@@ -17,8 +17,12 @@ data/
 
 ## Important Notes
 
+### Git Practice
+This is a practice change to demonstrate committing and syncing.
+
 ### GitHub Integration Test
 Repository successfully connected on: [Current Date]
+Testing Cursor Git Integration!
 
 ### Streamlit App (streamlit_app.py)
 - **CRITICAL**: The app currently reprocesses all states when switching between states. This is inefficient and will be optimized in a future update.
