@@ -17,6 +17,9 @@ data/
 
 ## Important Notes
 
+### GitHub Integration Test
+Repository successfully connected on: [Current Date]
+
 ### Streamlit App (streamlit_app.py)
 - **CRITICAL**: The app currently reprocesses all states when switching between states. This is inefficient and will be optimized in a future update.
 - Use the correct function names from table_generator.py:
