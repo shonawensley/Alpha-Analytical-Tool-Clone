@@ -1,0 +1,889 @@
+#!/usr/bin/env python
+"""
+vtrac_utils.py - V-TRAC pattern matching and winner highlighting
+
+This module:
+1. Stores the V-TRAC reference table
+2. Provides functions to find winning patterns and related combinations
+3. Handles highlighting of winners in table data
+"""
+
+# The complete V-TRAC reference table
+BOXED_VTRAC_REFERENCE = [
+    # 1) (111) => no singles, doubles => 005, 055
+    {
+        "Index": 1,
+        "Singles": [],
+        "Doubles": [
+            "005","050","500",
+            "055","505","550"
+        ]
+    },
+
+    # 2) (112) => singles: 015, 056; doubles: 001, 006, 155, 556
+    {
+        "Index": 2,
+        "Singles": [
+            "015","051","105","150","501","510",
+            "056","065","506","560","605","650"
+        ],
+        "Doubles": [
+            # 001
+            "001","010","100",
+            # 006
+            "006","060","600",
+            # 155
+            "155","515","551",
+            # 556
+            "556","565","655"
+        ]
+    },
+
+    # 3) (113) => singles: 025, 057; doubles: 002, 007, 255, 557
+    {
+        "Index": 3,
+        "Singles": [
+            "025","052","205","250","502","520",
+            "057","075","507","570","705","750"
+        ],
+        "Doubles": [
+            # 002
+            "002","020","200",
+            # 007
+            "007","070","700",
+            # 255
+            "255","525","552",
+            # 557
+            "557","575","755"
+        ]
+    },
+
+    # 4) (114) => singles: 035, 058; doubles: 003, 008, 355, 558
+    {
+        "Index": 4,
+        "Singles": [
+            "035","053","305","350","503","530",
+            "058","085","508","580","805","850"
+        ],
+        "Doubles": [
+            # 003
+            "003","030","300",
+            # 008
+            "008","080","800",
+            # 355
+            "355","535","553",
+            # 558
+            "558","585","855"
+        ]
+    },
+
+    # 5) (115) => singles: 045, 059; doubles: 004, 009, 455, 559
+    {
+        "Index": 5,
+        "Singles": [
+            "045","054","405","450","504","540",
+            "059","095","509","590","905","950"
+        ],
+        "Doubles": [
+            # 004
+            "004","040","400",
+            # 009
+            "009","090","900",
+            # 455
+            "455","545","554",
+            # 559
+            "559","595","955"
+        ]
+    },
+
+    # 6) (122) => singles: 016, 156; doubles: 011, 066, 115, 566
+    {
+        "Index": 6,
+        "Singles": [
+            "016","061","106","160","601","610",
+            "156","165","516","561","615","651"
+        ],
+        "Doubles": [
+            # 011
+            "011","101","110",
+            # 066
+            "066","606","660",
+            # 115
+            "115","151","511",
+            # 566
+            "566","656","665"
+        ]
+    },
+
+    # 7) (123) => singles: 012, 017, 026, 067, 125, 157, 256, 567; no doubles
+    {
+        "Index": 7,
+        "Singles": [
+            # 012
+            "012","021","102","120","201","210",
+            # 017
+            "017","071","107","170","701","710",
+            # 026
+            "026","062","206","260","602","620",
+            # 067
+            "067","076","607","670","706","760",
+            # 125
+            "125","152","215","251","512","521",
+            # 157
+            "157","175","517","571","715","751",
+            # 256
+            "256","265","526","562","625","652",
+            # 567
+            "567","576","657","675","756","765"
+        ],
+        "Doubles": []
+    },
+
+    # 8) (124) => singles: 013, 018, 036, 068, 135, 158, 356, 568; no doubles
+    {
+        "Index": 8,
+        "Singles": [
+            # 013
+            "013","031","103","130","301","310",
+            # 018
+            "018","081","108","180","801","810",
+            # 036
+            "036","063","306","360","603","630",
+            # 068
+            "068","086","608","680","806","860",
+            # 135
+            "135","153","315","351","513","531",
+            # 158
+            "158","185","518","581","815","851",
+            # 356
+            "356","365","536","563","635","653",
+            # 568
+            "568","586","658","685","856","865"
+        ],
+        "Doubles": []
+    },
+
+    # 9) (125) => singles: 014, 019, 046, 069, 145, 159, 456, 569; no doubles
+    {
+        "Index": 9,
+        "Singles": [
+            # 014
+            "014","041","104","140","401","410",
+            # 019
+            "019","091","109","190","901","910",
+            # 046
+            "046","064","406","460","604","640",
+            # 069
+            "069","096","609","690","906","960",
+            # 145
+            "145","154","415","451","514","541",
+            # 159
+            "159","195","519","591","915","951",
+            # 456
+            "456","465","546","564","645","654",
+            # 569
+            "569","596","659","695","956","965"
+        ],
+        "Doubles": []
+    },
+
+    # 10) (133) => singles: 027, 257; doubles: 022, 077, 225, 577
+    {
+        "Index": 10,
+        "Singles": [
+            # 027
+            "027","072","207","270","702","720",
+            # 257
+            "257","275","527","572","725","752"
+        ],
+        "Doubles": [
+            # 022
+            "022","202","220",
+            # 077
+            "077","707","770",
+            # 225
+            "225","252","522",
+            # 577
+            "577","757","775"
+        ]
+    },
+
+    # 11) (134) => singles: 023, 028, 037, 078, 235, 258, 357, 578; no doubles
+    {
+        "Index": 11,
+        "Singles": [
+            # 023
+            "023","032","203","230","302","320",
+            # 028
+            "028","082","208","280","802","820",
+            # 037
+            "037","073","307","370","703","730",
+            # 078
+            "078","087","708","780","807","870",
+            # 235
+            "235","253","325","352","523","532",
+            # 258
+            "258","285","528","582","825","852",
+            # 357
+            "357","375","537","573","735","753",
+            # 578
+            "578","587","758","785","857","875"
+        ],
+        "Doubles": []
+    },
+
+    # 12) (135) => singles: 024, 029, 047, 079, 245, 259, 457, 579; no doubles
+    {
+        "Index": 12,
+        "Singles": [
+            # 024
+            "024","042","204","240","402","420",
+            # 029
+            "029","092","209","290","902","920",
+            # 047
+            "047","074","407","470","704","740",
+            # 079
+            "079","097","709","790","907","970",
+            # 245
+            "245","254","425","452","524","542",
+            # 259
+            "259","295","529","592","925","952",
+            # 457
+            "457","475","547","574","745","754",
+            # 579
+            "579","597","759","795","957","975"
+        ],
+        "Doubles": []
+    },
+
+    # 13) (144) => singles: 038, 358; doubles: 033, 088, 335, 588
+    {
+        "Index": 13,
+        "Singles": [
+            # 038
+            "038","083","308","380","803","830",
+            # 358
+            "358","385","538","583","835","853"
+        ],
+        "Doubles": [
+            # 033
+            "033","303","330",
+            # 088
+            "088","808","880",
+            # 335
+            "335","353","533",
+            # 588
+            "588","858","885"
+        ]
+    },
+
+    # 14) (145) => singles: 034, 039, 048, 089, 345, 359, 458, 589; no doubles
+    {
+        "Index": 14,
+        "Singles": [
+            # 034
+            "034","043","304","340","403","430",
+            # 039
+            "039","093","309","390","903","930",
+            # 048
+            "048","084","408","480","804","840",
+            # 089
+            "089","098","809","890","908","980",
+            # 345
+            "345","354","435","453","534","543",
+            # 359
+            "359","395","539","593","935","953",
+            # 458
+            "458","485","548","584","845","854",
+            # 589
+            "589","598","859","895","958","985"
+        ],
+        "Doubles": []
+    },
+
+    # 15) (155) => singles: 049, 459; doubles: 044, 099, 445, 599
+    {
+        "Index": 15,
+        "Singles": [
+            # 049
+            "049","094","409","490","904","940",
+            # 459
+            "459","495","549","594","945","954"
+        ],
+        "Doubles": [
+            # 044
+            "044","404","440",
+            # 099
+            "099","909","990",
+            # 445
+            "445","454","544",
+            # 599
+            "599","959","995"
+        ]
+    },
+
+    # 16) (222) => doubles => 116, 166; triple expansions (111, 666) removed
+    {
+        "Index": 16,
+        "Singles": [],
+        "Doubles": [
+            # 116
+            "116","161","611",
+            # 166
+            "166","616","661"
+        ]
+    },
+
+    # 17) (223) => singles: 126, 167; doubles: 112, 117, 266, 667
+    {
+        "Index": 17,
+        "Singles": [
+            # 126
+            "126","162","216","261","612","621",
+            # 167
+            "167","176","617","671","716","761"
+        ],
+        "Doubles": [
+            # 112
+            "112","121","211",
+            # 117
+            "117","171","711",
+            # 266
+            "266","626","662",
+            # 667
+            "667","676","766"
+        ]
+    },
+
+    # 18) (224) => singles: 136, 168; doubles: 113, 118, 366, 668
+    {
+        "Index": 18,
+        "Singles": [
+            # 136
+            "136","163","316","361","613","631",
+            # 168
+            "168","186","618","681","816","861"
+        ],
+        "Doubles": [
+            # 113
+            "113","131","311",
+            # 118
+            "118","181","811",
+            # 366
+            "366","636","663",
+            # 668
+            "668","686","866"
+        ]
+    },
+
+    # 19) (225) => singles: 146, 169; doubles: 114, 119, 466, 669
+    {
+        "Index": 19,
+        "Singles": [
+            # 146
+            "146","164","416","461","614","641",
+            # 169
+            "169","196","619","691","916","961"
+        ],
+        "Doubles": [
+            # 114
+            "114","141","411",
+            # 119
+            "119","191","911",
+            # 466
+            "466","646","664",
+            # 669
+            "669","696","966"
+        ]
+    },
+
+    # 20) (233) => singles: 127, 267; doubles: 122, 177, 226, 677
+    {
+        "Index": 20,
+        "Singles": [
+            # 127
+            "127","172","217","271","712","721",
+            # 267
+            "267","276","627","672","726","762"
+        ],
+        "Doubles": [
+            # 122
+            "122","212","221",
+            # 177
+            "177","717","771",
+            # 226
+            "226","262","622",
+            # 677
+            "677","767","776"
+        ]
+    },
+
+    # 21) (234) => singles: 123, 128, 137, 178, 236, 268, 367, 678; no doubles
+    {
+        "Index": 21,
+        "Singles": [
+            # 123
+            "123","132","213","231","312","321",
+            # 128
+            "128","182","218","281","812","821",
+            # 137
+            "137","173","317","371","713","731",
+            # 178
+            "178","187","718","781","817","871",
+            # 236
+            "236","263","326","362","623","632",
+            # 268
+            "268","286","628","682","826","862",
+            # 367
+            "367","376","637","673","736","763",
+            # 678
+            "678","687","768","786","867","876"
+        ],
+        "Doubles": []
+    },
+
+    # 22) (235) => singles: 124, 129, 147, 179, 246, 269, 467, 679; no doubles
+    {
+        "Index": 22,
+        "Singles": [
+            # 124
+            "124","142","214","241","412","421",
+            # 129
+            "129","192","219","291","912","921",
+            # 147
+            "147","174","417","471","714","741",
+            # 179
+            "179","197","719","791","917","971",
+            # 246
+            "246","264","426","462","624","642",
+            # 269
+            "269","296","629","692","926","962",
+            # 467
+            "467","476","647","674","746","764",
+            # 679
+            "679","697","769","796","967","976"
+        ],
+        "Doubles": []
+    },
+
+    # 23) (244) => singles: 138, 368; doubles: 133, 188, 336, 688
+    {
+        "Index": 23,
+        "Singles": [
+            # 138
+            "138","183","318","381","813","831",
+            # 368
+            "368","386","638","683","836","863"
+        ],
+        "Doubles": [
+            # 133
+            "133","313","331",
+            # 188
+            "188","818","881",
+            # 336
+            "336","363","633",
+            # 688
+            "688","868","886"
+        ]
+    },
+
+    # 24) (245) => singles: 134, 139, 148, 189, 346, 369, 468, 689; no doubles
+    {
+        "Index": 24,
+        "Singles": [
+            # 134
+            "134","143","314","341","413","431",
+            # 139
+            "139","193","319","391","913","931",
+            # 148
+            "148","184","418","481","814","841",
+            # 189
+            "189","198","819","891","918","981",
+            # 346
+            "346","364","436","463","634","643",
+            # 369
+            "369","396","639","693","936","963",
+            # 468
+            "468","486","648","684","846","864",
+            # 689
+            "689","698","869","896","968","986"
+        ],
+        "Doubles": []
+    },
+
+    # 25) (255) => singles: 149, 469; doubles: 144, 199, 446, 699
+    {
+        "Index": 25,
+        "Singles": [
+            # 149
+            "149","194","419","491","914","941",
+            # 469
+            "469","496","649","694","946","964"
+        ],
+        "Doubles": [
+            # 144
+            "144","414","441",
+            # 199
+            "199","919","991",
+            # 446
+            "446","464","644",
+            # 699
+            "699","969","996"
+        ]
+    },
+
+    # 26) (333) => doubles => 227, 277; remove triple expansions (222,777)
+    {
+        "Index": 26,
+        "Singles": [],
+        "Doubles": [
+            # 227
+            "227","272","722",
+            # 277
+            "277","727","772"
+        ]
+    },
+
+    # 27) (334) => singles: 237, 278; doubles: 223, 228, 377, 778
+    {
+        "Index": 27,
+        "Singles": [
+            # 237
+            "237","273","327","372","723","732",
+            # 278
+            "278","287","728","782","827","872"
+        ],
+        "Doubles": [
+            # 223
+            "223","232","322",
+            # 228
+            "228","282","822",
+            # 377
+            "377","737","773",
+            # 778
+            "778","787","877"
+        ]
+    },
+
+    # 28) (335) => singles: 247, 279; doubles: 224, 229, 477, 779
+    {
+        "Index": 28,
+        "Singles": [
+            # 247
+            "247","274","427","472","724","742",
+            # 279
+            "279","297","729","792","927","972"
+        ],
+        "Doubles": [
+            # 224
+            "224","242","422",
+            # 229
+            "229","292","922",
+            # 477
+            "477","747","774",
+            # 779
+            "779","797","977"
+        ]
+    },
+
+    # 29) (344) => singles: 238, 378; doubles: (233,288,337,788) with 3 perms each
+    {
+        "Index": 29,
+        "Singles": [
+            # 238
+            "238","283","328","382","823","832",
+            # 378
+            "378","387","738","783","837","873"
+        ],
+        "Doubles": [
+            # 233
+            "233","323","332",
+            # 288
+            "288","828","882",
+            # 337
+            "337","373","733",
+            # 788
+            "788","878","887"
+        ]
+    },
+
+    # 30) (345) => singles: 234, 239, 248, 289, 347, 379, 478, 789; no doubles
+    {
+        "Index": 30,
+        "Singles": [
+            # 234
+            "234","243","324","342","423","432",
+            # 239
+            "239","293","329","392","923","932",
+            # 248
+            "248","284","428","482","824","842",
+            # 289
+            "289","298","829","892","928","982",
+            # 347
+            "347","374","437","473","734","743",
+            # 379
+            "379","397","739","793","937","973",
+            # 478
+            "478","487","748","784","847","874",
+            # 789
+            "789","798","879","897","978","987"
+        ],
+        "Doubles": []
+    },
+
+    # 31) (355) => singles: 249, 479; doubles: 244, 299, 447, 799
+    {
+        "Index": 31,
+        "Singles": [
+            # 249
+            "249","294","429","492","924","942",
+            # 479
+            "479","497","749","794","947","974"
+        ],
+        "Doubles": [
+            # 244
+            "244","424","442",
+            # 299
+            "299","929","992",
+            # 447
+            "447","474","744",
+            # 799
+            "799","979","997"
+        ]
+    },
+
+    # 32) (444) => doubles => 338, 388; remove triple expansions (333,888)
+    {
+        "Index": 32,
+        "Singles": [],
+        "Doubles": [
+            # 338
+            "338","383","833",
+            # 388
+            "388","838","883"
+        ]
+    },
+
+    # 33) (445) => singles: 348, 389; doubles: 334, 339, 488, 889
+    {
+        "Index": 33,
+        "Singles": [
+            # 348
+            "348","384","438","483","834","843",
+            # 389
+            "389","398","839","893","938","983"
+        ],
+        "Doubles": [
+            # 334
+            "334","343","433",
+            # 339
+            "339","393","933",
+            # 488
+            "488","848","884",
+            # 889
+            "889","898","988"
+        ]
+    },
+
+    # 34) (455) => singles: 349, 489; doubles: 344, 399, 448, 899
+    {
+        "Index": 34,
+        "Singles": [
+            # 349
+            "349","394","439","493","934","943",
+            # 489
+            "489","498","849","894","948","984"
+        ],
+        "Doubles": [
+            # 344
+            "344","434","443",
+            # 399
+            "399","939","993",
+            # 448
+            "448","484","844",
+            # 899
+            "899","989","998"
+        ]
+    },
+
+    # 35) (555) => doubles => 449, 499; remove triple expansions (444,999)
+    {
+        "Index": 35,
+        "Singles": [],
+        "Doubles": [
+            # 449
+            "449","494","944",
+            # 499
+            "499","949","994"
+        ]
+    }
+]
+
+def get_all_permutations(number):
+    """
+    Get all permutations of a 3-digit number
+    Returns a set of strings, each 3 digits long
+    """
+    number = str(number).zfill(3)
+    digits = list(number)
+    from itertools import permutations
+    perms = set(''.join(p) for p in permutations(digits))
+    return perms
+
+def find_vtrac_index_and_combos(number):
+    """
+    Find the V-TRAC index containing this number and return:
+    - index number
+    - winning permutations (all permutations of the input number)
+    - related combinations (all other numbers in the same index)
+    """
+    number = str(number).zfill(3)
+    winning_perms = get_all_permutations(number)
+    
+    for index_data in BOXED_VTRAC_REFERENCE:
+        # Check if number is in singles or doubles
+        all_combos = set(index_data["Singles"] + index_data["Doubles"])
+        if number in all_combos:
+            # Get all related combinations excluding the winning number's permutations
+            related = set(all_combos) - winning_perms
+            return index_data["Index"], winning_perms, related
+            
+    return None, set(), set()
+
+def scan_string_for_matches(string_val, patterns):
+    """
+    Scan a string for any 3-digit patterns
+    Returns list of found patterns and their positions
+    """
+    if not isinstance(string_val, str):
+        return []
+    
+    matches = []
+    for i in range(len(string_val) - 2):
+        substr = string_val[i:i+3]
+        if substr in patterns:
+            matches.append((substr, i))
+    return matches
+
+def highlight_string_with_matches(string_val, winning_patterns, related_patterns):
+    """
+    Returns HTML-formatted string with:
+    - winning patterns in red
+    - related patterns in blue
+    """
+    if not isinstance(string_val, str):
+        return string_val
+        
+    # Get all matches with positions
+    winning_matches = scan_string_for_matches(string_val, winning_patterns)
+    related_matches = scan_string_for_matches(string_val, related_patterns)
+    
+    # Sort all matches by position (to handle overlapping)
+    all_matches = [(pos, substr, 'red') for substr, pos in winning_matches]
+    all_matches.extend([(pos, substr, 'blue') for substr, pos in related_matches])
+    all_matches.sort()
+    
+    # Apply highlighting
+    result = string_val
+    offset = 0
+    for pos, substr, color in all_matches:
+        adjusted_pos = pos + offset
+        html_start = f'<span style="color: {color}; font-weight: bold">'
+        html_end = '</span>'
+        result = result[:adjusted_pos] + html_start + substr + html_end + result[adjusted_pos + 3:]
+        offset += len(html_start) + len(html_end)
+    
+    return result 
+
+def get_vtrac_patterns(winning_number):
+    """
+    Get all permutations for a winning number from its V-TRAC index.
+    
+    Args:
+        winning_number (str): The 3-digit winning number
+        
+    Returns:
+        tuple: (red_patterns, blue_patterns) where:
+            - red_patterns: Set of all permutations of the winning number
+            - blue_patterns: Set of all other combinations from same V-TRAC index
+    """
+    red_patterns = set()
+    blue_patterns = set()
+    
+    # Find which V-TRAC index contains this number
+    for vtrac_entry in BOXED_VTRAC_REFERENCE:
+        # Get all combinations from this index
+        all_combos = set()
+        all_combos.update(vtrac_entry.get("Singles", []))
+        all_combos.update(vtrac_entry.get("Doubles", []))
+        
+        # If we find our number in this index
+        if winning_number in all_combos:
+            # Add all permutations of winner to red set
+            red_patterns.add(winning_number)
+            # Add all other combinations to blue set
+            blue_patterns.update(all_combos - {winning_number})
+            break
+            
+    return red_patterns, blue_patterns
+
+def highlight_cell(value, red_patterns, blue_patterns):
+    """
+    Apply HTML styling to a cell value based on pattern matches.
+    
+    Args:
+        value (str): The cell value to check
+        red_patterns (set): Patterns to highlight in red
+        blue_patterns (set): Patterns to highlight in blue
+        
+    Returns:
+        str: HTML-styled string with appropriate color
+    """
+    if not value or value == 'N/A':
+        return value
+        
+    # Clean the string (remove any existing styling)
+    clean_val = ''.join(c for c in str(value) if c.isdigit() or c.isspace())
+    
+    # Look for stable patterns
+    if any(pattern in clean_val for pattern in red_patterns):
+        return f'<span style="color: red; font-weight: bold">{value}</span>'
+    elif any(pattern in blue_patterns for pattern in blue_patterns):
+        return f'<span style="color: blue">{value}</span>'
+    
+    return value
+
+def highlight_winners_in_table(df, midday_winner=None, evening_winner=None):
+    """
+    Process an entire table, highlighting winners and related patterns.
+    
+    Args:
+        df (pd.DataFrame): The table to process
+        midday_winner (str, optional): Midday winning number
+        evening_winner (str, optional): Evening winning number
+        
+    Returns:
+        pd.DataFrame: DataFrame with HTML styling applied
+    """
+    # Create copy for modification
+    styled_df = df.copy()
+    
+    # Get patterns for both winners
+    midday_red, midday_blue = get_vtrac_patterns(midday_winner) if midday_winner else (set(), set())
+    evening_red, evening_blue = get_vtrac_patterns(evening_winner) if evening_winner else (set(), set())
+    
+    # Combine patterns
+    all_red = midday_red | evening_red
+    all_blue = midday_blue | evening_blue
+    
+    # Value columns (7 to 1)
+    value_cols = [str(i) for i in range(7, 0, -1)]
+    
+    # Process each cell
+    for col in value_cols:
+        if col in styled_df.columns:
+            styled_df[col] = styled_df[col].apply(
+                lambda x: highlight_cell(str(x), all_red, all_blue)
+            )
+    
+    return styled_df 
