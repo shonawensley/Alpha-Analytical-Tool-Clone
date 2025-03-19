@@ -1,64 +1,65 @@
 #!/usr/bin/env python
 """
-test_vtrac.py - Standalone test script for V-TRAC functionality
-
-This script allows testing V-TRAC features without modifying the main Streamlit app.
-It provides simple command-line testing of:
-1. V-TRAC index lookup
-2. Finding winning permutations
-3. Finding related combinations
+test_vtrac.py - Test script for V-TRAC pattern extraction
 """
 
 import os
 import sys
+from vtrac_utils import find_vtrac_index_and_combos, highlight_winners_in_table
 
-# Add project root to path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
-sys.path.append(project_root)
-
-from vtrac_utils import find_vtrac_index_and_combos
-
-def test_vtrac_lookup(numbers_to_test):
-    """Test V-TRAC index lookup and pattern matching"""
-    print("\n=== Testing V-TRAC Lookup ===")
-    print("Testing numbers:", numbers_to_test)
-    print("-" * 50)
-    
-    for num in numbers_to_test:
-        print(f"\nTesting number: {num}")
-        vtrac_index, winning_perms, related = find_vtrac_index_and_combos(num)
-        print(f"V-TRAC Index: {vtrac_index}")
-        print(f"Winning permutations: {sorted(winning_perms)}")
-        print(f"Related combinations: {sorted(related)}")
-        print("-" * 30)
-
-def main():
-    # Test cases
-    test_numbers = [
-        "123",  # Simple ascending
-        "321",  # Simple descending
-        "111",  # All same digits
-        "147",  # Mixed digits
-        "258",  # Another pattern
-        "369"   # Another pattern
+def test_pattern_extraction():
+    """Test V-TRAC pattern extraction with sample numbers"""
+    test_cases = [
+        "468",  # Sample from your data
+        "684",  # Permutation
+        "992",  # Another sample
+        "025"   # From VTRAC reference
     ]
     
-    test_vtrac_lookup(test_numbers)
+    print("\nTesting V-TRAC Pattern Extraction:")
+    print("=" * 50)
     
-    # Allow interactive testing
-    while True:
-        print("\nEnter a 3-digit number to test (or 'q' to quit):")
-        user_input = input().strip()
-        
-        if user_input.lower() == 'q':
-            break
-            
-        if len(user_input) != 3 or not user_input.isdigit():
-            print("Please enter exactly 3 digits")
-            continue
-            
-        test_vtrac_lookup([user_input])
+    for number in test_cases:
+        print(f"\nTesting number: {number}")
+        try:
+            vtrac_index, winning_perms, related = find_vtrac_index_and_combos(number)
+            print(f"V-TRAC Index: {vtrac_index}")
+            print("Winning Permutations:", winning_perms)
+            print("Related Patterns:", related)
+        except Exception as e:
+            print(f"Error processing {number}: {str(e)}")
+
+def test_with_sample_data():
+    """Test pattern matching with sample R2/R4/R6/R8 strings"""
+    sample_data = {
+        "R2": ["992244138667", "992243667", "9923667"],
+        "R4": ["229966834471", "229966347", "2996637"],
+        "R6": ["668179932244", "667993224", "6679932"],
+        "R8": ["719983662244", "799366224", "7993662"]
+    }
+    
+    print("\nTesting Pattern Matching in Strings:")
+    print("=" * 50)
+    
+    # Test with a winning number
+    test_number = "468"
+    vtrac_index, winning_perms, related = find_vtrac_index_and_combos(test_number)
+    
+    print(f"\nSearching for patterns from number: {test_number}")
+    print(f"V-TRAC Index: {vtrac_index}")
+    
+    for row_type, strings in sample_data.items():
+        print(f"\n{row_type} Strings:")
+        for s in strings:
+            matches = []
+            for perm in winning_perms:
+                if perm in s:
+                    matches.append(perm)
+            if matches:
+                print(f"  {s} => Found patterns: {matches}")
+            else:
+                print(f"  {s} => No matches")
 
 if __name__ == "__main__":
-    main() 
+    test_pattern_extraction()
+    test_with_sample_data() 

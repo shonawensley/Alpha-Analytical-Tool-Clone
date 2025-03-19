@@ -853,37 +853,135 @@ def highlight_cell(value, red_patterns, blue_patterns):
     
     return value
 
-def highlight_winners_in_table(df, midday_winner=None, evening_winner=None):
+def find_all_patterns_in_string(pattern, string, allow_overlap=True):
     """
-    Process an entire table, highlighting winners and related patterns.
+    Find all occurrences of a pattern in a string
     
     Args:
-        df (pd.DataFrame): The table to process
-        midday_winner (str, optional): Midday winning number
-        evening_winner (str, optional): Evening winning number
+        pattern (str): Pattern to find (e.g. '468')
+        string (str): String to search in (e.g. '992244138667')
+        allow_overlap (bool): Whether to allow overlapping matches
         
     Returns:
-        pd.DataFrame: DataFrame with HTML styling applied
+        list: List of (start, end) tuples for each match
     """
-    # Create copy for modification
-    styled_df = df.copy()
+    matches = []
+    i = 0
+    while i < len(string) - len(pattern) + 1:
+        if string[i:i+len(pattern)] == pattern:
+            matches.append((i, i+len(pattern)))
+            if allow_overlap:
+                i += 1
+            else:
+                i += len(pattern)
+        else:
+            i += 1
+    return matches
+
+def find_patterns_in_row(val, winning_perms, related_patterns):
+    """
+    Find all winning and related patterns in a row value
     
-    # Get patterns for both winners
-    midday_red, midday_blue = get_vtrac_patterns(midday_winner) if midday_winner else (set(), set())
-    evening_red, evening_blue = get_vtrac_patterns(evening_winner) if evening_winner else (set(), set())
+    Args:
+        val: String value to search in
+        winning_perms: Set of winning permutations
+        related_patterns: Set of related patterns
+        
+    Returns:
+        dict: Dictionary with 'winning' and 'related' matches
+    """
+    if not isinstance(val, str):
+        return {'winning': [], 'related': []}
+        
+    matches = {
+        'winning': [],
+        'related': []
+    }
     
-    # Combine patterns
-    all_red = midday_red | evening_red
-    all_blue = midday_blue | evening_blue
+    # Check winning patterns
+    for pattern in winning_perms:
+        pos = 0
+        while pos < len(val):
+            idx = val.find(pattern, pos)
+            if idx == -1:
+                break
+            matches['winning'].append({
+                'text': pattern,
+                'position': (idx, idx + len(pattern))
+            })
+            pos = idx + 1
+            
+    # Check related patterns
+    for pattern in related_patterns:
+        pos = 0
+        while pos < len(val):
+            idx = val.find(pattern, pos)
+            if idx == -1:
+                break
+            # Don't add if position overlaps with a winning pattern
+            overlaps = False
+            for win in matches['winning']:
+                if (idx >= win['position'][0] and idx < win['position'][1]) or \
+                   (idx + len(pattern) > win['position'][0] and idx + len(pattern) <= win['position'][1]):
+                    overlaps = True
+                    break
+            if not overlaps:
+                matches['related'].append({
+                    'text': pattern,
+                    'position': (idx, idx + len(pattern))
+                })
+            pos = idx + 1
+            
+    return matches
+
+def highlight_winners_in_table(df, winning_perms, related_patterns):
+    """
+    Highlight winning and related patterns in table
     
-    # Value columns (7 to 1)
-    value_cols = [str(i) for i in range(7, 0, -1)]
+    Args:
+        df (pd.DataFrame): DataFrame to highlight
+        winning_perms (set): Set of winning permutations
+        related_patterns (set): Set of related patterns
+        
+    Returns:
+        pd.DataFrame: Highlighted DataFrame
+    """
+    def highlight_cell(val):
+        if not isinstance(val, str) or val in ['N/A', 'nan']:
+            return ''
+            
+        # Find all matches
+        matches = find_patterns_in_row(val, winning_perms, related_patterns)
+        
+        if not matches['winning'] and not matches['related']:
+            return ''
+            
+        # Build CSS styles
+        styles = []
+        
+        if matches['winning']:
+            styles.append('color: red; font-weight: bold')
+        elif matches['related']:
+            styles.append('color: blue')
+            
+        return '; '.join(styles)
     
-    # Process each cell
-    for col in value_cols:
-        if col in styled_df.columns:
-            styled_df[col] = styled_df[col].apply(
-                lambda x: highlight_cell(str(x), all_red, all_blue)
-            )
+    # Apply section background colors
+    styled = df.style.apply(lambda x: [
+        'background-color: rgba(31, 119, 180, 0.1)' if x['Set'] == 'Set3'
+        else 'background-color: rgba(44, 160, 44, 0.1)' if x['Set'] == 'Set2'
+        else 'background-color: rgba(255, 127, 14, 0.1)' if (x['Set'] == 'Set1' and x['Draw'] == 'Draw1')
+        else '' for _ in range(len(x))
+    ], axis=1)
     
-    return styled_df 
+    # Apply pattern highlighting to all columns except Set/Draw/RowType
+    cols_to_highlight = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
+    for col in cols_to_highlight:
+        styled = styled.applymap(highlight_cell, subset=[col])
+    
+    return styled.set_properties(**{
+        'text-align': 'center',
+        'font-family': 'monospace',
+        'white-space': 'nowrap',
+        'padding': '8px'
+    }) 

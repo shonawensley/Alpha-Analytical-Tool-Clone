@@ -19,14 +19,21 @@ from clean_data import clean_all_states, STATES
 from extract_data import LotteryDataExtractor
 from table_generator import build_section_table, build_r2_only_table
 from vtrac_utils import highlight_winners_in_table, find_vtrac_index_and_combos
+from excel_export import export_state_tables, setup_logging_directories
 
 def get_project_root():
     """Get the absolute path to the project root"""
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.dirname(os.path.dirname(current_dir))
 
+@st.cache_data
+def process_excel_file(excel_path, cleaned_dir):
+    """Process Excel file and clean all states (cached)"""
+    return clean_all_states(STATES, excel_path, cleaned_dir)
+
+@st.cache_data
 def load_state_data(state_name, excel_path):
-    """Load data for a single state"""
+    """Load data for a single state (cached)"""
     try:
         extractor = LotteryDataExtractor(excel_path)
         return extractor.extract_all()
@@ -34,12 +41,29 @@ def load_state_data(state_name, excel_path):
         st.error(f"Error loading {state_name}: {str(e)}")
         return None
 
+@st.cache_data
+def build_tables(section_data):
+    """Build combined and R2-only tables (cached)"""
+    if not section_data:
+        return None, None
+    return build_section_table(section_data), build_r2_only_table(section_data)
+
+def initialize_session_state():
+    """Initialize session state variables"""
+    if 'processed_states' not in st.session_state:
+        st.session_state.processed_states = {}
+    if 'last_upload' not in st.session_state:
+        st.session_state.last_upload = None
+
 def main():
     st.set_page_config(
         page_title="Lottery Data Viewer",
         layout="wide",
         initial_sidebar_state="expanded"
     )
+    
+    # Initialize session state
+    initialize_session_state()
     
     # Enhanced CSS for better table display
     st.markdown("""
@@ -96,19 +120,25 @@ def main():
             os.makedirs(original_dir, exist_ok=True)
             os.makedirs(cleaned_dir, exist_ok=True)
             
-            # Save uploaded file
-            excel_path = os.path.join(original_dir, uploaded_file.name)
-            with open(excel_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-            
-            # Process the file
-            with st.spinner("Processing Excel file..."):
-                results = clean_all_states(STATES, excel_path, cleaned_dir)
+            # Check if this is a new upload
+            current_upload = uploaded_file.getvalue()
+            if st.session_state.last_upload != current_upload:
+                st.session_state.last_upload = current_upload
+                st.session_state.processed_states = {}  # Clear cached state data
                 
-                if results["success"]:
-                    st.success(f"Processed {len(results['success'])} states successfully")
-                if results["failed"]:
-                    st.error(f"Failed to process {len(results['failed'])} states")
+                # Save uploaded file
+                excel_path = os.path.join(original_dir, uploaded_file.name)
+                with open(excel_path, "wb") as f:
+                    f.write(current_upload)
+                
+                # Process the file (cached)
+                with st.spinner("Processing Excel file..."):
+                    results = process_excel_file(excel_path, cleaned_dir)
+                    
+                    if results["success"]:
+                        st.success(f"Processed {len(results['success'])} states successfully")
+                    if results["failed"]:
+                        st.error(f"Failed to process {len(results['failed'])} states")
         
         # Winner inputs
         st.markdown("### Enter Winners")
@@ -127,13 +157,18 @@ def main():
         format_func=lambda x: x.replace("4", "")
     )
     
-    # Load state data
+    # Load state data (using session state cache)
     cleaned_file = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
     if not os.path.exists(cleaned_file):
         st.error(f"No cleaned data found for {state}")
         return
-        
-    state_data = load_state_data(state, cleaned_file)
+    
+    if state not in st.session_state.processed_states:
+        state_data = load_state_data(state, cleaned_file)
+        if state_data:
+            st.session_state.processed_states[state] = state_data
+    
+    state_data = st.session_state.processed_states.get(state)
     if not state_data:
         return
     
@@ -163,9 +198,11 @@ def main():
             st.markdown(f"### {section_name}")
             
             if section_data:
-                # Build tables
-                combined_df = build_section_table(section_data)
-                r2_df = build_r2_only_table(section_data)
+                # Build tables (cached)
+                combined_df, r2_df = build_tables(section_data)
+                
+                if combined_df is None or r2_df is None:
+                    continue
                 
                 # Style function for highlighting
                 def style_function(val):
@@ -238,6 +275,32 @@ def main():
                     "text/csv",
                     key=f'download-r2-{section_name.lower()}'
                 )
+
+                # After displaying tables, add logging button
+                if st.button(f"Log {state} Results", key=f"log-{section_name.lower()}"):
+                    try:
+                        # Prepare data for export
+                        tables_data = {
+                            'Midday': st.session_state.processed_states[state].get('Midday', {}).get('combined_table'),
+                            'Evening': st.session_state.processed_states[state].get('Evening', {}).get('combined_table'),
+                            'Combined': st.session_state.processed_states[state].get('Combined', {}).get('combined_table')
+                        }
+                        
+                        # Set up archive directory
+                        archive_dir = setup_logging_directories()
+                        
+                        # Export to Excel
+                        filepath = export_state_tables(
+                            state,
+                            tables_data,
+                            winning_combos,
+                            related_combos,
+                            archive_dir
+                        )
+                        
+                        st.success(f"Successfully logged results to: {filepath}")
+                    except Exception as e:
+                        st.error(f"Error logging results: {str(e)}")
 
 if __name__ == "__main__":
     main() 
