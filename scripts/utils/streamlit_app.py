@@ -8,6 +8,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+import tempfile
 
 # Add the project root to Python path
 import sys
@@ -62,6 +63,62 @@ def get_historical_files():
     if not historical_dir.exists():
         return []
     return sorted([f for f in historical_dir.glob("*.xlsx") if "Pick3StatsC4" in f.name])
+
+def export_all_tables_to_csv(state_data, state_name):
+    """Export all tables (Midday/Evening/Combined) to a single CSV file"""
+    import pandas as pd
+    import os
+    from datetime import datetime
+    
+    # Create output directory if it doesn't exist
+    output_dir = "data/archive"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Initialize list to store all tables
+    all_tables = []
+    section_names = []
+    
+    # Process each section
+    for section in ["Midday", "Evening", "Combined"]:
+        if section not in state_data:
+            continue
+            
+        # Build tables for this section
+        combined_df = build_section_table(state_data[section])
+        r2_df = build_r2_only_table(state_data[section])
+        
+        # Add section name as prefix to column names (except Set, Draw, RowType)
+        combined_df.columns = [f"{section}_{col}" if col not in ["Set", "Draw", "RowType"] else col 
+                             for col in combined_df.columns]
+        r2_df.columns = [f"{section}_{col}" if col not in ["Set", "Draw"] else col 
+                        for col in r2_df.columns]
+        
+        # Store tables
+        all_tables.extend([combined_df, r2_df])
+        section_names.extend([f"{section}_Combined", f"{section}_R2"])
+    
+    # Create Excel-like format with tables side by side
+    max_rows = max(len(df) for df in all_tables)
+    padded_tables = []
+    
+    for df in all_tables:
+        # Pad shorter tables with NaN rows
+        if len(df) < max_rows:
+            padding = pd.DataFrame(index=range(len(df), max_rows), columns=df.columns)
+            df = pd.concat([df, padding])
+        padded_tables.append(df)
+    
+    # Combine all tables horizontally
+    final_df = pd.concat(padded_tables, axis=1)
+    
+    # Save to CSV
+    output_file = os.path.join(output_dir, f"{state_name}_all_tables_{timestamp}.csv")
+    final_df.to_csv(output_file, index=False)
+    
+    return output_file
 
 def main():
     st.set_page_config(
@@ -336,6 +393,14 @@ def main():
                         st.success(f"Successfully logged results to: {filepath}")
                     except Exception as e:
                         st.error(f"Error logging results: {str(e)}")
+
+    # Add export all tables button
+    if st.button("Export All Tables (Midday/Evening/Combined)"):
+        try:
+            output_file = export_all_tables_to_csv(state_data, state)
+            st.success(f"All tables exported to: {output_file}")
+        except Exception as e:
+            st.error(f"Error exporting tables: {str(e)}")
 
 if __name__ == "__main__":
     main() 

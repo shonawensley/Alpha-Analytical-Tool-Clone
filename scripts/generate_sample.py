@@ -3,8 +3,16 @@
 generate_sample.py - Generate sample lottery data and tables for documentation
 """
 import json
+import os
+import sys
 import pandas as pd
-from table_generator import (
+
+# Add the project root to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(project_root)
+
+from scripts.utils.table_generator import (
     build_section_table,
     build_r2_only_table,
     print_ascii_table
@@ -52,7 +60,6 @@ def generate_sample_data():
 
 def export_sample(output_dir="sample_output"):
     """Generate and export sample data in multiple formats"""
-    import os
     os.makedirs(output_dir, exist_ok=True)
     
     # Generate sample data
@@ -87,3 +94,10 @@ def export_sample(output_dir="sample_output"):
 
 if __name__ == "__main__":
     export_sample() 
+
+
+
+
+
+
+   
