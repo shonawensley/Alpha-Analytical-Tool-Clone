@@ -9,15 +9,15 @@ import openpyxl
 from openpyxl.styles import PatternFill, Font, Border, Side
 from openpyxl.utils import get_column_letter
 
-def export_state_tables(state_name, tables_data, winning_combos, related_combos, output_dir):
+def export_state_tables(state_name, midday_df, evening_df, combined_df, output_dir):
     """
     Export state tables to a formatted Excel file with side-by-side layout
     
     Args:
         state_name (str): Name of the state
-        tables_data (dict): Dictionary containing DataFrames for each section
-        winning_combos (set): Set of winning number combinations
-        related_combos (set): Set of related number combinations
+        midday_df (pd.DataFrame): Midday table
+        evening_df (pd.DataFrame): Evening table
+        combined_df (pd.DataFrame): Combined table
         output_dir (str): Directory to save the Excel file
     """
     # Create timestamp for filename
@@ -25,17 +25,42 @@ def export_state_tables(state_name, tables_data, winning_combos, related_combos,
     filename = f"{state_name}_{timestamp}.xlsx"
     filepath = os.path.join(output_dir, filename)
     
+    # Calculate starting columns for each section
+    col_width = len(midday_df.columns) if midday_df is not None else 0
+    spacing = 2  # Number of columns to leave blank between tables
+    
     # Create Excel writer
     with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-        # Get the workbook and create a sheet
-        workbook = writer.book
-        sheet_name = "Combined Tables"
-        worksheet = workbook.create_sheet(sheet_name)
+        # Write each table with proper spacing
+        if midday_df is not None:
+            midday_df.to_excel(writer, sheet_name='State Tables', startcol=0, index=False)
         
-        # Define styles
+        if evening_df is not None:
+            evening_df.to_excel(writer, sheet_name='State Tables', startcol=col_width + spacing, index=False)
+        
+        if combined_df is not None:
+            combined_df.to_excel(writer, sheet_name='State Tables', startcol=(col_width + spacing) * 2, index=False)
+        
+        # Get the workbook and active sheet
+        workbook = writer.book
+        worksheet = writer.sheets['State Tables']
+        
+        # Add headers for each section
+        header_font = Font(bold=True, size=14)
+        worksheet.cell(row=1, column=1, value="Midday").font = header_font
+        worksheet.cell(row=1, column=col_width + spacing + 1, value="Evening").font = header_font
+        worksheet.cell(row=1, column=(col_width + spacing) * 2 + 1, value="Combined").font = header_font
+        
+        # Move the table data down one row to accommodate headers
+        for row in range(worksheet.max_row, 1, -1):
+            for col in range(1, worksheet.max_column + 1):
+                cell = worksheet.cell(row=row, column=col)
+                worksheet.cell(row=row + 1, column=col, value=cell.value)
+                if cell.has_style:
+                    worksheet.cell(row=row + 1, column=col)._style = cell._style
+        
+        # Apply styling
         header_fill = PatternFill(start_color='CCCCCC', end_color='CCCCCC', fill_type='solid')
-        winner_font = Font(color='FF0000', bold=True)  # Red
-        related_font = Font(color='0000FF')  # Blue
         border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
@@ -43,50 +68,18 @@ def export_state_tables(state_name, tables_data, winning_combos, related_combos,
             bottom=Side(style='thin')
         )
         
-        # Starting columns for each section
-        section_starts = {
-            'Midday': 1,
-            'Evening': 15,
-            'Combined': 29
-        }
+        # Apply borders and header styling
+        for col in range(1, worksheet.max_column + 1):
+            for row in range(2, worksheet.max_row + 1):
+                cell = worksheet.cell(row=row, column=col)
+                cell.border = border
+                if row == 2:  # Header row
+                    cell.fill = header_fill
+                    cell.font = Font(bold=True)
         
-        # Write each section
-        for section_name, start_col in section_starts.items():
-            if section_name in tables_data:
-                df = tables_data[section_name]
-                if df is not None:
-                    # Write section header
-                    header_cell = worksheet.cell(row=1, column=start_col, value=section_name)
-                    header_cell.font = Font(bold=True, size=14)
-                    
-                    # Write DataFrame
-                    for i, col in enumerate(df.columns):
-                        col_letter = get_column_letter(start_col + i)
-                        # Write header
-                        cell = worksheet.cell(row=2, column=start_col + i, value=col)
-                        cell.fill = header_fill
-                        cell.border = border
-                        
-                        # Write data
-                        for j, val in enumerate(df[col]):
-                            cell = worksheet.cell(row=j + 3, column=start_col + i, value=val)
-                            cell.border = border
-                            
-                            # Apply highlighting for string values
-                            if isinstance(val, str):
-                                if any(combo in val for combo in winning_combos):
-                                    cell.font = winner_font
-                                elif any(combo in val for combo in related_combos):
-                                    cell.font = related_font
-                    
-                    # Set column widths
-                    for i in range(len(df.columns)):
-                        col_letter = get_column_letter(start_col + i)
-                        worksheet.column_dimensions[col_letter].width = 15
-        
-        # Remove default sheet if it exists
-        if 'Sheet' in workbook.sheetnames:
-            workbook.remove(workbook['Sheet'])
+        # Set column widths
+        for col in range(1, worksheet.max_column + 1):
+            worksheet.column_dimensions[get_column_letter(col)].width = 15
     
     return filepath
 

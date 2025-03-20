@@ -277,6 +277,71 @@ def generate_tables(state_data, state_name, output_dir=None):
     
     return results
 
+def table_to_json_schema():
+    """
+    Returns a JSON schema representation of our table structures
+    """
+    return {
+        "combined_table": {
+            "columns": ["Set", "Draw", "RowType", "7", "6", "5", "4", "3", "2", "1"],
+            "structure": {
+                "Set": {"type": "string", "values": ["Set1", "Set2", "Set3"]},
+                "Draw": {"type": "string", "pattern": "Draw[1-7]"},
+                "RowType": {"type": "string", "values": ["DRAW_DATA", "R2", "R4", "R6", "R8"]},
+                "7,6,5,4,3,2,1": {"type": "string", "format": "right-aligned with N/A padding"}
+            },
+            "ordering": [
+                "Set3 -> Draw1 (all row types)",
+                "Set2 -> Draw1 (all row types)",
+                "Set1 -> Draw1-7 (all row types)"
+            ]
+        },
+        "r2_only_table": {
+            "columns": ["Set", "Draw", "7", "6", "5", "4", "3", "2", "1"],
+            "structure": {
+                "Set": {"type": "string", "values": ["Set1", "Set2", "Set3"]},
+                "Draw": {"type": "string", "pattern": "Draw[1-7]"},
+                "7,6,5,4,3,2,1": {"type": "string", "format": "right-aligned with N/A padding"}
+            },
+            "slicing_rules": {
+                "Set3/Set2 Draw1": "First 3 items",
+                "Set1 Draw1": "First 3 items",
+                "Set1 Draw2": "First 2 items",
+                "Set1 Draw3-7": "First 1 item"
+            }
+        },
+        "hot_zones": {
+            "Set1": {
+                "Draw1": "Last 5 items",
+                "Draw2": "Last 5 items",
+                "Draw3": "Last 5 items",
+                "Draw4": "Last 4 items",
+                "Draw5": "Last 2 items"
+            }
+        }
+    }
+
+def data_to_json(section_data):
+    """
+    Converts section data to a JSON representation
+    """
+    return {
+        "section_type": list(section_data.keys())[0],  # Midday/Evening/Combined
+        "sets": {
+            set_name: {
+                draw_name: {
+                    "draw_data": data.get("draw_data", []),
+                    "R2": data.get("R2", []),
+                    "R4": data.get("R4", []),
+                    "R6": data.get("R6", []),
+                    "R8": data.get("R8", [])
+                }
+                for draw_name, data in set_data.items()
+            }
+            for set_name, set_data in section_data.items()
+        }
+    }
+
 if __name__ == "__main__":
     # Demo with sample data
     print("This module is designed to be imported, not run directly.")

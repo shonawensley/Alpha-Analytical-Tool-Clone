@@ -12,8 +12,30 @@ scripts/
 │   └── test_vtrac.py      # Standalone V-TRAC tester
 data/
 ├── original/              # Original Excel files
-└── cleaned/              # Cleaned state data
+├── cleaned/              # Cleaned state data
+├── archive/              # Excel exports of state tables
+└── historical_files/     # Historical Pick3StatsC4 files
+docs/
+└── VTRAC_SYSTEM.md       # V-TRAC documentation
 ```
+
+## Recent Updates
+
+### Excel Export Feature (NEW)
+- Export all tables (Midday, Evening, Combined) for a state to a single Excel file
+- Tables are arranged side by side in the same layout as Streamlit
+- Files are saved to `data/archive` with state name and timestamp
+- Access via "Log All [State] Tables to Excel" button in the app
+
+### Historical Files Management (NEW)
+- Added `data/historical_files` directory for storing multiple Pick3StatsC4 files
+- Allows tracking of historical data without disrupting current system
+- Date selection feature coming soon to specify which file to process
+
+### V-TRAC System
+- Pattern matching system for identifying winning combinations
+- See `docs/VTRAC_SYSTEM.md` for detailed documentation
+- Currently under review for improvements
 
 ## Important Notes
 
@@ -47,7 +69,8 @@ Testing Cursor Git Integration!
 ## Known Issues
 1. State reprocessing on state change (performance issue)
 2. Path handling needs standardization
-3. Excel file processing could be optimized
+3. V-TRAC pattern highlighting needs improvement
+4. Date selection for historical files pending
 
 ## Testing V-TRAC
 To test V-TRAC functionality without affecting the main app:
@@ -57,6 +80,6 @@ To test V-TRAC functionality without affecting the main app:
 
 ## Future Improvements
 1. Optimize state processing to cache results
-2. Add proper error handling for Excel files
-3. Implement proper GitHub version control
+2. Add date selection for historical files
+3. Improve V-TRAC pattern highlighting
 4. Add automated tests 

@@ -1,0 +1,203 @@
+1. Due Pairs and Special Combinations Tool
+This tool will function as a modular component, ensuring it doesn’t interfere with core pattern evaluations but instead provides additional insight into overdue pairs and combinations.
+
+🔹 A. How the Due Pairs Tool Works
+Core Functionality:
+
+Tracks overdue two-digit pairs across 100 combined draws (50 Midday, 50 Evening).
+Categorizes overdue pairs into three categories:
+Late Pairs (last seen 37+ draws ago for non-repeating pairs, 71+ for repeating pairs).
+Very Late Pairs (last seen 56+ draws ago for non-repeating pairs, 107+ for repeating pairs).
+Other Due Combinations (contains overdue pairs but also manually added key combinations).
+Due combinations list is automatically generated, filtering boxed combinations that include overdue pairs.
+How it Integrates:
+
+🛠 Auxiliary role → The tool does not override the primary prediction system but acts as an additional scoring reference.
+🛠 Confidence Boosting → If the primary prediction system selects a combination that aligns with overdue pairs, the confidence score is adjusted.
+🛠 Post-Prediction Validation → The due pairs list is compared after core predictions are generated to see if any alignments exist.
+🔹 B. Code for Due Pairs Tracking
+1️⃣ Extracting Due Pairs from Past Draws
+python
+Copy
+Edit
+from collections import Counter
+
+def track_due_pairs(draw_history, max_history=50, late_threshold=37, very_late_threshold=56):
+    """
+    Identifies due pairs by analyzing their last occurrence in past draws.
+
+    Parameters:
+        draw_history (list): List of past draw results.
+        max_history (int): Number of past draws to analyze.
+        late_threshold (int): Minimum draws since a pair was last seen to be considered "late".
+        very_late_threshold (int): Minimum draws since a pair was last seen to be "very late".
+
+    Returns:
+        dict: Categorized overdue pairs.
+    """
+    pair_counts = Counter()
+    last_seen = {}
+
+    # Process past draws
+    for draw_index, draw in enumerate(reversed(draw_history[:max_history])):
+        pairs = [draw[i:i+2] for i in range(len(draw)-1)]
+
+        for pair in pairs:
+            if pair not in pair_counts:
+                last_seen[pair] = draw_index  # Store the last seen draw index
+            pair_counts[pair] += 1
+
+    # Classify due pairs into categories
+    late_pairs = {pair: last_seen[pair] for pair in last_seen if last_seen[pair] >= late_threshold}
+    very_late_pairs = {pair: last_seen[pair] for pair in last_seen if last_seen[pair] >= very_late_threshold}
+    
+    return {"Late Pairs": late_pairs, "Very Late Pairs": very_late_pairs}
+✅ Why This Matters?
+
+Automatically tracks overdue pairs without manual sorting.
+Uses past draw data to rank which pairs are "most due".
+2️⃣ Generating a Due Combinations List
+python
+Copy
+Edit
+def generate_due_combinations(due_pairs, common_combinations):
+    """
+    Generates a list of overdue boxed combinations using overdue pairs.
+
+    Parameters:
+        due_pairs (dict): Dictionary containing categorized overdue pairs.
+        common_combinations (list): List of past drawn boxed combinations.
+
+    Returns:
+        dict: Categorized due combinations.
+    """
+    due_combinations = {"Super Late": [], "Late": [], "Other Due": []}
+
+    for combo in common_combinations:
+        if any(pair in due_pairs["Very Late Pairs"] for pair in combo):
+            due_combinations["Super Late"].append(combo)
+        elif any(pair in due_pairs["Late Pairs"] for pair in combo):
+            due_combinations["Late"].append(combo)
+        else:
+            due_combinations["Other Due"].append(combo)
+    
+    return due_combinations
+✅ Why This Matters?
+
+Pairs are automatically classified into the right due category.
+Ensures that only combinations containing overdue pairs are included.
+🔹 C. Making the Due Pairs Tool Optional
+python
+Copy
+Edit
+ENABLE_DUE_PAIRS_TOOL = True  # Toggle ON/OFF as needed
+
+if ENABLE_DUE_PAIRS_TOOL:
+    due_pairs = track_due_pairs(draw_history)
+    due_combinations = generate_due_combinations(due_pairs, common_combinations)
+✅ Why This Matters?
+
+The feature can be turned ON/OFF dynamically.
+Prevents it from interfering with primary predictive tools if disabled.
+2. Logging Previous Day's Results for Learning & Statistics
+Your idea of logging past results per state to track system performance, validate historical learning, and improve AI accuracy is essential.
+
+🔹 A. How Logging Works
+Stores previous day’s Midday & Evening results per state.
+Logs each result alongside 8 VTrac state combinations for pattern comparison.
+Tracks hit/miss performance against past predictions.
+Saves all results into a structured CSV format for future machine learning analysis.
+🔹 B. Code for Logging Previous Day's Results
+python
+Copy
+Edit
+import csv
+import os
+
+def log_previous_day_results(state, midday_result, evening_result, vtrac_combinations, performance_metrics):
+    """
+    Logs previous day's results into a CSV file for tracking.
+
+    Parameters:
+        state (str): The state for which results are being logged.
+        midday_result (str): Winning Midday number.
+        evening_result (str): Winning Evening number.
+        vtrac_combinations (list): List of 8 VTrac combinations.
+        performance_metrics (dict): Placeholder for additional statistics.
+
+    Returns:
+        None: Saves the results into a CSV file.
+    """
+    log_directory = f"state_logs/{state}"  
+    os.makedirs(log_directory, exist_ok=True)
+    log_file = os.path.join(log_directory, "daily_results.csv")
+
+    header = ["Date", "Midday Result", "Evening Result", "VTrac Combinations", "Performance Metrics"]
+    data = [midday_result, evening_result, ",".join(vtrac_combinations), str(performance_metrics)]
+
+    # Write to CSV file
+    write_header = not os.path.exists(log_file)
+    with open(log_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        if write_header:
+            writer.writerow(header)
+        writer.writerow(data)
+✅ Why This Matters?
+
+Logs results per state into an organized directory.
+Ensures previous day's results are automatically available for statistical analysis.
+Provides a structured learning history for AI-based improvements.
+🔹 C. How This Log Feeds Into Analysis
+Once data is logged, the system can compare performance against predictions.
+
+python
+Copy
+Edit
+def analyze_logged_results(state):
+    """
+    Analyzes past results to evaluate system performance.
+
+    Parameters:
+        state (str): State for which analysis is being conducted.
+
+    Returns:
+        dict: Summary of performance metrics.
+    """
+    log_file = f"state_logs/{state}/daily_results.csv"
+    
+    if not os.path.exists(log_file):
+        return {"message": "No historical data found for this state."}
+
+    with open(log_file, mode='r') as file:
+        reader = csv.DictReader(file)
+        hits = 0
+        total_entries = 0
+
+        for row in reader:
+            total_entries += 1
+            if row["Midday Result"] in row["VTrac Combinations"] or row["Evening Result"] in row["VTrac Combinations"]:
+                hits += 1  # Count how many times VTrac combinations matched a past result.
+
+        hit_rate = hits / total_entries if total_entries > 0 else 0
+
+    return {"total_draws_analyzed": total_entries, "successful_hits": hits, "hit_rate": hit_rate}
+✅ Why This Matters?
+
+Tracks AI accuracy by checking how often predictions match actual results.
+Provides statistical insights into which methods are working best.
+3. Summary of Implementation
+🔹 A. Due Pairs & Special Combinations Tool
+✅ Tracks overdue pairs across 100 draws (50 Midday, 50 Evening).
+✅ Ranks overdue pairs into categories for better prioritization.
+✅ Automatically generates a due combinations list based on overdue pairs.
+✅ Acts as an optional, modular tool.
+
+🔹 B. Logging & Historical Analysis
+✅ Logs previous day's results for machine learning & evaluation.
+✅ Tracks system performance against predictions.
+✅ Provides AI with long-term learning history to improve future accuracy.
+
+🚀 Would you like an automated dashboard to display logged statistics in real-time?
+🚀 Would you like to implement weight-based learning to track which pairs & combinations contribute most to hits?
+
+Let me know how you'd like to refine this further! 🚀

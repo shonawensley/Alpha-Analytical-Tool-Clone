@@ -7,6 +7,7 @@ import os
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 
 # Add the project root to Python path
 import sys
@@ -54,6 +55,13 @@ def initialize_session_state():
         st.session_state.processed_states = {}
     if 'last_upload' not in st.session_state:
         st.session_state.last_upload = None
+
+def get_historical_files():
+    """Get list of available historical Excel files."""
+    historical_dir = Path("data/historical_files")
+    if not historical_dir.exists():
+        return []
+    return sorted([f for f in historical_dir.glob("*.xlsx") if "Pick3StatsC4" in f.name])
 
 def main():
     st.set_page_config(
@@ -111,44 +119,39 @@ def main():
     original_dir = os.path.join(project_root, "data", "original")
     cleaned_dir = os.path.join(project_root, "data", "cleaned")
     
-    # File upload in sidebar
-    with st.sidebar:
-        uploaded_file = st.file_uploader("Upload Pick3StatsC4 Excel file", type=["xlsm", "xlsx"])
-        
-        if uploaded_file:
-            # Create directories if they don't exist
-            os.makedirs(original_dir, exist_ok=True)
-            os.makedirs(cleaned_dir, exist_ok=True)
-            
-            # Check if this is a new upload
-            current_upload = uploaded_file.getvalue()
-            if st.session_state.last_upload != current_upload:
-                st.session_state.last_upload = current_upload
-                st.session_state.processed_states = {}  # Clear cached state data
-                
-                # Save uploaded file
-                excel_path = os.path.join(original_dir, uploaded_file.name)
-                with open(excel_path, "wb") as f:
-                    f.write(current_upload)
-                
-                # Process the file (cached)
-                with st.spinner("Processing Excel file..."):
-                    results = process_excel_file(excel_path, cleaned_dir)
-                    
-                    if results["success"]:
-                        st.success(f"Processed {len(results['success'])} states successfully")
-                    if results["failed"]:
-                        st.error(f"Failed to process {len(results['failed'])} states")
-        
-        # Winner inputs
-        st.markdown("### Enter Winners")
-        midday_winner = st.text_input("Midday Winner (3 digits):", placeholder="Enter 3 digits")
-        evening_winner = st.text_input("Evening Winner (3 digits):", placeholder="Enter 3 digits")
+    # File selection section
+    st.header("Data Source Selection")
+    upload_col, historical_col = st.columns(2)
     
-    # Main content area
-    if not uploaded_file:
-        st.info("Please upload an Excel file to begin")
+    with upload_col:
+        st.subheader("Upload New File")
+        uploaded_file = st.file_uploader("Choose a Pick3StatsC4 Excel file", type=["xlsx", "xlsm"])
+    
+    with historical_col:
+        st.subheader("Historical Files")
+        historical_files = get_historical_files()
+        if historical_files:
+            file_dates = [datetime.strptime(f.stem.split('_')[-1], '%Y%m%d') if '_' in f.stem else None for f in historical_files]
+            file_options = [f"{f.name} ({d.strftime('%Y-%m-%d') if d else 'No date'}" for f, d in zip(historical_files, file_dates)]
+            selected_file = st.selectbox("Select historical file", file_options, index=None)
+            if selected_file:
+                file_index = file_options.index(selected_file)
+                file_path = historical_files[file_index]
+                uploaded_file = file_path
+    
+    if uploaded_file is None:
+        st.warning("Please upload a Pick3StatsC4 Excel file or select one from historical files.")
         return
+
+    # Save uploaded file to historical_files if it's new
+    if hasattr(uploaded_file, 'name'):  # It's a new upload
+        file_name = uploaded_file.name
+        if "Pick3StatsC4" in file_name:
+            save_path = Path("data/historical_files") / file_name
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, "wb") as f:
+                f.write(uploaded_file.getvalue())
+            st.success(f"File saved to historical files: {file_name}")
     
     # State selection
     state = st.selectbox(
@@ -175,15 +178,47 @@ def main():
     # Get related combinations if winners are entered
     winning_combos = set()
     related_combos = set()
-    if midday_winner and len(midday_winner) == 3:
-        _, winning_perms, related = find_vtrac_index_and_combos(midday_winner)
-        winning_combos.update(winning_perms)
-        related_combos.update(related)
-    if evening_winner and len(evening_winner) == 3:
-        _, winning_perms, related = find_vtrac_index_and_combos(evening_winner)
-        winning_combos.update(winning_perms)
-        related_combos.update(related)
+    midday_winner = None
+    evening_winner = None
     
+    if state_data.get("Midday", {}):
+        midday_winner = state_data["Midday"].get("winning_combos", "")
+        if midday_winner:
+            _, winning_perms, related = find_vtrac_index_and_combos(midday_winner)
+            winning_combos.update(winning_perms)
+            related_combos.update(related)
+    
+    if state_data.get("Evening", {}):
+        evening_winner = state_data["Evening"].get("winning_combos", "")
+        if evening_winner:
+            _, winning_perms, related = find_vtrac_index_and_combos(evening_winner)
+            winning_combos.update(winning_perms)
+            related_combos.update(related)
+    
+    # Add a button to log all tables for this state
+    if st.button(f"Log All {state} Tables to Excel"):
+        try:
+            # Set up archive directory
+            archive_dir = setup_logging_directories()
+            
+            # Get the DataFrames
+            midday_df = build_section_table(state_data.get("Midday", {}))
+            evening_df = build_section_table(state_data.get("Evening", {}))
+            combined_df = build_section_table(state_data.get("Combined", {}))
+            
+            # Export to Excel
+            filepath = export_state_tables(
+                state,
+                midday_df,
+                evening_df,
+                combined_df,
+                archive_dir
+            )
+            
+            st.success(f"Successfully saved tables to: {filepath}")
+        except Exception as e:
+            st.error(f"Error saving tables: {str(e)}")
+
     # Create three columns for Midday/Evening/Combined
     midday_col, evening_col, combined_col = st.columns(3)
     
