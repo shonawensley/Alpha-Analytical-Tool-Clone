@@ -65,7 +65,7 @@ def get_historical_files():
     return sorted([f for f in historical_dir.glob("*.xlsx") if "Pick3StatsC4" in f.name])
 
 def export_all_tables_to_csv(state_data, state_name):
-    """Export all tables (Midday/Evening/Combined) to a single CSV file"""
+    """Export all tables (Midday/Evening/Combined) vertically to a single CSV file"""
     import pandas as pd
     import os
     from datetime import datetime
@@ -78,8 +78,7 @@ def export_all_tables_to_csv(state_data, state_name):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Initialize list to store all tables
-    all_tables = []
-    section_names = []
+    all_dfs = []
     
     # Process each section
     for section in ["Midday", "Evening", "Combined"]:
@@ -90,29 +89,31 @@ def export_all_tables_to_csv(state_data, state_name):
         combined_df = build_section_table(state_data[section])
         r2_df = build_r2_only_table(state_data[section])
         
-        # Add section name as prefix to column names (except Set, Draw, RowType)
-        combined_df.columns = [f"{section}_{col}" if col not in ["Set", "Draw", "RowType"] else col 
-                             for col in combined_df.columns]
-        r2_df.columns = [f"{section}_{col}" if col not in ["Set", "Draw"] else col 
-                        for col in r2_df.columns]
+        # Add section headers
+        section_header = pd.DataFrame([
+            [f"=== {section} Combined Table ==="] + [""] * (len(combined_df.columns) - 1)
+        ], columns=combined_df.columns)
         
-        # Store tables
-        all_tables.extend([combined_df, r2_df])
-        section_names.extend([f"{section}_Combined", f"{section}_R2"])
+        r2_header = pd.DataFrame([
+            [f"=== {section} R2-only Table ==="] + [""] * (len(r2_df.columns) - 1)
+        ], columns=r2_df.columns)
+        
+        # Add empty row for spacing
+        empty_row = pd.DataFrame([[""] * len(combined_df.columns)], columns=combined_df.columns)
+        
+        # Combine section tables with headers
+        all_dfs.extend([
+            section_header,
+            combined_df,
+            empty_row,
+            r2_header,
+            r2_df,
+            empty_row,
+            empty_row  # Extra spacing between sections
+        ])
     
-    # Create Excel-like format with tables side by side
-    max_rows = max(len(df) for df in all_tables)
-    padded_tables = []
-    
-    for df in all_tables:
-        # Pad shorter tables with NaN rows
-        if len(df) < max_rows:
-            padding = pd.DataFrame(index=range(len(df), max_rows), columns=df.columns)
-            df = pd.concat([df, padding])
-        padded_tables.append(df)
-    
-    # Combine all tables horizontally
-    final_df = pd.concat(padded_tables, axis=1)
+    # Combine all tables vertically
+    final_df = pd.concat(all_dfs, ignore_index=True)
     
     # Save to CSV
     output_file = os.path.join(output_dir, f"{state_name}_all_tables_{timestamp}.csv")
