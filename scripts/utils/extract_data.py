@@ -11,8 +11,6 @@ This module:
 import os
 import pandas as pd
 from .path_handler import get_cleaned_data_dir, get_cleaned_state_path
-
-# List of states from clean_data
 from .clean_data import STATES
 
 class LotteryDataExtractor:
