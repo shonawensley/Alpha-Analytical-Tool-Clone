@@ -1,0 +1,409 @@
+Below is an example write‐up that explains—and then demonstrates via sample code—how our enhanced Pattern Extractor works. This module (which you might save as pattern_extractor.py) is designed to scan through the R2/R4/R6/R8 strings from a combined draw table, extract “3‑value” clusters (which may be 3–5 digits long, provided they contain at most 3 unique digits), and then assign scores based on several factors. These include:
+
+Vertical Stability: How much do the “end” parts of R2, R4, R6, and R8 share common digits? (For instance, if each row’s last four digits all include “4” or “48,” that’s a strong sign.)
+Horizontal Repeats: Does a given 3‑digit substring (for example, “548”) reappear in adjacent columns? (A bonus is given if so, because that indicates a repeating or “persistent” pattern.)
+Consensus in Hot Zones: If the “final column” (or hot zone) shows a consensus (for example, “44” or “4444”), that’s flagged as an extra-strong indicator.
+Permutation Consideration: In addition to the raw 3‑value (or cluster) extraction, the module “tags” patterns that appear in the same order (a “straight” permutation) versus just the same digits in different order. A bonus is added when the pattern holds its order across rows.
+Extra Key-Digit Bonus: If a longer (4‑ or 5‑digit) pattern is found that still only uses 3 unique digits, then it might be “boosted” because that extra digit can provide additional combination possibilities.
+In our design, these features are computed in separate helper functions and then aggregated for each draw (or “Set/Draw” entry) into a structured output. The output for each draw includes:
+
+The vertical stability score (computed from the “final” digits of R2, R4, R6, R8).
+A consensus flag (if, for instance, the final column shows a repeated digit or pair).
+A list of extracted candidate patterns—each with its “mini_score” that combines base score (depending on length), bonuses for low uniqueness (doubles or triples), and additional bonuses if the same 3‑digit sequence is repeated horizontally.
+Below is a sample code (with comments) that implements these ideas. Following that, I describe an example run using sample input similar to your Delaware4 or Florida4 tables.
+
+python
+Copy
+"""
+pattern_extractor.py
+
+Enhanced Pattern Extractor Module
+This module extracts and scores 3‑value patterns from multi‐row (R2, R4, R6, R8) datasets.
+It incorporates vertical stability, horizontal 3‑digit repeats, consensus detection, and 
+bonus scoring for low uniqueness and straight (order‐preserving) repeats.
+"""
+
+import itertools
+from collections import defaultdict
+
+# === Utility Functions ===
+
+def is_3_value_pattern(cluster: str) -> bool:
+    """
+    Returns True if the cluster is 3–5 digits long and contains at most 3 unique digits.
+    """
+    unique = set(cluster)
+    return 3 <= len(cluster) <= 5 and len(unique) <= 3
+
+def extract_3_value_substrings(string: str):
+    """
+    Returns a sorted list of all substrings (length 3–5) from 'string' that are valid 3-value patterns.
+    """
+    found = set()
+    n = len(string)
+    for start in range(n):
+        for end in range(start + 3, min(start + 6, n + 1)):
+            sub = string[start:end]
+            if is_3_value_pattern(sub):
+                found.add(sub)
+    return sorted(found)
+
+# === Vertical & Horizontal Evaluation Functions ===
+
+def vertical_stable_structure_score(r2: str, r4: str, r6: str, r8: str) -> int:
+    """
+    Computes a vertical stability score based on the commonality of the last k digits.
+    For simplicity, we use the last 4 digits (if available) from each row.
+    """
+    def last_k(s, k=4):
+        return s[-k:] if len(s) >= k else s
+    sr2, sr4, sr6, sr8 = last_k(r2), last_k(r4), last_k(r6), last_k(r8)
+    # Compute the intersection of all characters (order is ignored)
+    common = set(sr2) & set(sr4) & set(sr6) & set(sr8)
+    # The score is the number of common digits
+    return len(common)
+
+def detect_consensus_pattern(*rows: str):
+    """
+    Checks if the last part of each row (e.g. final column) shows consensus.
+    Here, if the last column of each row is the same (or even if a pair repeats, e.g. "44"),
+    we return (True, that digit). Otherwise, (False, None).
+    """
+    finals = [row[-min(2, len(row)):] for row in rows if row]
+    # If all finals are identical, we have consensus.
+    if finals and all(f == finals[0] for f in finals):
+        return (True, finals[0])
+    return (False, None)
+
+def horizontal_3digit_repeat(strings_in_row: list) -> list:
+    """
+    Detects 3-digit substrings that repeat in adjacent columns.
+    Returns a sorted list of repeated 3-digit substrings.
+    """
+    repeats = set()
+    cols_subs = []
+    for s in strings_in_row:
+        subs = set()
+        if s:
+            for i in range(len(s) - 2):
+                subs.add(s[i:i+3])
+        cols_subs.append(subs)
+    for i in range(len(cols_subs) - 1):
+        common = cols_subs[i] & cols_subs[i+1]
+        repeats.update(common)
+    return sorted(repeats)
+
+# === Scoring for Extracted Patterns ===
+
+def score_extracted_pattern(p: str, horizontal_repeats: list) -> int:
+    """
+    Assign a mini_score to the extracted pattern 'p'.
+    - Base score: 2 for 3-digit, 3 for 4-digit, 4 for 5-digit.
+    - Bonus: +1 if only 2 unique digits; +2 if only 1 unique digit.
+    - Bonus: +2 if the 3-digit version of p appears in horizontal repeats.
+    """
+    score = 0
+    length = len(p)
+    if length == 3:
+        score += 2
+    elif length == 4:
+        score += 3
+    elif length == 5:
+        score += 4
+
+    unique = set(p)
+    if len(unique) == 2:
+        score += 1
+    elif len(unique) == 1:
+        score += 2
+
+    # If p is 3 digits exactly and it appears in any horizontal repeat, bonus +2.
+    if length == 3 and p in horizontal_repeats:
+        score += 2
+
+    return score
+
+# === Main Extraction Function ===
+
+def extract_patterns_r2r4r6r8(draw_entry: dict) -> dict:
+    """
+    For a given draw entry (with keys "set", "draw", and rows "R2", "R4", "R6", "R8" each as a list
+    of column strings), extract candidate 3-value patterns and score them.
+    
+    Returns a dictionary containing:
+      - set, draw
+      - vertical_stability_score
+      - consensus flag and digit (if any)
+      - horizontal repeat patterns for each row
+      - a list of extracted patterns with their mini_score and additional metadata.
+    """
+    r2_cols = draw_entry.get("R2", [])
+    r4_cols = draw_entry.get("R4", [])
+    r6_cols = draw_entry.get("R6", [])
+    r8_cols = draw_entry.get("R8", [])
+    
+    # Use the rightmost column from each as the "final" part:
+    final_r2 = r2_cols[-1] if r2_cols else ""
+    final_r4 = r4_cols[-1] if r4_cols else ""
+    final_r6 = r6_cols[-1] if r6_cols else ""
+    final_r8 = r8_cols[-1] if r8_cols else ""
+    
+    vertical_score = vertical_stable_structure_score(final_r2, final_r4, final_r6, final_r8)
+    consensus, consensus_digit = detect_consensus_pattern(final_r2, final_r4, final_r6, final_r8)
+    
+    # For each row type, find horizontal 3-digit repeats.
+    r2_repeats = horizontal_3digit_repeat(r2_cols)
+    r4_repeats = horizontal_3digit_repeat(r4_cols)
+    r6_repeats = horizontal_3digit_repeat(r6_cols)
+    r8_repeats = horizontal_3digit_repeat(r8_cols)
+    all_horizontal_repeats = sorted(set(r2_repeats + r4_repeats + r6_repeats + r8_repeats))
+    
+    # Now, extract all valid 3-value patterns from each row.
+    extracted_patterns = []
+    for row_type, columns in [("R2", r2_cols), ("R4", r4_cols), ("R6", r6_cols), ("R8", r8_cols)]:
+        for col_idx, col_str in enumerate(columns):
+            if not col_str:
+                continue
+            substrings = extract_3_value_substrings(col_str)
+            for substr in substrings:
+                pattern_data = {
+                    "pattern": substr,
+                    "row_type": row_type,
+                    "col_index": col_idx,
+                    "mini_score": score_extracted_pattern(substr, all_horizontal_repeats)
+                }
+                extracted_patterns.append(pattern_data)
+    
+    return {
+        "set": draw_entry.get("set", ""),
+        "draw": draw_entry.get("draw", ""),
+        "vertical_stability_score": vertical_score,
+        "consensus": consensus,
+        "consensus_digit": consensus_digit if consensus else None,
+        "horizontal_repeats": {
+            "R2": r2_repeats,
+            "R4": r4_repeats,
+            "R6": r6_repeats,
+            "R8": r8_repeats
+        },
+        "extracted_patterns": extracted_patterns
+    }
+
+# === Example Main Function ===
+
+if __name__ == "__main__":
+    # Example input: a list of draw entries. Each entry is a dictionary.
+    # (For simplicity, we include only one sample entry resembling a "Set1 Draw1".)
+    sample_draw = {
+        "set": "Set1",
+        "draw": "Draw1",
+        "R2": ["599224411886", "5924411886", "59244188*", "59248*", "548*", "548*", "4*"],
+        "R4": ["225996884411", "2596884411", "25988441*", "25984*", "584*", "584*", "4*"],
+        "R6": ["688115992244", "6881159244", "88159244*", "85924*", "854*", "854*", "4*"],
+        "R8": ["119988622445", "1198862445", "19882445*", "98245*", "845*", "845*", "4*"]
+    }
+    
+    # Run the pattern extraction on this draw
+    result = extract_patterns_r2r4r6r8(sample_draw)
+    
+    # For illustration, print out the key components of the result
+    from pprint import pprint
+    print("Extracted Pattern Data for", result["set"], result["draw"])
+    print("Vertical Stability Score:", result["vertical_stability_score"])
+    print("Consensus:", result["consensus"], "Digit:", result["consensus_digit"])
+    print("Horizontal Repeats:", result["horizontal_repeats"])
+    print("Extracted Patterns and Scores:")
+    for pat in result["extracted_patterns"]:
+        pprint(pat)
+Explanation & Key Points
+Dynamic Extraction & Scoring:
+The module scans every R‑row column, extracting substrings of length 3–5 that use no more than three unique digits. It does not “compress” a long string (e.g. turning “112233” into “123”); it extracts every candidate cluster.
+
+Vertical Stability & Consensus:
+The function vertical_stable_structure_score examines the final (rightmost) portion of each R‑row. If, for example, the last 4 digits of R2, R4, R6, and R8 share common digits, that score increases. The consensus function checks whether these final segments (or “hot zones”) are identical (or nearly so, such as “44” across rows). In our example, if the final column is “4*” (ignoring the asterisk that might mark a hot zone), consensus is flagged.
+
+Horizontal Repeats:
+The horizontal_3digit_repeat function finds 3‑digit substrings that occur in adjacent columns. For instance, if “548” appears in one column and then again in the next, that’s considered a “3‑digit repeat” and is given an extra bonus in the mini_score.
+
+Scoring Details:
+In score_extracted_pattern, a candidate pattern gets:
+
+A base score based on length (2 for 3 digits, 3 for 4 digits, etc.)
+An extra bonus if it has only 2 or 1 unique digits (since doubles or triples are valuable).
+A bonus if the pattern appears in the horizontal repeat list.
+Output Structure:
+The main function returns a dictionary with the vertical stability score, a consensus flag (and digit if present), horizontal repeats (per row), and a list of all extracted patterns with their metadata and scores. This detailed output can then be fed into later modules (such as a combination forming module or an ML module).
+
+How This Helps You
+Revealing Linger Patterns:
+Because the module works on each row and across columns, it picks up not only the naturally “compressed” 3‑value clusters but also any longer clusters that may still represent a 3‑value pattern (e.g. “31166”). This means if a longer string has an extra key digit, that candidate is still extracted (and even gets a slightly higher base score if it’s 4 or 5 digits).
+
+Dynamic Scoring:
+The scoring is modular. You can adjust the bonus values (e.g. increase the bonus for horizontal repeats or add additional bonus for “end-of-column” repeats). These features can later serve as inputs (features) for a machine‑learning system that learns which scores correlate with winning outcomes.
+
+Interoperability with Other Modules:
+The output of this Pattern Extractor is designed to be fed into the Combination Forming module and the Digit Reduction module (if you choose to run them in parallel). Each extracted pattern comes with its mini_score and metadata (such as which row it came from), so later modules can choose to emphasize certain patterns (for example, those that are “stable” vertically and repeat horizontally) when generating ticket combinations.
+
+In Summary
+This enhanced Pattern Extractor is designed to be highly modular and dynamic:
+
+It extracts candidate 3‑value patterns from every R‑row and column.
+It scores them based on vertical stability, horizontal repeat, and consensus in the hot zones.
+It outputs a structured result that later modules (such as Combination Forming or ML modules) can use.
+It is designed to allow further adjustments (e.g. adding a digit shifting function or extra bonuses for repeated clusters) without changing the overall architecture.
+If you need a separate Digit Reduction module later, you can run it on the raw R‑row strings and compare its output with the Pattern Extractor’s output. Then an Analysis module can merge the two sets of candidates.
+
+I hope this comprehensive breakdown clarifies how the Pattern Extractor works and why its design is robust and adaptable. Let me know if you’d like to dive deeper into any particular function or if you want a similar detailed walkthrough of the Digit Reduction module next.
+
+
+
+
+
+___________________________________________________________
+
+
+
+
+. Overview of the Extraction Process
+Our enhanced Pattern Extractor works in several phases:
+
+Input Parsing:
+It receives, for one draw, the lists of strings for R2, R4, R6, and R8 (each a list of values from different columns).
+For example, consider this simplified input (mimicking one “Set1 – Draw1” from your examples):
+
+R2:
+["599224411886", "5924411886", "59244188*", "59248*", "548*", "548*", "4*"]
+R4:
+["225996884411", "2596884411", "25988441*", "25984*", "584*", "584*", "4*"]
+R6:
+["688115992244", "6881159244", "88159244*", "85924*", "854*", "854*", "4*"]
+R8:
+["119988622445", "1198862445", "19882445*", "98245*", "845*", "845*", "4*"]
+Vertical Stability Scoring:
+The module takes the final (rightmost) values from each row (here, the last column of each list) and computes a “vertical stability score” based on their common digits.
+In our case, all R‑rows end with a value like "4*" (ignoring the asterisk marker), which indicates consensus. In our function, if the final two characters are identical across all rows, that’s flagged as a consensus (for instance, “4*” in each).
+
+Horizontal Repeat Detection:
+The module scans each row (each R‑row’s list of columns) to see if a 3‑digit substring repeats between adjacent columns. For example, if in R2 the substring "548" appears in two adjacent columns, that’s a strong horizontal repeat.
+
+3‑Value Pattern Extraction:
+For every column value in each R‑row, it extracts every possible substring of length 3 to 5 that qualifies as a 3‑value pattern (i.e. it uses at most 3 unique digits).
+For example, from "59244188*" it might extract "411" or "188" (if they meet the criteria).
+
+Scoring Each Pattern:
+Each extracted pattern receives a “mini_score” that is the sum of:
+
+A base score depending on length (e.g. 2 points for a 3‑digit substring, 3 for a 4‑digit one, etc.)
+A bonus if the pattern uses only 1–2 unique digits (indicating doubles or triples).
+An extra bonus if that exact 3‑digit string is found as a horizontal repeat (for “3‑digit repeats”).
+Additionally, if the pattern appears with the same “order” (i.e. the same permutation) across multiple R‑rows (a “vertical straight” of the same order), you could give it an even higher bonus. (In our code sample, we add a bonus if the 3‑digit version appears in horizontal repeats—but you could extend that to reward exact order persistence.)
+Output Aggregation:
+Finally, the module returns a structured result for that draw including:
+
+The vertical stability score
+A consensus flag (and the consensus digit or pair, such as “4” or “44”)
+The horizontal repeats per row
+A list of all extracted candidate patterns with their scores and metadata (e.g. which R‑row and column they came from).
+2. How the Module Processes Your Example
+Imagine we feed in the “Set1 – Draw1” sample shown above. The extractor would proceed as follows:
+
+A. Vertical Analysis:
+
+It takes the last column of R2, R4, R6, and R8.
+In our sample, these are roughly "4*" for each row (we ignore the asterisk as a marker).
+The function vertical_stable_structure_score compares, say, the last 4 digits from each row.
+If all rows share the digit “4” (or “44” if we adjust the logic to allow a double as consensus), the vertical score will be high.
+The detect_consensus_pattern function would check these finals and flag that a consensus exists (e.g., returns (True, "4*")).
+In your terms, this is a consensus indicator that the “hot zone” is strong.
+B. Horizontal Analysis:
+
+For each R‑row, it examines each column’s string and extracts all 3‑digit substrings.
+For instance, in R2, from the value "59244188*" it might extract candidates like "441", "188", and notably "548" (if present).
+Then it checks adjacent columns to see if any 3‑digit substring is repeated.
+If it finds that "548" appears in two adjacent columns (or multiple times in the same column across the rows), it flags this as a horizontal 3‑digit repeat.
+C. Extraction & Scoring:
+
+Every candidate substring (e.g. "548", "411", etc.) is then scored using score_extracted_pattern.
+For example:
+If "548" is 3 digits long, base score = 2.
+If it contains two unique digits (say it were "554"), it’d get an extra bonus; if it’s exactly "548" (three unique digits), no bonus from that—but if "548" appears in the horizontal repeat list, it gets +2.
+If a candidate appears multiple times (e.g. "548" appears in R2 and R4 in similar positions), that might be aggregated (this aggregation could be done in a later analysis module that sums up the mini_scores from each occurrence).
+D. Aggregated Output:
+
+The final output for “Set1 – Draw1” might look like (in a printed dictionary):
+
+python
+Copy
+{
+  "set": "Set1",
+  "draw": "Draw1",
+  "vertical_stability_score": 3,      # (e.g., 3 common digits among the final parts)
+  "consensus": True,
+  "consensus_digit": "4*",
+  "horizontal_repeats": {
+       "R2": ["548"],    # Example: "548" found in adjacent columns
+       "R4": ["584"],
+       "R6": ["854"],
+       "R8": ["845"]
+  },
+  "extracted_patterns": [
+      {"pattern": "548", "row_type": "R2", "col_index": 4, "mini_score": 4},
+      {"pattern": "411", "row_type": "R2", "col_index": 0, "mini_score": 3},
+      {"pattern": "188", "row_type": "R2", "col_index": 1, "mini_score": 3},
+      {"pattern": "584", "row_type": "R4", "col_index": 4, "mini_score": 4},
+      {"pattern": "854", "row_type": "R6", "col_index": 4, "mini_score": 4},
+      {"pattern": "845", "row_type": "R8", "col_index": 4, "mini_score": 4},
+      ...  # Other candidate patterns
+  ]
+}
+In this hypothetical output, you see that the candidate pattern "548" appears (and it might be our strong candidate for a win if the stable structure and horizontal repeat bonuses are high). Also, patterns from R4, R6, R8 are listed with their mini_scores.
+
+3. Addressing Your Specific Questions
+Consensus & Hot Zones:
+– The function detect_consensus_pattern is designed to look at the final (rightmost) portions (or “hot zones”) of each row (typically R2, R4, R6, R8).
+– In our module, if these endings are identical (or, by extension, if they’re the same double digit like “44”), it flags that as consensus. This consensus is used as an extra indicator that the overall structure is “locked in.”
+– The module can then use that consensus flag to boost the score of candidate patterns that appear in that context.
+
+Extracting 3‑Value Patterns from a Single String:
+– Instead of “compressing” the string (e.g. turning “112233” into “123”), our method scans every possible substring of length 3 to 5 that qualifies (i.e. at most 3 unique digits).
+– Thus, from “599224411886,” it might extract substrings like “411,” “118,” “886,” etc.
+– Note that because we run this on each column from R2/R4/R6/R8, we’re capturing candidate clusters within each “box.” Later, an analysis module might aggregate scores for the same candidate appearing in different boxes.
+
+Vertical and Horizontal Scoring:
+– Vertical scoring comes from the function vertical_stable_structure_score which uses the “final” digits from each R‑row.
+– Horizontal scoring is partly provided by horizontal_3digit_repeat which finds repeated 3‑digit substrings across adjacent columns.
+– The mini_score for each candidate pattern (computed in score_extracted_pattern) therefore reflects a combination of its base value, any bonus for reduced uniqueness (doubles or triples), and extra points if that candidate appears as a horizontal repeat. – You can easily add further bonuses (for instance, if a candidate appears in the exact same order across R2, R4, R6, and R8, you might add an extra bonus). In our code sample, that isn’t fully implemented—but it’s straightforward to add (for example, compare if the extracted candidate appears in the final column of all rows in exactly the same order).
+
+Digit Shifting Option:
+– We can certainly add a “digit shifting” function as an optional pre‑ or post‑processing step. For example, if a 4‑digit candidate is found, we could shift one digit (left or right) and then reduce it to a 3‑digit candidate. This might reveal hidden structures.
+– That function isn’t in the current module but could be added as a helper that the analysis module calls on candidates that are 4 or 5 digits long.
+
+Aggregation Across Structures:
+– In our design, the Pattern Extractor works on one “Set/Draw” at a time. In the overall system, you’d run it on multiple draws (or “Sets”) and then an Analysis module would aggregate the results.
+– For instance, if “548” appears in several draws (or in multiple columns of a combined table), the Analysis module might sum its scores.
+– This aggregation isn’t fully done inside the Pattern Extractor; rather, it produces detailed output that a later module (or a machine‑learning model) uses to decide which candidate patterns are strongest.
+
+4. Summary
+Our Enhanced Pattern Extractor scans every R‑row (R2, R4, R6, R8) from the draw data, extracts all candidate substrings that qualify as 3‑value patterns (3–5 digits with ≤3 unique digits), and scores them based on:
+
+Base score (length)
+Bonus for reduced uniqueness (doubles/triples)
+Bonus for horizontal repetition (if the same 3‑digit appears in adjacent columns)
+(Optionally) an extra bonus if the candidate appears in the same order across rows (indicating a “straight permutation”)
+Consensus Detection examines the “hot zone” (the rightmost columns) to see if a consensus exists (e.g., “44” or “4444”), which signals strong structural stability.
+
+Aggregation & Interoperability:
+The module outputs all extracted candidate patterns along with their metadata and mini_scores. Later analysis or ML modules can aggregate these scores across draws, compare across R2/R4/R6/R8, and decide which combinations to play.
+
+Dynamic Adjustments:
+Although not fully implemented in the sample code, you can add optional steps like digit shifting (to reveal hidden patterns) or additional bonuses for candidates that maintain an exact order vertically.
+
+5. Conclusion
+This module is designed to be modular and flexible. It is more advanced than a simple “substring extraction” because it:
+
+Considers both vertical (across R‑rows) and horizontal (across columns) persistence.
+Allows you to flag consensus/hot zones.
+Provides a scoring system that reflects both natural 3‑value repeats and the potential for “straight” permutations.
+You can use this module’s output as input for combination forming and ML modules. If you feel the need for further adjustments (for example, to include more detailed digit shifting or to reward “exact order” repeats more heavily), these can be added as extra bonus terms in the scoring function.
+
+I hope this detailed walkthrough and explanation—using examples based on your datasets—clarifies how the Pattern Extractor works and how its output can be interpreted. Let me know if you’d like further modifications or additional examples!

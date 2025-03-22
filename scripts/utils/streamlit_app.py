@@ -9,17 +9,17 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import tempfile
-
-# Add the project root to Python path
+import json
 import sys
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
-sys.path.append(project_root)
 
-# Import from local modules
-from clean_data import clean_all_states, STATES
-from extract_data import LotteryDataExtractor
-from table_generator import build_section_table, build_r2_only_table
+# Add parent directory to path so we can import from utils
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(script_dir)
+
+from utils.extract_data import LotteryDataExtractor
+from utils.table_generator import build_section_table, build_r2_only_table
+from utils.path_handler import get_cleaned_data_dir, get_cleaned_state_path
+from utils.clean_data import STATES
 from vtrac_utils import highlight_winners_in_table, find_vtrac_index_and_combos
 from excel_export import export_state_tables, setup_logging_directories
 
@@ -118,6 +118,146 @@ def export_all_tables_to_csv(state_data, state_name):
     # Save to CSV
     output_file = os.path.join(output_dir, f"{state_name}_all_tables_{timestamp}.csv")
     final_df.to_csv(output_file, index=False)
+    
+    return output_file
+
+def export_to_json(state_data, state_name):
+    """Export state data to AI-friendly JSON format with enhanced pattern analysis rules"""
+    import json
+    import os
+    from datetime import datetime
+    
+    # Create AI exports directory
+    output_dir = "data/ai_exports"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Structure the data for AI understanding
+    ai_friendly_data = {
+        "state_name": state_name,
+        "sections": {
+            section_name: {
+                "sets": {
+                    set_name: {
+                        "draws": {
+                            draw_name: {
+                                "draw_data": data.get("draw_data", []),
+                                "pattern_variations": {
+                                    "R2": data.get("R2", []),  # 2000x pool size variation
+                                    "R4": data.get("R4", []),  # 4000x pool size variation
+                                    "R6": data.get("R6", []),  # 6000x pool size variation
+                                    "R8": data.get("R8", [])   # 8000x pool size variation
+                                },
+                                "metadata": {
+                                    "is_hot_zone": set_name == "Set1" and draw_name in ["Draw1", "Draw2", "Draw3", "Draw4", "Draw5"],
+                                    "hot_zone_count": {
+                                        "Draw1": 5, "Draw2": 5, "Draw3": 5, 
+                                        "Draw4": 4, "Draw5": 2
+                                    }.get(draw_name, 0) if set_name == "Set1" else 0
+                                }
+                            }
+                            for draw_name, data in draws.items()
+                        }
+                    }
+                    for set_name, draws in section_data.items()
+                }
+            }
+            for section_name, section_data in state_data.items()
+        },
+        "analysis_guide": {
+            "table_structure": {
+                "combined_table": {
+                    "description": "Each section (Midday/Evening/Combined) has identical combined table structure",
+                    "layout": [
+                        "Set3 Draw1 and Set2 Draw1 represent previous 2 days' patterns",
+                        "Set1 Draw1 represents current day patterns",
+                        "Set1 Draw1-7 show different progressions of current day patterns",
+                        "Each Set1 structure reduces columns progressively (7→1 columns)"
+                    ],
+                    "progression": {
+                        "Set1 Draw1": "7 columns (last 7 draws)",
+                        "Set1 Draw2": "6 columns (last 6 draws)",
+                        "Set1 Draw3": "5 columns (last 5 draws)",
+                        "Set1 Draw4": "4 columns (last 3 draws)",
+                        "Set1 Draw5": "3 columns (last 3 draws)",
+                        "Set1 Draw6": "2 columns (last 2 draws)",
+                        "Set1 Draw7": "1 column (last draw)"
+                    }
+                },
+                "r2_table": {
+                    "description": "Alternative pattern category from longer strings in outer columns",
+                    "analysis": [
+                        "Evaluate longer strings for persistent patterns",
+                        "Look for V-TRAC relationships",
+                        "Consider digit reduction using past draws and mirrors",
+                        "Diversify pattern selections between R2 and R2/R4/R6/R8 methods"
+                    ]
+                }
+            },
+            "pattern_types": {
+                "three_digit": {
+                    "unique": {
+                        "description": "Three unique digits (e.g., 567, 123, 471)",
+                        "variations": [
+                            "Straight order (613, 613, 613)",
+                            "Box order (613, 361, 136)",
+                            "Extended digits (316 → 331116)"
+                        ]
+                    },
+                    "doubles": {
+                        "description": "Two unique digits forming doubles (e.g., 244, 566, 133)"
+                    }
+                },
+                "vtrac_patterns": {
+                    "description": "V-TRAC related stable patterns in strings",
+                    "examples": ["590 = 045 = 54455 (same V-TRAC)"],
+                    "importance": "Very strong indicator for upcoming winning pattern",
+                    "straight": "Patterns in same order (781 and 286 are same order V-TRAC)"
+                }
+            },
+            "analysis_methods": {
+                "vertical_analysis": {
+                    "description": "Evaluate patterns vertically within R2/R4/R6/R8 boxes",
+                    "focus": [
+                        "Stable patterns (straight and box)",
+                        "V-TRAC relationships",
+                        "Pattern persistence"
+                    ]
+                },
+                "horizontal_analysis": {
+                    "description": "Track pattern progression across columns",
+                    "focus": [
+                        "Pattern survival as digits eliminate",
+                        "End-string indicators (columns 3/2/1)",
+                        "Three-digit pattern survival"
+                    ]
+                },
+                "cross_section_analysis": {
+                    "description": "Evaluate patterns across Midday/Evening/Combined",
+                    "focus": [
+                        "V-TRAC relationships",
+                        "Pattern connections",
+                        "Hot zone patterns"
+                    ]
+                }
+            },
+            "pattern_strength_indicators": [
+                "Pattern stability in straight/box format",
+                "V-TRAC relationships across sections",
+                "Survival in end-string positions",
+                "Repetition across multiple draws",
+                "Presence in hot zones",
+                "Cross-section relationships"
+            ]
+        }
+    }
+    
+    # Save to JSON file
+    output_file = os.path.join(output_dir, f"{state_name}_ai_format_{timestamp}.json")
+    with open(output_file, "w") as f:
+        json.dump(ai_friendly_data, f, indent=2)
     
     return output_file
 
@@ -402,6 +542,14 @@ def main():
             st.success(f"All tables exported to: {output_file}")
         except Exception as e:
             st.error(f"Error exporting tables: {str(e)}")
+
+    # Add export for AI analysis button
+    if st.button("Export for AI Analysis (JSON)"):
+        try:
+            output_file = export_to_json(state_data, state)
+            st.success(f"AI-friendly JSON exported to: {output_file}")
+        except Exception as e:
+            st.error(f"Error exporting JSON: {str(e)}")
 
 if __name__ == "__main__":
     main() 

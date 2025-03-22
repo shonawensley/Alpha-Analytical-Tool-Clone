@@ -15,12 +15,13 @@ import pandas as pd
 # HOT ZONE SETTINGS (for Set1)
 ############################
 hotzone_counts = {
-    1: 5,  # For Draw1, star the last 5 items
-    2: 5,  # For Draw2, star the last 5 items
-    3: 5,  # For Draw3, star the last 5 items
-    4: 4,  # For Draw4, star the last 4 items
+    1: 3,  # For Draw1, star the last 3 items
+    2: 3,  # For Draw2, star the last 3 items
+    3: 2,  # For Draw3, star the last 2 items
+    4: 2,  # For Draw4, star the last 2 items
     5: 2,  # For Draw5, star the last 2 items
-    # Draw6 and Draw7 not included in hot zones
+    6: 1,  # For Draw6, star the last 1 item
+    # Draw7 not included in hot zones
 }
 
 ############################
@@ -29,23 +30,26 @@ hotzone_counts = {
 def mark_hot_zones(set_label, draw_label, row_type, vals):
     """
     For Set1 rows of type R2, R4, R6, or R8, mark the last hotzone_counts[draw_num] items 
-    by appending a '*' to them.
+    by appending a '*' to them. For Set2 Draw1, mark the last 2 items.
     
     Draw number is parsed from draw_label (e.g., "Draw1" => 1).
     """
-    if set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]:
+    if (set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]) or (set_label == "Set2" and draw_label == "Draw1" and row_type in ["R2", "R4", "R6", "R8"]):
         try:
             draw_num = int(draw_label.replace("Draw", ""))
-        except:
-            return vals  # parsing error: do nothing
-        if draw_num in hotzone_counts:
-            count_needed = hotzone_counts[draw_num]
+            if set_label == "Set2":
+                count_needed = 2  # For Set2 Draw1, always mark last 2 items
+            else:
+                count_needed = hotzone_counts.get(draw_num, 0)  # For Set1, use the counts from dict
+            
             n = len(vals)
             for i in range(count_needed):
                 idx = n - 1 - i  # start from the end
                 if idx < 0:
                     break
                 vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+        except:
+            return vals  # parsing error: do nothing
     return vals
 
 ############################

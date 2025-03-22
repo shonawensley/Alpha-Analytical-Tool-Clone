@@ -10,10 +10,10 @@ This module:
 
 import os
 import pandas as pd
-from scripts.utils.path_handler import get_cleaned_data_dir, get_cleaned_state_path
+from .path_handler import get_cleaned_data_dir, get_cleaned_state_path
 
 # List of states from clean_data
-from scripts.utils.clean_data import STATES
+from .clean_data import STATES
 
 class LotteryDataExtractor:
     def __init__(self, excel_path):

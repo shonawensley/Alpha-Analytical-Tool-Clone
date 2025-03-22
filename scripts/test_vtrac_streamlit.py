@@ -9,14 +9,48 @@ from pathlib import Path
 import sys
 import os
 
-# Add scripts to path
+# Add scripts directory to path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
 
+# Import utility modules
 from utils.vtrac_utils import find_vtrac_index_and_combos
-from vtrac.winner_highlighter import highlight_winners
 from utils.table_generator import build_section_table, build_r2_only_table
 from utils.extract_data import process_state
+
+def highlight_patterns_in_string(string, patterns, color='red'):
+    """Highlight patterns in a string with colored brackets"""
+    result = string
+    # Sort patterns by length (longest first) to avoid overlapping matches
+    sorted_patterns = sorted(patterns, key=len, reverse=True)
+    
+    for pattern in sorted_patterns:
+        start = 0
+        while True:
+            pos = string.find(pattern, start)
+            if pos == -1:
+                break
+            # Replace the pattern with colored version
+            result = result[:pos] + f"[{pattern}]" + result[pos + len(pattern):]
+            start = pos + len(pattern)
+    
+    return result
+
+def highlight_patterns_in_table(df, winning_patterns, related_patterns):
+    """Highlight patterns in all strings in the table"""
+    highlighted_df = df.copy()
+    
+    # Process each column that contains string data
+    for col in df.columns:
+        if df[col].dtype == 'object':  # Only process string columns
+            highlighted_df[col] = df[col].apply(
+                lambda x: highlight_patterns_in_string(str(x), winning_patterns, 'red') if pd.notna(x) else x
+            )
+            highlighted_df[col] = highlighted_df[col].apply(
+                lambda x: highlight_patterns_in_string(str(x), related_patterns, 'blue') if pd.notna(x) else x
+            )
+    
+    return highlighted_df
 
 def main():
     st.title("V-TRAC Pattern Testing")
@@ -53,23 +87,23 @@ def main():
                 
                 # Show V-TRAC information
                 st.subheader("V-TRAC Analysis")
-                index, winning_perms, related_combos = find_vtrac_index_and_combos(test_number)
+                index, winning_patterns, related_patterns = find_vtrac_index_and_combos(test_number)
                 
                 if index is not None:
                     st.write(f"V-TRAC Index: {index}")
-                    st.write("Winning Permutations:", ", ".join(sorted(winning_perms)))
-                    st.write("Related Combinations:", ", ".join(sorted(related_combos)))
+                    st.write("Winning Patterns:", ", ".join(sorted(winning_patterns)))
+                    st.write("Related Patterns:", ", ".join(sorted(related_patterns)))
+                    
+                    # Highlight patterns in tables
+                    st.subheader("Combined Table (Highlighted)")
+                    highlighted_combined = highlight_patterns_in_table(combined_df, winning_patterns, related_patterns)
+                    st.dataframe(highlighted_combined)
+                    
+                    st.subheader("R2-Only Table (Highlighted)")
+                    highlighted_r2 = highlight_patterns_in_table(r2_df, winning_patterns, related_patterns)
+                    st.dataframe(highlighted_r2)
                 else:
                     st.warning("Number not found in V-TRAC reference")
-                
-                # Show highlighted tables
-                st.subheader("Combined Table (Highlighted)")
-                highlighted_combined = highlight_winners(combined_df, test_number)
-                st.dataframe(highlighted_combined)
-                
-                st.subheader("R2-Only Table (Highlighted)")
-                highlighted_r2 = highlight_winners(r2_df, test_number)
-                st.dataframe(highlighted_r2)
             else:
                 st.error("No data available for selected state/section")
                 

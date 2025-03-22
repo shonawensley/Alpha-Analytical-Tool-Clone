@@ -1,0 +1,455 @@
+PROGRAM ROUGH VISION DESIGN
+A BIG PART OF THIS DESIGN IS A MIX OF APPLYING TO THE FULL 17 STATE SETUP AND A COMBINATION OF STARTING AT A SINGLE STATE THEN EXPANDING
+
+SEE I OIRIGINALLY BUILT A COMPREHENSIVE SCRIPT WITH ALL ANALYSIS BUT REALIZED THIS IS NOT THE WAY TO DO THIS AND I SHOULD BREAK INTO MODULAR PARTS I WAS ALSO GIVEN ADVICE THAT EACH MODULAR PARTS SHOULD DO ONE THING AND SERVE ONE FUNCTION HELPS WITH PROCESSING, REMEMBER I HAVE NO KNOWLEDGE OF CODING SO IM DOING MY BEST TO BUILD THIS TOGETHER NOW PIECE BY PIECE WITH LIMITED KNOWLEDGE I HAVE.
+OVERALL THE SYSTEM COMES DOWN TO 2 PRIMARY OVERALL ANALYSIS TOOLS—ANALYZING 3 VALUE AND 3 DIGTS CLUSTERS IN THE R2/R4/R6/R8 GROUPINGS AND THE DIGIT REDUCTION WHICH IS PERFORMED ON THE R2 STRINGS/WITHIN R2 TABLES. EACH STATE SHEET EXTRACTS TABLES FOR MIDDAY/EVENING/COMBINED WHICH CONTAIN THESE R2/R4/R6/R8 STRING STRUCUTURES AND R2 STRINGS TABLES. 
+I AM GOING TO TRY AND BREAK THINGS DOWN TO THE MAIN PARTS OF THE SCRIPT I CAN THINK OF THAT WE WILL TRY AND BUILD INTO A COMPREHENSIVE SCRIPT ONE MODULE AT A TIME, AND PERHAPS THESE CAN FORM THE MODULARS WE WILL BUILD OR SOME CAN BE COMBINED OR ADDED. ALSO THERE IS LIKELY PARTS OF THESE SECTIONS I EXPLAIN THAT INVOLVE MULTIPLE ASPECTS (SUCH AS MACHINE LEARNING) SO PLEASE PAY ATTENTION TO THAT HERE IS HOW IM GOING TO ROUGHLY BREAKDOWN THE PARTS TO TRY AND EXPLAIN MY OVERALL VISION OF THE COMPREHENSIVE SCRIPT.
+-	LOADING 
+-	PATTERN EXTRACTION
+-	DIGIT REDUCTION
+-	ANALYZING ALL PATTERNS + VTRAC ANALYSIS
+-	CROSS ANALYZING + VTRAC ANALYSIS
+-	SCORING/ SCORING DISPLAY
+-	COMBINATION FORMING /PREDICTIONS
+-	MACHINE LEARNING / RANDOM FOREST?
+-	STATISTICS/ PERFORMANCE METRICS
+-	 LOGGING /REPORTING
+I HAVE ALREADY STARTED CODING PARTS OF THE PROJECT WHICH I WILL REVIEW IN LOADING.
+Important concepts
+VTRAC PATTERNS/ VTRAC COMBINATION FORMING
+The term "VTracs" is comprised of "V" for variable and "Tracs" for tracking.  So when you talk about VTracs you're talking about tracking variables.
+
+VTracs uses a system of number substitution to condense regular Pick 3 drawing results into half as many possible combinations.  The number substitution is as follows:
+
+VTrac	Draw Numbers
+1	0	5
+2	1	6
+3	2	7
+4	3	8
+5	4	9
+
+To differentiate a VTrac 3-digit number from a regular Pick 3 combination, we add a "v" before the number.  Therefore, the VTrac 123 is represented as v123. We need less understanding of the actual naming of the vtrac combination "ex. v123" but more understanding of how the mirror relations of vtrac work very powerfully in how 3 digit or 3 value patterns form in the numerical string r2/r4/r6/r8 groupings pattern progression and string reduction. For example we might find 3 digit pattern "543" or 3 value pattern "5433" hold structure within the pattern progression and then the next winning number is "548 = 543, and 5433" or "593 = 543, 5433".
+Permutation Logic:
+------------------
+- For a single (e.g., "015"): there are 6 possible permutations.
+  Example: "015" → ["015", "051", "105", "150", "501", "510"].
+- For a double (e.g., "005"): there are 3 distinct permutations.
+  Example: "005" → ["005", "050", "500"].
+
+3 DIGIT / 3 VALUE PATTERNS OR CLUSTERS WHAT ARE THEY?
+What are 3 digit 3 value patterns/sub clusters we are trying to find in the r2/r4/r6/r8 string progressions?:
+LETS USE THE COMBINATION OR SET 361 BUT THIS IS JUST AN EXAMPLE
+
+
+ REMEMBER THE GAME IS PICK 3 LOTTERY WHY I MENTIONED 3611 WAS BECAUSE YOU CAN SEE ITS ALSO ONLY A 3 UNIQUE NUMBERS IN TERMS OF numbers 3-6-1 BUT IM CALLING IT 3 VALUE BECAUSE ITS ACTUALLY 4 TOTAL DIGITS BUT STILL ONLY 3 numbers
+361 = 3 DIGIT
+3611= 3 VALUE 
+611= 3 VALUE
+WE WANT THE SYSTEM TO PICK UP BOTH TYPE OF CLUSTERS EVEN  IF ITS 4 OR 5 TOTAL DIGITS (EX. 3611 OR 36111) BUT WE ARE LOOKING FOR ATLEAST 3 DIGIT OR 3 VALUE (3 VALUE MEANING MORE DIGITS BUT STILL ONLY 3 UNIQUE DIGITS)
+I SAY 3 DIGITS OR 3 VALUE BECAUSE IT CAN ALSO GO THE OTHER WAY LETS SAY CLUSTER 511 SEE THIS IS ONLY 2 UNIQUE DIGITS BUT ITS 3 TOTAL DIGITS THERFORE STILL FITTING INTO THE 3 DIGIT OR 3 VALUE BECAUSE ONLY DIGITS 5 AND 1 = 2 VALUE BUT 511 = 3 DIGITS
+ITS IMPORTANT TO PICKUP ALL VARIATIONS OF 3 VALUE PATTERNS AS THE STRING GROUPINGS/PATTERNS ARE ALSO VERY GOOD WITH PREDICTING DOUBLES 511 IS A DOUBLE COMBINATION , 2 VALUE BUT 3 DIGITS 
+BY HAVING CODE WHERE THAT IS PICKING UP 3 DIGIT AND 3 "VALUE" CLUSTERS YOU ACCOUNT FOR ALL SCENEARIOS THE DOUBLES, 511 = 3 VALUE , 3611= 3 VALUE, 36111 = 3 VALUE
+
+
+LOADING
+-	SO FAR I HAVE ALREADDY BASICALLY CODED THE MAJORITY OF THIS MODULE, I have setup this project so far the process is:
+1)	A)Prior to involving the script I have an excel file with macros/programming that I use to update all the strings table/charts 
+b)Once the string tables are updated I save the excel file which now IS SAVED STATIC AND CAN BE FEED INTO THE SCRIPT DAILY WITH THE UPDATED STRING CHARTS. 
+2) I have programmed that the static excel file is loaded into the script and it goes to the 17 state sheets for the script within the excel file. The clean and view.py first cleans all the state sheets for extra columns, scientific notation, etc. 
+3) the second script extracts the r2/r4/r6/r8 grouping data + r2 strings data out of the state sheets and into structured datasets within the script. All the datasets Midday/evening/combined for each is organized into their own state datasets and ready for analysis.
+
+PATTERN EXTRACTION (R2/R4/R6/R8 BOXES /STRUCTURES)
+WHAT I DECIDED COULD BE THE FIRST PART OF THE SYSTEM IS "PATTERN EXTRACTION" 
+BASICALLY THIS FIRST TOOL WOULD SCAN THROUGH THE R2/R4/R6/R8 GROUPINGS AND EXTRACT ALL THE 3 DIGIT OR 3 VALUE CLUSTERS.
+ ITS ALOT ABOUT REPEATING STABLE STRUCTURES WITHIN R2/R4/R6/R8 BOXES VERTICALLY (WITHIN THE BOX) AND PROGRESSIVELY ACROSS BOXES HORIZONTALLY AS DIGITS ARE REMOVED AS YOU MOVE ACROSS THE BOXES LEFT TO RIGHT.
+TO CLARIFY FURTHER ITS AS IF THE R2/R4/R6/R8 BOXES THAT MOVE ACROSS HORIZONTALLY MAKE UP A STRUCTURE AND THEY ARE BROKEN INTO NAMED STRUCTURES. (SET 3 DRAW 1/ SET 2 DRAW 1/ SET 1 DRAW 1)
+THEY FUNCTION JUST AS THE C2 TABLES IN THE TRAINING GUIDE.
+SO IDEALLY WE COME UP WITH A PATTERN PROGRESSION TOOL THAT SCANS THROUGH THE R2/R4/R6/R8 STRUCTURES SCORES AND EXTRACTS THE 3 DIGIT AND 3 VALUE CLUSTERS FOR THEIR STABLE STRUCTURE+ REPEATING NATURE WITHIN R2/R4/R6/R8 VERTICALLY WITHIN THE BOX AND PROGRESSIVELY ACROSS BOXES OF R2/R4/R6/R8.
+ THE PATTERN EXTRACTOR MODULE WOULD THEN SPIT OUT ALL THE 3 DIGIT + 3 VALUE CLUSTERS IT REGISTERS IN THE STRING STRUCTURES WITH A SCORING FOR STABLE STRUCTURE/HOW MANY TIMES THEY APPEAR ETC. AND THEN THE OTHER MODULES CAN WORK OFF ALL THE SCORED 3 DIGIT / 3 VALUE CLUSTERS.
+UNDERSTANDING STRUCTURES OF  R2/R4/R6/R8 TABLES/GROUPINGS
+THE SET 2 AND SET 3 STRUCTURES ARE ACTUALLY THE 2 STRUCTURES FROM PAST DAYS WHERE AS ALL THE SET 1 STRUCTURES ARE PROGRESSIONS THAT CAN  MORE SPECIFICALLY ASSIST WITH EXTRACTING THE NEXT WINNING 3 DIGIT PATTERNS (MIDDAY + EVENING) WHICH WE ARE TRYING TO DO/ GOAL OF ANAYLSIS/ PREDICTIONS.
+We can use the set 3 and set 2 strutures to see any left over/ previous patterns that are carrying over into the set 1 strcutures and even more so specifically the hot zones section in set 1. 
+The set 3 and set 2 groupings can also help us see 3 digit repeats that have happened in recent draws tables that we should be alert for or that are trickering into set 1 patterns. 
+Now there are a couple other important items to look for in the r2/r4/r6/r8 structures which im not sure if we should setup more as rules that the system is programmed to register:
+CONSENSUS PATTERNS*****
+One of which 100% needs to be registered or set as a rule somewhere are consensus patterns as I refer to in the training guide which we know are valuable
+The consensus pattern is when the end string boxes are reduced to a point that there are only 1 or 2 digits remaining in the r2/r4/r6/r8 boxes 
+-	They are often a doubles trigger involving the remaining 1 or 2 digits in the consensus end box (ex. Last box is 4/4/4/4 can be trigger for 644 double) or their 3 value/3 digit clusters are very strong indicators for a future hit.
+-	Even if there is just a way for the system to alert/account for when consensus patterns appear I think that be valuable within the scoring system
+Example (4/4/4/4 at end of r2/r4/r6/r8 grouping = CONSENSUS)
+Copy code
+"Draw #","Draw 1","Draw 2","Draw 3","Draw 4","Draw 5","Draw 6","Draw 7"
+"Draw Result","398","117","062","280","232","265","597"
+"ES2-R2","59240186677","592408667","594867","59467","59467","947","4"
+"ES2-R4","25906684771","259066847","596847","59647","59647","947","4"
+"ES2-R6","66817705924","668705924","687594","67594","67594","794","4"
+"ES2-R8","77019866245","709866245","798645","79645","79645","794","4"
+
+
+3 DIGIT REPEATS
+If you remember the training guide there was emphasis on the 3 digit repeat and we saw how valuable they are both for predicting winning hits, we know they appear at end of the string structures as they are reduced. We also see how valuable v-trac match 3 digit repeats can be between Midday/evening/combined. 
+****
+Ok I might end up repeating myself a lot but im just trying to communicate the most important aspects. Lets go back talking about the pattern extractor.
+ANOTHER THING I WANT TO MENTION AS I DESCRIBE THIS OVERALL LAYOUT AND WE BUILD OUT IN MDOULAR PARTS KEEP IN MIND THE ROUGH LIST OF MODULAR PARTS THAT MAKE UP THE SYSTEM AS I AM JUST TRYING MY BEST TO BREAK THIS UP BUT WE MAY NEED TO NOTE ITEMS FOR A DIFFERENT MODULE OR COMBINE ASPECTS OF OTHER MODULARS, ETC. KEEP THIS IN MIND I MAY ESPECIALLY ASK ABOUT MACHINE LEARNING INFLEUNCE AND ASPECT AS I DON’T REALLY KNOW HOW ITS CODED INTO TOOLS AND MAYBE IT NEEDS MORE THEN JUST ITS OWN MODULE AND BUILD IT INTO ADDITIONAL TOOLS WE ARE BUILDING.
+KEEP THIS IN MIND AND IF WE KEEP A LOG FOR ITEMS AS I SUGGESTED ABOVE:
+-	LOADING 
+-	PATTERN EXTRACTION
+-	DIGIT REDUCTION
+-	ANALYZING ALL PATTERNS + VTRAC ANALYSIS
+-	CROSS ANALYZING + VTRAC ANALYSIS
+-	SCORING/ SCORING DISPLAY
+-	COMBINATION FORMING /PREDICTIONS
+-	MACHINE LEARNING / RANDOM FOREST?
+-	STATISTICS/METRICS LOGGING
+******
+ 
+I have given you a lot of background data that shows you many of the concepts of the previous scripts and some of the safisticated tools involved.
+I even also showed you many examples of how the r2/r4/r6/r8 structures patterns lead to winning numbers as well as string reduction techniques of the r2 strings.
+I even showed you some examples using the new table structures I programmed and how the winning patterns materialize as stable structures rr2/r4/r6/r8 that persist through the pattern progression.
+You may already have some ideas after all the material you have reviewed but the more I am learning about writing code it seems to me its important that many tools or functions should be broken down into modules and perform a primary task instead of having code that is way to sophisticated at times. 
+Givent his and because I want to deisgn code that will be optimal for extracting our winning patterns I have thought about reducing the complexity that yo u likely observed in the recent versions of the script and try and break down the 2 primary analytical tools which are 
+-	Extracting stable patterns from r2/r4/r6/r8 string groupings
+-	Digit reduction of r2 strings
+Even further..
+Here is my vision in a more summarized way…
+The pattern extractor.py can focus mainly  on extracting/ scoring the 3 digit and 3 value patterns thereby more so FOCUSING ON STRUCTURE/ PATTERN STABILITY. ITS MAIN JOB IS EXTRACTING STRUCTURE SIMILAR TO HOW YOU OBSERVED IN MY EXAMPLES WHERE I SHOWCASED THE PATTERNS FORMING AS STABLE STRUCTURE IN THE R2/R4/R6/R8 GROUPINGS/TABLES. FOR EXAMPLE I ENVISION IT SCANNING THROUGH THE THE INDIVIDUAL R2/R4/R6/R8 GROUPINGS INDIVIDUALLY AS   STRUCTURES WITHIN EACH TABLE MIDDAY/EVENING/COMBINED AND EXTRACTING THE PATTERNS AS DISCUSSED.
+-NEXT THE DIGIT REDUCTION TOOL (DIGIT REDUCTION.PY) WILL DO ITS VARIATIONS OF TRANSFORMATIONON THE R2 STRINGS 
+WHAT  IM TRYING TO DESCRBIE IS HAVING THESE TOOLS FOCUS MORE ON A MAIN FUNCTION OF MAKING TRANSFORMATION ON THE STRING STRUCTURE WITH SOME MINIMAL SCORING FEATURES.
+-	THEN ONCE ALL PATTERNS AND DIGIT REDUCTION ARE COMPLETED THERE IS A WHOLE SEPARATE SCRIPT THAT DEALS WITH THE MAJORITY OF ADVANCED ANALYSIS ON THE EXTRACTED PATTERNS FROM BOTH TOOLS – PATTERN EXTRACTION AND DIGIT REDUCTION
+SO  ENVISION IT PERHAPS FOLLOWING AND GIVING THESE TOOLS MORE DEFINED CLEAR ROLES ON DOING MORE SPECIFIC THINGS THEN GETTING TO ELABORATE AND OVERCOMPLICATED WITH THE CODING ON TOOLS AND FUNCTIONS OR LOADING TOOLS WITH TO MUCH COMPLEXITY THAT COULD BE SPREAD AROUND FOR BETTER PROCESSING 
+SO YOU MAY HAVE SOMETHING SUCH AS:
+PATTERN EXTRACTOR.PY – EXTRACTING AND SCORING STRING GROUPINGS FOR STABLE STRUCTURE WITHIN R2/R4/R6/R8 VERTICAL WITH BOX AND ACROSS BOXES + PERSISTENCE + PERMUTATION
+DIGIT REDUCTION.PY – REDUCING STRINGS BY PAST DRAW DIGITS ACCORDING TO DESIGNED RULES
+PATTERN ANALYSIS.PY – TAKES ALL THE EXTRACTED PATTERNS + TRANSFORMATION AND DOES A MORE ADVANCED ANALYSIS  SUCH AS 
+-	CALCULATES 3 DIGIT REPEATS
+-	ADDS UP SCORING OF PATTERNS FOR STABLE STRUCTURE AND PERMUTATION (TARGETTING STRAIGHT)
+-	ANALYZES CROSS RELATIONS BETWEEN DIGIT REDUCTION PATTERNS AND EXTRACTED PATTERNS FROM PATTERN EXTRACTOR
+-	DOES A VTRAC ANALYSIS ON PATTERNS WITHIN OWN CHART MIDDAY/MIDDAY , EVENING /EVENING COMBINED/ COMBINED  AND CROSS ANALYSIS PATTERNS + VTRAC PATTERNS
+-	CROSS ANALYZES FOR VTRAC STRAIGHT PATTERNS
+-	AND MORE WE WILL ADD
+THS AGAIN MAY BE AN ASPECT WHERE WE EXPAND ON MACHINE LEARNING INFLUENCE 
+COMBINATION FORMING /PATTERN RECOGNTION.PY 
+NOW AFTER THIS WOULD BE COMBINATION FORMING / ALL THE VARIOUS COMBINATIONS AGAIN I DON’T KNOW IF THIS WOULD BE ITS OWN MODULE OR IF IT WOULD BE COMBINED WITH ONE OF OUR OTHER MODULES.
+THIS WILL INCLUDE EXPLAINING THE THEORY BEHIND FORMING COMBINATIONS 
+HERE ARE SOME KEY POINTS:
+-	WE ARE ALWAYS PREDICTING FOR THE NEXT MIDDAY AND EVENING DRAW SO NEXT 2 DRAWS
+-	MIDDAY PATTERNS + COMBINED PATTERNS SHOULD TAKE PRECITENT WHEN TRYING TO PREDICT FOR MIDDAY BUT THE MORE PATTERNS CONNECT MIDDAY/EVENING/COMBINED THE BETTER, THE SAME WITH EVENING + COMBINED WITH SOME MIDDAY INFLUENCE.
+-	WHAT WE WILL FIND IS MANY TIMES PATTERNS WILL CROSSOVER MIDDAY TO EVENIGN AND VICCE VERSA HOWEVER IF THERE IS A GENERAL RULE OF EMPHASIZING IN THIS WAY..CONSIDERING ALL 3 CHARTS BECAUSE WE ARE COMING UP WITH AN AGGREGATED LIST OF PREDICTIONS AS I INDICATED PATTERNS CROSSOVER. 
+-	WE CAN GET MORE INTO THIS AS WE GET TO THIS MODULE IM JUST TRYING TO GET YOU A GENERAL OVERVIEW OF ENTIRE SCRIPT DESIGN AND THEN WE WILL RETURN TO OUR PRIMARY ANALYTICAL TOOLS WE NEED TO DEISGN WHICH IS STARTING WITH THE PATTERN EXTRACTOR 
+-	Actually I don’t even know if it makes sense to wrry so much about the split influence because like im saying because we are predicting both the next midday and evening draws there can perhaps be combinations extracted from the pattern logic as discussed above but we do end up creating an aggregated list as patterns very much cross-over as you saw from the training guide and all my examples.
+-	Another prediction it comes up with is pick a vtrac so it will pick 1 vtrac = 8 combinations as we know how powerful v-trac relations are its what makes these patterns really shine and we can often find a vtrac permutation that comes out straight often, by having a picka  vtrac combination the system can learn and get better at predicting winning combinations/patterns through vtrac relations by picking an 8 combination vtrac
+-	Another combination category will be pick 5 best boxed combinations. All these combination predicting cateogories are for the AI to learn in which way it can learn to successfully predict and stay within “timeframes” which are our metric that will be discussed below.
+-	We may also try and incoprate a waging strategy prediction category which is based on the metrics below.
+
+-	COMBINATION LOGIC – I DISCUSSED IN MY TRAINING ETC. CERTAIN METHODS THAT ARE EFFECTIVE FOR PREDICTING STRAIGHT COMBINATION WINNERS THIS ONE IN PARTICULAR FOR STRONG PATTERNS AND REPEATING PATTERNS WE MAY EXTRACT FROM THE PATTERN EXTRACTOR.PY REMEMBER THIS…
+Let's consider the following example:
+
+Suppose we have identified a 3-digit repeat of 548 and want to apply the **Pair + Mirror Combination Formation** (Golden Rule 1).
+
+1. Break the 548 into pairs: 54, 48, 58.
+2. Mirror the 3rd digit in each pair:
+   - 54 becomes 543
+   - 48 becomes 480
+   - 58 becomes 589
+3. Generate  permutations based on r2/r4/r6/r8 pattern progression for each of the 3 combinations:
+   - 543, 534, 345, 435
+   - 480, 408, 048, 084
+   - 589, 598, 859, 895
+4. Total combinations: 12 (3 combinations × 4 permutations each)
+
+Now, let's assume the payout structure is:
+- Boxed hit 3 digit in any order: ex. winning number is 365 you hit prediction 653 box (any order) metric 1: 1$ to play 653 box hit equals $100 store level  metric 2: same prediction 653 hit boxed (any order)  1$ = $160 online
+
+- Straight hit 3 digit exact order: winning number is 365 you hit prediction 365 (exact order) metric 1: 1$ to play 365 hit straight $500 store / metric 2: same prediction 365 hit straight 1$ hit equals $900 online
+
+By playing all 12 combinations at $1 each online, the total cost would be $12. However, the potential payout for a straight hit is $900, resulting in a highly favorable profit ratio. 
+
+If we can further narrow down the permutations by observing the pattern progressions across the charts (Golden Rule 2), we may be able to reduce the playing set to just 3 or 4 combinations, further improving the profit ratio.
+
+-	***NOW HOW YOU MAY REDUCE BEING ABLE TO HIT STRAIGHTS TO 3-4 COMBINATIONS IN THIS CASE WOULD BE ANOTHER RULE WE SHOULD BE PUTTING INTO COMBINATION FORMING WHEN YOU HAVE A  3 VALUE PATTERN THAT PREVALENTLY CONTAINS A DOUBLE DIGIT SUCH AS 3411 
+WE CONSIDER BOTH 341 AND 3466 (AGAIN VTRAC ASSOCIATION) WE FOLLOW THIS LOGIC AS A GOLDEN RULE FOR COMBINATION FORMING  THIS GOES THE SAME FOR A DOUBLE COMBINATION THAT IS PREVALENT SUCH AS EX. 566 MANY TIMES WHEN A CERTAIN PERMUTATION IS PREVALENT SUCH AS THE PERMUTATION 566 THE WINNING COMBINATION WILL COME AS 561 OR 516, YOU SEE AS IT COMES AS A V-TRAC STRAIGHT!**
+-	AS I MENTIONED VTRAC STRAIGHTS ARE HIGHLY EFFECTIVE WE LOOK FOR PERMUTATIONS PATTERNS THAT PERSIST THROUGH THE STRINGS AND MAY HAVE A HIGH SCORE FROM PATTERN EXTRACTOR EXAMPLE 217 IN THE MIDDAY PATTERNS AND 762 IN THE EVENING PATTERNS THOSE ARE BOTH VIA THE SAME V-TRAC STRAIGHT COMBINATION THIS IS A VERY EFFECTIVE WAY TO PREDICT A STRAIGHT WITH ONLY 8 COMBINAITONS!
+-	ANOTHER FACTOR TO KEEP IN MIND IS HOW HIGHLY EFFECTIVE THE SYSTEM STRING PATTERNS ARE FOR PREDICTING DOUBLES COMBINATIONS AND THE BENEFIT OF THIS IS DOUBLES COMBINATIONS CAN ONLY BE PLAYED 3 WAY EX. 611-116-161 THIS ALLOWS AN EASIER ROUTE TO PREDICTING DOUBLES ESPECIALLY CONSIDERING THERE ARE SOME VERY STRONG DOUBLES TRIGGERS SUCH AS CONSENSUS STRING  PATTERNS AND WE CAN PERHAPS EVEN CONSIDER REVIEWING PAST DRAW DATA TO SEE WHICH STATES ARE DUE A DOUBLE COMBINATION. We may consider a combination category predicting 3 doubles combinations 
+-	The final combination category will be confidence- based play which will be based on the criteria of learning from the different pattern indicators, prediction methods, historical results to make prediction to optimize for profitability (see performance metrics in next module). The confidence based play like I said is looking to play based off of:
+-	Optimizing profitability
+-	Optimizing for straight play/focusing on permutation as this equals higher payout = higher chance at profitability
+-	Learning to Play as low total selection or sets as possible = improve profitability 
+-	Learning from historical data which pattern scoring etc. leads to hits = good time to play
+-	Choosing when to play and not, having the option to only play during favorable pattern scenarios (learning from historical data) here is a write up of confidence based play scenario from previous scripts we would edit logic to follow more as I stated above
+
+“Yes, I'll add the Confidence-Based Play setting as an additional method within the system. This feature will work as follows:
+1.	Confidence Scoring Mechanism:
+o	The system will evaluate each potential play against predefined confidence thresholds. These thresholds will be based on metrics like pattern strength, historical performance, and alignment with strong indicators from other tools.
+o	Scoring Criteria will consider the strength of repeat patterns, VTrac alignment, and recent performance of similar plays, especially focusing on recent success in achieving straight hits.
+2.	Confidence-Based Play Mode within Optimal Profitability:
+o	When enabled, the Optimal Profitability mode will apply this confidence-based scoring, limiting plays to only those that meet or exceed the designated confidence threshold.
+o	This threshold will dynamically adjust based on recent performance trends, ensuring that plays align with the highest confidence indicators and reduce unnecessary plays.
+3.	Selective Play Suggestions:
+o	Plays will only be suggested when their confidence score meets the threshold, ensuring more targeted betting on combinations with higher potential, especially for straight plays. This would be particularly effective for days when patterns show strong alignment across multiple indicators.
+Adding this setting allows the system to selectively suggest plays based on confidence levels, refining the Optimal Profitability mode with this additional layer of prioritization for high-confidence scenarios.
+I'll integrate this as a distinct method and ensure it applies seamlessly with other tools in Optimal Profitability mode. This will provide another strategy for managing both profitability and straight play accuracy. Let me know if you'd like further customization for this method!
+
+Your system's approach indeed incorporates aspects of a confidence-based play through the integration of various predictive tools, scoring, and adaptation mechanisms already described. Here's how we can confirm, optimize, or enhance the current setup based on your request:
+Current Setup and Confidence-Based Play Integration
+1.	Existing Confidence Mechanism:
+o	Multiple Methods Weighing In: Your system already combines insights from various tools (digit reduction, VTrac patterns, string permutations, etc.) to reach predictions. This approach inherently includes confidence building by aggregating signals across different tools.
+o	Scoring System: There is an existing scoring system where combinations or patterns that align with multiple tools receive higher scores, increasing their significance as potential predictions.
+o	"Optimal Profitability" Mode: This section focuses on profitability, taking into account not only prediction accuracy but also potential payout and risk. This aspect is aligned with confidence-based play since it evaluates predictions based on multiple factors and adjusts as necessary to improve profitability.
+2.	Optimization Potential for Confidence-Based Play:
+o	Separate Predictions Section for Confidence-Based Play: You could introduce a dedicated module that focuses solely on predictions with high confidence thresholds. This would work as an "elite" filter, producing recommendations only when a combination of methods converges strongly on a prediction.
+	Adaptive Thresholding: The system can dynamically learn which combinations of tools and thresholds lead to successful predictions over time. As it gathers data, it can adjust these thresholds to either become more stringent or more relaxed, depending on past performance trends.
+o	Historical Context Consideration: By tying in with your proposed "built-up dashboard," the system can further refine its confidence-based predictions by cross-referencing current predictions against historical patterns that proved successful.
+3.	Benefits of a Specialized Confidence-Based Section:
+o	Increased Accuracy: By filtering out lower-confidence predictions, this module would ideally produce fewer, but more accurate, predictions.
+o	Adaptation Over Time: This section could track its prediction success rate separately, learning which factors or combinations of tools lead to profitable outcomes and adjusting its criteria accordingly.
+o	Profitability Focus: If integrated into your "optimal profitability" mode, it can ensure predictions aren't only accurate but also aligned with profitability goals, like hitting straights.
+4.	Minimizing Overload Risk:
+o	Non-Disruptive Integration: The confidence-based play module would act as a supplementary layer. It wouldn't override or interfere with the existing tools but would refine and selectively highlight predictions that meet stricter confidence criteria.
+o	Selective Activation: This module can be activated or deactivated based on user preference, ensuring the system remains flexible and isn't overwhelmed.
+Summary and Recommendations
+•	Already Present Elements: Your system already includes multiple mechanisms that align with the concept of confidence-based predictions, particularly through its scoring system, diversified prediction tools, and adaptive elements.
+•	Potential Enhancements: Consider adding a dedicated confidence-based prediction module or section that applies stricter criteria for producing predictions, using the built-up dashboard and adaptive learning to refine its approach.
+•	Adaptive Learning and Optimization: Allow the system to track the success rates of different combinations of tools and adjust its confidence thresholds accordingly. This could happen within the "optimal profitability" mode or as a standalone module.
+Would you like to proceed with creating a dedicated confidence-based play module as described, or focus on refining existing tools to ensure they are working optimally in terms of confidence thresholds and aggregation?
+Great! I'll proceed with implementing the enhancements as an additional confidence-based module within your system. Here's a summary of what this module will include, and then I'll integrate these elements into the system:
+New Confidence-Based Prediction Module Summary:
+1.	Dedicated Module Structure:
+o	Stricter Confidence Thresholds: This module will only suggest predictions that meet a certain level of confidence based on alignment across multiple tools. For example, if predictions from digit reduction, VTrac patterns, permutation analysis, and other tools all strongly align, this would meet the threshold for recommendation.
+o	Adaptive Learning: Over time, the module will learn which combinations and alignments of predictive tools lead to successful outcomes and adjust its criteria accordingly. It will use a feedback mechanism to track and optimize based on past performance.
+2.	Integration with Built-Up Dashboard:
+o	This module will draw on data and trends from your built-up dashboard, using historical patterns and trends to refine and confirm high-confidence predictions.
+3.	Integration with "Optimal Profitability" Mode:
+o	When active, the module can work within the "optimal profitability" mode to selectively identify profitable opportunities, such as high-confidence straight predictions or well-supported boxed predictions, focusing on maximizing returns.
+4.	Tracking and Scoring Adjustments:
+o	Success Rate Monitoring: The module will track its prediction accuracy and profitability over time, learning from successes and failures.
+o	Dynamic Threshold Adjustments: Confidence thresholds will be adjusted as necessary based on historical data and feedback from actual predictions and outcomes, enhancing accuracy and profitability.
+Implementation Steps:
+•	Non-Disruptive Integration: The module will work as a supplementary feature that can be toggled on or off without interfering with the main prediction and scoring mechanisms.
+•	Flexibility in Usage: This module will allow for optional activation, meaning you can choose to use it in conjunction with other tools or independently.
+•	Enhanced Display and Insights: When active, it will display its high-confidence predictions separately for your review and consideration.
+I'll begin integrating this into your system as described. Let me know if there are any specific considerations or adjustments you'd like as we move forward! “
+
+
+STATISITICS AND METRICCS . PY
+-	This is why it is important to mention all aspects because I don’t know how this section may have influence over entire script design but this is one of the biggest items to discuss this has to do with with the performance metrics of the script and its based around trying to create a script that can optimize within this metrics system
+It revolves completely around TIMEFRAMES EXPLAINED BELOW:
+
+IF THERE A WAY TO COMMUNICATE AND POTENTIALLY CODE A METRIC/PERFORMANCE SYSTEM THAT INCORPORATES:
+
+1) STORE PLAY BOXED 1 PLAY (EX. A SINGLE PICK 3 TICKET PREDICTION - 456) PAYOUT 100$  = TIMEFRAME 1/100
+2) STORE PLAY STRAIGHT 1 PLAY PAYOUT $500 = TIMEFRAME 1/500
+3) ONLINE PLAY BOXED  1 PLAY PAYOUT $160 = TIMEFRAME 1/160
+4)ONLINE PLAY STRAIGHT 1 PLAY PAYOUT $900 = TIIMEFRAME 1/900
+5) PROGRESSIVE PLAY USING LOGIC DISCUSSED BELOW AND ABOVE FOR 8 COMBINATIONS BOXED
+6) PROGRESSIVE PLAY FOR 8 COMBINATIONS STRAIGHT BELOW 
+7) IM NOT SURE IF I INCLUDED PROGRESSIVE PLAY FOR ALL STORE AND ONLINE SCEARIOS IF YOU CAN PLEASE DOUBLE CHECK 
+7) SOME SORT OF PROGRESSIVE LOGIC TO APPLY PAYOUTS AND TIMEFRAMES IF YOU WERE TO EXTEND PAST 8 TOTAL COMBINATIONS
+
+THE GOAL IS TO INCLUDE 1-7 AS A METRICS/PERFORMANCE SYSTEM FOR THE SCRIPT TO FUNCTION TOWARDS PROFITABILITY I AM BUILDING MACHINE LEARNING INTO THE SCRIPT AND POSSIBLY USING RANDOMFOREST AND OTHER MACHINE LEARNING ASPECTS IF THEY MAKE SENSE IF YOU CAN SUMMARIZE ALL MY GOALS ABOVE AND 1-7 INTO SOME SORT OF PERFORMANCE METRIC SYSTEM WITH CLEAR EXPLANATION AND POTENTIAL PYTHON CODE FOR A POTENTIAL SCRIPT TO UTILILIZE EVERYTHING I AM DISCUSSING AND REQUESTED ABOVE IS BASED ON THE BELOW FOR MORE DETAIL YOU CAN REVIEW ADDITIONAL INFORMATION BELOW MOST OF THE THEORY IS BASED ON THE BELOW....
+
+
+Let me help design a performance metric system for your script based on your requirements. Here's a structured approach incorporating your 1-7 metrics and progressive strategies:
+Performance Metric System Structure
+1. Base Metrics (Criteria 1 & 2)
+python
+Copy
+class BaseMetrics:
+    def __init__(self):
+        self.metrics = {
+            'store_boxed': {'hit_rate': 0, 'timeframe': 1/100, 'payout': 100},
+            'store_straight': {'hit_rate': 0, 'timeframe': 1/500, 'payout': 500},
+            'online_boxed': {'hit_rate': 0, 'timeframe': 1/160, 'payout': 160},
+            'online_straight': {'hit_rate': 0, 'timeframe': 1/900, 'payout': 900}
+        }
+2. Progressive Play Metrics
+python
+Copy
+class ProgressiveMetrics:
+    def __init__(self):
+        self.progressive_strategies = {
+            '8_boxed': self.init_progressive_table(8, 100),
+            '8_straight': self.init_progressive_table(8, 500),
+            'extended_boxed': self.init_progressive_table(12, 100),
+            'extended_straight': self.init_progressive_table(12, 500)
+        }
+    
+    def init_progressive_table(self, combos, base_payout):
+        return {
+            'rounds': [],
+            'current_round': 0,
+            'combinations': combos,
+            'base_payout': base_payout,
+            'cumulative_expense': 0,
+            'net_profit': 0
+        }
+3. Comprehensive Tracking System
+python
+Copy
+class LotteryMetrics:
+    def __init__(self):
+        self.base = BaseMetrics()
+        self.progressive = ProgressiveMetrics()
+        self.history = []
+        self.ml_model = RandomForestClassifier()  # Placeholder for ML model
+    
+    def track_prediction(self, prediction_type, outcome, expense):
+        entry = {
+            'timestamp': datetime.now(),
+            'type': prediction_type,
+            'outcome': outcome,
+            'expense': expense,
+            'time_to_hit': None  # To be calculated
+        }
+        self.history.append(entry)
+    
+    def calculate_roi(self):
+        total_expense = sum(item['expense'] for item in self.history)
+        total_payout = sum(self.base.metrics[item['type']]['payout'] 
+                          for item in self.history if item['outcome'])
+        return (total_payout - total_expense) / total_expense * 100
+4. Progressive Strategy Simulator
+python
+Copy
+class ProgressiveStrategy:
+    def __init__(self, base_bet=1, max_rounds=5):
+        self.rounds = [
+            {'multiplier': 2, 'ticket_type': '$10'},
+            {'multiplier': 3, 'ticket_type': '$10+$2'},
+            {'multiplier': 4, 'ticket_type': '$10+$5'},
+            {'multiplier': 5, 'ticket_type': '$10x2'},
+            {'multiplier': 6, 'ticket_type': '$10x3'}
+        ]
+    
+    def calculate_round(self, n_combos, current_round):
+        strategy = self.rounds[current_round]
+        cost = (10 * strategy['multiplier']) * n_combos
+        potential_payout = (500 if 'straight' in self.pred_type else 100) * strategy['multiplier']
+        return cost, potential_payout
+5. ML Integration Framework
+python
+Copy
+class Predictor:
+    def __init__(self):
+        self.model = RandomForestClassifier(n_estimators=100)
+        self.features = ['digit_frequency', 'vtrac_patterns', 'string_reductions']
+    
+    def train(self, historical_data):
+        X = historical_data[self.features]
+        y = historical_data['outcome']
+        self.model.fit(X, y)
+    
+    def predict(self, current_patterns):
+        return self.model.predict_proba([current_patterns])
+Key Metric Groups
+1.	Hit Rate Accuracy
+o	Track prediction success rates per type
+o	Measure against timeframe expectations
+2.	ROI Efficiency
+o	Calculate net profit per strategy
+o	Compare actual vs expected timeframe ROI
+3.	Progressive Performance
+o	Track round success rates
+o	Monitor cumulative expenses vs potential payouts
+4.	Pattern Recognition Effectiveness
+o	Measure Vtrac pattern prediction accuracy
+o	Track string reduction success rates
+Implementation Strategy
+1.	Create prediction evaluation matrix:
+python
+Copy
+def evaluate_prediction(true_number, predicted_set):
+    boxed_hit = any(is_boxed_match(true_number, p) for p in predicted_set)
+    straight_hit = true_number in predicted_set
+    return {
+        'boxed': boxed_hit,
+        'straight': straight_hit,
+        'vtrac_match': check_vtrac_match(true_number, predicted_set)
+    }
+2.	Implement timeframe analyzer:
+python
+Copy
+class TimeframeAnalyzer:
+    def __init__(self):
+        self.hit_intervals = []
+    
+    def add_hit(self, draws_since_last):
+        self.hit_intervals.append(draws_since_last)
+    
+    def timeframe_compliance(self, target_ratio):
+        avg_interval = np.mean(self.hit_intervals)
+        return avg_interval <= (1 / target_ratio)
+Progressive Strategy Optimization
+For your 8-combination Vtrac patterns:
+python
+Copy
+def optimize_progressive(target_hit_rate=0.9):
+    strategy = []
+    current_bet = 1
+    while len(strategy) < 5:
+        required_rounds = -np.log(1 - target_hit_rate) / np.log(1 - (8/1000))
+        strategy.append({
+            'round': len(strategy)+1,
+            'bet_multiplier': 2**len(strategy),
+            'max_draws': math.ceil(required_rounds)
+        })
+    return strategy
+This system provides:
+•	Real-time performance tracking
+•	ML-integrated prediction improvements
+•	Progressive strategy simulations
+•	Timeframe compliance monitoring
+•	ROI calculations across all play types
+
+SCORING DISPLAY/ TABLEMODULE
+-	THE IDEA IS BASED ON THE ANALYSIS TOOLS AND SCORING THERE IS A FINAL SCORING DISPLAY BASED ON CATEGORIES WE COME UP WITH AFTER DESIGNING FINISHING THE ANALYTICAL TOOLS.
+-	THE OVERALL SCORING DISPLAY MAY HAVE CATEGORY AND THE PATTERN/COMBINATION WE WILL SEE.
+-	THE IDEA WILL BE EACH ANALYSIS OF THE STATES SHEETS DATASETS + ANALYTICAL TOOLS WILL PRODUCE AN OVERALL SCORING DISPLAY AND THERE SHOULD BE A FUNCTION /SCREEN ETC. THAT SHOWS ALL 17 STATES SCORING. 
+-	THE IDEA OF THIS IS THAT YOU DON’T NECESSARILY HAVE TO REVIEW EACH INDIVIDUAL STATES ENTIRE DATASETS AND ANALYSIS IF YOU CHOICE NOT TO (TOO TIME CONSUMING AT TIMES) AND REVIEW THE SCORING DISPLAY WHICH KINDA SUMMARIZES OVERALL ANALYSIS FOR THAT DAYS STATE SHEET ANALYSIS. 
+-	THE SCORING DISPLAY CAN FORM AT THE END OF ANALYSIS OF EACH STATES ANALYSIS SHEET WHICH I BELIEVE IN THEORY WOULD SHOW THE FOLLOWING:
+-	ALL DATASETS (R2/R4/R6/R8 STRUCTURES) AND R2 TABLES 
+-	PATTERN EXTRACTOR AND DIGIT REDUCTION RESULTS
+-	COMBINATIONS PREDICTIONS FOR DIFFERENT CATEGORIES
+-	SCORING DISPLAY TABLE BASED ON ANALYSIS
+-	SO THE SCORING DISPLAY IS ON BOTH 1) INDIVIDUAL ANALYSIS STATE SHEET BUT THERE IS ALSO 2) SOMEWHERE IN THE PROGRAM THAT AGGREGATES ALL THE SCORING TABLES FOR ALL STATES, THIS COULD EVEN BE  A PART OF THE ANALYSIS MODULE RESULTS THAT TERMS INTO SCORING DISPLAY SHOWING MOST FAVORABLE COMBINATION PATTERNS BASED ON SCORING IN ANALYSIS
+
+LOGGING/ AI REPORTS/ ANALYSIS REPORTS
+BASICALLY THE AI/SCRIPT LEARNS HOW TO IMPROVE on predicting through a few aspects we discussed but the most important one is historical analysis 
+WHAT NEEDS TO BE ADDED DON’T KNOW IF NECESSARILY LOADING BUT there NEEDS TO BE A FUNCTION:
+There needs to be a function within the script where I can enter the previous days results midday + evening . here are the states within the script:
+# List of states (removing Georgia and West Virginia)
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "TriState4", "Virginia4"
+In previous versions of the script I setup
+There is somewhere to enter the previous days results and then this is logged to the states previous days analysis/report and then saved as CVS file.
+This might also be linked with machine learning/statistics as well?. THE SYSTEM/SCRIPT AI LEARNS HOW TO GET BETTER AT PREDICTING THROUGH HISTORICAL DATA SO THIS IS HOW IT CONFIRMS PREVIOUS DAYS ANALYSIS AND LOGS ITS REPORT.
+IDEALLY WHEN I ENTER IN THE DAY AND RESULTS 
+(EX.CONNETICUT 216 / 556   (MIDDAY/EVENING)
+I WAS THINKING IT COULD ALSO GENERATE THE WINNING NUMBERS VTRAC STRAIGHT COMBINATIONS
+EX. 216 - 211, 261, 266, 711, 716, 761, 766
+THEN SCAN THESE VTRAC COMBINATION PATTERNS ACROSS THE PREVIOUS ANALYSIS AND SEE IF THERE WAS MATCHES, I AM SUGGESTING THIS AS WE HAVE DISCUSSED VTRAC RELATIONS ARE VERY STRONG AND EFFECTIVE WITH THIS SYSTEM/PATTERNS WITH PROGRESSION AND STRINGS AND THE AI/MACHINE LEARNING CAN LEARN FURTHER FROM HISTORICAL RESULTS THROUGH THIS PROCESS AND LOG PREVIOUS DAYS ANALYSIS IN SOME SORT OF DATABASE FOR EACH STATE
+
+
+-I THINK PREVIOUS VERSIONS DISCUSSED LOGGING ANALYSIS AS A REPORT AS A CVS FILE AND I WOULD IMAGINE THERE IS SOME DATABASE WHERE THESE ARE LOGGED INTO EACH STATES FOLDER I WOULD NEED TO UNDERSTAND IDEAL SEETUP FOR THIS. 
+MACHINE LEARNING
+I feel like there was a lot within the general outline which mentioned touched on machine learning but we can probably go more specific into this and also eventually understanding how to properly program RandomForest with features for this
+Some of the items within the system that touched on some form of machine learning:
+-would like learn from analysis tools to improve on predictions
+-learn based on the metrics how to predict better within metric timeframes
+-learn from historical analysis 
+
+HELPER FUNCTIONS
+THERE WERE A NUMBER OF HELPER FUNCTIONS IN PREVIOUS VERSION OF THE SCRIPTS I AM NOT SURE EXACTLY HOW MANY WE NEED FOR THIS SCRIPT
+I THINK THERE WERE EVEN SOME HELPER FUNCTIONS THAT PERFORMED SOME OPERATIONS ON THE “DRAW DATA” FROM PREVIOUS SCRIPTS I HAVENT EVEN TOUCHED ON THIS BECAUSE ITS IMPORTANT TO STRESS THAT THE PRIMARY FUNCTION OF THE SCRIPT IS THROUGH THE PATTERN RECOGNITION AND STRING REDUCTION BUT PERHAPS SOME FUNCTIONS CAN BE USED ON THE DRAW DATA AS A SUPPORTING FUNCTION TO SEE IF PATTERNS WITHIN THE PAST DRAW DATA CAN ALSO ASSIST WITH PREDICITING IN CERTAIN SCENARIOS
+CURRENTLY THERE ARE ONLY 14 COMBINED DRAWS FOR EACH STATE (CAN BE INTERPRETTED 7 MIDDAY + 7 EVENING DRAWS = 14 COMBINED DRAWS) THAT ENTER THE SCRIPT FOR EACH STATE SHEET EACH DAY WHEN I LOAD THE STATIC EXCEL FILE WITH THE UPDATED DATASETS.
+WE CAN LIKELY EXPLORE IF ADDITIONAL DRAW DATA CAN BE CONSIDERED I THINK IN PREVIOUS VERSIONS OF THE SCRIPT AI TOLD ME YOU CAN HAVE ATLEAST 50 DRAWS WORTH OF DATA BASED ON SOMETHING? IM THINKING THERE MAY BE A WAY TO UTILIZE THIS EASY AS THE SCRIPT/AI SHOULD LEARN FROM HISTORICAL ANALYSIS AND WILL HAVE A DATABASE LOGGING EACH PREVIOUS STATE’S ANALYSIS AS CVS FILE IM THINKING.
+NOW THAT YOU UNDERSTAND THE OVERALL VISION LETS GET INTO DESIGNING THE MOST IMPORTANT ASPECTS/ ANALYTICAL TOOLS.
+I have reviewed the training guide with you which really goes into many of the concepts in detail and shows how effective patterns and pattern methods, I have changed the structure of the datasets many times but anything I showed in the training guide we are still using the same type datasets just structured in a different way, what important to remember is and is universal is:
+ 1)the r2/r4/r6/r8 string grouping data sets where we extract the patterns from pattern progression
+2) the R2 strings (I think in previous versions + training I labelled as 7/6/5 strings etc. now they are in a structured table) 
+
+
+
+
