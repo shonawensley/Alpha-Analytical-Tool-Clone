@@ -94,4 +94,73 @@ lottery-analysis-tool/
 2. Create a feature branch
 3. Commit your changes
 4. Push to the branch
-5. Create a Pull Request 
+5. Create a Pull Request
+
+## Advanced Features
+
+### V-TRAC System
+- Pattern matching system for identifying winning combinations
+- Supports multiple pattern types (R2, R4, R6, R8)
+- Highlights winning patterns in tables
+- Interactive testing through test_vtrac_streamlit.py
+
+### Data Processing
+- Supports multiple states:
+  - Connecticut4
+  - Delaware4
+  - Florida4
+  - Indiana4
+  - Michigan4
+  - NewJersey4
+  - NewYork4
+  - NorthCarolina4
+  - Ohio4
+  - OntarioCanada4
+  - Pennsylvania4
+  - PuertoRico4
+  - SouthCarolina4
+  - Virginia4
+
+### Table Features
+- Hot zone marking for specific draws
+- Combined table views (Midday/Evening/Combined)
+- R2-only table generation
+- Excel export with proper formatting
+- JSON export for data analysis
+
+### Data Management
+- Historical file tracking
+- Automated data cleaning
+- State-specific data processing
+- Backup and archive system
+
+## Troubleshooting
+
+### Common Issues
+1. Import Errors
+   - Ensure you're running from the project root
+   - Check virtual environment activation
+   - Verify all dependencies are installed
+
+2. Excel File Issues
+   - Use correct Pick3StatsC4 format
+   - Place files in data/original directory
+   - Check file permissions
+
+3. Streamlit Interface
+   - Port conflicts: Close other Streamlit instances
+   - Display issues: Clear browser cache
+   - State switching: Allow time for processing
+
+### Getting Help
+- Check the documentation in the docs/ directory
+- Review error messages in the console
+- Contact repository maintainers
+
+## Documentation
+Detailed documentation available in docs/:
+- Alpha -Comprehensive Combination Methods
+- Alpha -Digit Reduction
+- Features Advanced Design
+- Initial Program Design Theory
+- And more... 

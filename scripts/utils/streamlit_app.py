@@ -11,6 +11,7 @@ from pathlib import Path
 import tempfile
 import json
 import sys
+import shutil
 
 # Add parent directory to path so we can import from utils
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -260,6 +261,57 @@ def export_to_json(state_data, state_name):
         json.dump(ai_friendly_data, f, indent=2)
     
     return output_file
+
+def get_timestamp():
+    """Generate timestamp for file naming"""
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def archive_data():
+    """Archive current data with timestamp"""
+    timestamp = get_timestamp()
+    archive_dir = Path("data/archive")
+    cleaned_dir = Path("data/cleaned")
+    outputs_dir = Path("data/outputs")
+    
+    # Create archive subdirectory with timestamp
+    archive_subdir = archive_dir / f"archive_{timestamp}"
+    archive_subdir.mkdir(parents=True, exist_ok=True)
+    
+    # Archive cleaned data
+    if cleaned_dir.exists():
+        cleaned_archive = archive_subdir / "cleaned"
+        shutil.copytree(cleaned_dir, cleaned_archive, dirs_exist_ok=True)
+    
+    # Archive outputs
+    if outputs_dir.exists():
+        outputs_archive = archive_subdir / "outputs"
+        shutil.copytree(outputs_dir, outputs_archive, dirs_exist_ok=True)
+    
+    # Clear current data (but keep .gitkeep)
+    for dir_path in [cleaned_dir, outputs_dir]:
+        if dir_path.exists():
+            for item in dir_path.glob("*"):
+                if item.name != ".gitkeep":
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+    
+    return archive_subdir
+
+def export_data(state_data, state_name, section):
+    """Export data with timestamps"""
+    timestamp = get_timestamp()
+    
+    # Export to CSV
+    csv_path = f"data/outputs/{state_name}_{section}_{timestamp}.csv"
+    state_data.to_csv(csv_path, index=False)
+    
+    # Export to JSON
+    json_path = f"data/ai_exports/{state_name}_ai_format_{timestamp}.json"
+    state_data.to_json(json_path, orient='records')
+    
+    return csv_path, json_path
 
 def main():
     st.set_page_config(
@@ -550,6 +602,17 @@ def main():
             st.success(f"AI-friendly JSON exported to: {output_file}")
         except Exception as e:
             st.error(f"Error exporting JSON: {str(e)}")
+
+    # Add Log All button in sidebar
+    with st.sidebar:
+        st.header("Data Management")
+        if st.button("Log All Data"):
+            try:
+                archive_path = archive_data()
+                st.success(f"All data archived to: {archive_path}")
+                st.info("Data folders cleared for new processing")
+            except Exception as e:
+                st.error(f"Error archiving data: {str(e)}")
 
 if __name__ == "__main__":
     main() 
