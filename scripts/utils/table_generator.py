@@ -15,13 +15,22 @@ import pandas as pd
 # HOT ZONE SETTINGS (for Set1)
 ############################
 hotzone_counts = {
-    1: 3,  # For Draw1, star the last 3 items
-    2: 3,  # For Draw2, star the last 3 items
-    3: 2,  # For Draw3, star the last 2 items
+    1: 5,  # For Draw1, star the last 5 items
+    2: 4,  # For Draw2, star the last 4 items
+    3: 3,  # For Draw3, star the last 3 items
     4: 2,  # For Draw4, star the last 2 items
     5: 2,  # For Draw5, star the last 2 items
     6: 1,  # For Draw6, star the last 1 item
     # Draw7 not included in hot zones
+}
+
+# Super hot zone settings (subset of hot zones)
+super_hotzone_counts = {
+    1: 3,  # Last 3 of the 5 hot items in Draw1 are super hot
+    2: 2,  # Last 2 of the 4 hot items in Draw2 are super hot
+    3: 2,  # Last 2 of the 3 hot items in Draw3 are super hot
+    4: 2,  # Both hot items in Draw4 are super hot
+    5: 2,  # Both hot items in Draw5 are super hot
 }
 
 ############################
@@ -29,25 +38,40 @@ hotzone_counts = {
 ############################
 def mark_hot_zones(set_label, draw_label, row_type, vals):
     """
-    For Set1 rows of type R2, R4, R6, or R8, mark the last hotzone_counts[draw_num] items 
-    by appending a '*' to them. For Set2 Draw1, mark the last 2 items.
+    For Set1 rows of type R2, R4, R6, or R8, mark items with:
+    - Single * for hot zone items
+    - Double ** for super hot zone items (subset of hot zone)
+    For Set2/Set3 Draw1, mark the last 4 items with *.
     
     Draw number is parsed from draw_label (e.g., "Draw1" => 1).
     """
-    if (set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]) or (set_label == "Set2" and draw_label == "Draw1" and row_type in ["R2", "R4", "R6", "R8"]):
+    if (set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]) or \
+       (set_label in ["Set2", "Set3"] and draw_label == "Draw1" and row_type in ["R2", "R4", "R6", "R8"]):
         try:
             draw_num = int(draw_label.replace("Draw", ""))
-            if set_label == "Set2":
-                count_needed = 2  # For Set2 Draw1, always mark last 2 items
+            
+            # Determine hot zone count
+            if set_label in ["Set2", "Set3"] and draw_label == "Draw1":
+                hot_count = 4  # For Set2/Set3 Draw1, mark last 4 items
+                super_hot_count = 0  # No super hot for Set2/Set3
             else:
-                count_needed = hotzone_counts.get(draw_num, 0)  # For Set1, use the counts from dict
+                hot_count = hotzone_counts.get(draw_num, 0)
+                super_hot_count = super_hotzone_counts.get(draw_num, 0)
             
             n = len(vals)
-            for i in range(count_needed):
+            
+            # Mark hot zones from right to left
+            for i in range(hot_count):
                 idx = n - 1 - i  # start from the end
                 if idx < 0:
                     break
-                vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+                
+                # Check if this position should be super hot
+                if i < super_hot_count:
+                    vals[idx] = vals[idx] + "**" if vals[idx] else "**"
+                else:
+                    vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+                    
         except:
             return vals  # parsing error: do nothing
     return vals
