@@ -25,7 +25,7 @@ You already have scripts like extract_datasets_5.py or final_simplified.py that 
 Pattern Extraction Script (pattern_extractor.py)
 Reads the combined table (or multiple combined tables, one per state).
 Filters by row types (R2, R4, etc.) or by sets/draws as needed.
-Finds stable 3-digit or 3-value sequences, plus any markers ([V], [W], *, etc.).
+Finds stable 3-digit or 3-value sequences
 Generates an “analysis report” or a data object that indicates which stable patterns you found. You might store this in a new CSV, a Python dict, or a database, depending on your workflow.
 Digit Reduction Module
 Could be a standalone function or script (e.g., digit_reduction.py) that the pattern extractor calls before or after it does pattern checks.

@@ -156,7 +156,8 @@ def export_to_json(state_data, state_name):
                                     "hot_zone_count": {
                                         "Draw1": 5, "Draw2": 5, "Draw3": 5, 
                                         "Draw4": 4, "Draw5": 2
-                                    }.get(draw_name, 0) if set_name == "Set1" else 0
+                                    }.get(draw_name, 0) if set_name == "Set1" else 0,
+                                    "hot_zone_indicators": _generate_hot_indicators(draw_name, len(data.get("R2", []))) if set_name == "Set1" and draw_name in ["Draw1", "Draw2", "Draw3", "Draw4", "Draw5"] else None
                                 }
                             }
                             for draw_name, data in draws.items()
@@ -262,6 +263,39 @@ def export_to_json(state_data, state_name):
     
     return output_file
 
+def _generate_hot_indicators(draw_name, total_length):
+    """Generate hot zone indicators for a pattern"""
+    hot_zone_info = {
+        "Draw1": {"total_hot": 5, "super_hot": 3},
+        "Draw2": {"total_hot": 4, "super_hot": 2},
+        "Draw3": {"total_hot": 3, "super_hot": 2},
+        "Draw4": {"total_hot": 2, "super_hot": 2},
+        "Draw5": {"total_hot": 2, "super_hot": 2}
+    }
+    
+    if draw_name not in hot_zone_info:
+        return None
+        
+    indicators = [""] * total_length  # Initialize with no indicators
+    info = hot_zone_info[draw_name]
+    
+    # Add regular hot indicators
+    for i in range(info["total_hot"]):
+        if i < len(indicators):
+            indicators[-(i+1)] = "*"
+            
+    # Override with super hot indicators
+    for i in range(info["super_hot"]):
+        if i < len(indicators):
+            indicators[-(i+1)] = "**"
+            
+    return {
+        "R2": indicators.copy(),
+        "R4": indicators.copy(),
+        "R6": indicators.copy(),
+        "R8": indicators.copy()
+    }
+
 def get_timestamp():
     """Generate timestamp for file naming"""
     return datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -312,6 +346,33 @@ def export_data(state_data, state_name, section):
     state_data.to_json(json_path, orient='records')
     
     return csv_path, json_path
+
+def process_new_excel_file(uploaded_file):
+    """Process a newly uploaded Excel file through the full pipeline"""
+    # Save to original directory
+    original_dir = os.path.join(get_project_root(), "data", "original")
+    os.makedirs(original_dir, exist_ok=True)
+    excel_path = os.path.join(original_dir, "Pick3StatsC4.xlsm")
+    
+    # Save the uploaded file
+    with open(excel_path, "wb") as f:
+        f.write(uploaded_file.getvalue())
+    
+    # Clear session state to force reprocessing
+    st.session_state.processed_states = {}
+    
+    # Run cleaning process
+    cleaned_dir = os.path.join(get_project_root(), "data", "cleaned")
+    os.makedirs(cleaned_dir, exist_ok=True)
+    
+    from clean_data import clean_all_states, STATES
+    results = clean_all_states(STATES, excel_path, cleaned_dir)
+    
+    if not results['success']:
+        st.error("Failed to process any states. Please check the Excel file format.")
+        return False
+        
+    return True
 
 def main():
     st.set_page_config(
@@ -376,6 +437,16 @@ def main():
     with upload_col:
         st.subheader("Upload New File")
         uploaded_file = st.file_uploader("Choose a Pick3StatsC4 Excel file", type=["xlsx", "xlsm"])
+        
+        # Add this new block to handle file processing
+        if uploaded_file is not None and uploaded_file != st.session_state.get('last_processed_file'):
+            st.info("Processing new Excel file...")
+            if process_new_excel_file(uploaded_file):
+                st.success("File processed successfully!")
+                st.session_state.last_processed_file = uploaded_file
+            else:
+                st.error("Error processing file. Please check the format and try again.")
+                uploaded_file = None
     
     with historical_col:
         st.subheader("Historical Files")
