@@ -661,72 +661,132 @@ def process_data_tab():
     st.title("Data Processing")
     st.markdown("Process raw data files to generate cleaned datasets and analysis tables.")
     
-    # File status check
-    excel_path = "data/original/Pick3StatsC4.xlsm"
-    if os.path.exists(excel_path):
-        st.success(f"Found source data file: {excel_path}")
-    else:
-        st.error(f"Source data file not found: {excel_path}")
-        st.info("Please place your data file in the data/original folder.")
+    # Check if Excel file exists
+    excel_path, excel_exists = check_excel_file()
+    
+    if not excel_exists:
+        st.error(f"Excel file not found at {excel_path}")
+        st.warning("Please place the 'Pick3StatsC4.xlsm' file in the data/original directory.")
         return
     
-    # Processing options
-    options = st.multiselect(
-        "Select processing steps:",
-        ["Clean Data", "Extract Data", "Generate Tables"],
-        default=["Clean Data", "Extract Data", "Generate Tables"]
+    st.success(f"Found Excel file: {os.path.basename(excel_path)}")
+    
+    # Create columns for processing options
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        clean_data = st.checkbox("Clean Data", value=True)
+    with col2:
+        extract_data = st.checkbox("Extract Data", value=True)
+    with col3:
+        generate_tables_option = st.checkbox("Generate Tables", value=True)
+    
+    # Add multi-select for states
+    selected_states = st.multiselect(
+        "Select States to Process (leave empty for all states)",
+        options=STATES,
+        default=[]
     )
     
-    # States selection
-    states = ["Florida4", "Georgia4", "Michigan4", "NewJersey4", "NewYork4", 
-              "NorthCarolina4", "Ohio4", "Pennsylvania4", "PuertoRico4", "Connecticut4"]
-    
-    selected_states = st.multiselect("Select states to process:", states, default=states)
+    # Use all states if none selected
+    states_to_process = selected_states if selected_states else STATES
     
     # Process button
     if st.button("Process Data"):
-        # Progress bar
+        # Create progress bar and status
         progress_bar = st.progress(0)
         status = st.empty()
+        results = st.empty()
         
-        if "Clean Data" in options:
-            status.info("Step 1/3: Cleaning data...")
-            
-            # Import the clean module
-            from utils.clean_data import clean_all_states
-            
-            # Clean the data
-            clean_all_states(states=selected_states)
-            
-            progress_bar.progress(33)
-            status.success("Data cleaning completed.")
+        # Create output directories
+        create_output_directories()
         
-        if "Extract Data" in options:
-            status.info("Step 2/3: Extracting data sets...")
-            
-            # Import the extract module
-            from utils.extract_data import extract_all_states
-            
-            # Extract the data
-            extract_all_states(states=selected_states)
-            
-            progress_bar.progress(66)
-            status.success("Data extraction completed.")
+        # Initialize processing summary
+        summary = {
+            "cleaned_states": [],
+            "failed_clean": [],
+            "extracted_states": [],
+            "tables_generated": []
+        }
         
-        if "Generate Tables" in options:
-            status.info("Step 3/3: Generating tables...")
+        with st.spinner("Processing data..."):
+            # Step 1: Clean data
+            if clean_data:
+                status.info("Step 1/3: Cleaning data...")
+                start_time = datetime.now()
+                
+                cleaning_results = clean_all_states(
+                    states_to_process, 
+                    excel_path, 
+                    get_cleaned_data_dir()
+                )
+                
+                summary["cleaned_states"] = cleaning_results["success"]
+                summary["failed_clean"] = cleaning_results["failed"]
+                
+                progress_bar.progress(33)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Data cleaning completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(33)
+                status.info("Skipping data cleaning step")
             
-            # Import the table generator module
-            from utils.table_generator import generate_all_tables
+            # Step 2: Extract data
+            extracted_data = {}
+            if extract_data:
+                status.info("Step 2/3: Extracting data...")
+                start_time = datetime.now()
+                
+                extracted_data = extract_all_states(
+                    states_to_process,
+                    get_cleaned_data_dir()
+                )
+                
+                summary["extracted_states"] = list(extracted_data.keys())
+                
+                progress_bar.progress(66)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Data extraction completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(66)
+                status.info("Skipping data extraction step")
             
-            # Generate tables
-            generate_all_tables(states=selected_states)
-            
-            progress_bar.progress(100)
-            status.success("Table generation completed.")
+            # Step 3: Generate tables
+            if generate_tables_option and extracted_data:
+                status.info("Step 3/3: Generating tables...")
+                start_time = datetime.now()
+                
+                for state_name, state_data in extracted_data.items():
+                    generate_tables(
+                        state_data,
+                        state_name,
+                        os.path.join(get_tables_output_dir(), state_name)
+                    )
+                    summary["tables_generated"].append(state_name)
+                
+                progress_bar.progress(100)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Table generation completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(100)
+                status.info("Skipping table generation step")
         
-        # Final success message
-        st.success("All processing steps completed successfully!")
+        # Show processing summary
+        results.markdown("### Processing Summary")
+        st.write(f"**States Processed:** {len(states_to_process)}")
+        
+        if clean_data:
+            st.write(f"**Successfully Cleaned:** {len(summary['cleaned_states'])}")
+            if summary["failed_clean"]:
+                st.warning(f"**Failed to Clean:** {', '.join(summary['failed_clean'])}")
+        
+        if extract_data:
+            st.write(f"**Successfully Extracted:** {len(summary['extracted_states'])}")
+        
+        if generate_tables_option:
+            st.write(f"**Tables Generated:** {len(summary['tables_generated'])}")
+        
+        st.success("Processing completed!")
 
 def view_results_tab():
     """The View Results tab"""
