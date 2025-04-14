@@ -1,8 +1,8 @@
 @echo off
-echo V-TRAC Enhanced Lottery Data Processor
-echo ======================================
-echo This is a TEST VERSION that includes the V-TRAC Analyzer
-echo Your original working process is NOT affected
+echo ================================
+echo = Alpha Analytical Tool (v1.0) =
+echo ================================
+echo.
 
 cd /d "%~dp0"
 call .venv\Scripts\activate.bat
