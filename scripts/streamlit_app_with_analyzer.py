@@ -16,8 +16,9 @@ import io
 import base64
 from collections import Counter
 import webbrowser
+from PIL import Image
 
-# Add script directory to path for imports
+# Add the project root to the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
 
@@ -38,7 +39,8 @@ from utils.table_generator import generate_tables
 from utils.vtrac_utils import (
     BOXED_VTRAC_REFERENCE,
     find_vtrac_index_and_combos,
-    highlight_winners_in_table
+    highlight_winners_in_table,
+    highlight_string_with_matches
 )
 
 # Set page config
@@ -691,7 +693,7 @@ def process_data_tab():
             status.info("Step 1/3: Cleaning data...")
             
             # Import the clean module
-            from scripts.utils.clean_data import clean_all_states
+            from utils.clean_data import clean_all_states
             
             # Clean the data
             clean_all_states(states=selected_states)
@@ -703,7 +705,7 @@ def process_data_tab():
             status.info("Step 2/3: Extracting data sets...")
             
             # Import the extract module
-            from scripts.utils.extract_data import extract_all_states
+            from utils.extract_data import extract_all_states
             
             # Extract the data
             extract_all_states(states=selected_states)
@@ -715,7 +717,7 @@ def process_data_tab():
             status.info("Step 3/3: Generating tables...")
             
             # Import the table generator module
-            from scripts.utils.table_generator import generate_all_tables
+            from utils.table_generator import generate_all_tables
             
             # Generate tables
             generate_all_tables(states=selected_states)
