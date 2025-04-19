@@ -216,27 +216,74 @@ def detect_straight_combinations(df, pattern):
     
     return straight_count
 
-def calculate_index_score(df, patterns):
+def calculate_index_score(tables, patterns):
     """
-    Calculate an overall score for a V-TRAC index based on:
-    ONLY pattern occurrence frequency (as requested)
-    
-    Other metrics (persistence, stability, straight combinations) are still 
-    calculated for display but not used in scoring.
-    
-    Returns a numeric score (higher is better)
+    Calculate an overall score for a V-TRAC index based on pattern occurrence frequency.
+    Analyzes patterns across all combined tables (Midday, Evening, Combined).
     """
-    if df is None or df.empty or not patterns:
+    if not tables or not patterns:
+        return 0
+        
+    # Check for required tables
+    required_tables = ["Midday_combined", "Evening_combined", "Combined_combined"]
+    if not all(table in tables for table in required_tables):
+        print(f"[ERROR] Missing required tables. Found: {list(tables.keys())}")
         return 0
     
-    # Get pattern counts - this is the ONLY score used for ranking
-    pattern_counts, _ = count_patterns_in_table(df, patterns)
+    total_score = 0
     
-    # Calculate occurrence score - straightforward sum of all pattern occurrences
-    occurrence_score = sum(pattern_counts.values()) * 10
+    # Analyze each combined table
+    for table_name in required_tables:
+        df = tables[table_name]
+        if df is not None and not df.empty:
+            # Get pattern counts for this table
+            pattern_counts, _ = count_patterns_in_table(df, patterns)
+            # Add to total score
+            total_score += sum(pattern_counts.values())
     
-    # Return just the occurrence score - other metrics are calculated separately for display
-    return occurrence_score
+    # Multiply by 10 for final score
+    return total_score * 10
+
+def analyze_all_indexes(state_name):
+    """Analyze all V-TRAC indexes for a state and rank them"""
+    # Load tables for the state
+    tables = load_state_data(state_name)
+    
+    # Check for required tables
+    required_tables = ["Midday_combined", "Evening_combined", "Combined_combined"]
+    if not tables or not all(table in tables for table in required_tables):
+        print(f"[ERROR] Missing required tables for {state_name}. Found: {list(tables.keys() if tables else [])}")
+        return None
+    
+    # Analyze each V-TRAC index
+    results = []
+    
+    # Get all valid V-TRAC indexes from reference
+    for entry in BOXED_VTRAC_REFERENCE:
+        index = entry["Index"]
+        # Get all patterns for this index
+        patterns = set()
+        patterns.update(entry.get("Singles", []))
+        patterns.update(entry.get("Doubles", []))
+        
+        # Skip indexes with no patterns
+        if not patterns:
+            continue
+        
+        # Calculate score for this index
+        score = calculate_index_score(tables, patterns)
+        
+        # Store result
+        results.append({
+            "index": index,
+            "patterns": patterns,
+            "score": score
+        })
+    
+    # Sort results by score (highest first)
+    results.sort(key=lambda x: x["score"], reverse=True)
+    
+    return results
 
 def generate_index_html_report(state_name, index, patterns, tables, score, rank, timestamp=None):
     """Generate an HTML report for a specific V-TRAC index"""
@@ -455,46 +502,6 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     
     return html
 
-def analyze_all_indexes(state_name):
-    """Analyze all V-TRAC indexes for a state and rank them"""
-    # Load tables for the state
-    tables = load_state_data(state_name)
-    if not tables:
-        return None
-    
-    # Analyze each V-TRAC index
-    results = []
-    
-    # Get all valid V-TRAC indexes
-    vtrac_indices = [entry["Index"] for entry in BOXED_VTRAC_REFERENCE]
-    
-    for index in vtrac_indices:
-        # Get all patterns for this index
-        patterns = get_all_combinations_for_index(index)
-        
-        # Skip indexes with no patterns
-        if not patterns:
-            continue
-        
-        # Calculate score for this index
-        score = calculate_index_score(tables, patterns)
-        
-        # Store result
-        results.append({
-            "index": index,
-            "patterns": patterns,
-            "score": score
-        })
-    
-    # Sort results by score (highest first)
-    results.sort(key=lambda x: x["score"], reverse=True)
-    
-    # Add ranks
-    for i, result in enumerate(results):
-        result["rank"] = i + 1
-    
-    return results
-
 def generate_top_reports(state_name, results, top_n=3):
     """Generate HTML reports for top N ranked indexes"""
     if not results or len(results) == 0:
@@ -517,7 +524,7 @@ def generate_top_reports(state_name, results, top_n=3):
             result["patterns"], 
             tables, 
             result["score"], 
-            result["rank"],
+            i + 1,
             timestamp
         )
         
@@ -828,140 +835,82 @@ def main():
         """)
 
 def vtrac_analyzer_tab():
-    """The V-TRAC Analyzer tab"""
-    st.header("V-TRAC Analyzer")
-    st.markdown("Analyze V-TRAC patterns and generate HTML reports.")
+    """V-TRAC Analyzer Interface"""
+    st.title("V-TRAC Pattern Analyzer")
+    st.markdown("Analyze state data for optimal V-TRAC indexes and pattern predictions")
     
-    # Sidebar for V-TRAC Analysis options
-    with st.sidebar:
-        st.subheader("V-TRAC Analysis Options")
+    # Select state
+    state_name = st.selectbox("Select State", STATES)
+    
+    # Analysis options
+    st.subheader("Analysis Options")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        top_n_indexes = st.slider("Number of Top Indexes to Display", 1, 35, 10)
+    
+    with col2:
+        top_n_reports = st.slider("Number of HTML Reports to Generate", 0, 10, 3)
+    
+    # Run analysis button
+    if st.button("Run V-TRAC Analysis", type="primary"):
+        progress_bar = st.progress(0)
+        status = st.empty()
         
-        # Option to analyze all states at once or a single state
-        analysis_mode = st.radio("Analysis Mode", ["Single State", "All States"])
+        status.info("Step 1/4: Loading state data...")
+        tables = load_state_data(state_name)
+        if not tables:
+            st.error(f"No table data loaded for {state_name}. Please process data first.")
+            return
+        progress_bar.progress(25)
         
-        if analysis_mode == "Single State":
-            # State selection (if single state mode)
-            state_options = ["Florida4", "Georgia4", "Michigan4", "NewJersey4", "NewYork4", 
-                            "NorthCarolina4", "Ohio4", "Pennsylvania4", "PuertoRico4", "Connecticut4"]
-            selected_state = st.selectbox("State to Analyze", state_options)
-            states_to_analyze = [selected_state]
+        status.info("Step 2/4: Analyzing all V-TRAC indexes...")
+        results = analyze_all_indexes(state_name)
+        if not results:
+            st.error(f"Analysis failed for {state_name}. Please check the data.")
+            return
+        progress_bar.progress(50)
+        
+        status.info("Step 3/4: Generating HTML reports...")
+        if top_n_reports > 0:
+            reports = generate_top_reports(state_name, results, top_n_reports)
         else:
-            # All states mode - select states to include
-            state_options = ["Florida4", "Georgia4", "Michigan4", "NewJersey4", "NewYork4", 
-                            "NorthCarolina4", "Ohio4", "Pennsylvania4", "PuertoRico4", "Connecticut4"]
-            states_to_analyze = st.multiselect("States to Analyze", state_options, default=state_options)
-            if not states_to_analyze:
-                states_to_analyze = state_options.copy()  # Default to all if none selected
+            reports = []
+        progress_bar.progress(75)
         
-        # Pattern threshold
-        pattern_threshold = st.slider("Minimum Pattern Count", 1, 10, 3)
+        status.info("Step 4/4: Preparing visualization...")
+        chart_image = generate_summary_chart(results, top_n_indexes)
+        progress_bar.progress(100)
         
-        # Number of top indices to analyze
-        top_n_indices = st.slider("Number of Top Indices to Show", 3, 10, 5)
+        status.success("Analysis complete!")
         
-        # Analysis button
-        analyze_button = st.button("Run V-TRAC Analysis")
-    
-    # Use full width for content
-    if analyze_button:
-        results = []
+        # Display top indexes first
+        st.subheader(f"Top {min(top_n_indexes, len(results))} V-TRAC Indexes for {state_name}")
+        top_results_df = pd.DataFrame([
+            {
+                "Rank": i + 1,
+                "Index": r["index"],
+                "Score": f"{r['score']:.2f}",
+                "Patterns": len(r["patterns"]),
+                "Pattern List": ", ".join(sorted(r["patterns"]))
+            }
+            for i, r in enumerate(results[:top_n_indexes])
+        ])
+        st.dataframe(top_results_df, use_container_width=True)
         
-        with st.spinner(f"Analyzing {'all selected states' if analysis_mode == 'All States' else selected_state}..."):
-            for state in states_to_analyze:
-                # Get tables for this state
-                midday_combined = get_combined_table(state, "Midday")
-                evening_combined = get_combined_table(state, "Evening")
-                combined_combined = get_combined_table(state, "Combined")
-                
-                # Optional: R2-only tables
-                midday_r2 = get_r2_table(state, "Midday")
-                evening_r2 = get_r2_table(state, "Evening")
-                combined_r2 = get_r2_table(state, "Combined")
-                
-                # Tables dictionary
-                tables = {
-                    "Midday_combined": midday_combined,
-                    "Evening_combined": evening_combined,
-                    "Combined_combined": combined_combined,
-                    "Midday_r2": midday_r2,
-                    "Evening_r2": evening_r2,
-                    "Combined_r2": combined_r2
-                }
-                
-                # Check ALL V-TRAC indices (1-35)
-                state_results = []
-                for index in range(1, 36):  # All indices 1-35
-                    # Get patterns for this index
-                    patterns = get_patterns_for_index(index)
-                    
-                    # Count patterns
-                    pattern_counts, total_count = count_patterns_in_table(combined_combined, patterns)
-                    
-                    # Filter out patterns below threshold
-                    filtered_patterns = [p for p, c in pattern_counts.items() if c >= pattern_threshold]
-                    
-                    if filtered_patterns:
-                        # Calculate index score - now based ONLY on occurrence count
-                        index_score = calculate_index_score(combined_combined, filtered_patterns)
-                        
-                        # Generate HTML report
-                        html_report = generate_index_html_report(
-                            state, index, filtered_patterns, tables, 
-                            index_score, len(state_results) + 1
-                        )
-                        
-                        # Save report
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        report_path = f"data/outputs/vtrac/{timestamp}_{state}_Index{index}.html"
-                        os.makedirs(os.path.dirname(report_path), exist_ok=True)
-                        with open(report_path, "w") as f:
-                            f.write(html_report)
-                        
-                        # Add to results
-                        state_results.append({
-                            'state': state,
-                            'index': index,
-                            'patterns': filtered_patterns,
-                            'score': index_score,
-                            'html': html_report,
-                            'path': report_path
-                        })
-                
-                # Sort by score (descending)
-                state_results.sort(key=lambda x: x['score'], reverse=True)
-                results.extend(state_results)
+        # Show chart if available
+        if chart_image:
+            st.subheader("Score Distribution")
+            st.image(chart_image)
         
-        # Sort overall results by score (descending)
-        results.sort(key=lambda x: x['score'], reverse=True)
-        
-        if results:
-            # Generate summary table of results
-            summary_data = []
-            for i, report in enumerate(results[:top_n_indices]):  # Limit to top N indices
-                summary_data.append({
-                    'Rank': i + 1,
-                    'State': report['state'],
-                    'Index': report['index'],
-                    'Score': f"{report['score']:.2f}",
-                    'Patterns': len(report['patterns']),
-                    'Pattern List': ", ".join(sorted(report['patterns']))
-                })
+        # Display top 3 reports with full tables and statistics
+        if reports:
+            st.subheader("Detailed Analysis Reports")
+            report_tabs = st.tabs([f"Rank #{r['rank']} (Index {r['index']})" for r in reports[:3]])
             
-            summary_df = pd.DataFrame(summary_data)
-            
-            # Display summary table only
-            st.subheader(f"Top {len(summary_df)} V-TRAC Indexes for {'All States' if analysis_mode == 'All States' else selected_state}")
-            st.dataframe(summary_df, use_container_width=True)
-            
-            # HTML Reports - increase height for maximum viewing
-            st.subheader("Top 3 HTML Reports")
-            top_reports = results[:3]
-            
-            report_tabs = st.tabs([f"Rank #{i+1} (Index {r['index']})" for i, r in enumerate(top_reports)])
-            
-            for i, (tab, report) in enumerate(zip(report_tabs, top_reports)):
+            for tab, report in zip(report_tabs, reports[:3]):
                 with tab:
-                    # File info - keep compact
+                    # File info row
                     col1, col2, col3 = st.columns([1, 1, 1])
                     
                     with col1:
@@ -969,249 +918,27 @@ def vtrac_analyzer_tab():
                     
                     with col2:
                         # Download button
-                        with open(report['path'], 'r') as f:
-                            st.download_button(
-                                label=f"Download HTML (Rank #{i+1})",
-                                data=f.read(),
-                                file_name=f"vtrac_{report['state']}_Index{report['index']}.html",
-                                mime="text/html"
-                            )
+                        st.download_button(
+                            label=f"Download HTML (Rank #{report['rank']})",
+                            data=report['html'],
+                            file_name=report['filename'],
+                            mime="text/html"
+                        )
                     
                     with col3:
                         # Open in browser button
-                        st.button(f"Open in Browser (Rank #{i+1})", 
-                              key=f"open_browser_{i}", 
-                              on_click=lambda p=report['path']: webbrowser.open(f"file://{os.path.abspath(p)}"))
+                        if st.button(f"Open in Browser (Rank #{report['rank']})", 
+                                   key=f"open_browser_{report['rank']}"):
+                            webbrowser.open(f"file://{os.path.abspath(report['filepath'])}")
                     
-                    # Preview - maximum height for better viewing
+                    # Preview with maximum height
                     st.components.v1.html(report['html'], height=1800, scrolling=True)
-        else:
-            st.warning("No results found matching the criteria. Try adjusting the pattern threshold or analyzing different states.")
-
-# Helper functions for V-TRAC analysis
-def get_patterns_for_index(index):
-    """Get the patterns associated with a specific V-TRAC index"""
-    if 1 <= index <= 35:
-        # Get the patterns from the reference table (index is 1-based)
-        vtrac_entry = BOXED_VTRAC_REFERENCE[index - 1]
-        patterns = []
-        patterns.extend(vtrac_entry.get("Singles", []))
-        patterns.extend(vtrac_entry.get("Doubles", []))
-        return patterns
-    return []
-
-def get_combined_table(state, time_of_day):
-    """Load the combined table for a specific state and time of day"""
-    # Find the most recent date folder
-    output_dir = "data/outputs/tables"
-    date_folders = sorted([d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d))], reverse=True)
-    
-    if not date_folders:
-        return None
-    
-    latest_date = date_folders[0]
-    filepath = os.path.join(output_dir, latest_date, state, f"{state}_{time_of_day}_combined.csv")
-    
-    if os.path.exists(filepath):
-        return pd.read_csv(filepath)
-    return None
-
-def get_r2_table(state, time_of_day):
-    """Load the R2-only table for a specific state and time of day"""
-    # Find the most recent date folder
-    output_dir = "data/outputs/tables" 
-    date_folders = sorted([d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d))], reverse=True)
-    
-    if not date_folders:
-        return None
-    
-    latest_date = date_folders[0]
-    filepath = os.path.join(output_dir, latest_date, state, f"{state}_{time_of_day}_R2_only.csv")
-    
-    if os.path.exists(filepath):
-        return pd.read_csv(filepath)
-    return None
-
-def count_patterns_in_table(df, patterns):
-    """
-    Count occurrences of patterns in the table
-    Returns dict of pattern counts and total count
-    """
-    if df is None:
-        return {}, 0
-    
-    # Get numeric columns (usually 1-7)
-    numeric_cols = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
-    
-    # Initialize counts
-    pattern_counts = {pattern: 0 for pattern in patterns}
-    total_count = 0
-    
-    # Count patterns
-    for _, row in df.iterrows():
-        # Combine all numeric columns into a single string
-        combined = ''.join(str(row[col]) for col in numeric_cols)
         
-        # Count patterns
-        for pattern in patterns:
-            if pattern in combined:
-                pattern_counts[pattern] += 1
-                total_count += 1
-    
-    return pattern_counts, total_count
-
-def analyze_pattern_persistence(df, patterns):
-    """
-    Analyze how patterns persist across different sets and draws
-    Returns a score for each pattern based on its distribution
-    """
-    if df is None or df.empty:
-        return {pattern: 0 for pattern in patterns}
-    
-    # Get numeric columns (usually 1-7)
-    numeric_cols = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
-    
-    # Initialize persistence scores
-    persistence_scores = {pattern: 0 for pattern in patterns}
-    
-    # Group data by Set and Draw
-    set_draws = df.groupby(['Set', 'Draw'])
-    
-    # Check persistence across different set/draw combinations
-    for pattern in patterns:
-        # Count in how many different set/draw combinations this pattern appears
-        appearances = 0
-        total_set_draws = 0
-        
-        for (set_name, draw_name), group in set_draws:
-            total_set_draws += 1
-            
-            # Check if pattern appears in this set/draw
-            appears = False
-            for _, row in group.iterrows():
-                combined = ''.join(str(row[col]) for col in numeric_cols)
-                if pattern in combined:
-                    appears = True
-                    break
-            
-            if appears:
-                appearances += 1
-        
-        # Calculate persistence score (percentage of set/draws where pattern appears)
-        if total_set_draws > 0:
-            persistence_scores[pattern] = (appearances / total_set_draws) * 100
-    
-    return persistence_scores
-
-def analyze_pattern_stability(df, patterns):
-    """
-    Analyze how stable patterns are within the same set/draw
-    Returns a stability score for each pattern
-    """
-    if df is None or df.empty:
-        return {pattern: 0 for pattern in patterns}
-    
-    # Get numeric columns (usually 1-7)
-    numeric_cols = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
-    
-    # Initialize stability scores
-    stability_scores = {pattern: 0 for pattern in patterns}
-    
-    # Process each pattern
-    for pattern in patterns:
-        total_occurrences = 0
-        consecutive_occurrences = 0
-        
-        # Group by Set
-        for set_name, set_group in df.groupby('Set'):
-            # Sort by Draw to ensure proper order
-            set_group = set_group.sort_values('Draw')
-            
-            # Track consecutive rows with pattern
-            prev_has_pattern = False
-            
-            for _, row in set_group.iterrows():
-                combined = ''.join(str(row[col]) for col in numeric_cols)
-                has_pattern = pattern in combined
-                
-                if has_pattern:
-                    total_occurrences += 1
-                    
-                    # Check if consecutive
-                    if prev_has_pattern:
-                        consecutive_occurrences += 1
-                
-                prev_has_pattern = has_pattern
-        
-        # Calculate stability score
-        if total_occurrences > 1:  # Need at least 2 occurrences for consecutive to be possible
-            stability_scores[pattern] = (consecutive_occurrences / (total_occurrences - 1)) * 100
-    
-    return stability_scores
-
-def detect_straight_combinations(df, pattern):
-    """
-    Detect straight combinations (pattern appears in exact same position)
-    Returns count of straight occurrences
-    """
-    if df is None or df.empty:
-        return 0
-    
-    # Get numeric columns (usually 1-7)
-    numeric_cols = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
-    
-    straight_count = 0
-    
-    # Check each position
-    for col in numeric_cols:
-        col_data = df[col].astype(str)
-        straight_count += col_data.str.contains(pattern).sum()
-    
-    return straight_count
-
-def calculate_index_score(df, patterns):
-    """
-    Calculate an overall score for a V-TRAC index based on:
-    1. Pattern occurrence frequency
-    2. Pattern persistence across sets/draws
-    3. Pattern stability (consecutive appearances)
-    4. Straight combinations
-    
-    Returns a numeric score (higher is better)
-    """
-    if df is None or df.empty or not patterns:
-        return 0
-    
-    # Get individual scores
-    pattern_counts, _ = count_patterns_in_table(df, patterns)
-    persistence_scores = analyze_pattern_persistence(df, patterns)
-    stability_scores = analyze_pattern_stability(df, patterns)
-    straight_counts = {p: detect_straight_combinations(df, p) for p in patterns}
-    
-    # Calculate aggregate score
-    total_score = 0
-    
-    # Occurrence weight: 40%
-    occurrence_score = sum(pattern_counts.values()) * 10
-    
-    # Persistence weight: 30%
-    persistence_score = sum(persistence_scores.values())
-    
-    # Stability weight: 20%
-    stability_score = sum(stability_scores.values())
-    
-    # Straight combinations weight: 10%
-    straight_score = sum(straight_counts.values()) * 5
-    
-    # Combine scores
-    total_score = (
-        occurrence_score * 0.4 +
-        persistence_score * 0.3 +
-        stability_score * 0.2 +
-        straight_score * 0.1
-    )
-    
-    return total_score
+        elif top_n_reports > 0:
+            st.info("No HTML reports were generated. Analysis might not have produced enough results.")
+    else:
+        # Show example of what to expect
+        st.info("Click 'Run V-TRAC Analysis' to analyze patterns and generate reports.")
 
 if __name__ == "__main__":
     main() 
