@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-streamlit_app_with_analyzer.py - Enhanced Streamlit interface with V-TRAC analyzer
+Alpha Analytical Tool with V-TRAC Analysis
+Provides data processing, table generation, and pattern analysis for numerical datasets
 """
 
 import os
@@ -15,8 +16,9 @@ import io
 import base64
 from collections import Counter
 import webbrowser
+from PIL import Image
 
-# Add script directory to path for imports
+# Add the project root to the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
 
@@ -37,13 +39,14 @@ from utils.table_generator import generate_tables
 from utils.vtrac_utils import (
     BOXED_VTRAC_REFERENCE,
     find_vtrac_index_and_combos,
-    highlight_winners_in_table
+    highlight_winners_in_table,
+    highlight_string_with_matches
 )
 
 # Set page config
 st.set_page_config(
-    page_title="Lottery Data Processor with V-TRAC Analyzer",
-    page_icon="🎲",
+    page_title="Alpha Analytical Tool",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -592,253 +595,364 @@ def generate_summary_chart(results, top_n=10):
     
     return f"data:image/png;base64,{image_base64}"
 
+def get_combined_table(state_name, time_period):
+    """Load combined table for state and time period"""
+    tables_dir = get_tables_output_dir()  
+    # Get most recent date folder
+    date_folders = sorted([d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))], reverse=True)
+    if not date_folders:
+        return None
+    
+    # Use most recent date
+    state_dir = os.path.join(tables_dir, date_folders[0], state_name)
+    if not os.path.exists(state_dir):
+        return None
+    
+    # Look for the combined table file
+    filename = f"{state_name}_{time_period}_combined.csv"
+    filepath = os.path.join(state_dir, filename)
+    
+    if os.path.exists(filepath):
+        try:
+            return pd.read_csv(filepath)
+        except Exception as e:
+            print(f"Error loading {filename}: {e}")
+    
+    return None
+
+def get_r2_table(state_name, time_period):
+    """Load R2-only table for state and time period"""
+    tables_dir = get_tables_output_dir()
+    # Get most recent date folder
+    date_folders = sorted([d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))], reverse=True)
+    if not date_folders:
+        return None
+    
+    # Use most recent date
+    state_dir = os.path.join(tables_dir, date_folders[0], state_name)
+    if not os.path.exists(state_dir):
+        return None
+    
+    # Look for the R2-only table file
+    filename = f"{state_name}_{time_period}_R2_only.csv"
+    filepath = os.path.join(state_dir, filename)
+    
+    if os.path.exists(filepath):
+        try:
+            return pd.read_csv(filepath)
+        except Exception as e:
+            print(f"Error loading {filename}: {e}")
+    
+    return None
+
+def get_patterns_for_index(index):
+    """Get all pattern combinations for a specific V-TRAC index"""
+    vtrac_entry = next((item for item in BOXED_VTRAC_REFERENCE if item["Index"] == index), None)
+    
+    if vtrac_entry:
+        patterns = set()
+        patterns.update(vtrac_entry.get("Singles", []))
+        patterns.update(vtrac_entry.get("Doubles", []))
+        return patterns
+    
+    return set()
+
 #------------------------------------------------------------------------------
 # COMBINED MAIN APP
 #------------------------------------------------------------------------------
 
 def main():
-    # Sidebar navigation
-    st.sidebar.title("Lottery Data Processor")
-    st.sidebar.image("https://img.icons8.com/fluency/96/lottery.png", width=80)
+    """Main function to run the Streamlit app"""
     
-    # Tabs for different sections
-    app_mode = st.sidebar.radio(
-        "Select Mode",
-        ["Process Data", "View Results", "V-TRAC Analyzer", "About"]
-    )
+    # Ensure all necessary directories exist
+    os.makedirs("data", exist_ok=True)
+    os.makedirs("data/original", exist_ok=True)
+    os.makedirs("data/cleaned", exist_ok=True)
+    os.makedirs("data/outputs", exist_ok=True)
+    
+    # Create a date-stamped folder for today
+    today = datetime.now().strftime("%Y-%m-%d")
+    os.makedirs(f"data/outputs/tables/{today}", exist_ok=True)
+    print(f"Ensured directory exists: {os.path.abspath(f'data/outputs/tables/{today}')}")
+    
+    # Sidebar for app navigation
+    with st.sidebar:
+        st.image("https://via.placeholder.com/150x80?text=Alpha+Analytics", width=150)
+        st.title("Alpha Analytical Tool")
+        
+        app_mode = st.radio(
+            "Select Mode",
+            ["Process Data", "View Results", "V-TRAC Analyzer", "About"]
+        )
     
     # Process Data tab
     if app_mode == "Process Data":
-        st.header("Process Lottery Data")
-        
-        # Check if Excel file exists
-        excel_path, excel_exists = check_excel_file()
-        
-        if not excel_exists:
-            st.error(f"Excel file not found at {excel_path}")
-            st.warning("Please place the 'Pick3StatsC4.xlsm' file in the data/original directory.")
-            return
-        
-        st.success(f"Found Excel file: {os.path.basename(excel_path)}")
-        
-        # Create columns for processing options
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            clean_data = st.checkbox("Clean Data", value=True)
-        with col2:
-            extract_data = st.checkbox("Extract Data", value=True)
-        with col3:
-            generate_tables_option = st.checkbox("Generate Tables", value=True)
-        
-        # Add multi-select for states
-        selected_states = st.multiselect(
-            "Select States to Process (leave empty for all states)",
-            options=STATES,
-            default=[]
-        )
-        
-        # Use all states if none selected
-        states_to_process = selected_states if selected_states else STATES
-        
-        # Process button
-        if st.button("Process Data", type="primary"):
-            # Create progress bar and status
-            progress_bar = st.progress(0)
-            status = st.empty()
-            results = st.empty()
-            
-            # Create output directories
-            create_output_directories()
-            
-            # Initialize processing summary
-            summary = {
-                "cleaned_states": [],
-                "failed_clean": [],
-                "extracted_states": [],
-                "tables_generated": []
-            }
-            
-            with st.spinner("Processing data..."):
-                # Step 1: Clean data
-                if clean_data:
-                    status.info("Step 1/3: Cleaning data...")
-                    start_time = datetime.now()
-                    
-                    cleaning_results = clean_all_states(
-                        states_to_process, 
-                        excel_path, 
-                        get_cleaned_data_dir()
-                    )
-                    
-                    summary["cleaned_states"] = cleaning_results["success"]
-                    summary["failed_clean"] = cleaning_results["failed"]
-                    
-                    progress_bar.progress(33)
-                    duration = (datetime.now() - start_time).total_seconds()
-                    status.success(f"Data cleaning completed in {format_time(duration)}")
-                else:
-                    progress_bar.progress(33)
-                    status.info("Skipping data cleaning step")
-                
-                # Step 2: Extract data
-                extracted_data = {}
-                if extract_data:
-                    status.info("Step 2/3: Extracting data...")
-                    start_time = datetime.now()
-                    
-                    extracted_data = extract_all_states(
-                        states_to_process,
-                        get_cleaned_data_dir()
-                    )
-                    
-                    summary["extracted_states"] = list(extracted_data.keys())
-                    
-                    progress_bar.progress(66)
-                    duration = (datetime.now() - start_time).total_seconds()
-                    status.success(f"Data extraction completed in {format_time(duration)}")
-                else:
-                    progress_bar.progress(66)
-                    status.info("Skipping data extraction step")
-                
-                # Step 3: Generate tables
-                if generate_tables_option and extracted_data:
-                    status.info("Step 3/3: Generating tables...")
-                    start_time = datetime.now()
-                    
-                    for state_name, state_data in extracted_data.items():
-                        generate_tables(
-                            state_data,
-                            state_name,
-                            os.path.join(get_tables_output_dir(), state_name)
-                        )
-                        summary["tables_generated"].append(state_name)
-                    
-                    progress_bar.progress(100)
-                    duration = (datetime.now() - start_time).total_seconds()
-                    status.success(f"Table generation completed in {format_time(duration)}")
-                else:
-                    progress_bar.progress(100)
-                    status.info("Skipping table generation step")
-            
-            # Show processing summary
-            results.markdown("### Processing Summary")
-            st.write(f"**States Processed:** {len(states_to_process)}")
-            
-            if clean_data:
-                st.write(f"**Successfully Cleaned:** {len(summary['cleaned_states'])}")
-                if summary["failed_clean"]:
-                    st.warning(f"**Failed to Clean:** {', '.join(summary['failed_clean'])}")
-            
-            if extract_data:
-                st.write(f"**Successfully Extracted:** {len(summary['extracted_states'])}")
-            
-            if generate_tables_option:
-                st.write(f"**Tables Generated:** {len(summary['tables_generated'])}")
-            
-            st.success("Processing completed!")
+        process_data_tab()
     
     # View Results tab
     elif app_mode == "View Results":
-        st.header("View Results")
-        
-        # Select state
-        state = st.selectbox("Select State", STATES)
-        
-        # Load data for selected state
-        state_data = load_state_data(state)
-        
-        if not state_data:
-            st.warning(f"No data found for {state}. Please process data first.")
-            return
-        
-        # Create tabs for different sections
-        tables_tabs = st.tabs(["Midday", "Evening", "Combined"])
-        
-        for i, section in enumerate(["Midday", "Evening", "Combined"]):
-            with tables_tabs[i]:
-                # Combined table
-                combined_key = f"{section}_combined"
-                r2_key = f"{section}_r2"
-                
-                st.subheader(f"{section} - Combined Table")
-                if combined_key in state_data:
-                    st.dataframe(
-                        state_data[combined_key], 
-                        use_container_width=True,
-                        height=400
-                    )
-                    
-                    # Download option
-                    csv = state_data[combined_key].to_csv(index=False)
-                    st.download_button(
-                        f"Download {section} Combined Table",
-                        csv,
-                        f"{state}_{section}_combined.csv",
-                        "text/csv",
-                        key=f"dl-combined-{section}"
-                    )
-                
-                st.subheader(f"{section} - R2-only Table")
-                if r2_key in state_data:
-                    st.dataframe(
-                        state_data[r2_key],
-                        use_container_width=True,
-                        height=400
-                    )
-                    
-                    # Download option
-                    csv = state_data[r2_key].to_csv(index=False)
-                    st.download_button(
-                        f"Download {section} R2-only Table",
-                        csv,
-                        f"{state}_{section}_r2.csv",
-                        "text/csv",
-                        key=f"dl-r2-{section}"
-                    )
+        view_results_tab()
     
     # V-TRAC Analyzer tab
     elif app_mode == "V-TRAC Analyzer":
         vtrac_analyzer_tab()
     
     # About tab
-    else:
-        st.header("About This Tool")
+    elif app_mode == "About":
+        st.title("About Alpha Analytical Tool")
         st.markdown("""
-        ## Lottery Data Processor with V-TRAC Analyzer
+        ## Alpha Analytical Tool
         
-        This tool combines data processing and analysis features:
+        This application provides advanced data processing and pattern analysis capabilities.
         
-        1. **Process Data:** Clean, extract, and generate tables from Excel files
-        2. **View Results:** View and download generated tables
-        3. **V-TRAC Analyzer:** Analyze state data for optimal V-TRAC indexes and pattern predictions
+        ### Key Features:
+        - Data cleaning and normalization
+        - Set extraction and transformation
+        - Table generation and formatting
+        - V-TRAC pattern analysis and visualization
         
-        The V-TRAC Analyzer evaluates all 35 pattern indexes to find those with strongest clustering 
-        across your data tables. It scores indexes based on:
+        ### Analysis Methods:
+        - Pattern detection across data sets
+        - Stability and persistence scoring
+        - Relationship clustering
+        - Visual highlighting of significant patterns
         
-        - Pattern occurrence frequency
-        - Pattern persistence across columns
-        - Pattern stability within row types
-        - Straight combinations
+        ### Getting Started:
+        1. First, use the "Process Data" tab to process your data files
+        2. Then, view the generated tables in the "View Results" tab
+        3. Finally, analyze patterns using the "V-TRAC Analyzer"
         
-        Top-scoring indexes are presented with detailed HTML reports showing pattern highlighting 
-        across all data tables.
-        """)
-        
-        # Add notes about file locations and data paths
-        st.subheader("Important File Locations")
-        st.markdown("""
-        - Input Excel: `data/original/Pick3StatsC4.xlsm`
-        - Cleaned Data: `data/cleaned/[STATE]_cleaned.xlsx`
-        - Generated Tables: `data/outputs/[STATE]/*.csv`
-        - Analysis Reports: `data/outputs/analysis/*.html`
+        For more information, refer to the documentation.
         """)
 
+def process_data_tab():
+    """The Process Data tab"""
+    st.title("Data Processing")
+    st.markdown("Process raw data files to generate cleaned datasets and analysis tables.")
+    
+    # Check if Excel file exists
+    excel_path, excel_exists = check_excel_file()
+    
+    if not excel_exists:
+        st.error(f"Excel file not found at {excel_path}")
+        st.warning("Please place the 'Pick3StatsC4.xlsm' file in the data/original directory.")
+        return
+    
+    st.success(f"Found Excel file: {os.path.basename(excel_path)}")
+    
+    # Create columns for processing options
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        clean_data = st.checkbox("Clean Data", value=True)
+    with col2:
+        extract_data = st.checkbox("Extract Data", value=True)
+    with col3:
+        generate_tables_option = st.checkbox("Generate Tables", value=True)
+    
+    # Add multi-select for states
+    selected_states = st.multiselect(
+        "Select States to Process (leave empty for all states)",
+        options=STATES,
+        default=[]
+    )
+    
+    # Use all states if none selected
+    states_to_process = selected_states if selected_states else STATES
+    
+    # Process button
+    if st.button("Process Data"):
+        # Create progress bar and status
+        progress_bar = st.progress(0)
+        status = st.empty()
+        results = st.empty()
+        
+        # Create output directories
+        create_output_directories()
+        
+        # Initialize processing summary
+        summary = {
+            "cleaned_states": [],
+            "failed_clean": [],
+            "extracted_states": [],
+            "tables_generated": []
+        }
+        
+        with st.spinner("Processing data..."):
+            # Step 1: Clean data
+            if clean_data:
+                status.info("Step 1/3: Cleaning data...")
+                start_time = datetime.now()
+                
+                cleaning_results = clean_all_states(
+                    states_to_process, 
+                    excel_path, 
+                    get_cleaned_data_dir()
+                )
+                
+                summary["cleaned_states"] = cleaning_results["success"]
+                summary["failed_clean"] = cleaning_results["failed"]
+                
+                progress_bar.progress(33)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Data cleaning completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(33)
+                status.info("Skipping data cleaning step")
+            
+            # Step 2: Extract data
+            extracted_data = {}
+            if extract_data:
+                status.info("Step 2/3: Extracting data...")
+                start_time = datetime.now()
+                
+                extracted_data = extract_all_states(
+                    states_to_process,
+                    get_cleaned_data_dir()
+                )
+                
+                summary["extracted_states"] = list(extracted_data.keys())
+                
+                progress_bar.progress(66)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Data extraction completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(66)
+                status.info("Skipping data extraction step")
+            
+            # Step 3: Generate tables
+            if generate_tables_option and extracted_data:
+                status.info("Step 3/3: Generating tables...")
+                start_time = datetime.now()
+                
+                for state_name, state_data in extracted_data.items():
+                    generate_tables(
+                        state_data,
+                        state_name,
+                        os.path.join(get_tables_output_dir(), state_name)
+                    )
+                    summary["tables_generated"].append(state_name)
+                
+                progress_bar.progress(100)
+                duration = (datetime.now() - start_time).total_seconds()
+                status.success(f"Table generation completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(100)
+                status.info("Skipping table generation step")
+        
+        # Show processing summary
+        results.markdown("### Processing Summary")
+        st.write(f"**States Processed:** {len(states_to_process)}")
+        
+        if clean_data:
+            st.write(f"**Successfully Cleaned:** {len(summary['cleaned_states'])}")
+            if summary["failed_clean"]:
+                st.warning(f"**Failed to Clean:** {', '.join(summary['failed_clean'])}")
+        
+        if extract_data:
+            st.write(f"**Successfully Extracted:** {len(summary['extracted_states'])}")
+        
+        if generate_tables_option:
+            st.write(f"**Tables Generated:** {len(summary['tables_generated'])}")
+        
+        st.success("Processing completed!")
+
+def view_results_tab():
+    """The View Results tab"""
+    st.title("View Results")
+    st.markdown("View the generated tables and analysis results.")
+    
+    # Find the most recent date folder
+    output_dir = "data/outputs/tables"
+    if not os.path.exists(output_dir):
+        st.error(f"Output directory not found: {output_dir}")
+        st.info("Please process data first.")
+        return
+    
+    date_folders = sorted([d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d))], reverse=True)
+    
+    if not date_folders:
+        st.error("No output data found.")
+        st.info("Please process data first.")
+        return
+    
+    # Select date
+    selected_date = st.selectbox("Select date:", date_folders)
+    
+    # Get states for the selected date
+    states_dir = os.path.join(output_dir, selected_date)
+    available_states = sorted([d for d in os.listdir(states_dir) if os.path.isdir(os.path.join(states_dir, d))])
+    
+    if not available_states:
+        st.error(f"No state data found for date: {selected_date}")
+        return
+    
+    # Select state
+    selected_state = st.selectbox("Select state:", available_states)
+    
+    # Get tables for the selected state
+    state_dir = os.path.join(states_dir, selected_state)
+    available_tables = sorted([f for f in os.listdir(state_dir) if f.endswith(".csv")])
+    
+    if not available_tables:
+        st.error(f"No tables found for state: {selected_state}")
+        return
+    
+    # Select table type
+    table_options = [
+        f"{selected_state}_Midday_combined.csv",
+        f"{selected_state}_Evening_combined.csv",
+        f"{selected_state}_Combined_combined.csv",
+        f"{selected_state}_Midday_R2_only.csv",
+        f"{selected_state}_Evening_R2_only.csv",
+        f"{selected_state}_Combined_R2_only.csv"
+    ]
+    
+    available_options = [opt for opt in table_options if opt in available_tables]
+    selected_table = st.selectbox("Select table type:", available_options)
+    
+    # Display the selected table
+    table_path = os.path.join(state_dir, selected_table)
+    if os.path.exists(table_path):
+        df = pd.read_csv(table_path)
+        
+        # Apply background colors to different sets
+        def highlight_sets(s):
+            if s.name != 'Set':
+                return [''] * len(s)
+            
+            return ['background-color: rgba(31, 119, 180, 0.1)' if x == 'Set3'
+                   else 'background-color: rgba(44, 160, 44, 0.1)' if x == 'Set2'
+                   else 'background-color: rgba(255, 127, 14, 0.1)' if (x == 'Set1')
+                   else '' for x in s]
+        
+        # Display styled table
+        st.dataframe(
+            df.style.apply(highlight_sets, axis=0).set_properties(**{
+                'text-align': 'center',
+                'font-family': 'monospace',
+                'white-space': 'nowrap'
+            }),
+            use_container_width=True
+        )
+        
+        # Download button
+        csv = df.to_csv(index=False)
+        st.download_button(
+            "Download Table as CSV",
+            csv,
+            file_name=selected_table,
+            mime="text/csv"
+        )
+    else:
+        st.error(f"Table file not found: {table_path}")
+
 def vtrac_analyzer_tab():
-    """V-TRAC Analyzer Interface"""
+    """The V-TRAC Analyzer tab"""
     st.title("V-TRAC Pattern Analyzer")
     st.markdown("Analyze state data for optimal V-TRAC indexes and pattern predictions")
     
+    """The V-TRAC Analyzer tab"""
     # Select state
     state_name = st.selectbox("Select State", STATES)
     
@@ -847,7 +961,7 @@ def vtrac_analyzer_tab():
     col1, col2 = st.columns(2)
     
     with col1:
-        top_n_indexes = st.slider("Number of Top Indexes to Display", 1, 35, 10)
+        top_n_indices = st.slider("Number of Top Indices to Display", 1, 30, 10)
     
     with col2:
         top_n_reports = st.slider("Number of HTML Reports to Generate", 0, 10, 3)
@@ -859,86 +973,79 @@ def vtrac_analyzer_tab():
         
         status.info("Step 1/4: Loading state data...")
         tables = load_state_data(state_name)
+        
         if not tables:
             st.error(f"No table data loaded for {state_name}. Please process data first.")
             return
+        
         progress_bar.progress(25)
         
         status.info("Step 2/4: Analyzing all V-TRAC indexes...")
         results = analyze_all_indexes(state_name)
+        
         if not results:
             st.error(f"Analysis failed for {state_name}. Please check the data.")
             return
+        
         progress_bar.progress(50)
         
         status.info("Step 3/4: Generating HTML reports...")
         if top_n_reports > 0:
             reports = generate_top_reports(state_name, results, top_n_reports)
-        else:
-            reports = []
+        
         progress_bar.progress(75)
         
-        status.info("Step 4/4: Preparing visualization...")
-        chart_image = generate_summary_chart(results, top_n_indexes)
+        status.info("Step 4/4: Generating summary...")
+        # Generate summary chart
+        chart_image = generate_summary_chart(results, top_n_indices)
+        
         progress_bar.progress(100)
+        status.success("V-TRAC analysis completed!")
         
-        status.success("Analysis complete!")
+        # Display results
         
-        # Display top indexes first
-        st.subheader(f"Top {min(top_n_indexes, len(results))} V-TRAC Indexes for {state_name}")
-        top_results_df = pd.DataFrame([
-            {
+        # 1. Summary table
+        st.subheader("Top V-TRAC Indexes Summary")
+        
+        summary_data = []
+        for i, result in enumerate(results[:top_n_indices]):
+            summary_data.append({
                 "Rank": i + 1,
-                "Index": r["index"],
-                "Score": f"{r['score']:.2f}",
-                "Patterns": len(r["patterns"]),
-                "Pattern List": ", ".join(sorted(r["patterns"]))
-            }
-            for i, r in enumerate(results[:top_n_indexes])
-        ])
-        st.dataframe(top_results_df, use_container_width=True)
+                "Index": result["index"],
+                "Score": result["score"],
+                "Patterns": ", ".join(sorted(list(result["patterns"])))
+            })
         
-        # Show chart if available
+        summary_df = pd.DataFrame(summary_data)
+        st.dataframe(summary_df, use_container_width=True)
+        
+        # 2. Chart image
         if chart_image:
-            st.subheader("Score Distribution")
+            st.subheader("V-TRAC Indexes by Score")
             st.image(chart_image)
         
-        # Display top 3 reports with full tables and statistics
-        if reports:
-            st.subheader("Detailed Analysis Reports")
-            report_tabs = st.tabs([f"Rank #{r['rank']} (Index {r['index']})" for r in reports[:3]])
+        # 3. HTML Reports (if any)
+        if top_n_reports > 0 and 'reports' in locals() and reports:
+            st.subheader("HTML Reports")
             
-            for tab, report in zip(report_tabs, reports[:3]):
-                with tab:
-                    # File info row
-                    col1, col2, col3 = st.columns([1, 1, 1])
+            for i, report in enumerate(reports):
+                with st.expander(f"Rank #{report['rank']}: Index {report['index']} (Score: {report['score']})"):
+                    # Link to the HTML file
+                    st.markdown(f"[Open HTML Report](file://{report['filepath']})")
                     
-                    with col1:
-                        st.write(f"V-TRAC Index: {report['index']} | Score: {report['score']:.2f}")
+                    # Download button (unique key for each button)
+                    st.download_button(
+                        f"Download HTML Report (#{report['rank']})",
+                        report["html"],
+                        file_name=report["filename"],
+                        mime="text/html",
+                        key=f"download_btn_{i}"
+                    )
                     
-                    with col2:
-                        # Download button
-                        st.download_button(
-                            label=f"Download HTML (Rank #{report['rank']})",
-                            data=report['html'],
-                            file_name=report['filename'],
-                            mime="text/html"
-                        )
-                    
-                    with col3:
-                        # Open in browser button
-                        if st.button(f"Open in Browser (Rank #{report['rank']})", 
-                                   key=f"open_browser_{report['rank']}"):
-                            webbrowser.open(f"file://{os.path.abspath(report['filepath'])}")
-                    
-                    # Preview with maximum height
-                    st.components.v1.html(report['html'], height=1800, scrolling=True)
-        
-        elif top_n_reports > 0:
-            st.info("No HTML reports were generated. Analysis might not have produced enough results.")
+                    # Mini preview
+                    st.components.v1.html(report["html"], height=300, scrolling=True)
     else:
-        # Show example of what to expect
-        st.info("Click 'Run V-TRAC Analysis' to analyze patterns and generate reports.")
+        st.info("Click 'Run V-TRAC Analysis' to start analyzing the data.")
 
 if __name__ == "__main__":
     main() 
