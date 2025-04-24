@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pattern Analysis</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }
+        table { 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            width: 100%;
+        }
+        th, td { 
+            border: 1px solid black; 
+            padding: 6px; 
+            text-align: center; 
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .version { 
+            color: gray; 
+            font-size: 0.9em; 
+            margin-bottom: 10px; 
+        }
+        .winning {
+            color: #ff0000;
+            font-weight: 800;
+        }
+        .pattern {
+            color: #0000ff;
+            font-weight: 800;
+        }
+        .three-column-layout {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .column {
+            flex: 0 0 32%;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1200px) {
+            .column {
+                flex: 0 0 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="version">Version: v20250304_062859</div>
+<div class="three-column-layout">
+<div class="column">
+<h2>Midday Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Midday Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td><span class="pattern">869</span></td><td>162</td><td>686</td><td>136</td><td>064</td><td><span class="pattern">134</span></td><td>191</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55920011<span class="pattern">367</span>7</td><td>55900<span class="pattern">137</span>7</td><td>55900<span class="pattern">137</span>7</td><td>5590077</td><td>559077</td><td>559077</td><td>55077</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>255900<span class="pattern">637</span>711</td><td>559003771</td><td>559003771</td><td>5590077</td><td>559077</td><td>559077</td><td>55077</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td>611770055932</td><td>177005593</td><td>177005593</td><td>7700559</td><td>770559</td><td>770559</td><td>77055</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>7700119<span class="pattern">362</span>55</td><td>7700<span class="pattern">193</span>55</td><td>7700<span class="pattern">193</span>55</td><td>7700955</td><td>770955</td><td>770955</td><td>77055</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td>162</td><td>686</td><td>136</td><td>064</td><td><span class="pattern">134</span></td><td>191</td><td>478</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>5592400<span class="pattern">137</span>7</td><td>5592400<span class="pattern">137</span>7</td><td>559240077</td><td>5592077</td><td>5592077</td><td>552077</td><td>55207</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>25590034771</td><td>25590034771</td><td>255900477</td><td>2559077</td><td>2559077</td><td>255077</td><td>25507</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td>17700559324</td><td>17700559324</td><td>770055924</td><td>7705592</td><td>7705592</td><td>770552</td><td>70552</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>7700<span class="pattern">193</span>2455</td><td>7700<span class="pattern">193</span>2455</td><td>770092455</td><td>7709255</td><td>7709255</td><td>770255</td><td>70255</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td>686</td><td>136</td><td>064</td><td><span class="pattern">134</span></td><td>191</td><td>478</td><td>483</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>5592440013377</td><td>55924400377</td><td>559240377*</td><td>5592077*</td><td>552077*</td><td>55207*</td><td>55207*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>2559003344771</td><td>25590034477</td><td>255903477*</td><td>2559077*</td><td>255077*</td><td>25507*</td><td>25507*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td>1770055933244</td><td>77005593244</td><td>770559324*</td><td>7705592*</td><td>770552*</td><td>70552*</td><td>70552*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>7700<span class="pattern">193</span>324455</td><td>77009324455</td><td>770932455*</td><td>7709255*</td><td>770255*</td><td>70255*</td><td>70255*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R2</td><td>N/A</td><td>5599244003877</td><td>55992403877*</td><td>559920877*</td><td>55920877*</td><td>559207*</td><td>559207*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R4</td><td>N/A</td><td>2559900834477</td><td>25599083477*</td><td>255990877*</td><td>25590877*</td><td>255907*</td><td>255907*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R6</td><td>N/A</td><td>8770055993244</td><td>87705599324*</td><td>877055992*</td><td>87705592*</td><td>705592*</td><td>705592*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R8</td><td>N/A</td><td>7700998324455</td><td>77099832455*</td><td>770998255*</td><td>77098255*</td><td>709255*</td><td>709255*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R2</td><td>N/A</td><td>N/A</td><td>5599224013877*</td><td>5599220877*</td><td>559220877*</td><td>5592207*</td><td>5592207*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R4</td><td>N/A</td><td>N/A</td><td>2255990834771*</td><td>2255990877*</td><td>225590877*</td><td>2255907*</td><td>2255907*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R6</td><td>N/A</td><td>N/A</td><td><span class="pattern">817</span>7055993224*</td><td>8770559922*</td><td>877055922*</td><td>7055922*</td><td>7055922*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R8</td><td>N/A</td><td>N/A</td><td>7701998322455*</td><td>7709982255*</td><td>770982255*</td><td>7092255*</td><td>7092255*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992208877*</td><td>5592208877*</td><td>55922087*</td><td>5592207*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>22559908877*</td><td>2255908877*</td><td>22559087*</td><td>2255907*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>88770559922*</td><td>8877055922*</td><td>87055922*</td><td>7055922*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>77099882255*</td><td>7709882255*</td><td>70982255*</td><td>7092255*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55922038<span class="pattern">867</span>7</td><td>5592203<span class="pattern">867</span>*</td><td>55922067*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>225590688377</td><td>2255906837*</td><td>22559067*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>688770559322</td><td><span class="pattern">687</span>0559322*</td><td>67055922*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>770988<span class="pattern">362</span>255</td><td>7098<span class="pattern">362</span>255*</td><td>70962255*</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>559220038667</td><td>5592200667</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>225590066837</td><td>2255900667</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>6<span class="pattern">687</span>00559322</td><td>6670055922</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>700983662255</td><td>7009662255</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55922003667</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>22559006<span class="pattern">637</span></td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>66700559322</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>700<span class="pattern">936</span>62255</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Midday R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55920011<span class="pattern">367</span>7</td><td>55900<span class="pattern">137</span>7</td><td>55900<span class="pattern">137</span>7</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592400<span class="pattern">137</span>7</td><td>5592400<span class="pattern">137</span>7</td><td>559240077</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592440013377</td><td>55924400377</td><td>559240377</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5599244003877</td><td>55992403877</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5599224013877</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992208877</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55922038<span class="pattern">867</span>7</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>559220038667</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55922003667</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+<div class="column">
+<h2>Evening Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Evening Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td>306</td><td>077</td><td>053</td><td>279</td><td>163</td><td><span class="pattern">841</span></td><td>293</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55244018877</td><td>5524<span class="pattern">418</span>8</td><td>524<span class="pattern">418</span>8</td><td>54<span class="pattern">418</span>8</td><td>54488</td><td>548</td><td>548</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>25508844771</td><td>25588441</td><td>2588441</td><td>588441</td><td>58844</td><td>584</td><td>584</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td>8<span class="pattern">817</span>7055244</td><td>88155244</td><td>8815244</td><td>881544</td><td>88544</td><td>854</td><td>854</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>77018824455</td><td>18824455</td><td>1882445</td><td>188445</td><td>88445</td><td>845</td><td>845</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td>077</td><td>053</td><td>279</td><td>163</td><td><span class="pattern">841</span></td><td>293</td><td>030</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55224411886</td><td>5224411886</td><td>524411886</td><td>524<span class="pattern">418</span>8</td><td>5248</td><td>548</td><td>548</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>22556884411</td><td>2256884411</td><td>256884411</td><td>2588441</td><td>2584</td><td>584</td><td>584</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td>68811552244</td><td>6881152244</td><td>688115244</td><td>8815244</td><td>8524</td><td>854</td><td>854</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>118<span class="pattern">862</span>24455</td><td>118<span class="pattern">862</span>2445</td><td>118<span class="pattern">862</span>445</td><td>1882445</td><td>8245</td><td>845</td><td>845</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td>053</td><td>279</td><td>163</td><td><span class="pattern">841</span></td><td>293</td><td>030</td><td>538</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>599224411886</td><td>5924411886</td><td>5924<span class="pattern">418</span>8*</td><td>59248*</td><td>548*</td><td>548*</td><td>4*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>2259<span class="pattern">968</span>84411</td><td>25<span class="pattern">968</span>84411</td><td>25988441*</td><td>25984*</td><td>584*</td><td>584*</td><td>4*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td>688115992244</td><td>6881159244</td><td>88159244*</td><td>85924*</td><td>854*</td><td>854*</td><td>4*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>11998<span class="pattern">862</span>2445</td><td>1<span class="pattern">198</span><span class="pattern">862</span>445</td><td><span class="pattern">198</span>82445*</td><td>98245*</td><td>845*</td><td>845*</td><td>4*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R2</td><td>N/A</td><td>592441138866</td><td>5924<span class="pattern">418</span>86*</td><td>592<span class="winning">486</span>*</td><td>5<span class="winning">486</span>*</td><td>5<span class="winning">486</span>*</td><td>46*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R4</td><td>N/A</td><td>259668834411</td><td>25<span class="pattern">968</span>8441*</td><td>259<span class="winning">684</span>*</td><td>5<span class="winning">684</span>*</td><td>5<span class="winning">684</span>*</td><td>64*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R6</td><td>N/A</td><td>668811593244</td><td>688159244*</td><td>685924*</td><td>6854*</td><td>6854*</td><td>64*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R8</td><td>N/A</td><td>1<span class="pattern">198</span>83662445</td><td><span class="pattern">198</span><span class="pattern">862</span>445*</td><td>9<span class="pattern">862</span>45*</td><td><span class="winning">864</span>5*</td><td><span class="winning">864</span>5*</td><td>64*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R2</td><td>N/A</td><td>N/A</td><td>59244018<span class="pattern">867</span>*</td><td>59240<span class="pattern">867</span>*</td><td>540<span class="pattern">867</span>*</td><td>54<span class="pattern">867</span>*</td><td>467*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R4</td><td>N/A</td><td>N/A</td><td>25906884471*</td><td>2590<span class="winning">684</span>7*</td><td>50<span class="winning">684</span>7*</td><td>5<span class="winning">684</span>7*</td><td>647*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R6</td><td>N/A</td><td>N/A</td><td>68<span class="pattern">817</span>059244*</td><td><span class="pattern">687</span>05924*</td><td><span class="pattern">687</span>054*</td><td><span class="pattern">687</span>54*</td><td>674*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R8</td><td>N/A</td><td>N/A</td><td>70<span class="pattern">198</span><span class="pattern">862</span>445*</td><td>709<span class="pattern">862</span>45*</td><td>70<span class="winning">864</span>5*</td><td><span class="pattern">786</span>45*</td><td>764*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55924003<span class="pattern">867</span>*</td><td>55400<span class="pattern">867</span>*</td><td>554<span class="pattern">867</span>*</td><td>5467*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>25590068347*</td><td>5500<span class="winning">684</span>7*</td><td>55<span class="winning">684</span>7*</td><td>5647*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td><span class="pattern">687</span>00559324*</td><td><span class="pattern">687</span>00554*</td><td><span class="pattern">687</span>554*</td><td>6754*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>70098<span class="pattern">362</span>455*</td><td>700<span class="winning">864</span>55*</td><td><span class="pattern">786</span>455*</td><td>7645*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592400<span class="pattern">867</span>7</td><td>55924<span class="pattern">867</span>7*</td><td>5924677*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>255900<span class="winning">684</span>77</td><td>2559<span class="winning">684</span>77*</td><td>2596477*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td><span class="pattern">687</span>70055924</td><td><span class="pattern">687</span>755924*</td><td>6775924*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>77009<span class="pattern">862</span>455</td><td>779<span class="pattern">862</span>455*</td><td>7796245*</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592<span class="pattern">418</span>6677</td><td>592416677</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>25596<span class="winning">684</span>771</td><td>259664771</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>66<span class="pattern">817</span>755924</td><td>661775924</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>77<span class="pattern">198</span>662455</td><td>771966245</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>592441186677</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>2596<span class="winning">684</span>47711</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>668117759244</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>771<span class="pattern">198</span>662445</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Evening R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55244018877</td><td>5524<span class="pattern">418</span>8</td><td>524<span class="pattern">418</span>8</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55224411886</td><td>5224411886</td><td>524411886</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>599224411886</td><td>5924411886</td><td>5924<span class="pattern">418</span>8</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>592441138866</td><td>5924<span class="pattern">418</span>86</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>59244018<span class="pattern">867</span></td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55924003<span class="pattern">867</span></td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592400<span class="pattern">867</span>7</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592<span class="pattern">418</span>6677</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>592441186677</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+<div class="column">
+<h2>Combined Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Combined Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td>163</td><td><span class="pattern">134</span></td><td><span class="pattern">841</span></td><td>191</td><td>293</td><td>478</td><td>030</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55924013887</td><td>55920887</td><td>5592087</td><td>552087</td><td>55087</td><td>550</td><td>55</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>25590883471</td><td>25590887</td><td>2559087</td><td>255087</td><td>55087</td><td>550</td><td>55</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td>8<span class="pattern">817</span>0559324</td><td>88705592</td><td>8705592</td><td>870552</td><td>87055</td><td>055</td><td>55</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>70<span class="pattern">198</span>832455</td><td>70988255</td><td>7098255</td><td>708255</td><td>70855</td><td>055</td><td>55</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td><span class="pattern">134</span></td><td><span class="pattern">841</span></td><td>191</td><td>293</td><td>478</td><td>030</td><td>483</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55992208877</td><td>5599220877</td><td>559220877</td><td>5520877</td><td>55207</td><td>5527</td><td>5527</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>22559908877</td><td>2255990877</td><td>225590877</td><td>2550877</td><td>25507</td><td>2557</td><td>2557</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td>88770559922</td><td>8770559922</td><td>877055922</td><td>8770552</td><td>70552</td><td>7552</td><td>7552</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>77099882255</td><td>7709982255</td><td>770982255</td><td>7708255</td><td>70255</td><td>7255</td><td>7255</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td><span class="pattern">841</span></td><td>191</td><td>293</td><td>478</td><td>030</td><td>483</td><td>538</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>55992200<span class="pattern">867</span>7</td><td>5592200<span class="pattern">867</span>7</td><td>55200<span class="pattern">867</span>7*</td><td>5520067*</td><td>55267*</td><td>55267*</td><td>5267*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>22559900<span class="pattern">687</span>7</td><td>2255900<span class="pattern">687</span>7</td><td>25500<span class="pattern">687</span>7*</td><td>2550067*</td><td>25567*</td><td>25567*</td><td>2567*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td><span class="pattern">687</span>700559922</td><td><span class="pattern">687</span>70055922</td><td><span class="pattern">687</span>700552*</td><td>6700552*</td><td>67552*</td><td>67552*</td><td>6752*</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>770099<span class="pattern">862</span>255</td><td>77009<span class="pattern">862</span>255</td><td>7700<span class="pattern">862</span>55*</td><td>7006255*</td><td>76255*</td><td>76255*</td><td>7625*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R2</td><td>N/A</td><td>5592200386677</td><td>5520086677*</td><td>55200667*</td><td>552667*</td><td>552667*</td><td>52667*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R4</td><td>N/A</td><td>2255900668377</td><td>255006<span class="pattern">687</span>7*</td><td>25500667*</td><td>255667*</td><td>255667*</td><td>25667*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R6</td><td>N/A</td><td>6<span class="pattern">687</span>700559322</td><td>6<span class="pattern">687</span>700552*</td><td>66700552*</td><td>667552*</td><td>667552*</td><td>66752*</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>R8</td><td>N/A</td><td>7700983662255</td><td>7700866255*</td><td>70066255*</td><td>766255*</td><td>766255*</td><td>76625*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R2</td><td>N/A</td><td>N/A</td><td>552400386677*</td><td>552003667*</td><td>552667*</td><td>552667*</td><td>52667*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R4</td><td>N/A</td><td>N/A</td><td>255006683477*</td><td>255006<span class="pattern">637</span>*</td><td>255667*</td><td>255667*</td><td>25667*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R6</td><td>N/A</td><td>N/A</td><td>6<span class="pattern">687</span>70055324*</td><td>667005532*</td><td>667552*</td><td>667552*</td><td>66752*</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>R8</td><td>N/A</td><td>N/A</td><td>770083662455*</td><td>700366255*</td><td>766255*</td><td>766255*</td><td>76625*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55240038667*</td><td>552<span class="winning">486</span>67*</td><td>552667*</td><td>52667*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>25500668347*</td><td>2556<span class="winning">684</span>7*</td><td>255667*</td><td>25667*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>6<span class="pattern">687</span>0055324*</td><td>6<span class="pattern">687</span>5524*</td><td>667552*</td><td>66752*</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>70083662455*</td><td><span class="pattern">786</span>62455*</td><td>766255*</td><td>76625*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55924118667</td><td>559211667*</td><td>59211667*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>25596<span class="winning">684</span>711</td><td>255966711*</td><td>25966711*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>66811755924</td><td>661175592*</td><td>66117592*</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>71<span class="pattern">198</span>662455</td><td>711966255*</td><td>71196625*</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992211667</td><td>5992211667</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>22559966711</td><td>2259966711</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>66117559922</td><td>6611759922</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>71199662255</td><td>7119966225</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>599224116677</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>225996647711</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>661177599224</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>R8</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>771199662245</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Indiana4 Combined R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55924013887</td><td>55920887</td><td>5592087</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992208877</td><td>5599220877</td><td>559220877</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992200<span class="pattern">867</span>7</td><td>5592200<span class="pattern">867</span>7</td><td>55200<span class="pattern">867</span>7</td></tr>
+<tr><td>Set1</td><td>Draw2</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>5592200386677</td><td>5520086677</td></tr>
+<tr><td>Set1</td><td>Draw3</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>552400386677</td></tr>
+<tr><td>Set1</td><td>Draw4</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55240038667</td></tr>
+<tr><td>Set1</td><td>Draw5</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55924118667</td></tr>
+<tr><td>Set1</td><td>Draw6</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>55992211667</td></tr>
+<tr><td>Set1</td><td>Draw7</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>599224116677</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+</div><!-- End three-column layout -->
+</body></html>

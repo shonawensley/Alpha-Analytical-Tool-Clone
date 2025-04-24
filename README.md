@@ -1,4 +1,4 @@
-# Lottery Analysis Tool
+# Alpha Analytical Tool
 
 A Python-based tool for analyzing lottery data with pattern recognition and V-TRAC analysis.
 
@@ -9,9 +9,10 @@ A Python-based tool for analyzing lottery data with pattern recognition and V-TR
 - Generate combined and R2-only tables
 - V-TRAC pattern analysis and highlighting
 - Interactive Streamlit interface
-- Data export capabilities (CSV, Excel, JSON)
 
-## Setup
+## Getting Started
+
+### Quick Setup
 
 1. Clone the repository:
 ```bash
@@ -19,148 +20,82 @@ git clone <repository-url>
 cd lottery-analysis-tool
 ```
 
-2. Create a virtual environment:
-```bash
-python -m venv .venv
+2. Set up environment (using included batch file):
+```
+install_packages.bat
 ```
 
-3. Activate the virtual environment:
-- Windows:
-```bash
-.venv\Scripts\activate
-```
-- Unix/MacOS:
-```bash
-source .venv/bin/activate
-```
+3. Place your Pick3StatsC4 Excel file in the `data/original` directory
 
-4. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+### Running the Application
 
-5. Create required data directories:
-```bash
-mkdir -p data/{original,cleaned,outputs,archive,historical_files,ai_exports}
-```
+Two batch files are provided for easy access:
 
-## Usage
-
-1. Place your Pick3StatsC4 Excel file in the `data/original` directory
-
-2. Run the Streamlit app:
-```bash
-streamlit run scripts/utils/streamlit_app.py
-```
-
-3. Use the interface to:
-   - Upload Pick3StatsC4 files
-   - Select states for analysis
-   - View combined and R2-only tables
-   - Highlight winning patterns
-   - Export results
+1. **run_app.bat** - Runs the standard table generator app
+2. **run_with_analyzer.bat** - Runs the enhanced app with V-TRAC analyzer
 
 ## Project Structure
 
+The project has been organized for clarity and maintainability:
+
 ```
-lottery-analysis-tool/
-├── data/
-│   ├── original/      # Original Excel files
-│   ├── cleaned/       # Cleaned state data
-│   ├── outputs/       # Generated outputs
-│   ├── archive/       # Archived results
-│   ├── historical_files/ # Historical Excel files
-│   └── ai_exports/    # AI-friendly JSON exports
+Alpha Analytical Tool/
 ├── scripts/
-│   ├── utils/
-│   │   ├── clean_data.py
-│   │   ├── extract_data.py
-│   │   ├── table_generator.py
-│   │   ├── vtrac_utils.py
-│   │   └── streamlit_app.py
-│   └── test_vtrac_streamlit.py
-└── requirements.txt
+│   ├── core/                # Main application scripts
+│   │   ├── streamlit_app_with_analyzer.py  # Enhanced app with V-TRAC
+│   │   ├── streamlit_app.py               # Basic table generator
+│   │   └── run_process.py                 # Core processing script
+│   └── utils/               # Core utilities
+│       ├── clean_data.py    # Data cleaning
+│       ├── extract_data.py  # Data extraction
+│       ├── table_generator.py # Table creation
+│       └── vtrac_utils.py   # V-TRAC utilities
+├── data/                    # Data storage
+│   ├── original/            # Original Excel files
+│   ├── cleaned/             # Cleaned CSV files
+│   └── outputs/             # Generated output
+└── docs/                    # Documentation
+    ├── guides/              # Comprehensive guides
+    ├── technical/           # Technical documentation
+    └── quickstart/          # Getting started guides
 ```
+
+## Documentation
+
+Comprehensive documentation is available in the `docs` directory:
+
+- For quick start guides: [docs/quickstart/](docs/quickstart/)
+- For user guides: [docs/guides/](docs/guides/)
+- For technical reference: [docs/technical/](docs/technical/)
+
+See [docs/README.md](docs/README.md) for a complete guide to all documentation.
+
+## Using the Application
+
+### 1. Process Data
+- Upload or select Pick3StatsC4 Excel file
+- Process data for all states or selected states
+- Generate tables for analysis
+
+### 2. View Results
+- Select state and table type
+- View combined and R2-only tables
+- Export tables to CSV if needed
+
+### 3. V-TRAC Analysis
+- Analyze tables for pattern clusters
+- View ranked V-TRAC indices
+- Generate HTML reports with pattern highlighting
 
 ## Data Privacy
 
-- Keep your Pick3StatsC4 files private
+This application is designed for local use only:
+- Keep your data files private
 - Do not commit data files to version control
 - Use `.gitignore` to exclude sensitive data
 
-## Contributing
+## Need Help?
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Advanced Features
-
-### V-TRAC System
-- Pattern matching system for identifying winning combinations
-- Supports multiple pattern types (R2, R4, R6, R8)
-- Highlights winning patterns in tables
-- Interactive testing through test_vtrac_streamlit.py
-
-### Data Processing
-- Supports multiple states:
-  - Connecticut4
-  - Delaware4
-  - Florida4
-  - Indiana4
-  - Michigan4
-  - NewJersey4
-  - NewYork4
-  - NorthCarolina4
-  - Ohio4
-  - OntarioCanada4
-  - Pennsylvania4
-  - PuertoRico4
-  - SouthCarolina4
-  - Virginia4
-
-### Table Features
-- Hot zone marking for specific draws
-- Combined table views (Midday/Evening/Combined)
-- R2-only table generation
-- Excel export with proper formatting
-- JSON export for data analysis
-
-### Data Management
-- Historical file tracking
-- Automated data cleaning
-- State-specific data processing
-- Backup and archive system
-
-## Troubleshooting
-
-### Common Issues
-1. Import Errors
-   - Ensure you're running from the project root
-   - Check virtual environment activation
-   - Verify all dependencies are installed
-
-2. Excel File Issues
-   - Use correct Pick3StatsC4 format
-   - Place files in data/original directory
-   - Check file permissions
-
-3. Streamlit Interface
-   - Port conflicts: Close other Streamlit instances
-   - Display issues: Clear browser cache
-   - State switching: Allow time for processing
-
-### Getting Help
 - Check the documentation in the docs/ directory
-- Review error messages in the console
-- Contact repository maintainers
-
-## Documentation
-Detailed documentation available in docs/:
-- Alpha -Comprehensive Combination Methods
-- Alpha -Digit Reduction
-- Features Advanced Design
-- Initial Program Design Theory
-- And more... 
+- Review error messages in the terminal
+- See the Troubleshooting section in the docs 

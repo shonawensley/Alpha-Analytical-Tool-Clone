@@ -1,0 +1,2221 @@
+#!/usr/bin/env python
+"""
+streamlit_app.py - Interactive web interface for lottery data processing
+
+This app provides:
+1. Data processing interface for cleaning and extracting lottery data
+2. Table viewer for examining generated tables by state and section
+3. Winner logging interface for highlighting and saving winners
+4. V-TRAC analyzer for checking number patterns
+"""
+
+import os
+import sys
+import time
+import pandas as pd
+import streamlit as st
+from datetime import datetime
+
+# Add script directory to path for imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+
+# Import utility modules
+from utils.path_handler import (
+    get_excel_path,
+    create_output_directories,
+    get_cleaned_data_dir,
+    get_tables_output_dir,
+    get_winners_output_dir
+)
+from utils.state_utils import STATES
+from utils.clean_data import clean_all_states
+from utils.extract_data import extract_all_states
+from utils.table_generator import generate_tables
+from vtrac.winner_highlighter import highlight_winners_in_tables
+from utils.vtrac_utils import find_vtrac_index_and_combos
+
+# Set page config
+st.set_page_config(
+    page_title="Lottery Data Processor",
+    page_icon="🎲",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Sidebar
+st.sidebar.title("Lottery Data Processor")
+st.sidebar.image("https://img.icons8.com/fluency/96/lottery.png", width=80)
+st.sidebar.markdown("---")
+
+# Helper functions
+def format_time(seconds):
+    """Format time in seconds to human-readable string"""
+    if seconds < 60:
+        return f"{seconds:.2f} seconds"
+    else:
+        minutes = int(seconds // 60)
+        sec = seconds % 60
+        return f"{minutes} min {sec:.2f} sec"
+
+def check_excel_file():
+    """Check if the Excel file exists and return its path"""
+    excel_path = get_excel_path()
+    excel_exists = os.path.exists(excel_path)
+    return excel_path, excel_exists
+
+def load_state_data(state_name):
+    """Load generated tables for a specific state"""
+    tables_dir = os.path.join(get_tables_output_dir(), state_name)
+    result = {}
+    
+    if os.path.exists(tables_dir):
+        for filename in os.listdir(tables_dir):
+            if filename.endswith(".csv"):
+                filepath = os.path.join(tables_dir, filename)
+                key = os.path.splitext(filename)[0].replace(f"{state_name}_", "")
+                try:
+                    df = pd.read_csv(filepath)
+                    result[key] = df
+                except Exception as e:
+                    st.error(f"Error loading {filename}: {e}")
+    
+    return result
+
+def process_data_tab():
+    """Process Data Tab Content"""
+    st.header("Process Lottery Data")
+    
+    # Check if Excel file exists
+    excel_path, excel_exists = check_excel_file()
+    
+    if not excel_exists:
+        st.error(f"Excel file not found at {excel_path}")
+        st.warning("Please place the 'Pick3StatsC4.xlsm' file in the data/original directory.")
+        return
+    
+    st.success(f"Found Excel file: {os.path.basename(excel_path)}")
+    
+    # Create columns for processing options
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        clean_data = st.checkbox("Clean Data", value=True)
+    with col2:
+        extract_data = st.checkbox("Extract Data", value=True)
+    with col3:
+        generate_tables_option = st.checkbox("Generate Tables", value=True)
+    
+    # Add multi-select for states
+    selected_states = st.multiselect(
+        "Select States to Process (leave empty for all states)",
+        options=STATES,
+        default=[]
+    )
+    
+    # Use all states if none selected
+    states_to_process = selected_states if selected_states else STATES
+    
+    # Process button
+    if st.button("Process Data", type="primary"):
+        # Create progress bar and status
+        progress_bar = st.progress(0)
+        status = st.empty()
+        results = st.empty()
+        
+        # Create output directories
+        create_output_directories()
+        
+        # Initialize processing summary
+        summary = {
+            "cleaned_states": [],
+            "failed_clean": [],
+            "extracted_states": [],
+            "tables_generated": []
+        }
+        
+        with st.spinner("Processing data..."):
+            # Step 1: Clean data
+            if clean_data:
+                status.info("Step 1/3: Cleaning data...")
+                start_time = time.time()
+                
+                cleaning_results = clean_all_states(
+                    states_to_process, 
+                    excel_path, 
+                    get_cleaned_data_dir()
+                )
+                
+                summary["cleaned_states"] = cleaning_results["success"]
+                summary["failed_clean"] = cleaning_results["failed"]
+                
+                progress_bar.progress(33)
+                duration = time.time() - start_time
+                status.success(f"Data cleaning completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(33)
+                status.info("Skipping data cleaning step")
+            
+            # Step 2: Extract data
+            extracted_data = {}
+            if extract_data:
+                status.info("Step 2/3: Extracting data...")
+                start_time = time.time()
+                
+                extracted_data = extract_all_states(
+                    states_to_process,
+                    get_cleaned_data_dir()
+                )
+                
+                summary["extracted_states"] = list(extracted_data.keys())
+                
+                progress_bar.progress(66)
+                duration = time.time() - start_time
+                status.success(f"Data extraction completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(66)
+                status.info("Skipping data extraction step")
+            
+            # Step 3: Generate tables
+            if generate_tables_option and extracted_data:
+                status.info("Step 3/3: Generating tables...")
+                start_time = time.time()
+                
+                for state_name, state_data in extracted_data.items():
+                    generate_tables(
+                        state_data,
+                        state_name,
+                        os.path.join(get_tables_output_dir(), state_name)
+                    )
+                    summary["tables_generated"].append(state_name)
+                
+                progress_bar.progress(100)
+                duration = time.time() - start_time
+                status.success(f"Table generation completed in {format_time(duration)}")
+            else:
+                progress_bar.progress(100)
+                status.info("Skipping table generation step")
+        
+        # Show processing summary
+        results.markdown("### Processing Summary")
+        st.write(f"**States Processed:** {len(states_to_process)}")
+        
+        if clean_data:
+            st.write(f"**Successfully Cleaned:** {len(summary['cleaned_states'])}")
+            if summary["failed_clean"]:
+                st.warning(f"**Failed to Clean:** {', '.join(summary['failed_clean'])}")
+        
+        if extract_data:
+            st.write(f"**Successfully Extracted:** {len(summary['extracted_states'])}")
+        
+        if generate_tables_option:
+            st.write(f"**Tables Generated:** {len(summary['tables_generated'])}")
+        
+        st.success("Processing completed!")
+
+def view_results_tab():
+    """View Results Tab Content"""
+    st.header("View Results")
+    
+    # Select state
+    state = st.selectbox("Select State", STATES)
+    
+    # Load data for selected state
+    state_data = load_state_data(state)
+    
+    if not state_data:
+        st.warning(f"No data found for {state}. Please process data first.")
+        return
+    
+    # Create tabs for different sections
+    tables_tabs = st.tabs(["Midday", "Evening", "Combined"])
+    
+    for i, section in enumerate(["Midday", "Evening", "Combined"]):
+        with tables_tabs[i]:
+            # Combined table
+            combined_key = f"{section}_combined"
+            r2_key = f"{section}_r2"
+            
+            st.subheader(f"{section} - Combined Table")
+            if combined_key in state_data:
+                st.dataframe(
+                    state_data[combined_key], 
+                    use_container_width=True,
+                    height=400
+                )
+                
+                # Download option
+                csv = state_data[combined_key].to_csv(index=False)
+                st.download_button(
+                    f"Download {section} Combined Table",
+                    data=csv,
+                    file_name=f"{state}_{section}_combined.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info(f"No {section} combined table available")
+            
+            # R2 table
+            st.subheader(f"{section} - R2 Table")
+            if r2_key in state_data:
+                st.dataframe(
+                    state_data[r2_key],
+                    use_container_width=True,
+                    height=250
+                )
+                
+                # Download option
+                csv = state_data[r2_key].to_csv(index=False)
+                st.download_button(
+                    f"Download {section} R2 Table",
+                    data=csv,
+                    file_name=f"{state}_{section}_r2.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info(f"No {section} R2 table available")
+
+def log_winners_tab():
+    """Log Winners Tab Content"""
+    st.header("Log & Highlight Winners")
+    
+    # Form for winner inputs
+    with st.form("winners_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Midday Winners")
+            midday_winners = st.text_input(
+                "Enter Midday winning numbers (separated by spaces)",
+                placeholder="e.g. 123 456 789"
+            )
+        
+        with col2:
+            st.subheader("Evening Winners")
+            evening_winners = st.text_input(
+                "Enter Evening winning numbers (separated by spaces)",
+                placeholder="e.g. 123 456 789"
+            )
+        
+        # Select states to process
+        selected_states = st.multiselect(
+            "Select States to Process (leave empty for all)",
+            options=STATES,
+            default=[]
+        )
+        
+        submit_button = st.form_submit_button("Highlight Winners", type="primary")
+    
+    # Process winners when submitted
+    if submit_button:
+        if not midday_winners and not evening_winners:
+            st.warning("Please enter at least one winning number")
+            return
+        
+        # Parse winners
+        midday_list = [w.strip() for w in midday_winners.split() if w.strip()]
+        evening_list = [w.strip() for w in evening_winners.split() if w.strip()]
+        
+        # Preview winners
+        if midday_list:
+            st.write("Midday Winners:", ", ".join(midday_list))
+        if evening_list:
+            st.write("Evening Winners:", ", ".join(evening_list))
+        
+        # States to process
+        states_to_process = selected_states if selected_states else STATES
+        st.write(f"Processing {len(states_to_process)} states...")
+        
+        # Progress tracking
+        progress_bar = st.progress(0)
+        status = st.empty()
+        
+        # Process each state
+        for i, state_name in enumerate(states_to_process):
+            status.info(f"Processing {state_name}...")
+            
+            # Load tables for this state
+            tables = load_state_data(state_name)
+            
+            if not tables:
+                st.warning(f"No tables found for {state_name}")
+                continue
+            
+            # Highlight winners
+            highlighted_tables = highlight_winners_in_tables(
+                tables,
+                midday_list,
+                evening_list
+            )
+            
+            # Save highlighted tables
+            output_dir = os.path.join(get_winners_output_dir(), state_name)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            for section_key, df in highlighted_tables.items():
+                if df is not None and not df.empty:
+                    # Create winner-specific filename
+                    winners_suffix = ""
+                    if "Midday" in section_key and midday_list:
+                        winners_suffix = f"_win{'_'.join(midday_list)}"
+                    elif "Evening" in section_key and evening_list:
+                        winners_suffix = f"_win{'_'.join(evening_list)}"
+                    elif "Combined" in section_key and (midday_list or evening_list):
+                        winners_suffix = "_winners"
+                    
+                    output_file = os.path.join(
+                        output_dir, 
+                        f"{state_name}_{section_key}{winners_suffix}.csv"
+                    )
+                    df.to_csv(output_file, index=False)
+            
+            # Update progress
+            progress = (i + 1) / len(states_to_process)
+            progress_bar.progress(progress)
+        
+        # Complete
+        status.success("Winner highlighting completed!")
+        
+        # Show sample results
+        if states_to_process:
+            st.subheader("Sample Results (First State)")
+            first_state = states_to_process[0]
+            sample_tables = load_state_data(first_state)
+            
+            if "Midday_combined" in sample_tables and midday_list:
+                st.write("Midday Combined Table (with winners):")
+                highlighted = highlight_winners_in_tables(
+                    {"Midday_combined": sample_tables["Midday_combined"]},
+                    midday_list,
+                    []
+                )
+                st.dataframe(highlighted["Midday_combined"], use_container_width=True)
+            
+            if "Evening_combined" in sample_tables and evening_list:
+                st.write("Evening Combined Table (with winners):")
+                highlighted = highlight_winners_in_tables(
+                    {"Evening_combined": sample_tables["Evening_combined"]},
+                    [],
+                    evening_list
+                )
+                st.dataframe(highlighted["Evening_combined"], use_container_width=True)
+
+def vtrac_analyzer_tab():
+    """V-TRAC Analyzer Tab Content"""
+    st.header("V-TRAC Analyzer")
+    
+    # V-TRAC explanation
+    with st.expander("What is V-TRAC?"):
+        st.markdown("""
+        **V-TRAC System** classifies 3-digit numbers based on their digit patterns:
+        
+        - **VTRAC0**: All three digits are the same (e.g., 111, 222) - 10 combinations
+        - **VTRAC1**: Two digits are the same (e.g., 112, 122) - 90 combinations  
+        - **VTRAC2**: All three digits are different (e.g., 123, 456) - 720 combinations
+        
+        This system helps identify potential number patterns and highlight winners.
+        """)
+    
+    # Number input
+    number = st.text_input(
+        "Enter a 3-digit number to analyze", 
+        max_chars=3,
+        placeholder="123"
+    )
+    
+    if number:
+        # Clean input
+        number = ''.join(c for c in number if c.isdigit())
+        
+        if len(number) > 0:
+            # Pad with zeros if less than 3 digits
+            if len(number) < 3:
+                number = number.zfill(3)
+            
+            # Find V-TRAC index
+            vtrac_idx = find_vtrac_index_and_combos(number)
+            
+            # Get match information
+            match_info = find_vtrac_index_and_combos(number)
+            
+            # Display result
+            st.markdown(f"### Analysis for Number: {number}")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f"**V-TRAC Index**: VTRAC{vtrac_idx}")
+                
+                if vtrac_idx == 0:
+                    st.markdown("**Pattern**: AAA (all digits the same)")
+                elif vtrac_idx == 1:
+                    st.markdown("**Pattern**: AAB (two digits the same)")
+                elif vtrac_idx == 2:
+                    st.markdown("**Pattern**: ABC (all digits different)")
+            
+            with col2:
+                st.markdown(f"**Total Matches**: {len(match_info['potential_matches'])}")
+                
+                # Calculate probability
+                total_combs = 10 + 90 + 720  # Total possible 3-digit combinations
+                probability = len(match_info['potential_matches']) / total_combs * 100
+                
+                st.markdown(f"**Probability**: {probability:.2f}%")
+            
+            # Show exact matches
+            if match_info['exact_matches']:
+                with st.expander(f"Exact Matches ({len(match_info['exact_matches'])})"):
+                    st.write(match_info['exact_matches'])
+                    
+                    # Create downloadable file of matches
+                    matches_df = pd.DataFrame(match_info['exact_matches'], columns=["Number"])
+                    csv = matches_df.to_csv(index=False)
+                    st.download_button(
+                        "Download Exact Matches",
+                        data=csv,
+                        file_name=f"vtrac_{number}_exact_matches.csv",
+                        mime="text/csv"
+                    )
+            
+            # Show all potential matches
+            with st.expander(f"All Potential Matches ({len(match_info['potential_matches'])})"):
+                # Split into chunks for better display
+                chunk_size = 10
+                matches = match_info['potential_matches']
+                chunks = [matches[i:i+chunk_size] for i in range(0, len(matches), chunk_size)]
+                
+                for i, chunk in enumerate(chunks):
+                    st.write(", ".join(chunk))
+                    
+                    if i >= 9:  # Limit display to first 10 chunks
+                        st.write("... and more")
+                        break
+                
+                # Create downloadable file of all matches
+                matches_df = pd.DataFrame(match_info['potential_matches'], columns=["Number"])
+                csv = matches_df.to_csv(index=False)
+                st.download_button(
+                    "Download All Potential Matches",
+                    data=csv,
+                    file_name=f"vtrac_{number}_all_matches.csv",
+                    mime="text/csv"
+                )
+
+def main():
+    """Main function to run the Streamlit app"""
+    # Show app title
+    st.title("Lottery Data Processing System")
+    
+    # Create tabs
+    tabs = st.tabs([
+        "📊 Process Data", 
+        "👁️ View Results", 
+        "🏆 Log Winners",
+        "🧩 V-TRAC Analyzer"
+    ])
+    
+    # Process Data tab
+    with tabs[0]:
+        process_data_tab()
+    
+    # View Results tab
+    with tabs[1]:
+        view_results_tab()
+    
+    # Log Winners tab
+    with tabs[2]:
+        log_winners_tab()
+    
+    # V-TRAC Analyzer tab
+    with tabs[3]:
+        vtrac_analyzer_tab()
+    
+    # Footer
+    st.sidebar.markdown("---")
+    st.sidebar.info(
+        "This application processes lottery data from Pick3StatsC4.xlsm file. "
+        "Place the file in the data/original directory to get started."
+    )
+    
+    # Display date and time
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.sidebar.text(f"Last Updated: {now}")
+
+if __name__ == "__main__":
+    main() 
+
+______________
+
+#!/usr/bin/env python
+"""
+vtrac_analyzer.py - Analytical tool for V-TRAC pattern prediction
+
+This tool:
+1. Analyzes all 35 V-TRAC indexes across state datasets
+2. Scores and ranks indexes by pattern clustering strength
+3. Generates HTML reports for the top indexes
+4. Provides statistical analysis of pattern persistence
+"""
+
+import os
+import sys
+import pandas as pd
+import numpy as np
+import streamlit as st
+from datetime import datetime
+import webbrowser
+from pathlib import Path
+from collections import Counter
+import matplotlib.pyplot as plt
+import io
+import base64
+
+# Add script directory to path for imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+
+# Import utility modules
+from utils.vtrac_utils import BOXED_VTRAC_REFERENCE
+from utils.path_handler import get_tables_output_dir
+from utils.state_utils import STATES
+
+# Set page config
+st.set_page_config(
+    page_title="V-TRAC Pattern Analyzer",
+    page_icon="📊",
+    layout="wide"
+)
+
+# Function to load tables for a specific state
+def load_state_tables(state_name):
+    """Load all tables for a specific state"""
+    tables_dir = os.path.join(get_tables_output_dir(), state_name)
+    result = {}
+    
+    if os.path.exists(tables_dir):
+        for filename in os.listdir(tables_dir):
+            if filename.endswith(".csv"):
+                filepath = os.path.join(tables_dir, filename)
+                key = os.path.splitext(filename)[0].replace(f"{state_name}_", "")
+                try:
+                    df = pd.read_csv(filepath)
+                    result[key] = df
+                except Exception as e:
+                    st.error(f"Error loading {filename}: {e}")
+    
+    return result
+
+# Function to get all combinations from a V-TRAC index
+def get_all_combinations_for_index(index):
+    """Get all pattern combinations for a specific V-TRAC index"""
+    vtrac_entry = next((item for item in BOXED_VTRAC_REFERENCE if item["Index"] == index), None)
+    
+    if vtrac_entry:
+        combinations = set()
+        combinations.update(vtrac_entry.get("Singles", []))
+        combinations.update(vtrac_entry.get("Doubles", []))
+        return combinations
+    
+    return set()
+
+# Function to count pattern occurrences in a table
+def count_patterns_in_table(df, patterns):
+    """Count occurrences of patterns in a table"""
+    # Initialize counter
+    pattern_counts = {pattern: 0 for pattern in patterns}
+    total_matches = 0
+    
+    # Check each cell for patterns
+    for col in ['7', '6', '5', '4', '3', '2', '1']:
+        if col in df.columns:
+            for value in df[col].astype(str):
+                for pattern in patterns:
+                    count = value.count(pattern)
+                    if count > 0:
+                        pattern_counts[pattern] += count
+                        total_matches += count
+    
+    return pattern_counts, total_matches
+
+# Function to analyze persistence of patterns across columns
+def analyze_pattern_persistence(df, patterns):
+    """Analyze how patterns persist across columns (7-1)"""
+    persistence_scores = {pattern: 0 for pattern in patterns}
+    
+    # Define columns to check
+    columns = ['7', '6', '5', '4', '3', '2', '1']
+    valid_columns = [col for col in columns if col in df.columns]
+    
+    # Check each pattern
+    for pattern in patterns:
+        # Check each row
+        for _, row in df.iterrows():
+            # Count consecutive columns containing the pattern
+            consecutive_count = 0
+            max_consecutive = 0
+            
+            for col in valid_columns:
+                if pattern in str(row[col]):
+                    consecutive_count += 1
+                else:
+                    # Update max_consecutive if current streak is better
+                    max_consecutive = max(max_consecutive, consecutive_count)
+                    consecutive_count = 0
+            
+            # Check final streak
+            max_consecutive = max(max_consecutive, consecutive_count)
+            
+            # Score based on max consecutive columns (squared to give more weight)
+            persistence_scores[pattern] += max_consecutive ** 2
+    
+    return persistence_scores
+
+# Function to analyze pattern stability within row types
+def analyze_pattern_stability(df, patterns):
+    """Analyze stability of patterns within R2/R4/R6/R8 rows"""
+    stability_scores = {pattern: 0 for pattern in patterns}
+    
+    # Group rows by Set and Draw
+    grouped = df.groupby(['Set', 'Draw'])
+    
+    # For each group, check pattern presence across row types
+    for _, group in grouped:
+        # Skip groups without all row types
+        row_types = group['RowType'].unique()
+        if len(row_types) < 2:  # Need at least 2 row types to measure stability
+            continue
+            
+        # Check each pattern
+        for pattern in patterns:
+            # Count row types containing the pattern
+            row_type_count = 0
+            
+            for row_type in ['R2', 'R4', 'R6', 'R8']:
+                row_type_rows = group[group['RowType'] == row_type]
+                if row_type_rows.empty:
+                    continue
+                    
+                # Check if pattern exists in any column of this row type
+                pattern_found = False
+                for col in ['7', '6', '5', '4', '3', '2', '1']:
+                    if col in df.columns:
+                        for value in row_type_rows[col].astype(str):
+                            if pattern in value:
+                                pattern_found = True
+                                break
+                    if pattern_found:
+                        break
+                
+                if pattern_found:
+                    row_type_count += 1
+            
+            # Score based on number of row types (squared for weight)
+            stability_scores[pattern] += row_type_count ** 2
+    
+    return stability_scores
+
+# Function to detect straight combinations (same order)
+def detect_straight_combinations(df, pattern):
+    """Detect instances where a pattern appears in the same order multiple times"""
+    straight_count = 0
+    
+    # Define columns to check
+    columns = ['7', '6', '5', '4', '3', '2', '1']
+    valid_columns = [col for col in columns if col in df.columns]
+    
+    # Check each row
+    for _, row in df.iterrows():
+        # Count occurrences in this row
+        occurrences = 0
+        for col in valid_columns:
+            if pattern in str(row[col]):
+                occurrences += 1
+        
+        # If pattern appears multiple times in the same row, count as straight
+        if occurrences > 1:
+            straight_count += occurrences
+    
+    return straight_count
+
+# Function to calculate an overall score for a V-TRAC index
+def calculate_index_score(tables, patterns):
+    """Calculate an overall score for a V-TRAC index based on multiple metrics"""
+    
+    overall_score = 0
+    combined_table = tables.get("Combined_combined", pd.DataFrame())
+    midday_table = tables.get("Midday_combined", pd.DataFrame())
+    evening_table = tables.get("Evening_combined", pd.DataFrame())
+    
+    # Skip if no data
+    if combined_table.empty and midday_table.empty and evening_table.empty:
+        return 0
+    
+    # 1. Total pattern occurrence score (weighted by importance of table)
+    tables_to_score = {
+        "Combined_combined": 3.0,  # Highest weight
+        "Midday_combined": 1.5,
+        "Evening_combined": 1.5,
+        "Combined_r2": 2.0,
+        "Midday_r2": 1.0,
+        "Evening_r2": 1.0
+    }
+    
+    occurrence_score = 0
+    for table_name, weight in tables_to_score.items():
+        if table_name in tables:
+            _, match_count = count_patterns_in_table(tables[table_name], patterns)
+            occurrence_score += match_count * weight
+    
+    # 2. Pattern persistence score
+    persistence_score = 0
+    for table_name, weight in tables_to_score.items():
+        if table_name in tables:
+            persistence_results = analyze_pattern_persistence(tables[table_name], patterns)
+            persistence_score += sum(persistence_results.values()) * weight
+    
+    # 3. Pattern stability score
+    stability_score = 0
+    for table_name, weight in tables_to_score.items():
+        if table_name in tables and "_combined" in table_name:  # Only combined tables have row types
+            stability_results = analyze_pattern_stability(tables[table_name], patterns)
+            stability_score += sum(stability_results.values()) * weight
+    
+    # 4. Straight combinations score
+    straight_score = 0
+    for table_name, weight in tables_to_score.items():
+        if table_name in tables:
+            for pattern in patterns:
+                straight_score += detect_straight_combinations(tables[table_name], pattern) * weight
+    
+    # Combine all scores with appropriate weighting
+    overall_score = (
+        occurrence_score * 0.35 +  # 35% weight
+        persistence_score * 0.30 +  # 30% weight
+        stability_score * 0.25 +    # 25% weight
+        straight_score * 0.10       # 10% weight
+    )
+    
+    return overall_score
+
+# Function to generate HTML report for a V-TRAC index
+def generate_index_html_report(state_name, index, patterns, tables, score, rank, timestamp=None):
+    """Generate an HTML report for a specific V-TRAC index"""
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Create HTML header
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>V-TRAC Analysis - Index {index}</title>
+    <style>
+        body {{ 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }}
+        table {{ 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            width: 100%;
+        }}
+        th, td {{ 
+            border: 1px solid black; 
+            padding: 6px; 
+            text-align: center; 
+        }}
+        th {{
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }}
+        .version {{ 
+            color: gray; 
+            font-size: 0.9em; 
+            margin-bottom: 10px; 
+        }}
+        .highlight {{
+            color: #800080;
+            font-weight: 800;
+        }}
+        .stats {{
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }}
+        .three-column-layout {{
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }}
+        .column {{
+            flex: 0 0 32%;
+            margin-bottom: 20px;
+        }}
+        @media (max-width: 1200px) {{
+            .column {{
+                flex: 0 0 100%;
+            }}
+        }}
+        .rank-badge {{
+            display: inline-block;
+            background-color: #800080;
+            color: white;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 20px;
+            margin-right: 10px;
+        }}
+    </style>
+</head>
+<body>
+<div class="version">Version: v{timestamp}</div>
+<h1><span class="rank-badge">Rank #{rank}</span> V-TRAC Analysis for {state_name} - Index {index}</h1>
+<div class="stats">
+    <h2>Analysis Statistics</h2>
+    <p><strong>Index Score:</strong> {score:.2f}</p>
+    <p><strong>Total Patterns:</strong> {len(patterns)}</p>
+    <p><strong>Pattern List:</strong> {', '.join(sorted(patterns))}</p>
+"""
+
+    # Add statistics tables
+    # 1. Pattern occurrence counts
+    html += "<h3>Pattern Occurrence Counts</h3>"
+    html += "<table><tr><th>Pattern</th><th>Occurrences</th></tr>"
+    
+    # Get pattern counts from combined table
+    if "Combined_combined" in tables:
+        pattern_counts, _ = count_patterns_in_table(tables["Combined_combined"], patterns)
+        for pattern, count in sorted(pattern_counts.items(), key=lambda x: x[1], reverse=True):
+            html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
+    
+    html += "</table>"
+    
+    # 2. Pattern persistence scores
+    html += "<h3>Pattern Persistence Scores</h3>"
+    html += "<table><tr><th>Pattern</th><th>Persistence Score</th></tr>"
+    
+    # Get persistence scores from combined table
+    if "Combined_combined" in tables:
+        persistence_scores = analyze_pattern_persistence(tables["Combined_combined"], patterns)
+        for pattern, score in sorted(persistence_scores.items(), key=lambda x: x[1], reverse=True):
+            html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
+    
+    html += "</table>"
+    
+    # 3. Pattern stability scores
+    html += "<h3>Pattern Stability Scores</h3>"
+    html += "<table><tr><th>Pattern</th><th>Stability Score</th></tr>"
+    
+    # Get stability scores from combined table
+    if "Combined_combined" in tables:
+        stability_scores = analyze_pattern_stability(tables["Combined_combined"], patterns)
+        for pattern, score in sorted(stability_scores.items(), key=lambda x: x[1], reverse=True):
+            html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
+    
+    html += "</table>"
+    
+    # 4. Straight combinations
+    html += "<h3>Straight Combination Occurrences</h3>"
+    html += "<table><tr><th>Pattern</th><th>Straight Occurrences</th></tr>"
+    
+    # Get straight counts from combined table
+    if "Combined_combined" in tables:
+        straight_counts = {pattern: detect_straight_combinations(tables["Combined_combined"], pattern) for pattern in patterns}
+        for pattern, count in sorted(straight_counts.items(), key=lambda x: x[1], reverse=True):
+            html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
+    
+    html += "</table>"
+    
+    # Close stats div
+    html += "</div>"
+    
+    # Start three-column layout
+    html += '<div class="three-column-layout">'
+    
+    # Function to generate table HTML
+    def generate_table_html(df, title):
+        table_html = f"<h2>{title}</h2><table>"
+        
+        # Table header
+        header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
+        table_html += "<tr>" + "".join([f"<th>{col}</th>" for col in header_cols if col in df.columns]) + "</tr>"
+        
+        # Table rows
+        for _, row in df.iterrows():
+            table_html += "<tr>"
+            for col in header_cols:
+                if col in df.columns:
+                    value = str(row[col])
+                    # Apply highlighting
+                    for pattern in patterns:
+                        if pattern in value:
+                            value = value.replace(pattern, f'<span class="highlight">{pattern}</span>')
+                    table_html += f"<td>{value}</td>"
+            table_html += "</tr>"
+        
+        table_html += "</table>"
+        return table_html
+    
+    # Midday column
+    html += '<div class="column"><h2>Midday Data</h2>'
+    if "Midday_combined" in tables:
+        html += generate_table_html(tables["Midday_combined"], f"{state_name} Midday Combined Table")
+    if "Midday_r2" in tables:
+        html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table")
+    html += '</div>'
+    
+    # Evening column
+    html += '<div class="column"><h2>Evening Data</h2>'
+    if "Evening_combined" in tables:
+        html += generate_table_html(tables["Evening_combined"], f"{state_name} Evening Combined Table")
+    if "Evening_r2" in tables:
+        html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table")
+    html += '</div>'
+    
+    # Combined column
+    html += '<div class="column"><h2>Combined Data</h2>'
+    if "Combined_combined" in tables:
+        html += generate_table_html(tables["Combined_combined"], f"{state_name} Combined Combined Table")
+    if "Combined_r2" in tables:
+        html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table")
+    html += '</div>'
+    
+    # Close layout and HTML
+    html += '</div></body></html>'
+    
+    return html
+
+# Function to analyze all V-TRAC indexes for a state
+def analyze_all_indexes(state_name):
+    """Analyze all V-TRAC indexes for a state and rank them"""
+    # Load tables for the state
+    tables = load_state_tables(state_name)
+    if not tables:
+        return None
+    
+    # Analyze each V-TRAC index
+    results = []
+    
+    # Get all valid V-TRAC indexes
+    vtrac_indices = [entry["Index"] for entry in BOXED_VTRAC_REFERENCE]
+    
+    for index in vtrac_indices:
+        # Get all patterns for this index
+        patterns = get_all_combinations_for_index(index)
+        
+        # Skip indexes with no patterns
+        if not patterns:
+            continue
+        
+        # Calculate score for this index
+        score = calculate_index_score(tables, patterns)
+        
+        # Store result
+        results.append({
+            "index": index,
+            "patterns": patterns,
+            "score": score
+        })
+    
+    # Sort results by score (highest first)
+    results.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Add ranks
+    for i, result in enumerate(results):
+        result["rank"] = i + 1
+    
+    return results
+
+# Function to generate HTML reports for top indexes
+def generate_top_reports(state_name, results, top_n=3):
+    """Generate HTML reports for top N ranked indexes"""
+    if not results or len(results) == 0:
+        return []
+    
+    # Load tables for the state
+    tables = load_state_tables(state_name)
+    if not tables:
+        return []
+    
+    # Generate reports for top N results
+    reports = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    for i, result in enumerate(results[:top_n]):
+        # Generate HTML
+        html = generate_index_html_report(
+            state_name, 
+            result["index"], 
+            result["patterns"], 
+            tables, 
+            result["score"], 
+            result["rank"],
+            timestamp
+        )
+        
+        # Generate filename
+        filename = f"{state_name}_vtrac_rank{i+1}_index{result['index']}_v{timestamp}.html"
+        
+        # Define save path
+        output_dir = os.path.join(os.path.dirname(script_dir), "outputs", "analysis")
+        os.makedirs(output_dir, exist_ok=True)
+        filepath = os.path.join(output_dir, filename)
+        
+        # Save to file
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(html)
+        
+        # Add to reports
+        reports.append({
+            "rank": i + 1,
+            "index": result["index"],
+            "score": result["score"],
+            "filename": filename,
+            "filepath": filepath,
+            "html": html
+        })
+    
+    return reports
+
+# Function to generate a summary chart for visualization
+def generate_summary_chart(results, top_n=10):
+    """Generate a summary chart of top indexes"""
+    if not results or len(results) == 0:
+        return None
+    
+    # Limit to top N results
+    top_results = results[:min(top_n, len(results))]
+    
+    # Extract data for chart
+    indices = [str(r["index"]) for r in top_results]
+    scores = [r["score"] for r in top_results]
+    
+    # Create chart
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(indices, scores, color='purple', alpha=0.7)
+    
+    # Add data labels
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2., height + 5,
+                 f'{height:.0f}',
+                 ha='center', va='bottom')
+    
+    # Add chart details
+    plt.title('Top V-TRAC Indexes by Score', fontsize=16)
+    plt.xlabel('V-TRAC Index', fontsize=14)
+    plt.ylabel('Score', fontsize=14)
+    plt.xticks(rotation=45)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    
+    # Convert to base64 for embedding in HTML
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    plt.close()
+    
+    return f"data:image/png;base64,{image_base64}"
+
+# Streamlit app for the analyzer
+def main():
+    st.title("V-TRAC Pattern Analyzer")
+    st.markdown("Analyze state data for optimal V-TRAC indexes and pattern predictions")
+    
+    # Select state
+    state = st.selectbox("Select State", STATES)
+    
+    # Analysis options
+    st.subheader("Analysis Options")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        top_n_indexes = st.slider("Number of Top Indexes to Analyze", 3, 10, 5)
+    
+    with col2:
+        top_n_reports = st.slider("Number of HTML Reports to Generate", 1, 5, 3)
+    
+    # Run analysis button
+    if st.button("Run V-TRAC Analysis", type="primary"):
+        # Progress bar
+        progress_bar = st.progress(0)
+        status = st.empty()
+        
+        # Step 1: Load data
+        status.info("Step 1/4: Loading state data...")
+        tables = load_state_tables(state)
+        if not tables:
+            st.error(f"No data found for {state}. Please process data first.")
+            return
+        progress_bar.progress(25)
+        
+        # Step 2: Analyze all indexes
+        status.info("Step 2/4: Analyzing all V-TRAC indexes...")
+        results = analyze_all_indexes(state)
+        if not results:
+            st.error("Analysis failed. No valid results.")
+            return
+        progress_bar.progress(50)
+        
+        # Step 3: Generate reports
+        status.info("Step 3/4: Generating HTML reports...")
+        reports = generate_top_reports(state, results, top_n_reports)
+        progress_bar.progress(75)
+        
+        # Step 4: Display results
+        status.info("Step 4/4: Preparing visualization...")
+        chart_image = generate_summary_chart(results, top_n_indexes)
+        progress_bar.progress(100)
+        
+        # Display summary
+        status.success("Analysis complete!")
+        
+        # Show chart
+        if chart_image:
+            st.subheader("V-TRAC Index Ranking")
+            st.image(chart_image)
+        
+        # Display table of top indexes
+        st.subheader(f"Top {top_n_indexes} V-TRAC Indexes for {state}")
+        
+        # Create DataFrame for display
+        top_results_df = pd.DataFrame([
+            {
+                "Rank": r["rank"],
+                "Index": r["index"],
+                "Score": f"{r['score']:.2f}",
+                "Patterns": len(r["patterns"]),
+                "Top Patterns": ", ".join(sorted(list(r["patterns"]))[:5]) + "..." if len(r["patterns"]) > 5 else ", ".join(sorted(r["patterns"]))
+            }
+            for r in results[:top_n_indexes]
+        ])
+        
+        st.dataframe(top_results_df)
+        
+        # Display reports
+        st.subheader(f"Top {len(reports)} HTML Reports")
+        
+        # Create tabs for each report
+        if reports:
+            report_tabs = st.tabs([f"Rank #{r['rank']} (Index {r['index']})" for r in reports])
+            
+            for i, (tab, report) in enumerate(zip(report_tabs, reports)):
+                with tab:
+                    st.markdown(f"**V-TRAC Index: {report['index']}** - Score: {report['score']:.2f}")
+                    
+                    # Buttons for viewing and saving
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button(f"Open in Browser (Rank #{i+1})", key=f"open_{i}"):
+                            webbrowser.open(f"file://{report['filepath']}")
+                    
+                    with col2:
+                        st.download_button(
+                            f"Download HTML (Rank #{i+1})",
+                            report['html'],
+                            file_name=report['filename'],
+                            mime="text/html",
+                            key=f"download_{i}"
+                        )
+                    
+                    # Preview
+                    with st.expander(f"Preview Report (Rank #{i+1})"):
+                        st.components.v1.html(report['html'], height=600, scrolling=True)
+
+if __name__ == "__main__":
+    main() 
+
+_________________________
+
+#!/usr/bin/env python
+"""
+vtrac_utils.py - V-TRAC pattern matching and winner highlighting
+
+This module:
+1. Stores the V-TRAC reference table
+2. Provides functions to find winning patterns and related combinations
+3. Handles highlighting of winners in table data
+"""
+
+# The complete V-TRAC reference table
+BOXED_VTRAC_REFERENCE = [
+    # 1) (111) => no singles, doubles => 005, 055
+    {
+        "Index": 1,
+        "Singles": [],
+        "Doubles": [
+            "005","050","500",
+            "055","505","550"
+        ]
+    },
+
+    # 2) (112) => singles: 015, 056; doubles: 001, 006, 155, 556
+    {
+        "Index": 2,
+        "Singles": [
+            "015","051","105","150","501","510",
+            "056","065","506","560","605","650"
+        ],
+        "Doubles": [
+            # 001
+            "001","010","100",
+            # 006
+            "006","060","600",
+            # 155
+            "155","515","551",
+            # 556
+            "556","565","655"
+        ]
+    },
+
+    # 3) (113) => singles: 025, 057; doubles: 002, 007, 255, 557
+    {
+        "Index": 3,
+        "Singles": [
+            "025","052","205","250","502","520",
+            "057","075","507","570","705","750"
+        ],
+        "Doubles": [
+            # 002
+            "002","020","200",
+            # 007
+            "007","070","700",
+            # 255
+            "255","525","552",
+            # 557
+            "557","575","755"
+        ]
+    },
+
+    # 4) (114) => singles: 035, 058; doubles: 003, 008, 355, 558
+    {
+        "Index": 4,
+        "Singles": [
+            "035","053","305","350","503","530",
+            "058","085","508","580","805","850"
+        ],
+        "Doubles": [
+            # 003
+            "003","030","300",
+            # 008
+            "008","080","800",
+            # 355
+            "355","535","553",
+            # 558
+            "558","585","855"
+        ]
+    },
+
+    # 5) (115) => singles: 045, 059; doubles: 004, 009, 455, 559
+    {
+        "Index": 5,
+        "Singles": [
+            "045","054","405","450","504","540",
+            "059","095","509","590","905","950"
+        ],
+        "Doubles": [
+            # 004
+            "004","040","400",
+            # 009
+            "009","090","900",
+            # 455
+            "455","545","554",
+            # 559
+            "559","595","955"
+        ]
+    },
+
+    # 6) (122) => singles: 016, 156; doubles: 011, 066, 115, 566
+    {
+        "Index": 6,
+        "Singles": [
+            "016","061","106","160","601","610",
+            "156","165","516","561","615","651"
+        ],
+        "Doubles": [
+            # 011
+            "011","101","110",
+            # 066
+            "066","606","660",
+            # 115
+            "115","151","511",
+            # 566
+            "566","656","665"
+        ]
+    },
+
+    # 7) (123) => singles: 012, 017, 026, 067, 125, 157, 256, 567; no doubles
+    {
+        "Index": 7,
+        "Singles": [
+            # 012
+            "012","021","102","120","201","210",
+            # 017
+            "017","071","107","170","701","710",
+            # 026
+            "026","062","206","260","602","620",
+            # 067
+            "067","076","607","670","706","760",
+            # 125
+            "125","152","215","251","512","521",
+            # 157
+            "157","175","517","571","715","751",
+            # 256
+            "256","265","526","562","625","652",
+            # 567
+            "567","576","657","675","756","765"
+        ],
+        "Doubles": []
+    },
+
+    # 8) (124) => singles: 013, 018, 036, 068, 135, 158, 356, 568; no doubles
+    {
+        "Index": 8,
+        "Singles": [
+            # 013
+            "013","031","103","130","301","310",
+            # 018
+            "018","081","108","180","801","810",
+            # 036
+            "036","063","306","360","603","630",
+            # 068
+            "068","086","608","680","806","860",
+            # 135
+            "135","153","315","351","513","531",
+            # 158
+            "158","185","518","581","815","851",
+            # 356
+            "356","365","536","563","635","653",
+            # 568
+            "568","586","658","685","856","865"
+        ],
+        "Doubles": []
+    },
+
+    # 9) (125) => singles: 014, 019, 046, 069, 145, 159, 456, 569; no doubles
+    {
+        "Index": 9,
+        "Singles": [
+            # 014
+            "014","041","104","140","401","410",
+            # 019
+            "019","091","109","190","901","910",
+            # 046
+            "046","064","406","460","604","640",
+            # 069
+            "069","096","609","690","906","960",
+            # 145
+            "145","154","415","451","514","541",
+            # 159
+            "159","195","519","591","915","951",
+            # 456
+            "456","465","546","564","645","654",
+            # 569
+            "569","596","659","695","956","965"
+        ],
+        "Doubles": []
+    },
+
+    # 10) (133) => singles: 027, 257; doubles: 022, 077, 225, 577
+    {
+        "Index": 10,
+        "Singles": [
+            # 027
+            "027","072","207","270","702","720",
+            # 257
+            "257","275","527","572","725","752"
+        ],
+        "Doubles": [
+            # 022
+            "022","202","220",
+            # 077
+            "077","707","770",
+            # 225
+            "225","252","522",
+            # 577
+            "577","757","775"
+        ]
+    },
+
+    # 11) (134) => singles: 023, 028, 037, 078, 235, 258, 357, 578; no doubles
+    {
+        "Index": 11,
+        "Singles": [
+            # 023
+            "023","032","203","230","302","320",
+            # 028
+            "028","082","208","280","802","820",
+            # 037
+            "037","073","307","370","703","730",
+            # 078
+            "078","087","708","780","807","870",
+            # 235
+            "235","253","325","352","523","532",
+            # 258
+            "258","285","528","582","825","852",
+            # 357
+            "357","375","537","573","735","753",
+            # 578
+            "578","587","758","785","857","875"
+        ],
+        "Doubles": []
+    },
+
+    # 12) (135) => singles: 024, 029, 047, 079, 245, 259, 457, 579; no doubles
+    {
+        "Index": 12,
+        "Singles": [
+            # 024
+            "024","042","204","240","402","420",
+            # 029
+            "029","092","209","290","902","920",
+            # 047
+            "047","074","407","470","704","740",
+            # 079
+            "079","097","709","790","907","970",
+            # 245
+            "245","254","425","452","524","542",
+            # 259
+            "259","295","529","592","925","952",
+            # 457
+            "457","475","547","574","745","754",
+            # 579
+            "579","597","759","795","957","975"
+        ],
+        "Doubles": []
+    },
+
+    # 13) (144) => singles: 038, 358; doubles: 033, 088, 335, 588
+    {
+        "Index": 13,
+        "Singles": [
+            # 038
+            "038","083","308","380","803","830",
+            # 358
+            "358","385","538","583","835","853"
+        ],
+        "Doubles": [
+            # 033
+            "033","303","330",
+            # 088
+            "088","808","880",
+            # 335
+            "335","353","533",
+            # 588
+            "588","858","885"
+        ]
+    },
+
+    # 14) (145) => singles: 034, 039, 048, 089, 345, 359, 458, 589; no doubles
+    {
+        "Index": 14,
+        "Singles": [
+            # 034
+            "034","043","304","340","403","430",
+            # 039
+            "039","093","309","390","903","930",
+            # 048
+            "048","084","408","480","804","840",
+            # 089
+            "089","098","809","890","908","980",
+            # 345
+            "345","354","435","453","534","543",
+            # 359
+            "359","395","539","593","935","953",
+            # 458
+            "458","485","548","584","845","854",
+            # 589
+            "589","598","859","895","958","985"
+        ],
+        "Doubles": []
+    },
+
+    # 15) (155) => singles: 049, 459; doubles: 044, 099, 445, 599
+    {
+        "Index": 15,
+        "Singles": [
+            # 049
+            "049","094","409","490","904","940",
+            # 459
+            "459","495","549","594","945","954"
+        ],
+        "Doubles": [
+            # 044
+            "044","404","440",
+            # 099
+            "099","909","990",
+            # 445
+            "445","454","544",
+            # 599
+            "599","959","995"
+        ]
+    },
+
+    # 16) (222) => doubles => 116, 166; triple expansions (111, 666) removed
+    {
+        "Index": 16,
+        "Singles": [],
+        "Doubles": [
+            # 116
+            "116","161","611",
+            # 166
+            "166","616","661"
+        ]
+    },
+
+    # 17) (223) => singles: 126, 167; doubles: 112, 117, 266, 667
+    {
+        "Index": 17,
+        "Singles": [
+            # 126
+            "126","162","216","261","612","621",
+            # 167
+            "167","176","617","671","716","761"
+        ],
+        "Doubles": [
+            # 112
+            "112","121","211",
+            # 117
+            "117","171","711",
+            # 266
+            "266","626","662",
+            # 667
+            "667","676","766"
+        ]
+    },
+
+    # 18) (224) => singles: 136, 168; doubles: 113, 118, 366, 668
+    {
+        "Index": 18,
+        "Singles": [
+            # 136
+            "136","163","316","361","613","631",
+            # 168
+            "168","186","618","681","816","861"
+        ],
+        "Doubles": [
+            # 113
+            "113","131","311",
+            # 118
+            "118","181","811",
+            # 366
+            "366","636","663",
+            # 668
+            "668","686","866"
+        ]
+    },
+
+    # 19) (225) => singles: 146, 169; doubles: 114, 119, 466, 669
+    {
+        "Index": 19,
+        "Singles": [
+            # 146
+            "146","164","416","461","614","641",
+            # 169
+            "169","196","619","691","916","961"
+        ],
+        "Doubles": [
+            # 114
+            "114","141","411",
+            # 119
+            "119","191","911",
+            # 466
+            "466","646","664",
+            # 669
+            "669","696","966"
+        ]
+    },
+
+    # 20) (233) => singles: 127, 267; doubles: 122, 177, 226, 677
+    {
+        "Index": 20,
+        "Singles": [
+            # 127
+            "127","172","217","271","712","721",
+            # 267
+            "267","276","627","672","726","762"
+        ],
+        "Doubles": [
+            # 122
+            "122","212","221",
+            # 177
+            "177","717","771",
+            # 226
+            "226","262","622",
+            # 677
+            "677","767","776"
+        ]
+    },
+
+    # 21) (234) => singles: 123, 128, 137, 178, 236, 268, 367, 678; no doubles
+    {
+        "Index": 21,
+        "Singles": [
+            # 123
+            "123","132","213","231","312","321",
+            # 128
+            "128","182","218","281","812","821",
+            # 137
+            "137","173","317","371","713","731",
+            # 178
+            "178","187","718","781","817","871",
+            # 236
+            "236","263","326","362","623","632",
+            # 268
+            "268","286","628","682","826","862",
+            # 367
+            "367","376","637","673","736","763",
+            # 678
+            "678","687","768","786","867","876"
+        ],
+        "Doubles": []
+    },
+
+    # 22) (235) => singles: 124, 129, 147, 179, 246, 269, 467, 679; no doubles
+    {
+        "Index": 22,
+        "Singles": [
+            # 124
+            "124","142","214","241","412","421",
+            # 129
+            "129","192","219","291","912","921",
+            # 147
+            "147","174","417","471","714","741",
+            # 179
+            "179","197","719","791","917","971",
+            # 246
+            "246","264","426","462","624","642",
+            # 269
+            "269","296","629","692","926","962",
+            # 467
+            "467","476","647","674","746","764",
+            # 679
+            "679","697","769","796","967","976"
+        ],
+        "Doubles": []
+    },
+
+    # 23) (244) => singles: 138, 368; doubles: 133, 188, 336, 688
+    {
+        "Index": 23,
+        "Singles": [
+            # 138
+            "138","183","318","381","813","831",
+            # 368
+            "368","386","638","683","836","863"
+        ],
+        "Doubles": [
+            # 133
+            "133","313","331",
+            # 188
+            "188","818","881",
+            # 336
+            "336","363","633",
+            # 688
+            "688","868","886"
+        ]
+    },
+
+    # 24) (245) => singles: 134, 139, 148, 189, 346, 369, 468, 689; no doubles
+    {
+        "Index": 24,
+        "Singles": [
+            # 134
+            "134","143","314","341","413","431",
+            # 139
+            "139","193","319","391","913","931",
+            # 148
+            "148","184","418","481","814","841",
+            # 189
+            "189","198","819","891","918","981",
+            # 346
+            "346","364","436","463","634","643",
+            # 369
+            "369","396","639","693","936","963",
+            # 468
+            "468","486","648","684","846","864",
+            # 689
+            "689","698","869","896","968","986"
+        ],
+        "Doubles": []
+    },
+
+    # 25) (255) => singles: 149, 469; doubles: 144, 199, 446, 699
+    {
+        "Index": 25,
+        "Singles": [
+            # 149
+            "149","194","419","491","914","941",
+            # 469
+            "469","496","649","694","946","964"
+        ],
+        "Doubles": [
+            # 144
+            "144","414","441",
+            # 199
+            "199","919","991",
+            # 446
+            "446","464","644",
+            # 699
+            "699","969","996"
+        ]
+    },
+
+    # 26) (333) => doubles => 227, 277; remove triple expansions (222,777)
+    {
+        "Index": 26,
+        "Singles": [],
+        "Doubles": [
+            # 227
+            "227","272","722",
+            # 277
+            "277","727","772"
+        ]
+    },
+
+    # 27) (334) => singles: 237, 278; doubles: 223, 228, 377, 778
+    {
+        "Index": 27,
+        "Singles": [
+            # 237
+            "237","273","327","372","723","732",
+            # 278
+            "278","287","728","782","827","872"
+        ],
+        "Doubles": [
+            # 223
+            "223","232","322",
+            # 228
+            "228","282","822",
+            # 377
+            "377","737","773",
+            # 778
+            "778","787","877"
+        ]
+    },
+
+    # 28) (335) => singles: 247, 279; doubles: 224, 229, 477, 779
+    {
+        "Index": 28,
+        "Singles": [
+            # 247
+            "247","274","427","472","724","742",
+            # 279
+            "279","297","729","792","927","972"
+        ],
+        "Doubles": [
+            # 224
+            "224","242","422",
+            # 229
+            "229","292","922",
+            # 477
+            "477","747","774",
+            # 779
+            "779","797","977"
+        ]
+    },
+
+    # 29) (344) => singles: 238, 378; doubles: (233,288,337,788) with 3 perms each
+    {
+        "Index": 29,
+        "Singles": [
+            # 238
+            "238","283","328","382","823","832",
+            # 378
+            "378","387","738","783","837","873"
+        ],
+        "Doubles": [
+            # 233
+            "233","323","332",
+            # 288
+            "288","828","882",
+            # 337
+            "337","373","733",
+            # 788
+            "788","878","887"
+        ]
+    },
+
+    # 30) (345) => singles: 234, 239, 248, 289, 347, 379, 478, 789; no doubles
+    {
+        "Index": 30,
+        "Singles": [
+            # 234
+            "234","243","324","342","423","432",
+            # 239
+            "239","293","329","392","923","932",
+            # 248
+            "248","284","428","482","824","842",
+            # 289
+            "289","298","829","892","928","982",
+            # 347
+            "347","374","437","473","734","743",
+            # 379
+            "379","397","739","793","937","973",
+            # 478
+            "478","487","748","784","847","874",
+            # 789
+            "789","798","879","897","978","987"
+        ],
+        "Doubles": []
+    },
+
+    # 31) (355) => singles: 249, 479; doubles: 244, 299, 447, 799
+    {
+        "Index": 31,
+        "Singles": [
+            # 249
+            "249","294","429","492","924","942",
+            # 479
+            "479","497","749","794","947","974"
+        ],
+        "Doubles": [
+            # 244
+            "244","424","442",
+            # 299
+            "299","929","992",
+            # 447
+            "447","474","744",
+            # 799
+            "799","979","997"
+        ]
+    },
+
+    # 32) (444) => doubles => 338, 388; remove triple expansions (333,888)
+    {
+        "Index": 32,
+        "Singles": [],
+        "Doubles": [
+            # 338
+            "338","383","833",
+            # 388
+            "388","838","883"
+        ]
+    },
+
+    # 33) (445) => singles: 348, 389; doubles: 334, 339, 488, 889
+    {
+        "Index": 33,
+        "Singles": [
+            # 348
+            "348","384","438","483","834","843",
+            # 389
+            "389","398","839","893","938","983"
+        ],
+        "Doubles": [
+            # 334
+            "334","343","433",
+            # 339
+            "339","393","933",
+            # 488
+            "488","848","884",
+            # 889
+            "889","898","988"
+        ]
+    },
+
+    # 34) (455) => singles: 349, 489; doubles: 344, 399, 448, 899
+    {
+        "Index": 34,
+        "Singles": [
+            # 349
+            "349","394","439","493","934","943",
+            # 489
+            "489","498","849","894","948","984"
+        ],
+        "Doubles": [
+            # 344
+            "344","434","443",
+            # 399
+            "399","939","993",
+            # 448
+            "448","484","844",
+            # 899
+            "899","989","998"
+        ]
+    },
+
+    # 35) (555) => doubles => 449, 499; remove triple expansions (444,999)
+    {
+        "Index": 35,
+        "Singles": [],
+        "Doubles": [
+            # 449
+            "449","494","944",
+            # 499
+            "499","949","994"
+        ]
+    }
+]
+
+def get_all_permutations(number):
+    """
+    Get all permutations of a 3-digit number
+    Returns a set of strings, each 3 digits long
+    """
+    number = str(number).zfill(3)
+    digits = list(number)
+    from itertools import permutations
+    perms = set(''.join(p) for p in permutations(digits))
+    return perms
+
+def find_vtrac_index_and_combos(number):
+    """
+    Find the V-TRAC index containing this number and return:
+    - index number
+    - winning permutations (all permutations of the input number)
+    - related combinations (all other numbers in the same index)
+    """
+    number = str(number).zfill(3)
+    winning_perms = get_all_permutations(number)
+    
+    for index_data in BOXED_VTRAC_REFERENCE:
+        # Check if number is in singles or doubles
+        all_combos = set(index_data["Singles"] + index_data["Doubles"])
+        if number in all_combos:
+            # Get all related combinations excluding the winning number's permutations
+            related = set(all_combos) - winning_perms
+            return index_data["Index"], winning_perms, related
+            
+    return None, set(), set()
+
+def scan_string_for_matches(string_val, patterns):
+    """
+    Scan a string for any 3-digit patterns
+    Returns list of found patterns and their positions
+    """
+    if not isinstance(string_val, str):
+        return []
+    
+    matches = []
+    for i in range(len(string_val) - 2):
+        substr = string_val[i:i+3]
+        if substr in patterns:
+            matches.append((substr, i))
+    return matches
+
+def highlight_string_with_matches(string_val, winning_patterns, related_patterns):
+    """
+    Returns HTML-formatted string with:
+    - winning patterns in red
+    - related patterns in blue
+    """
+    if not isinstance(string_val, str):
+        return string_val
+        
+    # Get all matches with positions
+    winning_matches = scan_string_for_matches(string_val, winning_patterns)
+    related_matches = scan_string_for_matches(string_val, related_patterns)
+    
+    # Sort all matches by position (to handle overlapping)
+    all_matches = [(pos, substr, 'red') for substr, pos in winning_matches]
+    all_matches.extend([(pos, substr, 'blue') for substr, pos in related_matches])
+    all_matches.sort()
+    
+    # Apply highlighting
+    result = string_val
+    offset = 0
+    for pos, substr, color in all_matches:
+        adjusted_pos = pos + offset
+        html_start = f'<span style="color: {color}; font-weight: bold">'
+        html_end = '</span>'
+        result = result[:adjusted_pos] + html_start + substr + html_end + result[adjusted_pos + 3:]
+        offset += len(html_start) + len(html_end)
+    
+    return result 
+
+def get_vtrac_patterns(winning_number):
+    """
+    Get all permutations for a winning number from its V-TRAC index.
+    
+    Args:
+        winning_number (str): The 3-digit winning number
+        
+    Returns:
+        tuple: (red_patterns, blue_patterns) where:
+            - red_patterns: Set of all permutations of the winning number
+            - blue_patterns: Set of all other combinations from same V-TRAC index
+    """
+    red_patterns = set()
+    blue_patterns = set()
+    
+    # Find which V-TRAC index contains this number
+    for vtrac_entry in BOXED_VTRAC_REFERENCE:
+        # Get all combinations from this index
+        all_combos = set()
+        all_combos.update(vtrac_entry.get("Singles", []))
+        all_combos.update(vtrac_entry.get("Doubles", []))
+        
+        # If we find our number in this index
+        if winning_number in all_combos:
+            # Add all permutations of winner to red set
+            red_patterns.add(winning_number)
+            # Add all other combinations to blue set
+            blue_patterns.update(all_combos - {winning_number})
+            break
+            
+    return red_patterns, blue_patterns
+
+def highlight_cell(value, red_patterns, blue_patterns):
+    """
+    Apply HTML styling to a cell value based on pattern matches.
+    
+    Args:
+        value (str): The cell value to check
+        red_patterns (set): Patterns to highlight in red
+        blue_patterns (set): Patterns to highlight in blue
+        
+    Returns:
+        str: HTML-styled string with appropriate color
+    """
+    if not value or value == 'N/A':
+        return value
+        
+    # Clean the string (remove any existing styling)
+    clean_val = ''.join(c for c in str(value) if c.isdigit() or c.isspace())
+    
+    # Look for stable patterns
+    if any(pattern in clean_val for pattern in red_patterns):
+        return f'<span style="color: red; font-weight: bold">{value}</span>'
+    elif any(pattern in blue_patterns for pattern in blue_patterns):
+        return f'<span style="color: blue">{value}</span>'
+    
+    return value
+
+def find_all_patterns_in_string(pattern, string, allow_overlap=True):
+    """
+    Find all occurrences of a pattern in a string
+    
+    Args:
+        pattern (str): Pattern to find (e.g. '468')
+        string (str): String to search in (e.g. '992244138667')
+        allow_overlap (bool): Whether to allow overlapping matches
+        
+    Returns:
+        list: List of (start, end) tuples for each match
+    """
+    matches = []
+    i = 0
+    while i < len(string) - len(pattern) + 1:
+        if string[i:i+len(pattern)] == pattern:
+            matches.append((i, i+len(pattern)))
+            if allow_overlap:
+                i += 1
+            else:
+                i += len(pattern)
+        else:
+            i += 1
+    return matches
+
+def find_patterns_in_row(val, winning_perms, related_patterns):
+    """
+    Find all winning and related patterns in a row value
+    
+    Args:
+        val: String value to search in
+        winning_perms: Set of winning permutations
+        related_patterns: Set of related patterns
+        
+    Returns:
+        dict: Dictionary with 'winning' and 'related' matches
+    """
+    if not isinstance(val, str):
+        return {'winning': [], 'related': []}
+        
+    matches = {
+        'winning': [],
+        'related': []
+    }
+    
+    # Check winning patterns
+    for pattern in winning_perms:
+        pos = 0
+        while pos < len(val):
+            idx = val.find(pattern, pos)
+            if idx == -1:
+                break
+            matches['winning'].append({
+                'text': pattern,
+                'position': (idx, idx + len(pattern))
+            })
+            pos = idx + 1
+            
+    # Check related patterns
+    for pattern in related_patterns:
+        pos = 0
+        while pos < len(val):
+            idx = val.find(pattern, pos)
+            if idx == -1:
+                break
+            # Don't add if position overlaps with a winning pattern
+            overlaps = False
+            for win in matches['winning']:
+                if (idx >= win['position'][0] and idx < win['position'][1]) or \
+                   (idx + len(pattern) > win['position'][0] and idx + len(pattern) <= win['position'][1]):
+                    overlaps = True
+                    break
+            if not overlaps:
+                matches['related'].append({
+                    'text': pattern,
+                    'position': (idx, idx + len(pattern))
+                })
+            pos = idx + 1
+            
+    return matches
+
+def highlight_winners_in_table(df, winning_perms, related_patterns):
+    """
+    Highlight winning and related patterns in table
+    
+    Args:
+        df (pd.DataFrame): DataFrame to highlight
+        winning_perms (set): Set of winning permutations
+        related_patterns (set): Set of related patterns
+        
+    Returns:
+        pd.DataFrame: Highlighted DataFrame
+    """
+    def highlight_cell(val):
+        if not isinstance(val, str) or val in ['N/A', 'nan']:
+            return ''
+            
+        # Find all matches
+        matches = find_patterns_in_row(val, winning_perms, related_patterns)
+        
+        if not matches['winning'] and not matches['related']:
+            return ''
+            
+        # Build CSS styles
+        styles = []
+        
+        if matches['winning']:
+            styles.append('color: red; font-weight: bold')
+        elif matches['related']:
+            styles.append('color: blue')
+            
+        return '; '.join(styles)
+    
+    # Apply section background colors
+    styled = df.style.apply(lambda x: [
+        'background-color: rgba(31, 119, 180, 0.1)' if x['Set'] == 'Set3'
+        else 'background-color: rgba(44, 160, 44, 0.1)' if x['Set'] == 'Set2'
+        else 'background-color: rgba(255, 127, 14, 0.1)' if (x['Set'] == 'Set1' and x['Draw'] == 'Draw1')
+        else '' for _ in range(len(x))
+    ], axis=1)
+    
+    # Apply pattern highlighting to all columns except Set/Draw/RowType
+    cols_to_highlight = [col for col in df.columns if col not in ['Set', 'Draw', 'RowType']]
+    for col in cols_to_highlight:
+        styled = styled.applymap(highlight_cell, subset=[col])
+    
+    return styled.set_properties(**{
+        'text-align': 'center',
+        'font-family': 'monospace',
+        'white-space': 'nowrap',
+        'padding': '8px'
+    }) 
+_____________
+
+I HOPE I DID THAT RIGHT I WENT INTO MY EXPLORERE VERSION WHERE THE WORKING ONE IS FROM AND CHECKED AND PASTED EACH OF THE ONES YOU ASKED FOR..NOT EVEN SURE ITS WHATS IN CURSOR RIGHT NOW ITS HARD FOR ME TO FIND THINGS IN THE DRIRECOTRY BUT I WOULD IMAGINE THEY MATCH IF IT REVRETED AND WORKS NOW

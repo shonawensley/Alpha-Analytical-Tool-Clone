@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pattern Analysis</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }
+        table { 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            width: 100%;
+        }
+        th, td { 
+            border: 1px solid black; 
+            padding: 6px; 
+            text-align: center; 
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .version { 
+            color: gray; 
+            font-size: 0.9em; 
+            margin-bottom: 10px; 
+        }
+        .winning {
+            color: #ff0000;
+            font-weight: 800;
+        }
+        .pattern {
+            color: #0000ff;
+            font-weight: 800;
+        }
+        .three-column-layout {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .column {
+            flex: 0 0 32%;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1200px) {
+            .column {
+                flex: 0 0 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="version">Version: v20250412_213811</div>
+<div class="three-column-layout">
+<div class="column">
+<h2>Midday Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Midday Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td>912</td><td>437</td><td>894</td><td>258</td><td><span class="pattern">663</span></td><td>502</td><td>643</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55240388796</td><td>55208867</td><td>5520784</td><td>50675</td><td>841</td><td>9</td><td>7</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>20266026</td><td>21856441</td><td>4326370</td><td>8712</td><td>670</td><td>0</td><td>8</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td><span class="winning">136</span>54824</td><td>9087578</td><td>30808314</td><td>65501</td><td>839</td><td>9</td><td>4</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>559046943</td><td>694497046</td><td>8275534</td><td>27474</td><td>479</td><td>9</td><td>9</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td>437</td><td>894</td><td>258</td><td><span class="pattern">663</span></td><td>502</td><td>643</td><td>064</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55240388822</td><td>55208108</td><td>5520076</td><td>50589</td><td>552</td><td>4</td><td>9</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>29446751</td><td>20476458</td><td>4216531</td><td>4123</td><td>565</td><td>9</td><td>7</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td>95095724</td><td>2326728</td><td>63204939</td><td>00808</td><td>835</td><td>4</td><td>3</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>197164490</td><td>898835431</td><td>9952520</td><td>77276</td><td>963</td><td>5</td><td>5</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td>894</td><td>258</td><td><span class="pattern">663</span></td><td>502</td><td>643</td><td>064</td><td>058</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>55240388526</td><td>55208293</td><td>5520086</td><td>50331</td><td>872</td><td>7</td><td>8</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>22296273</td><td>22586284</td><td>6596474</td><td>3006</td><td>573</td><td>0</td><td>5</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td>08504524</td><td>5423078</td><td>97508296</td><td>03703</td><td>017</td><td>9</td><td>8</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>097765709</td><td>375882825</td><td>5938955</td><td>90637</td><td>078</td><td>0</td><td>9</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Midday R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55240388796</td><td>55208867</td><td>5520784</td><td>50675</td><td>841</td><td>9</td><td>7</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55240388822</td><td>55208108</td><td>5520076</td><td>50589</td><td>552</td><td>4</td><td>9</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>55240388526</td><td>55208293</td><td>5520086</td><td>50331</td><td>872</td><td>7</td><td>8</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+<div class="column">
+<h2>Evening Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Evening Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td>585</td><td>325</td><td>339</td><td>076</td><td>845</td><td>020</td><td>270</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55240388263</td><td>55208944</td><td>5520167</td><td>50822</td><td>363</td><td>8</td><td>2</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>22626104</td><td>29<span class="pattern">686</span>589</td><td>9246803</td><td>0014</td><td>747</td><td>8</td><td>5</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td>54443924</td><td>1518973</td><td>09202512</td><td>73905</td><td>287</td><td>2</td><td>0</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>675052265</td><td>507364009</td><td>8334032</td><td>05831</td><td>996</td><td>4</td><td>5</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td>325</td><td>339</td><td>076</td><td>845</td><td>020</td><td>270</td><td>074</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55240388385</td><td>55208506</td><td>5520908</td><td>50964</td><td>154</td><td>2</td><td>5</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>26<span class="winning">316</span>430</td><td>2014<span class="pattern">618</span>5</td><td>1526954</td><td>4<span class="pattern">866</span></td><td>232</td><td>0</td><td>4</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td>74088524</td><td>467<span class="pattern">816</span>7</td><td>91009359</td><td>26403</td><td>341</td><td>0</td><td>9</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>794560231</td><td>678034160</td><td>6239301</td><td>43422</td><td>772</td><td>1</td><td>7</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td>339</td><td>076</td><td>845</td><td>020</td><td>270</td><td>074</td><td>478</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>55240388538</td><td>55208419</td><td>5520329</td><td>50675</td><td>864</td><td>5</td><td>0</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>20656775</td><td>23<span class="pattern">866</span>342</td><td>5826937</td><td>3095</td><td>724</td><td>0</td><td>0</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td>84876724</td><td>7515833</td><td>48805587</td><td>00700</td><td>930</td><td>9</td><td>9</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>244088223</td><td>170513918</td><td>7334152</td><td>99909</td><td>633</td><td>2</td><td>7</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Evening R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>55240388263</td><td>55208944</td><td>5520167</td><td>50822</td><td>363</td><td>8</td><td>2</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>55240388385</td><td>55208506</td><td>5520908</td><td>50964</td><td>154</td><td>2</td><td>5</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>55240388538</td><td>55208419</td><td>5520329</td><td>50675</td><td>864</td><td>5</td><td>0</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+<div class="column">
+<h2>Combined Draw</h2>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Combined Combined Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>DRAW_DATA</td><td>845</td><td>502</td><td>020</td><td>643</td><td>270</td><td>064</td><td>074</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>5992240<span class="pattern">113</span>87</td><td>9924<span class="pattern">113</span>87</td><td>994<span class="pattern">113</span>87</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span></td><td>99<span class="pattern">118</span></td><td>99<span class="pattern">118</span></td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R4</td><td>225990834711</td><td>299834711</td><td>99834711</td><td>998711</td><td>99<span class="pattern">811</span></td><td>99<span class="pattern">811</span></td><td>99<span class="pattern">811</span></td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R6</td><td><span class="pattern">811</span>7059932</td><td><span class="pattern">811</span>79932</td><td><span class="pattern">811</span>7993</td><td><span class="pattern">811</span>799</td><td><span class="pattern">811</span>99</td><td><span class="pattern">811</span>99</td><td><span class="pattern">811</span>99</td></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R8</td><td>70119983245</td><td>71199832</td><td>7119983</td><td>711998</td><td>11998</td><td>11998</td><td>11998</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>DRAW_DATA</td><td>502</td><td>020</td><td>643</td><td>270</td><td>064</td><td>074</td><td>058</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>99240<span class="pattern">113</span>877</td><td>994<span class="pattern">113</span>877</td><td>99<span class="pattern">118</span>77</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span></td><td>9911</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R4</td><td>29908347711</td><td>998347711</td><td>9987711</td><td>998711</td><td>998711</td><td>99<span class="pattern">811</span></td><td>9911</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R6</td><td><span class="pattern">811</span>7709932</td><td><span class="pattern">811</span>7793</td><td><span class="pattern">811</span>779</td><td><span class="pattern">811</span>79</td><td><span class="pattern">811</span>7</td><td><span class="pattern">811</span>9</td><td>119</td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R8</td><td>770119983</td><td>7711998</td><td>771199</td><td>71199</td><td>7119</td><td>1198</td><td>119</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>DRAW_DATA</td><td>020</td><td>643</td><td>270</td><td>064</td><td>074</td><td>058</td><td>478</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>994<span class="pattern">113</span>3<span class="pattern">866</span>77</td><td>99<span class="pattern">113</span>8677</td><td>99<span class="pattern">113</span>86</td><td>99<span class="pattern">113</span>8</td><td>99<span class="pattern">113</span></td><td>9911</td><td>991</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R4</td><td>99<span class="pattern">668</span>33471</td><td>996837711</td><td>9968371</td><td>998371</td><td>99831</td><td>9931</td><td>993</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R6</td><td>66<span class="pattern">811</span>7799</td><td>6<span class="pattern">811</span>779</td><td>6<span class="pattern">811</span>79</td><td><span class="pattern">811</span>79</td><td><span class="pattern">811</span>9</td><td>119</td><td>19</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R8</td><td>7711998<span class="pattern">366</span></td><td>771199836</td><td>7119983</td><td>711998</td><td>11998</td><td>1199</td><td>119</td></tr>
+</table>
+<br>
+
+        <style>
+            table {
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                width: 100%;
+                max-width: 1200px;
+            }
+            th {
+                background-color: #f2f2f2;
+                padding: 8px;
+                font-weight: bold;
+                text-align: center;
+                border: 1px solid #000;
+            }
+            td {
+                padding: 6px;
+                border: 1px solid #000;
+                text-align: center;
+                font-weight: 400;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .winning {
+                color: #ff0000;
+                font-weight: 800;
+            }
+            .pattern {
+                color: #0000ff;
+                font-weight: 800;
+            }
+            .three-column-layout {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .column {
+                flex: 0 0 32%;
+                margin-bottom: 20px;
+            }
+            @media (max-width: 1200px) {
+                .column {
+                    flex: 0 0 100%;
+                }
+            }
+        </style>
+        <h2>Michigan4 Combined R2-only Table</h2>
+<table>
+<tr><th>Set</th><th>Draw</th><th>RowType</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>
+<tr><td>Set3</td><td>Draw1</td><td>R2</td><td>5992240<span class="pattern">113</span>87</td><td>9924<span class="pattern">113</span>87</td><td>994<span class="pattern">113</span>87</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span></td><td>99<span class="pattern">118</span></td><td>99<span class="pattern">118</span></td></tr>
+<tr><td>Set2</td><td>Draw1</td><td>R2</td><td>99240<span class="pattern">113</span>877</td><td>994<span class="pattern">113</span>877</td><td>99<span class="pattern">118</span>77</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span>7</td><td>99<span class="pattern">118</span></td><td>9911</td></tr>
+<tr><td>Set1</td><td>Draw1</td><td>R2</td><td>994<span class="pattern">113</span>3<span class="pattern">866</span>77</td><td>99<span class="pattern">113</span>8677</td><td>99<span class="pattern">113</span>86</td><td>99<span class="pattern">113</span>8</td><td>99<span class="pattern">113</span></td><td>9911</td><td>991</td></tr>
+</table>
+<br>
+</div><!-- End column -->
+</div><!-- End three-column layout -->
+</body></html>

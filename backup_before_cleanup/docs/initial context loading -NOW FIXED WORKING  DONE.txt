@@ -1,0 +1,3636 @@
+can you help me get my project back on track with cursor? its a complete disaster and I keep going in cirlces trying to fix a process that use to work consistently
+
+im kinda tough to explain this all but ill try...
+
+When i thought i had a working process from uploading the excel file/it cleaning all the excel state sheets/ then importing into script and adjusting for perfect cusomt datasets (finalized tables) I tried to ask it to do something abit more advanved so this could be a program i could use daily wheere i upload the excel file and it perfomrs the entire process and saves the results to its own state sheet, i basically wanted it to atleast save the html of the 3 combined tables (via streamlit viewer) midday/evening/combined and save a version json file as it told me this was the best version for an AI/machine learning to learn from...
+
+now when i uploaded the file which will be named daily "Pick3Stats4" i saw it automatically what seems upload the file and give it a date (check attached images) now i think i realize cursor has such a problem with properly updating file paths that was likely happening was all the other scripts for the process maybe didint have the paths updated for this file name of the excel with the date (just my thoery) and then when i communivate that the cobined tables datasets and not being created as usual it starts editing code and messing up the process more...it had set up all the state folders and archieves i requested but couldnt even run the original process for all states correctly anymore..
+
+i basically been going in circles for days and days trying to get back to the starting point , im only guessing this was a path issue but ive seen it do this over and over and then not recognize fixing this and then over editing the wortkinfg code in the process...
+
+i want to be able to establish a working code of this process i can alsoways fall back to but because of these path issues this never seems to workout , even in my training docs there seems ot be path issues...there needs to be a way to estalbish a default process that works and addresses these path issues...
+
+what i would suggest is when we have the working process again and I upload the excel file that it provides the current date to i suggest when i upload the excel file it allows me to entre the date..this also allows me to test prior days of the excel file and im hoping their is some functionality built in some it understands updating the paths in whicheveer way it is...mayve it shouldnt even be adding the date to the excel file because this is essentially changing the working path of the scripts correct? isnt it easier that it understands I add "Pick3StatsC4" it doesnt change the name and maybe adds this somewhere else in the program or logs this? and if not it needs to have an adaptive way to recognize the excel files name will change and mess up all the paths for the entire process...
+
+here's what i was trying to do big picture... i wanted to upload the excel file daily , it runs through the coded process down to creating the finalized combined tables datasets (THIS SHOULD BE A PROCESS THAT DOESNT NEED TO BE MESSED WITH OVER AND OVER AGAIN)
+
+THEN WHAT I REALLY WANTED WAS BEFORE IT LOGS AWAY THE RESULTS/ COMBINED TABLES INTO THE STATE FOLDERS INCLUDING THE JSON FOR AI I WANTED TO FIRST BE ABLE TO VEW THE DATASETS AND THEN I WANTED ANOTHER FUNCTION WITHIN THE APP WHERE I COULD ENTER THE WINNING NUMBERS MIDDAY + EVENING SIMILAR TO THE ATTACHED IMAGE LAYOUT AS I CAN COPY AND PASTE THE RESULTS IN THIS FORMAT FROM A DIFFERENT EXCEL FILE..
+
+I WAS HOPING ONCE I ENTER THE MIDDAY + EVENING I COULD PRESS A BUTTON OR SUBMIT AND IT WOULD TAKE THE WINNING NUMBER AND USE THIS V-TRAC TABLE....
+
+#!/usr/bin/env python3
+"""
+FULL PYTHON CODE:
+- Includes the updated BOXED_VTRAC_REFERENCE with the corrected Index 29
+- A function to map any Pick3 draw (e.g. '458') to its V-Trac Index
+- Example logic for reading draws, computing gap analysis, and identifying "due" indices
+"""
+
+import pandas as pd
+import numpy as np
+
+# 1. Corrected V-TRAC INDEX COMBINATIONS lookup table
+BOXED_VTRAC_REFERENCE = [
+
+    # 1) (111) => no singles, doubles => 005, 055
+    {
+        "Index": 1,
+        "Singles": [],
+        "Doubles": [
+            "005","050","500",
+            "055","505","550"
+        ]
+    },
+
+    # 2) (112) => singles: 015, 056; doubles: 001, 006, 155, 556
+    {
+        "Index": 2,
+        "Singles": [
+            "015","051","105","150","501","510",
+            "056","065","506","560","605","650"
+        ],
+        "Doubles": [
+            # 001
+            "001","010","100",
+            # 006
+            "006","060","600",
+            # 155
+            "155","515","551",
+            # 556
+            "556","565","655"
+        ]
+    },
+
+    # 3) (113) => singles: 025, 057; doubles: 002, 007, 255, 557
+    {
+        "Index": 3,
+        "Singles": [
+            "025","052","205","250","502","520",
+            "057","075","507","570","705","750"
+        ],
+        "Doubles": [
+            # 002
+            "002","020","200",
+            # 007
+            "007","070","700",
+            # 255
+            "255","525","552",
+            # 557
+            "557","575","755"
+        ]
+    },
+
+    # 4) (114) => singles: 035, 058; doubles: 003, 008, 355, 558
+    {
+        "Index": 4,
+        "Singles": [
+            "035","053","305","350","503","530",
+            "058","085","508","580","805","850"
+        ],
+        "Doubles": [
+            # 003
+            "003","030","300",
+            # 008
+            "008","080","800",
+            # 355
+            "355","535","553",
+            # 558
+            "558","585","855"
+        ]
+    },
+
+    # 5) (115) => singles: 045, 059; doubles: 004, 009, 455, 559
+    {
+        "Index": 5,
+        "Singles": [
+            "045","054","405","450","504","540",
+            "059","095","509","590","905","950"
+        ],
+        "Doubles": [
+            # 004
+            "004","040","400",
+            # 009
+            "009","090","900",
+            # 455
+            "455","545","554",
+            # 559
+            "559","595","955"
+        ]
+    },
+
+    # 6) (122) => singles: 016, 156; doubles: 011, 066, 115, 566
+    {
+        "Index": 6,
+        "Singles": [
+            "016","061","106","160","601","610",
+            "156","165","516","561","615","651"
+        ],
+        "Doubles": [
+            # 011
+            "011","101","110",
+            # 066
+            "066","606","660",
+            # 115
+            "115","151","511",
+            # 566
+            "566","656","665"
+        ]
+    },
+
+    # 7) (123) => singles: 012, 017, 026, 067, 125, 157, 256, 567; no doubles
+    {
+        "Index": 7,
+        "Singles": [
+            # 012
+            "012","021","102","120","201","210",
+            # 017
+            "017","071","107","170","701","710",
+            # 026
+            "026","062","206","260","602","620",
+            # 067
+            "067","076","607","670","706","760",
+            # 125
+            "125","152","215","251","512","521",
+            # 157
+            "157","175","517","571","715","751",
+            # 256
+            "256","265","526","562","625","652",
+            # 567
+            "567","576","657","675","756","765"
+        ],
+        "Doubles": []
+    },
+
+    # 8) (124) => singles: 013, 018, 036, 068, 135, 158, 356, 568; no doubles
+    {
+        "Index": 8,
+        "Singles": [
+            # 013
+            "013","031","103","130","301","310",
+            # 018
+            "018","081","108","180","801","810",
+            # 036
+            "036","063","306","360","603","630",
+            # 068
+            "068","086","608","680","806","860",
+            # 135
+            "135","153","315","351","513","531",
+            # 158
+            "158","185","518","581","815","851",
+            # 356
+            "356","365","536","563","635","653",
+            # 568
+            "568","586","658","685","856","865"
+        ],
+        "Doubles": []
+    },
+
+    # 9) (125) => singles: 014, 019, 046, 069, 145, 159, 456, 569; no doubles
+    {
+        "Index": 9,
+        "Singles": [
+            # 014
+            "014","041","104","140","401","410",
+            # 019
+            "019","091","109","190","901","910",
+            # 046
+            "046","064","406","460","604","640",
+            # 069
+            "069","096","609","690","906","960",
+            # 145
+            "145","154","415","451","514","541",
+            # 159
+            "159","195","519","591","915","951",
+            # 456
+            "456","465","546","564","645","654",
+            # 569
+            "569","596","659","695","956","965"
+        ],
+        "Doubles": []
+    },
+
+    # 10) (133) => singles: 027, 257; doubles: 022, 077, 225, 577
+    {
+        "Index": 10,
+        "Singles": [
+            # 027
+            "027","072","207","270","702","720",
+            # 257
+            "257","275","527","572","725","752"
+        ],
+        "Doubles": [
+            # 022
+            "022","202","220",
+            # 077
+            "077","707","770",
+            # 225
+            "225","252","522",
+            # 577
+            "577","757","775"
+        ]
+    },
+
+    # 11) (134) => singles: 023, 028, 037, 078, 235, 258, 357, 578; no doubles
+    {
+        "Index": 11,
+        "Singles": [
+            # 023
+            "023","032","203","230","302","320",
+            # 028
+            "028","082","208","280","802","820",
+            # 037
+            "037","073","307","370","703","730",
+            # 078
+            "078","087","708","780","807","870",
+            # 235
+            "235","253","325","352","523","532",
+            # 258
+            "258","285","528","582","825","852",
+            # 357
+            "357","375","537","573","735","753",
+            # 578
+            "578","587","758","785","857","875"
+        ],
+        "Doubles": []
+    },
+
+    # 12) (135) => singles: 024, 029, 047, 079, 245, 259, 457, 579; no doubles
+    {
+        "Index": 12,
+        "Singles": [
+            # 024
+            "024","042","204","240","402","420",
+            # 029
+            "029","092","209","290","902","920",
+            # 047
+            "047","074","407","470","704","740",
+            # 079
+            "079","097","709","790","907","970",
+            # 245
+            "245","254","425","452","524","542",
+            # 259
+            "259","295","529","592","925","952",
+            # 457
+            "457","475","547","574","745","754",
+            # 579
+            "579","597","759","795","957","975"
+        ],
+        "Doubles": []
+    },
+
+    # 13) (144) => singles: 038, 358; doubles: 033, 088, 335, 588
+    {
+        "Index": 13,
+        "Singles": [
+            # 038
+            "038","083","308","380","803","830",
+            # 358
+            "358","385","538","583","835","853"
+        ],
+        "Doubles": [
+            # 033
+            "033","303","330",
+            # 088
+            "088","808","880",
+            # 335
+            "335","353","533",
+            # 588
+            "588","858","885"
+        ]
+    },
+
+    # 14) (145) => singles: 034, 039, 048, 089, 345, 359, 458, 589; no doubles
+    {
+        "Index": 14,
+        "Singles": [
+            # 034
+            "034","043","304","340","403","430",
+            # 039
+            "039","093","309","390","903","930",
+            # 048
+            "048","084","408","480","804","840",
+            # 089
+            "089","098","809","890","908","980",
+            # 345
+            "345","354","435","453","534","543",
+            # 359
+            "359","395","539","593","935","953",
+            # 458
+            "458","485","548","584","845","854",
+            # 589
+            "589","598","859","895","958","985"
+        ],
+        "Doubles": []
+    },
+
+    # 15) (155) => singles: 049, 459; doubles: 044, 099, 445, 599
+    {
+        "Index": 15,
+        "Singles": [
+            # 049
+            "049","094","409","490","904","940",
+            # 459
+            "459","495","549","594","945","954"
+        ],
+        "Doubles": [
+            # 044
+            "044","404","440",
+            # 099
+            "099","909","990",
+            # 445
+            "445","454","544",
+            # 599
+            "599","959","995"
+        ]
+    },
+
+    # 16) (222) => doubles => 116, 166; triple expansions (111, 666) removed
+    {
+        "Index": 16,
+        "Singles": [],
+        "Doubles": [
+            # 116
+            "116","161","611",
+            # 166
+            "166","616","661"
+        ]
+    },
+
+    # 17) (223) => singles: 126, 167; doubles: 112, 117, 266, 667
+    {
+        "Index": 17,
+        "Singles": [
+            # 126
+            "126","162","216","261","612","621",
+            # 167
+            "167","176","617","671","716","761"
+        ],
+        "Doubles": [
+            # 112
+            "112","121","211",
+            # 117
+            "117","171","711",
+            # 266
+            "266","626","662",
+            # 667
+            "667","676","766"
+        ]
+    },
+
+    # 18) (224) => singles: 136, 168; doubles: 113, 118, 366, 668
+    {
+        "Index": 18,
+        "Singles": [
+            # 136
+            "136","163","316","361","613","631",
+            # 168
+            "168","186","618","681","816","861"
+        ],
+        "Doubles": [
+            # 113
+            "113","131","311",
+            # 118
+            "118","181","811",
+            # 366
+            "366","636","663",
+            # 668
+            "668","686","866"
+        ]
+    },
+
+    # 19) (225) => singles: 146, 169; doubles: 114, 119, 466, 669
+    {
+        "Index": 19,
+        "Singles": [
+            # 146
+            "146","164","416","461","614","641",
+            # 169
+            "169","196","619","691","916","961"
+        ],
+        "Doubles": [
+            # 114
+            "114","141","411",
+            # 119
+            "119","191","911",
+            # 466
+            "466","646","664",
+            # 669
+            "669","696","966"
+        ]
+    },
+
+    # 20) (233) => singles: 127, 267; doubles: 122, 177, 226, 677
+    {
+        "Index": 20,
+        "Singles": [
+            # 127
+            "127","172","217","271","712","721",
+            # 267
+            "267","276","627","672","726","762"
+        ],
+        "Doubles": [
+            # 122
+            "122","212","221",
+            # 177
+            "177","717","771",
+            # 226
+            "226","262","622",
+            # 677
+            "677","767","776"
+        ]
+    },
+
+    # 21) (234) => singles: 123, 128, 137, 178, 236, 268, 367, 678; no doubles
+    {
+        "Index": 21,
+        "Singles": [
+            # 123
+            "123","132","213","231","312","321",
+            # 128
+            "128","182","218","281","812","821",
+            # 137
+            "137","173","317","371","713","731",
+            # 178
+            "178","187","718","781","817","871",
+            # 236
+            "236","263","326","362","623","632",
+            # 268
+            "268","286","628","682","826","862",
+            # 367
+            "367","376","637","673","736","763",
+            # 678
+            "678","687","768","786","867","876"
+        ],
+        "Doubles": []
+    },
+
+    # 22) (235) => singles: 124, 129, 147, 179, 246, 269, 467, 679; no doubles
+    {
+        "Index": 22,
+        "Singles": [
+            # 124
+            "124","142","214","241","412","421",
+            # 129
+            "129","192","219","291","912","921",
+            # 147
+            "147","174","417","471","714","741",
+            # 179
+            "179","197","719","791","917","971",
+            # 246
+            "246","264","426","462","624","642",
+            # 269
+            "269","296","629","692","926","962",
+            # 467
+            "467","476","647","674","746","764",
+            # 679
+            "679","697","769","796","967","976"
+        ],
+        "Doubles": []
+    },
+
+    # 23) (244) => singles: 138, 368; doubles: 133, 188, 336, 688
+    {
+        "Index": 23,
+        "Singles": [
+            # 138
+            "138","183","318","381","813","831",
+            # 368
+            "368","386","638","683","836","863"
+        ],
+        "Doubles": [
+            # 133
+            "133","313","331",
+            # 188
+            "188","818","881",
+            # 336
+            "336","363","633",
+            # 688
+            "688","868","886"
+        ]
+    },
+
+    # 24) (245) => singles: 134, 139, 148, 189, 346, 369, 468, 689; no doubles
+    {
+        "Index": 24,
+        "Singles": [
+            # 134
+            "134","143","314","341","413","431",
+            # 139
+            "139","193","319","391","913","931",
+            # 148
+            "148","184","418","481","814","841",
+            # 189
+            "189","198","819","891","918","981",
+            # 346
+            "346","364","436","463","634","643",
+            # 369
+            "369","396","639","693","936","963",
+            # 468
+            "468","486","648","684","846","864",
+            # 689
+            "689","698","869","896","968","986"
+        ],
+        "Doubles": []
+    },
+
+    # 25) (255) => singles: 149, 469; doubles: 144, 199, 446, 699
+    {
+        "Index": 25,
+        "Singles": [
+            # 149
+            "149","194","419","491","914","941",
+            # 469
+            "469","496","649","694","946","964"
+        ],
+        "Doubles": [
+            # 144
+            "144","414","441",
+            # 199
+            "199","919","991",
+            # 446
+            "446","464","644",
+            # 699
+            "699","969","996"
+        ]
+    },
+
+    # 26) (333) => doubles => 227, 277; remove triple expansions (222,777)
+    {
+        "Index": 26,
+        "Singles": [],
+        "Doubles": [
+            # 227
+            "227","272","722",
+            # 277
+            "277","727","772"
+        ]
+    },
+
+    # 27) (334) => singles: 237, 278; doubles: 223, 228, 377, 778
+    {
+        "Index": 27,
+        "Singles": [
+            # 237
+            "237","273","327","372","723","732",
+            # 278
+            "278","287","728","782","827","872"
+        ],
+        "Doubles": [
+            # 223
+            "223","232","322",
+            # 228
+            "228","282","822",
+            # 377
+            "377","737","773",
+            # 778
+            "778","787","877"
+        ]
+    },
+
+    # 28) (335) => singles: 247, 279; doubles: 224, 229, 477, 779
+    {
+        "Index": 28,
+        "Singles": [
+            # 247
+            "247","274","427","472","724","742",
+            # 279
+            "279","297","729","792","927","972"
+        ],
+        "Doubles": [
+            # 224
+            "224","242","422",
+            # 229
+            "229","292","922",
+            # 477
+            "477","747","774",
+            # 779
+            "779","797","977"
+        ]
+    },
+
+    # 29) (344) => singles: 238, 378; doubles: (233,288,337,788) with 3 perms each
+    {
+        "Index": 29,
+        "Singles": [
+            # 238
+            "238","283","328","382","823","832",
+            # 378
+            "378","387","738","783","837","873"
+        ],
+        "Doubles": [
+            # 233
+            "233","323","332",
+            # 288
+            "288","828","882",
+            # 337
+            "337","373","733",
+            # 788
+            "788","878","887"
+        ]
+    },
+
+    # 30) (345) => singles: 234, 239, 248, 289, 347, 379, 478, 789; no doubles
+    {
+        "Index": 30,
+        "Singles": [
+            # 234
+            "234","243","324","342","423","432",
+            # 239
+            "239","293","329","392","923","932",
+            # 248
+            "248","284","428","482","824","842",
+            # 289
+            "289","298","829","892","928","982",
+            # 347
+            "347","374","437","473","734","743",
+            # 379
+            "379","397","739","793","937","973",
+            # 478
+            "478","487","748","784","847","874",
+            # 789
+            "789","798","879","897","978","987"
+        ],
+        "Doubles": []
+    },
+
+    # 31) (355) => singles: 249, 479; doubles: 244, 299, 447, 799
+    {
+        "Index": 31,
+        "Singles": [
+            # 249
+            "249","294","429","492","924","942",
+            # 479
+            "479","497","749","794","947","974"
+        ],
+        "Doubles": [
+            # 244
+            "244","424","442",
+            # 299
+            "299","929","992",
+            # 447
+            "447","474","744",
+            # 799
+            "799","979","997"
+        ]
+    },
+
+    # 32) (444) => doubles => 338, 388; remove triple expansions (333,888)
+    {
+        "Index": 32,
+        "Singles": [],
+        "Doubles": [
+            # 338
+            "338","383","833",
+            # 388
+            "388","838","883"
+        ]
+    },
+
+    # 33) (445) => singles: 348, 389; doubles: 334, 339, 488, 889
+    {
+        "Index": 33,
+        "Singles": [
+            # 348
+            "348","384","438","483","834","843",
+            # 389
+            "389","398","839","893","938","983"
+        ],
+        "Doubles": [
+            # 334
+            "334","343","433",
+            # 339
+            "339","393","933",
+            # 488
+            "488","848","884",
+            # 889
+            "889","898","988"
+        ]
+    },
+
+    # 34) (455) => singles: 349, 489; doubles: 344, 399, 448, 899
+    {
+        "Index": 34,
+        "Singles": [
+            # 349
+            "349","394","439","493","934","943",
+            # 489
+            "489","498","849","894","948","984"
+        ],
+        "Doubles": [
+            # 344
+            "344","434","443",
+            # 399
+            "399","939","993",
+            # 448
+            "448","484","844",
+            # 899
+            "899","989","998"
+        ]
+    },
+
+    # 35) (555) => doubles => 449, 499; remove triple expansions (444,999)
+    {
+        "Index": 35,
+        "Singles": [],
+        "Doubles": [
+            # 449
+            "449","494","944",
+            # 499
+            "499","949","994"
+        ]
+    }
+]
+
+# 2. Build a quick dictionary that maps each 3-digit combo -> V-Trac Index
+#    This helps us quickly look up the index for any given draw.
+#    We'll skip triple combos like 000,111,...,999 because your table excludes them.
+
+IT WOULD TAKE THE LOGIC OF THIS TABLE WHICH ORGANIZES ALL COMBINATION INTO V-TRAC RELATED COMBINATIONS WITH ALL PERMUTATIONS...
+
+IT WOULD TAKE THE WINNING NUMBER PERMUTATIONS AND HIGHLIGHT ALL THE STABLE APPEARANCES OF THE WINNING NUMBERS (STABLE CLUSTERS) IN RED THROUGH THE COMBINED TABLES DATASETS (EX. SCAN THROUGH ALL R2/R4/R6/R8 STRINGS AND HIGHLIGHT WINNING PERMUTATIONS IN RED)
+
+THEN IT WOULD ALSO EXTRACT ALL THE ASSOVIATED V-TRAC PERMUTATIONS WITHIN THE SAME INDEX AND HIGHLIGHT ALL THOSE BLUE..
+
+FOLLOWING IT DOING THIS THEN IT WOULD PERFORMS THE SAVING PROCESS FOR THE DAY OF THOSE STATES INTO THEIR FOLDERS
+
+I ACTUALLY DONT BELIEVE THIS SHOULD BE THAT DIFFICULT AS ALL THE PERMUTATIONS ARE PROVIDED THIS WOULD BE CONSIDERED "LOGGING"
+
+IF THE PROCESS OF EXCEL UPLOAD/CLEAN OF FILE/CREATED DATASETS IS "LOADING"
+THE PROCESS OF ENTERING MIDDAY AND EVENING RESULTS AND HIGHLIGHTING THE CLUSTERS THROUGHOUT WOULD BE CONSIDERED "LOGGING"
+EVENTUALLY I MAY CHOOSE TO EXPAND AND BUILD ANALYTICAL TOOLS AROUND TRYING TO EXTRACT THE WINNING PATTERNS BUT IM TRYING TO BREAK EVERYTHIG INTO MODULAR PARTS AND DO ONE AT A TIME
+
+IM EXPLAINING ALL IN FULL BECAUSE MAYBE THIS WILL HELP WITH SORTING EVERYTHING I NEED TO FIND A WAY TO FIRST ESTABLISH WORKING PROCESSES I CAN RELY ON AND FALL BACK ON AND NOT GO IN CIRCLLES FOR HOURS OVER A SIMPLE PATH PROBLEM I DONT UNDERSTAND
+
+I THINK CURSOR KEEPS NOW RUNNING THE PROCESS INCORRECTLY NOW TO AND CHANGING TO MUCH -- I KOW THAT CLEAND AND VUEW3 USE TO WORK PERFECTLY, THEN EXTRACT DATASETS5.PY AND THEN THERE WAS A FINAL STEP FOR THE CUSTOM COMBINED TABLES THAT DOES THIS PROPERLY EITHER FINAL SIMPLIFIED I BELIEVE?
+
+BUT THERE ARE ALOS SOME OTHER SCRIPTS WHICH I DONT FULLY UNDERSTAND LIKE RUN ALL STATES, RUN FINAL TABLES ETC, THAT I THINK AT ONE TIME WERE HELPFUL FOR PRINTING DATASETS TO THE TERMINAL TO TEST DIFFERENT THINGS? BUT NOW I DONT KNW IF THEY WERE HELPING WITH THE STREAMLIT VIEWER WHICH SEEMED TO WORK AT SOME POINT SMOOTHLY AND NOW THERE ARE ISSUES...
+
+I THINK WHAT I DECIDED IS IM GOING TO START A PROJECT FROM SCRATCH THERE SEEMS TO BE WAY TOO MANY DIFFERENT SCRIPTS AND DIRECTORIES GOING ON IN MY PROJECT WHICH I THNK IS CAUSING PROBLEMS ...I JUST THINK IM GOING TO START FROM COMPLETE SCRATCH BUT I NEED OT GET ALL THE PATHS TAKEN CARE OF AND FIXED EVEN WHEN RE-STARTING A PROJECT 
+
+HERE IS SOME ISSUES ANOTHER AI SEEM TO MENTION AFTER GOING IN CRICLES AND CIRCLES WITH A CURSOR AGENT AS I DIDNT UNDERSTAND WHY THE PROCESS WASNT RUNNING SMOOTHLY ANYMORE...
+
+"Below is a summary of several potential issues I found while reviewing all the files. It looks like the main trouble with your Streamlit app (and possibly other scripts) is coming down to inconsistent and hard-coded paths. Here are the key points:Inconsistent project root naming and structure • The LOTTERY PROCESS FINAL document shows your folder as lottery_project_v2 (with subfolder lottery_system/), while the SETUP_AND_USAGE_GUIDE.md uses a different name (“new_test_lottery”). • When scripts compute the project root (for example by going up two directories from file), they assume one specific structure. If you run commands from different working directories or if the folder name differs, you’ll see “file not found” or constant path errors.Excel file naming mismatches • LOTTERY PROCESS FINAL instructs you to use Pick3StatsC4t.xlsm (note the “t” at the end) placed in lottery_system/data/original. • However, in clean_and_view_3.py the input file is hard-coded as "Pick3StatsC4_2025-03-13.xlsm" (note the extra date and underscore). This discrepancy means that if you have renamed your file (or followed the docs), the script won’t find it.Hardcoded relative/absolute paths in multiple scripts • In clean_and_view_3.py, extract_datasets_5.py, run_final_tables.py, and run_all_states.py the project root is calculated using:  current_dir = os.path.dirname(os.path.abspath(file))  project_root = os.path.abspath(os.path.join(current_dir, '..', '..')) • This works only if you maintain a consistent folder structure AND if you always run the scripts from the project root. If you run the Streamlit app or any of these scripts from somewhere else, the computed paths may be off. • For instance, the Streamlit command in the LOTTERY PROCESS FINAL file is:  streamlit run lottery_system/scripts/utils/streamlit_viewer.py  Make sure your working directory is indeed the project root (lottery_project_v2) when you execute it.Debugging clues • Check that the “data/cleaned” directory is created (by clean_and_view_3.py, for example) and contains files named exactly "{state}cleaned.xlsx". • Add temporary debug logs (or even raise meaningful errors) to print out the computed project_root and file paths before opening files. This can help verify that your path logic is correct relative to where you run the command.Recommendations to resolve these issues (S/M changes overall): ✓ Standardize your folder structure and naming across documentation and scripts—choose one project name (either lottery_project_v2 or new_test_lottery) and use it everywhere. ✓ Align the Excel file naming: if the doc says Pick3StatsC4t.xlsm, update clean_and_view_3.py to look for that file instead of “Pick3StatsC4_2025-03-13.xlsm”. ✓ Always run scripts (including the Streamlit app) from the project root so that the relative path calculations work as intended. If you must run them from elsewhere, consider making the project root configurable via an environment variable or config file.By addressing these points, you should be able to eliminate the constant path errors that are currently causing the system to go in circles.Does this summary of the potential issues make sense to you? Would you like to proceed by adjusting some of the file paths or adding some debug logging to verify computed paths?"
+
+AGAIN IT SEEMS TO SUGGEST THERE ARE PATH ISSUES PROBABLY BECAUSE CURSOR IS EDITING LIKE CRAZY...
+
+IVE EXPLAIINED THE OVERALL VISION...I WOULD LIKE TO GET THE LOADING AT MIINIMUM WORKINF PROPERLY AGIAN JUST TO CONSSITENLY PROVIDE THE COMBINED TABLE DATASETS AND ALSO GET THE LOGGING WORKING..
+
+CAN YOU HELP ME NAVAIGATE FIING EVERYTHING FROM SCRATCH GIVEN EVERYTHING I MENTIONED AND MADE CLEAR? CAN YOU HELP ME REIUOLD THE PROPERLY WITH CURSOR IN A NEW PROJECT?
+
+HERE IS A VERSION OF THE PROCESS I THINK DID WORK AT ONE POINT, OR ONE VERSION OF THE LOADINFG PROCESS BUT PAY ATTENTION TO IT NOT HAVING ALL THE PATHS RIGHT ITSELF I DONT THINK ATLEAST IN SOME OF THEM ..
+
+DO YOU THINK YOU CAN GIVE ME A STEP BY STEP PLAN TO REBUILD THIS REMEMBER IM A BEGINNER TO FIT EXACTLY WHAT IM TRYING TO DO? IT SEEMS TO GET SOME THINGS RIGHT IT HAD UNDERSTAND TURNING INTO A MORE USER FRIEDNLY PROGRAM WHERE I COULD UPLOAD THE EXCEL FILE IT PRODUCES THE DATASETS, LOGS AWAY JSON AND HTML ETC. BUT BECAUSE THE PROCESS WASNT WORKING PROPERLY IT WAS LOGGING NOTHING ...
+
+ALL OF THIS JUST SEEMS LIKE MINOR PROBLEMS THAT ARE BEING MISSED OR CURSOR DOESNT EGKNOLWEDGE AND THEN STARTS EDITING THE WRONG THINGS WHEN THERE ARE SIMPLE FIXES...
+
+I THINK THIS PROCESS MAY HAVE WORKED AT SOME POINT AND IS PRETTY DETAILED...
+
+# Comprehensive Lottery Data Processing Guide
+
+## 1. System Overview
+
+This guide provides a complete walkthrough of the lottery data processing system, including both the primary Streamlit workflow and alternative terminal-based verification methods.
+
+### 1.1 Core Features
+- Multi-state processing (14 states supported)
+- Automated data cleaning and extraction
+- Interactive Streamlit visualization
+- Terminal-based verification options
+- CSV export capabilities
+
+### 1.2 Supported States
+python
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+
+## 2. Directory Structure
+
+lottery_project_v2/
+└── lottery_system/
+    ├── data/
+    │   ├── original/
+    │   │   └── Pick3StatsC4t.xlsm    # Your daily Excel file
+    │   └── cleaned/                   # Auto-generated state files
+    │       ├── Connecticut4_cleaned.xlsx
+    │       ├── Delaware4_cleaned.xlsx
+    │       └── [other state files]
+    ├── scripts/
+    │   └── utils/
+    │       ├── clean_and_view_3.py    # Data cleaning
+    │       ├── extract_datasets_5.py   # Data extraction
+    │       ├── final_simplified.py     # Table generation
+    │       ├── run_all_states.py      # Terminal verification
+    │       └── streamlit_viewer.py     # Web interface
+    └── docs/
+        └── DETAILED_LOTTERY_PROCESS_FINAL_2.md
+
+
+## 3. Core Processing Pipeline
+
+### 3.1 Data Cleaning (clean_and_view_3.py)
+python
+# Process all states automatically
+python clean_and_view_3.py
+
+
+#!/usr/bin/env python
+"""
+clean_and_view_3.py
+Cleans and normalizes Pick3statsC4t.xlsm sheets for all states
+- Reads Pick3StatsC4t.xlsm
+- Processes all 14 states
+- Creates individual *_cleaned.xlsx files
+- Handles column mapping and data normalization
+
+"""
+import os
+import pandas as pd
+
+# List of all states to process
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+def clean_excel_file(input_path, output_path, sheet_name):
+    """Clean a single state's sheet from the Excel file"""
+    # Read the Excel file
+    print(f"\nProcessing state: {sheet_name}")
+    print(f"Reading file: {input_path}")
+    
+    try:
+        df = pd.read_excel(input_path, sheet_name=sheet_name, dtype=str)
+        
+        # Define columns to keep (removing 'Unnamed' columns and other unnecessary ones)
+        columns_to_keep = [
+            'Q', 'S',  # Midday indicators and draws
+            'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB',  # Midday data
+            'AD', 'AF',  # Evening indicators
+            'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO',  # Evening data
+            'BD',  # Combined indicators
+            'BI', 'BJ', 'BK', 'BL', 'BM', 'BN', 'BO'  # Combined data
+        ]
+        
+        # Verify which columns exist
+        available_cols = df.columns.tolist()
+        print(f"Found {len(available_cols)} columns in sheet")
+        
+        # Filter to only existing columns from our list
+        existing_columns = [col for col in columns_to_keep if col in available_cols]
+        
+        if not existing_columns:
+            print(f"Error: None of the required columns were found for {sheet_name}")
+            return False
+            
+        print(f"Processing {len(existing_columns)} columns")
+        
+        # Create cleaned dataframe with only necessary columns
+        cleaned_df = df[existing_columns]
+        
+        # Clean the data:
+        # 1. Remove any extra whitespace
+        # 2. Replace NaN with empty string
+        # 3. Ensure numbers are formatted properly (no scientific notation)
+        def clean_value(x):
+            return str(x).strip() if pd.notnull(x) else ''
+        
+        # Use map instead of applymap (which is deprecated)
+        cleaned_df = cleaned_df.map(clean_value)
+        
+        # Save the cleaned file
+        cleaned_df.to_excel(output_path, index=False)
+        print(f"Cleaned file saved to: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Error processing {sheet_name}: {str(e)}")
+        return False
+
+def main():
+    # Get the current script's directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Navigate to project root and construct paths
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    
+    input_path = os.path.join(project_root, 'data', 'original', 'Pick3StatsC4t.xlsm')
+    
+    print("\nProject paths:")
+    print(f"Project root: {project_root}")
+    print(f"Input path: {input_path}")
+    
+    # Check if input file exists
+    if not os.path.exists(input_path):
+        print(f"\nError: Input file not found at {input_path}")
+        return
+    
+    # Create cleaned directory if it doesn't exist
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    os.makedirs(cleaned_dir, exist_ok=True)
+    
+    # Process each state
+    successful_states = []
+    failed_states = []
+    
+    for state in STATES:
+        output_path = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
+        if clean_excel_file(input_path, output_path, state):
+            successful_states.append(state)
+        else:
+            failed_states.append(state)
+    
+    # Print summary
+    print("\n=== Processing Summary ===")
+    print(f"Successfully processed {len(successful_states)} states:")
+    for state in successful_states:
+        print(f"✓ {state}")
+    
+    if failed_states:
+        print(f"\nFailed to process {len(failed_states)} states:")
+        for state in failed_states:
+            print(f"✗ {state}")
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+### 3.2 Data Extraction (extract_datasets_5.py)
+
+- Processes cleaned files into structured data
+- Handles Set1, Set2, Set3 for each state
+- Manages Midday, Evening, Combined sections
+- Applies proper row offsets and column mappings
+
+#!/usr/bin/env python
+"""
+extract_datasets_5.py - Simplified lottery data extraction with direct row mapping
+"""
+import os
+import pandas as pd
+import glob
+
+# List of all states we process
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+class LotteryDataExtractor:
+    def __init__(self, excel_path):
+        print(f"Reading cleaned Excel: {os.path.abspath(excel_path)}")
+        self.df = pd.read_excel(excel_path, sheet_name=0, header=None, dtype=str)
+        print(f"DataFrame loaded with shape {self.df.shape}")
+        
+        # Rename DataFrame columns to match your Excel letters
+        col_map = {
+            0:'Q',  1:'S',  2:'V',  3:'W',  4:'X',  5:'Y',  6:'Z',  7:'AA', 8:'AB',
+            9:'AD', 10:'AF', 11:'AI', 12:'AJ', 13:'AK', 14:'AL', 15:'AM', 16:'AN', 17:'AO',
+            18:'BD', 19:'BI', 20:'BJ', 21:'BK', 22:'BL', 23:'BM', 24:'BN', 25:'BO'
+        }
+        self.df.rename(columns=col_map, inplace=True)
+
+        # For each section, we store:
+        #   - The "indicator_col" (Q for Midday, AD for Evening, BD for Combined)
+        #   - The 7 data columns to use for that section
+        #   - The starting row offsets for each set (Set1 starts at 3, Set2 at 49, Set3 at 95)
+        self.sections = {
+            'Midday': {
+                'indicator_col': 'Q',
+                'data_cols': ['V','W','X','Y','Z','AA','AB'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            },
+            'Evening': {
+                'indicator_col': 'AD',
+                'data_cols': ['AI','AJ','AK','AL','AM','AN','AO'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            },
+            'Combined': {
+                'indicator_col': 'BD',
+                'data_cols': ['BI','BJ','BK','BL','BM','BN','BO'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            }
+        }
+        # Define additional row shift adjustments for Set2 and Set3
+        # (shift upward by subtracting rows from the base offset)
+        # For all sections: Set2 shifts by 1 row, Set3 shifts by 2 rows.
+        self.shift_adjustments = {
+            'Midday': {2: 1, 3: 2},
+            'Evening': {2: 1, 3: 2},
+            'Combined': {2: 1, 3: 2}
+        }
+    
+    def extract_set1(self, section):
+        """
+        Set1 has 7 draws. Each draw is 5 lines (draw_data + R2 + R4 + R6 + R8)
+        plus 1 blank line => 6 rows per draw.
+
+        We also do the "column slicing" so that Draw1 uses all 7 columns,
+        Draw2 uses the last 6 columns, etc.
+        """
+        config = self.sections[section]
+        base_row = config['set_offsets'][1]  # typically 3
+        all_draws = {}
+        for draw_num in range(1, 8):  # 1..7
+            row = base_row + (draw_num - 1) * 6
+            cols = config['data_cols'][draw_num - 1:]
+
+            try:
+                data = {
+                    'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[row, cols]],
+                    'R2': [str(x).strip() for x in self.df.loc[row + 1, cols]],
+                    'R4': [str(x).strip() for x in self.df.loc[row + 2, cols]],
+                    'R6': [str(x).strip() for x in self.df.loc[row + 3, cols]],
+                    'R8': [str(x).strip() for x in self.df.loc[row + 4, cols]]
+                }
+
+                indicator_val = str(self.df.loc[row + 1, config['indicator_col']]).strip()
+                if not indicator_val.startswith("R-2"):
+                    print(f"Warning: Expected 'R-2' at row {row+1} for {section} Set1 Draw{draw_num}, found '{indicator_val}'")
+
+                print(f"\n{section} Set1 Draw{draw_num}:")
+                print(f"  draw_data => {data['draw_data']}")
+                print(f"  R2 => {data['R2']}")
+                print(f"  R4 => {data['R4']}")
+                print(f"  R6 => {data['R6']}")
+                print(f"  R8 => {data['R8']}")
+
+                all_draws[f"Draw{draw_num}"] = data
+            except Exception as e:
+                print(f"Error extracting {section} Set1 Draw{draw_num}: {e}")
+        return all_draws
+
+    def extract_single_draw(self, section, set_num):
+        """
+        For Set2 and Set3, we only want ONE draw (Draw1).
+        We take all 7 columns (no column slicing) and extract:
+          - draw_data at base_row,
+          - then R2, R4, R6, and R8 from the subsequent rows.
+        """
+        config = self.sections[section]
+        # Get the configured base row for this set (Set2 or Set3)
+        base = config['set_offsets'][set_num]
+        # Apply the shift adjustment for this section and set
+        shift = self.shift_adjustments[section][set_num]
+        actual_base = base - shift
+        # For single-draw extraction we always use all 7 data columns.
+        cols = config['data_cols']
+        try:
+            data = {
+                'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[actual_base, cols]],
+                'R2': [str(x).strip() for x in self.df.loc[actual_base + 1, cols]],
+                'R4': [str(x).strip() for x in self.df.loc[actual_base + 2, cols]],
+                'R6': [str(x).strip() for x in self.df.loc[actual_base + 3, cols]],
+                'R8': [str(x).strip() for x in self.df.loc[actual_base + 4, cols]]
+            }
+            indicator_val = str(self.df.loc[actual_base + 1, config['indicator_col']]).strip()
+            if not indicator_val.startswith("R-2"):
+                print(f"Warning: Expected 'R-2' at row {actual_base+1} for {section} Set{set_num} Draw1, found '{indicator_val}'")
+            print(f"\n{section} Set{set_num} Draw1:")
+            print(f"  draw_data => {data['draw_data']}")
+            print(f"  R2 => {data['R2']}")
+            print(f"  R4 => {data['R4']}")
+            print(f"  R6 => {data['R6']}")
+            print(f"  R8 => {data['R8']}")
+        except Exception as e:
+            print(f"Error extracting {section} Set{set_num} Draw1: {e}")
+            data = {}
+        return {"Draw1": data}
+    
+    def extract_all(self):
+        """Extract all data from the Excel file."""
+        all_data = {}
+        for section in ['Midday', 'Evening', 'Combined']:
+            all_data[section] = {}
+
+            # Set1 uses the existing 7-draw extraction with column slicing.
+            print(f"\nExtracting {section} Set1...")
+            all_data[section]["Set1"] = self.extract_set1(section)
+
+            # Set2 and Set3 each extract only one draw (Draw1) using all 7 columns.
+            print(f"\nExtracting {section} Set2...")
+            all_data[section]["Set2"] = self.extract_single_draw(section, set_num=2)
+
+            print(f"\nExtracting {section} Set3...")
+            all_data[section]["Set3"] = self.extract_single_draw(section, set_num=3)
+
+        return all_data
+
+def process_state(state_name, cleaned_dir):
+    """Process a single state's cleaned file"""
+    excel_path = os.path.join(cleaned_dir, f"{state_name}_cleaned.xlsx")
+    if not os.path.exists(excel_path):
+        print(f"Warning: File not found for {state_name}: {excel_path}")
+        return None
+    
+    try:
+        print(f"\nProcessing {state_name}...")
+        extractor = LotteryDataExtractor(excel_path)
+        data = extractor.extract_all()
+        print(f"✓ Successfully processed {state_name}")
+        return data
+    except Exception as e:
+        print(f"Error processing {state_name}: {str(e)}")
+        return None
+
+def process_all_states(cleaned_dir):
+    """Process all state files in the cleaned directory"""
+    results = {}
+    
+    # First verify the directory exists
+    if not os.path.exists(cleaned_dir):
+        print(f"Error: Cleaned directory not found: {cleaned_dir}")
+        return results
+    
+    # Process each state
+    for state in STATES:
+        data = process_state(state, cleaned_dir)
+        if data:
+            results[state] = data
+    
+    return results
+
+def main():
+    # Get the correct paths
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    print(f"Looking for cleaned files in: {cleaned_dir}")
+    
+    # Process all states
+    results = process_all_states(cleaned_dir)
+    
+    # Print summary
+    print("\n=== Processing Summary ===")
+    print(f"Successfully processed {len(results)} states:")
+    for state in results:
+        print(f"✓ {state}")
+        
+    if len(results) == 0:
+        print("Warning: No states were successfully processed!")
+    elif len(results) < len(STATES):
+        print(f"Warning: Only processed {len(results)} out of {len(STATES)} states")
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+
+### 3.3 Table Generation (final_simplified.py)
+Features:
+- Right-aligned data with "N/A" padding
+- Hot zone marking with "*" for Set1
+- Custom R2 slicing rules
+- Both Combined and R2-only table formats
+
+
+#!/usr/bin/env python
+"""
+final_simplified.py - Updated version with:
+  - Custom R2 slicing
+  - Hot zone marking (with '*' appended)
+  - Right-alignment using "N/A" placeholders (prepending "N/A" so that actual data appears in the rightmost columns)
+
+This module provides functions to build and print ASCII tables:
+  1. build_section_table_simple(): Builds a combined table with columns [Set, Draw, RowType, 7,6,5,4,3,2,1].
+     • If a row has fewer than 7 items, "N/A" placeholders are prepended.
+     • For Set1, hot zones in R2, R4, R6, and R8 are marked.
+  2. build_r2_only_table_simple(): Builds an R2-only table with similar alignment and hot zone marking.
+  3. print_ascii_table(): Prints the resulting DataFrame in the terminal.
+"""
+
+import pandas as pd
+
+############################
+# HOT ZONE SETTINGS (for Set1)
+############################
+hotzone_counts = {
+    1: 5,  # For Draw1, star the last 5 items
+    2: 5,  # For Draw2, star the last 5 items
+    3: 5,  # For Draw3, star the last 5 items
+    4: 4,  # For Draw4, star the last 4 items
+    5: 2,  # For Draw5, star the last 2 items
+    # Removed Draw6 and Draw7 from hot zones
+}
+
+############################
+# HOT ZONE FUNCTION
+############################
+def mark_hot_zones(set_label, draw_label, row_type, vals):
+    """
+    For Set1 rows of type R2, R4, R6, or R8, mark the last hotzone_counts[draw_num] items 
+    by appending a '*' to them.
+    
+    Draw number is parsed from draw_label (e.g., "Draw1" => 1).
+    """
+    if set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]:
+        try:
+            draw_num = int(draw_label.replace("Draw", ""))
+        except:
+            return vals  # parsing error: do nothing
+        if draw_num in hotzone_counts:
+            count_needed = hotzone_counts[draw_num]
+            n = len(vals)
+            for i in range(count_needed):
+                idx = n - 1 - i  # start from the end
+                if idx < 0:
+                    break
+                vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+    return vals
+
+############################
+# COMBINED TABLE
+############################
+def build_section_table_simple(section_data):
+    """
+    Build a combined table DataFrame with columns:
+        [Set, Draw, RowType, 7, 6, 5, 4, 3, 2, 1]
+    
+    • For each row, if there are fewer than 7 items, we right-align the data by 
+      prepending "N/A" placeholders (so the actual data appears in the rightmost columns).
+    • For Set1 rows (R2, R4, R6, R8), the hot zone marking is applied (stars are appended).
+    • Processes Set3 and Set2 (Draw1 only) and Set1 (Draw1 to Draw7)
+    """
+    columns = ["Set", "Draw", "RowType", "7", "6", "5", "4", "3", "2", "1"]
+    records = []
+
+    def add_row(set_label, draw_label, row_type, values):
+        # Convert to list and mark hot zones if applicable.
+        vals = list(values)
+        vals = mark_hot_zones(set_label, draw_label, row_type, vals)
+        
+        # Right-align: if fewer than 7 items, prepend "N/A" so that real data becomes right-aligned.
+        if len(vals) < 7:
+            needed = 7 - len(vals)
+            vals = ["N/A"] * needed + vals
+        elif len(vals) > 7:
+            vals = vals[:7]
+            
+        rec = {
+            "Set": set_label,
+            "Draw": draw_label,
+            "RowType": row_type,
+            "7": vals[0],
+            "6": vals[1],
+            "5": vals[2],
+            "4": vals[3],
+            "3": vals[4],
+            "2": vals[5],
+            "1": vals[6]
+        }
+        records.append(rec)
+
+    # Process Set3 -> Draw1 (include DRAW_DATA and R2, R4, R6, R8 rows)
+    if "Set3" in section_data and "Draw1" in section_data["Set3"]:
+        d = section_data["Set3"]["Draw1"]
+        if "draw_data" in d:
+            add_row("Set3", "Draw1", "DRAW_DATA", d["draw_data"])
+        for rt in ["R2", "R4", "R6", "R8"]:
+            if rt in d:
+                add_row("Set3", "Draw1", rt, d[rt])
+
+    # Process Set2 -> Draw1 (include DRAW_DATA and R2, R4, R6, R8 rows)
+    if "Set2" in section_data and "Draw1" in section_data["Set2"]:
+        d = section_data["Set2"]["Draw1"]
+        if "draw_data" in d:
+            add_row("Set2", "Draw1", "DRAW_DATA", d["draw_data"])
+        for rt in ["R2", "R4", "R6", "R8"]:
+            if rt in d:
+                add_row("Set2", "Draw1", rt, d[rt])
+
+    # Process Set1 -> Draw1 to Draw7
+    if "Set1" in section_data:
+        for draw_num in range(1, 8):
+            dk = f"Draw{draw_num}"
+            if dk in section_data["Set1"]:
+                d = section_data["Set1"][dk]
+                if draw_num == 1 and "draw_data" in d:
+                    add_row("Set1", dk, "DRAW_DATA", d["draw_data"])
+                for rt in ["R2", "R4", "R6", "R8"]:
+                    if rt in d:
+                        add_row("Set1", dk, rt, d[rt])
+
+    df = pd.DataFrame(records, columns=columns)
+    return df
+
+############################
+# R2-ONLY TABLE
+############################
+def build_r2_only_table_simple(section_data):
+    """
+    Build an R2-only table with columns:
+        [Set, Draw, 7, 6, 5, 4, 3, 2, 1]
+    Uses custom_r2_slice() to get the correct number of items for each Set/Draw.
+    """
+    columns = ["Set", "Draw", "7", "6", "5", "4", "3", "2", "1"]
+    records = []
+
+    def add_r2_row(slabel, dlabel, r2_values):
+        # First apply the custom slice
+        sliced = custom_r2_slice(slabel, dlabel, r2_values)
+        # Then right-align by prepending "N/A"
+        if len(sliced) > 7:
+            sliced = sliced[:7]
+        elif len(sliced) < 7:
+            needed = 7 - len(sliced)
+            sliced = ["N/A"] * needed + sliced
+        
+        rec = {
+            "Set": slabel,
+            "Draw": dlabel,
+            "7": sliced[0],
+            "6": sliced[1],
+            "5": sliced[2],
+            "4": sliced[3],
+            "3": sliced[4],
+            "2": sliced[5],
+            "1": sliced[6]
+        }
+        records.append(rec)
+
+    # Process Set3 -> Draw1
+    if "Set3" in section_data and "Draw1" in section_data["Set3"]:
+        d = section_data["Set3"]["Draw1"]
+        if "R2" in d:
+            add_r2_row("Set3", "Draw1", d["R2"])
+    
+    # Process Set2 -> Draw1
+    if "Set2" in section_data and "Draw1" in section_data["Set2"]:
+        d = section_data["Set2"]["Draw1"]
+        if "R2" in d:
+            add_r2_row("Set2", "Draw1", d["R2"])
+    
+    # Process Set1 -> Draw1 through Draw7
+    if "Set1" in section_data:
+        for draw_num in range(1, 8):
+            dk = f"Draw{draw_num}"
+            if dk in section_data["Set1"]:
+                d = section_data["Set1"][dk]
+                if "R2" in d:
+                    add_r2_row("Set1", dk, d["R2"])
+
+    df = pd.DataFrame(records, columns=columns)
+    return df
+
+############################
+# CUSTOM R2 SLICING
+############################
+def custom_r2_slice(set_label, draw_label, r2_list):
+    """
+    Custom slice for R2 data:
+      - For Set3/Set2 and Draw1: first 3 items.
+      - For Set1:
+          * Draw1: first 3 items.
+          * Draw2: first 2 items.
+          * Draw3 - Draw7: first 1 item.
+    """
+    vals = list(r2_list)
+    if set_label in ["Set3", "Set2"] and draw_label == "Draw1":
+        return vals[:3]
+    if set_label == "Set1":
+        try:
+            dnum = int(draw_label.replace("Draw", ""))
+        except:
+            dnum = 0
+        if dnum == 1:
+            return vals[:3]
+        elif dnum == 2:
+            return vals[:2]
+        else:
+            return vals[:1]
+    return vals
+
+############################
+# ASCII PRINT
+############################
+def print_ascii_table(df, title=""):
+    """
+    Print the DataFrame as a nicely formatted ASCII table in the terminal.
+    """
+    print("\n" + "=" * 40)
+    print(title)
+    print("=" * 40)
+    if df.empty:
+        print("No data.")
+        return
+    try:
+        print(df.to_markdown(tablefmt="grid", index=False))
+    except Exception as e:
+        print("Error printing table:", e)
+        print(df)
+
+############################
+# DEMO (for testing)
+############################
+def main():
+    # Sample data for Midday focusing on Set1
+    all_data = {
+        "Midday": {
+            "Set1": {
+                "Draw1": {
+                    "draw_data": ["059", "313", "262", "041", "536", "886", "666"],
+                    "R2": ["922441188677", "92244188677", "94418877", "948877", "948877", "9477", "9477"],
+                    "R4": ["229688447711", "22968844771", "98844771", "988477", "988477", "9477", "9477"],
+                    "R6": ["688117792244", "68817792244", "88177944", "887794", "887794", "7794", "7794"],
+                    "R8": ["771198862244", "77198862244", "77198844", "779884", "779884", "7794", "7794"]
+                },
+                "Draw2": {
+                    "R2": ["592244188677", "594418877", "5948877", "948877", "9477", "9477"],
+                },
+                "Draw3": {
+                    "R2": ["59440188677", "59488677", "948877", "9477", "9477"],
+                },
+                "Draw4": {
+                    "R2": ["55994088677", "599408877", "5994077", "5994077"],
+                },
+                "Draw5": {
+                    "R2": ["59940138877", "599401377", "599401377"],
+                },
+                "Draw6": {
+                    "R2": ["59922401377", "59922401377"],
+                },
+                "Draw7": {
+                    "R2": ["59922440011377"],
+                }
+            }
+        }
+    }
+    section_data = all_data["Midday"]
+    combined_df = build_section_table_simple(section_data)
+    print_ascii_table(combined_df, "Midday Combined Table")
+    r2_df = build_r2_only_table_simple(section_data)
+    print_ascii_table(r2_df, "Midday R2-only Table")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+### 3.4 Visualization Options
+
+#### A. Primary Method: Streamlit Interface
+python
+streamlit run streamlit_viewer.py
+
+Features:
+- Interactive state selection
+- Side-by-side layout
+- CSV downloads
+- Enhanced table styling
+- Hot zone visualization
+
+#!/usr/bin/env python
+"""
+streamlit_viewer.py - Streamlit app for viewing lottery data tables
+Features:
+- Shows all 38 rows in Combined tables
+- Side-by-side layout with proper spacing
+- Hot zone functionality with "*" marking
+- Enhanced styling and formatting
+- CSV download capabilities
+"""
+import os
+import sys
+import streamlit as st
+import pandas as pd
+
+# Add the utils directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+from extract_datasets_5 import LotteryDataExtractor
+from final_simplified import (
+    build_section_table_simple,
+    build_r2_only_table_simple
+)
+
+# List of states we process
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+def load_state_data(state_name, excel_path):
+    """Load data for a single state"""
+    try:
+        extractor = LotteryDataExtractor(excel_path)
+        return extractor.extract_all()
+    except Exception as e:
+        st.error(f"Error loading {state_name}: {str(e)}")
+        return None
+
+def enhance_table_styling(df):
+    """Add visual separation for Set-Draw1 sections"""
+    # Find indices of Set3-Draw1, Set2-Draw1, and Set1-Draw1
+    key_indices = []
+    for idx, row in df.iterrows():
+        if any(x in str(row.iloc[0]) for x in ['Set3 Draw1', 'Set2 Draw1', 'Set1 Draw1']):
+            key_indices.append(idx)
+    
+    # Apply styling
+    def style_row(row):
+        idx = row.name
+        style = []
+        for _ in range(len(row)):
+            if idx in key_indices:
+                style.append('border-top: 4px solid #1f77b4; border-bottom: 2px solid #1f77b4; background-color: rgba(211, 211, 211, 0.3); font-weight: bold;')
+            else:
+                style.append('')
+        return style
+    
+    return df.style.apply(style_row, axis=1).set_properties(**{
+        'text-align': 'right',
+        'font-family': 'monospace',
+        'white-space': 'nowrap',
+        'padding': '5px 10px',
+        'min-width': '400px',  # Force very wide columns
+        'width': '400px'      # Fixed width for all columns
+    }).set_table_styles([
+        {'selector': 'th', 'props': [
+            ('min-width', '400px'),
+            ('width', '400px'),
+            ('text-align', 'center'),
+            ('font-weight', 'bold'),
+            ('background-color', '#f6f8fa'),
+            ('border', '1px solid #e1e4e8')
+        ]},
+        {'selector': 'td', 'props': [
+            ('min-width', '400px'),
+            ('width', '400px'),
+            ('white-space', 'nowrap'),
+            ('overflow', 'visible'),
+            ('border', '1px solid #e1e4e8')
+        ]}
+    ])
+
+def main():
+    # Force the layout to be wide and disable the hamburger menu
+    st.set_page_config(
+        layout="wide",
+        page_title="Lottery Data Viewer",
+        initial_sidebar_state="collapsed",
+        menu_items=None
+    )
+    
+    # Enhanced CSS for better table visibility and minimal spacing
+    st.markdown("""
+        <style>
+        .stDataFrame {
+            margin-bottom: 1rem !important;
+            padding: 0 !important;
+            width: auto !important;
+            min-width: fit-content !important;
+        }
+        .main .block-container {
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+            max-width: none !important;
+            width: auto !important;
+        }
+        /* Force wider tables */
+        .dataframe {
+            width: auto !important;
+            min-width: fit-content !important;
+        }
+        .dataframe td, .dataframe th {
+            min-width: 400px !important;
+            width: 400px !important;
+            white-space: nowrap !important;
+        }
+        /* Additional fixes for Streamlit containers */
+        [data-testid="column"] {
+            width: auto !important;
+            min-width: fit-content !important;
+        }
+        div[data-testid="stDataFrame"] {
+            width: auto !important;
+            min-width: fit-content !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Sidebar controls - made more compact
+    with st.sidebar:
+        st.title("Lottery Data Viewer")
+        state = st.selectbox(
+            "Select a State",
+            STATES,
+            format_func=lambda x: x.replace("4", "")
+        )
+    
+    # Get path to cleaned files
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    # Load and display data
+    excel_path = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
+    if not os.path.exists(excel_path):
+        st.error(f"Cleaned file not found: {excel_path}")
+        st.info("Make sure you're running streamlit from the lottery_project_v2 directory")
+        return
+
+    state_data = load_state_data(state, excel_path)
+    if not state_data:
+        return
+
+    # Create three columns with custom widths (adjusted for wider content)
+    midday_col, evening_col, combined_col = st.columns([1.5, 1.5, 1.8])
+
+    # Display sections
+    sections = {
+        "Midday": midday_col,
+        "Evening": evening_col,
+        "Combined": combined_col
+    }
+
+    for section_name, column in sections.items():
+        with column:
+            st.markdown(f"### *** {section_name} ***")
+            if section_name in state_data:
+                st.markdown("#### Combined Table")
+                df_combined = build_section_table_simple(state_data[section_name])
+                styled_df = enhance_table_styling(df_combined)
+                st.dataframe(
+                    styled_df,
+                    use_container_width=False,  # Changed to False to prevent Streamlit from constraining width
+                    height=1500
+                )
+                
+                st.markdown("#### R2-only Table")
+                df_r2 = build_r2_only_table_simple(state_data[section_name])
+                styled_df_r2 = enhance_table_styling(df_r2)
+                st.dataframe(
+                    styled_df_r2,
+                    use_container_width=False,  # Changed to False to prevent Streamlit from constraining width
+                    height=400
+                )
+                
+                # Add download buttons
+                csv_combined = df_combined.to_csv(index=False)
+                csv_r2 = df_r2.to_csv(index=False)
+                st.download_button(
+                    "Download Combined CSV",
+                    csv_combined,
+                    f"{state}_{section_name}_Combined.csv",
+                    "text/csv",
+                    key=f'download-{section_name.lower()}-combined'
+                )
+                st.download_button(
+                    "Download R2-only CSV",
+                    csv_r2,
+                    f"{state}_{section_name}_R2only.csv",
+                    "text/csv",
+                    key=f'download-{section_name.lower()}-r2'
+                )
+
+    # Add notes at the bottom with minimal spacing
+    st.markdown("---")
+    st.markdown("""
+    ### Notes:
+    - Empty cells indicate no data for that position
+    - Data is organized from Set3 -> Set2 -> Set1 (most valuable)
+    - Hot zones are marked with "*" for the last N items in each draw
+    - All tables show complete data (38 rows in Combined tables)
+    - Blue borders indicate Set3-Draw1, Set2-Draw1, and Set1-Draw1 sections
+    """)
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### B. Terminal Verification (Optional)
+python
+python run_all_states.py
+
+Features:
+- Processes all states sequentially
+- Displays ASCII tables in terminal
+- Shows both Combined and R2-only views
+- Useful for quick verification
+
+
+#!/usr/bin/env python
+"""
+run_all_states.py - Process all cleaned state files
+"""
+
+import os
+from extract_datasets_5 import LotteryDataExtractor
+from final_simplified import (
+    build_section_table_simple, 
+    build_r2_only_table_simple,
+    print_ascii_table
+)
+
+# List of states (removing Georgia and West Virginia)
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+def process_state(state_name, excel_path):
+    """Process a single state's cleaned file"""
+    print(f"\n{'='*20} Processing {state_name} {'='*20}")
+    print(f"Reading file: {excel_path}")
+    
+    try:
+        # Extract data using our existing extractor
+        extractor = LotteryDataExtractor(excel_path)
+        state_data = extractor.extract_all()
+        
+        # Process each section (Midday/Evening/Combined)
+        for section in ["Midday", "Evening", "Combined"]:
+            if section not in state_data:
+                print(f"\nSkipping {section} for {state_name} - not found")
+                continue
+                
+            print(f"\n*** {state_name} {section} ***")
+            section_data = state_data[section]
+            
+            # Build and print combined table
+            print("\nBuilding combined table...")
+            combined_df = build_section_table_simple(section_data)
+            print_ascii_table(combined_df, f"{state_name} {section} Combined Table")
+            
+            # Build and print R2-only table
+            print("\nBuilding R2-only table...")
+            r2_df = build_r2_only_table_simple(section_data)
+            print_ascii_table(r2_df, f"{state_name} {section} R2-only Table")
+            
+    except Exception as e:
+        print(f"Error processing {state_name}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+def main():
+    # Get directory paths
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    print(f"Looking for cleaned files in: {cleaned_dir}")
+    
+    # Get list of actual files in the cleaned directory
+    existing_files = os.listdir(cleaned_dir)
+    print("\nFound files in cleaned directory:")
+    for f in existing_files:
+        print(f"  {f}")
+    
+    # Process each state's cleaned file
+    processed_count = 0
+    for state in STATES:
+        expected_file = f"{state}_cleaned.xlsx"
+        cleaned_file = os.path.join(cleaned_dir, expected_file)
+        
+        print(f"\nChecking for {expected_file}...")
+        if os.path.exists(cleaned_file):
+            print(f"Found {expected_file}")
+            process_state(state, cleaned_file)
+            processed_count += 1
+        else:
+            print(f"ERROR: File not found: {cleaned_file}")
+    
+    print(f"\nProcessing complete! Processed {processed_count} states")
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+
+## 4. Detailed Process Steps
+
+### 4.1 Initial Setup
+1. Install dependencies:
+   
+bash
+   pip install pandas streamlit openpyxl
+
+
+2. Place Excel file:
+   - Put Pick3StatsC4t.xlsm in lottery_system/data/original/
+   - Ensure all state sheets are present and named correctly
+
+### 4.2 Daily Processing Workflow
+
+1. **Clean Data**:
+   
+bash
+   cd lottery_system/scripts/utils
+   python clean_and_view_3.py
+
+   - Automatically processes all states
+   - Creates cleaned files in data/cleaned/
+   - Provides processing summary
+
+2. **View Results** (Choose A or B):
+
+   A. **Streamlit Interface** (Recommended):
+   
+bash
+   streamlit run streamlit_viewer.py
+
+   - Open browser to http://localhost:8501
+   - Select state from dropdown
+   - View all sections and tables
+   - Download CSVs as needed
+
+   B. **Terminal Verification** (Optional):
+   
+bash
+   python run_all_states.py
+
+   - View ASCII tables for all states
+   - Quick verification of data processing
+   - Shows both Combined and R2-only tables
+
+## 5. Technical Details
+
+### 5.1 Data Processing Rules
+
+#### Hot Zone Rules (Set1 only):
+python
+hotzone_counts = {
+    1: 5,  # Draw1: last 5 items marked
+    2: 5,  # Draw2: last 5 items marked
+    3: 5,  # Draw3: last 5 items marked
+    4: 4,  # Draw4: last 4 items marked
+    5: 2   # Draw5: last 2 items marked
+}
+
+
+#### R2 Slicing Rules:
+- Set3/Set2 (Draw1): First 3 items
+- Set1:
+  - Draw1: First 3 items
+  - Draw2: First 2 items
+  - Draw3-7: First item only
+
+### 5.2 Column Mappings
+python
+sections = {
+    'Midday': {
+        'indicator_col': 'Q',
+        'data_cols': ['V','W','X','Y','Z','AA','AB']
+    },
+    'Evening': {
+        'indicator_col': 'AD',
+        'data_cols': ['AI','AJ','AK','AL','AM','AN','AO']
+    },
+    'Combined': {
+        'indicator_col': 'BD',
+        'data_cols': ['BI','BJ','BK','BL','BM','BN','BO']
+    }
+}
+
+
+## 6. Troubleshooting
+
+### 6.1 Common Issues
+
+1. **Missing Files**:
+   - Verify Pick3StatsC4t.xlsm exists
+   - Check state sheet names match exactly
+   - Ensure cleaned files are generated
+
+2. **Data Issues**:
+   - Confirm Excel column mappings
+   - Check for missing data in sheets
+   - Verify row offsets match data
+
+3. **Display Issues**:
+   - Clear Streamlit cache if needed
+   - Check terminal output for errors
+   - Verify table formatting
+
+### 6.2 Quick Fixes
+
+1. **Reset Processing**:
+   
+bash
+   cd lottery_system
+   rm -rf data/cleaned/*
+   python scripts/utils/clean_and_view_3.py
+
+
+2. **Verify State Processing**:
+   
+bash
+   python scripts/utils/run_all_states.py
+
+
+3. **Check Paths**:
+   
+python
+   import os
+   print(os.getcwd())  # Should end with lottery_system
+
+
+## 7. Best Practices
+
+1. **Daily Operations**:
+   - Always process all states together
+   - Use Streamlit for primary viewing
+   - Keep terminal verification as backup
+
+2. **Data Management**:
+   - Backup Excel file before processing
+   - Clear cleaned directory periodically
+   - Verify all states process successfully
+
+3. **Monitoring**:
+   - Check processing summaries
+   - Verify row counts in tables
+   - Confirm hot zone marking
+
+## 8. Notes
+
+- System processes all states by default
+- All scripts share the same state list
+- Terminal output available for verification
+- Streamlit provides best viewing experience
+- CSV exports available for all tables 
+
+
+
+
+
+I've created a new comprehensive guide that:
+Standardizes State List: All scripts now use the same 14-state list
+Clarifies Core Process: Shows both Streamlit and terminal-based workflows
+Details Technical Aspects: Includes hot zone rules, R2 slicing, column mappings
+Provides Troubleshooting: Common issues and their solutions
+Shows Both Workflows:
+Primary: Streamlit interface for daily use
+Secondary: Terminal verification with run_all_states.py
+Key Improvements:
+Removed all single-state references
+Standardized paths across all scripts
+Added clear technical details
+Included both viewing methods
+Added best practices section
+Would you like me to:
+Make any adjustments to the guide?
+Update any specific scripts further?
+Add more technical details to any section?
+
+________________________________________________________________________________
+
+I THINK THIS WAS A PRIOR ONE EVEN WAY BEFORE THAT WORKED WELL AS WELL (KEEP IN MIND PATHS NOT SETUP FOR ALL STATES WHICH WE ARE TRYING TO DEFAULT SO IT PERFORMS THE PROCESS CORRECTLY FOR EACH STATE DAILY )
+
+
+# Detailed Lottery Data Processing Documentation
+
+## Complete Process Overview
+
+### 1. Initial Data Structure
+
+
+new_test_lottery/
+├── data/
+│ ├── original/
+│ │ └── Pick3StatsC4t.xlsm # Original Excel with all state sheets
+│ └── cleaned/
+│ ├── Connecticut4_cleaned.xlsx
+│ ├── Delaware4_cleaned.xlsx
+│ └── [other state files]
+├── scripts/
+│ └── utils/
+│ ├── clean_and_view_3.py
+│ ├── extract_datasets_5.py
+│ ├── final_simplified.py
+│ ├── run_final_tables.py
+│ ├── run_all_states.py
+│ └── streamlit_viewer.py
+└── README.md
+
+
+
+
+### 2. Processing Pipeline
+
+#### Step 1: Data Cleaning (clean_and_view_3.py)
+- **Purpose**: Clean raw Excel data for each state
+- **Process**:
+  1. Reads original Excel file (Pick3StatsC4t.xlsm)
+  2. Removes unnecessary columns
+  3. Standardizes data format
+  4. Creates individual cleaned files for each state
+- **Usage**:
+  
+bash
+  python clean_and_view_3.py
+
+
+#### Step 2: Data Extraction (extract_datasets_5.py)
+- **Purpose**: Extract structured data from cleaned Excel files
+- **Key Components**:
+  1. LotteryDataExtractor class
+  2. Column mappings:
+     
+python
+     sections = {
+         'MIDDAY': {
+             'indicator_col': 'Q',
+             'draw_col': 'S',
+             'data_cols': ['V', 'W', 'X', 'Y', 'Z', 'AA', 'AB']
+         },
+         'EVENING': {
+             'indicator_col': 'AD',
+             'draw_col': 'AF',
+             'data_cols': ['AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO']
+         },
+         'COMBINED': {
+             'indicator_col': 'BD',
+             'draw_col': 'BI',
+             'data_cols': ['BI', 'BJ', 'BK', 'BL', 'BM', 'BN', 'BO']
+         }
+     }
+
+
+#### Step 3: Table Generation (final_simplified.py)
+- **Purpose**: Generate formatted tables from extracted data
+- **Features**:
+  1. Right-alignment using "N/A" padding
+  2. Hot zone marking with "*"
+  3. Custom R2 slicing rules
+- **Table Types**:
+  1. Combined Table:
+     - Shows all data (Set3, Set2, Set1)
+     - Includes draw_data and R2/R4/R6/R8 rows
+  2. R2-only Table:
+     - Shows only R2 rows
+     - Custom slicing rules per Set/Draw
+
+#### Step 4: Running Tables (run_final_tables.py)
+- **Purpose**: Process and display tables for a single state
+- **Process**:
+  1. Loads cleaned state file
+  2. Extracts data using LotteryDataExtractor
+  3. Generates both table types
+  4. Prints ASCII tables to terminal
+
+#### Step 5: Multi-State Processing (run_all_states.py)
+- **Purpose**: Process all state files in batch
+- **Process**:
+  1. Iterates through all cleaned state files
+  2. Generates tables for each state
+  3. Handles errors and provides feedback
+
+#### Step 6: Web Interface (streamlit_viewer.py)
+- **Purpose**: Provide interactive web viewing of tables
+- **Features**:
+  1. State selection dropdown
+  2. Section selection (Midday/Evening/Combined)
+  3. Table type selection
+  4. CSV download option
+
+### 3. Detailed Data Flow
+
+
+Original Excel
+│
+▼
+clean_and_view_3.py
+│
+▼
+Cleaned State Files
+│
+▼
+extract_datasets_5.py
+│
+▼
+Structured Python Data
+│
+▼
+final_simplified.py
+│
+├─────────────────┐
+▼ ▼
+Combined Tables R2-only Tables
+│ │
+└────────┬────────┘
+▼
+run_final_tables.py
+│
+▼
+run_all_states.py
+│
+▼
+streamlit_viewer.py
+
+
+
+### 4. Key Data Structures
+
+#### Extracted Data Structure
+
+
+python
+{
+"Midday": {
+"Set3": {
+"Draw1": {
+"draw_data": ["350", "036", ...],
+"R2": ["59922441188677", ...],
+"R4": [...],
+"R6": [...],
+"R8": [...]
+}
+},
+"Set2": {...},
+"Set1": {
+"Draw1": {...},
+"Draw2": {...},
+...
+"Draw7": {...}
+}
+},
+"Evening": {...},
+"Combined": {...}
+}
+
+
+
+#### Hot Zone Rules
+
+
+python
+hotzone_counts = {
+1: 5, # Draw1: last 5 items marked
+2: 5, # Draw2: last 5 items marked
+3: 5, # Draw3: last 5 items marked
+4: 4, # Draw4: last 4 items marked
+5: 2 # Draw5: last 2 items marked
+}
+
+
+
+
+
+
+
+### 5. Running the Complete Pipeline
+
+1. **Clean All States**:
+   
+bash
+   cd new_test_lottery/scripts/utils
+   python clean_and_view_3.py
+
+
+2. **Process All States**:
+   
+bash
+   python run_all_states.py
+
+
+3. **View in Web Interface**:
+   
+bash
+   streamlit run streamlit_viewer.py
+
+
+### 6. Troubleshooting
+
+1. **File Path Issues**:
+   - Ensure correct directory structure
+   - Check file names match exactly
+   - Verify file permissions
+
+2. **Data Extraction Issues**:
+   - Verify Excel column mappings
+   - Check for missing data in sheets
+   - Validate row indices
+
+3. **Table Generation Issues**:
+   - Check hot zone rules
+   - Verify R2 slicing logic
+   - Validate padding/alignment
+
+### 7. Notes
+- System designed for specific Excel format
+- Hot zone marking only for Set1
+- R2 slicing rules are state-independent
+- All processing done in memory
+
+
+
+HERE ARE ALL THE SCRPTS UP UNTIL THIS PROCESS:
+
+
+#!/usr/bin/env python
+"""
+clean_and_view_3.py
+Cleans and normalizes Pick3statsC4t.xlsm OntarioCanada4 sheet data
+"""
+import os
+import pandas as pd
+
+def clean_excel_file(input_path, output_path, sheet_name="OntarioCanada4"):
+    # Read the Excel file
+    print(f"Reading file: {input_path}")
+    df = pd.read_excel(input_path, sheet_name=sheet_name, dtype=str)
+    
+    # Define columns to keep (removing 'Unnamed' columns and other unnecessary ones)
+    columns_to_keep = [
+        'Q', 'S',  # Midday indicators and draws
+        'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB',  # Midday data
+        'AD', 'AF',  # Evening indicators
+        'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO',  # Evening data
+        'BD',  # Combined indicators
+        'BI', 'BJ', 'BK', 'BL', 'BM', 'BN', 'BO'  # Combined data
+    ]
+    
+    # Verify which columns exist
+    available_cols = df.columns.tolist()
+    print("\nAvailable columns in Excel file:")
+    print(available_cols)
+    
+    # Filter to only existing columns from our list
+    existing_columns = [col for col in columns_to_keep if col in available_cols]
+    
+    if not existing_columns:
+        print("\nError: None of the required columns were found in the Excel file")
+        return
+        
+    print("\nKeeping these columns:", existing_columns)
+    
+    # Create cleaned dataframe with only necessary columns
+    cleaned_df = df[existing_columns]
+    
+    # Clean the data:
+    # 1. Remove any extra whitespace
+    # 2. Replace NaN with empty string
+    # 3. Ensure numbers are formatted properly (no scientific notation)
+    cleaned_df = cleaned_df.applymap(lambda x: str(x).strip() if pd.notnull(x) else '')
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Save the cleaned file
+    cleaned_df.to_excel(output_path, index=False)
+    print(f"\nCleaned file saved to: {output_path}")
+    print("First few rows of cleaned data:")
+    print(cleaned_df.head())
+
+def main():
+    # Get the current script's directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Navigate to project root and construct paths
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    
+    input_path = os.path.join(project_root, 'data', 'original', 'Pick3StatsC4t.xlsm')
+    output_path = os.path.join(project_root, 'data', 'cleaned', 'OntarioCanada4_cleaned.xlsx')
+    
+    print("\nProject paths:")
+    print(f"Project root: {project_root}")
+    print(f"Input path: {input_path}")
+    print(f"Output path: {output_path}")
+    
+    # Check if input file exists
+    if not os.path.exists(input_path):
+        print(f"\nError: Input file not found at {input_path}")
+        return
+        
+    clean_excel_file(input_path, output_path)
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+#!/usr/bin/env python
+"""
+extract_datasets_5.py - Simplified lottery data extraction with direct row mapping
+"""
+import os
+import pandas as pd
+
+class LotteryDataExtractor:
+    def __init__(self, excel_path):
+        print(f"Reading cleaned Excel: {os.path.abspath(excel_path)}")
+        self.df = pd.read_excel(excel_path, sheet_name=0, header=None, dtype=str)
+        print(f"DataFrame loaded with shape {self.df.shape}")
+        
+        # Rename DataFrame columns to match your Excel letters
+        col_map = {
+            0:'Q',  1:'S',  2:'V',  3:'W',  4:'X',  5:'Y',  6:'Z',  7:'AA', 8:'AB',
+            9:'AD', 10:'AF', 11:'AI', 12:'AJ', 13:'AK', 14:'AL', 15:'AM', 16:'AN', 17:'AO',
+            18:'BD', 19:'BI', 20:'BJ', 21:'BK', 22:'BL', 23:'BM', 24:'BN', 25:'BO'
+        }
+        self.df.rename(columns=col_map, inplace=True)
+
+        # For each section, we store:
+        #   - The "indicator_col" (Q for Midday, AD for Evening, BD for Combined)
+        #   - The 7 data columns to use for that section
+        #   - The starting row offsets for each set (Set1 starts at 3, Set2 at 49, Set3 at 95)
+        self.sections = {
+            'Midday': {
+                'indicator_col': 'Q',
+                'data_cols': ['V','W','X','Y','Z','AA','AB'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            },
+            'Evening': {
+                'indicator_col': 'AD',
+                'data_cols': ['AI','AJ','AK','AL','AM','AN','AO'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            },
+            'Combined': {
+                'indicator_col': 'BD',
+                'data_cols': ['BI','BJ','BK','BL','BM','BN','BO'],
+                'set_offsets': {1: 3, 2: 49, 3: 95}
+            }
+        }
+        # Define additional row shift adjustments for Set2 and Set3
+        # (shift upward by subtracting rows from the base offset)
+        # For all sections: Set2 shifts by 1 row, Set3 shifts by 2 rows.
+        self.shift_adjustments = {
+            'Midday': {2: 1, 3: 2},
+            'Evening': {2: 1, 3: 2},
+            'Combined': {2: 1, 3: 2}
+        }
+    
+    def extract_set1(self, section):
+        """
+        Set1 has 7 draws. Each draw is 5 lines (draw_data + R2 + R4 + R6 + R8)
+        plus 1 blank line => 6 rows per draw.
+
+        We also do the "column slicing" so that Draw1 uses all 7 columns,
+        Draw2 uses the last 6 columns, etc.
+        """
+        config = self.sections[section]
+        base_row = config['set_offsets'][1]  # typically 3
+        all_draws = {}
+        for draw_num in range(1, 8):  # 1..7
+            row = base_row + (draw_num - 1) * 6
+            cols = config['data_cols'][draw_num - 1:]
+
+            try:
+                data = {
+                    'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[row, cols]],
+                    'R2': [str(x).strip() for x in self.df.loc[row + 1, cols]],
+                    'R4': [str(x).strip() for x in self.df.loc[row + 2, cols]],
+                    'R6': [str(x).strip() for x in self.df.loc[row + 3, cols]],
+                    'R8': [str(x).strip() for x in self.df.loc[row + 4, cols]]
+                }
+
+                indicator_val = str(self.df.loc[row + 1, config['indicator_col']]).strip()
+                if not indicator_val.startswith("R-2"):
+                    print(f"Warning: Expected 'R-2' at row {row+1} for {section} Set1 Draw{draw_num}, found '{indicator_val}'")
+
+                print(f"\n{section} Set1 Draw{draw_num}:")
+                print(f"  draw_data => {data['draw_data']}")
+                print(f"  R2 => {data['R2']}")
+                print(f"  R4 => {data['R4']}")
+                print(f"  R6 => {data['R6']}")
+                print(f"  R8 => {data['R8']}")
+
+                all_draws[f"Draw{draw_num}"] = data
+            except Exception as e:
+                print(f"Error extracting {section} Set1 Draw{draw_num}: {e}")
+        return all_draws
+
+    def extract_single_draw(self, section, set_num):
+        """
+        For Set2 and Set3, we only want ONE draw (Draw1).
+        We take all 7 columns (no column slicing) and extract:
+          - draw_data at base_row,
+          - then R2, R4, R6, and R8 from the subsequent rows.
+        """
+        config = self.sections[section]
+        # Get the configured base row for this set (Set2 or Set3)
+        base = config['set_offsets'][set_num]
+        # Apply the shift adjustment for this section and set
+        shift = self.shift_adjustments[section][set_num]
+        actual_base = base - shift
+        # For single-draw extraction we always use all 7 data columns.
+        cols = config['data_cols']
+        try:
+            data = {
+                'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[actual_base, cols]],
+                'R2': [str(x).strip() for x in self.df.loc[actual_base + 1, cols]],
+                'R4': [str(x).strip() for x in self.df.loc[actual_base + 2, cols]],
+                'R6': [str(x).strip() for x in self.df.loc[actual_base + 3, cols]],
+                'R8': [str(x).strip() for x in self.df.loc[actual_base + 4, cols]]
+            }
+            indicator_val = str(self.df.loc[actual_base + 1, config['indicator_col']]).strip()
+            if not indicator_val.startswith("R-2"):
+                print(f"Warning: Expected 'R-2' at row {actual_base+1} for {section} Set{set_num} Draw1, found '{indicator_val}'")
+            print(f"\n{section} Set{set_num} Draw1:")
+            print(f"  draw_data => {data['draw_data']}")
+            print(f"  R2 => {data['R2']}")
+            print(f"  R4 => {data['R4']}")
+            print(f"  R6 => {data['R6']}")
+            print(f"  R8 => {data['R8']}")
+        except Exception as e:
+            print(f"Error extracting {section} Set{set_num} Draw1: {e}")
+            data = {}
+        return {"Draw1": data}
+    
+    def extract_all(self):
+        """Extract all data from the Excel file."""
+        all_data = {}
+        for section in ['Midday', 'Evening', 'Combined']:
+            all_data[section] = {}
+
+            # Set1 uses the existing 7-draw extraction with column slicing.
+            print(f"\nExtracting {section} Set1...")
+            all_data[section]["Set1"] = self.extract_set1(section)
+
+            # Set2 and Set3 each extract only one draw (Draw1) using all 7 columns.
+            print(f"\nExtracting {section} Set2...")
+            all_data[section]["Set2"] = self.extract_single_draw(section, set_num=2)
+
+            print(f"\nExtracting {section} Set3...")
+            all_data[section]["Set3"] = self.extract_single_draw(section, set_num=3)
+
+        return all_data
+
+def main():
+    # Path to your cleaned Excel file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    excel_path = os.path.join(project_root, 'data', 'cleaned', 'OntarioCanada4_cleaned.xlsx')
+    
+    extractor = LotteryDataExtractor(excel_path)
+    all_data = extractor.extract_all()
+    print("\nExtraction complete.")
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+
+
+
+
+
+
+#!/usr/bin/env python
+"""
+final_simplified.py - Updated version with:
+  - Custom R2 slicing
+  - Hot zone marking (with '*' appended)
+  - Right-alignment using "N/A" placeholders (prepending "N/A" so that actual data appears in the rightmost columns)
+
+This module provides functions to build and print ASCII tables:
+  1. build_section_table_simple(): Builds a combined table with columns [Set, Draw, RowType, 7,6,5,4,3,2,1].
+     • If a row has fewer than 7 items, "N/A" placeholders are prepended.
+     • For Set1, hot zones in R2, R4, R6, and R8 are marked.
+  2. build_r2_only_table_simple(): Builds an R2-only table with similar alignment and hot zone marking.
+  3. print_ascii_table(): Prints the resulting DataFrame in the terminal.
+"""
+
+import pandas as pd
+
+############################
+# HOT ZONE SETTINGS (for Set1)
+############################
+hotzone_counts = {
+    1: 5,  # For Draw1, star the last 5 items
+    2: 5,  # For Draw2, star the last 5 items
+    3: 5,  # For Draw3, star the last 5 items
+    4: 4,  # For Draw4, star the last 4 items
+    5: 2,  # For Draw5, star the last 2 items
+    # Removed Draw6 and Draw7 from hot zones
+}
+
+############################
+# HOT ZONE FUNCTION
+############################
+def mark_hot_zones(set_label, draw_label, row_type, vals):
+    """
+    For Set1 rows of type R2, R4, R6, or R8, mark the last hotzone_counts[draw_num] items 
+    by appending a '*' to them.
+    
+    Draw number is parsed from draw_label (e.g., "Draw1" => 1).
+    """
+    if set_label == "Set1" and row_type in ["R2", "R4", "R6", "R8"]:
+        try:
+            draw_num = int(draw_label.replace("Draw", ""))
+        except:
+            return vals  # parsing error: do nothing
+        if draw_num in hotzone_counts:
+            count_needed = hotzone_counts[draw_num]
+            n = len(vals)
+            for i in range(count_needed):
+                idx = n - 1 - i  # start from the end
+                if idx < 0:
+                    break
+                vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+    return vals
+
+############################
+# COMBINED TABLE
+############################
+def build_section_table_simple(section_data):
+    """
+    Build a combined table DataFrame with columns:
+        [Set, Draw, RowType, 7, 6, 5, 4, 3, 2, 1]
+    
+    • For each row, if there are fewer than 7 items, we right-align the data by 
+      prepending "N/A" placeholders (so the actual data appears in the rightmost columns).
+    • For Set1 rows (R2, R4, R6, R8), the hot zone marking is applied (stars are appended).
+    • Processes Set3 and Set2 (Draw1 only) and Set1 (Draw1 to Draw7)
+    """
+    columns = ["Set", "Draw", "RowType", "7", "6", "5", "4", "3", "2", "1"]
+    records = []
+
+    def add_row(set_label, draw_label, row_type, values):
+        # Convert to list and mark hot zones if applicable.
+        vals = list(values)
+        vals = mark_hot_zones(set_label, draw_label, row_type, vals)
+        
+        # Right-align: if fewer than 7 items, prepend "N/A" so that real data becomes right-aligned.
+        if len(vals) < 7:
+            needed = 7 - len(vals)
+            vals = ["N/A"] * needed + vals
+        elif len(vals) > 7:
+            vals = vals[:7]
+            
+        rec = {
+            "Set": set_label,
+            "Draw": draw_label,
+            "RowType": row_type,
+            "7": vals[0],
+            "6": vals[1],
+            "5": vals[2],
+            "4": vals[3],
+            "3": vals[4],
+            "2": vals[5],
+            "1": vals[6]
+        }
+        records.append(rec)
+
+    # Process Set3 -> Draw1 (include DRAW_DATA and R2, R4, R6, R8 rows)
+    if "Set3" in section_data and "Draw1" in section_data["Set3"]:
+        d = section_data["Set3"]["Draw1"]
+        if "draw_data" in d:
+            add_row("Set3", "Draw1", "DRAW_DATA", d["draw_data"])
+        for rt in ["R2", "R4", "R6", "R8"]:
+            if rt in d:
+                add_row("Set3", "Draw1", rt, d[rt])
+
+    # Process Set2 -> Draw1 (include DRAW_DATA and R2, R4, R6, R8 rows)
+    if "Set2" in section_data and "Draw1" in section_data["Set2"]:
+        d = section_data["Set2"]["Draw1"]
+        if "draw_data" in d:
+            add_row("Set2", "Draw1", "DRAW_DATA", d["draw_data"])
+        for rt in ["R2", "R4", "R6", "R8"]:
+            if rt in d:
+                add_row("Set2", "Draw1", rt, d[rt])
+
+    # Process Set1 -> Draw1 to Draw7
+    if "Set1" in section_data:
+        for draw_num in range(1, 8):
+            dk = f"Draw{draw_num}"
+            if dk in section_data["Set1"]:
+                d = section_data["Set1"][dk]
+                if draw_num == 1 and "draw_data" in d:
+                    add_row("Set1", dk, "DRAW_DATA", d["draw_data"])
+                for rt in ["R2", "R4", "R6", "R8"]:
+                    if rt in d:
+                        add_row("Set1", dk, rt, d[rt])
+
+    df = pd.DataFrame(records, columns=columns)
+    return df
+
+############################
+# R2-ONLY TABLE
+############################
+def build_r2_only_table_simple(section_data):
+    """
+    Build an R2-only table with columns:
+        [Set, Draw, 7, 6, 5, 4, 3, 2, 1]
+    Uses custom_r2_slice() to get the correct number of items for each Set/Draw.
+    """
+    columns = ["Set", "Draw", "7", "6", "5", "4", "3", "2", "1"]
+    records = []
+
+    def add_r2_row(slabel, dlabel, r2_values):
+        # First apply the custom slice
+        sliced = custom_r2_slice(slabel, dlabel, r2_values)
+        # Then right-align by prepending "N/A"
+        if len(sliced) > 7:
+            sliced = sliced[:7]
+        elif len(sliced) < 7:
+            needed = 7 - len(sliced)
+            sliced = ["N/A"] * needed + sliced
+        
+        rec = {
+            "Set": slabel,
+            "Draw": dlabel,
+            "7": sliced[0],
+            "6": sliced[1],
+            "5": sliced[2],
+            "4": sliced[3],
+            "3": sliced[4],
+            "2": sliced[5],
+            "1": sliced[6]
+        }
+        records.append(rec)
+
+    # Process Set3 -> Draw1
+    if "Set3" in section_data and "Draw1" in section_data["Set3"]:
+        d = section_data["Set3"]["Draw1"]
+        if "R2" in d:
+            add_r2_row("Set3", "Draw1", d["R2"])
+    
+    # Process Set2 -> Draw1
+    if "Set2" in section_data and "Draw1" in section_data["Set2"]:
+        d = section_data["Set2"]["Draw1"]
+        if "R2" in d:
+            add_r2_row("Set2", "Draw1", d["R2"])
+    
+    # Process Set1 -> Draw1 through Draw7
+    if "Set1" in section_data:
+        for draw_num in range(1, 8):
+            dk = f"Draw{draw_num}"
+            if dk in section_data["Set1"]:
+                d = section_data["Set1"][dk]
+                if "R2" in d:
+                    add_r2_row("Set1", dk, d["R2"])
+
+    df = pd.DataFrame(records, columns=columns)
+    return df
+
+############################
+# CUSTOM R2 SLICING
+############################
+def custom_r2_slice(set_label, draw_label, r2_list):
+    """
+    Custom slice for R2 data:
+      - For Set3/Set2 and Draw1: first 3 items.
+      - For Set1:
+          * Draw1: first 3 items.
+          * Draw2: first 2 items.
+          * Draw3 - Draw7: first 1 item.
+    """
+    vals = list(r2_list)
+    if set_label in ["Set3", "Set2"] and draw_label == "Draw1":
+        return vals[:3]
+    if set_label == "Set1":
+        try:
+            dnum = int(draw_label.replace("Draw", ""))
+        except:
+            dnum = 0
+        if dnum == 1:
+            return vals[:3]
+        elif dnum == 2:
+            return vals[:2]
+        else:
+            return vals[:1]
+    return vals
+
+############################
+# ASCII PRINT
+############################
+def print_ascii_table(df, title=""):
+    """
+    Print the DataFrame as a nicely formatted ASCII table in the terminal.
+    """
+    print("\n" + "=" * 40)
+    print(title)
+    print("=" * 40)
+    if df.empty:
+        print("No data.")
+        return
+    try:
+        print(df.to_markdown(tablefmt="grid", index=False))
+    except Exception as e:
+        print("Error printing table:", e)
+        print(df)
+
+############################
+# DEMO (for testing)
+############################
+def main():
+    # Sample data for Midday focusing on Set1
+    all_data = {
+        "Midday": {
+            "Set1": {
+                "Draw1": {
+                    "draw_data": ["059", "313", "262", "041", "536", "886", "666"],
+                    "R2": ["922441188677", "92244188677", "94418877", "948877", "948877", "9477", "9477"],
+                    "R4": ["229688447711", "22968844771", "98844771", "988477", "988477", "9477", "9477"],
+                    "R6": ["688117792244", "68817792244", "88177944", "887794", "887794", "7794", "7794"],
+                    "R8": ["771198862244", "77198862244", "77198844", "779884", "779884", "7794", "7794"]
+                },
+                "Draw2": {
+                    "R2": ["592244188677", "594418877", "5948877", "948877", "9477", "9477"],
+                },
+                "Draw3": {
+                    "R2": ["59440188677", "59488677", "948877", "9477", "9477"],
+                },
+                "Draw4": {
+                    "R2": ["55994088677", "599408877", "5994077", "5994077"],
+                },
+                "Draw5": {
+                    "R2": ["59940138877", "599401377", "599401377"],
+                },
+                "Draw6": {
+                    "R2": ["59922401377", "59922401377"],
+                },
+                "Draw7": {
+                    "R2": ["59922440011377"],
+                }
+            }
+        }
+    }
+    section_data = all_data["Midday"]
+    combined_df = build_section_table_simple(section_data)
+    print_ascii_table(combined_df, "Midday Combined Table")
+    r2_df = build_r2_only_table_simple(section_data)
+    print_ascii_table(r2_df, "Midday R2-only Table")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+#!/usr/bin/env python
+"""
+run_final_tables.py - Runner script with improved error handling
+"""
+
+import os
+import sys
+from extract_datasets_5 import LotteryDataExtractor
+from final_simplified import (
+    build_section_table_simple,
+    build_r2_only_table_simple,
+    print_ascii_table
+)
+
+def main():
+    # Get the correct path to your Excel file
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+        excel_path = os.path.join(project_root, 'data', 'cleaned', 'OntarioCanada4_cleaned.xlsx')
+        
+        print(f"Looking for Excel file at: {excel_path}")
+        if not os.path.exists(excel_path):
+            print(f"ERROR: Excel file not found at {excel_path}")
+            return
+        
+        # Extract the data
+        print("\nInitializing extractor...")
+        extractor = LotteryDataExtractor(excel_path)
+        print("Extracting data...")
+        all_data = extractor.extract_all()
+        
+        # Process each section
+        for section in ['Midday', 'Evening', 'Combined']:
+            if section not in all_data:
+                print(f"\nSkipping {section} - not found in data")
+                continue
+                
+            print(f"\n{'='*20} {section} {'='*20}")
+            section_data = all_data[section]
+            
+            # Build and display tables
+            print("\nBuilding combined table...")
+            combined_df = build_section_table_simple(section_data)
+            print_ascii_table(combined_df, title=f"{section} Combined Table")
+            
+            print("\nBuilding R2-only table...")
+            r2_df = build_r2_only_table_simple(section_data)
+            print_ascii_table(r2_df, title=f"{section} R2-only Table")
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+
+
+
+
+#!/usr/bin/env python
+"""
+run_all_states.py - Process all cleaned state files
+"""
+
+import os
+from extract_datasets_5 import LotteryDataExtractor
+from final_simplified import (
+    build_section_table_simple, 
+    build_r2_only_table_simple,
+    print_ascii_table
+)
+
+# List of states (removing Georgia and West Virginia)
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "TriState4", "Virginia4"
+]
+
+def process_state(state_name, excel_path):
+    """Process a single state's cleaned file"""
+    print(f"\n{'='*20} Processing {state_name} {'='*20}")
+    print(f"Reading file: {excel_path}")
+    
+    try:
+        # Extract data using our existing extractor
+        extractor = LotteryDataExtractor(excel_path)
+        state_data = extractor.extract_all()
+        
+        # Process each section (Midday/Evening/Combined)
+        for section in ["Midday", "Evening", "Combined"]:
+            if section not in state_data:
+                print(f"\nSkipping {section} for {state_name} - not found")
+                continue
+                
+            print(f"\n*** {state_name} {section} ***")
+            section_data = state_data[section]
+            
+            # Build and print combined table
+            print("\nBuilding combined table...")
+            combined_df = build_section_table_simple(section_data)
+            print_ascii_table(combined_df, f"{state_name} {section} Combined Table")
+            
+            # Build and print R2-only table
+            print("\nBuilding R2-only table...")
+            r2_df = build_r2_only_table_simple(section_data)
+            print_ascii_table(r2_df, f"{state_name} {section} R2-only Table")
+            
+    except Exception as e:
+        print(f"Error processing {state_name}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+def main():
+    # Get directory paths
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    print(f"Looking for cleaned files in: {cleaned_dir}")
+    
+    # Get list of actual files in the cleaned directory
+    existing_files = os.listdir(cleaned_dir)
+    print("\nFound files in cleaned directory:")
+    for f in existing_files:
+        print(f"  {f}")
+    
+    # Process each state's cleaned file
+    processed_count = 0
+    for state in STATES:
+        expected_file = f"{state}_cleaned.xlsx"
+        cleaned_file = os.path.join(cleaned_dir, expected_file)
+        
+        print(f"\nChecking for {expected_file}...")
+        if os.path.exists(cleaned_file):
+            print(f"Found {expected_file}")
+            process_state(state, cleaned_file)
+            processed_count += 1
+        else:
+            print(f"ERROR: File not found: {cleaned_file}")
+    
+    print(f"\nProcessing complete! Processed {processed_count} states")
+
+if __name__ == "__main__":
+    main() 
+
+
+
+
+
+#!/usr/bin/env python
+"""
+streamlit_viewer.py - Streamlit app for viewing state lottery tables
+"""
+
+import os
+import streamlit as st
+from extract_datasets_5 import LotteryDataExtractor
+from final_simplified import (
+    build_section_table_simple,
+    build_r2_only_table_simple
+)
+
+# List of states (excluding Georgia and West Virginia)
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "TriState4", "Virginia4"
+]
+
+def load_state_data(state_name, excel_path):
+    """Load data for a single state"""
+    try:
+        extractor = LotteryDataExtractor(excel_path)
+        return extractor.extract_all()
+    except Exception as e:
+        st.error(f"Error loading {state_name}: {str(e)}")
+        return None
+
+def main():
+    st.set_page_config(page_title="Lottery Data Viewer", layout="wide")
+    
+    st.title("Multi-State Lottery Data Viewer")
+    
+    # Get path to cleaned files
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    # State selection
+    state = st.selectbox(
+        "Select a State",
+        STATES,
+        format_func=lambda x: x.replace("4", "")  # Remove "4" from display
+    )
+    
+    # Section selection
+    section = st.radio(
+        "Select Section",
+        ["Midday", "Evening", "Combined"],
+        horizontal=True
+    )
+    
+    # Table type selection
+    table_type = st.radio(
+        "Select Table Type",
+        ["Combined Table", "R2-only Table"],
+        horizontal=True
+    )
+    
+    # Load and display data
+    excel_path = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
+    if os.path.exists(excel_path):
+        state_data = load_state_data(state, excel_path)
+        
+        if state_data and section in state_data:
+            section_data = state_data[section]
+            
+            st.subheader(f"{state.replace('4', '')} - {section} - {table_type}")
+            
+            if table_type == "Combined Table":
+                df = build_section_table_simple(section_data)
+            else:  # R2-only Table
+                df = build_r2_only_table_simple(section_data)
+            
+            # Display the table
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # Add download button
+            csv = df.to_csv(index=False)
+            st.download_button(
+                "Download as CSV",
+                csv,
+                f"{state}_{section}_{table_type}.csv",
+                "text/csv",
+                key='download-csv'
+            )
+        else:
+            st.warning(f"No data found for {section} section")
+    else:
+        st.error(f"Cleaned file not found: {excel_path}")
+
+if __name__ == "__main__":
+    main() 
+
+___________________________________________________
+
+I BELIEVE THIS WAS A VERSION EXPLAIING HOW TO RUN THE BAT FILE OR THE WAY IT WAS ITNEGRATED AT ONE POINT SO I COULD EASILY ADD MY EXCEL FILE AND GET THE FULL PROCESS TO RUN (BUT THIS ONLY WORKS WITH EVERYTHIG SETUP PROPER AND IT ACTUALLY RUNNING THE DATASETS /COMBINED TABLES) AND I ALSO ADDING SOME COMPLEXIOTY FOR IT TO HIGHLIGHT THE WINNING PATTERNS
+
+# Lottery Data Processing System
+
+A comprehensive system for processing and analyzing lottery data with a streamlined web interface.
+
+## Directory Structure
+
+lottery_system/
+├── data/
+│   ├── original/    # Place new Excel files here
+│   ├── cleaned/     # Processed state files
+│   └── archive/     # Historical data backup
+├── scripts/
+│   └── utils/
+│       ├── extract_datasets.py    # Data extraction logic
+│       ├── final_simplified.py    # Table generation
+│       └── streamlit_viewer.py    # Web interface
+├── docs/            # Documentation
+├── tests/           # Test files
+└── README.md        # This file
+
+
+## Quick Start
+
+1. Install Dependencies:
+   
+bash
+   pip install -r requirements.txt
+
+
+2. Place Data:
+   - Put your Pick3StatsC4t.xlsm file in data/original/
+
+3. Run the System:
+   
+bash
+   # Process the data
+   python scripts/utils/extract_datasets.py
+
+   # Launch the viewer
+   streamlit run scripts/utils/streamlit_viewer.py
+
+
+4. View Results:
+   - Open browser to http://localhost:8501
+   - Select a state from the dropdown
+   - View Midday, Evening, and Combined data side by side
+
+## Features
+
+- Processes multiple states simultaneously
+- Handles Midday, Evening, and Combined sections
+- Right-aligned values with proper N/A handling
+- Side-by-side table layout
+- Automatic data cleaning and processing
+
+## File Descriptions
+
+### Core Scripts
+
+- extract_datasets.py: Handles Excel file reading and data extraction
+- final_simplified.py: Creates formatted tables with proper alignment
+- streamlit_viewer.py: Web interface with side-by-side layout
+
+### Documentation
+
+Comprehensive documentation is available in the docs/ directory:
+- Setup and Usage Guide
+- Data Structure Guide
+- Troubleshooting Guide
+
+## Support
+
+For issues or questions:
+1. Check the documentation in docs/
+2. Verify file paths and permissions
+3. Ensure all dependencies are installed
+4. Check for any error messages
+
+## Maintenance
+
+To keep the system running smoothly:
+1. Regularly backup data to the archive directory
+2. Clean up old files from the cleaned directory
+3. Update documentation as needed
+4. Test new Excel files before processing 
+
+
+
+_______________________________________________________________________________________________
+
+I ALSO ATTACHED AN IMAGE OF HOW I WOULD ENTER THE RESULTS AS I COULD COPY AN PASTE AND THEN THE SCRIPT WOULD JUST TAKE FROM THE STATES WE HAVE SETUP TO THE TOOLS TO GET ITS PERMUTATIONS RED AND BLUE TO HIGHLIGHT WINNERS IN THE DATA PRIOR TO LOGGING AWAY INTO FOLDER 
+
+I ALSO INCLUDED A PICTURE WHEN THINGS WERE WOKRING AT ONE POINT AND IT WAS HIGHLIGHTING THE WINNING PATTTERNS IN THE DATASETS
+
+
+CAN YOU HELP ME SORT ALL THIS OUT? DO YOU UNDERSTAD?
+
+IM GOING TO START A BRAND NEW PROJECT AND TRY AND CLEAN EVERYTHING UP AND SOME OF THESE THINGS SHOULD WORK CONSISTENTLY AND NOT NEED EDITING LIKE GETTING THE COMBINED TABLES DAILY ETC.
+
+
+
+
+
+
+
+
+
+Request for o1 pro mode
+Reasoned for 3m 6s
+Below is a practical, step‐by‐step roadmap for rebuilding your lottery project from scratch so you can reliably:
+
+Upload a new Pick3StatsC4 Excel file (or similarly named file) each day.
+Clean & process it into separate state files (the “loading” phase).
+View the resulting tables (Midday, Evening, Combined).
+Optionally enter winning numbers and highlight them (the “logging” phase).
+Store or “archive” the final data (HTML, JSON, etc.) in state folders each day.
+I will focus on clear paths and modular scripts. This plan aims to avoid the path confusion and code breakage you’ve been experiencing.
+
+1. High‐Level Project Blueprint
+1.1 Folder Structure
+Create a brand‐new folder (e.g. lottery_project_simplified) with the following layout:
+
+bash
+Copy
+lottery_project_simplified/
+├── data/
+│   ├── original/         # Where daily Excel files are placed
+│   ├── cleaned/          # Where each state's cleaned .xlsx goes
+│   ├── outputs/          # Optional: final HTML/JSON or archived results
+│   └── sample_wins/      # Place test files with winning numbers, if needed
+├── scripts/
+│   ├── __init__.py       # empty
+│   └── utils/
+│       ├── clean_data.py
+│       ├── extract_data.py
+│       ├── final_tables.py
+│       ├── highlight_winners.py   # (logging step)
+│       ├── run_process.py         # Or “run_all.py”
+│       └── streamlit_app.py
+├── venv/ (optional)      # Python virtual environment
+├── requirements.txt
+├── README.md
+└── docs/
+    └── ...
+You can adapt subfolder names to your style. Key is to standardize so each script knows exactly where to look.
+
+1.2 Reusable Modules
+1.2.1 clean_data.py
+Reads the daily Excel (whatever name you provide or typed in), cleans each state’s sheet (or all states in one pass), saves one _cleaned.xlsx per state into data/cleaned/.
+1.2.2 extract_data.py
+Takes each cleaned .xlsx, does row offsets & extraction logic, returns Python data structures.
+1.2.3 final_tables.py
+Builds “Midday / Evening / Combined” tables from that extracted data.
+Possibly returns both “Combined Table” DataFrame and “R2‐only Table” DataFrame.
+1.2.4 highlight_winners.py
+Where you pass in the “winning numbers,” it uses your V‐Trac table to figure out which combos to mark in red/blue.
+Then modifies the in‐memory data or a DataFrame to highlight the hits.
+1.2.5 run_process.py (or “run_all.py”)
+Orchestrates the entire process from the command line.
+E.g.:
+Prompt user for the daily Excel name (or date)
+Clean each state → produce cleaned files
+Extract each state → produce DataFrames or JSON
+Optionally highlight winners if user provided them
+Save final results (HTML, JSON) in data/outputs/
+1.2.6 streamlit_app.py
+Provides a web UI.
+Let users upload the Excel (the “loading” step) and see the final tables.
+Let them enter or paste winning numbers and instantly highlight them (the “logging” step).
+Then a button to “Save final data to outputs/.”
+2. Step‐by‐Step Plan
+2.1 Create the Directory & Virtual Environment
+Make a new folder: lottery_project_simplified.
+Create subfolders: data/original, data/cleaned, data/outputs, scripts/utils, docs.
+(Optional but recommended) In lottery_project_simplified/, run:
+bash
+Copy
+python -m venv venv
+source venv/bin/activate  # (On Windows: venv\Scripts\activate)
+Create requirements.txt with pinned versions for pandas, numpy, openpyxl, streamlit, etc.
+txt
+Copy
+pandas==1.5.3
+numpy==1.24.2
+openpyxl==3.1.2
+streamlit==1.20.0
+Install them:
+bash
+Copy
+pip install -r requirements.txt
+2.2 Implement clean_data.py (Loading: Step 1)
+Goal:
+
+A single function that:
+Takes the path to the “daily Excel” (like Pick3StatsC4_2025-03-14.xlsm).
+Iterates over each state sheet.
+Cleans data, saves “{state}_cleaned.xlsx” to data/cleaned/.
+Core Points to Avoid Path Chaos:
+
+No hard‐coded “Pick3StatsC4_2025-03-14.xlsm” in the script. Instead, pass it as an argument or let the script ask the user for it.
+If you want a “date” in the filename, that’s fine, but the code must handle it flexibly.
+Example skeleton:
+
+python
+Copy
+# scripts/utils/clean_data.py
+
+import os
+import pandas as pd
+
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4",
+    "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+    "OntarioCanada4", "Pennsylvania4", "PuertoRico4", "SouthCarolina4", 
+    "Virginia4"
+]
+
+def clean_all_states(excel_file_path, cleaned_dir):
+    """
+    excel_file_path: full path to daily Excel (e.g. data/original/Pick3StatsC4_2025-03-14.xlsm)
+    cleaned_dir: path to 'data/cleaned/'
+    
+    Reads each state's sheet from the Excel, cleans columns, saves to {state}_cleaned.xlsx.
+    """
+    if not os.path.exists(excel_file_path):
+        raise FileNotFoundError(f"Excel file not found: {excel_file_path}")
+    os.makedirs(cleaned_dir, exist_ok=True)
+    
+    for state in STATES:
+        try:
+            df = pd.read_excel(excel_file_path, sheet_name=state, dtype=str)
+        except Exception as e:
+            print(f"[WARN] Could not read sheet '{state}' from {excel_file_path}. Error: {e}")
+            continue
+        
+        # Filter columns
+        columns_to_keep = [ ... same as before ... ]
+        existing_cols = [c for c in columns_to_keep if c in df.columns]
+        cleaned_df = df[existing_cols].applymap(lambda x: str(x).strip() if pd.notnull(x) else '')
+        
+        # Save
+        output_path = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
+        cleaned_df.to_excel(output_path, index=False)
+        print(f"✓ Cleaned data saved: {output_path}")
+2.3 Implement extract_data.py (Loading: Step 2)
+Similar to your old extract_datasets_5.py.
+Keep it strictly about reading a single _cleaned.xlsx (per state), applying row offsets, returning a Python dict with the “Set1 → Draw1…,” etc.
+Key: Use relative references to columns, row offsets, etc. This script does not guess any path. We pass it the path to the _cleaned.xlsx we want to read.
+
+python
+Copy
+# scripts/utils/extract_data.py
+
+import pandas as pd
+import os
+
+class LotteryDataExtractor:
+    def __init__(self, cleaned_file_path):
+        self.df = pd.read_excel(cleaned_file_path, header=None, dtype=str)
+        # rename columns, define sections, etc. same as you had
+
+    def extract_all(self):
+        # same logic: get self.extract_set1(...)
+        # return all_data = { 'Midday': {...}, 'Evening': {...}, 'Combined': {...} }
+        return all_data
+Then, in a helper function like extract_all_states(cleaned_dir), you do:
+
+python
+Copy
+def extract_all_states(cleaned_dir, states_list):
+    """
+    Returns a dict: { stateName: { 'Midday': ..., 'Evening': ..., 'Combined': ... }, ... }
+    """
+    results = {}
+    for state in states_list:
+        path = os.path.join(cleaned_dir, f"{state}_cleaned.xlsx")
+        if not os.path.exists(path):
+            print(f"[WARN] Missing cleaned file for {state}: {path}")
+            continue
+        
+        extractor = LotteryDataExtractor(path)
+        data = extractor.extract_all()
+        results[state] = data
+    return results
+2.4 Implement final_tables.py (Loading: Step 3)
+Port your “Build combined table” and “Build R2 table” logic from final_simplified.py.
+Provide a function that, given the extracted data for a particular section_data, returns DataFrames.
+No path usage in here. Strictly transform data → DataFrame.
+
+2.5 Implement highlight_winners.py (Logging Step)
+For your “blue & red” highlighting, you have a function that:
+Takes the user’s winning number(s) for Midday & Evening.
+Looks them up in your V‐Trac reference (the code you posted with BOXED_VTRAC_REFERENCE).
+Identifies which permutations appear in the table data.
+Revises the DataFrame’s cell text or otherwise modifies it to indicate color highlights.
+Implementation detail can vary. Usually you’d do something like:
+
+python
+Copy
+def highlight_winners_in_table(df, midday_win, evening_win, vtrac_index_table):
+    """
+    df: the combined or R2 DataFrame
+    midday_win, evening_win: '3-digit' or '4-digit'? (Adjust as needed)
+    vtrac_index_table: your big structure with permutations
+    returns a new DataFrame or modifies df in place
+    """
+    # e.g. loop over df cells, if cell text in the set of winning combos => color red
+    # if cell text in the same V-trac index => color blue, etc.
+    return styled_df
+In Streamlit, you might do conditional formatting via pandas Styler or use HTML markup and unsafe_allow_html.
+
+2.6 Implement run_process.py (Command‐Line Orchestration)
+So you can do everything from a terminal:
+
+python
+Copy
+# scripts/utils/run_process.py
+
+import os
+from clean_data import clean_all_states
+from extract_data import extract_all_states
+from final_tables import build_section_table_simple, build_r2_only_table_simple
+
+STATES = [ ... same as above ... ]
+
+def main():
+    # 1) Identify daily excel path. 
+    #    Possibly prompt user for the filename or date
+    #    Or read from sys.argv or input
+    excel_name = input("Enter the Excel filename in data/original (e.g. 'Pick3StatsC4_2025-03-14.xlsm'): ")
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
+    daily_excel_path = os.path.join(project_root, 'data', 'original', excel_name)
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    
+    # 2) Clean & save 
+    clean_all_states(daily_excel_path, cleaned_dir)
+    
+    # 3) Extract for all states
+    from extract_data import extract_all_states
+    all_states_data = extract_all_states(cleaned_dir, STATES)
+    
+    # 4) Build & show tables for each state/section
+    for state, data_dict in all_states_data.items():
+        for section in ['Midday', 'Evening', 'Combined']:
+            if section not in data_dict:
+                continue
+            # Build combined & R2
+            cdf = build_section_table_simple(data_dict[section])
+            rdf = build_r2_only_table_simple(data_dict[section])
+            # Print or save CSV, or do what you want
+            # ...
+            print(f"State {state}, Section {section}\n{cdf.head()}\n")
+            # Possibly store them in data/outputs, etc.
+
+if __name__ == "__main__":
+    main()
+Now you have a stable fallback script that you can run to do the entire “load” pipeline.
+
+2.7 Build the streamlit_app.py for the UI
+Key improvement:
+
+Instead of hardcoding file paths or state names, provide an “Upload” widget or “File Uploader.”
+Let the user manually pick the Excel from their local machine.
+Once uploaded, you can place it in data/original.
+Then do steps 2 & 3 in memory or after saving the file to disk.
+Rough outline:
+
+python
+Copy
+# scripts/utils/streamlit_app.py
+
+import streamlit as st
+import os
+from clean_data import clean_all_states
+from extract_data import extract_all_states
+from final_tables import build_section_table_simple, build_r2_only_table_simple
+from highlight_winners import highlight_winners_in_table
+
+STATES = [ ... ]
+
+def main():
+    st.title("Lottery Data Processor")
+    
+    # 1) Upload or pick daily Excel
+    uploaded_file = st.file_uploader("Upload today's Excel (Pick3StatsC4...)")
+    if not uploaded_file:
+        st.info("Please upload an Excel file to continue.")
+        st.stop()
+    
+    # 2) Save the uploaded file to data/original
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    original_dir = os.path.join(project_root, 'data', 'original')
+    os.makedirs(original_dir, exist_ok=True)
+    
+    # Suppose we name it "user_uploaded.xlsx" or keep the original name:
+    with open(os.path.join(original_dir, uploaded_file.name), 'wb') as f:
+        f.write(uploaded_file.read())
+    
+    st.success(f"File saved to {original_dir} as {uploaded_file.name}")
+    
+    # 3) Clean all states
+    cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+    clean_all_states(os.path.join(original_dir, uploaded_file.name), cleaned_dir)
+    
+    # 4) Extract
+    all_data = extract_all_states(cleaned_dir, STATES)
+    
+    # 5) Let user optionally input winning numbers
+    st.subheader("Enter Winning Numbers (Optional)")
+    midday_win = st.text_input("Midday Winning Number:", "")
+    eve_win = st.text_input("Evening Winning Number:", "")
+    
+    # 6) Display results in a selection
+    chosen_state = st.selectbox("Select a state:", STATES)
+    chosen_section = st.radio("Select a section:", ["Midday","Evening","Combined"])
+    
+    if chosen_state not in all_data:
+        st.warning("No data for that state yet.")
+        st.stop()
+    
+    if chosen_section not in all_data[chosen_state]:
+        st.warning(f"No {chosen_section} data found.")
+        st.stop()
+    
+    # Build tables
+    section_data = all_data[chosen_state][chosen_section]
+    combined_df = build_section_table_simple(section_data)
+    r2_df = build_r2_only_table_simple(section_data)
+    
+    # If user provided midday_win or eve_win, highlight
+    if midday_win or eve_win:
+        # highlight these DataFrames 
+        # (You’ll have to define highlight_winners_in_table yourself)
+        combined_df = highlight_winners_in_table(combined_df, midday_win, eve_win)
+        r2_df = highlight_winners_in_table(r2_df, midday_win, eve_win)
+    
+    st.write("### Combined Table")
+    st.dataframe(combined_df)
+    
+    st.write("### R2-only Table")
+    st.dataframe(r2_df)
+    
+    # Possibly a "Save HTML" or "Save JSON" button
+    if st.button("Save Final Results"):
+        output_dir = os.path.join(project_root, 'data', 'outputs')
+        os.makedirs(output_dir, exist_ok=True)
+        combined_df.to_csv(os.path.join(output_dir, f"{chosen_state}_{chosen_section}_combined.csv"), index=False)
+        r2_df.to_csv(os.path.join(output_dir, f"{chosen_state}_{chosen_section}_r2.csv"), index=False)
+        st.success("Saved final results to data/outputs/")
+
+if __name__ == "__main__":
+    main()
+This approach ensures:
+
+You only upload once.
+The system does a complete “load” pass (clean + extract).
+Then you “log” winning numbers, highlight them, optionally “archive” the final.
+3. Handling the “Path Issues”
+Always compute project_root the same way inside each script:
+python
+Copy
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+For reading the daily Excel:
+python
+Copy
+daily_excel_path = os.path.join(project_root, 'data', 'original', <filename>)
+For the cleaned outputs:
+python
+Copy
+cleaned_dir = os.path.join(project_root, 'data', 'cleaned')
+For final or archived results:
+python
+Copy
+outputs_dir = os.path.join(project_root, 'data', 'outputs')
+Avoid mixing “some scripts require the file to be named Pick3StatsC4_YYYY-MM-DD.xlsm.” Instead, let the user provide a filename or just use a file uploader.
+Golden rule: If you run all scripts from the project root or within streamlit run ..., your path logic remains consistent.
+
+4. Why This Prevents the “Circular Edits” Problem
+Each script does one job, and all paths are constructed from the same stable root reference.
+Cursor or any other AI tool is less likely to “randomly rename paths” if you keep them short and consistent.
+You do not re‐edit the core scripts every time you have a new Excel name. Instead you pass that name to the script.
+5. Conclusion & Next Steps
+Start fresh in lottery_project_simplified.
+Copy the essential code from your old scripts into these new, small modules: clean_data.py, extract_data.py, final_tables.py, etc.
+Test step by step:
+Put a test Pick3StatsC4_dummy.xlsm in data/original.
+Run python run_process.py, see if everything outputs as expected in data/cleaned & the console.
+Then do streamlit run streamlit_app.py, upload the same file, confirm it works.
+Add the highlighting logic in highlight_winners.py. Keep it simple at first (maybe just asterisks or uppercase, then move to color styling).
+Refine your “archives” so after you confirm the day’s final results, you can store the day’s final HTML or JSON in data/outputs/{STATE}/YYYY-MM-DD/ or something like that, automatically.
+By following these steps and modularizing everything, you shouldn’t keep “going in circles.” Once your paths are stable and the scripts do not rely on a single hard‐coded Excel name, the system becomes easy to maintain.
+
+Yes, it’s a lot of reorganization, but afterwards, you’ll have a solid baseline project:
+
+A well‐defined directory structure
+Minimal, consistent path references
+Scripts that do one job each
+A Streamlit UI that handles daily usage (upload, preview, log winners, save).
+I hope this clarifies the approach and gets you out of the path‐editing nightmare. You can do it—just carefully implement each step, test often, and keep all path logic consistent. Good luck, and don’t hesitate to break it down piece by piece, verifying each script in isolation before hooking them all together!
+
+
+
+
+
+
+
+3) Documentation & Version Control
+3.1 Building Proper Documentation
+Write down your “big picture” flow in docs/ or README.md. You’ve already got a lot of it—just keep it up to date.
+For each script (like clean_data.py, extract_data.py), add a docstring at the top describing:
+What it does overall
+How you run it (if it can be run directly)
+Any environment variables or file paths that must be set.
+Example:
+
+python
+Copy
+#!/usr/bin/env python3
+"""
+clean_data.py
+
+This script reads a daily Excel (Pick3StatsC4) for each state,
+filters the relevant columns, and saves a cleaned .xlsx per state
+in data/cleaned/.
+
+Usage:
+  python clean_data.py --excel data/original/Pick3StatsC4t.xlsm
+
+Required columns: ...
+Output: data/cleaned/<State>_cleaned.xlsx
+"""
+By having these docstrings, you’ll remember exactly how to run them in the future.
+
+3.2 Using Git or GitHub for Versioning
+Yes, the easiest way to “go back to a previous version” is to keep your project in a Git repository. Then, if Cursor messes up your code, you can revert to the last known‐good commit.
+
+Minimal Git Crash Course:
+Install Git (if not already).
+
+In your project folder:
+
+bash
+Copy
+git init
+git add .
+git commit -m "Initial commit of my new lottery project"
+After you confirm a stable set of changes:
+
+bash
+Copy
+git add .
+git commit -m "Add highlight_winners script, tested"
+If you make a mistake, you can do:
+
+bash
+Copy
+git revert <commit-hash>
+or
+
+bash
+Copy
+git checkout <commit-hash> -- path/to/file
+to restore older versions.
+
+You can also push the repository to GitHub for backup. If you do that, you can easily share your code with others or simply keep a safe remote copy.
+
