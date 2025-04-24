@@ -1,3 +1,1232 @@
+In lottery data analysis, especially for pick-type games, identifying repeating digit patterns can provide insights for predicting future draws. This module is designed to extract and score complex digit patterns from lottery draw data arranged in a grid format. We focus on vertical clusters within specific draw rows (R2, R4, R6, R8) across multiple columns (labeled 7 down to 1), looking for "3-value patterns" – sequences of digits that involve at most 3 unique values (by actual digit or by their VTrac transformation). The patterns are then scored based on their occurrences vertically (across multiple draws in a column) and horizontally (across adjacent columns in the same draw), with various bonuses (for exact repeats, cyclical rotations, consensus across all draws, hot zones marked by *, mirror elimination, persistence across draw sets, etc.). The results are formatted as a dictionary for integration into a machine learning system, including each pattern's canonical form, VTrac mapping, source locations, and a detailed score
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Comprehensive Pattern Extractor for Lottery Data
+Introduction
+In lottery data analysis, especially for pick-type games, identifying repeating digit patterns can provide insights for predicting future draws. This module is designed to extract and score complex digit patterns from lottery draw data arranged in a grid format. We focus on vertical clusters within specific draw rows (R2, R4, R6, R8) across multiple columns (labeled 7 down to 1), looking for "3-value patterns" – sequences of digits that involve at most 3 unique values (by actual digit or by their VTrac transformation). The patterns are then scored based on their occurrences vertically (across multiple draws in a column) and horizontally (across adjacent columns in the same draw), with various bonuses (for exact repeats, cyclical rotations, consensus across all draws, hot zones marked by *, mirror elimination, persistence across draw sets, etc.). The results are formatted as a dictionary for integration into a machine learning system, including each pattern's canonical form, VTrac mapping, source locations, and a detailed score breakdown. Data assumptions: The input data is a matrix of lottery results or derived numbers:
+Rows labeled R1, R2, ..., R8 represent sequential draws (e.g., R2 might be an evening draw on a certain date, R1 the midday draw of that date, etc.).
+Columns 7 through 1 represent positions or fields of the draw (for example, if each draw produces multiple numbers, they might be placed in these columns). We will refer to columns by number (col7 ... col1).
+We analyze only the even rows (R2, R4, R6, R8), which could correspond to a specific draw type (e.g., evening draws if odd rows are midday). These four rows form the vertical sequence for pattern extraction.
+Each cell (R# × Col#) contains a sequence of digits (e.g., a multi-digit number or concatenated numbers) and may have a trailing * or ** indicating a "hot" zone.
+Key concepts:
+3-Value Pattern: A contiguous substring of digits (length ≥ 3) that contains no more than 3 distinct digits. This can be assessed in two ways:
+By actual digits: e.g., the substring "5567" has digits {5,6,7} which is 3 unique digits (so it's a 3-value pattern); "1234" has 4 unique digits, not a 3-value pattern.
+By VTrac digits: VTracs are a transformation grouping digits into 5 classes. Digits 0 and 5 → VTrac 1; 1 and 6 → VTrac 2; 2 and 7 → VTrac 3; 3 and 8 → VTrac 4; 4 and 9 → VTrac 5​
+LOTTOFORUMS.COM
+. For example, the actual sequence "5096" is not 3-value by actual digits ({0,5,9,6} = 4 distinct), but its VTrac form is "1152" (0→1, 5→1, 9→5, 6→2) which has only 3 distinct VTrac values {1,5,2}, so it qualifies as a 3-value pattern in VTrac space. The extractor will detect patterns by both actual and VTrac criteria.
+Vertical cluster: A pattern found in the vertical slice of a column among the specified rows. In practice, we find patterns within each cell of R2/R4/R6/R8 individually, then consider their repetition down the column.
+Horizontal pattern: A pattern that repeats across adjacent columns in the same row.
+Cyclical shift: A rotated version of a digit sequence. For instance, "123", "231", and "312" are cyclical shifts of one another. Such patterns share the same set and order of digits cyclically, and we consider them as essentially the same underlying pattern for scoring purposes.
+Consensus column: A column where all four considered rows contain an identical value (sequence of digits). This is a strong pattern (all draws yielded the same outcome in that column) and yields a bonus, especially if the value is "short" (few digits).
+Hot zone: If a cell is marked with * or **, it indicates a special hot zone (e.g., a number likely to hit). Patterns occurring in those cells receive bonus points (with ** possibly denoting an even hotter zone than *).
+Mirror elimination: In lottery terms, mirror numbers are those separated by 5 (mod 10). For example, 0↔5, 1↔6, 2↔7, 3↔8, 4↔9 are mirror pairs​
+PT.PINTEREST.COM
+. "Mirror elimination" refers to excluding recently drawn digits and their mirrors from consideration. If a pattern becomes apparent only after removing digits from a prior draw (and their mirror counterparts), we reward it. In practice, if none of a cluster's digits appeared in the previous relevant draw (or its mirror), it gets a bonus.
+Persistence: If a pattern was present in older data sets (e.g., Set3 or Set2, which might represent earlier time periods or groups of draws) and it continues into the latest set (Set1), it indicates persistence. Persistent patterns are given extra weight.
+Below, we outline the approach and provide an implementation with clear documentation.
+Approach Overview
+Parsing Data: We parse the input structure of cells. Each cell's digit string is extracted, along with any star markers (noting 1 or 2 stars). We prepare a data structure to hold the parsed values for rows R2, R4, R6, R8 (and also R1, R3, etc., if needed for mirror elimination references).
+Identifying Clusters: For each target cell (R2,4,6,8 × Col7–Col1), we find all substrings of length ≥3 that qualify as 3-value patterns (by actual or VTrac). Each identified cluster is recorded with:
+Its actual digit sequence.
+Its VTrac sequence (same length).
+Its canonical form for pattern matching:
+For rotational equivalence: we choose a canonical rotation (e.g., the lexicographically smallest rotation of the string) to represent the pattern's cyclic class.
+We may also use the canonical VTrac rotation for grouping structural patterns.
+Metadata: which row & column it came from, whether it qualified via actual, VTrac, or both.
+Vertical Pattern Scoring: Clusters are compared within each column:
+If the exact same substring appears in multiple rows of the column, it's a vertical straight repeat – strong signal.
+If cyclically shifted versions of the substring appear in multiple rows (e.g., one row has "123", another has "312"), that's a multi-vertical straight pattern (same cyclic class across draws).
+A pattern’s vertical coverage is essentially the count of draws (rows) in that column in which it appears. More appearances = higher score.
+Consensus check: If all four values in the column (R2=R4=R6=R8) are identical (forming effectively a trivial pattern covering the whole column), we give a special bonus (the pattern is persistent across all those draws). This is applied even if the value is short (even 2 digits, which normally wouldn’t qualify as a cluster, can trigger a bonus for consensus).
+Horizontal Pattern Scoring: We then look across columns within the same row:
+If a pattern found in one column’s cell also appears in an adjacent column’s cell for the same row (e.g., R2 col3 and R2 col4 both contain "789"), that's a horizontal repeat. We give a bonus for each such adjacent-column repetition.
+This considers both exact matches and VTrac-equivalent matches across columns. For instance, if R2 col3 has pattern "512" and R2 col4 has "067", they share the same VTrac pattern "123", so we'd still count that as a horizontal pattern match via VTrac.
+VTrac-based Matching: As above, patterns are also matched by their VTrac sequences. If two pattern occurrences have different actual digits but the same VTrac representation, we treat them as the same underlying structural pattern and reward this repeat (though usually slightly less than an exact match). This applies vertically and horizontally. Essentially, we don't want to miss a pattern just because the digits have all +5 offsets in another draw – that's likely the mirror pattern repeating.
+Mirror Elimination Bonus: For each cluster, we check the previous draw’s digits (prior draw in sequence or the corresponding midday/evening counterpart):
+We compile the set of digits from the prior relevant draw, and possibly also include their mirror digits as excluded. For example, if the previous draw had digits {1, 7, 9}, then excluding those and their mirrors excludes {1,7,9, 6,2,4} (since 6↔1, 2↔7, 4↔9).
+If the cluster’s digits are completely outside this excluded set (meaning none of its digits appeared in the previous draw or are mirrors of those), it likely “emerged” after eliminating prior digits, so we grant a mirror elimination bonus.
+Persistence Scoring: If historical data (Set2, Set3, etc.) is provided or analyzed previously, we compare patterns:
+If a cluster (or its canonical form) was present in an older set and is found again in the latest set (Set1), mark it as persistent. A persistence bonus is applied proportional to how many past sets it appeared in (or a fixed bonus if it appears in any).
+This encourages patterns that have shown longevity across multiple periods.
+Result Compilation: We aggregate all identified patterns (grouping occurrences of the same pattern across locations). For each unique pattern (we use a canonical representation to define uniqueness), we compile:
+Canonical form: e.g. the smallest rotation of the digit sequence (for clarity).
+VTrac form: canonical VTrac sequence for the pattern.
+Locations: a list of (row, col) where the pattern or its rotations occurred (e.g., ("R2", 5) meaning row R2 col5).
+Score breakdown: contributions from vertical repeats, horizontal repeats, VTrac matches, consensus, hot zone, extended length, mirror elimination, persistence, etc.
+Total score: a weighted sum of the above, indicating overall significance of the pattern.
+The Python implementation below follows this design. It defines modular functions for parsing, pattern extraction, scoring each rule, and assembling the final output. Clear inline comments and docstrings are provided for clarity and debugging.
+Implementation
+python
+Copy
+from collections import defaultdict
+import math
+
+# Define VTrac mapping: actual digit -> VTrac digit (as character)
+VTRAC_MAP = {**{str(d): str(((d % 10) % 5) + 1) for d in range(10)}} 
+# This yields {'0':'1','1':'2','2':'3','3':'4','4':'5','5':'1','6':'2','7':'3','8':'4','9':'5'}
+# (Mapping 0/5→1, 1/6→2, 2/7→3, 3/8→4, 4/9→5) :contentReference[oaicite:2]{index=2}
+
+def vtrac_transform(num_str: str) -> str:
+    """Convert an actual digit string to its VTrac representation."""
+    return "".join(VTRAC_MAP[ch] for ch in num_str)
+
+def canonical_rotation(s: str) -> str:
+    """Get the canonical (lexicographically smallest) rotation of string s."""
+    # Rotate through all possible cyclic shifts and choose the smallest lexicographic string
+    rotations = [s[i:] + s[:i] for i in range(len(s))]
+    return min(rotations)
+
+def parse_cell(cell_value: str):
+    """
+    Parse a cell string to separate the numeric part and star markers.
+    Returns (digits_str, stars).
+    - digits_str: the sequence of digits as a string.
+    - stars: 0 (no star), 1 (*), or 2 (**).
+    """
+    if cell_value is None:
+        return "", 0
+    s = cell_value.strip()
+    if not s:
+        return "", 0
+    # Count stars at end of string
+    stars = 0
+    while s.endswith('*'):
+        stars += 1
+        s = s[:-1]
+    s = s.strip()  # remove any space before stars (if present)
+    # Ensure only digits in the digits_str (assuming the cell has only digits and optional stars)
+    digits_str = "".join(filter(str.isdigit, s))
+    return digits_str, stars
+
+def extract_cell_clusters(digits_str: str):
+    """
+    Extract all qualifying clusters (substrings) from a given cell's digit string.
+    Returns a list of cluster info dicts for each substring meeting the 3-value criteria.
+    Each dict will have: 'pattern', 'vtrac', 'canonical', 'canonical_vtrac', 'digit_pattern', 'vtrac_pattern'.
+    """
+    clusters = []
+    L = len(digits_str)
+    if L < 3:
+        return clusters  # no substrings of length ≥3
+    for length in range(3, L+1):  # consider substrings of length >=3
+        for start in range(0, L-length+1):
+            sub = digits_str[start:start+length]
+            # Check unique digits count and unique VTrac digits count
+            unique_digits = set(sub)
+            unique_vtrac = set(vtrac_transform(sub))
+            digit_ok = len(unique_digits) <= 3
+            vtrac_ok = len(unique_vtrac) <= 3
+            if not (digit_ok or vtrac_ok):
+                continue  # not a 3-value pattern in either sense
+            # Prepare cluster info
+            vtrac_sub = vtrac_transform(sub)
+            canonical_sub = canonical_rotation(sub)
+            canonical_vtrac = canonical_rotation(vtrac_sub)
+            clusters.append({
+                "pattern": sub,
+                "vtrac": vtrac_sub,
+                "canonical": canonical_sub,
+                "canonical_vtrac": canonical_vtrac,
+                "digit_pattern": digit_ok,
+                "vtrac_pattern": vtrac_ok
+            })
+    return clusters
+
+def find_vertical_patterns(clusters_by_col):
+    """
+    Analyze clusters in each column for vertical patterns:
+    - Group clusters by canonical form in each column.
+    - Identify vertical repeats (exact) and cyclic repeats.
+    - Return structure mapping column -> canonical_pattern -> occurrences and flags.
+    """
+    vertical_patterns = {}
+    for col, clusters in clusters_by_col.items():
+        # Group clusters by canonical rotation of actual digits
+        group_by_canon = defaultdict(list)
+        for cl in clusters:
+            group_by_canon[cl["canonical"]].append(cl)
+        col_patterns = {}
+        for canon, clist in group_by_canon.items():
+            if len(clist) < 2:
+                continue  # pattern appears only in one row, no vertical repetition
+            # Determine vertical repeat properties
+            rows = { (cl.get("row"), cl.get("col")): cl for cl in clist }  # map each occurrence by location
+            exact_repeat = False
+            cyclic_repeat = False
+            # If any two occurrences have the same exact pattern string
+            patterns_seen = {}
+            for cl in clist:
+                patt = cl["pattern"]
+                if patt in patterns_seen:
+                    exact_repeat = True
+                else:
+                    patterns_seen[patt] = True
+            # If there are multiple occurrences and not all are identical, then by definition they are cyclic variations
+            if len(patterns_seen) > 1:
+                cyclic_repeat = True  # because they share canonical but differ actual pattern
+            # Prepare the pattern entry
+            col_patterns[canon] = {
+                "canonical": canon,
+                "vtrac": clist[0]["canonical_vtrac"],  # vtrac canonical (same for all in group if digits differ only by rotation or mirror offset)
+                "locations": list(rows.keys()),       # list of (row, col) where pattern (or its rotation) appears
+                "exact_vertical_repeat": exact_repeat,
+                "cyclic_vertical_repeat": cyclic_repeat,
+                "count_vertical": len(clist)
+            }
+            # Also check if any of these occurrences only match by VTrac (meaning actual patterns differ beyond rotation)
+            # If there are multiple distinct actual canonical groups that share the same VTrac canonical in this column,
+            # that would indicate mirror-based pattern repetition.
+            # We check this separately below in VTrac-based pattern recognition step.
+        vertical_patterns[col] = col_patterns
+    return vertical_patterns
+
+def find_vtrac_vertical_matches(clusters_by_col):
+    """
+    Find vertical pattern matches that are only apparent in VTrac space (different actual canonical).
+    This complements find_vertical_patterns by capturing cases where patterns in a column share a VTrac pattern but not actual pattern.
+    Returns mapping column -> vtrac_canonical -> list of occurrences (if length > 1).
+    """
+    vtrac_vertical_patterns = {}
+    for col, clusters in clusters_by_col.items():
+        group_by_vcanon = defaultdict(list)
+        for cl in clusters:
+            group_by_vcanon[cl["canonical_vtrac"]].append(cl)
+        vcol_patterns = {}
+        for vcanon, clist in group_by_vcanon.items():
+            # if VTrac canonical group has more than one occurrence, and they are not all in the same actual canonical group
+            if len(clist) < 2:
+                continue
+            actual_canons = {cl["canonical"] for cl in clist}
+            if len(actual_canons) > 1:
+                # Patterns differ in actual digits but share VTrac structure
+                locations = [ (cl.get("row"), cl.get("col")) for cl in clist ]
+                vcol_patterns[vcanon] = {
+                    "canonical_vtrac": vcanon,
+                    "locations": locations,
+                    "count_vertical": len(clist)
+                }
+        if vcol_patterns:
+            vtrac_vertical_patterns[col] = vcol_patterns
+    return vtrac_vertical_patterns
+
+def find_horizontal_patterns(clusters_by_row):
+    """
+    Analyze clusters in each row for horizontal patterns across adjacent columns.
+    - Checks for patterns that appear in adjacent columns in the same row.
+    Returns mapping row -> canonical_pattern -> occurrences and flags.
+    """
+    horizontal_patterns = {}
+    for row, clusters in clusters_by_row.items():
+        # Index clusters by column for quick lookup
+        clusters_by_col = defaultdict(list)
+        for cl in clusters:
+            col = cl["col"]
+            clusters_by_col[col].append(cl)
+        # Compare adjacent columns
+        row_patterns = {}
+        for col in range(1, 7):  # columns 1-6, each compared with col+1
+            if col not in clusters_by_col or (col+1) not in clusters_by_col:
+                continue
+            # Check all cluster combos between col and col+1
+            for cl1 in clusters_by_col[col]:
+                for cl2 in clusters_by_col[col+1]:
+                    # If they share the same canonical (actual or rotated) or same VTrac canonical, it's a horizontal match
+                    same_actual_class = (cl1["canonical"] == cl2["canonical"])
+                    same_vtrac_class = (cl1["canonical_vtrac"] == cl2["canonical_vtrac"])
+                    if not (same_actual_class or same_vtrac_class):
+                        continue
+                    # Determine a representative key for this pattern match (use actual canonical if possible, else vtrac)
+                    key = cl1["canonical"] if same_actual_class else cl1["canonical_vtrac"]
+                    if key not in row_patterns:
+                        row_patterns[key] = {
+                            "canonical": cl1["canonical"],
+                            "vtrac": cl1["canonical_vtrac"],
+                            "locations": set(),  # use set to avoid duplicates
+                            "adjacent_cols": []
+                        }
+                    # Add the locations and note the adjacent column pair
+                    row_patterns[key]["locations"].add((cl1.get("row"), col))
+                    row_patterns[key]["locations"].add((cl2.get("row"), col+1))
+                    row_patterns[key]["adjacent_cols"].append((col, col+1))
+        # Convert location sets to list for output
+        for key, info in row_patterns.items():
+            info["locations"] = list(info["locations"])
+        if row_patterns:
+            horizontal_patterns[row] = row_patterns
+    return horizontal_patterns
+
+def apply_scoring(patterns_dict, vertical_patterns, vtrac_vertical_patterns, horizontal_patterns, consensus_cols, hot_cells, prev_draw_digits):
+    """
+    Calculate scores for each pattern entry in patterns_dict based on various factors:
+    - vertical coverage (appearances in column),
+    - exact vertical repeats,
+    - cyclic vertical repeats,
+    - horizontal adjacency,
+    - VTrac-only matches,
+    - consensus column,
+    - hot zone stars,
+    - extended cluster length,
+    - mirror elimination,
+    - persistence (this requires knowledge of older sets; here we assume patterns_dict may carry info from older sets or such).
+    """
+    for pattern_key, pat in patterns_dict.items():
+        score_breakdown = {}
+        total_score = 0
+        # Vertical coverage & repeats
+        if pat["locations"]:
+            # Determine how many unique rows in same col for vertical coverage
+            locs_by_col = defaultdict(set)
+            for (r, c) in pat["locations"]:
+                locs_by_col[c].add(r)
+            max_vertical = 0
+            for c, rows in locs_by_col.items():
+                count = len(rows)
+                if count > 1:
+                    # pattern appears in multiple rows in this column
+                    score_breakdown[f"vertical_coverage_col{c}"] = count * 2  # e.g., 2 points per occurrence beyond one
+                    total_score += count * 2
+                    max_vertical = max(max_vertical, count)
+                    # Check if exact or cyclic repeat was present for this column
+                    if c in vertical_patterns:
+                        canon = pat["canonical"]
+                        if canon in vertical_patterns[c]:
+                            if vertical_patterns[c][canon]["exact_vertical_repeat"]:
+                                score_breakdown[f"vertical_exact_col{c}"] = score_breakdown.get(f"vertical_exact_col{c}", 0) + 3
+                                total_score += 3
+                            if vertical_patterns[c][canon]["cyclic_vertical_repeat"]:
+                                # cyclic variation (if not exact), a bit smaller bonus
+                                score_breakdown[f"vertical_cyclic_col{c}"] = score_breakdown.get(f"vertical_cyclic_col{c}", 0) + 2
+                                total_score += 2
+                    # Check VTrac-only pattern grouping
+                    if c in vtrac_vertical_patterns:
+                        vcanon = pat["vtrac"]
+                        if vcanon in vtrac_vertical_patterns[c]:
+                            # if actual canonical differ (vtrac-only match), give a small bonus
+                            score_breakdown[f"vertical_vtrac_col{c}"] = score_breakdown.get(f"vertical_vtrac_col{c}", 0) + 2
+                            total_score += 2
+            # Maybe a slight extra if it covered all 4 rows vertically (full vertical)
+            if max_vertical == 4:
+                score_breakdown["vertical_full_column"] = 5
+                total_score += 5
+        # Horizontal coverage
+        if pat["locations"]:
+            locs_by_row = defaultdict(set)
+            for (r, c) in pat["locations"]:
+                locs_by_row[r].add(c)
+            for r, cols in locs_by_row.items():
+                # Check if pattern appears in at least 2 adjacent columns in this row
+                if r in horizontal_patterns:
+                    key = pat["canonical"] if pat["canonical"] in horizontal_patterns[r] else pat["vtrac"]
+                    if key in horizontal_patterns[r]:
+                        adj_pairs = horizontal_patterns[r][key]["adjacent_cols"]
+                        # Each adjacent pair occurrence yields a bonus
+                        score_breakdown[f"horizontal_{r}"] = len(adj_pairs) * 1  # 1 point per adjacent repetition
+                        total_score += len(adj_pairs) * 1
+                        if len(adj_pairs) >= 2:
+                            # If spans 3 columns (two adjacent pairs), extra bonus
+                            score_breakdown[f"horizontal_span_{r}"] = 2
+                            total_score += 2
+        # Consensus column bonus
+        for c in consensus_cols:
+            # If this pattern is exactly the consensus value of column c
+            # (Consensus means one value repeated in all 4 rows. That value itself is the pattern of interest.)
+            # We check if pattern's canonical (or actual) equals that consensus value.
+            cons_val = consensus_cols[c]
+            if pat["canonical"] == canonical_rotation(cons_val):  # compare canonical form
+                score_breakdown[f"consensus_col{c}"] = 5
+                total_score += 5
+                # If the consensus pattern is short (<=3 digits), maybe an additional bonus
+                if len(cons_val) <= 3:
+                    score_breakdown[f"consensus_short_col{c}"] = 2
+                    total_score += 2
+        # Hot zone bonus
+        # If any occurrence of the pattern is in a cell marked with * or **, apply bonus (2 for one star, 3 for two stars for example).
+        star_bonus = 0
+        for (r, c) in pat["locations"]:
+            if (r, c) in hot_cells:
+                stars = hot_cells[(r,c)]
+                if stars == 1:
+                    star_bonus = max(star_bonus, 2)
+                elif stars == 2:
+                    star_bonus = max(star_bonus, 3)
+        if star_bonus:
+            score_breakdown["hot_zone"] = star_bonus
+            total_score += star_bonus
+        # Extended cluster length bonus
+        pattern_len = len(pat["canonical"])
+        if pattern_len > 3:
+            # e.g., 1 point for each digit beyond length 3
+            bonus = pattern_len - 3
+            score_breakdown["extended_length"] = bonus
+            total_score += bonus
+        # Mirror elimination bonus
+        # Check if none of this pattern's digits are in the prior draw's digits (and their mirrors).
+        if prev_draw_digits:
+            pat_digits = set(pat["canonical"])
+            # If pattern digits and prior+mirror have no intersection for any relevant prior (We consider the prior draw corresponding to each occurrence's row perhaps)
+            eligible = False
+            for (r, c) in pat["locations"]:
+                # Determine which prior draw to use for this row. 
+                # If R2 -> use R1, R4->R3, R6->R5, R8->R7 (assuming prior is the immediate previous row).
+                try:
+                    prior_row = "R" + str(int(r[1:]) - 1)
+                except:
+                    prior_row = None
+                if prior_row and prior_row in prev_draw_digits:
+                    prior_set = prev_draw_digits[prior_row]
+                    # Exclude these and their mirror
+                    excl = set(prior_set)
+                    # Add mirrors
+                    for d in list(prior_set):
+                        md = str((int(d) + 5) % 10)
+                        excl.add(md)
+                    # If pattern digits do not intersect with excluded set, mark eligible
+                    if pat_digits.isdisjoint(excl):
+                        eligible = True
+                        break
+            if eligible:
+                score_breakdown["mirror_elimination"] = 2
+                total_score += 2
+        # Persistence bonus (placeholder, requires older set patterns info)
+        # Here we would check if this pattern_key was found in older sets (Set2, Set3).
+        if "persistence" in pat:
+            # 'persistence' could be a count of consecutive sets this pattern appeared in (including current)
+            if pat["persistence"] > 1:
+                score_breakdown["persistence"] = (pat["persistence"] - 1) * 3  # 3 points for each prior set presence
+                total_score += (pat["persistence"] - 1) * 3
+        # Assign breakdown and total
+        pat["score_breakdown"] = score_breakdown
+        pat["score"] = total_score
+
+# Example main function to use the above components:
+def extract_patterns(data):
+    """
+    Main function to extract and score patterns from lottery data.
+    'data' is expected to be a dict or similar structure with keys for rows (e.g., "R2") containing sub-dicts of column values.
+    Returns a dictionary of patterns with their details and scores.
+    """
+    # Parse cells and collect clusters
+    clusters_by_col = defaultdict(list)
+    clusters_by_row = defaultdict(list)
+    hot_cells = {}
+    consensus_cols = {}
+    prev_draw_digits = {}
+    # Determine consensus columns and prepare prev_draw_digits sets
+    # Assuming data includes R1..R8 even if we only analyze R2,4,6,8
+    for col in range(1, 8):  # col1 to col7
+        # Check if R2,R4,R6,R8 all have same value (consensus)
+        vals = []
+        for r in [2,4,6,8]:
+            row_key = "R"+str(r)
+            if row_key in data and col in data[row_key]:
+                val = str(data[row_key][col]).strip()
+            else:
+                val = None
+            vals.append(val)
+        if vals[0] and vals.count(vals[0]) == len(vals):
+            consensus_cols[col] = vals[0]  # record the identical value
+    # Prepare previous draw digits (for mirror elimination) from R1, R3, R5, R7 if present
+    for r in [1,3,5,7]:
+        row_key = "R"+str(r)
+        if row_key in data:
+            digits_set = set()
+            for col_val in data[row_key].values():  # go through all columns of that row
+                if col_val is None: 
+                    continue
+                val_str = str(col_val).strip()
+                val_str = "".join(filter(str.isdigit, val_str))
+                digits_set.update(val_str)
+            if digits_set:
+                prev_draw_digits[row_key] = digits_set
+    # Parse and find clusters in the target rows
+    for r in [2,4,6,8]:
+        row_key = "R"+str(r)
+        if row_key not in data:
+            continue
+        for col, cell_val in data[row_key].items():
+            digits_str, stars = parse_cell(str(cell_val) if cell_val is not None else "")
+            if not digits_str:
+                continue
+            # Store star info
+            if stars:
+                hot_cells[(row_key, col)] = stars
+            # Extract clusters from this cell
+            clusters = extract_cell_clusters(digits_str)
+            for cl in clusters:
+                # annotate cluster with location
+                cl["row"] = row_key
+                cl["col"] = col
+                clusters_by_col[col].append(cl)
+                clusters_by_row[row_key].append(cl)
+    # Identify vertical and horizontal pattern occurrences
+    vertical_patterns = find_vertical_patterns(clusters_by_col)
+    vtrac_vertical_patterns = find_vtrac_vertical_matches(clusters_by_col)
+    horizontal_patterns = find_horizontal_patterns(clusters_by_row)
+    # Aggregate all unique pattern classes across the dataset (using canonical as key)
+    patterns_dict = {}
+    for col, patterns in vertical_patterns.items():
+        for canon, info in patterns.items():
+            key = canon  # use canonical actual as unique key
+            if key not in patterns_dict:
+                patterns_dict[key] = {
+                    "canonical": canon,
+                    "vtrac": info["vtrac"],
+                    "locations": []
+                }
+            # Extend locations list
+            for loc in info["locations"]:
+                if loc not in patterns_dict[key]["locations"]:
+                    patterns_dict[key]["locations"].append(loc)
+    # Also include clusters that might not repeat vertically (single occurrences) but could be horizontal or otherwise interesting
+    # We will include all clusters found in clusters_by_row as well
+    for row, clist in clusters_by_row.items():
+        for cl in clist:
+            key = cl["canonical"]
+            if key not in patterns_dict:
+                patterns_dict[key] = {
+                    "canonical": key,
+                    "vtrac": cl["canonical_vtrac"],
+                    "locations": []
+                }
+            loc = (cl["row"], cl["col"])
+            if loc not in patterns_dict[key]["locations"]:
+                patterns_dict[key]["locations"].append(loc)
+    # Scoring
+    apply_scoring(patterns_dict, vertical_patterns, vtrac_vertical_patterns, horizontal_patterns, consensus_cols, hot_cells, prev_draw_digits)
+    return patterns_dict
+
+# (The module could further include __name__ == "__main__" logic or unit tests for each function.)
+Explanation of Implementation: The code first sets up the VTrac mapping and helper functions:
+vtrac_transform applies the mapping to any digit string.
+canonical_rotation finds a canonical rotation (used to group cyclic patterns).
+parse_cell separates digits from trailing star markers in a cell value.
+extract_cell_clusters finds all qualifying substrings from a given cell's digits, tagging each whether it meets the digit-based and/or VTrac-based 3-value criteria, and computing canonical forms for both actual and VTrac sequences.
+The pattern finding functions then organize cluster data:
+find_vertical_patterns groups clusters in each column by their actual canonical form and identifies if there are exact repeats or just rotated repeats across the rows.
+find_vtrac_vertical_matches similarly groups by VTrac canonical form to catch patterns that repeat structurally (mirror patterns) even if their actual digits differ (e.g., one draw has "512", another has "067" – different actual, same VTrac "123").
+find_horizontal_patterns checks each row for clusters that appear in adjacent columns. It uses both actual and VTrac canonical comparisons to catch mirror cases as well.
+After identifying raw pattern occurrences, we aggregate them in a patterns_dict, keyed by a chosen canonical representation (we use the actual-digit canonical rotation as the key). Each entry gathers all locations (row, col) where that pattern or its rotations appeared. Finally, apply_scoring iterates through each pattern entry and calculates a detailed score breakdown:
+It uses the info from vertical/horizontal pattern detection to assign points for vertical coverage (with extra for exact or cyclic repeats and VTrac-only repeats) and horizontal adjacency occurrences.
+If the pattern corresponds to a consensus column value, a significant bonus is added (with an extra bump if that value is short).
+Any occurrence in a hot zone cell contributes a star bonus.
+Longer patterns (length >3) get a small bonus per extra digit (since they sustain a 3-value pattern over more digits).
+The mirror elimination check uses prev_draw_digits (compiled from prior draws like R1, R3, etc.): if any occurrence of the pattern is comprised of digits not present in the prior draw (and not mirrors of prior draw’s digits), it adds a bonus.
+A placeholder for persistence is included (pat["persistence"] could be set if integrating multiple sets; if present, it adds points for each prior set the pattern was in).
+Each pattern's breakdown and total score are stored in the final dictionary. The extract_patterns function ties everything together:
+It identifies consensus columns and prepares the set of digits from prior draws for mirror elimination.
+It parses each relevant cell and gathers clusters by row and column.
+It invokes the pattern finding functions and then scoring.
+It returns the dictionary of patterns with scores, ready for use in a machine learning pipeline or further analysis.
+Conclusion
+The above module comprehensively covers the detection of 3-value digit patterns in lottery data and scores them according to a rich set of rules:
+vertical repeats (exact and rotated),
+horizontal repeats across columns,
+VTrac (mirror) pattern matches,
+consensus occurrences,
+hot zone indicators,
+extended length patterns,
+mirror elimination filtering,
+and persistence across datasets.
+The output provides a clear mapping of each pattern’s canonical form (representative of its class of rotations/mirrors), its VTrac mapping, all locations it was found (by column and draw row), and a score breakdown detailing the contribution of each factor, along with a total score. This structured output can be directly fed into a machine learning system or used for manual analysis of pattern progression over time.
+
+
+_______________________________________________________________________________________________________________________________________________________________________________________________________
+
+EXPANDING INTO FINAL PATTERN EXTRACTOR?
+
+
+
+
+Below is the complete Python code for the comprehensive pattern extractor, including all the helper functions (apply_scoring, find_vertical_patterns, etc.) you saw referenced. You should be able to copy and paste this into a single .py file (e.g., pattern_extractor.py) and then import/use it in your project.
+
+pattern_extractor.py
+python
+Copy
+#!/usr/bin/env python
+"""
+Comprehensive Pattern Extractor for Lottery Data
+------------------------------------------------
+This module extracts and scores complex '3-value' digit patterns
+from lottery draw data arranged in a grid with rows R1..R8 and columns 7..1.
+
+Key Features:
+ - Identifies '3-value' patterns in each cell (≤3 unique digits, or ≤3 unique VTrac digits).
+ - Handles vertical repeats within a column (R2,R4,R6,R8).
+ - Handles horizontal repeats across adjacent columns in the same row.
+ - Recognizes cyclic/rotational shifts as the same pattern via a canonical rotation approach.
+ - Identifies patterns that match only in VTrac space (mirror-like transformations).
+ - Detects special 'consensus' columns (if all four R2,R4,R6,R8 are identical).
+ - Adds scoring bonuses for hot zone cells (* or **), extended length, mirror elimination,
+   and possible cross-day persistence (if integrated).
+ - Returns a dictionary of pattern entries with final scores and location data.
+
+Usage Example:
+
+  from pattern_extractor import extract_patterns
+
+  # data should be a dict like:
+  # {
+  #   "R2": { 7: "6688*", 6:"1688", 5:"18866", ... },
+  #   "R4": { 7: "668811", ... },
+  #   ...
+  # }
+  # The keys are row labels ("R2","R4","R6","R8") and each sub-dict
+  # has col->cellValue. A trailing '*' or '**' indicates hot zone.
+
+  results = extract_patterns(data)
+  for pkey, pinfo in results.items():
+      print(pkey, pinfo["score"], pinfo["locations"], pinfo["score_breakdown"])
+
+"""
+
+from collections import defaultdict
+
+#############################################
+# 1. VTRAC Mapping & Helper Functions
+#############################################
+
+# VTrac mapping digit -> '1'..'5'
+# (0,5) -> '1'; (1,6) -> '2'; (2,7) -> '3'; (3,8) -> '4'; (4,9) -> '5'
+VTRAC_MAP = {
+    str(d): str(((d % 10) % 5) + 1)
+    for d in range(10)
+}
+# Example: '0' -> '1', '1' -> '2', '5' -> '1', '9' -> '5'
+
+def vtrac_transform(num_str: str) -> str:
+    """
+    Convert an actual digit string into its VTrac representation (digits 1..5).
+    Example: '5096' -> '1152'.
+    """
+    return "".join(VTRAC_MAP[ch] for ch in num_str if ch in VTRAC_MAP)
+
+def canonical_rotation(s: str) -> str:
+    """
+    Return the lexicographically smallest rotation of a string s.
+    This groups cyclic permutations under one canonical form.
+    E.g., '312' -> '123', '6688' -> '6688' (maybe '8668' or '6886', but whichever is lexicographically smallest).
+    """
+    if not s:
+        return s
+    rotations = [s[i:] + s[:i] for i in range(len(s))]
+    return min(rotations)
+
+def parse_cell(cell_value: str):
+    """
+    Separate the numeric part from any trailing '*' (hot zone).
+    Returns (digits_str, star_count)
+       digits_str = only digits from the cell
+       star_count = 0 if no star, 1 if one '*', 2 if '**'
+    """
+    if not cell_value:
+        return "", 0
+    s = cell_value.strip()
+    if not s:
+        return "", 0
+
+    stars = 0
+    # Count trailing stars
+    while s.endswith('*'):
+        stars += 1
+        s = s[:-1]
+    s = s.strip()
+    # Keep only digits in the front part
+    digits_str = "".join(ch for ch in s if ch.isdigit())
+    return digits_str, stars
+
+#############################################
+# 2. Extract 3-Value Clusters from a Cell
+#############################################
+
+def extract_cell_clusters(digits_str: str, min_len=3):
+    """
+    Find all substrings of 'digits_str' (length >= min_len) that qualify as 3-value patterns,
+    meaning they have <=3 unique digits by actual OR <=3 unique digits in VTrac space.
+    Each cluster is returned with:
+      {
+        "pattern": sub,              # actual substring
+        "vtrac": vtrac_sub,          # vtrac transformation
+        "canonical": cano_sub,       # canonical rotation of the actual substring
+        "canonical_vtrac": cano_vt,  # canonical rotation of the vtrac substring
+        "digit_pattern": bool,       # True if <=3 actual digits
+        "vtrac_pattern": bool        # True if <=3 vtrac digits
+      }
+    """
+    clusters = []
+    length = len(digits_str)
+    if length < min_len:
+        return clusters  # no possible substrings
+
+    for size in range(min_len, length+1):
+        for start in range(0, length - size + 1):
+            sub = digits_str[start:start+size]
+            unique_d = set(sub)
+            vt = vtrac_transform(sub)
+            unique_v = set(vt)
+            digit_ok = (len(unique_d) <= 3)
+            vtrac_ok = (len(unique_v) <= 3)
+            if digit_ok or vtrac_ok:
+                cano_sub = canonical_rotation(sub)
+                cano_vt = canonical_rotation(vt)
+                clusters.append({
+                    "pattern": sub,
+                    "vtrac": vt,
+                    "canonical": cano_sub,
+                    "canonical_vtrac": cano_vt,
+                    "digit_pattern": digit_ok,
+                    "vtrac_pattern": vtrac_ok
+                })
+
+    return clusters
+
+#############################################
+# 3. Identify Vertical Patterns
+#############################################
+
+def find_vertical_patterns(clusters_by_col):
+    """
+    For each column, group clusters by canonical (actual) string. If
+    any canonical pattern appears 2+ times in that column (multiple rows),
+    it's a vertical repeat. We note whether they're exact repeats or
+    differ by rotation.
+    Returns: { col_number: { canonical_str: {...pattern info...} } }
+    """
+    vertical_patterns = {}
+    for col, cluster_list in clusters_by_col.items():
+        group_by_canon = defaultdict(list)
+        for cl in cluster_list:
+            group_by_canon[cl["canonical"]].append(cl)
+
+        col_pattern_info = {}
+        for canon, c_list in group_by_canon.items():
+            if len(c_list) < 2:
+                continue
+            # We have 2+ occurrences of this canonical in the same column => vertical repeat
+            exact_repeat = False
+            cyc_repeat = False
+            # if there's more than 1 unique actual string among them, cyc_repeat = True
+            # if we find the same actual string repeated, exact_repeat = True
+            actual_strs = defaultdict(int)
+            for citem in c_list:
+                actual_strs[citem["pattern"]] += 1
+            if len(actual_strs) > 1:
+                cyc_repeat = True
+            for astr, count in actual_strs.items():
+                if count > 1:
+                    exact_repeat = True
+                    break
+
+            col_pattern_info[canon] = {
+                "canonical": canon,
+                "vtrac": c_list[0]["canonical_vtrac"],
+                "locations": [(citem["row"], citem["col"]) for citem in c_list],
+                "exact_vertical_repeat": exact_repeat,
+                "cyclic_vertical_repeat": cyc_repeat,
+                "count_vertical": len(c_list),
+            }
+        if col_pattern_info:
+            vertical_patterns[col] = col_pattern_info
+    return vertical_patterns
+
+def find_vtrac_vertical_matches(clusters_by_col):
+    """
+    Similar to find_vertical_patterns, but grouping by vtrac canonical.
+    If we find multiple actual canons that share the same vtrac canonical,
+    that indicates a 'vtrac-only' vertical match.
+    Returns: { col_number: { vtrac_canon_str: { "canonical_vtrac":..., "locations":..., "count_vertical":...} } }
+    """
+    vtrac_vert = {}
+    for col, cluster_list in clusters_by_col.items():
+        group_by_vcanon = defaultdict(list)
+        for cl in cluster_list:
+            group_by_vcanon[cl["canonical_vtrac"]].append(cl)
+
+        col_vtrac_info = {}
+        for vcanon, c_list in group_by_vcanon.items():
+            if len(c_list) < 2:
+                continue
+            # But we only care if their actual canons differ
+            actual_canons = { cl["canonical"] for cl in c_list }
+            if len(actual_canons) < 2:
+                continue  # all the same actual => already covered by normal vertical
+            col_vtrac_info[vcanon] = {
+                "canonical_vtrac": vcanon,
+                "locations": [(citem["row"], citem["col"]) for citem in c_list],
+                "count_vertical": len(c_list)
+            }
+        if col_vtrac_info:
+            vtrac_vert[col] = col_vtrac_info
+    return vtrac_vert
+
+#############################################
+# 4. Identify Horizontal Patterns
+#############################################
+
+def find_horizontal_patterns(clusters_by_row):
+    """
+    For each row, we see if a pattern is repeated in adjacent columns.
+    We'll store them keyed by actual canonical or vtrac canonical.
+    Returns: { row: { pattern_key: { "canonical":..., "vtrac":..., "locations":..., "adjacent_cols":[...] } } }
+    """
+    horizontal_patterns = {}
+
+    for row, cluster_list in clusters_by_row.items():
+        # cluster_list are all the clusters from that row
+        # We'll map col -> list_of_clusters
+        row_by_col = defaultdict(list)
+        for cl in cluster_list:
+            row_by_col[cl["col"]].append(cl)
+
+        row_pattern_info = {}
+        # Compare col.. col+1 for adjacency
+        for col in range(1, 7):
+            if col not in row_by_col or (col+1) not in row_by_col:
+                continue
+            left_clusters = row_by_col[col]
+            right_clusters = row_by_col[col+1]
+
+            for lc in left_clusters:
+                for rc in right_clusters:
+                    # match if same actual canonical or same vtrac canonical
+                    same_actual = (lc["canonical"] == rc["canonical"])
+                    same_vtrac = (lc["canonical_vtrac"] == rc["canonical_vtrac"])
+                    if same_actual or same_vtrac:
+                        # define a key
+                        key = lc["canonical"] if same_actual else lc["canonical_vtrac"]
+                        if key not in row_pattern_info:
+                            row_pattern_info[key] = {
+                                "canonical": lc["canonical"],
+                                "vtrac": lc["canonical_vtrac"],
+                                "locations": set(),
+                                "adjacent_cols": []
+                            }
+                        row_pattern_info[key]["locations"].add((lc["row"], lc["col"]))
+                        row_pattern_info[key]["locations"].add((rc["row"], rc["col"]))
+                        row_pattern_info[key]["adjacent_cols"].append((col, col+1))
+
+        # convert location sets to list
+        for key, info in row_pattern_info.items():
+            info["locations"] = list(info["locations"])
+        if row_pattern_info:
+            horizontal_patterns[row] = row_pattern_info
+
+    return horizontal_patterns
+
+#############################################
+# 5. Scoring Function
+#############################################
+
+def apply_scoring(patterns_dict,
+                  vertical_patterns,
+                  vtrac_vertical_patterns,
+                  horizontal_patterns,
+                  consensus_cols,
+                  hot_cells,
+                  prev_draw_digits):
+    """
+    Assigns numeric scores to each pattern in patterns_dict, storing
+    them in pattern["score"] and a breakdown in pattern["score_breakdown"].
+
+    The rules:
+      - vertical coverage (multiple rows in same column)
+      - exact vertical repeats, cyclic vertical repeats
+      - vtrac-only vertical
+      - horizontal adjacency
+      - consensus column (if the pattern == the column's consensus value)
+      - hot zone stars
+      - extended length beyond 3 digits
+      - mirror elimination check
+      - optional 'persistence' if pattern has an attribute pattern["persistence"]
+    """
+    from collections import defaultdict
+
+    for pkey, pattern_info in patterns_dict.items():
+        breakdown = {}
+        total = 0
+
+        # Gather all columns where pattern appears
+        columns_map = defaultdict(set)  # col -> set_of_rows
+        for (r, c) in pattern_info["locations"]:
+            columns_map[c].add(r)
+
+        # 1) vertical coverage
+        max_vertical_hits = 0
+        for c, rows_set in columns_map.items():
+            # coverage = how many rows
+            coverage = len(rows_set)
+            if coverage > 1:
+                # each row beyond 1 => coverage * 2 points
+                # e.g. coverage=2 => +4, coverage=3 => +6, coverage=4 => +8
+                pts = coverage * 2
+                breakdown[f"vertical_coverage_col{c}"] = pts
+                total += pts
+                max_vertical_hits = max(max_vertical_hits, coverage)
+                # check if exact or cyclic
+                canon = pattern_info["canonical"]
+                if c in vertical_patterns and canon in vertical_patterns[c]:
+                    vpinfo = vertical_patterns[c][canon]
+                    if vpinfo["exact_vertical_repeat"]:
+                        breakdown[f"vertical_exact_col{c}"] = breakdown.get(f"vertical_exact_col{c}", 0) + 3
+                        total += 3
+                    if vpinfo["cyclic_vertical_repeat"]:
+                        breakdown[f"vertical_cyclic_col{c}"] = breakdown.get(f"vertical_cyclic_col{c}", 0) + 2
+                        total += 2
+                # vtrac-only?
+                if c in vtrac_vertical_patterns:
+                    vcanon = pattern_info["vtrac"]
+                    if vcanon in vtrac_vertical_patterns[c]:
+                        # means multiple distinct actual canons share the same vtrac => +2
+                        breakdown[f"vertical_vtrac_col{c}"] = breakdown.get(f"vertical_vtrac_col{c}", 0) + 2
+                        total += 2
+
+        # if coverage is 4 rows => full vertical => +5
+        if max_vertical_hits == 4:
+            breakdown["vertical_full_col"] = 5
+            total += 5
+
+        # 2) horizontal adjacency
+        # figure out row -> columns
+        row_map = defaultdict(set)
+        for (r,c) in pattern_info["locations"]:
+            row_map[r].add(c)
+
+        for row_id, colset in row_map.items():
+            # check if this pattern is recognized in horizontal_patterns
+            # use actual canonical or vtrac as a key
+            # if row has adjacency info
+            if row_id in horizontal_patterns:
+                hrow = horizontal_patterns[row_id]
+                # prefer actual canonical key if it exists, else vtrac
+                acan = pattern_info["canonical"]
+                vtcan = pattern_info["vtrac"]
+                key = None
+                if acan in hrow:
+                    key = acan
+                elif vtcan in hrow:
+                    key = vtcan
+                if key and "adjacent_cols" in hrow[key]:
+                    adj_list = hrow[key]["adjacent_cols"]
+                    # 1 point each adjacency
+                    pts_h = len(adj_list)
+                    breakdown[f"horizontal_{row_id}"] = pts_h
+                    total += pts_h
+                    # if 2+ adjacency => might be spanning 3 columns => +2
+                    if pts_h >= 2:
+                        breakdown[f"horizontal_span_{row_id}"] = 2
+                        total += 2
+
+        # 3) consensus column
+        # if pattern is exactly the consensus value in column c => +5, +2 if short
+        # We check each consensus col
+        for c, cons_val in consensus_cols.items():
+            # if pattern's canonical == canonical_rotation(cons_val)
+            ccons = canonical_rotation(cons_val)
+            if pattern_info["canonical"] == ccons:
+                breakdown[f"consensus_col{c}"] = 5
+                total += 5
+                if len(cons_val) <= 3:
+                    breakdown[f"consensus_short_col{c}"] = 2
+                    total += 2
+
+        # 4) hot zone stars
+        # if any occurrence is in a cell with star≥1 => +2 for one star, +3 for two stars (max)
+        star_bonus = 0
+        for (r,c) in pattern_info["locations"]:
+            if (r,c) in hot_cells:
+                scount = hot_cells[(r,c)]
+                if scount == 1:
+                    star_bonus = max(star_bonus, 2)
+                elif scount == 2:
+                    star_bonus = max(star_bonus, 3)
+        if star_bonus:
+            breakdown["hot_zone"] = star_bonus
+            total += star_bonus
+
+        # 5) extended cluster length
+        # 1 point per digit beyond 3
+        pat_len = len(pattern_info["canonical"])
+        if pat_len > 3:
+            ext_pts = (pat_len - 3)
+            breakdown["extended_length"] = ext_pts
+            total += ext_pts
+
+        # 6) mirror elimination
+        # if none of pattern's digits appear in prior row's digits (and their mirror)
+        if prev_draw_digits:
+            digits_set = set(pattern_info["canonical"])
+            eliminated = False
+            for (r,c) in pattern_info["locations"]:
+                # guess prior row => e.g. R2->R1, R4->R3, ...
+                try:
+                    rn = int(r[1:])
+                    prior_row = f"R{rn-1}"
+                except:
+                    prior_row = None
+                if prior_row and prior_row in prev_draw_digits:
+                    excl = set(prev_draw_digits[prior_row])
+                    # also add mirror
+                    mirrored = set()
+                    for d in excl:
+                        # digit +5 mod10
+                        if d.isdigit():
+                            newd = str((int(d)+5)%10)
+                            mirrored.add(newd)
+                    excl.update(mirrored)
+                    # if disjoint => means the pattern's digits are not in prior draw or mirror => give bonus
+                    if digits_set.isdisjoint(excl):
+                        eliminated = True
+                        break
+            if eliminated:
+                breakdown["mirror_elimination"] = 2
+                total += 2
+
+        # 7) persistence
+        # If pattern_info has "persistence" entry => +3 per additional set
+        if "persistence" in pattern_info:
+            # if persistence=2 => 1 older set => +3
+            # if 3 => 2 older sets => +6, etc.
+            pval = pattern_info["persistence"]
+            if pval>1:
+                addp = (pval-1)*3
+                breakdown["persistence"] = addp
+                total += addp
+
+        pattern_info["score_breakdown"] = breakdown
+        pattern_info["score"] = total
+
+
+#############################################
+# 6. MAIN EXTRACTOR FUNCTION
+#############################################
+
+def extract_patterns(data):
+    """
+    Main function to extract and score patterns from lottery data.
+    'data' is expected to be a dict with row labels "R1".."R8"
+    and inside each row, a dict of col->cellValue. E.g.:
+      data["R2"][7] = "6688*"
+      data["R2"][6] = "1688"
+      ...
+    This function:
+      1) Identifies columns that have consensus (R2..R8 are identical).
+      2) Identifies digits from R1,R3,R5,R7 for mirror elimination usage.
+      3) Extracts 3-value clusters from each cell in R2,R4,R6,R8.
+      4) Finds vertical/horizontal patterns, plus VTrac vertical matches.
+      5) Aggregates all patterns by their canonical actual rotation.
+      6) Applies scoring rules (vertical coverage, hot zone, etc.).
+      7) Returns dict: { pattern_key: { "canonical":..., "vtrac":..., "locations":[(row,col),...], "score":..., "score_breakdown": {...} } }
+    """
+    from collections import defaultdict
+
+    # 1) find consensus columns
+    consensus_cols = {}
+    for col in range(1,8):
+        # check R2,R4,R6,R8
+        vals = []
+        for rr in [2,4,6,8]:
+            rkey = f"R{rr}"
+            if rkey not in data or col not in data[rkey]:
+                vals = []
+                break
+            cell_str = str(data[rkey][col]).strip()
+            vals.append(cell_str)
+        if len(vals)==4 and vals[0] and all(v == vals[0] for v in vals):
+            consensus_cols[col] = vals[0]
+
+    # 2) gather digits from R1,R3,R5,R7 => prev_draw_digits
+    prev_draw_digits = {}
+    for rr in [1,3,5,7]:
+        rkey = f"R{rr}"
+        if rkey in data:
+            ddset = set()
+            for colval in data[rkey].values():
+                if colval is None: continue
+                s = str(colval).strip()
+                dig = "".join(ch for ch in s if ch.isdigit())
+                ddset.update(dig)
+            if ddset:
+                prev_draw_digits[rkey] = ddset
+
+    # 3) extract clusters from R2,R4,R6,R8
+    clusters_by_col = defaultdict(list)
+    clusters_by_row = defaultdict(list)
+    hot_cells = {}
+    for rr in [2,4,6,8]:
+        rkey = f"R{rr}"
+        if rkey not in data:
+            continue
+        for col, cell_val in data[rkey].items():
+            dig_str, star_cnt = parse_cell(str(cell_val) if cell_val else "")
+            if not dig_str:
+                continue
+            if star_cnt>0:
+                hot_cells[(rkey,col)] = star_cnt
+            # find clusters
+            found = extract_cell_clusters(dig_str)
+            for fc in found:
+                # annotate row,col
+                fc["row"] = rkey
+                fc["col"] = col
+                clusters_by_col[col].append(fc)
+                clusters_by_row[rkey].append(fc)
+
+    # 4) find vertical/horizontal/vtrac patterns
+    vertical_pts = find_vertical_patterns(clusters_by_col)
+    vtrac_vertical_pts = find_vtrac_vertical_matches(clusters_by_col)
+    horizontal_pts = find_horizontal_patterns(clusters_by_row)
+
+    # 5) aggregate unique patterns by actual canonical
+    patterns_dict = {}
+    # from vertical patterns
+    for col,vmap in vertical_pts.items():
+        for canon, info in vmap.items():
+            if canon not in patterns_dict:
+                patterns_dict[canon] = {
+                    "canonical": canon,
+                    "vtrac": info["vtrac"],
+                    "locations": []
+                }
+            for loc in info["locations"]:
+                if loc not in patterns_dict[canon]["locations"]:
+                    patterns_dict[canon]["locations"].append(loc)
+
+    # also from the row clusters that might not show up as vertical repeats
+    for rr, clist in clusters_by_row.items():
+        for citem in clist:
+            ccan = citem["canonical"]
+            if ccan not in patterns_dict:
+                patterns_dict[ccan] = {
+                    "canonical": ccan,
+                    "vtrac": citem["canonical_vtrac"],
+                    "locations": []
+                }
+            lc = (citem["row"], citem["col"])
+            if lc not in patterns_dict[ccan]["locations"]:
+                patterns_dict[ccan]["locations"].append(lc)
+
+    # 6) apply scoring
+    apply_scoring(patterns_dict, vertical_pts, vtrac_vertical_pts,
+                  horizontal_pts, consensus_cols, hot_cells,
+                  prev_draw_digits)
+
+    return patterns_dict
+
+
+if __name__ == "__main__":
+    # Example usage / quick test:
+    # Suppose we have some mock data rows:
+    data_example = {
+        "R2": {
+            7: "6688*", 6: "1688", 5:"18866", 4:"18866", 3:"**", 2:"66*", 1:"1",
+        },
+        "R4": {
+            7: "668811", 6:"68811", 5:"8866", 4:"18866", 3:"66", 2:"66*", 1:"1"
+        },
+        "R6": {
+            7: "58811*", 6:"18866", 5:"8866", 4:"9866", 3:"066", 2:"0", 1:"8"
+        },
+        "R8": {
+            7: "6688**", 6:"1688", 5:"18866", 4:"18866", 3:"66", 2:"6", 1:""
+        },
+        "R1": { 7:"123",6:"789" },  # prior row for mirror elimination
+        "R3": { 7:"654",6:"321" }   # another prior row
+    }
+    results = extract_patterns(data_example)
+
+    print("\n=== Extracted Patterns ===")
+    for k,info in sorted(results.items(), key=lambda x:x[0]):
+        print(f"Pattern Key: {k}")
+        print("  Score:", info["score"])
+        print("  Locations:", info["locations"])
+        print("  Breakdown:", info["score_breakdown"])
+What Else You Might Need
+Data Input
+
+You must supply your lottery data in a Python dictionary format matching the above.
+
+For instance, data["R2"][7] = "6688*" means “Row R2, Column 7, value=6688 with a single star.”
+
+If you want to read from JSON, CSV, or another source, you'll need a small loader function that populates this dictionary structure.
+
+Further Sub-Modules (Optional)
+
+If you plan to do multi-day or multi-set analysis, you’ll want to apply extract_patterns to each day’s data or each set.
+
+You can then unify the results and compute the “persistence” attribute if a pattern reappears on multiple days. For example, you could do something like:
+
+python
+Copy
+results_day1 = extract_patterns(data_day1)
+results_day2 = extract_patterns(data_day2)
+# Then check which canonical patterns appear in both day1 & day2 to set 'persistence'.
+for key in results_day2:
+    if key in results_day1:
+        # pattern persists
+        results_day2[key]["persistence"] = 2  # or day1 + day2
+Mirror Elimination
+
+The code includes a check for digits from R1, R3, R5, R7. If you want a different approach (like referencing a totally separate “last draw” from another dataset), just swap out how prev_draw_digits is constructed.
+
+Adjusting Scoring Weights
+
+The function apply_scoring has hard-coded numbers for coverage, hot zone, extended length, etc. You may edit those as needed. For instance, if you prefer +3 for a single-star cell, you can adjust:
+
+python
+Copy
+if stars == 1:
+    star_bonus = max(star_bonus, 3)
+Or if you want fewer points for vertical coverage, simply change them from (coverage * 2) to something else.
+
+Tests / Debug
+
+If you find anomalies or want to track pattern origins, add more prints/logs within each function.
+
+The __main__ block at the bottom has a quick mock example. You can remove or modify it to fit your environment.
+
+In summary, you now have a single code file with all the required components:
+
+Helper functions for VTrac transform, canonical rotation, and cell parsing.
+
+Extraction of 3-value clusters from each cell.
+
+Pattern detection for vertical repeats (exact or cyclic), horizontal adjacency, and VTrac-only matches.
+
+Comprehensive scoring for coverage, hot zones, consensus columns, extended length, mirror elimination, and optional persistence.
+
+Once you have your data in the right format (a dict of row→col→"value"), simply do:
+
+python
+Copy
+from pattern_extractor import extract_patterns
+
+my_data = {
+  "R2": {7:"6688*",6:"1688",5:"18866",...},
+  "R4": {...},
+  ...
+}
+results = extract_patterns(my_data)
+
+for pattern_key, info in results.items():
+    print(pattern_key, info["score"], info["score_breakdown"])
+…and you will see the extracted patterns, their total scores, and a breakdown of each bonus/feature that contributed to the score.
+
+
+
+
+
+
 Below is a fully-coded, comprehensive Python module (long_string_reduction.py) implementing all the logic we outlined in “MODULE PART 1.” This script:
 
 Collects the relevant “long string” columns (7, 6, 5) from Set3, Set2, and Set1 Draw1 (for Midday/Evening/Combined).
