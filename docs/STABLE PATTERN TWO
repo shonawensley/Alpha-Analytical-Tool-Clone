@@ -1,0 +1,306 @@
+Below is “Part 2”—a Streamlit-based example script demonstrating how to integrate the stable pattern extraction (from Part 1) with a similar UI/HTML highlighting approach as your V-Trac tool.
+
+It loads your CSV tables (like vtrac_analyzer_standalone.py does).
+
+It calls the stable pattern extractor logic to find/score patterns in each CSV.
+
+It displays patterns & scores in Streamlit AND generates an optional HTML highlight report—very similar to your V-Trac approach.
+
+You can place this script in, for example, scripts/core/stable_pattern_analyzer_standalone.py and run via:
+
+arduino
+Copy
+streamlit run stable_pattern_analyzer_standalone.py
+Once you see the UI, choose a state; it will:
+
+Load the 6 standard CSV tables for that state (Midday_combined, Evening_R2_only, etc.).
+
+Convert them to a single big DataFrame or multiple DataFrames if desired.
+
+Run the stable pattern extraction from Part 1 on those data rows (like we do with your JSON approach, but here we read from CSV).
+
+Render an interactive table of patterns & a bar chart or highlight table.
+
+NOTE: Because you have two data pipelines (one that outputs CSV, another that outputs JSON), you can either:
+
+Use the same approach from your “vtrac_analyzer_standalone.py” to read CSV → build an in-memory structure → pass that to the stable extractor, OR
+
+Just convert your CSV to the same JSON format the stable extractor script expects, and call it directly.
+
+Below, we show a hybrid approach: we read CSV into DataFrames, reformat them into the “R2/R4/R6/R8” structure in memory, then call the stable extraction logic. Feel free to adapt.
+
+stable_pattern_analyzer_standalone.py
+python
+Copy
+#!/usr/bin/env python
+"""
+stable_pattern_analyzer_standalone.py
+
+Streamlit-based UI that:
+ 1) Loads pre-generated CSV tables for a selected state (like V-Trac does).
+ 2) Builds an internal "R2/R4/R6/R8" structure for each draw/column (faking or reconstructing what your JSON approach does).
+ 3) Calls the advanced stable pattern extraction script (Part 1) to find stable patterns.
+ 4) Displays a summary of top stable patterns, along with an optional HTML highlight report.
+
+This is PART 2: A demonstration of how you can integrate the stable pattern code
+with a user-friendly Streamlit interface, reusing the same approach as 'vtrac_analyzer_standalone.py'.
+"""
+
+import os
+import sys
+import streamlit as st
+import pandas as pd
+import numpy as np
+from collections import defaultdict, Counter
+from datetime import datetime
+import time
+import io
+import base64
+
+# Adjust these imports as needed, depending on your project layout:
+# -----------------------------------------------------------------
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(script_dir))  # up 2 levels
+sys.path.append(project_root)
+
+# 1) We'll import the PART 1 stable extractor. 
+#    (Adapt if you placed stable_pattern_extractor_full in a different location.)
+try:
+    from stable_pattern_extractor_full import (
+        run_stable_pattern_extraction,
+        build_html_report
+    )
+except ImportError as e:
+    st.error(f"Error importing stable_pattern_extractor_full: {e}")
+    st.stop()
+
+# 2) We'll also import your path_handler, 
+#    so we can load the CSV tables from data/outputs/tables/[STATE_NAME].
+try:
+    from scripts.utils.path_handler import get_tables_output_dir
+    from scripts.utils.state_utils import STATES
+except ImportError as e:
+    st.error(f"Error importing path_handler or state_utils: {e}")
+    st.stop()
+
+################################################################################
+# Helper function: load CSV tables for a state (like in vtrac_analyzer_standalone)
+################################################################################
+
+@st.cache_data
+def load_state_tables(state_name):
+    """
+    Read the standard 6 CSV tables for the given state from data/outputs/tables/[state_name].
+    Return them as a dictionary: {
+      "Midday_combined": DataFrame,
+      "Evening_combined": DataFrame, 
+      ...
+    }
+    """
+    tables_root = get_tables_output_dir()
+    state_dir = os.path.join(tables_root, state_name)
+    if not os.path.exists(state_dir):
+        st.warning(f"No directory found for state {state_name} at {state_dir}.")
+        return {}
+
+    result = {}
+    # The typical filenames we expect:
+    expected_filenames = [
+        f"{state_name}_Midday_combined.csv",
+        f"{state_name}_Midday_R2_only.csv",
+        f"{state_name}_Evening_combined.csv",
+        f"{state_name}_Evening_R2_only.csv",
+        f"{state_name}_Combined_combined.csv",
+        f"{state_name}_Combined_R2_only.csv",
+    ]
+
+    for fname in expected_filenames:
+        path = os.path.join(state_dir, fname)
+        if os.path.exists(path):
+            try:
+                df = pd.read_csv(path)
+                # Let's define a short key: e.g. "Midday_combined"
+                short_key = fname.replace(f"{state_name}_", "").replace(".csv","")
+                result[short_key] = df
+            except Exception as exc:
+                st.warning(f"Error loading {fname}: {exc}")
+
+    return result
+
+
+################################################################################
+# Convert CSV DataFrames -> 'JSON-like' structure for the stable extractor
+################################################################################
+
+def convert_tables_to_json_style(tables_dict):
+    """
+    The stable_pattern_extractor_full expects a 'json_data' that has 
+      json_data["sections"][section]["sets"][set_name]["draws"][draw_name]["pattern_variations"][row_type] = [...]
+    We'll do a simplified approach: 
+    - We look at 'Combined_combined' table (and perhaps others).
+    - We interpret each row as a single "Draw" with columns 7..1. 
+    - Then R2/R4/R6/R8 might come from 'RowType'. 
+      For example, a row with RowType=R2 => we put its columns in pattern_variations["R2"].
+
+    This is a bit contrived, but it shows how you can map CSV data into the expected structure.
+    (You can do a more advanced approach if your CSV is truly the "R2..R8" structure.)
+    """
+    # We'll focus on "Combined_combined" as an example:
+    combined_key = "Combined_combined"
+    if combined_key not in tables_dict:
+        st.warning(f"No {combined_key} table found. This example will do nothing.")
+        return {"sections":{}}
+
+    df = tables_dict[combined_key].copy()
+    # We assume df has columns: [Set, Draw, RowType, 7, 6, 5, 4, 3, 2, 1, ...]
+    # We'll group by Set+Draw, then gather row data for R2, R4, R6, R8 each in the "pattern_variations".
+    # We'll treat "section" as "Combined" only, with set=whatever is in df['Set'] (like 'Set1','Set2', etc.).
+    # We'll name the draws as "Draw1","Draw2", etc. based on your actual df['Draw'] column.
+
+    sections_data = defaultdict(lambda: {"sets": defaultdict(lambda: {"draws":{}})})
+
+    grouped = df.groupby(["Set","Draw"])
+    for (set_name, draw_id), group in grouped:
+        # example: set_name='Set1', draw_id=1 => "Draw1"
+        draw_label = f"Draw{draw_id}"
+        pattern_variations = defaultdict(list)
+        # we also might want to store hotzone metadata if your DF has it (this example omits for brevity).
+
+        # in each group, we expect rows with RowType in [R2, R4, R6, R8].
+        # each row has columns 7..1 with the "digits."
+        # We'll just read them left->right and store them as if they are "columns."
+        # e.g. pattern_variations["R2"][0] => the digits from column7, 
+        # pattern_variations["R2"][1] => digits from column6, etc.
+
+        # But in many real CSV structures, each row is 1 "Draw" + "RowType", 
+        # so columns 7..1 might be '6688', '9941', etc. 
+        # We'll just do a direct approach: we store them in a single string?
+
+        # For each rowType, we'll build a list-of-strings from col7..col1
+        # ignoring the possibility that the CSV might have many rows. 
+        # We'll do a single row -> single list approach for demo.
+
+        for _, row in group.iterrows():
+            rt = str(row["RowType"])
+            # Gather columns 7..1 into a list of strings
+            # some columns might be missing or NaN => coerce to str
+            col_values = []
+            for colN in ['7','6','5','4','3','2','1']:
+                if colN in row:
+                    val = str(row[colN]) if pd.notna(row[colN]) else ''
+                else:
+                    val = ''
+                col_values.append(val)
+            pattern_variations[rt] = col_values
+
+        # store in the sections_data under "Combined" -> set_name -> draw_label -> ...
+        sections_data["Combined"]["sets"][set_name]["draws"][draw_label] = {
+            "pattern_variations": dict(pattern_variations),
+            "metadata": {
+                # e.g. "is_hot_zone": ???, "hot_zone_indicators": ??? 
+                # For now, we'll put a placeholder
+                "is_hot_zone": False
+            }
+        }
+
+    json_data = { "sections": dict(sections_data) }
+    return json_data
+
+
+################################################################################
+# MAIN STREAMLIT APP
+################################################################################
+
+def main():
+    st.title("Stable Pattern Analyzer (Standalone) - PART 2 Demo")
+    st.write("This app loads the standard CSV tables for a chosen state, "
+             "converts them to the JSON-like structure expected by the stable pattern extractor, "
+             "and then runs the extraction + displays the results in Streamlit.")
+
+    # Select state
+    states = list(STATES)  # from your state_utils
+    selected_state = st.selectbox("Select State", states, index=0)
+    if not selected_state:
+        st.info("No state selected.")
+        return
+
+    if st.button("Run Stable Pattern Analysis"):
+        with st.spinner(f"Loading tables for {selected_state}..."):
+            tables = load_state_tables(selected_state)
+            if not tables:
+                st.error(f"No tables found for {selected_state}. Make sure CSVs exist.")
+                return
+
+        with st.spinner("Converting tables to JSON-like structure..."):
+            json_data = convert_tables_to_json_style(tables)
+            if "sections" not in json_data or not json_data["sections"]:
+                st.error("Conversion yielded empty or invalid structure. Stopping.")
+                return
+
+        with st.spinner("Extracting stable patterns..."):
+            results = run_stable_pattern_extraction(json_data)
+
+        # Build an HTML report
+        report_html = build_html_report(results)
+        # Provide a download button for the HTML
+        html_b64 = base64.b64encode(report_html.encode("utf-8")).decode()
+        st.download_button(
+            label="Download HTML Report",
+            data=html_b64,
+            file_name="stable_patterns_report.html",
+            mime="text/html"
+        )
+
+        # Also show top patterns in Streamlit
+        # We'll flatten the results just like we do in the "demo_main" console approach
+        st.subheader("Top Patterns (Global)")
+
+        all_patterns = []
+        for section_name, setsdict in results.items():
+            for set_name, draw_list in setsdict.items():
+                for d_idx, col_list in enumerate(draw_list, start=1):
+                    draw_label = f"Draw{d_idx}"
+                    for col_i, cdict in enumerate(col_list):
+                        for pat, info in cdict.items():
+                            all_patterns.append({
+                                "Section": section_name,
+                                "Set": set_name,
+                                "Draw": draw_label,
+                                "Column": col_i+1,
+                                "Pattern": pat,
+                                "Score": info["score"]
+                            })
+        # sort
+        all_patterns.sort(key=lambda x: x["Score"], reverse=True)
+        # make a small df
+        topN = 15
+        top_df = pd.DataFrame(all_patterns[:topN])
+        st.dataframe(top_df.reset_index(drop=True))
+
+        st.success("Stable pattern analysis complete!")
+
+    else:
+        st.info("Select a state and click 'Run Stable Pattern Analysis' to begin.")
+
+if __name__ == "__main__":
+    main()
+How This Script Works
+User picks a state from the dropdown.
+
+We call load_state_tables (just like your V-Trac script) to get 6 DataFrames for that state.
+
+We then convert those DataFrames into a JSON-like structure—basically replicating the format your stable extractor wants (like the “sections->...->sets->...->draws->...->pattern_variations->row_type...”).
+
+We call the stable extractor’s run_stable_pattern_extraction(json_data) method.
+
+We build an HTML report with build_html_report(results).
+
+We provide a download button for the HTML, plus a simple top-15 summary table in Streamlit.
+
+In practice, you can:
+
+Expand or modify the convert_tables_to_json_style function to fully incorporate hot zone indicators, star markers, or columns.
+
+Tweak the scoring, or even add new fields in the metadata if you wish.
+
+This code is just an illustrative example showing how you can integrate “Part 1” with a Streamlit interface that resembles your V-Trac approa
