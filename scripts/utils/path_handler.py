@@ -44,8 +44,14 @@ def get_outputs_dir():
 
 def get_tables_output_dir():
     """Get the tables output directory path"""
-    date_str = get_current_date_str()
-    return os.path.join(get_outputs_dir(), "tables", date_str)
+    return os.path.join(get_outputs_dir(), "tables")
+
+def get_analysis_output_dir() -> str:
+    """
+    Folder where HTML/CSV/JSON analysis files are written.
+    Matches the layout used by vtrac & stable-pattern tools.
+    """
+    return os.path.join(get_outputs_dir(), "analysis")
 
 def get_winners_output_dir():
     """Get the winners output directory path"""
@@ -100,7 +106,8 @@ def create_output_directories():
         get_cleaned_data_dir(),
         get_outputs_dir(),
         get_tables_output_dir(),
-        get_winners_output_dir()
+        get_winners_output_dir(),
+        get_analysis_output_dir()
     ]
     
     for directory in dirs:
@@ -115,8 +122,9 @@ if __name__ == "__main__":
     print(f"Original Data: {get_original_data_dir()}")
     print(f"Cleaned Data: {get_cleaned_data_dir()}")
     print(f"Outputs Directory: {get_outputs_dir()}")
-    print(f"Tables Output (Today): {get_tables_output_dir()}")
+    print(f"Tables Output: {get_tables_output_dir()}")
     print(f"Winners Output (Today): {get_winners_output_dir()}")
+    print(f"Analysis Output: {get_analysis_output_dir()}")
     print(f"Excel File Path: {get_excel_path()}")
     
     # Create directories

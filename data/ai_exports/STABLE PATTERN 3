@@ -1,0 +1,637 @@
+
+python
+Copy
+#!/usr/bin/env python
+"""
+stable_pattern_extractor.py
+
+One-file script that:
+ 1) Loads one or more "combined table" CSV files (each with columns: Set,Draw,RowType,7..1).
+ 2) Finds "stable 3-value" digit substrings in R2/R4/R6/R8 cells (≥3 digits, ≤3 distinct digits or V-Trac).
+ 3) Groups & scores them by vertical coverage, horizontal adjacency, etc.
+ 4) Outputs a highlight-enabled HTML and a CSV summary of patterns.
+
+Usage (CLI):
+   python stable_pattern_extractor.py --files <csv1> <csv2> ... --html output.html --csv output.csv
+
+Or run in Streamlit:
+   streamlit run stable_pattern_extractor.py
+"""
+
+import os, sys, re, argparse
+import pandas as pd
+from collections import defaultdict, Counter
+from functools import lru_cache
+import json
+from datetime import datetime
+
+try:
+    import streamlit as st
+    RUNNING_STREAMLIT = True
+except ImportError:
+    st = None
+    RUNNING_STREAMLIT = False
+
+###############################################################################
+# PART A: Helpers & Config
+###############################################################################
+COLS = ['7','6','5','4','3','2','1']
+
+# V-Trac mapping: digits -> 1..5
+digit2v = {
+    '0':1,'5':1,
+    '1':2,'6':2,
+    '2':3,'7':3,
+    '3':4,'8':4,
+    '4':5,'9':5
+}
+
+# Mirror pairs: e.g. (0,5), (1,6), ...
+mirror_pairs = {'0':'5','5':'0','1':'6','6':'1','2':'7','7':'2','3':'8','8':'3','4':'9','9':'4'}
+
+def is_3value_pattern(sub: str) -> bool:
+    """
+    True if 'sub' has <=3 unique digits or <=3 unique vtrac values.
+    We skip non-digit chars in this check.
+    """
+    digits = set(ch for ch in sub if ch.isdigit())
+    if len(digits) <=3:
+        return True
+    vvals = {digit2v[d] for d in digits if d in digit2v}
+    return (len(vvals)<=3)
+
+def strip_stars_and_non_digits(s: str) -> str:
+    """Remove '*' and any non-digit from the cell. We'll do substring detection on pure digits."""
+    return re.sub(r'[^0-9]', '', s or '')
+
+###############################################################################
+# PART B: Substring Extraction & Grouping
+###############################################################################
+def find_substrings_in_cell(cell_val: str, min_len=3, max_len=8):
+    """
+    Return all distinct substrings [≥3 ≤max_len] in 'cell_val' that pass is_3value_pattern.
+    """
+    cell_digits = strip_stars_and_non_digits(cell_val)
+    results = set()
+    L = len(cell_digits)
+    for start in range(L):
+        for end in range(start+min_len, min(start+max_len+1, L+1)):
+            sub = cell_digits[start:end]
+            if is_3value_pattern(sub):
+                results.add(sub)
+    return results
+
+def canonical_form(sub: str) -> str:
+    """Sort digits to unify permutations, e.g. '418' -> '148'."""
+    return ''.join(sorted(sub))
+
+###############################################################################
+# PART C: Main Analysis (vertical/horizontal coverage, etc.)
+###############################################################################
+def analyze_patterns(dflist, section_name=""):
+    """
+    Given a list of rows in DataFrame form (the parsed CSV for a single section),
+    returns (highlight_map, pattern_list).
+
+    highlight_map: (row_index,col) -> mask array of bools (which chars in cell are part of stable pattern)
+    pattern_list: [ { 'section':..., 'Set':..., 'Draw':..., 'Col':..., 'Pattern':..., 'Score':..., etc.}, ... ]
+    """
+    # We'll unify all row data in a single DataFrame
+    df = pd.concat(dflist, ignore_index=True) if isinstance(dflist,list) else dflist
+    df = df.fillna('')
+    df.reset_index(drop=True, inplace=True)
+
+    # We only care about rows with RowType in [R2, R4, R6, R8] for substring detection
+    # But we'll store highlight for them. We'll skip RowType=DRAW_DATA in substring detection
+    mask_map = {}  # (row_i,col) -> [bool]*len(original_cell)
+
+    # Step 1: collect all substring occurrences
+    # pattern_occurrences: list of {set,draw, rowtype, col, pattern, row_i}
+    pattern_occurrences = []
+    for i, row in df.iterrows():
+        rowtype = row.get('RowType','')
+        if rowtype not in ['R2','R4','R6','R8']:
+            continue
+        setv = row.get('Set',''); drawv = row.get('Draw','')
+        for c in COLS:
+            cell_raw = str(row.get(c,''))
+            if not cell_raw.strip():
+                continue
+            # find stable substrings
+            stable_subs = find_substrings_in_cell(cell_raw)
+            if not stable_subs:
+                continue
+            # We'll build a mask
+            mask = [False]*len(cell_raw)
+            # For each stable_sub, find all occurrences in cell_raw ignoring non-digit vs. digit alignment
+            # We'll do a naive approach: we reconstruct a digit-only version, track its mapping to the original
+            # This can get more complex if there are '*' in the middle, etc. We'll do a rough approach for highlight.
+            digit_positions = []
+            for idx_ch, ch in enumerate(cell_raw):
+                if ch.isdigit():
+                    digit_positions.append(idx_ch)
+            digit_str = ''.join(cell_raw[idx] for idx in digit_positions)
+
+            # for each sub in stable_subs, search in digit_str
+            for subx in stable_subs:
+                start_idx = 0
+                while True:
+                    f = digit_str.find(subx, start_idx)
+                    if f<0:
+                        break
+                    # highlight positions in mask
+                    for k in range(f, f+len(subx)):
+                        if f+len(subx)<=len(digit_positions):
+                            realpos = digit_positions[k]
+                            mask[realpos] = True
+                    start_idx = f+1
+
+                # record occurrence
+                pattern_occurrences.append({
+                    'section': section_name,
+                    'Set': setv,
+                    'Draw': drawv,
+                    'RowType': rowtype,
+                    'Col': c,
+                    'Pattern': subx,
+                    'row_i': i
+                })
+            mask_map[(i,c)] = mask
+
+    # Step 2: group them by (section, Set, Draw, Col, canonical_form)
+    grouping = defaultdict(lambda: {'rows': set(), 'patterns': set()})
+    for occ in pattern_occurrences:
+        cform = canonical_form(occ['Pattern'])
+        key = (occ['section'],occ['Set'],occ['Draw'],occ['Col'],cform)
+        grouping[key]['rows'].add(occ['RowType'])
+        grouping[key]['patterns'].add(occ['Pattern'])
+
+    # Step 3: compute coverage, adjacency, etc.
+    # We'll gather for adjacency analysis => grouping by (section, set, draw, cform) => list of columns
+    adjacency_dict = defaultdict(list)
+    for (sec,s,d,col,cform), info in grouping.items():
+        adjacency_dict[(sec,s,d,cform)].append(int(col))
+
+    # Build final list
+    results_list = []
+    for (sec,s,d,col,cform), info in grouping.items():
+        rowcov = len(info['rows'])  # vertical coverage
+        perm_count = len(info['patterns'])
+        # optional mirror check
+        mirror_flag = False
+        for dd in cform:
+            if mirror_pairs.get(dd,'') in cform:
+                mirror_flag = True
+                break
+
+        # adjacency pass
+        colset = sorted(adjacency_dict[(sec,s,d,cform)])
+        # find the longest consecutive run
+        best_run=1
+        run=1
+        for i in range(1,len(colset)):
+            if colset[i]==colset[i-1]+1:
+                run+=1
+            else:
+                best_run=max(best_run,run)
+                run=1
+        best_run=max(best_run,run)
+
+        # quick naive score: coverage + best_run + mirror bonus
+        base_score = rowcov*2 + best_run  # coverage is weighted 2, adjacency is weighted 1
+        if mirror_flag:
+            base_score+=1
+        # if perm_count < rowcov => means there's a perfect vertical "straight" in some row
+        # e.g. 2 row coverage, but only 1 distinct pattern => 1 is a vertical straight
+        # we can +1
+        if perm_count < rowcov:
+            base_score+=1
+
+        # if col=='1' and rowcov==4 => consensus in final col => +2
+        consensus_b=0
+        if col=='1' and rowcov==4:
+            consensus_b=2
+            base_score+=2
+
+        # vtrac form
+        vvals = sorted(digit2v.get(x,0) for x in cform)
+        vtrac_s = ''.join(str(v) for v in vvals)
+
+        # store
+        results_list.append({
+            'section': sec,
+            'Set': s,
+            'Draw': d,
+            'Column': col,
+            'Canonical': cform,
+            'score': base_score,
+            'rows': ','.join(sorted(info['rows'])),
+            'mirror': mirror_flag,
+            'perm_count': perm_count,
+            'vtrac': vtrac_s,
+            'consensus': consensus_b
+        })
+
+    # sort results
+    results_list.sort(key=lambda x:x['score'], reverse=True)
+    return mask_map, results_list
+
+###############################################################################
+# PART D: HTML Output
+###############################################################################
+def build_html(df, mask_map, section_name, results_chunk):
+    """
+    Build an HTML table for the data + highlight, plus a chunk of <table> for the results.
+    """
+    # 1) table with highlight
+    lines = [f"<h2>{section_name}</h2>"]
+    lines.append("<table border='1' cellspacing='0' cellpadding='3' style='border-collapse:collapse;'>")
+    # header
+    lines.append("<tr><th>Set</th><th>Draw</th><th>RowType</th>"+''.join(f"<th>{c}</th>" for c in COLS)+"</tr>")
+
+    for i, row in df.iterrows():
+        setv = row.get('Set',''); drawv=row.get('Draw',''); rt=row.get('RowType','')
+        lines.append("<tr>")
+        lines.append(f"<td>{setv}</td><td>{drawv}</td><td>{rt}</td>")
+        for c in COLS:
+            cell_raw = str(row.get(c,''))
+            if not cell_raw.strip() or cell_raw.strip().lower()=='nan':
+                lines.append("<td></td>")
+                continue
+            mask = mask_map.get((i,c), [False]*len(cell_raw))
+            cell_out=""
+            for idx_ch, ch in enumerate(cell_raw):
+                start_h = (mask[idx_ch] and (idx_ch==0 or not mask[idx_ch-1]))
+                end_h   = (mask[idx_ch] and ((idx_ch==len(cell_raw)-1) or not mask[idx_ch+1]))
+                if start_h:
+                    cell_out+="<span style='background:yellow;font-weight:bold;'>"
+                cell_out+=ch
+                if end_h:
+                    cell_out+="</span>"
+            lines.append(f"<td>{cell_out}</td>")
+        lines.append("</tr>")
+    lines.append("</table>")
+
+    # 2) a summary table of patterns
+    lines.append("<h3>Detected Patterns</h3>")
+    lines.append("<table border='1' cellpadding='3' cellspacing='0'>")
+    lines.append("<tr><th>Section</th><th>Set</th><th>Draw</th><th>Col</th><th>Canonical</th><th>Score</th><th>Rows</th><th>Mirror?</th><th>VTrac</th><th>ConsBonus</th></tr>")
+    for r in results_chunk:
+        lines.append(f"<tr><td>{r['section']}</td><td>{r['Set']}</td><td>{r['Draw']}</td>"
+                     f"<td>{r['Column']}</td><td>{r['Canonical']}</td><td>{r['score']}</td>"
+                     f"<td>{r['rows']}</td><td>{'Yes' if r['mirror'] else ''}</td><td>{r['vtrac']}</td><td>{r['consensus']}</td></tr>")
+    lines.append("</table>")
+    return "\n".join(lines)
+
+
+###############################################################################
+# PART E: Command Line & Streamlit
+###############################################################################
+def main_cli():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--files", nargs="+", help="Paths to one or more combined CSVs.")
+    ap.add_argument("--html", default="stable_patterns.html", help="Output HTML file.")
+    ap.add_argument("--csv",  default="stable_patterns.csv",  help="Output CSV file.")
+    args = ap.parse_args()
+
+    if not args.files:
+        print("No CSV files provided. Use --files path/to/midday.csv path/to/evening.csv ...")
+        sys.exit(1)
+
+    # load
+    df_list = []
+    for f in args.files:
+        if not os.path.exists(f):
+            print(f"[Error] File not found: {f}")
+            continue
+        # guess a section_name from the filename?
+        # e.g. "Indiana4_Midday_combined.csv" -> "Midday"  or fallback
+        fname = os.path.basename(f)
+        m = re.search(r'_(Midday|Evening|Combined)_', fname, re.IGNORECASE)
+        section_name = m.group(1) if m else "Combined"
+        df = pd.read_csv(f, dtype=str).fillna('')
+        # store as (df, section_name)
+        df_list.append((df, section_name))
+
+    if not df_list:
+        print("No valid CSV loaded.")
+        sys.exit(0)
+
+    all_results = []
+    html_sections = []
+
+    for df, section_name in df_list:
+        df.reset_index(drop=True, inplace=True)
+        mask_map, results_list = analyze_patterns(df, section_name=section_name)
+        all_results.extend(results_list)
+        # build HTML for this section
+        section_html = build_html(df, mask_map, section_name, results_list[:30])  # just top 30 for brevity
+        html_sections.append(section_html)
+
+    # Sort final by score
+    all_results.sort(key=lambda x:x['score'], reverse=True)
+
+    # Build one big HTML
+    final_html = """<!DOCTYPE html><html><head>
+    <meta charset="utf-8"/>
+    <title>Stable Patterns Report</title>
+    <style>
+    body { font-family: Arial, sans-serif; margin: 10px; }
+    table { border-collapse: collapse; margin-bottom:20px; }
+    td,th { border:1px solid #ccc; padding:4px 6px; }
+    span[style*="background"] { border:1px dotted #f00; }
+    </style></head><body>
+    <h1>Stable Patterns Extraction</h1>
+    <p>Generated: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "</p>\n"
+    final_html += "\n".join(html_sections)
+    final_html += "\n</body></html>"
+
+    # write HTML
+    with open(args.html, 'w', encoding='utf-8') as f:
+        f.write(final_html)
+    print(f"HTML written -> {args.html}")
+
+    # write CSV
+    cols = ["section","Set","Draw","Column","Canonical","score","rows","mirror","vtrac","consensus"]
+    import csv as cmod
+    with open(args.csv,'w',newline='',encoding='utf-8') as fout:
+        wr = cmod.DictWriter(fout, fieldnames=cols)
+        wr.writeheader()
+        for r in all_results:
+            rowd = {k:r[k] for k in cols if k in r}
+            wr.writerow(rowd)
+    print(f"CSV written -> {args.csv}")
+
+def main_streamlit():
+    st.title("Stable Pattern Extractor (All-in-One)")
+    files = st.text_area("Enter paths to one or more CSV files (one per line):")
+    out_html = st.text_input("Output HTML file", "stable_patterns.html")
+    out_csv  = st.text_input("Output CSV file",  "stable_patterns.csv")
+    if st.button("Run Extraction"):
+        flist = [line.strip() for line in files.split('\n') if line.strip()]
+        if not flist:
+            st.warning("No files provided.")
+            return
+        df_list = []
+        for f in flist:
+            if not os.path.exists(f):
+                st.error(f"File not found: {f}")
+                continue
+            fname = os.path.basename(f)
+            m = re.search(r'_(Midday|Evening|Combined)_', fname, re.IGNORECASE)
+            section_name = m.group(1) if m else "Combined"
+            df = pd.read_csv(f, dtype=str).fillna('')
+            df_list.append((df, section_name))
+
+        all_results = []
+        html_sections=[]
+        for df, section_name in df_list:
+            df.reset_index(drop=True, inplace=True)
+            mask_map, results_list = analyze_patterns(df, section_name=section_name)
+            all_results.extend(results_list)
+            # partial HTML
+            partial = build_html(df, mask_map, section_name, results_list[:30])
+            html_sections.append(partial)
+
+        all_results.sort(key=lambda x:x['score'], reverse=True)
+        # Build big HTML
+        final_html = "<html><head><meta charset='utf-8'/><title>Stable Patterns</title></head><body>"
+        final_html += "\n".join(html_sections) + "</body></html>"
+        # show partial result
+        st.markdown("### Top 50 Patterns")
+        st.dataframe(pd.DataFrame(all_results[:50]))
+        # write files
+        with open(out_html,'w',encoding='utf-8') as ff:
+            ff.write(final_html)
+        # CSV
+        cols = ["section","Set","Draw","Column","Canonical","score","rows","mirror","vtrac","consensus"]
+        import csv as cmod
+        with open(out_csv,'w',newline='',encoding='utf-8') as fout:
+            wr = cmod.DictWriter(fout, fieldnames=cols)
+            wr.writeheader()
+            for r in all_results:
+                rowd = {k:r[k] for k in cols if k in r}
+                wr.writerow(rowd)
+        st.success(f"HTML -> {out_html}, CSV -> {out_csv}")
+        st.info("Done. You can open the HTML file in a browser, or see the top patterns above.")
+
+###############################################################################
+# entry point
+###############################################################################
+if __name__ == "__main__":
+    if RUNNING_STREAMLIT and st._is_running_with_streamlit:
+        main_streamlit()
+    else:
+        main_cli()
+How to Use This One‐File Script
+Copy & Paste the entire code into a file named, for example, stable_pattern_extractor.py.
+
+Install dependencies:
+
+bash
+Copy
+pip install pandas streamlit
+Command‐Line usage:
+
+bash
+Copy
+python stable_pattern_extractor.py --files path/to/Midday_combined.csv path/to/Evening_combined.csv \
+    --html stable_patterns.html \
+    --csv  stable_patterns.csv
+After it finishes, you’ll have:
+
+stable_patterns.html – an HTML file you can open in a browser to see the original table + highlighted stable substrings.
+
+stable_patterns.csv – a listing of each pattern found, with the computed score and various flags.
+
+Streamlit usage:
+
+bash
+Copy
+streamlit run stable_pattern_extractor.py
+Paste your CSV file paths into the text area (one path per line).
+
+Click “Run Extraction.”
+
+It will show a top-50 patterns table in the Streamlit UI, plus an HTML/CSV saved to the file paths you specified.
+
+Why This Integrates Everything We Discussed
+Extracts multi‐digit strings (3–8 length by default) from each R2/R4/R6/R8 cell.
+
+3‐value check: We skip any substring that has more than 3 distinct digits in normal or more than 3 in V-Trac.
+
+Highlights them in the HTML table so you visually confirm the script sees the same “clusters” you do.
+
+Scores each pattern with a straightforward weighting:
+
+vertical coverage = how many of {R2,R4,R6,R8} found it,
+
+adjacency = how many consecutive columns it occupies,
+
+mirror bonus if the substring has a digit & its mirror pair,
+
+consensus if it’s a full 4‐row coverage in col=1.
+
+Groups by (section,Set,Draw,Col,canonical_form) to unify permutations (e.g. “468,” “864,” “648” are the same canonical pattern).
+
+Outputs a single final scoreboard in CSV sorted by score.
+
+Once you see the results, you can tweak these parts:
+
+is_3value_pattern(sub) – if you want to allow up to 4 digits, or require strictly ≤3 normal digits plus ≤2 V‐Trac, etc.
+
+min_len/max_len – if you want to allow bigger stable substrings (like 12 digits).
+
+Scoring – inside the loop at base_score = rowcov*2 + best_run + .... Feel free to add or remove factors (hot‐zone detection, horizontal “straight” detection, etc.).
+
+By default, it doesn’t check “hot zone” marks ('*') or multi‐day “lingering” bonuses. If you want them, you can see how easy it is to add a line in the scoring loop:
+
+python
+Copy
+hot = 0
+# e.g. if any row in that draw/col has '*'
+# you'd do something like:  if '*' in some cell => hot=2
+base_score += hot
+Similarly, for lingering across sets, you’d track (set_name, draw, col, cform) in a dictionary. That’s the nice part about everything being in one Python file: you can expand it without rummaging in 4–5 different scripts.
+
+That’s it – a monolithic “Stable Pattern Extractor” that should “just work” in Cursor. Copy–paste the script above, run it, and open the resulting HTML. Now you can visually see if the recognized patterns align with your manual picks – and adjust from there. Have fun!
+# stable_pattern_extractor_full.py   (PART 2 of 2)
+#  ── append this directly after PART 1 ──
+
+##############################################################################
+# ── HTML OUTPUT ─────────────────────────────────────────────────────────────
+##############################################################################
+def render_table(df: pd.DataFrame, hl, title: str, top_patterns):
+    """Return HTML chunk with highlight overlay + mini scoreboard."""
+    h  = [f"<h2>{title}</h2>"]
+    h += ["<table style='border-collapse:collapse;'>"]
+    # header
+    h += ["<tr><th>Set</th><th>Draw</th><th>Row</th>" +
+          ''.join(f"<th>{c}</th>" for c in COLS) + "</tr>"]
+    for i,row in df.iterrows():
+        h.append("<tr>")
+        h.append(f"<td>{row['Set']}</td><td>{row['Draw']}</td><td>{row['RowType']}</td>")
+        for col in COLS:
+            raw = str(row[col])
+            if not raw.strip() or raw.strip().lower()=='nan':
+                h.append("<td></td>"); continue
+            mask = hl.get((i,col), [False]*len(raw))
+            cell_out = ""
+            for j,ch in enumerate(raw):
+                if mask[j] and (j==0 or not mask[j-1]):
+                    cell_out += "<span style='background:#ffff6b;'>"
+                cell_out += ch
+                if mask[j] and (j==len(raw)-1 or not mask[j+1]):
+                    cell_out += "</span>"
+            h.append(f"<td>{cell_out}</td>")
+        h.append("</tr>")
+    h.append("</table>")
+
+    # mini pattern list (top 30)
+    h.append("<h4>Top patterns (score ↓)</h4>")
+    h.append("<table style='border-collapse:collapse;'><tr>" +
+             "<th>Set</th><th>Draw</th><th>Col</th><th>Pattern</th>" +
+             "<th>Score</th><th>Rows</th><th>Span</th><th>V-Trac</th></tr>")
+    for r in top_patterns[:30]:
+        h.append(f"<tr><td>{r['Set']}</td><td>{r['Draw']}</td><td>{r['Column']}</td>"
+                 f"<td>{r['Pattern']}</td><td>{r['score']}</td>"
+                 f"<td>{r['coverage']}</td><td>{r['span']}</td><td>{r['vtrac']}</td></tr>")
+    h.append("</table><hr/>")
+    return '\n'.join(h)
+
+##############################################################################
+# ── CLI ENTRY ───────────────────────────────────────────────────────────────
+##############################################################################
+def run_cli():
+    ap = argparse.ArgumentParser(description="Stable-Pattern Extractor FULL")
+    ap.add_argument("--files", nargs="+", required=True, help="One or more combined-table CSVs.")
+    ap.add_argument("--html", default="stable_patterns_report.html")
+    ap.add_argument("--csv",  default="stable_patterns_scores.csv")
+    args = ap.parse_args()
+
+    html_chunks = []
+    all_scores  = []
+
+    for path in args.files:
+        if not os.path.exists(path):
+            print(f"[!] File not found → {path}"); continue
+        # guess section from filename else use file basename
+        fname = os.path.basename(path)
+        m = re.search(r'_(Midday|Evening|Combined)_', fname, re.I)
+        section = m.group(1) if m else os.path.splitext(fname)[0]
+
+        df = pd.read_csv(path, dtype=str)
+        hl, scores = analyse_section(df, section)
+        html_chunks.append(render_table(df, hl, section, scores))
+        all_scores.extend(scores)
+        print(f"✓ {section}: {len(scores)} patterns")
+
+    if not html_chunks:
+        print("No valid CSVs processed."); sys.exit(0)
+
+    # write HTML
+    full_html = f"""<!DOCTYPE html><html><head>
+    <meta charset='utf-8'><title>Stable Patterns Report</title>
+    <style>body{{font-family:Arial,Helvetica,sans-serif;font-size:14px}}</style></head><body>
+    <h1>Stable Pattern Extractor – Report</h1>
+    <p>Generated: {datetime.now():%Y-%m-%d %H:%M:%S}</p>
+    {''.join(html_chunks)}
+    </body></html>"""
+    with open(args.html,'w',encoding='utf-8') as f:
+        f.write(full_html)
+    print(f"HTML → {args.html}")
+
+    # write CSV
+    pd.DataFrame(all_scores).to_csv(args.csv,index=False)
+    print(f"CSV  → {args.csv}")
+
+##############################################################################
+# ── STREAMLIT ENTRY (optional) ──────────────────────────────────────────────
+##############################################################################
+def run_streamlit():
+    import streamlit as st
+    st.set_page_config("Stable Pattern Extractor FULL", layout="wide")
+
+    st.title("Stable-Pattern Extractor FULL")
+
+    filelist = st.text_area("CSV paths (one per line)").strip().splitlines()
+    out_html = st.text_input("Output HTML", "stable_patterns_report.html")
+    out_csv  = st.text_input("Output CSV",  "stable_patterns_scores.csv")
+
+    if st.button("Run"):
+        if not filelist:
+            st.warning("No files provided"); st.stop()
+
+        html_chunks=[]; all_scores=[]
+        for p in filelist:
+            if not os.path.exists(p):
+                st.error(f"File not found: {p}"); continue
+            m = re.search(r'_(Midday|Evening|Combined)_', os.path.basename(p), re.I)
+            section = m.group(1) if m else os.path.splitext(os.path.basename(p))[0]
+            df = pd.read_csv(p,dtype=str)
+            hl,scores = analyse_section(df,section)
+            html_chunks.append(render_table(df,hl,section,scores))
+            all_scores.extend(scores)
+        if not html_chunks:
+            st.stop()
+
+        # show top-level DataFrame
+        st.subheader("Top 100 patterns")
+        st.dataframe(pd.DataFrame(all_scores).sort_values('score',ascending=False).head(100))
+
+        # write outputs
+        with open(out_html,'w',encoding='utf-8') as f:
+            f.write("<html><head><meta charset='utf-8'></head><body>"+''.join(html_chunks)+"</body></html>")
+        pd.DataFrame(all_scores).to_csv(out_csv,index=False)
+        st.success(f"Saved →  {out_html}, {out_csv}")
+        st.components.v1.html(''.join(html_chunks), height=800, scrolling=True)
+
+##############################################################################
+# ── MAIN ────────────────────────────────────────────────────────────────────
+##############################################################################
+if __name__ == "__main__":
+    # detect if launched via streamlit
+    if 'streamlit' in sys.argv[0]:
+        run_streamlit()
+    else:
+        run_cli()
