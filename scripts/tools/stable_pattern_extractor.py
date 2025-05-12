@@ -121,6 +121,10 @@ def analyse(df: pd.DataFrame, section: str):
 
             # find stable substrings
             subs = find_subs(raw)
+            # If the cell itself is only 1–2 digits long, inject it so
+            # consensus logic can "see" the row even when find_subs() returns nothing.
+            if not subs and 1 <= len(digits_only(raw)) <= 2:
+                subs.add(digits_only(raw))
             if not subs:
                 continue
 
@@ -258,9 +262,14 @@ def analyse(df: pd.DataFrame, section: str):
             })
             box_info['stub_done'] = True
 
-        # (B) Skip any pattern <3 digits if it's not a stub row
-        if len(cpat) < 3:
-            continue
+        # (B) Gate short canonicals:
+        #     keep a 1- or 2-digit value only when it is
+        #       • full tail-consensus, or
+        #       • the only survivor in the box (dom_last / dom_pair)
+        if len(cpat) <= 2:
+            keep_short = (is_consbox or (len(cpat) == 2 and len(set(cpat)) == 1))
+            if not keep_short:
+                continue
 
         # Build flags
         straight   = (perm == 1)
