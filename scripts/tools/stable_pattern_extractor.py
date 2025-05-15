@@ -276,7 +276,7 @@ def analyse(df: pd.DataFrame, section: str):
         straight2  = (straight and rowcov >= 2)
         straight3  = (straight and rowcov >= 3)
         mirror     = any(mirror_pairs.get(d, None) in cpat for d in cpat)
-        single_left= (straight and rowcov >= 3)
+        single_left= (straight and rowcov >= 3 and span == 1)
 
         # --- (B1) Rigorous row-by-row consensus check ---
         rows_needed = {'R2','R4','R6','R8'}
@@ -429,6 +429,13 @@ def analyse(df: pd.DataFrame, section: str):
                     if kk < len(digit_positions):
                         newmask[digit_positions[kk]] = True
                 pos_idx = digit_str.find(sub, pos_idx+1)
+        # --- paint full-cell 1- or 2-digit consensus (e.g. 7 / 77) ---
+        raw_digits = digits_only(rawval)
+        if 1 <= len(raw_digits) <= 2:
+            key_full = (section, setv_i, draw_i, col, canon(raw_digits))
+            if key_full in keepers:
+                for k in digit_positions:        # colour every digit
+                    newmask[k] = True
         mask_map[(r_i,col)] = newmask
 
     # final sort
