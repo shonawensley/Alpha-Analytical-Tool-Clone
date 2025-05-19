@@ -736,8 +736,8 @@ def main():
     st.sidebar.markdown("---")
     
     # Page title
-        st.title("Alpha Analytical Tool")
-        
+    st.title("Alpha Analytical Tool")
+    
     # Create tabs
     tabs = st.tabs([
         "📊 Process Data", 
@@ -956,36 +956,36 @@ def view_results_tab():
     table_path = os.path.join(state_dir, selected_table)
     if os.path.exists(table_path):
         try:
-        df = pd.read_csv(table_path)
-        
-        # Apply background colors to different sets
-        def highlight_sets(s):
-            if s.name != 'Set':
-                return [''] * len(s)
+            df = pd.read_csv(table_path)
             
-            return ['background-color: rgba(31, 119, 180, 0.1)' if x == 'Set3'
-                   else 'background-color: rgba(44, 160, 44, 0.1)' if x == 'Set2'
-                   else 'background-color: rgba(255, 127, 14, 0.1)' if (x == 'Set1')
-                   else '' for x in s]
-        
-        # Display styled table
-        st.dataframe(
-            df.style.apply(highlight_sets, axis=0).set_properties(**{
-                'text-align': 'center',
-                'font-family': 'monospace',
-                'white-space': 'nowrap'
-            }),
-            use_container_width=True
-        )
-        
-        # Download button
-        csv = df.to_csv(index=False)
-        st.download_button(
-            "Download Table as CSV",
-            csv,
-            file_name=selected_table,
-            mime="text/csv"
-        )
+            # Apply background colors to different sets
+            def highlight_sets(s):
+                if s.name != 'Set':
+                    return [''] * len(s)
+                
+                return ['background-color: rgba(31, 119, 180, 0.1)' if x == 'Set3'
+                       else 'background-color: rgba(44, 160, 44, 0.1)' if x == 'Set2'
+                       else 'background-color: rgba(255, 127, 14, 0.1)' if (x == 'Set1')
+                       else '' for x in s]
+            
+            # Display styled table
+            st.dataframe(
+                df.style.apply(highlight_sets, axis=0).set_properties(**{
+                    'text-align': 'center',
+                    'font-family': 'monospace',
+                    'white-space': 'nowrap'
+                }),
+                use_container_width=True
+            )
+            
+            # Download button
+            csv = df.to_csv(index=False)
+            st.download_button(
+                "Download Table as CSV",
+                csv,
+                file_name=selected_table,
+                mime="text/csv"
+            )
         except Exception as e:
             st.error(f"Error loading table: {str(e)}")
     else:
@@ -1136,7 +1136,7 @@ def vtrac_analyzer_tab():
         with st.spinner("Running V-TRAC Analysis..."):
             if selected_option == "All States":
                 states_to_run = STATES
-        else:
+            else:
                 states_to_run = [selected_option]
             
             progress_bar = st.progress(0)
@@ -1268,7 +1268,7 @@ def vtrac_analyzer_tab():
             st_tbls = load_state_data(selected_state)
             col1, col2, col3 = st.columns(3)
                     
-                    with col1:
+            with col1:
                 st.markdown("**Midday Combined Table**")
                 if "Midday_combined" in st_tbls:
                     st.dataframe(st_tbls["Midday_combined"], use_container_width=True, height=400)
@@ -1283,12 +1283,12 @@ def vtrac_analyzer_tab():
                 else:
                     st.info("No Midday combined table available")
                     
-                    with col2:
+            with col2:
                 st.markdown("**Evening Combined Table**")
                 if "Evening_combined" in st_tbls:
                     st.dataframe(st_tbls["Evening_combined"], use_container_width=True, height=400)
                     csv = st_tbls["Evening_combined"].to_csv(index=False)
-                            st.download_button(
+                    st.download_button(
                         "Download Evening Combined Table",
                         data=csv,
                         file_name=f"{selected_state}_Evening_combined.csv",
@@ -1298,7 +1298,7 @@ def vtrac_analyzer_tab():
                 else:
                     st.info("No Evening combined table available")
                     
-                    with col3:
+            with col3:
                 st.markdown("**Combined Table**")
                 if "Combined_combined" in st_tbls:
                     st.dataframe(st_tbls["Combined_combined"], use_container_width=True, height=400)
