@@ -32,6 +32,7 @@ from long_string_reducer_part1 import (
     method_b,
     method_c,
     method_d,
+    SECTION_NAMES,
 )
 from long_string_reducer_part1 import run_reduction_progression  # exposed by part‑1
 
@@ -79,27 +80,59 @@ def build_html_for_cell(location_id: str, variation_logs: Dict[Tuple[str, str], 
     return "\n".join(lines)
 
 
-def build_full_html(results_area1: List[Dict], results_area2: List[Dict]) -> str:
-    """Combine all per‑cell tables into a single report."""
-    css = """
-    body { font-family: Arial, sans-serif; }
-    table { border-collapse: collapse; margin-bottom: 28px; }
-    th, td { border: 1px solid #ccc; padding: 4px 6px; font-size: 12px; }
-    th { background: #f2f2f7; }
-    td.step { font-weight: bold; background: #fafafa; }
-    h2 { margin-top: 40px; }
+def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_heads: Dict[str, str] = None) -> str:
+    """Pretty 3-column layout:
+         ┌────────────── Long-String 1 ───────────────┐
+         │ Midday │ Evening │ Combined (each a column)│
+         └─────────────────────────────────────────────┘
+       Same again for Long-String 2.
+       Optionally a small DRAW_DATA summary on top.
     """
-    parts: List[str] = ["<html><head><meta charset='utf-8'>",
-            f"<style>{css}</style></head><body>",
-            "<h1>Digit‑Reduction / Long‑String Report</h1>"]
+    css = """
+    body{font-family:Arial,Helvetica,sans-serif}
+    table{border-collapse:collapse;font-size:12px;margin:6px 0}
+    th,td{border:1px solid #bbb;padding:3px 4px}
+    td.step{font-weight:bold;background:#f7f7f7}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    h3{margin:4px 0 6px}
+    """
+    parts = ["<html><head><meta charset='utf-8'><style>", css, "</style></head><body>",
+             "<h1>Digit-Reduction / Long-String Report</h1>"]
 
-    parts.append("<h2>Area 1 — columns 7/6/5 (Midday · Evening · Combined)</h2>")
-    for cell in results_area1:
-        parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+    # ---- optional DRAW_DATA header ---------------------------------
+    if draw_heads:
+        parts.append("<h2>Latest draw triples (validation)</h2>")
+        parts.append("<table><tr><th>Section</th><th>Latest draw</th></tr>")
+        for sec, trip in draw_heads.items():
+            parts.append(f"<tr><td>{sec}</td><td>{trip}</td></tr>")
+        parts.append("</table>")
 
-    parts.append("<h2>Area 2 — Set 1 → [Draw4 meth 3, Draw6 meth 1]</h2>")
-    for cell in results_area2:
-        parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+    # ---- Long-String 1 (Area-1) ------------------------------------
+    parts.append("<h2>Long-String 1  •  columns 7 / 6 / 5</h2>")
+    parts.append('<div class="grid">')
+    for sec in ("Midday","Evening","Combined"):
+        parts.append(f"<div><h3>{sec}</h3>")
+        # pick the three tables that belong to this section & keep order col7 -> col6 -> col5
+        for col in (7,6,5):
+            for cell in results_area1:
+                if cell["location_id"].startswith(f"{sec}") and f"col{col}" in cell["location_id"]:
+                    parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+        parts.append("</div>")
+    parts.append("</div>")   # /grid
+
+    # ---- Long-String 2 (Area-2) ------------------------------------
+    parts.append("<h2>Long-String 2  •  Set 1 [Draw-4 col 3, Draw-6 col 1]</h2>")
+    parts.append('<div class="grid">')
+    for sec in ("Midday","Evening","Combined"):
+        parts.append(f"<div><h3>{sec}</h3>")
+        # only two cells per section → Draw4-col3 first, then Draw6-col1
+        draw_order = ("Draw4|col3", "Draw6|col1")
+        for frag in draw_order:
+            for cell in results_area2:
+                if cell["location_id"].startswith(f"{sec}") and frag in cell["location_id"]:
+                    parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+        parts.append("</div>")
+    parts.append("</div>")   # /grid
 
     parts.append("</body></html>")
     return "\n".join(parts)
@@ -153,20 +186,42 @@ def main():
         return
 
     # --- gather R2 strings -------------------------------------------------
-    area1_all_sections: List[Dict] = []
-    area2_all_sections: List[Dict] = []
+    area1_cells, area2_cells = [], []
 
-    for sec in SECTION_NAMES: # SECTION_NAMES is imported from part1
-        # Call the extraction functions for each section, passing big_data and the section name
-        area1_all_sections.extend(extract_r2_strings_area1(big_data, sec))
-        area2_all_sections.extend(extract_r2_strings_area2(big_data, sec))
+    for sec in SECTION_NAMES:                      # Midday / Evening / Combined
+        # Ensure the big_data structure has the section before trying to iterate
+        if "sections" in big_data and sec in big_data["sections"]:
+            # Call the extraction functions for each section
+            for loc_id, s in extract_r2_strings_area1(big_data, sec).items():
+                area1_cells.append({
+                    "location_id": loc_id,
+                    "original_string": s,
+                    "metadata": {"section": sec} # Include section metadata
+                })
+            for loc_id, s in extract_r2_strings_area2(big_data, sec).items():
+                area2_cells.append({
+                    "location_id": loc_id,
+                    "original_string": s,
+                    "metadata": {"section": sec} # Include section metadata
+                })
 
     # --- run analyses ------------------------------------------------------
-    analysed_area1 = analyse_area(area1_all_sections, big_data)
-    analysed_area2 = analyse_area(area2_all_sections, big_data)
+    analysed_area1 = analyse_area(area1_cells, big_data)
+    analysed_area2 = analyse_area(area2_cells, big_data)
+
+    # --- collect latest draw triples for validation header -----------------
+    draw_heads = {}
+    for sec in SECTION_NAMES:
+        if (sec in big_data["sections"] and 
+            "Set1" in big_data["sections"][sec]["sets"] and 
+            "Draw1" in big_data["sections"][sec]["sets"]["Set1"]["draws"]):
+            dd = big_data["sections"][sec]["sets"]["Set1"]["draws"]["Draw1"].get("draw_data", {})
+            # col1 is newest → if it exists grab it, else first non-empty col
+            latest = next((dd.get(str(c)) for c in ("1","2","3","4","5","6","7") if dd.get(str(c))), "")
+            draw_heads[sec] = latest
 
     # --- build and dump HTML ---------------------------------------------
-    html = build_full_html(analysed_area1, analysed_area2)
+    html = build_full_html(analysed_area1, analysed_area2, draw_heads)
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     args.out.mkdir(parents=True, exist_ok=True)
     html_path = args.out / f"digit_reduction_{ts}.html"

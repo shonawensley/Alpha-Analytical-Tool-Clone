@@ -144,16 +144,13 @@ def extract_r2_strings_area1(big_data: dict, section: str) -> Dict[str, str]:
         if set_name in section_data["sets"] and "draws" in section_data["sets"][set_name] and "Draw1" in section_data["sets"][set_name]["draws"]:
              draw_data = section_data["sets"][set_name]["draws"]["Draw1"]
              if "pattern_variations" in draw_data and "R2" in draw_data["pattern_variations"]:
-                  # The R2 pattern variations in load_csv_directory are stored as a list
-                  # We need to access the dictionary structure 'draw_data' -> 'draw_data' for column values
-                  if "draw_data" in draw_data:
-                      column_values = draw_data["draw_data"]
-                      for col_num, col_label in zip([7, 6, 5], ["7", "6", "5"]):
-                          if col_label in column_values:
-                              r2_string = str(column_values[col_label]).strip()
-                              loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
-                              if r2_string:
-                                  out[loc_id] = r2_string
+                  column_values = draw_data["pattern_variations"]["R2"]
+                  for col_num, col_label in zip([7, 6, 5], ["7", "6", "5"]):
+                      if col_label in column_values:
+                          r2_string = str(column_values[col_label]).strip()
+                          loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
+                          if r2_string:
+                              out[loc_id] = r2_string
     return out
 
 
@@ -172,8 +169,8 @@ def extract_r2_strings_area2(big_data: dict, section: str) -> Dict[str, str]:
          for draw in ["Draw4", "Draw6"]:
              if draw in set1_draws:
                  draw_data = set1_draws[draw]
-                 if "draw_data" in draw_data:
-                     column_values = draw_data["draw_data"]
+                 if "pattern_variations" in draw_data and "R2" in draw_data["pattern_variations"]:
+                     column_values = draw_data["pattern_variations"]["R2"]
                      # map wanted column numbers to csv columns
                      target_cols = {"Draw4": 3, "Draw6": 1}
                      if draw in target_cols:
