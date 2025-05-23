@@ -48,6 +48,8 @@ COLUMNS_ORDER: List[Tuple[str, str]] = [
     ("A", "combined"), ("B", "combined"), ("C", "combined"), ("D", "combined"),
 ]
 
+STEP_LABEL = {0: "Orig"}  # row-header text; 0 = original string
+
 # ---------------------------------------------------------------------------
 # HTML helpers
 # ---------------------------------------------------------------------------
@@ -69,7 +71,8 @@ def build_html_for_cell(location_id: str, variation_logs: Dict[Tuple[str, str], 
 
     # rows --------------------------------------------------
     for idx in range(max_rows):
-        row_cells = [f"<td class='step'>{idx}</td>"]
+        label = STEP_LABEL.get(idx, idx)          # 0 → "Orig", else number
+        row_cells = [f"<td class='step'>{label}</td>"]
         for key in COLUMNS_ORDER:
             step_log = variation_logs.get(key, [])
             val = step_log[idx] if idx < len(step_log) else ""
@@ -119,9 +122,10 @@ def build_html_for_cell_single(location_id: str, variation_logs: Dict, sec_id: s
     step_log = variation_logs.get(key, [])
     lines = [f"<h3>{_html_escape(location_id)}</h3>"]
     lines.append("<table class='cell'>")
-    lines.append("<tr><th>Step</th><th>Value</th></tr>")
+    lines.append("<tr><th>Step</th><th>Val</th></tr>")
     for idx, val in enumerate(step_log):
-        lines.append(f"<tr><td class='step'>{idx}</td><td>{_html_escape(val)}</td></tr>")
+        label = STEP_LABEL.get(idx, idx)
+        lines.append(f"<tr><td class='step'>{label}</td><td>{_html_escape(val)}</td></tr>")
     lines.append("</table>")
     return "\n".join(lines)
 
@@ -136,18 +140,17 @@ def render_longstring_tables(area1_cells, area2_cells, sec_id):
 def minitable(cell, sec_id):
     meta = cell["metadata"]
     nice_lbl = f'{meta["section"][0]}-{meta["set"][-1]}.{meta["draw"][-1]}'
-    #   → "M-3.1"   (cleaner label)
     key = tuple(sec_id.split("-"))  # ('A','own')
     log = cell["variation_logs"][key]
     rows = ['<caption class="miniCap">'+nice_lbl+'</caption>',
             '<tr><th class="step">#</th><th>Val</th></tr>']
     for i,v in enumerate(log):
-        rows.append(f'<tr><td class="step">{i}</td><td>{v}</td></tr>')
+        label = STEP_LABEL.get(i, i)
+        rows.append(f'<tr><td class="step">{label}</td><td>{v}</td></tr>')
         if i>=7: break
     return '<table class="miniTbl">' + ''.join(rows) + '</table>'
 
 def grid_block(cells, want_cols, sec_id):
-    # group cells by (set, draw, section, col) so each lookup is unambiguous
     box = {}                             # {(set, draw, section, col): cell}
     for c in cells:
         m = c["metadata"]
@@ -160,7 +163,7 @@ def grid_block(cells, want_cols, sec_id):
             lines.append('<div class="grid3">')
             for sec in ("Midday", "Evening", "Combined"):
                 inner = ['<div class="lsStrip">']
-                for want in ("col7", "col6", "col5"):       # keep full tag here
+                for want in want_cols:                      # use the list we received
                     cell = box.get((set_name, draw, sec, want))
                     if cell:
                         inner.append(f'<div class="mini">{minitable(cell, sec_id)}</div>')
@@ -225,11 +228,11 @@ def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_h
         parts.append(f'<h2>Method {meth} – {mode}</h2>')
         # LONG-STRING 1  (cols 7/6/5)
         ls1 = [c for c in results_area1 if any(c["location_id"].endswith(f"col{x}") for x in (7,6,5))]
-        parts.append('<h3>Long-String 1 (columns 7/6/5)</h3>')
-        parts.append(grid_block(ls1, ['7','6','5'], sec_id))
+        parts.append('<h3>Long-String 1  (columns 7 / 6 / 5)</h3>')
+        parts.append(grid_block(ls1, ['col7','col6','col5'], sec_id))
         # LONG-STRING 2  (Set1 Draw-4 col3  + Draw-6 col1)
         ls2 = [c for c in results_area2]  # already just those two columns
-        parts.append('<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>')
+        parts.append('<h3>Long-String 2  (Set1 Draw-4 col-3  & Draw-6 col-1)</h3>')
         parts.append(grid_block(ls2, ['col3','col1'], sec_id))
         parts.append('</section>')
     parts.append("</body></html>")
