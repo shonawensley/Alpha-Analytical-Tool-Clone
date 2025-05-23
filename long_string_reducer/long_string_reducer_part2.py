@@ -80,60 +80,158 @@ def build_html_for_cell(location_id: str, variation_logs: Dict[Tuple[str, str], 
     return "\n".join(lines)
 
 
+def build_latest_draw_table(draw_heads):
+    rows = []
+    for sec in ["Midday","Evening","Combined"]:
+        latest = draw_heads.get(sec, "")
+        rows.append(f'<tr><td>{sec}</td><td>{_html_escape(str(latest))}</td></tr>')
+    return '<table><tr><th>Section</th><th>Latest draw</th></tr>' + ''.join(rows) + '</table>'
+
+
+def side_by_side(cells, sec_id):
+    # Render three tables (Midday, Evening, Combined) for the given method/mode
+    out = []
+    for sec in ("Midday","Evening","Combined"):
+        for col in (7,6,5):
+            for cell in cells:
+                if cell["location_id"].startswith(f"{sec}") and f"col{col}" in cell["location_id"]:
+                    # Only show the table for the current method/mode
+                    table = build_html_for_cell_single(cell["location_id"], cell["variation_logs"], sec_id)
+                    out.append(f'<div class="lsBox">{table}</div>')
+    return out
+
+def side_by_side_area2(cells, sec_id):
+    # For area2, only two tables per section: Draw4|col3, Draw6|col1
+    out = []
+    for sec in ("Midday","Evening","Combined"):
+        draw_order = ("Draw4|col3", "Draw6|col1")
+        for frag in draw_order:
+            for cell in cells:
+                if cell["location_id"].startswith(f"{sec}") and frag in cell["location_id"]:
+                    table = build_html_for_cell_single(cell["location_id"], cell["variation_logs"], sec_id)
+                    out.append(f'<div class="lsBox">{table}</div>')
+    return out
+
+def build_html_for_cell_single(location_id: str, variation_logs: Dict, sec_id: str) -> str:
+    # Only show the column for the current method/mode
+    meth, mode = sec_id.split("-")
+    key = (meth, mode)
+    step_log = variation_logs.get(key, [])
+    lines = [f"<h3>{_html_escape(location_id)}</h3>"]
+    lines.append("<table class='cell'>")
+    lines.append("<tr><th>Step</th><th>Value</th></tr>")
+    for idx, val in enumerate(step_log):
+        lines.append(f"<tr><td class='step'>{idx}</td><td>{_html_escape(val)}</td></tr>")
+    lines.append("</table>")
+    return "\n".join(lines)
+
+def render_longstring_tables(area1_cells, area2_cells, sec_id):
+    out = []
+    out.append('<h3>Long-String 1 (columns 7/6/5)</h3>')
+    out.extend(side_by_side(area1_cells, sec_id))
+    out.append('<h3>Long-String 2 (Set1 Draw4 col3 & Draw6 col1)</h3>')
+    out.extend(side_by_side_area2(area2_cells, sec_id))
+    return "\n".join(out)
+
+def minitable(cell, sec_id):
+    meta = cell["metadata"]
+    nice_lbl = f'{meta["section"][0]}-{meta["set"][-1]}.{meta["draw"][-1]}'
+    #   → "M-3.1"   (cleaner label)
+    key = tuple(sec_id.split("-"))  # ('A','own')
+    log = cell["variation_logs"][key]
+    rows = ['<caption class="miniCap">'+nice_lbl+'</caption>',
+            '<tr><th class="step">#</th><th>Val</th></tr>']
+    for i,v in enumerate(log):
+        rows.append(f'<tr><td class="step">{i}</td><td>{v}</td></tr>')
+        if i>=7: break
+    return '<table class="miniTbl">' + ''.join(rows) + '</table>'
+
+def grid_block(cells, want_cols, sec_id):
+    # group cells by (set, draw, section, col) so each lookup is unambiguous
+    box = {}                             # {(set, draw, section, col): cell}
+    for c in cells:
+        m = c["metadata"]
+        box[(m["set"], m["draw"], m["section"], m["col"])] = c
+
+    lines = []
+    for set_name in ["Set3","Set2","Set1"]:
+        for draw in sorted({ d for (s,d,_,_) in box }):
+            lines.append(f'<div class="rowHead">{set_name} {draw}</div>')
+            lines.append('<div class="grid3">')
+            for sec in ("Midday", "Evening", "Combined"):
+                inner = ['<div class="lsStrip">']
+                for want in ("col7", "col6", "col5"):       # keep full tag here
+                    cell = box.get((set_name, draw, sec, want))
+                    if cell:
+                        inner.append(f'<div class="mini">{minitable(cell, sec_id)}</div>')
+                    else:
+                        inner.append('<div class="mini"></div>')
+                inner.append('</div>')      # lsStrip
+                lines.append('<div class="lsBox">' + ''.join(inner) + '</div>')
+            lines.append('</div>')   # grid3
+    return "\n".join(lines)
+
 def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_heads: Dict[str, str] = None) -> str:
-    """Pretty 3-column layout:
-         ┌────────────── Long-String 1 ───────────────┐
-         │ Midday │ Evening │ Combined (each a column)│
-         └─────────────────────────────────────────────┘
-       Same again for Long-String 2.
-       Optionally a small DRAW_DATA summary on top.
-    """
+    """Tabbed layout: navbar for A-own, ..., D-combined. Each tab shows two big tables (Long-String 1 and 2), each as Midday | Evening | Combined."""
     css = """
     body{font-family:Arial,Helvetica,sans-serif}
     table{border-collapse:collapse;font-size:12px;margin:6px 0}
     th,td{border:1px solid #bbb;padding:3px 4px}
     td.step{font-weight:bold;background:#f7f7f7}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .lsBox      {flex:1 1 0; min-width:160px; font-size:11px}
+    .grid3      {display:flex; gap:8px; margin-bottom:10px;}
+    .rowHead    {font-style:italic; margin-top:6px; font-size:12px}
+    #methodNav { margin-bottom:14px }
+    #methodNav button.active { background:#333;color:#fff }
+    section.method { display:none }
+    section.method:first-of-type { display:block }
     h3{margin:4px 0 6px}
+    th.step,td.step{width:24px;text-align:center}
+    .lsStrip  {display:flex; gap:4px}
+    .miniTbl  {font-size:10px}
+    .miniCap  {font-size:9px; font-style:italic; text-align:left; padding:0 0 2px}
+    .mini     {flex:1 1 0; min-width:110px}
     """
-    parts = ["<html><head><meta charset='utf-8'><style>", css, "</style></head><body>",
-             "<h1>Digit-Reduction / Long-String Report</h1>"]
-
-    # ---- optional DRAW_DATA header ---------------------------------
+    parts = ["<html><head><meta charset='utf-8'><style>", css, "</style></head><body>"]
+    # Navbar
+    parts.append('<nav id="methodNav">')
+    for meth, mode in COLUMNS_ORDER:
+        sec_id = f"{meth}-{mode}"
+        label = f"{meth}-{mode}"
+        active = ' class="active"' if sec_id == "A-own" else ''
+        parts.append(f'<button data-target="{sec_id}"{active}>{label}</button>')
+    parts.append('</nav>')
+    # JS
+    parts.append("""
+    <script>
+      const btns = [...document.querySelectorAll('#methodNav button')];
+      btns.forEach(btn => btn.onclick = () => {
+        const tgt = btn.dataset.target;
+        document.querySelectorAll('section.method').forEach(
+            sec => sec.style.display = (sec.id === tgt) ? 'block' : 'none');
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    </script>
+    """)
+    # Latest draw triples
     if draw_heads:
-        parts.append("<h2>Latest draw triples (validation)</h2>")
-        parts.append("<table><tr><th>Section</th><th>Latest draw</th></tr>")
-        for sec, trip in draw_heads.items():
-            parts.append(f"<tr><td>{sec}</td><td>{trip}</td></tr>")
-        parts.append("</table>")
-
-    # ---- Long-String 1 (Area-1) ------------------------------------
-    parts.append("<h2>Long-String 1  •  columns 7 / 6 / 5</h2>")
-    parts.append('<div class="grid">')
-    for sec in ("Midday","Evening","Combined"):
-        parts.append(f"<div><h3>{sec}</h3>")
-        # pick the three tables that belong to this section & keep order col7 -> col6 -> col5
-        for col in (7,6,5):
-            for cell in results_area1:
-                if cell["location_id"].startswith(f"{sec}") and f"col{col}" in cell["location_id"]:
-                    parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
-        parts.append("</div>")
-    parts.append("</div>")   # /grid
-
-    # ---- Long-String 2 (Area-2) ------------------------------------
-    parts.append("<h2>Long-String 2  •  Set 1 [Draw-4 col 3, Draw-6 col 1]</h2>")
-    parts.append('<div class="grid">')
-    for sec in ("Midday","Evening","Combined"):
-        parts.append(f"<div><h3>{sec}</h3>")
-        # only two cells per section → Draw4-col3 first, then Draw6-col1
-        draw_order = ("Draw4|col3", "Draw6|col1")
-        for frag in draw_order:
-            for cell in results_area2:
-                if cell["location_id"].startswith(f"{sec}") and frag in cell["location_id"]:
-                    parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
-        parts.append("</div>")
-    parts.append("</div>")   # /grid
-
+        parts.append('<h2>Latest draw triples (validation)</h2>')
+        parts.append(build_latest_draw_table(draw_heads))
+    # Tabbed sections
+    for meth, mode in COLUMNS_ORDER:
+        sec_id = f"{meth}-{mode}"
+        parts.append(f'<section class="method" id="{sec_id}">')
+        parts.append(f'<h2>Method {meth} – {mode}</h2>')
+        # LONG-STRING 1  (cols 7/6/5)
+        ls1 = [c for c in results_area1 if any(c["location_id"].endswith(f"col{x}") for x in (7,6,5))]
+        parts.append('<h3>Long-String 1 (columns 7/6/5)</h3>')
+        parts.append(grid_block(ls1, ['7','6','5'], sec_id))
+        # LONG-STRING 2  (Set1 Draw-4 col3  + Draw-6 col1)
+        ls2 = [c for c in results_area2]  # already just those two columns
+        parts.append('<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>')
+        parts.append(grid_block(ls2, ['col3','col1'], sec_id))
+        parts.append('</section>')
     parts.append("</body></html>")
     return "\n".join(parts)
 
@@ -159,6 +257,7 @@ def analyse_area(cells: List[Dict], big_data: dict) -> List[Dict]:
         analysed.append({
             "location_id": loc_id,
             "variation_logs": variation_logs,
+            "metadata": cell.get("metadata", {})
         })
     return analysed
 
@@ -193,16 +292,29 @@ def main():
         if "sections" in big_data and sec in big_data["sections"]:
             # Call the extraction functions for each section
             for loc_id, s in extract_r2_strings_area1(big_data, sec).items():
+                # Parse loc_id: e.g. 'Midday|Set3|Draw1|col7'
+                parts = loc_id.split("|")
                 area1_cells.append({
                     "location_id": loc_id,
                     "original_string": s,
-                    "metadata": {"section": sec} # Include section metadata
+                    "metadata": {
+                        "section": parts[0],
+                        "set": parts[1],
+                        "draw": parts[2],
+                        "col": parts[3] if len(parts) > 3 else ""
+                    }
                 })
             for loc_id, s in extract_r2_strings_area2(big_data, sec).items():
+                parts = loc_id.split("|")
                 area2_cells.append({
                     "location_id": loc_id,
                     "original_string": s,
-                    "metadata": {"section": sec} # Include section metadata
+                    "metadata": {
+                        "section": parts[0],
+                        "set": parts[1],
+                        "draw": parts[2],
+                        "col": parts[3] if len(parts) > 3 else ""
+                    }
                 })
 
     # --- run analyses ------------------------------------------------------

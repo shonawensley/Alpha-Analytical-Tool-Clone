@@ -1,0 +1,98 @@
+<html><head><meta charset='utf-8'><style>
+
+    body{font-family:Arial,Helvetica,sans-serif}
+    table{border-collapse:collapse;font-size:12px;margin:6px 0}
+    th,td{border:1px solid #bbb;padding:3px 4px}
+    td.step{font-weight:bold;background:#f7f7f7}
+    .lsBox      {flex:1 1 0; min-width:160px; font-size:11px}
+    .grid3      {display:flex; gap:8px; margin-bottom:10px;}
+    .rowHead    {font-style:italic; margin-top:6px; font-size:12px}
+    #methodNav { margin-bottom:14px }
+    #methodNav button.active { background:#333;color:#fff }
+    section.method { display:none }
+    section.method:first-of-type { display:block }
+    h3{margin:4px 0 6px}
+    th.step,td.step{width:24px;text-align:center}
+    
+</style></head><body>
+<nav id="methodNav">
+<button data-target="A-own" class="active">A-own</button>
+<button data-target="B-own">B-own</button>
+<button data-target="C-own">C-own</button>
+<button data-target="D-own">D-own</button>
+<button data-target="A-combined">A-combined</button>
+<button data-target="B-combined">B-combined</button>
+<button data-target="C-combined">C-combined</button>
+<button data-target="D-combined">D-combined</button>
+</nav>
+
+    <script>
+      const btns = [...document.querySelectorAll('#methodNav button')];
+      btns.forEach(btn => btn.onclick = () => {
+        const tgt = btn.dataset.target;
+        document.querySelectorAll('section.method').forEach(
+            sec => sec.style.display = (sec.id === tgt) ? 'block' : 'none');
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    </script>
+    
+<h2>Latest draw triples (validation)</h2>
+<table><tr><th>Section</th><th>Latest draw</th></tr><tr><td>Midday</td><td>841</td></tr><tr><td>Evening</td><td>741</td></tr><tr><td>Combined</td><td>741</td></tr></table>
+<section class="method" id="A-own">
+<h2>Method A – own</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="B-own">
+<h2>Method B – own</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="C-own">
+<h2>Method C – own</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="D-own">
+<h2>Method D – own</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="A-combined">
+<h2>Method A – combined</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="B-combined">
+<h2>Method B – combined</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="C-combined">
+<h2>Method C – combined</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+<section class="method" id="D-combined">
+<h2>Method D – combined</h2>
+<h3>Long-String 1 (columns 7/6/5)</h3>
+
+<h3>Long-String 2 (Set1 Draw-4/Draw-6)</h3>
+
+</section>
+</body></html>
