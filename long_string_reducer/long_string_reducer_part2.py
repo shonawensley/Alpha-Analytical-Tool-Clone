@@ -32,6 +32,8 @@ from long_string_reducer_part1 import (
     method_b,
     method_c,
     method_d,
+    method_e,
+    method_t,
     SECTION_NAMES,
 )
 from long_string_reducer_part1 import run_reduction_progression  # exposed by part‑1
@@ -41,11 +43,13 @@ METHOD_FUNCS = {
     "B": method_b,
     "C": method_c,
     "D": method_d,
+    "E": method_e,
+    "T": method_t,
 }
 
 COLUMNS_ORDER: List[Tuple[str, str]] = [
-    ("A", "own"), ("B", "own"), ("C", "own"), ("D", "own"),
-    ("A", "combined"), ("B", "combined"), ("C", "combined"), ("D", "combined"),
+    ("A", "own"), ("B", "own"), ("C", "own"), ("D", "own"), ("E", "own"), ("T", "own"),
+    ("A", "combined"), ("B", "combined"), ("C", "combined"), ("D", "combined"), ("E", "combined"), ("T", "combined"),
 ]
 
 STEP_LABEL = {0: "Orig"}  # row-header text; 0 = original string
@@ -190,7 +194,8 @@ def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_h
     section.method:first-of-type { display:block }
     h3{margin:4px 0 6px}
     th.step,td.step{width:24px;text-align:center}
-    .lsStrip  {display:flex; gap:4px}
+    .lsStrip  {display:flex; gap:4px; flex-wrap:wrap}
+    .lsBox:not(:last-child){border-right:2px solid #aaa; padding-right:6px}
     .miniTbl  {font-size:10px}
     .miniCap  {font-size:9px; font-style:italic; text-align:left; padding:0 0 2px}
     .mini     {flex:1 1 0; min-width:110px}

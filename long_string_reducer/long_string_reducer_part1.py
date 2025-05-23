@@ -1,6 +1,7 @@
 # ================================================
 #  Long‑String Digit‑Reduction Module – Part 1
 #  (core data‑loading helpers + reduction methods)
+#  Methods: A (all exacts), B (all digit or mirror), C (all digit+mirror), D (all digit, one mirror), E (single-hit), T (adaptive transit, ≤3)
 # -----------------------------------------------
 #  This file can live anywhere in the Alpha‑Analytical
 #  Tool repo – e.g.  ./modules/long_string_reducer/
@@ -33,7 +34,7 @@ MIRROR_MAP: Dict[str, str] = {
 }
 
 # =============================================================
-#  Digit‑Reduction Methods (A, B, C, D)
+#  Digit‑Reduction Methods (A, B, C, D, E, T)
 # =============================================================
 
 def _remove_one(s_list: List[str], digit: str) -> None:
@@ -45,15 +46,14 @@ def _remove_one(s_list: List[str], digit: str) -> None:
 
 
 def method_a(state: str, draw_digits: List[str]) -> str:
-    """Remove exact digits – one occurrence per appearance *in the draw*."""
-    working = list(state)
+    """Remove ALL copies of each draw digit (exact only)."""
     for d in draw_digits:
-        _remove_one(working, d)
-    return "".join(working)
+        state = state.replace(d, "")
+    return state
 
 
-def method_b(state: str, draw_digits: List[str]) -> str:
-    """Remove digit OR its mirror (once) – favour the exact digit if present."""
+def _method_single_hit(state: str, draw_digits: List[str]) -> str:
+    """Former Method-B logic – remove ONE copy of digit or its mirror."""
     working = list(state)
     for d in draw_digits:
         if d in working:
@@ -61,6 +61,14 @@ def method_b(state: str, draw_digits: List[str]) -> str:
         elif d in MIRROR_MAP:
             _remove_one(working, MIRROR_MAP[d])
     return "".join(working)
+
+
+def method_b(state: str, draw_digits: List[str]) -> str:
+    """Remove ALL copies of digit, else ALL copies of its mirror."""
+    for d in draw_digits:
+        target = d if d in state else MIRROR_MAP.get(d, "")
+        state = state.replace(target, "")
+    return state
 
 
 def method_c(state: str, draw_digits: List[str]) -> str:
@@ -74,7 +82,11 @@ def method_c(state: str, draw_digits: List[str]) -> str:
 
 
 def method_d(state: str, draw_digits: List[str]) -> str:
-    """Transit removal – iterate one digit at a time (removing all copies)."""
+    """
+    D-singleMirror  (legacy "transit"):
+      • remove *all* copies of each exact draw digit
+      • then remove ***one*** mirror copy (if present) – no length awareness
+    """
     working = list(state)
     for d in draw_digits:
         # remove *all* occurrences of the digit first
@@ -85,11 +97,47 @@ def method_d(state: str, draw_digits: List[str]) -> str:
     return "".join(working)
 
 
+def method_e(state: str, draw_digits: List[str]) -> str:
+    """Single-hit variant retained for comparison (old Method-B)."""
+    return _method_single_hit(state, draw_digits)
+
+
+# --- adaptive transit digit (Method T) -----------------------------------
+def method_t(state: str,
+            draw_digits: List[str],
+            target_len: int = 3) -> str:
+    """
+    T-adaptive:
+      1) remove all exact draw digits
+      2) if string already ≤ target_len → done
+      3) otherwise, walk through the mirrors in draw order,
+         stripping *all* copies of each until the string length
+         drops to target_len or below.
+    """
+    # 1) wipe exacts
+    for d in draw_digits:
+        state = state.replace(d, "")
+
+    if len(state) <= target_len:
+        return state
+
+    # 2) peel mirrors just until short enough
+    for d in draw_digits:
+        m = MIRROR_MAP.get(d)
+        if m and m in state:
+            state = state.replace(m, "")
+            if len(state) <= target_len:
+                break
+    return state
+
+
 METHOD_FUNCS = {
     "A": method_a,
     "B": method_b,
     "C": method_c,
-    "D": method_d,
+    "D": method_d,   # single-mirror version
+    "E": method_e,   # single-hit (exact or mirror) legacy
+    "T": method_t,   # NEW adaptive transit-digit
 }
 
 # =============================================================
@@ -429,4 +477,9 @@ if __name__ == "__main__":
                     print("[INFO] The functions are adapted to work with the output of load_csv_directory for use with part2.")
 
         else:
-             print("No dataframes loaded by load_data_from_state_dir. Direct test skipped.") 
+             print("No dataframes loaded by load_data_from_state_dir. Direct test skipped.")
+
+    # --- Unit tests for reduction methods ---
+    assert method_t("559922086", ["841"]) == "592"
+    assert method_d("559922086", ["841"]) == "5920"   # exacts gone, one '3' mirror (->6) removed
+    assert method_e("559922086", ["841"]) == "59922086" 
