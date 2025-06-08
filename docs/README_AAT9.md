@@ -32,10 +32,11 @@ Review the synergy JSON or final user interface to see top patterns.
 ## Documentation Structure (AAT9)
 
 - **modules/**  
-  - [module_A_stable_extractor.md](modules/module_A_stable_extractor.md)  
-  - [module_B_digit_reduction.md](modules/module_B_digit_reduction.md)  
-  - [module_C_hot_zones.md](modules/module_C_hot_zones.md)  
-  - [module_D_aggregator.md](modules/module_D_aggregator.md)
+  - [Module A – Stable Pattern Extractor](modules/module_A_stable_extractor.md)  
+  - [Module B – Digit Reduction](modules/module_B_digit_reduction.md)  
+  - [Module C – Hot Zones](modules/module_C_hot_zones.md)
+  - [Module D – V-TRAC Analyzer](modules/AAT9_Module_VTRAC_Enhancement.md)
+  - [Module E – Aggregator](modules/module_D_aggregator.md)
 - **architecture_AAT9.md**  
   - Overarching system flow / diagram for AAT9
 - **data_formats_AAT9.md**  

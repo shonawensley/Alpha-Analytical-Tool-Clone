@@ -4,6 +4,13 @@ Alpha Analytical Tool with V-TRAC Analysis
 Provides data processing, table generation, and pattern analysis for numerical datasets
 """
 
+# --- ensure we can import utils.* no matter where Streamlit is launched ---
+import sys, pathlib
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# --------------------------------------------------------------------------
+
 import os
 import streamlit as st
 import pandas as pd
@@ -18,10 +25,7 @@ from collections import Counter
 import webbrowser
 from PIL import Image
 import time
-
-# Add the project root to the Python path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(script_dir)
+import json  # Added for JSON export
 
 # Import utility modules
 from utils.extract_data import process_state
@@ -43,6 +47,7 @@ from utils.vtrac_utils import (
     highlight_winners_in_table,
     highlight_string_with_matches
 )
+from utils.bundler import bundle_day
 
 # Set page config
 st.set_page_config(
@@ -52,9 +57,136 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# JSON EXPORT FUNCTIONS FOR AI TRAINING
+# ------------------------------------------------------------------------------
+
+def get_predictions_output_dir():
+    """Get the directory for prediction outputs"""
+    output_dir = os.path.join("data", "outputs", "predictions")
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+def get_winners_json_output_dir():
+    """Get the directory for winner JSON outputs"""
+    output_dir = os.path.join("data", "outputs", "winners_json")
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+def save_predictions_as_json(state_name, results, top_n=3):
+    """
+    Save V-TRAC predictions as JSON for AI training
+    
+    Args:
+        state_name: Name of the state
+        results: Analysis results from analyze_all_indexes
+        top_n: Number of top predictions to save
+    """
+    if not results or len(results) == 0:
+        return None
+    
+    # Get today's date
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Prepare predictions data
+    predictions_data = {
+        "date": date_str,
+        "timestamp": timestamp,
+        "state": state_name,
+        "predictions": []
+    }
+    
+    # Add top N predictions
+    for i, result in enumerate(results[:top_n]):
+        prediction = {
+            "rank": i + 1,
+            "index": result["index"],
+            "score": result["score"],
+            "patterns": sorted(list(result["patterns"])),
+            "pattern_count": len(result["patterns"])
+        }
+        predictions_data["predictions"].append(prediction)
+    
+    # Save to JSON file
+    output_dir = get_predictions_output_dir()
+    filename = f"{state_name}_{date_str}_predictions.json"
+    filepath = os.path.join(output_dir, filename)
+    
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(predictions_data, f, indent=2)
+    
+    return filepath
+
+def save_winners_as_json(state_name, midday_winner, evening_winner, date_str=None):
+    """
+    Save winning numbers as JSON for AI training
+    
+    Args:
+        state_name: Name of the state
+        midday_winner: Midday winning number (string)
+        evening_winner: Evening winning number (string)
+        date_str: Date string (YYYY-MM-DD format), defaults to today
+    """
+    if date_str is None:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Prepare winners data
+    winners_data = {
+        "date": date_str,
+        "timestamp": timestamp,
+        "state": state_name,
+        "winners": {
+            "midday": midday_winner if midday_winner else "",
+            "evening": evening_winner if evening_winner else ""
+        }
+    }
+    
+    # Save to JSON file
+    output_dir = get_winners_json_output_dir()
+    filename = f"{state_name}_{date_str}_winners.json"
+    filepath = os.path.join(output_dir, filename)
+    
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(winners_data, f, indent=2)
+    
+    return filepath
+
+def parse_winners_input(winners_text):
+    """
+    Parse the winners input text format from the document
+    Returns a dictionary of state: (midday, evening) tuples
+    """
+    winners_dict = {}
+    lines = winners_text.strip().split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Split by tabs or multiple spaces
+        parts = line.split('\t') if '\t' in line else line.split()
+        
+        if len(parts) >= 2:
+            state = parts[0]
+            # Handle cases with 2 or 3 columns (midday, evening, or both)
+            if len(parts) == 2:
+                # Could be just midday or just evening
+                winners_dict[state] = (parts[1], "")
+            elif len(parts) >= 3:
+                winners_dict[state] = (parts[1], parts[2])
+        elif len(parts) == 1 and parts[0]:
+            # State with no numbers
+            winners_dict[parts[0]] = ("", "")
+    
+    return winners_dict
+
+# ------------------------------------------------------------------------------
 # MAIN APP FUNCTIONS (from streamlit_app.py)
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 def format_time(seconds):
     """Format time in seconds to human-readable string"""
@@ -89,9 +221,9 @@ def load_state_data(state_name):
     
     return result
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # V-TRAC ANALYZER FUNCTIONS (from vtrac_analyzer.py)
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 def get_all_combinations_for_index(index):
     """Get all pattern combinations for a specific V-TRAC index"""
@@ -133,9 +265,7 @@ def analyze_pattern_persistence(df, patterns):
     
     # Check each pattern
     for pattern in patterns:
-        # Check each row
         for _, row in df.iterrows():
-            # Count consecutive columns containing the pattern
             consecutive_count = 0
             max_consecutive = 0
             
@@ -143,7 +273,6 @@ def analyze_pattern_persistence(df, patterns):
                 if pattern in str(row[col]):
                     consecutive_count += 1
                 else:
-                    # Update max_consecutive if current streak is better
                     max_consecutive = max(max_consecutive, consecutive_count)
                     consecutive_count = 0
             
@@ -162,18 +291,14 @@ def analyze_pattern_stability(df, patterns):
     # Group rows by Set and Draw
     grouped = df.groupby(['Set', 'Draw'])
     
-    # For each group, check pattern presence across row types
     for _, group in grouped:
-        # Skip groups without all row types
+        # Skip groups without at least 2 row types
         row_types = group['RowType'].unique()
-        if len(row_types) < 2:  # Need at least 2 row types to measure stability
+        if len(row_types) < 2:
             continue
             
-        # Check each pattern
         for pattern in patterns:
-            # Count row types containing the pattern
             row_type_count = 0
-            
             for row_type in ['R2', 'R4', 'R6', 'R8']:
                 row_type_rows = group[group['RowType'] == row_type]
                 if row_type_rows.empty:
@@ -202,13 +327,10 @@ def detect_straight_combinations(df, pattern):
     """Detect instances where a pattern appears in the same order multiple times"""
     straight_count = 0
     
-    # Define columns to check
     columns = ['7', '6', '5', '4', '3', '2', '1']
     valid_columns = [col for col in columns if col in df.columns]
     
-    # Check each row
     for _, row in df.iterrows():
-        # Count occurrences in this row
         occurrences = 0
         for col in valid_columns:
             if pattern in str(row[col]):
@@ -227,8 +349,7 @@ def calculate_index_score(tables, patterns):
     """
     if not tables or not patterns:
         return 0
-        
-    # Check for required tables
+    
     required_tables = ["Midday_combined", "Evening_combined", "Combined_combined"]
     if not all(table in tables for table in required_tables):
         print(f"[ERROR] Missing required tables. Found: {list(tables.keys())}")
@@ -240,9 +361,7 @@ def calculate_index_score(tables, patterns):
     for table_name in required_tables:
         df = tables[table_name]
         if df is not None and not df.empty:
-            # Get pattern counts for this table
             pattern_counts, _ = count_patterns_in_table(df, patterns)
-            # Add to total score
             total_score += sum(pattern_counts.values())
     
     # Multiply by 10 for final score
@@ -250,43 +369,33 @@ def calculate_index_score(tables, patterns):
 
 def analyze_all_indexes(state_name):
     """Analyze all V-TRAC indexes for a state and rank them"""
-    # Load tables for the state
     tables = load_state_data(state_name)
     
-    # Check for required tables
     required_tables = ["Midday_combined", "Evening_combined", "Combined_combined"]
     if not tables or not all(table in tables for table in required_tables):
         print(f"[ERROR] Missing required tables for {state_name}. Found: {list(tables.keys() if tables else [])}")
         return None
     
-    # Analyze each V-TRAC index
     results = []
     
-    # Get all valid V-TRAC indexes from reference
     for entry in BOXED_VTRAC_REFERENCE:
         index = entry["Index"]
-        # Get all patterns for this index
         patterns = set()
         patterns.update(entry.get("Singles", []))
         patterns.update(entry.get("Doubles", []))
         
-        # Skip indexes with no patterns
         if not patterns:
             continue
         
-        # Calculate score for this index
         score = calculate_index_score(tables, patterns)
         
-        # Store result
         results.append({
             "index": index,
             "patterns": patterns,
             "score": score
         })
     
-    # Sort results by score (highest first)
     results.sort(key=lambda x: x["score"], reverse=True)
-    
     return results
 
 def generate_index_html_report(state_name, index, patterns, tables, score, rank, timestamp=None):
@@ -294,7 +403,6 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if timestamp is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Create HTML header
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -379,26 +487,20 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
 </head>
 <body>
 """
-    
-    # Function to generate table HTML
+
     def generate_table_html(df, title):
-        # Check if dataframe is None or empty
         if df is None or df.empty:
             return f"<h2>{title}</h2><p>No data available</p>"
-            
-        table_html = f"<h2>{title}</h2><table>"
         
-        # Table header
+        table_html = f"<h2>{title}</h2><table>"
         header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
         table_html += "<tr>" + "".join([f"<th>{col}</th>" for col in header_cols if col in df.columns]) + "</tr>"
         
-        # Table rows
         for _, row in df.iterrows():
             table_html += "<tr>"
             for col in header_cols:
                 if col in df.columns:
                     value = str(row[col])
-                    # Apply highlighting
                     for pattern in patterns:
                         if pattern in value:
                             value = value.replace(pattern, f'<span class="highlight">{pattern}</span>')
@@ -408,13 +510,13 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         table_html += "</table>"
         return table_html
     
-    # START IMMEDIATELY with tables at the very top
+    # Horizontal layout styling
     html += '<style>.horizontal-layout{display:flex; flex-direction:row; justify-content:space-between; width:100%; margin:0; padding:0;} .section{flex:1; margin:0 2px;}</style>'
     
-    # Display all three sections horizontally side-by-side without any header
+    # Three sections (Midday/Evening/Combined) at the top
     html += '<div class="horizontal-layout">'
     
-    # Midday section
+    # Midday
     html += '<div class="section">'
     html += '<h2>Midday Data</h2>'
     if "Midday_combined" in tables:
@@ -423,7 +525,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table")
     html += '</div>'
     
-    # Evening section
+    # Evening
     html += '<div class="section">'
     html += '<h2>Evening Data</h2>'
     if "Evening_combined" in tables:
@@ -432,7 +534,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table")
     html += '</div>'
     
-    # Combined section
+    # Combined
     html += '<div class="section">'
     html += '<h2>Combined Data</h2>'
     if "Combined_combined" in tables:
@@ -441,67 +543,56 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table")
     html += '</div>'
     
-    # Close horizontal layout
-    html += '</div>'
-    
-    # V-TRAC info (below tables)
+    html += '</div>'  # close horizontal-layout
+
+    # V-TRAC info below tables
     html += f'<div class="version">Version: v{timestamp}</div>'
     html += f'<h1><span class="rank-badge">Rank #{rank}</span> V-TRAC Analysis for {state_name} - Index {index}</h1>'
     
-    # Statistics section at the bottom
+    # Detailed analysis stats at the bottom
     html += '<div class="stats">'
     html += '<h2>Detailed Analysis Statistics</h2>'
     
     # 1. Pattern occurrence counts
     html += "<h3>Pattern Occurrence Counts</h3>"
     html += "<table><tr><th>Pattern</th><th>Occurrences</th></tr>"
-    
-    # Get pattern counts from combined table
     if "Combined_combined" in tables:
         pattern_counts, _ = count_patterns_in_table(tables["Combined_combined"], patterns)
         for pattern, count in sorted(pattern_counts.items(), key=lambda x: x[1], reverse=True):
             html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
-    
     html += "</table>"
     
     # 2. Pattern persistence scores
     html += "<h3>Pattern Persistence Scores</h3>"
     html += "<table><tr><th>Pattern</th><th>Persistence Score</th></tr>"
-    
-    # Get persistence scores from combined table
     if "Combined_combined" in tables:
         persistence_scores = analyze_pattern_persistence(tables["Combined_combined"], patterns)
         for pattern, score in sorted(persistence_scores.items(), key=lambda x: x[1], reverse=True):
             html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
-    
     html += "</table>"
     
     # 3. Pattern stability scores
     html += "<h3>Pattern Stability Scores</h3>"
     html += "<table><tr><th>Pattern</th><th>Stability Score</th></tr>"
-    
-    # Get stability scores from combined table
     if "Combined_combined" in tables:
         stability_scores = analyze_pattern_stability(tables["Combined_combined"], patterns)
         for pattern, score in sorted(stability_scores.items(), key=lambda x: x[1], reverse=True):
             html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
-    
     html += "</table>"
     
     # 4. Straight combinations
     html += "<h3>Straight Combination Occurrences</h3>"
     html += "<table><tr><th>Pattern</th><th>Straight Occurrences</th></tr>"
-    
-    # Get straight counts from combined table
     if "Combined_combined" in tables:
-        straight_counts = {pattern: detect_straight_combinations(tables["Combined_combined"], pattern) for pattern in patterns}
+        straight_counts = {
+            pattern: detect_straight_combinations(tables["Combined_combined"], pattern)
+            for pattern in patterns
+        }
         for pattern, count in sorted(straight_counts.items(), key=lambda x: x[1], reverse=True):
             html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
-    
     html += "</table>"
-    html += '</div>'
     
-    # Close HTML
+    html += '</div>'  # stats
     html += '</body></html>'
     
     return html
@@ -511,48 +602,39 @@ def generate_top_reports(state_name, results, top_n=3):
     if not results or len(results) == 0:
         return []
     
-    # Load tables for the state
     tables = load_state_data(state_name)
     if not tables:
         return []
     
-    # Generate reports for top N results
     reports = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     for i, result in enumerate(results[:top_n]):
-        rank = i + 1  # Calculate rank position
-        
-        # Generate HTML
+        rank = i + 1
         html = generate_index_html_report(
-            state_name, 
-            result["index"], 
-            result["patterns"], 
-            tables, 
-            result["score"], 
+            state_name,
+            result["index"],
+            result["patterns"],
+            tables,
+            result["score"],
             rank,
             timestamp
         )
         
-        # Generate filename
         filename = f"{state_name}_vtrac_rank{rank}_index{result['index']}_v{timestamp}.html"
+        output_dir = ROOT / "data" / "outputs" / "analysis"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        filepath = output_dir / filename
         
-        # Define save path
-        output_dir = os.path.join(os.path.dirname(script_dir), "outputs", "analysis")
-        os.makedirs(output_dir, exist_ok=True)
-        filepath = os.path.join(output_dir, filename)
-        
-        # Save to file
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html)
         
-        # Add to reports
         reports.append({
             "rank": rank,
             "index": result["index"],
             "score": result["score"],
             "filename": filename,
-            "filepath": filepath,
+            "filepath": str(filepath),  # Convert Path to string for compatibility
             "html": html
         })
     
@@ -563,25 +645,23 @@ def generate_summary_chart(results, top_n=10):
     if not results or len(results) == 0:
         return None
     
-    # Limit to top N results
     top_results = results[:min(top_n, len(results))]
-    
-    # Extract data for chart
     indices = [str(r["index"]) for r in top_results]
     scores = [r["score"] for r in top_results]
     
-    # Create chart
     plt.figure(figsize=(10, 6))
     bars = plt.bar(indices, scores, color='purple', alpha=0.7)
     
-    # Add data labels
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2., height + 5,
-                 f'{height:.0f}',
-                 ha='center', va='bottom')
+        plt.text(
+            bar.get_x() + bar.get_width()/2.,
+            height + 5,
+            f'{height:.0f}',
+            ha='center',
+            va='bottom'
+        )
     
-    # Add chart details
     plt.title('Top V-TRAC Indexes by Score', fontsize=16)
     plt.xlabel('V-TRAC Index', fontsize=14)
     plt.ylabel('Score', fontsize=14)
@@ -589,7 +669,6 @@ def generate_summary_chart(results, top_n=10):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.tight_layout()
     
-    # Convert to base64 for embedding in HTML
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
     buffer.seek(0)
@@ -600,18 +679,18 @@ def generate_summary_chart(results, top_n=10):
 
 def get_combined_table(state_name, time_period):
     """Load combined table for state and time period"""
-    tables_dir = get_tables_output_dir()  
-    # Get most recent date folder
-    date_folders = sorted([d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))], reverse=True)
+    tables_dir = get_tables_output_dir()
+    date_folders = sorted(
+        [d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))],
+        reverse=True
+    )
     if not date_folders:
         return None
     
-    # Use most recent date
     state_dir = os.path.join(tables_dir, date_folders[0], state_name)
     if not os.path.exists(state_dir):
         return None
     
-    # Look for the combined table file
     filename = f"{state_name}_{time_period}_combined.csv"
     filepath = os.path.join(state_dir, filename)
     
@@ -626,17 +705,17 @@ def get_combined_table(state_name, time_period):
 def get_r2_table(state_name, time_period):
     """Load R2-only table for state and time period"""
     tables_dir = get_tables_output_dir()
-    # Get most recent date folder
-    date_folders = sorted([d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))], reverse=True)
+    date_folders = sorted(
+        [d for d in os.listdir(tables_dir) if os.path.isdir(os.path.join(tables_dir, d))],
+        reverse=True
+    )
     if not date_folders:
         return None
     
-    # Use most recent date
     state_dir = os.path.join(tables_dir, date_folders[0], state_name)
     if not os.path.exists(state_dir):
         return None
     
-    # Look for the R2-only table file
     filename = f"{state_name}_{time_period}_R2_only.csv"
     filepath = os.path.join(state_dir, filename)
     
@@ -651,13 +730,11 @@ def get_r2_table(state_name, time_period):
 def get_patterns_for_index(index):
     """Get all pattern combinations for a specific V-TRAC index"""
     vtrac_entry = next((item for item in BOXED_VTRAC_REFERENCE if item["Index"] == index), None)
-    
     if vtrac_entry:
         patterns = set()
         patterns.update(vtrac_entry.get("Singles", []))
         patterns.update(vtrac_entry.get("Doubles", []))
         return patterns
-    
     return set()
 
 def get_winners_output_dir():
@@ -667,7 +744,8 @@ def get_winners_output_dir():
     return output_dir
 
 def highlight_winners_in_table(tables, midday_winners, evening_winners):
-    """Highlight winning numbers in tables and save highlighted versions
+    """
+    Highlight winning numbers in tables and save highlighted versions
     
     Args:
         tables (dict): Dictionary of table DataFrames
@@ -679,12 +757,9 @@ def highlight_winners_in_table(tables, midday_winners, evening_winners):
     """
     highlighted_tables = {}
     
-    # Function to apply highlight style
     def highlight_winner(row):
-        # Create a styling DataFrame with same dimensions as row
         styles = pd.Series([''] * len(row), index=row.index)
         
-        # Check which numbers to highlight
         highlight_nums = []
         if 'Midday' in row.get('Category', ''):
             highlight_nums = midday_winners
@@ -694,27 +769,21 @@ def highlight_winners_in_table(tables, midday_winners, evening_winners):
             # For combined tables, highlight both
             highlight_nums = midday_winners + evening_winners
         
-        # Apply highlight style
         for num_col in ['Num1', 'Num2', 'Num3']:
             if num_col in row and str(row[num_col]) in highlight_nums:
                 styles[num_col] = 'background-color: yellow; font-weight: bold'
         
-        # Check combined number
         if 'Number' in row and str(row['Number']) in highlight_nums:
             styles['Number'] = 'background-color: yellow; font-weight: bold'
             
         return styles
     
-    # Process each table
     for key, df in tables.items():
         if df is None or df.empty:
             highlighted_tables[key] = df
             continue
-            
-        # Copy the DataFrame to avoid modifying the original
-        highlighted_df = df.copy()
         
-        # Apply styling
+        highlighted_df = df.copy()
         try:
             styled_df = highlighted_df.style.apply(highlight_winner, axis=1)
             highlighted_tables[key] = styled_df
@@ -724,21 +793,18 @@ def highlight_winners_in_table(tables, midday_winners, evening_winners):
     
     return highlighted_tables
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # COMBINED MAIN APP
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 def main():
     """Main application layout and execution"""
-    # Set sidebar
     st.sidebar.title("Alpha Analytical Tool")
     st.sidebar.image("https://img.icons8.com/fluency/96/lottery.png", width=80)
     st.sidebar.markdown("---")
     
-    # Page title
-        st.title("Alpha Analytical Tool")
-        
-    # Create tabs
+    st.title("Alpha Analytical Tool")
+    
     tabs = st.tabs([
         "📊 Process Data", 
         "👁 View Results", 
@@ -746,23 +812,15 @@ def main():
         "📈 V-TRAC Analyzer"
     ])
     
-    # Process Data tab
     with tabs[0]:
         process_data_tab()
-    
-    # View Results tab
     with tabs[1]:
         view_results_tab()
-    
-    # Log Winners tab
     with tabs[2]:
         log_winners_tab()
-    
-    # V-TRAC Analyzer tab
     with tabs[3]:
         vtrac_analyzer_tab()
     
-    # Display date and time
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     st.sidebar.text(f"Last Updated: {now}")
 
@@ -771,7 +829,6 @@ def process_data_tab():
     st.title("Data Processing")
     st.markdown("Process raw data files to generate cleaned datasets and analysis tables.")
     
-    # Check if Excel file exists
     excel_path, excel_exists = check_excel_file()
     
     if not excel_exists:
@@ -781,9 +838,7 @@ def process_data_tab():
     
     st.success(f"Found Excel file: {os.path.basename(excel_path)}")
     
-    # Create columns for processing options
     col1, col2, col3 = st.columns(3)
-    
     with col1:
         clean_data = st.checkbox("Clean Data", value=True)
     with col2:
@@ -791,27 +846,20 @@ def process_data_tab():
     with col3:
         generate_tables_option = st.checkbox("Generate Tables", value=True)
     
-    # Add multi-select for states
     selected_states = st.multiselect(
         "Select States to Process (leave empty for all states)",
         options=STATES,
         default=[]
     )
-    
-    # Use all states if none selected
     states_to_process = selected_states if selected_states else STATES
     
-    # Process button
     if st.button("Process Data"):
-        # Create progress bar and status
         progress_bar = st.progress(0)
         status = st.empty()
         results = st.empty()
         
-        # Create output directories
         create_output_directories()
         
-        # Initialize processing summary
         summary = {
             "cleaned_states": [],
             "failed_clean": [],
@@ -820,14 +868,14 @@ def process_data_tab():
         }
         
         with st.spinner("Processing data..."):
-            # Step 1: Clean data
+            # 1) Clean
             if clean_data:
                 status.info("Step 1/3: Cleaning data...")
                 start_time = datetime.now()
                 
                 cleaning_results = clean_all_states(
-                    states_to_process, 
-                    excel_path, 
+                    states_to_process,
+                    excel_path,
                     get_cleaned_data_dir()
                 )
                 
@@ -841,7 +889,7 @@ def process_data_tab():
                 progress_bar.progress(33)
                 status.info("Skipping data cleaning step")
             
-            # Step 2: Extract data
+            # 2) Extract
             extracted_data = {}
             if extract_data:
                 status.info("Step 2/3: Extracting data...")
@@ -861,7 +909,7 @@ def process_data_tab():
                 progress_bar.progress(66)
                 status.info("Skipping data extraction step")
             
-            # Step 3: Generate tables
+            # 3) Generate tables
             if generate_tables_option and extracted_data:
                 status.info("Step 3/3: Generating tables...")
                 start_time = datetime.now()
@@ -881,7 +929,6 @@ def process_data_tab():
                 progress_bar.progress(100)
                 status.info("Skipping table generation step")
         
-        # Show processing summary
         results.markdown("### Processing Summary")
         st.write(f"**States Processed:** {len(states_to_process)}")
         
@@ -903,32 +950,29 @@ def view_results_tab():
     st.title("View Results")
     st.markdown("View the generated tables and analysis results.")
     
-    # Find the most recent date folder
     output_dir = get_tables_output_dir()
     if not os.path.exists(output_dir):
         st.error(f"Output directory not found: {output_dir}")
         st.info("Please process data first.")
         return
     
-    # Check if there are any files/directories in the output directory
     if len(os.listdir(output_dir)) == 0:
         st.error("No output data found.")
         st.info("Please process data first.")
         return
     
-    # List state directories directly instead of assuming date folders
-    available_states = sorted([d for d in os.listdir(output_dir) 
-                              if os.path.isdir(os.path.join(output_dir, d))])
+    # List top-level directories (states) in get_tables_output_dir()
+    available_states = sorted([
+        d for d in os.listdir(output_dir)
+        if os.path.isdir(os.path.join(output_dir, d))
+    ])
     
     if not available_states:
         st.error("No state data found.")
         st.info("Please process data first.")
         return
     
-    # Select state
     selected_state = st.selectbox("Select state:", available_states)
-    
-    # Get tables for the selected state
     state_dir = os.path.join(output_dir, selected_state)
     available_tables = sorted([f for f in os.listdir(state_dir) if f.endswith(".csv")])
     
@@ -936,7 +980,6 @@ def view_results_tab():
         st.error(f"No tables found for state: {selected_state}")
         return
     
-    # Select table type
     table_options = [
         f"{selected_state}_Midday_combined.csv",
         f"{selected_state}_Evening_combined.csv",
@@ -948,184 +991,444 @@ def view_results_tab():
     
     available_options = [opt for opt in table_options if opt in available_tables]
     if not available_options:
-        available_options = available_tables  # Fallback to all tables if expected ones aren't found
-        
+        available_options = available_tables
+    
     selected_table = st.selectbox("Select table type:", available_options)
     
-    # Display the selected table
     table_path = os.path.join(state_dir, selected_table)
     if os.path.exists(table_path):
         try:
-        df = pd.read_csv(table_path)
-        
-        # Apply background colors to different sets
-        def highlight_sets(s):
-            if s.name != 'Set':
-                return [''] * len(s)
+            # FIX #1: properly-indented try block
+            df = pd.read_csv(table_path)
             
-            return ['background-color: rgba(31, 119, 180, 0.1)' if x == 'Set3'
-                   else 'background-color: rgba(44, 160, 44, 0.1)' if x == 'Set2'
-                   else 'background-color: rgba(255, 127, 14, 0.1)' if (x == 'Set1')
-                   else '' for x in s]
-        
-        # Display styled table
-        st.dataframe(
-            df.style.apply(highlight_sets, axis=0).set_properties(**{
-                'text-align': 'center',
-                'font-family': 'monospace',
-                'white-space': 'nowrap'
-            }),
-            use_container_width=True
-        )
-        
-        # Download button
-        csv = df.to_csv(index=False)
-        st.download_button(
-            "Download Table as CSV",
-            csv,
-            file_name=selected_table,
-            mime="text/csv"
-        )
+            def highlight_sets(s):
+                # Color by Set column
+                if s.name != 'Set':
+                    return [''] * len(s)
+                
+                return [
+                    'background-color: rgba(31, 119, 180, 0.1)' if x == 'Set3'
+                    else 'background-color: rgba(44, 160, 44, 0.1)' if x == 'Set2'
+                    else 'background-color: rgba(255, 127, 14, 0.1)' if x == 'Set1'
+                    else ''
+                    for x in s
+                ]
+            
+            st.dataframe(
+                df.style.apply(highlight_sets, axis=0).set_properties(**{
+                    'text-align': 'center',
+                    'font-family': 'monospace',
+                    'white-space': 'nowrap'
+                }),
+                use_container_width=True
+            )
+            
+            csv = df.to_csv(index=False)
+            st.download_button(
+                "Download Table as CSV",
+                csv,
+                file_name=selected_table,
+                mime="text/csv"
+            )
         except Exception as e:
             st.error(f"Error loading table: {str(e)}")
     else:
         st.error(f"Table file not found: {table_path}")
 
+def _winner_html(df, patterns):
+    def cell_fmt(val):
+        val = str(val)
+        for p in patterns:
+            if p in val:
+                val = val.replace(p, f'<span class="highlight">{p}</span>')
+        return val
+    cols = [c for c in ['Set','Draw','RowType','7','6','5','4','3','2','1'] if c in df.columns]
+    rows = ["<tr>"+"".join(f"<th>{c}</th>" for c in cols)+"</tr>"]
+    for _, row in df.iterrows():
+        rows.append("<tr>"+ "".join(f"<td>{cell_fmt(row[c])}</td>" for c in cols) +"</tr>")
+    return (
+        "<html><head><style> "
+        ".highlight{color:#800080;font-weight:800} table{border-collapse:collapse}"
+        "th,td{border:1px solid #000;padding:4px 6px;text-align:center}"
+        "</style></head><body><table>"
+        + "\n".join(rows) + "</table></body></html>"
+    )
+
+def get_top_prediction_index(state: str, date_str: str):
+    """
+    Look at data/outputs/predictions/<state>_<date>_predictions.json
+    and return the index with rank 1. None if the file isn't there.
+    """
+    pred_path = Path("data/outputs/predictions") / f"{state}_{date_str}_predictions.json"
+    if not pred_path.exists():
+        return None
+
+    with open(pred_path, "r") as f:
+        preds = json.load(f)
+
+    # file format: { "predictions": [ { "rank": 1, "index": ... }, ... ] }
+    for entry in preds.get("predictions", []):
+        if entry.get("rank") == 1:
+            return entry.get("index")
+    return None
+
 def log_winners_tab():
-    """Log Winners Tab Content"""
+    """Enhanced Log Winners Tab with JSON Export"""
     st.header("Log & Highlight Winners")
+    st.markdown("Enter winning numbers to highlight them in tables and save for AI training.")
     
-    # Form for winner inputs
-    with st.form("winners_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Midday Winners")
-            midday_winners = st.text_input(
-                "Enter Midday winning numbers (separated by spaces)",
-                placeholder="e.g. 123 456 789"
-            )
-        
-        with col2:
-            st.subheader("Evening Winners")
-            evening_winners = st.text_input(
-                "Enter Evening winning numbers (separated by spaces)",
-                placeholder="e.g. 123 456 789"
-            )
-        
-        # Select states to process
-        selected_states = st.multiselect(
-            "Select States to Process (leave empty for all)",
-            options=STATES,
-            default=[],
-            key="log_winners_states"
-        )
-        
-        submit_button = st.form_submit_button("Highlight Winners", type="primary")
+    # Choose input method
+    input_method = st.radio(
+        "Choose input method:",
+        ["Individual Entry", "Bulk Paste (Multiple States)"],
+        key="winner_input_method"
+    )
     
-    # Process winners when submitted
-    if submit_button:
-        if not midday_winners and not evening_winners:
-            st.warning("Please enter at least one winning number")
-            return
-        
-        # Parse winners
-        midday_list = [w.strip() for w in midday_winners.split() if w.strip()]
-        evening_list = [w.strip() for w in evening_winners.split() if w.strip()]
-        
-        # Preview winners
-        if midday_list:
-            st.write("Midday Winners:", ", ".join(midday_list))
-        if evening_list:
-            st.write("Evening Winners:", ", ".join(evening_list))
-        
-        # States to process
-        states_to_process = selected_states if selected_states else STATES
-        st.write(f"Processing {len(states_to_process)} states...")
-        
-        # Progress tracking
-        progress_bar = st.progress(0)
-        status = st.empty()
-        
-        # Process each state
-        for i, state_name in enumerate(states_to_process):
-            status.info(f"Processing {state_name}...")
+    if input_method == "Individual Entry":
+        # Original individual entry form
+        with st.form("winners_form_individual"):
+            col1, col2 = st.columns(2)
             
-            # Load tables for this state
-            tables = load_state_data(state_name)
+            with col1:
+                st.subheader("Midday Winners")
+                midday_winners = st.text_input(
+                    "Enter Midday winning numbers (separated by spaces)",
+                    placeholder="e.g. 123 456 789"
+                )
             
-            if not tables:
-                st.warning(f"No tables found for {state_name}")
-                continue
+            with col2:
+                st.subheader("Evening Winners")
+                evening_winners = st.text_input(
+                    "Enter Evening winning numbers (separated by spaces)",
+                    placeholder="e.g. 123 456 789"
+                )
             
-            # Highlight winners
-            highlighted_tables = highlight_winners_in_table(
-                tables,
-                midday_list,
-                evening_list
+            selected_states = st.multiselect(
+                "Select States to Process (leave empty for all)",
+                options=STATES,
+                default=[],
+                key="log_winners_states_individual"
             )
             
-            # Save highlighted tables
-            output_dir = os.path.join(get_winners_output_dir(), state_name)
-            os.makedirs(output_dir, exist_ok=True)
+            # Add date input for historical data
+            winner_date = st.date_input(
+                "Winner Date",
+                value=datetime.now().date(),
+                key="winner_date_individual"
+            )
             
-            for section_key, df in highlighted_tables.items():
-                if df is not None and not df.empty:
-                    # Create winner-specific filename
-                    winners_suffix = ""
-                    if "Midday" in section_key and midday_list:
-                        winners_suffix = f"_win{'_'.join(midday_list)}"
-                    elif "Evening" in section_key and evening_list:
-                        winners_suffix = f"_win{'_'.join(evening_list)}"
-                    elif "Combined" in section_key and (midday_list or evening_list):
-                        winners_suffix = "_winners"
+            submit_button = st.form_submit_button("Log Winners & Highlight", type="primary")
+        
+        if submit_button:
+            if not midday_winners and not evening_winners:
+                st.warning("Please enter at least one winning number")
+                return
+            
+            midday_list = [w.strip() for w in midday_winners.split() if w.strip()]
+            evening_list = [w.strip() for w in evening_winners.split() if w.strip()]
+            
+            states_to_process = selected_states if selected_states else STATES
+            date_str = winner_date.strftime("%Y-%m-%d")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            progress_bar = st.progress(0)
+            status = st.empty()
+            json_files_saved = []
+            
+            for i, state_name in enumerate(states_to_process):
+                status.info(f"Processing {state_name}...")
+                
+                # Save winners as JSON
+                if midday_list or evening_list:
+                    midday_winner = midday_list[0] if midday_list else ""
+                    evening_winner = evening_list[0] if evening_list else ""
                     
-                    output_file = os.path.join(
-                        output_dir, 
-                        f"{state_name}_{section_key}{winners_suffix}.csv"
+                    json_filepath = save_winners_as_json(
+                        state_name, 
+                        midday_winner, 
+                        evening_winner,
+                        date_str
                     )
-                    df.to_csv(output_file, index=False)
+                    if json_filepath:
+                        json_files_saved.append(json_filepath)
+                
+                # Original highlighting logic
+                tables = load_state_data(state_name)
+                if not tables:
+                    st.warning(f"No tables found for {state_name}")
+                    continue
+                
+                # First check if tables exist and are not empty
+                valid_tables = {}
+                for section_key, df in tables.items():
+                    if df is not None and not df.empty:
+                        valid_tables[section_key] = df
+                
+                if valid_tables:
+                    # Now apply highlighting to valid tables
+                    highlighted_tables = highlight_winners_in_table(
+                        valid_tables,
+                        midday_list,
+                        evening_list
+                    )
+                    
+                    output_dir = os.path.join(get_winners_output_dir(), state_name)
+                    os.makedirs(output_dir, exist_ok=True)
+                    
+                    # Create winners directory for HTML files
+                    winners_dir = Path("data/outputs/winners")
+                    winners_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    for section_key, styled_df in highlighted_tables.items():
+                        if styled_df is not None:
+                            winners_suffix = ""
+                            if "Midday" in section_key and midday_list:
+                                winners_suffix = f"_win{'_'.join(midday_list)}"
+                            elif "Evening" in section_key and evening_list:
+                                winners_suffix = f"_win{'_'.join(evening_list)}"
+                            elif "Combined" in section_key and (midday_list or evening_list):
+                                winners_suffix = "_winners"
+                            
+                            # Save CSV
+                            output_file = os.path.join(
+                                output_dir,
+                                f"{state_name}_{section_key}{winners_suffix}.csv"
+                            )
+                            valid_tables[section_key].to_csv(output_file, index=False)
+                            
+                            # Get top prediction index for this state/date
+                            top_index = get_top_prediction_index(state_name, date_str)
+                            patterns = get_patterns_for_index(top_index) if top_index is not None else []
+                            html_str = _winner_html(valid_tables[section_key], patterns)
+                            html_path = winners_dir / f"{state_name}_{section_key}{winners_suffix}_{timestamp}.html"
+                            with open(html_path, "w", encoding="utf-8") as f:
+                                f.write(html_str)
+                            
+                            # Show quick link in UI
+                            st.markdown(f"✅ **HTML saved** → `{html_path}`")
+                    
+                    # Create bundle
+                    pred_json_path = Path("data/outputs/predictions") / f"{state_name}_{date_str}_predictions.json"
+                    winners_json_path = Path("data/outputs/winners_json") / f"{state_name}_{date_str}_winners.json"
+                    if pred_json_path.exists() and winners_json_path.exists():
+                        bundle_path = bundle_day(state_name, date_str, pred_json_path, winners_json_path)
+                        st.success(f"Bundle saved → {bundle_path}")
+                
+                progress = (i + 1) / len(states_to_process)
+                progress_bar.progress(progress)
             
-            # Update progress
-            progress = (i + 1) / len(states_to_process)
-            progress_bar.progress(progress)
+            status.success("Winner logging completed!")
+            
+            if json_files_saved:
+                st.success(f"Saved {len(json_files_saved)} winner JSON files for AI training")
+                with st.expander("View saved JSON files"):
+                    for filepath in json_files_saved[:5]:  # Show first 5
+                        st.text(filepath)
+                    if len(json_files_saved) > 5:
+                        st.text(f"... and {len(json_files_saved) - 5} more files")
+    
+    else:  # Bulk Paste method
+        st.markdown("""
+        ### Bulk Paste Format
+        Paste winners in this format (tab or space separated):
+        ```
+        Connecticut    042    838
+        Delaware       058    478
+        Florida        610    975
+        ```
+        First column: State name
+        Second column: Midday winner (or empty)
+        Third column: Evening winner (or empty)
+        """)
         
-        # Complete
-        status.success("Winner highlighting completed!")
+        with st.form("winners_form_bulk"):
+            winners_text = st.text_area(
+                "Paste winners data here:",
+                height=300,
+                placeholder="Connecticut\t042\t838\nDelaware\t058\t478\nFlorida\t610\t975"
+            )
+            
+            winner_date_bulk = st.date_input(
+                "Winner Date",
+                value=datetime.now().date(),
+                key="winner_date_bulk"
+            )
+            
+            submit_bulk = st.form_submit_button("Process Bulk Winners", type="primary")
         
-        # Show sample results
-        if states_to_process:
-            st.subheader("Sample Results (First State)")
-            first_state = states_to_process[0]
-            sample_tables = load_state_data(first_state)
+        if submit_bulk and winners_text:
+            # Parse the bulk input
+            winners_dict = parse_winners_input(winners_text)
             
-            if "Midday_combined" in sample_tables and midday_list:
-                st.write("Midday Combined Table (with winners):")
-                highlighted = highlight_winners_in_table(
-                    {"Midday_combined": sample_tables["Midday_combined"]},
-                    midday_list,
-                    []
-                )
-                st.dataframe(highlighted["Midday_combined"], use_container_width=True)
+            if not winners_dict:
+                st.error("No valid winner data found. Please check the format.")
+                return
             
-            if "Evening_combined" in sample_tables and evening_list:
-                st.write("Evening Combined Table (with winners):")
-                highlighted = highlight_winners_in_table(
-                    {"Evening_combined": sample_tables["Evening_combined"]},
-                    [],
-                    evening_list
+            st.write(f"Found winner data for {len(winners_dict)} states")
+            
+            progress_bar = st.progress(0)
+            status = st.empty()
+            json_files_saved = []
+            date_str = winner_date_bulk.strftime("%Y-%m-%d")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Map state names to match STATES list
+            state_mapping = {
+                "Connecticut": "Connecticut4",
+                "Delaware": "Delaware4",
+                "Florida": "Florida4",
+                "Indiana": "Indiana4",
+                "Michigan": "Michigan4",
+                "New Jersey": "NewJersey4",
+                "New York": "NewYork4",
+                "North Carolina": "NorthCarolina4",
+                "Ohio": "Ohio4",
+                "Ontario": "OntarioCanada4",
+                "Pennsylvania": "Pennsylvania4",
+                "Puerto Rico": "PuertoRico4",
+                "South Carolina": "SouthCarolina4",
+                "Virginia": "Virginia4"
+            }
+            
+            processed_count = 0
+            for state_input, (midday, evening) in winners_dict.items():
+                # Try to match state name
+                state_name = None
+                for full_name in STATES:
+                    if state_input.lower() in full_name.lower():
+                        state_name = full_name
+                        break
+                
+                # Also check mapping
+                if not state_name and state_input in state_mapping:
+                    state_name = state_mapping[state_input]
+                
+                if not state_name:
+                    st.warning(f"Could not match state: {state_input}")
+                    continue
+                
+                status.info(f"Processing {state_name}...")
+                
+                # Save winners as JSON
+                json_filepath = save_winners_as_json(
+                    state_name,
+                    midday,
+                    evening,
+                    date_str
                 )
-                st.dataframe(highlighted["Evening_combined"], use_container_width=True)
+                if json_filepath:
+                    json_files_saved.append(json_filepath)
+                
+                # Highlight in tables if numbers exist
+                if midday or evening:
+                    tables = load_state_data(state_name)
+                    if tables:
+                        midday_list = [midday] if midday else []
+                        evening_list = [evening] if evening else []
+                        
+                        # First check if tables exist and are not empty
+                        valid_tables = {}
+                        for section_key, df in tables.items():
+                            if df is not None and not df.empty:
+                                valid_tables[section_key] = df
+                        
+                        if valid_tables:
+                            # Now apply highlighting to valid tables
+                            highlighted_tables = highlight_winners_in_table(
+                                valid_tables,
+                                midday_list,
+                                evening_list
+                            )
+                            
+                            output_dir = os.path.join(get_winners_output_dir(), state_name)
+                            os.makedirs(output_dir, exist_ok=True)
+                            
+                            # Create winners directory for HTML files
+                            winners_dir = Path("data/outputs/winners")
+                            winners_dir.mkdir(parents=True, exist_ok=True)
+                            
+                            for section_key, styled_df in highlighted_tables.items():
+                                if styled_df is not None:
+                                    # Save CSV
+                                    output_file = os.path.join(
+                                        output_dir,
+                                        f"{state_name}_{section_key}_winners_{date_str}.csv"
+                                    )
+                                    valid_tables[section_key].to_csv(output_file, index=False)
+                                    
+                                    # Get top prediction index for this state/date
+                                    top_index = get_top_prediction_index(state_name, date_str)
+                                    patterns = get_patterns_for_index(top_index) if top_index is not None else []
+                                    html_str = _winner_html(valid_tables[section_key], patterns)
+                                    html_path = winners_dir / f"{state_name}_{section_key}_winners_{timestamp}.html"
+                                    with open(html_path, "w", encoding="utf-8") as f:
+                                        f.write(html_str)
+                                    
+                                    # Show quick link in UI
+                                    st.markdown(f"✅ **HTML saved** → `{html_path}`")
+                    
+                            # Create bundle
+                            bundle_day(state_name, date_str)
+                
+                processed_count += 1
+                progress_bar.progress(processed_count / len(winners_dict))
+            
+            status.success(f"Processed {processed_count} states!")
+            
+            if json_files_saved:
+                st.success(f"Saved {len(json_files_saved)} winner JSON files")
+                
+                # Show summary
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("States Processed", processed_count)
+                    st.metric("JSON Files Saved", len(json_files_saved))
+                
+                with col2:
+                    predictions_dir = get_predictions_output_dir()
+                    winners_dir = get_winners_json_output_dir()
+                    st.info(f"Predictions saved to:\n`{predictions_dir}`")
+                    st.info(f"Winners saved to:\n`{winners_dir}`")
+    
+    # Add section to view saved data
+    st.markdown("---")
+    st.subheader("View Saved Data")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("View Recent Predictions"):
+            predictions_dir = get_predictions_output_dir()
+            if os.path.exists(predictions_dir):
+                files = sorted(os.listdir(predictions_dir))[-10:]  # Last 10 files
+                if files:
+                    st.write("Recent prediction files:")
+                    for f in files:
+                        st.text(f"• {f}")
+                else:
+                    st.info("No prediction files found yet")
+    
+    with col2:
+        if st.button("View Recent Winners"):
+            winners_dir = get_winners_json_output_dir()
+            if os.path.exists(winners_dir):
+                files = sorted(os.listdir(winners_dir))[-10:]  # Last 10 files
+                if files:
+                    st.write("Recent winner files:")
+                    for f in files:
+                        st.text(f"• {f}")
+                else:
+                    st.info("No winner files found yet")
 
 def vtrac_analyzer_tab():
-    """Enhanced V-TRAC Analyzer Tab Content with optimized performance and improved layout from clustering_app_3"""
+    """Enhanced V-TRAC Analyzer Tab Content"""
     st.header("Enhanced V-TRAC Pattern Analyzer")
     st.markdown("""
-    This tool analyzes V-TRAC indexes for your selected dataset(s). Use the dropdown to view results for each state.
+    This tool analyzes V-TRAC indexes for your selected dataset(s). Use the dropdown 
+    to view results for each state.
     """)
     st.info("Analysis may take longer for large datasets or when running all states.")
     
-    # Dropdown for single state or all states
     state_options = ["All States"] + STATES
     selected_option = st.selectbox("Select Dataset(s) to Analyze", state_options, key="vtrac_state_select")
     
@@ -1134,9 +1437,10 @@ def vtrac_analyzer_tab():
     
     if st.button("Run V-TRAC Analysis for Selected Dataset(s)", type="primary", key="vtrac_analyzer_run_button"):
         with st.spinner("Running V-TRAC Analysis..."):
+            # FIX #2: indentation for the if/else (states_to_run)
             if selected_option == "All States":
                 states_to_run = STATES
-        else:
+            else:
                 states_to_run = [selected_option]
             
             progress_bar = st.progress(0)
@@ -1148,7 +1452,6 @@ def vtrac_analyzer_tab():
                 state_start = time.time()
                 status_text.info(f"Analyzing {state_name}...")
                 
-                # Initialize session state for this state if needed
                 if 'vtrac_results' not in st.session_state:
                     st.session_state.vtrac_results = {}
                 if 'vtrac_reports' not in st.session_state:
@@ -1156,35 +1459,36 @@ def vtrac_analyzer_tab():
                 if 'last_analysis_time' not in st.session_state:
                     st.session_state.last_analysis_time = {}
                 
-                # Check if we already have recent results (< 5 minutes old)
                 current_time = time.time()
                 cached_results_exist = (
                     state_name in st.session_state.vtrac_results and
                     state_name in st.session_state.last_analysis_time and
-                    current_time - st.session_state.last_analysis_time.get(state_name, 0) < 300  # 5 minutes
+                    current_time - st.session_state.last_analysis_time.get(state_name, 0) < 300
                 )
                 
                 if not cached_results_exist:
-                    # Load tables using the efficient load_state_data function
                     tables = load_state_data(state_name)
                     if not tables:
                         print(f"[V-TRAC] No tables found for {state_name}, skipping.")
                         st.warning(f"No tables found for {state_name}")
-                        progress_bar.progress((i+1)/len(states_to_run))
+                        progress_bar.progress((i + 1) / len(states_to_run))
                         continue
                     
                     results = analyze_all_indexes(state_name)
                     if not results:
                         print(f"[V-TRAC] No analyzable data for {state_name}, skipping.")
                         st.warning(f"No analyzable data found for {state_name}")
-                        progress_bar.progress((i+1)/len(states_to_run))
+                        progress_bar.progress((i + 1) / len(states_to_run))
                         continue
                     
-                    # Store in session state
                     st.session_state.vtrac_results[state_name] = results
                     st.session_state.last_analysis_time[state_name] = current_time
                     
-                    # Generate reports
+                    # Save predictions as JSON for AI training
+                    json_filepath = save_predictions_as_json(state_name, results, top_n_reports)
+                    if json_filepath:
+                        print(f"[V-TRAC] Saved predictions to: {json_filepath}")
+                    
                     reports = generate_top_reports(state_name, results, top_n_reports)
                     st.session_state.vtrac_reports[state_name] = reports
                 else:
@@ -1193,35 +1497,28 @@ def vtrac_analyzer_tab():
                 state_end = time.time()
                 print(f"[V-TRAC] Finished {state_name} in {state_end - state_start:.2f} seconds.")
                 
-                progress_bar.progress((i+1)/len(states_to_run))
+                progress_bar.progress((i + 1) / len(states_to_run))
             
             total_end = time.time()
             print(f"[V-TRAC] All selected analyses complete in {total_end - total_start:.2f} seconds.")
-            
             status_text.success("Analysis completed!")
     
-    # Always display results if we have them, regardless of whether button was pressed
-    # This allows results to persist across UI interactions
-    
-    # Check if we have any analysis results
+    # Check if we have analysis results
     has_results = False
     if 'vtrac_results' in st.session_state:
         for s in STATES:
             if s in st.session_state.vtrac_results:
                 has_results = True
                 break
-        
         if not has_results and selected_option in st.session_state.vtrac_results:
             has_results = True
     
     if has_results:
         st.markdown("## Analysis Results")
         
-        # Dropdown to select which state's results to view
         available_states = [s for s in STATES if s in st.session_state.vtrac_results]
         
         if len(available_states) > 1:
-            # If All States was selected but we only have one state's results, select it directly
             if selected_option == "All States" and len(available_states) == 1:
                 selected_state = available_states[0]
             else:
@@ -1237,38 +1534,38 @@ def vtrac_analyzer_tab():
         results = st.session_state.vtrac_results[selected_state]
         reports = st.session_state.vtrac_reports.get(selected_state, [])
         
-        # Display when this analysis was performed
         if selected_state in st.session_state.last_analysis_time:
             last_t = datetime.fromtimestamp(st.session_state.last_analysis_time[selected_state])
             st.info(f"Analysis for {selected_state} was last run on {last_t.strftime('%Y-%m-%d at %H:%M:%S')}")
         
-        # Display summary
         st.subheader(f"Top {min(top_n_indexes, len(results))} V-TRAC Indexes for {selected_state}")
         
-        # Display table with results
         top_results_df = pd.DataFrame([
             {
-                "Rank": i + 1,  # Calculate rank position directly
+                "Rank": i + 1,
                 "Index": r["index"],
                 "Score": f"{r['score']:.2f}",
                 "Patterns": len(r["patterns"]),
-                "Top Patterns": ", ".join(sorted(list(r["patterns"]))[:5]) + "..." if len(r["patterns"]) > 5 else ", ".join(sorted(r["patterns"]))
+                "Top Patterns": (
+                    ", ".join(sorted(list(r["patterns"]))[:5]) + "..."
+                    if len(r["patterns"]) > 5 else
+                    ", ".join(sorted(r["patterns"]))
+                )
             }
             for i, r in enumerate(results[:top_n_indexes])
         ])
         st.dataframe(top_results_df, use_container_width=True)
         
-        # Show the #1 rank table set in three columns (from clustering_app_3)
         if results:
-            best_result = results[0]  # rank #1
+            best_result = results[0]
             st.subheader(f"Top Ranked Index Tables (Index #{best_result['index']})")
             st.write("Midday, Evening, and Combined data for the highest-scoring index.")
             
-            # Get tables for this state (using our efficient table loading)
             st_tbls = load_state_data(selected_state)
             col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
+            
+            # FIX #3: remove extra indentation for the 'with colX' blocks
+            with col1:
                 st.markdown("**Midday Combined Table**")
                 if "Midday_combined" in st_tbls:
                     st.dataframe(st_tbls["Midday_combined"], use_container_width=True, height=400)
@@ -1282,13 +1579,13 @@ def vtrac_analyzer_tab():
                     )
                 else:
                     st.info("No Midday combined table available")
-                    
-                    with col2:
+            
+            with col2:
                 st.markdown("**Evening Combined Table**")
                 if "Evening_combined" in st_tbls:
                     st.dataframe(st_tbls["Evening_combined"], use_container_width=True, height=400)
                     csv = st_tbls["Evening_combined"].to_csv(index=False)
-                            st.download_button(
+                    st.download_button(
                         "Download Evening Combined Table",
                         data=csv,
                         file_name=f"{selected_state}_Evening_combined.csv",
@@ -1297,8 +1594,8 @@ def vtrac_analyzer_tab():
                     )
                 else:
                     st.info("No Evening combined table available")
-                    
-                    with col3:
+            
+            with col3:
                 st.markdown("**Combined Table**")
                 if "Combined_combined" in st_tbls:
                     st.dataframe(st_tbls["Combined_combined"], use_container_width=True, height=400)
@@ -1313,14 +1610,12 @@ def vtrac_analyzer_tab():
                 else:
                     st.info("No Combined table available")
         
-        # Display HTML reports in tabs
         if reports and top_n_reports > 0:
             st.subheader("Detailed Analysis Reports")
-            # Add rank to reports if needed
             for i, report in enumerate(reports):
                 if 'rank' not in report:
                     report['rank'] = i + 1
-                    
+            
             report_tabs = st.tabs([f"Rank #{r['rank']} (Index {r['index']})" for r in reports[:top_n_reports]])
             for tab, report in zip(report_tabs, reports[:top_n_reports]):
                 with tab:
@@ -1335,14 +1630,13 @@ def vtrac_analyzer_tab():
                             mime="text/html",
                             key=f"dl_html_rank{report['rank']}"
                         )
-                        if st.button(f"Open in Browser (Rank #{report['rank']})", 
-                                     key=f"open_browser_{selected_state}_{report['rank']}"):
+                        if st.button(
+                            f"Open in Browser (Rank #{report['rank']})",
+                            key=f"open_browser_{selected_state}_{report['rank']}"
+                        ):
                             webbrowser.open(f"file://{os.path.abspath(report['filepath'])}")
                     
-                    # Add toggle for expanding the view
                     expand_view = st.checkbox("Expand View", key=f"expand_{selected_state}_{report['rank']}")
-        
-                    # Show HTML report with different heights based on expand state
                     if expand_view:
                         st.components.v1.html(report['html'], height=4000, scrolling=True)
                     else:
@@ -1353,4 +1647,4 @@ def vtrac_analyzer_tab():
         st.info("No analysis results found. Please run an analysis first.")
 
 if __name__ == "__main__":
-    main() 
+    main()
