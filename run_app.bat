@@ -1,5 +1,3 @@
 @echo off
-cd /d "%~dp0"
-call .venv\Scripts\activate.bat
-streamlit run scripts/utils/streamlit_app.py
-pause 
+call .venv\Scripts\activate
+python -m streamlit run src/app.py 

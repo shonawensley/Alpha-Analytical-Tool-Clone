@@ -21,27 +21,25 @@ import traceback
 from datetime import datetime
 from collections import Counter
 from functools import lru_cache
+import pathlib
 
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Adjust path (script_dir -> project_root)
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(script_dir))
-sys.path.append(project_root)
+# --- temporary path fix until we retire this stand-alone app  ----
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent   # repo root
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# ----------------------------------------------------------------
 
 # ------------------------------------------------------------------
 # Project-level helpers and constants
 # ------------------------------------------------------------------
 try:
-    from scripts.utils.path_handler import (
-        get_tables_output_dir,
-        # If you want to save winners highlight, you can keep:
-        get_winners_output_dir
-    )
-    from scripts.utils.state_utils import STATES
-    from scripts.utils.vtrac_utils import (
+    from utils import vtrac_utils, bundler, path_handler
+    from utils.state_utils import STATES
+    from utils.vtrac_utils import (
         BOXED_VTRAC_REFERENCE,
         highlight_winners_in_table,  # Optional if needed
     )
@@ -106,7 +104,7 @@ def load_state_data_cached(state_name: str) -> dict:
     Loads only the 3 "combined" tables from data/outputs/tables/[STATE_NAME]/.
     Returns a dict: { 'Midday_combined': df, 'Evening_combined': df, 'Combined_combined': df }
     """
-    tables_root = get_tables_output_dir()
+    tables_root = path_handler.get_tables_output_dir()
     if not os.path.exists(tables_root):
         print(f"[ERROR] Tables root dir not found: {tables_root}")
         st.error("Please generate tables first.")
