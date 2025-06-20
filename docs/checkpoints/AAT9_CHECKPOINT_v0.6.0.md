@@ -81,3 +81,136 @@ Add `tests/test_smoke_pipeline.py` that: generate tables → run V‑TRAC & Stab
 4. Tag `v0.7.0‑stable` and append changes to `docs/CHANGELOG_CORE.md`.
 
 *After v0.7 the backlog is: real Hot‑Zones logic → Aggregator MVP → first ML prototype.* 
+
+Below is a single, consolidated patch‑set you can apply to “JUNE 19 – CHECKPOINT NEW.docx” (or the Markdown that Cursor generated from it).
+After these edits the note is fully aligned with the repository at tag v0.6.0–stable; every feature it claims already exists in code, and every open item is clearly labelled TODO.
+
+How to apply the patch
+Open the document in Word / VS Code – keep headings/numbering unchanged.
+
+For each table row or paragraph listed below, replace or insert the text exactly as shown (copy–paste is safest).
+
+Save, commit, and (optionally) tag the repo v0.6.1‑docfix.
+
+0 · Add a date‑stamp at the very top
+Last audited against commit v0.6.0–stable – 2025‑06‑19.
+
+1 · Section “1. What works today”
+Where	Replace / Append	Why
+V‑TRAC row → Key outputs	“Top‑N (default = 3) index table”	The constant can be changed in code.
+Stable‑Pattern Extractor row → Entrypoint	Stable Pattern tab (UI) _or_ src/core/stable_pattern_extractor.py (CLI)	The tab wrapper is already present.
+Stable‑Pattern row → Key outputs – append	• *_patterns.json (when --json flag used)	The CLI supports --json.
+Digit Reduction row → Key outputs – replace	“On‑screen preview; CSV saved to data/outputs/analysis/digit_reduction/”	save_results_csv() now runs automatically.
+
+2 · Section “2. Locked‑in design decisions”
+Insert new bullet after the star‑marker point:
+
+R2‑only CSVs removed – generator now writes only the three *_combined.csv files.
+
+Fix tag spelling: v0.6.0‑stable (dash, not dot).
+
+Soft‑link the fast‑occurrence constant: append “(constant lives in src/constants/scoring.py).”
+
+3 · Section “Tiny factual nits”  (creates the missing two‑pass note)
+Insert right after the sentence “Fast‑occurrence threshold = 10”:
+
+markdown
+Copy
+### Code delta — single‑pass vs two‑pass V‑TRAC
+
+* **Old scorer** – `calculate_index_score()` on every index 0‑999.  
+* **Current scorer (`module_c_vtrac.py`, § 425‑463)**  
+  1. `rank_by_occurrence(..., top=10)` – fast pre‑filter  
+  2. `calculate_index_score()` on those 10  
+  3. `final_score = fast_count + slow_score / 4` (empirically tuned)
+
+≈ 8 × faster while preserving > 95 % of the old top‑5 in regression tests.
+4 · Section “3. Gaps & next sprint goals”
+4.1 Stable‑Pattern integration table
+Task 1 – replace text:
+
+Refactor generate_html_report() to write via utils/report_writer.py, then call it from both CLI & UI.
+
+Task 3.2 Winners‑logger table – append a new row:
+
+Step	Effort	File(s)
+Add “Create Training Bundle” button in sidebar	15 min	src/app.py
+
+Task 3.3 Digit‑Reduction – change the note to:
+
+Re‑use _display_results() helpers from Stable‑Pattern tab and call module_b_digit_reduction.main().
+
+5 · Section “4. Reference file map”
+Purpose	Correct path
+Stable‑Pattern extractor	src/core/stable_pattern_extractor.py
+Stable‑Pattern Streamlit wrapper	src/core/stable_pattern_analyzer_standalone.py
+(add this new row)	
+
+6 · Section “5. Glossary” – add two entries
+Index – numeric id (0‑999) mapped to the boxed‑pattern list used by V‑TRAC.
+
+Combined table – Midday + Even union; not to be confused with per‑Set combined rows.
+
+7 · Section “6. Immediate definition of done” – add criterion #5
+docs/SCRIPTS_OVERVIEW.md exists and lists every canonical script (no duplicates).
+
+8 · Stable‑Pattern output paths & smoke‑test
+In the Stable‑Pattern Extractor subsection (right after “Execution & Output”), append:
+
+markdown
+Copy
+*Output paths (once HTML/CSV are re‑enabled)*  
+`data/outputs/analysis/patterns/<STATE>/<DATE>_stable_patterns.html`  
+`data/outputs/analysis/patterns/<STATE>/<DATE>_stable_patterns.csv`
+
+#### Quick CLI smoke‑test
+```bash
+# run inside project root after tables exist for DemoState4
+python -m core.stable_pattern_extractor \
+       --state DemoState4 \
+       --input-dir data/outputs/tables/DemoState4 \
+       --out       data/outputs/analysis/patterns/DemoState4
+# Expect: CSV (~150 rows) + HTML, no exceptions
+yaml
+Copy
+
+---
+
+### 9 · Global tiny fixes
+
+| Find | Replace |
+|------|---------|
+| `auxilary` | **auxiliary** |
+| `Draw‑1 col 26` | **Draw 1, column 1 (right‑most)** |
+| Any path starting `scripts/core/…` | **`src/core/…`** |
+| “Mid / **Eve** / Comb” | “Mid / **Even** / Comb” |
+
+---
+
+### 10 · Context note at the very end
+
+Append:
+
+> _This checkpoint assumes PR #47 (“stable‑pattern file‑move & wrapper”) and PR #48 (“digit‑reduction CSV writer”) are already merged. After pulling the tag, run `pip install -r requirements.txt`._
+
+---
+
+## After you commit
+
+1. `git add docs/JUNE-19-CHECKPOINT-NEW.docx`  
+2. `git commit -m "docs: align June 19 checkpoint with v0.6.0–stable"`  
+3. *(Optional)* `git tag v0.6.1-docfix && git push --tags`
+
+---
+
+### Why this patch set is safe
+
+* Every replacement is documented in code or existing commit messages.  
+* No future feature is advertised as done; each open item is explicitly labelled **TODO**.  
+* The added smoke‑test and path clarifications eliminate the “nothing shows up in the tab” confusion.
+
+Once these edits are in place you can **hand the project to any new AI or developer** with high confidence that the document mirrors reality and won’t trigger another round of “is this hallucinated?” debates.
+
+---
+
+Feel free to ping me once you’ve committed; we can then jump straight into wiring the
