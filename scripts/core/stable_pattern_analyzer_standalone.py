@@ -9,6 +9,9 @@ Streamlit-based UI that:
  4) Displays a summary of top stable patterns in Streamlit, allows downloading results as CSV/JSON, and offers the generated HTML report for download.
 
 This integrates the core logic (Part 1) with a UI and CSV loading mechanism (Part 2).
+
+❗ Embedded in the Alpha Analytical Tool via src/app.py.
+   When imported, do NOT call st.set_page_config(); the main app already did.
 """
 
 import os
@@ -319,7 +322,6 @@ def save_results_to_files(
 ###############################################################################
 
 def main():
-    st.set_page_config(page_title="Stable Pattern Analyzer", layout="wide")
     st.title("🎯 Stable Pattern Analyzer (Standalone)")
     st.markdown(
         "Loads standard CSV tables, runs the `stable_pattern_extractor_full.py` logic, and displays results."
@@ -533,4 +535,5 @@ def main():
 
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="Stable Pattern Analyzer", layout="wide")
     main()
