@@ -30,28 +30,26 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(os.path.dirname(script_dir))  # up 2 levels
 sys.path.append(project_root)
 
-# 1) Import the PART 1 stable extractor.
-# -----------------------------------------------------------------
-try:
-    from scripts.core.stable_pattern_extractor_full import (
-        run_stable_pattern_extraction,
-        build_html_report  # Also import the HTML report builder
-    )
-except ImportError as e:
-    st.error("FATAL ERROR: Cannot import stable_pattern_extractor_full.py.")
-    st.error(f"Details: {e}")
-    st.error("Please ensure 'scripts/core/stable_pattern_extractor_full.py' exists and is accessible.")
-    st.stop()
-
 # 2) Import project utilities for path handling and state list.
 # -----------------------------------------------------------------
 try:
-    from scripts.utils.path_handler import get_tables_output_dir, get_analysis_output_dir
-    from scripts.utils.state_utils import STATES
+    from src.utils.path_handler import get_tables_output_dir, get_analysis_output_dir, get_analysis_dir
+    from src.utils.state_utils import STATES
 except ImportError as e:
     st.error("FATAL ERROR: Cannot import path_handler or state_utils.")
     st.error(f"Details: {e}")
     st.error("Please ensure 'scripts/utils/' directory and its contents are correct.")
+    st.stop()
+
+# === Updated canonical import path ===
+try:
+    from core import stable_pattern_extractor as extractor
+    run_stable_pattern_extraction = extractor.run_stable_pattern_extraction
+    build_html_report = extractor.build_html_report
+except ImportError as e:
+    st.error("FATAL ERROR: Cannot import canonical stable_pattern_extractor module.")
+    st.error(f"Details: {e}")
+    st.error("Please ensure 'src/core/stable_pattern_extractor.py' exists and Python path is configured.")
     st.stop()
 
 
