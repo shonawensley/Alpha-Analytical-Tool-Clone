@@ -211,6 +211,44 @@ Append:
 
 Once these edits are in place you can **hand the project to any new AI or developer** with high confidence that the document mirrors reality and won’t trigger another round of “is this hallucinated?” debates.
 
----
+___
 
-Feel free to ping me once you’ve committed; we can then jump straight into wiring the
+### Pipeline relation to integrated app
+
+Below spells out exactly how the one-time table pipeline lives inside the Streamlit UI and how every downstream module plugs in. Feel free to tweak headings, but the wording is deliberately precise for future devs/AI.
+
+☑ How the classic “pipeline” now runs inside the integrated Streamlit app
+Stage	What happens	Code owner	UI trigger	CLI twin
+1 Clean & Extract	Reads Pick3StatsC4.xlsm → writes a cleaned workbook (*_cleaned.xlsx).	src/core/module_c_vtrac.py:run_clean_step()	Process Data tab – first checkbox	python -m src.core.generate_tables_pipeline --clean
+2 Generate Tables	Builds the three canonical *_combined.csv files (Midday / Evening / Combined). Runs once per state/date; stored under data/outputs/tables/<STATE>/.	utils/table_generator.py (called by same module_c file)	Process Data tab – second checkbox	python -m src.core.generate_tables_pipeline --tables
+3 Analysis – V-TRAC	Reads, never rewrites, the CSV tables. Produces:
+• *_predictions.json
+• *_vtrac.html.	src/core/module_c_vtrac.py:analyze_all_indexes()	V-TRAC tab	python -m src.core.vtrac_analyzer_standalone
+4 Analysis – Stable Patterns	Reads the same tables, finds vertical/horizontal 3-digit runs. Produces:
+• *_patterns.csv
+• optional *_patterns.html.	src/core/stable_pattern_extractor.py	Stable Pattern tab	python -m src.core.stable_pattern_extractor
+5 Analysis – Digit Reduction	Reduces long strings (R2/R4/…) to reveal survivor digits. Outputs on-screen & downloadable CSV.	src/core/module_b_digit_reduction.py	Digit Reduction tab	planned python -m …digit_reduction
+6 Winner Logging	User pastes daily hits → JSON saved under data/outputs/winners/<STATE>/.	src/ui/widgets/winner_logger.py	Log Winners tab	n/a
+7 Bundle / Aggregate	Joins predictions + winners → *_bundle.json (1 row per draw). Planned aggregator then outputs final training CSV.	scripts/merge_predictions_vs_winners.py (WIP)	button coming in Aggregator tab	same script in cron/CI
+
+Key take-aways
+
+The tables are built once (steps 1-2). All later modules only read them – no regeneration, no conflicts.
+
+CLI helpers and the Streamlit tabs call the same functions inside src/; the BAT files are just thin wrappers.
+
+Folder layout is contract-based: everything reads from data/outputs/tables/… and writes its own sub-folder in data/outputs/analysis/.
+
+Because every module writes JSON/CSV side-by-side, the aggregator can merge on {state, date, index} keys without re-running any analysis.
+
+If the Streamlit app runs, the pipeline is healthy.
+Failing BAT = stale import path only; fix path or run the UI.
+
+Drop this box into your “AAT9 v0.6.0 Checkpoint” doc and you’ve captured the exact relationship between the legacy pipeline scripts and the integrated app.
+
+
+
+
+
+
+
