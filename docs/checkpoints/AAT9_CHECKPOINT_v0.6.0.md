@@ -247,7 +247,33 @@ Failing BAT = stale import path only; fix path or run the UI.
 Drop this box into your “AAT9 v0.6.0 Checkpoint” doc and you’ve captured the exact relationship between the legacy pipeline scripts and the integrated app.
 
 
+🔄 How the one‑time pipeline now lives inside the integrated Streamlit app  
+Stage №	Action (reads → writes)	Code (single source of truth)	Streamlit trigger	Optional CLI helper
+1	Clean & Extract
+Pick3StatsC4.xlsm → *_cleaned.xlsx	src/core/module_c_vtrac.py : run_clean_step()	Process Data tab – “Clean Data”	python -m src.core.generate_tables_pipeline --clean
+2	Generate Tables
+_cleaned.xlsx → 3 *_combined.csv	utils/table_generator.py (called by same file as #1)	Process Data tab – “Generate Tables”	python -m src.core.generate_tables_pipeline --tables
+3	V‑TRAC Analyzer
+CSV → predictions JSON + HTML	src/core/module_c_vtrac.py	V‑TRAC tab	python -m src.core.vtrac_analyzer_standalone
+4	Stable‑Pattern Extractor
+CSV → patterns CSV / HTML	src/core/stable_pattern_extractor.py ✔	Stable Pattern tab	python -m src.core.stable_pattern_extractor
+5	Digit Reduction
+CSV → reduction CSV	src/core/module_b_digit_reduction.py	Digit Reduction tab	planned python -m src.core.digit_reduction
+6	Winner Logger
+User paste → winners JSON	src/ui/widgets/winner_logger.py	Log Winners tab	—
+7	Bundle / Aggregator
+predictions + winners → _bundle.json (future training set)	scripts/merge_predictions_vs_winners.py (WIP)	upcoming Aggregator tab	same script via cron
 
+Key facts
+
+Tables are generated once (Stages 1‑2). All analysis modules only read them – no double work, no risk of clobbering.
+
+The integrated app is the pipeline; BAT/CLI helpers are thin wrappers that call the same src/… code.
+
+Canonical Stable‑Pattern engine = src/core/stable_pattern_extractor.py.
+  Everything else (…_full.py, old BATs) should be archived once you confirm the UI works.
+
+If the Streamlit app runs end‑to‑end, the pipeline is healthy. BAT errors usually just mean an old import path (e.g. scripts.utils instead of utils). Fix the path or use the app.
 
 
 
