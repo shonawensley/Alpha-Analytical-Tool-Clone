@@ -45,9 +45,9 @@ _strip_non = re.compile(r'[^0-9]').sub
 def digits_only(s:str)->str: return _strip_non('', s or '')
 
 def is_3value(sub:str)->bool:
-    d=set(sub)
-    if not d: return False
-    return len(d)<=3 and len({digit2v.get(x) for x in d if x in digit2v})<=3
+    """Return True if the substring spans three or fewer V-Trac classes (regardless of raw digit count)."""
+    vset = {digit2v.get(ch) for ch in sub if ch in digit2v}
+    return bool(vset) and len(vset) <= 3
 
 def canon(sub:str)->str: return ''.join(sorted(sub))
 
@@ -65,6 +65,11 @@ def analyse(df:pd.DataFrame, section:str):
     """
     Main analysis function, combining all logic for pattern extraction, scoring, and flagging.
     """
+    # ------------------------------------------------------------------
+    # always start with an empty highlight-map so downstream code is safe
+    # ------------------------------------------------------------------
+    mask_map: dict[tuple[int, str], str] = {}
+    
     # --- STEP 1: Find all potential patterns and group them ---
     df=df.fillna('').reset_index(drop=True)
     occurrences = []
@@ -158,7 +163,7 @@ def analyse(df:pd.DataFrame, section:str):
                     tmp_run = 1
             span = max(span, tmp_run)
 
-        single_left = (straight and rowcov >= 3 and span == 1)
+        single_left = (straight and rowcov == 3 and span == 1)
         
         cons_full = is_cons_box or (rowcov==4 and perm==1 and len(cpat) == 3)
         cons_3v = (cons_full and len(cpat) == 3)
@@ -197,6 +202,9 @@ def analyse(df:pd.DataFrame, section:str):
                 continue
 
         # --- Scoring ---
+        # Hot-zone bonuses decay with column age (newest column "1" gets ×2)
+        col_factor = 2 if col == '1' else 1
+
         base = (rowcov * CFG['vertical_coverage_per_row'] +
                 span * CFG['horizontal_span_per_col'] +
                 (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) +
@@ -206,11 +214,12 @@ def analyse(df:pd.DataFrame, section:str):
                 ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char'] if info['patterns'] else 0) +
                 (CFG['single_left_bonus'] if single_left else 0) +
                 (CFG['consensus_full_bonus'] if cons_full else 0) +
-                (CFG['hot_level_1_bonus'] if hot == 1 else 0) +
-                (CFG['hot_level_2_bonus'] if hot == 2 else 0) +
+                (CFG['hot_level_1_bonus'] * col_factor if hot == 1 else 0) +
+                (CFG['hot_level_2_bonus'] * col_factor if hot == 2 else 0) +
                 (CFG.get('dominant_last_bonus', 0) if dom_last else 0) +
                 (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0) +
-                (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat)==3 and len(set(cpat))==2) else 0)
+                (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat)==3 and len(set(cpat))==2) else 0) +
+                (0.5 if (dom_last and perm == 1) else 0)
         )
         
         # --- Build Final Record ---
