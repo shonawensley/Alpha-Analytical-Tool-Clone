@@ -350,6 +350,23 @@ def main_cli():
         for r in all_rows: w.writerow({k:r.get(k,'') for k in out_cols})
     print(f"CSV   → {os.path.abspath(args.csv)}")
 
+def _eval_single_left(*, rowcov:int, span:int, straight:bool)->bool:
+    """Return True if pattern qualifies as 'single_left' according to v1.0.0 rule."""
+    return straight and rowcov == 3 and span == 1
+
+def _hot_bonus(col:str, hot:int)->int:
+    """Compute hot-zone bonus with column-age weighting used in scoring."""
+    col_factor = 2 if col == '1' else 1
+    if hot == 2:
+        return CFG['hot_level_2_bonus'] * col_factor
+    if hot == 1:
+        return CFG['hot_level_1_bonus'] * col_factor
+    return 0
+
+__all__ = [
+    # existing exports
+    'analyse','build_html','main_cli','is_3value','_eval_single_left','_hot_bonus'
+]
 
 if __name__ == "__main__":
     if st and getattr(st, '_is_running_with_streamlit', False):
