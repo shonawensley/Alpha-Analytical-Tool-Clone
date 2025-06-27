@@ -1,3 +1,6 @@
+<!-- aat9 -->
+For open tasks see TODO.md and CHANGELOG.md in the repo root.
+
 ## [1.0.0] – 2025-06-27
 ### Added
 - Frozen Stable-Pattern Extractor tagged v1.0.0 and moved to `alpha_analytical.stable`.
