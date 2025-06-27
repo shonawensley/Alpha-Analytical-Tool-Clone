@@ -22,6 +22,9 @@ def test_import_canonical_path():
     # Checking spe.__file__ would only check the path of the wrapper itself.
     assert spe._ex.__name__ == "alpha_analytical.stable"
 
+def test_import_canonical_file():
+    from core import stable_pattern_extractor as spe
+
     # The file path of the re-exported module (_ex) should end with the canonical path.
     # Checking spe.__file__ would only check the path of the wrapper itself.
     assert str(spe._ex.__file__).replace("\\", "/").endswith(

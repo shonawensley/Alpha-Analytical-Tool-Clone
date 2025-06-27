@@ -3,7 +3,7 @@ import alpha_analytical.stable as stab
 def test_is_3value():
     assert stab.is_3value("5599")
     assert stab.is_3value("661155")
-    assert not stab.is_3value("55983")
+    assert not stab.is_3value("51289")  # classes 1,2,4,5 -> 4 classes
 
 def test_single_left():
     assert stab._eval_single_left(rowcov=3, span=1, straight=True)
