@@ -18,12 +18,18 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
 import webbrowser
 import base64
 import io
 from collections import Counter
+
+# --- make src/ importable when running from scripts/ ------------
+PROJECT_ROOT = Path(__file__).resolve().parents[2]   # repo root
+SRC_DIR      = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+# ---------------------------------------------------------------
 
 # Add project root to path
 script_dir = os.path.dirname(os.path.abspath(__file__))

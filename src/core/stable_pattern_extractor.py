@@ -5,7 +5,15 @@ import pandas as pd
 _ex = import_module("alpha_analytical.stable")
 
 
-def run_stable_pattern_extraction(state: str, tables_path: Path, out_path: Path, min_occ: int = 3):
+# NOTE: out_path now optional – if not provided we save to the canonical
+# data/outputs/analysis/patterns/<STATE>/ folder.
+
+def run_stable_pattern_extraction(
+    state: str,
+    tables_path: Path,
+    out_path: Path | str | None = None,
+    min_occ: int = 3,
+):
     """Convenience wrapper around the canonical Stable-Pattern Extractor.
 
     Parameters
@@ -15,9 +23,10 @@ def run_stable_pattern_extraction(state: str, tables_path: Path, out_path: Path,
     tables_path : Path | str
         Directory containing the combined-table CSV files produced by the upstream
         table-generator pipeline.
-    out_path : Path | str
+    out_path : Path | str | None, default=None
         Destination directory where the HTML report and CSV score file will be
-        written. The directory is created if it does not already exist.
+        written. The directory is created if it does not already exist. If None,
+        the canonical patterns folder is used.
     min_occ : int, default=3
         Minimum number of occurrences a pattern must have before being returned.
 
@@ -32,8 +41,15 @@ def run_stable_pattern_extraction(state: str, tables_path: Path, out_path: Path,
         Absolute path to the generated CSV file (or empty string if nothing was
         generated).
     """
-    # Ensure we are working with pathlib.Path objects
+    # ------------------------------------------------------------------
+    # Resolve paths
+    # ------------------------------------------------------------------
     tables_path = Path(tables_path)
+
+    # Decide where to store artefacts. If the caller did not supply a path
+    # we default to the canonical patterns folder – one sub-dir per state.
+    if out_path is None:
+        out_path = Path("data/outputs/analysis/patterns") / state
     out_path = Path(out_path)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -80,13 +96,22 @@ def run_stable_pattern_extraction(state: str, tables_path: Path, out_path: Path,
         df_scores = df_scores[df_scores["Canonical"].isin(keepers)].reset_index(drop=True)
 
     html_path = out_path / f"{state}_stable_patterns_report.html"
-    csv_path = ""  # neutralise legacy path
+    csv_path = out_path / f"{state}_stable_patterns_scores.csv"
 
     # Write outputs
     with open(html_path, "w", encoding="utf-8") as fh:
         fh.write("<html><head><meta charset='utf-8'></head><body>" + "\n".join(html_sections) + "</body></html>")
 
-    return df_scores, str(html_path), csv_path
+    # ------------------------------------------------------------------
+    # Persist CSV if we have results
+    # ------------------------------------------------------------------
+    if not df_scores.empty:
+        df_scores.to_csv(csv_path, index=False)
+    else:
+        # If nothing to write, fall back to empty string so callers can test truthiness
+        csv_path = ""
+
+    return df_scores, str(html_path), str(csv_path)
 
 
 # Optional convenience re-exports (if they exist in the underlying module)

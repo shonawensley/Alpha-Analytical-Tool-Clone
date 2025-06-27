@@ -559,6 +559,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Midday_combined" in tables:
         html += generate_table_html(tables["Midday_combined"], f"{state_name} Midday Combined Table")
     if "Midday_r2" in tables:
+        html += f"<h5>Midday – R2-only</h5>"
         html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table")
     html += '</div>'
     
@@ -568,6 +569,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Evening_combined" in tables:
         html += generate_table_html(tables["Evening_combined"], f"{state_name} Evening Combined Table")
     if "Evening_r2" in tables:
+        html += f"<h5>Evening – R2-only</h5>"
         html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table")
     html += '</div>'
     
@@ -577,6 +579,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Combined_combined" in tables:
         html += generate_table_html(tables["Combined_combined"], f"{state_name} Combined Combined Table")
     if "Combined_r2" in tables:
+        html += f"<h5>Combined – R2-only</h5>"
         html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table")
     html += '</div>'
     

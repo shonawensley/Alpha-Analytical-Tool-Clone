@@ -1,17 +1,21 @@
-import os
 import sys
+import pathlib
 import unittest
 
-# Add project root to sys.path to allow importing from scripts
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(script_dir)
-sys.path.append(project_root)
+# ---------------------------------------------------------------------
+# Ensure src/ is importable so we can reach core.module_a_stable_patterns
+# ---------------------------------------------------------------------
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
+# Import the canonical extractor implementation
 try:
-    from scripts.core.stable_pattern_extractor_full import run_stable_pattern_extraction
+    from core.module_a_stable_patterns import run_stable_pattern_extraction
 except ImportError:
-    print("ERROR: Cannot import run_stable_pattern_extraction. Ensure script exists and path is correct.")
-    run_stable_pattern_extraction = None # Define as None to avoid NameError later
+    print("ERROR: Cannot import run_stable_pattern_extraction from core.module_a_stable_patterns.")
+    run_stable_pattern_extraction = None  # Set to None to skip tests gracefully
 
 class TestStablePatternExtractor(unittest.TestCase):
 
