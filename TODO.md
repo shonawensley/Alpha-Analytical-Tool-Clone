@@ -15,6 +15,8 @@ For open tasks see TODO.md and CHANGELOG.md in the repo root.
 - [x] ✅ hot-zone decay
 - [x] ✅ straight tie-break bias
 - [ ] 🔒 No open items (frozen 👑)
+- Auto-save filename now includes state and lands in data/outputs/patterns/
+- Legacy auto-save to analysis/patterns disabled
 
 ## Digit Reducer
 - [ ] Design V-Trac+pairing rules  (📅 added 2025-06-27)

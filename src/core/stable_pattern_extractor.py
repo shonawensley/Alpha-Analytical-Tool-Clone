@@ -80,15 +80,13 @@ def run_stable_pattern_extraction(state: str, tables_path: Path, out_path: Path,
         df_scores = df_scores[df_scores["Canonical"].isin(keepers)].reset_index(drop=True)
 
     html_path = out_path / f"{state}_stable_patterns_report.html"
-    csv_path = out_path / f"{state}_stable_patterns_scores.csv"
+    csv_path = ""  # neutralise legacy path
 
     # Write outputs
     with open(html_path, "w", encoding="utf-8") as fh:
         fh.write("<html><head><meta charset='utf-8'></head><body>" + "\n".join(html_sections) + "</body></html>")
 
-    df_scores.to_csv(csv_path, index=False)
-
-    return df_scores, str(html_path), str(csv_path)
+    return df_scores, str(html_path), csv_path
 
 
 # Optional convenience re-exports (if they exist in the underlying module)
