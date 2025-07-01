@@ -1,4 +1,4 @@
-# Module A: Stable Pattern Extractor
+# Module A: Stable Pattern Extractor  # AAT9
 
 **Purpose**  
 This module scans the **R2/R4/R6/R8** structures in the combined CSV tables (Midday, Evening, Combined) to find stable 3–6 digit patterns. It awards "stability" points for:

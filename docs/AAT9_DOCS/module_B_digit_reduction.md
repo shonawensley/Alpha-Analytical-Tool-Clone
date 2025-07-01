@@ -1,4 +1,4 @@
-# Module B: Digit Reduction & Hidden Patterns
+# Module B: Digit Reduction & Hidden Patterns # AAT9
 
 **Purpose**  
 Focuses on **long-string columns** (commonly col7..col5 or any 6–8 digit strings) in R2/R4/R6/R8. Applies digit reduction (Methods A, B, C, or single-digit transit) to uncover hidden 3-value or 3-digit combos that do not appear in the raw data.

@@ -1,0 +1,173 @@
+# long_string_reducer_part2.py
+"""Run‑time orchestrator + HTML writer for the Digit‑Reduction / Long‑String module.
+
+USAGE (from project root):
+    python long_string_reducer_part2.py --json data/big_table.json
+    # OR
+    python long_string_reducer_part2.py --csv_dir tables/
+
+It will read the required R2 strings (Area 1 & Area 2),
+run the four reduction methods (A–D) in both draw modes (own / combined),
+generate a full HTML report under outputs/ and optionally a JSON dump.
+
+Part 1 (long_string_reducer_part1.py) must be importable.
+"""
+
+from __future__ import annotations
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+from typing import List, Dict, Tuple
+
+# --- local imports ---------------------------------------------------------
+from long_string_reducer_part1 import (
+    load_big_lottery_json,
+    load_csv_directory,
+    gather_area1_R2_strings,
+    gather_area2_R2_strings,
+    get_draw_lists_for_section,
+    MIRROR_MAP,
+    method_a,
+    method_b,
+    method_c,
+    method_d,
+)
+from long_string_reducer_part1 import run_reduction_progression  # exposed by part‑1
+
+METHOD_FUNCS = {
+    "A": method_a,
+    "B": method_b,
+    "C": method_c,
+    "D": method_d,
+}
+
+COLUMNS_ORDER: List[Tuple[str, str]] = [
+    ("A", "own"), ("B", "own"), ("C", "own"), ("D", "own"),
+    ("A", "combined"), ("B", "combined"), ("C", "combined"), ("D", "combined"),
+]
+
+# ---------------------------------------------------------------------------
+# HTML helpers
+# ---------------------------------------------------------------------------
+
+def _html_escape(txt: str) -> str:
+    return (txt.replace("&", "&amp;")
+               .replace("<", "&lt;")
+               .replace(">", "&gt;"))
+
+
+def build_html_for_cell(location_id: str, variation_logs: Dict[Tuple[str, str], List[str]]) -> str:
+    """Single table per R2 string (location)."""
+    max_rows = max(len(v) for v in variation_logs.values())
+    lines: List[str] = []
+    lines.append(f"<h3>{_html_escape(location_id)}</h3>")
+    lines.append("<table class='cell'>")
+    # header ------------------------------------------------
+    lines.append("<tr><th>Step</th>" + "".join(f"<th>{m}-{md}</th>" for m, md in COLUMNS_ORDER) + "</tr>")
+
+    # rows --------------------------------------------------
+    for idx in range(max_rows):
+        row_cells = [f"<td class='step'>{idx}</td>"]
+        for key in COLUMNS_ORDER:
+            step_log = variation_logs.get(key, [])
+            val = step_log[idx] if idx < len(step_log) else ""
+            row_cells.append(f"<td>{_html_escape(val)}</td>")
+        lines.append("<tr>" + "".join(row_cells) + "</tr>")
+
+    lines.append("</table>")
+    return "\n".join(lines)
+
+
+def build_full_html(results_area1: List[Dict], results_area2: List[Dict]) -> str:
+    """Combine all per‑cell tables into a single report."""
+    css = """
+    body { font-family: Arial, sans-serif; }
+    table { border-collapse: collapse; margin-bottom: 28px; }
+    th, td { border: 1px solid #ccc; padding: 4px 6px; font-size: 12px; }
+    th { background: #f2f2f7; }
+    td.step { font-weight: bold; background: #fafafa; }
+    h2 { margin-top: 40px; }
+    """
+    parts: List[str] = ["<html><head><meta charset='utf-8'>",
+            f"<style>{css}</style></head><body>",
+            "<h1>Digit‑Reduction / Long‑String Report</h1>"]
+
+    parts.append("<h2>Area 1 — columns 7/6/5 (Midday · Evening · Combined)</h2>")
+    for cell in results_area1:
+        parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+
+    parts.append("<h2>Area 2 — Set 1 → [Draw4 col 3, Draw6 col 1]</h2>")
+    for cell in results_area2:
+        parts.append(build_html_for_cell(cell["location_id"], cell["variation_logs"]))
+
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+# ---------------------------------------------------------------------------
+# Analysis driver
+# ---------------------------------------------------------------------------
+
+def analyse_area(cells: List[Dict], big_data: dict) -> List[Dict]:
+    """Run 8 variations for every R2 string cell."""
+    analysed: List[Dict] = []
+    for cell in cells:
+        loc_id = cell["location_id"]
+        original = cell["original_string"] or ""
+        section = cell["metadata"].get("section", "Midday")
+
+        draw_lists = get_draw_lists_for_section(big_data, section)
+        variation_logs: Dict[Tuple[str, str], List[str]] = {}
+        for meth_label, func in METHOD_FUNCS.items():
+            for mode in ("own", "combined"):
+                draws = draw_lists[mode]
+                variation_logs[(meth_label, mode)] = run_reduction_progression(original, draws, func)
+
+        analysed.append({
+            "location_id": loc_id,
+            "variation_logs": variation_logs,
+        })
+    return analysed
+
+# ---------------------------------------------------------------------------
+# Command‑line interface
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Digit‑Reduction module and build HTML report.")
+    g = parser.add_mutually_exclusive_group(required=True)
+    g.add_argument("--json", type=Path, help="Path to the big lottery JSON file")
+    g.add_argument("--csv_dir", type=Path, help="Path to the directory containing CSV tables")
+    parser.add_argument("--out", type=Path, default=Path("outputs"), help="Output directory for reports")
+    args = parser.parse_args()
+
+    # --- load data ---------------------------------------------------------
+    if args.json:
+        big_data = load_big_lottery_json(args.json)
+    else:
+        big_data = load_csv_directory(args.csv_dir)
+
+    # --- gather R2 strings -------------------------------------------------
+    area1_cells = gather_area1_R2_strings(big_data)
+    area2_cells = gather_area2_R2_strings(big_data)
+
+    # --- run analyses ------------------------------------------------------
+    analysed_area1 = analyse_area(area1_cells, big_data)
+    analysed_area2 = analyse_area(area2_cells, big_data)
+
+    # --- build and dump HTML ---------------------------------------------
+    html = build_full_html(analysed_area1, analysed_area2)
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    args.out.mkdir(parents=True, exist_ok=True)
+    html_path = args.out / f"digit_reduction_{ts}.html"
+    html_path.write_text(html, encoding="utf-8")
+    print(f"[✓] HTML report written to {html_path}")
+
+    # Optional JSON snapshot (comment‑in if desired)
+    # json_path = args.out / f"digit_reduction_{ts}.json"
+    # json_path.write_text(json.dumps({"area1": analysed_area1, "area2": analysed_area2}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

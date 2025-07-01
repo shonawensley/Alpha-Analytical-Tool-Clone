@@ -15,3 +15,11 @@
 - `streamlit_app_with_analyzer.py` NameError (`script_dir`) + bundle writer
 ### Deferred
 - Digit-Reduction Part 3 (parked)
+<!-- aat9 -->
+For open tasks see TODO.md and CHANGELOG.md in the repo root.
+
+## [2025‑06‑29] Stable‑Pattern Extractor consolidation
+* Switched Streamlit + batch paths to `core.module_a_stable_patterns`.
+* Auto‑save now drops **both** HTML & CSV into `data/outputs/analysis/patterns/<STATE>/`.
+* Removed legacy extractor code and flaky test import.
+* Minor UI polish (R2‑only labels) + dependency clean‑up.

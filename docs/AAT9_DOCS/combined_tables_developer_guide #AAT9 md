@@ -1,0 +1,585 @@
+# Combined Tables Developer Guide #AAT9
+
+
+This document provides a comprehensive technical reference for the combined tables data structure. It explains how the tables are created, their structure, and how to build new analytical tools that interface with them.
+
+## Table of Contents
+1. [Data Flow Overview](#data-flow-overview)
+2. [Combined Tables Structure](#combined-tables-structure)
+3. [String Data Format](#string-data-format)
+4. [Loading and Manipulating Tables](#loading-and-manipulating-tables)
+5. [Creating New Analytical Tools](#creating-new-analytical-tools)
+6. [Best Practices](#best-practices)
+7. [Template Code](#template-code)
+
+## Data Flow Overview
+
+The combined tables are created through a multi-step process:
+
+```
+Excel File → Cleaned Data → Extracted Sets → Combined Tables
+```
+
+1. **Excel File (`Pick3StatsC4.xlsm`)**: Raw data source with multiple state sheets
+2. **Cleaned Data**: State-specific data with standardized formatting
+3. **Extracted Sets**: Raw data organized into sets and draws with R2/R4/R6/R8 transformations
+4. **Combined Tables**: Formatted tables ready for analysis
+
+### Key Components
+
+- **`clean_data.py`**: Cleans and standardizes Excel data
+- **`extract_data.py`**: Extracts structured datasets with transformations
+- **`table_generator.py`**: Generates the combined tables
+- **`LotteryDataExtractor`**: Class that handles the extraction process
+
+## Combined Tables Structure
+
+Each state has six standard table types:
+
+1. **Midday Combined**: Combines all Midday data across sets and draws
+2. **Evening Combined**: Combines all Evening data across sets and draws
+3. **Combined Combined**: Merges Midday and Evening data
+4. **Midday R2-only**: Only R2 rows from Midday data
+5. **Evening R2-only**: Only R2 rows from Evening data
+6. **Combined R2-only**: Only R2 rows from merged data
+
+### Table Schema
+
+Each combined table has the following columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| Set | string | Set identifier (Set1, Set2, Set3) |
+| Draw | string | Draw identifier (Draw1, Draw2, etc.) |
+| RowType | string | Row type (DRAW_DATA, R2, R4, R6, R8) |
+| 7 | string | 7-column data (longest string) |
+| 6 | string | 6-column data |
+| 5 | string | 5-column data |
+| 4 | string | 4-column data |
+| 3 | string | 3-column data |
+| 2 | string | 2-column data |
+| 1 | string | 1-column data (shortest string) |
+
+### Logical Organization
+
+- **Sets**:
+  - **Set3**: Previous draws (oldest)
+  - **Set2**: Previous day draws
+  - **Set1**: Current day draws (most recent)
+
+- **Draws**:
+  - **Set1 Draw Progression**:
+    - Draw1: 7 columns (full data)
+    - Draw2: 6 columns
+    - Draw3: 5 columns
+    - Draw4: 4 columns
+    - Draw5: 3 columns
+    - Draw6: 2 columns
+    - Draw7: 1 column (most condensed)
+
+- **Row Types**:
+  - **DRAW_DATA**: Original draw numbers
+  - **R2**: 2000-size transformation
+  - **R4**: 4000-size transformation
+  - **R6**: 6000-size transformation
+  - **R8**: 8000-size transformation
+
+## String Data Format
+
+The string data is the core of the analysis system. Each cell contains:
+
+- **Number strings** (typically 3-8 digits)
+- Representing lottery number transformations
+- Arranged in decreasing length from column 7 to column 1
+
+### String Data Characteristics
+
+1. **Length Reduction**: Strings get progressively shorter moving from column 7 to column 1
+2. **Pattern Preservation**: Important patterns remain across columns
+3. **Digit Representation**: Each digit represents a transformed lottery number
+4. **Pattern Analysis**: Recurring substrings indicate stable patterns
+
+### Example String Progression
+
+```
+Column 7: "59920188667"
+Column 6: "59921866"
+Column 5: "599266"
+Column 4: "59966"
+Column 3: "59966"
+Column 2: "59966"
+Column 1: "5966"
+```
+
+This shows how patterns survive the reduction process. The substring "5966" appears in every column, indicating it may be a stable pattern.
+
+## Loading and Manipulating Tables
+
+### Loading Tables
+
+```python
+import pandas as pd
+import os
+
+def load_state_data(state_name):
+    """Load all tables for a specific state"""
+    tables_dir = os.path.join("data", "outputs", "tables", state_name)
+    result = {}
+    
+    if os.path.exists(tables_dir):
+        for filename in os.listdir(tables_dir):
+            if filename.endswith(".csv"):
+                filepath = os.path.join(tables_dir, filename)
+                key = os.path.splitext(filename)[0].replace(f"{state_name}_", "")
+                try:
+                    df = pd.read_csv(filepath)
+                    result[key] = df
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+    
+    return result
+
+# Usage
+tables = load_state_data("Connecticut4")
+midday_combined = tables.get("Midday_combined")
+```
+
+### Accessing String Data
+
+```python
+# Get all R2 rows from Set1 Draw1
+r2_rows = midday_combined[(midday_combined['Set'] == 'Set1') & 
+                         (midday_combined['Draw'] == 'Draw1') & 
+                         (midday_combined['RowType'] == 'R2')]
+
+# Access the string in column '7'
+column_7_string = r2_rows.iloc[0]['7']
+
+# Get all strings across a row
+def get_row_strings(df, set_name, draw_name, row_type):
+    row = df[(df['Set'] == set_name) & 
+             (df['Draw'] == draw_name) & 
+             (df['RowType'] == row_type)]
+    
+    if row.empty:
+        return None
+    
+    return {
+        '7': row.iloc[0].get('7', ''),
+        '6': row.iloc[0].get('6', ''),
+        '5': row.iloc[0].get('5', ''),
+        '4': row.iloc[0].get('4', ''),
+        '3': row.iloc[0].get('3', ''),
+        '2': row.iloc[0].get('2', ''),
+        '1': row.iloc[0].get('1', '')
+    }
+```
+
+### Finding Patterns
+
+```python
+def find_patterns_in_table(df, patterns):
+    """Find occurrences of patterns in a combined table"""
+    results = {pattern: [] for pattern in patterns}
+    
+    # Check each cell for patterns
+    for _, row in df.iterrows():
+        for col in ['7', '6', '5', '4', '3', '2', '1']:
+            if col in df.columns and not pd.isna(row[col]):
+                cell_value = str(row[col])
+                for pattern in patterns:
+                    if pattern in cell_value:
+                        # Record the location
+                        results[pattern].append({
+                            'Set': row['Set'],
+                            'Draw': row['Draw'],
+                            'RowType': row['RowType'],
+                            'Column': col,
+                            'Position': cell_value.find(pattern)
+                        })
+    
+    return results
+```
+
+## Creating New Analytical Tools
+
+### Core Principles
+
+1. **Non-destructive**: Tools should not modify the original tables
+2. **Standalone**: Keep analysis logic separate from table generation
+3. **Input/Output clarity**: Define clear inputs and outputs
+4. **Error handling**: Gracefully handle missing or malformed data
+5. **Documentation**: Document what your tool does and how it works
+
+### Integration Points
+
+There are three main ways to integrate with the existing system:
+
+1. **Post-processing**: Build tools that take the combined tables as input
+2. **UI integration**: Add new tabs or sections to the Streamlit interface
+3. **Data augmentation**: Generate additional data based on the tables
+
+### Integration Example: Pattern Frequency Analyzer
+
+```python
+# pattern_frequency_analyzer.py
+
+import pandas as pd
+from collections import Counter
+
+def analyze_pattern_frequency(state_data, patterns, timeframe="Midday"):
+    """
+    Analyze frequency of patterns across different tables
+    
+    Args:
+        state_data (dict): Dictionary containing the state's table DataFrames
+        patterns (list): List of patterns to analyze
+        timeframe (str): Which timeframe to analyze ("Midday", "Evening", "Combined")
+        
+    Returns:
+        dict: Frequency analysis results
+    """
+    # Get the right table
+    table_key = f"{timeframe}_combined"
+    if table_key not in state_data:
+        return {"error": f"No {table_key} table found"}
+    
+    table = state_data[table_key]
+    
+    # Analyze pattern frequencies
+    results = {}
+    for pattern in patterns:
+        result = {
+            "total_occurrences": 0,
+            "by_set": Counter(),
+            "by_draw": Counter(),
+            "by_row_type": Counter(),
+            "by_column": Counter()
+        }
+        
+        # Check each cell
+        for _, row in table.iterrows():
+            for col in ['7', '6', '5', '4', '3', '2', '1']:
+                if col in table.columns and not pd.isna(row[col]):
+                    cell_value = str(row[col])
+                    count = cell_value.count(pattern)
+                    
+                    if count > 0:
+                        result["total_occurrences"] += count
+                        result["by_set"][row["Set"]] += count
+                        result["by_draw"][row["Draw"]] += count
+                        result["by_row_type"][row["RowType"]] += count
+                        result["by_column"][col] += count
+        
+        results[pattern] = result
+    
+    return results
+```
+
+### UI Integration Example
+
+```python
+# Add to streamlit_app.py
+
+def pattern_analyzer_tab():
+    """Pattern frequency analyzer tab"""
+    st.header("Pattern Frequency Analyzer")
+    
+    # Select state
+    state = st.selectbox("Select State", STATES)
+    
+    # Enter patterns
+    patterns_input = st.text_input("Enter patterns to analyze (separated by spaces)")
+    patterns = [p.strip() for p in patterns_input.split() if p.strip()]
+    
+    # Select timeframe
+    timeframe = st.selectbox("Select Timeframe", ["Midday", "Evening", "Combined"])
+    
+    if st.button("Analyze Patterns") and patterns:
+        # Load state data
+        state_data = load_state_data(state)
+        
+        if not state_data:
+            st.error(f"No data found for {state}")
+            return
+            
+        # Analyze patterns
+        results = analyze_pattern_frequency(state_data, patterns, timeframe)
+        
+        # Display results
+        for pattern in patterns:
+            st.subheader(f"Pattern: {pattern}")
+            
+            result = results.get(pattern, {})
+            st.write(f"Total occurrences: {result.get('total_occurrences', 0)}")
+            
+            # Show distribution charts
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("Distribution by Set")
+                st.bar_chart({k: v for k, v in result.get("by_set", {}).items()})
+                
+            with col2:
+                st.write("Distribution by Row Type")
+                st.bar_chart({k: v for k, v in result.get("by_row_type", {}).items()})
+```
+
+## Best Practices
+
+### Data Loading
+
+1. **Use the standard loading function**: Reuse `load_state_data()` wherever possible
+2. **Check for missing tables**: Always verify tables exist before analyzing
+3. **Handle missing columns**: Some tables might be missing certain columns
+4. **Cast to string**: Always cast cell values to strings before searching for patterns
+
+### Pattern Analysis
+
+1. **Pre-validate patterns**: Ensure patterns are valid before searching
+2. **Consider column progression**: Remember patterns evolve from columns 7→1
+3. **Track positions**: Record where patterns occur, not just that they occur
+4. **Analyze all row types**: Different insights come from different row types
+5. **Compare across timeframes**: Patterns may appear in Midday but not Evening
+
+### Tool Design
+
+1. **Self-contained files**: Keep each tool in its own file
+2. **Clear documentation**: Document inputs, outputs, and assumptions
+3. **Parameter flexibility**: Allow users to tune analysis parameters
+4. **Visual output**: Provide visualizations where appropriate
+5. **Export options**: Allow saving or exporting of results
+
+## Template Code
+
+Below is a template for creating a new analytical tool:
+
+```python
+#!/usr/bin/env python
+"""
+Template for creating a new analytical tool for combined tables.
+"""
+
+import os
+import pandas as pd
+import argparse
+
+def load_state_data(state_name):
+    """Load all tables for a specific state"""
+    tables_dir = os.path.join("data", "outputs", "tables", state_name)
+    result = {}
+    
+    if os.path.exists(tables_dir):
+        for filename in os.listdir(tables_dir):
+            if filename.endswith(".csv"):
+                filepath = os.path.join(tables_dir, filename)
+                key = os.path.splitext(filename)[0].replace(f"{state_name}_", "")
+                try:
+                    df = pd.read_csv(filepath)
+                    result[key] = df
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+    
+    return result
+
+def analyze_data(state_data, table_key, parameters):
+    """
+    Main analysis function - replace with your specific analysis
+    
+    Args:
+        state_data (dict): Dictionary containing the state's table DataFrames
+        table_key (str): Key for the table to analyze (e.g., "Midday_combined")
+        parameters (dict): Parameters for the analysis
+        
+    Returns:
+        dict: Analysis results
+    """
+    if table_key not in state_data:
+        return {"error": f"No {table_key} table found"}
+    
+    table = state_data[table_key]
+    
+    # Your analysis logic here
+    results = {
+        "table_shape": table.shape,
+        "sets": table["Set"].unique().tolist(),
+        "draws": table["Draw"].unique().tolist(),
+        "row_types": table["RowType"].unique().tolist(),
+        # Add your custom analysis results
+    }
+    
+    return results
+
+def save_results(results, output_path):
+    """Save analysis results"""
+    # Implement saving logic (CSV, JSON, etc.)
+    with open(output_path, 'w') as f:
+        f.write(str(results))
+    print(f"Results saved to {output_path}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Combined Tables Analysis Tool")
+    parser.add_argument("--state", required=True, help="State to analyze")
+    parser.add_argument("--table", default="Midday_combined", help="Table to analyze")
+    parser.add_argument("--output", default="analysis_results.txt", help="Output file")
+    parser.add_argument("--param1", type=int, default=0, help="Custom parameter 1")
+    parser.add_argument("--param2", type=str, default="", help="Custom parameter 2")
+    
+    args = parser.parse_args()
+    
+    # Load data
+    state_data = load_state_data(args.state)
+    if not state_data:
+        print(f"No data found for {args.state}")
+        return
+    
+    # Set up parameters
+    parameters = {
+        "param1": args.param1,
+        "param2": args.param2,
+        # Add more parameters
+    }
+    
+    # Run analysis
+    results = analyze_data(state_data, args.table, parameters)
+    
+    # Save results
+    save_results(results, args.output)
+
+if __name__ == "__main__":
+    main()
+```
+
+### Streamlit Template
+
+```python
+#!/usr/bin/env python
+"""
+Streamlit template for creating a new analytical tool with UI.
+"""
+
+import os
+import streamlit as st
+import pandas as pd
+
+# Add the scripts directory to the Python path
+import sys
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(script_dir))
+
+# Import utilities as needed
+from utils.path_handler import get_tables_output_dir
+
+# Define state constants
+STATES = [
+    "Connecticut4", "Delaware4", "Florida4", "Indiana4", "Michigan4",
+    "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4", "OntarioCanada4",
+    "Pennsylvania4", "PuertoRico4", "SouthCarolina4", "Virginia4"
+]
+
+def load_state_data(state_name):
+    """Load all tables for a specific state"""
+    tables_dir = os.path.join(get_tables_output_dir(), state_name)
+    result = {}
+    
+    if os.path.exists(tables_dir):
+        for filename in os.listdir(tables_dir):
+            if filename.endswith(".csv"):
+                filepath = os.path.join(tables_dir, filename)
+                key = os.path.splitext(filename)[0].replace(f"{state_name}_", "")
+                try:
+                    df = pd.read_csv(filepath)
+                    result[key] = df
+                except Exception as e:
+                    st.error(f"Error loading {filename}: {e}")
+    
+    return result
+
+def analyze_data(state_data, table_key, parameters):
+    """Your analysis logic here"""
+    # Add your custom analysis
+    return {"sample": "results"}
+
+def main():
+    st.set_page_config(
+        page_title="Combined Tables Analysis Tool",
+        layout="wide"
+    )
+    
+    st.title("Combined Tables Analysis Tool")
+    st.markdown("Description of your tool and what it does.")
+    
+    # Sidebar controls
+    st.sidebar.header("Analysis Parameters")
+    state = st.sidebar.selectbox("Select State", STATES)
+    table_type = st.sidebar.selectbox(
+        "Select Table Type", 
+        ["Midday_combined", "Evening_combined", "Combined_combined", 
+         "Midday_R2_only", "Evening_R2_only", "Combined_R2_only"]
+    )
+    
+    # Custom parameters
+    param1 = st.sidebar.slider("Parameter 1", 0, 10, 5)
+    param2 = st.sidebar.text_input("Parameter 2", "default")
+    
+    # Load data button
+    if st.sidebar.button("Load Data and Analyze"):
+        # Show spinner while loading
+        with st.spinner("Loading and analyzing data..."):
+            # Load the data
+            state_data = load_state_data(state)
+            
+            if not state_data:
+                st.error(f"No data found for {state}")
+            elif table_type not in state_data:
+                st.error(f"Table {table_type} not found for {state}")
+            else:
+                # Run analysis
+                parameters = {
+                    "param1": param1,
+                    "param2": param2,
+                }
+                results = analyze_data(state_data, table_type, parameters)
+                
+                # Display results
+                st.header("Analysis Results")
+                st.json(results)
+                
+                # Add visualizations as needed
+                st.header("Visualizations")
+                # st.bar_chart(...)
+                # st.line_chart(...)
+    
+    # Documentation section
+    with st.expander("How to use this tool"):
+        st.markdown("""
+        ## Instructions
+        
+        1. Select a state from the dropdown
+        2. Choose the table type to analyze
+        3. Adjust the parameters as needed
+        4. Click "Load Data and Analyze"
+        5. Review the results
+        
+        ## Output Explanation
+        
+        The tool provides the following insights:
+        - Key finding 1
+        - Key finding 2
+        - etc.
+        """)
+
+if __name__ == "__main__":
+    main()
+```
+
+## Conclusion
+
+This guide provides a comprehensive overview of the combined tables data structure and how to build analytical tools that interact with it. By understanding the table structure, string data format, and best practices, you can create powerful analytical tools that extract insights from the lottery data.
+
+The templates provided offer a starting point for your own custom tools, whether command-line based or with a Streamlit UI. Follow the best practices outlined in this guide to ensure your tools integrate seamlessly with the existing system.
+
+For more specific implementation details, refer to the actual code in the repository, particularly:
+- `scripts/utils/table_generator.py`
+- `scripts/utils/extract_data.py`
+- `scripts/vtrac_analyzer.py` 

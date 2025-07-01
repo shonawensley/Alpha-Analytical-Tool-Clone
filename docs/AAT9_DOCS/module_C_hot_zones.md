@@ -1,4 +1,4 @@
-# Module C: Hot Zones Analysis
+# Module C: Hot Zones Analysis # AAT9
 
 **Purpose**  
 Detect patterns in the "star" columns or any `*`/`**` cells in R2/R4/R6/R8. Typically focuses on 3-value or short final columns. Often uses single-digit transit or a small method (like removing 1–2 digits) to see if a 3-digit repeat emerges.

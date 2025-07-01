@@ -1,0 +1,43 @@
+# AAT9 — Project Check‑point (2025‑06‑29)
+
+## 1 Scope of this milestone
+| Area | Status |
+|------|--------|
+| **Stable‑Pattern Extractor** | ✅ Canonical (“module_a_stable_patterns”) wired into Streamlit UI.<br>✅ HTML + CSV auto‑write consolidated under `data/outputs/analysis/patterns/<STATE>/`.<br>✅ Legacy `stable_pattern_extractor_full.py` archived / references removed. |
+| **Tests** | ✅ `tests/test_stable_pattern.py` and `test_extractor_import.py` point at the canonical module and pass. |
+| **UI** | ✅ Streamlit banner + Download‑CSV button restored.<br>➕ Minor cosmetic fix: R2‑only sub‑headings. |
+| **Repo hygiene** | ✅ Artefacts (.html/.csv) now Git‑ignored.<br>✅ Only 5 source files changed in commit `cb465d1`. |
+
+## 2 File‑level diff (since previous checkpoint)
+| File | Key change |
+|------|------------|
+| `src/core/stable_pattern_extractor.py` | • `out_path` now optional → defaults to canonical patterns folder.<br>• CSV is written alongside HTML and path returned. |
+| `scripts/core/streamlit_app.py` | • Added defensive `sys.path` injection (no more *utils* import errors).<br>• Removed unused *seaborn* import. |
+| `src/core/module_c_vtrac.py` | • Added explicit R2‑only sub‑headings in report generator. |
+| `tests/test_*` | • Legacy import removed; smoke test passes. |
+| `.gitignore` | • Ensures `data/outputs/analysis/patterns/*` stays out of Git. |
+
+## 3 Runbook for reproducing
+```bash
+# From repo root
+# 1. Run smoke tests
+pytest -q
+
+# 2. Generate patterns for one state (CLI)
+python -m core.stable_pattern_extractor data/raw/Connecticut4_all_tables.json
+
+# 3. Launch full app
+streamlit run scripts/core/streamlit_app.py
+
+Outputs land in
+data/outputs/analysis/patterns/Connecticut4/Connecticut4_stable_patterns_{report, scores}.(html|csv)
+
+4 Open actions carried forward
+ID	Task	Owner	ETA
+DR‑01	Finish integrating Digit‑Reduction (Part 3 tally + Streamlit tab)	dev	next sprint
+HZ‑01	Implement Hot‑Zone module (compute + minimal report)	dev	next sprint
+WL‑01	Consolidate “winner logging” into a single winner_log.py utility (see /utils)	dev	backlog
+DOC‑01	Refactor existing module docs → split core/*_algorithm.md vs report/*_ui.md	dev	ongoing
+ML‑01	Set up initial back‑test harness (feature CSV → rule‑based scorer)	dev	after DR‑01 & HZ‑01
+
+This checkpoint supersedes any earlier stable‑pattern notes.

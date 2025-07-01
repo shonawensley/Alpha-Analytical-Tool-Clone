@@ -1,4 +1,4 @@
-# Module D: Final Aggregator & Synergy
+# Module D: Final Aggregator & Synergy # AAT9
 
 **Purpose**  
 Combines the outputs of Modules A (Stable), B (Digit Reduction), and C (Hot Zones), awarding synergy points for:
