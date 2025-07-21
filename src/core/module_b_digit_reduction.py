@@ -19,7 +19,7 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 # --- local imports ---------------------------------------------------------
 from .long_string_reducer_part1 import (
@@ -268,6 +268,201 @@ def analyse_area(cells: List[Dict], big_data: dict) -> List[Dict]:
             "metadata": cell.get("metadata", {})
         })
     return analysed
+
+# ---------------------------------------------------------------------------
+# Public wrapper for Streamlit / external usage
+# ---------------------------------------------------------------------------
+
+# Helper to build the nested big_data structure from any *combined.csv files, even if prefixed with state name
+
+def _load_big_data_from_tables(csv_dir: Path) -> dict:
+    """Flexibly load *_combined.csv tables inside `csv_dir` into the nested dict structure
+    expected by the reduction algorithms. Handles filenames that include the state prefix
+    (e.g. `Connecticut4_Midday_combined.csv`)."""
+    import pandas as pd  # local import to avoid top-level dependency if unused
+
+    big: dict = {"sections": {}}
+
+    for fp in csv_dir.glob("*_combined.csv"):
+        try:
+            df = pd.read_csv(fp, dtype=str).fillna("")
+        except Exception:
+            continue  # skip unreadable file
+
+        fname_lower = fp.name.lower()
+        if "midday" in fname_lower:
+            section = "Midday"
+        elif "evening" in fname_lower:
+            section = "Evening"
+        else:
+            section = "Combined"
+
+        sect_node = big["sections"].setdefault(section, {"sets": {}})
+
+        for _, row in df.iterrows():
+            # -------- normalise & sanity‑clean -------------------------
+            set_name  = str(row.get("Set",  "") or "").strip()
+            draw_name = str(row.get("Draw", "") or "").strip()
+            row_type  = str(row.get("RowType", "") or "").strip().upper()
+            if not (set_name and draw_name and row_type):
+                continue
+
+            # Accept mixed‑case / dashes
+            if row_type in {"DRAW_DATA", "DRAW"}:
+                row_type = "DRAW_DATA"
+            elif row_type.replace("-", "") == "R2":
+                row_type = "R2"
+
+            col_values = {str(c): str(row.get(str(c), "")).strip()
+                          for c in ["7","6","5","4","3","2","1"]}
+            # -----------------------------------------------------------
+
+            draw_node = (
+                sect_node["sets"]
+                .setdefault(set_name, {})
+                .setdefault("draws", {})
+                .setdefault(draw_name, {"pattern_variations": {}, "draw_data": {}})
+            )
+
+            if row_type == "DRAW_DATA":
+                draw_node["draw_data"] = col_values
+            else:            # R2, R3, …
+                draw_node["pattern_variations"].setdefault(row_type, col_values)
+
+    return big
+
+
+def _build_score_df(results_area1: List[Dict], results_area2: List[Dict]):
+    """Flatten analysed cell logs into a tidy DataFrame."""
+    import pandas as pd
+
+    rows = []
+    for cell in results_area1 + results_area2:
+        loc = cell["location_id"]
+        for (meth, mode), log in cell["variation_logs"].items():
+            final_val = log[-1] if log else ""
+            rows.append({
+                "Location": loc,
+                "Method": meth,
+                "Mode": mode,
+                "Final": final_val,
+                "Steps": len(log),
+            })
+    return pd.DataFrame(rows)
+
+
+def run_digit_reduction(
+    state: str,
+    tables_path: Path,
+    out_path: Path | str | None = None,
+    *,
+    min_occ: int = 3,
+) -> tuple["pd.DataFrame", str, str]:
+    """Wrapper exposing the digit-reduction engine to other modules (e.g. Streamlit).
+
+    Parameters
+    ----------
+    state : str
+        State identifier (e.g. "Connecticut4") – only used for naming outputs.
+    tables_path : Path
+        Directory containing the *_combined.csv tables for that state.
+    out_path : Path | str | None, optional
+        Destination folder for artefacts. Defaults to
+        data/outputs/analysis/digit_reduction/<STATE>/.
+    min_occ : int, optional
+        Reserved for future use (kept for API symmetry with stable-pattern wrapper).
+
+    Returns
+    -------
+    df_scores : pandas.DataFrame
+    html_path : str – absolute path to generated HTML report
+    csv_path  : str – absolute path to generated CSV file ("" if no data)
+    """
+    import pandas as pd  # local import
+
+    tables_path = Path(tables_path)
+    if not tables_path.exists():
+        return pd.DataFrame(), "", ""
+
+    if out_path is None:
+        out_path = Path("data/outputs/analysis/digit_reduction") / state
+    out_path = Path(out_path)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    # --------------------------------------------------------
+    # Build big_data structure the analyser expects
+    # --------------------------------------------------------
+    big_data = _load_big_data_from_tables(tables_path)
+    if not big_data.get("sections"):
+        return pd.DataFrame(), "", ""
+
+    # --------------------------------------------------------
+    # Gather R2 strings (Area-1 & Area-2) and analyse
+    # --------------------------------------------------------
+    area1_cells, area2_cells = [], []
+    for sec in SECTION_NAMES:
+        if "sections" not in big_data or sec not in big_data["sections"]:
+            continue
+        for loc_id, s in extract_r2_strings_area1(big_data, sec).items():
+            parts = loc_id.split("|")
+            area1_cells.append({
+                "location_id": loc_id,
+                "original_string": s,
+                "metadata": {"section": parts[0], "set": parts[1], "draw": parts[2], "col": parts[3] if len(parts)>3 else ""},
+            })
+        for loc_id, s in extract_r2_strings_area2(big_data, sec).items():
+            parts = loc_id.split("|")
+            area2_cells.append({
+                "location_id": loc_id,
+                "original_string": s,
+                "metadata": {"section": parts[0], "set": parts[1], "draw": parts[2], "col": parts[3] if len(parts)>3 else ""},
+            })
+
+    analysed_area1 = analyse_area(area1_cells, big_data)
+    analysed_area2 = analyse_area(area2_cells, big_data)
+
+    # --------------------------------------------------------
+    # Build latest-draw map for header validation
+    # --------------------------------------------------------
+    draw_heads: Dict[str, str] = {}
+    for sec in SECTION_NAMES:
+        try:
+            dd = big_data["sections"][sec]["sets"]["Set1"]["draws"]["Draw1"].get("draw_data", {})
+            latest = next((dd.get(str(c)) for c in ("1","2","3","4","5","6","7") if dd.get(str(c))), "")
+            draw_heads[sec] = latest
+        except Exception:
+            continue
+
+    # --------------------------------------------------------
+    # Write HTML report
+    # --------------------------------------------------------
+    html_content = build_full_html(analysed_area1, analysed_area2, draw_heads)
+    html_path = out_path / f"{state}_digit_reduction_report.html"
+    html_path.write_text(html_content, encoding="utf-8")
+
+    # --------------------------------------------------------
+    # Build & persist score DataFrame
+    # --------------------------------------------------------
+    df_scores = _build_score_df(analysed_area1, analysed_area2)
+    csv_path = out_path / f"{state}_digit_reduction_scores.csv"
+    if not df_scores.empty:
+        df_scores.to_csv(csv_path, index=False)
+        csv_path_str: str = str(csv_path)
+    else:
+        csv_path_str = ""
+
+    return df_scores, str(html_path), csv_path_str
+
+# Re-export for convenience
+try:
+    import pandas as pd  # noqa: F401 – re-export check
+except ModuleNotFoundError:
+    pass
+
+__all__ = [
+    # existing exports … (implicitly) add new symbol
+    "run_digit_reduction",
+]
 
 # ---------------------------------------------------------------------------
 # Command‑line interface

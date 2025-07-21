@@ -48,6 +48,7 @@ from utils.state_utils import STATES
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
 from utils.table_generator import generate_tables
+from core.module_b_digit_reduction import run_digit_reduction
 
 # Functions from vtrac_analyzer.py
 def load_state_tables(state_name):
@@ -328,7 +329,7 @@ def main():
         
         mode = st.radio(
             "Select Mode",
-            ["Process Data", "V-TRAC Analysis", "About"]
+            ["Process Data", "V-TRAC Analysis", "Digit Reduction", "About"]
         )
     
     if mode == "Process Data":
@@ -444,6 +445,35 @@ def main():
                                     st.components.v1.html(report, height=800, scrolling=True)
                     else:
                         st.error("No results found. Please process data first.")
+                        
+    elif mode == "Digit Reduction":
+        st.header("Digit Reduction")
+
+        state = st.selectbox("Select State", STATES)
+
+        if st.button("Run Digit Reduction"):
+            with st.spinner("Crunching digit reductions …"):
+                df, html_path, csv_path = run_digit_reduction(
+                    state,
+                    tables_path=Path(get_tables_output_dir()) / state,
+                )
+
+            if df.empty:
+                st.warning("No reductions found – verify tables for this state or adjust inputs.")
+            else:
+                st.success(f"✅ {len(df)} reductions extracted")
+                st.dataframe(df.head(100), height=360, use_container_width=True)
+
+                if csv_path:
+                    st.download_button(
+                        "Download CSV",
+                        Path(csv_path).read_bytes(),
+                        file_name=Path(csv_path).name,
+                    )
+
+                if html_path and Path(html_path).exists():
+                    with open(html_path, "r", encoding="utf-8") as fh:
+                        st.components.v1.html(fh.read(), height=600, scrolling=True)
                         
     else:  # About
         st.header("About")

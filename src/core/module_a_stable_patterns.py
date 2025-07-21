@@ -31,6 +31,7 @@ import json
 import re
 from collections import defaultdict, Counter
 from datetime import datetime
+from pathlib import Path
 
 # Define MAX_COL constant as requested
 MAX_COL = 7
@@ -684,16 +685,17 @@ def _tables_to_jsonlike(state_name: str, tbls: dict) -> dict:
     return out
 
 
-def _display_results(results: dict):
-    """Flatten results dict and show in Streamlit with download button."""
-    flat_rows = []
+def _results_to_df(results: dict) -> "pd.DataFrame":
+    """Flatten nested extractor results dict into a DataFrame suitable for display."""
+    import pandas as pd
+    rows = []
     for sec, sets in results.items():
         for set_name, draws in sets.items():
             for d_idx, col_list in enumerate(draws, start=1):
                 draw_label = f"Draw{d_idx}"
                 for col_idx, col_dict in enumerate(col_list):
                     for pat, det in col_dict.items():
-                        flat_rows.append({
+                        rows.append({
                             "Section": sec,
                             "Set": set_name,
                             "Draw": draw_label,
@@ -701,13 +703,29 @@ def _display_results(results: dict):
                             "Pattern": pat,
                             "Score": det.get("score", 0),
                         })
-    if not flat_rows:
+    return pd.DataFrame(rows).sort_values("Score", ascending=False) if rows else pd.DataFrame()
+
+
+def _display_results(results: dict, state: str = "unknown"):
+    """Flatten results dict and show in Streamlit with download button."""
+    if results.empty:
         st.warning("No stable patterns found.")
         return
-    df = pd.DataFrame(flat_rows).sort_values("Score", ascending=False)
+    df = results
     st.dataframe(df, use_container_width=True)
-    csv = df.to_csv(index=False).encode()
-    st.download_button("Download CSV", csv, file_name="stable_patterns.csv")
+    
+    # Auto-save output for reproducibility
+    today = datetime.now().strftime("%Y-%m-%d")
+    out_dir = Path("data/outputs/patterns")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_auto = out_dir / f"{state}_{today}_stable_patterns.csv"
+    try:
+        df.to_csv(csv_auto, index=False)
+        st.success(f"📁 Saved to {csv_auto}")
+        csv_bytes = df.to_csv(index=False).encode()
+        st.download_button("Download CSV", csv_bytes, file_name="stable_patterns.csv")
+    except Exception as exc:
+        st.warning(f"⚠️ Failed to auto-save CSV: {exc}")
 
 
 def main():  # noqa: D401 – Streamlit entry point
@@ -741,7 +759,8 @@ def main():  # noqa: D401 – Streamlit entry point
                     st.stop()
                 json_like = _tables_to_jsonlike(state, tbls)
                 results = run_stable_pattern_extraction(json_like)
-            _display_results(results)
+            df_scores = _results_to_df(results)
+            _display_results(df_scores, state)
     else:
         uploaded = st.file_uploader("Upload *_all_tables_ JSON export", type=["json"])
         if uploaded is not None:
@@ -757,7 +776,7 @@ def main():  # noqa: D401 – Streamlit entry point
                 st.warning("No stable patterns found.")
                 st.stop()
             st.success("Extraction complete.")
-            _display_results(results)
+            _display_results(_results_to_df(results), "uploaded")
 
 # Note: existing CLI demo_main() remains functional.
 

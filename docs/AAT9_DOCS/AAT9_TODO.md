@@ -22,6 +22,7 @@ For open tasks see TODO.md and CHANGELOG.md in the repo root.
 - [ ] Design V-Trac+pairing rules  (📅 added 2025-06-27)
 - [ ] Prototype score weights
 - [ ] Unit tests
+- [ ] 🟡 Part 1/2 wired to UI; implement Part 3 tally next
 
 ## General v0 (repetition detector)
 - [ ] Build SQLite ingest script
@@ -30,19 +31,19 @@ For open tasks see TODO.md and CHANGELOG.md in the repo root.
 <!-- aat9 -->
 For open tasks see TODO.md and CHANGELOG.md in the repo root.
 
-# AAT9 — Rolling TODO / Road‑map
+# AAT9 — Rolling TODO / Road‑map
 
-Legend  🟢 planned 🟡 in‑progress 🔴 blocked
+Legend 🟢 planned 🟡 in‑progress 🔴 blocked
 
 | Epic | Sub‑task | Status | Notes |
 |------|----------|--------|-------|
-| **Digit Reduction** | Port Part 3 “tally & rank” | 🟡 | Most algorithms exist; needs wrapper + tests. |
+| **Digit Reduction** | Port Part 3 "tally & rank" | 🟡 | Most algorithms exist; needs wrapper + tests. |
 | | Wire Streamlit tab | 🟢 | Mirror pattern‑extractor pattern. |
 | **Hot‑Zone** | Compute engine | 🟢 | Re‑use consensus logic blueprint. |
 | | Report builder | 🟢 | HTML first, Streamlit later. |
-| **Winner Logging** | Unify JSON schema | 🟢 | Decide single payload (`draw_date`, `tool`, `hit_flag`, …). |
+| **Winner Logging** | Unify JSON schema | 🟢 | Decide single payload (`draw_date`, `tool`, `hit_flag`, …). |
 | | Hook into V‑Trac & Stable‑Pattern runs | 🟢 | Write once per state/day. |
 | **Brain (Analysis)** | Feature catalog (.yaml) | 🟢 | One row per feature; owner/tool/ref. |
 | | Baseline scorer (rule weights) | 🟢 | Use 2023‑2024 history for first fit. |
-| **Dev Experience** | `make clean‑artefacts` | 🟢 | Purge outputs locally. |
+| **Dev Experience** | `make clean‑artefacts` | 🟢 | Purge outputs locally. |
 | | Pre‑commit black+ruff | 🟢 | Keep style consistent. |

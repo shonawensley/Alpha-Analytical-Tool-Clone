@@ -12,4 +12,4 @@ For open tasks see TODO.md and CHANGELOG.md in the repo root.
 - Import wrapper now targets stable package.
 
 ### Removed
-- Legacy `stable_pattern_analyzer_standalone.py` archived. 
+- Legacy `stable_pattern_analyzer_standalone.py` archived.     
