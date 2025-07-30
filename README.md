@@ -1,5 +1,14 @@
 # Alpha Analytical Tool
 
+## 🎯 Project Status (July 30, 2025)
+
+**The project is currently staged for the integration of the Auxiliary Tools module.**
+
+For a detailed summary of the recent setup and cleanup tasks, please review the latest checkpoint document:
+-   [**CHECKPOINT: Auxiliary Tools Module Setup**](./docs/AAT9_DOCS/CHECKPOINT_2025-07-30_Auxiliary_Tools_Setup.md)
+
+---
+
 This project is a Python-based tool for lottery data analysis.
 
 ## 🚀 Getting Started
