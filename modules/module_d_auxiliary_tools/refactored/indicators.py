@@ -17,6 +17,16 @@ legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'lega
 if legacy_path not in sys.path:
     sys.path.insert(0, legacy_path)
 
+# Bridge: map `modules.vtrac_reference` to the rich legacy reference if needed
+try:
+    import importlib
+    _vr = importlib.import_module('vtrac_reference')
+    sys.modules['modules.vtrac_reference'] = _vr
+    if 'modules' in sys.modules:
+        setattr(sys.modules['modules'], 'vtrac_reference', _vr)
+except Exception:
+    pass
+
 try:
     from analyze_pairs import (
         extract_pairs, calculate_overdue_pairs, get_top_overdue_repeating_pairs,
@@ -32,6 +42,15 @@ except ImportError as e:
     COLOR_VERY_LATE = 'blue'  
     COLOR_PENDING = 'purple'
 
+# Provide no-op stubs to prevent NameError during UI rendering if legacy imports fail
+if 'get_doubles_history' not in globals():
+    def get_doubles_history(draws):
+        return {}
+
+if 'get_top_overdue_repeating_pairs' not in globals():
+    def get_top_overdue_repeating_pairs(draws, top_n):
+        return []
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,8 +65,11 @@ def get_overdue_pairs_analysis(draws: List[str], top_n: int = 10) -> pd.DataFram
     Returns:
         DataFrame with pair, overdue_count, and color information
     """
+    print(f"[DEBUG] get_overdue_pairs_analysis called with {len(draws)} draws")
+    
     if not draws:
         logger.warning("No draws provided for overdue pairs analysis")
+        print("[DEBUG] No draws provided for overdue pairs analysis")
         return pd.DataFrame(columns=['Pair', 'Draws_Overdue', 'Color', 'Type'])
     
     try:

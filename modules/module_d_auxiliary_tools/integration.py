@@ -43,6 +43,13 @@ def run_aux_tools(state: str, data_dir: Optional[Path] = None) -> Dict[str, pd.D
         logger.info(f"Running auxiliary tools analysis for {state}")
         draws = extract_draw_list(state, data_dir)
         
+        # DEBUG: Print draw extraction results
+        print(f"[DEBUG] {state}: loaded {len(draws)} draws — first5={draws[:5] if draws else []}")
+        if draws:
+            print(f"[DEBUG] Last5 draws: {draws[-5:]}")
+        else:
+            print(f"[DEBUG] NO DRAWS LOADED FOR {state}!")
+        
         if not draws:
             logger.warning(f"No draw data found for {state}")
             return _empty_results()

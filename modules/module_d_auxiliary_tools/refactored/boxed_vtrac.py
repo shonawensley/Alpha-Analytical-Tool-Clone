@@ -17,6 +17,17 @@ legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'lega
 if legacy_path not in sys.path:
     sys.path.insert(0, legacy_path)
 
+# Bridge: ensure legacy import path `modules.vtrac_reference` resolves to the rich reference
+try:
+    import importlib
+    _vr = importlib.import_module('vtrac_reference')
+    # Register as submodule under the already-imported top-level package `modules`
+    sys.modules['modules.vtrac_reference'] = _vr
+    if 'modules' in sys.modules:
+        setattr(sys.modules['modules'], 'vtrac_reference', _vr)
+except Exception:
+    pass
+
 try:
     from vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
     from analyze_pairs import (
@@ -35,6 +46,15 @@ except ImportError as e:
     COLOR_PENDING = 'purple'
     VTRAC_DISPLAY = []
 
+# Belt-and-suspenders: provide no-op stubs if legacy functions are missing
+if 'calculate_overdue_pairs' not in globals():
+    def calculate_overdue_pairs(draws):
+        return ({}, {}, {})
+
+if 'get_vtrac_statuses' not in globals():
+    def get_vtrac_statuses(draws_100, draws_1000=None):
+        return {}
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,8 +68,12 @@ def generate_boxed_vtrac_table(draws: List[str]) -> pd.DataFrame:
     Returns:
         pandas.DataFrame with Index, Singles, Doubles columns and styling information
     """
+    print(f"[DEBUG] generate_boxed_vtrac_table called with {len(draws)} draws")
+    print(f"[DEBUG] VTRAC_DISPLAY available: {len(VTRAC_DISPLAY) if VTRAC_DISPLAY else 'NO'}")
+    
     if not draws:
         logger.warning("No draws provided for V-TRAC table generation")
+        print("[DEBUG] No draws provided - returning empty DataFrame")
         return pd.DataFrame(columns=['Index', 'Singles', 'Doubles'])
     
     try:
