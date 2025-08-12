@@ -57,11 +57,12 @@ def run_aux_tools(state: str, data_dir: Optional[Path] = None) -> Dict[str, pd.D
         # Validate draw data
         validated_draws = validate_draw_data(draws)
         logger.info(f"Processing {len(validated_draws)} validated draws for {state}")
+        print(f"[DEBUG] {state} first5(newest): {validated_draws[:5]}  last5(oldest): {validated_draws[-5:]}")
         
-        # Generate boxed V-TRAC table
+        # Generate boxed V-TRAC table (100/1000 handled inside)
         boxed_vtrac = generate_boxed_vtrac_table(validated_draws)
         
-        # Generate overdue pairs analysis
+        # Generate overdue pairs analysis (uses last 100 draws inside)
         overdue_pairs = get_overdue_pairs_analysis(validated_draws, top_n=15)
         
         # Generate doubles tracker analysis

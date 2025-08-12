@@ -11,19 +11,24 @@ from typing import List, Dict, Any, Tuple, Optional
 import logging
 import sys
 import os
+import importlib.util
+import pathlib
 
 # Add the legacy modules to path for imports
 legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'legacy_modules_backup')
 if legacy_path not in sys.path:
     sys.path.insert(0, legacy_path)
 
-# Bridge: map `modules.vtrac_reference` to the rich legacy reference if needed
+# --- force-load the rich legacy vtrac_reference as "modules.vtrac_reference" safely ---
 try:
-    import importlib
-    _vr = importlib.import_module('vtrac_reference')
-    sys.modules['modules.vtrac_reference'] = _vr
-    if 'modules' in sys.modules:
-        setattr(sys.modules['modules'], 'vtrac_reference', _vr)
+    LEGACY = pathlib.Path(__file__).resolve().parents[1] / "core_legacy" / "legacy_modules_backup"
+    vr_path = LEGACY / "vtrac_reference.py"
+    if "modules.vtrac_reference" not in sys.modules and vr_path.exists():
+        spec = importlib.util.spec_from_file_location("modules.vtrac_reference", str(vr_path))
+        vr_mod = importlib.util.module_from_spec(spec)
+        assert spec and spec.loader
+        spec.loader.exec_module(vr_mod)
+        sys.modules["modules.vtrac_reference"] = vr_mod
 except Exception:
     pass
 
@@ -73,11 +78,13 @@ def get_overdue_pairs_analysis(draws: List[str], top_n: int = 10) -> pd.DataFram
         return pd.DataFrame(columns=['Pair', 'Draws_Overdue', 'Color', 'Type'])
     
     try:
-        # Calculate overdue pairs
-        non_repeating_overdue, repeating_overdue, colored_pairs = calculate_overdue_pairs(draws)
+        # Use last 100 draws for overdue logic (legacy window)
+        WINDOW_LATE = 100
+        draws_late = draws[:WINDOW_LATE]
+        non_repeating_overdue, repeating_overdue, colored_pairs = calculate_overdue_pairs(draws_late)
         
-        # Get top overdue repeating pairs specifically
-        top_pairs = get_top_overdue_repeating_pairs(draws, top_n)
+        # Get top overdue repeating pairs specifically (use same 100-draw window)
+        top_pairs = get_top_overdue_repeating_pairs(draws_late, top_n)
         
         # Combine all overdue pairs
         all_pairs = []
@@ -107,6 +114,11 @@ def get_overdue_pairs_analysis(draws: List[str], top_n: int = 10) -> pd.DataFram
         if not df.empty:
             df = df.sort_values('Draws_Overdue', ascending=False).head(top_n)
         
+        if not df.empty:
+            # Debug snapshot to compare with legacy UI
+            head = df.head(5).to_dict(orient="records")
+            snap = [(r.get("Pair"), r.get("Draws_Overdue")) for r in head if r.get("Type") == "Repeating"]
+            print("[DEBUG] Top5 repeating pairs snapshot:", snap)
         return df
         
     except Exception as e:

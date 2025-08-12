@@ -145,6 +145,7 @@ def show_aux_page(state: str) -> None:
     import streamlit as st
     import pandas as pd
     from modules.module_d_auxiliary_tools.integration import run_aux_tools
+    from modules.module_d_auxiliary_tools.refactored.boxed_vtrac import render_boxed_vtrac_html
     
     st.title(f"Auxiliary Tools - {state}")
     st.write(f"Advanced lottery analysis tools for {state}")
@@ -159,25 +160,16 @@ def show_aux_page(state: str) -> None:
             try:
                 results = cached_aux_analysis(state)
                 
-                # Display Boxed V-TRAC Table
+                # Display Boxed V-TRAC Table (HTML render for colors/underlines)
                 st.subheader("📊 Boxed V-TRAC Table")
                 boxed_vtrac = results["boxed_vtrac"]
-                
                 if not boxed_vtrac.empty:
-                    st.write(f"35x8 V-TRAC index table with color coding")
-                    
-                    # Display with custom styling
-                    st.dataframe(
-                        boxed_vtrac,
-                        use_container_width=True,
-                        height=600
-                    )
-                    
-                    # Add download option
-                    csv_data = boxed_vtrac.to_csv(index=False)
+                    st.write("35x8 V‑TRAC index table with legacy color/underline styling")
+                    st.markdown(render_boxed_vtrac_html(boxed_vtrac), unsafe_allow_html=True)
+                    # Add download option (CSV from the underlying DataFrame)
                     st.download_button(
                         "Download V-TRAC Table CSV",
-                        csv_data,
+                        boxed_vtrac.to_csv(index=False),
                         f"{state}_boxed_vtrac.csv",
                         "text/csv"
                     )
@@ -189,46 +181,33 @@ def show_aux_page(state: str) -> None:
                 overdue_pairs = results["overdue_pairs"]
                 
                 if not overdue_pairs.empty:
-                    st.write("Top overdue pairs with color coding:")
-                    
-                    # Display with color styling
-                    for _, row in overdue_pairs.head(10).iterrows():
+                    # Compact top-5 repeating pairs (like legacy)
+                    st.caption("Top 5 Most Overdue Repeating Pairs")
+                    top5 = (
+                        overdue_pairs[overdue_pairs['Type'] == 'Repeating']
+                        .sort_values('Draws_Overdue', ascending=False)
+                        .head(5)
+                    )
+                    for _, row in top5.iterrows():
                         color = row.get('Color', '')
                         pair = row['Pair']
                         overdue = row['Draws_Overdue']
-                        pair_type = row.get('Type', '')
-                        
                         if color == 'red':
-                            st.markdown(f'<span style="color: red; font-weight: bold">{pair} - {overdue} draws overdue ({pair_type})</span>', unsafe_allow_html=True)
+                            st.markdown(f'<span style="color: red; font-weight: bold">{pair} - {overdue} draws overdue</span>', unsafe_allow_html=True)
                         elif color == 'blue':
-                            st.markdown(f'<span style="color: blue; font-weight: bold">{pair} - {overdue} draws overdue ({pair_type})</span>', unsafe_allow_html=True)
+                            st.markdown(f'<span style="color: blue; font-weight: bold">{pair} - {overdue} draws overdue</span>', unsafe_allow_html=True)
                         elif color == 'purple':
-                            st.markdown(f'<span style="color: purple; font-weight: bold">{pair} - {overdue} draws overdue ({pair_type})</span>', unsafe_allow_html=True)
+                            st.markdown(f'<span style="color: purple; font-weight: bold">{pair} - {overdue} draws overdue</span>', unsafe_allow_html=True)
                         else:
-                            st.write(f"{pair} - {overdue} draws overdue ({pair_type})")
-                    
+                            st.write(f"{pair} - {overdue} draws overdue")
+                    # Detailed table below for reference
                     st.dataframe(overdue_pairs, use_container_width=True)
                 else:
                     st.info("No overdue pairs data available.")
-                
-                # Display Doubles Tracker
+
+                # Doubles tracking (per-state) will be part of Control Center aggregation
                 st.subheader("🎯 Doubles Tracker")
-                doubles_tracker = results["doubles_tracker"]
-                
-                if not doubles_tracker.empty:
-                    st.write("Doubles analysis and frequency tracking:")
-                    st.dataframe(doubles_tracker, use_container_width=True)
-                    
-                    # Show summary stats
-                    most_overdue = doubles_tracker.iloc[0] if not doubles_tracker.empty else None
-                    if most_overdue is not None:
-                        st.metric(
-                            "Most Overdue Double",
-                            most_overdue['Double'],
-                            f"{most_overdue['Draws_Since']} draws ago"
-                        )
-                else:
-                    st.info("No doubles tracking data available.")
+                st.info("Cross-state doubles (combos) ranking will appear in Control Center.")
                 
                 # Display Compound Indicators (Placeholder)
                 if "compound_indicators" in results:

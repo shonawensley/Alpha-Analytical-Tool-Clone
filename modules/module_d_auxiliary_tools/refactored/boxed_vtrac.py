@@ -11,21 +11,26 @@ from typing import List, Dict, Any, Tuple, Optional
 import logging
 import sys
 import os
+import importlib.util
+import pathlib
 
 # Add the legacy modules to path for imports
 legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'legacy_modules_backup')
 if legacy_path not in sys.path:
     sys.path.insert(0, legacy_path)
 
-# Bridge: ensure legacy import path `modules.vtrac_reference` resolves to the rich reference
+# --- force-load the rich legacy vtrac_reference as "modules.vtrac_reference" safely ---
 try:
-    import importlib
-    _vr = importlib.import_module('vtrac_reference')
-    # Register as submodule under the already-imported top-level package `modules`
-    sys.modules['modules.vtrac_reference'] = _vr
-    if 'modules' in sys.modules:
-        setattr(sys.modules['modules'], 'vtrac_reference', _vr)
+    LEGACY = pathlib.Path(__file__).resolve().parents[1] / "core_legacy" / "legacy_modules_backup"
+    vr_path = LEGACY / "vtrac_reference.py"
+    if "modules.vtrac_reference" not in sys.modules and vr_path.exists():
+        spec = importlib.util.spec_from_file_location("modules.vtrac_reference", str(vr_path))
+        vr_mod = importlib.util.module_from_spec(spec)
+        assert spec and spec.loader
+        spec.loader.exec_module(vr_mod)
+        sys.modules["modules.vtrac_reference"] = vr_mod
 except Exception:
+    # do not fail UI if shimging fails; legacy direct import below may still work
     pass
 
 try:
@@ -77,9 +82,13 @@ def generate_boxed_vtrac_table(draws: List[str]) -> pd.DataFrame:
         return pd.DataFrame(columns=['Index', 'Singles', 'Doubles'])
     
     try:
+        # Use last 100 draws for overdue logic; last 1000 for underline checks
+        draws_100 = draws[:100]
+        draws_1000 = draws[:1000]
+
         # Calculate overdue pairs and get V-TRAC statuses
-        non_repeating_overdue, repeating_overdue, colored_pairs = calculate_overdue_pairs(draws)
-        vtrac_statuses = get_vtrac_statuses(draws)
+        non_repeating_overdue, repeating_overdue, colored_pairs = calculate_overdue_pairs(draws_100)
+        vtrac_statuses = get_vtrac_statuses(draws_100, draws_1000)
         
         # Build the table data
         table_data = []
@@ -231,6 +240,32 @@ def apply_vtrac_styling(df: pd.DataFrame):
     ])
     
     return styler
+
+
+def render_boxed_vtrac_html(df: pd.DataFrame) -> str:
+    """
+    Render the boxed V-TRAC DataFrame as HTML with color classes preserved.
+
+    Streamlit's dataframe escapes HTML; for legacy-style colored output we
+    return an HTML table string for st.markdown(..., unsafe_allow_html=True).
+    """
+    if df is None or df.empty:
+        return "<p>No V-TRAC data available.</p>"
+
+    css = """
+    <style>
+      table.vtrac { border-collapse: collapse; width: 100%; }
+      table.vtrac th, table.vtrac td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+      table.vtrac th { background: #f7f7f7; font-weight: 600; }
+      .red { color: red; font-weight: 700; }
+      .blue { color: blue; font-weight: 700; }
+      .purple { color: purple; font-weight: 700; }
+      .underline { text-decoration: underline; }
+    </style>
+    """
+
+    html = df.to_html(escape=False, index=False, classes=["vtrac"])
+    return css + html
 
 
 def get_boxed_vtrac_summary(df: pd.DataFrame) -> Dict[str, Any]:
