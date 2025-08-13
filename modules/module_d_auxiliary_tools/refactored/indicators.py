@@ -11,8 +11,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import logging
 import sys
 import os
-import importlib.util
-import pathlib
+from .bootstrap_imports import init as _aux_bootstrap_init
 
 # Add the legacy modules to path for imports
 legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'legacy_modules_backup')
@@ -20,17 +19,8 @@ if legacy_path not in sys.path:
     sys.path.insert(0, legacy_path)
 
 # --- force-load the rich legacy vtrac_reference as "modules.vtrac_reference" safely ---
-try:
-    LEGACY = pathlib.Path(__file__).resolve().parents[1] / "core_legacy" / "legacy_modules_backup"
-    vr_path = LEGACY / "vtrac_reference.py"
-    if "modules.vtrac_reference" not in sys.modules and vr_path.exists():
-        spec = importlib.util.spec_from_file_location("modules.vtrac_reference", str(vr_path))
-        vr_mod = importlib.util.module_from_spec(spec)
-        assert spec and spec.loader
-        spec.loader.exec_module(vr_mod)
-        sys.modules["modules.vtrac_reference"] = vr_mod
-except Exception:
-    pass
+# Initialize legacy imports once
+_aux_bootstrap_init()
 
 try:
     from analyze_pairs import (

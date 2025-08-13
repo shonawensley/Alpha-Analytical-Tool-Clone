@@ -165,7 +165,8 @@ def show_aux_page(state: str) -> None:
                 boxed_vtrac = results["boxed_vtrac"]
                 if not boxed_vtrac.empty:
                     st.write("35x8 V‑TRAC index table with legacy color/underline styling")
-                    st.markdown(render_boxed_vtrac_html(boxed_vtrac), unsafe_allow_html=True)
+                    # Render via HTML component to preserve <span> styling
+                    st.components.v1.html(render_boxed_vtrac_html(boxed_vtrac), height=650, scrolling=True)
                     # Add download option (CSV from the underlying DataFrame)
                     st.download_button(
                         "Download V-TRAC Table CSV",
