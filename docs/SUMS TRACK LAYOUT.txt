@@ -1,0 +1,497 @@
+2) Sums Tracking – design choices (quick answers)
+
+“Is 100 draws too long for sums? Aren’t we tracking hit‑rates more than ‘outstanding’?”
+
+We’ll compute both:
+
+Hit‑rate vs expectation for each sum 0–27 (and root sum 0–9). Expectation is based on the true distribution of sums over 000–999 (we compute the exact combinatorial probabilities once).
+
+Draws‑since for each sum (the “outstanding” view).
+
+100‑draw window is totally fine (≈ a few weeks of data depending on state cadence). With 28 sum buckets, 100 draws gives enough signal for a useful z‑score (hot/cold) without overreacting to noise. You can set it from your existing “Analysis Window Size” slider.
+
+Color semantics (consistent with the rest of Aux):
+
+blue = “hot” (observed >> expected; z ≥ +1.0)
+
+red = “cold” (observed << expected; z ≤ −1.0)
+
+purple = “pending gap” (draws‑since ≥ 25 by default)
+
+If a sum is both cold and has a long gap, it’ll be red + purple (we return flags so your UI can render both if you like).
+
+Complexity & performance
+
+The core routine is O(N) over the window and the constants (28 sums, 10 root‑sums) are tiny. It’s fast and cheap.
+
+3) Drop‑in code (no abbreviations)
+
+Copy these files into your repo (matching the module layout you used for pairs/V‑TRAC). The code is complete and ready to import. After that, add the two small hooks shown at the end.
+
+A) modules/sums_reference.py
+
+Builds exact probabilities for sums and root‑sums over 000–999 and exposes helpers.
+
+# modules/sums_reference.py
+
+from typing import Dict, Tuple
+
+__all__ = [
+    "SUM_COUNTS",
+    "SUM_PROB",
+    "ROOTSUM_COUNTS",
+    "ROOTSUM_PROB",
+    "digital_root",
+    "sum_of_draw",
+    "root_sum_of_draw",
+]
+
+def digital_root(n: int) -> int:
+    """
+    Digital root of a non-negative integer.
+    Conventional mapping: 0 stays 0; otherwise 1..9.
+    """
+    if n <= 0:
+        return 0
+    return 1 + ((n - 1) % 9)
+
+def sum_of_draw(draw: str) -> int:
+    """
+    Sum the digits of a 3-digit draw string, e.g., '042' -> 6.
+    """
+    if not draw or len(draw) != 3 or not draw.isdigit():
+        raise ValueError(f"Invalid draw: {draw!r}")
+    return int(draw[0]) + int(draw[1]) + int(draw[2])
+
+def root_sum_of_draw(draw: str) -> int:
+    """
+    Digital root of the sum of digits for the draw.
+    '000' -> 0; others -> 1..9.
+    """
+    return digital_root(sum_of_draw(draw))
+
+def _build_sum_and_rootsum_counts() -> Tuple[Dict[int, int], Dict[int, int]]:
+    """
+    Enumerate all ordered 3-digit numbers 000..999 to count:
+      - counts per sum (0..27)
+      - counts per root-sum (0..9; 0 occurs only for 000)
+    """
+    sum_counts: Dict[int, int] = {s: 0 for s in range(0, 28)}
+    rootsum_counts: Dict[int, int] = {r: 0 for r in range(0, 10)}
+    for a in range(10):
+        for b in range(10):
+            for c in range(10):
+                s = a + b + c
+                sum_counts[s] += 1
+                r = digital_root(s)
+                rootsum_counts[r] += 1
+    return sum_counts, rootsum_counts
+
+# Build tables once at import
+SUM_COUNTS, ROOTSUM_COUNTS = _build_sum_and_rootsum_counts()
+
+# Convert to probabilities (over 1000 outcomes)
+SUM_PROB: Dict[int, float] = {k: v / 1000.0 for k, v in SUM_COUNTS.items()}
+ROOTSUM_PROB: Dict[int, float] = {k: v / 1000.0 for k, v in ROOTSUM_COUNTS.items()}
+
+B) modules/sums_analysis.py
+
+Computes hit‑rate vs expectation, z‑scores, and draws‑since flags for the selected window.
+
+# modules/sums_analysis.py
+
+from typing import Dict, List, Any
+import math
+
+from .sums_reference import (
+    SUM_PROB,
+    ROOTSUM_PROB,
+    sum_of_draw,
+    root_sum_of_draw,
+)
+
+# ---------- Tunable thresholds ----------
+Z_HOT = 1.0         # blue if z >= +1.0
+Z_COLD = -1.0       # red  if z <= -1.0
+GAP_PURPLE = 25     # purple if draws_since >= 25
+# ---------------------------------------
+
+def _draws_since_indices(items: List[int], universe: List[int], default_value: int) -> Dict[int, int]:
+    """
+    Given a per-draw sequence of category labels (e.g., sum values),
+    compute draws-since (0 = newest draw) for every category in `universe`.
+    We scan newest->oldest (list is already newest first in our app).
+    """
+    last_seen: Dict[int, int] = {}
+    for i, label in enumerate(items):
+        if label not in last_seen:
+            last_seen[label] = i
+        if len(last_seen) == len(universe):
+            break
+    return {label: last_seen.get(label, default_value) for label in universe}
+
+def _zscore(observed: int, window: int, p: float) -> float:
+    """
+    Normal approximation z-score: (obs - E) / sqrt(N p (1-p))
+    Safe when 0 < p < 1; otherwise return 0.
+    """
+    if p <= 0.0 or p >= 1.0 or window <= 0:
+        return 0.0
+    expected = window * p
+    var = window * p * (1 - p)
+    if var <= 0.0:
+        return 0.0
+    return (observed - expected) / math.sqrt(var)
+
+def _class_flags(z: float, gap: int) -> Dict[str, bool]:
+    """
+    Map z and gap to color semantics used across the Auxiliary UI.
+    - blue   -> hot (z >= Z_HOT)
+    - red    -> cold (z <= Z_COLD)
+    - purple -> pending gap (gap >= GAP_PURPLE)
+    Multiple flags may be true simultaneously.
+    """
+    return {
+        "blue":   z >= Z_HOT,
+        "red":    z <= Z_COLD,
+        "purple": gap >= GAP_PURPLE,
+    }
+
+def _analyze_categories(
+    labels: List[int],
+    probs: Dict[int, float],
+    window: int
+) -> Dict[int, Dict[str, Any]]:
+    """
+    Generic analyzer for per-draw labels (sum or root-sum).
+    Returns a dict keyed by category with:
+      count, expected, hit_rate, exp_rate, z, draws_since, flags{blue,red,purple}
+    """
+    # Count observed
+    counts: Dict[int, int] = {k: 0 for k in probs.keys()}
+    for val in labels:
+        if val in counts:
+            counts[val] += 1
+
+    # Draws-since per category (0..window)
+    universe = list(probs.keys())
+    draws_since_map = _draws_since_indices(labels, universe, default_value=window)
+
+    # Build results
+    out: Dict[int, Dict[str, Any]] = {}
+    for k in universe:
+        p = probs[k]
+        c = counts.get(k, 0)
+        z = _zscore(c, window, p)
+        gap = draws_since_map[k]
+        out[k] = {
+            "count": c,
+            "expected": window * p,
+            "hit_rate": c / window if window else 0.0,
+            "exp_rate": p,
+            "z": z,
+            "draws_since": gap,
+            "flags": _class_flags(z, gap),
+        }
+    return out
+
+def calculate_sums_stats(draws: List[str], window: int = 100) -> Dict[str, Any]:
+    """
+    Main entry: analyze sums and root-sums over the newest `window` draws.
+    Input draws are newest-first, consistent with the rest of the app.
+    Returns:
+      {
+        'window': int,
+        'by_sum': { sum:int -> metrics },
+        'by_root_sum': { root:int -> metrics }
+      }
+    """
+    if not draws:
+        return {"window": 0, "by_sum": {}, "by_root_sum": {}}
+
+    w = min(window, len(draws))
+    window_draws = draws[:w]
+
+    sums: List[int] = [sum_of_draw(d) for d in window_draws if d and len(d) == 3]
+    roots: List[int] = [root_sum_of_draw(d) for d in window_draws if d and len(d) == 3]
+
+    by_sum = _analyze_categories(sums, SUM_PROB, w)
+    by_root = _analyze_categories(roots, ROOTSUM_PROB, w)
+
+    return {"window": w, "by_sum": by_sum, "by_root_sum": by_root}
+
+C) modules/sums_ui.py (optional helper for Streamlit rendering)
+
+If you’re mirroring the style of the other Aux tables, this formats a compact DataFrame and basic HTML color cues.
+
+# modules/sums_ui.py
+
+from typing import Dict, Any, List
+import pandas as pd
+
+COLOR_CLASS = {
+    "blue": "blue",
+    "red": "red",
+    "purple": "purple",
+}
+
+def _flag_to_badge(flags: Dict[str, bool]) -> str:
+    badges: List[str] = []
+    for key, val in flags.items():
+        if val:
+            css = COLOR_CLASS.get(key, "")
+            badges.append(f'<span class="{css}">{key}</span>')
+    return " ".join(badges) if badges else ""
+
+def build_sums_dataframe(stats: Dict[str, Any]) -> pd.DataFrame:
+    """
+    Convert stats dict from calculate_sums_stats() to a compact table for UI.
+    """
+    rows = []
+    for s, m in sorted(stats["by_sum"].items(), key=lambda kv: kv[0]):
+        rows.append({
+            "Type": "Sum",
+            "Bucket": s,
+            "Hits": m["count"],
+            "Expected": round(m["expected"], 2),
+            "Hit %": round(100 * m["hit_rate"], 1),
+            "Exp %": round(100 * m["exp_rate"], 1),
+            "Z": round(m["z"], 2),
+            "Draws Since": m["draws_since"],
+            "Flags": _flag_to_badge(m["flags"]),
+        })
+    for r, m in sorted(stats["by_root_sum"].items(), key=lambda kv: kv[0]):
+        rows.append({
+            "Type": "Root",
+            "Bucket": r,
+            "Hits": m["count"],
+            "Expected": round(m["expected"], 2),
+            "Hit %": round(100 * m["hit_rate"], 1),
+            "Exp %": round(100 * m["exp_rate"], 1),
+            "Z": round(m["z"], 2),
+            "Draws Since": m["draws_since"],
+            "Flags": _flag_to_badge(m["flags"]),
+        })
+    return pd.DataFrame(rows)
+
+D) Wire‑in hooks (two small edits)
+
+Analysis pipeline (run_process.py) – add one line after your per‑state analysis:
+
+# in run_process(...) inside the per-state loop, after you build draws_100 etc.
+from modules.sums_analysis import calculate_sums_stats
+
+# window uses the same analysis_draws slider you already have
+sums_stats = calculate_sums_stats(draws, window=analysis_draws)
+
+results[state].update({
+    "sums_stats": sums_stats,
+})
+
+
+Auxiliary/State page (where you already show V‑TRAC + pairs): add a Sums section.
+If you’re using Streamlit, something like:
+
+import pandas as pd
+import streamlit as st
+from modules.sums_ui import build_sums_dataframe
+
+def display_sums_section(state_data: dict):
+    st.subheader("Sums Tracking")
+    if "sums_stats" not in state_data or not state_data["sums_stats"]:
+        st.write("No sums data.")
+        return
+    df = build_sums_dataframe(state_data["sums_stats"])
+    # Render as HTML so the .red/.blue/.purple classes apply if you already defined them
+    st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+
+Call display_sums_section(state_data) under your existing “Overdue Pairs Analysis” or “V‑TRAC Analysis” sections.
+
+4) Token‑savvy workflow for Cursor (so it “wires,” not “rewrites”)
+
+Drop the three files above into modules/.
+
+Create a tiny task brief file DEV_NOTES_sums.md next to them with:
+
+“Do not regenerate these modules. Only: (a) import in run_process, (b) call calculate_sums_stats, (c) render a Sums section with build_sums_dataframe.”
+
+“Use the existing analysis_draws slider value as the window.”
+
+“Use the same .red/.blue/.purple CSS classes already defined for pairs.”
+
+In Cursor, open the brief and say:
+“Wire these exact modules; add the two integration edits; do not redesign. Show me a diff.”
+
+Turn off Max mode for this step.
+
+This keeps prompts short and avoids the costly “read a long plan and rebuild everything” pattern.
+
+5) What to do next (after Sums)
+
+When Sums is landed, we can add the Aggregate Aux Score the way you outlined (compound flags from: pair colors, V‑TRAC row ranks, combination shapes, and the new sums flags). That’s also a light O(N) pass and we can keep it inexpensive by scoring, not brute‑forcing.
+
+
+
+
+
+
+
+
+
+
+
+
+____________________________________________________
+
+
+How to wire Sums Tracking without breaking anything
+
+Sums uses only the draw list; it does not depend on the V‑TRAC reference at all. So you can attach it immediately to whichever draw source you already use in Aux or in the main app.
+
+1) Add Sums to your main analysis pipeline (the place that builds results[state])
+
+In your real run_process.py (the main app, not in the Aux folder), import and call the sums analyzer where you already compute draws_100 / analysis_draws:
+
+# near the other imports
+from modules.sums_analysis import calculate_sums_stats
+
+# inside your per-state loop in run_process(...):
+sums_stats = calculate_sums_stats(draws, window=analysis_draws)
+results[state].update({"sums_stats": sums_stats})
+
+
+Notes:
+
+draws should be newest‑first (that’s how your other analyzers already run).
+
+analysis_draws can reuse your existing slider (100 by default is fine).
+
+2) Show Sums on the Aux/State page
+
+Wherever you render Aux state results (in your Streamlit page):
+
+import streamlit as st
+from modules.sums_ui import build_sums_dataframe
+
+def display_sums_section(state_data: dict):
+    st.subheader("Sums Tracking")
+    if "sums_stats" not in state_data or not state_data["sums_stats"]:
+        st.write("No sums data.")
+        return
+    df = build_sums_dataframe(state_data["sums_stats"])
+    st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+
+Call display_sums_section(state_data) under your existing V‑TRAC/pairs sections.
+
+If you prefer to keep that in show_aux_page.py for now, that’s fine—just make sure the main app passes sums_stats into whatever state_data object the Aux page is reading.
+
+One lingering structural fix (the “two V‑TRAC references” issue)
+
+You noticed duplicates (two vtrac_reference.py flavors). With V2 + bootstrap_imports.py you don’t need to delete those files right away; the shim ensures both Aux files import the same legacy implementations under the same names:
+
+In boxed_vtrac.py and indicators.py the imports should look like:
+
+from .bootstrap_imports import init as _aux_bootstrap_init
+_aux_bootstrap_init()
+
+from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
+from modules.analyze_pairs import (
+    extract_pairs, track_pairs, calculate_overdue_pairs,
+    get_vtrac_statuses, get_colored_pairs,
+    COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
+    THRESHOLD_LATE_NONREPEATING, THRESHOLD_LATE_REPEATING,
+    THRESHOLD_VERY_LATE_NONREPEATING, THRESHOLD_VERY_LATE_REPEATING,
+    THRESHOLD_PENDING_LATE
+)
+
+
+That forces Aux to run on the same code as the legacy app. Once you’re happy, we can remove the duplicate wrapper file later and keep a single source of truth.
+
+Your rename of run_process to run_process_sum.py
+
+Good instinct to avoid collisions, but the cleanest approach is: don’t add a second runner at all. Put the two‑line sums call (above) in the real run_process.py that already builds your results. That way:
+
+You don’t create multiple entry points with similar names.
+
+Cursor/Codex won’t guess the wrong file and rewire imports to the wrong place.
+
+If you’ve already created run_process_sum.py in the Aux refactored folder, delete it to avoid shadowing.
+
+“Black Apple later” concern
+
+Nothing in the V2 sums design prevents later reuse in another environment or agent (“Black Apple”). It’s pure Python + pandas, no UI framework coupling, and its public API is a single function:
+
+calculate_sums_stats(draws: List[str], window: int) -> Dict[str, Any]
+
+
+You can call that from anywhere and render however you like.
+
+A simple process so we don’t repeat this confusion
+
+I’ll follow this every time:
+
+Manifest first. I’ll list each file with a ✅ (add), ✏️ (edit), 🗑️ (delete), or 🧭 (move), and the exact path.
+
+Non‑abbreviated, full files only. No unnamed snippets.
+
+Prospective Scripts folder. If we’re exploring, I’ll put any not‑yet‑wired files under a single folder you can create once (e.g., /prospective_scripts/aux_sums/…). When we finalize, I’ll include the move commands.
+
+Single source of truth. If a file exists in multiple places (like run_process.py), I’ll say exactly which path to change and explicitly call out any duplicates to delete.
+
+Smoke tests. I’ll include one quick “run this and expect X” check (like the CT snapshot) so you can confirm parity without reading code.
+
+Quick sanity checks you can run
+
+Aux parity check (pairs/V‑TRAC): make sure your Aux files import from modules.* (as above) and that bootstrap_imports.init() is called at the top. On the Aux page for Connecticut4, you should see:
+
+35‑row boxed V‑TRAC table with colors and underlines.
+
+“Top 5 Most Overdue Repeating Pairs” matches the legacy app when your Analysis Window is 100.
+
+Sums check: after you add sums_stats to results[state], hit your Aux page and you should see the Sums section. Try toggling the analysis window (e.g., 100 → 150) and confirm the “Window” in the sums DataFrame header reflects the change and z‑scores shift slightly.
+
+If something still looks off, the fastest way to spot wiring issues is:
+
+Confirm there is no stray run_process.py in the Aux refactored folder.
+
+Restart Streamlit (to clear cache).
+
+Print the first five draws in both places (legacy app vs Aux) and ensure they’re the same newest‑first list for the same state.
+
+If you want Cursor/Codex to finish the wiring for you
+
+Paste this exact brief (it’s safe; it won’t rewrite the world):
+
+Task: finalize Sums Tracking and lock Aux to legacy imports
+
+In run_process.py (main app), import modules.sums_analysis.calculate_sums_stats and update the per‑state loop to attach:
+
+sums_stats = calculate_sums_stats(draws, window=analysis_draws)
+results[state].update({"sums_stats": sums_stats})
+
+
+Ensure Aux import shimming is active:
+
+In modules/module_d_auxiliary_tools/refactored/boxed_vtrac.py and indicators.py, call:
+
+from .bootstrap_imports import init as _aux_bootstrap_init
+_aux_bootstrap_init()
+
+
+and import legacy via from modules.vtrac_reference ... and from modules.analyze_pairs ... (not plain from vtrac_reference ...).
+
+Delete any run_process.py or run_process_sum.py that live inside modules/module_d_auxiliary_tools/refactored/.
+
+Do not change sums_reference.py, sums_analysis.py, or sums_ui.py.
+
+Show me a diff for the touched files only, then stop.
+
+Last bit of candor
+
+I can’t inspect your PC or run agents on your local repo, so I rely on what you paste or push. The GitHub checkpoint you mentioned was the right move—now if anything goes sideways, you can always reset to that commit.
+
+If you want, I can also give you a tiny verify_sums.py that prints the sums snapshot for a single state and window so you can confirm behavior without opening the full app. But given where you are, simply adding the two‑line sums_stats update to your real run_process.py and calling display_sums_section(state_data) on the Aux page will get you over the line.
+
+If anything in the manifest above doesn’t match what you see on disk, tell me exactly which filenames differ and I’ll adapt the instructions so you don’t have to guess.
