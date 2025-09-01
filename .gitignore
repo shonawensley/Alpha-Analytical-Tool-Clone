@@ -53,17 +53,13 @@ Desktop.ini
 # Logs
 *.log
 
-# Data files
+# Data paths (path-scoped; avoid global file-type ignores)
 data/original/*
 data/cleaned/*
 data/outputs/*
 data/archive/*
 data/historical_files/*
 data/ai_exports/*
-*.xlsx
-*.xls
-*.csv
-*.json
 
 # OS
 .DS_Store
@@ -81,8 +77,55 @@ config.local.json
 data/outputs/analysis/digit_reduction/
 CLAUDE.local.md
 
-# --- project hygiene ---
+# --- project hygiene (normalized) ---
+# Generated outputs & artifacts
 data/outputs/**
 artifacts/**
+
+# Reports and caches
 reports/**
 **/*.cache
+
+# OS & editor junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# Python / venv
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+
+# Build
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# IDE configs (optional to ignore)
+.vscode/
+.idea/
+
+# Local config
+.env
+config.local.json
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+~$*
+
+# Legacy, project-specific
+data/outputs/analysis/digit_reduction/
+CLAUDE.local.md
+
+
+

@@ -1,36 +1,29 @@
-# Codex Boot Contract – AAT9
+# Codex Boot Contract — AAT9 (Universal, Desktop-first)
 
-## Repo & working dir
-- Always work at: C:\dev\Alpha-Analytical-Tool  (repo root)
-- Before any work, run and show:
-  - git status -s
-  - git remote -v
-  - git branch -vv
+**Working dir**: `C:\dev\Alpha-Analytical-Tool\`
 
-## Session config
-- /config model_reasoning_effort=high
-- /config yolo=false   # ask before running edits/commands
+**Session config**
+/config model_reasoning_effort=high
+/config yolo=false
 
-## Guardrails (scope)
-- Allowed edits unless I say otherwise:
-  - modules/module_d_auxiliary_tools/**
-  - scripts/**
-  - src/app.py  (Aux page only)
-  - briefings/**
-- Do **not** modify `core_legacy/**` or unrelated modules.
+**Quick checks (print outputs)**
+- git status -s
+- git branch -vv
+- git remote -v   # must show origin → https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git
 
-## Legacy import wiring (Aux only)
-- Ensure legacy code is importable with a single call:
-  ```python
-  from modules.module_d_auxiliary_tools.refactored.bootstrap_imports import init as wire_legacy
-  wire_legacy()
+**Operating rules**
+1. Think → write a short checkbox plan; wait for **Approved**.
+2. Small diffs only; security sanity before commit.
+3. Do **not** change Git remotes or push.
+4. Do **not** run Linux tools on Windows; use PowerShell-native when needed.
+5. When a change is ready, show the diff and STOP. I will commit/push via GitHub Desktop.
 
-4) (Optional) reuse your Claude workflow docs without pasting
+**Guardrails (edits allowed)**
+- modules/module_d_auxiliary_tools/**
+- scripts/**
+- tests/**
+- briefings/**
 
-If you want Codex to follow those practices, add this one paragraph to the top of briefings\codex_boot.md (under the H1):
-
-Follow the spirit of docs/CLAUDE_CODE/CLAUDE.md (7 rules: think → plan → review → implement small → audit → learn → wrap-up).
-Do not auto-load those large prompts; just mirror the workflow: write a plan, wait for “Approved,” implement in small diffs, add a brief learning recap in the commit message when helpful.
-
-
-This gives you the benefits of your Claude workflow without loading huge texts into Codex’s context.
+Must not edit:
+- core_legacy/**
+- git remotes or repo config
