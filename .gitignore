@@ -1,90 +1,21 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-ENV/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Streamlit
-.streamlit/
-
-# Project specific
-data/original/*.xlsm
-data/cleaned/*.xlsx
-data/outputs/tables/*
-data/outputs/analysis/*
-!data/original/.gitkeep
-!data/cleaned/.gitkeep
-!data/outputs/tables/.gitkeep
-!data/outputs/analysis/.gitkeep
-
-# legacy auto-saved pattern outputs (pre v1.0)
-data/outputs/analysis/patterns/
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Logs
-*.log
-
-# Data paths (path-scoped; avoid global file-type ignores)
-data/original/*
-data/cleaned/*
-data/outputs/*
-data/archive/*
-data/historical_files/*
-data/ai_exports/*
-
-# OS
-.DS_Store
-
-# Local configuration
-.env
-config.local.json
-
-# Temporary files
-*.tmp
-*.temp
-~$*
-
-# Digit Reduction outputs
-data/outputs/analysis/digit_reduction/
-CLAUDE.local.md
-
 # --- project hygiene (normalized) ---
+
 # Generated outputs & artifacts
 data/outputs/**
 artifacts/**
-
-# Reports and caches
 reports/**
 **/*.cache
+
+# Data paths (keep curated data out of Git by default)
+data/original/**
+data/cleaned/**
+data/archive/**
+data/historical_files/**
+data/ai_exports/**
+
+# Optional whitelists (uncomment if you want to version specific outputs)
+# !data/outputs/tables/**
+# !data/outputs/bundles/**
 
 # OS & editor junk
 .DS_Store
@@ -92,28 +23,30 @@ Thumbs.db
 Desktop.ini
 *.swp
 *.swo
+.ipynb_checkpoints/
 
-# Python / venv
+# Python cache / build
 __pycache__/
 *.py[cod]
 *$py.class
 .Python
+
+# Virtual envs
 env/
 venv/
 ENV/
 
-# Build
+# Build / packaging
 build/
 dist/
 .eggs/
 *.egg-info/
 *.egg
 
-# IDE configs (optional to ignore)
-.vscode/
-.idea/
+# Tools
+.streamlit/
 
-# Local config
+# Local config / secrets
 .env
 config.local.json
 
@@ -126,6 +59,4 @@ config.local.json
 # Legacy, project-specific
 data/outputs/analysis/digit_reduction/
 CLAUDE.local.md
-
-
 
