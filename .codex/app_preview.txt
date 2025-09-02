@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import pathlib
 import streamlit as st
@@ -22,7 +22,7 @@ if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
     sys.path.insert(0, _AUX_WORKING_ROOT)
 # ----------------------------------------------------------------------
 
-# Helpers for rendering working Vâ€‘TRAC output (used only on Aux page)
+# Helpers for rendering working V‑TRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
     return {"blue": 3, "red": 2, "purple": 1}.get(cls or "", 0)
 
@@ -153,7 +153,7 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
             if flags.get("red"):
                 parts.append(f'<span class="red">{label}</span>')
             if flags.get("purple"):
-                parts.append('<span class="purple">â€¢</span>')
+                parts.append('<span class="purple">•</span>')
             return " ".join(parts)
 
         s_tag = tag(f"S{s}", sflags)
@@ -165,9 +165,9 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
     except Exception:
         return ""
 
-# â¶ Page config FIRST (before every other st.*)
+# ❶ Page config FIRST (before every other st.*)
 st.set_page_config(page_title="Alpha-Final Analytical Tool",
-                   page_icon="ðŸš€", layout="wide")
+                   page_icon="🚀", layout="wide")
 
 # Debug: show which file is running (safe to remove later)
 st.sidebar.caption(f"ENTRY: {os.path.relpath(__file__)}")
@@ -188,14 +188,14 @@ def main():
     ]
     
     selected_state = st.sidebar.selectbox(
-        "State â–¼",
+        "State ▼",
         states_list,
         index=0
     )
     
     # Second level: Tool selector  
     selected_tool = st.sidebar.selectbox(
-        "Tool â–¼",
+        "Tool ▼",
         [
             "V-TRAC Analyzer",
             "Stable Pattern Extractor", 
@@ -256,13 +256,13 @@ def show_stable_pattern_page(state: str) -> None:
         )
 
         if df.empty:
-            st.warning("No patterns found â€“ verify tables or adjust parameters.")
+            st.warning("No patterns found – verify tables or adjust parameters.")
         else:
             st.success(f"{len(df)} patterns extracted.")
             st.dataframe(df.head(50), height=360)
 
             if csv_f:
-                st.markdown(f"[â¬‡ Download CSV]({csv_f})")
+                st.markdown(f"[⬇ Download CSV]({csv_f})")
 
             if html_f and Path(html_f).exists():
                 with open(html_f, "r", encoding="utf-8") as fh:
@@ -335,46 +335,6 @@ def show_control_center_page() -> None:
             return
         st.subheader("States Ranked by Draws Since Last Double")
         st.dataframe(df, use_container_width=True)
-        # --- Blackapple Alerts (All States) ---
-        try:
-            from modules.blackapple import analyze_blackapple, ba_status_label
-            import pandas as _pd
-            rows_ba = []
-            # Re-scan cleaned draws to build BA status per state
-            for csv_path in cleaned_dir.glob("*_draws.csv"):
-                try:
-                    dfc = _pd.read_csv(csv_path)
-                    dr = [str(x).zfill(3) for x in dfc["Draw"].dropna().astype(int).astype(str).tolist()]
-                    name = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    if dr:
-                        ba = analyze_blackapple(dr)
-                        status = ba_status_label(ba.get("score", 0))
-                        tr = ba.get("triggers", {})
-                        tparts = []
-                        if tr.get("mirror"): tparts.append("Mirror")
-                        roots = tr.get("root_due", [])
-                        if roots: tparts.append("Root " + "/".join(map(str, roots)))
-                        pat = tr.get("pattern", {})
-                        if pat.get("extreme_due"): tparts.append("SSS/TTT")
-                        if pat.get("mixed_due"):   tparts.append("SST/STS/TSS")
-                        flt = tr.get("floating", [])
-                        if flt: tparts.append("Float " + "".join(flt))
-                        rows_ba.append({
-                            "State": name,
-                            "BA-Score": ba.get("score", 0),
-                            "Status": status,
-                            "Triggers": ", ".join(tparts),
-                            "#Candidates": len(ba.get("candidates", [])),
-                            "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]])
-                        })
-                except Exception:
-                    continue
-            if rows_ba:
-                df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
-                st.subheader("Blackapple Alerts (All States)")
-                st.dataframe(df_ba, use_container_width=True)
-        except Exception as _e:
-            st.caption(f"Combined BA table unavailable: {_e}")
     except Exception as e:
         st.warning(f"Combined view unavailable: {e}")
 
@@ -389,7 +349,7 @@ def show_aux_page(state: str) -> None:
     except Exception:
         extract_draw_list = None
 
-    # Working modules (staged copy) â€“ used only inside Aux page
+    # Working modules (staged copy) – used only inside Aux page
     _AUX_WORKING_AVAILABLE = False
     try:
         from modules.analyze_pairs import (
@@ -427,9 +387,9 @@ def show_aux_page(state: str) -> None:
     def cached_aux_analysis(state_name: str):
         if not (_AUX_WORKING_AVAILABLE):
             return None
-        # 1) Try CSVs first (selfâ€‘contained; does not touch other tools)
+        # 1) Try CSVs first (self‑contained; does not touch other tools)
         draws = _load_draws_from_csv_candidates(state_name)
-        # 2) Fallback to extractor (readâ€‘only) if available
+        # 2) Fallback to extractor (read‑only) if available
         if not draws and extract_draw_list is not None:
             draws = extract_draw_list(state_name, None)
         # If no draws, attempt to generate cleaned CSVs once from local Excel
@@ -488,7 +448,7 @@ def show_aux_page(state: str) -> None:
                             build_sums_dataframe as _build_sums_df,
                         )
                         # Debug caption to verify import source; safe to remove later
-                        st.sidebar.caption(f"SUMS â¦¿ {_calc_sums.__module__}")
+                        st.sidebar.caption(f"SUMS ⦿ {_calc_sums.__module__}")
                     except Exception as _e:
                         st.sidebar.caption(f"SUMS import failed: {_e}")
 
@@ -502,8 +462,8 @@ def show_aux_page(state: str) -> None:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
 
-                # --- Vâ€‘Trac Table (Working logic) ---
-                st.subheader("ðŸ“Š Vâ€‘Trac Analysis (Working logic)")
+                # --- V‑Trac Table (Working logic) ---
+                st.subheader("📊 V‑Trac Analysis (Working logic)")
                 import pandas as _pd
                 rows = []
                 rows_plain = []
@@ -542,14 +502,14 @@ def show_aux_page(state: str) -> None:
                 # Download (plain)
                 df_plain = _pd.DataFrame(rows_plain)
                 st.download_button(
-                    "Download Vâ€‘Trac Table (Working) CSV",
+                    "Download V‑Trac Table (Working) CSV",
                     df_plain.to_csv(index=False).encode("utf-8"),
                     file_name=f"{state}_vtrac_working.csv",
                     mime="text/csv",
                 )
 
                 # --- Overdue Pairs (Working logic) ---
-                st.subheader("ðŸ”¥ Overdue Pairs Analysis (Working logic)")
+                st.subheader("🔥 Overdue Pairs Analysis (Working logic)")
                 THR_NR_RED, THR_R_RED = 37, 71
                 THR_NR_BLUE, THR_R_BLUE = 56, 107
                 THR_PENDING = 25
@@ -572,14 +532,14 @@ def show_aux_page(state: str) -> None:
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (â‰¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (≥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (≥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (≥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
                 with c2:
-                    st.markdown("<b>Nonâ€‘Repeating Pairs</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (â‰¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                    st.markdown("<b>Non‑Repeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (≥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (≥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (≥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
 
                 # --- Top 5 Repeating Pairs ---
                 st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
@@ -688,57 +648,22 @@ def show_aux_page(state: str) -> None:
                         st.markdown(f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_sums}</div>', unsafe_allow_html=True)
                     except Exception:
                         pass
-                # --- Blackapple Alert (MVP) ---
-                try:
-                    from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
-                    ba = analyze_blackapple(draws)
-                    status = ba_status_label(ba.get("score", 0))
-                    st.subheader("Blackapple Alert")
-                    parts = []
-                    tr = ba.get("triggers", {})
-                    if tr.get("mirror"): parts.append("Mirror")
-                    roots = tr.get("root_due", [])
-                    if roots: parts.append("Root due: " + ", ".join(map(str, roots)))
-                    pat = tr.get("pattern", {})
-                    if pat.get("extreme_due"): parts.append("SSS/TTT due")
-                    if pat.get("mixed_due"): parts.append("SST/STS/TSS due")
-                    flt = tr.get("floating", [])
-                    if flt: parts.append("Floating: " + "".join(flt))
-                    rc = (tr.get("pairs", {}) or {}).get("remaining_count")
-                    if rc is not None: parts.append(f"Remaining Pairs: {rc}")
-                    st.markdown(f"**Status:** {status} (BAScore {ba.get('score',0)}/5)")
-                    st.write("Triggers: " + (", ".join(parts) if parts else "None"))
-                    rows = []
-                    for c in ba.get("candidates", []):
-                        t = sum_tags(c.get("combo", ""))
-                        rows.append({
-                            "Combo": c.get("combo", ""),
-                            "MatchScore": c.get("score", 0),
-                            "Tags": " ".join(sorted(c.get("tags", []))),
-                            "Sums": f"IΣ{t['Sigma']} sD{t['sD']} RS{t['RS']}"
-                        })
-                    if rows:
-                        import pandas as _pd
-                        st.dataframe(_pd.DataFrame(rows), use_container_width=True)
-                    else:
-                        st.caption("No candidate list (insufficient overlap) — still watching triggers.")
-                except Exception as _e:
-                    st.caption(f"Blackapple panel unavailable: {_e}")
+
                 # Legend / Feature Guide
                 with st.expander("Legend / Feature Guide"):
                     st.markdown("""
-                    - Vâ€‘Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
+                    - V‑Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
                     - Combination shapes:
-                      - Red circle: Singles â‰¥ 501 draws since; Doubles â‰¥ 1000
-                      - Blue square: Singles â‰¥ 334; Doubles â‰¥ 667
+                      - Red circle: Singles ≥ 501 draws since; Doubles ≥ 1000
+                      - Blue square: Singles ≥ 334; Doubles ≥ 667
                       - Boxed combos: permutations are treated as the same combo
                     - Pairs colors (analysis window based):
-                      - Red (Late): nonâ€‘repeating â‰¥ 37, repeating â‰¥ 71
-                      - Blue (Very Late): nonâ€‘repeating â‰¥ 56, repeating â‰¥ 107
-                      - Purple (Pending): â‰¥ 25
+                      - Red (Late): non‑repeating ≥ 37, repeating ≥ 71
+                      - Blue (Very Late): non‑repeating ≥ 56, repeating ≥ 107
+                      - Purple (Pending): ≥ 25
                     """)
 
-                # --- Vâ€‘Trac Index Hits (Working logic) ---
+                # --- V‑Trac Index Hits (Working logic) ---
                 import pandas as _pd
                 idx_rows = []
                 # Build draws_since map for all indices
@@ -782,10 +707,10 @@ def show_aux_page(state: str) -> None:
                     df_idx["_rank_fill"] = df_idx["Rank"].apply(lambda r: int(r) if str(r).isdigit() else 0)
                     df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "Rank"] ]
                     html_idx = df_idx.to_html(index=False, escape=False)
-                    st.subheader("Vâ€‘Trac Index Hits (Working logic)")
+                    st.subheader("V‑Trac Index Hits (Working logic)")
                     st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
 
-                st.success(f"âœ… Auxiliary tools (working logic) completed for {state}")
+                st.success(f"✅ Auxiliary tools (working logic) completed for {state}")
                 
             except Exception as e:
                 st.error(f"Error running auxiliary analysis: {str(e)}")
@@ -807,7 +732,7 @@ def show_aux_page(state: str) -> None:
             cols = st.columns(3)
             for i, state_name in enumerate(available_states):
                 with cols[i % 3]:
-                    st.write(f"â€¢ {state_name}")
+                    st.write(f"• {state_name}")
         else:
             st.warning("No state data files found. Please ensure cleaned data is available.")
 
@@ -835,51 +760,11 @@ def show_digit_reduction_page(state: str) -> None:
             )
 
         if df.empty:
-            st.warning("Digit Reduction produced no output â€“ verify tables exist.")
+            st.warning("Digit Reduction produced no output – verify tables exist.")
             return
 
         st.success(f"{len(df)} reductions extracted for {state}")
         st.dataframe(df, use_container_width=True)
-        # --- Blackapple Alerts (All States) ---
-        try:
-            from modules.blackapple import analyze_blackapple, ba_status_label
-            import pandas as _pd
-            rows_ba = []
-            # Re-scan cleaned draws to build BA status per state
-            for csv_path in cleaned_dir.glob("*_draws.csv"):
-                try:
-                    dfc = _pd.read_csv(csv_path)
-                    dr = [str(x).zfill(3) for x in dfc["Draw"].dropna().astype(int).astype(str).tolist()]
-                    name = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    if dr:
-                        ba = analyze_blackapple(dr)
-                        status = ba_status_label(ba.get("score", 0))
-                        tr = ba.get("triggers", {})
-                        tparts = []
-                        if tr.get("mirror"): tparts.append("Mirror")
-                        roots = tr.get("root_due", [])
-                        if roots: tparts.append("Root " + "/".join(map(str, roots)))
-                        pat = tr.get("pattern", {})
-                        if pat.get("extreme_due"): tparts.append("SSS/TTT")
-                        if pat.get("mixed_due"):   tparts.append("SST/STS/TSS")
-                        flt = tr.get("floating", [])
-                        if flt: tparts.append("Float " + "".join(flt))
-                        rows_ba.append({
-                            "State": name,
-                            "BA-Score": ba.get("score", 0),
-                            "Status": status,
-                            "Triggers": ", ".join(tparts),
-                            "#Candidates": len(ba.get("candidates", [])),
-                            "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]])
-                        })
-                except Exception:
-                    continue
-            if rows_ba:
-                df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
-                st.subheader("Blackapple Alerts (All States)")
-                st.dataframe(df_ba, use_container_width=True)
-        except Exception as _e:
-            st.caption(f"Combined BA table unavailable: {_e}")
 
         if csv_path:
             st.download_button(

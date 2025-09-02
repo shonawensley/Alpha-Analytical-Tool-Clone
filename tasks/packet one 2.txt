@@ -1,0 +1,97 @@
+What Codex is doing right now
+
+From the log:
+
+It found and read your context: the three AAT9_* docs and tasks\packet one.txt.
+
+It enumerated the repo and then started paging through src\app.py in 200‑line windows using
+Get-Content -TotalCount N | Select-Object -Last 200, increasing N (300 → 400 → 500 → 700 → 900).
+
+It has not run run_app.bat or launched the app. All commands shown are read‑only file listings/reads.
+
+This “progressive tail read” is a common pattern agents use to inspect long files without overflowing the console. So: not stuck, just gathering context and trying to understand your entry point.
+
+Should you allow the next command?
+
+Yes—it’s another read of src\app.py. But I recommend nudging Codex to switch to a faster, cleaner approach and then proceed to an actual first run. Below is a copy‑paste message you can send to Codex to keep it efficient and aligned with our plan.
+
+Paste this to Codex (verbatim)
+
+You are not stuck—good on the recon. Please switch to faster reads and then do a safe first run.
+
+1) Stop paging app.py; read smart & summarize
+
+Powershell:
+
+Get-Content -Raw .\src\app.py | Set-Content .\.codex\app_preview.txt
+Select-String -Path .\src\app.py -Pattern "streamlit|st\." -SimpleMatch
+
+
+Summarize the app’s entry points (pages, routers, display_* functions) and note where “Auxiliary Tools” mounts.
+
+2) Inspect the run wrapper & env
+
+Show .\run_app.bat (or the main launcher) and any requirements*.txt/pyproject.toml found.
+
+Print current working dir: Get-Location. Confirm modules\ and src\ paths.
+
+3) Do a safe headless boot (no browser) and capture logs
+
+Prefer the batch if it configures env:
+
+$env:STREAMLIT_BROWSER='none'
+.\run_app.bat *>$null 2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+
+If there’s no batch, try:
+
+$env:STREAMLIT_BROWSER='none'
+streamlit run .\src\app.py --server.headless true --server.address 127.0.0.1 --server.port 8501 `
+  2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+
+If boot fails, do not refactor. Instead, print the last 200 lines of the log and propose a minimal fix for the first error only (usually a path/import).
+
+4) Lock the implementation plan for PACKET ONE
+
+Produce a short execution plan tied to the repo (file paths + exact functions to touch), grouped as:
+
+A) Imports/paths sanity (one VTRAC/analysis source of truth)
+
+B) Auxiliary panels wiring (read‑only first)
+
+C) New modules to add (file list + stubs)
+
+D) App run & regression checks (what you will verify after each change)
+
+For every step, list: files to edit, concrete diffs you’ll make, and how you’ll prove it worked (what page/section will show the change).
+
+5) Guardrails
+
+Before editing files, show a git status and create a branch feature/packet-one.
+
+When running commands that write or execute, print a one‑line WHAT & WHY first.
+
+Approval guidance (so you don’t have to guess)
+
+Reads/listings (Get‑ChildItem, Get‑Content, Select‑String): ✅ Allow.
+
+Creating .codex/ scratch files / logs: ✅ Allow (easy to clean; keeps console short).
+
+git (branch, add, commit) inside the repo: ✅ Allow when it posts a clear WHAT & WHY and diff preview.
+
+Running the app (run_app.bat or streamlit run): ✅ Allow headless with log capture as above.
+
+Package installs / global changes: ⚠️ Ask it to vendor them into a venv and print pip list first.
+
+Bulk refactors touching many files at once: ❌ Do not allow until it shows a tight, step‑by‑step plan with tests.
+
+Why this nudge helps
+
+It replaces the slow paging with a single raw read + targeted greps (fewer prompts, less noise).
+
+It moves from “reading forever” to “boot once, collect logs, fix one thing at a time.”
+
+It keeps scope tight and aligns with our staged plan from Packet One (no surprise refactors).
+
+If you want, I can also supply the next “Packet Two” instruction block once Codex completes the first run + plan lock, but for this step the guidance above is all it needs.

@@ -1,0 +1,87 @@
+✅ Paste this to Codex
+
+Approved to proceed with your Packet‑2/3 plan under these constraints:
+
+Guardrails
+
+No refactors. Do not move or rename existing files or change app structure.
+
+Writes only to: .codex/, modules/blackapple.py, scripts/smoke/blackapple_smoke.py, and small UI hooks in src/app.py and the Combined page to render the panel/table.
+
+No package upgrades yet; if a dependency is missing, stop at the first error with the log tail.
+
+Windows first: prefer run_app.bat; fallback to streamlit run with headless args.
+
+Stage 1 — Fast reads (+ preview)
+
+Create scratch: .\.codex\
+
+Dump the first ~400 lines of .\src\app.py into .\.codex\app_preview.txt and show me the top and bottom 60 lines.
+
+Read .\run_app.bat and (if present) .\requirements.txt.
+
+Confirm and print $PWD.
+
+Stage 2 — Headless boot with logs
+
+Set: $env:STREAMLIT_BROWSER='none'
+
+Primary: .\run_app.bat *>$null 2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+Fallback (if no BAT): streamlit run .\src\app.py --server.headless true --server.address 127.0.0.1 --server.port 8501 --browser.gatherUsageStats false 2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+On failure: print the last 200 lines of .codex\first_boot.log and propose the smallest concrete fix for the first error only (path/import/dependency). Do not attempt broad changes.
+
+Stage 3 — Implement Blackapple MVP (one module)
+
+Add modules/blackapple.py (self‑contained). Compute 5 triggers (mirror, root‑sum due, spike/trough pattern due, floating digits, 27–29 remaining pairs). Return {score, triggers, candidates}.
+
+Default to HYBRID mode (foundation is a bonus, not a hard gate). Include a code switch USE_FOUNDATION_AS_HARD_BASE = False at the top of the file.
+
+Keep constants at top (floating ≥5 draws; SSS/TTT gap ≥25; SST/STS/TSS gap ≥12; remaining‑pairs target ≈28; Top 12 candidates).
+
+Add two tiny UI hooks:
+
+State page: “Blackapple Alert” panel with Status (OFF/WATCH/ALERT), triggers line, and a small candidates table (Combo, MatchScore, Tags).
+
+Combined page: “Blackapple Alerts (All States)” table with columns: State | BA‑Score | Status | Triggers | #Candidates | Examples.
+
+Add scripts/smoke/blackapple_smoke.py that feeds a short synthetic draw list to analyze_blackapple() and prints score/triggers/top3 for a sanity run.
+
+Stage 4 — Smoke test (no regressions)
+
+Re‑run the app headlessly; confirm no errors and no changes to existing features (V‑TRAC, doubles, etc.). If anything breaks, revert the last change and show the log tail + a minimal fix.
+
+Stop after Stage 4 and show:
+
+the tail of .codex\first_boot.log from the green run,
+
+a file diff summary (paths + added lines count), and
+
+screenshots/text of the new state panel and combined table.
+
+Why I’m green‑lighting this
+
+Your screenshot plan lock (A–D) is solid: imports/paths sanity → wire the new panel → new module → run/regression checks. It also keeps all writes scoped to .codex/ until boot is green, which protects the codebase.
+
+The “headless boot with log capture” step is exactly how we quickly detect path/import/env issues before touching implementation.
+
+The Blackapple module it proposes matches our intended MVP (tiny, self‑contained; one state panel + one combined table). No heavy refactors required.
+
+Do you need Codex to re‑read Packet One or follow “Task 1 → 2 → 3”?
+
+No. It already integrated Packet 1–3 into the A–D plan. Forcing a re‑read wastes cycles; the guardrails above keep it on rails. The staged flow gives you clear pause points if something looks off.
+
+What to watch for (common first‑boot hiccups)
+
+Path mismatches: run_app.bat not at repo root, or src/app.py path differs. The fallback streamlit run covers this.
+
+Missing deps: If ModuleNotFoundError appears, have Codex propose one minimal install or code tweak; don’t let it upgrade unrelated packages.
+
+Port in use: If 8501 is busy, it should bump the port (e.g., 8502) and print which it used.
+
+If you want a lighter approval
+
+If you prefer even tighter scope, replace Stage 3 with “create file stubs and show the diff only” first, then allow the render hooks. Otherwise, the block above is safe and efficient.
+
+If you paste the approval block, Codex will move from planning to doing, capture the boot log, and then implement the Blackapple module behind those guardrails. If anything in the log tail looks off, share it and I’ll pinpoint the smallest fix so you keep momentum.

@@ -1,0 +1,128 @@
+My recommendation
+
+Approve Stages 1–2 exactly as written, with one extra constraint (timebox the headless run). After the boot succeeds and it shows you the log tail + diff plan, approve Stage 3 (Blackapple MVP) and Stage 4 (re‑run headless + regression snapshot).
+
+This keeps risk low, gives you a clean “before/after,” and avoids accidental refactors.
+
+Copy‑paste approval block for Codex
+
+Use this as your single reply to Codex to proceed:
+
+APPROVED — run Stages 1–2 with these constraints.
+Guardrails (must honor):
+• Writes allowed only to: .codex/, modules/blackapple.py, scripts/smoke/blackapple_smoke.py, and tiny UI hooks inside src/app.py.
+• No file moves/renames, no mass formatting, no dependency changes.
+• Stop at the first error and propose the smallest fix only; ask before writing code.
+• Timebox headless run to 120s and kill the process after the log tail is captured (avoid lingering servers).
+• Prefer run_app.bat; if it fails, fallback to streamlit run with headless args.
+• BA default: HYBRID (foundational weighting), not a hard gate.
+
+Run now (exactly):
+
+Fast reads & preview
+
+New-Item -ItemType Directory -Force .\.codex
+
+Get-Content -Raw .\src\app.py | Set-Content .\.codex\app_preview.txt
+
+Select-String -Path .\src\app.py -Pattern "streamlit|st\." -SimpleMatch
+
+Get-Content -Raw .\run_app.bat
+
+if (Test-Path .\requirements.txt) { Get-Content -Raw .\requirements.txt }
+
+Get-Location
+
+Headless boot + logs (prefer .bat, then fallback):
+
+$env:STREAMLIT_BROWSER='none'
+
+.\run_app.bat *> $null 2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+Fallback:
+streamlit run .\src\app.py --server.headless true --server.address 127.0.0.1 --server.port 8501 --browser.gatherUsageStats false 2>&1 | Tee-Object -FilePath .\.codex\first_boot.log
+
+After run:
+
+Print top and bottom 60 lines of .codex\first_boot.log.
+
+Summarize the smallest fix required (if any) and ask before writing code.
+
+If green, propose the exact diff plan to add:
+• modules/blackapple.py (MVP engine + public API)
+• scripts/smoke/blackapple_smoke.py (synthetic draws + triggers/candidates smoke)
+• Minimal UI hooks in src/app.py: add a per‑state “Blackapple Alert” panel and a combined “Blackapple Alerts (All States)” table, off by default.
+
+Proceed once you confirm the log tail + smallest‑fix summary. Then show the exact diffs for Stage 3 for approval.
+
+What this guarantees / what to look for
+
+No “stuck” behavior: the earlier “read app.py 200 lines at a time” you saw was Codex chunk‑reading the file for context — that’s normal, not a stall.
+
+Headless proof first: you’ll get a .codex\first_boot.log and a short tail showing either “App running” or the first actionable error.
+
+Smallest‑fix discipline: if something breaks (e.g., a path/port/import), it must propose one surgical change and stop.
+
+Blackapple MVP expectations (Stage 3)
+
+Codex’s plan mirrors our spec. When it asks to write files, approve only if the plan includes these non‑negotiables:
+
+Module modules/blackapple.py
+
+compute_alerts(draws, sums_stats, pair_status, vtrac_status) -> dict with:
+
+triggers (mirror pairs, longest‑out root sum, rare spike/trough, floating digits, remaining pairs),
+
+score/status,
+
+candidates (boxed singles/doubles),
+
+sum_tags (Σ, RS, optional sD).
+
+No external side‑effects; pure functions only.
+
+Smoke test scripts/smoke/blackapple_smoke.py
+
+Builds a small synthetic draw list and asserts each trigger toggles and that candidates is non‑empty when ≥3 triggers fire.
+
+UI hooks in src/app.py (only two surfaces):
+
+Per‑state panel “Blackapple Alert” (collapsed by default) that calls compute_alerts(...) using the same Aux cached data.
+
+Combined table “Blackapple Alerts (All States)” aggregating the per‑state status.
+
+Sums alignment (no surprises):
+
+Keep your current sums badges [Sx Ry] in the V‑Trac grid.
+
+Optionally compute short sum (sD) internally for Blackapple scoring, but do not expand badge UI unless you ask for it.
+
+Ensure badges also appear in the Combinations Analysis (Draws‑Since) table for consistency.
+
+Add/confirm a simple legend under the Sums table: Σ=sum, RS=root sum, •purple=overdue.
+
+No V‑Trac refactor now: Aux keeps using _AUX_WORKING_ROOT and the staged vtrac_reference. Global unification is a later pass.
+
+Acceptance checks after Stage 4
+
+When it re‑runs headless, you should see:
+
+Normal Aux sections render (V‑Trac table, pairs, four‑panel row, sums table if available).
+
+New “Blackapple Alert” panel appears (collapsed, no errors) and All States combined table displays.
+
+.codex/ contains app_preview.txt, first_boot.log, and any smoke output.
+
+If anything fails, make it propose the smallest fix only and ask again.
+
+TL;DR
+
+You’re good to let Codex proceed under the guardrails above.
+
+Paste the APPROVED block verbatim.
+
+Review the log tail + smallest fix before allowing it to write the Blackapple files.
+
+After Stage 3 writes, require a diff summary and one more headless re‑run.
+
+I’m here to review the log tail, the diff plan, and the smoke output the moment you get them.

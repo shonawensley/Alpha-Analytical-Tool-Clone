@@ -1,0 +1,109 @@
+You didn’t break anything. Hitting Ctrl+T didn’t “damage” the run; it just sent an ignored control keystroke while the headless process was still running. Closing the browser tab also doesn’t stop a headless Streamlit server—that’s why it kept saying “considering execution methods”.
+
+Here’s exactly what to do now, safely and cleanly.
+
+1) Stop the current run (safe)
+
+In the terminal that’s still running the headless command:
+
+A. Try the normal interrupt
+
+Press Ctrl+C once.
+
+Give it ~2–3 seconds. If it’s still running, press Ctrl+C again.
+
+B. If Ctrl+C doesn’t return you to a prompt
+Use PowerShell to find and stop the server process:
+
+# Find anything listening on Streamlit’s default port
+Get-NetTCPConnection -LocalPort 8501 -ErrorAction SilentlyContinue |
+  ForEach-Object { Get-Process -Id $_.OwningProcess }
+
+# Kill it (replace <PID> with the Id you saw)
+Stop-Process -Id <PID> -Force
+
+
+(If you see nothing on 8501, it may have bumped ports; you can check 8502/8503 similarly.)
+
+2) Verify you captured the log
+
+Codex/your script was teeing output to .codex\first_boot.log. Check it now:
+
+# Top & bottom of the boot log
+Get-Content .\.codex\first_boot.log -TotalCount 80
+Get-Content .\.codex\first_boot.log -Tail 200
+
+
+You’ll likely see lines like “run_app.bat not found; falling back to streamlit run …” — that’s expected if there’s no run_app.bat at repo root.
+
+3) Make sure the port is clear before re-running
+Get-NetTCPConnection -LocalPort 8501 -ErrorAction SilentlyContinue
+
+
+If it returns nothing, the port is free.
+
+If something is still listening, stop that PID (same Stop-Process as above) or just use a different port (e.g., 8502) on the next run.
+
+4) Re-run headless with a hard 120‑second timebox (copy‑paste)
+
+This uses a background job so it will auto‑stop even if Streamlit is happy and headless:
+
+# Ensure the scratch dir exists
+New-Item -ItemType Directory -Force .\.codex | Out-Null
+
+# Don't open a browser window
+$env:STREAMLIT_BROWSER = 'none'
+
+# Pick a port (change if 8501 was busy)
+$port = 8501
+
+# Start headless and capture all output to the log
+$job = Start-Job -Name BAFirstBoot -ScriptBlock {
+    streamlit run .\src\app.py `
+      --server.headless true `
+      --server.address 127.0.0.1 `
+      --server.port $using:port `
+      --browser.gatherUsageStats false 2>&1 |
+    Tee-Object -FilePath .\.codex\first_boot.log
+}
+
+# Timebox to 120s, then stop the job and flush any remaining output
+Start-Sleep -Seconds 120
+if (Get-Job -Name BAFirstBoot -ErrorAction SilentlyContinue) {
+    Stop-Job -Name BAFirstBoot -Force
+    Receive-Job -Name BAFirstBoot -Keep | Out-Null
+}
+
+# Show the tail so you can spot errors quickly
+Get-Content .\.codex\first_boot.log -Tail 200
+
+
+(If you do have a run_app.bat and prefer using it, swap the streamlit run … line for .\run_app.bat in the script block.)
+
+5) Typical outcomes & next move
+
+No fatal errors in the log: you’re good—proceed to the next stage (implement the tiny UI hooks / BA module, etc.).
+
+“Port already in use” error: re‑run with $port = 8502 (and kill the old PID if needed).
+
+Import/ModuleNotFoundError: don’t refactor—add the smallest missing line to requirements.txt or fix the import path, then re-run the timeboxed boot.
+
+6) What to avoid next time
+
+Don’t rely on closing the browser to stop a headless run—it won’t.
+
+Don’t mash random keys; Ctrl+C is the correct way to stop a foreground process in PowerShell/Terminal.
+
+If your tool/agent says “timebox to 120s” but you don’t see an explicit timer, use the job script above so it can’t hang.
+
+Quick sanity checklist
+
+ Terminal prompt is back (or the job was stopped).
+
+ .codex\first_boot.log exists and has content.
+
+ Port 8501 (or the one you used) is free.
+
+ You can re-run with the timeboxed script and capture a clean tail.
+
+If you want, I can also give you a one‑liner to attach to your agent so every headless boot it does is automatically timeboxed and logged (same pattern as above, just parameterized).

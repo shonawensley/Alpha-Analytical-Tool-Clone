@@ -1,0 +1,52 @@
+short answer: yes—go ahead and approve Stage 3.
+
+From your screenshots: Stages 1–2 completed cleanly (headless boot green, app starts; the script stopped the background job and cleaned processes). The Stage 3 plan is tightly scoped: two new files (modules/blackapple.py, scripts/smoke/blackapple_smoke.py) and two tiny UI hooks in src/app.py (one panel on each state page, one small table on the Combined page). That exactly matches the MVP we designed (mirror + root sums + S/T pattern + floating digits + 27–29 remaining‑pairs foundation, with conservative thresholds), so it’s a safe next step.
+
+Paste this approval block (exactly)
+
+Use this as your one reply in the Codex console:
+
+APPROVED — implement Stage 3 (Blackapple MVP) under these guardrails.
+Writes allowed only: modules/blackapple.py, scripts/smoke/blackapple_smoke.py, and minimal UI hooks inside src/app.py (add panel + combined table; no refactors).
+Do not: move/rename files, reformat the repo, or change dependencies.
+Behavior: prefer run_app.bat; if missing, fallback to streamlit run. Timebox the headless boot to 120 s; capture logs to .codex/first_boot.log, then stop the server/job.
+Config: keep BA defaults from the plan (HYBRID mode; USE_FOUNDATION_AS_HARD_BASE=False).
+Stop on first error and propose the smallest fix; show a diff summary of added/edited lines.
+After write: re‑run headless (120 s, logged), then show: (a) diff summary, (b) log tail/head, (c) screenshots/snippets of the new Blackapple Alert panel and Blackapple Alerts (All States) table.
+
+What you should see after it runs
+
+New module at modules/blackapple.py with the five triggers and constants at the top.
+
+Smoke script at scripts/smoke/blackapple_smoke.py that flips triggers on synthetic data.
+
+UI:
+
+On a state page: a “Blackapple Alert” panel with a status pill (OFF / WATCH / ALERT), a one‑line “Triggers:” summary, and a small candidates table (≤ 12 combos with tags like PAIR/MIR/RS/PAT/FLT).
+
+On Combined/Control Center: a “Blackapple Alerts (All States)” table with State | BA‑Score | Status | Triggers | #Candidates | Examples.
+
+Logs: .codex/first_boot.log head + tail; confirmation that the job/server was stopped at the end of the 120 s window.
+
+This output aligns with the MVP spec you reviewed earlier, so if you see that structure, you’re in great shape.
+
+If it ever “hangs” again (safe exit)
+
+You shouldn’t have to do anything right now—the script you ran already timeboxed and cleaned up. For future reference:
+
+In the same console that launched it: Ctrl+C once (graceful), then again if needed.
+
+If the script used a named PowerShell job (your earlier log showed BAFirstBoot):
+Get-Job → Stop-Job -Name BAFirstBoot → Remove-Job -Name BAFirstBoot.
+
+As a last resort (only if a stray process remains): stop the specific Streamlit/Python process from that console (Get-Process streamlit, python | Stop-Process -Force).
+
+No need to press odd key combos like Ctrl+T; just paste the approval block above.
+
+Why I’m confident approving now
+
+Stages 1–2 validated imports, paths, and the app boot headlessly, then shut the server down—exactly the safety rails we wanted before writing code.
+
+Stage 3’s file list and UI hooks are surgical and match the previously agreed Blackapple design (no dependency churn or refactors).
+
+If you prefer an even tighter step, you can ask it to write files + show diffs only (no UI wiring) first, but given your clean boot and the smallness of the UI hooks, I’d proceed with the full Stage 3 block above.

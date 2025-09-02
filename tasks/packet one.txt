@@ -1,0 +1,859 @@
+
+INTRO INSTRUCTIONS:
+
+Below is exactly what I’d add on top of “Packet 1” so Codex (or any coding agent) behaves like a focused implementation engineer, ships the Blackapple MVP, and doesn’t wander.
+
+Use this in two parts:
+
+0) Put this Driver Prompt at the very top of Packet 1
+
+ROLE & GOAL
+You are the implementation engineer for an existing Streamlit-based Pick-3 analysis app. Your job is to plan → implement → prove the tasks in this packet with minimal, surgical changes. Treat the app’s current behavior as correct unless the packet explicitly says otherwise.
+
+NON‑NEGOTIABLE INVARIANTS
+
+Do not rename or move existing modules, functions, CSS classes, or data keys unless the packet tells you to.
+
+Assume per‑state draws is List[str] of 3‑char strings (e.g., "681"), newest‑first.
+
+Keep compute pure and UI light: compute in modules, render in pages.
+
+All constants/thresholds introduced must live at the top of the new module.
+
+Add code idempotently: re-running “Process” should not duplicate outputs or mutate inputs.
+
+IMPLEMENTATION ORDER (do not skip):
+
+Read & Outline: Extract a bullet list of deliverables + files to touch/add.
+
+Plan: Propose a short plan & file‑change list; then proceed.
+
+Implement A: modules/blackapple.py (MVP) + tiny UI hooks on State pages and Combined page.
+
+Implement B (optional in this pass if time allows): Σ/short-sum tags helper (Σ, sD, RS) shown next to combos—no extra tables.
+
+Prove: Add a tiny smoke test harness (script or page snippet) showing BAScore/trigger flips on synthetic draws.
+
+Docs & Diff: Output a changeset summary (files added/modified, key functions, how to toggle constants) and a 10‑step manual test checklist.
+
+ACCEPTANCE CRITERIA
+
+New file modules/blackapple.py (self-contained, no external deps).
+
+Each State page shows a “Blackapple Alert” panel with: Status (OFF/WATCH/ALERT), triggers line, and Top‑N candidates with tags.
+
+Combined page shows “Blackapple Alerts (All States)” table with BAScore/Status/Triggers/#Candidates/Examples.
+
+Module constants at top, no UI sliders (hard‑coded defaults).
+
+No regressions in existing Aux/Combined features.
+
+QUALITY BAR
+
+Small, well‑named functions; docstrings; no dead code.
+
+Deterministic output given fixed inputs.
+
+Handle edge cases (empty draws, non‑3‑char strings) silently by skipping.
+
+RETURN AT END
+
+A short “What changed & why” summary.
+
+File list with +/- line counts.
+
+The manual test checklist executed with notes (pass/fail).
+
+Any follow‑ups you recommend, de‑scoped.
+
+1) Paste‑to‑Agent sequence (send in order)
+
+You can paste these as separate messages (A → B → C). They reference “Packet 1” content you already assembled.
+
+A) “Read & Plan” task
+
+Task A — Read & Plan
+Read Packet 1 end‑to‑end. Produce:
+
+A one‑screen implementation plan (files to add/modify, function names, UI injection points).
+
+A diff plan showing only the minimal edits needed to wire the panel/table.
+
+Risk list (max 5 bullets) and how you’ll avoid each.
+Then wait for “Proceed with B”.
+
+(This ensures the agent doesn’t jump straight into refactors.)
+
+B) “Implement Blackapple MVP” task
+
+Task B — Implement Blackapple MVP
+Implement the “Blackapple Alerts” module and UI hooks exactly as specified in Packet 1:
+
+Add modules/blackapple.py with:
+
+5 triggers: mirror event, root‑sum due, pattern due (SSS/TTT extreme gap or SST/STS/TSS group gap), floating digits, remaining pairs 27–29.
+
+analyze_blackapple(draws) -> dict returning {score, triggers, candidates}.
+
+ba_status_label(score) OFF/WATCH/ALERT.
+
+(If present in Packet 1) USE_FOUNDATION_AS_HARD_BASE toggle; default Hybrid = False.
+
+State page: add a “Blackapple Alert” panel (Status, triggers line, candidates DataFrame with tags).
+
+Combined page: add “Blackapple Alerts (All States)” table with BAScore/Status/Triggers/#Candidates/Examples.
+
+Constants at top; no sliders; code pure & testable.
+
+Do not touch unrelated modules.
+
+After coding, run a local smoke test:
+
+Feed a short synthetic draw list where the last draw has a mirror pair (e.g., ["162","..."]) → MIR trigger on.
+
+Force SST/STS/TSS gap ≥12 → mixed_due True.
+
+Hide two digits ≥5 draws → floating trigger on.
+
+Show candidate list is non‑empty and tagged.
+
+Output:
+
+Diff summary; copies of the new file(s); screenshots or printed sample outputs from the smoke test.
+
+(This aligns with the MVP spec and code embedded in Packet 1. Packet 1 already details the module’s functions, constants, and UI snippets. )
+
+C) “Add minimal Σ / short‑sum tags” task (optional if you want it now)
+
+Task C — Minimal sums tags
+Add sum_tags(combo) or reuse the helper from Packet 1 so candidates display compact tags Σ## sD# RS#. No tables; no controls. Bold/shape styling may be reused from existing CSS classes. Keep it tiny.
+
+2) Guardrails & Do/Don’t for the agent (copy verbatim)
+
+Do keep draws newest‑first; don’t reverse the list.
+
+Do centralize thresholds at top of blackapple.py (e.g., floating ≥5, mixed‑group gap ≥12, extremes ≥25, remaining‑pairs target ≈28).
+
+Do treat “foundation” (27–29 pairs) as a boost by default (Hybrid), not a hard gate—unless the packet explicitly flips it.
+
+Do not add sliders or sidebars; hard‑code defaults.
+
+Do handle non‑3‑char artifacts gracefully (skip).
+
+Do not refactor unrelated modules, imports, or data structures.
+
+Do keep the Combined page table logic scoped and sorted by BAScore then #Candidates.
+
+3) Manual test checklist (acceptance)
+
+Launch app; open any State page.
+
+Confirm “Blackapple Alert” panel renders with Status and BAScore x/5.
+
+Confirm Triggers line lists any of: Mirror / Root due X / SSS‑TTT / SST‑STS‑TSS / Floating {digits} / Remaining Pairs NN.
+
+Confirm candidates table appears (when overlap exists) showing Combo | MatchScore | Tags.
+
+Flip a synthetic last draw containing a mirror pair → panel shows Mirror.
+
+Feed a sequence with SST/STS/TSS absent ≥12 draws → SST/STS/TSS due displays.
+
+Hide two digits ≥5 draws → Floating lists those digits.
+
+Combined page shows “Blackapple Alerts (All States)” with non‑empty rows and “Examples” column.
+
+No errors in logs; performance unchanged (panel renders quickly).
+
+Re‑run; results reproducible.
+
+4) What I’m already baking into Packet 1 (for Codex to follow)
+
+The full Blackapple MVP spec + code outline for modules/blackapple.py, the five triggers, the BAScore (ALERT at 3+), and the exact UI snippets for State and Combined views. This is the core implementation work.
+
+The (optional) Hybrid vs Strict foundation toggle and weighted scoring guidance so you can choose coverage‑first now (Hybrid) without losing the “pure BA” option later.
+
+The tiny Σ/sD/RS helper so candidates can show sums tags without building a new UI surface.
+
+5) Answers to your two meta‑questions
+
+“Agent mode—will it use internal tools if I just tell it to?”
+Yes, but give it the rails above. The Driver Prompt and the A/B/C task sequence keep it from over‑refactoring or stalling on planning. It will “use its tools,” but inside the constraints you set.
+
+“Anything else to add before I feed this to Codex?”
+Add only these two lines at the very end of Packet 1:
+
+“If any acceptance criterion can’t be met without a risky refactor, stop and propose the smallest alternative that ships the user‑visible result.”
+
+“Return a checklist showing how to manually trigger each trigger (MIR, RS, PAT, FLT, Pairs) with a tiny synthetic draw set.”
+
+That’s it. With this driver + sequence + guardrails, your Packet 1 is “turn‑key” for Codex to implement the Blackapple MVP exactly as we scoped—tight surface area, stable defaults, and a simple way to verify it works.
+
+
+
+
+
+
+
+
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+packet 1
+
+
+Below is Packet 1: a complete, copy‑paste task bundle you can feed directly to Codex/Cursor. It’s organized as four small, safe deliveries with acceptance checks, and it locks the baseline so we don’t chase ghosts later.
+
+Scope of Packet 1
+
+Unify VTRAC + analyzers (single source of truth + guardrails).
+
+Run/Session controller + ledger (run once per daily C4 file; gate Winners).
+
+Combined “Aggregated Doubles (S)” (the block you said is empty).
+
+Blackapple Alerts (MVP) panel + combined table (self‑contained module, faithful to the method you and I aligned on).
+
+You can paste the four tasks one by one. Each task includes exact file paths, code, and a short “Done when” checklist.
+
+TASK 1 — Unify VTRAC + analyzers (SSOT) and guardrails
+
+Goal. Every tool imports the same vtrac_reference.py and analyze_pairs.py. No stubs, no duplicate copies, no fallback paths. This eliminates the “two pattern lists / mismatched scoring” risk.
+
+1A) Add one tiny bootstrap (Aux only)
+
+File: modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py
+
+# modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py
+from __future__ import annotations
+import sys
+from pathlib import Path
+import importlib.util
+
+def _load_module_from(path: Path, as_name: str):
+    spec = importlib.util.spec_from_file_location(as_name, str(path))
+    if spec and spec.loader:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        sys.modules[as_name] = mod
+        return mod
+    return None
+
+def init() -> None:
+    """
+    Make legacy modules importable for Aux tools.
+
+    Registers BOTH names so legacy & refactor agree:
+      "vtrac_reference"   and "modules.vtrac_reference"
+      "analyze_pairs"     and "modules.analyze_pairs"
+    """
+    root = Path(__file__).resolve().parents[1]  # .../module_d_auxiliary_tools
+    candidates = [
+        root / "legacy_2" / "modules",
+        root / "legacy_modules_backup" / "modules",
+        root / "legacy_modules_backup",
+    ]
+    for p in candidates:
+        if p.exists():
+            p_str = str(p)
+            if p_str not in sys.path:
+                sys.path.insert(0, p_str)
+
+    for name in ("vtrac_reference", "analyze_pairs"):
+        try:
+            __import__(name)
+        except Exception:
+            for base in candidates:
+                file = base / f"{name}.py"
+                if file.exists():
+                    _load_module_from(file, name)
+                    break
+        if name in sys.modules:
+            sys.modules[f"modules.{name}"] = sys.modules[name]
+
+__all__ = ["init"]
+
+1B) Normalize imports in Aux files that use VTRAC/analyzers
+
+At the top of each Aux refactor file that touches VTRAC or pairs (at minimum boxed_vtrac.py and indicators.py), add:
+
+from .bootstrap_imports import init as _aux_bootstrap_init
+_aux_bootstrap_init()
+
+
+Then replace any bare imports with modules.* imports:
+
+from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
+from modules.analyze_pairs import (
+    extract_pairs, calculate_overdue_pairs, get_vtrac_statuses,
+    get_colored_pairs, get_top_overdue_repeating_pairs, get_doubles_history,
+    COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
+    THRESHOLD_LATE_NONREPEATING, THRESHOLD_LATE_REPEATING,
+    THRESHOLD_VERY_LATE_NONREPEATING, THRESHOLD_VERY_LATE_REPEATING,
+    THRESHOLD_PENDING_LATE
+)
+
+1C) Add a startup guard (fail fast if two copies appear)
+
+At app startup (or in the first page load), add:
+
+import importlib
+v1 = importlib.import_module("modules.vtrac_reference")
+try:
+    v2 = importlib.import_module("vtrac_reference")
+    assert (v1 is v2) or (getattr(v1, "__file__", None) == getattr(v2, "__file__", None)), \
+        f"Two different VTRAC modules detected:\n{getattr(v1,'__file__',None)}\n{getattr(v2,'__file__',None)}"
+except Exception:
+    pass
+print("Using VTRAC from:", getattr(v1, "__file__", None))
+
+1D) Acceptance (run locally)
+
+No more Pylance “unresolved” warnings for VTRAC/analyzers.
+
+VTRAC_DISPLAY has 35 rows (boxed grid).
+
+CT4 (100‑draw window) “Top 5 repeating pairs” matches legacy snapshot (e.g., you quoted 11, 66, 22, 55, 00 with the expected gaps).
+
+Your Aux tables now match the legacy tool numbers.
+
+TASK 2 — Run/Session controller + ledger + winners gate
+
+Goal. Press Process once per daily Pick3StatsC4 file. A single Run ID caches all tool outputs. The Winners page stays disabled until core+aux+combined are complete.
+
+2A) Run controller
+
+File: core/run_controller.py
+
+from __future__ import annotations
+from pathlib import Path
+import hashlib, json, time
+from typing import Dict, Any
+
+RUNS_DIR = Path("runs")  # add to .gitignore
+
+def _short_md5(b: bytes) -> str:
+    return hashlib.md5(b).hexdigest()[:8]
+
+def compute_run_id(date_label: str, file_bytes: bytes) -> str:
+    return f"{date_label}_{_short_md5(file_bytes)}"
+
+def start_run(date_label: str, excel_path: Path) -> str:
+    file_bytes = excel_path.read_bytes()
+    run_id = compute_run_id(date_label, file_bytes)
+    run_dir = RUNS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Persist canonical inputs/metadata
+    meta = {
+        "run_id": run_id,
+        "date_label": date_label,
+        "ts": int(time.time()),
+        "excel_name": excel_path.name,
+        "excel_size": len(file_bytes),
+    }
+    (run_dir / "run.json").write_text(json.dumps(meta, indent=2))
+
+    # Initialize checklist
+    checklist = {
+        "core_done": False,
+        "aux_done": False,
+        "combined_done": False,
+        "winners_posted": False
+    }
+    (run_dir / "checklist.json").write_text(json.dumps(checklist, indent=2))
+    return run_id
+
+def load_checklist(run_id: str) -> Dict[str, bool]:
+    return json.loads((RUNS_DIR / run_id / "checklist.json").read_text())
+
+def mark_complete(run_id: str, key: str, value: bool = True):
+    p = RUNS_DIR / run_id / "checklist.json"
+    chk = json.loads(p.read_text())
+    chk[key] = value
+    p.write_text(json.dumps(chk, indent=2))
+
+def save_state_outputs(run_id: str, state: str, data: Dict[str, Any]):
+    d = RUNS_DIR / run_id / state
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "results.json").write_text(json.dumps(data, indent=2))
+
+def save_combined_outputs(run_id: str, data: Dict[str, Any]):
+    d = RUNS_DIR / run_id / "combined"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "results.json").write_text(json.dumps(data, indent=2))
+
+2B) Winners logger (gated)
+
+File: core/winners_logger.py
+
+from __future__ import annotations
+from pathlib import Path
+import json
+from typing import Dict, Any, List
+from core.run_controller import RUNS_DIR, load_checklist
+
+def can_post_winners(run_id: str) -> bool:
+    chk = load_checklist(run_id)
+    return chk.get("core_done") and chk.get("aux_done") and chk.get("combined_done")
+
+def post_winners(run_id: str, winners: Dict[str, Dict[str, str]]):
+    """
+    winners = { "CT": {"mid": "531", "eve": "890"}, ... }
+    """
+    assert can_post_winners(run_id), "All tools must be complete before posting winners."
+    d = RUNS_DIR / run_id
+    (d / "winners.json").write_text(json.dumps(winners, indent=2))
+    # flip the flag
+    from core.run_controller import mark_complete
+    mark_complete(run_id, "winners_posted", True)
+
+2C) UI hooks (minimal)
+
+In Control Center: select date label, upload C4, click Process → call start_run. Store active_run_id in session.
+
+Each page reads from runs/<run_id>/... JSONs; only show Recompute buttons per module if you want to force refresh.
+
+Winners page: disable inputs until can_post_winners(run_id).
+
+2D) Acceptance
+
+Process once; navigate between pages with no re‑processing.
+
+Checklist shows ✅ for core, aux, combined after each module finishes; Winners button is disabled until those 3 are green; flips to ✅ after posting winners.
+
+TASK 3 — Combined “Aggregated Doubles (S)”
+
+Goal. Fill the Combined block with (A) per‑state doubles and (B) an aggregated table by double base (00, 11, …, 99).
+
+File: combined/aggregated_doubles.py
+
+from __future__ import annotations
+from typing import Dict, List, Tuple, Optional
+from collections import defaultdict
+
+def is_double(draw: str) -> bool:
+    # exactly one repeated digit (exclude triples)
+    if len(draw) != 3 or not draw.isdigit(): return False
+    a,b,c = draw
+    return (a==b!=c) or (a==c!=b) or (b==c!=a)
+
+def is_triple(draw: str) -> bool:
+    return len(draw)==3 and draw.isdigit() and draw[0]==draw[1]==draw[2]
+
+def double_base(draw: str) -> Optional[str]:
+    # return '00'..'99' for doubles & triples; None for singles
+    if len(draw)!=3 or not draw.isdigit(): return None
+    a,b,c = draw
+    if a==b==c:     return a*2
+    if a==b!=c:     return a*2
+    if a==c!=b:     return a*2
+    if b==c!=a:     return b*2
+    return None
+
+def draws_since_last_double(draws_newest_first: List[str]) -> int:
+    for i, d in enumerate(draws_newest_first):
+        if is_double(d) or is_triple(d):
+            return i
+    return len(draws_newest_first)
+
+def draws_since_last_double_base(draws_newest_first: List[str], base: str) -> int:
+    for i, d in enumerate(draws_newest_first):
+        if double_base(d) == base:
+            return i
+    return len(draws_newest_first)
+
+def per_state_summary(state_draws: Dict[str, List[str]]) -> List[Dict]:
+    rows = []
+    for state, draws in state_draws.items():
+        ds = draws_since_last_double(draws)
+        latest = None
+        for d in draws:
+            if is_double(d) or is_triple(d):
+                latest = d
+                break
+        rows.append({"State": state, "DrawsSinceLastDouble": ds, "LatestDoubleOrTriple": latest})
+    return rows
+
+def aggregated_double_bases(state_draws: Dict[str, List[str]]) -> List[Dict]:
+    bases = [f"{d}{d}" for d in "0123456789"]
+    acc: List[Dict] = []
+    for b in bases:
+        per_state = []
+        for state, draws in state_draws.items():
+            ds = draws_since_last_double_base(draws, b)
+            per_state.append((state, ds))
+        per_state.sort(key=lambda x: -x[1])  # longest gap first
+        max_gap = per_state[0][1]
+        leaders = [s for s, ds in per_state if ds == max_gap]
+        acc.append({
+            "Base": b, "MaxGap": max_gap, "Leaders": ", ".join(leaders),
+            "MedianGap": sorted(ds for _, ds in per_state)[len(per_state)//2],
+            "MeanGap": round(sum(ds for _, ds in per_state)/max(1,len(per_state)), 1)
+        })
+    acc.sort(key=lambda x: -x["MaxGap"])
+    return acc
+
+
+UI. In Combined page, below your existing doubles ranking:
+
+Table A: per_state_summary(results_state_to_draws)
+
+Table B: aggregated_double_bases(results_state_to_draws)
+
+Persistence. Save to runs/<run_id>/combined/aggregated_doubles.json, then mark combined_done=True.
+
+Acceptance
+
+Both tables render with data for the current run.
+
+“Leaders” shows the state(s) tied for the longest gap for each base.
+
+TASK 4 — Blackapple Alerts (MVP) — module + two hooks
+
+Why now. It’s one file, deterministic, and exactly matches the overlap method we discussed (mirror, root sums, spike/trough patterns, floating digits, remaining‑pairs 27–29). We raise an alert only when multiple BA conditions line up; that’s the same “lock” style Blackapple used.
+
+4A) Drop‑in module
+
+File: modules/blackapple.py (v1.2; includes “strict vs hybrid” toggle + scoring)
+
+# modules/blackapple.py  (v1.2)
+from typing import List, Dict, Set
+
+# ------------------- Config knobs -------------------
+# Coverage vs. precision
+USE_FOUNDATION_AS_HARD_BASE = False   # False = HYBRID (wide search), True = STRICT (foundation-only)
+
+# Trigger thresholds
+FLOATING_OUT_THRESHOLD    = 5         # digits absent >= this many draws are "floating"
+EXTREME_PATTERN_OVERDUE   = 25        # SSS or TTT gap
+MIXED_GROUP_OVERDUE       = 12        # no SST/STS/TSS for this many draws
+
+# Remaining-pairs method
+REMAINING_PAIRS_TARGET    = 28        # aim 27–29 left after cross-offs
+TOP_N_CANDIDATES          = 12
+
+# Mirror lookback (how many recent draws count as a "mirror event")
+MIRROR_LOOKBACK           = 1         # 1 = just the last draw; raise to 2–3 if you want a wider mirror window
+
+# Weights for scoring (Hybrid mode)
+WEIGHTS = dict(
+    PAIR_FOUNDATION = 2,  # bonus if combo's 3 pairs ⊆ remaining set
+    MIR = 2,              # combo has a mirror pair when a mirror event is active
+    RS  = 2,              # combo's root sum in due set
+    PAT = 1,              # combo matches due pattern bucket
+    FLT = 1,              # combo contains any floating digit
+    SD  = 1,              # (optional) combo's short-sum in due set (currently off by default)
+)
+
+SPIKES  = set("234567")
+TROUGHS = set("0189")
+MIRROR  = {"0":"5","1":"6","2":"7","3":"8","4":"9","5":"0","6":"1","7":"2","8":"3","9":"4"}
+
+# ---------- sums helpers ----------
+def _sum_digits(combo: str) -> int: return sum(int(c) for c in combo)
+
+def _digital_root_sum(combo: str) -> int:
+    s = _sum_digits(combo)
+    while s > 9: s = sum(int(c) for c in str(s))
+    return s
+
+def _short_sum(combo: str) -> int: return _sum_digits(combo) % 10
+
+# ---------- pattern / mirror ----------
+def _st_pattern(combo: str) -> str:
+    return ''.join('S' if d in SPIKES else 'T' for d in combo)
+
+def _has_mirror_pair(combo: str) -> bool:
+    s = set(combo)
+    for d in s:
+        if MIRROR[d] in s and MIRROR[d] != d:
+            return True
+    return False
+
+def _had_mirror_in_last_k(draws: List[str], k: int) -> bool:
+    upto = min(k, len(draws))
+    for i in range(upto):
+        d = draws[i]
+        if len(d) == 3 and _has_mirror_pair(d):
+            return True
+    return False
+
+# ---------- pairs universe ----------
+def _pairs_from_draw(draw: str) -> Set[str]:
+    a,b,c = draw[0], draw[1], draw[2]
+    return { ''.join(sorted(ab)) for ab in [a+b, b+c, a+c] }
+
+def _all_pairs_universe() -> Set[str]:
+    out = set()
+    for i in range(10):
+        for j in range(i,10):
+            out.add(f"{i}{j}")   # 45 non-repeat + 10 doubles = 55 pairs
+    return out
+
+def _remaining_pairs(draws: List[str], target: int) -> Set[str]:
+    """Cross off pairs newest->older until ~target remain (27–29 method)."""
+    U = _all_pairs_universe().copy()
+    for d in draws:
+        if len(U) <= target: break
+        if len(d) != 3: continue
+        for p in _pairs_from_draw(d):
+            U.discard(p)
+    return U
+
+def _singles_from_pairs(remaining_pairs: Set[str]) -> List[str]:
+    """Boxed singles whose 3 internal pairs are all in remaining_pairs."""
+    combos = []
+    for i in range(10):
+        for j in range(i+1,10):
+            for k in range(j+1,10):
+                a,b,c = str(i), str(j), str(k)
+                if {a+b, a+c, b+c} <= remaining_pairs:
+                    combos.append(a+b+c)
+    return combos
+
+def _all_singles() -> List[str]:
+    """All 120 boxed singles (three distinct digits)."""
+    return [f"{i}{j}{k}"
+            for i in range(10)
+            for j in range(i+1,10)
+            for k in range(j+1,10)]
+
+# ---------- draws-since helpers ----------
+def _longest_out_root_sums(draws: List[str]) -> List[int]:
+    last = {r: len(draws) for r in range(10)}
+    for i, d in enumerate(draws):
+        if len(d) != 3: continue
+        r = _digital_root_sum(d)
+        if last[r] == len(draws): last[r] = i
+    max_gap = max(last.values())
+    return [r for r,g in last.items() if g == max_gap]
+
+def _longest_out_short_sums(draws: List[str]) -> List[int]:
+    last = {s: len(draws) for s in range(10)}  # sD 0..9
+    for i, d in enumerate(draws):
+        if len(d) != 3: continue
+        sD = (int(d[0])+int(d[1])+int(d[2])) % 10
+        if last[sD] == len(draws): last[sD] = i
+    max_gap = max(last.values())
+    return [s for s,g in last.items() if g == max_gap]
+
+def _pattern_draws_since(draws: List[str]) -> Dict[str, int]:
+    patterns = ["SSS","SST","STS","TSS","TTS","TST","STT","TTT"]
+    last = {p: len(draws) for p in patterns}
+    for i, d in enumerate(draws):
+        if len(d) != 3: continue
+        p = _st_pattern(d)
+        if last[p] == len(draws): last[p] = i
+    return last
+
+def _group_draws_since_sst_sts_tss(draws: List[str]) -> int:
+    last = len(draws)
+    for i, d in enumerate(draws):
+        if len(d) != 3: continue
+        if _st_pattern(d) in {"SST","STS","TSS"}:
+            last = i
+            break
+    return last
+
+def _floating_digits(draws: List[str], threshold: int) -> List[str]:
+    last = {str(d): len(draws) for d in range(10)}
+    for i, d in enumerate(draws):
+        if len(d) != 3: continue
+        for ch in set(d):
+            if last[ch] == len(draws):
+                last[ch] = i
+    return [d for d,g in last.items() if g >= threshold]
+
+# ---------- main ----------
+def analyze_blackapple(draws: List[str]) -> Dict:
+    if not draws:
+        return {"score": 0, "triggers": {}, "candidates": []}
+
+    # Mirror event in last K draws?
+    mirror_event = _had_mirror_in_last_k(draws, MIRROR_LOOKBACK)
+
+    # Due sets
+    due_roots = _longest_out_root_sums(draws)
+    pat_ds    = _pattern_draws_since(draws)
+    extreme_due = (pat_ds["SSS"] >= EXTREME_PATTERN_OVERDUE) or (pat_ds["TTT"] >= EXTREME_PATTERN_OVERDUE)
+    mixed_due   = (_group_draws_since_sst_sts_tss(draws) >= MIXED_GROUP_OVERDUE)
+    floating    = _floating_digits(draws, FLOATING_OUT_THRESHOLD)
+    floating_on = (len(floating) >= 2)
+
+    # Remaining-pairs foundation
+    rem_pairs  = _remaining_pairs(draws, REMAINING_PAIRS_TARGET)
+    foundation = _singles_from_pairs(rem_pairs)
+
+    # Optional short-sum due (kept off unless you enable in scoring)
+    due_short  = _longest_out_short_sums(draws)
+
+    # Triggers summary
+    triggers = {
+        "mirror": mirror_event,
+        "root_due": due_roots,
+        "pattern": {"extreme_due": extreme_due, "mixed_due": mixed_due},
+        "floating": floating,
+        "pairs": {"remaining_count": len(rem_pairs)}
+    }
+
+    # BA-Score = count of active trigger families
+    score = (1 if mirror_event else 0) \
+          + (1 if due_roots else 0) \
+          + (1 if (extreme_due or mixed_due) else 0) \
+          + (1 if floating_on else 0) \
+          + (1 if len(rem_pairs) <= REMAINING_PAIRS_TARGET + 2 else 0)
+
+    # Choose base set
+    base = foundation if USE_FOUNDATION_AS_HARD_BASE else _all_singles()
+
+    # Build candidates with weighted scoring
+    candidates = []
+    floating_set = set(floating)
+    for combo in base:
+        tags  = set()
+        score_c = 0
+
+        # Foundation bonus (even in HYBRID mode)
+        if {combo[0]+combo[1], combo[0]+combo[2], combo[1]+combo[2]} <= rem_pairs:
+            tags.add("PAIR"); score_c += WEIGHTS["PAIR_FOUNDATION"]
+
+        if mirror_event and _has_mirror_pair(combo):
+            tags.add("MIR");  score_c += WEIGHTS["MIR"]
+
+        if due_roots and _digital_root_sum(combo) in set(due_roots):
+            tags.add("RS");   score_c += WEIGHTS["RS"]
+
+        if (extreme_due or mixed_due):
+            pat = _st_pattern(combo)
+            if (extreme_due and pat in {"SSS","TTT"}) or (mixed_due and pat in {"SST","STS","TSS"}):
+                tags.add("PAT"); score_c += WEIGHTS["PAT"]
+
+        if floating_on and any(d in floating_set for d in combo):
+            tags.add("FLT");  score_c += WEIGHTS["FLT"]
+
+        # Optional short-sum due
+        # if _short_sum(combo) in set(due_short):
+        #     tags.add("SD");   score_c += WEIGHTS["SD"]
+
+        if score_c > 0:
+            candidates.append({"combo": combo, "score": score_c, "tags": tags})
+
+    candidates.sort(key=lambda x: (-x["score"], x["combo"]))
+    return {"score": score, "triggers": triggers, "candidates": candidates[:TOP_N_CANDIDATES]}
+
+def ba_status_label(score: int) -> str:
+    if score >= 3: return "ALERT"
+    if score == 2: return "WATCH"
+    return "OFF"
+
+def sum_tags(combo: str) -> Dict[str,int]:
+    s = _sum_digits(combo)
+    return {"Sigma": s, "sD": s % 10, "RS": _digital_root_sum(combo)}
+
+4B) Hook on each State page
+from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+import pandas as pd
+ba = analyze_blackapple(state_data["draws"])
+status = ba_status_label(ba["score"])
+
+st.subheader("Blackapple Alert")
+st.markdown(f"**Status:** {status} (BAScore {ba['score']}/5)")
+
+tr = ba["triggers"]; parts = []
+if tr.get("mirror"): parts.append("Mirror")
+roots = tr.get("root_due", [])
+if roots: parts.append("Root due: " + ", ".join(map(str, roots)))
+pat = tr.get("pattern", {})
+if pat.get("extreme_due"): parts.append("SSS/TTT due")
+if pat.get("mixed_due"): parts.append("SST/STS/TSS due")
+flt = tr.get("floating", [])
+if flt: parts.append("Floating: " + ", ".join(flt))
+rc = tr.get("pairs", {}).get("remaining_count")
+if rc is not None: parts.append(f"Remaining Pairs: {rc}")
+st.write("Triggers: " + (", ".join(parts) if parts else "None"))
+
+rows = []
+for c in ba["candidates"]:
+    t = sum_tags(c["combo"])
+    rows.append({
+        "Combo": c["combo"],
+        "MatchScore": c["score"],
+        "Tags": " ".join(sorted(c["tags"])),
+        "Sums": f"Σ{t['Sigma']} sD{t['sD']} RS{t['RS']}"
+    })
+st.dataframe(pd.DataFrame(rows)) if rows else st.caption("No candidate list (insufficient overlap) — still watching triggers.")
+# Optional for debugging/inspection
+state_data["blackapple"] = ba
+
+4C) Hook on Combined page
+from modules.blackapple import analyze_blackapple, ba_status_label
+import pandas as pd
+
+rows = []
+for state, data in results.items():
+    if state == "combined": continue
+    ba = analyze_blackapple(data.get("draws", []))
+    status = ba_status_label(ba["score"])
+    tr = ba["triggers"]; roots = tr.get("root_due", [])
+    tparts = []
+    if tr.get("mirror"): tparts.append("Mirror")
+    if roots: tparts.append("Root " + "/".join(map(str, roots)))
+    pat = tr.get("pattern", {})
+    if pat.get("extreme_due"): tparts.append("SSS/TTT")
+    if pat.get("mixed_due"):   tparts.append("SST/STS/TSS")
+    flt = tr.get("floating", [])
+    if flt: tparts.append("Float " + "".join(flt))
+    rows.append({
+        "State": state,
+        "BA-Score": ba["score"],
+        "Status": status,
+        "Triggers": ", ".join(tparts),
+        "#Candidates": len(ba["candidates"]),
+        "Examples": " ".join([c["combo"] for c in ba["candidates"][:3]])
+    })
+
+if rows:
+    df = pd.DataFrame(rows).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
+    st.subheader("Blackapple Alerts (All States)")
+    st.dataframe(df)
+
+4D) Acceptance
+
+Each state page shows Status + triggers + a small list of tagged candidates.
+
+Combined page shows one row per state (score/status/triggers/#candidates/examples).
+
+Module compiles with no new dependencies.
+
+You can flip USE_FOUNDATION_AS_HARD_BASE to compare Strict vs Hybrid lists without touching UI.
+
+Notes on design fidelity. The five triggers and the 27–29 “remaining pairs” foundation directly follow the method you asked to implement and we aligned on; an ALERT fires only when multiple BA conditions overlap (the way BA framed “potent/lock” calls).
+
+Optional add‑on (tiny): Σ / Short‑sum tags in VTRAC rows
+
+If you want the compact tags beside each printed combo (e.g., 641 (Σ11 sD1 RS2)), reuse sum_tags() from modules/blackapple.py inside your existing format_combo() to append a small pill. (You can bold if the sum/short‑sum is the longest‑out in the current window — trivial to compute later.)
+
+How to hand this to Codex
+
+Paste Task 1 exactly. Let it finish; verify the acceptance points (35‑row VTRAC, matching CT4 snapshot).
+
+Paste Task 2. Confirm you can Process once, see the Run checklist, and the Winners page is gated.
+
+Paste Task 3. Verify the two Combined doubles tables populate and mark combined_done=True.
+
+Paste Task 4. Confirm the state panel & combined BA table render and use the new run cache.
+
+If anything surprises you during testing, send me the specific state & run_id and I’ll triage immediately.
+
+Why this order is safest
+
+SSOT first: stops the “two engines” problem for good.
+
+Run caching: solves “do I have to click process on every page” and sets up your daily ledger.
+
+Combined doubles: quick visible win you asked for.
+
+Blackapple MVP: one file, self‑contained, and perfectly aligned with the overlap method (mirror, root sums, spike/trough, floating, remaining pairs).
+
+When these four land, you’ll be able to upload C4, run once, navigate freely, and post winners only when everything for the day is truly done — exactly how you described your ideal flow.
+
+I’m ready for the next packet (Sums minimal UI, compound aux score, positional front/back badges, day summary writer) whenever you are.

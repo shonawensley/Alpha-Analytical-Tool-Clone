@@ -1,0 +1,132 @@
+You did the right thing pausing to sanity‑check. I went through your screenshots carefully. Here’s the straight take and exactly what I’d do next.
+
+Quick verdict
+
+Stage 3 does look implemented and wired. Your log shows:
+
+modules/__init__.py created.
+
+modules/blackapple.py written (≈250 lines).
+
+scripts/smoke/blackapple_smoke.py added.
+
+Two UI inserts into src/app.py (Aux panel + Combined table).
+
+Streamlit headless boot succeeded (server started and was time‑boxed then stopped), which means imports and syntax were OK.
+
+One gotcha to clean up: an earlier attempt wrote a file under
+C:\Windows\System32\modules\blackapple.py. Later commands switched to C:\dev\Alpha-Analytical-Tool and wrote the real file there, so you’re probably fine when launching from the project root—but that stray System32 copy is a footgun (Windows services sometimes start from System32 and could import the wrong module). Delete or rename it.
+
+Why I’m confident it’s correctly hooked now
+
+Your later commands explicitly Set-Location 'C:\dev\Alpha-Analytical-Tool', create modules\ and scripts\smoke\, then write modules\blackapple.py.
+
+The app booted headless and reached http://127.0.0.1:8501 before being stopped; that would have failed immediately if from modules.blackapple import … was missing or broken.
+
+The summary says the Aux panel was inserted before the “Legend / Feature Guide” and the Combined table after the doubles table—exactly the safe anchors you and I agreed on.
+
+Do this 5‑minute checklist (prevents path surprises)
+
+Remove the stray file (recommended)
+
+In an elevated PowerShell:
+
+if (Test-Path "C:\Windows\System32\modules\blackapple.py") { 
+  Rename-Item "C:\Windows\System32\modules\blackapple.py" "blackapple.py.bak"
+}
+
+
+(Or delete it if you prefer.)
+
+Confirm which module Python will import
+
+From your project root:
+
+cd C:\dev\Alpha-Analytical-Tool
+python - << 'PY'
+
+
+import modules.blackapple as ba, os, sys
+print("Imported from:", ba.file)
+PY
+```
+Expected: a path inside C:\dev\Alpha-Analytical-Tool\modules\blackapple.py.
+
+Verify the two UI hooks landed
+
+git grep -n "Blackapple Alert" -- src/app.py
+git grep -n "Blackapple Alerts (All States)" -- src/app.py
+
+
+You should see one hit in the Aux section and one in the Combined page.
+
+Run the smoke script once
+
+python scripts\smoke\blackapple_smoke.py
+
+
+Expected console bits: a printed BAScore, a Status label (OFF/WATCH/ALERT), a short Triggers line, and 1–3 example candidates. If that prints, imports + core logic are good.
+
+Commit the good state (optional but smart)
+
+git add -A
+git commit -m "Stage 3: Blackapple module + Aux/Combined hooks"
+
+Then test it in the app (order of operations)
+
+Launch normally from the project root (this ensures the right modules/ is on sys.path):
+
+streamlit run src/app.py
+
+
+Auxiliary Tools page
+
+Find the new “Blackapple Alert” panel for a state you know has recent data.
+
+You should see:
+
+Status: OFF/WATCH/ALERT (BAScore x/5)
+
+Triggers line (Mirror / Root due / SSS‑TTT or SST/STS/TSS / Floating / Remaining Pairs count)
+
+A small Top 12 candidates table (each with tags like PAIR, RS, PAT, FLT, MIR).
+
+Control Center / Combined
+
+Below the existing “States Ranked by Draws Since Last Double” table, you should see “Blackapple Alerts (All States)” with columns:
+State | BA‑Score | Status | Triggers | #Candidates | Examples.
+
+What to watch for (and quick fixes)
+
+Panel/table shows but is empty: Usually means the page didn’t have access to the draws list.
+
+Aux panel: verify we compute draws in that function before calling analyze_blackapple(draws).
+
+Combined table: verify it iterates state_to_draws (not a results dict that isn’t defined there).
+
+ImportError for modules.blackapple: You’re probably launching from the wrong working directory or that stray System32 copy is being hit. Launch from the repo root and/or remove the System32 file.
+
+No candidates even when triggers are on: That’s just the current thresholds being conservative. You can flip the toggle in modules/blackapple.py if you want the stricter or wider mode:
+
+USE_FOUNDATION_AS_HARD_BASE = False   # HYBRID (wide, ranked; default)
+# True -> STRICT (only numbers whose 3 internal pairs are in the remaining set)
+
+Should you run the smoke script first or jump straight into the app?
+
+Run the smoke script first. It’s the fastest way to prove imports + core logic without any Streamlit/UI variables in the way. If it prints the expected JSON-ish summary, go straight to testing in the app.
+
+Acceptance checklist (green = you’re done)
+
+ python -c "import modules.blackapple as ba; print(ba.__file__)" points to your repo.
+
+ python scripts\smoke\blackapple_smoke.py prints BAScore/Status/Triggers/Candidates.
+
+ Aux page shows the Blackapple Alert panel with sensible values.
+
+ Combined page shows Blackapple Alerts (All States) with rows for your states.
+
+If any box doesn’t tick, tell me which step and the exact message you see, and I’ll zero in on it.
+
+TL;DR
+
+Yes—based on your logs, Stage 3 is in and working. Clean up the stray System32\modules\blackapple.py, run the smoke script, then confirm the two UI blocks render in the app. After that, you’re safe to proceed with the rest of your plan.

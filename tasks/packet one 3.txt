@@ -1,0 +1,105 @@
+—you’re doing the right “first‑run” diligence. Here’s what’s happening in Codex’s screen, what to approve, and the exact message I want you to paste to Codex so it proceeds in a safe, gated way.
+
+What Codex is doing in your screenshot (quick read)
+
+Plan Lock (Packet One A→D): it has condensed Packet 1/2 into a 4‑step gated plan:
+
+A) Imports/paths sanity (read‑only review of src/app.py, module layout).
+
+B) Wire minimal Aux panels into state pages + a Combined table (no refactor).
+
+C) Add new module(s)—specifically modules/blackapple.py and a tiny smoke script.
+
+D) Headless boot + regression checks.
+
+Why it kept reading app.py in 200‑line chunks: that’s just Codex previewing a long file with Get-Content … | Select-Object -Last 200 in a loop to see entry points and Streamlit hooks; it’s not “stuck.”
+
+Why it’s asking for approval: the proposed next commands create a scratch folder (.codex/) and run the app headlessly to capture first_boot.log. Those are writes, so it’s waiting for your go‑ahead.
+
+Bottom line: this is exactly the pre‑flight I asked it to do before any code writes. 👍
+
+Should we let it proceed? (Yes—approve, with guardrails)
+
+Do not ask it to re‑read Packet One; that just burns tokens. Its “Plan Lock (A–D)” already mirrors the task breakdown. Approve the headless boot + log capture and keep it on the A→B→C→D rails. We’ll review after the first headless boot and again after the blackapple.py drop‑in.
+
+Paste this to Codex (approval + guardrails)
+
+APPROVED to run the “Proposed Next Commands” for headless boot and log capture exactly as listed, with these conditions:
+
+Scratch‑only writes: all new files/outputs go under .codex/ (e.g., app_preview.txt, first_boot.log).
+
+No refactors yet: do not modify src/ or modules/ until after headless boot succeeds and you show the first error (if any).
+
+Minimal‑diff principle: when we move to Step C, create one new file modules/blackapple.py and two tiny UI hooks only; no unrelated edits.
+
+Stop after first real error: if headless boot fails, print the last 200 lines of .codex/first_boot.log, propose the smallest fix for that single error, and wait for approval.
+
+Windows first: use the run_app.bat launcher if present; else fall back to:
+streamlit run .\src\app.py --server.headless true --browser.gatherUsageStats false | Tee-Object .\.codex\first_boot.log
+
+After headless boot is green, proceed to Plan C to add modules/blackapple.py (MVP) and wire:
+
+State page: a small “Blackapple Alert” panel (status pill + triggers + Top‑12 candidates).
+
+Combined page: a table “Blackapple Alerts (All States)”.
+
+Use the MVP we documented: 5 triggers (Mirror, Root‑sum‑due, Spike/Trough pattern‑due, Floating digits, 27–29 Remaining‑Pairs). Fire ALERT when ≥3 triggers overlap and filter/score candidates from the remaining‑pairs foundation. Keep all thresholds hardcoded.
+
+Deliverables after Plan C:
+
+Unified diff (file list + hunks).
+
+A one‑screen summary of what changed.
+
+A fresh headless boot with a short “smoke run” note (e.g., “BA panel rendered in 18 states; no regressions in V‑TRAC/Doubles”).
+
+Do not touch other modules or styling. If any import/path issue pops up, suggest a single‑line fix (e.g., add __init__.py, or update one import).
+
+Why this is the right level of “steer, don’t micromanage”
+
+You keep Codex on A→B→C→D milestones with clear stop points (after logs, after MVP add).
+
+You avoid accidental refactors and path churn (biggest risk from these agents).
+
+You get a reproducible first_boot.log to triage any errors quickly.
+
+You land the highest‑value feature next (blackapple.py) with tiny UI hooks and no coupling, matching the MVP spec we settled on (mirror, root sums, spike/trough, floating digits, remaining pairs overlap).
+
+What I’ll look for in the first log (so you know what “normal” is)
+
+Typical first‑boot issues (with the smallest acceptable fix, one at a time):
+
+Module path error (e.g., ModuleNotFoundError: modules.blackapple):
+→ OK; at this stage we haven’t added it. Proceed to Plan C and add modules/blackapple.py.
+
+Missing requirements.txt or missing streamlit:
+→ Don’t install now; just note it and continue (your workstation already has Streamlit). We can add a note to requirements.txt later if needed.
+
+Import layout (packages) issue (e.g., attempted relative import):
+→ Add a single __init__.py in the affected folder; do not change import names elsewhere.
+
+If the app boots, we’re green—move to Plan C.
+
+After approval—what to expect next
+
+Step A: It writes .codex/app_preview.txt, confirms your entry points, and shows it found Streamlit patterns.
+
+Step D: It runs run_app.bat headlessly and captures .codex/first_boot.log. It will either propose a single minimal fix or say “boot clean.”
+
+Step C: It drops in modules/blackapple.py, wires the two tiny render calls, and shows a diff. (That module is self‑contained and mirrors the BA workflow we documented; no sliders, hardcoded thresholds.)
+
+One last toggle (optional, but good)
+
+Tell Codex to default to the wide/coverage mode inside blackapple.py (we built that option): start from all 120 boxed singles and bonus‑weight the remaining‑pairs foundation, rather than using it as a hard gate. You can flip to the strict “foundation‑only” mode later in one line if you want the purist BA list.
+
+Short answer to your questions
+
+Is it stuck? No—just previewing large files and waiting for approval to write .codex/* and run headless.
+
+Re‑read Packet One? No need. It already formed a good A→D plan from it.
+
+Force task‑by‑task? Yes—approve and keep it on the A→B→C→D rails with the stop points I gave.
+
+Let it “do its thing”? Yes, within the guardrails above. We’ll review right after headless logs and again after the BA MVP diff.
+
+If you paste the approval block above, we’ll get the first concrete log + minimal patch quickly and keep momentum without risking accidental refactors.

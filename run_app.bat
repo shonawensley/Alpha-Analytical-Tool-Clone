@@ -1,9 +1,16 @@
 @echo off
-REM ── Activate your v-env if you normally do ─────────────
-REM call ".\venv\Scripts\activate.bat"
+setlocal
+REM Optional: activate your venv if used
+REM call "%~dp0venv\Scripts\activate.bat"
 
-REM ── Launch the Streamlit UI (all modules, inc. Digit-Reduction) ──
-streamlit run src/app.py
+REM Ensure we run from the repo root regardless of how this BAT is launched
+pushd "%~dp0"
 
-REM ── Keep the window open so you can read logs ──────────
-pause 
+REM Prevent auto-opening browser (optional)
+set STREAMLIT_BROWSER=none
+
+REM Launch the Streamlit UI (all modules, inc. Digit-Reduction and Blackapple)
+streamlit run src\app.py
+
+popd
+endlocal
