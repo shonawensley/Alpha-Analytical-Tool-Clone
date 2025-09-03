@@ -467,6 +467,19 @@ def show_control_center_page() -> None:
             pass
             st.caption(f"Combined BA table unavailable: {_e}")
     except Exception as e:
+        # System Health (development)
+        try:
+            import os, sys as _sys
+            with st.expander("System Health"):
+                st.caption(f"cwd: {os.getcwd()}")
+                st.caption(f"python: {_sys.executable}")
+                try:
+                    _ba = _load_blackapple_real()
+                    st.caption(f"BA module: {getattr(_ba, '__file__', 'unknown')}")
+                except Exception as _se:
+                    st.caption(f"BA module: unavailable: {_se}")
+        except Exception:
+            pass
         st.warning(f"Combined view unavailable: {e}")
 def show_aux_page(state: str) -> None:
     """Render the Auxiliary Tools page."""
@@ -962,6 +975,9 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
+
+
 
 
 
