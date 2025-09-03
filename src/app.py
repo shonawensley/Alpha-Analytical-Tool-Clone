@@ -13,6 +13,7 @@ PROJECT_ROOT = SRC_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 # ----------------------------------------------------------------------
+ 
 
 # --- AUX working modules path (staged, isolated) -----------------------
 from pathlib import Path
@@ -21,6 +22,28 @@ if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
     # Insert the parent folder so absolute imports like `modules.parse_excel` work
     sys.path.insert(0, _AUX_WORKING_ROOT)
 # ----------------------------------------------------------------------
+from importlib.util import spec_from_file_location, module_from_spec
+
+def _load_project_module(dotted_name: str, rel_file: str):
+    """Load a module by absolute file path from the project root.
+    This bypasses any top-level package name collisions on sys.path.
+    """
+    file_path = Path(PROJECT_ROOT) / rel_file
+    if not file_path.exists():
+        raise FileNotFoundError(f"Expected module at {file_path}")
+    spec = spec_from_file_location(dotted_name, str(file_path))
+    mod = module_from_spec(spec)  # type: ignore[arg-type]
+    assert spec and spec.loader, f"Could not load spec for {file_path}"
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+def _load_blackapple_real():
+    return _load_project_module("project_blackapple", "modules/blackapple.py")
+
+
+def _load_aux_loaders_real():
+    return _load_project_module("project_aux_loaders", "modules/aux_loaders.py")
 
 # Helpers for rendering working Vâ€‘TRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
@@ -125,6 +148,32 @@ def _project_modules_first():
     finally:
         sys.path[:] = old
 
+@contextmanager
+def _project_blackapple_ctx():
+    """Ensure project modules resolve first for Blackapple and avoid staged 'modules' shadow.
+    Temporarily prepend PROJECT_ROOT to sys.path and evict any existing 'modules' binding
+    so imports of 'modules.blackapple' resolve to the project's modules package.
+    """
+    old_path = list(sys.path)
+    old_modules = sys.modules.get('modules')
+    try:
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        try:
+            sys.modules.pop('modules')
+        except KeyError:
+            pass
+        yield
+    finally:
+        # Restore prior 'modules' binding
+        if old_modules is not None:
+            sys.modules['modules'] = old_modules
+        else:
+            try:
+                sys.modules.pop('modules')
+            except KeyError:
+                pass
+        sys.path[:] = old_path
 def _sum3(d: str) -> int:
     return sum(int(ch) for ch in d) if d and len(d) == 3 and d.isdigit() else 0
 
@@ -170,15 +219,17 @@ st.set_page_config(page_title="Alpha-Final Analytical Tool",
                    page_icon="ðŸš€", layout="wide")
 
 # Debug: show which file is running (safe to remove later)
-st.sidebar.caption(f"ENTRY: {os.path.relpath(__file__)}")
-
-
 def main():
     """
     Main function to run the Alpha-Final Streamlit app.
     This app will have a two-level navigation: State selection and Tool selection.
     """
     st.sidebar.title("Navigation")
+    # Debug sidebar info after context is ready
+    try:
+        st.sidebar.caption(f"ENTRY: {os.path.relpath(__file__)}")
+    except Exception:
+        pass
     
     # First level: State selector
     states_list = [
@@ -280,8 +331,6 @@ def show_control_center_page() -> None:
     st.title("Control Center")
     st.write("Cross-State Analysis Dashboard")
     
-    # Control Center expects cleaned CSVs; if none, prompt to run Aux once
-    # Cross-state doubles aggregation using staged working modules
     try:
         from modules.analyze_pairs import get_doubles_history
         import pandas as _pd
@@ -321,64 +370,104 @@ def show_control_center_page() -> None:
                 df = df.sort_values(["Draws Since Last Double", "State"], ascending=[False, True])
             return df
 
-        # Refresh button
         if st.button("Refresh Combined Table"):
             st.session_state.pop("combined_doubles_df", None)
 
         df = st.session_state.get("combined_doubles_df")
         if df is None or df.empty:
             df = _compute_combined()
-            if not df.empty:
+            if df is not None and not df.empty:
                 st.session_state["combined_doubles_df"] = df
         if df is None or df.empty:
             st.warning("No state draw files found in data/cleaned.")
             return
+
         st.subheader("States Ranked by Draws Since Last Double")
         st.dataframe(df, use_container_width=True)
+
         # --- Blackapple Alerts (All States) ---
         try:
-            from modules.blackapple import analyze_blackapple, ba_status_label
-            import pandas as _pd
+            _ba = _load_blackapple_real()
+            analyze_blackapple = _ba.analyze_blackapple
+            ba_status_label = _ba.ba_status_label
+            _aux = _load_aux_loaders_real()
+            load_state_draws = _aux.load_state_draws
+
             rows_ba = []
-            # Re-scan cleaned draws to build BA status per state
             for csv_path in cleaned_dir.glob("*_draws.csv"):
                 try:
-                    dfc = _pd.read_csv(csv_path)
-                    dr = [str(x).zfill(3) for x in dfc["Draw"].dropna().astype(int).astype(str).tolist()]
-                    name = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    if dr:
-                        ba = analyze_blackapple(dr)
-                        status = ba_status_label(ba.get("score", 0))
-                        tr = ba.get("triggers", {})
-                        tparts = []
-                        if tr.get("mirror"): tparts.append("Mirror")
-                        roots = tr.get("root_due", [])
-                        if roots: tparts.append("Root " + "/".join(map(str, roots)))
-                        pat = tr.get("pattern", {})
-                        if pat.get("extreme_due"): tparts.append("SSS/TTT")
-                        if pat.get("mixed_due"):   tparts.append("SST/STS/TSS")
-                        flt = tr.get("floating", [])
-                        if flt: tparts.append("Float " + "".join(flt))
-                        rows_ba.append({
-                            "State": name,
-                            "BA-Score": ba.get("score", 0),
-                            "Status": status,
-                            "Triggers": ", ".join(tparts),
-                            "#Candidates": len(ba.get("candidates", [])),
-                            "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]])
-                        })
+                    state_label = csv_path.stem.replace("_draws", "").replace("_", " ")
+                    dr, src = load_state_draws(state_label)
+                    if not dr:
+                        continue
+                    ba = analyze_blackapple(dr)
+                    status = ba_status_label(ba.get("score", 0))
+                    tr = ba.get("triggers", {})
+                    tparts = []
+                    if tr.get("mirror"):
+                        tparts.append("Mirror")
+                    roots = tr.get("root_due", [])
+                    if roots:
+                        tparts.append("Root " + "/".join(map(str, roots)))
+                    pat = tr.get("pattern", {})
+                    if pat.get("extreme_due"):
+                        tparts.append("SSS/TTT")
+                    if pat.get("mixed_due"):
+                        tparts.append("SST/STS/TSS")
+                    flt = tr.get("floating", [])
+                    if flt:
+                        tparts.append("Float " + "".join(flt))
+                    rows_ba.append({
+                        "State": state_label,
+                        "BA-Score": ba.get("score", 0),
+                        "Status": status,
+                        "Triggers": ", ".join(tparts),
+                        "#Candidates": len(ba.get("candidates", [])),
+                        "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]]),
+                    })
                 except Exception:
                     continue
+
             if rows_ba:
                 df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
                 st.subheader("Blackapple Alerts (All States)")
                 st.dataframe(df_ba, use_container_width=True)
         except Exception as _e:
             st.caption(f"Combined BA table unavailable: {_e}")
+        # Optional: per-state full candidates view with tags
+        try:
+            for row in rows_ba:
+                state_label = row.get("State") or row.get("state")
+                if not state_label:
+                    continue
+                with st.expander(f"{state_label} — View all candidates"):
+                    # Re-run BA for this state to list all candidates
+                    dr, _src = load_state_draws(state_label)
+                    if not dr:
+                        st.caption("No draws available.")
+                        continue
+                    ba_full = analyze_blackapple(dr)
+                    cands = ba_full.get("candidates", [])
+                    if not cands:
+                        st.caption("No candidates found.")
+                        continue
+                    import pandas as _pd
+                    rows_detail = []
+                    for c in cands:
+                        tags = c.get("tags", [])
+                        if isinstance(tags, set):
+                            tags = sorted(tags)
+                        rows_detail.append({
+                            "Combo": c.get("combo", ""),
+                            "Score": c.get("score", 0),
+                            "Tags": " ".join(tags),
+                        })
+                    st.dataframe(_pd.DataFrame(rows_detail), use_container_width=True)
+        except Exception:
+            pass
+            st.caption(f"Combined BA table unavailable: {_e}")
     except Exception as e:
         st.warning(f"Combined view unavailable: {e}")
-
-
 def show_aux_page(state: str) -> None:
     """Render the Auxiliary Tools page."""
     import streamlit as st
@@ -690,22 +779,48 @@ def show_aux_page(state: str) -> None:
                         pass
                 # --- Blackapple Alert (MVP) ---
                 try:
-                    from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
-                    ba = analyze_blackapple(draws)
+                    _ba = _load_blackapple_real()
+                    analyze_blackapple = _ba.analyze_blackapple
+                    ba_status_label = _ba.ba_status_label
+                    sum_tags = getattr(_ba, "sum_tags", None)
+                    if sum_tags is None:
+                        def sum_tags(combo: str):
+                            s = sum(int(c) for c in combo) if combo and combo.isdigit() else 0
+                            r = s
+                            while r > 9:
+                                r = sum(int(x) for x in str(r))
+                            return {"Sigma": s, "sD": s % 10, "RS": r}
+
+                    _aux = _load_aux_loaders_real()
+                    load_state_draws = getattr(_aux, "load_state_draws", None)
+                    if callable(load_state_draws):
+                        ba_draws, ba_src = load_state_draws(state)
+                    else:
+                        ba_draws, ba_src = [], ""
+
+                    ba = analyze_blackapple(ba_draws or draws)
                     status = ba_status_label(ba.get("score", 0))
                     st.subheader("Blackapple Alert")
+                    if ba_src:
+                        st.caption(f"BA draws: {ba_src} ({len(ba_draws)})")
                     parts = []
                     tr = ba.get("triggers", {})
-                    if tr.get("mirror"): parts.append("Mirror")
+                    if tr.get("mirror"):
+                        parts.append("Mirror")
                     roots = tr.get("root_due", [])
-                    if roots: parts.append("Root due: " + ", ".join(map(str, roots)))
+                    if roots:
+                        parts.append("Root due: " + ", ".join(map(str, roots)))
                     pat = tr.get("pattern", {})
-                    if pat.get("extreme_due"): parts.append("SSS/TTT due")
-                    if pat.get("mixed_due"): parts.append("SST/STS/TSS due")
+                    if pat.get("extreme_due"):
+                        parts.append("SSS/TTT due")
+                    if pat.get("mixed_due"):
+                        parts.append("SST/STS/TSS due")
                     flt = tr.get("floating", [])
-                    if flt: parts.append("Floating: " + "".join(flt))
+                    if flt:
+                        parts.append("Floating: " + "".join(flt))
                     rc = (tr.get("pairs", {}) or {}).get("remaining_count")
-                    if rc is not None: parts.append(f"Remaining Pairs: {rc}")
+                    if rc is not None:
+                        parts.append(f"Remaining Pairs: {rc}")
                     st.markdown(f"**Status:** {status} (BAScore {ba.get('score',0)}/5)")
                     st.write("Triggers: " + (", ".join(parts) if parts else "None"))
                     rows = []
@@ -800,14 +915,6 @@ def show_aux_page(state: str) -> None:
             available_states = get_available_states()
         except Exception:
             available_states = []
-        
-        if available_states:
-            st.subheader("Available States")
-            st.write(f"Data available for {len(available_states)} states:")
-            cols = st.columns(3)
-            for i, state_name in enumerate(available_states):
-                with cols[i % 3]:
-                    st.write(f"â€¢ {state_name}")
         else:
             st.warning("No state data files found. Please ensure cleaned data is available.")
 
@@ -840,46 +947,6 @@ def show_digit_reduction_page(state: str) -> None:
 
         st.success(f"{len(df)} reductions extracted for {state}")
         st.dataframe(df, use_container_width=True)
-        # --- Blackapple Alerts (All States) ---
-        try:
-            from modules.blackapple import analyze_blackapple, ba_status_label
-            import pandas as _pd
-            rows_ba = []
-            # Re-scan cleaned draws to build BA status per state
-            for csv_path in cleaned_dir.glob("*_draws.csv"):
-                try:
-                    dfc = _pd.read_csv(csv_path)
-                    dr = [str(x).zfill(3) for x in dfc["Draw"].dropna().astype(int).astype(str).tolist()]
-                    name = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    if dr:
-                        ba = analyze_blackapple(dr)
-                        status = ba_status_label(ba.get("score", 0))
-                        tr = ba.get("triggers", {})
-                        tparts = []
-                        if tr.get("mirror"): tparts.append("Mirror")
-                        roots = tr.get("root_due", [])
-                        if roots: tparts.append("Root " + "/".join(map(str, roots)))
-                        pat = tr.get("pattern", {})
-                        if pat.get("extreme_due"): tparts.append("SSS/TTT")
-                        if pat.get("mixed_due"):   tparts.append("SST/STS/TSS")
-                        flt = tr.get("floating", [])
-                        if flt: tparts.append("Float " + "".join(flt))
-                        rows_ba.append({
-                            "State": name,
-                            "BA-Score": ba.get("score", 0),
-                            "Status": status,
-                            "Triggers": ", ".join(tparts),
-                            "#Candidates": len(ba.get("candidates", [])),
-                            "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]])
-                        })
-                except Exception:
-                    continue
-            if rows_ba:
-                df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
-                st.subheader("Blackapple Alerts (All States)")
-                st.dataframe(df_ba, use_container_width=True)
-        except Exception as _e:
-            st.caption(f"Combined BA table unavailable: {_e}")
 
         if csv_path:
             st.download_button(
@@ -895,3 +962,23 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

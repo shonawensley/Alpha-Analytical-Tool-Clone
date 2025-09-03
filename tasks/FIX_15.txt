@@ -1,0 +1,150 @@
+You’re not crazy—this is a package‐name collision problem, not a “mysterious bug.”
+You have two different top‑level packages named modules on sys.path (your real project package that has blackapple.py, and a staged “working” package that doesn’t). Streamlit binds the first one it sees to sys.modules['modules'], so:
+
+from modules.analyze_pairs import … works (because the staged copy has it),
+
+from modules.blackapple import … fails (because the staged copy doesn’t).
+
+That perfectly matches the symptoms you and Cursor saw.
+
+Below is a do‑this‑now plan that fixes it without an hour of thrash, avoids brittle PowerShell text surgery, and gets “Blackapple Alert” rendering again.
+
+What to do now (minimal, safe, and reversible)
+
+1) Add a tiny absolute‑path loader in src/app.py.
+This bypasses the ambiguous modules name and loads modules/blackapple.py from your project root every time you need it.
+
+# --- Project module loaders (put near the top of src/app.py, after stdlib imports) ---
+from pathlib import Path
+from importlib.util import spec_from_file_location, module_from_spec
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # app.py lives in src/, project root is one level up
+
+def _load_project_module(dotted_name: str, rel_file: str):
+    """
+    Load a module by absolute file path from the project, avoiding any 'modules' shadow on sys.path.
+    dotted_name is just a unique label for the loader (doesn't touch your package names).
+    """
+    file_path = PROJECT_ROOT / rel_file
+    if not file_path.exists():
+        raise FileNotFoundError(f"Expected module at {file_path}")
+    spec = spec_from_file_location(dotted_name, str(file_path))
+    mod = module_from_spec(spec)
+    assert spec and spec.loader, f"Could not load spec for {file_path}"
+    spec.loader.exec_module(mod)
+    return mod
+
+def _load_blackapple_real():
+    return _load_project_module("project_blackapple", "modules/blackapple.py")
+
+def _load_aux_loaders_real():
+    # Only if you need load_state_draws from your project package.
+    return _load_project_module("project_aux_loaders", "modules/aux_loaders.py")
+
+
+2) Replace the two BA import spots with the absolute loader.
+Do this in both places where you render BA:
+
+Control Center (the “Blackapple Alerts (All States)” table)
+
+Aux page (the “Blackapple Alert” panel)
+
+# --- inside Control Center BA block ---
+_ba = _load_blackapple_real()
+analyze_blackapple = _ba.analyze_blackapple
+ba_status_label    = _ba.ba_status_label
+
+# (optional) tiny proof caption so you see exactly which file is active:
+# st.sidebar.caption(f"BA from: {getattr(_ba, '__file__', 'unknown')}")
+
+# ... use analyze_blackapple(...) and ba_status_label(...) as before ...
+
+# --- inside Aux page BA block ---
+_ba = _load_blackapple_real()
+analyze_blackapple = _ba.analyze_blackapple
+ba_status_label    = _ba.ba_status_label
+sum_tags           = getattr(_ba, "sum_tags", None)
+
+# If your older blackapple.py doesn't have sum_tags yet, provide a safe fallback:
+if sum_tags is None:
+    def sum_tags(combo: str):
+        s = sum(int(c) for c in combo)
+        # digital root
+        r = s
+        while r > 9:
+            r = sum(int(x) for x in str(r))
+        return {"Sigma": s, "sD": (s % 10), "RS": r}
+
+# If you were importing load_state_draws from modules.aux_loaders:
+_aux = _load_aux_loaders_real()
+load_state_draws = getattr(_aux, "load_state_draws", None)
+# ... and use it exactly as before ...
+
+
+Why this works: you completely sidestep sys.modules['modules'] and load the project copy of blackapple.py by absolute path. The staged “working” modules can remain on sys.path for Aux‑only code without shadowing BA.
+
+3) Don’t keep trying automated PowerShell edits.
+The errors you pasted (Unexpected token ...) are just quoting/escaping issues from dynamic line surgery. Open src/app.py, make the small edits above once, and save. That’s it.
+
+4) Quick compile check (no Streamlit needed).
+
+py -m py_compile src\app.py
+
+
+If it compiles, run your app and navigate to the BA panels.
+
+5) If BA shows but candidates are empty, check your data file names.
+If any cleaned files have the wrong extension (e.g., *_draws.cvs), rename them to .csv. One‑liner:
+
+Get-ChildItem data\cleaned -Filter *_draws.cvs -Recurse |
+  Rename-Item -NewName { $_.Name -replace '\.cvs$', '.csv' }
+
+(Optional) Alternative fix you can do later
+
+If you prefer to keep from modules.blackapple import ... spelling, you can add a scoped “project‑first” import context manager that temporarily inserts the project root at sys.path[0] and clears sys.modules['modules'] just for the BA import, then restores everything. Functionally fine, but the absolute‑path loader above is simpler and more bulletproof for Streamlit’s hot‑reload.
+
+What to tell Cursor/Codex (and what not to change)
+
+Do: Add the loader block once and switch the two BA import spots to use it.
+
+Do not: Rename packages, change your global sys.path, or refactor other tools today.
+
+Do later (nice to have): Move the scripts/auxiliary/working sys.path insertion so it’s used only inside the Aux page; or rename that staged package to aux_working to permanently remove the collision.
+
+Sanity proof you can add while testing
+
+Add a small caption temporarily to see which file BA is coming from:
+
+try:
+    st.sidebar.caption(f"BA module: {getattr(_ba, '__file__', 'unknown')}")
+except Exception:
+    pass
+
+
+If you see a path under <project>\modules\blackapple.py, you’ve eliminated the shadowing.
+
+Why I’m confident this unblocks “Blackapple Alert”
+
+Your BA panel/table code only needs to import the module and call analyze_blackapple(...) and ba_status_label(...). The MVP logic for BA—mirror event, root sum due, spike/trough pattern due (SSS/TTT or SST/STS/TSS gap), floating digits, and the 27–29 remaining‑pairs foundation—was already sketched as a single, self‑contained modules/blackapple.py and tiny Streamlit hooks. The loader above ensures that module is the one actually used in the app, exactly as the MVP doc described.
+
+If you’re using the updated version with the “Hybrid vs Strict foundation” toggle and sum_tags helper, your UI hooks remain unchanged; the loader doesn’t affect logic—only import resolution.
+
+If you want a belt‑and‑suspenders test before launching Streamlit
+
+From your repo root:
+
+# Should succeed and print a path in your project tree
+py -c "import pathlib, importlib.util as u; p = pathlib.Path('modules/blackapple.py'); s=u.spec_from_file_location('test_ba', str(p)); m=u.module_from_spec(s); s.loader.exec_module(m); print(getattr(m,'__file__','<no file>')); print('OK:', hasattr(m,'analyze_blackapple'), hasattr(m,'ba_status_label'))"
+
+Long‑term hardening (do later, not today)
+
+Rename the staged package from modules → aux_working (or similar), or
+
+Scope its sys.path insertion to the Aux page only (never at app startup).
+Either removes the class of collision that bit you here.
+
+Bottom line
+
+Let Cursor/Codex implement the absolute‑path loader and switch the two BA import sites to it. That single change de‑shadows modules.blackapple, gets the “Blackapple Alert” sections rendering again, and avoids more fragile PowerShell surgeries. If you then see “no candidates,” fix any .cvs → .csv typos and you’re done.
+
+If you need me to also show the context‑manager variant (keeping from modules... syntax), I included that option—but the absolute loader is the fastest and most robust path right now.

@@ -1,0 +1,315 @@
+Sorry I'm just being extra careful here I had mentioned that I didn't want the string tables of the other analytical tools affected with whatever optimal Excel loading mechanism you are adding and when I mention that you seem to completely change your fix which I'm wondering why because you are essentially fixing the black apple wiring so I don't know if I'm causing confusion because it looks like you may have started to change that and not address that or am I just not interpreting your code changes properly i'm just trying to be extra careful and ensure the other analytical tools table building is not being adjusted because that involves rebuilding the string tables within the app While the auxiliary tools it's a very simple process of extracting a column of draws and converting into the CBS file as I'm sure you now fully understand I just wanted to make sure I wasn't screwing you up or mixing things up by saying too much so I thought I'd let you review this file Read your initial suggested fix and then read the second one after I mentioned not affecting the string tables building of the analytical tools the other ones outside of auxiliary tools as essentially you are still mapping the BA tool properly I don't know what exactly it is you planned this is why I like sometimes to brainstorm and hear your plan so I know what you're doing I don't know if you're revamping the entire extraction of the CFCBS draw files for the all the auxiliary tools or if you're just making sure to properly wire black Apple Maybe that's the right question to ask and maybe I messed you up by saying too much? Just review both below and let's discuss one more time and I think things should be clear of what to do currently the other auxiliary tools were working perfectly when you press the Run auxiliary analysis as they go off the CVS files in the cleaned CVS draws folder we want Black Apple to essentially be extracting to the same excel files to get their 1000 draw history So maybe just explaining the difference between your two suggestions why did you change your plan or did you not really change it?
+
+
+
+✗ You canceled the request to run
+    powershell.exe -NoLogo -NoProfile -Command '$ErrorActionPreference='"'Stop'; Set-Location 'C:\\dev\\Alpha-Analytical-Tool';
+    # 1) Write modules/aux_loaders.py
+    "'$loader = @'"'
+    from __future__ import annotations
+    from pathlib import Path
+    from typing import Dict, List, Tuple
+    import pandas as pd
+    import re
+
+    CLEANED_DIR = Path('data') / 'cleaned'
+
+    def _norm(s: str) -> str:
+        # Lowercase, remove non-alnum to normalize labels and stems
+        return re.sub(r'["'^0-9a-z]+'"', '', (s or '').lower())
+
+    def _list_draw_csvs() -> List[Path]:
+        if not CLEANED_DIR.exists():
+            return []
+        return list(CLEANED_DIR.glob('*_draws.csv'))
+
+    def load_state_draws(state_label: str, max_n: int = 1000) -> Tuple[List[str], str | None]:
+        \"\"\"
+        Load newest-first draws from data/cleaned/*_draws.csv with tolerant matching.
+        Returns (draws, source_path_str or None).
+        \"\"\"
+        label_norm = _norm(state_label)
+        candidates = _list_draw_csvs()
+        # First pass: exact normalized stem match
+        best: Path | None = None
+        for p in candidates:
+            stem = p.stem.replace('_draws', '')
+            stem_norm = _norm(stem)
+            if stem_norm == label_norm:
+                best = p
+                break
+        # Second pass: contains match (either way)
+        if best is None:
+            for p in candidates:
+                stem = p.stem.replace('_draws', '')
+                stem_norm = _norm(stem)
+                if label_norm in stem_norm or stem_norm in label_norm:
+                    best = p
+                    break
+        if best is None:
+            return [], None
+        try:
+            df = pd.read_csv(best)
+            # Use first column as draw, keep only digits, zfill to 3
+            col = df.columns[0]
+            draws = (
+                df[col].astype(str)
+                      .str.replace(r'\\D', '', regex=True)
+                      .str.zfill(3)
+                      .tolist()
+            )
+            # Newest-first expected; if not, reverse heuristically: keep as-is here
+            return draws[:max_n], str(best)
+        except Exception:
+            return [], str(best)
+
+    def load_all_draws_map(max_n: int = 1000) -> Dict[str, List[str]]:
+        \"\"\"Scan all *_draws.csv and return {Display State: draws} mapping.\"\"\"
+        out: Dict[str, List[str]] = {}
+        for p in _list_draw_csvs():
+            try:
+                df = pd.read_csv(p)
+                col = df.columns[0]
+                draws = (
+                    df[col].astype(str)
+                          .str.replace(r'\\D', '', regex=True)
+                          .str.zfill(3)
+                          .tolist()
+                )[:max_n]
+                name = p.stem.replace('_draws', '').replace('_', ' ')
+                out[name] = draws
+            except Exception:
+                continue
+        return out
+    '@;
+    "'$loader | Set-Content modules'"\\aux_loaders.py;
+
+    # 2) Patch src/app.py imports and BA wiring
+    "'$app = Get-Content -Raw src'"\\app.py;
+    # Insert loader imports after path_handler import if not already present
+    if ("'$app -notmatch '"'from modules\\.aux_loaders import') {
+      "'$app = $app -replace '"'from utils\\.path_handler import get_tables_output_dir', \"from utils.path_handler import get_tables_output_dir"'`r`nfrom modules.aux_loaders import load_state_draws,
+load_all_draws_map";
+    }
+
+    # Replace Aux BA panel block
+    $panelOld = @'"'
+                    # --- Blackapple Alert (MVP) ---
+                    try:
+                        from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+                        ba = analyze_blackapple(draws)
+                        status = ba_status_label(ba.get(\"score\", 0))
+                        st.subheader(\"Blackapple Alert\")
+                        parts = []
+                        tr = ba.get(\"triggers\", {})
+                        if tr.get(\"mirror\"): parts.append(\"Mirror\")
+                        roots = tr.get(\"root_due\", [])
+                        if roots: parts.append(\"Root due: \" + \", \".join(map(str, roots)))
+                        pat = tr.get(\"pattern\", {})
+                        if pat.get(\"extreme_due\"): parts.append(\"SSS/TTT due\")
+                        if pat.get(\"mixed_due\"): parts.append(\"SST/STS/TSS due\")
+                        flt = tr.get(\"floating\", [])
+                        if flt: parts.append(\"Floating: \" + \"\".join(flt))
+                        rc = (tr.get(\"pairs\", {}) or {}).get(\"remaining_count\")
+                        if rc is not None: parts.append(f\"Remaining Pairs: {rc}\")
+                        st.markdown(f\"**Status:** {status} (BAScore {ba.get('score',0)}/5)\")
+                        st.write(\"Triggers: \" + (\", \".join(parts) if parts else \"None\"))
+                        rows = []
+                        for c in ba.get(\"candidates\", []):
+                            t = sum_tags(c.get(\"combo\", \"\"))
+                            rows.append({
+                                \"Combo\": c.get(\"combo\", \"\"),
+                                \"MatchScore\": c.get(\"score\", 0),
+                                \"Tags\": \" \".join(sorted(c.get(\"tags\", []))),
+                                \"Sums\": f\"IΣ{t['Sigma']} sD{t['sD']} RS{t['RS']}\"
+                            })
+                        if rows:
+                            import pandas as _pd
+                            st.dataframe(_pd.DataFrame(rows), use_container_width=True)
+                        else:
+                            st.caption(\"No candidate list (insufficient overlap) — still watching triggers.\")
+                    # --- Blackapple Alert (MVP) ---
+                    try:
+                        from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+                            st.caption(\"Blackapple: no draws CSV found in data/cleaned/\")
+                        else:
+                            ba = analyze_blackapple(ba_draws[:1000])
+                            status = ba_status_label(ba.get(\"score\", 0))
+                            st.subheader(\"Blackapple Alert\")
+                            parts = []
+                            tr = ba.get(\"triggers\", {})
+                            if tr.get(\"mirror\"): parts.append(\"Mirror\")
+                            roots = tr.get(\"root_due\", [])
+                            if roots: parts.append(\"Root due: \" + \", \".join(map(str, roots)))
+                            pat = tr.get(\"pattern\", {})
+                            if pat.get(\"extreme_due\"): parts.append(\"SSS/TTT due\")
+                            if pat.get(\"mixed_due\"): parts.append(\"SST/STS/TSS due\")
+                            flt = tr.get(\"floating\", [])
+                            if flt: parts.append(\"Floating: \" + \"\".join(flt))
+                            rc = (tr.get(\"pairs\", {}) or {}).get(\"remaining_count\")
+                            if rc is not None: parts.append(f\"Remaining Pairs: {rc}\")
+                            st.markdown(f\"**Status:** {status} (BAScore {ba.get('score',0)}/5)\")
+                            st.write(\"Triggers: \" + (\", \".join(parts) if parts else \"None\"))
+                            rows = []
+                            for c in ba.get(\"candidates\", []):
+                                t = sum_tags(c.get(\"combo\", \"\"))
+                                rows.append({
+                                    \"Combo\": c.get(\"combo\", \"\"),
+                                    \"MatchScore\": c.get(\"score\", 0),
+                                    \"Tags\": \" \".join(sorted(c.get(\"tags\", []))),
+                                    \"Sums\": f\"IΣ{t['Sigma']} sD{t['sD']} RS{t['RS']}\"
+                                })
+                            if rows:
+                                import pandas as _pd
+                                st.dataframe(_pd.DataFrame(rows), use_container_width=True)
+                            else:
+                                st.caption(\"No candidate list (insufficient overlap) — still watching triggers.\")
+                            if ba_src:
+                                st.caption(f\"Draw source: {ba_src} ({len(ba_draws)} rows)\")
+                    except Exception as _e:
+                        st.caption(f\"Blackapple panel unavailable: {_e}\")
+    '@;
+    "'$app = $app -replace [regex]::Escape($panelOld), [regex]::Escape($panelNew).Replace('"'"'`n'"','"'`n'"');
+
+    # Replace both Combined BA blocks to use load_all_draws_map and robust import
+    "'$combinedNew = @'"'
+            # --- Blackapple Alerts (All States) ---
+            try:
+                try:
+                    from modules.blackapple import analyze_blackapple, ba_status_label
+                except Exception:
+                    import sys as _sys, os as _os
+                    _ROOT = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), \"..\"))
+                    if _ROOT not in _sys.path:
+                        _sys.path.insert(0, _ROOT)
+                    from modules.blackapple import analyze_blackapple, ba_status_label
+                from modules.aux_loaders import load_all_draws_map
+                import pandas as _pd
+                rows_ba = []
+                draws_map = load_all_draws_map()
+                for state, dr in draws_map.items():
+                    ba = analyze_blackapple(dr[:1000])
+                    status = ba_status_label(ba.get(\"score\", 0))
+                    tr = ba.get(\"triggers\", {})
+                    tparts = []
+                    if tr.get(\"mirror\"): tparts.append(\"Mirror\")
+                    roots = tr.get(\"root_due\", [])
+                    if roots: tparts.append(\"Root \" + \"/\".join(map(str, roots)))
+                    pat = tr.get(\"pattern\", {})
+                    if pat.get(\"extreme_due\"): tparts.append(\"SSS/TTT\")
+                    if pat.get(\"mixed_due\"):   tparts.append(\"SST/STS/TSS\")
+                    flt = tr.get(\"floating\", [])
+                    if flt: tparts.append(\"Float \" + \"\".join(flt))
+                    rows_ba.append({
+                        \"State\": state,
+                        \"BA-Score\": ba.get(\"score\", 0),
+                        \"Status\": status,
+                        \"Triggers\": \", \".join(tparts),
+                        \"#Candidates\": len(ba.get(\"candidates\", [])),
+                        \"Examples\": \" \".join([c.get(\"combo\", \"\") for c in ba.get(\"candidates\", [])[:3]]),
+                    })
+                if rows_ba:
+                    df_ba = _pd.DataFrame(rows_ba).sort_values([\"BA-Score\", \"#Candidates\"], ascending=[False, False]).reset_index(drop=True)
+                    st.subheader(\"Blackapple Alerts (All States)\")
+                    st.dataframe(df_ba, use_container_width=True)
+            except Exception as _e:
+                st.caption(f\"Combined BA table unavailable: {_e}\")
+    '@;
+    # Replace each occurrence of the older combined blocks by matching headers
+    "'$app = $app -replace '"'(?s)\\n\\s*# --- Blackapple Alerts \\(All States\\) ---.*?st\\.caption\\(f\"Combined BA table unavailable: \\{_e\\}\"\\)\\n', \""'`n$combinedNew`n";
+
+    # Save updated app.py
+    $app | Set-Content src'"\\app.py;
+
+    Write-Host 'Aux loader added and BA wiring updated.'"
+
+
+🖐  Tell the model what to do differently
+
+user
+sorry there is just one thing i wanted to quickly metnio can you ensure That Table extraction involved with the combined string tables of the other analytical tools is not affected or touched There's some
+more sophistication involved with this because those files are extracted and then there's like a somewhat complex table building mechanism that took a lot of time to figure out in math I just want to make
+sure the rules of keeping things self contained in terms of life or working on auxiliary tools and the CvS draw excel and all that is kept within itself if you kind of get what I'm trying to say just trying
+to be careful and not destroy or touch other tools unnecessarily this mechanism or optimal solution you are implementing should be specific for the CBS draw files is this safe to say and be sure of? if so
+proceed
+
+proposed patch to 1 file (+74 -0)
+  └ C:\Windows\System32\modules/aux_loaders.py
+    1     +from __future__ import annotations
+    2     +
+    3     +from pathlib import Path
+    4     +from typing import List, Tuple
+    5     +import pandas as pd
+    6     +
+    7     +
+    8     +def _norm(label: str) -> str:
+    9     +    """Normalize a state label or stem: lowercase alnum only (drop spaces/underscores/digits noise)."""
+    10    +    s = (label or "").lower()
+    11    +    return "".join(ch for ch in s if ch.isalnum())
+    12    +
+    13    +
+    14    +def _strip_trailing_digits(s: str) -> str:
+    15    +    i = len(s)
+    16    +    while i > 0 and s[i - 1].isdigit():
+    17    +        i -= 1
+    18    +    return s[:i]
+    19    +
+    20    +
+    21    +def _pick_draws_csv_for(label: str, base: Path) -> Path | None:
+    22    +    """Pick the most likely *_draws.csv for a given UI label, tolerant to naming differences."""
+    23    +    if not base.exists():
+    24    +        return None
+    25    +    want = _norm(label)
+    26    +    want_no4 = _norm(_strip_trailing_digits(label))
+    27    +
+    28    +    candidates = list(base.glob("*_draws.csv"))
+    29    +    if not candidates:
+    30    +        return None
+    31    +
+    32    +    def stem_norm(p: Path) -> str:
+    33    +        stem = p.stem.replace("_draws", "")
+    34    +        return _norm(stem)
+    35    +
+    36    +    # 1) exact norm match
+    37    +    for p in candidates:
+    38    +        if stem_norm(p) == want or stem_norm(p) == want_no4:
+    39    +            return p
+    40    +    # 2) contains relationship (e.g., ontario vs ontariocanada)
+    41    +    for p in candidates:
+    42    +        sn = stem_norm(p)
+    43    +        if want in sn or want_no4 in sn or sn in want or sn in want_no4:
+    44    +            return p
+    45    +    # 3) fallback: None
+    46    +    return None
+    47    +
+    48    +
+    49    +def load_state_draws(state_label: str, base: Path | None = None, max_n: int = 1000) -> Tuple[List[str], str]:
+    50    +    """
+    51    +    Load newest-first draws for a state from data/cleaned/*_draws.csv.
+    52    +    Returns (draws, source_path_str). If not found, returns ([], '').
+    53    +    """
+    54    +    base = base or Path("data") / "cleaned"
+    55    +    csv_path = _pick_draws_csv_for(state_label, base)
+    56    +    if not csv_path:
+    57    +        return [], ""
+    58    +    try:
+    59    +        df = pd.read_csv(csv_path)
+    60    +        # Prefer a column literally named Draw; otherwise take the first column
+    61    +        col = "Draw" if "Draw" in df.columns else df.columns[0]
+    62    +        draws = (
+    63    +            df[col]
+    64    +            .astype(str)
+    65    +            .str.replace(r"\D", "", regex=True)
+    66    +            .str.zfill(3)
+    67    +            .tolist()
+    68    +        )
+    69    +        if max_n and max_n > 0:
+    70    +            draws = draws[:max_n]
+    71    +        return draws, str(csv_path)
+    72    +    except Exception:
+    73    +        return [], str(csv_path)
+    74    +
+
+▌Apply changes?
+▌ Yes   No, provide feedback
+▌ Approve and apply the changes

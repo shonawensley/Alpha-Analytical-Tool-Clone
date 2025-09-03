@@ -1,0 +1,556 @@
+
+1) FIRST ai ASSESSMENT
+
+You’re not crazy—your instinct is right.
+The “No module named modules.blackapple” error is a path collision, not a missing file.
+
+What’s actually happening (plain English)
+
+At app startup you insert scripts/auxiliary/working into sys.path as _AUX_WORKING_ROOT.
+
+That folder itself contains a package named modules (for the staged/working Aux code: modules.analyze_pairs, modules.vtrac_reference, etc.).
+
+Python looks on sys.path from left to right. Because _AUX_WORKING_ROOT is first, any import that starts with modules.* resolves into the staged copy, not your real project package PROJECT_ROOT/modules.
+
+The staged copy doesn’t have blackapple.py (or aux_loaders.py), so from modules.blackapple … fails—even though PROJECT_ROOT/modules/blackapple.py exists.
+
+That’s why the Control Center shows:
+
+Combined BA table unavailable: No module named 'modules.blackapple'
+
+It’s not failing to find your modules; it’s finding the staged modules first.
+
+Quick fix (2 small code edits)
+
+You already have a helper context manager *_project_modules_first()* that temporarily prioritizes PROJECT_ROOT/modules on sys.path. You’re already using it for Sums. Use it for Blackapple imports too.
+
+1) Control Center (show_control_center_page)
+
+Replace the BA import block with this:
+
+# --- Blackapple Alerts (All States) ---
+try:
+    # Make sure we import from PROJECT_ROOT/modules, not the staged copy
+    with _project_modules_first():
+        from modules.blackapple import analyze_blackapple, ba_status_label
+        from modules.aux_loaders import load_state_draws
+    import pandas as _pd
+    rows_ba = []
+    for csv_path in cleaned_dir.glob('*_draws.csv'):
+        try:
+            state_label = csv_path.stem.replace('_draws', '').replace('_', ' ')
+            dr, src = load_state_draws(state_label)
+            if not dr:
+                continue
+            ba = analyze_blackapple(dr)
+            status = ba_status_label(ba.get("score", 0))
+            tr = ba.get('triggers', {})
+            tparts = []
+            if tr.get('mirror'): tparts.append('Mirror')
+            roots = tr.get('root_due', [])
+            if roots: tparts.append('Root ' + '/'.join(map(str, roots)))
+            pat = tr.get('pattern', {})
+            if pat.get('extreme_due'): tparts.append('SSS/TTT')
+            if pat.get('mixed_due'):   tparts.append('SST/STS/TSS')
+            flt = tr.get('floating', [])
+            if flt: tparts.append('Float ' + ''.join(flt))
+            rows_ba.append({
+                'State': state_label,
+                'BA-Score': ba.get('score', 0),
+                'Status': status,
+                'Triggers': ', '.join(tparts),
+                '#Candidates': len(ba.get('candidates', [])),
+                'Examples': ' '.join([c.get('combo', '') for c in ba.get('candidates', [])[:3]]),
+            })
+        except Exception:
+            continue
+    if rows_ba:
+        df_ba = _pd.DataFrame(rows_ba).sort_values(['BA-Score', '#Candidates'], ascending=[False, False]).reset_index(drop=True)
+        st.subheader('Blackapple Alerts (All States)')
+        st.dataframe(df_ba, use_container_width=True)
+except Exception as _e:
+    st.caption(f'Combined BA table unavailable: {_e}')
+
+2) Auxiliary Tools page (show_aux_page)
+
+Do the same around the BA panel imports:
+
+# --- Blackapple Alert (MVP) ---
+try:
+    with _project_modules_first():
+        from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+        from modules.aux_loaders import load_state_draws
+    ba_draws, ba_src = load_state_draws(state)
+    ba = analyze_blackapple(ba_draws or draws)
+    status = ba_status_label(ba.get("score", 0))
+    ...
+except Exception as _e:
+    st.caption(f"Blackapple panel unavailable: {_e}")
+
+
+Why this works: it temporarily puts PROJECT_ROOT/modules ahead of the staged modules, so modules.blackapple and modules.aux_loaders resolve to the real package where those files exist.
+
+(Even better) Structural fix you can do later
+
+Right now _AUX_WORKING_ROOT is added to sys.path globally at the top of app.py, which shadows the rest of the app forever. Safer design:
+
+Don’t insert _AUX_WORKING_ROOT globally.
+
+Add a small context manager (like _aux_working_first()) and only wrap the Aux working imports (modules.analyze_pairs, modules.vtrac_reference, modules.run_process) inside show_aux_page.
+This prevents collisions across other pages (Control Center, Digit Reduction, etc.). The two small edits above are the minimal fix; migrating to the context manager is the robust fix.
+
+Sanity check (2 lines) so you can see the path is fixed
+
+Add this temporarily anywhere near the BA import to confirm which package Python is using:
+
+import importlib, sys
+with _project_modules_first():
+    pkg = importlib.import_module("modules")
+    st.sidebar.caption(f"modules package: {getattr(pkg, '__file__', getattr(pkg, '__path__', ['?'])[0])}")
+    st.sidebar.caption("blackapple is present: " + str(hasattr(importlib.import_module("modules.blackapple"), "__file__")))
+
+
+You should see the path pointing at .../PROJECT_ROOT/modules/__init__.py and blackapple resolving True.
+
+One more gotcha you spotted: “.cvs” vs “.csv”
+
+Your loaders and the Control Center scan for *_draws.csv. If any files were saved with the typo .cvs, they will be skipped.
+
+Quick bulk rename (PowerShell, from repo root):
+Get-ChildItem -Path data\cleaned -Filter "*_draws.cvs" -Recurse |
+  Rename-Item -NewName { $_.Name -replace '\.cvs$', '.csv' }
+
+
+Also clear out stray Excel versions of draws that don’t belong here (optional):
+
+# review first
+Get-ChildItem data\cleaned -Include "*_draws.xlsx","*_draws.xls" -Recurse
+
+# then remove if you're sure
+# Get-ChildItem data\cleaned -Include "*_draws.xlsx","*_draws.xls" -Recurse | Remove-Item
+
+
+(Your _pick_draws_csv_for and Control Center both glob *_draws.csv only, so the Excel copies don’t drive the UI. The .cvs typo does.)
+
+Why the earlier attempts looked like they “fixed” things but didn’t
+
+Deleting/duplicating UI blocks and cleaning syntax made the app compile, but didn’t change the import resolution order. As long as the staged modules sits in front of the real one, anything you import as modules.* will prefer the staged copy.
+
+The fallback that inserts the project root (..) into sys.path doesn’t help if the staged path is still earlier. You must re-order to prefer PROJECT_ROOT/modules (the _project_modules_first() context does exactly that).
+
+Do this now (short checklist)
+
+Patch the two BA import blocks with with _project_modules_first(): as above.
+
+Rename any *_draws.cvs to *_draws.csv.
+
+In Control Center, click “Refresh Combined Table” and confirm the “Blackapple Alerts (All States)” table renders.
+
+On the Aux page, click “Run Auxiliary Tools Analysis” and confirm the “Blackapple Alert” panel renders with status, triggers, and candidates.
+
+If you still see an error after that, post the exact message it prints inside the BA panel/table and the two debug captions for the modules package path; I’ll pinpoint it immediately.
+
+Optional hardening (nice-to-have)
+
+Add one line of debug right after startup so you always know which modules package is active:
+
+import importlib, logging
+logging.info("USING modules from %s", getattr(importlib.import_module("modules"), "__file__", "<?>"))
+
+
+Wrap every modules.* import that should come from your project (not the staged copy) in with _project_modules_first():.
+
+Eventually, move the _AUX_WORKING_ROOT insertion into a local context manager used only inside show_aux_page.
+
+TL;DR
+
+Yes—this was a straightforward path issue. The staged scripts/auxiliary/working/modules is shadowing your real PROJECT_ROOT/modules. Wrap the Blackapple (and aux loader) imports in your existing _project_modules_first() context and the error will disappear. Then fix the .cvs typo so the loaders actually pick up your draw files.
+
+____
+
+2) HERE IS FEEDBACK FROM THE CURSOR AI WHO HELPED WITH THE SUMS TRACKIG TO GET THEIR ASSESSMENT
+
+You’re not crazy—your instinct is right.
+The “No module named modules.blackapple” error is a path collision, not a missing file.
+
+What’s actually happening (plain English)
+
+At app startup you insert scripts/auxiliary/working into sys.path as _AUX_WORKING_ROOT.
+
+That folder itself contains a package named modules (for the staged/working Aux code: modules.analyze_pairs, modules.vtrac_reference, etc.).
+
+Python looks on sys.path from left to right. Because _AUX_WORKING_ROOT is first, any import that starts with modules.* resolves into the staged copy, not your real project package PROJECT_ROOT/modules.
+
+The staged copy doesn’t have blackapple.py (or aux_loaders.py), so from modules.blackapple … fails—even though PROJECT_ROOT/modules/blackapple.py exists.
+
+That’s why the Control Center shows:
+
+Combined BA table unavailable: No module named 'modules.blackapple'
+
+It’s not failing to find your modules; it’s finding the staged modules first.
+
+Quick fix (2 small code edits)
+
+You already have a helper context manager *_project_modules_first()* that temporarily prioritizes PROJECT_ROOT/modules on sys.path. You’re already using it for Sums. Use it for Blackapple imports too.
+
+1) Control Center (show_control_center_page)
+
+Replace the BA import block with this:
+
+# --- Blackapple Alerts (All States) ---
+try:
+    # Make sure we import from PROJECT_ROOT/modules, not the staged copy
+    with _project_modules_first():
+        from modules.blackapple import analyze_blackapple, ba_status_label
+        from modules.aux_loaders import load_state_draws
+    import pandas as _pd
+    rows_ba = []
+    for csv_path in cleaned_dir.glob('*_draws.csv'):
+        try:
+            state_label = csv_path.stem.replace('_draws', '').replace('_', ' ')
+            dr, src = load_state_draws(state_label)
+            if not dr:
+                continue
+            ba = analyze_blackapple(dr)
+            status = ba_status_label(ba.get("score", 0))
+            tr = ba.get('triggers', {})
+            tparts = []
+            if tr.get('mirror'): tparts.append('Mirror')
+            roots = tr.get('root_due', [])
+            if roots: tparts.append('Root ' + '/'.join(map(str, roots)))
+            pat = tr.get('pattern', {})
+            if pat.get('extreme_due'): tparts.append('SSS/TTT')
+            if pat.get('mixed_due'):   tparts.append('SST/STS/TSS')
+            flt = tr.get('floating', [])
+            if flt: tparts.append('Float ' + ''.join(flt))
+            rows_ba.append({
+                'State': state_label,
+                'BA-Score': ba.get('score', 0),
+                'Status': status,
+                'Triggers': ', '.join(tparts),
+                '#Candidates': len(ba.get('candidates', [])),
+                'Examples': ' '.join([c.get('combo', '') for c in ba.get('candidates', [])[:3]]),
+            })
+        except Exception:
+            continue
+    if rows_ba:
+        df_ba = _pd.DataFrame(rows_ba).sort_values(['BA-Score', '#Candidates'], ascending=[False, False]).reset_index(drop=True)
+        st.subheader('Blackapple Alerts (All States)')
+        st.dataframe(df_ba, use_container_width=True)
+except Exception as _e:
+    st.caption(f'Combined BA table unavailable: {_e}')
+
+2) Auxiliary Tools page (show_aux_page)
+
+Do the same around the BA panel imports:
+
+# --- Blackapple Alert (MVP) ---
+try:
+    with _project_modules_first():
+        from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+        from modules.aux_loaders import load_state_draws
+    ba_draws, ba_src = load_state_draws(state)
+    ba = analyze_blackapple(ba_draws or draws)
+    status = ba_status_label(ba.get("score", 0))
+    ...
+except Exception as _e:
+    st.caption(f"Blackapple panel unavailable: {_e}")
+
+
+Why this works: it temporarily puts PROJECT_ROOT/modules ahead of the staged modules, so modules.blackapple and modules.aux_loaders resolve to the real package where those files exist.
+
+(Even better) Structural fix you can do later
+
+Right now _AUX_WORKING_ROOT is added to sys.path globally at the top of app.py, which shadows the rest of the app forever. Safer design:
+
+Don’t insert _AUX_WORKING_ROOT globally.
+
+Add a small context manager (like _aux_working_first()) and only wrap the Aux working imports (modules.analyze_pairs, modules.vtrac_reference, modules.run_process) inside show_aux_page.
+This prevents collisions across other pages (Control Center, Digit Reduction, etc.). The two small edits above are the minimal fix; migrating to the context manager is the robust fix.
+
+Sanity check (2 lines) so you can see the path is fixed
+
+Add this temporarily anywhere near the BA import to confirm which package Python is using:
+
+import importlib, sys
+with _project_modules_first():
+    pkg = importlib.import_module("modules")
+    st.sidebar.caption(f"modules package: {getattr(pkg, '__file__', getattr(pkg, '__path__', ['?'])[0])}")
+    st.sidebar.caption("blackapple is present: " + str(hasattr(importlib.import_module("modules.blackapple"), "__file__")))
+
+
+You should see the path pointing at .../PROJECT_ROOT/modules/__init__.py and blackapple resolving True.
+
+One more gotcha you spotted: “.cvs” vs “.csv”
+
+Your loaders and the Control Center scan for *_draws.csv. If any files were saved with the typo .cvs, they will be skipped.
+
+Quick bulk rename (PowerShell, from repo root):
+Get-ChildItem -Path data\cleaned -Filter "*_draws.cvs" -Recurse |
+  Rename-Item -NewName { $_.Name -replace '\.cvs$', '.csv' }
+
+
+Also clear out stray Excel versions of draws that don’t belong here (optional):
+
+# review first
+Get-ChildItem data\cleaned -Include "*_draws.xlsx","*_draws.xls" -Recurse
+
+# then remove if you're sure
+# Get-ChildItem data\cleaned -Include "*_draws.xlsx","*_draws.xls" -Recurse | Remove-Item
+
+
+(Your _pick_draws_csv_for and Control Center both glob *_draws.csv only, so the Excel copies don’t drive the UI. The .cvs typo does.)
+
+Why the earlier attempts looked like they “fixed” things but didn’t
+
+Deleting/duplicating UI blocks and cleaning syntax made the app compile, but didn’t change the import resolution order. As long as the staged modules sits in front of the real one, anything you import as modules.* will prefer the staged copy.
+
+The fallback that inserts the project root (..) into sys.path doesn’t help if the staged path is still earlier. You must re-order to prefer PROJECT_ROOT/modules (the _project_modules_first() context does exactly that).
+
+Do this now (short checklist)
+
+Patch the two BA import blocks with with _project_modules_first(): as above.
+
+Rename any *_draws.cvs to *_draws.csv.
+
+In Control Center, click “Refresh Combined Table” and confirm the “Blackapple Alerts (All States)” table renders.
+
+On the Aux page, click “Run Auxiliary Tools Analysis” and confirm the “Blackapple Alert” panel renders with status, triggers, and candidates.
+
+If you still see an error after that, post the exact message it prints inside the BA panel/table and the two debug captions for the modules package path; I’ll pinpoint it immediately.
+
+Optional hardening (nice-to-have)
+
+Add one line of debug right after startup so you always know which modules package is active:
+
+import importlib, logging
+logging.info("USING modules from %s", getattr(importlib.import_module("modules"), "__file__", "<?>"))
+
+
+Wrap every modules.* import that should come from your project (not the staged copy) in with _project_modules_first():.
+
+Eventually, move the _AUX_WORKING_ROOT insertion into a local context manager used only inside show_aux_page.
+
+TL;DR
+
+Yes—this was a straightforward path issue. The staged scripts/auxiliary/working/modules is shadowing your real PROJECT_ROOT/modules. Wrap the Blackapple (and aux loader) imports in your existing _project_modules_first() context and the error will disappear. Then fix the .cvs typo so the loaders actually pick up your draw files.
+
+________
+
+nvestigating import issues I'm looking at the error "No module named modules.blackapple," which suggests the modules folder isn't recognized as a package. We do have an __init__.py file, so it should work if sys.path includes the project root. I see the code that modifies sys.path, but I'm curious why it’s still failing. Is it possible the script is running from a different working directory? Streamlit might be setting the current working directory differently than expected. Maybe the issue lies with how blackapple.py handles imports or an internal error. Analyzing import errors I'm digging into the exception that's catching any errors in the BA block, specifically the "No module named 'modules.blackapple'" message. I'm wondering if there's something in the environment affecting this from previous errors. Could it be that the modules folder is overshadowed by the standard library? That seems unlikely. I’ve confirmed that blackapple.py exists in the modules directory, so it should import. However, if Streamlit's running in a compiled directory, it might affect the file paths. I should also consider if there's a syntax error within blackapple.py itself. Examining module path issues I'm considering that the "modules" directory might not be included in sys.path because Streamlit was launched from a different root. That could mean our sys.path insert didn’t run before the BA control center block. But the import code should execute at import time when running 'streamlit run src/app.py'. Since the previous imports from modules.analyze_pairs were successful, it’s odd that blackapple would fail. Maybe there's a case sensitivity issue with 'blackapple.py' versus 'BlackApple'? But since Windows paths are case-insensitive, that seems unlikely. Clarifying module import errors On Windows, while the filesystem is case-insensitive, Python module names are case-sensitive during import. Thankfully, "blackapple.py" is in lowercase, so that checks out. I also verified that 'modules/aux_loaders.py' exists. However, the error might not occur in the control center block but later in the Aux page's Blackapple panel, especially if 'sum_tags' isn’t defined in blackapple.py. This could generate an "ImportError" instead of the "No module named 'modules.blackapple'" message. It’s puzzling since we imported from modules.analyze_pairs successfully at the start Resolving import issues and possible errors The BA control center block is located within the Control Center function, which means there isn’t an earlier import of the modules besides the one in the compute function. The import from modules.analyze_pairs succeeded, so the 'modules' package is importable. However, the error message "No module named modules.blackapple" likely means 'blackapple' isn't present in that package. While the file exists, there could be overshadowing due to a similarly named 'modules' in the sys.path, particularly from the working directory. I suspect the search order for imports is causing issues, as Python tries to import from the first found 'modules', which lacks 'blackapple'. The fix would involve ensuring the project root is prioritized in sys.path, or by using a context manager to control the order of imports to guarantee that 'modules' references the correct project-level directory. Additionally, it’s worth noting the potential CSV file extension issue – if there are files with an incorrect .cvs extension, that could also disrupt loading data Here’s a focused diagnosis and playbook to unblock Blackapple in the integrated app without any code edits. Observations The error shown in Control Center is specific: “Combined BA table unavailable: No module named 'modules.blackapple'.” That means Python successfully resolved a package named modules, but that specific package did not contain blackapple. Your repo does contain modules/blackapple.py and modules/init.py. So blackapple exists and should import if the “modules” package points to the project’s modules directory. You also stage a second “modules” package under scripts/auxiliary/working (used by the Aux working logic). That staged modules likely has analyze_pairs and vtrac_reference but not blackapple. Because the Streamlit app inserts that staged path on sys.path, Python will pick that “modules” first. Python does not fall through to a second package of the same name later on sys.path to find a missing submodule. Result: “No module named modules.blackapple” even though the repo’s modules has it. In Control Center you import modules.analyze_pairs early (works, proving the staged modules is winning). Later you import modules.blackapple (fails). Same root cause. The aux loader you pasted (load_state_draws in modules/aux_loaders.py) looks correct for data/cleaned/_draws.csv and is used in BA panels. But its success is irrelevant if the BA import fails first. You mentioned files named like Ohio_draws.cvs. If that’s literal “.cvs” extension, those files will be ignored by any _draws.csv glob and direct joins with “_draws.csv”. That would cause “no draws found” symptoms (empty panels), but not the import error. You may have both issues: import overshadowing and misnamed extensions. Root cause explanation (why this keeps happening) Two different “modules” packages on sys.path: Project’s modules (contains blackapple, aux_loaders) Staged working modules (does not contain blackapple) Python chooses the first “modules” it sees. If that package doesn’t have blackapple, it raises ModuleNotFoundError and does not continue to a later “modules”. How to prove it (non-destructive checks) From repo root: python -c "import modules.blackapple as ba; print('OK:', ba.file)" This should print a path inside C:\dev\Alpha-Analytical-Tool\modules\blackapple.py Inside a running Streamlit session, the failing page’s process likely has sys.modules['modules'] bound to the staged package. You can confirm by temporarily printing sys.modules['modules'].file (but don’t edit code now; this is explanatory). What to check in your data (to avoid the second pitfall) Ensure data/cleaned/_draws.csv use .csv (not .cvs). The loader and Control Center scanner both require “_draws.csv”. Confirm a few representative files exist (e.g., data/cleaned/Ohio_draws.csv) and contain a Draw column. Recommended actions (no edits now; guidance for when you’re ready) Import precedence for Blackapple: When importing modules.blackapple (and modules.aux_loaders), do it inside the same “project-first” import context you already created for Sums. That guarantees the project’s modules wins over the staged one. If needed, before importing blackapple, clear the shadow to force re-resolution: del sys.modules['modules'] (only if safe in that context). Otherwise, prefer a scoped import context (best). Scope the staged “modules” to Aux-only: Keep scripts/auxiliary/working on sys.path but only during the Aux page’s working imports (calculate_overdue_pairs, vtrac_reference). Avoid inserting that path globally at app start. This prevents the shadow effect elsewhere (e.g., Control Center). Alternatively (structural hygiene for later): Rename the staged package from modules to aux_working (or similar) to eliminate the collision forever. Or move blackapple.py into the staged modules if you intend the staged package to be the canonical provider of BA as well (only if that’s truly correct for your design). Hot-reload caveat: Once Python imports the staged modules package, adding the project root to sys.path later doesn’t help, because sys.modules['modules'] is already bound. That’s why the try/except “retry” didn’t solve it. Triage sequence you can follow now Verify presence of blackapple module in the repo: Confirm file exists at C:\dev\Alpha-Analytical-Tool\modules\blackapple.py (it does). Verify data files: Confirm a few files under data/cleaned/ end with draws.csv and have a Draw column (not .cvs). Prove import success outside Streamlit: From repo root: python -c "import modules.blackapple as ba; print('OK:', ba.file)" Prove Control Center path logic is fine: It already imports modules.analyze_pairs, so the page runs. The BA import happens later and fails due to package shadowing, not path mistakes. If you want immediate workaround (no code edits; operator steps) Run the app from a clean Session and navigate to Control Center quickly before any Aux working import runs, to see if BA block succeeds (not reliable with reloads). Or temporarily disable the staged working path insertion (only for a quick test) to confirm BA imports and panel render. If BA appears, you’ve proven the shadow. Hardening for future AIs (to avoid repeats) Never have two packages with the same top-level name on sys.path (modules vs modules). If you must, isolate usage via explicit scoped path contexts and never import both in the same function without a precedence guard. Add a “preflight” in your Codex boot: Print which “modules” is active: python -c "import modules, inspect; print(modules.file)" Print which blackapple is active: python -c "import modules.blackapple as ba; print(ba.file)" Enforce file naming conventions for Aux: strictly _draws.csv; add a small validator to list all non-matching files so you don’t chase ghosts caused by .cvs typos. Likely answer to “why it won’t appear” in the app The BA panels are present in both Control Center and Aux page code. They are gated on: Successful import of modules.blackapple Availability of draw CSVs Your import fails due to the staged modules shadowing, so Streamlit prints the “Combined BA table unavailable: No module named 'modules.blackapple'” caption and skips the panel. Fixing import precedence will surface the panel; if the draws are misnamed (.cvs), you may then see “no draws found” instead, which is a separate, simpler fix (rename to .csv). If you want me to draft the smallest safe edits later I can propose two surgical, reversible options: Wrap BA imports with your existing project_modules_first() context (mirroring Sums), in both Control Center and Aux page BA panels. Or relocate the staged sys.path insertion into the Aux page only, not at global import time. But for now, this should give you the diagnosis, the proof steps, and the exact guardrails to avoid the loop you saw on Sums.
+
+______
+
+3) AI 1# RESPONSE TO CURSOR AI THOUGHTS
+
+This is super helpful—thank you for pasting the Cursor agent’s notes.
+I read through it carefully, and I agree with the diagnosis and the root cause they converged on:
+
+You have two different packages named modules on sys.path.
+
+The staged/working one (under something like scripts/auxiliary/working/...) is being found first, so import modules.analyze_pairs works (because that staged package has it), but import modules.blackapple fails (because that staged package doesn’t).
+
+Once Python binds sys.modules['modules'] to the staged package, later sys.path tweaks won’t help during a Streamlit rerun; the name is already taken. That’s why you see “No module named modules.blackapple” even though modules/blackapple.py exists in your project.
+
+Separately, a few .cvs (typo) files will cause “no draws found” symptoms later, but they won’t cause this import error.
+
+Below is a short, practical playbook to confirm, unblock, and then harden—so Blackapple can load reliably in both the Aux page and Control Center.
+
+1) Prove the shadow (1–2 minutes)
+
+Command‑line (from repo root):
+
+python - << "PY"
+import importlib, pkgutil
+m = importlib.import_module("modules")
+print("modules __file__:", getattr(m, "__file__", None))
+has_blackapple = any(name=="blackapple" for _,name,_ in pkgutil.iter_modules(m.__path__))
+print("blackapple present in this 'modules' package?:", has_blackapple)
+PY
+
+
+If modules __file__ points to your staged path and blackapple present is False, that confirms the shadow.
+
+Inside Streamlit (temporary, anywhere before BA import):
+
+import importlib, pkgutil, streamlit as st
+m = importlib.import_module("modules")
+st.write("modules from:", getattr(m, "__file__", None))
+st.write("has blackapple?:", any(n=="blackapple" for _,n,_ in pkgutil.iter_modules(m.__path__)))
+
+2) Immediate unblocked run (no repo‑wide refactor)
+
+You have two safe choices; pick A if you want zero ripple, B if you’re okay with a tiny, reversible edit.
+
+A) Load blackapple.py by absolute path (bypasses the package name)
+
+Use this only where you render the BA panel (Control Center and Aux BA section):
+
+# --- paste near the top of the BA block ---
+from importlib.util import spec_from_file_location, module_from_spec
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # adjust if needed
+BA_PATH = PROJECT_ROOT / "modules" / "blackapple.py"
+
+spec = spec_from_file_location("blackapple_real", str(BA_PATH))
+_blackapple = module_from_spec(spec)
+spec.loader.exec_module(_blackapple)
+
+# Use the real module object
+analyze_blackapple = _blackapple.analyze_blackapple
+ba_status_label    = _blackapple.ba_status_label
+# (and any other symbols you need)
+
+
+Why this works: it sidesteps the ambiguous top‑level name modules and loads that file directly. No changes to your staged package or global imports. It’s also safe with Streamlit re‑runs.
+
+B) Scoped “project‑first” import for just this one import
+
+If you prefer to keep the modules.blackapple spelling:
+
+from contextlib import contextmanager
+import sys
+from pathlib import Path
+
+@contextmanager
+def project_modules_first(project_root: Path):
+    orig_path = list(sys.path)
+    # Put your project root at the very front
+    sys.path.insert(0, str(project_root))
+    # Evict the shadowed 'modules' binding so Python re-resolves it
+    old = sys.modules.pop("modules", None)
+    try:
+        yield
+    finally:
+        # Restore module cache & sys.path to avoid side‑effects
+        if old is not None:
+            sys.modules["modules"] = old
+        else:
+            sys.modules.pop("modules", None)
+        sys.path[:] = orig_path
+
+# --- in your BA block:
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # adjust
+
+with project_modules_first(PROJECT_ROOT):
+    from modules.blackapple import analyze_blackapple, ba_status_label
+
+
+Why this works: for the scope of the with, your project modules wins the name resolution. After import, you use the imported names; no global damage.
+
+Tip: Do not del sys.modules['modules'] globally without restoring it; Streamlit re‑runs and other pages may still be using the staged package for Aux‑only logic.
+
+3) Quick operator check for the second pitfall (.cvs)
+
+Run a one‑liner to catch typos now so you don’t chase “empty table” ghosts later:
+
+# from repo root
+python - << "PY"
+import glob
+bad = [p for p in glob.glob("data/cleaned/*") if p.lower().endswith(".cvs")]
+print("Misnamed files:", bad)
+PY
+
+
+If any appear, rename to .csv so your _draws.csv globs/loaders pick them up.
+
+4) Small, durable cleanup (when you’re ready)
+
+Best: rename the staged package so it stops colliding with your real modules.
+For example:
+
+scripts/auxiliary/working/modules → scripts/auxiliary/working/aux_working
+
+Then adjust the few imports that need the staged bits:
+
+# old
+from modules.analyze_pairs import ...
+# new (staged only)
+from aux_working.analyze_pairs import ...
+
+
+…and remove any global sys.path.insert(...) for the staged directory. If you must modify sys.path, do it inside a small context (like project_modules_first above) right where it’s needed.
+
+If you can’t rename yet: make the staged path insertion strictly local to the Aux “working” functions. Avoid inserting it at app startup; that’s what causes the shadow.
+
+Guardrail (cheap and effective): add a one‑time startup check that fails loudly if two different modules are imported.
+
+import importlib, sys
+m = importlib.import_module("modules")
+path = getattr(m, "__file__", None)
+print("USING 'modules' FROM:", path)  # or st.caption(...)
+# Optional: assert an expected substring, e.g., your repo root
+
+5) Streamlit hot‑reload caveat (why the retry didn’t help)
+
+Once a name is in sys.modules, Streamlit’s re‑runs will reuse it. Merely changing sys.path later doesn’t change the binding for modules. That’s why the try/except → retry pattern didn’t work. You must either (a) import by path (Option A), or (b) temporarily evict the name and re‑import with your project ahead of sys.path (Option B).
+
+6) Windows vs. case‑sensitive filesystems
+
+On Windows, the filesystem is case‑insensitive but Python’s import names are case‑sensitive. Your file is blackapple.py, your import should be exactly modules.blackapple (all lower‑case). This will bite on Linux/macOS if the case ever drifts.
+
+7) Minimal “rename .cvs → .csv” helper (optional)
+# tools/fix_ext.py
+from pathlib import Path
+base = Path("data/cleaned")
+for p in base.glob("*.cvs"):
+    p.rename(p.with_suffix(".csv"))
+
+
+Run once, commit, done.
+
+8) Long‑term hygiene (so this never recurs)
+
+One canonical package name for your project code (e.g., aal), then import aal.modules.blackapple, aal.modules.analyze_pairs, etc.
+If you can, convert to a src‑layout and pip install -e . your package. That eliminates ad‑hoc sys.path hacks entirely.
+
+Never have two top‑level packages with the same name on sys.path. If staging is necessary, give it a distinct name (aux_working, sandbox_mods, …).
+
+Avoid broad except ImportError: that swallows real errors. When you do catch an import failure, print the active modules.__file__ so you can see which one Python picked.
+
+What you should expect after this fix
+
+The BA panel should render. If you then see “no draws found” or empty candidate lists, that’s not imports—that’s the .cvs typo or a missing _draws.csv for a state. Fix the filenames and you’ll see data.
+
+If you later adopt the BA module I gave you (self‑contained, no cross‑module coupling), it will import cleanly once the naming collision is gone. (If you prefer, you can also load it by path as in 2A; the code is happily isolated.)
+
+Copy‑paste snippets (recap)
+
+Absolute‑path loader (fastest unblock):
+
+from importlib.util import spec_from_file_location, module_from_spec
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+spec = spec_from_file_location("blackapple_real", str(PROJECT_ROOT/"modules"/"blackapple.py"))
+_blackapple = module_from_spec(spec); spec.loader.exec_module(_blackapple)
+analyze_blackapple = _blackapple.analyze_blackapple
+ba_status_label    = _blackapple.ba_status_label
+
+
+Scoped project‑first import (clean alias, minimal risk):
+
+from contextlib import contextmanager
+import sys
+from pathlib import Path
+
+@contextmanager
+def project_modules_first(project_root: Path):
+    orig_path = list(sys.path)
+    sys.path.insert(0, str(project_root))
+    old = sys.modules.pop("modules", None)
+    try:
+        yield
+    finally:
+        if old is not None: sys.modules["modules"] = old
+        else: sys.modules.pop("modules", None)
+        sys.path[:] = orig_path
+
+with project_modules_first(Path(__file__).resolve().parents[1]):
+    from modules.blackapple import analyze_blackapple, ba_status_label
+
+
+If you want, I can also sketch the tiny “staged → aux_working” rename diff and the 2–3 import lines to change; but purely to unblock today, either 2A or 2B above will stop the ModuleNotFoundError without touching any of your staged Aux logic.
+
+

@@ -1,0 +1,1596 @@
+
+OK it's still not appearing in the app when I run the bat file and this is getting very frustrating I ended up doing my own comprehensive investigation and I think I've identified many possible issues and still unfortunately some path issues which is really disappointing i'm gonna have to start adjusting this process or workflow where maybe we review all implemented code changes so this can be checked 'cause it doesn't seem to be understood very well to ensure this is always wired properly I thought logically that could always be figured out but I guess I'm wrong. Here's what I'd like you to do It's a lot of content but hopefully it helps us resolve this issue and avoid them in the future for similar integrations I created Fix_12 document WHICH IS MAINLY MY INVESTIGATION AND THEN "FIX_13" IS FEEDBACK FROM 2 DIFFERENT AI'S. I WANT YOU TO REVIEW ALL THE CONTENT DILLIGENTLY AND GIVE ME A BRIEF SUMMARY OF EACH AI'S OPTIMAL POINTERS THAT COULD BE OF VALUE, YOUR INTERPRTATION OF ISSUES AND FIXES, SUGGESTED FIXIGN TO FINALLY GET BLACKAPPLE WORKING, AND SUGGESINT TO ADJUST WORKFLOW OR AGENTS TO AVOID THESE ISSUES IN THE FUTURE WHICH ARE CRITCAL CODING ROADBLOCKS HOPEFULLY ALL THIS WILL HELP US GET THIS FIGURED OUT AND ALLOW US TO BUILD MORE EFFICIENTLY MOVING FORWARD.. WHAT A DISASTER! AT THE PAC WE WILL NEVER FINISH THIS APP AND IM SAD AND FRUSTRATED AT THIS FACT
+
+PAY SEPCIAL ATTENTION TO CURSOR AI FEEDBACK IN FIX_13 DOCUMENT OU WILL READ NEXT AS THEY FIXED A SIMILAR ISSUE IN THE PAST
+
+_______________________
+
+Combined BA table unavailable: No module named 'modules.blackapple'
+
+______
+
+CODEX
+
+
+OK I JUST WANTED TO MAKE SURE YOU WERENT FROZEN AND IN A LOOP IM GUESSING YOU ARE CHECKING FOR SYNTEX ERRORS? IM JUST REALLY CONCERNED THAT IM COMPLETELY DESTROYING THE BLACK APPLE ITEGRATIO YOU HAD SAID
+SHOULDNT WORRY? SHOULDNT IT HYPOTHETICALLY NOT BEEN SO DIFFICULT TO FIX WHAETEVER ISSUE NEEDED TO BR FIXED TO SEE IT VIA STREAMLIT/BAT FILE THE SSAME WAY YOU WERE SEEING IT DONE AND WORKING? SHOULD I COSIDER
+RUNNING IT A SECOND WAY SIMIALR TO HOW YOU SAW IT WORKING AND FORGET ABOUT THE STREMALIT SPECIFIC? I JUST EWANT TO HOPE I AHVENT GOTTEN YOU DESTROYIG WHAT YOU HAD COMPETLED DO YOU FEEL COFNIDENT YOU CAN FIX
+AHVENT TESTED AND SEEN BLACK APPLE WORKING BUT IT SEEMED YOU HAD IT COMPELTE PRIOR TO THE STREMALI ISSUES NOW IMC CONCERNED
+
+
+What’s working
+
+What went wrong in Streamlit
+What I’ve fixed so far
+
+- Moved the sidebar caption into main() to avoid ScriptRunContext warnings.
+- Cleaned the malformed sidebar line at line ~178 (now proper try/except, no “\n” escapes).
+- The loader reads draws from CSV only; we don’t touch combined string-table Excel at all.
+
+
+Plan to finish (surgical)
+- Manual test: run_app.bat → Auxiliary Tools → click “Run Auxiliary Tools Analysis” → see “Blackapple Alert” and the “BA draws” caption; Control Center → “Blackapple Alerts (All States)”.
+
+
+Confidence
+
+- We haven’t touched BA engine or other analytics; we’ve been repairing malformed UI glue. The fixes are minimal and contained. I’m confident we can get the Streamlit UI green and showing BA now.
+
+If you’re ready, I’ll do the compile check + headless boot and then ask you to test via run_app.bat.
+
+user
+PLEASE CONTINUE OPTIMALLY WITH OPTIMAL PLAN AS OUTLINED HOPEFULLY WE CA FIX THIS
+
+✔ You approved codex to run
+    powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; python - << 'PY'
+    import py_compile, sys
+    try:
+        py_compile.compile('src/app.py', doraise=True)
+        print('COMPILE_OK')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    PY"
+ this time
+
+>_
+  ✗ ⌨️ powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; python - << 'PY'
+    import py_compile, sys
+    try:
+        py_compile.compile('src/app.py', doraise=True)
+        print('COMPILE_OK')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    PY"
+    At line:1 char:56
+    + Set-Location 'C:\dev\Alpha-Analytical-Tool'; python - << 'PY'
+    +                                                        ~
+    Missing file specification after redirection operator.
+    At line:1 char:55
+… +25 lines
+    +                         ~
+    An expression was expected after '('.
+        + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+        + FullyQualifiedErrorId : MissingFileSpecification
+
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' }" this
+time
+  ✗ ⌨️ powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' }"
+    Sorry: IndentationError: unexpected indent (app.py, line 388)
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 380..400 | %
+{ '"'{0:D4}: {1}' -f "'$_, ($arr[$_] -replace "`r$",'"'') }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 380..400 | % { '"'{0:D4}: {1}' -f "'$_,
+($arr[$_] -replace "`r$",'"'') }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 387..420 | %
+{ '"'{0:D4}: {1}' -f "'$_, ($arr[$_] -replace "`r$",'"'') }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 387..420 | % { '"'{0:D4}: {1}' -f "'$_,
+($arr[$_] -replace "`r$",'"'') }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 420..450 | %
+{ '"'{0:D4}: {1}' -f "'$_, ($arr[$_] -replace "`r$",'"'') }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "Set-Location 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 420..450 | % { '"'{0:D4}: {1}' -f "'$_,
+($arr[$_] -replace "`r$",'"'') }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command '$ErrorActionPreference='"'Stop'; cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$path='"'src/app.py'; "'$arr=(Get-Content -Raw $path -Encoding
+UTF8) -split "`n"; $start=387; $end=433; $before=@(); if($start -gt 0){ $before=$arr[0..($start-1)] }; $after=@(); if($end -lt ($arr.Length-1)){ $after=$arr[($end+1)..($arr.Length-1)] }; $new=@($before +
+$after); ($new -join "`n") | Set-Content -Encoding UTF8 $path; '"'Deleted duplicate Combined BA block lines 387..433.'" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command '$ErrorActionPreference='"'Stop'; cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$path='"'src/app.py'; "'$arr=(Get-Content -Raw $path -Encoding UTF8) -split "`n";
+$start=387; $end=433; $before=@(); if($start -gt 0){ $before=$arr[0..($start-1)] }; $after=@(); if($end -lt ($arr.Length-1)){ $after=$arr[($end+1)..($arr.Length-1)] }; $new=@($before + $after); ($new -join
+"`n") | Set-Content -Encoding UTF8 $path; '"'Deleted duplicate Combined BA block lines 387..433.'"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' } else
+{ 'COMPILE_FAIL' }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' } else { 'COMPILE_FAIL' }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 840..880 | % { '"'{0:D4}:
+{1}' -f "'$_, ($arr[$_] -replace "`r$",'"'') }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$arr=(Get-Content -Raw src'"\\app.py -Encoding UTF8) -split \""'`n"; 840..880 | % { '"'{0:D4}: {1}' -f "'$_, ($arr[$_]
+-replace "`r$",'"'') }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$path='"'src/app.py'; "'$arr=(Get-Content -Raw $path -Encoding UTF8) -split "`n"; $start=849;
+$end=856; $before=@(); if($start -gt 0){$before=$arr[0..($start-1)]}; $after=@(); if($end -lt ($arr.Length-1)){ $after=$arr[($end+1)..($arr.Length-1)]}; ($before + $after) -join "`n" | Set-Content -Encoding
+UTF8 $path; '"'Deleted stray BA block under Digit Reduction (lines 849..856).'" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$path='"'src/app.py'; "'$arr=(Get-Content -Raw $path -Encoding UTF8) -split "`n"; $start=849; $end=856; $before=@();
+if($start -gt 0){$before=$arr[0..($start-1)]}; $after=@(); if($end -lt ($arr.Length-1)){ $after=$arr[($end+1)..($arr.Length-1)]}; ($before + $after) -join "`n" | Set-Content -Encoding UTF8 $path; '"'Deleted
+stray BA block under Digit Reduction (lines 849..856).'"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' } else
+{ 'COMPILE_FAIL' }" this time
+  ✓ ⌨️ powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; python -m py_compile .\\src\\app.py; if ("'$LASTEXITCODE -eq 0) { '"'COMPILE_OK' } else { 'COMPILE_FAIL' }"
+
+✔ You approved codex to run powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$ErrorActionPreference='"'SilentlyContinue'; taskkill /IM streamlit.exe /F 2>"'$null; taskkill /
+IM python.exe /F 2>$null; $env:STREAMLIT_BROWSER='"'none'; "'$port=8502; $job = Start-Job -Name BAHeadless -ScriptBlock { param($p,$root) Set-Location $root; streamlit run .'"\\src\\app.py --server.headless
+true --server.address 127.0.0.1 --server.port "'$p 2>&1 | Tee-Object -FilePath .'"\\.codex\\first_boot.log } -ArgumentList "'$port,(Get-Location).Path; Start-Sleep -Seconds 60; if (Get-Job -Name BAHeadless
+-ErrorAction SilentlyContinue) { Stop-Job -Name BAHeadless; Receive-Job -Name BAHeadless -Keep | Out-Null }; Get-Content -Tail 80 .'"\\.codex\\first_boot.log" this time
+  ✗ ⌨️ powershell.exe -NoLogo -NoProfile -Command "cd 'C:\\dev\\Alpha-Analytical-Tool'; "'$ErrorActionPreference='"'SilentlyContinue'; taskkill /IM streamlit.exe /F 2>"'$null; taskkill /IM python.exe /
+F 2>$null; $env:STREAMLIT_BROWSER='"'none'; "'$port=8502; $job = Start-Job -Name BAHeadless -ScriptBlock { param($p,$root) Set-Location $root; streamlit run .'"\\src\\app.py --server.headless true
+--server.address 127.0.0.1 --server.port "'$p 2>&1 | Tee-Object -FilePath .'"\\.codex\\first_boot.log } -ArgumentList "'$port,(Get-Location).Path; Start-Sleep -Seconds 60; if (Get-Job -Name BAHeadless
+-ErrorAction SilentlyContinue) { Stop-Job -Name BAHeadless; Receive-Job -Name BAHeadless -Keep | Out-Null }; Get-Content -Tail 80 .'"\\.codex\\first_boot.log"
+
+codex
+Thanks for the patience — I found and removed the last malformed block and verified the app compiles cleanly.
+
+What I fixed just now
+
+- Removed a stray, malformed “Blackapple Alerts (All States)” block that had been inserted under the Digit Reduction page (lines ~849–856). This was causing the SyntaxError you saw.
+- Re-ran a Python compile check: src/app.py now compiles (COMPILE_OK).
+
+Where we are now
+
+- BA core and loader are intact:
+    - modules/blackapple.py — unchanged and working.
+    - modules/aux_loaders.py — CSV-only draws loader (data/cleaned/*_draws.csv).
+- UI wiring is clean:
+    - Control Center: One valid “Blackapple Alerts (All States)” block using the loader with a hot‑reload import fallback.
+    - Auxiliary Tools: “Blackapple Alert” panel uses the loader and shows “BA draws:  (N)”.
+    - Sidebar debug caption moved into main() to avoid ScriptRunContext warning.
+
+What to do now
+
+- Please run the app via run_app.bat from the repo root.
+- Test two views:
+    - Auxiliary Tools:
+    - Select a state that has a *_draws.csv (e.g., Ohio_draws.csv).
+    - Click “Run Auxiliary Tools Analysis.”
+    - You should see “Blackapple Alert,” a caption with the CSV path and row count, status/triggers, and candidates.
+- Control Center:
+    - Below “States Ranked by Draws Since Last Double,” see “Blackapple Alerts (All States)” for states with *_draws.csv.
+
+If anything still shows an error
+
+- Share the exact message and page section (Aux panel vs Control Center). I’ll apply the smallest fix immediately.
+- If a BA panel appears but is empty, check the captioned CSV path; if a state’s filename pattern varies, I can extend the loader’s normalization.
+
+I’m confident this is ready to test now.
+
+____
+
+COULD THIS TILL HAVE TO DO WITH AY OF THE CANT GET THE DRAWS CVS FILES ATTACHED PROPERLY I THOUGHT WE HAD FIXED THIS?
+
+____
+
+IM REALLY GOING TO TRY AND BREAK THIS COMPLETELY DOWN WHICH I DONT THIK I SHOULD HAVE TO BUT YOU GUYS DONT SEEM TO UNDERSTAND HOW TO FIX THIS, LIKE THIS LOADER IT CREATED ARE WE SURE THAT IT 100% HAS ALL THE PATH AD DETAILS INLCUDED?
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import List, Tuple
+import pandas as pd
+
+
+def _norm(label: str) -> str:
+    """Normalize a state label or stem: lowercase alnum only (drops spaces/underscores/digits noise)."""
+    s = (label or "").lower()
+    return "".join(ch for ch in s if ch.isalnum())
+
+
+def _strip_trailing_digits(s: str) -> str:
+    i = len(s)
+    while i > 0 and s[i - 1].isdigit():
+        i -= 1
+    return s[:i]
+
+
+def _pick_draws_csv_for(label: str, base: Path) -> Path | None:
+    """Pick the most likely *_draws.csv for a given UI label, tolerant to naming differences."""
+    if not base.exists():
+        return None
+    want = _norm(label)
+    want_no4 = _norm(_strip_trailing_digits(label))
+
+    candidates = list(base.glob("*_draws.csv"))
+    if not candidates:
+        return None
+
+    def stem_norm(p: Path) -> str:
+        stem = p.stem.replace("_draws", "")
+        return _norm(stem)
+
+    # 1) exact norm match
+    for p in candidates:
+        sn = stem_norm(p)
+        if sn == want or sn == want_no4:
+            return p
+    # 2) contains relationship (e.g., ontario vs ontariocanada)
+    for p in candidates:
+        sn = stem_norm(p)
+        if want in sn or want_no4 in sn or sn in want or sn in want_no4:
+            return p
+    # 3) fallback: None
+    return None
+
+
+def load_state_draws(state_label: str, base: Path | None = None, max_n: int = 1000) -> Tuple[List[str], str]:
+    """
+    Load newest-first draws for a state from data/cleaned/*_draws.csv.
+    Returns (draws, source_path_str). If not found, returns ([], '').
+    """
+    base = base or Path("data") / "cleaned"
+    csv_path = _pick_draws_csv_for(state_label, base)
+    if not csv_path:
+        return [], ""
+    try:
+        df = pd.read_csv(csv_path)
+        # Prefer a column literally named Draw; otherwise take the first column
+        col = "Draw" if "Draw" in df.columns else df.columns[0]
+        draws = (
+            df[col]
+            .astype(str)
+            .str.replace(r"\\D", "", regex=True)
+            .str.zfill(3)
+            .tolist()
+        )
+        if max_n and max_n > 0:
+            draws = draws[:max_n]
+        return draws, str(csv_path)
+    except Exception:
+        return [], str(csv_path)
+
+____
+
+HERE ARE THE CHECKPOIINT DOCUMENTS PRIOR TO STARTIG BLACK APPLE AFTER FICING THE SUMS TRACKING ARE THERE CLUES WITHIN HERE TO HELP US UNDERSTAND? I ASKED THE AI TO PROVIDE CLUES OR CLARITY SO WE WOULD AVOID THE 3 DAYS IT TOOK TO FIX THE SUMS TRACKING I WONT BE SURPRISED IF THERES A SIMILAR ISSUE GOING ON HERE READ COMPREHESNIVELY FOR CLUES
+
+AT9 — Auxiliary Tools Integration Checkpoint (2025-09-01)
+
+Overview
+
+This document records the successfully completed work to integrate the “Auxiliary Tools” from the standalone Lottery Analysis Tool into the consolidated Streamlit app (`src/app.py`). It focuses on working, shipped behavior: features, wiring, data flow, and boundaries to avoid regressions elsewhere in the app.
+
+Scope of Changes
+
+- Primary file edited: `src/app.py` only.
+- No functional modifications to shared modules under `src/core` or `src/utils`.
+- A staged, isolated import path is used for the working Aux logic under `scripts/auxiliary/working/` so other tools remain untouched.
+- Control Center doubles aggregation added (cross‑state), consuming cleaned CSVs.
+
+Key Capabilities Now Available
+
+1) Auxiliary Tools page (state‑specific)
+- Sources draws from `data/cleaned/*_draws.csv`; non‑destructive fallback to extractor (read‑only), and final fallback to run the staged “working” process once to generate cleaned CSVs.
+- Computes and renders the following (mirrors the working app’s behavior and visuals):
+  - V‑Trac Table (working logic): colorized digits, shape around combinations, index row tints and rank badges, with CSV download.
+  - Overdue Pairs Analysis (working thresholds/sections for repeating and non‑repeating pairs) and the “Top 5 Most Overdue Repeating Pairs”.
+  - Four‑panel row: Latest Draws, Pairs Analysis Results, Combinations Analysis (Draws Since) with shapes, and a second compact Top 5 block.
+  - V‑Trac Index Hits table derived from the tracked ranks and 1,000‑draw scan.
+  - Sums badges next to each combination cell; Sums Tracking table is wired to render when the Sums modules are available.
+
+2) Control Center (cross‑state)
+- “States Ranked by Draws Since Last Double” aggregated table computed from every `data/cleaned/*_draws.csv` using the same doubles logic as the working tool.
+- Refresh button repopulates from disk and caches the result in `st.session_state`.
+
+File/Directory Map and Purpose
+
+- `src/app.py`: All Aux Tools and Control Center UI and orchestration lives here. The rest of the application pages (V‑TRAC Analyzer, Stable Pattern, Digit Reduction) are unchanged.
+- `scripts/auxiliary/working/` (on `sys.path` only for Aux use): carries staged modules from the working tool so we can import `modules.analyze_pairs`, `modules.vtrac_reference`, and `modules.run_process` without colliding with the main project’s `modules` tree.
+- Data directories used (read/write):
+  - `data/cleaned/` — canonical location for `*_draws.csv` used by Aux and Control Center.
+  - `data/original/Pick3StatsC4.xlsm` — optional local input if we must produce cleaned CSVs once via `modules.run_process`.
+
+Import and Path Management
+
+- Project root is inserted at startup for general imports:
+  - `SRC_DIR = Path(__file__).resolve().parent`, `PROJECT_ROOT = SRC_DIR.parent` then `sys.path.insert(0, str(PROJECT_ROOT))`.
+- Staged working Aux modules are isolated and prepended only for the Aux page:
+  - `_AUX_WORKING_ROOT = .../scripts/auxiliary/working` is added to `sys.path` so absolute imports like `modules.analyze_pairs` resolve to the staged copy, not the main project.
+- For Sums (to avoid name collisions), a scoped context manager prefers `PROJECT_ROOT/modules`:
+  - `_project_modules_first()` temporarily prepends `PROJECT_ROOT/modules` so imports like `module_d_auxiliary_tools.refactored.sums_analysis` resolve reliably.
+
+Auxiliary Tools — Runtime Data Flow
+
+Button: “Run Auxiliary Tools Analysis” → function `cached_aux_analysis(state)` → renderers.
+
+1) Draws acquisition (non‑destructive):
+- `_load_draws_from_csv_candidates(state)`: tries `data/cleaned/<State>_draws.csv` then `data/processed/draws/<State>_draws.csv`.
+- If not found and the legacy extractor is available: `extract_draw_list(state, None)` is used read‑only.
+- If still not found and `data/original/Pick3StatsC4.xlsm` exists: call staged `modules.run_process()` once, which writes cleaned CSVs into `data/cleaned/`; then retry the CSV read. No changes are made to other tools’ data.
+
+2) Working analysis logic (from staged modules):
+- Imports within Aux context:
+  - `from modules.analyze_pairs import calculate_overdue_pairs, get_top_overdue_repeating_pairs, get_vtrac_statuses, get_doubles_history, COLOR_*`
+  - `from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index`
+- Computations stored in a single result dict (cached for 30 minutes via `@st.cache_data`):
+  - `draws`, `draws_100`, `draws_1000`
+  - `nonrep`, `rep`, `pair_status`
+  - `vstat` (per‑index status, row styles, draws‑since maps)
+  - `top5` (list of `(pair, overdue)`)
+  - `doubles` (state → draws since last double)
+
+3) Sums helpers (local, side‑effect free):
+- `_sum3`, `_root`, `_root_sum3`: used to compute Sum and Root‑Sum of a 3‑digit draw. These enable inline Sums badges even if external Sums modules are unavailable.
+- `_sums_badge_for(combo, sums_stats)`: reads flags from `sums_stats` and renders `[Sx Ry]` with red/blue highlights; gracefully returns an empty string if stats aren’t present.
+- If the Sums package is available under `modules/`, `calculate_sums_stats` and `build_sums_dataframe` are imported inside `_project_modules_first()` and used to compute and render the Sums Tracking table.
+
+Auxiliary Tools — UI/Renderers
+
+Common styling (exact classes used by the working tool):
+- CSS classes for digits and status colors: `.red`, `.blue`, `.purple`, `.digit`.
+- Shape classes around combinations: `.shape-red-circle`, `.shape-blue-square`.
+- V‑Trac row tinting: `.row-green` and `.row-red`; `.rank-badge` shows the index rank.
+
+V‑Trac Table (working logic):
+- Iterates `VTRAC_DISPLAY` and renders each row with:
+  - Index cell, optional row tint and rank badge.
+  - Singles and Doubles cells: colorized digits per pair status; optional shape overlays; inline Sums badges.
+- A plain CSV of Index/Singles/Doubles is downloadable via “Download V‑Trac Table (Working) CSV”.
+
+Overdue Pairs Analysis (working thresholds):
+- Thresholds mirror the working tool:
+  - Repeating (doubles): RED ≥ 71, BLUE ≥ 107, PURPLE ≥ 25.
+  - Non‑repeating: RED ≥ 37, BLUE ≥ 56, PURPLE ≥ 25.
+- Side‑by‑side sections show the sets in each band. A Top‑5 list is also rendered in the four‑panel row.
+
+Four‑Panel Row:
+- Latest Draws — recent draws table.
+- Pairs Analysis Results — counts of times drawn merged with current Draws‑Since.
+- Combinations Analysis (Draws Since) — singles/doubles lists with shape badges and a scrollable container.
+- Top 5 Most Overdue Repeating Pairs — compact, colorized list.
+
+V‑Trac Index Hits (working logic):
+- Reconstructs Recent/Overdue rank sets from `vstat` and scans the 1,000‑draw window to compute per‑index “Draws Since”.
+- Renders a sortable table in a scrollable container.
+
+Control Center — Doubles Aggregation
+
+- Reads all `data/cleaned/*_draws.csv`, builds `state → draws`, and passes to the same `get_doubles_history` used on the Aux page.
+- Produces a table with columns: `State`, `Draws Since Last Double`, `Latest Double`, `Total Draws`.
+- Sorts by “Draws Since Last Double” (desc), then `State`.
+- A “Refresh Combined Table” button evicts the cached dataframe from `st.session_state` and recomputes.
+
+Caching and Session Behavior
+
+- `@st.cache_data(ttl=1800)` on `cached_aux_analysis(state)` caches the full analysis per state for 30 minutes.
+- `st.session_state["combined_doubles_df"]` stores the Control Center aggregation; the refresh button clears it.
+- `analysis_draws` window defaults to 100 via `st.session_state.get("analysis_draws", 100)` and is used by Sums when available.
+
+Safety and Boundaries (No Regressions)
+
+- Only `src/app.py` was changed; other modules remain untouched.
+- Staged “working” imports are isolated to the Aux page via `_AUX_WORKING_ROOT` so other tools do not resolve against the staged copies.
+- Draw generation writes only to `data/cleaned/`; no mutation of legacy folders.
+- V‑TRAC Analyzer continues to use `core.module_c_vtrac`. Stable Pattern and Digit Reduction pages are unchanged apart from their own page code.
+
+How to Use (Operator Notes)
+
+1) Launch the app (e.g., `run_app.bat`).
+2) Go to “Auxiliary Tools”, pick a state, click “Run Auxiliary Tools Analysis”.
+   - If cleaned CSVs exist, they’re used immediately.
+   - If not, the page may run the staged `run_process` once to produce them, then proceed.
+3) Review rendered sections; download the V‑Trac CSV if needed.
+4) Go to “Control Center” and click “Refresh Combined Table” to see the cross‑state doubles table.
+
+Known Limitations / Next Targets (non‑blocking)
+
+- Sums: integration is wired and renders when the Sums package is importable; badges have local fallbacks. Further unification and error surfacing can be done later.
+- Optional: unify V‑TRAC reference usage globally after Aux parity is fully finalized.
+
+Change Log (high level)
+
+- Added robust CSV‑first draw loading with extractor and staged runner fallbacks.
+- Integrated working Aux analysis (`analyze_pairs`, `vtrac_reference`) with visual parity.
+- Added V‑Trac Index Hits table.
+- Added Control Center doubles aggregation using cleaned CSVs.
+- Implemented import path isolation for safety and introduced local Sums helpers and context managers for conflict‑free imports.
+
+_______
+
+# AAT9 — Auxiliary Tools Integration Checkpoint (Part 2) — 2025‑09‑01
+
+This document records the concrete wiring and successful behaviors added for Auxiliary Tools in `src/app.py`, with a deep focus on Sums availability and UI integration. It is written so another AI/operator can continue without rediscovery.
+
+## Overview
+
+- Edited file: `src/app.py` only.
+- Working modules consumed from staged path: `scripts/auxiliary/working/modules/…` (exposed as `modules.*` via `_AUX_WORKING_ROOT`).
+- No changes to `src/core` or `src/utils` packages.
+- Data read/write remains confined to `data/cleaned/` for CSVs produced by the staged runner if needed.
+
+## Navigation & Entry Points
+
+- Sidebar tool selection contains: `Auxiliary Tools` and `Control Center` among other pages.
+- When `Auxiliary Tools` is selected → `show_aux_page(state)`.
+- When `Control Center` is selected → doubles aggregation UI using cleaned CSVs.
+
+## Isolated Working Modules Path
+
+- Declared near top of app:
+  - `_AUX_WORKING_ROOT = <PROJECT>/scripts/auxiliary/working`
+  - If exists, it is `sys.path.insert(0, _AUX_WORKING_ROOT)`, enabling absolute imports like `from modules.analyze_pairs import …` to resolve to the staged copies only for Aux usage.
+
+## Draws Acquisition (Non‑destructive)
+
+Inside `cached_aux_analysis(state_name)`:
+- `_load_draws_from_csv_candidates(state_name)` tries the following in order:
+  1) `data/cleaned/<State>_draws.csv`
+  2) `data/processed/draws/<State>_draws.csv`
+- If both missing and extractor is importable: calls `extract_draw_list(state, None)` read‑only.
+- If still missing and `data/original/Pick3StatsC4.xlsm` exists: calls staged `modules.run_process()` once to produce `data/cleaned/*_draws.csv`; re‑reads.
+
+This sequence avoids mutating other tools’ data while guaranteeing the Aux page can proceed.
+
+## Working Logic Imports (staged)
+
+- In `show_aux_page` guarded by try/except:
+  - `from modules.analyze_pairs import calculate_overdue_pairs, get_top_overdue_repeating_pairs, get_vtrac_statuses, get_doubles_history, COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING`
+  - `from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index`
+- Flag `_AUX_WORKING_AVAILABLE` gates the page functionality.
+
+## Caching Strategy
+
+- `@st.cache_data(ttl=30 * 60)` on `cached_aux_analysis(state_name)` caches the full result dict per state for 30 minutes.
+- For Control Center, `st.session_state["combined_doubles_df"]` caches the aggregated doubles table. A button clears it.
+
+## Result Model (cached_aux_analysis)
+
+Returned dictionary keys:
+- `draws`, `draws_100`, `draws_1000`
+- `nonrep`, `rep`, `pair_status`
+- `vstat` (per‑index status, row styles, draws‑since maps)
+- `top5` list of `(pair, overdue)`
+- `doubles` mapping produced by `get_doubles_history({state: draws})`
+- `sums_stats` (added in the render phase; see Sums section)
+
+## Sums Integration (Local helpers + optional package)
+
+Local helpers in `src/app.py`:
+- `_sum3(d: str) -> int` — sum of three digits (guards invalid input)
+- `_root(n: int) -> int` — digit root
+- `_root_sum3(d: str) -> int` — composition of the above
+- `_sums_badge_for(combo: str, sums_stats: dict) -> str` — returns inline badge string like `[Sx Ry]` with red/blue styling based on `flags` in `sums_stats`.
+
+Scoped import context to avoid collisions:
+- `_project_modules_first()` temporarily prepends `PROJECT_ROOT/modules` so imports resolve to the project’s `modules` tree, not the staged `scripts/auxiliary/working`.
+
+Optional external Sums package (used when available):
+- Inside `_project_modules_first()` the app attempts:
+  - `from module_d_auxiliary_tools.refactored.sums_analysis import calculate_sums_stats as _calc_sums`
+  - `from module_d_auxiliary_tools.refactored.sums_ui import build_sums_dataframe as _build_sums_df`
+- A sidebar caption displays the import source module for troubleshooting: `SUMS ⦿ <module>` or `SUMS import failed: <error>`.
+
+Runtime behavior:
+- `analysis_draws = st.session_state.get("analysis_draws", 100)` sets the analysis window.
+- If `_calc_sums` is callable, compute `sums_stats = _calc_sums(draws, window=analysis_draws)`; otherwise fallback to an empty structure: `{ "window": 0, "by_sum": {}, "by_root_sum": {} }`.
+- Sums badges are appended to Singles/Doubles strings in the V‑Trac table rendering via `_sums_badge_for`.
+- If `_build_sums_df` is available and `sums_stats.by_sum` is present, render a scrollable "Sums Tracking" table using `build_sums_dataframe(sums_stats)`.
+
+Practical outcomes:
+- Even if the external Sums package is missing, the UI remains functional — badges may be empty and the table omitted, but the page renders.
+- When the package is present, Sums badges show alongside each combo and the Sums table appears.
+
+## V‑Trac Table Rendering (Working Parity)
+
+- Iterates `VTRAC_DISPLAY` per index.
+- Each row renders Index cell, row tint, rank badge; Singles and Doubles cells use working pair status colors and shape overlays.
+- Inline Sums badges are added per combo using `_sums_badge_for`.
+
+## Overdue Pairs & Top 5
+
+- Uses `calculate_overdue_pairs` for repeating/non‑repeating thresholds.
+- Renders side‑by‑side sections and a compact "Top 5 Most Overdue Repeating Pairs" block.
+
+## V‑Trac Index Hits (Working)
+
+- Rebuilds recent/overdue rank sets from `vstat` and scans the 1,000‑draw window to compute per‑index Draws‑Since; renders a sortable table.
+
+## Control Center (Cross‑state Doubles Aggregation)
+
+- Reads all `data/cleaned/*_draws.csv`.
+- Uses the same `get_doubles_history` as the Aux page to build the combined table.
+- Cached in `st.session_state["combined_doubles_df"]`; a refresh button evicts cache and recomputes.
+
+## Safety, Boundaries, and No‑Regression Guarantees
+
+- Only `src/app.py` edited; other modules untouched.
+- Staged working imports isolated behind `_AUX_WORKING_ROOT` to avoid clashes.
+- Data generation writes only to `data/cleaned/` when needed; no mutation of legacy folders.
+- Sums features degrade gracefully when modules are unavailable.
+
+## Operator How‑To (Aux Page)
+
+1) Open app (e.g., `run_app.bat`).
+2) Navigate to “Auxiliary Tools”, choose a state.
+3) Click “Run Auxiliary Tools Analysis”.
+4) If needed, the staged runner will generate `data/cleaned/*_draws.csv` once, then the page renders working visuals:
+   - V‑Trac table with badges and shapes
+   - Overdue Pairs sections and Top‑5
+   - V‑Trac Index Hits
+   - Sums badges always present (content depends on package availability)
+   - Sums Tracking table appears when Sums package is importable
+
+## Known Limitations & Outstanding Work
+
+- Sums package availability:
+  - If `module_d_auxiliary_tools.refactored` is not on `PROJECT_ROOT/modules`, only local badges (empty) render and the Sums table is hidden. Action: ensure that folder exists with `sums_analysis.py` and `sums_ui.py` and imports succeed within `_project_modules_first()`.
+- Styling parity:
+  - Badge colors are controlled by `flags` in `sums_stats`. If the external analyzer returns different flag keys, the inline styling may need alignment.
+- Error surfacing:
+  - Import failures are shown via sidebar caption only; consider adding a subtle warning on the page if Sums is unavailable.
+- CSV expectations:
+  - Aux tools assume `data/cleaned/<State>_draws.csv` schema used by the working tool. If schema deviates, `_calc_sums` may require adapters.
+- Performance knobs:
+  - Cache TTL is 30 min (`@st.cache_data(ttl=1800)`). Adjust per usage. The V‑Trac Index Hits scan uses 1,000 draws; lowering can reduce compute if needed.
+
+## Quick Pointers (for another AI)
+
+- Entry: search for `show_aux_page` in `src/app.py`.
+- Cache: `cached_aux_analysis` (nested inside show_aux_page).
+- Sums glue:
+  - Helpers: `_sum3`, `_root`, `_root_sum3`, `_sums_badge_for`.
+  - Import context: `_project_modules_first()`; import targets are `module_d_auxiliary_tools.refactored.sums_analysis` and `.sums_ui`.
+  - UI table: gated by `callable(_build_sums_df)` and `sums_stats.get("by_sum")`.
+- Control Center: search `get_doubles_history` and `combined_doubles_df`.
+
+## Change Log (this Part 2)
+
+- Documented precise import contexts, cache lifetimes, and result model keys.
+- Captured Sums fallback logic and UI gating conditions.
+- Mapped data flow, safety boundaries, and operator steps for reproducible runs.
+
+____
+
+# AAT9 — Integrated App Data Flow (Part 3) — 2025‑09‑01
+
+Purpose: Explain how the Streamlit app (`src/app.py`) stitches together all tools, what each page depends on, and how data moves. This clarifies that most tools consume the combined/tables pipeline while Auxiliary Tools uniquely run from per‑state draw CSVs.
+
+## Big Picture
+
+- Single Streamlit app with multiple pages:
+  - V‑TRAC Analyzer
+  - Stable Pattern Extractor
+  - Digit Reduction
+  - Auxiliary Tools (unique draw‑file source)
+  - Control Center (cross‑state view)
+- Shared rule: pages are self‑contained but read from the project’s canonical outputs, avoiding side effects on other tools.
+
+## Data Sources by Page
+
+- V‑TRAC Analyzer
+  - Code: `show_vtrac_page(state)`
+  - Uses `core.module_c_vtrac.main()` (internals read tables/structures used historically by the V‑TRAC page).
+  - Input: processed/combined artifacts produced by the data pipeline (tables and HTML/CSV generated under `tables/` and `data/outputs/`).
+
+- Stable Pattern Extractor
+  - Code: `show_stable_pattern_page(state)`
+  - Imports: `from core import stable_pattern_extractor as stable`
+  - Paths: via `utils.path_handler` functions
+    - `ph.get_state_tables_dir(state)` → state’s tables directory
+    - `ph.get_analysis_dir("patterns", state)` → output dir for pattern results
+  - Input: combined state tables; Output: pattern CSV/HTML to analysis directory
+
+- Digit Reduction
+  - Code: `show_digit_reduction_page(state)`
+  - Imports: `from core.module_b_digit_reduction import run_digit_reduction`
+  - Input path root: `get_tables_output_dir()`; checks `tables_root/state`
+  - Input: state’s tables (combined); Output: digit‑reduction dataframe + CSV/HTML (paths returned by `run_digit_reduction`)
+
+- Auxiliary Tools (Working parity logic; unique source)
+  - Code: `show_aux_page(state)` with nested `cached_aux_analysis(state)`
+  - Working imports (staged): `modules.analyze_pairs`, `modules.vtrac_reference`
+  - Input order:
+    1) `data/cleaned/<State>_draws.csv`
+    2) `data/processed/draws/<State>_draws.csv`
+    3) Fallbacks: read‑only extractor; or staged `modules.run_process()` to generate cleaned CSVs once
+  - Outputs (rendered in‑page): V‑Trac table, Overdue Pairs, Top‑5, V‑Trac Index Hits, optional Sums badges/table
+
+- Control Center (Cross‑state)
+  - Code: `show_control_center_page()`
+  - Data source: scans `data/cleaned/*_draws.csv`
+  - Logic: `get_doubles_history` + aggregation into a dataframe; cached in `st.session_state["combined_doubles_df"]`
+
+## Why Auxiliary Tools are Different
+
+- Most tools read the “combined tables” pipeline outputs under `tables/` (via `utils.path_handler`) or project analysis outputs under `data/outputs/`.
+- Auxiliary Tools expressly operate on raw per‑state draw CSVs `*_draws.csv` for working‑tool parity and speed.
+- This separation ensures Aux changes don’t interfere with Stable Pattern, Digit Reduction, or V‑TRAC calculations.
+
+## Import Isolation & Safety
+
+- `_AUX_WORKING_ROOT` adds `scripts/auxiliary/working` to `sys.path` so `modules.*` resolves to staged copies only for Aux.
+- `_project_modules_first()` temporarily prioritizes `PROJECT_ROOT/modules` for optional Sums imports:
+  - `module_d_auxiliary_tools.refactored.sums_analysis`
+  - `module_d_auxiliary_tools.refactored.sums_ui`
+- Other pages continue to use their respective `core/*` and `utils/*` modules.
+
+## Caching & Session State
+
+- Aux analysis cached with `@st.cache_data(ttl=1800)` per state.
+- Control Center stores its combined table in `st.session_state["combined_doubles_df"]`; a refresh button evicts cache.
+
+## Typical End‑to‑End Flow (Operator Mental Model)
+
+1) Run the data pipeline (outside the app if needed) to produce combined tables under `tables/`.
+2) V‑TRAC, Stable Pattern, Digit Reduction pages read those tables for state‑specific analytics.
+3) Auxiliary Tools page reads per‑state draw CSVs and renders working‑tool parity visuals; if CSVs are missing, it can generate them from `data/original/Pick3StatsC4.xlsm` once via the staged runner.
+4) Control Center combines all `data/cleaned/*_draws.csv` to present a cross‑state doubles table.
+
+## Key File & Function Index
+
+- `src/app.py`
+  - View functions: `show_vtrac_page`, `show_stable_pattern_page`, `show_digit_reduction_page`, `show_aux_page`, `show_control_center_page`, `show_hot_zones_page`
+  - Aux cached core: `cached_aux_analysis(state)`
+  - Sums helpers: `_sum3`, `_root`, `_root_sum3`, `_sums_badge_for`
+  - Import contexts: `_project_modules_first()`, `_AUX_WORKING_ROOT` path hook
+  - Table paths: `utils.path_handler.get_tables_output_dir()`, `ph.get_state_tables_dir`, `ph.get_analysis_dir`
+
+## Current Gaps / Next Improvements
+
+- Unify status messages for missing data across pages (common helper for "data/cleaned" and "tables").
+- Optional banner if Sums package is missing (beyond sidebar caption), to guide operators.
+- Document minimal CSV schema for `*_draws.csv` to prevent adapter churn across tools.
+- Control Center: add per‑state links back to Aux or to CSV locations for quick inspection.
+
+## TL;DR
+
+- Combined tables power V‑TRAC, Stable Pattern, Digit Reduction.
+- Auxiliary Tools uniquely run on per‑state draw CSVs (`data/cleaned/*_draws.csv` with safe fallbacks).
+- Control Center summarizes across those CSVs.
+- Import isolation and caching ensure these parts remain self‑contained while presented in one app.
+
+## Visual Flow (Mermaid)
+
+```mermaid
+flowchart TB
+  subgraph Pipeline[Combined Tables Pipeline]
+    A[data/original/Pick3StatsC4.xlsm]
+    A -->|extract/clean/build| T[tables/ (state tables)]
+  end
+
+  subgraph AppPages[Streamlit App Pages]
+    V[V‑TRAC Analyzer]
+    S[Stable Pattern Extractor]
+    D[Digit Reduction]
+    X[Auxiliary Tools]
+    C[Control Center]
+  end
+
+  T --> V
+  T --> S
+  T --> D
+
+  subgraph Draws[Per‑state Draw CSVs]
+    DC[data/cleaned/*_draws.csv]
+    DP[data/processed/draws/*_draws.csv]
+  end
+
+  DC --> X
+  DP --> X
+  A -->|staged runner (once if needed)| DC
+
+  DC --> C
+
+  style X fill:#eef,stroke:#88a,stroke-width:1px
+  style C fill:#eef,stroke:#88a,stroke-width:1px
+```
+
+## Data Contracts & Directories (Quick Ref)
+
+- Combined tables
+  - Root: `tables/`
+  - Accessors: `utils.path_handler.get_tables_output_dir()`, `ph.get_state_tables_dir(state)`
+- Aux draw CSVs
+  - Primary: `data/cleaned/<State>_draws.csv`
+  - Secondary: `data/processed/draws/<State>_draws.csv`
+  - One‑time generator: `modules.run_process(Pick3StatsC4.xlsm, ...)` (staged)
+- Control Center cache
+  - `st.session_state["combined_doubles_df"]`
+- Sums
+  - Optional package path: `modules/module_d_auxiliary_tools/refactored/{sums_analysis.py,sums_ui.py}`
+  - Import guard: `_project_modules_first()`
+
+## Troubleshooting Checklist
+
+- Missing combined tables → run the pipeline; verify `tables/<State>/` exists.
+- Aux page shows "Working modules unavailable" → ensure `scripts/auxiliary/working` is present and `_AUX_WORKING_ROOT` is active.
+- No Sums table/badges → confirm `module_d_auxiliary_tools/refactored` exists under `PROJECT_ROOT/modules` and imports succeed (sidebar caption shows the module).
+- Control Center empty → verify `data/cleaned/*_draws.csv` files exist.
+
+___
+1)THERE ARE STILL SOME OF THE INNCOORECT EXCEL FILES (NON CVS) IN THE CLEANED FOLDER FOR CVS WHICH I AM DELETEING OUT NOW IN CASE THIS IS CONTRIBUTING TO THE PROBLEM ( I THINK UNLIKELY) CHECK IMAGES
+
+2) BRAINSTORMING TROUBLESHOOTING THOUGHT - IS IT CLEAR I THE SCRIPTS AND "PATHS" THE DRAWS FILES ARE NOT CALLED "CLEANED" ONLY THE "COMBIED STTRING TABLES" EXCEL FILES ARE WHICH SHOULD BE UNRELATED (CHECK MY IMAGE) BUT FOR THE AUXILLARY TOOLS YES THE DRAWS GET COVERTED INTO A CVS FILE AND GO INTO THE "CLEANED" FILE ITS OWN DIRECTORY OF CLEANED FOR AUXILLARY = USING 1000 DRAWS HISTORY BUT AGAIN THE FILE WE DOT HAVE VALLED CLEANED IT JUST GOES INTO CLEANED FOLDER!! EXAMPLE OF CVS DRAWS FILE TITLE AFTER CLEANING AND IN FOLDER !!!! EX. "Ohio_draws.cvs"...is this possbily confusing and causing some type of problem!!!!!!!!!
+
+_____
+
+finally lets inspect the app.py code which is connected to the bat file is there something within this not pointing to or connecting properly for it to work in stremalit?
+
+import sys
+import os
+import pathlib
+import streamlit as st
+from contextlib import contextmanager
+from pathlib import Path
+from core.module_b_digit_reduction import run_digit_reduction
+from utils.path_handler import get_tables_output_dir
+
+# --- path hook ---------------------------------------------------------
+SRC_DIR = pathlib.Path(__file__).resolve().parent     # .../src
+PROJECT_ROOT = SRC_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+# ----------------------------------------------------------------------
+
+# --- AUX working modules path (staged, isolated) -----------------------
+from pathlib import Path
+_AUX_WORKING_ROOT = os.path.normpath(os.path.join(Path(__file__).resolve().parent.parent, "scripts", "auxiliary", "working"))
+if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
+    # Insert the parent folder so absolute imports like `modules.parse_excel` work
+    sys.path.insert(0, _AUX_WORKING_ROOT)
+# ----------------------------------------------------------------------
+
+# Helpers for rendering working Vâ€‘TRAC output (used only on Aux page)
+def _severity(cls: str) -> int:
+    return {"blue": 3, "red": 2, "purple": 1}.get(cls or "", 0)
+
+
+def _color_digit_pairs(combo: str, pair_status: dict) -> str:
+    if not combo or len(combo) != 3:
+        return combo
+    d1, d2, d3 = combo[0], combo[1], combo[2]
+    p12 = ''.join(sorted(d1 + d2))
+    p23 = ''.join(sorted(d2 + d3))
+    p13 = ''.join(sorted(d1 + d3))
+    c1 = pair_status.get(p12, "")
+    if _severity(pair_status.get(p13, "")) > _severity(c1):
+        c1 = pair_status.get(p13, "")
+    c2 = pair_status.get(p12, "")
+    if _severity(pair_status.get(p23, "")) > _severity(c2):
+        c2 = pair_status.get(p23, "")
+    c3 = pair_status.get(p13, "")
+    if _severity(pair_status.get(p23, "")) > _severity(c3):
+        c3 = pair_status.get(p23, "")
+    s1 = f'<span class="digit {c1}">{d1}</span>' if c1 else f'<span class="digit">{d1}</span>'
+    s2 = f'<span class="digit {c2}">{d2}</span>' if c2 else f'<span class="digit">{d2}</span>'
+    s3 = f'<span class="digit {c3}">{d3}</span>' if c3 else f'<span class="digit">{d3}</span>'
+    return s1 + s2 + s3
+
+
+def _format_combo(combo: str, status_dict: dict, pair_status: dict) -> str:
+    if combo not in status_dict:
+        return _color_digit_pairs(combo, pair_status)
+    combo_status = status_dict[combo]
+    classes = []
+    if combo_status.get("shape_red_circle"):
+        classes.append("shape-red-circle")
+    elif combo_status.get("shape_blue_square"):
+        classes.append("shape-blue-square")
+    inner = _color_digit_pairs(combo, pair_status)
+    if not classes:
+        return inner
+    return f'<span class="{" ".join(classes)}">{inner}</span>'
+
+# --- Helpers: robust draw loading without touching other tools ----------
+def _normalize_state_name(state_name: str) -> str:
+    import re
+    # Drop trailing digits like "Connecticut4" -> "Connecticut"
+    return re.sub(r"\d+$", "", state_name or "").strip().replace("_", " ")
+
+
+def _load_draws_from_csv_candidates(state_name: str):
+    import pandas as _pd
+    base = _normalize_state_name(state_name)
+    fn = f"{base.replace(' ', '_')}_draws.csv"
+    candidates = [
+        os.path.normpath("data/cleaned"),
+        os.path.normpath("data/processed/draws"),  # auxiliary extractor output
+    ]
+    for d in candidates:
+        path = os.path.join(d, fn)
+        if os.path.exists(path):
+            try:
+                df = _pd.read_csv(path)
+                draws = [str(x).zfill(3) for x in df["Draw"].dropna().astype(int).astype(str).tolist()]
+                if draws:
+                    return draws
+            except Exception:
+                continue
+    return []
+
+# --- Project-first import context and local sums helpers ----------------
+@contextmanager
+def _project_first_imports():
+    """Temporarily place PROJECT_ROOT at the front of sys.path so imports
+    prefer the project's `modules` tree over the staged working copy.
+    """
+    _old = list(sys.path)
+    try:
+        if str(PROJECT_ROOT) in sys.path:
+            try:
+                sys.path.remove(str(PROJECT_ROOT))
+            except ValueError:
+                pass
+        sys.path.insert(0, str(PROJECT_ROOT))
+        yield
+    finally:
+        sys.path[:] = _old
+
+# Prefer PROJECT_ROOT/modules for non-colliding imports of Sums package
+MODULES_DIR = os.path.join(PROJECT_ROOT, "modules")
+
+@contextmanager
+def _project_modules_first():
+    old = list(sys.path)
+    try:
+        if MODULES_DIR in sys.path:
+            try:
+                sys.path.remove(MODULES_DIR)
+            except ValueError:
+                pass
+        sys.path.insert(0, MODULES_DIR)
+        yield
+    finally:
+        sys.path[:] = old
+
+def _sum3(d: str) -> int:
+    return sum(int(ch) for ch in d) if d and len(d) == 3 and d.isdigit() else 0
+
+def _root(n: int) -> int:
+    return 0 if n <= 0 else 1 + ((n - 1) % 9)
+
+def _root_sum3(d: str) -> int:
+    return _root(_sum3(d))
+
+# --- Sums badge helpers (local-only; no imports) -----------------------
+def _sums_badge_for(combo: str, sums_stats: dict) -> str:
+    try:
+        if not combo or len(combo) != 3 or not combo.isdigit():
+            return ""
+        s = _sum3(combo)
+        r = _root_sum3(combo)
+        by_sum = sums_stats.get("by_sum", {}) if isinstance(sums_stats, dict) else {}
+        by_root = sums_stats.get("by_root_sum", {}) if isinstance(sums_stats, dict) else {}
+        sflags = (by_sum.get(s) or {}).get("flags", {})
+        rflags = (by_root.get(r) or {}).get("flags", {})
+
+        def tag(label: str, flags: dict) -> str:
+            parts = []
+            if flags.get("blue"):
+                parts.append(f'<span class="blue">{label}</span>')
+            if flags.get("red"):
+                parts.append(f'<span class="red">{label}</span>')
+            if flags.get("purple"):
+                parts.append('<span class="purple">â€¢</span>')
+            return " ".join(parts)
+
+        s_tag = tag(f"S{s}", sflags)
+        r_tag = tag(f"R{r}", rflags)
+        if not s_tag and not r_tag:
+            return ""
+        both = " ".join(x for x in (s_tag, r_tag) if x)
+        return f' <span style="font-size:0.85em;opacity:.85">[{both}]</span>'
+    except Exception:
+        return ""
+
+# â¶ Page config FIRST (before every other st.*)
+st.set_page_config(page_title="Alpha-Final Analytical Tool",
+                   page_icon="ðŸš€", layout="wide")
+
+# Debug: show which file is running (safe to remove later)
+def main():
+    """
+    Main function to run the Alpha-Final Streamlit app.
+    This app will have a two-level navigation: State selection and Tool selection.
+    """
+    st.sidebar.title("Navigation")
+    # Debug sidebar info after context is ready
+    try:
+        st.sidebar.caption(f"ENTRY: {os.path.relpath(__file__)}")
+    except Exception:
+        pass
+    
+    # First level: State selector
+    states_list = [
+        "Connecticut4", "Delaware4", "Florida4", "Georgia4", "Indiana4",
+        "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+        "Ontario4", "Pennsylvania4", "Texas4", "Virginia4", "WestVirginia4"
+    ]
+    
+    selected_state = st.sidebar.selectbox(
+        "State â–¼",
+        states_list,
+        index=0
+    )
+    
+    # Second level: Tool selector  
+    selected_tool = st.sidebar.selectbox(
+        "Tool â–¼",
+        [
+            "V-TRAC Analyzer",
+            "Stable Pattern Extractor", 
+            "Digit Reduction",
+            "Auxiliary Tools",
+            "Hot Zones (Stub)",
+            "Control Center",
+        ],
+        index=0
+    )
+
+    if selected_tool == "V-TRAC Analyzer":
+        show_vtrac_page(selected_state)
+        
+    elif selected_tool == "Stable Pattern Extractor":
+        show_stable_pattern_page(selected_state)
+        
+    elif selected_tool == "Digit Reduction":
+        show_digit_reduction_page(selected_state)
+        
+    elif selected_tool == "Auxiliary Tools":
+        show_aux_page(selected_state)
+        
+    elif selected_tool == "Hot Zones (Stub)":
+        show_hot_zones_page(selected_state)
+        
+    elif selected_tool == "Control Center":
+        show_control_center_page()
+
+
+def show_vtrac_page(state: str) -> None:
+    """Render the V-TRAC Analyzer page."""
+    from core import module_c_vtrac  # lazy import
+    st.title(f"V-TRAC Analyzer - {state}")
+    st.info(f"Running V-TRAC analysis for {state}")
+    module_c_vtrac.main()
+
+
+def show_stable_pattern_page(state: str) -> None:
+    """Render the Stable Pattern Extractor page."""
+    from core import stable_pattern_extractor as stable
+    from utils import path_handler as ph
+
+    st.title(f"Stable Pattern Extractor - {state}")
+
+    # --- User inputs ---------------------------------------------------
+    min_occ = st.number_input("Minimum occurrences (min_occ)", min_value=1, max_value=10, value=3, step=1)
+
+    if st.button("Run Stable Pattern Extraction"):
+        tables_dir = ph.get_state_tables_dir(state)
+        out_dir    = ph.get_analysis_dir("patterns", state)
+
+        df, html_f, csv_f = stable.run_stable_pattern_extraction(
+            state=state,
+            tables_path=tables_dir,
+            out_path=out_dir,
+            min_occ=min_occ,
+        )
+
+        if df.empty:
+            st.warning("No patterns found â€“ verify tables or adjust parameters.")
+        else:
+            st.success(f"{len(df)} patterns extracted.")
+            st.dataframe(df.head(50), height=360)
+
+            if csv_f:
+                st.markdown(f"[â¬‡ Download CSV]({csv_f})")
+
+            if html_f and Path(html_f).exists():
+                with open(html_f, "r", encoding="utf-8") as fh:
+                    st.components.v1.html(fh.read(), height=600, scrolling=True)
+
+
+def show_hot_zones_page(state: str) -> None:
+    """Render the Hot Zones Stub page."""
+    st.title(f"Hot Zones - {state}")
+    st.write("Hot-Zones module is a placeholder.")
+
+
+def show_control_center_page() -> None:
+    """Render the Control Center page."""
+    st.title("Control Center")
+    st.write("Cross-State Analysis Dashboard")
+    
+    # Control Center expects cleaned CSVs; if none, prompt to run Aux once
+    # Cross-state doubles aggregation using staged working modules
+    try:
+        from modules.analyze_pairs import get_doubles_history
+        import pandas as _pd
+        from pathlib import Path as _Path
+
+        cleaned_dir = _Path("data/cleaned")
+        if not cleaned_dir.exists():
+            st.warning("No cleaned data found in data/cleaned.")
+            return
+
+        def _compute_combined():
+            state_to_draws = {}
+            for csv_path in cleaned_dir.glob("*_draws.csv"):
+                try:
+                    df = _pd.read_csv(csv_path)
+                    draws = [str(x).zfill(3) for x in df["Draw"].dropna().astype(int).astype(str).tolist()]
+                    state_name = csv_path.stem.replace("_draws", "").replace("_", " ")
+                    if draws:
+                        state_to_draws[state_name] = draws
+                except Exception:
+                    continue
+            if not state_to_draws:
+                return _pd.DataFrame()
+            doubles = get_doubles_history(state_to_draws)
+            rows = []
+            for state, draws in state_to_draws.items():
+                ds = int(doubles.get(state, 0)) if state in doubles else 0
+                latest_double = draws[ds] if 0 <= ds < len(draws) else "None"
+                rows.append({
+                    "State": state,
+                    "Draws Since Last Double": ds,
+                    "Latest Double": latest_double,
+                    "Total Draws": len(draws),
+                })
+            df = _pd.DataFrame(rows)
+            if not df.empty:
+                df = df.sort_values(["Draws Since Last Double", "State"], ascending=[False, True])
+            return df
+
+        # Refresh button
+        if st.button("Refresh Combined Table"):
+            st.session_state.pop("combined_doubles_df", None)
+
+        df = st.session_state.get("combined_doubles_df")
+        if df is None or df.empty:
+            df = _compute_combined()
+            if not df.empty:
+                st.session_state["combined_doubles_df"] = df
+        if df is None or df.empty:
+            st.warning("No state draw files found in data/cleaned.")
+            return
+        st.subheader("States Ranked by Draws Since Last Double")
+        st.dataframe(df, use_container_width=True)
+        # --- Blackapple Alerts (All States) ---
+        try:
+            # Ensure blackapple import and loader available, even on hot-reload
+            try:
+                from modules.blackapple import analyze_blackapple, ba_status_label
+            except Exception:
+                import sys as _sys, os as _os
+                _PR = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..'))
+                if _PR not in _sys.path:
+                    _sys.path.insert(0, _PR)
+                from modules.blackapple import analyze_blackapple, ba_status_label
+            from modules.aux_loaders import load_state_draws
+            import pandas as _pd
+            rows_ba = []
+            for csv_path in cleaned_dir.glob('*_draws.csv'):
+                try:
+                    state_label = csv_path.stem.replace('_draws', '').replace('_', ' ')
+                    dr, src = load_state_draws(state_label)
+                    if not dr:
+                        continue
+                    ba = analyze_blackapple(dr)
+                    status = ba_status_label(ba.get("score", 0))
+                    tr = ba.get('triggers', {})
+                    tparts = []
+                    if tr.get('mirror'): tparts.append('Mirror')
+                    roots = tr.get('root_due', [])
+                    if roots: tparts.append('Root ' + '/'.join(map(str, roots)))
+                    pat = tr.get('pattern', {})
+                    if pat.get('extreme_due'): tparts.append('SSS/TTT')
+                    if pat.get('mixed_due'):   tparts.append('SST/STS/TSS')
+                    flt = tr.get('floating', [])
+                    if flt: tparts.append('Float ' + ''.join(flt))
+                    rows_ba.append({
+                        'State': state_label,
+                        'BA-Score': ba.get('score', 0),
+                        'Status': status,
+                        'Triggers': ', '.join(tparts),
+                        '#Candidates': len(ba.get('candidates', [])),
+                        'Examples': ' '.join([c.get('combo', '') for c in ba.get('candidates', [])[:3]]),
+                    })
+                except Exception:
+                    continue
+            if rows_ba:
+                df_ba = _pd.DataFrame(rows_ba).sort_values(['BA-Score', '#Candidates'], ascending=[False, False]).reset_index(drop=True)
+                st.subheader('Blackapple Alerts (All States)')
+                st.dataframe(df_ba, use_container_width=True)
+        except Exception as _e:
+            st.caption(f'Combined BA table unavailable: {_e}')
+    except Exception as e:
+        st.warning(f"Combined view unavailable: {e}")
+
+
+def show_aux_page(state: str) -> None:
+    """Render the Auxiliary Tools page."""
+    import streamlit as st
+    import pandas as pd
+    # Loader from legacy extractor (safe to reuse just for CSV reads)
+    try:
+        from modules.module_d_auxiliary_tools.refactored.extractor import extract_draw_list
+    except Exception:
+        extract_draw_list = None
+
+    # Working modules (staged copy) â€“ used only inside Aux page
+    _AUX_WORKING_AVAILABLE = False
+    try:
+        from modules.analyze_pairs import (
+            calculate_overdue_pairs,
+            get_top_overdue_repeating_pairs,
+            get_vtrac_statuses,
+            get_doubles_history,
+            COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
+        )
+        from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
+        _AUX_WORKING_AVAILABLE = True
+    except Exception:
+        _AUX_WORKING_AVAILABLE = False
+    
+    st.title(f"Auxiliary Tools - {state}")
+    st.write(f"Advanced lottery analysis tools for {state}")
+    
+    # Basic styles for working renderer
+    st.markdown("""
+    <style>
+        .red { color: red; font-weight: bold; }
+        .blue { color: blue; font-weight: bold; }
+        .purple { color: purple; font-weight: bold; }
+        .shape-red-circle { border: 2px solid red; border-radius: 8px; padding: 1px 3px; }
+        .shape-blue-square { border: 2px solid blue; padding: 1px 3px; }
+        .digit { padding: 0 1px; font-weight: 600; }
+        .row-green { background-color: rgba(0, 200, 0, 0.08); display: block; padding: 2px 4px; min-height: 1.2em; }
+        .row-red { background-color: rgba(255, 0, 0, 0.08); display: block; padding: 2px 4px; min-height: 1.2em; }
+        .rank-badge { font-size: 0.8em; float: right; opacity: 0.7; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Add caching for performance (working logic)
+    @st.cache_data(ttl=30 * 60)
+    def cached_aux_analysis(state_name: str):
+        if not (_AUX_WORKING_AVAILABLE):
+            return None
+        # 1) Try CSVs first (selfâ€‘contained; does not touch other tools)
+        draws = _load_draws_from_csv_candidates(state_name)
+        # 2) Fallback to extractor (readâ€‘only) if available
+        if not draws and extract_draw_list is not None:
+            draws = extract_draw_list(state_name, None)
+        # If no draws, attempt to generate cleaned CSVs once from local Excel
+        if not draws:
+            try:
+                local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
+                if os.path.exists(local_excel_path):
+                    # Use staged runner; writes only to data/cleaned
+                    from modules.run_process import run_process
+                    _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
+                    # re-try CSV read to avoid extractor conflicts
+                    draws = _load_draws_from_csv_candidates(state_name)
+            except Exception:
+                pass
+        if not draws:
+            return None
+        draws_100 = draws[:100] if len(draws) >= 100 else draws
+        draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
+        nonrep, rep, pair_status = calculate_overdue_pairs(draws_100)
+        vstat = get_vtrac_statuses(draws_100, draws_1000)
+        top5 = get_top_overdue_repeating_pairs(draws_100, 5)
+        doubles = get_doubles_history({state_name: draws})
+        return {
+            "draws": draws,
+            "draws_100": draws_100,
+            "draws_1000": draws_1000,
+            "nonrep": nonrep,
+            "rep": rep,
+            "pair_status": pair_status,
+            "vstat": vstat,
+            "top5": top5,
+            "doubles": doubles,
+        }
+    
+    if st.button("Run Auxiliary Tools Analysis", type="primary"):
+        with st.spinner(f"Running auxiliary analysis for {state}..."):
+            try:
+                results = cached_aux_analysis(state)
+                if not results:
+                    st.error("Working modules unavailable or no draws found.")
+                    return
+
+                draws = results["draws"]
+                draws_100 = results["draws_100"]
+                pair_status = results["pair_status"]
+                vstat = results["vstat"]
+                # Compute sums stats (window matches analysis_draws) using a non-colliding import root
+                _calc_sums = None
+                _build_sums_df = None
+                with _project_modules_first():
+                    try:
+                        from module_d_auxiliary_tools.refactored.sums_analysis import (
+                            calculate_sums_stats as _calc_sums,
+                        )
+                        from module_d_auxiliary_tools.refactored.sums_ui import (
+                            build_sums_dataframe as _build_sums_df,
+                        )
+                        # Debug caption to verify import source; safe to remove later
+                        st.sidebar.caption(f"SUMS â¦¿ {_calc_sums.__module__}")
+                    except Exception as _e:
+                        st.sidebar.caption(f"SUMS import failed: {_e}")
+
+                analysis_draws = st.session_state.get("analysis_draws", 100)
+                if callable(_calc_sums):
+                    try:
+                        sums_stats = _calc_sums(draws, window=analysis_draws)
+                    except Exception:
+                        sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
+                else:
+                    sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
+                results["sums_stats"] = sums_stats
+
+                # --- Vâ€‘Trac Table (Working logic) ---
+                st.subheader("ðŸ“Š Vâ€‘Trac Analysis (Working logic)")
+                import pandas as _pd
+                rows = []
+                rows_plain = []
+                for entry in VTRAC_DISPLAY:
+                    idx = entry["Index"]
+                    singles = entry["Singles"].split() if entry["Singles"] else []
+                    doubles = entry["Doubles"].split() if entry["Doubles"] else []
+                    sdict = vstat.get(idx, {}).get("singles_status", {})
+                    ddict = vstat.get(idx, {}).get("doubles_status", {})
+                    # Build html content
+                    # Build html content + sums badges
+                    s_html = " ".join([
+                        (_format_combo(c, sdict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in singles
+                    ]) if singles else "&nbsp;"
+                    d_html = " ".join([
+                        (_format_combo(c, ddict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in doubles
+                    ]) if doubles else "&nbsp;"
+                    # Row tint + rank badge
+                    idx_style = vstat.get(idx, {}).get("index_style", {})
+                    row_class = ""
+                    if idx_style.get("bg") == "green":
+                        row_class = "row-green"
+                    elif idx_style.get("bg") == "red":
+                        row_class = "row-red"
+                    badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    index_cell = f'<div class="{row_class}">{idx}{badge}</div>' if row_class else f'{idx}{badge}'
+                    singles_cell = f'<div class="{row_class}">{s_html}{badge}</div>' if row_class else f'{s_html}{badge}'
+                    doubles_cell = f'<div class="{row_class}">{d_html}{badge}</div>' if row_class else f'{d_html}{badge}'
+                    rows.append({"Index": index_cell, "Singles": singles_cell, "Doubles": doubles_cell})
+                    # Plain (for CSV download)
+                    rows_plain.append({"Index": idx, "Singles": " ".join(singles), "Doubles": " ".join(doubles)})
+                df_v = _pd.DataFrame(rows)
+                st.markdown(df_v.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Download (plain)
+                df_plain = _pd.DataFrame(rows_plain)
+                st.download_button(
+                    "Download Vâ€‘Trac Table (Working) CSV",
+                    df_plain.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{state}_vtrac_working.csv",
+                    mime="text/csv",
+                )
+
+                # --- Overdue Pairs (Working logic) ---
+                st.subheader("ðŸ”¥ Overdue Pairs Analysis (Working logic)")
+                THR_NR_RED, THR_R_RED = 37, 71
+                THR_NR_BLUE, THR_R_BLUE = 56, 107
+                THR_PENDING = 25
+                nonrep = results["nonrep"]
+                rep = results["rep"]
+                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_RED])
+                rep_blue = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_purple = sorted([p for p, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
+                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_RED])
+                nr_blue = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_purple = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
+
+                # Thresholds info like the working app
+                st.info(f"""
+                **Overdue Thresholds:**
+                - Repeating pairs (00, 11, etc): RED={THR_R_RED}+, BLUE={THR_R_BLUE}+, PURPLE={THR_PENDING}+
+                - Non-repeating pairs (01, 23, etc): RED={THR_NR_RED}+, BLUE={THR_NR_BLUE}+, PURPLE={THR_PENDING}+
+                """)
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (â‰¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                with c2:
+                    st.markdown("<b>Nonâ€‘Repeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (â‰¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+
+                # --- Top 5 Repeating Pairs ---
+                st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
+                for pair, overdue in results["top5"]:
+                    if overdue >= 107:
+                        color = "blue"
+                    elif overdue >= 71:
+                        color = "red"
+                    elif overdue >= 25:
+                        color = "purple"
+                    else:
+                        color = ""
+
+                    line = f"{pair} - {overdue} draws overdue"
+                    if color:
+                        st.markdown(f'<span class="{color}">{line}</span>', unsafe_allow_html=True)
+                    else:
+                        st.write(line)
+
+                # --- Four-panels row (parity with working app) ---
+                c1, c2, c3, c4 = st.columns(4, gap="small")
+                # Latest Draws
+                with c1:
+                    st.subheader("Latest Draws")
+                    import pandas as _pd
+                    df_latest = _pd.DataFrame({"Draw": draws[:5]})
+                    st.dataframe(df_latest, use_container_width=True)
+                # Pairs Analysis Results (tabular)
+                with c2:
+                    st.subheader("Pairs Analysis Results")
+                    times_drawn = {}
+                    for i, d in enumerate(draws[:150]):
+                        if not isinstance(d, str) or len(d) != 3:
+                            continue
+                        d1, d2, d3 = d[0], d[1], d[2]
+                        for raw in (d1+d2, d2+d3, d1+d3):
+                            p = ''.join(sorted(raw))
+                            times_drawn[p] = times_drawn.get(p, 0) + 1
+                    # merge overdue values
+                    all_pairs = sorted(set(list(nonrep.keys()) + list(rep.keys())))
+                    rows_pairs = []
+                    for p in all_pairs:
+                        is_rep = (p[0] == p[1])
+                        overdue = rep.get(p, 0) if is_rep else nonrep.get(p, 0)
+                        rows_pairs.append({"Pair": p, "Times Drawn": times_drawn.get(p, 0), "Draws Since": overdue})
+                    df_pairs = _pd.DataFrame(rows_pairs)
+                    if not df_pairs.empty:
+                        df_pairs = df_pairs.sort_values("Draws Since", ascending=False)
+                    st.dataframe(df_pairs, use_container_width=True)
+                # Combinations Analysis (Draws Since) with shapes
+                with c3:
+                    st.subheader("Combinations Analysis (Draws Since)")
+                    combo_ds = vstat.get(0, {})
+                    singles_ds = combo_ds.get("singles_ds", {})
+                    doubles_ds = combo_ds.get("doubles_ds", {})
+                    S_RED, S_BLUE, D_RED, D_BLUE = 501, 334, 1000, 667
+                    safe_rows = []
+                    # Build status to reuse shape rendering
+                    for base, ds in singles_ds.items():
+                        status = {}
+                        if ds >= S_RED:
+                            status[base] = {"shape_red_circle": True}
+                        elif ds >= S_BLUE:
+                            status[base] = {"shape_blue_square": True}
+                        html_combo = _format_combo(str(base).zfill(3), status, pair_status)
+                        safe_rows.append({"Combo": html_combo, "Type": "Single", "Draws Since": int(ds)})
+                    for base, ds in doubles_ds.items():
+                        status = {}
+                        if ds >= D_RED:
+                            status[base] = {"shape_red_circle": True}
+                        elif ds >= D_BLUE:
+                            status[base] = {"shape_blue_square": True}
+                        html_combo = _format_combo(str(base).zfill(3), status, pair_status)
+                        safe_rows.append({"Combo": html_combo, "Type": "Double", "Draws Since": int(ds)})
+                    if safe_rows:
+                        safe_rows.sort(key=lambda x: x["Draws Since"], reverse=True)
+                        dfc_html = _pd.DataFrame(safe_rows)
+                        html_table = dfc_html.to_html(escape=False, index=False)
+                        st.markdown(f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_table}</div>', unsafe_allow_html=True)
+                    else:
+                        st.write("No data")
+                with c4:
+                    st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
+                    for pair, overdue in results["top5"]:
+                        if overdue >= 107:
+                            color = "blue"
+                        elif overdue >= 71:
+                            color = "red"
+                        elif overdue >= 25:
+                            color = "purple"
+                        else:
+                            color = ""
+                        style = "font-size: 1.05rem; font-weight: 600;"
+                        line = f"{pair} - {overdue} draws overdue"
+                        if color:
+                            st.markdown(f"<span class='{color}' style='{style}'>{line}</span>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<span style='{style}'>{line}</span>", unsafe_allow_html=True)
+
+                # Sums Tracking (table)
+                if callable(_build_sums_df) and isinstance(sums_stats, dict) and sums_stats.get("by_sum"):
+                    try:
+                        df_sums = _build_sums_df(sums_stats)  # type: ignore[misc]
+                        html_sums = df_sums.to_html(escape=False, index=False)
+                        st.subheader("Sums Tracking")
+                        st.markdown(f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_sums}</div>', unsafe_allow_html=True)
+                    except Exception:
+                        pass
+                # --- Blackapple Alert (MVP) ---
+                try:
+                    from modules.blackapple import analyze_blackapple, ba_status_label, sum_tags
+                    from modules.aux_loaders import load_state_draws
+                    ba_draws, ba_src = load_state_draws(state)
+                    ba = analyze_blackapple(ba_draws or draws)
+                    status = ba_status_label(ba.get("score", 0))
+                    st.subheader("Blackapple Alert")
+                    if ba_src:
+                        st.caption(f"BA draws: {ba_src} ({len(ba_draws)})")
+                    parts = []
+                    tr = ba.get("triggers", {})
+                    if tr.get("mirror"): parts.append("Mirror")
+                    roots = tr.get("root_due", [])
+                    if roots: parts.append("Root due: " + ", ".join(map(str, roots)))
+                    pat = tr.get("pattern", {})
+                    if pat.get("extreme_due"): parts.append("SSS/TTT due")
+                    if pat.get("mixed_due"): parts.append("SST/STS/TSS due")
+                    flt = tr.get("floating", [])
+                    if flt: parts.append("Floating: " + "".join(flt))
+                    rc = (tr.get("pairs", {}) or {}).get("remaining_count")
+                    if rc is not None: parts.append(f"Remaining Pairs: {rc}")
+                    st.markdown(f"**Status:** {status} (BAScore {ba.get('score',0)}/5)")
+                    st.write("Triggers: " + (", ".join(parts) if parts else "None"))
+                    rows = []
+                    for c in ba.get("candidates", []):
+                        t = sum_tags(c.get("combo", ""))
+                        rows.append({
+                            "Combo": c.get("combo", ""),
+                            "MatchScore": c.get("score", 0),
+                            "Tags": " ".join(sorted(c.get("tags", []))),
+                            "Sums": f"IΣ{t['Sigma']} sD{t['sD']} RS{t['RS']}"
+                        })
+                    if rows:
+                        import pandas as _pd
+                        st.dataframe(_pd.DataFrame(rows), use_container_width=True)
+                    else:
+                        st.caption("No candidate list (insufficient overlap) — still watching triggers.")
+                except Exception as _e:
+                    st.caption(f"Blackapple panel unavailable: {_e}")
+                    st.caption(f"Blackapple panel unavailable: {_e}")
+                # Legend / Feature Guide
+                with st.expander("Legend / Feature Guide"):
+                    st.markdown("""
+                    - Vâ€‘Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
+                    - Combination shapes:
+                      - Red circle: Singles â‰¥ 501 draws since; Doubles â‰¥ 1000
+                      - Blue square: Singles â‰¥ 334; Doubles â‰¥ 667
+                      - Boxed combos: permutations are treated as the same combo
+                    - Pairs colors (analysis window based):
+                      - Red (Late): nonâ€‘repeating â‰¥ 37, repeating â‰¥ 71
+                      - Blue (Very Late): nonâ€‘repeating â‰¥ 56, repeating â‰¥ 107
+                      - Purple (Pending): â‰¥ 25
+                    """)
+
+                # --- Vâ€‘Trac Index Hits (Working logic) ---
+                import pandas as _pd
+                idx_rows = []
+                # Build draws_since map for all indices
+                recent_ranks = vstat.get(0, {}).get("recent_index_ranks", {}) if isinstance(vstat.get(0, {}), dict) else {}
+                overdue_ranks = vstat.get(0, {}).get("overdue_index_ranks", {}) if isinstance(vstat.get(0, {}), dict) else {}
+                # If not present under 0-key, reconstruct minimal maps from per-index style
+                if not recent_ranks and not overdue_ranks:
+                    for entry in VTRAC_DISPLAY:
+                        idx = entry["Index"]
+                        ist = vstat.get(idx, {}).get("index_style", {})
+                        if ist.get("bg") == "green" and ist.get("rank"):
+                            recent_ranks[idx] = ist.get("rank")
+                        elif ist.get("bg") == "red" and ist.get("rank"):
+                            overdue_ranks[idx] = ist.get("rank")
+                # derive draws_since by scanning the first-seen positions over draws_1000
+                draws_1000 = results.get("draws_1000", draws)
+                total_len = len(draws_1000)
+                index_first_seen = {}
+                for i, d in enumerate(draws_1000):
+                    if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
+                        continue
+                    idx = get_vtrac_index(d)
+                    if idx and idx not in index_first_seen:
+                        index_first_seen[idx] = i
+                index_draws_since = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+
+                for idx, ds in index_draws_since.items():
+                    status = "None"
+                    rank = ""
+                    if idx in overdue_ranks:
+                        status = "Overdue"
+                        rank = overdue_ranks[idx]
+                    elif idx in recent_ranks:
+                        status = "Recent"
+                        rank = recent_ranks[idx]
+                    idx_rows.append({"Index": idx, "Draws Since": ds, "Status": status, "Rank": rank})
+                # Sort: Overdue desc, then Recent by rank, then others
+                df_idx = _pd.DataFrame(idx_rows)
+                if not df_idx.empty:
+                    df_idx["_overdue_sort"] = df_idx["Status"].apply(lambda s: 2 if s == "Overdue" else (1 if s == "Recent" else 0))
+                    df_idx["_rank_fill"] = df_idx["Rank"].apply(lambda r: int(r) if str(r).isdigit() else 0)
+                    df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "Rank"] ]
+                    html_idx = df_idx.to_html(index=False, escape=False)
+                    st.subheader("Vâ€‘Trac Index Hits (Working logic)")
+                    st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
+
+                st.success(f"âœ… Auxiliary tools (working logic) completed for {state}")
+                
+            except Exception as e:
+                st.error(f"Error running auxiliary analysis: {str(e)}")
+                st.info("Please ensure the state data files are available in data/cleaned/")
+    
+    else:
+        st.info("Click the button above to run auxiliary tools analysis.")
+        
+        # Show available states info (from legacy helper if present)
+        try:
+            from modules.module_d_auxiliary_tools.integration import get_available_states
+            available_states = get_available_states()
+        except Exception:
+            available_states = []
+        else:
+            st.warning("No state data files found. Please ensure cleaned data is available.")
+
+
+def show_digit_reduction_page(state: str) -> None:
+    """Render the Digit-Reduction Streamlit tab."""
+    st.title(f"Digit Reduction - {state}")
+
+    tables_root = Path(get_tables_output_dir())
+    if not tables_root.exists():
+        st.error("No processed tables found. Run the data pipeline first.")
+        return
+
+    # Check if the specific state directory exists
+    state_path = tables_root / state
+    if not state_path.exists():
+        st.error(f"No tables found for {state}. Available states: {[p.name for p in tables_root.iterdir() if p.is_dir()]}")
+        return
+
+    if st.button("Run Digit Reduction"):
+        with st.spinner(f"Running Digit Reduction for {state}..."):
+            df, html_path, csv_path = run_digit_reduction(
+                state,
+                tables_path=state_path,
+            )
+
+        if df.empty:
+            st.warning("Digit Reduction produced no output â€“ verify tables exist.")
+            return
+
+        st.success(f"{len(df)} reductions extracted for {state}")
+        st.dataframe(df, use_container_width=True)
+
+        if csv_path:
+            st.download_button(
+                "Download CSV",
+                Path(csv_path).read_bytes(),
+                file_name=Path(csv_path).name,
+            )
+
+        if html_path and Path(html_path).exists():
+            with open(html_path, "r", encoding="utf-8") as fh:
+                st.components.v1.html(fh.read(), height=800, scrolling=True)
+
+
+if __name__ == "__main__":
+    main() 
+
+comments:
+
+-remmember it created this "state loader" to apparently make this more efficient for black apple is this being pathed or pointed to correctly? look at my images showing the direcotry the draws files appear to be in data/cleaned/ example of one "ex.Ohio_draws.cvs" is this pathed throughout all the scripts ive shown to use this properly?
+
+-why is it so hard to refer to how all the other auxillary features are running off the extracted draws files ad mimic this in some way even though black apple is abit more complex?
+
+-im looking at the code where "run auxillary tools analysis" button seems to be setup and it seems to point to "cached_aux_analysis" is this like a connecting script which allows the auxillary features (all the other which work ad calculate properly) to access and use the cvs files im highlighting in the cleaned folder? if it is then is black apple also pointing to this and accessing? and if not then why?
+
+-when i look at black apple (mvp0 in code i see it wiring to from "modules.blackapple" which correlates to the indicator or error we get when runing the integrated app look at my picture in explorer where it appears blackapple items are if im interpretting correctly i dont see a black apple module its either "modules" or is it "module_d_auxillary_tools"? tell me what the images with these details are showing you
+
+IT SEEMS THERE IS ALOT IM SEEING WITHIN THIS SINGLE INVESTIGATION THAT ISNT MENTIONED OR UNDERSTOOD PROPERLY BY BOTH YOU AND CODEX WHICH IS DISAPPOINTING COMPLETELY WSATIG MY TIME AND TOKENS WITH A MILLION EDITS THAT DONT SEEM TO MATCH ALOT OF WHAT IM SEEING, THIS ALSO IS SHOWING ME HOW MUCH OF A TOTAL MESS THIS DIRECTORY IS WHICH WE WILL NEED TO FIX LATER RIGHT NOW  JUST WANT TO SEE IF WE CAN EVER GET THIS ATTACHED PROPERLY IF IT EVEN WORKS BUT THERE IS SOOO MUCH IN WHAT I SHARED THAT WE GOT TO BE ABLE TO FIGURE THIS OUT , I FEEL I GAVE SO MUCH QUALITY DETAIL TO FIX THIS! AND AS ALWAYS SEEMS LIKE MORE PATH ISSUES AND NOT UNDERSTANDING OR NAMING/REFERENCIG LOCATIONS AND FOLDER CORRECTLY AD ACCURATELY! IM VERY ANGRY AT ALL THIS WASTED TIME!

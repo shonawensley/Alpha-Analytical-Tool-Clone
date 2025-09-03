@@ -1,0 +1,226 @@
+What’s wrong (2 things):
+
+Data-source mismatch.
+Blackapple is the only aux tool that wants the 1000‑draw history CSVs (e.g., data/cleaned/OntarioCanada4_draws.csv). The app is likely handing it the cleaned Excel combined tables (e.g., OntarioCanada4_cleaned.xlsx) or a wrong/missing path, so BA gets zero draws and renders nothing. The MVP module was designed to operate purely from a ['531','890','861',…] draw list; if the page feeds it the wrong file, you get exactly what you see: an empty panel / “unavailable”.
+
+Import/working‑dir hygiene.
+The message in Control Center — “Combined BA table unavailable: No module named 'modules.blackapple'” — means Python can’t find modules/blackapple.py at runtime. Given your logs, there are two likely culprits:
+
+You were running run_bat.app (typo / different file) while I updated run_app.bat. That would explain why CWD fixes didn’t take.
+
+Or modules isn’t resolvable as a package on sys.path when Streamlit hot-reloads the Combined page.
+
+Below is a surgical fix that (A) guarantees the right files are read (CSV draws), and (B) bullet‑proofs the import path. I’ve kept this minimal and reversible.
+
+A. Add a dedicated draws loader (CSV‑first, with safe XLSX fallback)
+
+Create: modules/aux_loaders.py
+
+# modules/aux_loaders.py
+from pathlib import Path
+import pandas as pd
+
+# Optional alias map if UI labels don't match filenames exactly
+ALIASES = {
+    "OntarioCanada4": "OntarioCanada4",
+    "OntarioCanada": "OntarioCanada",
+    "Connecticut4": "Connecticut",
+    "Connecticut": "Connecticut",
+    # add more if your menu label differs from filename stem
+}
+
+def _stem(label: str) -> str:
+    s = (label or "").strip()
+    return ALIASES.get(s, s)
+
+def load_state_draws(state_label: str, base: Path | None = None, max_n: int = 1000) -> list[str]:
+    """
+    Returns newest-first draws like ['531','890','861',...].
+    Preferred source: data/cleaned/<stem>_draws.csv
+    Fallback: derive from <stem>_cleaned.xlsx if CSV missing.
+    """
+    base = base or Path("data") / "cleaned"
+    stem = _stem(state_label)
+
+    # 1) CSV candidates (with/without '4' suffix tolerance)
+    candidates = [
+        base / f"{stem}_draws.csv",
+        base / f"{stem.replace('4','')}_draws.csv" if "4" in stem else base / f"{stem}4_draws.csv",
+    ]
+    for p in candidates:
+        if p.exists():
+            df = pd.read_csv(p)
+            col = df.columns[0]
+            return (
+                df[col]
+                .astype(str)
+                .str.replace(r"\D", "", regex=True)
+                .str.zfill(3)
+                .tolist()
+            )[:max_n]
+
+    # 2) XLSX fallback (not preferred, but prevents crashes)
+    xlsx_candidates = [
+        base / f"{stem}_cleaned.xlsx",
+        base / f"{stem.replace('4','')}_cleaned.xlsx" if "4" in stem else base / f"{stem}4_cleaned.xlsx",
+    ]
+    for p in xlsx_candidates:
+        if p.exists():
+            df = pd.read_excel(p, engine="openpyxl")
+            for cand in ("Draw", "draw", "Number", "numbers", "draws"):
+                if cand in df.columns:
+                    return (
+                        df[cand]
+                        .astype(str).str.replace(r"\D", "", regex=True)
+                        .str.zfill(3).tolist()
+                    )[:max_n]
+    return []
+
+
+Why: Blackapple’s analyzer takes only a draw list, nothing else. For correctness and simplicity, we explicitly prefer *_draws.csv. If it’s missing, we try to mine draws from the Excel so the UI never hard‑crashes, but CSV is the intended source for BA.
+
+B. Wire the loader into both places BA is used
+
+1) Auxiliary Tools → “Run Auxiliary Tools Analysis” handler
+Add (or replace your current BA input):
+
+from modules.aux_loaders import load_state_draws
+from modules.blackapple import analyze_blackapple, ba_status_label
+
+draws = load_state_draws(state_label)      # ← now always CSV-first
+if not draws:
+    st.warning("No draws found for this state (expected data/cleaned/*_draws.csv).")
+else:
+    ba = analyze_blackapple(draws[:1000])
+    status = ba_status_label(ba["score"])
+    # ... render status, triggers & candidate list as you already do ...
+
+
+2) Control Center (Combined)
+
+from modules.aux_loaders import load_state_draws
+from modules.blackapple import analyze_blackapple, ba_status_label
+
+rows = []
+for state in enabled_states:
+    draws = load_state_draws(state)
+    if not draws:
+        rows.append((state, "OFF", "No draws CSV", 0, ""))  # or your schema
+        continue
+    ba = analyze_blackapple(draws[:1000])
+    status = ba_status_label(ba["score"])
+    # ... build table row with score, triggers, #candidates, examples ...
+
+
+This matches the original BA MVP wiring (state panel + Combined table). If you prefer, you can copy the tiny UI snippets from the spec I gave earlier; they’re sized specifically for your aux layout.
+
+C. Bullet‑proof the import path (eliminate the “No module named ‘modules.blackapple’”)
+
+Ensure a real package: add an empty modules/__init__.py.
+
+Bootstrap sys.path at app entry. At the very top of src/app.py:
+
+# --- path bootstrap (top of src/app.py) ---
+import os, sys
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+# optional: print in sidebar for quick confirmation
+try:
+    import streamlit as st
+    st.sidebar.caption(f"ENTRY: {__file__}")
+    st.sidebar.caption(f"CWD: {os.getcwd()}")
+except Exception:
+    pass
+# ------------------------------------------
+
+
+Add a fallback import inside the Combined BA block (so the page never dies silently if a reload loses sys.path):
+
+try:
+    from modules import blackapple as BA
+except Exception as e:
+    import os, sys
+    ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
+    from modules import blackapple as BA
+
+
+Run the right BAT.
+You mentioned you run run_bat.app. The file I updated is run_app.bat. Please use that one. To avoid ambiguity, replace it with this diagnostic‑friendly version:
+
+@echo off
+setlocal
+pushd "%~dp0"
+echo === RUN_APP.BAT ===
+echo CWD=%CD%
+where python
+python -V
+set STREAMLIT_BROWSER=none
+echo Import check...
+python - << "PY"
+import sys, os
+print("sys.path[0]:", sys.path[0])
+try:
+    import modules.blackapple as ba
+    print("BA OK from:", ba.__file__)
+except Exception as e:
+    print("BA import FAIL:", e)
+PY
+echo Launching Streamlit...
+streamlit run src\app.py
+popd
+endlocal
+
+
+If that “Import check” line prints your repo path, the Combined page error will go away.
+
+If you ever had a stray C:\Windows\System32\modules\blackapple.py:
+Rename it (e.g., blackapple.py.bak). A shadow in System32 can confuse imports, though your current error message suggests the package simply wasn’t on sys.path.
+
+D. Quick verification steps (safe to run)
+
+Check that the _draws.csv files exist for your test state(s):
+
+Get-ChildItem data\cleaned\*_draws.csv | Select-Object Name
+
+
+Confirm the loader finds draws:
+
+python - << 'PY'
+from modules.aux_loaders import load_state_draws
+for s in ["OntarioCanada4","Connecticut4","Michigan4"]:
+    d = load_state_draws(s)
+    print(s, "len(draws)=", len(d), "head=", d[:5])
+PY
+
+
+Run the app via the updated BAT (run_app.bat).
+
+On Auxiliary Tools, select a state and click Run Auxiliary Tools Analysis once; the BA panel should list status, triggers, and candidates.
+
+On Control Center, you should now see “Blackapple Alerts (All States)” populated. (That’s exactly the intended UI surface for the BA MVP.)
+
+Why this solves your symptom
+
+The BA analyzer computes a few simple draw‑based triggers (mirror event, longest‑out root sum, spike/trough gaps, floating digits, and a 27–29 remaining‑pairs foundation). It expects only the last N draws for the state; if we hand it the wrong file (combined XLSX), it sees no draws and the panel stays empty. By forcing a CSV‑first loader, we remove that entire class of failures.
+
+The Combined page error was import hygiene: on some launches/hot‑reloads Streamlit wasn’t seeing the repo root on sys.path, so modules.blackapple wasn’t importable. Making modules a package, bootstrapping sys.path once at app entry, and retrying the import where it’s used removes this brittleness.
+
+(Optional) One more safety net
+
+If your state labels sometimes differ (e.g., menu shows “OntarioCanada” but the CSV is OntarioCanada4_draws.csv), add one line per mismatch in the ALIASES dict in aux_loaders.py. That will keep BA robust even if labels and filenames drift.
+
+Reference (what the BA MVP surfaces)
+
+State panel: “Blackapple Alert” box with BAScore (0–5), triggers line, and a small candidate list filtered by the active triggers.
+
+Combined page: a compact “Blackapple Alerts (All States)” table showing State | BA‑Score | Status | Triggers | #Candidates | Examples.
+(These UI hooks are exactly how the MVP was specified.)
+
+Triggers used (all computed from draws): mirror event, root‑sum due, spike/trough pattern gaps (SSS/TTT extreme or SST/STS/TSS group gap), floating digits, and a 27–29 remaining‑pairs foundation (the standard forum “cross‑off to ~28 pairs, then unite to singles” method).
+
+If anything still looks off
+
+Copy back the three exact lines you see at the top of the Streamlit sidebar (ENTRY & CWD) plus the “Import check” output from the BAT, and tell me which state label you selected. I’ll tweak the alias map or the fallback import in one pass.
