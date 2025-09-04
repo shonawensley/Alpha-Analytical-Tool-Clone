@@ -283,6 +283,21 @@ def show_vtrac_page(state: str) -> None:
     st.title(f"V-TRAC Analyzer - {state}")
     st.info(f"Running V-TRAC analysis for {state}")
     module_c_vtrac.main()
+    # Dev: System Health (V-TRAC)
+    try:
+        show_dev_v = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_vtrac")
+    except Exception:
+        show_dev_v = False
+    if show_dev_v:
+        import os, sys as _sys
+        with st.expander("System Health (V-TRAC)"):
+            st.caption("cwd: " + os.getcwd())
+            st.caption("python: " + _sys.executable)
+            try:
+                import core.module_c_vtrac as _v
+                st.caption("V-TRAC module: " + str(getattr(_v, "__file__", "unknown")))
+            except Exception as _se:
+                st.caption("V-TRAC module: unavailable: " + str(_se))
 
 
 def show_stable_pattern_page(state: str) -> None:
@@ -292,6 +307,28 @@ def show_stable_pattern_page(state: str) -> None:
 
     st.title(f"Stable Pattern Extractor - {state}")
 
+    # Dev: System Health (Stable Pattern)
+    try:
+        show_dev_s = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_stable")
+    except Exception:
+        show_dev_s = False
+    if show_dev_s:
+        import os, sys as _sys
+        from utils import path_handler as ph
+        from pathlib import Path as _P
+        with st.expander("System Health (Stable)"):
+            st.caption("cwd: " + os.getcwd())
+            st.caption("python: " + _sys.executable)
+            try:
+                from core import stable_pattern_extractor as _stable
+                st.caption("Stable module: " + str(getattr(_stable, "__file__", "unknown")))
+            except Exception as _se:
+                st.caption("Stable module: unavailable: " + str(_se))
+            try:
+                tdir = ph.get_state_tables_dir(state)
+                st.caption("tables_dir: " + str(tdir) + " (exists=" + str(_P(tdir).exists()) + ")")
+            except Exception:
+                pass
     # --- User inputs ---------------------------------------------------
     min_occ = st.number_input("Minimum occurrences (min_occ)", min_value=1, max_value=10, value=3, step=1)
 
@@ -341,6 +378,35 @@ def show_control_center_page() -> None:
             st.warning("No cleaned data found in data/cleaned.")
             return
 
+            try:
+                show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
+            except Exception:
+                show_dev_d = False
+            if show_dev_d:
+                import os, sys as _sys
+                with st.expander("System Health (Digit Reduction)"):
+                    st.caption("cwd: " + os.getcwd())
+                    st.caption("python: " + _sys.executable)
+                    try:
+                        from core.module_b_digit_reduction import run_digit_reduction as _rdr
+                        import inspect as _insp
+                        st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
+                    except Exception as _se:
+                        st.caption("DR module: unavailable: " + str(_se))
+                    try:
+                        st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
+                    except Exception:
+                        pass
+                st.error("No processed tables found. Run the data pipeline first.")
+                return
+        
+            # Check if the specific state directory exists
+            state_path = tables_root / state
+            if not state_path.exists():
+                st.error(f"No tables found for {state}. Available states: {[p.name for p in tables_root.iterdir() if p.is_dir()]}")
+                return
+        
+            if st.button("Run Digit Reduction"):
         def _compute_combined():
             state_to_draws = {}
             for csv_path in cleaned_dir.glob("*_draws.csv"):
@@ -509,6 +575,29 @@ def show_aux_page(state: str) -> None:
     st.title(f"Auxiliary Tools - {state}")
     st.write(f"Advanced lottery analysis tools for {state}")
     
+    # Dev: System Health (toggle in sidebar)
+    try:
+        show_dev = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_aux")
+    except Exception:
+        show_dev = False
+    if show_dev:
+        import os, sys as _sys
+        with st.expander("System Health (Aux)"):
+            st.caption("cwd: " + os.getcwd())
+            st.caption("python: " + _sys.executable)
+            try:
+                _ba = _load_blackapple_real()
+                st.caption("BA module: " + str(getattr(_ba, "__file__", "unknown")))
+            except Exception as _se:
+                st.caption("BA module: unavailable: " + str(_se))
+            try:
+                _aux = _load_aux_loaders_real()
+                load_state_draws = getattr(_aux, "load_state_draws", None)
+                if callable(load_state_draws):
+                    dr, src = load_state_draws(state)
+                    st.caption("draws CSV: " + str(src) + " (" + str(len(dr) if isinstance(dr, list) else 0) + ")")
+            except Exception:
+                pass
     # Basic styles for working renderer
     st.markdown("""
     <style>
@@ -938,6 +1027,26 @@ def show_digit_reduction_page(state: str) -> None:
 
     tables_root = Path(get_tables_output_dir())
     if not tables_root.exists():
+    # Dev: System Health (Digit Reduction)
+    try:
+        show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
+    except Exception:
+        show_dev_d = False
+    if show_dev_d:
+        import os, sys as _sys
+        with st.expander("System Health (Digit Reduction)"):
+            st.caption("cwd: " + os.getcwd())
+            st.caption("python: " + _sys.executable)
+            try:
+                from core.module_b_digit_reduction import run_digit_reduction as _rdr
+                import inspect as _insp
+                st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
+            except Exception as _se:
+                st.caption("DR module: unavailable: " + str(_se))
+            try:
+                st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
+            except Exception:
+                pass
         st.error("No processed tables found. Run the data pipeline first.")
         return
 
@@ -975,6 +1084,11 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
+
+
+
+
 
 
 
