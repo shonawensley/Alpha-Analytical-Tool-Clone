@@ -406,7 +406,6 @@ def show_control_center_page() -> None:
                 st.error(f"No tables found for {state}. Available states: {[p.name for p in tables_root.iterdir() if p.is_dir()]}")
                 return
         
-            if st.button("Run Digit Reduction"):
         def _compute_combined():
             state_to_draws = {}
             for csv_path in cleaned_dir.glob("*_draws.csv"):
@@ -1027,26 +1026,26 @@ def show_digit_reduction_page(state: str) -> None:
 
     tables_root = Path(get_tables_output_dir())
     if not tables_root.exists():
-    # Dev: System Health (Digit Reduction)
-    try:
-        show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
-    except Exception:
-        show_dev_d = False
-    if show_dev_d:
-        import os, sys as _sys
-        with st.expander("System Health (Digit Reduction)"):
-            st.caption("cwd: " + os.getcwd())
-            st.caption("python: " + _sys.executable)
-            try:
-                from core.module_b_digit_reduction import run_digit_reduction as _rdr
-                import inspect as _insp
-                st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
-            except Exception as _se:
-                st.caption("DR module: unavailable: " + str(_se))
-            try:
-                st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
-            except Exception:
-                pass
+        # Dev: System Health (Digit Reduction)
+        try:
+            show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
+        except Exception:
+            show_dev_d = False
+        if show_dev_d:
+            import os, sys as _sys
+            with st.expander("System Health (Digit Reduction)"):
+                st.caption("cwd: " + os.getcwd())
+                st.caption("python: " + _sys.executable)
+                try:
+                    from core.module_b_digit_reduction import run_digit_reduction as _rdr
+                    import inspect as _insp
+                    st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
+                except Exception as _se:
+                    st.caption("DR module: unavailable: " + str(_se))
+                try:
+                    st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
+                except Exception:
+                    pass
         st.error("No processed tables found. Run the data pipeline first.")
         return
 
