@@ -140,3 +140,195 @@ Candidates: Start from the remaining‑pairs foundation and filter/weight by the
 When those overlap with Mirror, Pattern, and Floating conditions, the state moves from OFF → WATCH → ALERT, and your table shows a small, ranked list you can actually play or analyze.
 
 If you want, I can also jot a one‑page “reader” you can pin near the Control Center that explains each tag (PAIR/MIR/RS/PAT/FLT) with a single example line so anyone glancing at the Blackapple panel knows exactly why a combo is on the list.
+
+________________________________________________________________________
+
+You’re asking three things, all tightly related:
+
+What “pair 27–29” means and how BA uses it.
+
+What’s special (or not) about root sums 3‑6‑9, and how that relates to SUNS / Sums tracking.
+
+Whether to add a specific “3‑6‑9 stack” alert to Blackapple, and how you’d tune it.
+
+Below I break each down and then give you a concrete, low‑risk spec you can hand to Codex if you decide to add that alert later.
+
+1) “Pair 27–29” — what it actually means
+
+The idea: in Pick‑3, each draw has 3 digits and therefore 3 internal, unordered pairs (e.g., draw 1‑2‑6 contains pairs 12, 16, 26). If you look back over a recent window (say the last 100–200 draws for a state) and collect all distinct unordered pairs that have not appeared in that window, you get the remaining‑pairs set (sometimes called “out pairs”).
+
+There are 45 possible unordered pairs from digits 0–9 (C(10,2) = 45).
+
+As draws go by, that remaining‑pairs set shrinks and grows.
+
+Community shorthand like “27–29” refers to the size of the remaining‑pairs set being in the high‑20s (e.g., 27, 28, 29). Some players believe that when the number of out pairs sits ~27–29, the odds of a “target” pair popping soon are high.
+
+How BA uses it:
+Blackapple uses “remaining pairs” as a foundation filter and weight, not as a prediction by itself:
+
+When forming candidate combos, BA prefers boxed triples whose internal pairs are all or mostly inside the remaining‑pairs set (e.g., 1‑2‑6 is favored if 12, 16, 26 are still out).
+
+That remaining‑pairs screen keeps the candidate list focused and is why your #Candidates often tops out at 12 (the cap) when other triggers also line up.
+
+This is a structural cue; other triggers (Mirror, Root due, Pattern due, Floating digits) then boost or re‑rank those candidates.
+
+2) Root sums, the 3‑6‑9 cluster, and SUNS/Sums tracking
+Digital root (root sum) in a sentence
+
+Take the sum of the digits and collapse it to a single digit by summing until one digit remains (mod‑9 arithmetic, treating 9 as 9, not 0).
+Examples:
+
+1+2+6 = 9 → RS 9
+
+0+3+5 = 8 → RS 8
+
+2+7+9 = 18 → 1+8 = 9 → RS 9
+
+Why people talk about 3‑6‑9
+
+3, 6, and 9 are all multiples of 3. Players notice rhythms in mod‑3 / mod‑9 space: there are stretches where sums that reduce to 3/6/9 appear to “cycle.” This can be partly real (some short‑term autocorrelation) and partly perception (humans spot patterns fast). In practical terms:
+
+Sometimes the cluster {3,6,9} as “due” is just a special case of a regular root‑due condition: if the longest‑out digital root happens to be 3, 6 or 9, you will see that call‑out.
+
+There’s nothing inherently magical about 3‑6‑9; it’s simply a popular cluster to watch because of mod‑3 rhythms. The right way to use it is evidence‑based: if the longest‑out digital root sits in {3,6,9} and other triggers also line up, then the stack matters.
+
+How BA already uses root sums
+
+BA doesn’t hard‑code any special love for 3‑6‑9. It:
+
+Scans your recent draws, finds the longest‑out digital root(s) (could be 7, could be 9, etc.), and tags that as Root X due.
+
+Any candidate whose RS matches a due value gets RS+ weight.
+
+If other triggers (Mirror, Pattern, Floats, Remaining‑pairs) overlap, the BA‑Score moves from OFF → WATCH → ALERT.
+
+How to “extend SUNS/Sums tracking”
+
+If you want to go deeper than “root due,” extend the sums layer with three simple, stable checks:
+
+Absolute sum gap due (sum 0..27 for Pick‑3): longest‑out absolute sum group (e.g., 12–15).
+
+Mod‑3 state / streaks: is the current run starved of sums ≡ 0 (mod 3) (i.e., the 3‑6‑9 family)? Track the gap since last 3/6/9 and the typical waiting time for that state.
+
+Mod‑9 gap due: same concept but at digital‑root granularity (1..9), which you already have — just keep the gap length and maybe a rolling hazard estimate (see tuning below).
+
+None of that conflicts with BA; it enriches the root‑due trigger so it’s quantitative rather than folklore.
+
+3) Should we add a 3‑6‑9‑specific alert? (and how)
+
+Short answer: Yes, as an opt‑in, stacked trigger — only when multiple pieces line up. Treat it like a bonus on top of what BA already does, not a new theory that overrides everything else.
+
+A clean, low‑risk spec (“369 Stack”)
+
+Name (UI Triggers column): 369‑Stack
+What it means: A 3‑6‑9 root‑cluster push coincides with at least one other strong BA signal.
+
+Default rule (conservative): Fire 369‑Stack when all of the following hold:
+
+Root‑due in {3,6,9}: the longest‑out digital root set intersects {3,6,9}.
+
+Recency pressure: gap since last 3/6/9 ≥ median historical gap for that state or exceeds a fixed threshold (e.g., ≥ 7 draws).
+
+Any one strong co‑signal among:
+
+Mirror occurred on the latest draw,
+
+Pattern due (extreme) SSS/TTT flagged, or
+
+Floats include a multiple‑of‑3 digit (3,6,9) and that digit appears in the candidate.
+
+Scoring effect: +1 BA‑Score (so a WATCH can move to ALERT when other triggers exist).
+Candidate tagging (per combo): add RS3/RS6/RS9 tag and a small weight if the combo’s RS ∈ {3,6,9}.
+Display: in Control Center “Triggers,” append 369‑Stack when active.
+
+Why this is safe: you are not “forcing” 3‑6‑9; you’re saying when it’s due and something else is also hot, give it a nudge.
+
+Tuning knobs (so you can “tinker” safely later)
+
+Windows:
+
+Root‑due window: 120–200 draws is typical; 150 is a good first pass.
+
+Float window: 5–7 draws.
+
+Thresholds:
+
+Recency: “gap ≥ median gap” (robust to outliers), or a fixed 7–10 draws.
+
+Weights:
+
+Base RS‑match: +0.5;
+
+369‑Stack fired: +1.0 (to the state BA‑Score), and +0.2 to each matching candidate.
+
+Strict mode (optional): only award the candidate boost if all three internal pairs of the combo are in the remaining‑pairs set (ties back to your 27–29 foundation).
+
+What about the “95% hit” claim?
+
+Treat that as motivating lore, not a target. If you want numbers:
+
+Backtest each state with a rolling split (e.g., train on years 1–2, test on year 3; then slide).
+
+Log precision@12 (did the day’s winner appear in the 12?), coverage (how often we issue ALERT), and lead time (did it hit within k draws of an alert?).
+
+Compare BA vs. BA+369‑Stack to see if the alert quality improves (higher precision for the same or lower coverage).
+
+How this informs the settings you tweak
+
+If you want fewer but sharper alerts:
+
+Raise the co‑signal requirement for 369‑Stack from “any one” to “any two,” or require Strict remaining‑pairs (all 3 pairs out).
+
+Increase float window from 5 to 7 (harder for floats to trigger).
+
+If you want more exploration (richer list):
+
+Keep the cap at 12, but lower RS boost from +0.5 to +0.2 so RS is supportive, not dominant.
+
+Allow the 369‑Stack to fire on “gap ≥ 75th percentile” or “Mirror+Mixed pattern (SST/STS/TSS)” even if RS9 isn’t the single longest‑out (but still in top‑2).
+
+If you’re chasing short bursts (day‑trader style):
+
+Shrink windows (root‑due 100; float 3–5) and give slightly more weight to Mirror and Floats; keep 369‑Stack but require a co‑signal so you don’t over‑fire.
+
+Why extending SUNS/Sums beyond “3‑6‑9 folklore” helps
+
+Quantifies the intuition: instead of “3‑6‑9 feels hot,” you log an actual gap and compare it to that state’s typical gaps.
+
+Combines with structure: by insisting on remaining‑pairs coverage you keep candidates anchored to recent market structure, not just a sum story.
+
+Plugs into BA cleanly: it’s one more stackable trigger, with small weights and a clear UI label.
+
+A tiny pseudo‑logic block (so you can hand it to Codex later)
+
+Not asking you to implement now—this is the exact shape that slots into BA without breaking anything.
+
+if root_due intersects {3,6,9}:
+    rs369_due = True
+    gap = draws_since_last_root_in({3,6,9})
+    due_enough = (gap >= median_gap369[state]) or (gap >= 7)
+
+    co_signal = mirror_flag or pattern.extreme_due or (any(d in floats for d in {3,6,9}))
+
+    if due_enough and co_signal:
+        triggers.append("369-Stack")
+        BA_score += 1
+        for cand in candidates:
+            if root_sum(cand) in {3,6,9}:
+                cand.score += 0.2
+                cand.tags.add(f"RS{root_sum(cand)}")
+
+
+All of the variables above already exist in your BA flow (root‑due set, pattern flags, float set, candidate loop); this just adds a gated, modest boost and a label.
+
+Bottom line
+
+27–29 is about remaining‑pairs coverage; BA already uses that as a structural base.
+
+3‑6‑9 is a root‑sum cluster some players watch; the right way to use it is as a stacked trigger only when it’s actually due and at least one other BA signal is hot.
+
+If you want it, add 369‑Stack exactly as above: small boost, conservative gating, clear UI label.
+
+Tuning is just windows + thresholds + tiny weights. Validate with a simple rolling backtest so you know whether BA+369 helps your precision without spamming alerts.
+
+If you want, I can turn the spec above into a one‑page “BA‑369 addendum” you can paste into your repo docs so every future AI knows exactly how (and how not) to wire it.

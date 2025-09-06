@@ -178,8 +178,18 @@ def grid_block(cells, want_cols, sec_id):
             lines.append('</div>')   # grid3
     return "\n".join(lines)
 
-def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_heads: Dict[str, str] = None) -> str:
-    """Tabbed layout: navbar for A-own, ..., D-combined. Each tab shows two big tables (Long-String 1 and 2), each as Midday | Evening | Combined."""
+def build_full_html(
+    results_area1: List[Dict],
+    results_area2: List[Dict],
+    draw_heads: Dict[str, str] = None,
+    view_mode: str = "tabbed",
+) -> str:
+    """Render the reductions report.
+
+    view_mode:
+      - "tabbed"  (default) shows a navbar to toggle method/mode sections
+      - "stacked" shows all sections one after another for easy scrolling
+    """
     css = """
     body{font-family:Arial,Helvetica,sans-serif}
     table{border-collapse:collapse;font-size:12px;margin:6px 0}
@@ -200,37 +210,42 @@ def build_full_html(results_area1: List[Dict], results_area2: List[Dict], draw_h
     .miniCap  {font-size:9px; font-style:italic; text-align:left; padding:0 0 2px}
     .mini     {flex:1 1 0; min-width:110px}
     """
+    # Override CSS for stacked mode (no tabs, show all sections)
+    if str(view_mode).lower() == "stacked":
+        css += "\n#methodNav{display:none}\nsection.method{display:block}\n"
+
     parts = ["<html><head><meta charset='utf-8'><style>", css, "</style></head><body>"]
-    # Navbar
-    parts.append('<nav id="methodNav">')
-    for meth, mode in COLUMNS_ORDER:
-        sec_id = f"{meth}-{mode}"
-        label = f"{meth}-{mode}"
-        active = ' class="active"' if sec_id == "A-own" else ''
-        parts.append(f'<button data-target="{sec_id}"{active}>{label}</button>')
-    parts.append('</nav>')
-    # JS
-    parts.append("""
-    <script>
-      const btns = [...document.querySelectorAll('#methodNav button')];
-      btns.forEach(btn => btn.onclick = () => {
-        const tgt = btn.dataset.target;
-        document.querySelectorAll('section.method').forEach(
-            sec => sec.style.display = (sec.id === tgt) ? 'block' : 'none');
-        btns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    </script>
-    """)
+    # Navbar only for tabbed mode
+    if str(view_mode).lower() == "tabbed":
+        parts.append('<nav id="methodNav">')
+        for meth, md in COLUMNS_ORDER:
+            sec_id = f"{meth}-{md}"
+            label = f"{meth}-{md}"
+            active = ' class="active"' if sec_id == "A-own" else ''
+            parts.append(f'<button data-target="{sec_id}"{active}>{label}</button>')
+        parts.append('</nav>')
+        # Tab JS to toggle sections
+        parts.append("""
+        <script>
+          const btns = [...document.querySelectorAll('#methodNav button')];
+          btns.forEach(btn => btn.onclick = () => {
+            const tgt = btn.dataset.target;
+            document.querySelectorAll('section.method').forEach(
+                sec => sec.style.display = (sec.id === tgt) ? 'block' : 'none');
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+        </script>
+        """)
     # Latest draw triples
     if draw_heads:
         parts.append('<h2>Latest draw triples (validation)</h2>')
         parts.append(build_latest_draw_table(draw_heads))
     # Tabbed sections
-    for meth, mode in COLUMNS_ORDER:
-        sec_id = f"{meth}-{mode}"
+    for meth, md in COLUMNS_ORDER:
+        sec_id = f"{meth}-{md}"
         parts.append(f'<section class="method" id="{sec_id}">')
-        parts.append(f'<h2>Method {meth} – {mode}</h2>')
+        parts.append(f'<h2>Method {meth} – {md}</h2>')
         # LONG-STRING 1  (cols 7/6/5)
         ls1 = [c for c in results_area1 if any(c["location_id"].endswith(f"col{x}") for x in (7,6,5))]
         parts.append('<h3>Long-String 1  (columns 7 / 6 / 5)</h3>')
@@ -434,11 +449,18 @@ def run_digit_reduction(
             continue
 
     # --------------------------------------------------------
-    # Write HTML report
+    # Write HTML reports (tabbed + stacked)
     # --------------------------------------------------------
-    html_content = build_full_html(analysed_area1, analysed_area2, draw_heads)
+    html_content = build_full_html(analysed_area1, analysed_area2, draw_heads, view_mode="tabbed")
     html_path = out_path / f"{state}_digit_reduction_report.html"
     html_path.write_text(html_content, encoding="utf-8")
+
+    try:
+        html_content_stacked = build_full_html(analysed_area1, analysed_area2, draw_heads, view_mode="stacked")
+        (out_path / f"{state}_digit_reduction_report_stacked.html").write_text(html_content_stacked, encoding="utf-8")
+    except Exception:
+        # If for any reason the stacked build fails, continue with the tabbed report only
+        pass
 
     # --------------------------------------------------------
     # Build & persist score DataFrame

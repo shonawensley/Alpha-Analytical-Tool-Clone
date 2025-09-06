@@ -1077,8 +1077,23 @@ def show_digit_reduction_page(state: str) -> None:
             )
 
         if html_path and Path(html_path).exists():
-            with open(html_path, "r", encoding="utf-8") as fh:
-                st.components.v1.html(fh.read(), height=800, scrolling=True)
+            # Offer a stacked view toggle for easier screenshotting/training review
+            stacked = st.checkbox("Stacked view (show all methods)", value=False)
+            # If stacked is requested, attempt to load the pre-rendered stacked report
+            if stacked:
+                stacked_path = Path(html_path).with_name(
+                    Path(html_path).name.replace("_digit_reduction_report.html", "_digit_reduction_report_stacked.html")
+                )
+                if stacked_path.exists():
+                    with open(stacked_path, "r", encoding="utf-8") as fh:
+                        st.components.v1.html(fh.read(), height=3200, scrolling=True)
+                else:
+                    # Fallback to the standard report at a larger height
+                    with open(html_path, "r", encoding="utf-8") as fh:
+                        st.components.v1.html(fh.read(), height=3200, scrolling=True)
+            else:
+                with open(html_path, "r", encoding="utf-8") as fh:
+                    st.components.v1.html(fh.read(), height=900, scrolling=True)
 
 
 if __name__ == "__main__":
