@@ -1,4 +1,4 @@
-# Codex Boot Contract — Universal, Desktop-first
+# Codex Boot Contract â€” Universal, Desktop-first
 
 **Working dir**: `C:\dev\Alpha-Analytical-Tool`
 
@@ -9,10 +9,10 @@
 **Quick checks (print only)**
 - git status -s
 - git branch -vv
-- git remote -v    # must show origin → https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git
+- git remote -v    # must show origin â†’ https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git
 
 **Operating rules**
-1. Think → write a short checkbox plan; wait for **Approved**.
+1. Think â†’ write a short checkbox plan; wait for **Approved**.
 2. Implement in small diffs; show the /diff before any commit step.
 3. **Do not** change Git remotes or push.
 4. **Do not** run Linux tools on Windows; use PowerShell-native when needed.

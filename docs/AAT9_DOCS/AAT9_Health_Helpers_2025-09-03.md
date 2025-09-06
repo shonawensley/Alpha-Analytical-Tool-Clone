@@ -1,5 +1,14 @@
 ﻿# AAT9 — System Health Helpers (2025‑09‑03)
 
+## Canonical Setup (AAT9)
+- Launch: `run_app.bat` → `streamlit run src\\app.py` (repo root)
+- Imports resolve to in-repo files: `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`
+- Data contracts:
+  - Aux/Blackapple → `data/cleaned/*_draws.csv` (draws only)
+  - V‑TRAC / Stable / Digit Reduction → combined tables under `tables/` or `data/outputs/tables/<STATE>/` via `utils.path_handler`
+- Preflight: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
+  - Shows cwd, Python, import sources, `data/cleaned` inventory and selected state resolution
+
 Overview
 
 This document describes the small, read‑only “System Health” helpers added to the integrated app. These helpers make the environment, import sources, and data resolution visible so you can diagnose issues quickly without touching analytics logic. They are DEV‑gated and safe to leave in the codebase long‑term.

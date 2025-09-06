@@ -1,56 +1,102 @@
-﻿$ErrorActionPreference = 'Stop'
-
 param(
-  [string]$State = ''
+  [string]$State = '',
+  [switch]$CheckTables,
+  [string]$TablesRoot = ''
 )
 
-# Ensure we run from repo root (this script sits in .codex/)
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$root = Resolve-Path (Join-Path $here '..')
-Set-Location $root
-Write-Host ("CWD: " + (Get-Location).Path)
+Write-Host 'AAT9 Preflight (Windows)'
+Write-Host '--------------------------------'
+Write-Host ('CWD: ' + (Get-Location).Path)
 
-Write-Host "Python info:"
-python -V
-where python | Select-Object -First 1 | ForEach-Object { Write-Host ("python => " + $_) }
-
-Write-Host "Import check (modules.blackapple):"
 try {
-  python -c "import modules.blackapple as ba, sys; print('BA from:', ba.__file__)"
+  $py = (Get-Command python -ErrorAction Stop).Source
+  Write-Host ('Python: ' + $py)
 } catch {
-  Write-Host "BA import failed; check cwd and sys.path."
+  Write-Warning 'python not found on PATH'
 }
 
-Write-Host "Listing draw CSVs under data/cleaned:"
-if (Test-Path 'data/cleaned') {
-  Get-ChildItem data/cleaned *_draws.csv | Select-Object Name, FullName
+# Print key imports and their file locations
+$code = @'
+import importlib, json
+mods = [
+  ('utils.path_handler','utils.path_handler'),
+  ('modules.blackapple','modules.blackapple'),
+  ('modules.aux_loaders','modules.aux_loaders'),
+  ('alpha_analytical.stable','alpha_analytical.stable'),
+]
+out = {}
+for imp, name in mods:
+    try:
+        m = importlib.import_module(imp)
+        out[name] = getattr(m, '__file__', 'NOFILE')
+    except Exception as e:
+        out[name] = f'IMPORT_ERROR: {e}'
+print(json.dumps(out, indent=2))
+'@
+
+try {
+  $imports = python -c $code
+  Write-Host 'Imports:'
+  Write-Host $imports
+} catch {
+  Write-Warning 'Failed to import one or more modules.'
+}
+
+# Draws CSV inventory
+$cleaned = Join-Path (Get-Location) 'data/cleaned'
+if (Test-Path $cleaned) {
+  $csvs = Get-ChildItem $cleaned -Filter '*_draws.csv' -ErrorAction SilentlyContinue
+  Write-Host ("data/cleaned inventory: " + ($csvs | Measure-Object).Count)
+  $csvs | Select-Object -First 20 | ForEach-Object { ' - ' + $_.Name }
 } else {
-  Write-Host "No data/cleaned directory found."
+  Write-Warning 'data/cleaned not found.'
 }
 
 if ($State) {
-  function Normalize($s) { -join ($s.ToLower() -replace '[^a-z0-9]', '') }
-  $want = Normalize $State
-  $wantNo4 = Normalize (($State -replace '\d+$',''))
-  $cands = Get-ChildItem data/cleaned *_draws.csv -ErrorAction SilentlyContinue
-  $pick = $null
-  foreach ($p in $cands) {
-    $stem = ($p.BaseName -replace '_draws$','')
-    $sn = Normalize $stem
-    if ($sn -eq $want -or $sn -eq $wantNo4) { $pick = $p; break }
-  }
-  if (-not $pick) {
-    foreach ($p in $cands) {
-      $stem = ($p.BaseName -replace '_draws$','')
-      $sn = Normalize $stem
-      if ($sn -like "*$want*" -or $sn -like "*$wantNo4*") { $pick = $p; break }
-    }
-  }
-  if ($pick) {
-    Write-Host ("Selected CSV for state '" + $State + "': " + $pick.FullName)
-  } else {
-    Write-Host ("No matching *_draws.csv found for state '" + $State + "'.")
+  # Resolve draws file via aux_loaders picker for the given state
+  $code2 = @"
+from pathlib import Path
+from modules.aux_loaders import load_state_draws
+draws, src = load_state_draws(r'$State')
+print('State:', r'$State')
+print('Source:', src)
+print('Draws:', len(draws))
+"@
+  try {
+    $sel = python -c $code2
+    Write-Host "\nSelected state resolution:"
+    Write-Host $sel
+  } catch {
+    Write-Warning 'State resolution failed.'
   }
 }
 
-Write-Host "Preflight complete."
+# Optional combined tables check for Stable/DR/V-TRAC workflows
+if ($CheckTables) {
+  try {
+    if (-not $TablesRoot) {
+      $TablesRoot = python -c "import utils.path_handler as ph; import sys; sys.stdout.write(str(ph.get_tables_output_dir()))"
+    }
+  } catch {
+    Write-Warning 'Could not resolve tables root via utils.path_handler.'
+  }
+  Write-Host "\nTables root: $TablesRoot"
+  if ($TablesRoot -and (Test-Path $TablesRoot)) {
+    $stateDirs = Get-ChildItem $TablesRoot -Directory -ErrorAction SilentlyContinue
+    Write-Host ("tables state dirs: " + (($stateDirs | Measure-Object).Count))
+    $stateDirs | Select-Object -First 15 | ForEach-Object { ' - ' + $_.Name }
+    if ($State) {
+      $stPath = Join-Path $TablesRoot $State
+      if (Test-Path $stPath) {
+        Write-Host ("State tables present: " + $stPath)
+      } else {
+        Write-Warning ("No tables dir for state: " + $State)
+      }
+    }
+  } else {
+    Write-Warning 'tables root not found.'
+  }
+}
+
+Write-Host '--------------------------------'
+Write-Host 'Tip: Use run_app.bat to launch the UI from repo root.'

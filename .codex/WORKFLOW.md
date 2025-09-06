@@ -1,4 +1,6 @@
-﻿Codex Optimal Workflow (This Repository)
+Codex Optimal Workflow (This Repository)
+
+Banner: For the curated, up‑to‑date AAT9 documentation and workflow, see docs/AAT9_KIT/AAT9_KIT_README.md.
 
 Purpose: A practical, repeatable flow Codex follows in this repo. Pairs with .codex/AGENTS.universal.md and AGENTS.md.
 

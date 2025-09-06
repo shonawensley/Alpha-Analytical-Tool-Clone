@@ -1,6 +1,17 @@
 # Alpha Analytical Tool 9 (AAT9)
 
+> Banner: For the curated, up‑to‑date AAT9 documentation and workflow, see `docs/AAT9_KIT/AAT9_KIT_README.md`. Older AAT9 docs remain for history and reference.
+
 Welcome to **AAT9**, a modularized analytics suite for lottery pattern extraction, digit reduction, hot zone analysis, and final synergy aggregation. This documentation set is specifically for **AAT9**, distinguishing it from any older docs or prototypes in the repository.
+
+## Canonical Setup (AAT9)
+- Launch the integrated app via `run_app.bat` → `streamlit run src\app.py` (from repo root).
+- Imports resolve to in-repo files: `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`.
+- Data contracts:
+  - Aux/Blackapple → `data/cleaned/*_draws.csv` (draws only)
+  - V‑TRAC / Stable / Digit Reduction → combined tables under `tables/` or `data/outputs/tables/<STATE>/` (via `utils.path_handler`).
+- Preflight (recommended): `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"` to print cwd, Python, module sources, and draws inventory.
+- Reference: see `AAT9_Architecture_Dir_Layout_2025-09-06.md` for the canonical directory tree and diagrams.
 
 ## What Is AAT9?
 

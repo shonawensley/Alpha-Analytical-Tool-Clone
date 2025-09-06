@@ -1,3 +1,5 @@
+Banner: For AAT9 sessions, prefer briefings/CODEX_READ_FIRST_AAT9.md for the optimized startup and KIT workflow.
+
 Read briefings/CODEX_READ_THIS.md exactly and everything it tells you to review. When finished, reply READY and wait for my task file.
 
 
