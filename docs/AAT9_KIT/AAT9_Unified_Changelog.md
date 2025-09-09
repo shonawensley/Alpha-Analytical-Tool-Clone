@@ -23,3 +23,14 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
 - Folder: `docs/AAT9_KIT/*`
 - Includes: KIT README, Quickstart, AI Guide, Preflight Ref, Unified Changelog, Diagrams Guide
 
+## 2025‑09‑06 — Pipeline — Tables pipeline runner + Control Center UI (optional)
+- Files: `src/core/pipeline_runner.py`; `src/app.py` (Control Center expander)
+- Adds: Upload Pick3StatsC4.xlsm and “Generate Tables” (clean → extract → generate)
+- Writes: `data/cleaned/<State>_cleaned.xlsx`; `data/outputs/tables/<STATE>/..._combined.csv`
+- Safe: path_handler SSOT; no auto‑run; soft‑fail captions; pages keep reusing outputs
+
+## 2025‑09‑07 — Imports — SSOT bootstrap for canonical utils
+- Files: `src/app.py`
+- Fix: Enforce top‑level `utils` package binding early to prevent `src\utils` shadowing
+- Why: Streamlit/sys.path order could resolve `utils` to `src\utils`, causing `ImportError/NameError`
+- Safe: small, surgical import bootstrap; no behavior change to pages

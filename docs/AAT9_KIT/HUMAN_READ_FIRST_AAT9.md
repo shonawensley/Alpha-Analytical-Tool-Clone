@@ -10,6 +10,7 @@ Use these steps at the start of a session to set Codex up correctly and avoid pa
 ## 2) Run preflight (from repo root)
 - `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 - Check that imports resolve inside your repo and `data/cleaned/*_draws.csv` files exist.
+ - Tip: If you ever see an import error for `utils.path_handler`, it usually means the legacy `/src/utils` shadowed the canonical `/utils` temporarily. The app now enforces a canonical binding at startup to prevent this; preflight shows import file paths so you can confirm.
 
 ## 3) Launch the app
 - Use: `run_app.bat`
@@ -74,4 +75,3 @@ Next steps (if you want)
 - If you want me to create a tiny “KIT pointer” in a few more legacy AAT9 docs, I can do that safely, but it’s optional now that we have READ_FIRST, banners, and KIT.
 
 You’re in great shape to proceed: the app is stable, the surface is clean, and the workflow is codified so both you and any AI can deliver consistently and safely.
-

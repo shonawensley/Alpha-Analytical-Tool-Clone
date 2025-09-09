@@ -52,6 +52,17 @@ def get_analysis_output_dir() -> str:
     """
     return os.path.join(get_outputs_dir(), "analysis")
 
+def get_analysis_dir(kind: str, state: str) -> str:
+    """
+    Get the per-tool analysis directory for a given state, ensuring it exists.
+
+    Example: kind="patterns" -> data/outputs/analysis/patterns/<STATE>/
+    """
+    base = os.path.join(get_analysis_output_dir(), kind)
+    path = os.path.join(base, state)
+    os.makedirs(path, exist_ok=True)
+    return path
+
 def get_winners_output_dir():
     """Get the winners output directory path"""
     date_str = get_current_date_str()

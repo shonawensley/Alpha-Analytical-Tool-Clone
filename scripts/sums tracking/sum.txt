@@ -1,0 +1,312 @@
+"""
+Sums Tracking for Pick-3 (Auxiliary Tools).
+
+Computes three related views over the last `window` draws (latest-first):
+  1) Sum (0..27)
+  2) Sum Last Digit (0..9)   => sum % 10
+  3) Digital Root (1..9)     => (sum % 9) with 0 mapped to 9 (except sum=0 -> 0)
+
+For each key we compute:
+  - observed count in window
+  - expected count in window (from true probabilities over 1000 ordered combos)
+  - hit rate (%), expected rate (%)
+  - draws since last seen
+  - z-score for (observed - expected), binomial variance np(1-p)
+  - status color: purple (pending), red (late), blue (very late)
+    using probability-scaled thresholds.
+
+This module is standalone: it depends only on a list[str] of draws (newest first).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Any
+import math
+
+import pandas as pd
+
+
+# -----------------------
+# Configurable parameters
+# -----------------------
+
+DEFAULT_WINDOW = 100
+
+# Status threshold multipliers relative to the expected wait (geometric average gap)
+# expected_wait = (1 - p) / p
+PENDING_FACTOR = 0.75
+LATE_FACTOR    = 1.30
+VERY_LATE_FACTOR = 1.90
+
+# Color constants to align with the Aux palette
+COLOR_LATE = "red"
+COLOR_VERY_LATE = "blue"
+COLOR_PENDING = "purple"
+
+
+# ------------------------------------
+# Probability tables from 1000 combos
+# ------------------------------------
+
+def _enumerate_probabilities() -> Tuple[List[int], List[int], Dict[int, int]]:
+    """
+    Enumerate all 1000 ordered 3-digit outcomes to build probability counts:
+      - ways_by_sum[0..27]
+      - ways_by_sum_last_digit[0..9] where key = (sum % 10)
+      - ways_by_root[1..9], with special case: if sum==0 we use root=0
+    Returns integer counts (not normalized). Callers can divide by 1000.
+    """
+    ways_by_sum = [0] * 28
+    ways_by_sum_last_digit = [0] * 10
+    ways_by_root: Dict[int, int] = {k: 0 for k in range(10)}  # allow 0..9; we'll mostly use 1..9
+
+    for d1 in range(10):
+        for d2 in range(10):
+            for d3 in range(10):
+                s = d1 + d2 + d3
+                ways_by_sum[s] += 1
+                ways_by_sum_last_digit[s % 10] += 1
+
+                if s == 0:
+                    root = 0
+                else:
+                    r = s % 9
+                    root = 9 if r == 0 else r
+                ways_by_root[root] += 1
+
+    return ways_by_sum, ways_by_sum_last_digit, ways_by_root
+
+
+# Compute once at import
+WAYS_BY_SUM, WAYS_BY_LSD, WAYS_BY_ROOT = _enumerate_probabilities()
+TOTAL_OUTCOMES = 1000.0
+
+PROB_SUM       = [w / TOTAL_OUTCOMES for w in WAYS_BY_SUM]     # index 0..27
+PROB_LSD       = [w / TOTAL_OUTCOMES for w in WAYS_BY_LSD]     # index 0..9
+PROB_ROOT      = {k: (v / TOTAL_OUTCOMES) for k, v in WAYS_BY_ROOT.items()}  # keys 0..9
+
+
+# ----------------------------
+# Helpers over the draw stream
+# ----------------------------
+
+def _sum_of_draw(draw: str) -> int:
+    """Return sum of digits for a 'ddd' string. Invalid strings return -1."""
+    if not isinstance(draw, str) or len(draw) != 3 or not draw.isdigit():
+        return -1
+    return int(draw[0]) + int(draw[1]) + int(draw[2])
+
+
+def _digital_root(sum_value: int) -> int:
+    """Digital root on the sum: 1..9; special-case sum=0 -> 0."""
+    if sum_value == 0:
+        return 0
+    r = sum_value % 9
+    return 9 if r == 0 else r
+
+
+@dataclass
+class KeyStats:
+    key: int
+    observed: int
+    expected: float
+    p: float
+    draws_since: int
+    hit_rate_pct: float
+    expected_rate_pct: float
+    z_score: float
+    status: str  # "", "purple", "red", "blue"
+    pending_threshold: int
+    late_threshold: int
+    very_late_threshold: int
+
+
+def _compute_key_stats(
+    key_space: List[int] | range,
+    key_of_draw: Any,
+    p_lookup: Any,
+    draws: List[str],
+    window: int
+) -> List[KeyStats]:
+    """
+    Generic engine to compute statistics for a given key space.
+
+    Args:
+        key_space: the iterable of keys (e.g., range(0,28) for sums)
+        key_of_draw: function draw->key
+        p_lookup: function key->probability in [0,1]
+        draws: latest-first list of 'ddd'
+        window: number of latest draws to analyze
+    """
+    # Clip the analysis window safely
+    W = min(max(1, int(window)), len(draws)) if draws else 0
+    recent = draws[:W] if W > 0 else []
+
+    # Count observed per key and track last-seen index
+    observed = {k: 0 for k in key_space}
+    last_seen = {k: W for k in key_space}  # default W if never seen in window
+
+    for i, d in enumerate(recent):
+        k = key_of_draw(d)
+        if k in observed:
+            observed[k] += 1
+            if last_seen[k] == W:
+                last_seen[k] = i
+
+    stats: List[KeyStats] = []
+    for k in key_space:
+        p = float(p_lookup(k))
+        exp = W * p
+        obs = observed[k]
+        ds = last_seen[k]  # 0 if seen in most recent draw; W if not seen in window
+
+        # Rates
+        hr = (obs / W * 100.0) if W > 0 else 0.0
+        er = (p * 100.0)
+
+        # Binomial z-score
+        var = W * p * (1.0 - p)
+        z = 0.0 if var <= 0.0 else (obs - exp) / math.sqrt(var)
+
+        # Expected wait and probability-scaled thresholds
+        expected_wait = int(math.ceil(((1.0 - p) / p))) if p > 0 else W
+        pending_th = int(math.ceil(PENDING_FACTOR * expected_wait))
+        late_th    = int(math.ceil(LATE_FACTOR    * expected_wait))
+        verylate_th= int(math.ceil(VERY_LATE_FACTOR * expected_wait))
+
+        # Status by draws_since
+        status = ""
+        if ds >= verylate_th:
+            status = COLOR_VERY_LATE
+        elif ds >= late_th:
+            status = COLOR_LATE
+        elif ds >= pending_th:
+            status = COLOR_PENDING
+
+        stats.append(
+            KeyStats(
+                key=k,
+                observed=obs,
+                expected=exp,
+                p=p,
+                draws_since=ds,
+                hit_rate_pct=hr,
+                expected_rate_pct=er,
+                z_score=z,
+                status=status,
+                pending_threshold=pending_th,
+                late_threshold=late_th,
+                very_late_threshold=verylate_th,
+            )
+        )
+
+    return stats
+
+
+# -------------------
+# Public entry points
+# -------------------
+
+def analyze_sum_values(draws: List[str], window: int = DEFAULT_WINDOW) -> pd.DataFrame:
+    """Return a DataFrame for sums 0..27 with metrics and status."""
+    def key_of_draw(d: str) -> int:
+        return _sum_of_draw(d)
+
+    def prob_lookup(k: int) -> float:
+        return PROB_SUM[k] if 0 <= k <= 27 else 0.0
+
+    stats = _compute_key_stats(list(range(28)), key_of_draw, prob_lookup, draws, window)
+    return _stats_to_df(stats, label="Sum")
+
+
+def analyze_sum_last_digit(draws: List[str], window: int = DEFAULT_WINDOW) -> pd.DataFrame:
+    """Return a DataFrame for sum last digit 0..9 with metrics and status."""
+    def key_of_draw(d: str) -> int:
+        s = _sum_of_draw(d)
+        return -1 if s < 0 else (s % 10)
+
+    def prob_lookup(k: int) -> float:
+        return PROB_LSD[k] if 0 <= k <= 9 else 0.0
+
+    stats = _compute_key_stats(list(range(10)), key_of_draw, prob_lookup, draws, window)
+    return _stats_to_df(stats, label="SumLastDigit")
+
+
+def analyze_digital_root(draws: List[str], window: int = DEFAULT_WINDOW) -> pd.DataFrame:
+    """Return a DataFrame for digital root 1..9 (and include 0 for sum==0)."""
+    def key_of_draw(d: str) -> int:
+        s = _sum_of_draw(d)
+        return -1 if s < 0 else _digital_root(s)
+
+    def prob_lookup(k: int) -> float:
+        return PROB_ROOT.get(k, 0.0)
+
+    # Include 0..9 to make the table complete; 0 will nearly always be 0 unless 000 shows up
+    stats = _compute_key_stats(list(range(10)), key_of_draw, prob_lookup, draws, window)
+    df = _stats_to_df(stats, label="DigitalRoot")
+    # Most users prefer to see 1..9 on top; sort descending by draws_since, then by key
+    return df
+
+
+def build_sums_tracking(draws: List[str], window: int = DEFAULT_WINDOW) -> Dict[str, Any]:
+    """
+    One-call builder that returns all three tables plus metadata.
+    """
+    if not isinstance(draws, list):
+        draws = list(draws or [])
+
+    window = DEFAULT_WINDOW if window is None else int(window)
+
+    df_sum   = analyze_sum_values(draws, window)
+    df_lsd   = analyze_sum_last_digit(draws, window)
+    df_root  = analyze_digital_root(draws, window)
+
+    meta = {
+        "window": window,
+        "pending_factor": PENDING_FACTOR,
+        "late_factor": LATE_FACTOR,
+        "very_late_factor": VERY_LATE_FACTOR,
+    }
+
+    # Sort each by “most interesting” first: draws_since desc, then |z| desc
+    df_sum  = df_sum.sort_values(["Draws_Since", "abs_z"], ascending=[False, False]).reset_index(drop=True)
+    df_lsd  = df_lsd.sort_values(["Draws_Since", "abs_z"], ascending=[False, False]).reset_index(drop=True)
+    df_root = df_root.sort_values(["Draws_Since", "abs_z"], ascending=[False, False]).reset_index(drop=True)
+
+    return {
+        "window": window,
+        "sum_values": df_sum,
+        "sum_last_digit": df_lsd,
+        "digital_root": df_root,
+        "meta": meta,
+    }
+
+
+# ---------------
+# Formatting util
+# ---------------
+
+def _stats_to_df(stats: List[KeyStats], label: str) -> pd.DataFrame:
+    rows = []
+    for s in stats:
+        rows.append({
+            "Key": s.key,
+            "Observed": s.observed,
+            "Expected": round(s.expected, 2),
+            "HitRate%": round(s.hit_rate_pct, 2),
+            "ExpRate%": round(s.expected_rate_pct, 2),
+            "Draws_Since": s.draws_since,
+            "z": round(s.z_score, 3),
+            "abs_z": abs(s.z_score),
+            "Status": s.status,
+            "Pending_Th": s.pending_threshold,
+            "Late_Th": s.late_threshold,
+            "VeryLate_Th": s.very_late_threshold,
+            "Label": label,
+        })
+    df = pd.DataFrame(rows, columns=[
+        "Key","Observed","Expected","HitRate%","ExpRate%","Draws_Since",
+        "z","abs_z","Status","Pending_Th","Late_Th","VeryLate_Th","Label"
+    ])
+    return df

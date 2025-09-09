@@ -1,0 +1,47 @@
+# AAT9 — Live Wiring & Data Paths
+
+Purpose: Map each page to its engines/modules and the exact input/output directories.
+
+## Pages → Engines → Inputs/Outputs
+- V‑TRAC Analyzer
+  - Engine: `core/module_c_vtrac.py` (internal helpers under `src/utils/*` as needed)
+  - Inputs: combined tables under `data/outputs/tables/<STATE>/`
+  - Outputs: optional analysis under `data/outputs/analysis/vtrac/<STATE>/` (when applicable)
+
+- Stable Pattern Extractor
+  - Engine: `src/core/stable_pattern_extractor.py` → `alpha_analytical/stable`
+  - Inputs: combined tables under `data/outputs/tables/<STATE>/`
+  - Outputs: `data/outputs/analysis/patterns/<STATE>/`
+
+- Digit Reduction
+  - Engine: `src/core/module_b_digit_reduction.py`
+  - Inputs: combined tables under `data/outputs/tables/<STATE>/`
+  - Outputs: `data/outputs/analysis/digit_reduction/<STATE>/`
+
+- Auxiliary Tools (working parity logic)
+  - Engines: staged/working `modules.analyze_pairs`, `modules.vtrac_reference`; sums optional under `modules/module_d_auxiliary_tools/refactored`
+  - Inputs: `data/cleaned/*_draws.csv` (draws‑only; newest‑first)
+  - Outputs: rendered in‑page (tables/captions); no writes to code folders
+
+- Control Center (cross‑state doubles + BA summary)
+  - Logic: scans `data/cleaned/*_draws.csv` to build a doubles table; renders BA summary across states
+  - Optional: “Tables Pipeline” panel to regenerate combined tables from Excel
+
+## String‑Table Pipeline (from Excel)
+- Source Excel: `data/original/Pick3StatsC4.xlsm`
+- Cleaned Excel sheets: `data/cleaned/<State>_cleaned.xlsx`
+- Combined tables: `data/outputs/tables/<STATE>/` (Midday/Evening/Combined CSVs)
+  - Filenames: `Midday_Combined.csv`, `Evening_Combined.csv`, `Combined_Combined.csv`
+- Runner: `src/core/pipeline_runner.py` (pure functions)
+  - App entry: Control Center → “Tables Pipeline (optional)”
+  - CLI (optional): can be wired via a small script in `scripts/pipeline/`
+
+## Inventories & Preflight
+- Draws (Aux/BA): `data/cleaned/*_draws.csv` (preflight lists inventory)
+- Cleaned Excel: `data/cleaned/*_cleaned.xlsx` (preflight lists inventory)
+- Combined tables: `data/outputs/tables/<STATE>/` (preflight `-CheckTables` validates root and a state dir)
+
+## Canonical Helpers
+- Path SSOT: `utils/path_handler.py` (do not import from `src/utils`)
+- BA/Aux: `modules/blackapple.py`, `modules/aux_loaders.py`
+- Stable: `alpha_analytical/stable/{__init__.py, feature_config.yml}`

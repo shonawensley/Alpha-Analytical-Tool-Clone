@@ -1,0 +1,49 @@
+I'll quickly inspect the two utils packages and the src/app.py bootstrap (read-only) to validate the import shadowing hypothesis.
+I found the duplicate utils packages and confirmed imports in src/app.py happen before the sys.path bootstrap, which explains the intermittent shadowing and circular import. I'll quickly read the launcher to see how the app is invoked and whether it sets the working directory consistently.
+I inspected the repo read-only (no edits). Here’s what I found and how it explains your intermittent import error.
+Observations
+You have two utils packages:
+C:\dev\Alpha-Analytical-Tool\utils\... (canonical; has get_cleaned_data_dir)
+C:\dev\Alpha-Analytical-Tool\src\utils\... (legacy; includes a forwarder)
+The legacy src\utils\path_handler.py is a forwarder that tries to re-export the canonical utils.path_handler:
+In src/app.py, the path bootstrap (that puts project root first) happens after imports that use utils:
+The canonical utils\path_handler.py defines the function in question:
+Reasoning
+When Streamlit runs src/app.py, Python places src on sys.path. Because src appears before the project root, the absolute import from utils.path_handler import ... resolves to src\utils first.
+That triggers src\utils\__init__.py, which imports .path_handler, which is the forwarder shown above.
+The forwarder tries from utils.path_handler import * expecting “utils” to point to the top-level package, but because “utils” currently points to src\utils, this creates a self-import/cycle. The module ends up partially initialized and does not expose get_cleaned_data_dir, yielding:
+ImportError: cannot import name 'get_cleaned_data_dir' from 'utils.path_handler' (…\src\utils\path_handler.py)
+Why it worked before, sometimes: if the project root was at the front of sys.path early enough (or a different import order occurred), utils resolved to the canonical package and things ran. Small changes in launch method, reload timing, or extension behavior shift the import order, making it flaky.
+Hypotheses to test (no code changes)
+Confirm which utils is being imported first when the failure happens:
+In a Python REPL started from the repo root:
+python -c "import sys, utils; print(utils.file); print(sys.path[:3])"
+In a failing Streamlit session, log/print:
+The value of utils.__file__
+The first few entries of sys.path
+Verify that streamlit run is always started from the repo root (your run_app.bat does pushd "%~dp0" correctly).
+If you ever launched from src directly or opened src as the workspace root in Cursor/VS Code, you’ll bias imports toward src\utils.
+Likely root cause
+Import shadowing: src\utils is taking precedence over the canonical utils due to sys.path order and early imports in src/app.py that use utils before bootstrapping the project root.
+Low-risk remedies (for later, once you approve)
+Option A (surgical, minimal blast radius; recommended):
+In src/app.py, move the project-root sys.path bootstrap to the very top of the file, before any imports that reference core or utils.
+Immediately after bootstrapping, if utils or src.utils are in sys.modules and point to the src tree, evict them so subsequent imports bind to the canonical utils.
+Keep the rest of the code unchanged.
+Option B (lazy imports to avoid early binding):
+Defer from utils.path_handler import get_tables_output_dir and similar to inside functions where used. This lowers the chance of early shadowing. Still, Option A is cleaner and deterministic.
+Option C (structural; more invasive):
+Rename src\utils to src\legacy_utils and adjust imports. This removes the collision but touches many files; not ideal now.
+Option D (make the forwarder robust):
+Change src\utils\path_handler.py forwarder to load the canonical module by absolute file path via importlib, bypassing package names. This is safe but adds logic to legacy files.
+Why I agree with your “should be simple”
+The data and features are fine; this is a name-collision plus import-order issue. A tiny ordering/bootstrapping fix makes imports deterministic and eliminates the intermittent failure.
+What I’d do after approval (no edits yet)
+Apply Option A only in src/app.py (few lines), then run a headless boot (from repo root) to confirm:
+STREAMLIT_BROWSER=none
+timebox 120s; log to .codex/first_boot.log
+Verify the sidebar “ENTRY” shows src\app.py and that utils.__file__ points to the top-level utils.
+If you want, I can proceed with that minimal change next; otherwise, I can provide a one-liner snippet you can paste temporarily at the top of src/app.py to verify the diagnosis without committing anything.
+Confirmed duplicates: utils at project root and src\utils (forwarders). Early imports in src/app.py occur before path bootstrap, causing src\utils to shadow the canonical utils.
+Root cause: import shadowing + circular forwarder leading to “cannot import name ‘get_cleaned_data_dir’”.
+Fix to apply later: move bootstrap to the top of src/app.py and evict any premature utils binding so canonical utils always wins.

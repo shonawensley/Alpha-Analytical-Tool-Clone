@@ -1,0 +1,466 @@
+You’re asking exactly the right questions. Here’s a straight, comprehensive answer that (1) locks the thresholds in code, (2) fixes the repeating‑pairs coloring, (3) explains the current Sums Tracking coloring and what to keep vs. change, and (4) shows how/why to keep a few tiny “tests” so this never drifts again.
+
+TL;DR (what to do)
+
+Hard‑code the thresholds once, in one place, and consume them everywhere.
+
+Repeating‑pairs bug: your lists were built with overlapping “≥” checks (red ≥71 and blue ≥107), so the labels weren’t mutually exclusive. Fix by exclusive bands and red = highest.
+
+Top‑5 list: always sort by draws since, not by color buckets.
+
+Color priority: when a digit/pair picks up multiple statuses, use red > blue > purple.
+
+Sums Tracking: today, blue = “over‑hit/hot”, red = “under‑hit/late”, purple = “unseen/pending”. That’s fine and doesn’t conflict with Blackapple. Keep it, but add a one‑line legend so it’s obvious.
+
+Tests: keep three tiny checks (pair banding, list ordering, and sums flags). They’re cheap guardrails you keep forever.
+
+1) Why the repeating‑pairs coloring looks wrong in your screenshot
+
+Root cause: the bucketing code used overlapping conditions. For repeating pairs it was effectively:
+
+rep_red = ds ≥ 71
+
+rep_blue = ds ≥ 107
+
+That makes every blue pair also red (superset). So the caption and the lists disagree, and any view that assumes “red is the highest band” looks inconsistent.
+
+What you want (and what the page text says):
+
+Repeating pairs (00, 11, …)
+
+RED = ≥ 107
+
+BLUE = 71..106
+
+PURPLE = 25..70
+
+Non‑repeating pairs (01, 23, …)
+
+RED = ≥ 56
+
+BLUE = 37..55
+
+PURPLE = 25..36
+
+And you want red > blue > purple everywhere visually.
+
+The “Top 5 Most Overdue Repeating Pairs” list should not depend on colors at all. It’s simply the 5 repeating pairs with the largest draws‑since. In your image (CT), the list 11→75, 66→47, 22→39, 55→38, 00→37 is exactly what we expect—those should appear regardless of how the color labels are rendered.
+
+2) Canonical, hard‑coded constants + banding (drop‑in)
+
+Put this in one module (e.g., modules/pairs_thresholds.py) and import it everywhere:
+
+# modules/pairs_thresholds.py
+
+# Immutable thresholds (keep these hard-coded)
+THR_PENDING = 25
+
+# Repeating: 00, 11, ...
+THR_REP_BLUE = 71
+THR_REP_RED  = 107
+
+# Non-repeating: 01, 23, ...
+THR_NONREP_BLUE = 37
+THR_NONREP_RED  = 56
+
+def band_repeating(ds: int) -> str | None:
+    if ds >= THR_REP_RED:  return "red"     # 107+
+    if ds >= THR_REP_BLUE: return "blue"    # 71..106
+    if ds >= THR_PENDING:  return "purple"  # 25..70
+    return None
+
+def band_nonrepeating(ds: int) -> str | None:
+    if ds >= THR_NONREP_RED:  return "red"     # 56+
+    if ds >= THR_NONREP_BLUE: return "blue"    # 37..55
+    if ds >= THR_PENDING:     return "purple"  # 25..36
+    return None
+
+
+Then render the three lists by filtering with these bands (mutually exclusive by construction).
+For the Top‑5 repeating list, do:
+
+top5 = sorted(repeating_pairs.items(), key=lambda kv: kv[1].draws_since, reverse=True)[:5]
+
+
+No color logic involved.
+
+Color priority for digits/pairs: when multiple statuses collide, always pick the most severe:
+
+PRIORITY = {"red": 3, "blue": 2, "purple": 1, None: 0}
+
+
+Pick the color with the max priority among applicable tags.
+
+Encoding (“≥” mojibake): if you still see Ã¢â€°Â¥, change captions to ASCII " >= " and ensure the page runs with UTF‑8.
+
+3) Is hard‑coding better? (Yes—when it’s a policy)
+
+Hard‑coding policy constants (like “Repeating BLUE = 71+”) is a good thing. It prevents “threshold drift,” keeps different pages consistent, and makes tests trivial. It does not prevent all mistakes (a future dev could still write a wrong comparison), which is why we add tiny tests (below). But hard‑coding is exactly what you want for “these rules must never change unless I deliberately edit this one file.”
+
+4) Keep a few tiny tests (they’re not just for setup; keep them forever)
+
+These are cheap, fast, and catch 95% of the ways this can break:
+
+A. Banding is mutually exclusive & correct
+
+def _test_banding():
+    # Repeating
+    assert band_repeating(24)  is None
+    assert band_repeating(25)  == "purple"
+    assert band_repeating(70)  == "purple"
+    assert band_repeating(71)  == "blue"
+    assert band_repeating(106) == "blue"
+    assert band_repeating(107) == "red"
+
+    # Non-repeating
+    assert band_nonrepeating(24)  is None
+    assert band_nonrepeating(25)  == "purple"
+    assert band_nonrepeating(36)  == "purple"
+    assert band_nonrepeating(37)  == "blue"
+    assert band_nonrepeating(55)  == "blue"
+    assert band_nonrepeating(56)  == "red"
+
+
+B. Top‑5 is sorted by draws‑since only
+
+pairs = {"11":75,"66":47,"22":39,"55":38,"00":37,"03":5}
+top5 = [p for p,_ in sorted(pairs.items(), key=lambda kv: kv[1], reverse=True)[:5]]
+assert top5 == ["11","66","22","55","00"]
+
+
+C. Color priority
+
+def pick_color(applicable: list[str|None]) -> str|None:
+    PRIORITY = {"red":3,"blue":2,"purple":1,None:0}
+    return max(applicable, key=lambda c: PRIORITY.get(c,0))
+
+assert pick_color(["purple","red"]) == "red"
+assert pick_color(["blue","purple"]) == "blue"
+
+
+These are unit tests (milliseconds) you keep permanently. They don’t slow the app and they stop regressions cold.
+
+5) Sums Tracking — what it’s doing now and whether to change it
+
+From your table:
+
+Blue appears when a sum/root is over‑hit vs expected (positive Z), e.g., Sum 13 with Z≈+2.47 and “Draws Since 15” shows blue.
+
+Red appears where the category is under‑hit / late (negative Z), e.g., Sums 15 (Z≈−1.65) and 16 (Z≈−1.14) show red.
+
+Purple is used for “never in window / effectively pending,” e.g., Sums 0–3 with Draws Since = window size (100).
+
+So your sums logic already has a consistent, two‑sided meaning:
+
+Red = late/under‑performing (i.e., overdue relative to math).
+
+Blue = hot/over‑performing (recently hit more than expected).
+
+Purple = unseen/pending in the current window.
+
+That does not conflict with your red>blue>purple mental model: red is still the primary “pay attention” color, and blue is a useful “hot” tell. I’d keep this as‑is because it’s informative and you’ve already wired some Blackapple thinking around “due root sums” (which keys off lateness—red/purple—not hotness). If you want to make it crystal clear, add a one‑line legend under the table:
+
+Legend: red = under‑hit/late (overdue), blue = over‑hit/hot, purple = unseen in window (pending).
+
+If you’d still prefer to collapse everything to a one‑sided “lateness band” (purple/blue/red = mild/moderate/severe lateness), you can convert draws‑since vs expected gap into a band. But it’s a loss of information (you’d hide “hot”). My recommendation: keep the current two‑sided view and just label it clearly.
+
+6) Do tests belong in the app after it “works”? (Yes)
+
+Why: regressions are sneaky—renaming an import, switching a comparison from >= to >, or a copy‑paste can silently break bands, colors, or top‑5 ordering.
+
+What to keep: exactly the three micro‑tests above (plus a parity check that your “Index Hits” top‑10 matches the big V‑Trac table). These are smoke checks, not heavy QA. Keep them in your repo; run them on every start or behind a tiny “self‑check” button.
+
+Performance: negligible. These don’t process your draws, they just exercise the rules.
+
+Outcome: you don’t have to “remember” any of this. If someone reorders a condition, CI (or the app’s self‑check) will flag it instantly.
+
+7) About the Codex notes you shared (pairs & V‑Trac)
+
+Codex’s diagnosis is right: the lists were built with the old mapping (“red ≥71; blue ≥107”), and the caption was updated before the list logic. The plan to switch to exclusive bands and sort Top‑5 by ds is exactly what I described above—follow it and the display will match your rules.
+
+You also have the V‑Trac “Index Hits” and the big V‑Trac table Top‑10 red overlay in sync now—good. That’s a display‑only layer; it doesn’t change any calculations, and it’s consistent with the small table.
+
+8) Blackapple & sums: no conflict
+
+Your Blackapple MVP uses: mirror event, root sum due, spike/trough gap, floating digits, and the 27–29 remaining‑pairs foundation, then raises an alert on overlap. Sums (especially root sums) are a first‑class input there; the sums table’s “red (late)” is the one that matters for BA due logic. Keeping “blue=hot” visible in Sums Tracking doesn’t hurt BA at all. (This matches exactly the BA notes you saved earlier where we convert those five BA ideas into triggers and only raise an alert when 3+ overlap. )
+
+9) “Hard‑coding makes it safer,” but also centralize and label it
+
+To make this bomb‑proof:
+
+One source of truth: keep the thresholds in a single module (pairs_thresholds.py above).
+
+Explicit legend: render the thresholds in the UI from those constants (“Repeating: RED ≥ 107, BLUE ≥ 71, PURPLE ≥ 25” …).
+
+Self‑check: the three micro‑tests + a simple “bands are exclusive” assertion (count overlaps = 0).
+
+Color priority defined once and reused (red>blue>purple).
+
+ASCII captions (>=) to avoid mojibake if the browser/OS flips encodings.
+
+10) What to leave alone vs. tweak now
+
+Leave Sums Tracking logic (red = late/under; blue = hot/over; purple = unseen) and add the legend. This is already informative and aligns with BA’s “root sum due” ideas.
+
+Fix the pairs bands + Top‑5 now (simple, high‑impact).
+
+Keep the V‑Trac Top‑10 overlay (you already confirmed it’s right).
+
+If you want one more ultra‑low‑risk polish now: rename the Sums table “Flags” column header to Status and show the three possible words Late / Hot / Pending (colorized), which mirrors your mental model.
+
+11) Quick checklist you (or Cursor) can execute today
+
+ Add modules/pairs_thresholds.py (constants + banding functions) and import it in the Aux page.
+
+ Build the three lists by filtering with those functions (no overlaps).
+
+ Build Top‑5 repeating by sorting the repeating ds map, independent of color.
+
+ Set color priority (red > blue > purple) wherever overlapping tags can appear (digits/pairs).
+
+ Add the Sums legend.
+
+ Add the three micro‑tests (banding, Top‑5 ordering, color priority). Optionally expose a “Run self‑check” button that prints PASS/FAIL.
+
+Do those and your Aux page will be faithful, stable, and future‑proof.
+
+Final word on reliability
+
+Hard‑coding the thresholds helps (and you should do it),
+
+but only tiny tests guarantee we don’t regress later.
+
+Keep both—and you won’t be fighting this again.
+
+If you want, I can also bundle the tiny self‑check function into a single snippet you can paste into your Streamlit page to print a green “All rules OK” banner when everything is aligned.
+
+PS: Your BA plan remains solid and independent of these display fixes; when you’re ready to finish wiring BA into the Aux page, keep the five triggers and the “3+ triggers ⇒ ALERT” rule exactly as captured in your notes.
+
+_____________________________________________________________
+
+
+Love where you’re taking this. Yes—your “compound features + winner logging” plan is exactly how to turn the Aux tools from dashboards into something that learns what actually overlaps on wins. Below is a concrete, low‑risk way to wire it in so everything stays deterministic (hard‑coded), reproducible, and fast.
+
+1) Hard‑code, but version it (so you’re safe)
+
+Hard‑coding the criteria/thresholds is good for stability as long as you:
+
+keep them in one place (e.g., constants.py),
+
+tag every run with the config version and a code hash,
+
+add tiny self‑checks so bands can’t overlap.
+
+Example (pairs thresholds – mutually exclusive bands):
+
+# constants.py
+PAIR_BANDS = {
+    "repeating": {"red": 107, "blue": 71, "purple": 25},
+    "nonrep":    {"red": 56,  "blue": 37, "purple": 25},
+}
+CONFIG_VERSION = "2025-09-aux-01"
+
+# invariants.py (run once at startup)
+def _bands_ok(b):
+    return (b["red"] > b["blue"] > b["purple"] >= 0)
+assert _bands_ok(PAIR_BANDS["repeating"]) and _bands_ok(PAIR_BANDS["nonrep"])
+
+
+Display bucketing helper (no overlap, red is highest):
+
+def bucket_repeating(ds):
+    if ds >= 107: return "red"
+    if ds >= 71:  return "blue"
+    if ds >= 25:  return "purple"
+    return None
+
+def bucket_nonrep(ds):
+    if ds >= 56:  return "red"
+    if ds >= 37:  return "blue"
+    if ds >= 25:  return "purple"
+    return None
+
+
+Why tests even if code is “correct”?
+Because tiny edits (like sorting or label strings) can silently drift logic. Add sanity tests: (1) no pair appears in two bands, (2) “Top‑5 repeating” comes from sorting the raw draws_since map, not from a color band, (3) V‑Trac has 35 rows and top‑10 overdue are consistent with the small table. These take seconds and catch 95% of UI‑logic mistakes.
+
+2) “Run once per daily file” (so you don’t keep pressing buttons)
+
+Introduce a Run ID and a tiny ledger.
+
+Run ID
+
+run_id = f"{user_date}_{short_md5(file_bytes)}"
+
+
+On Process:
+
+parse Excel (once)
+
+run core analyzers + Aux using the hard‑coded constants
+
+write JSON under runs/{run_id}/{STATE}/...
+
+write runs/{run_id}/checklist.json:
+
+{"core_done": true, "aux_done": true, "combined_done": true, "winners_posted": false, "config_version": "2025-09-aux-01"}
+
+
+All pages read from the Active Run cache; only “Recompute” buttons bypass cache.
+
+3) Winner Logger that captures the compound features
+
+When you enter the winner(s), the logger should attach the day’s features exactly as the analyzers produced them.
+
+Gating: Enable “Post winners” only if core_done && aux_done && combined_done.
+
+One minimal row per state/day:
+
+{
+  "run_id": "2025-09-08_5bd3f2",
+  "state": "Connecticut4",
+  "mid_winner": "641",
+  "eve_winner": "???",
+  "pairs": {
+    "top5_repeating": [["11",75],["66",47],["22",39],["55",38],["00",37]],
+    "counts": {"rep":{"red":k1,"blue":k2,"purple":k3},"nonrep": {...}}
+  },
+  "vtrac": {
+    "top10_overdue": [20,1,33,30,15,16,26, ...],
+    "recent5": [ ... ]
+  },
+  "combos_panel": {
+    "top_combos": [{"combo":"249","draws_since":821,"type":"single"}, ...]
+  },
+  "sums": {
+    "sum_due": {"14":{"draws_since":..., "flags":{"sum_overdue_red":false,"sum_overdue_blue":true}}},
+    "shortsum_due": {"1": {...}}, "root_due": {"2": {...}}
+  },
+  "blackapple": {
+    "score": 0,               // or later: 0..5
+    "triggers": {}            // see BA MVP below
+  },
+  "config_version": "2025-09-aux-01"
+}
+
+
+This is your training snapshot. Over time you’ll have: which features overlapped on the day a win happened—exactly what you want for compounding and tuning.
+
+4) “Compound score” (lightweight, fully deterministic)
+
+Start simple: one score per boxed combo using only signals you already compute. No tuning UI—weights are constants.
+
+Feature vector per combo (abc):
+
+Pair pressure: max band across its three pairs (red=3, blue=2, purple=1, else 0).
+
+Draws‑since shape: red circle (1000+) = 2, blue square (667+) = 1, else 0 (your shapes legend).
+
+V‑Trac context: overdue‑rank bonus (rank 1..10 → 10..1), recent‑rank bonus (1..5 → 5..1).
+
+Sums pressure: if combo’s Σ/short‑sum/root belongs to the “due” sets, add small bonuses.
+
+Mirror bias (tiny): +1 if combo contains any mirror pair (0/5,1/6,2/7,3/8,4/9).
+
+Score (constants in constants.py):
+
+W = dict(pair=3.0, shape=2.0, vtrac=1.5, sums=1.25, mirror=0.5)
+
+score = (W["pair"]*pair_sev +
+         W["shape"]*shape_pts +
+         W["vtrac"]*(overdue_pts + recent_pts) +
+         W["sums"]*sums_pts +
+         W["mirror"]*mirror_hit)
+
+
+Keep the Top‑N (e.g., 20) per state. Log the reasons (explain) so you can audit why a combo ranked high.
+
+5) Keep sums tracking minimal (now) and usable later
+
+You don’t have to move the Sums UI. Just compute:
+
+Σ / root / short‑sum per combo (for small tags like Σ11 sD1 RS2)
+
+A “due set” per day (longest‑out or expectation‑based).
+That’s enough for the aggregator and later for Blackapple’s root/short‑sum filters.
+
+6) Blackapple MVP panel (ready when you want it)
+
+The triggers we outlined earlier (drop‑in module) already match BA’s posts: Mirror event, Root‑sum longest‑out, Spike/Trough (extremes or SST/STS/TSS gap), Floating digits (out ≥5), and 27–29 remaining pairs to form a foundation list; raise an alert when 3+ overlap and show a short candidate list.
+
+Because the triggers are binary and hard‑coded, they play nicely with your “no sliders” rule, and you can store {"ba_score":3,"triggers":{...}} with each run for later analysis.
+
+7) “Why can correct code still be wrong sometimes?”
+
+Encoding & labels: e.g., ≥ vs >= mojibake—display “looks” wrong though logic is fine.
+
+Bucket overlap: a subtle >= can put the same pair in red and blue.
+
+Sorting by the wrong key: a table looks correct but is ranked by the label instead of draws_since.
+
+Cheap protections:
+
+one‑line assertions (bands don’t overlap),
+
+snapshot tests (CT4 “Top‑5 repeating” equals the known list when fed the known last 100 draws),
+
+smoke run that compares the small V‑Trac table to the large one’s top‑10.
+
+8) What to ship next (small, surgical steps)
+
+A. Single source of truth for thresholds
+
+constants.py with PAIR_BANDS, shape thresholds, sums flags.
+
+Replace scattered literals with calls to the helpers above.
+
+B. Run ledger + gating
+
+run_controller.start_run(file, date_label) → run_id
+
+Write all outputs to runs/{run_id}/...
+
+“Winners Logger” button enabled only when checklist is green.
+
+C. Winner snapshot & daily summary
+
+Append one JSON/CSV row per state (structure above).
+
+Auto‑generate a short Markdown summary (“Top overlaps vs winners”).
+
+D. Compound list
+
+New panel: “Aux Aggregate: Top 20” with score bars + tags (Σ…, shapes, pair colors).
+
+This doesn’t change any existing logic—just ranking over features you already compute.
+
+E. (When ready) Blackapple panel
+
+Paste the BA module; show Status (OFF/WATCH/ALERT) and top candidates; also include it in the snapshot row.
+
+9) Tiny acceptance checklist (so you know it’s “done‑done”)
+
+ Overdue pairs lists are mutually exclusive (red > blue > purple); “Top‑5 repeating” comes from sorting draws_since.
+
+ V‑Trac big table and “Index Hits” small table show the same top‑10 overdue.
+
+ A new run produces runs/{run_id}/... with checklist.json.
+
+ Winners Logger blocks until the checklist is green; after posting winners, a CSV/JSON row per state is saved with the features.
+
+ Aux Aggregate shows Top 20 with clear “why” tags; page load reads from the run cache (no re‑processing).
+
+ Config/version hash is visible in the footer so you can reproduce any day’s results.
+
+Final thoughts
+
+You don’t need to rework Sums UI now; keep it steady and let the aggregator read the “due” flags.
+
+Hard‑coding is the right choice for your v1: deterministic, comparable across states, and easy to backtest.
+
+The winner snapshots turn your Aux tools into training data—so six weeks from now you’ll know exactly which overlaps were actually predictive, not just visually compelling.
+
+If you want, I can also hand you a one‑page “dev brief” for your coding agent that mirrors the steps A–E above in code‑task form.
+
+________
+

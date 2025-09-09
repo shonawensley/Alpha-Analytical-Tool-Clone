@@ -463,6 +463,84 @@ def run_digit_reduction(
         pass
 
     # --------------------------------------------------------
+    # Training-friendly exports (CSV steps + JSON logs)
+    # --------------------------------------------------------
+    try:
+        train_dir = out_path / "training"
+        train_dir.mkdir(parents=True, exist_ok=True)
+
+        rows: List[Dict] = []
+        items: List[Dict] = []
+
+        def _add_area(area_label: str, analysed_cells: List[Dict]) -> None:
+            for cell in analysed_cells:
+                meta = cell.get("metadata", {})
+                loc = cell.get("location_id", "")
+                vlogs = cell.get("variation_logs", {}) or {}
+                for (meth, md), log in vlogs.items():
+                    step_entries: List[Dict] = []
+                    for idx, val in enumerate(log):
+                        sval = str(val or "")
+                        length = len(sval)
+                        unique_digits = len(set(sval)) if sval else 0
+                        is_3value = (unique_digits <= 3 and sval != "")
+                        rows.append({
+                            "state": state,
+                            "area": area_label,
+                            "section": meta.get("section", ""),
+                            "set": meta.get("set", ""),
+                            "draw": meta.get("draw", ""),
+                            "col": meta.get("col", ""),
+                            "location": loc,
+                            "method": meth,
+                            "mode": md,
+                            "step": idx,
+                            "value": sval,
+                            "length": length,
+                            "unique_digits": unique_digits,
+                            "is_3value": bool(is_3value),
+                        })
+                        step_entries.append({
+                            "step": idx,
+                            "value": sval,
+                            "length": length,
+                            "unique_digits": unique_digits,
+                            "is_3value": bool(is_3value),
+                        })
+                    items.append({
+                        "state": state,
+                        "area": area_label,
+                        "section": meta.get("section", ""),
+                        "set": meta.get("set", ""),
+                        "draw": meta.get("draw", ""),
+                        "col": meta.get("col", ""),
+                        "location": loc,
+                        "method": meth,
+                        "mode": md,
+                        "steps": step_entries,
+                    })
+
+        _add_area("LS1", analysed_area1)
+        _add_area("LS2", analysed_area2)
+
+        # CSV (steps)
+        try:
+            import pandas as pd  # type: ignore
+            steps_csv_path = train_dir / f"{state}_digit_reduction_steps.csv"
+            df_steps = pd.DataFrame(rows)
+            if not df_steps.empty:
+                df_steps.to_csv(steps_csv_path, index=False)
+        except Exception:
+            pass
+
+        # JSON (logs)
+        logs_json_path = train_dir / f"{state}_digit_reduction_logs.json"
+        logs_json_path.write_text(json.dumps({"state": state, "items": items}, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        # Training exports are optional; failures must not block the main report
+        pass
+
+    # --------------------------------------------------------
     # Build & persist score DataFrame
     # --------------------------------------------------------
     df_scores = _build_score_df(analysed_area1, analysed_area2)

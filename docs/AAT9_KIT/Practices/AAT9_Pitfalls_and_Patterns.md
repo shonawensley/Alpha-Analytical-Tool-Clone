@@ -10,6 +10,13 @@ Synthesized from PITFALLS and recent integration experiences.
 - Symptom: Different modules with same names; silent empties or mismatched outputs.
 - Fix: Use canonical imports (`modules.*`, `alpha_analytical.stable`); add forwarders/SSOT where needed.
 
+## Duplicate Package Shadowing (`utils`)
+- Symptom: `ImportError: cannot import name ...` from `utils.path_handler` resolving to `src\utils\path_handler.py`, or `NameError: Path is not defined`.
+- Cause: Two `utils` packages exist (`/utils` canonical, `/src/utils` legacy). If `src` is first on `sys.path`, `utils.*` may bind to the legacy package.
+- Fix:
+  - SSOT bootstrap at app entry: ensure project root is first, evict premature `utils` bindings that point to `/src/utils`, and import canonical `utils.path_handler`.
+  - Do not import from `src/utils` (see KEEPERS). Keep the legacy tree for reference only.
+
 ## Wrong CWD / Interpreter
 - Symptom: Missing files, odd paths (OneDrive/home) in logs.
 - Fix: Launch via `run_app.bat` from repo root; use preflight to confirm cwd and Python.
@@ -25,4 +32,3 @@ Synthesized from PITFALLS and recent integration experiences.
 ## Aux/BA Using Wrong Data Source
 - Symptom: BA candidates inconsistent; Aux tables empty.
 - Fix: Ensure draws come from `data/cleaned/*_draws.csv` via `modules.aux_loaders`.
-

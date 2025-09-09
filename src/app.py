@@ -1,17 +1,36 @@
-﻿import sys
+import sys
 import os
 import pathlib
 import streamlit as st
 from contextlib import contextmanager
 from pathlib import Path
-from core.module_b_digit_reduction import run_digit_reduction
-from utils.path_handler import get_tables_output_dir
 
-# --- path hook ---------------------------------------------------------
+# --- Canonical imports bootstrap (ensure top-level utils wins) ---------
 SRC_DIR = pathlib.Path(__file__).resolve().parent     # .../src
 PROJECT_ROOT = SRC_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+try:
+    u = sys.modules.get('utils')
+    if u and getattr(u, '__file__', '') and ('%s' % u.__file__).replace('\\', '/').find('/src/utils/') != -1:
+        sys.modules.pop('utils', None)
+        sys.modules.pop('utils.path_handler', None)
+        sys.modules.pop('src.utils', None)
+        sys.modules.pop('src.utils.path_handler', None)
+except Exception:
+    pass
+try:
+    import importlib as _importlib
+    _uph = _importlib.import_module('utils.path_handler')
+    sys.modules['utils.path_handler'] = _uph
+except Exception:
+    pass
+# ----------------------------------------------------------------------
+
+from core.module_b_digit_reduction import run_digit_reduction
+from utils.path_handler import get_tables_output_dir
+
+# --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
 # ----------------------------------------------------------------------
  
 
@@ -45,9 +64,10 @@ def _load_blackapple_real():
 def _load_aux_loaders_real():
     return _load_project_module("project_aux_loaders", "modules/aux_loaders.py")
 
-# Helpers for rendering working Vâ€‘TRAC output (used only on Aux page)
+# Helpers for rendering working VÃ¢â‚¬â€˜TRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
-    return {"blue": 3, "red": 2, "purple": 1}.get(cls or "", 0)
+    # Priority: red > blue > purple (display-only severity)
+    return {"red": 3, "blue": 2, "purple": 1}.get(cls or "", 0)
 
 
 def _color_digit_pairs(combo: str, pair_status: dict) -> str:
@@ -202,7 +222,7 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
             if flags.get("red"):
                 parts.append(f'<span class="red">{label}</span>')
             if flags.get("purple"):
-                parts.append('<span class="purple">â€¢</span>')
+                parts.append('<span class="purple">Ã¢â‚¬Â¢</span>')
             return " ".join(parts)
 
         s_tag = tag(f"S{s}", sflags)
@@ -214,9 +234,9 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
     except Exception:
         return ""
 
-# â¶ Page config FIRST (before every other st.*)
+# Ã¢ÂÂ¶ Page config FIRST (before every other st.*)
 st.set_page_config(page_title="Alpha-Final Analytical Tool",
-                   page_icon="ðŸš€", layout="wide")
+                   page_icon="Ã°Å¸Å¡â‚¬", layout="wide")
 
 # Debug: show which file is running (safe to remove later)
 def main():
@@ -239,14 +259,14 @@ def main():
     ]
     
     selected_state = st.sidebar.selectbox(
-        "State â–¼",
+        "State Ã¢â€“Â¼",
         states_list,
         index=0
     )
     
     # Second level: Tool selector  
     selected_tool = st.sidebar.selectbox(
-        "Tool â–¼",
+        "Tool Ã¢â€“Â¼",
         [
             "V-TRAC Analyzer",
             "Stable Pattern Extractor", 
@@ -344,13 +364,13 @@ def show_stable_pattern_page(state: str) -> None:
         )
 
         if df.empty:
-            st.warning("No patterns found â€“ verify tables or adjust parameters.")
+            st.warning("No patterns found Ã¢â‚¬â€œ verify tables or adjust parameters.")
         else:
             st.success(f"{len(df)} patterns extracted.")
             st.dataframe(df.head(50), height=360)
 
             if csv_f:
-                st.markdown(f"[â¬‡ Download CSV]({csv_f})")
+                st.markdown(f"[Ã¢Â¬â€¡ Download CSV]({csv_f})")
 
             if html_f and Path(html_f).exists():
                 with open(html_f, "r", encoding="utf-8") as fh:
@@ -367,6 +387,26 @@ def show_control_center_page() -> None:
     """Render the Control Center page."""
     st.title("Control Center")
     st.write("Cross-State Analysis Dashboard")
+
+    # Optional: Tables Pipeline runner (upload Pick3StatsC4.xlsm and generate per-state tables)
+    with st.expander("Tables Pipeline (optional)"):
+        upl = st.file_uploader("Upload Pick3StatsC4.xlsm", type=["xlsm"], accept_multiple_files=False)
+        if upl is not None and st.button("Generate Tables"):
+            try:
+                from core.pipeline_runner import run_pipeline_from_bytes
+                with st.spinner("Running tables pipeline (clean â†’ extract â†’ generate)..."):
+                    summary = run_pipeline_from_bytes(upl.getvalue())
+                st.success(
+                    f"Cleaned: {summary.get('clean_success',0)} states; "
+                    f"Extracted: {summary.get('states_extracted',0)}; "
+                    f"Wrote tables for ~{summary.get('written_states',0)} states."
+                )
+                st.caption("Tables root: " + str(summary.get("tables_root", "")))
+                fails = summary.get("clean_failed") or []
+                if fails:
+                    st.warning("Cleaning failed for: " + ", ".join(fails))
+            except Exception as e:
+                st.error("Pipeline failed: " + str(e))
     
     try:
         from modules.analyze_pairs import get_doubles_history
@@ -505,7 +545,7 @@ def show_control_center_page() -> None:
                 state_label = row.get("State") or row.get("state")
                 if not state_label:
                     continue
-                with st.expander(f"{state_label} — View all candidates"):
+                with st.expander(f"{state_label} â€” View all candidates"):
                     # Re-run BA for this state to list all candidates
                     dr, _src = load_state_draws(state_label)
                     if not dr:
@@ -556,7 +596,7 @@ def show_aux_page(state: str) -> None:
     except Exception:
         extract_draw_list = None
 
-    # Working modules (staged copy) â€“ used only inside Aux page
+    # Working modules (staged copy) Ã¢â‚¬â€œ used only inside Aux page
     _AUX_WORKING_AVAILABLE = False
     try:
         from modules.analyze_pairs import (
@@ -617,9 +657,9 @@ def show_aux_page(state: str) -> None:
     def cached_aux_analysis(state_name: str):
         if not (_AUX_WORKING_AVAILABLE):
             return None
-        # 1) Try CSVs first (selfâ€‘contained; does not touch other tools)
+        # 1) Try CSVs first (selfÃ¢â‚¬â€˜contained; does not touch other tools)
         draws = _load_draws_from_csv_candidates(state_name)
-        # 2) Fallback to extractor (readâ€‘only) if available
+        # 2) Fallback to extractor (readÃ¢â‚¬â€˜only) if available
         if not draws and extract_draw_list is not None:
             draws = extract_draw_list(state_name, None)
         # If no draws, attempt to generate cleaned CSVs once from local Excel
@@ -678,7 +718,7 @@ def show_aux_page(state: str) -> None:
                             build_sums_dataframe as _build_sums_df,
                         )
                         # Debug caption to verify import source; safe to remove later
-                        st.sidebar.caption(f"SUMS â¦¿ {_calc_sums.__module__}")
+                        st.sidebar.caption(f"SUMS Ã¢Â¦Â¿ {_calc_sums.__module__}")
                     except Exception as _e:
                         st.sidebar.caption(f"SUMS import failed: {_e}")
 
@@ -692,11 +732,27 @@ def show_aux_page(state: str) -> None:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
 
-                # --- Vâ€‘Trac Table (Working logic) ---
-                st.subheader("ðŸ“Š Vâ€‘Trac Analysis (Working logic)")
+                # --- VÃ¢â‚¬â€˜Trac Table (Working logic) ---
+                st.subheader("Ã°Å¸â€œÅ  VÃ¢â‚¬â€˜Trac Analysis (Working logic)")
                 import pandas as _pd
                 rows = []
                 rows_plain = []
+                # Overlay: compute Top 10 overdue indices by draws_since (display-only)
+                try:
+                    draws_1000 = results.get("draws_1000", draws)
+                    total_len = len(draws_1000)
+                    index_first_seen = {}
+                    for i, d in enumerate(draws_1000):
+                        if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
+                            continue
+                        idx_tmp = get_vtrac_index(d)
+                        if idx_tmp and idx_tmp not in index_first_seen:
+                            index_first_seen[idx_tmp] = i
+                    index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+                    _sorted_by_ds_overlay = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
+                    _top10_overdue_overlay = [i for i, _ds in _sorted_by_ds_overlay[:10]]
+                except Exception:
+                    _top10_overdue_overlay = []
                 for entry in VTRAC_DISPLAY:
                     idx = entry["Index"]
                     singles = entry["Singles"].split() if entry["Singles"] else []
@@ -716,11 +772,21 @@ def show_aux_page(state: str) -> None:
                     # Row tint + rank badge
                     idx_style = vstat.get(idx, {}).get("index_style", {})
                     row_class = ""
+                    badge = ""
                     if idx_style.get("bg") == "green":
+                        # Preserve green (recent)
                         row_class = "row-green"
-                    elif idx_style.get("bg") == "red":
-                        row_class = "row-red"
-                    badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                        badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    else:
+                        # Overlay red for Top 10 overdue (display-only)
+                        if idx in _top10_overdue_overlay:
+                            row_class = "row-red"
+                            rank_num = _top10_overdue_overlay.index(idx) + 1
+                            ds_disp = index_draws_since_overlay.get(idx, "")
+                            badge = f'<sup class="rank-badge">{rank_num} ({ds_disp})</sup>'
+                        elif idx_style.get("bg") == "red":
+                            row_class = "row-red"
+                            badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
                     index_cell = f'<div class="{row_class}">{idx}{badge}</div>' if row_class else f'{idx}{badge}'
                     singles_cell = f'<div class="{row_class}">{s_html}{badge}</div>' if row_class else f'{s_html}{badge}'
                     doubles_cell = f'<div class="{row_class}">{d_html}{badge}</div>' if row_class else f'{d_html}{badge}'
@@ -732,52 +798,54 @@ def show_aux_page(state: str) -> None:
                 # Download (plain)
                 df_plain = _pd.DataFrame(rows_plain)
                 st.download_button(
-                    "Download Vâ€‘Trac Table (Working) CSV",
+                    "Download VÃ¢â‚¬â€˜Trac Table (Working) CSV",
                     df_plain.to_csv(index=False).encode("utf-8"),
                     file_name=f"{state}_vtrac_working.csv",
                     mime="text/csv",
                 )
 
                 # --- Overdue Pairs (Working logic) ---
-                st.subheader("ðŸ”¥ Overdue Pairs Analysis (Working logic)")
+                st.subheader("Ã°Å¸â€Â¥ Overdue Pairs Analysis (Working logic)")
                 THR_NR_RED, THR_R_RED = 37, 71
                 THR_NR_BLUE, THR_R_BLUE = 56, 107
                 THR_PENDING = 25
                 nonrep = results["nonrep"]
                 rep = results["rep"]
-                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_RED])
-                rep_blue = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_blue = sorted([p for p, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
                 rep_purple = sorted([p for p, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
-                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_RED])
-                nr_blue = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_blue = sorted([p for p, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
                 nr_purple = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
 
                 # Thresholds info like the working app
-                st.info(f"""
-                **Overdue Thresholds:**
-                - Repeating pairs (00, 11, etc): RED={THR_R_RED}+, BLUE={THR_R_BLUE}+, PURPLE={THR_PENDING}+
-                - Non-repeating pairs (01, 23, etc): RED={THR_NR_RED}+, BLUE={THR_NR_BLUE}+, PURPLE={THR_PENDING}+
-                """)
+                st.info(
+                    "**Overdue Thresholds:**\n"
+                    f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
+                    f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
+                )
+                # Display-only note to avoid ambiguity when multiple statuses overlap
+                st.caption("Color priority (digits/pairs overlap): red > blue > purple")
 
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (â‰¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
                 with c2:
-                    st.markdown("<b>Nonâ€‘Repeating Pairs</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (â‰¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (â‰¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (â‰¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                    st.markdown("<b>NonÃ¢â‚¬â€˜Repeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
 
                 # --- Top 5 Repeating Pairs ---
                 st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
                 for pair, overdue in results["top5"]:
                     if overdue >= 107:
-                        color = "blue"
-                    elif overdue >= 71:
                         color = "red"
+                    elif overdue >= 71:
+                        color = "blue"
                     elif overdue >= 25:
                         color = "purple"
                     else:
@@ -931,30 +999,30 @@ def show_aux_page(state: str) -> None:
                             "Combo": c.get("combo", ""),
                             "MatchScore": c.get("score", 0),
                             "Tags": " ".join(sorted(c.get("tags", []))),
-                            "Sums": f"IΣ{t['Sigma']} sD{t['sD']} RS{t['RS']}"
+                            "Sums": f"IÎ£{t['Sigma']} sD{t['sD']} RS{t['RS']}"
                         })
                     if rows:
                         import pandas as _pd
                         st.dataframe(_pd.DataFrame(rows), use_container_width=True)
                     else:
-                        st.caption("No candidate list (insufficient overlap) — still watching triggers.")
+                        st.caption("No candidate list (insufficient overlap) â€” still watching triggers.")
                 except Exception as _e:
                     st.caption(f"Blackapple panel unavailable: {_e}")
                 # Legend / Feature Guide
                 with st.expander("Legend / Feature Guide"):
                     st.markdown("""
-                    - Vâ€‘Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
+                    - VÃ¢â‚¬â€˜Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
                     - Combination shapes:
-                      - Red circle: Singles â‰¥ 501 draws since; Doubles â‰¥ 1000
-                      - Blue square: Singles â‰¥ 334; Doubles â‰¥ 667
+                      - Red circle: Singles Ã¢â€°Â¥ 501 draws since; Doubles Ã¢â€°Â¥ 1000
+                      - Blue square: Singles Ã¢â€°Â¥ 334; Doubles Ã¢â€°Â¥ 667
                       - Boxed combos: permutations are treated as the same combo
                     - Pairs colors (analysis window based):
-                      - Red (Late): nonâ€‘repeating â‰¥ 37, repeating â‰¥ 71
-                      - Blue (Very Late): nonâ€‘repeating â‰¥ 56, repeating â‰¥ 107
-                      - Purple (Pending): â‰¥ 25
+                      - Red (Late): nonÃ¢â‚¬â€˜repeating Ã¢â€°Â¥ 37, repeating Ã¢â€°Â¥ 71
+                      - Blue (Very Late): nonÃ¢â‚¬â€˜repeating Ã¢â€°Â¥ 56, repeating Ã¢â€°Â¥ 107
+                      - Purple (Pending): Ã¢â€°Â¥ 25
                     """)
 
-                # --- Vâ€‘Trac Index Hits (Working logic) ---
+                # --- VÃ¢â‚¬â€˜Trac Index Hits (Working logic) ---
                 import pandas as _pd
                 idx_rows = []
                 # Build draws_since map for all indices
@@ -981,27 +1049,44 @@ def show_aux_page(state: str) -> None:
                         index_first_seen[idx] = i
                 index_draws_since = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
 
+                # Extend Overdue to Top 10 by draws_since (display-only); keep Recent as-is
+                _sorted_by_ds = sorted(index_draws_since.items(), key=lambda kv: kv[1], reverse=True)
+                _top10_overdue = [i for i, _ds in _sorted_by_ds[:10]]
+
                 for idx, ds in index_draws_since.items():
                     status = "None"
-                    rank = ""
-                    if idx in overdue_ranks:
+                    rank_num = 0
+                    # Overdue (Top 10 by draws_since)
+                    if idx in _top10_overdue:
                         status = "Overdue"
-                        rank = overdue_ranks[idx]
+                        rank_num = _top10_overdue.index(idx) + 1
+                    # Recent (from vstat) if not in Overdue
                     elif idx in recent_ranks:
                         status = "Recent"
-                        rank = recent_ranks[idx]
-                    idx_rows.append({"Index": idx, "Draws Since": ds, "Status": status, "Rank": rank})
-                # Sort: Overdue desc, then Recent by rank, then others
+                        try:
+                            rank_num = int(str(recent_ranks[idx])) if str(recent_ranks[idx]).isdigit() else 0
+                        except Exception:
+                            rank_num = 0
+
+                    rank_disp = f"{rank_num} ({ds})" if rank_num > 0 else ""
+                    idx_rows.append({
+                        "Index": idx,
+                        "Draws Since": ds,
+                        "Status": status,
+                        "Rank": rank_num,
+                        "RankDisplay": rank_disp,
+                    })
+                # Sort: Overdue desc (most due first), then Recent by rank, then others
                 df_idx = _pd.DataFrame(idx_rows)
                 if not df_idx.empty:
                     df_idx["_overdue_sort"] = df_idx["Status"].apply(lambda s: 2 if s == "Overdue" else (1 if s == "Recent" else 0))
                     df_idx["_rank_fill"] = df_idx["Rank"].apply(lambda r: int(r) if str(r).isdigit() else 0)
-                    df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "Rank"] ]
+                    df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "RankDisplay"] ]
                     html_idx = df_idx.to_html(index=False, escape=False)
-                    st.subheader("Vâ€‘Trac Index Hits (Working logic)")
+                    st.subheader("VÃ¢â‚¬â€˜Trac Index Hits (Working logic)")
                     st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
 
-                st.success(f"âœ… Auxiliary tools (working logic) completed for {state}")
+                st.success(f"Ã¢Å“â€¦ Auxiliary tools (working logic) completed for {state}")
                 
             except Exception as e:
                 st.error(f"Error running auxiliary analysis: {str(e)}")
@@ -1063,7 +1148,7 @@ def show_digit_reduction_page(state: str) -> None:
             )
 
         if df.empty:
-            st.warning("Digit Reduction produced no output â€“ verify tables exist.")
+            st.warning("Digit Reduction produced no output Ã¢â‚¬â€œ verify tables exist.")
             return
 
         st.success(f"{len(df)} reductions extracted for {state}")
@@ -1098,6 +1183,7 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
 
 
 

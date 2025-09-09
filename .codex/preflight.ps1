@@ -71,6 +71,13 @@ print('Draws:', len(draws))
   }
 }
 
+# List cleaned Excel sheets (string-table inputs) if present
+$cleaned_xlsx = Get-ChildItem (Join-Path (Get-Location) 'data/cleaned') -Filter '*_cleaned.xlsx' -ErrorAction SilentlyContinue
+if ($cleaned_xlsx) {
+  Write-Host ("\ncleaned Excel inventory: " + (($cleaned_xlsx | Measure-Object).Count))
+  $cleaned_xlsx | Select-Object -First 20 | ForEach-Object { ' - ' + $_.Name }
+}
+
 # Optional combined tables check for Stable/DR/V-TRAC workflows
 if ($CheckTables) {
   try {
