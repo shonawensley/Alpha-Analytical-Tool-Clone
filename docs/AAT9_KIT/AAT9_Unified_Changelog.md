@@ -34,3 +34,26 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
 - Fix: Enforce top‑level `utils` package binding early to prevent `src\utils` shadowing
 - Why: Streamlit/sys.path order could resolve `utils` to `src\utils`, causing `ImportError/NameError`
 - Safe: small, surgical import bootstrap; no behavior change to pages
+
+## 2025‑09‑07 — Aux — Pairs display bands & captions
+- Files: `src/app.py` (Aux page)
+- Change: Mutually‑exclusive bands (red highest) for repeating/non‑repeating; Top‑5 repeating coloring aligned; thresholds caption uses ASCII ">="
+- Why: Old labels used overlapping checks (red ≥ 71 and blue ≥ 107) causing confusion; this is display‑only; calculations unchanged
+
+## 2025‑09‑07 — V‑Trac — Big table badges
+- Files: `src/app.py` (Aux page)
+- Change: Red Top‑10 overdue rows show badge with "rank (draws_since)"; preserves green (recent)
+- Why: Align big table with the small “Index Hits” table; display‑only
+
+## 2025‑09‑07 — Digit Reduction — Stacked report + training exports
+- Files: `src/core/module_b_digit_reduction.py` (orchestrator), `src/app.py` (page wiring)
+- Adds: Stacked HTML report embed checkbox; training CSV/JSON with structural fields and export compaction (analysis unchanged)
+- Outputs: `data/outputs/analysis/digit_reduction/<STATE>/{...report.html, ...report_stacked.html, ...scores.csv}`;
+  `training/{...steps.csv, ...logs.json}` with guidance and schema
+
+## 2025‑09‑07 — Winners — V‑Trac winner report (index panels)
+- Files: `src/core/winners_vtrac_report.py`, `src/app.py` (Control Center expander)
+- Adds: single‑state, per‑winner HTML export showing Midday/Evening/Combined index panels
+  - Purple = index stable‑pattern combos; Green = straight permutations of the winning number
+- Writes: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
+- Notes: table‑agnostic (safe for states missing string‑tables); later can overlay table‑driven details

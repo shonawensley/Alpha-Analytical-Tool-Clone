@@ -1,0 +1,166 @@
+Where to check
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>digit_reduction_logs.json
+Top-level now contains:
+state
+guidance: purpose, notes, sort_suggestion, and a concise schema
+items: compacted sequences with structural fields
+What the guidance says (highlights)
+Use area (LS1/LS2), section (Midday/Evening/Combined), set (Set1/2/3), draw (Draw1..7), col (numeric + label) to align panels.
+Own-table analysis: filter by a single section (e.g., Midday) and compare LS1 col_rank 7/6/5 (or LS2 3/1).
+Cross-chart analysis: group by [area, set_rank, draw_rank, col_rank, method, mode] and pivot over section_rank (1=Midday,2=Evening,3=Combined).
+Compaction: steps are trimmed after terminal start (length<=3 or unique_digits<=2); after terminal we keep at most one identical duplicate per value, plus any later changes (each also at most one identical duplicate). Meaningful duplicates before terminal are preserved.
+Suggested sort order to recreate the UI grid:
+area_rank, section_rank, set_rank desc, draw_rank, col_rank, method, mode.
+sequence_meta and grid_position provided for quick grouping and diagnostics.
+Summary of changes you can forward
+Stacked report support:
+New file: data/outputs/analysis/digit_reduction/<STATE>/<STATE>digit_reduction_report_stacked.html
+App checkbox toggles stacked embed (higher height); defaults unchanged.
+Training-friendly exports added and enhanced:
+CSV: data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>digit_reduction_steps.csv
+Long/tidy rows with structural fields (area, section, set, draw, col, ranks), compaction metadata, and per-step features.
+JSON: data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>digit_reduction_logs.json
+Items now include: grid_position, sequence_meta, final, and compacted steps.
+Embedded guidance: notes, schema, and sort suggestions to direct training evaluation.
+Export compaction logic (exports only; analysis/UI not touched):
+Detect terminal start at first step with length<=3 or unique_digits<=2.
+Keep steps up to terminal inclusive.
+After terminal, allow at most one identical duplicate per distinct value; keep later changes (each with at most one identical duplicate).
+If no terminal is reached, keep up to last_change_step.
+Wiring overview (unchanged)
+App → src/app.py → show_digit_reduction_page(state)
+Resolves tables dir via utils.path_handler.get_tables_output_dir()
+Calls src/core/module_b_digit_reduction.py::run_digit_reduction
+Renders summary and embeds HTML; training files written alongside HTML
+Orchestrator → src/core/module_b_digit_reduction.py
+Builds big_data from tables, runs methods A..T in own/combined
+Writes tabbed + stacked HTML, summary CSV, training CSV/JSON with structural fields and compaction
+Engine → src/core/long_string_reducer_part1.py
+Reduction methods A..T, extractors (LS1/LS2), draw-list helpers
+Paths
+Inputs: data/outputs/tables/<STATE>/_combined.csv
+Outputs:
+data/outputs/analysis/digit_reduction/<STATE>/{...report.html, ...report_stacked.html, ...scores.csv}
+data/outputs/analysis/digit_reduction/<STATE>/training/{...steps.csv, ...logs.json}
+Pitfalls to remember
+Windows locks the summary CSV if open in Excel/Preview Pane; close/delete and re-run.
+State name must match the tables directory.
+You’re set for training: the JSON/CSV now carry the structural barriers, ranks, and guidance so another AI can evaluate own-table and cross‑chart patterns with minimal ambiguity.
+
+________
+
+Here’s the full “wiring + files” reference for Digit Reduction in the integrated app, with roles, call flow, inputs/outputs, and pitfalls. You can paste this directly into your log/guide.
+Overview (what runs where)
+UI entry (Streamlit page)
+File: src/app.py
+Function: show_digit_reduction_page(state)
+Responsibilities:
+Resolve state tables path via utils.path_handler.get_tables_output_dir() / <STATE>
+Call the orchestrator: src/core/module_b_digit_reduction.py::run_digit_reduction(state, tables_path)
+Render:
+Summary dataframe (scores)
+“Download CSV” (summary CSV)
+Embed HTML (tabbed by default). Checkbox toggles stacked embed (higher height)
+Orchestrator (Part‑2 runner + HTML writer + training exports)
+File: src/core/module_b_digit_reduction.py
+Key functions:
+_load_big_data_from_tables(csv_dir) → reads *_combined.csv into nested big_data
+analyse_area(...) → apply methods A..T in both modes (own/combined)
+build_full_html(results_area1, results_area2, draw_heads, view_mode="tabbed"|"stacked")
+run_digit_reduction(state, tables_path, out_path=None, min_occ=3) → main entry called by the app
+Outputs per run (under data/outputs/analysis/digit_reduction/<STATE>/):
+<STATE>_digit_reduction_report.html (tabbed)
+<STATE>_digit_reduction_report_stacked.html (stacked)
+<STATE>_digit_reduction_scores.csv (summary, used by Download CSV)
+training/<STATE>_digit_reduction_steps.csv (long/tidy steps, compacted)
+training/<STATE>_digit_reduction_logs.json (compacted logs + structural fields + embedded guidance)
+Export compaction (exports only; no change to analysis or HTML):
+Terminal start = first step where length ≤ 3 or unique_digits ≤ 2
+Keep all steps up to the terminal step (inclusive)
+After terminal: for any distinct value, keep at most one identical duplicate; keep later changes (each also at most one identical duplicate)
+If no terminal is seen, keep up to last_change_step
+JSON includes guidance, grid_position (ranks/coordinates), sequence_meta (first_3value_step, last_change_step, counts), final
+Engine (Part‑1: reduction methods + R2/Draw helpers)
+File: src/core/long_string_reducer_part1.py
+Key exports used by orchestrator:
+Methods: method_a, method_b, method_c, method_d, method_e, method_t
+run_reduction_progression(original_string, draw_digit_lists, method_func)
+R2 extraction: extract_r2_strings_area1, extract_r2_strings_area2
+Draw lists: get_draw_lists_for_section
+Constants: MIRROR_MAP, SECTION_NAMES
+Path helpers
+File: src/utils/path_handler.py
+Function used: get_tables_output_dir() → data/outputs/tables
+Call flow (end-to-end)
+1) User selects state in the app → show_digit_reduction_page(state) in src/app.py
+2) Resolve tables path: tables_root = Path(get_tables_output_dir()) / state
+3) Call orchestrator:
+df_scores, html_path, csv_path = run_digit_reduction(state, tables_path=tables_root)
+4) Orchestrator:
+_load_big_data_from_tables(tables_root) reads Midday_combined.csv, Evening_combined.csv, Combined_combined.csv
+Build Area‑1 (LS1: col7/6/5) + Area‑2 (LS2: Draw4 col3 / Draw6 col1)
+For each Location × Method × Mode:
+Run run_reduction_progression with method function (A..T) on “own” and “combined” draw lists
+Write tabbed HTML, stacked HTML, summary CSV
+Build compacted training exports (CSV + JSON with guidance)
+5) App renders summary dataframe + Download CSV + embed HTML (tabbed or stacked)
+Inputs your page expects
+The state’s tables directory:
+data/outputs/tables/<STATE>/ must contain:
+Midday_combined.csv
+Evening_combined.csv
+Combined_combined.csv
+Output locations per state
+HTML + summary CSV:
+data/outputs/analysis/digit_reduction/<STATE>/<STATE>_digit_reduction_report.html
+data/outputs/analysis/digit_reduction/<STATE>/<STATE>_digit_reduction_report_stacked.html
+data/outputs/analysis/digit_reduction/<STATE>/<STATE>_digit_reduction_scores.csv
+Training exports:
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_steps.csv
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_logs.json
+JSON contains top-level guidance object with:
+Purpose, notes, sort suggestions (to rebuild the grid order), and a concise schema
+How to run own-table and cross-chart evaluations (LS1/LS2; Midday/Evening/Combined)
+Structural fields for AI (in both CSV + JSON)
+Identity:
+state, area (LS1/LS2), section (Midday/Evening/Combined), set (Set1/2/3), draw (Draw1..7), col (numeric), col_label (e.g., “col7”), location (Section|Set|Draw|col#)
+method (A..T), mode (own/combined)
+Coordinates for grouping/sorting:
+grid_position: area_rank (LS1=1, LS2=2), section_rank (Midday=1, Evening=2, Combined=3), set_rank (Set1=1, Set2=2, Set3=3), draw_rank (1..7), col_rank (7/6/5 or 3/1)
+Sequence diagnostics:
+sequence_meta: first_3value_step, last_change_step, steps_total_before_compaction, steps_kept_after_compaction
+steps (compacted): arrays of { step, value, length, unique_digits, is_3value }
+final: { value, length, unique_digits, is_3value }
+Files NOT used by Digit Reduction (to avoid confusion)
+src/core/long_string_reducer_part2.py — legacy fragment; not imported by the app
+modules/blackapple.py & aux loaders — unrelated to Digit Reduction (they’re used in Aux/Control Center)
+Anything under scripts/ — Digit Reduction in the integrated app does not run via scripts/* (there is a CLI in module_b_digit_reduction.py::main, but the app doesn’t invoke it)
+Dependencies
+pandas (for reading CSVs, building dataframes)
+Streamlit (app UI)
+Standard library only otherwise
+Known pitfalls (and how to avoid them)
+Windows file lock on summary CSV:
+If <STATE>_digit_reduction_scores.csv is open in Excel or visible in Explorer Preview Pane, pandas will raise PermissionError on overwrite. Close the file/Preview Pane, delete the CSV, re-run.
+State label must match tables directory:
+The label selected in the app must match folder name under data/outputs/tables/<STATE>
+Checkbox location (UI):
+The “Stacked view” checkbox sits inside the results area, so toggling it triggers a rerun; press “Run Digit Reduction” if the block disappears, or open the stacked HTML directly
+What I changed (summary)
+Added stacked report generation and a checkbox to embed it (taller viewport for screenshots)
+Added training exports:
+Steps CSV (long/tidy) with structural fields and ranks for grouping/pivots
+JSON logs containing the same data + embedded guidance
+Export compaction logic:
+Detect terminal start (length ≤ 3 or unique_digits ≤ 2)
+Keep up to terminal inclusive; after terminal allow at most one identical duplicate per distinct value; keep later changes (each with at most one duplicate)
+If no terminal reached, keep up to last_change_step
+No changes to reduction algorithms or HTML/tabbed summary logic (analysis stays identical)
+Minimal “how to interpret” for another AI (lift from JSON guidance)
+Own-table:
+Filter a single section, then evaluate LS1 columns (col_rank 7/6/5) or LS2 (col_rank 3/1) across methods/modes
+Cross‑chart:
+Group by [area, set_rank, draw_rank, col_rank, method, mode], pivot over section_rank to compare Midday vs Evening vs Combined
+Recreate grid order:
+Sort [area_rank, section_rank, set_rank desc, draw_rank, col_rank, method, mode]
+This captures the full wiring, the exact files involved, what they do, where inputs/outputs live, and all the guardrails we discussed.

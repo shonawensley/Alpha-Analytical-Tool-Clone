@@ -1,0 +1,531 @@
+TL;DR: Today the Winners Logger does not create a V‑TRAC “Winning‑Index” HTML. It (a) highlights the Midday/Evening/Combined tables and saves CSV, and (b) writes a winners JSON (and you also have a predictions JSON elsewhere). We can add a safe, isolated step that, after you paste winners, computes the winner’s V‑TRAC index and saves the same analyzer‑style HTML — without breaking anything, and still future‑proof for later integration.
+
+What the Winners Logger currently does (and where it saves)
+
+Highlights tables (Midday / Evening / Combined) for the pasted winners.
+
+Saves CSVs with the highlights under:
+data/outputs/winners/<STATE>/<STATE>_{Midday|Evening|Combined}_combined.csv
+
+Saves winners JSON (for ML/training later) under:
+data/outputs/winners_json/<STATE>_<YYYY-MM-DD>_winners.json
+
+(Separate) predictions JSON is saved under:
+data/outputs/predictions/<STATE>_<YYYY-MM-DD>_predictions.json
+
+There is no code today that writes ...WIN_index_<IDX>.html. The only HTML generator in the project is tied to the V‑TRAC analyzer view, not the Winners Logger.
+
+How to confirm on your side in 30 seconds
+
+Open the app → Log Winners tab → paste Midday/Evening winners → submit.
+
+Check the filesystem:
+
+data/outputs/winners/<STATE>/..._combined.csv (new or updated)
+
+data/outputs/winners_json/<STATE>_<DATE>_winners.json (new)
+
+There will not be any WIN_index_*.html yet — that’s the addition below.
+
+Minimal, safe addition: save a “Winning‑Index” HTML when you log winners
+
+This adds one helper (new module) and two one‑liners in the Winners Logger page, right after your existing CSV saves. It reuses your V‑TRAC mapping and, if available, your analyzer’s rich HTML generator; otherwise it emits a compact fallback HTML. It does not change how any other tool reads data.
+
+1) New file: modules/winner_report.py
+# modules/winner_report.py
+from pathlib import Path
+import os
+
+def write_winner_index_html(state_name: str,
+                            date_str: str,
+                            winning_number: str,
+                            tables: dict,
+                            out_root: str = "data/outputs/winners") -> str:
+    """
+    Create a V‑TRAC report for the winning number's index and save it as:
+        data/outputs/winners/<STATE>/<STATE>_<DATE>_WIN_index_<IDX>.html
+    Returns the full path to the saved HTML.
+    """
+    # Use the same mapping as the analyzer
+    from modules.vtrac_reference import get_vtrac_index, VTRAC_DISPLAY
+
+    win = str(winning_number).strip()
+    if len(win) != 3 or not win.isdigit():
+        raise ValueError(f"Winning number '{winning_number}' must be 3 digits (got '{winning_number}').")
+
+    idx = get_vtrac_index(win)
+
+    # Gather combos for that index
+    singles, doubles = [], []
+    for row in VTRAC_DISPLAY:
+        if int(row.get("Index", 0)) == int(idx):
+            singles = row.get("Singles", []) or []
+            doubles = row.get("Doubles", []) or []
+            break
+
+    # Prefer the analyzer's full HTML if available
+    html = None
+    try:
+        # Adjust import path if your project keeps it elsewhere
+        from src.core.module_c_vtrac import generate_index_html_report
+        html = generate_index_html_report(
+            state_name=state_name,
+            index=idx,
+            patterns={"Singles": singles, "Doubles": doubles},
+            tables=tables,          # {"Midday": df, "Evening": df, "Combined": df} if you have them
+            score=0,
+            rank=0,
+        )
+    except Exception:
+        # Lightweight fallback HTML (still correct index & combos)
+        def _ul(title, seq):
+            return "<h3>{}</h3><ul>{}</ul>".format(title, "".join(f"<li>{c}</li>" for c in seq))
+        html = f"""<!doctype html>
+<html><head><meta charset="utf-8"><title>{state_name} WIN Index {idx}</title></head>
+<body>
+<h1>{state_name} — Winning V‑TRAC Index {idx}</h1>
+<p><strong>Winning Number:</strong> {win}</p>
+{_ul("Singles", singles)}
+{_ul("Doubles", doubles)}
+</body></html>"""
+
+    out_dir = Path(out_root) / state_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{state_name}_{date_str}_WIN_index_{idx}.html"
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return str(out_path)
+
+2) Call it from the Winners Logger (after your existing CSV saves)
+
+Where you already have the Winners Logger submit handler (the code that parses winners, highlights, and saves the CSVs/JSON), add:
+
+from modules.winner_report import write_winner_index_html
+
+# Build the tables dict if you have these DataFrames in scope; otherwise pass {}
+tables_for_report = {
+    "Midday":   midday_df,    # or {} if not available
+    "Evening":  evening_df,
+    "Combined": combined_df,
+}
+
+# Example variables used below:
+#   state_name: the selected state label (e.g., "Connecticut4")
+#   date_str:   date string you use for winners files (e.g., "2025-09-02")
+#   mid_win:    "NNN" or "" for the Midday winner
+#   eve_win:    "NNN" or "" for the Evening winner
+
+if mid_win:
+    path_mid = write_winner_index_html(
+        state_name=state_name,
+        date_str=date_str,
+        winning_number=mid_win,
+        tables=tables_for_report
+    )
+
+if eve_win:
+    path_eve = write_winner_index_html(
+        state_name=state_name,
+        date_str=date_str,
+        winning_number=eve_win,
+        tables=tables_for_report
+    )
+
+# Optional: show success messages / links in the UI
+import streamlit as st
+if mid_win:
+    st.success(f"Saved Midday winning-index HTML: {path_mid}")
+if eve_win:
+    st.success(f"Saved Evening winning-index HTML: {path_eve}")
+
+
+That’s it. When you paste winners, you’ll now get:
+
+data/outputs/winners/<STATE>/<STATE>_<DATE>_WIN_index_<IDX>.html
+
+
+Open it and you’ll see the correct V‑TRAC index for that winner. If the rich generator is available in your build, the page will look exactly like the analyzer’s print (with Midday/Evening/Combined sections). If not, the fallback HTML still shows the right index and its combos so you can train today.
+
+Why this won’t disturb future integration
+
+It’s additive: we don’t change the existing table logic or file structure; we just write an extra HTML artifact next to the CSV/JSON you already produce.
+
+It’s modular: all the new logic lives in modules/winner_report.py. Later, when you wire in the bundle (predictions + winners → *_bundle.json), nothing here needs to change.
+
+It’s consistent: it reuses the same V‑TRAC index mapping you already use everywhere else, so the index is guaranteed to match the analyzer.
+
+Quick test checklist
+
+Launch the app → Log Winners tab.
+
+Paste a known Midday and/or Evening winner and submit.
+
+Confirm:
+
+CSVs updated in data/outputs/winners/<STATE>/..._combined.csv
+
+Winners JSON created in data/outputs/winners_json/..._winners.json
+
+NEW: .../<STATE>_<DATE>_WIN_index_<IDX>.html exists; open it and confirm the index and combos.
+
+If you want me to tailor the import line for generate_index_html_report to your exact file path (some branches keep it in a different module), say the word and I’ll give the exact import so you get the full analyzer‑style page every time.
+
+
+
+
+
+_______________________________________________________________
+
+<I’ll answer as a world‑recognized software‑engineering workflow coach (ACM Distinguished Engineer)>
+
+TL;DR: From what you showed, the Winners Logger today reliably saves CSV highlights under data/outputs/winners/<STATE>/...csv and winners JSON under data/outputs/winners_json/.... You also already have a working flow that can save V‑TRAC index HTML under data/outputs/winners/<DATE>/vtrac_reports/<STATE>/... (the folder you pointed at with the rank/index files), but the path/wiring is inconsistent: some runs save plain Midday/Evening/Combined HTML with no purple highlights, and other runs save the correct analyzer‑style HTML into the vtrac_reports subfolders.
+What you want now is simple and safe: when you log winners, always save one analyzer‑style “Winning‑Index” HTML (the 3‑pane Midday/Evening/Combined view with purple stable‑pattern highlights) and additionally mark the winner’s V‑TRAC straight(s) in green. Below is a concrete, cut‑and‑paste plan for Codex that does exactly that without breaking any other module, and we can hook deeper integrations later.
+
+What I can confirm from your screenshots (why you’re seeing “random” outputs)
+
+data/outputs/winners/<STATE>/... contains CSV like Connecticut4_Combined_combined_winners.csv and many Midday/Evening_combined_winXYZ.csv — this is the table‑highlight side of the Winners Logger working.
+
+data/outputs/winners/<DATE>/vtrac_reports/<STATE>/... (e.g., Connecticut4_vtrac_rank1_index28_...html) shows analyzer‑style HTML (the correct 3‑pane with purple highlights). You said this used to be produced from winners logging and now isn’t always hit — that’s a wiring/path branch issue, not a logic bug.
+
+You also showed a case where the logger saved plain Midday/Evening/Combined HTML (no purple). That’s the wrong branch; it’s rendering a simple table writer instead of the analyzer’s generate_index_html_report.
+
+Conclusion: Keep the current CSV+JSON behavior. Unify winners logging to always call the analyzer’s HTML generator and write into the date‑first vtrac_reports folder. Then add the green “V‑TRAC straight” highlight.
+
+Exact changes for Codex (safe, additive, minimal)
+
+Goal: When you click Log Winners, for every (state, date) and every Midday/Evening winner you paste, write:
+data/outputs/winners/<YYYY-MM-DD>/vtrac_reports/<STATE>/<STATE>_vtrac_WIN_index_<IDX>_<YYYYMMDD_HHMM>.html
+The HTML must be the analyzer layout (purple stable pattern) plus green highlight of the winner’s “V‑TRAC straight” set.
+
+0) Keep the current artifacts
+
+No removals. We keep:
+
+CSV highlights in data/outputs/winners/<STATE>/*.csv
+
+winners_json and predictions_json exactly as they are
+
+1) Create a tiny, dedicated writer for winners → analyzer HTML
+
+File: modules/winner_report.py (new)
+
+from pathlib import Path
+import os, re, datetime
+
+# ---- Optional: centralize the winners vtrac report path
+def winners_vtrac_dir(date_str: str, state_name: str) -> Path:
+    # date_str like "2025-09-10"
+    return Path("data") / "outputs" / "winners" / date_str / "vtrac_reports" / state_name
+
+def _timestamp():
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M")
+
+def _highlight_straights_in_html(html: str, straights: list[str]) -> str:
+    """
+    Post-process: color the V‑TRAC straight combos in green, preserving the analyzer's HTML.
+    We inject a .straight CSS and wrap exact 3-digit hits with <span class="straight">...</span>.
+    """
+    if not straights:
+        return html
+    css = (
+        "<style>"
+        ".straight{background:#d8f5d6;color:#0b7a0b;font-weight:600;"
+        "border-radius:3px;padding:0 2px}"
+        "</style>"
+    )
+    # add CSS into <head>
+    if "</head>" in html:
+        html = html.replace("</head>", css + "</head>")
+    else:
+        html = css + html
+
+    # replace 3-digit tokens with span; ensure we don't match inside longer numbers
+    for s in sorted(set(straights), reverse=True):
+        patt = rf'(?<!\d){re.escape(s)}(?!\d)'
+        html = re.sub(patt, f'<span class="straight">{s}</span>', html)
+    return html
+
+def compute_vtrac_index_and_display(winning_number: str):
+    """
+    Returns (index:int, patterns:dict, vstraights:list[str]).
+    patterns is what analyzer's generator expects: {"Singles":[...], "Doubles":[...]}.
+    vstraights is the 8-combo "V‑TRAC straight" set for the specific v-code that includes winning_number.
+    """
+    win = str(winning_number).strip().zfill(3)
+    # Try the same refs the analyzer uses
+    idx = None
+    patterns = {"Singles": [], "Doubles": []}
+    try:
+        # common analyzer reference
+        from modules.vtrac_reference import get_vtrac_index, VTRAC_DISPLAY
+        idx = get_vtrac_index(win)
+        for row in VTRAC_DISPLAY:
+            if int(row.get("Index", -1)) == int(idx):
+                patterns["Singles"] = row.get("Singles", []) or []
+                patterns["Doubles"] = row.get("Doubles", []) or []
+                break
+    except Exception:
+        # Fallback if names differ in your branch
+        from src.core.module_c_vtrac import find_vtrac_index_and_combos  # adjust if needed
+        idx, combos = find_vtrac_index_and_combos(win)
+        patterns = combos
+
+    # V‑TRAC straight mapping (winner's 8-combo set). We load from a small module you’ll add next.
+    from modules.vtrac_straight_map import VSTRAIGHTS  # see step 2
+    vstraights = []
+    for vcode, combos in VSTRAIGHTS.items():
+        if win in combos:
+            vstraights = combos[:]  # the full 8
+            break
+    return int(idx), patterns, vstraights
+
+def write_winner_index_html(state_name: str,
+                            date_str: str,
+                            winning_number: str,
+                            tables: dict) -> str:
+    """
+    Build analyzer-style HTML (Midday/Evening/Combined) for the winner’s V‑TRAC index
+    and save it under winners/<DATE>/vtrac_reports/<STATE>/...WIN_index_<IDX>_<STAMP>.html
+    Returns the full path.
+    """
+    idx, patterns, vstraights = compute_vtrac_index_and_display(winning_number)
+
+    # Prefer the analyzer's rich generator
+    try:
+        from src.core.module_c_vtrac import generate_index_html_report
+        html = generate_index_html_report(
+            state_name=state_name,
+            index=idx,
+            patterns=patterns,   # {"Singles": [...], "Doubles":[...]}
+            tables=tables,       # {"Midday":df, "Evening":df, "Combined":df} or {}
+            score=0,
+            rank=0,
+        )
+    except Exception:
+        # Minimal fallback if the generator name/path differs
+        html = f"""<!doctype html><html><head><meta charset="utf-8">
+<title>{state_name} WIN index {idx}</title></head>
+<body>
+<h1>{state_name} — WIN index {idx}</h1>
+<p><strong>Winning:</strong> {str(winning_number).zfill(3)}</p>
+<h3>Singles</h3><p>{", ".join(patterns.get("Singles", []))}</p>
+<h3>Doubles</h3><p>{", ".join(patterns.get("Doubles", []))}</p>
+</body></html>"""
+
+    # Green-mark the V‑TRAC straights
+    html = _highlight_straights_in_html(html, vstraights)
+
+    out_dir = winners_vtrac_dir(date_str, state_name)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fname = f"{state_name}_vtrac_WIN_index_{idx}_{date_str.replace('-','')}_{_timestamp()}.html"
+    out_path = out_dir / fname
+    out_path.write_text(html, encoding="utf-8")
+    return str(out_path)
+
+2) Add the “V‑TRAC straight” mapping (the 8‑combo sets)
+
+File: modules/vtrac_straight_map.py (new) — paste your full list as code:
+
+# modules/vtrac_straight_map.py
+# Mapping of v-codes to their 8 V‑TRAC “straight” combinations (strings, zero-padded)
+VSTRAIGHTS = {
+    "v111": ["000","005","050","055","500","505","550","555"],
+    "v112": ["001","006","051","056","501","506","551","556"],
+    "v113": ["002","007","052","057","502","507","552","557"],
+    "v114": ["003","008","053","058","503","508","553","558"],
+    "v115": ["004","009","054","059","504","509","554","559"],
+    "v121": ["010","015","060","065","510","515","560","565"],
+    "v122": ["011","016","061","066","511","516","561","566"],
+    "v123": ["012","017","062","067","512","517","562","567"],
+    "v124": ["013","018","063","068","513","518","563","568"],
+    "v125": ["014","019","064","069","514","519","564","569"],
+    "v131": ["020","025","070","075","520","525","570","575"],
+    "v132": ["021","026","071","076","521","526","571","576"],
+    "v133": ["022","027","072","077","522","527","572","577"],
+    "v134": ["023","028","073","078","523","528","573","578"],
+    "v135": ["024","029","074","079","524","529","574","579"],
+    "v141": ["030","035","080","085","530","535","580","585"],
+    "v142": ["031","036","081","086","531","536","581","586"],
+    "v143": ["032","037","082","087","532","537","582","587"],
+    "v144": ["033","038","083","088","533","538","583","588"],
+    "v145": ["034","039","084","089","534","539","584","589"],
+    "v151": ["040","045","090","095","540","545","590","595"],
+    "v152": ["041","046","091","096","541","546","591","596"],
+    "v153": ["042","047","092","097","542","547","592","597"],
+    "v154": ["043","048","093","098","543","548","593","598"],
+    "v155": ["044","049","094","099","544","549","594","599"],
+    "v211": ["100","105","150","155","600","605","650","655"],
+    "v212": ["101","106","151","156","601","606","651","656"],
+    "v213": ["102","107","152","157","602","607","652","657"],
+    "v214": ["103","108","153","158","603","608","653","658"],
+    "v215": ["104","109","154","159","604","609","654","659"],
+    "v221": ["110","115","160","165","610","615","660","665"],
+    "v222": ["111","116","161","166","611","616","661","666"],
+    "v223": ["112","117","162","167","612","617","662","667"],
+    "v224": ["113","118","163","168","613","618","663","668"],
+    "v225": ["114","119","164","169","614","619","664","669"],
+    "v231": ["120","125","170","175","620","625","670","675"],
+    "v232": ["121","126","171","176","621","626","671","676"],
+    "v233": ["122","127","172","177","622","627","672","677"],
+    "v234": ["123","128","173","178","623","628","673","678"],
+    "v235": ["124","129","174","179","624","629","674","679"],
+    "v241": ["130","135","180","185","630","635","680","685"],
+    "v242": ["131","136","181","186","631","636","681","686"],
+    "v243": ["132","137","182","187","632","637","682","687"],
+    "v244": ["133","138","183","188","633","638","683","688"],
+    "v245": ["134","139","184","189","634","639","684","689"],
+    "v251": ["140","145","190","195","640","645","690","695"],
+    "v252": ["141","146","191","196","641","646","691","696"],
+    "v253": ["142","147","192","197","642","647","692","697"],
+    "v254": ["143","148","193","198","643","648","693","698"],
+    "v255": ["144","149","194","199","644","649","694","699"],
+    "v311": ["200","205","250","255","700","705","750","755"],
+    "v312": ["201","206","251","256","701","706","751","756"],
+    "v313": ["202","207","252","257","702","707","752","757"],
+    "v314": ["203","208","253","258","703","708","753","758"],
+    "v315": ["204","209","254","259","704","709","754","759"],
+    "v321": ["210","215","260","265","710","715","760","765"],
+    "v322": ["211","216","261","266","711","716","761","766"],
+    "v323": ["212","217","262","267","712","717","762","767"],
+    "v324": ["213","218","263","268","713","718","763","768"],
+    "v325": ["214","219","264","269","714","719","764","769"],
+    "v331": ["220","225","270","275","720","725","770","775"],
+    "v332": ["221","226","271","276","721","726","771","776"],
+    "v333": ["222","227","272","277","722","727","772","777"],
+    "v334": ["223","228","273","278","723","728","773","778"],
+    "v335": ["224","229","274","279","724","729","774","779"],
+    "v341": ["230","235","280","285","730","735","780","785"],
+    "v342": ["231","236","281","286","731","736","781","786"],
+    "v343": ["232","237","282","287","732","737","782","787"],
+    "v344": ["233","238","283","288","733","738","783","788"],
+    "v345": ["234","239","284","289","734","739","784","789"],
+    "v351": ["240","245","290","295","740","745","790","795"],
+    "v352": ["241","246","291","296","741","746","791","796"],
+    "v353": ["242","247","292","297","742","747","792","797"],
+    "v354": ["243","248","293","298","743","748","793","798"],
+    "v355": ["244","249","294","299","744","749","794","799"],
+    "v411": ["300","305","350","355","800","805","850","855"],
+    "v412": ["301","306","351","356","801","806","851","856"],
+    "v413": ["302","307","352","357","802","807","852","857"],
+    "v414": ["303","308","353","358","803","808","853","858"],
+    "v415": ["304","309","354","359","804","809","854","859"],
+    "v421": ["310","315","360","365","810","815","860","865"],
+    "v422": ["311","316","361","366","811","816","861","866"],
+    "v423": ["312","317","362","367","812","817","862","867"],
+    "v424": ["313","318","363","368","813","818","863","868"],
+    "v425": ["314","319","364","369","814","819","864","869"],
+    "v431": ["320","325","370","375","820","825","870","875"],
+    "v432": ["321","326","371","376","821","826","871","876"],
+    "v433": ["322","327","372","377","822","827","872","877"],
+    "v434": ["323","328","373","378","823","828","873","878"],
+    "v435": ["324","329","374","379","824","829","874","879"],
+    "v441": ["330","335","380","385","830","835","880","885"],
+    "v442": ["331","336","381","386","831","836","881","886"],
+    "v443": ["332","337","382","387","832","837","882","887"],
+    "v444": ["333","338","383","388","833","838","883","888"],
+    "v445": ["334","339","384","389","834","839","884","889"],
+    "v451": ["340","345","390","395","840","845","890","895"],
+    "v452": ["341","346","391","396","841","846","891","896"],
+    "v453": ["342","347","392","397","842","847","892","897"],
+    "v454": ["343","348","393","398","843","848","893","898"],
+    "v455": ["344","349","394","399","844","849","894","899"],
+    "v511": ["400","405","450","455","900","905","950","955"],
+    "v512": ["401","406","451","456","901","906","951","956"],
+    "v513": ["402","407","452","457","902","907","952","957"],
+    "v514": ["403","408","453","458","903","908","953","958"],
+    "v515": ["404","409","454","459","904","909","954","959"],
+    "v521": ["410","415","460","465","910","915","960","965"],
+    "v522": ["411","416","461","466","911","916","961","966"],
+    "v523": ["412","417","462","467","912","917","962","967"],
+    "v524": ["413","418","463","468","913","918","963","968"],
+    "v525": ["414","419","464","469","914","919","964","969"],
+    "v531": ["420","425","470","475","920","925","970","975"],
+    "v532": ["421","426","471","476","921","926","971","976"],
+    "v533": ["422","427","472","477","922","927","972","977"],
+    "v534": ["423","428","473","478","923","928","973","978"],
+    "v535": ["424","429","474","479","924","929","974","979"],
+    "v541": ["430","435","480","485","930","935","980","985"],
+    "v542": ["431","436","481","486","931","936","981","986"],
+    "v543": ["432","437","482","487","932","937","982","987"],
+    "v544": ["433","438","483","488","933","938","983","988"],
+    "v545": ["434","439","484","489","934","939","984","989"],
+    "v551": ["440","445","490","495","940","945","990","995"],
+    "v552": ["441","446","491","496","941","946","991","996"],
+    "v553": ["442","447","492","497","942","947","992","997"],
+    "v554": ["443","448","493","498","943","948","993","998"],
+    "v555": ["444","449","494","499","944","949","994","999"],
+}
+
+3) Call the writer from the Winners Logger (two lines per winner)
+
+In your Log Winners tab handler (the place that already saves the CSVs and winners JSON), add:
+
+from modules.winner_report import write_winner_index_html
+
+tables_for_report = {
+    "Midday":   midday_df,    # if you have them; else pass {}
+    "Evening":  evening_df,
+    "Combined": combined_df,
+}
+
+# After CSV/JSON saves:
+if mid_win:
+    path_mid = write_winner_index_html(
+        state_name=state_name,
+        date_str=date_str,             # e.g., "2025-09-10"
+        winning_number=mid_win,        # "NNN"
+        tables=tables_for_report
+    )
+
+if eve_win:
+    path_eve = write_winner_index_html(
+        state_name=state_name,
+        date_str=date_str,
+        winning_number=eve_win,
+        tables=tables_for_report
+    )
+
+import streamlit as st
+if mid_win: st.success(f"HTML saved: {path_mid}")
+if eve_win: st.success(f"HTML saved: {path_eve}")
+
+
+That’s it. This ensures the correct analyzer‑style HTML is always written for winners (and you’ll see the green highlight on the winner’s V‑TRAC straight(s)).
+
+Why this won’t break anything & stays future‑compatible
+
+It is additive; we don’t change CSV/JSON or other modules.
+
+It reuses the analyzer generator (the source of the purple stable‑pattern highlights), so your “side‑by‑side” view stays identical to what you already trust.
+
+The green highlight is a post‑process on the HTML string; if you later want to move that into the generator, you can pass winner_straights as a parameter and highlight during rendering.
+
+We write only into the date‑first vtrac_reports tree, which is the clean, training‑friendly layout you showed. (If you want to keep a second copy per‑state for convenience, you can shutil.copy into data/outputs/winners/<STATE>/ as well.)
+
+One‑minute acceptance test you can hand to Codex
+
+Open the app → Log Winners. Enter Delaware4 Midday = 216 (your test).
+
+After submit, you should see success lines like:
+
+HTML saved: data/outputs/winners/2025-09-10/vtrac_reports/Delaware4/Delaware4_vtrac_WIN_index_33_20250910_...html
+
+Saved 1 winner JSON file(s) for AI training.
+
+Open that HTML:
+
+Layout = analyzer 3‑pane (Midday/Evening/Combined) with purple stable‑pattern highlights.
+
+The exact V‑TRAC straight set (the 8 items that include 216 because it’s in the v322 set) is green wherever it appears.
+
+216 itself is green wherever present.
+
+(If the analyzer generator import path differs in your branch, Codex only needs to adjust the from src.core.module_c_vtrac import generate_index_html_report import to match your file.)
+
+Notes on the “random HTML” you saw
+
+The plain per‑pane HTML (no purple) is from a simple table writer used early on. The patch above removes its need for winners logging; you always call the analyzer’s HTML generator for winners.
+
+You don’t have to clean old artifacts now. Once this is live, new runs will save into the vtrac_reports tree and that can be your single source of truth for training.
+
+If you want, I can also give a tiny bundle writer (merge_predictions_vs_winners.py) that emits a _bundle.json per (state, date) pointing to the exact HTML you just produced, so the training pipeline can link directly to human‑readable context. But for your “let me train now” goal, the three changes above will make the Winners Logger produce exactly the side‑by‑side V‑TRAC index print you want, every time, with the green straight overlay.

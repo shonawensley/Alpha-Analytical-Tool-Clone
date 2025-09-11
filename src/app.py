@@ -407,6 +407,32 @@ def show_control_center_page() -> None:
                     st.warning("Cleaning failed for: " + ", ".join(fails))
             except Exception as e:
                 st.error("Pipeline failed: " + str(e))
+
+    # Winners Logger: V‑Trac winner report
+    with st.expander("Winners Logger (V‑Trac winner report)"):
+        try:
+            states_list = [
+                "Connecticut4", "Delaware4", "Florida4", "Georgia4", "Indiana4",
+                "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+                "Ontario4", "Pennsylvania4", "Texas4", "Virginia4", "WestVirginia4"
+            ]
+        except Exception:
+            states_list = []
+        w_state = st.selectbox("State", states_list, key="winners_state")
+        w_number = st.text_input("Winning number (3 digits)", max_chars=3, key="winners_number")
+        if st.button("Generate V‑Trac Winner Report", key="btn_gen_winner_vtrac"):
+            try:
+                from core.winners_vtrac_report import build_vtrac_winner_report
+                if not (w_number and len(w_number) == 3 and w_number.isdigit()):
+                    st.warning("Enter a 3‑digit winning number.")
+                else:
+                    with st.spinner("Building winner report..."):
+                        out_path = build_vtrac_winner_report(w_state, w_number)
+                    rel = os.path.relpath(out_path)
+                    st.success("Winner report generated.")
+                    st.markdown(f"[Open report]({rel})")
+            except Exception as e:
+                st.error(f"Winners Logger failed: {e}")
     
     try:
         from modules.analyze_pairs import get_doubles_history
@@ -423,7 +449,7 @@ def show_control_center_page() -> None:
             except Exception:
                 show_dev_d = False
             if show_dev_d:
-                import os, sys as _sys
+                import sys as _sys
                 with st.expander("System Health (Digit Reduction)"):
                     st.caption("cwd: " + os.getcwd())
                     st.caption("python: " + _sys.executable)
@@ -574,7 +600,7 @@ def show_control_center_page() -> None:
     except Exception as e:
         # System Health (development)
         try:
-            import os, sys as _sys
+            import sys as _sys
             with st.expander("System Health"):
                 st.caption(f"cwd: {os.getcwd()}")
                 st.caption(f"python: {_sys.executable}")

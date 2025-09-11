@@ -36,6 +36,15 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
   - App entry: Control Center → “Tables Pipeline (optional)”
   - CLI (optional): can be wired via a small script in `scripts/pipeline/`
 
+## Winners Logger (V‑Trac Winner Report)
+- Entry: Control Center → “Winners Logger (V‑Trac winner report)”
+- Inputs: State (single), winning number (3 digits)
+- Behavior: renders index panels (Midday/Evening/Combined) using V‑Trac mapping
+  - Purple: stable‑pattern combos for the winner’s index
+  - Green: straight permutations of the winner (order‑specific)
+- Outputs: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
+- Notes: table‑agnostic (does not require state tables); safe to use for states still missing string‑tables
+
 ## Inventories & Preflight
 - Draws (Aux/BA): `data/cleaned/*_draws.csv` (preflight lists inventory)
 - Cleaned Excel: `data/cleaned/*_cleaned.xlsx` (preflight lists inventory)

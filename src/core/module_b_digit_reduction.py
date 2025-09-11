@@ -472,52 +472,165 @@ def run_digit_reduction(
         rows: List[Dict] = []
         items: List[Dict] = []
 
+        def _to_int(s: str, default: int = 0) -> int:
+            try:
+                return int(s)
+            except Exception:
+                return default
+
+        def _col_num_from_label(col_label: str) -> int:
+            # expects formats like "col7", "col3", else returns 0
+            try:
+                if isinstance(col_label, str) and col_label.startswith("col"):
+                    return int(col_label.replace("col", "").strip())
+            except Exception:
+                pass
+            return 0
+
+        SECTION_RANK = {"Midday": 1, "Evening": 2, "Combined": 3}
+        SET_RANK = {"Set1": 1, "Set2": 2, "Set3": 3}
+
         def _add_area(area_label: str, analysed_cells: List[Dict]) -> None:
             for cell in analysed_cells:
                 meta = cell.get("metadata", {})
                 loc = cell.get("location_id", "")
                 vlogs = cell.get("variation_logs", {}) or {}
                 for (meth, md), log in vlogs.items():
-                    step_entries: List[Dict] = []
+                    # Build raw steps with features
+                    raw_steps: List[Dict] = []
                     for idx, val in enumerate(log):
                         sval = str(val or "")
                         length = len(sval)
                         unique_digits = len(set(sval)) if sval else 0
                         is_3value = (unique_digits <= 3 and sval != "")
+                        raw_steps.append({
+                            "step": idx,
+                            "value": sval,
+                            "length": length,
+                            "unique_digits": unique_digits,
+                            "is_3value": bool(is_3value),
+                        })
+
+                    # Determine last change step (trim terminal repeats only)
+                    last_change_step = 0
+                    for i in range(1, len(raw_steps)):
+                        if raw_steps[i]["value"] != raw_steps[i-1]["value"]:
+                            last_change_step = i
+
+                    first_3value_step = -1
+                    for s in raw_steps:
+                        if s["is_3value"]:
+                            first_3value_step = s["step"]
+                            break
+
+                    # Determine terminal start: first step reaching small/low-variance state
+                    # Terminal is defined as length <= 3 OR unique_digits <= 2 (includes empty string)
+                    first_terminal_idx = -1
+                    for s in raw_steps:
+                        if s["length"] <= 3 or s["unique_digits"] <= 2:
+                            first_terminal_idx = s["step"]
+                            break
+
+                    steps_total_before_compaction = len(raw_steps)
+                    kept: List[Dict] = []
+                    if not raw_steps:
+                        kept = []
+                    else:
+                        if first_terminal_idx == -1:
+                            # No terminal; keep up to last change
+                            kept = raw_steps[: last_change_step + 1]
+                        else:
+                            # Keep everything up to the first terminal step (inclusive)
+                            kept = raw_steps[: first_terminal_idx + 1]
+                            # After terminal: allow at most one exact duplicate per distinct value
+                            # and keep later change steps (also allowing one duplicate for each new value)
+                            allowed_dups_per_value = 1
+                            dup_count_for_current = 0
+                            for j in range(first_terminal_idx + 1, last_change_step + 1):
+                                s = raw_steps[j]
+                                if kept and s["value"] == kept[-1]["value"]:
+                                    if dup_count_for_current < allowed_dups_per_value:
+                                        kept.append(s)
+                                        dup_count_for_current += 1
+                                    else:
+                                        # skip further identical terminal repeats
+                                        continue
+                                else:
+                                    kept.append(s)
+                                    dup_count_for_current = 0
+                    steps_kept_after_compaction = len(kept)
+
+                    # Structural anchors / ranks for AI mapping
+                    section = str(meta.get("section", ""))
+                    set_name = str(meta.get("set", ""))
+                    draw_name = str(meta.get("draw", ""))
+                    col_label = str(meta.get("col", ""))
+                    col_num = _col_num_from_label(col_label)
+
+                    grid_position = {
+                        "area_rank": 1 if area_label == "LS1" else 2,
+                        "section_rank": SECTION_RANK.get(section, 0),
+                        "set_rank": SET_RANK.get(set_name, 0),
+                        "draw_rank": _to_int(draw_name.replace("Draw", ""), 0) if draw_name else 0,
+                        "col_rank": col_num,
+                    }
+
+                    # Emit CSV rows for kept steps only
+                    for s in kept:
                         rows.append({
                             "state": state,
                             "area": area_label,
-                            "section": meta.get("section", ""),
-                            "set": meta.get("set", ""),
-                            "draw": meta.get("draw", ""),
-                            "col": meta.get("col", ""),
+                            "section": section,
+                            "set": set_name,
+                            "draw": draw_name,
+                            "col": col_num,
+                            "col_label": col_label,
                             "location": loc,
                             "method": meth,
                             "mode": md,
-                            "step": idx,
-                            "value": sval,
-                            "length": length,
-                            "unique_digits": unique_digits,
-                            "is_3value": bool(is_3value),
+                            "area_rank": grid_position["area_rank"],
+                            "section_rank": grid_position["section_rank"],
+                            "set_rank": grid_position["set_rank"],
+                            "draw_rank": grid_position["draw_rank"],
+                            "col_rank": grid_position["col_rank"],
+                            "step": s["step"],
+                            "value": s["value"],
+                            "length": s["length"],
+                            "unique_digits": s["unique_digits"],
+                            "is_3value": s["is_3value"],
+                            "first_3value_step": first_3value_step,
+                            "last_change_step": last_change_step,
+                            "steps_total_before_compaction": steps_total_before_compaction,
+                            "steps_kept_after_compaction": steps_kept_after_compaction,
                         })
-                        step_entries.append({
-                            "step": idx,
-                            "value": sval,
-                            "length": length,
-                            "unique_digits": unique_digits,
-                            "is_3value": bool(is_3value),
-                        })
+
+                    final_obj = kept[-1] if kept else {"value": "", "length": 0, "unique_digits": 0, "is_3value": False}
+
                     items.append({
                         "state": state,
                         "area": area_label,
-                        "section": meta.get("section", ""),
-                        "set": meta.get("set", ""),
-                        "draw": meta.get("draw", ""),
-                        "col": meta.get("col", ""),
+                        "section": section,
+                        "set": set_name,
+                        "draw": draw_name,
+                        "col": col_num,
+                        "col_label": col_label,
                         "location": loc,
                         "method": meth,
                         "mode": md,
-                        "steps": step_entries,
+                        "grid_position": grid_position,
+                        "sequence_meta": {
+                            "first_3value_step": first_3value_step,
+                            "last_change_step": last_change_step,
+                            "steps_total_before_compaction": steps_total_before_compaction,
+                            "steps_kept_after_compaction": steps_kept_after_compaction,
+                        },
+                        "steps": kept,
+                        "final": {
+                            "value": final_obj.get("value", ""),
+                            "length": final_obj.get("length", 0),
+                            "unique_digits": final_obj.get("unique_digits", 0),
+                            "is_3value": final_obj.get("is_3value", False),
+                        },
                     })
 
         _add_area("LS1", analysed_area1)
@@ -533,9 +646,55 @@ def run_digit_reduction(
         except Exception:
             pass
 
-        # JSON (logs)
+        # JSON (logs) with guidance (JSON has no native comments, so we embed guidance fields)
         logs_json_path = train_dir / f"{state}_digit_reduction_logs.json"
-        logs_json_path.write_text(json.dumps({"state": state, "items": items}, ensure_ascii=False, indent=2), encoding="utf-8")
+        guidance = {
+            "purpose": "Training guidance for interpreting Digit‑Reduction outputs.",
+            "notes": [
+                "Use fields area (LS1/LS2), section (Midday/Evening/Combined), set (Set1/2/3), draw (Draw1..7), col (numeric + label) to align panels.",
+                "Own‑table analysis: filter section to the same value (e.g., Midday) and compare across col_rank 7/6/5 (LS1) or 3/1 (LS2).",
+                "Cross‑chart analysis: group by [area, set_rank, draw_rank, col_rank, method, mode] and pivot over section_rank (1=Midday,2=Evening,3=Combined).",
+                "Compaction: steps are trimmed after terminal start (length<=3 or unique_digits<=2); after terminal we allow at most one identical duplicate per distinct value.",
+                "Meaning: steps preserve all distinct states up to stabilization, with minimal end‑tail noise for readability.",
+                "Ordering: sort by [area_rank, section_rank, set_rank desc, draw_rank, col_rank, method, mode] to reproduce the grid order seen in the UI.",
+                "Final state is provided at item.final; step‑level features include length, unique_digits, is_3value.",
+                "Keys grid_position and sequence_meta are provided to speed up grouping and diagnostics.",
+            ],
+            "sort_suggestion": [
+                "area_rank", "section_rank", {"set_rank": "desc"}, "draw_rank", "col_rank", "method", "mode"
+            ],
+            "schema": {
+                "item": {
+                    "state": "State identifier (e.g., Connecticut4)",
+                    "area": "LS1|LS2 (Long‑String 1 vs Long‑String 2)",
+                    "section": "Midday|Evening|Combined",
+                    "set": "Set1|Set2|Set3",
+                    "draw": "Draw1..Draw7",
+                    "col": "numeric column index (7/6/5 for LS1; 3/1 for LS2)",
+                    "col_label": "e.g., col7",
+                    "location": "'<Section>|<Set>|<Draw>|col<Num>'",
+                    "method": "A..T",
+                    "mode": "own|combined",
+                    "grid_position": {
+                        "area_rank": "1 for LS1, 2 for LS2",
+                        "section_rank": "1 Midday, 2 Evening, 3 Combined",
+                        "set_rank": "1 Set1, 2 Set2, 3 Set3",
+                        "draw_rank": "1..7",
+                        "col_rank": "column number as integer"
+                    },
+                    "sequence_meta": {
+                        "first_3value_step": "first step with unique_digits<=3 (‑1 if none)",
+                        "last_change_step": "largest index i where value[i]!=value[i‑1]",
+                        "steps_total_before_compaction": "raw step count",
+                        "steps_kept_after_compaction": "after trimming terminal tail and allowing at most one identical duplicate per distinct value"
+                    },
+                    "steps": "array of step objects: {step, value, length, unique_digits, is_3value}",
+                    "final": "summary of last kept step"
+                }
+            }
+        }
+        payload = {"state": state, "guidance": guidance, "items": items}
+        logs_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         # Training exports are optional; failures must not block the main report
         pass

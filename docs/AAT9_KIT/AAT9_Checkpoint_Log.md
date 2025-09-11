@@ -59,3 +59,44 @@ Template
 - Impact: Deterministic binding to canonical `utils`; no behavior changes to pages/pipeline.
 - Files: `src/app.py`; docs updated: KEEPERS.md, Pitfalls.
 - Follow‑ups: None — structural rename of `src/utils` not required now.
+
+## 2025‑09‑07 12:20 (UTC) — Aux Pairs Bands (Display‑Only)
+
+- Context: Overdue pairs lists used overlapping bands (e.g., repeating red ≥ 71 and blue ≥ 107), causing label confusion. Policy: red is the highest threshold.
+- Change: Mutually‑exclusive bands (display‑only) with red highest:
+  - Repeating: red ≥ 107; blue 71..106; purple 25..70
+  - Non‑repeating: red ≥ 56; blue 37..55; purple 25..36
+- Caption updated to ASCII ">=" to avoid mojibake. Top‑5 repeating color mapping aligned; list still sorted by draws_since.
+- Impact: No calculation changes; UI buckets and captions now match policy.
+
+## 2025‑09‑07 12:40 (UTC) — V‑Trac Big Table: Badge Shows Draws‑Since
+
+- Context: Small “Index Hits” shows draws_since; big table should show it too for Top‑10 red rows.
+- Change: Red rows now use badge "rank (draws_since)"; green rows unchanged.
+- Impact: Display‑only; keeps small/big table alignment.
+
+## 2025‑09‑07 13:00 (UTC) — Digit Reduction: Stacked Report + Training Exports
+
+- Context: Need training‑friendly exports and stacked view for better screenshots; analysis unchanged.
+- Change:
+  - Added stacked report HTML and checkbox in page to embed it.
+  - Added training CSV/JSON exports under `.../training/` with structural fields, ranks, guidance, and export‑only compaction.
+- Outputs:
+  - `data/outputs/analysis/digit_reduction/<STATE>/<STATE>digit_reduction_report.html`
+  - `.../<STATE>digit_reduction_report_stacked.html`
+  - `.../<STATE>digit_reduction_scores.csv`
+  - `.../training/<STATE>digit_reduction_steps.csv`
+  - `.../training/<STATE>digit_reduction_logs.json`
+- Impact: No changes to reduction algorithms or tabbed HTML; only exports and optional embed.
+
+## 2025‑09‑07 14:10 (UTC) — Winners Logger: V‑Trac Winner Report (Index Panels)
+
+- Context: Need a per‑state, per‑winner visual export for external training; older runs had correct “vtrac_reports” HTML under winners.
+- Change: Added an index‑based report generator and UI expander in Control Center:
+  - Inputs: State, 3‑digit winner
+  - Renders 3 panels (Midday/Evening/Combined) with:
+    - Purple: stable‑pattern combos for the winner’s index
+    - Green: straight permutations of the winner
+  - Writes to: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
+- Impact: Does not require string‑tables; safe for states whose tables aren’t mapped yet. Later we can overlay table‑driven details.
+- Files: `src/core/winners_vtrac_report.py`, `src/app.py`

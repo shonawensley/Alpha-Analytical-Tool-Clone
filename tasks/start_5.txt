@@ -1,0 +1,118 @@
+Done. I added the requested “human” quick-start doc and placed KIT banners where they add the most value, keeping everything reversible and path-safe.
+
+What I added
+
+- Human quick start: docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md
+    - Simple operator instructions:
+    - Run TOOLS\codex_start_aat9.bat and paste the boot line.
+    - Run preflight: powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4".
+    - Launch app with run_app.bat.
+    - Where to read more in the KIT.
+- Codex “read first”: briefings/CODEX_READ_FIRST_AAT9.md
+    - One-stop setup for Codex (high reasoning, repo root, KIT docs, preflight, Plan→Implement→Verify→Document).
+- Clipboard helper: TOOLS/codex_start_aat9.bat
+    - Copies the AAT9 boot line to clipboard for faster starts.
+
+Banners and pointers
+
+- .codex/WORKFLOW.md: Banner at top pointing to the AAT9 KIT as the curated, up-to-date source.
+- briefings/CODEX_READ_THIS.md: Banner to prefer CODEX_READ_FIRST_AAT9.md for AAT9 sessions.
+- docs/AAT9_DOCS/README_AAT9.md: Banner pointing to the AAT9 KIT.
+- REPO_INFO.md: Added an “AAT9 KIT (Curated Docs)” section with direct links and preflight command.
+- .codex/READ_FIRST_AAT9.md: A short pointer file under .codex that directs to the KIT.
+
+Why these banners are optimal
+
+- Funnel effect: They steer both humans and agents to the curated KIT, reducing drift across older documents.
+- Minimal intrusion: Light-touch banners keep history intact while ensuring new work starts from the right place.
+- Efficiency: New sessions get the same consistent path-safe setup every time.
+
+Notes
+
+- Some legacy files have mixed encodings; I updated those that could be safely edited without risking corruption. We already have clear read-first docs and banners in the high-traffic places, which achieves
+the same outcome.
+- No changes to working code paths; the app remains stable.
+
+Where to start next time
+
+- For humans: open docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md.
+- For Codex: run TOOLS\codex_start_aat9.bat and paste the line; Codex will read briefings/CODEX_READ_FIRST_AAT9.md and follow the KIT.
+
+If you want more legacy files to get explicit KIT banners, I can add them with care despite encoding quirks. Otherwise, we’re in great shape: clean start, curated workflow, and safe guardrails baked in.
+
+user
+Can you give me some comprehensive feedback on number two in the human that says run preflight from reporoot and seems to detail the state Connecticut for and check the import resolves inside repo for data
+clean draws CDS files exist Can you explain what the purpose of that is and why it's specific to that state and the draws files over say the other excel extracted files having to do with the string tables ?
+Is this some sort of shortcut  Or something you're added for working with the auxiliary tools and their data set I'm just always wary of keeping things universal and if that will cause confusion let's say if
+I'm working on a different tool that isn't auxiliary and has to do back with the tool that involves more the combined tables Hopefully I'm not being confusing and asking that just looking for some feedback
+to make sure everything makes sense .Besides that let me know if you think we're pretty much done to proceed out of the task and to continue building optimally also although I know this is probably somewhere
+in the documents in more detail would you possibly be able to give me a short summary or a convincing explanation last two how and why you've reconfigured our directory to be optimal for processing and future
+building after you finish the cleanup I'd just like to be able to understand this maybe in a quick summary that you can share Consider this like Brainstorm mode or you can provide some feedback on these final
+questions
+
+codex
+Here’s clear feedback on the preflight step and a concise wrap-up of why the new layout is optimal.
+
+Preflight Purpose
+
+- CWD check: Confirms the session runs from repo root so imports and relative paths behave predictably.
+- Interpreter check: Ensures you’re using the intended Python, reducing “works here, not there” issues.
+- Import origins: Verifies key modules resolve to in-repo files (no site-packages shadowing).
+- Data presence: Quickly inventories data/cleaned/*_draws.csv so pages that depend on them won’t start empty.
+
+Why “Connecticut4” and Draws CSV
+
+- Example state: “Connecticut4” is a simple, consistent sentinel that’s present in your cleaned draws. You can pass any state; it’s not hardcoded beyond the example.
+- Draws CSV baseline: Aux & Blackapple consume only data/cleaned/*_draws.csv. Validating a known-good draw file is the fastest universal smoke test for the app’s “data at rest” without invoking the full
+combined-tables pipeline.
+- Not a shortcut for Aux only: The preflight’s primary value is path/import sanity, not just data. Even when you’re working on Stable/DR/V‑TRAC, confirming imports resolve to in-repo modules and that the repo
+has data is universally helpful.
+- Why not check combined tables here? Keeping preflight fast avoids long scans. Combined tables are validated:
+    - By their own pipeline (generate_tables_pipeline.bat) and
+    - At page render (Stable/DR/V‑TRAC) with clear captions if missing.
+    - If you want, we can add an optional preflight flag to also verify tables/<STATE>/ (e.g., -CheckTables).
+
+When You’re Working Non‑Aux Tools
+
+- Preflight still matters: Getting cwd/python/imports right prevents hours of confusion for any page.
+- Use page‑specific checks: Stable/DR/V‑TRAC already read from tables/ via utils.path_handler and will tell you if the tables aren’t present.
+- Optional enhancement: I can add a quick “tables presence” check as a separate, opt-in section in preflight.
+
+Are We Ready To Proceed?
+
+- Yes. The app launches cleanly, imports resolve inside the repo, and the AAT9 KIT + preflight + changelog provide a robust workflow. We can exit this task and build features using the standardized process.
+
+Why The Directory Is Now Optimal
+
+- Single source of truth: utils/path_handler.py is canonical; src/utils/path_handler.py now forwards to it (no duplication, fewer path bugs).
+- Clean surface: Legacy launchers/entrypoints were archived (not deleted), reducing confusion while keeping rapid revert possible.
+- Explicit data contracts:
+    - Aux/BA → data/cleaned/*_draws.csv only (predictable, quick to validate).
+    - Stable/DR/V‑TRAC → combined tables via utils.path_handler (consistent, centralized).
+- App stability preserved: run_app.bat, src/app.py, src/core/*, modules/*, alpha_analytical/stable left intact.
+- Path safety baked in: .codex/preflight.ps1 for fast environment/import checks; “System Health” expanders in UI to debug in seconds.
+- Documentation unified: AAT9 KIT (Quickstart, Workflow, Practices, Changelog, Diagrams) is the living source; older docs remain for history with banners pointing to KIT.
+- BA isolation: Absolute-path loader ensures we always use in-repo modules/blackapple.py, avoiding name collisions with any staged “modules”.
+
+If you want, I can add an optional “tables presence” check to preflight (fast list + state dir verify) for Stable/DR/V‑TRAC work. Otherwise, you’re set to proceed with feature development using the KIT
+workflow and changelog.
+
+user
+this sounds amazinI'm wondering if there's something else you would add based on these final questions I just asked Basically anything added that has to do with workflow the idea in my eyes is to make it
+applied or for a way for AI to understand or use without me having to explain or remember to let it know if that makes sense That was the point of prompting it to certain documents for workflow and practices
+etc Does that make sense basically in a way it's like trying to optimize as much as possible I mean automate in a sensible way for AI coding to take advantage optimally of all the things we know and could
+contribute to optimal workflow Do you think you could include some more feedback on why you think it would be so much cleaner and easier to build out the project now that we've made these optimizations Sorry
+if I'm repeating myself I know you're basically almost done The other random thing I'm wondering is did you as part of the optimization and archiving get rid of all the duplication especially within the
+auxiliary module and all the different legacy scripts I had going that seemed like it needed to be really cleaned up Consider this a final brainstorm on this task Give me your thoughts overall
+
+codex
+Here’s a concise, final pass with practical additions and clarity on why this setup makes building easier, plus a note on duplication cleanup.
+
+Workflow Automation
+
+- AI boot path: TOOLS\codex_start_aat9.bat + briefings\CODEX_READ_FIRST_AAT9.md ensures every session reads the KIT, runs preflight, and follows the same Plan → Implement → Verify → Document cycle — without
+you needing to remember anything.
+- Single index: docs/AAT9_KIT/AAT9_KIT_README.md is the curated entry; banners in .codex/WORKFLOW.md, briefings/CODEX_READ_THIS.md, and AAT9 docs funnel agents there.
+- Task discipline: AAT9_Workflow_Standard.md + AAT9_Task_Template.md make it trivial for any AI/dev to propose a small plan, execute minimal diffs, and update the Unified Changelog and affected docs.
+- Preflight sanity: .codex/preflight.ps1 -State "<State>" catches cwd/python/import issues immediately and confirms draws CSV availability for Aux/BA. Optional enhancement if you want: add a “tables presence”
+check for Stable/DR/V‑TRAC (ask and I’ll add it).
