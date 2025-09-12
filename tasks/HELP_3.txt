@@ -1,0 +1,534 @@
+You think I'm gonna lose my mind because based on an analysis I had CHAT GPT PERFORM Where I had it looked at the Stable pattern extractor patterns it scored versus the data sets and the winning results comp I showed it this and then I had a couple folders of what was likely the older stable pattern extractor in with its results and it basically gave me feedback that the old one was much more accurate at finding and associating winning patterns which is just driving me insane 'cause it doesn't really make sense to me at all Can you please 100% point me to the correct script that's associated and wired within the app because this is driving me crazy that there's still confusion about this I just find that their feedback is not making sense to me... LOOK AT MY IMAGE WHAT IS THE SCRIPT ASSOCIATED WITH THE FEATURE CONFIG YOU LISTED ITS THIS Wrapper: src/core/stable_pattern_extractor.py HOWEVER LOOK AT MY IAMGE IS IT 100% NOT THE STABLE_PATTERN_ANALYZER_STANDALONE.PY? IM JUST ASKIG CAUSE IT LOOKS LIEK IT COULD BE BASED ON THE DIRECTORY IMAGE BUT IM NOT SURE...OK NO YOURE SAYIG ITS THE STABLE_PATTERN_EXTRACOR.PY I THE CORE IN THE SECOD IMAGE THAT IS LIKED WITH THE FEATURE_CONFIG?
+
+UGHH EITHER WAY THIS IST EVEN THE BIGGEST POT OF CONFUSION..
+
+THE CHAPT GPT SEEMS TO SUGGEST THE OLD SCORING AND TOOL WHICH I FOUD IN DATA-ANALYSIS-STABLE_PATTERN (THE OLD) IS BETTER!?!?! 
+
+YET HES MIXIG UP IN MY MIND WHAT HES CALLING OLD AND NEW BECAUSE I SHOWED HIM ALL THE NEW PATHS YOU PTOVIDED ME SO WHY IS HE MIXING UP NEW AND OLD?!?!?
+
+I ADDED AN IMAGE YOU WILL SEE THERE ARE MAYBE SOME MORE ADVANCED SCORING FEATURES WITH THIS OLD OE BUT LIKE I ISAD I DIDNT EVEN THINK IT WAS SCROIG ON THE DATASETS CORRECTLY AND I THOUGHT THERE WAS MWAY MORE ADVANCED UNDERSTANDING IN THE NEW ONE (THAT I THIK HES CALLIG OLD?!?!?
+
+IM LOSING MYMMID CAN YOU READ THROUGH ALL THIS, LOOK AT MY IMAGES, REVIEW THE DOCS AND OUTPUTS BEIG DISCUSSED, REVIEW MY CHAT WITH CHAGPT ...CA YOU TRY AND GET US A BETTTER COMPREHSIVE UNDESTANDING? ARE THEY MIS UNDERSTANDING? AM I? ILL EVE GIVE YOU THE DATASETS SO YOU CAN GO COMPARE THINGS ACROSS THE BOARD YOU ARE ABLE TO SEE ALL SCRIPTSA, OUTPUTS, YOU KNOW WHATS WIRED AND WHATS ARCHIEVED...
+
+CONSIDER WHAT IVE SAID AND READ BELOW AND PLEASE PROVIDE SOME COMPREHSIVE FEEDBACK..
+
+
+________________________________________
+
+MY CHAT WITH CHAT GPT REVIEW DATA ANALYSIS STABLE PATTERN EXTRACTOR - STARTED WITH TASK AND THEN ANALYSIS
+
+
+HERE IS WHAT CURSOR TOLD ME.. I can’t access your past chat, but here’s the exact, definitive wiring and outputs for Stable Pattern Extractor in this repo. Scripts involved (Stable Pattern) Page entry: src/app.py → show_stable_pattern_page(state) Wrapper: src/core/stable_pattern_extractor.py Engine (canonical): alpha_analytical/stable/init.py Weights/config: alpha_analytical/stable/feature_config.yml Path helpers: utils/path_handler.py (used to resolve tables_dir and analysis output dir) Inputs it reads data/outputs/tables/<STATE>/Combined.csv Outputs it writes CSV (pattern scoring): C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\<STATE>\<STATE>stable_patterns_scores.csv HTML (highlight report): C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\<STATE>\<STATE>stable_patterns_report.html Example (Connecticut4) C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\Connecticut4\Connecticut4_stable_patterns_scores.csv C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\Connecticut4\Connecticut4_stable_patterns_report.html NOW PAY ATTENTION TO THE ATTACHED IMAGES AND ALL THE PATHS, THERE IS A FOLDER _STABLE_PATTERNS THAT SEEMS TO HAVE A COMPLETELY SECOND VERSION OF THE STABLE PATTERN EXTRACTOR.. 
+
+Combined
+Set	Draw	RowType	7	6	5	4	3	2	1
+Set3	Draw1	DRAW_DATA	507	604	701	881	178	615	861
+Set3	Draw1	R2	522401133867	522113387	5221338	52233*	52233*	2233*	2233*
+Set3	Draw1	R4	225068334711	225833711	2258331	22533*	22533*	2233*	2233*
+Set3	Draw1	R6	681170533224	811753322	8153322	53322*	53322*	3322*	3322*
+Set3	Draw1	R8	701183362245	711833225	1833225	33225*	33225*	3322*	3322*
+Set2	Draw1	DRAW_DATA	604	701	881	178	615	861	890
+Set2	Draw1	R2	52241133887	522413388	522433	522433*	22433*	22433*	22433*
+Set2	Draw1	R4	22588334711	225883341	225334	225334*	22334*	22334*	22334*
+Set2	Draw1	R6	88117533224	881533224	533224	533224*	33224*	33224*	33224*
+Set2	Draw1	R8	71188332245	188332245	332245	332245*	33224*	33224*	33224*
+Set1	Draw1	DRAW_DATA	701	881	178	615	861	890	531
+Set1	Draw1	R2	599224133886	599224336	599224336*	9922433*	9922433**	922433**	92243**
+Set1	Draw1	R4	225996883341	225996334	225996334*	2299334*	2299334**	229334**	22934**
+Set1	Draw1	R6	688159933224	659933224	659933224*	9933224*	9933224**	933224**	93224**
+Set1	Draw1	R8	199883362245	993362245	993362245*	9933224*	9933224**	933224**	93224**
+Set1	Draw2	R2		55992243367	5599224336	59922433*	59922433*	5922433**	92243**
+Set1	Draw2	R4		22559963347	2255996334	22599334*	22599334*	2259334**	22934**
+Set1	Draw2	R6		67559933224	6559933224	59933224*	59933224*	5933224**	93224**
+Set1	Draw2	R8		79933622455	9933622455	99332245*	99332245*	9332245**	93224**
+Set1	Draw3	R2			5599224403366	59922440336	5992244033*	59224433**	922443**
+Set1	Draw3	R4			2255990663344	22599063344	2259903344*	22593344**	229344**
+Set1	Draw3	R6			6605599332244	60599332244	0599332244*	59332244**	932244**
+Set1	Draw3	R8			0993366224455	09933622445	0993322445*	93322445**	932244**
+Set1	Draw4	R2				5992244003367	599224400337	5922440337**	92244037**
+Set1	Draw4	R4				2259900633447	225990033447	2259033447**	22903447**
+Set1	Draw4	R6				6700599332244	700599332244	7059332244**	70932244**
+Set1	Draw4	R8				7009933622445	700993322445	7093322445**	70932244**
+Set1	Draw5	R2					599224400337	5922440337**	92244037**
+Set1	Draw5	R4					225990033447	2259033447**	22903447**
+Set1	Draw5	R6					700599332244	7059332244**	70932244**
+Set1	Draw5	R8					700993322445	7093322445**	70932244**
+Set1	Draw6	R2						59224403377	922440377*
+Set1	Draw6	R4						22590334477	229034477*
+Set1	Draw6	R6						77059332244	770932244*
+Set1	Draw6	R8						77093322445	770932244*
+Set1	Draw7	R2							59224403677
+Set1	Draw7	R4							22590634477
+Set1	Draw7	R6							67705932244
+Set1	Draw7	R8							77093622445
+
+___
+
+Evening
+Set	Draw	RowType	7	6	5	4	3	2	1
+Set3	Draw1	DRAW_DATA	596	158	426	489	507	701	178
+Set3	Draw1	R2	92244011887	922440187	9240187	2017*	21*	2*	2*
+Set3	Draw1	R4	22908844711	229084471	2908471	2071*	21*	2*	2*
+Set3	Draw1	R6	88117092244	817092244	8170924	1702*	12*	2*	2*
+Set3	Draw1	R8	70119882244	701982244	7019824	7012*	12*	2*	2*
+Set2	Draw1	DRAW_DATA	158	426	489	507	701	178	861
+Set2	Draw1	R2	92244013387	924013387	201337	2133*	233*	233*	233*
+Set2	Draw1	R4	22908334471	290833471	203371	2331*	233*	233*	233*
+Set2	Draw1	R6	81709332244	817093324	170332	1332*	332*	332*	332*
+Set2	Draw1	R8	70198332244	701983324	701332	1332*	332*	332*	332*
+Set1	Draw1	DRAW_DATA	426	489	507	701	178	861	531
+Set1	Draw1	R2	92400133877	20013377	201337*	233*	233**	233**	23**
+Set1	Draw1	R4	29008334771	20033771	203371*	233*	233**	233**	23**
+Set1	Draw1	R6	81770093324	17700332	170332*	332*	332**	332**	32**
+Set1	Draw1	R8	77001983324	77001332	701332*	332*	332**	332**	32**
+Set1	Draw2	R2		59200133677	92013367	92336*	92336*	9233**	923**
+Set1	Draw2	R4		25900633771	29063371	29633*	29633*	2933**	293**
+Set1	Draw2	R6		61770059332	61709332	69332*	69332*	9332**	932**
+Set1	Draw2	R8		77001933625	70193362	93362*	93362*	9332**	932**
+Set1	Draw3	R2			59201133867	59213386	592336*	59233**	923**
+Set1	Draw3	R4			25906833711	25968331	259633*	25933**	293**
+Set1	Draw3	R6			68117059332	68159332	659332*	59332**	932**
+Set1	Draw3	R8			70119833625	19833625	933625*	93325**	932**
+Set1	Draw4	R2				59224133866	592243366	59224336**	922436**
+Set1	Draw4	R4				22596683341	225966334	22596334**	229634**
+Set1	Draw4	R6				66815933224	665933224	65933224**	693224**
+Set1	Draw4	R8				19833662245	933662245	93362245**	936224**
+Set1	Draw5	R2					599224433866	5992244336**	99224436**
+Set1	Draw5	R4					225996683344	2259963344**	22996344**
+Set1	Draw5	R6					668599332244	6599332244**	69932244**
+Set1	Draw5	R8					998336622445	9933622445**	99362244**
+Set1	Draw6	R2						559922440336	5992244036*
+Set1	Draw6	R4						225599063344	2259906344*
+Set1	Draw6	R6						605599332244	6059932244*
+Set1	Draw6	R8						099336224455	0993622445*
+Set1	Draw7	R2							599224400367
+Set1	Draw7	R4							225990063447
+Set1	Draw7	R6							670059932244
+Set1	Draw7	R8							700993622445
+
+____
+
+
+Midday
+Set	Draw	RowType	7	6	5	4	3	2	1
+Set3	Draw1	DRAW_DATA	801	742	215	695	969	604	881
+Set3	Draw1	R2	55992338677	559933867	59933867	93387*	3387*	3387*	337*
+Set3	Draw1	R4	25599683377	559968337	59968337	98337*	8337*	8337*	337*
+Set3	Draw1	R6	68775599332	687559933	68759933	87933*	8733*	8733*	733*
+Set3	Draw1	R8	77998336255	799833655	79983365	79833*	7833*	7833*	733*
+Set2	Draw1	DRAW_DATA	742	215	695	969	604	881	615
+Set2	Draw1	R2	55992433867	599433867	943387	43387*	3387*	337*	337*
+Set2	Draw1	R4	25599683347	599683347	983347	83347*	8337*	337*	337*
+Set2	Draw1	R6	68755993324	687599334	879334	87334*	8733*	733*	733*
+Set2	Draw1	R8	79983362455	799833645	798334	78334*	7833*	733*	733*
+Set1	Draw1	DRAW_DATA	215	695	969	604	881	615	890
+Set1	Draw1	R2	59940338667	94033867	403387*	3387*	337**	337**	337**
+Set1	Draw1	R4	59906683347	90683347	083347*	8337*	337**	337**	337**
+Set1	Draw1	R6	66870599334	68709334	870334*	8733*	733**	733**	733**
+Set1	Draw1	R8	70998336645	70983364	708334*	7833*	733**	733**	733**
+Set1	Draw2	R2		94001338867	400133887	0133887*	0337*	0337**	337**
+Set1	Draw2	R4		90068833471	008833471	0883371*	0337*	0337**	337**
+Set1	Draw2	R6		68817009334	881700334	8817033*	7033*	7033**	733**
+Set1	Draw2	R8		70019883364	700188334	7018833*	7033*	7033**	733**
+Set1	Draw3	R2			244001338877	2401338877	2403377*	2403377**	243377**
+Set1	Draw3	R4			200883344771	2088334771	2033477*	2033477**	233477**
+Set1	Draw3	R6			881770033244	8817703324	7703324*	7703324**	773324**
+Set1	Draw3	R8			770018833244	7701883324	7703324*	7703324**	773324**
+Set1	Draw4	R2				5224011338877	5224013377	22403377**	2243377**
+Set1	Draw4	R4				2250883347711	2250334771	22033477**	2233477**
+Set1	Draw4	R6				8811770533224	1770533224	77033224**	7733224**
+Set1	Draw4	R8				7701188332245	7701332245	77033224**	7733224**
+Set1	Draw5	R2					55224013377	522403377**	52243377**
+Set1	Draw5	R4					22550334771	225033477**	22533477**
+Set1	Draw5	R6					17705533224	770533224**	77533224**
+Set1	Draw5	R8					77013322455	770332245**	77332245**
+Set1	Draw6	R2						59922403377	592243377*
+Set1	Draw6	R4						22599033477	225933477*
+Set1	Draw6	R6						77059933224	775933224*
+Set1	Draw6	R8						77099332245	779332245*
+Set1	Draw7	R2							592244033677
+Set1	Draw7	R4							225906334477
+Set1	Draw7	R6							677059332244
+Set1	Draw7	R8							770933622445
+
+
+
+
+
+
+HERES THE RESULT WE WERE TRYING TO PREDICT FOR , YOU USE PATTERNS FROM ALL CHARTS AS PATTRENS CROSSOVER AND WORK TOGETHER 
+WINNERS BELOW: 
+
+038-MIDDAY 620-EVENINIG
+
+HERE IS THE V-TRAC INDEX FIND THE IDEX OF THE 2 WINNING COMBINATIONS AND USE ALL THE V-TRAC ASSOCIATED PATTERNS IN YOUR ANALYSIS OF HOW THE TOOLS SCORED PATTERNS TO BE CLOSE TO WINNNERS ITS TRYING TO PREDICT FOR..(YOU HAVE ACCESS TO V-TRAC INDEX WITHIN CURSOR!)
+
+___________________________________________
+
+
+
+ , YOU USE PATTERNS FROM ALL CHARTS AS PATTRENS CROSSOVER AND WORK TOGETHER WINNERS BELOW: 038-MIDDAY 620-EVENINIG ____________ HERE IS THE V-TRAC INDEX FIND THE IDEX OF THE 2 WINNING COMBINATIONS AND USE ALL THE V-TRAC ASSOCIATED PATTERNS IN YOUR ANALYSIS OF HOW THE TOOLS SCORED PATTERNS TO BE CLOSE TO WINNNERS ITS TRYING TO PREDICT FOR..
+
+
+You’re not crazy—there are two Stable Pattern extractors writing to two different output trees, and both can still be run. I dug through the artifacts you shared and analyzed both sets against the target winners 038 (Midday) and 620 (Evening) with their V‑Trac families.
+
+Below is a clear picture of (1) what I can access, (2) how each tool is wired by its outputs, (3) how each one scored relative to the winners (using V‑Trac families for context), and (4) what to do to stop the double‑writing and lock the system to one canonical extractor.
+
+1) What I can open & what scoring fields are available
+
+Old/Canonical Stable Pattern (folder: analysis/patterns/<STATE>/)
+
+Files (Delaware4):
+
+Delaware4_stable_patterns_report.html — parsed ✔️
+
+Delaware4_stable_patterns_scores.csv — parsed ✔️
+
+What’s inside:
+
+“Detected Patterns (Top 30)” tables for Midday/Evening with columns like Canonical, Type, Score, Rows, V‑Trac, Hot, Single?, Cons?, 3vCons?, DomLast?, DomPair?, and a “Why” string (e.g., straight|cov4|span6|vstr2|...).
+
+New/Refactored Stable Pattern (folder: analysis/stable_pattern/<STATE>/)
+
+Files (Delaware4):
+
+Delaware4_stable_patterns_20250516_050158_report.html — parsed ✔️
+
+Delaware4_stable_patterns_20250516_050158_summary.csv — parsed ✔️
+
+Delaware4_stable_patterns_20250516_050158_raw.json — parsed ✔️
+
+What’s inside:
+
+Ranked tables by Section (Midday/Evening/Combined) with Pattern, Score, and location (Set/Draw/Column).
+
+Full per‑pattern breakdown in CSV/JSON with these scoring components (columns prefixed dbg_ in the CSV):
+
+dbg_vertical_coverage, dbg_permutation_strength, dbg_vtrac_strength,
+dbg_mirror_bonus, dbg_straight_bonus, dbg_box_bonus,
+dbg_length_bonus, dbg_hot_zone_points, dbg_nested_cluster_bonus,
+dbg_consensus_digit_bonus, dbg_hot_zone_consensus_synergy,
+dbg_horizontal_persistence, dbg_lingering_bonus,
+dbg_remaining_3value_bonus, dbg_order_persistence.
+
+Important difference: This version’s patterns include 0–9 (e.g., 002233788, 0038), so zeros are first‑class citizens here, while the old canonical table mostly shows digits 1–8 as “canonical” strings.
+
+✅ Availability: I have full access to both HTMLs and both CSVs, and to the new JSON with all debug fields. Nothing is missing from a scoring‑data standpoint.
+
+2) Why you’re seeing two folders (and why it feels “still hooked in”)
+
+From the evidence of the filenames and structures:
+
+Old/Canonical extractor writes to
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_{report, scores}.*
+
+New/Refactored extractor (timestamped runs) writes to
+data/outputs/analysis/stable_pattern/<STATE>/<STATE>_stable_patterns_<timestamp>_{report,summary,raw}.*
+
+Both are reading the same Combined Tables and can be run independently (e.g., the app page versus a batch/CLI job), so it’s easy to end up with both sets of outputs. If the UI reads “latest file in folder” or a helper uses a different root, you’ll see what looks like ghosts of a prior tool—because both trees are valid outputs produced by two different code paths.
+
+3) V‑Trac families for the two winners
+
+038 (Midday) → V‑Trac Index 13
+Family: singles 038, 358; doubles 033, 088, 335, 588.
+
+620 (Evening) → V‑Trac Index 7
+Family singles: 012, 017, 026, 067, 125, 157, 256, 567.
+(So 620 is in the same Index‑7 family as 026, 125, 157, etc.)
+
+I used those families when checking each tool’s outputs.
+
+4) Which tool scored closer to the winners?
+4a) Midday target = 038 (Index 13)
+
+New/Refactored extractor (analysis/stable_pattern/...)
+
+Combined section surfaced the exact combo:
+
+Pattern 0038 with Score 26 (Set1/Draw2/Col5), and 038 with Score 24 (Set1/Draw1/Col5 and Set2/Draw1/Col6).
+
+These hits carried dbg_vtrac_strength = 2 (the stronger setting) and solid coverage/length bonuses.
+
+It also ranked multiple family signals high:
+
+033 up to Score 39 (e.g., 00334488, 0033788, …),
+
+358 up to Score 36 (02233588, …),
+
+335 up to Score 36,
+
+588 up to Score 36.
+
+Among the top 50 Combined rows, the new tool includes four of six Index‑13 family members (033, 335, 358, 588).
+⇒ Very strong alignment with the 038 family.
+
+Old/Canonical extractor (analysis/patterns/...)
+
+Best visible family trace I could find was canonical 338 around Score 10–12 (low).
+
+I did not find exact 038, 033, 335, 358, 588, or 088 among high ranks in the old CSV/HTML.
+
+The “V‑Trac” column in the old HTML is a different internal coding (values like 133, 135, 335…) and doesn’t reflect direct V‑Trac index matches the way the new extractor’s debug does.
+⇒ Weak alignment with the 038 family.
+
+Verdict (Midday/038): The new extractor decisively outperformed the old one. It not only captured the exact 038/0038 in Combined with strong V‑Trac weighting, but it also stacked multiple high‑scoring family members (033/335/358/588). The old extractor showed only faint echoes (e.g., small 338 scores).
+
+4b) Evening target = 620 (Index 7)
+
+New/Refactored extractor
+
+I did not see 620 (exact) near the top sets, but Index‑7 family members showed up:
+
+125 to Score 21 (e.g., 001255) with dbg_vtrac_strength = 1.
+
+157 to Score 15 (e.g., 01577) with dbg_vtrac_strength = 1.
+
+No 026, 067, 256, or 567 hits among the top bands.
+⇒ Moderate family presence (Index‑7), no exact 620.
+
+Old/Canonical extractor
+
+No strong Index‑7 family signals in the high ranks (no readable 125, 157, 026, … in the canonical list).
+⇒ Weak here as well.
+
+Verdict (Evening/620): Neither version hit 620 directly; the new extractor at least surfaced Index‑7 family members (125, 157) with reasonable scores, so it still beats the old extractor for the evening case, but the signal was weaker than we’d like.
+
+5) What this means (diagnosis)
+
+Your new/timestamped Stable Pattern is the one whose scoring and features line up with your current AAT9 design: it recognizes 0–9, reports granular bonuses (V‑Trac, mirrors, length, lingering, hot‑zone+consensus synergy, etc.), and it actively pushed the 038 family to the top, including the exact combo in the Combined view.
+
+The old/canonical Stable Pattern is still runnable and writes a separate report and CSV. It uses a simpler canonical patterning space (mostly digits 1–8) and older feature names. Because it writes to a different folder, you end up with two “latest” artifacts—and depending on which helper resolves the path, you may be staring at the other tool’s outputs.
+
+TL;DR — The new extractor is the one you want. It scored the Midday winner family extremely well (and the exact number in Combined). The old one is what’s causing the confusion by still writing files in parallel.
+
+6) “Lock to one tool” plan (safe, minimal, and testable)
+
+A. Decide the canonical output root (recommend the new one)
+
+Set STABLE_PATTERN_OUTPUT_ROOT = data/outputs/analysis/stable_pattern/<STATE>/
+
+Introduce a lightweight “latest” symlink or JSON pointer:
+
+data/outputs/analysis/stable_pattern/<STATE>/latest.json
+
+Fields: { "engine":"stable_v2", "timestamp":"2025-05-16T05:01:58Z", "report":"..._report.html", "summary":"..._summary.csv", "raw":"..._raw.json" }
+
+B. Disable the old writer
+
+In the old extractor wrapper, add a guard:
+
+if AAT9_DISABLE_OLD_STABLE or ENGINE != "stable_v2": return
+
+Or route it to an archive path:
+
+data/archive/analysis/patterns/<STATE>/...
+
+C. Path hygiene
+
+Centralize path resolution in utils/path_handler.py (or your equivalent) with a single function, e.g.,
+get_stable_outputs_dir(state, engine="stable_v2").
+
+Ensure the app page only reads from the new output root (or from latest.json).
+
+D. Quick regression checks (can be automated as unit tests)
+
+Exactly one Stable Pattern directory for the active engine is non‑empty after a run.
+
+New run updates latest.json and produces {report, summary, raw} with matching timestamps.
+
+Sanity asserts for Delaware4:
+
+Combined contains 038 or 0038 with dbg_vtrac_strength ≥ 2 and Score ≥ 20.
+
+At least 2 of {033,335,358,588} appear in the top 50 Combined.
+
+For Evening, at least one Index‑7 member among {125,157,026,067,256,567} appears with Score ≥ 15.
+
+E. One‑time cleanup
+
+Move data/outputs/analysis/patterns/<STATE>/ to data/archive/… after you switch the app page to the new root and pass the tests.
+
+7) Optimization suggestions (weights + UX)
+
+Boost V‑Trac weight for exact family hits in the same section/daypart if you want more aggressiveness on 620‑style cases (dbg_vtrac_strength currently 1 for Index‑7 family hits; consider a conditional that bumps it when family density is high in recent columns).
+
+Hot‑zone + consensus synergy is captured; consider a small extra bonus when a family hit (Index‑level) also has a hot‑zone on the same column in Combined.
+
+Order/persistence: your dbg_order_persistence exists—turn it into a small additive boost for short strings (e.g., literal 038 vs. long clusters), so exact 3‑digit alignments don't get drowned by long‑string bonuses.
+
+Report UX: put a “Winner Family Lens” panel in the HTML:
+
+For each target (e.g., Midday 038, Evening 620), show (a) top exact matches, (b) top family members, (c) their scores and locations, (d) a single “family coverage” bar (how many of the family appeared in top N).
+
+8) Quick scoreboard (Delaware4 snapshot)
+
+Midday target 038 (Index 13)
+
+New extractor (Combined): 0038 26, 038 24; family: 033 39, 358 36, 335 36, 588 36.
+
+Old extractor: only faint 338 around 10–12.
+
+Evening target 620 (Index 7)
+
+New extractor: family (Index‑7) present: 125 up to 21, 157 up to 15; no exact 620.
+
+Old extractor: no strong Index‑7 patterns surfaced near the top.
+
+9) What I’ll keep logging for the master script
+
+Module ledger (Stable Pattern)
+
+Inputs: Combined Tables (Set3→Set1), R2/R4/R6/R8 strings, Midday/Evening/Combined.
+
+Core scoring features: exactly the dbg_* items listed above (15+ dimensions).
+
+Outputs (chosen canonical): .../stable_pattern/<STATE>/{timestamp}_{report,summary,raw} + latest.json.
+
+Health tests: the three asserts in §6D.
+
+Helper functions to register
+
+get_stable_outputs_dir(state, engine="stable_v2")
+
+write_latest_pointer(state, meta)
+
+assert_single_output_root(state, engine)
+
+assert_family_signal(state, section, family, thresholds)
+
+Open knobs to tune (weights)
+
+vtrac_strength, length_bonus, order_persistence, hot_zone_consensus_synergy.
+
+Bottom line
+
+You have two Stable Pattern pipelines writing side‑by‑side.
+
+The new (timestamped) pipeline is the one whose scores and features match your AAT9 design and it did the job on 038 (exact and family).
+
+The old pipeline is what’s causing the “ghost outputs” feeling—archive/disable it and point the app to a single output root (preferably the new one with latest.json).
+
+If you want, I can draft the exact file/flag names and the unit‑test stubs next so you can paste them into the repo and lock this down.
+
+_________________________
+
+You’re right to be suspicious—your latest run wrote new results into data/outputs/analysis/patterns/ for many states (the folder list in your screenshot), while data/outputs/analysis/stable_pattern/ still only has Connecticut4 and Delaware4 from Aug-13. That means the app is currently wired to the older Stable Pattern extractor, not the upgraded one we analyzed earlier. The older report’s “Detected Patterns (Top 30)” table and the Combined/Midday/Evening blocks you shared match that older engine’s layout and fields, and the Combined section clearly shows the two winners (038, 620) in the rows we were studying.
+
+The upgraded extractor (the one I recommended) is the one that:
+
+emits the nicer “Upgraded Stable Pattern Extraction Report,”
+
+includes explicit debug fields per pattern (e.g., vertical_coverage, permutation_strength, vtrac_strength, mirror_bonus, hot_zone_consensus_synergy, order_persistence, etc.), and
+
+recognizes zero-inclusive patterns across sections.
+It also writes a machine-readable JSON/summary with those scores so we can audit or test them programmatically.
+
+Quick findings (what’s happening + why some states look “missing”)
+
+Wrong engine is active in the app
+
+Fresh outputs landed under analysis/patterns/ (older engine) for many states; analysis/stable_pattern/ (upgraded engine) was untouched in your latest run. That’s why you saw a whole set of state folders appear in patterns/ while stable_pattern/ still shows only CT/DE from an earlier day.
+
+Ontario naming mismatch
+
+Your tables UI shows OntarioCanada4, but your filesystem screenshot shows an Ontario4 folder under analysis/patterns/. That mismatch alone is enough to make the Stable Pattern page “skip” Ontario if its state-key resolver expects OntarioCanada4 but the extractor reads/writes Ontario4 (or vice-versa).
+
+Texas4 and WestVirginia4
+
+You already recalled these two are not mapped yet. If their Combined tables aren’t produced, all downstream tools (including stable patterns) will skip them by design. The fact they don’t appear in your tables dropdown is consistent with “not mapped”.
+
+Ohio4 / Pennsylvania4 confusion
+
+Your patterns/ screenshot shows both folders updated (so the old extractor did write results), but your tables dropdown image doesn’t show them. That usually means the Tables UI is listing states from a different state list or root (or filtered list), while the stable pattern job enumerates states differently (or normalizes names differently). In other words: two different state enumerations in code.
+
+Winners context (to anchor what we’re checking)
+
+In the older Delaware report you uploaded, the Combined section includes 038 and 620 (winners) in the exact rows we studied; the older report’s Top-30 table shows simpler fields (e.g., “Why” strings, V-Trac codes like 133/135/335) rather than the full debug breakdown.
+
+In the upgraded report, you can see the richer scoring surface (e.g., vtrac_strength, nested_cluster_bonus, hot_zone_consensus_synergy, order_persistence) and zero-inclusive patterns like 002233788—that’s the engine we want the app to use going forward.
+
+What to fix (short, surgical)
+
+Point the app at the upgraded engine (and only that one).
+
+Set the Stable Pattern page to use the upgraded extractor and write to:
+data/outputs/analysis/stable_pattern/<STATE>/... (not analysis/patterns/).
+
+Add a tiny feature flag (e.g., AAT9_STABLE_ENGINE=stable_v2) so there’s no ambiguity going forward.
+
+When the extractor runs, also write a small latest.json pointer in each state folder (report, summary CSV, raw JSON) for deterministic UI loading. (That JSON is exactly what the upgraded tool already emits/needs. )
+
+Normalize state keys in one place.
+
+Create a single mapping like:
+normalize("Ontario4") → "OntarioCanada4" and use it everywhere (tables generator, stable pattern, and UI dropdown).
+
+Today you’ve got a live mismatch (UI says OntarioCanada4, outputs folder says Ontario4). That alone explains “Ontario tables exist but no stable patterns show up.” Fixing normalization typically clears 80% of these “missing state” reports.
+
+One source of truth for enabled states.
+
+Have the Tables UI, the extractor job, and the dropdown all read the same iterable of enabled_states. Include comments/metadata for the two intentionally unmapped states (Texas4, WestVirginia4) so they’re either suppressed with a clear reason or shown as “unavailable (not mapped)”.
+
+Emit a “skip reason” when a state doesn’t run.
+
+If a state has no Combined.csv, write skip_state_reasons.json in that state’s folder (e.g., "reason": "missing Combined tables"). That removes all guesswork.
+
+Health logging (already supported by your helpers).
+
+On every Stable Pattern run, log the resolved input paths and output folder the engine is using, and the count of patterns saved. This is simple, high-signal telemetry and instantly reveals wrong roots or bad keys.
+
+What scored closer to winners?
+
+The upgraded engine is the one that exposes the scoring axes we designed (explicit vtrac_strength, mirror_bonus, hot_zone_consensus_synergy, order_persistence, etc.) and outputs structured CSV/JSON for auditing. That makes it the right engine for aligning to V-Trac family analysis (e.g., Index 13 family around 038, Index 7 family around 620).
+
+The older engine’s output is readable, but lighter on signal; its tables (e.g., the Delaware Combined/Midday/Evening blocks and “Top 30”) don’t surface the same per-pattern debug fields, and you end up reasoning by eye rather than by structured scores.
+
+Bottom line: Switch the app to the upgraded extractor, normalize your state keys once, and re-run. You’ll get Ontario and the other “missing” states back (except the two you know are unmapped), and your reports will include the richer debug scoring that tracks the V-Trac families we care about.
+
+Fast triage for the specific states you mentioned
+
+Texas4, WestVirginia4 — expected to be blank until you finish mapping (no Combined tables ⇒ no patterns).
+
+Ontario — fix the Ontario4 ↔ OntarioCanada4 normalization; then re-run Stable Pattern with the upgraded engine and confirm new outputs under analysis/stable_pattern/OntarioCanada4/….
+
+Ohio4, Pennsylvania4 — ensure they’re in the same enabled list the Tables page uses. If your patterns run found them but the tables UI didn’t list them, you’ve got a state-list or root mismatch. After normalization, verify data/outputs/tables/<State>/Combined.csv exists for each. If it does, the upgraded extractor will write their reports.
+
+If you want, I can draft the exact constants/flags and a tiny “state-key normalizer” plus a latest.json writer you can paste into the repo. After that, your next run should only populate stable_pattern/, and every state’s folder will have a clear, inspectable pointer to its newest files.
+
+Worked for 3 minutes
+
+It looks like you’re still using the older Stable Pattern extractor (the one that writes to data/outputs/analysis/patterns/<STATE>/…). In your screenshots you ran the extractor for multiple states and saw new folders created under analysis/patterns/, while analysis/stable_pattern/ still only has Connecticut4 and Delaware4. That indicates the app is wired to the old engine, not the upgraded one we analysed earlier.
+
+The upgraded engine (the one I suggested using) writes its results under data/outputs/analysis/stable_pattern/<STATE>/…. Its report is called “Upgraded Stable Pattern Extraction Report” and it lists per‑pattern debug metrics such as vertical_coverage, permutation_strength, vtrac_strength, mirror_bonus, straight_bonus, box_bonus, length_bonus, hot_zone_points, nested_cluster_bonus, consensus_digit_bonus and hot_zone_consensus_synergy – you can see these fields in the detailed section of the upgraded report. Those metrics are what allowed us to compare patterns against the winners (038 and 620) and gave the new engine a clear edge. The older engine doesn’t output these fields; it writes only the canonical patterns and a simplified V‑Trac code.
+
+Why some states produced no stable‑pattern results
+
+Your stable‑pattern pipeline works by first generating a Combined.csv table for each state and then running the pattern extractor over those tables. If either the table or the mapping is missing, no patterns will be produced. Based on the repo structure and your screenshots:
+
+Texas4 & WestVirginia4 – these are the two unmapped states you mentioned. They never generate tables, so the extractor correctly skips them.
+
+Ontario – you have tables, but notice the mismatch between the folder (Ontario4) and the state key in your UI (OntarioCanada4). The stable‑pattern code uses the folder name to find the Combined table; the app uses the state key to display results. Because these don’t match, the extractor doesn’t pick up Ontario’s tables. Normalise to a single key (e.g. rename the folder to OntarioCanada4 or update the code’s mapping).
+
+Pennsylvania4 – your tables exist but patterns aren’t generated. This is typically caused by the state not being included in the extractor’s enabled_states list or by an incorrect tables path. Check the state enumeration in stable_pattern and ensure Pennsylvania is enabled and its Combined.csv path is correct.
+
+Ohio4 – it doesn’t appear in the tables list, so either its Combined tables were never generated or the state key/path is mis‑named (similar to Ontario). Verify that data/outputs/tables/Ohio4/Combined.csv exists and that the extractor is pointing to it.
+
+How to confirm which extractor is active
+
+Check the output directories: if new folders appear under analysis/patterns/<STATE>/ when you run the extractor, you’re using the old engine. The upgraded engine writes to analysis/stable_pattern/<STATE>/.
+
+Look for the debug metrics: open the latest report for a state. If you see metrics like vertical_coverage: X, permutation_strength: Y, vtrac_strength: Z etc. in the table header, you’re looking at the upgraded report. If those metrics are absent and you only see a canonical pattern and a V‑Trac code, you’re on the old engine.
+
+Check for a summary CSV/JSON: the upgraded extractor also writes a machine‑readable summary CSV and a raw JSON with the debug scores; the old extractor doesn’t.
+
+Recommended next steps
+
+Switch the app to use the upgraded stable‑pattern extractor exclusively; point its output to data/outputs/analysis/stable_pattern and disable the old writer.
+
+Create a single mapping of state keys to folder names so that Ontario4 and OntarioCanada4 resolve to the same folder and all states are enumerated consistently.
+
+Ensure that each state in your UI has a corresponding Combined table (Combined.csv) and that any unmapped states (e.g. Texas4, WestVirginia4) are either hidden or clearly labelled “not mapped”.
+
+After switching, verify that each state has a new latest.json or summary file in its analysis/stable_pattern folder. Those files will make it obvious that the upgraded engine is running and producing the richer scoring features.
+
+This should clear up why some states weren’t producing results and ensure you’re using the scoring engine that actually prioritises the V‑Trac families matching your winners.

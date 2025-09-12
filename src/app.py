@@ -433,7 +433,30 @@ def show_control_center_page() -> None:
                     st.markdown(f"[Open report]({rel})")
             except Exception as e:
                 st.error(f"Winners Logger failed: {e}")
-    
+
+    # Winners Logger (Analyzer-style full report)
+    with st.expander("Winners Logger (Analyzer-style full report)"):
+        w_state2 = st.selectbox("State", [
+            "Connecticut4", "Delaware4", "Florida4", "Georgia4", "Indiana4",
+            "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
+            "Ontario4", "Pennsylvania4", "Texas4", "Virginia4", "WestVirginia4"
+        ], key="winners_state_full")
+        w_number2 = st.text_input("Winning number (3 digits)", max_chars=3, key="winners_number_full")
+        if st.button("Generate Analyzer-style Report", key="btn_gen_winner_full"):
+            try:
+                from modules.winner_report_full import write_winner_full_report
+                if not (w_number2 and len(w_number2) == 3 and w_number2.isdigit()):
+                    st.warning("Enter a 3-digit winning number.")
+                else:
+                    with st.spinner("Building analyzer-style report (requires combined tables)..."):
+                        out_full = write_winner_full_report(w_state2, w_number2)
+                    rel_full = os.path.relpath(out_full)
+                    st.success("Winner report (full) generated.")
+                    st.markdown(f"[Open report]({rel_full})")
+            except Exception as e:
+                st.warning("Full report unavailable (missing tables or renderer). Use compact index report above.")
+                st.caption(str(e))
+
     try:
         from modules.analyze_pairs import get_doubles_history
         import pandas as _pd
