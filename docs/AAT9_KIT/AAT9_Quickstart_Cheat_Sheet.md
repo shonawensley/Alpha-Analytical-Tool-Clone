@@ -35,3 +35,11 @@
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 - Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per-state combined tables existence.
 - V-TRAC Analyzer + Stable pages: Dev Health shows module bindings and tables roots for their flows.
+
+## Optional: Codex model preset
+- If your Codex client supports model presets, choose `gpt-5-codex` and set reasoning to High for complex tasks (wiring, refactors) or Medium for general work.
+- Otherwise, use `gpt-5 high` with dynamic thinking enabled.
+
+
+## Default model preset (Pro)
+- Select gpt-5-codex (High) after launch; switch to Medium only when you need lower latency.

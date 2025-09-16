@@ -3,6 +3,7 @@
 Read and follow this sequence exactly before coding. Goal: highest‑quality planning, path‑safe execution, and consistent documentation/logging.
 
 ## 1) Session Setup
+- Model preset: select `gpt-5-codex` (High) by default (Pro). Use Medium only when you prefer lower latency.
 - Operate with high reasoning, yolo=false mindset (ask before destructive changes).
 - Ensure CWD is the repo root: `C:\dev\Alpha-Analytical-Tool`.
 - Print‑only sanity: `git status -s`, `git branch -vv`, `git remote -v` (no changes to remotes).
@@ -41,3 +42,10 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 ## Notes
 - Never write outside the repo; do not modify git remotes.
 - Archive‑first for cleanup; no deletions; keep changes reversible.
+
+## 1.5) Model preset (if available)
+- Select the `gpt-5-codex` preset at High or Medium reasoning depending on task:
+  - High: complex wiring, refactors, cross-page integrations
+  - Medium: day-to-day coding with balanced latency
+- If `gpt-5-codex` is not visible, use `gpt-5 high` and enable the dynamic thinking toggle where supported.
+

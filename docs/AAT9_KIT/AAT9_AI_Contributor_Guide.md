@@ -56,3 +56,14 @@ Toggle on app pages to quickly verify environment, import bindings, and data ava
 - Control Center: bindings for `utils.path_handler`, `modules.vtrac_reference`, `modules.winner_report_full`, `modules.blackapple`, `modules.aux_loaders`, `core.pipeline_runner`; tables root inventory.
 - Winners Full tile: `modules` binding, canonical vtrac_reference path, builder presence, per-state combined tables existence.
 - V-TRAC Analyzer + Stable: module bindings and tables roots for their flows.
+
+## Model preset (Codex)
+- Prefer `gpt-5-codex` at High or Medium reasoning for app-related development.
+- If not available, use `gpt-5 high` and enable dynamic thinking in your Codex client.
+- Keep `yolo=false` and follow the Plan ? Implement ? Verify ? Document loop.
+
+
+## Model preset (default for Pro)
+- Use gpt-5-codex (High) by default for complex coding/wiring, refactors, and cross-page integrations.
+- Use Medium for faster iteration with moderate reasoning.
+- Keep yolo=false and follow Plan ? Implement ? Verify ? Document.

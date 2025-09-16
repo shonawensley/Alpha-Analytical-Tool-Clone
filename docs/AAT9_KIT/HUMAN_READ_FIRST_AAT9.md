@@ -81,3 +81,6 @@ Next steps (if you want)
 - If you want me to create a tiny “KIT pointer” in a few more legacy AAT9 docs, I can do that safely, but it’s optional now that we have READ_FIRST, banners, and KIT.
 
 You’re in great shape to proceed: the app is stable, the surface is clean, and the workflow is codified so both you and any AI can deliver consistently and safely.
+
+## Pro Model Preset (Codex)
+- If you have Pro, select `gpt-5-codex` (High) after launch. This is the default for complex wiring/refactors and multi-step coding; switch to Medium only when you want lower latency.

@@ -1,0 +1,385 @@
+OpenAI announced Monday that it’s releasing a new version of GPT-5 to its AI coding agent, Codex. The company says its new model, called GPT-5-Codex, spends its “thinking” time more dynamically than previous models and could spend anywhere from a few seconds to seven hours on a coding task. As a result, it performs better on agentic coding benchmarks.
+
+The new model is now rolling out in Codex products — which can be accessed via a terminal, IDE, GitHub, or ChatGPT — to all ChatGPT Plus, Pro, Business, Edu, and Enterprise users. OpenAI says it plans to make the model available to API customers in the future.
+
+The update is part of OpenAI’s effort to make Codex more competitive with other AI coding products, such as Claude Code, Anysphere’s Cursor, or Microsoft’s GitHub Copilot. The market for AI coding tools has become much more crowded in the last year as a result of intense user demand. Cursor surpassed $500 million in ARR earlier in 2025, and Windsurf, a similar code editor, was the subject of a chaotic acquisition attempt that saw its team split between Google and Cognition.
+
+OpenAI says that GPT-5-Codex outperforms GPT-5 on SWE-bench Verified, a benchmark measuring agentic coding abilities, as well as a benchmark measuring performance on code refactoring tasks from large, established repositories.
+
+
+Image Credits:OpenAI
+The company also says it trained GPT-5-Codex for conducting code reviews and asked experience software engineers to evaluate the model’s review comments. The engineers reportedly found GPT-5-Codex to submit fewer incorrect comments, while adding more “high-impact comments.”
+
+In a briefing, OpenAI’s Codex product lead Alexander Embiricos said that much of the increased performance was thanks to GPT-5-Codex’s dynamic “thinking abilities.” Users may be familiar with GPT-5’s router in ChatGPT, which directs queries to different models based on the complexity of a task. Embiricos said GPT-5-Codex works similarly but has no router under the hood and can adjust for how long to work on a task in real time.
+
+Embiricos says this is an advantage compared to a router, which decides how much computational power and time to use on a problem at the outset. Instead, GPT-5-Codex can decide five minutes into a problem that it needs to spend another hour. Embiricos said he’s seen the model take upward of seven hours in some cases.
+
+How much do foundation models matter?
+
+It might seem like a silly question, but it’s come up a lot in my conversations with AI startups, which are increasingly comfortable with businesses that used to be dismissed as “GPT wrappers,” or companies that build interfaces on top of existing AI models like ChatGPT.
+
+These days, startup teams are focused on customizing AI models for specific tasks and interface work, and see the foundation model as a commodity that can be swapped in and out as necessary. That approach was on display especially at last week’s BoxWorks conference, which seemed devoted entirely to the user-facing software built on top of AI models.
+
+Part of what is driving this is that the scaling benefits of pre-training — that initial process of teaching AI models using massive datasets, which is the sole domain of foundation models — has slowed down. That doesn’t mean AI has stopped making progress, but the early benefits of hyperscaled foundational models have hit diminishing returns, and attention has turned to post-training and reinforcement learning as sources of future progress.
+
+If you want to make a better AI coding tool, you’re better off working on fine-tuning and interface design rather than spending another few billion dollars’ worth in server time on pre-training. As the success of Anthropic’s Claude Code shows, foundation model companies are quite good at these other fields too — but it’s not as durable an advantage as it used to be.
+
+In short, the competitive landscape of AI is changing in ways that undermine the advantages of the biggest AI labs. Instead of a race for an all-powerful AGI that could match or exceed human abilities across all cognitive tasks, the immediate future looks like a flurry of discrete businesses: software development, enterprise data management, image generation, and so on.
+
+Aside from a first-mover advantage, it’s not clear that building a foundation model gives you any advantage in those businesses. Worse, the abundance of open source alternatives means that foundation models may not have any price leverage if they lose the competition at the application layer. This would turn companies like OpenAI and Anthropic into back-end suppliers in a low-margin commodity business — as one founder put it to me, “like selling coffee beans to Starbucks.” 
+
+________________
+
+How much do foundation models matter?
+
+It might seem like a silly question, but it’s come up a lot in my conversations with AI startups, which are increasingly comfortable with businesses that used to be dismissed as “GPT wrappers,” or companies that build interfaces on top of existing AI models like ChatGPT.
+
+These days, startup teams are focused on customizing AI models for specific tasks and interface work, and see the foundation model as a commodity that can be swapped in and out as necessary. That approach was on display especially at last week’s BoxWorks conference, which seemed devoted entirely to the user-facing software built on top of AI models.
+
+Part of what is driving this is that the scaling benefits of pre-training — that initial process of teaching AI models using massive datasets, which is the sole domain of foundation models — has slowed down. That doesn’t mean AI has stopped making progress, but the early benefits of hyperscaled foundational models have hit diminishing returns, and attention has turned to post-training and reinforcement learning as sources of future progress.
+
+If you want to make a better AI coding tool, you’re better off working on fine-tuning and interface design rather than spending another few billion dollars’ worth in server time on pre-training. As the success of Anthropic’s Claude Code shows, foundation model companies are quite good at these other fields too — but it’s not as durable an advantage as it used to be.
+
+In short, the competitive landscape of AI is changing in ways that undermine the advantages of the biggest AI labs. Instead of a race for an all-powerful AGI that could match or exceed human abilities across all cognitive tasks, the immediate future looks like a flurry of discrete businesses: software development, enterprise data management, image generation, and so on.
+
+Aside from a first-mover advantage, it’s not clear that building a foundation model gives you any advantage in those businesses. Worse, the abundance of open source alternatives means that foundation models may not have any price leverage if they lose the competition at the application layer. This would turn companies like OpenAI and Anthropic into back-end suppliers in a low-margin commodity business — as one founder put it to me, “like selling coffee beans to Starbucks.” 
+
+It now also works in your terminal or IDE. Codex has always supported web.
+
+Codex
+Codex in Windows Terminal
+Source: BleepingComputer
+OpenAI states that your ChatGPT account connects it all, so you can work seamlessly between your local environment and Codex’s cloud without losing state.
+
+If you use Cursor, which is based on VS, you can use Codex's new extension that brings Codex into VS Code, Cursor, and other VS Code forks.
+
+"Available in both the IDE and CLI, eliminating API key setup and providing access directly through your existing ChatGPT plan," OpenAI noted.
+
+In addition, OpenAI has added Seamless Local ↔ Cloud Handoff, which means developers can pair with Codex locally and then delegate tasks to the cloud to execute asynchronously without losing state.
+
+Codex web
+Codex web
+Source: BleepingComputer
+There’s also an upgrade to the Codex CLI with a few new commands and several bug fixes.
+
+OpenAI is not the only company linking its web coding agent with the terminal tool. Claude is also testing Claude Code for web.
+
+OpenAI released yesterday GPT-5-Codex, a version of GPT-5 optimized for its AI coding agent, “performing better at real-time collaboration and tackling tasks independently anywhere you develop, whether via the terminal, IDE, web, or even your phone.”
+
+The update is part of OpenAI’s effort to compete better with other AI coding tools, such as Claude Code, Windsurf, GitHub Copilot, and Cursor (with $500 million in ARR).
+
+The San Francisco-based research lab first launched Codex CLI in April and Codex web in May.
+
+Codex now works where you develop—in your terminal or IDE, on the web, in GitHub, and even in the ChatGPT iOS app. Codex is included with ChatGPT Plus, Pro, Business, Edu, and Enterprise plans.
+
+“It performs better on agentic coding benchmarks,” and “its code review capability can catch critical bugs before they ship,” explained the startup.
+
+GPT-5-Codex can spend anywhere from a few seconds to seven hours on a coding task.
+
+The new model is now rolling out in Codex products — which can be accessed via a terminal, IDE, GitHub, or ChatGPT — to all ChatGPT Plus, Pro, Business, Edu, and Enterprise users.
+
+OpenAI says it plans to make the model available to API customers in the future.
+
+____________________________________________
+
+Pretty wild timing for these two announcements, and I can't be the only one whose head has been turned.
+
+For those who missed it, OpenAI just dropped a bombshell today (2025-09-15): a major upgrade to Codex with a new "GPT-5-Codex" model.
+
+Link to OpenAI Announcement
+
+The highlights look seriously impressive:
+
+* Truly Agentic: They're claiming it can work independently for hours, iterating on code, fixing tests, and seeing tasks through.
+
+* Smarter Resource Use: It dynamically adapts its "thinking" time—snappy for small requests, but digs in for complex refactors.
+
+* Better Code Review: The announcement claims it finds more high-impact bugs and generates fewer incorrect/unimportant comments.
+
+* Visual Capabilities: It can take screenshots, analyze images you provide (mockups/diagrams), and show you its progress visually.
+
+* Deep IDE Integration: A proper VS Code extension that seems to bridge local and cloud work seamlessly.
+
+This all sounds great, but what makes the timing so brutal is what's been happening over at Anthropic.
+
+Let's be real, has anyone else been fighting with Claude Code for the last month? The "model degradation" has been a real and frustrating issue. Their own status page confirmed that Sonnet 4 and even Opus were affected for weeks.
+
+Link to Anthropic Status Page
+
+Anthropic say they've rolled out fixes as of Sep 12th, but the trust is definitely shaken for me. I spent way too much time getting weird, non-deterministic, or just plain 'bad' code suggestions.
+
+So now we have a choice:
+
+* Anthropic's Claude Code: A powerful tool with a ton of features, but it just spent a month being unreliable. We're promised it's fixed, but are we sure?
+
+* OpenAI's Codex CLI: A brand new, powerful competitor powered by a new GPT-5-codex model, promising to solve the exact pain points of agentic coding, from a company that (at least right now) isn't having major quality control issues. Plus, it's bundled with existing ChatGPT plans.
+
+I was all-in on the Claude Code ecosystem, but this announcement, combined with the recent failures from Anthropic, has me seriously considering jumping ship. The promise of a more reliable agent that can handle complex tasks without degrading is exactly what I need.
+
+TL;DR: OpenAI launched a powerful new competitor to Claude Code right as Anthropic was recovering from major model quality issues. The new features of GPT-5-Codex seem to directly address the weaknesses we've been seeing in Claude.
+
+What are your thoughts? Is anyone else making the switch? Are the new Codex features compelling enough, or are you sticking with Anthropic and hoping for the best?
+
+_____________________
+
+
+To try it right away, make sure to first update codex cli to v0.36.0:
+
+`npm install -g u/openai/codexu/latest`
+
+and then run codex with:
+
+`codex -m gpt-5-codex -c model_reasoning_effort="high"`
+
+__________________
+
+gpt-5-high-new "our latest model tuned for coding workflows"
+Resources And Tips
+Looks like we'll be getting something new soon!
+
+r/ChatGPTCoding - gpt-5-high-new "our latest model tuned for coding workflows"
+r/ChatGPTCoding - gpt-5-high-new "our latest model tuned for coding workflows"
+It's in the main codex repo, but not yet released. Currently it's not accessible via Codex or the API if you attempt to use any combination of the model ID and reasoning effort.
+
+Looks like we'll be getting a popup when opening Codex suggesting to switch to the new model. Hopefully it goes live this weekend!
+
+_______________________________________________________________________________________________________________________
+
+use codex_core::protocol_config_types::ReasoningEffort;
+
+/// A simple preset pairing a model slug with a reasoning effort.
+#[derive(Debug, Clone, Copy)]
+pub struct ModelPreset {
+    /// Stable identifier for the preset.
+    pub id: &'static str,
+    /// Display label shown in UIs.
+    pub label: &'static str,
+    /// Short human description shown next to the label in UIs.
+    pub description: &'static str,
+    /// Model slug (e.g., "gpt-5").
+    pub model: &'static str,
+    /// Reasoning effort to apply for this preset.
+    pub effort: ReasoningEffort,
+}
+
+/// Built-in list of model presets that pair a model with a reasoning effort.
+///
+/// Keep this UI-agnostic so it can be reused by both TUI and MCP server.
+pub fn builtin_model_presets() -> &'static [ModelPreset] {
+    // Order reflects effort from minimal to high.
+    const PRESETS: &[ModelPreset] = &[
+        ModelPreset {
+            id: "gpt-5-minimal",
+            label: "gpt-5 minimal",
+            description: "— fastest responses with limited reasoning; ideal for coding, instructions, or lightweight tasks",
+            model: "gpt-5",
+            effort: ReasoningEffort::Minimal,
+        },
+        ModelPreset {
+            id: "gpt-5-low",
+            label: "gpt-5 low",
+            description: "— balances speed with some reasoning; useful for straightforward queries and short explanations",
+            model: "gpt-5",
+            effort: ReasoningEffort::Low,
+        },
+        ModelPreset {
+            id: "gpt-5-medium",
+            label: "gpt-5 medium",
+            description: "— default setting; provides a solid balance of reasoning depth and latency for general-purpose tasks",
+            model: "gpt-5",
+            effort: ReasoningEffort::Medium,
+        },
+        ModelPreset {
+            id: "gpt-5-high",
+            label: "gpt-5 high",
+            description: "— maximizes reasoning depth for complex or ambiguous problems",
+            model: "gpt-5",
+            effort: ReasoningEffort::High,
+        },
+        ModelPreset {
+            id: "gpt-5-high-new",
+            label: "gpt-5 high new",
+            description: "— our latest release tuned to rely on the model's built-in reasoning defaults",
+            model: "gpt-5-high-new",
+            effort: ReasoningEffort::Medium,
+        },
+    ];
+    PRESETS
+}
+
+______________________________________________________________________________________________
+
+use codex_core::protocol_config_types::ReasoningEffort;
+
+/// A simple preset pairing a model slug with a reasoning effort.
+#[derive(Debug, Clone, Copy)]
+pub struct ModelPreset {
+    /// Stable identifier for the preset.
+    pub id: &'static str,
+    /// Display label shown in UIs.
+    pub label: &'static str,
+    /// Short human description shown next to the label in UIs.
+    pub description: &'static str,
+    /// Model slug (e.g., "gpt-5").
+    pub model: &'static str,
+    /// Reasoning effort to apply for this preset.
+    pub effort: ReasoningEffort,
+}
+
+/// Built-in list of model presets that pair a model with a reasoning effort.
+///
+/// Keep this UI-agnostic so it can be reused by both TUI and MCP server.
+pub fn builtin_model_presets() -> &'static [ModelPreset] {
+    // Order reflects effort from minimal to high.
+    const PRESETS: &[ModelPreset] = &[
+        ModelPreset {
+            id: "gpt-5-minimal",
+            label: "gpt-5 minimal",
+            description: "— fastest responses with limited reasoning; ideal for coding, instructions, or lightweight tasks",
+            model: "gpt-5",
+            effort: ReasoningEffort::Minimal,
+        },
+        ModelPreset {
+            id: "gpt-5-low",
+            label: "gpt-5 low",
+            description: "— balances speed with some reasoning; useful for straightforward queries and short explanations",
+            model: "gpt-5",
+            effort: ReasoningEffort::Low,
+        },
+        ModelPreset {
+            id: "gpt-5-medium",
+            label: "gpt-5 medium",
+            description: "— default setting; provides a solid balance of reasoning depth and latency for general-purpose tasks",
+            model: "gpt-5",
+            effort: ReasoningEffort::Medium,
+        },
+        ModelPreset {
+            id: "gpt-5-high",
+            label: "gpt-5 high",
+            description: "— maximizes reasoning depth for complex or ambiguous problems",
+            model: "gpt-5",
+            effort: ReasoningEffort::High,
+        },
+        ModelPreset {
+            id: "gpt-5-high-new",
+            label: "gpt-5 high new",
+            description: "— our latest release tuned to rely on the model's built-in reasoning defaults",
+            model: "gpt-5-high-new",
+            effort: ReasoningEffort::Medium,
+        },
+    ];
+    PRESETS
+}
+
+____________________________________________________________________________________________________
+
+Here’s an optimal, Pro‑focused update that sets you up to always use the highest‑reasoning model and makes that choice explicit in the startup flow. I’ve also highlighted the upgrade’s benefits and how they
+map to your workflow.
+
+What I changed (so it “just works” post‑upgrade)
+
+- CODEx bootline (TOOLS/codex_start_aat9.bat)
+    - Now says: “Read CODEX_READ_FIRST_AAT9.md… Select model preset gpt‑5‑codex (High), run preflight + Dev Health, then reply: READY.”
+- briefings/CODEX_READ_FIRST_AAT9.md
+    - Added default: “Model preset: select gpt‑5‑codex (High) by default (Pro). Use Medium only for lower latency.”
+- docs/AAT9_KIT/AAT9_AI_Contributor_Guide.md
+    - Appended “Model preset (default for Pro): Use gpt‑5‑codex (High) for complex coding/wiring and refactors; Medium for faster iteration.”
+- docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md
+    - Added “Default model preset (Pro): Select gpt‑5‑codex (High) after launch; switch to Medium when needed.”
+- Other recent improvements retained:
+    - Dev Health sections in KIT README, Human Read First, Quickstart, and Codex Read First so fresh sessions (AIs) check key bindings and table presence quickly.
+
+Should you do the upgrade now?
+
+- Yes — Pro membership typically gives you access to gpt‑5‑codex. Based on the upgrades doc:
+    - Dynamic thinking: The model can adapt its “thinking time” during a task (seconds to hours) rather than relying on a one-time “router” guess. Helpful for complex wiring/refactors — it can “decide” to
+spend more time mid‑task.
+    - Better refactors and code review: Fewer incorrect review comments and more high‑impact ones — useful for beginner workflows, catching real issues instead of noise.
+    - Higher agentic performance: Benchmarks like SWE‑bench Verified show improvements for agentic code tasks, meaning it handles multi-step coding better with fewer nudges.
+
+What’s different that helps a beginner
+
+- You don’t need to micromanage “how much thinking” per request. Keep the model at High reasoning (Pro) and let it adapt on complex tasks; use Dev Health to validate environment quickly.
+- Code review signals are less noisy and catch more real issues, so you spend less time sifting through false positives.
+- Complex wiring (like we just fixed) benefits more from the model’s ability to extend its own effort mid‑task.
+
+How to perform the upgrade efficiently
+
+- End this session and upgrade Codex in your client (terminal/IDE/ChatGPT) to enable gpt‑5‑codex.
+- On first launch after upgrade:
+    - Select model preset gpt‑5‑codex (High) by default.
+    - Paste the boot line (TOOLS\codex_start_aat9.bat copies it).
+    - Run preflight for a state and toggle Dev Health in Control Center and on the page you’re working on to confirm environment/imports and data availability.
+
+Notes on model switching
+
+- For your Pro setup and workflow, staying on gpt‑5‑codex (High) by default is recommended. Only switch to Medium for speed-sensitive or trivial tasks. The docs now reflect that preference.
+
+If you want, I can also drop a tiny note in the Human Read First doc reminding Pro users to select gpt‑5‑codex (High) right after preflight — but with the BAT bootline and Codex Read First now updated, your
+on‑ramp already points there.
+
+_____________________
+
+codex
+Added a Pro model preset note to Human Read First so it’s unmistakable during startup.
+
+Changes
+
+- docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md
+    - New section “Pro Model Preset (Codex)”
+    - Tells Pro users to select gpt‑5‑codex (High) after launch; switch to Medium only for lower latency.
+
+Where model preset is now emphasized
+
+- TOOLS\codex_start_aat9.bat: bootline reminds to select gpt‑5‑codex (High).
+- briefings/CODEX_READ_FIRST_AAT9.md: default model preset note under Session Setup.
+- docs/AAT9_KIT/AAT9_AI_Contributor_Guide.md: model preset (default for Pro).
+- docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md: default model preset (Pro).
+- docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md: Pro model preset note (this change).
+
+You can now end this session and upgrade Codex. After you relaunch:
+
+- Select gpt‑5‑codex (High).
+- Run preflight and toggle Dev Health (Control Center and the working page) to quickly confirm module bindings and data availability.
+- Proceed with work — your docs and app wiring are aligned for the new model and dynamic thinking behavior.
+
+user
+ok so all docs are updated from the wortk you did today just double checking i proceed to ed this session?
+
+codex
+Yes — all relevant docs and startup materials are updated. It’s safe to end this session and perform the upgrade.
+
+What I updated today
+
+- Winners + Aux: analyzer-style Winners Full (purple + green), Aux restored and isolated.
+- Canonical API: modules/vtrac_reference.py (non‑Aux), staged copy kept for Aux.
+- Import hygiene: standardized via src/_import_hygiene.py, applied at app startup.
+- Dev Health: added/enhanced for Control Center, Winners Full, V‑TRAC Analyzer, Stable, and Pipeline.
+- String‑safe reads: utils/table_io.read_csv_strsafe used in Winners Full.
+- Legacy cleanup: archived unused V‑TRAC references out of import paths.
+- Docs:
+    - docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md (Pro model preset + Dev Health step)
+    - briefings/CODEX_READ_FIRST_AAT9.md (default gpt‑5‑codex High + Dev Health)
+    - docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (Dev Health + preset)
+    - docs/AAT9_KIT/AAT9_AI_Contributor_Guide.md (preset guidance)
+    - docs/AAT9_KIT/AAT9_KIT_README.md (Dev Health cheat sheet)
+    - docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md (usage, paths, CLI smoke)
+    - docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md (Winners Full wiring)
+    - docs/AAT9_KIT/AAT9_Unified_Changelog.md, AAT9_Checkpoint_Log.md (entries)
+    - briefings/PITFALLS.txt (import collisions, canonical API, string‑safe reads, renderer fallback)
+- BOOT line: TOOLS\codex_start_aat9.bat now reminds to select gpt‑5‑codex (High).
+
+After you upgrade (Pro)
+
+- Select model: gpt‑5‑codex (High) by default (Medium only for lower latency).
+- Run preflight: powershell -NoProfile -File .codex/preflight.ps1 -State "<State>"
+- Toggle Dev Health:
+    - Control Center → confirm module bindings + tables root inventory.
+    - Winners Full tile → confirm modules binding, vtrac_reference path, builder presence, per‑state tables.
+    - Analyzer/Stable → confirm modules + tables roots.
+
+Optional
+
+- CLI smoke for Winners Full exists but is secondary; the app’s path/health checks are the primary validation.
+
+You can end this session now and perform the upgrade. When you relaunch, follow the (updated) bootline and docs; everything is aligned to use the highest‑reasoning model and keep sessions smooth.
