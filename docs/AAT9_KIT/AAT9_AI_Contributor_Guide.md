@@ -50,3 +50,9 @@
 - UI soft‑fails with clear captions on missing data.
 - Minimal diff; archive legacy if cleaning up.
 
+
+### Dev Health
+Toggle on app pages to quickly verify environment, import bindings, and data availability before coding:
+- Control Center: bindings for `utils.path_handler`, `modules.vtrac_reference`, `modules.winner_report_full`, `modules.blackapple`, `modules.aux_loaders`, `core.pipeline_runner`; tables root inventory.
+- Winners Full tile: `modules` binding, canonical vtrac_reference path, builder presence, per-state combined tables existence.
+- V-TRAC Analyzer + Stable: module bindings and tables roots for their flows.

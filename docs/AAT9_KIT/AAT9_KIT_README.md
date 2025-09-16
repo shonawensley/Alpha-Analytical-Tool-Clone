@@ -23,3 +23,10 @@ Purpose: A single, current source for AAT9 usage, structure, workflow, and updat
   - V‑TRAC / Stable / Digit Reduction → combined tables under `tables/` or `data/outputs/tables/<STATE>/` via `utils.path_handler`
 - Preflight: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 
+## Dev Health Cheat Sheet (fast diagnostics)
+- Control Center: shows bindings for `utils.path_handler`, `modules.vtrac_reference`, `modules.winner_report_full`, `modules.blackapple`, `modules.aux_loaders`, `core.pipeline_runner`, and tables root inventory.
+- Winners Full tile: shows actual `modules` binding, `modules.vtrac_reference` path, builder presence, and per‑state combined tables existence.
+- V‑TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
+
+Tip: Use these before running pipelines or generating reports to quickly confirm environment, imports, and data availability.
+

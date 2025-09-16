@@ -57,3 +57,4 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
   - Purple = index stable‑pattern combos; Green = straight permutations of the winning number
 - Writes: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
 - Notes: table‑agnostic (safe for states missing string‑tables); later can overlay table‑driven details
+2025-09-16 — Winners — Analyzer-style Winners Full report + Aux restore — Adds table-aware 3‑pane HTML (purple index + green straights), restores staged Aux V‑TRAC reference, adds canonical vtrac_reference API; Files: modules/vtrac_reference.py, modules/winner_report_full.py, src/reporting (added via modules shim), src/app.py (full tile wiring); Refs: AAT9_Winners_VTrac_Report.md, AAT9_Live_Wiring_and_Data_Paths.md, AAT9_Checkpoint_Log.md, briefings/PITFALLS.txt

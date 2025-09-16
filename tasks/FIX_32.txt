@@ -1,0 +1,298 @@
+Got it—here’s a surgical, “no‑surprises” set of import paths, file stubs, and validation checks that align with the project’s own folder conventions and outputs. Where I anchor to an existing, authoritative source (your AAT10 checkpoint), I note it explicitly so nothing here depends on memory or guesswork.
+
+0) One‑paragraph green‑light for Codex’s plan
+
+Yes—proceed with Codex’s Phase 1→5, with two small guard‑rails:
+
+Do not touch anything under scripts/auxiliary/working except restoring the missing vtrac_reference.py and ensuring there’s an __init__.py.
+
+Add a canonical modules/vtrac_reference.py for the rest of the app (so non‑Aux pages never import from the staged Aux package).
+
+This respects the single pipeline and folder conventions already established (tables live under data/outputs/tables/<State4>/; analysis HTML lives under data/outputs/analysis/...; predictions JSON live under data/outputs/predictions/).
+
+1) Exact paths and imports (copy/paste)
+1A. Restore the staged (Aux) reference without impacting anything else
+scripts/auxiliary/working/modules/
+  __init__.py            # (empty file is fine)
+  vtrac_reference.py     # the staged copy that Aux expects
+
+
+Aux page import (inside the Aux page only):
+
+# At the very top of the Aux page file (before any local imports)
+from pathlib import Path
+import sys
+
+_AUX_MOD_ROOT = Path(__file__).resolve().parent / "working" / "modules"
+if str(_AUX_MOD_ROOT) not in sys.path:
+    sys.path.insert(0, str(_AUX_MOD_ROOT))
+
+# Now this resolves to the *staged* working package:
+from modules.vtrac_reference import (
+    get_vtrac_index, get_index_set, get_index_straights,
+    VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, VTRAC_LOOKUP, BOXED_LABEL_LOOKUP
+)
+
+
+Why this is safe: The path tweak is local to the Aux page context, so only Aux sees the staged package; the rest of the app continues to resolve imports from the project’s canonical modules/ package. This keeps the Aux “working tools” untouched while preventing cross‑page collisions.
+
+1B. Add a canonical V‑TRAC reference for the whole project
+modules/
+  __init__.py
+  vtrac_reference.py
+  # (optional) _vtrac_reference_data.py   ← if you prefer to keep the mapping table separate
+
+
+modules/vtrac_reference.py (canonical):
+
+# modules/vtrac_reference.py
+# Narrow, stable API for non-Aux pages.
+
+from typing import Iterable, Set, List
+
+# If you prefer, place lookup tables in a sibling data module.
+# from ._vtrac_reference_data import VTRAC_LOOKUP, BOXED_LABEL_LOOKUP, ...
+
+# --- Minimal, narrow API expected by the Winners logger/report ---
+def get_vtrac_index(winner: str) -> int:
+    """Return the V-TRAC index (0..999) for a 3-digit winner like '579'."""
+    s = "".join(ch for ch in winner if ch.isdigit())
+    if len(s) != 3:
+        raise ValueError(f"winner must be 3 digits, got {winner!r}")
+    # placeholder deterministic mapping (replace with your real table):
+    return (int(s[0])*100 + int(s[1])*10 + int(s[2])) % 1000
+
+def get_index_set(index: int) -> List[str]:
+    """Return the full purple-coverage set of combinations for an index."""
+    # placeholder: return the index family as strings; replace with your table logic
+    return [f"{index:03d}"]
+
+def get_index_straights(winner: str) -> Set[str]:
+    """Return the green straights overlay for the given winner."""
+    # placeholder: winner itself as the only straight
+    return { "".join(ch for ch in winner if ch.isdigit()) }
+
+__all__ = [
+    "get_vtrac_index", "get_index_set", "get_index_straights"
+]
+
+
+Note: If you already trust the staged table logic, you can copy the real mapping/data into modules/_vtrac_reference_data.py and implement the three functions against that (recommended), rather than importing from the staged Aux tree. The key is: non‑Aux pages import only from modules.vtrac_reference, never from the staged path.
+
+1C. Full Winners report: file locations and imports
+
+Inputs (read‑only):
+data/outputs/tables/<State4>/<State4>_{Midday,Evening,Combined}_combined.csv ← this is the canonical table location the whole app already uses.
+
+Outputs (HTML):
+data/outputs/analysis/winners/<State4>/<State4>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html
+(This mirrors your existing “analysis” destinations used by V‑TRAC and Stable Patterns, keeping folders predictable.)
+
+New module (project code):
+
+src/reporting/winner_report_full.py
+
+
+Shim for easy imports from pages:
+
+modules/winner_report_full.py
+
+
+src/reporting/winner_report_full.py (string‑safe loader + minimal template hook):
+
+# src/reporting/winner_report_full.py
+from __future__ import annotations
+from pathlib import Path
+import datetime as dt
+import pandas as pd
+
+from modules.vtrac_reference import (
+    get_vtrac_index, get_index_set, get_index_straights
+)
+
+def build_and_save_full_report(
+    state4: str,
+    draw: str,            # "Midday" | "Evening" | "Combined"
+    date_yyyy_mm_dd: str, # "2025-09-16"
+    winner: str,          # "579"
+    outputs_root: str | Path = "data/outputs/analysis/winners",
+    tables_root: str | Path = "data/outputs/tables",
+) -> Path:
+    """Builds a 3-pane analyzer-style HTML for a specific (state, draw, date, winner)."""
+    state4 = str(state4)
+    draw = str(draw)
+    date_yyyy_mm_dd = str(date_yyyy_mm_dd)
+
+    tables_dir = Path(tables_root) / state4
+    input_csv = tables_dir / f"{state4}_{draw}_combined.csv"
+    if not input_csv.exists():
+        raise FileNotFoundError(f"Missing table: {input_csv}")
+
+    # String-safe CSV read (no NA coercion, preserve leading zeros):
+    df = pd.read_csv(input_csv, dtype=str, keep_default_na=False, na_filter=False)
+
+    # V-TRAC overlays
+    idx = get_vtrac_index(winner)
+    purple_set = set(get_index_set(idx))
+    green_set  = set(get_index_straights(winner))
+
+    # --- Very-light HTML render (you can swap in a Jinja2 template later) ---
+    # Policy: green overlay should override purple where both apply
+    def colorize(cell: str) -> str:
+        val = str(cell)
+        cls = "none"
+        if val in purple_set: cls = "purple"
+        if val in green_set:  cls = "green"
+        return f'<td class="{cls}">{val}</td>'
+
+    # Assume df is a rectangular “numbers” grid; adapt if your schema differs.
+    rows_html = "\n".join(
+        "<tr>" + "".join(colorize(x) for x in row) + "</tr>"
+        for row in df.fillna("").values.tolist()
+    )
+
+    css = """
+    <style>
+      td { padding: 2px 6px; font-family: ui-monospace, Consolas, monospace; }
+      td.purple { background: rgba(128, 0, 128, .18); }
+      td.green  { background: rgba(0, 128,   0, .28); font-weight: 700; }
+    </style>
+    """
+
+    meta = f"<p><strong>{state4} — {draw}</strong> · Date {date_yyyy_mm_dd} · Winner {winner} · Index {idx:03d}</p>"
+    html = f"<!doctype html><html><head><meta charset='utf-8'>{css}</head><body>{meta}<table>{rows_html}</table></body></html>"
+
+    out_dir = Path(outputs_root) / state4
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{state4}_{draw}_{date_yyyy_mm_dd}_winner_{winner}_analyzer.html"
+    out.write_text(html, encoding="utf-8")
+    return out
+
+
+modules/winner_report_full.py (shim):
+
+# modules/winner_report_full.py
+from src.reporting.winner_report_full import build_and_save_full_report
+__all__ = ["build_and_save_full_report"]
+
+
+Usage from a Streamlit tile (pseudo‑wiring):
+
+# inside the full Winners tile file:
+from modules.winner_report_full import build_and_save_full_report
+
+# ... collect state4, date, and (optional) Midday/Evening winners from UI ...
+paths = []
+if midday_winner:
+    p = build_and_save_full_report(state4, "Midday", date_str, midday_winner)
+    paths.append(p)
+if evening_winner:
+    p = build_and_save_full_report(state4, "Evening", date_str, evening_winner)
+    paths.append(p)
+
+# embed previews (Streamlit):
+for p in paths:
+    st.write(f"Saved: {p}")
+    st.components.v1.html(Path(p).read_text(encoding="utf-8"), height=480, scrolling=True)
+
+
+Why these locations: They match your existing “tables → analysis outputs” layout and keep winners alongside other analysis HTML artifacts (V‑TRAC under analysis/vtrac/, Stable Patterns under analysis/patterns/). This keeps everything consistent with the AAT10 conventions.
+
+2) Path hygiene hardening (non‑destructive)
+
+Project‑wide imports: put project root on sys.path once, early in your main app entrypoint (if not there already):
+
+# e.g., in src/app.py near the top
+from pathlib import Path
+import sys
+ROOT = Path(__file__).resolve().parents[1]  # project root if app.py is in src/
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
+Aux page only: use the local sys.path.insert(0, ...) snippet from §1A so modules.* resolves to the staged “working” package only inside Aux.
+
+No other pages should tweak sys.path. Everything else should import from modules.* (canonical) and src.*.
+
+Keep “tables root” and “outputs root” centralized. If you already have a helper (the doc mentions utils/path_handler.py), consider routing the tables_root / outputs_root defaults through it later. For immediate unblocking, the explicit defaults in the stubs above match your AAT10 map.
+
+3) Minimal, decisive validation (takes minutes)
+
+A. Aux back to life (staged reference present):
+
+# In a Python REPL launched *from* the Aux page context, confirm it binds to staged:
+>>> import modules.vtrac_reference as v
+>>> v.__file__  # should show .../scripts/auxiliary/working/modules/vtrac_reference.py
+>>> v.get_vtrac_index("579")
+
+
+B. Canonical API resolves elsewhere:
+
+# In the app root or any non-Aux module:
+>>> import modules.vtrac_reference as v
+>>> v.__file__  # should now show .../modules/vtrac_reference.py (the canonical one)
+
+
+C. Winners report end‑to‑end:
+
+from modules.winner_report_full import build_and_save_full_report
+p = build_and_save_full_report("Ohio4", "Midday", "2025-09-16", "579")
+print(p)  # verify .../data/outputs/analysis/winners/Ohio4/Ohio4_Midday_2025-09-16_winner_579_analyzer.html
+
+
+D. Tables exist (string‑safe read): spot‑check one combined file:
+
+import pandas as pd
+df = pd.read_csv("data/outputs/tables/Ohio4/Ohio4_Midday_combined.csv",
+                 dtype=str, keep_default_na=False, na_filter=False)
+assert df.shape[0] > 0 and df.shape[1] > 0
+
+
+These file locations and the “three combined CSVs per state” are straight from AAT10.
+
+4) Clear answers to the four concerns (compact and source‑anchored)
+
+Which V‑TRAC runs in the integrated app?
+The integrated app uses the Streamlit variant under src/core/ (not the archived standalone). That aligns with the “current entrypoint & outputs” rows and the Streamlit integrated‑app description in AAT10.
+
+Does the roadmap reflect what changed?
+AAT10 already locks in: single pipeline → *_combined.csv → tools; where files land; and that each module reads from tables and writes analysis outputs (no rewrites). If you add the Winners Full HTML destination (data/outputs/analysis/winners/<State4>/...) to your docs, it will fit the same pattern and keep the doc complete.
+
+What should Winner logging / prediction JSON do?
+
+Already in place: V‑TRAC emits prediction JSON under data/outputs/predictions/ (AAT10 “Winners Log / Predictions” rows).
+
+Planned next step: A winners artifact per day/state that compares official results vs. predictions and writes a compact log for downstream ML. Your new full Winners report HTML is a visual companion to that data log.
+
+How to keep this from going off the rails?
+
+Keep Aux isolated (staged package via local path tweak).
+
+Keep non‑Aux imports pointed at modules/ (canonical).
+
+Keep all readers string‑safe for CSV (dtype=str, keep_default_na=False, na_filter=False).
+
+Keep outputs under the established “analysis/…” tree and predictions under “…/predictions/”.
+All four rules are consistent with AAT10’s conventions and prevent drift or cross‑page import collisions.
+
+5) What Codex should implement now (checklist)
+
+ Restore scripts/auxiliary/working/modules/vtrac_reference.py + __init__.py (Phase 1).
+
+ Add modules/vtrac_reference.py (canonical API, three functions only).
+
+ Add src/reporting/winner_report_full.py and modules/winner_report_full.py shim.
+
+ Wire only the full Winners tile to call build_and_save_full_report(); leave the compact tile unchanged.
+
+ Run the three validation probes in §3.
+
+If each box ticks, Aux is back, and you have a reliable Winners Full HTML builder that doesn’t interfere with other tools.
+
+Why you can trust the paths above
+
+They match the AAT10 Checkpoint truth‑table: single table pipeline; tools read data/outputs/tables/<State4>/...; V‑TRAC/Stable write to data/outputs/analysis/...; prediction JSON lives under data/outputs/predictions/. Your new Winners report follows the same pattern, so it’s consistent with the established conventions rather than inventing a new layout.
+
+If you want, I can also draft the tiny Jinja2 template for the 3‑pane HTML (since your repo already organizes templates under reporting/templates/ per AAT10), but the in‑file CSS stub above will render correctly right away.
+
+Good luck—this is the last small set of edits before you can generate real analyzer‑style Winners HTML again without destabilizing Aux.

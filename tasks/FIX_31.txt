@@ -1,3 +1,24 @@
+You’re right: the Aux pages expect a staged “working” V‑TRAC API at
+
+scripts/auxiliary/working/modules/vtrac_reference.py
+
+
+and import exactly these names:
+
+from modules.vtrac_reference import (
+    VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE,
+    get_vtrac_index, BOXED_LABEL_LOOKUP
+)
+
+
+That file got emptied/overwritten, which is why the Aux tools stopped rendering. Below is a drop‑in, fully restored vtrac_reference.py designed for the working/modules package. It matches the legacy behavior (boxed table + fast lookups) and adds a couple of small helpers that won’t break anything but will help Codex finish the Winners Logger wiring (e.g., get_index_set, get_index_straights).
+
+Paste the file contents below verbatim into
+scripts/auxiliary/working/modules/vtrac_reference.py
+(keep __init__.py in that folder). Then reload the app/Aux page.
+
+scripts/auxiliary/working/modules/vtrac_reference.py
+# -*- coding: utf-8 -*-
 """
 V‑TRAC reference for working/modules (Aux tools).
 
@@ -484,4 +505,63 @@ __all__ = [
     "normalize_draw",
 ]
 
+Why this fixes the Aux breakage
 
+The Aux “working” pages bind modules.* to scripts/auxiliary/working/modules by design.
+When vtrac_reference.py there became empty/missing, imports failed and the page showed “Working modules unavailable…”.
+Restoring this file with the four exported symbols (VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, get_vtrac_index, BOXED_LABEL_LOOKUP) brings the page back.
+
+This module also exposes get_index_set and get_index_straights. They do not change Aux behavior, but they give Codex a stable, canonical API to build the analyzer‑style Winners Logger (purple = index set, green = straights) without touching analyzer internals.
+
+Quick sanity test (no code changes elsewhere)
+
+Save the file above to
+scripts/auxiliary/working/modules/vtrac_reference.py.
+
+Ensure scripts/auxiliary/working/modules/__init__.py exists (your tree shows it).
+
+Reload the app and open the Aux page → the “Working modules unavailable…” banner should disappear.
+
+Try a few lookups in a Python REPL inside the project (optional):
+
+from modules.vtrac_reference import get_vtrac_index, BOXED_LABEL_LOOKUP
+get_vtrac_index("623")  # expect an int 1..35
+get_vtrac_index("025")  # should resolve against the reference
+
+How this relates to the Winners Logger task
+
+The errors you saw on the Control Center (“No module named 'modules.winner_report_full'” and “cannot import name 'get_vtrac_index' from 'modules.vtrac_reference' (…working\modules\vtrac_reference.py)”) were both wiring issues:
+
+This file being blank killed the get_vtrac_index import.
+
+The Winners Logger also needs a builder shim at modules/winner_report_full.py. (I can supply that once this restore is confirmed working.)
+
+With this restore in place, Codex can proceed with the plan you approved:
+
+Keep modules.* imports pinned to your project modules (SSOT).
+
+Use modules.vtrac_reference.get_vtrac_index / get_index_set / get_index_straights.
+
+Read the three pipeline CSVs string‑safe.
+
+Render analyzer‑style HTML with purple overlay (index set) and green overlay (winner straights), green taking precedence.
+
+Save under data/outputs/analysis/winners/<State4>/...html.
+
+About the duplicates & cleanup (short guidance)
+
+You’re right that there are several V‑TRAC references scattered across legacy trees. The safest path (after we finish the current task) is:
+
+Canonicalize to modules/vtrac_reference.py (project modules root), with the exact API above.
+
+Keep this staged copy (scripts/auxiliary/working/modules/vtrac_reference.py) identical to the canonical one, or make it a one‑liner re‑export:
+
+# in working/modules/vtrac_reference.py
+from project.modules.vtrac_reference import *  # re-export canonical
+
+
+Move all other historical copies into a clearly marked archive (alpha_analytical/archived/...) so imports cannot accidentally resolve to them.
+
+For now, the file above unblocks Aux immediately and gives Codex all it needs to complete the Winners Logger wiring without touching other tools.
+
+If you want me to also provide the tiny modules/winner_report_full.py shim next (so the Control Center tile stops saying “No module named …”), say the word and I’ll drop that file ready‑to‑paste as well.

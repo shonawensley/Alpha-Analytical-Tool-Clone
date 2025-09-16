@@ -64,3 +64,9 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 - Never change remotes or repo config.
 - Keep BA draws‑only; don’t mix combined string‑tables with Aux/BA.
 - Keep changes reversible and documented.
+
+### Dev Health (quick checks in UI)
+- Control Center: shows bindings for utils.path_handler, modules.vtrac_reference, modules.winner_report_full, modules.blackapple, modules.aux_loaders, core.pipeline_runner, and tables root inventory.
+- Winners Full tile: shows actual modules binding, modules.vtrac_reference path, builder presence, and per-state combined tables existence.
+- V-TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
+

@@ -1,0 +1,48 @@
+codex
+Added a Dev Health panel to the Winners Full tile and finished the docs pass. Dev Health doesn’t change behavior; it’s purely diagnostic so you can immediately see path bindings and tables presence when
+something’s off.
+
+What I Added
+
+- Winners Full Dev Health (src/app.py)
+    - Checkbox “Show Dev Health (Winners Full)”.
+    - Expander shows:
+    - cwd and python executable
+    - Which `modules` package is currently bound (file path)
+    - `modules.vtrac_reference` file path
+    - `modules/winner_report_full.py` presence
+    - Tables directory for the selected state and existence of Midday/Evening/Combined CSVs
+
+- Docs
+    - Changelog: Added 2025‑09‑16 entry for Winners Full + Aux restore + canonical API.
+    - Checkpoint Log: Detailed write‑up of context, changes, rationale, impact, refs, and follow‑ups.
+    - Winners doc: Added analyzer‑style Full report section (inputs, outputs, overlay rules, fallback).
+    - Wiring/Paths: Added the Winners Full mapping from inputs → outputs.
+    - Pitfalls: Added guidance on:
+    - Preventing `modules` import collisions (staged vs project)
+    - Canonical V‑TRAC API for non‑Aux pages
+    - String‑safe CSV reads
+    - Renderer coupling and fallback
+    - Keeping the Aux path tweak strictly local to the Aux page
+
+Where It Helps
+
+- Dev Health helps diagnose:
+    - If non‑Aux pages accidentally bound modules to the staged Aux path.
+    - If modules.vtrac_reference or the builder file are missing.
+    - If any of the three combined CSVs are missing for the selected state.
+- It doesn’t affect processing; it just makes drift visible so you don’t lose time guessing.
+
+Quick Use
+
+- Open “Winners Logger (Analyzer‑style full report)”.
+- Select a state; toggle “Show Dev Health (Winners Full)” to inspect the environment.
+- Enter Midday/Evening winners and generate; outputs land in:
+    - data\outputs\analysis\winners\<STATE>\<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html
+
+Why We Finally Landed It
+
+- We separated Aux (staged working/modules) from the integrated app (project modules/*).
+- We created a canonical V‑TRAC API for non‑Aux pages, so imports don’t collide and logic stays consistent.
+- The builder reads the same three pipeline tables the analyzer uses, renders identical 3 panes, and overlays green straights after purple (clear precedence).
+- Compact Winners remains as your safe fallback.

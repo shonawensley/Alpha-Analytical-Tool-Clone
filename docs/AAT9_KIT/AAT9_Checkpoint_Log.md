@@ -100,3 +100,24 @@ Template
   - Writes to: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
 - Impact: Does not require string‑tables; safe for states whose tables aren’t mapped yet. Later we can overlay table‑driven details.
 - Files: `src/core/winners_vtrac_report.py`, `src/app.py`
+## 2025-09-16 16:00 (UTC) — Winners Full Report + Aux V‑TRAC Restore
+
+- Context: The Aux tools rely on a staged V‑TRAC reference under `scripts/auxiliary/working/modules/` while the integrated app should use a canonical `modules/*`. A deleted staged `vtrac_reference.py` broke Aux; the Winners Logger (full) also failed due to imports resolving to the staged package and a missing canonical API. Goal: restore Aux, add a canonical V‑TRAC API, and enable a table‑aware analyzer‑style Winners Full report (3 panes, purple index + green straights) without touching analyzer internals.
+- Change:
+  - Restored staged Aux reference: `scripts/auxiliary/working/modules/vtrac_reference.py` (exports restored; draws‑only Aux unaffected).
+  - Added canonical API: `modules/vtrac_reference.py` exporting `get_vtrac_index`, `get_index_set`, `get_index_straights` (backed by analyzer utilities).
+  - Implemented full builder: `modules/winner_report_full.py` (reads three combined tables, renders analyzer‑style 3‑pane HTML via analyzer renderer, applies green straights overlay, writes to `data/outputs/analysis/winners/<STATE>/...`).
+  - Wired Control Center tile: “Winners Logger (Analyzer‑style full report)” now accepts Midday/Evening and generates one HTML per input; compact tile unchanged.
+  - Import hygiene: ensured non‑Aux pages bind `modules/*` to the project tree, not the staged Aux path; added a robust import fallback in the full tile.
+- Rationale: Cleanly separates Aux (staged) from the integrated app (canonical), removes import collisions, and reuses the established pipeline tables to produce the expected analyzer‑style Winners view. The canonical API gives non‑Aux code a single, stable entrypoint, reducing drift.
+- Impact:
+  - Aux tools: working again; no change to draws‑only behavior.
+  - Winners Full tile: produces analyzer‑style HTML under `data/outputs/analysis/winners/<STATE>/...` with purple index coverage + green straights overlay; compact tile remains as a safe fallback when tables are missing.
+  - No changes to analyzer internals or other tools; string‑safe CSV reads for new reporting prevent token coercion.
+- Files/Refs:
+  - Code: `modules/vtrac_reference.py`, `modules/winner_report_full.py`, `src/app.py` (full tile wiring), staged `scripts/auxiliary/working/modules/vtrac_reference.py` (restored)
+  - Docs: `docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md` (usage/paths), `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md` (I/O mapping), `briefings/PITFALLS.txt` (import SSOT + string‑safe IO), `docs/AAT9_KIT/AAT9_Preflight_Reference.md` (tip for tables)
+- Follow‑ups:
+  - Optional: unify all tools on `modules/vtrac_reference.py` over time; keep Aux staged shim as a re‑export when you’re ready to retire duplicates.
+  - Optional: move full report renderer to `src/reporting/` with a template; today’s builder already mirrors analyzer layout.
+  - Add a tiny smoke CLI to generate a winners full report outside Streamlit if desired.

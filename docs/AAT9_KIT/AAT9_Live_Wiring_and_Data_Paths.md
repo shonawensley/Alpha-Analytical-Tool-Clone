@@ -54,3 +54,10 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
 - Path SSOT: `utils/path_handler.py` (do not import from `src/utils`)
 - BA/Aux: `modules/blackapple.py`, `modules/aux_loaders.py`
 - Stable: `alpha_analytical/stable/{__init__.py, feature_config.yml}`
+
+## Winners Logger (Analyzer-style Full Report)
+- Entry: Control Center + “Winners Logger (Analyzer-style full report)”
+- Inputs (read-only): `data/outputs/tables/<STATE>/<STATE>_{Midday,Evening,Combined}_combined.csv`
+- Logic: compute index via `modules.vtrac_reference.get_vtrac_index(winner)`; purple coverage via `get_index_set(index)`; green overlay via `get_index_straights(winner)`; render analyzer-style 3 panes
+- Outputs (HTML): `data/outputs/analysis/winners/<STATE>/<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html`
+- Notes: compact Winners tile remains as fallback when tables are missing

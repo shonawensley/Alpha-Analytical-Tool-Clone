@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Dict
 
 from utils import path_handler as ph
+from utils.table_io import read_csv_strsafe
 
 
 def _unique_straights(winner: str) -> set[str]:
@@ -63,23 +64,25 @@ def write_winner_full_report(state: str, winner: str, out_dir: str | None = None
     if len(win) != 3 or (not win.isdigit()):
         raise ValueError("Winning number must be a 3-digit string")
 
-    # Load tables via analyzer helper
-    tables: Dict[str, object] | None = vtrac.load_state_data(state_name)
-    if not tables:
-        raise RuntimeError(f"No combined tables available for {state_name}")
+    # Load tables (string-safe) directly from tables dir
+    tables_dir = os.path.join("data", "outputs", "tables", state_name)
+    def _p(section: str) -> str:
+        return os.path.join(tables_dir, f"{state_name}_{section}_combined.csv")
+    paths = {s: _p(s) for s in ("Midday", "Evening", "Combined")}
+    if not all(os.path.exists(p) for p in paths.values()):
+        missing = [k for k, p in paths.items() if not os.path.exists(p)]
+        raise RuntimeError(f"Missing combined tables for {state_name}: {', '.join(missing)}")
+    tables: Dict[str, object] = {
+        "Midday_combined": read_csv_strsafe(paths["Midday"]),
+        "Evening_combined": read_csv_strsafe(paths["Evening"]),
+        "Combined_combined": read_csv_strsafe(paths["Combined"]),
+    }
 
-    # Compute patterns for the index
-    idx = vtrac.find_vtrac_index_and_combos(win)["index"] if hasattr(vtrac, "find_vtrac_index_and_combos") else None
-    if idx is None:
-        # Fallback: use helper that derives all combos for a numeric index
-        from modules.vtrac_reference import get_vtrac_index
-        idx = get_vtrac_index(win)
-        get_all = getattr(vtrac, "get_all_combinations_for_index", None)
-        patterns = set(get_all(idx)) if callable(get_all) else set()
-    else:
-        # Prefer analyzer helper that also supplies patterns
-        get_all = getattr(vtrac, "get_all_combinations_for_index", None)
-        patterns = set(get_all(idx)) if callable(get_all) else set()
+    # Compute patterns for the index via canonical reference
+    from modules.vtrac_reference import get_vtrac_index
+    idx = get_vtrac_index(win)
+    get_all = getattr(vtrac, "get_all_combinations_for_index", None)
+    patterns = set(get_all(idx)) if callable(get_all) else set()
 
     # Generate analyzer-style HTML
     gen = getattr(vtrac, "generate_index_html_report", None)
@@ -91,12 +94,10 @@ def write_winner_full_report(state: str, winner: str, out_dir: str | None = None
     # Overlay winner straights in green
     html2 = _inject_green_overlay(html, _unique_straights(win))
 
-    # Resolve output path
-    base = out_dir or ph.get_winners_output_dir()
-    target = os.path.join(base, "vtrac_reports", state_name)
+    # Resolve output path under analysis/winners/<STATE>
+    target = out_dir or ph.get_analysis_dir("winners", state_name)
     os.makedirs(target, exist_ok=True)
     out_path = os.path.join(target, f"{state_name}_vtrac{idx}_winner_{win}_{ts}.html")
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html2)
     return out_path
-

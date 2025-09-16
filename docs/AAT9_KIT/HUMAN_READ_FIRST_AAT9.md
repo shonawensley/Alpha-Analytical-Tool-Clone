@@ -12,6 +12,11 @@ Use these steps at the start of a session to set Codex up correctly and avoid pa
 - Check that imports resolve inside your repo and `data/cleaned/*_draws.csv` files exist.
  - Tip: If you ever see an import error for `utils.path_handler`, it usually means the legacy `/src/utils` shadowed the canonical `/utils` temporarily. The app now enforces a canonical binding at startup to prevent this; preflight shows import file paths so you can confirm.
 
+## 2.5) Use Dev Health (fast checks in UI)
+- Control Center: shows bindings for `utils.path_handler`, `modules.vtrac_reference`, `modules.winner_report_full`, `modules.blackapple`, `modules.aux_loaders`, `core.pipeline_runner`, and tables root inventory.
+- Winners Full tile: shows `modules` binding, `modules.vtrac_reference` path, builder presence, and per‑state combined tables existence (Full report requires tables; compact Winners tile does not).
+- V‑TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
+
 ## 3) Launch the app
 - Use: `run_app.bat`
 - The app runs at: `src\app.py`
@@ -21,6 +26,7 @@ Use these steps at the start of a session to set Codex up correctly and avoid pa
 - Quickstart Cheat Sheet: `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`
 - Workflow Standard + Task Template: `docs/AAT9_KIT/AAT9_Workflow_Standard.md`, `docs/AAT9_KIT/AAT9_Task_Template.md`
 - Practices: coding standards, agent rules, pitfalls: `docs/AAT9_KIT/Practices/*`
+ - Winners Reports: `docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md`
 
 That’s it. These quick steps ensure a clean start every time and guide Codex to the optimal workflow and docs.
 

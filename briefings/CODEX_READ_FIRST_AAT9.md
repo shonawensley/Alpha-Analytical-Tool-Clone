@@ -23,6 +23,10 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 - Run: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 - Confirm imports resolve to in‑repo files and that draws CSVs are present.
 
+## 3.5) Dev Health (fast checks in UI)
+- Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
+- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per‑state combined tables existence.
+
 ## 4) Plan → Implement → Verify → Document
 - Plan: small, explicit; state files to change and why; wait for approval if collaborating.
 - Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA draws‑only.
@@ -37,4 +41,3 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 ## Notes
 - Never write outside the repo; do not modify git remotes.
 - Archive‑first for cleanup; no deletions; keep changes reversible.
-

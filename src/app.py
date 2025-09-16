@@ -19,6 +19,24 @@ try:
         sys.modules.pop('src.utils.path_handler', None)
 except Exception:
     pass
+# Ensure 'modules' resolves to project modules for non-Aux pages
+try:
+    m = sys.modules.get('modules')
+    if m and getattr(m, '__file__', ''):
+        path_norm = ('%s' % m.__file__).replace('\\', '/').lower()
+        if '/scripts/auxiliary/working/modules/' in path_norm:
+            # Evict staged binding so imports resolve to project modules
+            sys.modules.pop('modules', None)
+except Exception:
+    pass
+
+# Standardize import hygiene via helper (safe no-op if already applied)
+try:
+    from _import_hygiene import ensure_project_root_on_syspath, evict_staged_modules_for_non_aux
+    ensure_project_root_on_syspath()
+    evict_staged_modules_for_non_aux()
+except Exception:
+    pass
 try:
     import importlib as _importlib
     _uph = _importlib.import_module('utils.path_handler')
@@ -333,7 +351,7 @@ def show_stable_pattern_page(state: str) -> None:
     except Exception:
         show_dev_s = False
     if show_dev_s:
-        import os, sys as _sys
+        import os, sys as _sys, importlib as _il
         from utils import path_handler as ph
         from pathlib import Path as _P
         with st.expander("System Health (Stable)"):
@@ -344,6 +362,11 @@ def show_stable_pattern_page(state: str) -> None:
                 st.caption("Stable module: " + str(getattr(_stable, "__file__", "unknown")))
             except Exception as _se:
                 st.caption("Stable module: unavailable: " + str(_se))
+            try:
+                _vref = _il.import_module('modules.vtrac_reference')
+                st.caption("vtrac_reference: " + getattr(_vref, '__file__', 'unknown'))
+            except Exception:
+                pass
             try:
                 tdir = ph.get_state_tables_dir(state)
                 st.caption("tables_dir: " + str(tdir) + " (exists=" + str(_P(tdir).exists()) + ")")
@@ -388,8 +411,66 @@ def show_control_center_page() -> None:
     st.title("Control Center")
     st.write("Cross-State Analysis Dashboard")
 
+    # Dev: System Health (Control Center)
+    try:
+        show_dev_cc = st.checkbox("Show Dev Health (Control Center)", value=False, key="dev_health_cc")
+    except Exception:
+        show_dev_cc = False
+    if show_dev_cc:
+        import os, sys as _sys, importlib as _il
+        from pathlib import Path as _P
+        from utils import path_handler as _ph
+        with st.expander("System Health (Control Center)", expanded=False):
+            st.caption("cwd: " + os.getcwd())
+            st.caption("python: " + _sys.executable)
+            # Key modules bound
+            for name in [
+                'utils.path_handler',
+                'modules.vtrac_reference',
+                'modules.winner_report_full',
+                'modules.blackapple',
+                'modules.aux_loaders',
+                'core.pipeline_runner',
+            ]:
+                try:
+                    mod = _il.import_module(name)
+                    st.caption(f"{name}: " + getattr(mod, '__file__', '<package>'))
+                except Exception as _se:
+                    st.caption(f"{name}: unavailable: {_se}")
+            # Tables root + quick inventory
+            try:
+                _root = _P(_ph.get_tables_output_dir())
+                states = sorted([p.name for p in _root.iterdir() if p.is_dir()]) if _root.exists() else []
+                st.caption(f"tables_root: {_root} (exists={_root.exists()}; states={len(states)})")
+                if states:
+                    st.caption("sample states: " + ", ".join(states[:10]) + (" ..." if len(states) > 10 else ""))
+            except Exception:
+                pass
+
     # Optional: Tables Pipeline runner (upload Pick3StatsC4.xlsm and generate per-state tables)
     with st.expander("Tables Pipeline (optional)"):
+        # Dev Health for pipeline
+        try:
+            show_dev_pipe = st.checkbox("Show Dev Health (Pipeline)", value=False, key="dev_health_pipeline")
+        except Exception:
+            show_dev_pipe = False
+        if show_dev_pipe:
+            import os, sys as _sys, importlib as _il
+            from pathlib import Path as _P
+            from utils import path_handler as _ph
+            with st.expander("System Health (Pipeline)", expanded=False):
+                st.caption("cwd: " + os.getcwd())
+                st.caption("python: " + _sys.executable)
+                try:
+                    _pr = _il.import_module('core.pipeline_runner')
+                    st.caption("core.pipeline_runner: " + getattr(_pr, '__file__', 'unknown'))
+                except Exception as _se:
+                    st.caption("core.pipeline_runner: unavailable: " + str(_se))
+                try:
+                    _tables_root = _P(_ph.get_tables_output_dir())
+                    st.caption(f"tables_root: {_tables_root} (exists={_tables_root.exists()})")
+                except Exception:
+                    pass
         upl = st.file_uploader("Upload Pick3StatsC4.xlsm", type=["xlsm"], accept_multiple_files=False)
         if upl is not None and st.button("Generate Tables"):
             try:
@@ -441,18 +522,91 @@ def show_control_center_page() -> None:
             "Michigan4", "NewJersey4", "NewYork4", "NorthCarolina4", "Ohio4",
             "Ontario4", "Pennsylvania4", "Texas4", "Virginia4", "WestVirginia4"
         ], key="winners_state_full")
-        w_number2 = st.text_input("Winning number (3 digits)", max_chars=3, key="winners_number_full")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            mid_win = st.text_input("Midday winner (3 digits)", max_chars=3, key="winners_mid_full")
+        with col_b:
+            eve_win = st.text_input("Evening winner (3 digits)", max_chars=3, key="winners_eve_full")
+        # Dev Health (diagnostics only; does not affect processing)
+        try:
+            show_dev_full = st.checkbox("Show Dev Health (Winners Full)", value=False, key="winners_full_dev")
+        except Exception:
+            show_dev_full = False
+        if show_dev_full:
+            import sys as _sys, os as _os
+            import importlib as _il
+            from pathlib import Path as _P
+            with st.expander("System Health (Winners Full)", expanded=False):
+                st.caption(f"cwd: {_os.getcwd()}")
+                st.caption(f"python: {_sys.executable}")
+                try:
+                    _modpkg = _sys.modules.get('modules')
+                    st.caption("modules bound: " + (getattr(_modpkg, '__file__', '<package>') or '<package>'))
+                except Exception as _se:
+                    st.caption("modules bound: unavailable: " + str(_se))
+                try:
+                    with _project_modules_first():
+                        _vref = _il.import_module('modules.vtrac_reference')
+                        st.caption("vtrac_reference: " + getattr(_vref, '__file__', 'unknown'))
+                except Exception as _se:
+                    st.caption("vtrac_reference: unavailable: " + str(_se))
+                try:
+                    _wrp = _P(PROJECT_ROOT) / 'modules' / 'winner_report_full.py'
+                    st.caption("winner_report_full: " + (str(_wrp) if _wrp.exists() else 'missing'))
+                except Exception:
+                    pass
+                try:
+                    if w_state2:
+                        _td = _P('data') / 'outputs' / 'tables' / w_state2
+                        st.caption(f"tables_dir: {_td} (exists={_td.exists()})")
+                        for _sec in ("Midday", "Evening", "Combined"):
+                            _f = _td / f"{w_state2}_{_sec}_combined.csv"
+                            st.caption(f"{_sec}: {_f.name} exists={_f.exists()}")
+                except Exception:
+                    pass
         if st.button("Generate Analyzer-style Report", key="btn_gen_winner_full"):
             try:
-                from modules.winner_report_full import write_winner_full_report
-                if not (w_number2 and len(w_number2) == 3 and w_number2.isdigit()):
-                    st.warning("Enter a 3-digit winning number.")
+                # Ensure imports resolve to project modules, not staged Aux
+                import sys as _sys, os as _os, importlib.util as _iu
+                from _import_hygiene import project_modules_first as _pmf
+                with _pmf():
+                    try:
+                        _sys.modules.pop('modules')
+                        _sys.modules.pop('modules.winner_report_full')
+                    except KeyError:
+                        pass
+                    try:
+                        from modules.winner_report_full import write_winner_full_report
+                    except Exception as _ie:
+                        # Fallback: import the builder directly from file path
+                        _wr_path = _os.path.join(str(PROJECT_ROOT), 'modules', 'winner_report_full.py')
+                        if _os.path.exists(_wr_path):
+                            _spec = _iu.spec_from_file_location('modules.winner_report_full_fallback', _wr_path)
+                            if _spec and _spec.loader:
+                                _mod = _iu.module_from_spec(_spec)
+                                _spec.loader.exec_module(_mod)
+                                write_winner_full_report = getattr(_mod, 'write_winner_full_report', None)
+                        if not callable(locals().get('write_winner_full_report', None)):
+                            # provide debugging breadcrumbs
+                            _mod_pkg = _sys.modules.get('modules')
+                            _mf = getattr(_mod_pkg, '__file__', 'unknown') if _mod_pkg else 'unbound'
+                            raise ImportError(f"winner_report_full import failed: {_ie}; modules.__file__={_mf}")
+                generated = []
+                if mid_win and len(mid_win) == 3 and mid_win.isdigit():
+                    with st.spinner("Building full report (Midday)..."):
+                        p_mid = write_winner_full_report(w_state2, mid_win)
+                    generated.append(("Midday", p_mid))
+                if eve_win and len(eve_win) == 3 and eve_win.isdigit():
+                    with st.spinner("Building full report (Evening)..."):
+                        p_eve = write_winner_full_report(w_state2, eve_win)
+                    generated.append(("Evening", p_eve))
+                if not generated:
+                    st.warning("Enter at least one 3-digit winner (Midday or Evening).")
                 else:
-                    with st.spinner("Building analyzer-style report (requires combined tables)..."):
-                        out_full = write_winner_full_report(w_state2, w_number2)
-                    rel_full = os.path.relpath(out_full)
-                    st.success("Winner report (full) generated.")
-                    st.markdown(f"[Open report]({rel_full})")
+                    for label, path_out in generated:
+                        rel_full = os.path.relpath(path_out)
+                        st.success(f"{label} winner report generated.")
+                        st.markdown(f"[Open report]({rel_full})")
             except Exception as e:
                 st.warning("Full report unavailable (missing tables or renderer). Use compact index report above.")
                 st.caption(str(e))

@@ -647,3 +647,21 @@ No drift: Grep the repo for bare imports; replace with modules.*.
 Blackapple UI: Status (OFF/WATCH/ALERT), triggers line, #Candidates, first 3 examples, with a per‑row expander to view all candidates. (Design and interface documented in the BA notes.)
 
 If you follow that, you can safely finish the last Aux touches, lock the integrated app, and archive the noise without reintroducing path issues.
+Import collisions (modules binding)
+- Symptom: `No module named 'modules.winner_report_full'` or imports resolve to `scripts/auxiliary/working/modules/...` on non‑Aux pages.
+- Fix: Ensure repo root is on `sys.path` early; evict staged `modules` binding for non‑Aux pages so imports resolve to project `modules/*`. Only the Aux page should prepend the staged `working/modules` path.
+
+Canonical V‑TRAC API
+- Problem: Multiple V‑Trac reference copies (staged vs ad‑hoc) cause drift. Non‑Aux pages must not import from staged.
+- Fix: Provide `modules/vtrac_reference.py` with `get_vtrac_index`, `get_index_set`, `get_index_straights` backed by analyzer utilities. Aux keeps its staged copy for parity, isolated to the Aux page.
+
+String‑safe table reads
+- Symptom: scientific notation, lost leading zeros, missed overlays.
+- Fix: use `pd.read_csv(..., dtype=str, keep_default_na=False, na_filter=False)` for string‑tables.
+
+Renderer coupling
+- Symptom: full Winners tile “missing renderer/tables.”
+- Fix: full tile reads three combined tables and calls a stable renderer (or a reporting builder) with purple+green overlay. Keep compact tile as fallback.
+
+Per‑page sys.path tweaks
+- Guidance: Only the Aux page should mutate `sys.path` to bind the staged `working/modules`. All other pages must import from project `modules/*` and `src/*`.

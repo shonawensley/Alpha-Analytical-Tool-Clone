@@ -30,3 +30,8 @@
 - `modules.aux_loaders.load_state_draws(state)` — robust draws CSV resolver
 - `alpha_analytical/stable` — YAML‑weighted stable extractor (`feature_config.yml`)
 
+
+## Dev Health (fast UI checks)
+- Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
+- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per-state combined tables existence.
+- V-TRAC Analyzer + Stable pages: Dev Health shows module bindings and tables roots for their flows.

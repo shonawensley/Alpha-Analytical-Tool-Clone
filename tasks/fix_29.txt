@@ -1,0 +1,320 @@
+You’re not crazy—what you’re seeing is a classic wiring/compatibility tangle: the full Winners Logger is trying to call a legacy import path (modules.winner_report_full) and an old V‑TRAC helper (get_vtrac_index) while your live app and tables are on the unified pipeline. Below I (1) answer your questions crisply, (2) show exactly why the three errors appear, and (3) give Cursor/Codex a cut‑and‑paste change list (with concrete code) that fixes paths, imports, and rendering so the Analyzer‑style full report works and saves the Midday/Evening HTML you want.
+
+I’m assuming repo root is C:\dev\Alpha-Analytical-Tool\ and the integrated app reads the three pipeline tables located at:
+
+data/outputs/tables/<State4>/
+  <State4>_Midday_combined.csv
+  <State4>_Evening_combined.csv
+  <State4>_Combined_combined.csv
+
+
+That’s the canonical contract for all modules in the integrated app; tables are built once and reused (cached) by V‑TRAC + friends.
+
+A. First—direct answers to the specific questions you raised
+
+1) “Which tables?”
+Use the *_combined.csv files on disk under data/outputs/tables/<State4>/. The View Results drop‑down in V‑TRAC is just a viewer of those same files; it lists whatever is present in that folder. Nothing special or ephemeral happens there—the tables are generated once by the pipeline and then all tools read them.
+
+2) “Renderer source of truth?”
+The simplest path is to put a dedicated renderer in reporting/winner_report_full.py that mirrors the analyzer look (three panes: Midday/Evening/Combined) and highlight rules (purple index; green straights). We’ll keep it internal and call it from the Control Center tile. (If you also have generate_index_html_report in module_c_vtrac.py, keep using it for V‑TRAC; don’t couple Winners Logger to that module.)
+
+3) “dtype=str?”
+Yes—force dtype=str on every CSV read (and disable NA inference). This permanently stops scientific notation and protects leading zeros and star markers (e.g., *, **). Example loader flags:
+
+pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
+
+
+4) “Single vs dual inputs?”
+Implement two inputs (Midday and Evening) and generate two separate HTML files per click. That matches your training workflow and is trivial—just call the same builder twice with draw="Midday" and draw="Evening".
+
+5) “Overlay scope & intent?”
+Correct: purple = entire V‑TRAC index set for the selected winner’s index; green = the 8 straight combinations inside that same index, with green taking precedence if both styles apply. In practice that means you’ll see pockets of green inside the purple footprint.
+
+B. Why you see the three errors (and what each means)
+
+No module named 'modules.winner_report_full'
+The Control Center tile imports a legacy package path. That package either never existed in this branch or sits outside sys.path. Fix: create a real module at src/reporting/winner_report_full.py and a tiny compat shim at modules/winner_report_full.py that re‑exports it.
+
+cannot import name 'get_vtrac_index' from 'modules.vtrac_reference'
+That file exists but its function is named differently (or isn’t exported). Fix: standardize the API by adding get_vtrac_index() and get_index_straights() (or aliases) and ensure modules/__init__.py exists. The Winners Logger and Analyzer should import the same two names.
+
+“Full report unavailable (missing tables or renderer)”
+This is the tile’s soft‑fail message if (a) either import above fails or (b) it can’t find the tables where it’s looking. We’ll lock the loader to data/outputs/tables/<State4>/*_combined.csv and explicitly ignore any *_r2.csv files left behind by older builds.
+
+C. Implementation Pack for Cursor/Codex (copy/paste these edits)
+
+Goal: Make the Control Center’s “Winners Logger (Analyzer‑style full report)” produce two HTML files (Midday/Evening) that show three panes each (Midday/Evening/Combined tables), with purple index coverage and green straights overlay. Read the pipeline tables from disk; never recompute in this tile.
+
+1) Create the real builder: src/reporting/winner_report_full.py
+# src/reporting/winner_report_full.py
+from __future__ import annotations
+from pathlib import Path
+from typing import Iterable, Tuple, Dict, Set
+import pandas as pd
+
+# ---- Public entrypoint -------------------------------------------------------
+
+def build_and_save_full_report(
+    state4: str,
+    winner_3d: str,
+    draw: str,   # "Midday" or "Evening"
+    winner_date: str,  # "YYYY-MM-DD" string; used in filename + banner
+    tables_root: Path | None = None,
+    out_root: Path | None = None,
+) -> Path:
+    """
+    Render the Analyzer-style HTML (3 panes: Midday/Evening/Combined)
+    for a single winner input. Returns the output HTML path.
+    """
+    state4 = str(state4)
+    winner = normalize_token(winner_3d)
+
+    repo = Path(__file__).resolve().parents[2]  # repo root: .../Alpha-Analytical-Tool
+    tables_root = tables_root or repo / "data" / "outputs" / "tables" / state4
+    out_root    = out_root    or repo / "data" / "outputs" / "analysis" / "winners" / state4
+
+    # 1) Load the three pipeline tables (string-safe)
+    paths = {
+        "Midday":    tables_root / f"{state4}_Midday_combined.csv",
+        "Evening":   tables_root / f"{state4}_Evening_combined.csv",
+        "Combined":  tables_root / f"{state4}_Combined_combined.csv",
+    }
+    for name, p in paths.items():
+        if not p.exists():
+            raise FileNotFoundError(f"Missing table for {name}: {p}")
+
+    tables = {k: load_table_csv(v) for k, v in paths.items()}
+
+    # 2) Resolve V-TRAC index + its full "purple" set and the "green straights"
+    from modules.vtrac_reference import get_vtrac_index, get_index_set, get_index_straights
+    index = get_vtrac_index(winner)
+    purple_set: Set[str]  = set(map(normalize_token, get_index_set(index)))
+    green_set: Set[str]   = set(map(normalize_token, get_index_straights(index)))
+
+    # 3) Build HTML (3 panes; purple + green overlay)
+    html = render_three_pane_html(
+        state4=state4, winner=winner, draw=draw, date_str=winner_date,
+        tables=tables, purple=purple_set, greens=green_set
+    )
+
+    # 4) Save
+    out_root.mkdir(parents=True, exist_ok=True)
+    out_path = out_root / f"{state4}_{draw}_{winner_date}_winner_{winner}_analyzer.html"
+    out_path.write_text(html, encoding="utf-8")
+    return out_path
+
+# ---- Helpers -----------------------------------------------------------------
+
+VISIBLE_COLS = ["7","6","5","4","3","2","1"]  # table value columns
+
+def load_table_csv(path: Path) -> pd.DataFrame:
+    df = pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
+    # normalize value columns once; keep star markers for display but match on stripped tokens
+    for c in VISIBLE_COLS:
+        if c in df.columns:
+            df[c] = df[c].astype(str)
+    return df
+
+def normalize_token(s: str) -> str:
+    return str(s).replace("*", "").replace("’", "").replace("'", "").strip()
+
+def style_cell(val: str, purple: Set[str], greens: Set[str]) -> str:
+    norm = normalize_token(val)
+    if norm in greens:
+        return "background-color:#26A269; color:white; font-weight:600;"  # green overlay
+    if norm in purple:
+        return "background-color:#6D49A3; color:white;"
+    return ""
+
+def render_three_pane_html(
+    state4: str, winner: str, draw: str, date_str: str,
+    tables: Dict[str,pd.DataFrame], purple: Set[str], greens: Set[str]
+) -> str:
+    parts = []
+    banner = (f"<h2>Winners Logger – {state4} – {draw} – {date_str} – "
+              f"Winner: <code>{winner}</code> – V‑TRAC index overlay</h2>")
+    parts.append(banner)
+    for pane in ("Midday", "Evening", "Combined"):
+        df = tables[pane].copy()
+        # apply style to the 7 visible columns only
+        styler = df.style.applymap(lambda v: style_cell(v, purple, greens), subset=VISIBLE_COLS)
+        parts.append(f"<h3>{pane}</h3>" + styler.to_html())
+    return "\n<hr/>\n".join(parts)
+
+
+Why this matters
+
+Reads only the three pipeline tables (string‑safe).
+
+Decouples the winner report from the V‑TRAC UI internals.
+
+Guarantees purple coverage + green straights with green precedence.
+
+Writes to data/outputs/analysis/winners/<State4>/...html (a clean, tool‑specific location).
+
+The location & “read-once reuse everywhere” pattern are consistent with the unified pipeline you documented (tables under data/outputs/tables/<State4>/, analyzers write HTML under data/outputs/analysis/...).
+
+2) Standardize the V‑TRAC reference API (backward‑compat aliases)
+
+Open one canonical V‑TRAC reference and export these three names:
+
+# modules/vtrac_reference.py  (existing file)
+# Ensure this package exists: modules/__init__.py  (can be empty)
+
+# If your current functions have different names, create aliases:
+def get_vtrac_index(n: str) -> int:
+    """Return the V‑TRAC index for a 3‑digit winner string."""
+    return index_for_winner(n)  # <-- or your existing function
+
+def get_index_set(index: int) -> list[str]:
+    """Return the full purple set for this index (all combos in the index)."""
+    return INDEX_MAP[index]     # <-- or your existing container
+
+def get_index_straights(index: int) -> list[str]:
+    """Return the 9 straight combinations tied to this index (winner + 8 mates)."""
+    return STRAIGHTS_MAP[index] # <-- or your existing container
+
+__all__ = ["get_vtrac_index", "get_index_set", "get_index_straights"]
+
+
+If that file actually lives under src/core/vtrac_reference.py, keep the above filename as the shim and re‑export the real functions:
+
+# modules/vtrac_reference.py (shim)
+from src.core.vtrac_reference import (
+    get_vtrac_index, get_index_set, get_index_straights
+)
+__all__ = ["get_vtrac_index", "get_index_set", "get_index_straights"]
+
+
+This makes from modules.vtrac_reference import get_vtrac_index work everywhere and resolves your “cannot import name” error.
+
+3) Add the compat import shim for the full report module (fixes “No module named…”)
+# modules/winner_report_full.py  (compat shim)
+from src.reporting.winner_report_full import build_and_save_full_report
+__all__ = ["build_and_save_full_report"]
+
+
+Make sure modules/__init__.py exists (empty file is fine) so modules.* is a package.
+
+4) Harden the Control Center tile
+
+In the code that handles “Winners Logger (Analyzer‑style full report)”:
+
+# Pseudocode inside the Streamlit tile callback:
+
+from modules.winner_report_full import build_and_save_full_report
+
+state = st.selectbox("State", options=STATE4_LIST, index=...)
+midday_input  = st.text_input("Midday winner (3 digits)")
+evening_input = st.text_input("Evening winner (3 digits)")
+date_str = st.date_input("Winner Date").strftime("%Y-%m-%d")
+
+if st.button("Generate Analyzer-style Report"):
+    outputs = []
+    if midday_input.strip():
+        p = build_and_save_full_report(state, midday_input.strip(), "Midday", date_str)
+        outputs.append(("Midday", p))
+    if evening_input.strip():
+        p = build_and_save_full_report(state, evening_input.strip(), "Evening", date_str)
+        outputs.append(("Evening", p))
+    if outputs:
+        for draw, path in outputs:
+            st.success(f"{draw} report saved: {path}")
+            with open(path, "r", encoding="utf-8") as f:
+                st.components.v1.html(f.read(), height=800, scrolling=True)
+    else:
+        st.warning("Enter at least one winner.")
+
+
+Important guards (please keep them):
+
+Don’t ever read *_r2.csv in this tile. Only *_combined.csv.
+
+If a table is missing, raise the explicit FileNotFoundError (you’ll see which one).
+
+Recommend wiring the Process Data step (tables pipeline) as a quick link if a table is missing.
+
+5) Universal CSV loader (optional centralization)
+
+If you already have utils/path_handler.py, add a string‑safe CSV loader there and import it from both V‑TRAC and Winners Logger:
+
+# utils/path_handler.py  (or utils/table_io.py)
+import pandas as pd
+
+def read_table_csv(path):
+    return pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
+
+
+This aligns with the project’s “single pipeline; all modules read the same tables” decision.
+
+D. QA checklist (quick, reproducible)
+
+Tables exist?
+Verify the three files under data/outputs/tables/Connecticut4/ are present and non‑empty (they appear in your screenshots). If any is missing, run the pipeline once (Process Data tab). The “build once, reuse” flow is expected.
+
+Imports OK?
+Start the app; the Control Center tile should no longer show the “No module named 'modules.winner_report_full'” message.
+
+Run tile
+Enter Midday 3‑digit winner and click Generate Analyzer‑style Report. You should see:
+
+success message with a fully qualified path like:
+data/outputs/analysis/winners/Connecticut4/Connecticut4_Midday_2025-09-12_winner_623_analyzer.html
+
+embedded HTML with three panes; purple coverage visible; green straights inside purple.
+
+Evening too
+Repeat with an Evening input (same day); a second HTML appears and is embedded.
+
+Smoke test with stars
+Open the saved HTML in a browser and confirm cells containing *** and * keep their markers (styles are calculated on the normalized token; the displayed value remains unchanged).
+
+E. “View Results” and saving/caching (quick background, in plain English)
+
+The tables pipeline generates *_combined.csv once under data/outputs/tables/<State4>/.
+
+The app caches table loads, so V‑TRAC and other tabs don’t rebuild them; all readers use the same on‑disk CSVs.
+
+The V‑TRAC “View Results” dropdown simply enumerates that folder and displays a table preview; it’s not a separate format.
+
+Because of that, the right fix is to point the Winners Logger to that same folder (as we did), not to an older in‑memory or pandas‑only structure.
+
+F. Guard‑rails to prevent drift (they address the recurring regressions you mentioned)
+
+Import stability: Keep the two shims you added (modules/winner_report_full.py and (if needed) modules/vtrac_reference.py). These absorb path changes and let you refactor the real code under src/… without breaking UI imports.
+
+Single source of tables: In code searches, delete/ignore any reference that reads _r2.csv. R2 was explicitly removed from the pipeline; *_combined.csv is the contract going forward.
+
+String‑safe IO everywhere: Any module reading tables should use dtype=str, keep_default_na=False, na_filter=False. This eliminates “scientific notation” surprises and ensures exact string matches for overlays.
+
+Explicit CSS precedence: Always apply the green style after purple (as in the sample). That guarantees green wins where both match.
+
+Output paths: Keep Winners Logger outputs under data/outputs/analysis/winners/<State4>/…. V‑TRAC keeps its HTML under data/outputs/analysis/vtrac/…. Predictions JSON lives under data/outputs/predictions/. This separation mirrors your AAT10 “where files land” table.
+
+G. What to tell Cursor/Codex in one paste (ready-to-run brief)
+
+Objective: Make “Winners Logger (Analyzer‑style full report)” generate Analyzer-like HTML for Midday & Evening using the pipeline tables. Fix the three import/path errors.
+Baseline: Tables are at data/outputs/tables/<State4>/*_combined.csv. Do NOT use any _r2.csv.
+Tasks:
+
+Add src/reporting/winner_report_full.py (code above) and create modules/winner_report_full.py shim exporting build_and_save_full_report.
+
+In modules/vtrac_reference.py, export get_vtrac_index, get_index_set, get_index_straights (or re‑export from src/core/vtrac_reference.py).
+
+Update the Control Center tile to call build_and_save_full_report(state, winner, draw, date_str) separately for Midday/Evening, then embed the returned HTML.
+
+Ensure all CSV reads use dtype=str, keep_default_na=False, na_filter=False.
+
+Save outputs under data/outputs/analysis/winners/<State4>/…html.
+
+Verify: run tile with a known winner; confirm purple index coverage and green straights overlay across the 3 panes.
+
+Final reassurance
+
+Your integrated app’s contract is clear: *single pipeline → three _combined.csv → every tool reads them; outputs (HTML/JSON) land under data/outputs/analysis/* and data/outputs/predictions/. That’s exactly how the AAT10 checkpoint describes the system.
+
+The three errors you pasted are fully explained by legacy import names and a missing module shim—not by missing tables.
+
+The change set above is narrow, reversible, and keeps future work tidy (you can evolve the winners logger without touching V‑TRAC internals).
+
+If you want, I can also draft a 10‑line smoke script (CLI) that calls build_and_save_full_report(...) for a dummy state; but the Streamlit tile path above should be enough to validate end‑to‑end.

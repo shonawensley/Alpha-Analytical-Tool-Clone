@@ -42,3 +42,4 @@ Tip: Use run_app.bat to launch the UI from repo root.
 - If draws inventory is empty: confirm CSVs exist under `data/cleaned/`.
 - If a state doesn’t resolve: normalize the name (e.g., "Connecticut4" → base "Connecticut").
 
+
