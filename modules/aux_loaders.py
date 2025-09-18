@@ -18,8 +18,31 @@ def _strip_trailing_digits(s: str) -> str:
     return s[:i]
 
 
+_CATEGORY_SUFFIXES_NORM = ("midday", "evening", "morning", "nite", "noon")
+
+_DRAWS_ROOT = Path("data") / "cleaned" / "draws"
+_LEGACY_DRAWS_ROOT = Path("data") / "cleaned"
+
+
+def _iter_draw_roots(base: Path | None) -> List[Path]:
+    """Return candidate directories where draw CSVs might live."""
+    if base is not None:
+        return [base]
+
+    roots: List[Path] = []
+    if _DRAWS_ROOT.exists():
+        roots.append(_DRAWS_ROOT)
+    # Legacy location (combined draws historically lived here)
+    roots.append(_LEGACY_DRAWS_ROOT)
+    return roots
+
+
 def _pick_draws_csv_for(label: str, base: Path) -> Path | None:
-    """Pick the most likely *_draws.csv for a given UI label, tolerant to naming differences."""
+    """Pick the most likely *_draws.csv for a given UI label, tolerant to naming differences.
+
+    When multiple draw categories are present (e.g., Midday/Evening), prefer the canonical
+    combined file whose normalized stem exactly matches the state label.
+    """
     if not base.exists():
         return None
     want = _norm(label)
@@ -38,9 +61,18 @@ def _pick_draws_csv_for(label: str, base: Path) -> Path | None:
         sn = stem_norm(p)
         if sn == want or sn == want_no4:
             return p
-    # 2) contains relationship (e.g., ontario vs ontariocanada)
+
+    # Filter out known category suffixes (Midday/Evening/etc.) before falling back to
+    # relaxed matching. This keeps the default lookup pinned to combined draws.
+    filtered: List[Tuple[Path, str]] = []
     for p in candidates:
         sn = stem_norm(p)
+        if any(sn.endswith(sfx) for sfx in _CATEGORY_SUFFIXES_NORM):
+            continue
+        filtered.append((p, sn))
+
+    # 2) contains relationship (e.g., ontario vs ontariocanada)
+    for p, sn in filtered:
         if want in sn or want_no4 in sn or sn in want or sn in want_no4:
             return p
     # 3) fallback: None
@@ -49,26 +81,28 @@ def _pick_draws_csv_for(label: str, base: Path) -> Path | None:
 
 def load_state_draws(state_label: str, base: Path | None = None, max_n: int = 1000) -> Tuple[List[str], str]:
     """
-    Load newest-first draws for a state from data/cleaned/*_draws.csv.
+    Load newest-first draws for a state from data/cleaned/draws/*_draws.csv (fallback to legacy path).
     Returns (draws, source_path_str). If not found, returns ([], '').
     """
-    base = base or Path("data") / "cleaned"
-    csv_path = _pick_draws_csv_for(state_label, base)
-    if not csv_path:
-        return [], ""
-    try:
-        df = pd.read_csv(csv_path)
-        # Prefer a column literally named Draw; otherwise take the first column
-        col = "Draw" if "Draw" in df.columns else df.columns[0]
-        draws = (
-            df[col]
-            .astype(str)
-            .str.replace(r"\\D", "", regex=True)
-            .str.zfill(3)
-            .tolist()
-        )
-        if max_n and max_n > 0:
-            draws = draws[:max_n]
-        return draws, str(csv_path)
-    except Exception:
-        return [], str(csv_path)
+    candidate_roots = _iter_draw_roots(base)
+    for root in candidate_roots:
+        csv_path = _pick_draws_csv_for(state_label, root)
+        if not csv_path:
+            continue
+        try:
+            df = pd.read_csv(csv_path)
+            col = "Draw" if "Draw" in df.columns else df.columns[0]
+            draws = (
+                df[col]
+                .astype(str)
+                .str.replace(r"\\D", "", regex=True)
+                .str.zfill(3)
+                .tolist()
+            )
+            if max_n and max_n > 0:
+                draws = draws[:max_n]
+            return draws, str(csv_path)
+        except Exception:
+            return [], str(csv_path)
+
+    return [], ""

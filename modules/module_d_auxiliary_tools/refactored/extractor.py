@@ -1,161 +1,210 @@
-"""
-Draw list extractor and common helpers for auxiliary tools.
+﻿"""Draw list extractor and helpers for auxiliary tools."""
 
-This module provides functionality to extract and process raw draw data
-from CSV files produced from the P3Draws sheet.
-"""
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-import logging
+
+from .draws_extractor_p3_columns import (
+    canonical_state,
+    get_columns_for,
+    state_to_filename,
+)
 
 logger = logging.getLogger(__name__)
 
+_P3_SHEET_NAME = "P3Draws"
+_P3_START_ROW = 19  # zero-indexed row 20 in Excel
+_MAX_DRAWS_DEFAULT = 1000
+DEFAULT_DRAWS_DIR = Path("data") / "cleaned" / "draws"
+LEGACY_DRAWS_DIR = Path("data") / "cleaned"
+
+_P3_CACHE: Optional[pd.DataFrame] = None
+_P3_CACHE_PATH: Optional[Path] = None
+
+
+def _load_p3_draws(excel_path: Path) -> pd.DataFrame:
+    global _P3_CACHE, _P3_CACHE_PATH
+    excel_path = excel_path.resolve()
+    if _P3_CACHE is None or _P3_CACHE_PATH != excel_path:
+        _P3_CACHE = pd.read_excel(excel_path, sheet_name=_P3_SHEET_NAME, header=None)
+        _P3_CACHE_PATH = excel_path
+    return _P3_CACHE
+
+
+def _excel_col_to_index(col_letter: str) -> int:
+    idx = 0
+    for char in col_letter:
+        idx = idx * 26 + (ord(char.upper()) - ord("A") + 1)
+    return idx - 1
+
+
+def _extract_column_draws(df: pd.DataFrame, col_letter: str, *, max_draws: int) -> List[str]:
+    if not col_letter:
+        return []
+    col_idx = _excel_col_to_index(col_letter)
+    draws: List[str] = []
+    upper = min(_P3_START_ROW + max_draws * 2, len(df))
+    for row in range(_P3_START_ROW, upper):
+        if col_idx >= len(df.columns):
+            break
+        value = df.iat[row, col_idx]
+        if pd.isna(value):
+            continue
+        try:
+            draw_str = str(int(value)).zfill(3)
+        except (ValueError, TypeError):
+            continue
+        draws.append(draw_str)
+        if len(draws) >= max_draws:
+            break
+    draws.reverse()
+    return draws
+
+
+def extract_draws_from_columns(
+    df: pd.DataFrame,
+    column_letters: List[str],
+    *,
+    max_draws: int = _MAX_DRAWS_DEFAULT,
+) -> List[str]:
+    aggregated: List[str] = []
+    for letter in column_letters:
+        aggregated.extend(_extract_column_draws(df, letter, max_draws=max_draws))
+    if len(aggregated) > max_draws:
+        aggregated = aggregated[:max_draws]
+    return aggregated
+
+
+def _write_draw_csv(path: Path, draws: List[str]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame({"Draw": draws}).to_csv(path, index=False)
+    except PermissionError as exc:
+        raise PermissionError(
+            f"Permission denied while writing {path}. Close the file if it is open and retry."
+        ) from exc
+
+
+def save_category_csvs(
+    excel_path: os.PathLike[str] | str,
+    states: List[str],
+    outdir: os.PathLike[str] | str,
+    *,
+    include_combined: bool = True,
+    include_specials: bool = True,
+    max_draws: int = _MAX_DRAWS_DEFAULT,
+) -> None:
+    excel_file = Path(excel_path)
+    if not excel_file.exists():
+        raise FileNotFoundError(f"Excel path not found: {excel_file}")
+
+    df = _load_p3_draws(excel_file)
+    out_path = Path(outdir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    for label in states:
+        canonical = canonical_state(label)
+        if not canonical:
+            logger.warning("Unknown state label '%s' skipped", label)
+            continue
+
+        stem = state_to_filename(canonical)
+
+        cols_combined = get_columns_for(canonical, "combined")
+        if include_combined and cols_combined:
+            draws_combined = extract_draws_from_columns(df, cols_combined, max_draws=max_draws)
+            if draws_combined:
+                target = out_path / f"{stem}_draws.csv"
+                _write_draw_csv(target, draws_combined)
+
+        midday_cols = get_columns_for(canonical, "midday")
+        if midday_cols:
+            draws_mid = extract_draws_from_columns(df, midday_cols, max_draws=max_draws)
+            if draws_mid:
+                _write_draw_csv(out_path / f"{stem}_Midday_draws.csv", draws_mid)
+
+        evening_cols = get_columns_for(canonical, "evening")
+        if evening_cols:
+            draws_eve = extract_draws_from_columns(df, evening_cols, max_draws=max_draws)
+            if draws_eve:
+                _write_draw_csv(out_path / f"{stem}_Evening_draws.csv", draws_eve)
+
+        if include_specials:
+            for category in ("morning", "noon", "nite"):
+                spec_cols = get_columns_for(canonical, category)
+                if not spec_cols:
+                    continue
+                draws_spec = extract_draws_from_columns(df, spec_cols, max_draws=max_draws)
+                if not draws_spec:
+                    continue
+                suffix = category.capitalize()
+                _write_draw_csv(out_path / f"{stem}_{suffix}_draws.csv", draws_spec)
+
+
+def _iter_draw_roots(base: Optional[Path]) -> List[Path]:
+    if base is not None:
+        return [base]
+
+    roots: List[Path] = []
+    if DEFAULT_DRAWS_DIR.exists():
+        roots.append(DEFAULT_DRAWS_DIR)
+    roots.append(LEGACY_DRAWS_DIR)
+    return roots
+
+
+def _load_draws_from_csv(csv_path: Path, *, max_n: int) -> List[str]:
+    df = pd.read_csv(csv_path)
+    col = "Draw" if "Draw" in df.columns else df.columns[0]
+    draws = (
+        df[col]
+        .astype(str)
+        .str.replace(r"\D", "", regex=True)
+        .str.zfill(3)
+        .tolist()
+    )
+    if max_n and max_n > 0:
+        draws = draws[:max_n]
+    return draws
+
 
 def extract_draw_list(state: str, data_dir: Optional[Path] = None) -> List[str]:
-    """
-    Extract the raw draw list for a state. 
-    First tries to read from CSV cache, then creates it from master Excel if needed.
-    
-    Args:
-        state: State name (e.g., "Connecticut4")
-        data_dir: Directory containing the data (defaults to data/cleaned)
-        
-    Returns:
-        List of 3-digit draw strings, most recent first
-        
-    Raises:
-        FileNotFoundError: If neither CSV nor master Excel file is found
-        ValueError: If the data format is invalid
-    """
-    if data_dir is None:
-        # Try legacy CSV location first, fallback to cleaned dir
-        csv_dir = Path("data/processed/draws")
-        if csv_dir.exists():
-            data_dir = csv_dir
-        else:
-            data_dir = Path("data/cleaned")
-    
-    # First, try to read from cached CSV file (legacy format)
-    state_csv = data_dir / f"{state.replace('4', '')}_draws.csv"  # Remove "4" suffix for legacy compatibility
-    
-    if state_csv.exists():
-        try:
-            df = pd.read_csv(state_csv)
-            if 'Draw' in df.columns:
-                draws = df['Draw'].astype(str).str.zfill(3).tolist()
-                return draws[:1000]  # Most recent first, limit to 1000
-        except Exception as e:
-            logger.warning(f"Failed to read CSV {state_csv}: {e}")
-    
-    # If CSV doesn't exist, create it from master Excel using legacy approach
-    logger.info(f"CSV not found for {state}, extracting from master Excel")
-    return _extract_from_master_excel(state)
+    canonical = canonical_state(state) or state.replace("4", "")
+
+    for root in _iter_draw_roots(data_dir):
+        csv_path = root / f"{state_to_filename(canonical)}_draws.csv"
+        if csv_path.exists():
+            try:
+                return _load_draws_from_csv(csv_path, max_n=_MAX_DRAWS_DEFAULT)
+            except Exception as exc:
+                logger.warning("Failed to read %s: %s", csv_path, exc)
+                break
+
+    logger.info("CSV not found for %s, extracting from master Excel", state)
+    return _extract_from_master_excel(canonical)
 
 
 def _extract_from_master_excel(state: str) -> List[str]:
-    """
-    Extract draws directly from the master Pick3StatsC4.xlsm file using legacy column mapping.
-    This replicates the exact logic from scripts/auxiliary/draw_extractor.py
-    """
-    # State mapping from legacy draw_extractor.py
-    STATE_MAPPING = {
-        4: ('Connecticut4', 'N'),
-        5: ('Delaware4', 'O'), 
-        6: ('Florida4', 'P'),
-        7: ('Georgia4', 'Q'),
-        10: ('Indiana4', 'T'),
-        15: ('Michigan4', 'Y'),
-        18: ('NewJersey4', 'AB'),
-        20: ('NewYork4', 'AD'),
-        21: ('NorthCarolina4', 'AE'),
-        22: ('Ohio4', 'AF'),
-        23: ('OntarioCanada4', 'AG'),
-        24: ('Pennsylvania4', 'AH'),
-        25: ('PuertoRico4', 'AI'),
-        26: ('SouthCarolina4', 'AJ'),
-        28: ('Texas4', 'AL'),
-        29: ('TriState4', 'AM'),
-        30: ('Virginia4', 'AN'),
-        74: ('WestVirginia4', 'CF')
-    }
-    
-    def excel_col_to_index(col_str):
-        """Convert Excel column letter to 0-based index"""
-        idx = 0
-        for char in col_str:
-            idx = idx * 26 + (ord(char.upper()) - ord('A') + 1)
-        return idx - 1
-    
-    # Find state column
-    state_column = None
-    for state_id, (state_name, col) in STATE_MAPPING.items():
-        if state_name == state:
-            state_column = col
-            break
-    
-    if not state_column:
-        raise ValueError(f"State '{state}' not found in STATE_MAPPING")
-    
-    # Read master Excel file
+    combined_cols = get_columns_for(state, "combined")
+    if not combined_cols:
+        raise ValueError(f"No combined mapping available for {state}")
+
     master_file = Path("data/original/Pick3StatsC4.xlsm")
     if not master_file.exists():
         raise FileNotFoundError(f"Master data file not found at {master_file}")
-    
-    try:
-        # Load P3Draws sheet with no headers (like legacy)
-        df = pd.read_excel(master_file, sheet_name="P3Draws", header=None)
-        
-        # Extract using legacy logic
-        col_idx = excel_col_to_index(state_column)
-        start_row = 19  # Data starts from row 20 (0-indexed: 19)
-        max_draws = 1000
-        
-        draws = []
-        max_row = min(start_row + max_draws * 2, len(df))
-        
-        for i in range(start_row, max_row):
-            if i >= len(df) or col_idx >= len(df.columns):
-                break
-                
-            draw_val = df.iloc[i, col_idx]
-            
-            if pd.isna(draw_val):
-                continue
-            
-            try:
-                draw_str = str(int(draw_val)).zfill(3)
-                draws.append(draw_str)
-                
-                if len(draws) >= max_draws:
-                    break
-            except (ValueError, TypeError):
-                continue
-        
-        if not draws:
-            raise ValueError(f"No valid draws found for {state}")
-        
-        # Return newest first (legacy reverses the order)
-        draws.reverse()
-        return draws
-        
-    except Exception as e:
-        logger.error(f"Error extracting from master Excel for {state}: {e}")
-        raise
+
+    df = _load_p3_draws(master_file)
+    draws = extract_draws_from_columns(df, combined_cols, max_draws=_MAX_DRAWS_DEFAULT)
+    if not draws:
+        raise ValueError(f"No valid draws found for {state}")
+    return draws
 
 
 def get_state_info(state: str) -> Dict[str, Any]:
-    """
-    Get basic information about a state.
-    
-    Args:
-        state: State name
-        
-    Returns:
-        Dictionary with state information
-    """
-    # State mapping from legacy code
     state_mapping = {
         "Connecticut4": {"id": 4, "draws_per_day": 2},
         "Delaware4": {"id": 5, "draws_per_day": 2},
@@ -173,30 +222,15 @@ def get_state_info(state: str) -> Dict[str, Any]:
         "Virginia4": {"id": 30, "draws_per_day": 2},
         "WestVirginia4": {"id": 74, "draws_per_day": 1},
     }
-    
     return state_mapping.get(state, {"id": 0, "draws_per_day": 2})
 
 
 def validate_draw_data(draws: List[str]) -> List[str]:
-    """
-    Validate and clean draw data.
-    
-    Args:
-        draws: List of draw strings
-        
-    Returns:
-        List of validated 3-digit draw strings
-    """
     validated = []
-    
     for draw in draws:
-        # Convert to string and pad with zeros if necessary
         draw_str = str(draw).zfill(3)
-        
-        # Validate it's exactly 3 digits
         if len(draw_str) == 3 and draw_str.isdigit():
             validated.append(draw_str)
         else:
             logger.warning(f"Invalid draw skipped: {draw}")
-    
     return validated

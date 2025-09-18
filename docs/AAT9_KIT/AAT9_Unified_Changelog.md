@@ -1,6 +1,14 @@
 # AAT9 — Unified Changelog
 
 Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
+## 2025-09-17 — Aux — Draw pipeline restructure + archive legacy — Cleaner pipeline + clearer tooling
+- Impact: Combined Aux features stay pinned to `<State>_draws.csv`; Midday/Evening exports live under `data/cleaned/draws/`; legacy Aux packages/scripts archived for reference.
+- Files: `modules/aux_loaders.py`, `modules/module_d_auxiliary_tools/refactored/{extractor.py,README.md}`, `scripts/auxiliary/generate_draws_csv.py`, `src/app.py`, `archived/2025-09-17_aux_legacy/README.md`
+- Notes:
+  - Control Center → “Aux Draws Pipeline” regenerates combined by default and shows destination filenames.
+  - CLI helper mirrors the same behaviour (`py -3 scripts/auxiliary/generate_draws_csv.py ...`).
+  - Archived trees: `modules/module_d_auxiliary_tools/{adapters_old_module,legacy_2}` + legacy scripts under `archived/2025-09-17_aux_legacy/`.
+
 
 ## 2025‑09‑06 — Cleanup — Archive legacy launchers/entrypoints — Safer surface
 - Impact: No runtime changes; older scripts moved under `archived/2025-09-06/` with manifest

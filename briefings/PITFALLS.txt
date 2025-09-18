@@ -665,3 +665,8 @@ Renderer coupling
 
 Per‑page sys.path tweaks
 - Guidance: Only the Aux page should mutate `sys.path` to bind the staged `working/modules`. All other pages must import from project `modules/*` and `src/*`.
+
+Combined draw exports
+- Symptom: `PermissionError: [Errno 13]` when running the Aux draw pipeline/CLI because Excel or another editor still has an old CSV open.
+- Fix: Close the spreadsheet before regenerating; the exporter now writes to `data/cleaned/draws/`. Do not drop new CSVs back into `data/cleaned/`—leave that folder for the cleaned Excel sheets only.
+- Reminder: Combined draws remain the source of truth for Aux/Control Center/Blackapple; Midday/Evening wiring should add features without overwriting the combined feed.

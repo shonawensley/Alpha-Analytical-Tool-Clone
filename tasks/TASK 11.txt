@@ -1,0 +1,562 @@
+
+TO POSSIBLY MAKE THINGS SIMPLIER DISREGARD TEXAS/GEORGIA/VIRGINIA FOR NOW WHICH HAVE MULTIPLE OR CUSTOM DRAWS AND FOCUS ON ALL REMAINING STATES FIDNIG AND MAPPING THEIR MIDDAY AND EVENIG DRAW ADDITIOS, I ASKED ANTOHER AI TO MAP OUT SIMILAR LOGIC TO WORKIG AMPPED OUT COULMNS FOR AUCILLARY SO FAR SO BELOW MAPPING SHOULD BE TRUSTOWRTHY I BELIEVE AD I CAN EVEN ASK THE EXTNERAL AI TO HELP US WITH AN EXTERNAL DOUBLE CHECK...JUST WONDERING IF THIS COULD HELP MAKING THE TASK ABIT MORE SIMPLE AND STRAIGHTFORWARD? JUST ADDIG THE MIDDAY AND EVENING DRAWS? LETS GO BACK INTO BRAINSTORM FOR A MOMENTT NAD GIVE ME YOUR THOUGHTS...ARE YOU HAVING ANY PROBLWEMS WITH THE DRAWS?
+
+UNLESS YOU FEEL THERE IS MINIMAL ISSUES WITH GETTING TEXAS/GEROGIA ETC. I JUST THOUGHT MAKE SIMPLE AND WE CAN RETUR TO THOSE OES AND ADD LATER THAT ARE LESS STRAIGHTFORWARD?
+
+
+_______________________________________
+
+You’re right—I didn’t give you the actual Excel column letters last time. I went back into your Pick3StatsC4.xlsm → P3Draws sheet and pulled the exact columns that contain the real draw histories. Below is a clean, “lock‑in” mapping you can paste into the extractor so your current Combined features stay frozen, and so you can add Midday/Evening (plus special cases) without mixing anything up.
+
+A) What to lock in (current behavior)
+
+These are the exact Excel columns you’re already using for “Combined.”
+
+Start row of data: row 20 (0‑indexed 19), Date column = A (as in your module).
+
+Keep all current features pointed at these “Combined (locked)” letters so nothing regresses.
+
+State	Combined (locked)
+Connecticut	N
+Delaware	O
+Florida	P
+Georgia	Q
+Indiana	T
+Michigan	Y
+New Jersey	AB
+New York	AD
+North Carolina	AE
+Ohio	AF
+Ontario (Canada)	AG
+Pennsylvania	AH
+Puerto Rico	AI
+South Carolina	AJ
+Texas	AL
+Tri‑State	AM
+Virginia	AN
+West Virginia	CF (WV has 1 draw; this is its Evening column and serves as Combined)
+
+Note: WV had no *_Combined header in the sheet—historically it’s a single draw. We treat CF as Combined for WV.
+
+B) New columns to add (Midday / Evening + specials)
+
+Pulled from the header row of P3Draws.
+Rules we’ll enforce:
+
+“Midday” is the Midday column; where the sheet uses Noon (TX/TN), we alias to Midday.
+
+“Evening” includes the standard Evening column; where present, we also include Nite as an additional evening period.
+
+States not listed below aren’t in your current tracked set.
+
+State	Midday	Evening	Extra
+Connecticut	CL	AU	—
+Delaware	CM	AV	—
+Florida	CN	AW	—
+Georgia	CO	AX, AY	Nite: AY
+Indiana	CR	BB	—
+Michigan	CW	BH	—
+New Jersey	CZ	BM	—
+New York	DB	BO	—
+North Carolina	DC	BP	—
+Ohio	DD	BQ	—
+Ontario (Canada)	DE	BS	—
+Pennsylvania	DF	BT	—
+Puerto Rico	DG	BU	—
+South Carolina	DH	BW	—
+Texas	DL (Noon)	BY, BZ	Morning: DK, Nite: BZ, Noon→Midday: DL
+Tri‑State	DM	CA	—
+Virginia	(keep Combined only)	(keep Combined only)	—
+West Virginia	—	CF	(single draw; treat as Combined)
+
+Exceptions you asked for:
+
+Virginia → stay Combined only.
+
+Texas → 4 draws (DK / DL / BY / BZ).
+
+Georgia → 3 draws (Midday CO, Evening AX, Nite AY).
+
+C) Drop‑in code you can hand to Codex
+
+Goal: Freeze the existing Combined behavior, and add a clean API to fetch Midday/Evening (and specials) using the exact columns above.
+
+# draws_extractor_p3_columns.py  (new helper; import this in your extractor)
+
+# Locked "Combined" mapping — use these for all existing features so nothing changes
+COMBINED_LOCKED = {
+    'Connecticut': 'N',
+    'Delaware': 'O',
+    'Florida': 'P',
+    'Georgia': 'Q',
+    'Indiana': 'T',
+    'Michigan': 'Y',
+    'New Jersey': 'AB',
+    'New York': 'AD',
+    'North Carolina': 'AE',
+    'Ohio': 'AF',
+    'Ontario': 'AG',
+    'Pennsylvania': 'AH',
+    'Puerto Rico': 'AI',
+    'South Carolina': 'AJ',
+    'Texas': 'AL',
+    'Tri-State': 'AM',
+    'Virginia': 'AN',
+    'West Virginia': 'CF',  # single draw; Evening = Combined
+}
+
+# Midday / Evening (with specials).  Evening can be a list (e.g., ['BY','BZ'] for TX).
+MIDDAY_COL = {
+    'Connecticut': 'CL',
+    'Delaware': 'CM',
+    'Florida': 'CN',
+    'Georgia': 'CO',
+    'Indiana': 'CR',
+    'Michigan': 'CW',
+    'New Jersey': 'CZ',
+    'New York': 'DB',
+    'North Carolina': 'DC',
+    'Ohio': 'DD',
+    'Ontario': 'DE',
+    'Pennsylvania': 'DF',
+    'Puerto Rico': 'DG',
+    'South Carolina': 'DH',
+    'Texas': 'DL',       # TX uses "Noon" in sheet → treat as Midday
+    'Tri-State': 'DM',
+    # Virginia: keep Combined only
+    # West Virginia: single draw only
+}
+
+EVENING_COLS = {
+    'Connecticut': ['AU'],
+    'Delaware': ['AV'],
+    'Florida': ['AW'],
+    'Georgia': ['AX','AY'],  # Evening + Nite
+    'Indiana': ['BB'],
+    'Michigan': ['BH'],
+    'New Jersey': ['BM'],
+    'New York': ['BO'],
+    'North Carolina': ['BP'],
+    'Ohio': ['BQ'],
+    'Ontario': ['BS'],
+    'Pennsylvania': ['BT'],
+    'Puerto Rico': ['BU'],
+    'South Carolina': ['BW'],
+    'Texas': ['BY','BZ'],    # Evening + Nite
+    'Tri-State': ['CA'],
+    'Virginia': ['CB'],      # DO NOT use if you want VA Combined-only policy
+    'West Virginia': ['CF'], # single draw
+}
+
+EXTRA_COLS = {
+    # Additional categories you may want separate CSVs for:
+    'Georgia': {'Nite': 'AY'},
+    'Texas':   {'Morning': 'DK', 'Noon': 'DL', 'Nite': 'BZ'},
+    # Others empty by design
+}
+
+
+Minimal changes in your current module (apply to your posted “Draw Data Extractor Module”):
+
+# at top, add:
+from draws_extractor_p3_columns import COMBINED_LOCKED, MIDDAY_COL, EVENING_COLS, EXTRA_COLS
+
+def get_columns_for(state: str, category: str = 'combined'):
+    """
+    category: 'combined' | 'midday' | 'evening' | 'nite' | 'morning'
+    returns: list[str] of Excel column letters
+    """
+    s = state  # state names use spaces, e.g., 'New Jersey', 'West Virginia'
+    category = category.lower()
+
+    if category == 'combined':
+        col = COMBINED_LOCKED.get(s)
+        return [col] if col else []
+
+    if category == 'midday':
+        # Noon is normalized into MIDDAY_COL for TX; WV/VA may be absent by design
+        col = MIDDAY_COL.get(s)
+        return [col] if col else []
+
+    if category == 'evening':
+        return EVENING_COLS.get(s, [])
+
+    # specials (only where present)
+    extra = EXTRA_COLS.get(s, {})
+    if category == 'nite':
+        c = extra.get('Nite')
+        return [c] if c else []
+    if category == 'morning':
+        c = extra.get('Morning')
+        return [c] if c else []
+    if category == 'noon':
+        c = extra.get('Noon')
+        return [c] if c else []
+
+    return []
+
+
+Then update your extractor to accept multiple columns (for TX/GA evenings):
+
+def extract_draws_from_columns(df, col_letters, max_draws=1000):
+    """Return newest-first draw strings aggregated from one or more columns."""
+    draws = []
+    for col_letter in col_letters:
+        draws += extract_state_draws(df, col_letter, max_draws=max_draws)
+    # flatten + sort by date if you want (your current function already reverses newest-first)
+    # If dates exist, you can sort by date descending; otherwise keep append order.
+    return draws
+
+
+Saving with unambiguous filenames (keeps Aux safe and Combined unchanged):
+
+def save_category_csvs(excel_path, states, outdir):
+    df = load_draw_data(excel_path)
+    os.makedirs(outdir, exist_ok=True)
+
+    for s in states:
+        # 1) Combined (locked) — keep your current Aux behavior untouched
+        c_cols = get_columns_for(s, 'combined')
+        if c_cols:
+            draws = extract_draws_from_columns(df, c_cols, max_draws=1000)
+            pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+                os.path.join(outdir, f"{s}_draws.csv"), index=False
+            )
+
+        # 2) Midday
+        m_cols = get_columns_for(s, 'midday')
+        if m_cols:
+            draws = extract_draws_from_columns(df, m_cols, max_draws=1000)
+            pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+                os.path.join(outdir, f"{s}_Midday_draws.csv"), index=False
+            )
+
+        # 3) Evening (includes Nite where applicable)
+        e_cols = get_columns_for(s, 'evening')
+        if e_cols:
+            draws = extract_draws_from_columns(df, e_cols, max_draws=1000)
+            pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+                os.path.join(outdir, f"{s}_Evening_draws.csv"), index=False
+            )
+
+        # 4) Specials (TX/GA etc.)
+        for special in ('Morning','Noon','Nite'):
+            x_cols = get_columns_for(s, special.lower())
+            if x_cols:
+                draws = extract_draws_from_columns(df, x_cols, max_draws=1000)
+                pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+                    os.path.join(outdir, f"{s}_{special}_draws.csv"), index=False
+                )
+
+
+Tracked states list (spaces, as your CSVs use):
+
+TRACKED_STATES = [
+    'Connecticut','Delaware','Florida','Georgia','Indiana','Michigan',
+    'New Jersey','New York','North Carolina','Ohio','Ontario','Pennsylvania',
+    'Puerto Rico','South Carolina','Texas','Tri-State','Virginia','West Virginia'
+]
+
+D) What to tell Codex (step‑by‑step)
+
+Freeze today’s Combined behavior
+
+Add draws_extractor_p3_columns.py with the COMBINED_LOCKED dict above.
+
+In your current extractor, default all existing features to category='combined' and read from COMBINED_LOCKED.
+
+Add categories without breaking Aux
+
+Add MIDDAY_COL, EVENING_COLS, EXTRA_COLS, and the get_columns_for helper.
+
+Add extract_draws_from_columns to handle multi‑column evening (TX/GA).
+
+Write separate CSVs for the new categories
+
+
+
+__________________________________________
+
+
+I REGRETABLY DISRUPPTED ***************************************************************************
+
+
+▌ DelawareCMAV—
+▌ FloridaCNAW—
+▌ GeorgiaCOAX, AYNite: AY
+▌ IndianaCRBB—
+▌ MichiganCWBH—
+▌ New JerseyCZBM—
+▌ New YorkDBBO—
+▌ North CarolinaDCBP—
+▌ OhioDDBQ—
+▌ Ontario (Canada)DEBS—
+▌ PennsylvaniaDFBT—
+▌ Puerto RicoDGBU—
+▌ South CarolinaDHBW—
+▌ TexasDL (Noon)BY, BZMorning: DK, Nite: BZ, Noon→Midday: DL
+▌ Tri‑StateDMCA—
+▌ Virginia(keep Combined only)(keep Combined only)—
+▌ West Virginia—CF(single draw; treat as Combined)
+▌
+▌ Exceptions you asked for:
+▌
+▌ Virginia → stay Combined only.
+▌
+▌ Texas → 4 draws (DK / DL / BY / BZ).
+▌
+▌ Georgia → 3 draws (Midday CO, Evening AX, Nite AY).
+▌
+▌ C) Drop‑in code you can hand to Codex
+▌
+▌ Goal: Freeze the existing Combined behavior, and add a clean API to fetch Midday/Evening (and specials) using the exact columns above.
+▌
+▌ # draws_extractor_p3_columns.py  (new helper; import this in your extractor)
+▌
+▌ # Locked "Combined" mapping — use these for all existing features so nothing changes
+▌ COMBINED_LOCKED = {
+▌     'Connecticut': 'N',
+▌     'Delaware': 'O',
+▌     'Florida': 'P',
+▌     'Georgia': 'Q',
+▌     'Indiana': 'T',
+▌     'Michigan': 'Y',
+▌     'New Jersey': 'AB',
+▌     'New York': 'AD',
+▌     'North Carolina': 'AE',
+▌     'Ohio': 'AF',
+▌     'Ontario': 'AG',
+▌     'Pennsylvania': 'AH',
+▌     'Puerto Rico': 'AI',
+▌     'South Carolina': 'AJ',
+▌     'Texas': 'AL',
+▌     'Tri-State': 'AM',
+▌     'Virginia': 'AN',
+▌     'West Virginia': 'CF',  # single draw; Evening = Combined
+▌ }
+▌
+▌ # Midday / Evening (with specials).  Evening can be a list (e.g., ['BY','BZ'] for TX).
+▌ MIDDAY_COL = {
+▌     'Connecticut': 'CL',
+▌     'Delaware': 'CM',
+▌     'Florida': 'CN',
+▌     'Georgia': 'CO',
+▌     'Indiana': 'CR',
+▌     'Michigan': 'CW',
+▌     'New Jersey': 'CZ',
+▌     'New York': 'DB',
+▌     'North Carolina': 'DC',
+▌     'Ohio': 'DD',
+▌     'Ontario': 'DE',
+▌     'Pennsylvania': 'DF',
+▌     'Puerto Rico': 'DG',
+▌     'South Carolina': 'DH',
+▌     'Texas': 'DL',       # TX uses "Noon" in sheet → treat as Midday
+▌     'Tri-State': 'DM',
+▌     # Virginia: keep Combined only
+▌     # West Virginia: single draw only
+▌ }
+▌
+▌ EVENING_COLS = {
+▌     'Connecticut': ['AU'],
+▌     'Delaware': ['AV'],
+▌     'Florida': ['AW'],
+▌     'Georgia': ['AX','AY'],  # Evening + Nite
+▌     'Indiana': ['BB'],
+▌     'Michigan': ['BH'],
+▌     'New Jersey': ['BM'],
+▌     'New York': ['BO'],
+▌     'North Carolina': ['BP'],
+▌     'Ohio': ['BQ'],
+▌     'Ontario': ['BS'],
+▌     'Pennsylvania': ['BT'],
+▌     'Puerto Rico': ['BU'],
+▌     'South Carolina': ['BW'],
+▌     'Texas': ['BY','BZ'],    # Evening + Nite
+▌     'Tri-State': ['CA'],
+▌     'Virginia': ['CB'],      # DO NOT use if you want VA Combined-only policy
+▌     'West Virginia': ['CF'], # single draw
+▌ }
+▌
+▌ EXTRA_COLS = {
+▌     # Additional categories you may want separate CSVs for:
+▌     'Georgia': {'Nite': 'AY'},
+▌     'Texas':   {'Morning': 'DK', 'Noon': 'DL', 'Nite': 'BZ'},
+▌     # Others empty by design
+▌ }
+▌
+▌
+▌ Minimal changes in your current module (apply to your posted “Draw Data Extractor Module”):
+▌
+▌ # at top, add:
+▌ from draws_extractor_p3_columns import COMBINED_LOCKED, MIDDAY_COL, EVENING_COLS, EXTRA_COLS
+▌
+▌ def get_columns_for(state: str, category: str = 'combined'):
+▌     """
+▌     category: 'combined' | 'midday' | 'evening' | 'nite' | 'morning'
+▌     returns: list[str] of Excel column letters
+▌     """
+▌     s = state  # state names use spaces, e.g., 'New Jersey', 'West Virginia'
+▌     category = category.lower()
+▌
+▌     if category == 'combined':
+▌         col = COMBINED_LOCKED.get(s)
+▌         return [col] if col else []
+▌
+▌     if category == 'midday':
+▌         # Noon is normalized into MIDDAY_COL for TX; WV/VA may be absent by design
+▌         col = MIDDAY_COL.get(s)
+▌         return [col] if col else []
+▌
+▌     if category == 'evening':
+▌         return EVENING_COLS.get(s, [])
+▌
+▌     # specials (only where present)
+▌     extra = EXTRA_COLS.get(s, {})
+▌     if category == 'nite':
+▌         c = extra.get('Nite')
+▌         return [c] if c else []
+▌     if category == 'morning':
+▌         c = extra.get('Noon')
+▌         return [c] if c else []
+▌
+▌     return []
+▌
+▌
+▌ Then update your extractor to accept multiple columns (for TX/GA evenings):
+▌
+▌ def extract_draws_from_columns(df, col_letters, max_draws=1000):
+▌     """Return newest-first draw strings aggregated from one or more columns."""
+▌     draws = []
+▌     for col_letter in col_letters:
+▌         draws += extract_state_draws(df, col_letter, max_draws=max_draws)
+▌     # flatten + sort by date if you want (your current function already reverses newest-first)
+▌     # If dates exist, you can sort by date descending; otherwise keep append order.
+▌     return draws
+▌
+▌
+▌ Saving with unambiguous filenames (keeps Aux safe and Combined unchanged):
+▌
+▌ def save_category_csvs(excel_path, states, outdir):
+▌     df = load_draw_data(excel_path)
+▌     os.makedirs(outdir, exist_ok=True)
+▌
+▌     for s in states:
+▌         # 1) Combined (locked) — keep your current Aux behavior untouched
+▌         c_cols = get_columns_for(s, 'combined')
+▌         if c_cols:
+▌             draws = extract_draws_from_columns(df, c_cols, max_draws=1000)
+▌             pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+▌                 os.path.join(outdir, f"{s}_draws.csv"), index=False
+▌             )
+▌
+▌         # 2) Midday
+▌         m_cols = get_columns_for(s, 'midday')
+▌         if m_cols:
+▌             draws = extract_draws_from_columns(df, m_cols, max_draws=1000)
+▌             pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+▌                 os.path.join(outdir, f"{s}_Midday_draws.csv"), index=False
+▌             )
+▌
+▌         # 3) Evening (includes Nite where applicable)
+▌         e_cols = get_columns_for(s, 'evening')
+▌         if e_cols:
+▌             draws = extract_draws_from_columns(df, e_cols, max_draws=1000)
+▌             pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+▌                 os.path.join(outdir, f"{s}_Evening_draws.csv"), index=False
+▌             )
+▌
+▌         # 4) Specials (TX/GA etc.)
+▌         for special in ('Morning','Noon','Nite'):
+▌             x_cols = get_columns_for(s, special.lower())
+▌             if x_cols:
+▌                 draws = extract_draws_from_columns(df, x_cols, max_draws=1000)
+▌                 pd.DataFrame(draws, columns=['Date','Draw']).to_csv(
+▌                     os.path.join(outdir, f"{s}_{special}_draws.csv"), index=False
+▌                 )
+▌
+▌
+▌ Tracked states list (spaces, as your CSVs use):
+▌
+▌ TRACKED_STATES = [
+▌     'Connecticut','Delaware','Florida','Georgia','Indiana','Michigan',
+▌     'New Jersey','New York','North Carolina','Ohio','Ontario','Pennsylvania',
+▌     'Puerto Rico','South Carolina','Texas','Tri-State','Virginia','West Virginia'
+▌ ]
+▌
+▌ D) What to tell Codex (step‑by‑step)
+▌
+▌ Freeze today’s Combined behavior
+▌
+▌ Add draws_extractor_p3_columns.py with the COMBINED_LOCKED dict above.
+▌
+▌ In your current extractor, default all existing features to category='combined' and read from COMBINED_LOCKED.
+▌
+▌ Add categories without breaking Aux
+▌
+▌ Add MIDDAY_COL, EVENING_COLS, EXTRA_COLS, and the get_columns_for helper.
+▌
+▌ Add extract_draws_from_columns to handle multi‑column evening (TX/GA).
+▌
+▌ Write separate CSVs for the new categories
+▌
+▌ Keep writing data/cleaned/<State>_draws.csv for Combined (unchanged).
+▌
+▌ Additionally write:
+▌
+▌ data/cleaned/<State>_Midday_draws.csv
+▌
+▌ data/cleaned/<State>_Evening_draws.csv
+▌
+▌ For TX/GA: ..._Morning_draws.csv, ..._Nite_draws.csv, and (TX) ..._Noon_draws.csv if you need it distinctly.
+▌
+▌ (Optional) Add a tiny verification
+▌
+▌ On startup, read header row of P3Draws and assert the letter→label still matches (e.g., check CL == 'Connecticut_Midday'). If not, print a warning and fall back to hard‑coded letters (still safe). DOES THIS
+▌ HELP?
+
+Keep writing data/cleaned/<State>_draws.csv for Combined (unchanged).
+
+Additionally write:
+
+data/cleaned/<State>_Midday_draws.csv
+
+data/cleaned/<State>_Evening_draws.csv
+
+For TX/GA: ..._Morning_draws.csv, ..._Nite_draws.csv, and (TX) ..._Noon_draws.csv if you need it distinctly.
+
+(Optional) Add a tiny verification
+
+On startup, read header row of P3Draws and assert the letter→label still matches (e.g., check CL == 'Connecticut_Midday'). If not, print a warning and fall back to hard‑coded letters (still safe).
+
+E) Quick smoke test
+# from repo root
+python -c "from scripts.your_extractor import save_category_csvs; \
+save_category_csvs('data/original/Pick3StatsC4.xlsm', \
+['Texas','Georgia','Connecticut','West Virginia','Virginia'], \
+'data/cleaned')"
+
+
+Check files created under data/cleaned/:
+
+Texas_draws.csv (unchanged Combined)
+
+Texas_Midday_draws.csv, Texas_Evening_draws.csv, Texas_Morning_draws.csv, Texas_Nite_draws.csv
+
+Georgia_Midday_draws.csv, Georgia_Evening_draws.csv, Georgia_Nite_draws.csv
+
+Connecticut_Midday_draws.csv, Connecticut_Evening_draws.csv
+
+West Virginia_draws.csv (Combined/Evening single)
+
+Virginia_draws.csv (Combined only)
+
+TL;DR
+
+I pulled the exact P3Draws columns.
+
+Combined (locked) letters above keep all current Aux features unchanged.
+
+You now have Midday/Evening (+ TX/GA specials) mapped to real columns, plus copy‑paste code that lets you extract and save them cleanly without touching existing outputs.
+
+If you want, I can also produce a short unit check that scans 3–5 known values per column to ensure we’re reading clean 3‑digit strings starting at row 20 before you run a full export.

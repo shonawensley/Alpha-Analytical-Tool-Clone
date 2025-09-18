@@ -121,3 +121,20 @@ Template
   - Optional: unify all tools on `modules/vtrac_reference.py` over time; keep Aux staged shim as a re‑export when you’re ready to retire duplicates.
   - Optional: move full report renderer to `src/reporting/` with a template; today’s builder already mirrors analyzer layout.
   - Add a tiny smoke CLI to generate a winners full report outside Streamlit if desired.
+
+## 2025-09-17 21:00 (UTC) — Aux Draws Pipeline + Legacy Archive
+
+- Context: Combined Aux features relied on historical folders (`adapters_old_module`, `legacy_2`, assorted scripts) and drew from `data/cleaned/*_draws.csv`. We now have a canonical extractor + Control Center exporter, so clutter was causing confusion and file-lock issues when rebuilding Midday/Evening draws.
+- Change:
+  - Added `scripts/auxiliary/generate_draws_csv.py` and Control Center "Aux Draws Pipeline" expander. Both write Combined/Midday/Evening CSVs to `data/cleaned/draws/` (combined enabled by default).
+  - Loader (`modules/aux_loaders.load_state_draws`) prefers `data/cleaned/draws/` with fallback to legacy location so existing Aux/BA logic stays on combined.
+  - Archived unused Aux packages (`modules/module_d_auxiliary_tools/{adapters_old_module,legacy_2}`) and legacy helper scripts under `archived/2025-09-17_aux_legacy/` with a README.
+  - Documented the refactored surface in `modules/module_d_auxiliary_tools/refactored/README.md`.
+- Impact:
+  - Daily flow: run tables pipeline (if needed) then run Aux Draws Pipeline to refresh combined + Midday/Evening files.
+  - Combined Aux features remain untouched; Midday/Evening ready for future wiring.
+  - Less risk of grabbing stale modules; clearer directory layout for new contributors.
+- Follow-ups:
+  - Remove the leftover `data/cleaned/Connecticut_Midday_draws.csv` once Excel releases the file lock.
+  - When ready, wire Midday/Evening into Control Center doubles + Blackapple (combined stays the baseline).
+  - Consider retiring `scripts/auxiliary/working/` once staged modules are no longer needed by the Aux page.

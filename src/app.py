@@ -43,6 +43,13 @@ try:
     sys.modules['utils.path_handler'] = _uph
 except Exception:
     pass
+
+try:
+    from modules.module_d_auxiliary_tools.refactored import draws_extractor_p3_columns as _aux_columns
+    from modules.module_d_auxiliary_tools.refactored import extractor as _aux_extractor
+except Exception:
+    _aux_columns = None
+    _aux_extractor = None
 # ----------------------------------------------------------------------
 
 from core.module_b_digit_reduction import run_digit_reduction
@@ -411,6 +418,16 @@ def show_control_center_page() -> None:
     st.title("Control Center")
     st.write("Cross-State Analysis Dashboard")
 
+    _CATEGORY_SUFFIXES = ("_Midday", "_Evening", "_Morning", "_Nite", "_Noon")
+
+    def _is_combined_csv(path: Path) -> bool:
+        stem = path.stem
+        if stem.endswith("_draws"):
+            prefix = stem[: -len("_draws")]
+        else:
+            prefix = stem
+        return not any(prefix.endswith(sfx) for sfx in _CATEGORY_SUFFIXES)
+
     # Dev: System Health (Control Center)
     try:
         show_dev_cc = st.checkbox("Show Dev Health (Control Center)", value=False, key="dev_health_cc")
@@ -444,6 +461,11 @@ def show_control_center_page() -> None:
                 st.caption(f"tables_root: {_root} (exists={_root.exists()}; states={len(states)})")
                 if states:
                     st.caption("sample states: " + ", ".join(states[:10]) + (" ..." if len(states) > 10 else ""))
+            except Exception:
+                pass
+            try:
+                _draw_root = _P("data/cleaned/draws")
+                st.caption(f"draws_root: {_draw_root} (exists={_draw_root.exists()})")
             except Exception:
                 pass
 
@@ -489,8 +511,77 @@ def show_control_center_page() -> None:
             except Exception as e:
                 st.error("Pipeline failed: " + str(e))
 
-    # Winners Logger: V‑Trac winner report
-    with st.expander("Winners Logger (V‑Trac winner report)"):
+    with st.expander("Aux Draws Pipeline (Midday/Evening)"):
+        if _aux_columns is None or _aux_extractor is None:
+            st.caption("Aux draw extractor unavailable. Ensure refactored modules are present.")
+        else:
+            all_states = _aux_columns.get_tracked_states()
+            selected_states = st.multiselect(
+                "States",
+                options=all_states,
+                default=all_states,
+                help="Choose which states to export.",
+            )
+
+            include_combined = st.checkbox(
+                "Regenerate combined draw CSVs",
+                value=True,
+                help="Keep on to refresh <State>_draws.csv alongside Midday/Evening.",
+            )
+            include_specials = st.checkbox(
+                "Include specials (Morning/Noon/Nite where available)",
+                value=False,
+            )
+
+            excel_default = Path("data/original/Pick3StatsC4.xlsm")
+            excel_path = st.text_input(
+                "Excel source",
+                value=str(excel_default),
+            )
+            out_default = Path("data/cleaned/draws")
+            out_path = st.text_input(
+                "Output directory",
+                value=str(out_default),
+            )
+
+            if st.button("Generate Aux Draw CSVs", key="generate_aux_draws"):
+                if not selected_states:
+                    st.warning("Select at least one state to export.")
+                else:
+                    try:
+                        excel_file = Path(excel_path)
+                        out_dir = Path(out_path)
+                        with st.spinner("Generating draw CSVs..."):
+                            _aux_extractor.save_category_csvs(
+                                excel_path=excel_file,
+                                states=selected_states,
+                                outdir=out_dir,
+                                include_combined=include_combined,
+                                include_specials=include_specials,
+                            )
+                        st.success("Aux draw export complete.")
+                        preview_lines = []
+                        for label in selected_states:
+                            canonical = _aux_columns.canonical_state(label) or label
+                            stem = _aux_columns.state_to_filename(canonical)
+                            if include_combined and _aux_columns.get_columns_for(canonical, "combined"):
+                                preview_lines.append(f"{stem}_draws.csv")
+                            if _aux_columns.get_columns_for(canonical, "midday"):
+                                preview_lines.append(f"{stem}_Midday_draws.csv")
+                            if _aux_columns.get_columns_for(canonical, "evening"):
+                                preview_lines.append(f"{stem}_Evening_draws.csv")
+                            if include_specials:
+                                for key, suffix in (("morning", "Morning"), ("noon", "Noon"), ("nite", "Nite")):
+                                    if _aux_columns.get_columns_for(canonical, key):
+                                        preview_lines.append(f"{stem}_{suffix}_draws.csv")
+                        if preview_lines:
+                            st.caption("Files written:")
+                            st.code("\n".join(preview_lines), language="text")
+                    except Exception as _aux_err:
+                        st.error(f"Aux draw export failed: {_aux_err}")
+
+    # Winners Logger: V-Trac winner report
+    with st.expander("Winners Logger (V-Trac winner report)"):
         try:
             states_list = [
                 "Connecticut4", "Delaware4", "Florida4", "Georgia4", "Indiana4",
@@ -501,11 +592,11 @@ def show_control_center_page() -> None:
             states_list = []
         w_state = st.selectbox("State", states_list, key="winners_state")
         w_number = st.text_input("Winning number (3 digits)", max_chars=3, key="winners_number")
-        if st.button("Generate V‑Trac Winner Report", key="btn_gen_winner_vtrac"):
+        if st.button("Generate V-Trac Winner Report", key="btn_gen_winner_vtrac"):
             try:
                 from core.winners_vtrac_report import build_vtrac_winner_report
                 if not (w_number and len(w_number) == 3 and w_number.isdigit()):
-                    st.warning("Enter a 3‑digit winning number.")
+                    st.warning("Enter a 3-digit winning number.")
                 else:
                     with st.spinner("Building winner report..."):
                         out_path = build_vtrac_winner_report(w_state, w_number)
@@ -616,7 +707,11 @@ def show_control_center_page() -> None:
         import pandas as _pd
         from pathlib import Path as _Path
 
-        cleaned_dir = _Path("data/cleaned")
+        draws_root = _Path("data/cleaned/draws")
+        if not draws_root.exists():
+            draws_root = _Path("data/cleaned")
+
+        cleaned_dir = draws_root
         if not cleaned_dir.exists():
             st.warning("No cleaned data found in data/cleaned.")
             return
@@ -651,17 +746,21 @@ def show_control_center_page() -> None:
         
         def _compute_combined():
             state_to_draws = {}
+            state_sources = {}
             for csv_path in cleaned_dir.glob("*_draws.csv"):
+                if not _is_combined_csv(csv_path):
+                    continue
                 try:
                     df = _pd.read_csv(csv_path)
                     draws = [str(x).zfill(3) for x in df["Draw"].dropna().astype(int).astype(str).tolist()]
                     state_name = csv_path.stem.replace("_draws", "").replace("_", " ")
                     if draws:
                         state_to_draws[state_name] = draws
+                        state_sources[state_name] = str(csv_path)
                 except Exception:
                     continue
             if not state_to_draws:
-                return _pd.DataFrame()
+                return _pd.DataFrame(), {}, {}
             doubles = get_doubles_history(state_to_draws)
             rows = []
             for state, draws in state_to_draws.items():
@@ -676,22 +775,38 @@ def show_control_center_page() -> None:
             df = _pd.DataFrame(rows)
             if not df.empty:
                 df = df.sort_values(["Draws Since Last Double", "State"], ascending=[False, True])
-            return df
+            return df, state_to_draws, state_sources
 
         if st.button("Refresh Combined Table"):
+            st.session_state.pop("combined_doubles_state", None)
             st.session_state.pop("combined_doubles_df", None)
 
-        df = st.session_state.get("combined_doubles_df")
-        if df is None or df.empty:
-            df = _compute_combined()
-            if df is not None and not df.empty:
-                st.session_state["combined_doubles_df"] = df
-        if df is None or df.empty:
+        cached = st.session_state.get("combined_doubles_state")
+        if cached is None:
+            combined_df, state_to_draws, state_sources = _compute_combined()
+            if not combined_df.empty:
+                st.session_state["combined_doubles_state"] = {
+                    "df": combined_df,
+                    "draws": state_to_draws,
+                    "sources": state_sources,
+                }
+        else:
+            combined_df = cached.get("df")
+            state_to_draws = cached.get("draws", {})
+            state_sources = cached.get("sources", {})
+
+        if combined_df is None or combined_df.empty:
             st.warning("No state draw files found in data/cleaned.")
             return
 
         st.subheader("States Ranked by Draws Since Last Double")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(combined_df, use_container_width=True)
+        if state_sources:
+            sample_sources = sorted(Path(src).name for src in state_sources.values())
+            preview = ", ".join(sample_sources[:5])
+            if len(sample_sources) > 5:
+                preview += " ..."
+            st.caption(f"Combined draw sources: {preview}")
 
         # --- Blackapple Alerts (All States) ---
         try:
@@ -702,7 +817,10 @@ def show_control_center_page() -> None:
             load_state_draws = _aux.load_state_draws
 
             rows_ba = []
+            ba_sources = set()
             for csv_path in cleaned_dir.glob("*_draws.csv"):
+                if not _is_combined_csv(csv_path):
+                    continue
                 try:
                     state_label = csv_path.stem.replace("_draws", "").replace("_", " ")
                     dr, src = load_state_draws(state_label)
@@ -733,6 +851,8 @@ def show_control_center_page() -> None:
                         "#Candidates": len(ba.get("candidates", [])),
                         "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]]),
                     })
+                    if src:
+                        ba_sources.add(Path(src).name)
                 except Exception:
                     continue
 
@@ -740,6 +860,11 @@ def show_control_center_page() -> None:
                 df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
                 st.subheader("Blackapple Alerts (All States)")
                 st.dataframe(df_ba, use_container_width=True)
+                if ba_sources:
+                    sample = ", ".join(sorted(ba_sources)[:5])
+                    if len(ba_sources) > 5:
+                        sample += " ..."
+                    st.caption(f"Blackapple sources (combined locked): {sample}")
         except Exception as _e:
             st.caption(f"Combined BA table unavailable: {_e}")
         # Optional: per-state full candidates view with tags
