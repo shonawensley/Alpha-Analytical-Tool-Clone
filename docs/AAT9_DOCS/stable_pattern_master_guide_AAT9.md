@@ -1,4 +1,6 @@
 # AAT9 - Stable Pattern Documentation
+> **2025-09-19 Note:** Legacy Stable Pattern demos/tests moved to `archived/2025-09-19_stable_cleanup/`. Production wiring relies on `src/core/stable_pattern_extractor.py` + `alpha_analytical/stable/`.
+
 ## Stable Pattern Master Guide - June 21
 
 ---

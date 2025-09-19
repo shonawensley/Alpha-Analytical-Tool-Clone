@@ -370,6 +370,16 @@ def show_stable_pattern_page(state: str) -> None:
             except Exception as _se:
                 st.caption("Stable module: unavailable: " + str(_se))
             try:
+                from core import stable_pattern_extractor as _stable_ex
+                engine_path = getattr(getattr(_stable_ex, "_ex", None), "__file__", None)
+                if engine_path:
+                    st.caption("Engine: " + str(engine_path))
+                cfg_path = getattr(getattr(_stable_ex, "_ex", None), "CFG_PATH", None)
+                if cfg_path:
+                    st.caption("feature_config.yml: " + str(cfg_path))
+            except Exception:
+                pass
+            try:
                 _vref = _il.import_module('modules.vtrac_reference')
                 st.caption("vtrac_reference: " + getattr(_vref, '__file__', 'unknown'))
             except Exception:
@@ -1511,6 +1521,7 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
 
 
 

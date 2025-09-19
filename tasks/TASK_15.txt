@@ -1,4 +1,138 @@
-Update 2025-09-19: Legacy runners/tests now live under archived/2025-09-19_stable_cleanup/. The live chain remains src/app.py ? src/core/stable_pattern_extractor.py ? alpha_analytical/stable/__init__.py.\n\nScripts involved (Stable Pattern)
+Here's a concise plan and detailed wiring inventory based on the information you shared, the AAT9 docs, and the actual code base. This should give you confidence about which files are active, which are legacy, and how to approach cleanup safely.
+
+✅ What’s wired in today (Stable Pattern Extractor)
+Component	Path(s) / Role
+UI entry	src/app.py → show_stable_pattern_page(state) – this page renders a Streamlit view and calls the wrapper with run_stable_pattern_extraction.
+Wrapper	src/core/stable_pattern_extractor.py – thin wrapper that locates the combined-table CSVs via utils.path_handler, calls the canonical engine, and writes the HTML and CSV outputs to data/outputs/analysis/patterns/<STATE>/.
+Engine	alpha_analytical/stable/__init__.py – the final, “Rule‑based” stable pattern engine. It reads alpha_analytical/stable/feature_config.yml (the weights YAML) to score patterns. This is the code you posted in your message.
+Config	alpha_analytical/stable/feature_config.yml – contains the weights for vertical coverage, horizontal span, mirror bonus, straight/boxed bonuses, hot-level bonuses, dominant-last bonuses, etc.
+Inputs	Combined tables under data/outputs/tables/<STATE>/, produced by your pipeline. The extractor looks for *Combined*.csv files. Midday/Evening/Combined versions are all supported.
+Outputs	For each state it writes two files: <STATE>_stable_patterns_scores.csv and <STATE>_stable_patterns_report.html in data/outputs/analysis/patterns/<STATE>/.
+Path helpers	utils/path_handler.py (top‑level) – provides get_state_tables_dir() and get_analysis_dir(). The duplicate src/utils/path_handler.py is just a shim; the app imports utils.path_handler directly.
+Dev Health check	When you toggle “System Health (Stable)” in the app, it prints the actual module file used (src/core/stable_pattern_extractor.py) and the tables directory path. This is a good sanity check for live sessions.
+
+📌 Note: This canonical chain (app → wrapper → engine → weights) is exactly the one described in the AAT9 docs: the new docs instruct you to use CODEX_READ_FIRST_AAT9.md, run preflight, and then launch the app
+GitHub
+.
+
+📁 Legacy / unused stable extractors
+
+These files exist in the repo but are not wired to the app. You can archive them once you’re confident nothing imports them:
+
+src/core/module_a_stable_patterns.py – an older “all‑in‑one” extractor that targeted JSON combined tables. It isn’t called by the Streamlit app.
+
+archived/stable_pattern_analyzer_standalone.py and scripts in scripts/archive/ – standalone demos from earlier iterations. They write to data/outputs/analysis/stable_pattern/… (note the different folder name) and are not part of the integrated app.
+
+run_stable_pattern_extractor.bat and scripts/tools/stable_pattern_extractor.py – a one‑off CLI runner for the canonical engine. This is useful for manual testing but separate from the Streamlit flow.
+
+The duplicate src/utils/path_handler.py – the app uses utils.path_handler, so once you verify nothing else imports src.utils.path_handler, you can safely archive this shim.
+
+🧭 How to verify there are no stray imports
+
+Search for imports. Use a project‑wide search for module_a_stable_patterns and stable_pattern_analyzer to confirm they aren’t referenced.
+
+Check path handler. Search for from src.utils import path_handler vs. from utils import path_handler and ensure only the latter appears. If you find stray references, update them to the canonical import before removing the duplicate file.
+
+Run Dev Health. In the Stable page, expand “System Health (Stable)” – it should print the wrapper path (src/core/stable_pattern_extractor.py) and engine path (alpha_analytical/stable/__init__.py) and show that the tables directory exists. This confirms the correct module is loaded at runtime.
+
+🧼 Suggested cleanup plan
+
+Archive legacy files. Move the unused extractor scripts (src/core/module_a_stable_patterns.py, archived/stable_pattern_analyzer_standalone.py, scripts/archive/…, etc.) into an archived/2025-09/ folder. Leave a README noting that they’re deprecated.
+
+Keep the canonical chain. Do not move or rename src/core/stable_pattern_extractor.py, alpha_analytical/stable/, or utils/path_handler.py – these are referenced by the app.
+
+Document the canonical wiring. Add a short note in your docs (e.g. under docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md) making explicit that the Stable Pattern page uses the wrapper → canonical engine flow. This prevents future confusion.
+
+Update the logs (AAT9 checkpoint/changelog). When you archive the legacy files, run your “document and process” step to write entries into AAT9_Unified_Changelog.md and AAT9_Checkpoint_Log.md (see docs for how to do this).
+
+🧩 Big‑picture wiring of the integrated app (for context)
+
+V‑TRAC Analyzer: src/app.py → core/module_c_vtrac.main() reads combined tables and writes analysis under data/outputs/analysis/vtrac/<STATE>/.
+
+Stable Pattern Extractor: as described above.
+
+Digit Reduction: src/app.py → core/module_b_digit_reduction.run_digit_reduction uses combined tables and writes results to data/outputs/analysis/digit_reduction/<STATE>/.
+
+Auxiliary Tools: separate working modules under scripts/auxiliary/working/. They operate on data/cleaned/<State>_draws.csv (per‑state draws) instead of the combined tables. This isolation is intentional; see the Aux docs for details.
+
+Control Center: scans data/cleaned/*_draws.csv to build cross‑state doubles tables and Blackapple Alerts. It does not call the Stable Pattern engine.
+
+Table pipeline: the combined tables are generated by the pipeline runner (src/core/pipeline_runner.py or generate_tables_pipeline.bat). These output the data/outputs/tables/<STATE>/… CSVs consumed by V‑TRAC, Stable, and Digit Reduction.
+
+🔍 Final notes
+
+The confusion you experienced came from having both the canonical extractor and legacy copies in the tree. Only the canonical wrapper/engine path is used in the app
+GitHub
+.
+
+Older docs like module_A_stable_extractor.md describe the legacy Module‑A extractor and scoring ideas
+GitHub
+, but the AAT9 docs and your Streamlit app use the newer rule‑based engine.
+
+Keep using the AAT9 startup flow (read the AAT9 “Read First” doc, run preflight, use Dev Health) to avoid drifting back into old paths.
+
+Once you’re ready to proceed, you can confidently edit alpha_analytical/stable/__init__.py or its YAML config to adjust scoring logic, knowing it’s the sole engine wired into the app. And when you archive the obsolete scripts, document the change in the AAT9 logs so future you (or collaborators) understand what changed.
+
+If you need help automating the search for stray imports or want to draft the actual archive moves, just let me know!
+
+________________________________________________________________________________________
+
+I verified the wiring in code and your plan is correct. One caution: there’s a legacy test that still imports the old extractor.
+What to keep (active)
+src/app.py → src/core/stable_pattern_extractor.py → alpha_analytical/stable/init.py
+alpha_analytical/stable/feature_config.yml
+Outputs: data/outputs/analysis/patterns/<STATE>/<STATE>stable_patterns{scores.csv,report.html}
+utils/path_handler.py (canonical). src/utils/path_handler.py is a shim only.
+What to archive (inactive)
+src/core/module_a_stable_patterns.py (legacy, not used by app)
+archived/stable_pattern_analyzer_standalone.py and scripts/archive/* (standalone demos writing to data/outputs/analysis/stable_pattern/…)
+Any batch/CLI runner you don’t need day-to-day (e.g., run_stable_pattern_extractor.bat, scripts/tools/stable_pattern_extractor.py). If you do manual runs, keep one CLI.
+Important additions before archiving
+Stray import check (fast):
+Search for module_a_stable_patterns and stable_pattern_analyzer. If found in live code, update/remove first.
+Path handler: ensure imports use utils.path_handler (not src.utils.path_handler).
+Tests reference legacy extractor:
+tests/test_stable_pattern.py tries importing core.module_a_stable_patterns. If you archive that file, either remove/relocate that test to legacy or update it to use the canonical wrapper/engine.
+Doc drift to fix later:
+docs/confirming checkpoint 01-07.txt claims module_a is “canonical.” That’s outdated; AAT9_KIT reflects the current, correct chain.
+Optional but useful:
+On the Stable page, print the engine module file and YAML path in the “System Health (Stable)” expander for instant verification during runs.
+Quick verify after cleanup (no edits required now)
+Run the Stable page; confirm outputs appear under data/outputs/analysis/patterns/<STATE>/…
+In “System Health (Stable)”, confirm:
+Stable module: …/src/core/stable_pattern_extractor.py
+Engine resolves to alpha_analytical/stable and the YAML path is correct.
+This is safe to hand to Codex. The only “gotcha” is that legacy test; decide whether to update or move it to the archive with the old extractor.
+
+______________________________________________________________________________________________________
+
+Absolutely—this is a smart moment to pause, archive the confusing duplicate extractor, and line up the first round of upgrades so Codex can make fast, low‑risk progress.
+
+Below I’ve (1) validated that the “do‑first” list is directionally right, (2) tightened the order and scope so it reflects everything we’ve discussed, and (3) expanded it into a Codex‑ready implementation plan with precise file paths, patch details, verification steps, and pitfalls to avoid. I’ve also answered your questions about whether to hand Codex my scripts verbatim vs. letting it “interpret,” and how to keep wiring clean.
+
+Assumptions I’m using: your active Stable page wiring matches the AAT9 docs you shared (UI → src/app.py → src/core/stable_pattern_extractor.py → alpha_analytical/stable/__init__.py + feature_config.yml). Artifact paths live under data/outputs/analysis/patterns/<STATE>/. If anything differs locally, call it out before you run the changes.
+
+A. Archive the legacy extractor first (to prevent accidental imports)
+
+Why now: this eliminates 80% of wiring confusion before edits.
+
+Move (don’t delete) the following into a clearly labeled folder:
+
+src/core/module_a_stable_patterns.py → legacy/stable/module_a_stable_patterns.py
+
+scripts/archive/** → legacy/scripts/**
+
+archived/** → legacy/archived/**
+
+If you have two path handlers: keep top‑level utils/path_handler.py (that’s what the Stable page uses) and move src/utils/path_handler.py to legacy/utils/path_handler.py with a README saying “not referenced by app.”
+
+Guardrail:
+
+Add a one‑liner Health readout on the Stable page: print the resolved module and YAML paths that were actually imported (see section E.3 below). This will prevent “wrong file loaded” problems later.
+
+__________________________________________________________________________________________________
+
+Scripts involved (Stable Pattern)
 Page entry: src/app.py → show_stable_pattern_page(state)
 Wrapper: src/core/stable_pattern_extractor.py
 Engine (canonical): alpha_analytical/stable/init.py
@@ -14,7 +148,7 @@ C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\Connecticut4\Connect
 C:\dev\Alpha-Analytical-Tool\data\outputs\analysis\patterns\Connecticut4\Connecticut4_stable_patterns_report.html
 
 
-______________________
+______________________________________________________________
 
 
 I reviewed the Stable Pattern modules and config in a read-only sweep. Now I’ll quickly inspect the src/utils/path_handler.py to confirm the analysis output path helpers used by the app.
@@ -630,4 +764,4 @@ min_score_to_highlight:    8
 dominant_last_bonus:   2
 dominant_pair_bonus:   1
 dominant_double3_bonus: 1
-] 
+
