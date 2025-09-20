@@ -62,7 +62,6 @@ def _extract_column_draws(df: pd.DataFrame, col_letter: str, *, max_draws: int) 
         draws.append(draw_str)
         if len(draws) >= max_draws:
             break
-    draws.reverse()
     return draws
 
 

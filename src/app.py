@@ -143,6 +143,7 @@ def _load_draws_from_csv_candidates(state_name: str):
     base = _normalize_state_name(state_name)
     fn = f"{base.replace(' ', '_')}_draws.csv"
     candidates = [
+        os.path.normpath("data/cleaned/draws"),
         os.path.normpath("data/cleaned"),
         os.path.normpath("data/processed/draws"),  # auxiliary extractor output
     ]
@@ -192,6 +193,34 @@ def _project_modules_first():
         yield
     finally:
         sys.path[:] = old
+
+@contextmanager
+def _aux_working_first():
+    """Temporarily prefer staged Aux modules and restore project bindings afterwards."""
+    prev_modules = sys.modules.get("modules")
+    prev_children = {
+        name: sys.modules.get(name)
+        for name in (
+            "modules.analyze_pairs",
+            "modules.vtrac_reference",
+            "modules.run_process",
+        )
+    }
+    try:
+        sys.modules.pop("modules", None)
+        for name in prev_children:
+            sys.modules.pop(name, None)
+        yield
+    finally:
+        if prev_modules is not None:
+            sys.modules["modules"] = prev_modules
+        else:
+            sys.modules.pop("modules", None)
+        for name, mod in prev_children.items():
+            if mod is not None:
+                sys.modules[name] = mod
+            else:
+                sys.modules.pop(name, None)
 
 @contextmanager
 def _project_blackapple_ctx():
@@ -714,7 +743,8 @@ def show_control_center_page() -> None:
                 st.caption(str(e))
 
     try:
-        from modules.analyze_pairs import get_doubles_history
+        with _aux_working_first():
+            from modules.analyze_pairs import get_doubles_history
         import pandas as _pd
         from pathlib import Path as _Path
 
@@ -938,14 +968,15 @@ def show_aux_page(state: str) -> None:
     # Working modules (staged copy) Ã¢â‚¬â€œ used only inside Aux page
     _AUX_WORKING_AVAILABLE = False
     try:
-        from modules.analyze_pairs import (
-            calculate_overdue_pairs,
-            get_top_overdue_repeating_pairs,
-            get_vtrac_statuses,
-            get_doubles_history,
-            COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
-        )
-        from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
+        with _aux_working_first():
+            from modules.analyze_pairs import (
+                calculate_overdue_pairs,
+                get_top_overdue_repeating_pairs,
+                get_vtrac_statuses,
+                get_doubles_history,
+                COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
+            )
+            from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
         _AUX_WORKING_AVAILABLE = True
     except Exception:
         _AUX_WORKING_AVAILABLE = False

@@ -1,0 +1,111 @@
+Only if you could help me with something else Wondering if you can help me with something else so I had code let's go back to a previous task where we were trying to add more draws files for files files basically let me try the best way to explain this I think it's kind of explained below but basically I hadn't actually tested the pipeline to see if it gives us the draws files properly so I ran everything that had been added and it turns out it looks like it works perfectly however you will see there's some error messages having to do with modules analyze pairs and I notice actually that the auxiliary tools our module doesn't run anymore when I had asked prior to making the draws changes if they could lock in and save everything as is for auxiliary which was everything to do with the THE "COMBINED" DRAWS THERE ARE 3 DRAWS FILES NOW MIDDAY/EVENING/COMBINED. WELL IT LOOKS LIKE THE COMBINED PROTECTION MAY HAVE BEEN EFFECTED IN SOME WAYS I HAVE A FEW THOUGHTS TO HELP TROUBLESHOOT POTENTIALLY We also I think might have done a massive kind of tidy after this I wonder if any of that movement affected things One of the biggest things though check my image showing where the new draws Files Go If you can see it shows the NEW MIDDAY AND EVENING DRAWS BUT THERE IS A 3RD DRAWS FILE I BELIVE MUST BE THE "COMBINED"? BUT YOU SEE IT IS NOT LABELLED AS COMBINED OR TITELD THIS , COULD THIS HAVE ANYTHING TO DO WITH THINGS? DEFINITELY THERE IS SOMETHING STRANGE THAT HAPPENED HERE AS MENTIOED WE DID A BIG CLEAN-UP AS WELL WERE I WANTED TO GET RIFD OF DUPLICATE AUXILLARY MODULES (SOME WERE TESTING) COULD HAVE SOMETHING TO DO WITH "CLEANUP DETAILS SEPT 16" DOCUMENT IN "important" folder aat9_kit? im hoping we didnt archieve away analyze pairs? its definitely a big auxillary tools script i was trying to proect they were all programmed for the "combined" draws as they were all that existed priopr tp the ew midday ad evening draw we just added and tested successfully...could this maybe be a path issue? this might be hard to otrubleshoot basically  wat you to try your bes to nvestigatge ad give me your best thouhgts refer also to aat9_kit docs like chagelog, checkpoits, wiring, ufiief chamgelog etc. might give a paper trial as well..
+________________________________________________________
+
+Draws Reset Guidance
+
+  - Logs say the new extractor writes everything into data/cleaned/draws/ and leaves the old combined file only
+  as a fallback (docs/AAT9_KIT/AAT9_Checkpoint_Log.md:151-162; briefings/PITFALLS.txt:671). To simulate a clean
+  rebuild, stage or archive whatever is inside data/cleaned/draws/ (and the stray legacy file data/cleaned/
+  Connecticut_Midday_draws.csv) rather than deleting—easiest is to move them into a dated folder under archived/ so you
+  can roll back fast.
+  - Once the folder is empty, run one of the two supported pipelines from the repo root:
+      - Streamlit route: Control Center → “Aux Draws Pipeline (Midday/Evening)” expander; confirm the Dev Health block
+  shows the extractor binding and the target path (src/app.py:478-721).
+      - CLI route: py -3 scripts/auxiliary/generate_draws_csv.py --states Connecticut Delaware (or omit --states to
+  rebuild all) using the helper described in scripts/auxiliary/generate_draws_csv.py and the mapping documented in
+  tasks/TASK_10.txt.
+  - After the run, make sure each state now has three files (<State>_draws.csv, <State>_Midday_draws.csv,
+  <State>_Evening_draws.csv) living strictly under data/cleaned/draws/; the Control Center doubles view should reflect
+  the split inventory, and modules/aux_loaders.load_state_draws will still default to the combined CSV for existing
+  pages (modules/aux_loaders.py:84).
+
+  Why This Matters
+
+  - Completing a zero-baseline export validates that the refactored extractor (and its column map) are correct before
+  any Midday/Evening feature wiring begins, exactly matching the follow-up called out in the Checkpoint Log.
+  - Keeping backups instead of hard deletes matches the archive-first rule and lets you diff the regenerated draws
+  versus the previous generation if anything looks off.
+
+  Next Checks
+
+  1. Spot-check a regenerated CSV to confirm draw order (newest first) and that Midday/Evening counts match the Excel
+  source.
+  2. Toggle Control Center Dev Health to confirm the draw directory path and file counts are what you expect.
+  3. Once confident, proceed with the planned Midday/Evening feature wiring and remember to log the verification run in
+  both the Checkpoint Log and Unified Changelog.
+
+▌ OK I ONLY REALLY KNOW HOW TO USE THE BAT FILE FOR THE APP THAT I HAVE IM GOIG TO USE THAT AD TRY TO FIGURE THIS OUT
+▌ AND FIND WHICH FOLDER NEEDS TO BE EMPTY I GUESS AND THEN TRY AND GET THESE DRAWS FILES HOPEFULLY, I WAT  TO MVOE THIS
+▌ ALOG ABIT QUIXKER THERE IS ALOT TO DO...IF TIHGS ARE WIRED CURRETNLY SHOULD BE ABLE TO EXTRACT THE DRAWS IM HOPING
+
+> Sounds good. Here’s a quick checklist you can follow using the app:
+
+  Prep
+
+  - From repo root, peek at data/cleaned/draws/ so you know what’s there now (Get-ChildItem data/cleaned/draws).
+  - If you want a clean rebuild, move those files somewhere safe first (e.g., create archived/2025-09-XX_draws_backup/
+  and move the CSVs there). Don’t delete—just move, so you can restore if needed.
+
+  Run the pipeline
+
+  - Launch with your usual run_app.bat.
+  - Open Control Center and expand “Aux Draws Pipeline (Midday/Evening)”.
+  - The Dev Health block should show the extractor module path and the target folder (data/cleaned/draws).
+  - Click the regenerate button—the default run writes Combined/Midday/Evening files for all tracked states.
+
+  Verify
+
+  - After it finishes, refresh data/cleaned/draws/ (or check the log panel). You should see, per state,
+  <State>_draws.csv, <State>_Midday_draws.csv, <State>_Evening_draws.csv (plus any specials if you enabled them).
+  - Spot-check one of the new files to confirm the draws look right and are in newest-first order.
+  - Update the Checkpoint Log once you’re satisfied.
+
+  If anything errors (usually a locked Excel file), close the spreadsheet and rerun the pipeline. That path should get
+  the draw exports regenerated so you can move on to feature wiring.
+
+
+
+
+
+
+_______________________________________________________________________________________________________________________________________
+
+
+
+
+
+
+
+I'll check where 'modules.analyze_pairs' is imported from, and trace how the Aux page locates draws files to explain why it says "No state data files found" despite seeing CSVs. Then I'll summarize fixes you can hand to Codex.
+Findings:
+The “No module named modules.analyze_pairs” warning is likely from Control Center’s “Combined view” section, not the main Aux page. Your working modules exist: scripts/auxiliary/working/modules/analyze_pairs.py is present. If Control Center tries to import a different package path (or if sys.path order changed), that warning appears while the Aux page still renders.
+Aux says “No state data files found” because the page filters for combined-only CSVs. It looks in data/cleaned/draws and only accepts files whose stem does NOT end with any of (“Midday”, “_Evening”, “_Morning”, “_Nite”, “_Noon”). Your screenshot shows the three files exist, but your “combined” file is named <State>_draws.csv (good), while many per-session cleanups moved old combined files or left only Midday/Evening for some states. If any state has only <State>_Midday_draws.csv and <State>_Evening_draws.csv but no <State>_draws.csv, the Aux page will treat it as “no state data” for that state.
+Why this changed now:
+The draws extractor now writes three files per state into data/cleaned/draws/. The Aux page is still coded to prefer the legacy combined name pattern (<State>draws.csv) for its primary analysis. It intentionally ignores Midday/Evening versions via _is_combined_csv.
+What to do (hand to Codex):
+1) Restore the combined CSVs for all enabled states
+Ensure each state has all three:
+data/cleaned/draws/<State>draws.csv ← required for Aux today
+data/cleaned/draws/<State>Midday_draws.csv
+data/cleaned/draws/<State>Evening_draws.csv
+If your extractor skipped writing <State>draws.csv, add that output back or copy/concatenate Midday+Evening into a combined file (newest-first) as an interim fix.
+2) Verify the path the Control Center uses for the working modules
+It expects staged imports under scripts/auxiliary/working/modules:
+modules.analyze_pairs
+modules.vtrac_reference
+Make sure scripts/auxiliary/working is being added to sys.path only for Aux/Control Center blocks (as designed). If the archive/cleanup moved or emptied those staged files, re-add them. You do have analyze_pairs.py and vtrac_reference.py there now, so the error likely comes from a mismatched sys.path ordering on that section. A simple fix Codex can apply is to guard that “Combined view” block the same way as Aux (temporarily add the working root to sys.path inside that expander before importing modules.analyze_pairs).
+3) Quick checks you can run in the UI (no code edits):
+Control Center → Show Dev Health → confirm it prints:
+draws_root: data/cleaned/draws (exists=True)
+In Aux page Dev Health: confirm it shows the BA module file and a draws CSV path like data/cleaned/draws/Connecticut_draws.csv (1000).
+If Aux still shows “No state data files found,” open data/cleaned/draws/ and confirm the exact combined filename exists for that state (must end with draws.csv, not _Midday_draws.csv only).
+Likely root causes mapped to your screenshots:
+The draws folder shows <State>draws.csv present for many states (good), plus Midday/Evening. For any state missing the plain “…_draws.csv”, Aux will skip it. That explains why the page-level caption says “No state data files found” for the selected state even though Midday/Evening exist.
+The Control Center yellow banner “Combined view unavailable: No module named 'modules.analyze_pairs'” means the staged import wasn’t available in that section’s context; the file exists, so it’s a context/sys.path timing issue, not a missing file.
+Minimal instructions to Codex (precise):
+Ensure combined CSV write is on for all states in the draws exporter; if not, add a step to emit <State>draws.csv (merged Midday+Evening, newest-first).
+In src/app.py inside the Control Center “Combined view” helper, wrap any imports of modules.analyze_pairs with the same sys.path staging used in show_aux_page, then cleanly unstage afterward.
+Do not change the Aux page’s is_combined_csv logic yet; once combined files are guaranteed, the page will find data again.
+If you want Aux to support Midday/Evening directly later:
+Add a toggle on the Aux page (“Use combined / Use Midday / Use Evening”), update the glob to include pattern suffixes, and pass the selected set to the analyzers. That’s an enhancement, but not required to fix today’s break.
+This should get Aux and Control Center healthy again without undoing your draws refactor.
