@@ -1,0 +1,237 @@
+Today, we’re releasing GPT‑5-Codex—a version of GPT‑5 further optimized for agentic coding in Codex. GPT‑5-Codex was trained with a focus on real-world software engineering work; it’s equally proficient at quick, interactive sessions and at independently powering through long, complex tasks. Its code review capability can catch critical bugs before they ship. GPT‑5-Codex is available everywhere you use Codex—it’s the default for cloud tasks and code review, and developers can choose to use it for local tasks via Codex CLI and the IDE extension.
+
+Since we first launched Codex CLI⁠(opens in a new window) in April and Codex⁠ web in May, Codex has steadily evolved into a more effective coding collaborator. Two weeks ago, we unified Codex into a single product experience connected by your ChatGPT account, enabling you to move work seamlessly between your local environment and the cloud without losing context. Codex now works where you develop—in your terminal or IDE, on the web, in GitHub, and even in the ChatGPT iOS app. Codex is included with ChatGPT Plus, Pro, Business, Edu, and Enterprise plans.
+
+With these updates, Codex moves closer to what we’ve been building toward all along—a teammate that understands your context, works alongside you, and reliably takes on work for your team.
+
+GPT‑5-Codex
+GPT‑5-Codex is a version of GPT‑5 further optimized for agentic software engineering in Codex. It’s trained on complex, real-world engineering tasks such as building full projects from scratch, adding features and tests, debugging, performing large-scale refactors, and conducting code reviews. It’s more steerable, adheres better to AGENTS.md⁠(opens in a new window) instructions, and produces higher-quality code—just tell it what you need without writing long instructions on style or code cleanliness.
+
+GPT-5 (high)
+GPT-5-Codex (high)
+0%
+20%
+40%
+60%
+80%
+Accuracy
+74.5%
+72.8%
+SWE-bench Verified (n=500)
+
+GPT-5 (high)
+GPT-5-Codex (high)
+0%
+20%
+40%
+60%
+80%
+Accuracy
+33.9%
+51.3%
+Code refactoring tasks
+
+SWE-bench Verified: Historically, including at the time of the GPT‑5 launch, we reported results on 477 SWE-bench Verified tasks because some tasks couldn’t run in our infrastructure. We’ve since fixed this and now report on all 500 tasks.
+
+Code refactoring tasks: Our code refactoring evaluation contains refactor-style tasks from large, established repositories and includes tasks in Python, Go and even OCaml. An example task is the following pull request from Gitea⁠(opens in a new window) which changes 232 files and 3,541 lines to thread a ctx variable through the application logic.
+
+GPT‑5-Codex adapts how much time it spends thinking more dynamically based on the complexity of the task. The model combines two essential skills for a coding agent: pairing with developers in interactive sessions, and persistent, independent execution on longer tasks. That means Codex will feel snappier on small, well-defined requests or while you are chatting with it, and will work for longer on complex tasks like big refactors. During testing, we've seen GPT‑5-Codex work independently for more than 7 hours at a time on large, complex tasks, iterating on its implementation, fixing test failures, and ultimately delivering a successful implementation.
+
+On OpenAI employee traffic, we see that for the bottom 10% of user turns sorted by model-generated tokens (including hidden reasoning and final output), GPT‑5-Codex uses 93.7% fewer tokens than GPT‑5. Conversely, for the top 10%, GPT‑5-Codex thinks more, spending twice as long reasoning, editing and testing code, and iterating.
+
+10th percentile
+30th percentile
+50th percentile
+70th percentile
+90th percentile
+# of model-generated tokens per response
+−93.7%
+−68.4%
+−30.8%
++25.1%
++102.2%
+GPT-5 (medium)
+GPT-5-Codex (medium)
+OpenAI employee traffic using Codex CLI
+
+GPT‑5-Codex has been trained specifically for conducting code reviews and finding critical flaws. When reviewing, it navigates your codebase, reasons through dependencies, and runs your code and tests in order to validate correctness. We evaluated code review performance on recent commits from popular open-source repositories. For each commit, experienced software engineers evaluated review comments for correctness and importance. We find that comments by GPT‑5-Codex are less likely to be incorrect or unimportant, reserving more user attention for critical issues.
+
+GPT-5 (high)
+GPT-5-Codex (high)
+0%
+5%
+10%
+15%
+20%
+% of comments
+13.7%
+4.4%
+Incorrect comments
+
+GPT-5 (high)
+GPT-5-Codex (high)
+0%
+10%
+20%
+30%
+40%
+50%
+60%
+% of comments
+39.4%
+52.4%
+High-impact comments
+
+GPT-5 (high)
+GPT-5-Codex (high)
+0.0
+0.5
+1.0
+1.5
+# of comments
+1.32
+0.93
+Comments per PR (avg)
+
+GPT‑5-Codex is a reliable partner on front-end tasks. In addition to creating aesthetic desktop apps, GPT‑5-Codex also shows significant improvements in human preference evaluations when creating mobile websites. When working in the cloud, it can look at images or screenshots you provide as input, visually inspect its progress, and display screenshots of its work to you.
+
+GPT‑5-Codex was purpose-built for Codex CLI, the Codex IDE extension, the Codex cloud environment, and working in GitHub, and also supports versatile tool use. Unlike GPT‑5, which is a general-purpose model, we recommend using GPT‑5-Codex only for agentic coding tasks in Codex or Codex-like environments.
+
+Updates to Codex
+We also recently made some updates to make Codex a better pair programmer, with a revamped Codex CLI and the new Codex IDE extension.
+
+Codex CLI
+Codex CLI is open-source, and community feedback over the last few months has been invaluable in shaping its evolution. With this feedback, we’ve rebuilt Codex CLI around agentic coding workflows to harness our models into more capable and reliable partners. You can now attach and share images—screenshots, wireframes, and diagrams—right in the CLI to build shared context on design decisions and get exactly what you want. When doing more complex work, Codex now tracks progress with a to-do list, and includes tools like web search and MCP for connecting to external systems, with more accurate tool use overall.
+
+The terminal UI has also been upgraded: tool calls and diffs are better formatted and easier to follow. Approval modes are simplified to three levels: read-only with explicit approvals, auto with full workspace access but requiring approvals outside the workspace, and full access with the ability to read files anywhere and run commands with network access. It also supports compacting conversation state to make longer sessions easier to manage.
+
+Check out the Codex CLI quickstart⁠(opens in a new window) to learn more.
+
+
+
+The Codex IDE extension
+
+
+Codex meets you where you already work, including in your IDE. The IDE extension brings the Codex agent into VS Code, Cursor, and other VS Code forks, so that you can seamlessly preview local changes and edit code with Codex. When you use Codex in your IDE, you can write shorter prompts and get faster results because Codex can use context like the files you’ve opened or the code you’ve selected.
+
+The Codex IDE extension also lets you move work smoothly between the cloud and your local environment. You can create new cloud tasks, track in‑progress work, and review completed tasks without leaving your editor. To make finishing touches, you can open cloud tasks in your IDE, and Codex maintains context. Learn more on how to get the most out of the IDE extension in the quickstart⁠(opens in a new window).
+
+Codex cloud
+In addition to Codex CLI, the new IDE extension and GitHub integration bring the Codex cloud agent closer to developer workflows so you can now delegate tasks without switching away from your editor or GitHub.
+
+Behind the scenes, we’ve also been continuously improving cloud infrastructure performance. By caching containers, we’ve slashed the median completion time for new tasks and follow-ups by 90%. Codex also now automatically sets up its own environment by scanning for common setup scripts and executing them, and with configurable internet access can run commands like pip install to fetch dependencies as needed at runtime.
+
+Like in the CLI and IDE extension, you can now use images to share frontend design specs or explain UI bugs. As it builds for you, Codex can spin up its own browser, look at what it built, iterate, and attach a screenshot of the result to the task and GitHub PR. For more details, check out the docs⁠(opens in a new window).
+
+
+
+Code review
+Codex also now includes code review capabilities trained to catch critical flaws. Unlike static analysis tools, it matches the stated intent of a PR to the actual diff, reasons over the entire codebase and dependencies, and executes code and tests to validate behavior. Only the most thorough human reviewers put this level of effort into every PR they review, so Codex fills the gap—helping teams find problems earlier, reduce reviewer load, and ship with more confidence.
+
+Once turned on for a GitHub repo, Codex automatically reviews PRs as they move from draft to ready, posting its analysis on the PR. If it recommends edits, you can stay in the same thread and ask Codex to implement them. You can also explicitly ask for a review by mentioning “@codex review” in a PR, and give it extra guidance like “@codex review for security vulnerabilities” or “@codex review for outdated dependencies”. Check out the quickstart⁠(opens in a new window) to learn how to set up code review for your repos.
+
+At OpenAI, Codex now reviews the vast majority of our PRs, catching hundreds of issues every day—often before a human review begins. It’s been key to letting the Codex team move fast with greater confidence.
+
+
+
+How developers are using Codex
+Cisco Meraki
+Duolingo
+Ramp
+Vanta
+Virgin Atlantic
+Gap
+“I needed to update a codebase owned by another team for a feature release. [...] With Codex, I offloaded the refactoring and test generation while focusing on other priorities. It produced high-quality, fully tested code that I could quickly hand back — keeping the feature on schedule without adding risk.”
+Tres Wong-Godfrey, Tech Lead at Cisco Meraki
+Building safe and trustworthy AI agents
+We’re building Codex with a focus on protecting code and data from exfiltration, and guarding against misuse. By default, Codex runs in a sandboxed environment with network access⁠(opens in a new window) disabled, whether locally or in the cloud. This helps ensure Codex can’t take harmful actions on your computer, and reduces the risk of prompt injections from untrusted sources.
+
+Codex can ask for permission before potentially dangerous actions and is trained to run commands to verify its outputs. Developers can customize security settings to match their risk tolerance. In the cloud, you can limit network access to trusted domains. In the CLI and IDE extension, developers can approve commands to run with full access or allow the agent to use web search and connect to MCP servers. This can expand capabilities of the agent while increasing the risks–learn more about how to securely operate and manage Codex here⁠(opens in a new window).
+
+We always encourage developers to review the agent’s work before making changes or deploying to production. Codex provides citations, terminal logs, and test results with each task to help with this. While Codex code reviews help reduce the risk of dangerous issues being deployed to production, whether created by humans or agents, we always recommend using Codex as an additional reviewer—not a replacement for human reviews.
+
+Consistent with our approach to GPT‑5, we have decided to treat GPT‑5-Codex as High capability in the Biological and Chemical domains, and have implemented safeguards to minimize the associated risks. Read more about our assessments and robust safety approach in the system card addendum⁠.
+
+
+_________________
+
+Codex is OpenAI’s coding agent that can read, modify, and run code. It helps you build faster, squash bugs, and understand unfamiliar code. With the Codex VS Code extension you can use Codex side-by-side in your IDE, or delegate tasks to the cloud.
+
+Set up the extension
+
+The Codex IDE extension works with VS Code forks such as Insiders, Cursor, or Windsurf.
+
+You can get the Codex extension from the Visual Studio Code marketplace, or download it for your IDE:
+
+Download for Visual Studio Code
+Download for Cursor
+Download for Windsurf
+Download for Visual Studio Code Insiders
+The Codex VS Code extension is available on macOS and Linux. Windows support is still experimental. Currently, the best experience on Windows is to use Codex with the Windows Subsystem for Linux.
+
+After installing, you’ll find the extension in your left sidebar next to other extensions. If you’re using VS Code, you might need to restart VS Code to see the Codex extension on the left sidebar.
+
+If you’re using Cursor, by default this section will be displayed horizontally and Codex might be hidden in the collapsed items, so you can pin it and reorganize the order of the extensions.codex-extension
+
+Adding Codex to the right sidebar
+
+In VS Code you should be able to click and drag the Codex icon to the right of your editor screen to move it to the right sidebar to make it more accessible.
+
+In some IDEs, like Cursor, you will have to first change the display of the activity bar temporarily.
+
+Go into your editor settings and search for “activity bar” (in Workbench settings), then change the orientation to “vertical”. You’ll have to restart your editor to see the changes.
+
+codex-workbench-setting
+
+Now you can drag the Codex icon to the right of your editor screen into the same area as your Cursor chat. Codex will now be displayed as an additional tab in the sidebar.
+
+After moving it you can reset the activity bar orientation to “horizontal” to restore the default behavior.
+
+Sign in
+
+Once you have installed the extension, you will be prompted to sign in with your ChatGPT account, which is the recommended path. You get usage credits with your ChatGPT plan, so you can use Codex without any additional setup. If you wish to use Codex with an API key, you can do so, but this requires additional setup—you can learn more about this and what’s included in each plan in our pricing page.
+
+Update the extension
+
+The extension auto-updates, but you can also open the extension page in your IDE to manually check for updates.
+
+Keyboard shortcuts
+
+Codex offers a series of commands that you can bind as keyboard shortcuts in your IDE settings such as toggling the Codex chat or adding something to the Codex context.
+
+To see all available commands and bind them as keyboard shortcuts, press the Settings icon in the Codex chat and select “Keyboard shortcuts”.
+
+Pair with Codex
+
+Use Codex in your editor to chat, edit, and preview changes seamlessly. With context from opened files and selected code, you can write shorter prompts and get faster, more relevant results.
+
+You can reference any file in your editor by tagging it in your prompt like this:
+
+Use @example.tsx as a reference to add a new page named "Resources" to the app that contains a list of resources defined in @resources.ts
+Switch between models
+
+You can use Codex with GPT-5 (default), but we recommend switching to our newest model that is an optimized version of GPT-5 for agentic coding in Codex: GPT-5-Codex.
+
+You can switch between models with the switcher under the extension chat input.
+
+codex-switch-model
+
+Reasoning effort
+
+You can adjust the reasoning effort of Codex to make it think more or less before answering. With high reasoning effort, Codex will take longer to answer, but it can perform more complex tasks. If the tasks are simple and you need speed, you can use a lower reasoning effort.
+
+You can adjust the reasoning effort with the same model switcher shown above, and choose between low, medium, and high for each model.g
+
+Approval modes
+
+We’ve chosen a powerful default for how Codex works on your computer called Agent. In this approval mode, Codex can read files, make edits, and run commands in the working directory automatically. However, Codex will need your approval to work outside the working directory or access the internet network.
+
+When you just want to chat, or if you want to plan before diving in, you can switch to Chat with the switcher under the extension chat input.
+
+codex-approval-modes
+
+If you need Codex to read files, make edits, and run commands with network access, without approval, you can use Agent (Full Access). Exercise caution before doing so.
+
+Detailed docs
+
+The VS Code extension is built around the open source Codex CLI. For more detailed docs covering advanced configuration, MCP, and more, check out the README and docs on the GitHub repository: github.com/openai/codex.

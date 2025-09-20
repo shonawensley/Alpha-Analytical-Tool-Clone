@@ -1,3 +1,25 @@
+## 2025-09-19 20:30 (UTC)  Stable Pattern Modal Scoring + Families
+
+- Context: Needed richer Stable outputs (permutation density, family grouping, winner spotlights) to prep for training and operational use.
+- Change:
+  - Updated analyser to count permutation/repeat density, modal straights, debug columns, and consensus tails using digits-only logic.
+  - Added post-pass family aggregator + YAML weights; winner spotlight CSVs generated when winners provided.
+  - Extended Streamlit UI with winners input, family/spotlight download links, and dev health prints for engine/YAML.
+- Rationale: Improves scoring fidelity and exposes structured outputs for downstream analysis without touching other tools.
+- Impact: New CSVs under data/outputs/analysis/patterns/<STATE>/ (families + optional spotlight); Stable page now accepts winners list; Stable UI shows quick links + preview for the families frame.
+- Files/Refs: alpha_analytical/stable/{__init__.py,feature_config.yml,post_pass_families.py,winner_family_spotlight.py}, alpha_analytical/vtrac/, src/core/stable_pattern_extractor.py, src/app.py, docs/AAT9_KIT/important/stable_pattern_AAT9.txt.
+- Follow-ups: Consider cross-section/progression bonuses (post_pass_families) and unit tests for rep3 helper.
+## 2025-09-19 01:05 (UTC)  Stable Pattern Archive Cleanup
+
+- Context: Multiple legacy Stable Pattern runners/tests were still in the repo, creating confusion about which extractor feeds the integrated app.
+- Change:
+  - Archived root BATs, scripts/archive/* demos, scripts/utils_old/* helpers, historical `data/outputs/stable_patterns/`, and the legacy pytest into `archived/2025-09-19_stable_cleanup/` with a manifest.
+  - Added Stable Dev Health details so the page prints engine + feature_config paths.
+  - Updated KIT docs/changelog to reference the canonical chain and archive location.
+- Rationale: Eliminates duplicate entry points while keeping references available; Dev Health now confirms bindings explicitly.
+- Impact: No runtime change  Streamlit uses `src/core/stable_pattern_extractor.py` ? `alpha_analytical/stable/__init__.py`; legacy assets are preserved for reference.
+- Files/Refs: archived/2025-09-19_stable_cleanup/*, src/app.py, docs/AAT9_KIT/important/stable_pattern_AAT9.txt, docs/AAT9_DOCS/stable_pattern_master_guide_AAT9.md, docs/AAT9_KIT/AAT9_Unified_Changelog.md.
+- Follow-ups: None required; restore specific runners from archive only if a CLI is needed.
 # AAT9 — Checkpoint Log (Running, Detailed Notes)
 
 Purpose: A single, date‑tagged log for deeper explanations, context, and rationale that complement the Unified Changelog. Use this when you (or AI) want to capture more than a one‑line changelog entry.
@@ -138,3 +160,5 @@ Template
   - Remove the leftover `data/cleaned/Connecticut_Midday_draws.csv` once Excel releases the file lock.
   - When ready, wire Midday/Evening into Control Center doubles + Blackapple (combined stays the baseline).
   - Consider retiring `scripts/auxiliary/working/` once staged modules are no longer needed by the Aux page.
+
+

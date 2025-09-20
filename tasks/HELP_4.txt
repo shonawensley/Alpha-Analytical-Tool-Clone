@@ -1,0 +1,183 @@
+our instinct is right: don’t slice Canonical[:3]. That’s arbitrary and can misclassify many valid 3‑value patterns. The wired engine already guarantees “3‑value” (≤3 V‑Trac classes) via is_3value, so you can deterministically derive a proper 3‑digit representative from any longer Canonical.
+Recommended approach (safe and deterministic)
+Goal: map any Canonical (len ≥ 3, ≤ 3 V‑classes) to one 3‑digit representative, then call get_vtrac_index(rep3).
+Steps:
+1) Map each digit in Canonical to its V‑class using digit2v (same map the engine uses).
+2) Group digits by class. Let classes = unique classes sorted.
+3) Build rep3:
+If len(classes) == 3: pick the smallest digit (by char) from each class, sort, join → rep3.
+If len(classes) == 2: pick the smallest digit from each class, then duplicate the class with the larger total count in Canonical (tie-break: smaller digit). Sort → rep3.
+If len(classes) == 1: rep3 = ddd where d is the smallest digit in that class.
+4) vti = get_vtrac_index(rep3). If None, fallback: try all 3‑combinations of Canonical’s digits, call get_vtrac_index on each, pick the first non‑None (tie-break: lexicographically largest).
+Error handling: skip rows with len(Canonical) < 3 or non‑digit content after digits_only filter.
+Why this is better than canon[:3]
+It respects the “3‑value” definition (class‑based), is deterministic, and matches the boxed family logic. Slicing first three digits drops useful information and can flip families.
+Where to place it
+Keep this logic inside post_pass_families (or a small helper next to it). No need to touch the engine or get_vtrac_index.
+Acceptance check
+Pick a few known Canonicals (length 4–6) and verify the derived rep3 maps to the same index as any valid 3‑digit member you’d expect from that family.
+Sanity: run Stable on one state; the family grouping should be stable across runs; no crashes from ValueError.
+If you want a minimal fallback
+If you’re time‑boxed: try all 3‑combinations of Canonical’s digits → first get_vtrac_index that returns a value; otherwise skip. It’s slower but simple and correct.
+Bottom line
+Let Codex implement the deterministic rep3 algorithm above (or the combinations fallback). Avoid the naive [:3] slice.
+
+__________________
+
+DO YOU AGREE WITH THE SUGGESTION?
+ChatGPT said:
+Thought for 1m 7s
+
+Short answer: I agree with Cursor—do not slice Canonical[:3]. Use a deterministic 3-digit representative based on V-Trac classes, with a safe fallback to “try all 3-combinations.” That keeps family mapping correct for any 3-value pattern (≤3 V-classes) and avoids silent misclassification.
+
+Why Canonical[:3] is unsafe
+
+Your Canonical can be 4–8 digits (e.g., 13388, 2259334, etc.). Taking the first three digits is arbitrary and can map to the wrong V-Trac index.
+
+The wired extractor already guarantees “3-value” via is_3value (≤3 V-classes). You should exploit that to derive a representative 3-digit form, not truncate.
+
+Example: Canonical = "13388"
+
+V-classes: 1→2, 3→4, 8→4 → classes = {2,4}
+
+Naive [:3] = "138" → might map you to the wrong family if the true 3-digit family signature should reflect the class duplication.
+
+Correct, deterministic mapping (what to implement)
+
+Goal: For any Canonical (len ≥3) that is 3-value, deterministically derive a 3-digit representative rep3 that reflects its V-class composition; then call get_vtrac_index(rep3).
+
+Algorithm (class-aware):
+
+Map each digit d in Canonical to its V-class via your digit2v.
+
+Group digits by class: class → [digits].
+
+Let classes = sorted(unique classes).
+
+Build rep3:
+
+If 3 classes: pick the smallest digit from each class; sort and join → rep3.
+
+If 2 classes: pick the smallest digit from each class; then duplicate the class with the larger total count in the canonical (tie-break: duplicate the class whose smallest digit is smaller). Sort → rep3.
+
+If 1 class: rep3 = ddd where d is the smallest digit in that class.
+
+vti = get_vtrac_index(rep3).
+
+Fallback (defensive): if vti is None (should be rare), try all 3-combinations of the canonical’s digits (with permutations) and return the first non-None (tie-break: lexicographically largest).
+
+Where: put this helper inside post_pass_families.py (or a small vtrac_family.py) and call it whenever you need a family id from a 3-value canonical. You do not have to touch the engine’s get_vtrac_index.
+
+Drop-in helper for Codex
+# alpha_analytical/stable/post_pass_families.py (near top)
+from collections import defaultdict
+from itertools import combinations, permutations
+
+# must match the extractor's map
+DIGIT2V = {'0':1,'5':1,'1':2,'6':2,'2':3,'7':3,'3':4,'8':4,'4':5,'9':5}
+
+def _rep3_from_classes(canon: str) -> str | None:
+    """Derive a deterministic 3-digit representative for a 3-value canonical."""
+    if not canon or len(canon) < 3 or not canon.isdigit():
+        return None
+
+    # group digits by V-class
+    by_class: dict[int, list[str]] = defaultdict(list)
+    for ch in canon:
+        v = DIGIT2V.get(ch)
+        if v is None:
+            return None
+        by_class[v].append(ch)
+
+    classes = sorted(by_class.keys())
+    k = len(classes)
+
+    # smallest digit helper per class
+    smallest = {c: sorted(by_class[c])[0] for c in classes}
+
+    if k == 3:
+        rep = sorted([smallest[c] for c in classes])
+        return "".join(rep)
+
+    if k == 2:
+        # choose smallest from each class
+        seeds = [smallest[classes[0]], smallest[classes[1]]]
+        # duplicate the class with the larger count; tie -> smaller smallest-digit
+        c0, c1 = classes
+        cnt0, cnt1 = len(by_class[c0]), len(by_class[c1])
+        if cnt0 > cnt1:
+            dup = smallest[c0]
+        elif cnt1 > cnt0:
+            dup = smallest[c1]
+        else:
+            dup = min(smallest[c0], smallest[c1])
+        rep = sorted(seeds + [dup])
+        return "".join(rep)
+
+    if k == 1:
+        d = smallest[classes[0]]
+        return d*3
+
+    # if somehow more than 3 classes slipped through, bail
+    return None
+
+def derive_vtrac_index_for_canonical(canon: str, get_vtrac_index) -> int | None:
+    """Robustly map any 3-value canonical (len>=3) to a V-Trac index."""
+    if not canon or len(canon) < 3:
+        return None
+    rep3 = _rep3_from_classes(canon)
+    if rep3:
+        vti = get_vtrac_index(rep3)
+        if vti is not None:
+            return vti
+
+    # fallback: try all 3-combinations of digits (with permutations)
+    digits = list(canon)
+    seen = set()
+    for combo in combinations(digits, 3):
+        for perm in permutations(combo, 3):
+            s = "".join(perm)
+            if s in seen: 
+                continue
+            seen.add(s)
+            vti = get_vtrac_index(s)
+            if vti is not None:
+                return vti
+    return None
+
+
+Use it in post-pass:
+
+from alpha_analytical.vtrac import get_vtrac_index
+vti = derive_vtrac_index_for_canonical(canon, get_vtrac_index)
+
+
+Why this is good:
+
+Deterministic (class-aware) for 3-value canonicals.
+
+Doesn’t throw away information by slicing.
+
+Has a guaranteed, correct fallback (3-combinations) if needed.
+
+Keeps get_vtrac_index unchanged.
+
+Edge cases & acceptance checks
+
+Consensus stubs (1–2 digits): skip (len(canon) < 3 → None), as intended.
+
+Non-digits or starred strings: digits_only() should be applied before this mapping (your analyzer already does this for Canonical).
+
+Performance: class-based path is O(n). Fallback combinations are bounded (for len 8: C(8,3)=56 × 6 perms = 336 lookups max), which is fine in a post-pass.
+
+Tests: pick several longer canonicals (4–6 digits) from a real run; ensure derive_vtrac_index_for_canonical() returns the same V-Trac index as any 3-digit family member you expect (e.g., “13388” → Index 13; “2259334” → right index for that family).
+
+Bottom line
+
+Do not adopt Codex’s canon[:3] replacement—it’s a correctness foot-gun.
+
+Do adopt Cursor’s class-based rep3 algorithm (or the combinations fallback).
+
+This integrates cleanly in post_pass_families.py (no changes to the engine), is deterministic, fast, and faithful to your 3-value definition.
+
+If you want me to hand Codex fully formed functions (with imports wired to your repo’s actual V-Trac module path), say the word and I’ll paste them with the exact import lines you’re using.

@@ -401,6 +401,7 @@ def show_stable_pattern_page(state: str) -> None:
             tables_path=tables_dir,
             out_path=out_dir,
             min_occ=min_occ,
+            winners=winners_list if winners_list else None,
         )
 
         if df.empty:

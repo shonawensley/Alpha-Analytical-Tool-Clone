@@ -60,216 +60,305 @@ def find_subs(cell:str,min_len=3,max_len=8):
             if is_3value(ss): out.add(ss)
     return out
 
+def find_subs_with_counts(cell: str, min_len: int = 3, max_len: int = 8):
+    raw = digits_only(cell)
+    hits = Counter()
+    L = len(raw)
+    for start in range(L):
+        for end in range(start + min_len, min(start + max_len + 1, L + 1)):
+            sub = raw[start:end]
+            if is_3value(sub):
+                hits[sub] += 1
+    return hits
+
+
 # --- Main Analysis Function ---
-def analyse(df:pd.DataFrame, section:str):
-    """
-    Main analysis function, combining all logic for pattern extraction, scoring, and flagging.
-    """
-    # ------------------------------------------------------------------
-    # always start with an empty highlight-map so downstream code is safe
-    # ------------------------------------------------------------------
-    mask_map: dict[tuple[int, str], str] = {}
-    
-    # --- STEP 1: Find all potential patterns and group them ---
-    df=df.fillna('').reset_index(drop=True)
-    occurrences = []
+
+
+def analyse(df: pd.DataFrame, section: str):
+    """Return highlight mask and scored stable-pattern rows for a section."""
+    df = df.fillna('').reset_index(drop=True)
+
+    grouping = defaultdict(
+        lambda: {
+            "rows": set(),
+            "patterns": set(),
+            "hot": [],
+            "orders_by_row": defaultdict(set),
+            "repeat_extras": 0,
+        }
+    )
+    tail_box = defaultdict(lambda: {"rows": set(), "tails": set(), "is_cons": False, "stub_done": False, "tail": ""})
+
     for r_i, row in df.iterrows():
-        rt=row.get('RowType','')
-        if rt not in ('R2','R4','R6','R8'): continue
-        setv=row.get('Set',''); draw=row.get('Draw','')
+        rowtype = row.get('RowType', '')
+        if rowtype not in ('R2', 'R4', 'R6', 'R8'):
+            continue
+        setv = row.get('Set', '')
+        draw = row.get('Draw', '')
         for col in COLS:
-            cell_raw = str(row.get(col,''))
+            cell_raw = str(row.get(col, ''))
             hot_level = 2 if '**' in cell_raw else 1 if '*' in cell_raw else 0
-            if not cell_raw.strip() or cell_raw.strip().lower()=='nan': continue
-            
-            subs = find_subs(cell_raw)
-            # Inject 1-2 digit cells for consensus logic
-            if not subs and 1 <= len(digits_only(cell_raw)) <= 2:
-                subs.add(digits_only(cell_raw))
-            if not subs: continue
+            raw_digits = digits_only(cell_raw)
+            if not cell_raw.strip() and not raw_digits:
+                continue
 
-            for subval in subs:
-                occurrences.append({
-                    'section': section, 'Set': setv, 'Draw': draw, 'Col': col,
-                    'RowType': rt, 'Pattern': subval, 'row_i': r_i, 'hot': hot_level
-                })
-    
-    grouping = defaultdict(lambda: {'rows': set(), 'patterns': set(), 'hot': []})
-    for occ in occurrences:
-        cform = canon(occ['Pattern'])
-        key_g = (occ['section'], occ['Set'], occ['Draw'], occ['Col'], cform)
-        grouping[key_g]['rows'].add(occ['RowType'])
-        grouping[key_g]['patterns'].add(occ['Pattern'])
-        grouping[key_g]['hot'].append(occ['hot'])
+            orders_counts = find_subs_with_counts(cell_raw)
+            if not orders_counts and 1 <= len(raw_digits) <= 2:
+                orders_counts[raw_digits] += 1
+            if not orders_counts:
+                continue
 
-    # --- STEP 2: Pre-calculate box-level summaries ---
-    tail_box = defaultdict(lambda: { 'rows_present_in_box': set(), 'distinct_tails_in_box': set(), 'is_cons': False, 'stub_done': False })
-    for (sec_tb, setv_tb, draw_tb, col_tb, cpat_tb), info_tb in grouping.items():
-        if col_tb not in ('1','2'): continue
-        rows_ = {r for r in info_tb['rows'] if r != 'CONS_STUB'}
-        tail_of_cpat = cpat_tb[-2:]
-        box_key = (sec_tb, setv_tb, draw_tb, col_tb)
-        tb = tail_box[box_key]
-        tb['rows_present_in_box'].update(rows_)
-        tb['distinct_tails_in_box'].add(tail_of_cpat)
-    
-    for box_k, box_summary in tail_box.items():
-        if len(box_summary['rows_present_in_box']) == 4:
-            valid_tails = {t for t in box_summary['distinct_tails_in_box'] if 1 <= len(t) <= 2}
-            if len(valid_tails) == 1:
-                box_summary['is_cons'] = True
-                box_summary['tail'] = next(iter(valid_tails))
-    
+            box_key = (section, setv, draw, col)
+            box_entry = tail_box[box_key]
+            box_entry['rows'].add(rowtype)
+            tail = raw_digits[-2:] if raw_digits else ''
+            if 1 <= len(tail) <= 2:
+                box_entry['tails'].add(tail)
+
+            for subval, count in orders_counts.items():
+                cform = canon(subval)
+                key_g = (section, setv, draw, col, cform)
+                info = grouping[key_g]
+                info['rows'].add(rowtype)
+                info['patterns'].add(subval)
+                info['hot'].append(hot_level)
+                info['orders_by_row'][rowtype].add(subval)
+                if count > 1:
+                    info['repeat_extras'] += count - 1
+
+    for box_key, box in tail_box.items():
+        rows_present = {r for r in box['rows'] if r != 'CONS_STUB'}
+        if len(rows_present) == 4:
+            tails = {t for t in box['tails'] if t}
+            if len(tails) == 1:
+                box['is_cons'] = True
+                box['tail'] = next(iter(tails))
+
     front_cache = {}
-    for (sec,setv,draw,col,cpat),info in grouping.items():
+    for (sec, setv, draw, col, cpat), info in grouping.items():
         front_key = (sec, setv, draw, col)
-        front_entry = { 'cpat': cpat, 'rowcov': len([r for r in info['rows'] if r != 'CONS_STUB']), 'perm': len(info['patterns']) }
+        entry = {
+            'cpat': cpat,
+            'rowcov': len([r for r in info['rows'] if r != 'CONS_STUB']),
+            'perm': len(info['patterns']),
+        }
         prev = front_cache.get(front_key)
-        if (prev is None or front_entry['rowcov'] > prev['rowcov'] or
-            (front_entry['rowcov'] == prev['rowcov'] and len(cpat) > len(prev['cpat']))):
-            front_cache[front_key] = front_entry
-            
+        if (
+            prev is None
+            or entry['rowcov'] > prev['rowcov']
+            or (entry['rowcov'] == prev['rowcov'] and len(cpat) > len(prev['cpat']))
+        ):
+            front_cache[front_key] = entry
+
     horiz_map = defaultdict(list)
-    for (sec_g, setv_g, draw_g, col_g, cpat_g), info_g in grouping.items():
-        horiz_map[(sec_g, setv_g, draw_g, cpat_g)].append(int(col_g))
-        
-    # --- STEP 3: Build final results by iterating through groups ---
+    for (sec_g, setv_g, draw_g, col_g, cpat_g), _info in grouping.items():
+        try:
+            col_int = int(col_g)
+        except ValueError:
+            col_int = 0
+        horiz_map[(sec_g, setv_g, draw_g, cpat_g)].append(col_int)
+
     results = []
     for (sec, setv, draw, col, cpat), info in grouping.items():
         rowset = {r for r in info['rows'] if r != 'CONS_STUB'}
-        rowcov = len(rowset); perm = len(info['patterns']); hot = max(info['hot']) if info['hot'] else 0
+        rowcov = len(rowset)
+        perm_count_in_box = len(info['patterns'])
+        repeat_extras_in_box = info.get('repeat_extras', 0)
+        hot = max(info['hot']) if info['hot'] else 0
 
-        # Inject stub row for tail consensus boxes (once per box)
-        box_key = (sec, setv, draw, col)
-        box_info = tail_box.get(box_key, {})
-        is_cons_box = box_info.get('is_cons', False)
-        if is_cons_box and not box_info.get('stub_done', False):
-            tail_cpat = box_info.get('tail', '')
-            if tail_cpat:
-                results.append(dict(section=sec, Set=setv, Draw=draw, Column=col, Canonical=tail_cpat, type='consensus_stub', score=CFG.get('stub_consensus_score',3), rows='', mirror=False, straight2=False, straight3=False, single_left=False, cons_full=True, cons_3v=False, cons_stub=True, dom_last=False, dom_pair=(len(tail_cpat)==2), hot=hot, why='consensus_stub'))
-                box_info['stub_done'] = True
+        orders_by_row = info['orders_by_row']
+        modal_counter = Counter()
+        for orders in orders_by_row.values():
+            for order in orders:
+                modal_counter[order] += 1
+        orders_modal_value = ''
+        orders_modal_rows = 0
+        if modal_counter:
+            orders_modal_value, orders_modal_rows = modal_counter.most_common(1)[0]
 
-        # --- Flag Calculation ---
-        straight = (perm == 1); straight2 = (straight and rowcov >= 2); straight3 = (straight and rowcov >= 3)
+        straight = perm_count_in_box == 1
+        straight2 = orders_modal_rows >= 2
+        straight3 = orders_modal_rows >= 3
+
         mirror = any(mirror_pairs.get(d) in cpat for d in cpat if d in mirror_pairs)
-        acols = sorted(horiz_map[(sec, setv, draw, cpat)]); span = 1
-        if acols: 
+
+        acols = sorted(horiz_map[(sec, setv, draw, cpat)])
+        span = 1
+        if acols:
             tmp_run = 1
-            for i2 in range(1, len(acols)):
-                if acols[i2] == acols[i2-1] + 1:
+            for idx in range(1, len(acols)):
+                if acols[idx] == acols[idx - 1] + 1:
                     tmp_run += 1
                 else:
                     span = max(span, tmp_run)
                     tmp_run = 1
             span = max(span, tmp_run)
 
-        single_left = (straight and rowcov == 3 and span == 1)
-        
-        cons_full = is_cons_box or (rowcov==4 and perm==1 and len(cpat) == 3)
-        cons_3v = (cons_full and len(cpat) == 3)
+        single_left = _eval_single_left(rowcov=rowcov, span=span, straight=straight)
 
-        # ----------  DOMINANT LAST SURVIVOR (unique) ----------------
+        box_info = tail_box.get((sec, setv, draw, col), {})
+        is_cons_box = box_info.get('is_cons', False)
+        if is_cons_box and not box_info.get('stub_done', False):
+            tail_cpat = box_info.get('tail', '')
+            if tail_cpat:
+                results.append(dict(
+                    section=sec,
+                    Set=setv,
+                    Draw=draw,
+                    Column=col,
+                    Canonical=tail_cpat,
+                    type='consensus_stub',
+                    score=CFG.get('stub_consensus_score', 3),
+                    rows='',
+                    mirror=False,
+                    straight2=False,
+                    straight3=False,
+                    single_left=False,
+                    cons_full=True,
+                    cons_3v=False,
+                    cons_stub=True,
+                    dom_last=False,
+                    dom_pair=(len(tail_cpat) == 2),
+                    hot=hot,
+                    why='consensus_stub'
+                ))
+                box_info['stub_done'] = True
+
+        perm = perm_count_in_box
+        cons_full = is_cons_box or (rowcov == 4 and straight and len(cpat) == 3)
+        cons_3v = cons_full and len(cpat) == 3
+
         dom_last = False
         dom_pair = False
-        if rowcov >= 3:                                   # current pattern must be stable
-            # walk right→left once per Set-Draw
-            for c_check in reversed(COLS):                # ['1','2', … ,'7']
+        if rowcov >= 3:
+            for c_check in reversed(COLS):
                 key_check = (sec, setv, draw, c_check)
                 best = front_cache.get(key_check)
-                if best and best['rowcov'] >= 3:          # first (right-most) stable column
-                    if c_check == col:                    # ← we're in that column
-                        # longest canonical among all stable patterns in this box
-                        stable_cpats_in_box = [kk[4] for kk,vv in grouping.items() if kk[0:4]==key_check and len(vv['rows'])>=3]
+                if best and best['rowcov'] >= 3:
+                    if c_check == col:
+                        stable_cpats_in_box = [kk[4] for kk, vv in grouping.items() if kk[0:4] == key_check and len(vv['rows']) >= 3]
                         if stable_cpats_in_box:
                             max_len = max(len(p) for p in stable_cpats_in_box)
-                            # find lexicographically largest canonical of that max_len in the box
                             longest_cpats = [p for p in stable_cpats_in_box if len(p) == max_len]
-                            leximax = max(longest_cpats) if longest_cpats else ""
-                            
-                            is_double3_tie = (len(cpat) == 3 and len(set(cpat)) == 2 and len(cpat)==max_len)
-                            
-                            # The current pattern is dominant if it's the longest and lexicographically largest, OR it's a double-3 tieing for longest
+                            leximax = max(longest_cpats) if longest_cpats else ''
+                            is_double3_tie = (len(cpat) == 3 and len(set(cpat)) == 2 and len(cpat) == max_len)
                             if (len(cpat) == max_len and cpat == leximax) or is_double3_tie:
-                                dom_last = (len(cpat) >= 3)
-                                dom_pair = (len(cpat) == 2)
-                    break                                 # stop after front-line column
-        # ------------------------------------------------------------
-        
-        # Gate short canonicals (using flags calculated above)
-        if len(cpat) <= 2:
-            keep_short = (cons_full or dom_pair) # dom_last implies len >= 3
-            if not keep_short:
-                continue
+                                dom_last = len(cpat) >= 3
+                                dom_pair = len(cpat) == 2
+                    break
 
-        # --- Scoring ---
-        # Hot-zone bonuses decay with column age (newest column "1" gets ×2)
+        if len(cpat) <= 2 and not (cons_full or dom_pair):
+            continue
+
         col_factor = 2 if col == '1' else 1
+        extra_len_bonus = ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char']) if info['patterns'] else 0
+        perm_bonus = max(0, perm_count_in_box - 1) * CFG.get('perm_density_per_extra', 0)
+        repeat_bonus = repeat_extras_in_box * CFG.get('repeat_count_per_extra', 0)
 
-        base = (rowcov * CFG['vertical_coverage_per_row'] +
-                span * CFG['horizontal_span_per_col'] +
-                (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) +
-                (CFG['mirror_bonus'] if mirror else 0) +
-                (CFG['straight_2rows_bonus'] if straight2 else 0) +
-                (CFG['straight_3rows_bonus'] if straight3 else 0) +
-                ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char'] if info['patterns'] else 0) +
-                (CFG['single_left_bonus'] if single_left else 0) +
-                (CFG['consensus_full_bonus'] if cons_full else 0) +
-                (CFG['hot_level_1_bonus'] * col_factor if hot == 1 else 0) +
-                (CFG['hot_level_2_bonus'] * col_factor if hot == 2 else 0) +
-                (CFG.get('dominant_last_bonus', 0) if dom_last else 0) +
-                (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0) +
-                (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat)==3 and len(set(cpat))==2) else 0) +
-                (0.5 if (dom_last and perm == 1) else 0)
+        base = (
+            rowcov * CFG['vertical_coverage_per_row'] +
+            span * CFG['horizontal_span_per_col'] +
+            (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) +
+            (CFG['mirror_bonus'] if mirror else 0) +
+            (CFG['straight_2rows_bonus'] if straight2 else 0) +
+            (CFG['straight_3rows_bonus'] if straight3 else 0) +
+            extra_len_bonus +
+            (CFG['single_left_bonus'] if single_left else 0) +
+            (CFG['consensus_full_bonus'] if cons_full else 0) +
+            (CFG['hot_level_1_bonus'] * col_factor if hot == 1 else 0) +
+            (CFG['hot_level_2_bonus'] * col_factor if hot == 2 else 0) +
+            (CFG.get('dominant_last_bonus', 0) if dom_last else 0) +
+            (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0) +
+            (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat) == 3 and len(set(cpat)) == 2) else 0) +
+            (0.5 if (dom_last and straight) else 0) +
+            perm_bonus + repeat_bonus
         )
-        
-        # --- Build Final Record ---
-        why = ['straight' if straight else 'boxed', f'cov{rowcov}']
-        if span > 1: why.append(f'span{span}')
-        if straight2: why.append('vstr2')
-        if straight3: why.append('vstr3')
-        if mirror: why.append('mirror')
-        if single_left: why.append('single_left')
-        if cons_full: why.append('cons_full')
-        if hot > 0: why.append(f'hot{hot}')
-        if dom_last: why.append('dom_last')
-        if dom_pair: why.append('dom_pair')
-        if cons_3v: why.append('cons_3v')
-        
-        results.append(dict(
-            section=sec, Set=setv, Draw=draw, Column=col, Canonical=cpat,
-            type='straight' if straight else 'boxed', score=base, rows=",".join(sorted(rowset)),
-            mirror=mirror, straight2=straight2, straight3=straight3, single_left=single_left,
-            cons_full=cons_full, cons_3v=cons_3v, cons_stub=False, dom_last=dom_last,
-            dom_pair=dom_pair, hot=hot, why='|'.join(why)
-        ))
-        
-    # --- STEP 4: highlight filter ---
-    cutoff_score = CFG['min_score_to_highlight']
-    keepers = { (r['section'], r['Set'], r['Draw'], r['Column'], r['Canonical']) for r in results if r['score'] >= cutoff_score }
 
-    for (r_i, col), mask_val in list(mask_map.items()):
-        rawval = df.at[r_i,col]; newmask = [False]*len(rawval)
-        setv_i = df.at[r_i,'Set']; draw_i = df.at[r_i,'Draw']
-        
-        digit_positions = [idx for idx,ch in enumerate(rawval) if ch.isdigit()]
-        digit_str = ''.join(rawval[idx] for idx in digit_positions)
-        
-        for sub in find_subs(rawval):
-            csub = canon(sub)
-            if (section, setv_i, draw_i, col, csub) not in keepers: continue
-            pos_idx = digit_str.find(sub)
-            while pos_idx != -1:
-                for kk in range(pos_idx, pos_idx + len(sub)):
-                    if kk < len(digit_positions): newmask[digit_positions[kk]] = True
-                pos_idx = digit_str.find(sub, pos_idx+1)
-        
-        raw_digits = digits_only(rawval)
-        if 1 <= len(raw_digits) <= 2:
-            key_full = (section, setv_i, draw_i, col, canon(raw_digits))
-            if key_full in keepers:
-                for k in digit_positions: newmask[k] = True
-        mask_map[(r_i,col)] = newmask
-        
+        why = ['straight' if straight else 'boxed', f'cov{rowcov}']
+        if span > 1:
+            why.append(f'span{span}')
+        if straight2:
+            why.append('vstr2')
+        if straight3:
+            why.append('vstr3')
+        if mirror:
+            why.append('mirror')
+        if single_left:
+            why.append('single_left')
+        if cons_full:
+            why.append('cons_full')
+        if hot > 0:
+            why.append(f'hot{hot}')
+        if dom_last:
+            why.append('dom_last')
+        if dom_pair:
+            why.append('dom_pair')
+        if cons_3v:
+            why.append('cons_3v')
+        if perm_count_in_box > 1:
+            why.append(f'perm{perm_count_in_box}')
+        if repeat_extras_in_box > 0:
+            why.append('repeat_extra')
+
+        results.append(dict(
+            section=sec,
+            Set=setv,
+            Draw=draw,
+            Column=col,
+            Canonical=cpat,
+            type='straight' if straight else 'boxed',
+            score=base,
+            rows=",".join(sorted(rowset)),
+            mirror=mirror,
+            straight2=straight2,
+            straight3=straight3,
+            single_left=single_left,
+            cons_full=cons_full,
+            cons_3v=cons_3v,
+            cons_stub=False,
+            dom_last=dom_last,
+            dom_pair=dom_pair,
+            hot=hot,
+            perm_count_in_box=perm_count_in_box,
+            repeat_extras_in_box=repeat_extras_in_box,
+            hp_span=span,
+            orders_modal_value=orders_modal_value,
+            orders_modal_rows=orders_modal_rows,
+            why='|'.join(why)
+        ))
+
+    cutoff_score = CFG['min_score_to_highlight']
+    keepers = {(r['section'], r['Set'], r['Draw'], r['Column'], r['Canonical']) for r in results if r['score'] >= cutoff_score}
+
+    mask_map = {}
+    for r_i, row in df.iterrows():
+        setv_i = row.get('Set', '')
+        draw_i = row.get('Draw', '')
+        for col in COLS:
+            rawval = str(row.get(col, ''))
+            newmask = [False] * len(rawval)
+            if rawval:
+                digit_positions = [idx for idx, ch in enumerate(rawval) if ch.isdigit()]
+                digit_str = ''.join(rawval[idx] for idx in digit_positions)
+                for sub in find_subs(rawval):
+                    csub = canon(sub)
+                    if (section, setv_i, draw_i, col, csub) not in keepers:
+                        continue
+                    pos_idx = digit_str.find(sub)
+                    while pos_idx != -1:
+                        for kk in range(pos_idx, pos_idx + len(sub)):
+                            if kk < len(digit_positions):
+                                newmask[digit_positions[kk]] = True
+                        pos_idx = digit_str.find(sub, pos_idx + 1)
+                raw_digits = digits_only(rawval)
+                if 1 <= len(raw_digits) <= 2:
+                    key_full = (section, setv_i, draw_i, col, canon(raw_digits))
+                    if key_full in keepers:
+                        for kk in digit_positions:
+                            newmask[kk] = True
+            mask_map[(r_i, col)] = newmask
+
     results.sort(key=lambda x: x.get('score', 0), reverse=True)
     return mask_map, results
 
@@ -343,7 +432,8 @@ def main_cli():
       "section","Set","Draw","Column","Canonical","type","score","rows",
       "mirror","straight2","straight3","single_left",
       "cons_full","cons_3v","cons_stub",
-      "dom_last","dom_pair", "hot","why"
+      "dom_last","dom_pair","perm_count_in_box","repeat_extras_in_box",
+      "hp_span","orders_modal_value","orders_modal_rows","hot","why"
     ]
     with open(args.csv,'w',newline='',encoding='utf-8') as fc:
         w=csv.DictWriter(fc,fieldnames=out_cols); w.writeheader()

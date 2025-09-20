@@ -1,0 +1,496 @@
+Absolutely—this is a smart moment to pause, archive the confusing duplicate extractor, and line up the first round of upgrades so Codex can make fast, low‑risk progress.
+
+Below I’ve (1) validated that the “do‑first” list is directionally right, (2) tightened the order and scope so it reflects everything we’ve discussed, and (3) expanded it into a Codex‑ready implementation plan with precise file paths, patch details, verification steps, and pitfalls to avoid. I’ve also answered your questions about whether to hand Codex my scripts verbatim vs. letting it “interpret,” and how to keep wiring clean.
+
+Assumptions I’m using: your active Stable page wiring matches the AAT9 docs you shared (UI → src/app.py → src/core/stable_pattern_extractor.py → alpha_analytical/stable/__init__.py + feature_config.yml). Artifact paths live under data/outputs/analysis/patterns/<STATE>/. If anything differs locally, call it out before you run the changes.
+
+A. Archive the legacy extractor first (to prevent accidental imports)
+
+Why now: this eliminates 80% of wiring confusion before edits.
+
+Move (don’t delete) the following into a clearly labeled folder:
+
+src/core/module_a_stable_patterns.py → legacy/stable/module_a_stable_patterns.py
+
+scripts/archive/** → legacy/scripts/**
+
+archived/** → legacy/archived/**
+
+If you have two path handlers: keep top‑level utils/path_handler.py (that’s what the Stable page uses) and move src/utils/path_handler.py to legacy/utils/path_handler.py with a README saying “not referenced by app.”
+
+Guardrail:
+
+Add a one‑liner Health readout on the Stable page: print the resolved module and YAML paths that were actually imported (see section E.3 below). This will prevent “wrong file loaded” problems later.
+
+B. “Do‑first” upgrades (tightened & ordered)
+
+These are short, surgical and immediately improve predictive lift without changing the UI flow. I’m expanding your checklist into exact edits.
+
+B1) Consensus tails: lock to Col1/Col2 from raw digit tails
+
+Files: alpha_analytical/stable/__init__.py
+What to change:
+
+In your current analyse() you already build a tail_box out of Col1/Col2 and inject a consensus_stub. Keep that, but make two small fixes:
+
+Strip markers before tailing: compute the tail on digits_only(cell), not the rendered string (so */** never leak into the consensus comparison).
+
+Don’t let deduping hide 1–2 digit tails: even if a cell produced no 3+ digit subs, still register the 1–2 digit tail for consensus voting.
+
+Diff sketch (intent only):
+
+raw = digits_only(str(row.get(col,'')))      # before any subs
+tail = raw[-2:] if raw else ""
+# ... accumulate tails per box only if 1 <= len(tail) <= 2
+
+
+Verify:
+
+On any table with visible “4/4 same tail” (e.g., …7/7/7/7 or …44/44/44/44) in Col1 or Col2, ensure:
+
+consensus_stub appears once in results for that box.
+
+why includes cons_full for the families inside that box.
+
+No stars appear inside the stub canonical.
+
+B2) Straight2/3 = modal order across rows (not just “perm==1”)
+
+Files: alpha_analytical/stable/__init__.py
+Why: Today straight2/3 is true when perm==1 and row‑coverage ≥2/3, but that can be boxed consensus. We want true order matching across ≥2/3 R‑rows.
+
+Patch approach:
+
+When you build grouping[(section,Set,Draw,Col,canonical)], also keep the exact orders seen per row:
+
+grouping[key]['orders_by_row'][rowtype].add(substring)  # not canonical
+
+
+After grouping, for each (…canonical) compute the modal (most frequent) exact order and its row coverage.
+
+all_orders = Counter()
+for r, orders in orders_by_row.items():
+    for o in orders: all_orders[o] += 1
+modal_order, modal_rows = max(all_orders.items(), key=lambda kv: kv[1])
+straight2 = (modal_rows >= 2)
+straight3 = (modal_rows >= 3)
+
+
+Keep type = 'straight' if perm==1 else 'boxed' for baseline, but set the straight2/3 flags from the modal calculation.
+
+YAML impact: none (weights already there; see C).
+
+Verify:
+
+Pick a box where e.g., 038 appears as 038 in R2+R6 and as 083 in R4; expect straight2=True, straight3=False, type='straight' only for the canonical that has perm==1 within that box.
+
+B3) Intra‑box permutation density and repeat extras
+
+Files: alpha_analytical/stable/__init__.py, feature_config.yml
+Why: Multiple permutations of the same 3‑value inside one box is a strong straight pressure; multiple occurrences in a cell is stronger than 1.
+
+Patch:
+
+Stop deduping at the cell level. Today find_subs() returns a set (unique). Add a second path that computes counts by scanning the digit‑only string:
+
+def find_subs_with_counts(cell, min_len=3, max_len=8):
+    s = digits_only(cell)
+    hits = Counter()
+    L = len(s)
+    for i in range(L):
+        for j in range(i+min_len, min(i+max_len+1, L+1)):
+            sub = s[i:j]
+            if is_3value(sub):
+                hits[sub] += 1  # allow overlaps
+    return hits            # returns Counter of exact-order substrings
+
+
+In the main loop, increment:
+
+grouping[key]['patterns'] with exact orders (for perm density).
+
+grouping[key]['repeat_count'] += (hits[sub] - 1) for each occurrence beyond the first in the same cell (for repeat extras).
+
+In scoring, add:
+
+perm_density = max(0, len(info['patterns']) - 1)
+base += perm_density * CFG['perm_density_per_extra']
+base += info.get('repeat_count',0) * CFG['repeat_count_per_extra']
+
+
+YAML (new keys): see section C.
+
+Verify:
+
+A box with 038 and 803 inside the same R‑row should get +1 density; if 038 appears twice in the same cell, add repeat extras.
+
+B4) Rename “span” → “horizontal_persistence” (labels only)
+
+Files: alpha_analytical/stable/__init__.py, HTML builder
+
+Keep the variable name span internally if you like, but change the why token to hp3 (for example) and the UI label to “Horizontal persistence (adjacent columns)”.
+
+if span > 1: why.append(f'hp{span}')
+
+
+Verify: result CSV why strings show hpN instead of spanN.
+
+B5) YAML deltas + training gates
+
+File: alpha_analytical/stable/feature_config.yml
+Apply exactly these (safe) changes:
+
+# existing keys (tuned)
+vertical_coverage_per_row: 2
+horizontal_span_per_col:   1      # shown in UI as "horizontal_persistence"
+mirror_bonus:              1
+
+baseline_straight_bonus:   3      # +1
+baseline_boxed_bonus:      1
+
+straight_2rows_bonus:      2      # +1
+straight_3rows_bonus:      4      # +1
+
+extra_digit_per_char:      1
+single_left_bonus:         4
+
+consensus_full_bonus:      4
+stub_consensus_score:      4
+
+hot_level_1_bonus:         1
+hot_level_2_bonus:         2
+
+dominant_last_bonus:       3      # +1
+dominant_pair_bonus:       1
+dominant_double3_bonus:    1
+
+min_score_to_highlight:    7      # -1 for training runs
+
+# NEW keys (used now or by post-pass)
+perm_density_per_extra:    1
+repeat_count_per_extra:    0.5
+vtrac_family_presence:     1
+cross_section_triple:      2
+progression_across_sets:   1
+last_remaining_3v_bonus:   3
+consensus_family_bonus:    2
+hotzone_family_bonus:      1
+
+
+Wrapper gate for training: run src/core/stable_pattern_extractor.py with min_occ=1 so early family seeds aren’t pruned.
+
+B6) Add debug columns to the main CSV
+
+File: alpha_analytical/stable/__init__.py (result row dict)
+Add fields so we don’t have to infer everything from why:
+
+perm_count_in_box (int)
+
+repeat_extras_in_box (int)
+
+hp_span (int)
+
+consensus_box (bool)
+
+front_line_col (the rightmost stable column for that Set/Draw)
+
+orders_modal_rows (int) – the modal straight coverage across rows
+
+orders_modal_value (string) – the exact modal order (e.g., “038”)
+
+(You already compute most of these; it’s just exposing them.)
+
+Verify: CSV has these columns populated for top rows.
+
+B7) Implement post_pass_families.py (small, standalone)
+
+New file: alpha_analytical/stable/post_pass_families.py
+
+Purpose: Roll the raw rows into family rows so evidence aggregates before you look at winners.
+
+Skeleton (Codex can fill in quickly):
+
+# alpha_analytical/stable/post_pass_families.py
+from collections import defaultdict, Counter
+import pandas as pd
+
+# import your V-TRAC lookup (centralize it under alpha_analytical/vtrac.py)
+from alpha_analytical.vtrac import get_vtrac_index
+
+def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """
+    Aggregates row-level stable patterns into family rows.
+    family_id = vtrac_index (broad)  # fine to start broad
+    Grouping keys: (section, Set, Draw, Column, family_id)
+    """
+    rows = []
+
+    # pre-compute front-line/rightmost stable column per (section, Set, Draw)
+    # using df_scores[dom_last==True] or recompute if needed.
+
+    g = defaultdict(lambda: {
+        "rows_covered": set(),
+        "perm_count_in_box": 0,
+        "repeat_extras_in_box": 0,
+        "hp_span": 0,
+        "hot_hits": 0,
+        "hot_total": 0,
+        "any_straight2": False,
+        "any_straight3": False,
+        "any_consensus": False,
+        "any_dom_last": False,
+        "canonicals": Counter(),
+        "modal_orders": Counter(),
+    })
+
+    for _, r in df_scores.iterrows():
+        canon = str(r["Canonical"])
+        section, Set, Draw, Col = r["section"], r["Set"], r["Column"], r["Draw"]
+        vti = get_vtrac_index(canon)  # map canonical to an index via any rep (OK)
+        if vti is None:
+            continue
+        key = (section, Set, Draw, Col, vti)
+        gg = g[key]
+        gg["rows_covered"].update((str(r["rows"]) or "").split(","))  # crude but workable
+        gg["perm_count_in_box"] = max(gg["perm_count_in_box"], int(r.get("perm_count_in_box", 1)))
+        gg["repeat_extras_in_box"] += float(r.get("repeat_extras_in_box", 0))
+        gg["hp_span"] = max(gg["hp_span"], int(r.get("hp_span", 1)))
+        hot = int(r.get("hot", 0)); gg["hot_total"] += 1; gg["hot_hits"] += (1 if hot>0 else 0)
+        gg["any_straight2"] = gg["any_straight2"] or bool(r.get("straight2", False))
+        gg["any_straight3"] = gg["any_straight3"] or bool(r.get("straight3", False))
+        gg["any_consensus"] = gg["any_consensus"] or bool(r.get("cons_full", False))
+        gg["any_dom_last"] = gg["any_dom_last"] or bool(r.get("dom_last", False))
+        gg["canonicals"][canon] += 1
+        mv = str(r.get("orders_modal_value","")).strip()
+        if mv: gg["modal_orders"][mv] += int(r.get("orders_modal_rows", 0))
+
+    # score per family box
+    out = []
+    for (section, Set, Draw, Col, vti), gg in g.items():
+        hot_density = (gg["hot_hits"] / gg["hot_total"]) if gg["hot_total"] else 0.0
+        rows_cov = len([x for x in gg["rows_covered"] if x])
+        fam_score = (
+            rows_cov * cfg["vertical_coverage_per_row"]
+            + gg["hp_span"] * cfg["horizontal_span_per_col"]
+            + max(0, gg["perm_count_in_box"]-1) * cfg["perm_density_per_extra"]
+            + gg["repeat_extras_in_box"] * cfg["repeat_count_per_extra"]
+            + (cfg["consensus_family_bonus"] if gg["any_consensus"] else 0)
+            + (cfg["last_remaining_3v_bonus"] if gg["any_dom_last"] else 0)
+            + (cfg["hotzone_family_bonus"] if hot_density >= 0.5 else 0)
+            + (cfg["straight_2rows_bonus"] if gg["any_straight2"] else 0)
+            + (cfg["straight_3rows_bonus"] if gg["any_straight3"] else 0)
+        )
+        out.append({
+            "section": section, "Set": Set, "Draw": Draw, "Column": Col,
+            "family_id": vti,
+            "rows_cov": rows_cov,
+            "perm_count_in_box": gg["perm_count_in_box"],
+            "repeat_extras_in_box": gg["repeat_extras_in_box"],
+            "hp_span": gg["hp_span"],
+            "hot_density": round(hot_density,3),
+            "any_straight2": gg["any_straight2"],
+            "any_straight3": gg["any_straight3"],
+            "any_consensus": gg["any_consensus"],
+            "any_dom_last": gg["any_dom_last"],
+            "top_canonicals": ";".join([f"{k}:{v}" for k,v in gg["canonicals"].most_common(3)]),
+            "top_modal_orders": ";".join([f"{k}:{v}" for k,v in gg["modal_orders"].most_common(3)]),
+            "family_score": fam_score,
+        })
+
+    df = pd.DataFrame(out).sort_values(["section","Set","Draw","Column","family_score"], ascending=[True,True,True,True,False]).reset_index(drop=True)
+
+    # (Optional) Cross-section & progression bonuses can be added in a second pass
+    # grouping by (Set,Draw,Column,family_id) across sections, and Set progression Draw=1 across sets.
+
+    return df
+
+
+Emit to: data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_families.csv.
+
+Verify:
+
+For your CT case, the 038 family (V‑TRAC 13) and the 620 family (V‑TRAC 7) should bubble up in Col1/Col2 boxes with higher family_score than the fragmented raw rows.
+
+B8) Implement winner_family_spotlight.py (tiny helper)
+
+New file: alpha_analytical/stable/winner_family_spotlight.py
+
+Purpose: Given a winners list (e.g., ["038","620"]), pull all raw rows and family rows for those families, report top boxes, hot/consensus presence, straight2/3 hits.
+
+Skeleton:
+
+import pandas as pd
+from alpha_analytical.vtrac import get_vtrac_index
+
+def build_winner_spotlight(df_scores: pd.DataFrame, df_families: pd.DataFrame, winners: list[str]) -> pd.DataFrame:
+    rows=[]
+    vtix = {w: get_vtrac_index(w) for w in winners}
+    fam_ids = set(vtix.values()) - {None}
+    # raw matches by canonical family
+    raw = df_scores[df_scores["Canonical"].map(lambda c: get_vtrac_index(str(c)))\
+                    .isin(fam_ids)].copy()
+    raw["is_exact_straight"] = raw.apply(lambda r: str(r.get("orders_modal_value","")) in winners, axis=1)
+    # family matches
+    fam = df_families[df_families["family_id"].isin(fam_ids)].copy()
+
+    # summarize best boxes per winner
+    # (Codex can add rank, top-N per section)
+    return raw.sort_values("score", ascending=False), fam.sort_values("family_score", ascending=False)
+
+
+Emit to:
+
+…/<STATE>_winner_family_spotlight_raw.csv
+
+…/<STATE>_winner_family_spotlight_families.csv
+
+B9) Update wrapper to emit families (+ spotlight when winners provided)
+
+File: src/core/stable_pattern_extractor.py
+
+Changes:
+
+Accept optional winners: list[str] | None = None.
+
+After writing the main CSV, call post_pass_families.build_family_summary(df_scores, CFG) and persist …_families.csv.
+
+If winners, call winner_family_spotlight.build_winner_spotlight() and persist the two spotlight CSVs.
+
+Verify: Stable page shows new file paths in its completion message.
+
+B10) UI “Health” line + quarantine notice
+
+Files: src/app.py (Stable page), docs/AAT9_DOCS
+
+Add a small “Health” expander on the Stable page that prints:
+
+Resolved Stable module path (alpha_analytical.stable.__file__)
+
+Resolved YAML path
+
+Active tables_dir
+
+Path to the output analysis/patterns/<STATE>/
+
+Add a note in docs that legacy paths live under /legacy and are never imported by the page.
+
+C. Quick test checklist (per run)
+
+Health line shows alpha_analytical/stable/__init__.py and the intended YAML path.
+
+CSV includes new debug columns; why uses hpN tokens.
+
+Consensus: boxes with Col1/Col2 4/4 tails emit a consensus_stub and set cons_full=True.
+
+Straight2/3: modal order across rows works (see B2 verification).
+
+Perm density / repeats: forced test cells with multiple perms or repeats score higher.
+
+Families CSV exists; families for winners (e.g., V‑TRAC 13 and 7) appear with sensible family_score.
+
+Spotlight CSVs exist when winners are provided.
+
+No imports from legacy/**.
+
+D. Pitfalls you’ll avoid by following this order
+
+Ambiguous imports: moving legacy code before editing prevents the “wrong extractor loaded” problem.
+
+Dual path handlers: explicitly keep top‑level utils/path_handler.py as authoritative.
+
+Pruning too early: min_occ=1 during training allows family post‑pass to use weak but meaningful echoes.
+
+Consensus contamination: computing tails from digits_only() avoids marker leakage (*, **).
+
+UI drift: debug columns + health line prevent future “why didn’t this score?” confusion.
+
+(These align with the AAT9 Pitfalls notes you shared.)
+
+E. Your questions
+E1) “Should I paste full scripts or let Codex interpret?”
+
+Paste full, minimal scripts where it helps (as I did above), and state the target file path.
+Codex’s main failure modes in this repo were (a) importing the wrong module, and (b) ambiguous file placement. Giving an exact file destination and a small, self‑contained skeleton avoids both. When it’s a small inline edit (like changing a few lines in analyse()), give a diff‑style instruction (“insert this block at point X”) or paste the entire updated function.
+
+E2) Is the “do‑first” list from Agent Mode on the right track?
+
+Yes. The substance and the order were broadly right. I tightened semantics for straight2/3 (modal order), expanded perm density/repeats, and turned “families” and “spotlight” into concrete modules with paths. I also added the Health line and precise archive moves—both are high‑leverage for stability.
+
+E3) Where to surface the Health line?
+
+Add something like this in the Stable page:
+
+import alpha_analytical.stable as stable
+with st.expander("Health (Stable)"):
+    st.write("Module:", stable.__file__)
+    st.write("YAML:", stable.CFG_PATH if hasattr(stable, "CFG_PATH") else "unknown")
+    st.write("tables_dir:", tables_dir)
+    st.write("analysis_dir:", out_dir)
+
+F. What to hand to Codex (copy/paste checklist)
+
+Archive moves (section A), and confirm Stable page never imports from legacy/**.
+
+Edits to alpha_analytical/stable/__init__.py:
+
+Consensus tail patch (B1)
+
+Modal straight2/3 (B2)
+
+find_subs_with_counts() and scoring additions for perm density + repeats (B3)
+
+why rename to hpN (B4)
+
+Add debug columns to each result row (B6)
+
+feature_config.yml apply deltas (B5).
+
+New file: alpha_analytical/stable/post_pass_families.py (skeleton from B7).
+
+New file: alpha_analytical/stable/winner_family_spotlight.py (skeleton from B8).
+
+Edit src/core/stable_pattern_extractor.py to:
+
+Accept winners: list[str] | None = None
+
+Always emit …_families.csv
+
+If winners, emit the two spotlight CSVs
+
+During training runs, call with min_occ=1
+
+Stable page (src/app.py): add the Health expander and surface paths.
+
+Docs: Add a short entry to AAT9_Unified_Changelog.md and, if you touch diagrams, follow AAT9_Diagrams_Guide.md.
+
+G. What to do after Codex commits
+
+Run one known state (e.g., Connecticut4) with winners ["038","620"].
+
+Open:
+
+…_stable_patterns_scores.csv (confirm debug cols)
+
+…_stable_patterns_families.csv (confirm families rank)
+
+…_winner_family_spotlight_*.csv (confirm focus)
+
+Use the validation checklist in C; paste any anomalies back to me and I’ll diagnose.
+
+H. Longer‑horizon (P1.5–P2) items you can queue but not block on
+
+Cross‑section compounding: in post_pass_families.py, add small bonuses when the same family appears in ≥2 sections (Midday/Evening/Combined) and a slightly larger one if in all 3 (keys: vtrac_family_presence, cross_section_triple).
+
+Progression across sets: add progression_across_sets bonus when the family persists from Set3→Set2→Set1 for the same Draw number.
+
+“Hidden‑by‑one” detector: scan 4‑digit windows; if any 3‑digit subwindow is valid by your 3‑value rules, add a small bonus to that family.
+
+Consensus ⇒ doubles trigger: when a box is consensus, derive the 9 “consensus doubles” candidates and note if any appear nearby; give doubles_trigger_bonus in YAML (you can add that key alongside the others when you’re ready).
+
+Final note on pace
+
+None of B1–B10 requires multi‑week effort; these are compact edits with very high signal‑to‑time payoff. If you hand Codex the exact paths and skeletons above, they can complete B1–B6 in one pass, then B7–B9 in the next. The Health line and archive are trivial and should go first.
+
+If you want, I can also supply the updated analyse() function as a whole (with the above changes integrated) so Codex can drop it in verbatim. But given your previous wiring pain, keeping the edits scoped and explicit—as listed here—will minimize risk and make review simpler.
+
+You’re set up to make the Stable Pattern Extractor both predictive and auditable—and this sequence keeps us fast without cutting corners.

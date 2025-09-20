@@ -1,15 +1,16 @@
+
+# existing keys (tuned)
 vertical_coverage_per_row: 2
-horizontal_span_per_col:   1
+horizontal_span_per_col:   1      # shown in UI as "horizontal_persistence"
 mirror_bonus:              1
 
-baseline_straight_bonus:   2
+baseline_straight_bonus:   3      # +1
 baseline_boxed_bonus:      1
 
-straight_2rows_bonus:      1
-straight_3rows_bonus:      3
+straight_2rows_bonus:      2      # +1
+straight_3rows_bonus:      4      # +1
 
 extra_digit_per_char:      1
-
 single_left_bonus:         4
 
 consensus_full_bonus:      4
@@ -18,8 +19,18 @@ stub_consensus_score:      4
 hot_level_1_bonus:         1
 hot_level_2_bonus:         2
 
-min_score_to_highlight:    8
+dominant_last_bonus:       3      # +1
+dominant_pair_bonus:       1
+dominant_double3_bonus:    1
 
-dominant_last_bonus:   2
-dominant_pair_bonus:   1
-dominant_double3_bonus: 1
+min_score_to_highlight:    7      # -1 for training runs
+
+# NEW keys (used now or by post-pass)
+perm_density_per_extra:    1
+repeat_count_per_extra:    0.5
+vtrac_family_presence:     1
+cross_section_triple:      2
+progression_across_sets:   1
+last_remaining_3v_bonus:   3
+consensus_family_bonus:    2
+hotzone_family_bonus:      1

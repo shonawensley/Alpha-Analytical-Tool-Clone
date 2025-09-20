@@ -9,9 +9,13 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
   - Outputs: optional analysis under `data/outputs/analysis/vtrac/<STATE>/` (when applicable)
 
 - Stable Pattern Extractor
-  - Engine: `src/core/stable_pattern_extractor.py` → `alpha_analytical/stable`
+  - Engine: `src/core/stable_pattern_extractor.py` → `alpha_analytical/stable` (post-pass families + spotlight helpers)
   - Inputs: combined tables under `data/outputs/tables/<STATE>/`
   - Outputs: `data/outputs/analysis/patterns/<STATE>/`
+    - Always writes `<STATE>_stable_patterns_scores.csv` + HTML report
+    - Emits `<STATE>_stable_patterns_families.csv` via post-pass aggregation
+    - Winners text box (optional) adds `<STATE>_winner_family_spotlight_{raw,families}.csv`
+  - Dev Health: confirms engine/YAML paths and displays new file paths after a run
 
 - Digit Reduction
   - Engine: `src/core/module_b_digit_reduction.py`

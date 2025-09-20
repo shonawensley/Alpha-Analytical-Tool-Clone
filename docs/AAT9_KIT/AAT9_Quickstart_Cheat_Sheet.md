@@ -31,6 +31,11 @@
 - `alpha_analytical/stable` — YAML‑weighted stable extractor (`feature_config.yml`)
 
 
+
+## Stable Pattern extras
+- After running the Stable page you should see the HTML/CSV under `data/outputs/analysis/patterns/<STATE>/`.
+- A new winners field accepts comma-separated 3-digit numbers; when supplied, the run produces `<STATE>_winner_family_spotlight_raw.csv` and `<STATE>_winner_family_spotlight_families.csv` alongside `<STATE>_stable_patterns_families.csv`.
+- Use Dev Health (Stable) to confirm the engine path, YAML path, and the generated file locations.
 ## Dev Health (fast UI checks)
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 - Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per-state combined tables existence.

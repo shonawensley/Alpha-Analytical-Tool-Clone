@@ -76,6 +76,8 @@ ________________________________________
 File	Purpose
 stable_patterns.csv	One row per canonical substring with ~25 feature columns and a total score. This is the file other modules ingest.
 stable_patterns.html	Colour highlight table & Top 30 scoreboard for human QA.
+optional stable_patterns_families.csv	Per-family aggregation (V-Trac index, row coverage, perm density, consensus flags).
+optional winner_family_spotlight_{raw,families}.csv	Winner-focused breakdowns when winners are supplied via UI.
 (optional) stable_patterns.json	Straight JSON dump — identical data as the CSV but structured (Set → Draw → Column → canonical). Generated only if you turn on the flag.
 A downstream script can glob *_patterns.csv from multiple states, concatenate, and feed XGBoost in five lines of pandas.
 ________________________________________
@@ -1032,3 +1034,5 @@ ________________________________________
 Good luck — the heavy lifting on Module A is essentially done; the next modules are iterative but straightforward. The system really can become a strong daily predictor once the aggregator / ML loop is in place.
 
 </rewritten_file> 
+
+

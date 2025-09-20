@@ -2,6 +2,8 @@ from importlib import import_module
 from pathlib import Path
 import pandas as pd
 
+from alpha_analytical.stable.post_pass_families import build_family_summary
+from alpha_analytical.stable.winner_family_spotlight import build_winner_spotlight
 _ex = import_module("alpha_analytical.stable")
 
 
@@ -13,6 +15,7 @@ def run_stable_pattern_extraction(
     tables_path: Path,
     out_path: Path | str | None = None,
     min_occ: int = 3,
+    winners: list[str] | None = None,
 ):
     """Convenience wrapper around the canonical Stable-Pattern Extractor.
 
@@ -105,6 +108,37 @@ def run_stable_pattern_extraction(
     # ------------------------------------------------------------------
     # Persist CSV if we have results
     # ------------------------------------------------------------------
+
+    families_df = pd.DataFrame()
+    families_path = ""
+    spotlight_raw_path = ""
+    spotlight_family_path = ""
+
+    cfg = getattr(_ex, "CFG", {})
+    if not df_scores.empty:
+        families_df = build_family_summary(df_scores, cfg)
+        if not families_df.empty:
+            families_path_obj = out_path / f"{state}_stable_patterns_families.csv"
+            families_df.to_csv(families_path_obj, index=False)
+            families_path = str(families_path_obj)
+
+    winners = [w.strip() for w in (winners or []) if str(w).strip()]
+    if winners and not df_scores.empty:
+        raw_df, fam_df = build_winner_spotlight(df_scores, families_df, winners)
+        if not raw_df.empty:
+            spotlight_raw_obj = out_path / f"{state}_winner_family_spotlight_raw.csv"
+            raw_df.to_csv(spotlight_raw_obj, index=False)
+            spotlight_raw_path = str(spotlight_raw_obj)
+        if not fam_df.empty:
+            spotlight_family_obj = out_path / f"{state}_winner_family_spotlight_families.csv"
+            fam_df.to_csv(spotlight_family_obj, index=False)
+            spotlight_family_path = str(spotlight_family_obj)
+
+    df_scores.attrs["families_path"] = families_path
+    df_scores.attrs["families_df"] = families_df.head(20) if isinstance(families_df, pd.DataFrame) else None
+    df_scores.attrs["spotlight_raw_path"] = spotlight_raw_path
+    df_scores.attrs["spotlight_family_path"] = spotlight_family_path
+
     if not df_scores.empty:
         df_scores.to_csv(csv_path, index=False)
     else:
