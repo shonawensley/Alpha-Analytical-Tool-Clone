@@ -670,3 +670,6 @@ Combined draw exports
 - Symptom: `PermissionError: [Errno 13]` when running the Aux draw pipeline/CLI because Excel or another editor still has an old CSV open.
 - Fix: Close the spreadsheet before regenerating; the exporter now writes to `data/cleaned/draws/`. Do not drop new CSVs back into `data/cleaned/`—leave that folder for the cleaned Excel sheets only.
 - Reminder: Combined draws remain the source of truth for Aux/Control Center/Blackapple; Midday/Evening wiring should add features without overwriting the combined feed.
+
+Legacy Aux reminder: keep the files listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md (boxed VTRAC reference and analyze_pairs). If Aux starts reporting missing BOXED/VTRAC_DISPLAY, run `python scripts/checks/smoke_aux_vtrac.py` and restore those files before archiving further.
+

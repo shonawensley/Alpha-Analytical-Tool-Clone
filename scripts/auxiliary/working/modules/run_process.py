@@ -8,8 +8,8 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from modules.parse_excel import process_excel_file
-from modules.analyze_pairs import (
+from .parse_excel import process_excel_file
+from .analyze_pairs import (
     calculate_overdue_pairs,
     get_top_overdue_repeating_pairs,
     get_vtrac_statuses,

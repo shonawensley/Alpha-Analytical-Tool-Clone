@@ -1,3 +1,17 @@
+## 2025-09-21 02:00 (UTC) - Aux staging restore
+
+- Context: Aux began failing after the Sept-16 cleanup because the rich boxed VTRAC reference (legacy) was archived. Lazily imported modules fell back to the slim canonical API, so Aux lost `BOXED_LABEL_LOOKUP` and returned empty tables.
+- Change:
+  - Hardened `_aux_working_first()` (stages working modules for full run; restores sys.path and prior bindings).
+  - Converted staged imports to relative (`scripts/auxiliary/working/modules/*`).
+  - Updated refactored bootstrap to locate legacy assets and register them before loading Aux helpers.
+  - Removed ad-hoc sys.path tweaks in refactored helpers; added smoke script `scripts/checks/smoke_aux_vtrac.py`.
+  - Added Aux staging manifest + doc hooks (Quickstart, Live Wiring, Pitfalls).
+- Rationale: Keep Aux draws-only flow stable while maintaining the canonical VTRAC API for Winners and other pages.
+- Impact: Aux runs again (boxed VTRAC grid + overdue panels), Dev Health shows staged bindings, quick smoke script catches regressions.
+- Files/Refs: src/app.py; scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}; modules/module_d_auxiliary_tools/refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}; scripts/checks/smoke_aux_vtrac.py; docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md; Quickstart/LW/Pitfalls updates.
+- Follow-ups: Optional - remove duplicate legacy copies once archive-only loader is validated; consider compat shim so Aux can consume canonical API long-term.
+
 ## 2025-09-19 20:30 (UTC)  Stable Pattern Modal Scoring + Families
 
 - Context: Needed richer Stable outputs (permutation density, family grouping, winner spotlights) to prep for training and operational use.

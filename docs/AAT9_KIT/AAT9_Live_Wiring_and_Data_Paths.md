@@ -65,3 +65,5 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
 - Logic: compute index via `modules.vtrac_reference.get_vtrac_index(winner)`; purple coverage via `get_index_set(index)`; green overlay via `get_index_straights(winner)`; render analyzer-style 3 panes
 - Outputs (HTML): `data/outputs/analysis/winners/<STATE>/<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html`
 - Notes: compact Winners tile remains as fallback when tables are missing
+
+- Legacy dependency: Aux loads boxed VTRAC data via the staged package listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md.

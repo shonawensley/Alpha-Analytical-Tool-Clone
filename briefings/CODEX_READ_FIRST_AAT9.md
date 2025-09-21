@@ -49,3 +49,4 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
   - Medium: day-to-day coding with balanced latency
 - If `gpt-5-codex` is not visible, use `gpt-5 high` and enable the dynamic thinking toggle where supported.
 
+Note: If Aux throws legacy import errors, run python scripts/checks/smoke_aux_vtrac.py and confirm the files listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md.

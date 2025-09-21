@@ -32,3 +32,6 @@ Synthesized from PITFALLS and recent integration experiences.
 ## Aux/BA Using Wrong Data Source
 - Symptom: BA candidates inconsistent; Aux tables empty.
 - Fix: Ensure draws come from `data/cleaned/*_draws.csv` via `modules.aux_loaders`.
+
+\n## Aux Staging Legacy Dependency\n- Symptom: Aux shows `cannot import name BOXED_LABEL_LOOKUP` or Dev Health reports staged modules missing.\n- Fix: Run `python scripts/checks/smoke_aux_vtrac.py`; restore the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` before archiving.
+

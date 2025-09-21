@@ -48,3 +48,5 @@
 
 ## Default model preset (Pro)
 - Select gpt-5-codex (High) after launch; switch to Medium only when you need lower latency.
+- If Aux shows legacy import errors, run `python scripts/checks/smoke_aux_vtrac.py` and confirm the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` are present.
+

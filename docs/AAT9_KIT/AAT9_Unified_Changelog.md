@@ -70,3 +70,6 @@ Conventions: YYYYâ€‘MMâ€‘DD â€” Category â€” Summary â€” Impact â€” Files/Refs
 ## 2025-09-19 – Cleanup – Archived legacy Stable Pattern scripts/run artifacts – Reduced confusion; canonical extractor unchanged – Files: archived/2025-09-19_stable_cleanup/*; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
 ## 2025-09-19 — Stable — Modal straight scoring + families/spotlight exports — Richer signals; winner reports get dedicated CSVs — Files: alpha_analytical/stable/__init__.py, feature_config.yml, post_pass_families.py, winner_family_spotlight.py, src/core/stable_pattern_extractor.py, src/app.py; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
 
+## 2025-09-21 - Aux - Restored staged VTRAC reference & smoke check - Aux page stable again
+- Files: `src/app.py`, `scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}`, `modules/module_d_auxiliary_tools/refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}`, `scripts/checks/smoke_aux_vtrac.py`
+- Notes: hardened Aux staging context, restored legacy boxed reference loader, added smoke script and documentation manifest.

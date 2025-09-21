@@ -9,14 +9,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 import logging
-import sys
-import os
 from .bootstrap_imports import init as _aux_bootstrap_init
-
-# Add the legacy modules to path for imports
-legacy_path = os.path.join(os.path.dirname(__file__), '..', 'core_legacy', 'legacy_modules_backup')
-if legacy_path not in sys.path:
-    sys.path.insert(0, legacy_path)
 
 # --- force-load the rich legacy vtrac_reference as "modules.vtrac_reference" safely ---
 # Initialize legacy imports once

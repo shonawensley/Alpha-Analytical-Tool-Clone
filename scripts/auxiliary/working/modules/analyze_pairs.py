@@ -6,7 +6,7 @@ import os
 from typing import Dict, List, Tuple, Set, Optional
 import pandas as pd
 import numpy as np
-from modules.vtrac_reference import get_vtrac_index, VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP
+from .vtrac_reference import get_vtrac_index, VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP
 
 # Thresholds for different overdue categories
 THRESHOLD_LATE_NONREPEATING = 37  # Red for non-repeating pairs
@@ -277,7 +277,7 @@ def combos_appeared_in_1000(draws_1000: List[str]) -> Set[str]:
     Returns:
         Set of unique 3-digit combos that have appeared
     """
-    from modules.vtrac_reference import BOXED_LABEL_LOOKUP
+    from .vtrac_reference import BOXED_LABEL_LOOKUP
     
     found_combos = set()
     

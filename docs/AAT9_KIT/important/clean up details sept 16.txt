@@ -716,3 +716,5 @@ Why we’re in a good state to move forward
 
 If you want me to finalize the CLI smoke to be fully self-contained — by force-binding top-level utils.path_handler before importing the builder — I can do that next. Otherwise, we’re ready to move on to your
 next feature.
+---
+Note (2025-09-21): Aux relies on the staged legacy modules listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md. Do not archive or relocate those files unless bootstrap_imports.py is updated accordingly.
