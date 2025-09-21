@@ -206,12 +206,25 @@ def _aux_working_first():
             "modules.run_process",
         )
     }
+    old_sys_path = list(sys.path)
     try:
+        # Ensure the staged working root is first on sys.path so that
+        # imports of `modules.*` resolve to scripts/auxiliary/working/modules.
+        if _AUX_WORKING_ROOT in sys.path:
+            try:
+                sys.path.remove(_AUX_WORKING_ROOT)
+            except ValueError:
+                pass
+        sys.path.insert(0, _AUX_WORKING_ROOT)
+
+        # Evict any existing bindings so we get a fresh import from the staged copy
         sys.modules.pop("modules", None)
         for name in prev_children:
             sys.modules.pop(name, None)
         yield
     finally:
+        # Restore original sys.path
+        sys.path[:] = old_sys_path
         if prev_modules is not None:
             sys.modules["modules"] = prev_modules
         else:
@@ -1007,6 +1020,19 @@ def show_aux_page(state: str) -> None:
                     st.caption("draws CSV: " + str(src) + " (" + str(len(dr) if isinstance(dr, list) else 0) + ")")
             except Exception:
                 pass
+            # Show which staged modules are actually bound (debug-only)
+            try:
+                with _aux_working_first():
+                    import modules.analyze_pairs as _ap  # type: ignore
+                    import modules.vtrac_reference as _vr  # type: ignore
+                st.caption("ap: " + str(getattr(_ap, "__file__", "unknown")))
+                st.caption("vr: " + str(getattr(_vr, "__file__", "unknown")))
+                try:
+                    st.caption("vr has VTRAC_DISPLAY: " + str(hasattr(_vr, "VTRAC_DISPLAY")))
+                except Exception:
+                    pass
+            except Exception as _e_dbg:
+                st.caption("aux staged bindings: unavailable: " + str(_e_dbg))
     # Basic styles for working renderer
     st.markdown("""
     <style>
@@ -1027,42 +1053,44 @@ def show_aux_page(state: str) -> None:
     def cached_aux_analysis(state_name: str):
         if not (_AUX_WORKING_AVAILABLE):
             return None
-        # 1) Try CSVs first (selfÃ¢â‚¬â€˜contained; does not touch other tools)
-        draws = _load_draws_from_csv_candidates(state_name)
-        # 2) Fallback to extractor (readÃ¢â‚¬â€˜only) if available
-        if not draws and extract_draw_list is not None:
-            draws = extract_draw_list(state_name, None)
-        # If no draws, attempt to generate cleaned CSVs once from local Excel
-        if not draws:
-            try:
-                local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
-                if os.path.exists(local_excel_path):
-                    # Use staged runner; writes only to data/cleaned
-                    from modules.run_process import run_process
-                    _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
-                    # re-try CSV read to avoid extractor conflicts
-                    draws = _load_draws_from_csv_candidates(state_name)
-            except Exception:
-                pass
-        if not draws:
-            return None
-        draws_100 = draws[:100] if len(draws) >= 100 else draws
-        draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
-        nonrep, rep, pair_status = calculate_overdue_pairs(draws_100)
-        vstat = get_vtrac_statuses(draws_100, draws_1000)
-        top5 = get_top_overdue_repeating_pairs(draws_100, 5)
-        doubles = get_doubles_history({state_name: draws})
-        return {
-            "draws": draws,
-            "draws_100": draws_100,
-            "draws_1000": draws_1000,
-            "nonrep": nonrep,
-            "rep": rep,
-            "pair_status": pair_status,
-            "vstat": vstat,
-            "top5": top5,
-            "doubles": doubles,
-        }
+        # Keep staged working package first during analysis to support lazy imports
+        with _aux_working_first():
+            # 1) Try CSVs first (self-contained; does not touch other tools)
+            draws = _load_draws_from_csv_candidates(state_name)
+            # 2) Fallback to extractor (read-only) if available
+            if not draws and extract_draw_list is not None:
+                draws = extract_draw_list(state_name, None)
+            # If no draws, attempt to generate cleaned CSVs once from local Excel
+            if not draws:
+                try:
+                    local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
+                    if os.path.exists(local_excel_path):
+                        # Use staged runner; writes only to data/cleaned
+                        from modules.run_process import run_process
+                        _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
+                        # re-try CSV read to avoid extractor conflicts
+                        draws = _load_draws_from_csv_candidates(state_name)
+                except Exception:
+                    pass
+            if not draws:
+                return None
+            draws_100 = draws[:100] if len(draws) >= 100 else draws
+            draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
+            nonrep, rep, pair_status = calculate_overdue_pairs(draws_100)
+            vstat = get_vtrac_statuses(draws_100, draws_1000)
+            top5 = get_top_overdue_repeating_pairs(draws_100, 5)
+            doubles = get_doubles_history({state_name: draws})
+            return {
+                "draws": draws,
+                "draws_100": draws_100,
+                "draws_1000": draws_1000,
+                "nonrep": nonrep,
+                "rep": rep,
+                "pair_status": pair_status,
+                "vstat": vstat,
+                "top5": top5,
+                "doubles": doubles,
+            }
     
     if st.button("Run Auxiliary Tools Analysis", type="primary"):
         with st.spinner(f"Running auxiliary analysis for {state}..."):

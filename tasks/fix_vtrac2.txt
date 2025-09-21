@@ -1,0 +1,235 @@
+You’re right to pause here. The symptoms you pasted line up with two intertwined issues:
+
+Import binding drift (Aux is sometimes binding to the project modules/vtrac_reference.py, which intentionally does not export VTRAC_DISPLAY/BOXED_LABEL_LOOKUP, instead of the staged legacy file that does).
+
+Legacy reference location drift (your refactored Aux helpers still try to load vtrac_reference.py from core_legacy/legacy_modules_backup, but the rich legacy copy was moved to another folder; when that path isn’t found they soft‑fail to stubs, which then look like “no draws” even though CSVs exist).
+
+The debug you captured confirms both:
+
+Red banner lines such as:
+cannot import name 'VTRAC_DISPLAY' from 'modules.vtrac_reference' (C:\dev\Alpha-Analytical-Tool\modules\vtrac_reference.py)
+show Python bound the canonical project module (which excludes BOXED constants), not the staged legacy module.
+
+Failed to import legacy modules: No module named 'vtrac_reference' is the refactored bootstrap falling back because it can’t find the legacy file where it expects it.
+
+Good news: your data looks fine. For Aux and Control Center the canonical data contract is still data/cleaned/*_draws.csv (combined, newest‑first), and BA/Control Center already read those (that’s why your doubles debug prints look healthy). This is documented as the canonical wiring for Aux+BA and Control Center; the combined tables are only for V‑TRAC/Stable/DR.
+
+Below is a single-page, surgical plan you can hand to Codex (or follow yourself). It keeps the app stable, restores Aux immediately, and adds guardrails so this doesn’t bite you again.
+
+A. What broke and why it was hard to see
+
+Two V‑TRAC APIs now exist by design:
+
+Canonical modules/vtrac_reference.py (lean; no VTRAC_DISPLAY/BOXED_LABEL_LOOKUP) to support newer Winners/Analyzer paths.
+
+Legacy/staged reference (rich; has BOXED constants) that Aux still needs.
+
+During cleanup, the rich legacy file was moved/archived, while refactored Aux bootstrap still points to the old folder. At runtime:
+
+Early imports may succeed, but lazy imports inside analyze_pairs/helpers re‑import modules.vtrac_reference later and bind to the canonical one. That’s why you saw both “works / fails” behaviors depending on timing.
+
+Because Aux’s helpers are coded to soft‑fallback on import failure (to avoid crashing the app), the user‑visible message devolved into “No state data files found”, which misdirected attention to CSV paths even though the real cause was import binding.
+
+B. The minimal, safe fix (5 tiny changes)
+
+Goal: Make Aux deterministically bind to the staged legacy package for the entire analysis window, and make the staged package self‑contained so it won’t hop to the project module even if someone changes sys.path later.
+
+The patches below are deliberately small and reversible. They do not touch V‑TRAC/Stable/DR/BA logic or the combined tables pipeline. Aux continues to use data/cleaned/*_draws.csv.
+
+1) Keep staged working package first for the entire Aux run
+
+File: src/app.py
+
+Strengthen the _aux_working_first() context:
+
+insert(0, _AUX_WORKING_ROOT) on enter and restore the entire sys.path on exit.
+
+Evict sys.modules["modules"] and its children on enter; restore any saved binding on exit.
+
+Wrap the whole Aux cached_aux_analysis(...) body in _aux_working_first() (not only the import lines) so that late imports inside analyze_pairs also resolve to the staged package.
+
+Your screenshot shows Cursor already made a version of this change. Keep it. Verify the finally restores sys.path[:] = old_sys_path and re‑inserts the previous modules binding if it existed.
+
+2) Make staged imports relative so they can’t hop away
+
+Files (staged package only — the ones under scripts/auxiliary/working/modules/):
+
+In any staged module that currently says
+from modules.vtrac_reference import ...
+change to
+from .vtrac_reference import ...
+
+In staged modules that import siblings (e.g., analyze_pairs, vtrac_utils), prefer
+from .analyze_pairs import ... (relative)
+instead of relying on ambient sys.path.
+
+This locks the staged package to itself and prevents it from “finding” the project’s canonical modules package by accident later.
+
+3) Fix the legacy bootstrap for the refactored Aux helpers
+
+Files: modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py and friends (boxed_vtrac.py, indicators.py)
+
+Teach the bootstrap to look in both (first match wins):
+
+modules/module_d_auxiliary_tools/core_legacy/legacy_modules_backup/
+
+modules/module_d_auxiliary_tools/legacy_2/modules/
+
+Optionally, archived/vtrac_refs/ if that’s where the rich copy now lives.
+
+When you locate vtrac_reference.py (rich copy), explicitly register it as:
+
+sys.modules["modules.vtrac_reference"] = vr_mod
+sys.modules["vtrac_reference"] = vr_mod  # for 'from vtrac_reference import ...'
+
+
+so both absolute and bare imports succeed.
+
+This cures the “Failed to import legacy modules: No module named 'vtrac_reference'” path immediately, without moving files around.
+
+4) Correct the Aux extractor’s draws directory logic (one line, big win)
+
+File: modules/module_d_auxiliary_tools/refactored/extractor.py
+
+Default search order should be:
+
+data/cleaned/draws/ (new canonical location for combined & session files)
+
+fallback data/cleaned/
+
+fallback data/processed/draws/ (legacy caches)
+
+Also fix the filename derivation to strip only a trailing “4”, not every “4” in the name:
+
+state_csv = data_root / f"{state.removesuffix('4')}_draws.csv"
+# or: f"{state[:-1] if state.endswith('4') else state}_draws.csv"
+
+
+(The current replace('4','') will turn “Florida4” into “Flori da”.)
+
+Aux and BA are supposed to read data/cleaned/*_draws.csv (combined, newest‑first). Keep that contract; don’t wire per‑session files into Aux yet.
+
+5) Add two Dev‑Health proofs in Aux (no logic change)
+
+File: src/app.py (Aux page under your “Show Dev Health” checkbox)
+
+Print:
+
+the bound file paths for modules.analyze_pairs.__file__ and modules.vtrac_reference.__file__
+
+hasattr(modules.vtrac_reference, "VTRAC_DISPLAY") and hasattr(..., "BOXED_LABEL_LOOKUP")
+
+the draws CSV found: data\cleaned\draws\<STATE>_draws.csv (N)
+
+You already have a version of this — keep it. It’s the fastest way to see mis‑binding in the future.
+
+C. Exactly what you’ll see after the fix
+
+Aux page:
+
+Dev Health ➜
+ap: ...\scripts\auxiliary\working\modules\analyze_pairs.py
+vr: ...\scripts\auxiliary\working\modules\vtrac_reference.py
+vr has VTRAC_DISPLAY: True, BOXED_LABEL_LOOKUP: True
+
+Draws caption shows a combined CSV under data\cleaned\draws\..._draws.csv (1000).
+
+Clicking Run Auxiliary Tools Analysis renders the 35×8 V‑TRAC grid and the overdue‑pairs sections without the red banner.
+
+Control Center:
+
+Doubles/BA panels keep working (they already use draws‑CSV only, by contract). If you ever need to stage working modules in a Control Center block (e.g., a combined view that calls the staged analyzer), wrap that block in the same context used on the Aux page.
+
+D. About that small Cursor edit you flagged
+
+The changes you pasted (staging _AUX_WORKING_ROOT, evicting sys.modules["modules"], adding Dev Health captions) are in the right direction.
+
+Two caveats to confirm in your local diff:
+
+The finally: does restore the entire sys.path list (sys.path[:] = old_sys_path) and reinstates the prior modules binding if it existed.
+
+The whole analysis function runs under _aux_working_first() (not just the import lines), otherwise a lazy import inside analyze_pairs can still re‑bind to the project module.
+
+If those two are true (your screenshots suggest they are), keep Cursor’s change. It won’t affect V‑TRAC/Stable/DR/BA because the context is only used on the Aux page.
+
+E. One‑command preflight you (or Codex) can run before/after
+
+From the repo root (same interpreter the app uses):
+
+python - <<'PY'
+import sys, importlib.util, os
+root = os.path.normpath('scripts/auxiliary/working')
+sys.path.insert(0, root)
+import modules.analyze_pairs as ap, modules.vtrac_reference as vr
+print("ap:", getattr(ap, "__file__", "?"))
+print("vr:", getattr(vr, "__file__", "?"))
+print("has VTRAC_DISPLAY:", hasattr(vr, "VTRAC_DISPLAY"))
+print("has BOXED_LABEL_LOOKUP:", hasattr(vr, "BOXED_LABEL_LOOKUP"))
+PY
+
+
+Expected: both paths under scripts\auxiliary\working\modules\..., and both has ... True.
+If not, the staged imports aren’t winning; revisit steps B‑1 and B‑2.
+
+F. Documentation & guardrails (so we don’t repeat this)
+
+Add/Update docs in docs/AAT9_DOCS/:
+
+Aux Staging Manifest — a short list of legacy files the staged Aux depends on (e.g., rich vtrac_reference.py, any legacy analyze_pairs.py helpers). Link it from the cleanup checklist and the Architecture & Directory Layout doc so future refactors check it before archiving.
+
+Wiring page(s) updates — explicitly state:
+
+Aux + BA read only data/cleaned/*_draws.csv and never the string‑tables; V‑TRAC/Stable/DR read the combined tables.
+
+Keep the BA absolute‑path loader to avoid modules collisions.
+
+Preflight — add a short snippet (like E) to your .codex/preflight.ps1 and reference it from the Architecture doc’s “Preflight (Windows)” section so an AI can self‑check binding and CSV inventory in seconds.
+
+G. Multiple clones / “which copy is the truth”?
+
+Pick the copy under C:\dev\Alpha-Analytical-Tool as source‑of‑truth, then:
+
+git checkout -b fix/aux-staging-legacy-refs
+# apply the 5 changes in section B
+git add -A
+git commit -m "aux: stage working pkg for full run; relative imports; bootstrap multi-path; extractor draws dir; dev-health proofs"
+git push -u origin fix/aux-staging-legacy-refs
+
+
+Open a PR to main. This keeps Cursor/Codex from silently diverging between machines and makes review/rollback trivial.
+
+H. Why this plan is safe
+
+Scope‑limited: Only Aux page staging, two refactored helpers, and one extractor default — no changes to V‑TRAC, Stable, Digit Reduction, BA, or the combined tables builder.
+
+Data‑contract‑aligned: Aux/BA continue to read data/cleaned/*_draws.csv; no session wiring yet.
+
+Reversible: Every change is a tiny hunk in a known file; a single git revert (or “discard hunk”) restores prior state.
+
+Visible proofs: Dev‑Health captions and the shell preflight show exactly which modules are bound and where draws come from.
+
+I. Quick checklist you can hand to Codex
+
+src/app.py
+
+Ensure _aux_working_first() stages _AUX_WORKING_ROOT at sys.path[0] and restores exactly.
+
+Wrap cached_aux_analysis entirely with _aux_working_first().
+
+Keep Dev Health captions (paths + hasattr).
+
+scripts/auxiliary/working/modules/
+Convert any from modules... to relative from . ....
+
+modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py
+Search/resolve rich vtrac_reference.py from multiple candidate folders and register it as both vtrac_reference and modules.vtrac_reference.
+
+modules/module_d_auxiliary_tools/refactored/extractor.py
+Default to data/cleaned/draws/; fix trailing “4” handling.
+
+Docs
+Add the Aux Staging Manifest; update wiring statements to reaffirm the draws contract; add the preflight snippet.
+
+Run the app, flip Show Dev Health, confirm staged paths and combined CSV, press Run Auxiliary Tools Analysis — the banner should be gone and the tables render.
+
+If you want, I can also draft the tiny code diffs for each file as patch blocks; but the bullets above are enough for Codex to implement precisely.

@@ -1,0 +1,265 @@
+You’re right to be cautious—this was a small change hidden in a haystack. The short version is: the September cleanup archived the legacy V‑TRAC reference that Aux still depends on, and Aux sometimes ends up importing the canonical (slimmed) modules.vtrac_reference instead of the staged/legacy one. That’s why you see cannot import name 'VTRAC_DISPLAY' / missing BOXED_LABEL_LOOKUP and why Aux falls back to “empty” results (e.g., “No state data files found”). This matches Codex’s diagnosis and lines up with the app wiring described in your AAT9 docs (Aux runs from staged modules and draws CSVs; non‑Aux pages use the canonical API and the combined tables) .
+
+Below is an execution plan that fixes Aux immediately without breaking Winners Full / V‑TRAC / Digit Reduction—and adds guardrails so this doesn’t happen again.
+
+0) What broke & why it was hard to spot
+
+Two V‑TRAC surfaces exist by design:
+
+Canonical API at modules/vtrac_reference.py used by non‑Aux pages (Winners Full, etc.). During cleanup it was slimmed and no longer exports VTRAC_DISPLAY / BOXED_LABEL_LOOKUP. This is intentional. Winners Full still works with it.
+
+Aux staged stack under scripts/auxiliary/working/modules/... still expects the richer legacy reference (with the boxed constants). Some imports inside Aux (e.g., late imports inside analyze_pairs) slipped to the canonical one at runtime or couldn’t find the legacy one after it was archived, producing the errors you’re seeing. Aux is the only page affected.
+
+Path/data was a red herring. Aux and Control Center consume data/cleaned/*_draws.csv (or data/cleaned/draws/* if you moved them), while V‑TRAC/Stable/DR consume the combined tables. That split is documented, and Dev Health was added exactly to make these issues visible (cwd, python path, module __file__, and CSV locations). The “draws vs cleaned” confusion isn’t the root cause here.
+
+1) Decision you should make (copy vs link)
+
+We have two clean options to restore Aux:
+
+Option A — Restore a copy of the legacy vtrac_reference.py back to the tree where Aux expects it (the pre‑cleanup core_legacy/legacy_modules_backup path). Fastest, least risky. Keeps Aux self‑contained; minimal changes to code.
+
+Option B — Keep archive, adjust bootstrap so Aux imports the legacy reference from archived/vtrac_refs/…. Avoids duplication, but requires a small bootstrap change and careful path handling.
+
+Given you want the safest path and you’re in checkpoint mode, I recommend Option A now, then do Option B later when things are calm.
+
+2) Fix Track A — Restore Aux staging (copy‑back + import hardening)
+A1. Restore the legacy reference files (copy‑back)
+
+From your archive folder (e.g., archived/vtrac_refs/), copy the legacy vtrac_reference.py file(s) that contain the boxed constants back to:
+
+modules/module_d_auxiliary_tools/core_legacy/legacy_modules_backup/vtrac_reference.py
+
+
+This is the path the refactored Aux helper (refactored/boxed_vtrac.py) expects per the integration notes. After copy‑back, staged imports like from modules.vtrac_reference import VTRAC_DISPLAY (when under _aux_working_first() context) resolve again.
+
+Why this is safe: non‑Aux pages never import from core_legacy/legacy_modules_backup. Winners Full and V‑TRAC Analyzer remain on the canonical API and the combined tables pipeline.
+
+A2. Make Aux bootstrap resilient (so future cleanups can’t break it)
+
+Open modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py (or the helper your refactored Aux code uses to load legacy bits) and replace its “legacy import” block with this dual‑path resolver:
+
+# modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py
+from pathlib import Path
+import sys, importlib
+
+def import_legacy_vtrac_reference():
+    repo = Path(__file__).resolve().parents[3]  # <repo>/modules/module_d_auxiliary_tools/refactored/...
+    # 1) Preferred: core_legacy/legacy_modules_backup (staged copy restored by Option A)
+    core_legacy = repo / 'module_d_auxiliary_tools' / 'core_legacy' / 'legacy_modules_backup'
+    # 2) Fallback: archived/vtrac_refs (post‑cleanup archives)
+    archived = repo.parents[2] / 'archived' / 'vtrac_refs'  # <repo>/archived/vtrac_refs
+
+    # Try both locations without leaking them globally
+    for base in (core_legacy, archived):
+        vr = base / 'vtrac_reference.py'
+        if vr.exists():
+            sys.path.insert(0, str(base))
+            try:
+                mod = importlib.import_module('vtrac_reference')
+                return mod  # has VTRAC_DISPLAY, BOXED_LABEL_LOOKUP, etc.
+            finally:
+                # remove the temp path so we don't affect other pages
+                try: sys.path.remove(str(base))
+                except ValueError: pass
+
+    raise ImportError("Legacy vtrac_reference.py not found in core_legacy or archived/vtrac_refs")
+
+
+…and in refactored/boxed_vtrac.py (or the site that uses the boxed data):
+
+from .bootstrap_imports import import_legacy_vtrac_reference
+
+# Safely obtain the legacy reference (boxed constants)
+_legacy_vr = import_legacy_vtrac_reference()
+VTRAC_DISPLAY       = getattr(_legacy_vr, 'VTRAC_DISPLAY')
+BOXED_LABEL_LOOKUP  = getattr(_legacy_vr, 'BOXED_LABEL_LOOKUP')
+get_vtrac_index     = getattr(_legacy_vr, 'get_vtrac_index', None)
+
+
+This keeps Aux aligned with the legacy boxed constants regardless of future archiving.
+
+A3. Neutralize “late imports” inside Aux that hop to canonical
+
+If scripts/auxiliary/working/modules/analyze_pairs.py does late imports like:
+
+# inside a function
+from modules import vtrac_reference as vr
+
+
+change them to import once at module top (right after you ensure _AUX_WORKING_ROOT is on sys.path) or use the boxed layer you just wired:
+
+# top of analyze_pairs.py (staged)
+from modules.module_d_auxiliary_tools.refactored.boxed_vtrac import VTRAC_DISPLAY, BOXED_LABEL_LOOKUP
+
+
+That prevents accidental resolution to the canonical modules/vtrac_reference.py. Your Aux integration doc already calls out the staged path + import isolation; this just makes it explicit inside the working module.
+
+A4. Keep the draws loader tolerant
+
+Your “Aux Official” and data‑flow docs say Aux/Control Center must use data/cleaned/*_draws.csv (optionally data/cleaned/draws/* after the move) with fallbacks to data/processed/draws/*. Confirm your loader still tries both, in this priority:
+
+data/cleaned/draws/<State>_draws.csv
+data/cleaned/<State>_draws.csv
+data/processed/draws/<State>_draws.csv
+
+
+This aligns with the app‑flow and Aux integration docs. If you see a “No state data files found” banner after the V‑TRAC fix, that path list is the thing to check.
+
+3) Fix Track B — Docs & guardrails (so this never surprises you again)
+B1. Add an Aux Staging Manifest (new doc)
+
+Create docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md with:
+
+Required live files for Aux:
+
+scripts/auxiliary/working/modules/analyze_pairs.py
+
+modules/module_d_auxiliary_tools/refactored/{boxed_vtrac.py, bootstrap_imports.py}
+
+modules/module_d_auxiliary_tools/core_legacy/legacy_modules_backup/vtrac_reference.py (must export VTRAC_DISPLAY, BOXED_LABEL_LOOKUP)
+
+Where they can alternatively live (archives) and how bootstrap finds them.
+
+The “don’t touch these” note during cleanup.
+
+Link this manifest from your Architecture & Directory Layout and the App Flow Addendum (“Legacy References” section) so future cleanups check it.
+
+B2. Update Live Wiring & Pitfalls (existing docs)
+
+In App Flow (Part 3) and Aux Official, add a one‑liner:
+“Aux uses the legacy boxed V‑TRAC reference; non‑Aux pages use the canonical API. Do not archive the legacy boxed reference without updating bootstrap_imports.”
+
+In Integration & Hardening and System Health, add “Aux V‑TRAC health” checks (see next section).
+
+B3. Add a tiny preflight/smoke for Aux
+
+Put this as scripts/checks/smoke_aux_vtrac.py and link it from Roadmap (Winners Logging & Health) so you (or any AI) can run it in seconds.
+
+# scripts/checks/smoke_aux_vtrac.py
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+AUX  = ROOT / 'scripts' / 'auxiliary' / 'working'
+sys.path.insert(0, str(AUX))
+
+print(f"[cwd] {Path.cwd()}")
+print(f"[AUX] {AUX.exists()} {AUX}")
+
+# force staged imports
+import importlib
+mod = importlib.import_module('modules.vtrac_reference')
+print("[vr.__file__]", getattr(mod, '__file__', None))
+print("[has] VTRAC_DISPLAY:", hasattr(mod, 'VTRAC_DISPLAY'), 
+      "BOXED_LABEL_LOOKUP:", hasattr(mod, 'BOXED_LABEL_LOOKUP'))
+
+
+Expected: staged file path and both flags True.
+
+4) Fix Track C — Verification inside the app
+
+Your “System Health” expanders are perfect for this. Add two lines to the Aux expander:
+
+# in src/app.py Aux System Health block
+try:
+    import modules.vtrac_reference as vr
+    st.caption(f"Aux vtrac_reference: {getattr(vr, '__file__', None)} | "
+               f"VTRAC_DISPLAY={hasattr(vr, 'VTRAC_DISPLAY')} | "
+               f"BOXED_LABEL_LOOKUP={hasattr(vr, 'BOXED_LABEL_LOOKUP')}")
+except Exception as e:
+    st.caption(f"Aux vtrac_reference import failed: {e}")
+
+
+Now the expander tells you instantly whether the boxed legacy reference is loaded (no more silent fallbacks). This mirrors the health‑helper intent you already documented and keeps “mystery bugs” from eating hours.
+
+Also validate:
+
+Control Center still shows BA rows correctly. BA is explicitly wired via absolute‑path loader and consumes only data/cleaned/*_draws.csv; it’s isolated from the V‑TRAC reference change.
+
+V‑TRAC Analyzer / Digit Reduction / Stable Pattern pages still read the combined tables via utils.path_handler, unaffected by Aux.
+
+5) Optional—but recommended—cleanup once green
+
+If you want to eliminate duplication after Aux is stable:
+
+Switch to Option B: keep the legacy file only under archived/vtrac_refs, and rely on the dual‑path bootstrap_imports to load from there. Update the Aux Staging Manifest to say “archive‑only” and remove the copy from core_legacy/legacy_modules_backup. (Do this in a small PR and smoke it with the script above.)
+
+Longer‑term: introduce a tiny compat layer (e.g., modules/module_d_auxiliary_tools/refactored/compat_vtrac.py) that adapts the canonical API to expose VTRAC_DISPLAY / BOXED_LABEL_LOOKUP (computed), then migrate Aux to import from the compat layer. That’s the cleanest path to a truly unified V‑TRAC API—but it’s optional and can wait.
+
+6) Git & checkpoint hygiene (beginner‑safe)
+
+Create a branch, e.g., fix/aux-staging-vtrac-restore.
+
+Do Option A (copy‑back), adjust bootstrap, change the late import(s) if any, add the smoke script and the two System‑Health lines.
+
+Run:
+
+python scripts/checks/smoke_aux_vtrac.py → expect both boxed flags = True.
+
+Launch app → Auxiliary Tools → enable Show Dev Health. Confirm the staged path and boxed flags show up.
+
+Visit Control Center and a V‑TRAC page to confirm they’re unchanged.
+
+Commit with message:
+fix(aux): restore legacy boxed vtrac_reference for staged Aux + dual-path bootstrap; add health checks
+
+Update:
+
+docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md (new).
+
+Touch App Flow Addendum / Architecture Layout sections with one line about the legacy boxed dependency for Aux.
+
+Merge once green.
+
+7) Why this won’t regress again
+
+Explicit manifest lists files that must remain for Aux to run. (Prior docs implied the separation but didn’t enumerate filenames.)
+
+Health expander now shows which vtrac_reference is in use and whether boxed constants exist, so you’ll see a problem in seconds rather than hours.
+
+Dual‑path bootstrap continues to work even if someone archives the legacy file again.
+
+Absolute‑path BA loader + CSV‑only contract keep Control Center stable and isolated.
+
+8) Quick answers to your bigger questions
+
+“Are we re‑introducing duplication/clutter?”
+Temporarily yes (Option A), by design, to stop the bleeding. The permanent, tidy state is Option B (archive + bootstrap) or a small compat layer so Aux can consume the canonical API. The manifest + smoke test prevent accidental re‑breaks either way.
+
+“Why didn’t docs save us?”
+Your docs do describe the two‑track setup (Aux vs. canonical) and the data split, and they add System Health helpers. What was missing was a concrete file list (“these exact legacy files are still live”). Adding the manifest closes that gap.
+
+“What about the draws folder rename?”
+Aux/BA are meant to read data/cleaned/*_draws.csv (and can also check data/cleaned/draws/*)—that’s already in the app‑flow and Aux docs. Ensure the loader tries both, as above. This is independent of the V‑TRAC reference issue.
+
+9) Copy‑paste checklists
+
+Checkpoint run (5 minutes):
+
+ Copy legacy vtrac_reference.py back under modules/module_d_auxiliary_tools/core_legacy/legacy_modules_backup/.
+
+ Patch bootstrap_imports.py with the dual‑path resolver above.
+
+ If needed, change Aux staged modules to import boxed_vtrac (top‑level import, no late imports).
+
+ Ensure draws loader checks data/cleaned/draws/ and data/cleaned/ (then data/processed/draws/).
+
+ Add the two System‑Health lines to the Aux page.
+
+ Run python scripts/checks/smoke_aux_vtrac.py → both boxed flags True.
+
+ Launch app → Aux page → Show Dev Health → confirm staged path + flags.
+
+ Open Control Center → BA table renders; V‑TRAC/DR/Stable pages OK.
+
+Docs updates (10 minutes):
+
+ New AAT9_Aux_Staging_Manifest.md (list & locations).
+
+ Add one‑liner to App Flow Addendum + Architecture Layout re: legacy boxed dependency for Aux.
+
+ Link the smoke script from Winners Logging & Health Helpers and System Health.
+
+If you want me to choose: I recommend Option A now (copy‑back), verify green with the steps above, then—when you’re comfortable—switch to Option B (archive + bootstrap only) to remove the duplication. Both options keep Winners Full, V‑TRAC Analyzer, Digit Reduction, and Blackapple exactly as documented.
+
+If you do have a second repo where Aux was working, that’s a great sanity check: compare the legacy vtrac_reference.py there with the one you restore now—they should match the boxed constants Aux expects. After that, the health panel plus the smoke script will make this class of issue trivial to spot in the future._there with the one you restore now—they should match the boxed constants Aux expects. After that, the health panel plus the smoke script will make this class of issue trivial to spot in the future.

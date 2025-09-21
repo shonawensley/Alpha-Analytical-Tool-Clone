@@ -1,0 +1,207 @@
+I understand your goal
+You want a clean baseline where the Aux Tools page works exactly as before using the “combined” draws (<State>_draws.csv). The new Midday/Evening files can be wired later.
+Right now Aux shows “Working modules unavailable or no draws found” and console shows “cannot import name VTRAC_DISPLAY from modules.vtrac_reference (…\modules\vtrac_reference.py)”.
+Your draws are present and detected (Dev Health shows data\cleaned\draws\Connecticut_draws.csv (1000)), so this is not a data-missing problem; it’s an import binding issue.
+Diagnosis (high confidence)
+Aux is supposed to import the staged working references:
+scripts/auxiliary/working/modules/analyze_pairs.py
+scripts/auxiliary/working/modules/vtrac_reference.py (this is the only place that defines VTRAC_DISPLAY)
+But Python is instead importing the project package modules/vtrac_reference.py (which intentionally does NOT define VTRAC_DISPLAY) → import error → _AUX_WORKING_AVAILABLE=False → “Working modules unavailable or no draws found.”
+Why binding is wrong: the context manager _aux_working_first() evicts sys.modules['modules'] but doesn’t also force sys.path precedence for the working folder during that import window. If anything else has moved PROJECT_ROOT to the front earlier, modules.* resolves to the project package, not the staged one.
+Why this is safe to fix and won’t affect other tools
+Change is isolated to src/app.py, inside the Aux-only import context. We will:
+Temporarily put the staged working root at position 0 in sys.path while importing working modules.*.
+Evict any prior modules.* bindings.
+Restore sys.path and sys.modules exactly afterward.
+V‑TRAC Analyzer, Stable Pattern, Digit Reduction, Blackapple are unaffected (they don’t use this context).
+We do not touch your data generators or any combined-table pipeline.
+Minimal change plan (surgical)
+1) Strengthen _aux_working_first() so the staged folder wins on import
+Add temporary sys.path precedence for _AUX_WORKING_ROOT inside the context, and restore on exit.
+Keep the existing sys.modules eviction/restore.
+2) Visible proof in UI (dev only)
+When “Show Dev Health” is enabled on Aux page, print which files were actually bound for:
+modules.analyze_pairs.__file__
+modules.vtrac_reference.__file__
+If they point to scripts/auxiliary/working/modules/..., we’ve fixed the binding.
+3) No changes to draws handling
+Aux will continue reading <State>_draws.csv (combined). Midday/Evening files are left untouched for later wiring.
+Intended edits (tiny and reversible)
+File: src/app.py
+Edit the existing context manager to stage the working root during Aux imports.
+Proposed edit (core of the change):
+Optional (dev-only caption near existing Aux Dev Health block):
+Why this fixes your exact error
+With the working root forced to the front during the import, modules.vtrac_reference resolves to scripts/auxiliary/working/modules/vtrac_reference.py, which defines VTRAC_DISPLAY. The import succeeds, _AUX_WORKING_AVAILABLE=True, and the page runs.
+Your screenshot’s path in the error (... \modules\vtrac_reference.py) goes away.
+Preflight and safety checks (before any edit)
+From repo root:
+git status -s; verify only src/app.py will be touched.
+Confirm staged files exist:
+scripts/auxiliary/working/modules/analyze_pairs.py
+scripts/auxiliary/working/modules/vtrac_reference.py
+Non-destructive: we won’t touch data or other modules.
+Validation after the edit
+Launch the app from repo root (your usual BAT).
+Aux page:
+Enable Dev Health → verify combined CSV path shows data\cleaned\draws\<State>_draws.csv (1000).
+Verify the two captions show the staged paths:
+...scripts\auxiliary\working\modules\analyze_pairs.py
+...scripts\auxiliary\working\modules\vtrac_reference.py
+Click “Run Auxiliary Tools Analysis” → expect V‑Trac table and pairs sections to render (no red banner).
+Control Center remains unchanged. If it ever imports staged working code, we can wrap that specific block with the same context later, but it’s not required for Aux to work.
+Rollback plan
+Single-file change. If anything unexpected happens:
+Revert src/app.py to previous commit: git restore src/app.py (or undo the specific hunk).
+No other files touched.
+Confidence
+High. The staged module exists and contains VTRAC_DISPLAY. Your error message proves Python is binding the project module instead. The proposed change deterministically resolves imports to the staged module only inside the Aux page’s import window, then fully restores the environment.
+If you approve, I’ll implement exactly the tiny edit above, run a quick smoke validation, and share the log tail and on‑screen Dev Health paths so you can see the binding is correct.
+
+
+
+
+Short answer
+Yes—Codex’s read aligns with my diagnosis. The app is healthy, the draws exist, and the break is a wiring/import-binding issue on the Aux page, not missing data. My plan directly targets that binding so Aux uses the staged “working” modules (the only ones that define VTRAC_DISPLAY) while leaving everything else untouched.
+What’s actually failing (precise)
+Your console shows: “cannot import name VTRAC_DISPLAY from modules.vtrac_reference (…\modules\vtrac_reference.py)”.
+That path is the project package, which intentionally doesn’t export VTRAC_DISPLAY.
+Aux is supposed to import the staged copies in scripts/auxiliary/working/modules/…, where vtrac_reference.py does export VTRAC_DISPLAY.
+So the import resolver is picking the wrong package named modules during the Aux import window.
+Surgical fix I propose (safe, reversible)
+File to edit: src/app.py
+Change only the Aux-only import context _aux_working_first():
+Temporarily prepend scripts/auxiliary/working to sys.path and evict any prior modules.* bindings before the Aux imports.
+After the imports, restore sys.path and sys.modules exactly as they were.
+This forces modules.vtrac_reference and modules.analyze_pairs to bind to the staged working copies only while the Aux page loads them; other pages (Stable, V‑TRAC Analyzer, Digit Reduction, Blackapple) remain unaffected.
+Exact content of the change (conceptually)
+In _aux_working_first():
+Save old_sys_path = list(sys.path)
+On enter: ensure _AUX_WORKING_ROOT is at index 0 of sys.path; sys.modules.pop('modules') and its children
+On exit: sys.path[:] = old_sys_path; restore any saved sys.modules entries
+Optional, dev-only (for instant proof)
+When “Show Dev Health” is on in the Aux page, display:
+modules.analyze_pairs.__file__
+modules.vtrac_reference.__file__
+You’ll see both paths under scripts\auxiliary\working\modules\… once fixed.
+Why this is safe
+Scope: one context manager in src/app.py; Aux page only.
+No changes to data pipelines, combined tables, Stable, V‑TRAC, Digit Reduction, or BA.
+Fully reversible (single-file edit).
+Matches your baseline goal: Aux continues to use <State>_draws.csv combined files; Midday/Evening wiring comes later.
+Preflight I’ll run (print-only)
+From repo root:
+git status/branch/remotes (read-only)
+Verify the staged files exist:
+scripts/auxiliary/working/modules/analyze_pairs.py
+scripts/auxiliary/working/modules/vtrac_reference.py
+Confirm combined draws exist for your test state in data/cleaned/draws/<State>_draws.csv.
+Success criteria after the edit
+Aux Dev Health shows:
+BA module path under modules\blackapple.py
+draws CSV: data\cleaned\draws\Connecticut_draws.csv (1000)
+staged imports file paths:
+…scripts\auxiliary\working\modules\analyze_pairs.py
+…scripts\auxiliary\working\modules\vtrac_reference.py
+Clicking “Run Auxiliary Tools Analysis” renders:
+V‑TRAC table (no red banner)
+Overdue Pairs sections populated
+Rollback
+One file touched. If anything looks off: git restore src/app.py.
+If you approve, I’ll make exactly this tiny edit, add the optional Dev Health captions, and smoke it.
+ok im going to trust you and say move forward with your comprehsive pla i hope i dot regret this
+
+I'll start by running a quick preflight to confirm we're at the repo root and to show the current git status/branch/remotes, then I'll strengthen the Aux import context in src/app.py to stage the working modules path, and add a small Dev Health caption to show which module files are bound. Then I'll check for linter errors on that file.
+
+Proceeding to implement the minimal, reversible edit to src/app.py and add Dev Health captions. I'll make only the scoped changes described.
+proceed optimally
+
+I updated the Aux import context to force the staged working path to the front of sys.path during Aux imports. Next, I'll add Dev Health captions in the Aux page to show which files are actually bound for analyze_pairs and vtrac_reference, then run a quick linter check on src/app.py.
+
+I strengthened the Aux import context in src/app.py to force scripts/auxiliary/working to the front of sys.path during Aux imports and restore it afterward. This ensures modules.vtrac_reference resolves to the staged file that defines VTRAC_DISPLAY.
+I added Aux Dev Health captions to show the actual bound files for modules.analyze_pairs and modules.vtrac_reference, plus a check that VTRAC_DISPLAY exists.
+Linter check on src/app.py passed.
+Shell verification shows bindings are correct:
+ap → scripts\auxiliary\working\modules\analyze_pairs.py
+vr → scripts\auxiliary\working\modules\vtrac_reference.py
+has VTRAC_DISPLAY → True
+You can now launch the app and run the Aux page:
+Turn on “Show Dev Health” on Aux; you should see the staged paths and the draws CSV path (combined).
+Click “Run Auxiliary Tools Analysis”; the red banner should be gone and the tables should render.
+Impact:
+Only src/app.py changed.
+No data pipelines touched.
+Other tools (Stable, V‑TRAC, Digit Reduction, BA) unaffected.
+If anything looks off, I can revert this single edit.
+d completely 
+
+Sure I can trust you because like I told you the Air isn't showing how it's pointing to looking for folder cleaned when didn't all the changes that were recently made with the draws mean that it should be looking within the draws folder now?
+
+
+
+I'll wrap the entire cached_aux_analysis execution in the Aux working context so lazy imports inside analyze_pairs resolve to the staged vtrac_reference. Then I'll lint the file.
+I see the new error: “cannot import name BOXED_LABEL_LOOKUP from modules.vtrac_reference (C:\dev\Alpha-Analytical-Tool\modules\vtrac_reference.py)”. That proves a lazy import inside the working code was still resolving to the project package during execution. I wrapped the entire analysis (cached_aux_analysis) inside the staged import context so any late imports inside analyze_pairs now bind to the staged vtrac_reference that defines BOXED_LABEL_LOOKUP. Lint is clean.
+Draws path concern: the Aux page already loads combined draws from data/cleaned/draws (and falls back to data/cleaned and data/processed/draws). Your screenshots show combined, Midday, and Evening present under data/cleaned/draws, so the baseline is correct. We are not switching Aux to session files yet; we’re keeping the combined path as you requested.
+What to do now:
+1) Reload the app page and run “Run Auxiliary Tools Analysis” once more.
+2) With “Show Dev Health” on, confirm:
+ap shows ...scripts\auxiliary\working\modules\analyze_pairs.py
+vr shows ...scripts\auxiliary\working\modules\vtrac_reference.py
+“vr has VTRAC_DISPLAY: True”
+3) The red error banner should be gone; the V‑TRAC and Pairs tables should render.
+Why I’m confident:
+ok youre timig out.. im getting really worried you cant handle this GIVE ME COMPREHSIVE THOUGHTS ONLY FIRST OF WHY YOU THNK YOU CAN FIX
+
+ strengthened the Aux import context in src/app.py to force scripts/auxiliary/working to the front of sys.path during Aux imports and restore it afterward. This ensures modules.vtrac_reference resolves to the staged file that defines VTRAC_DISPLAY.
+I added Aux Dev Health captions to show the actual bound files for modules.analyze_pairs and modules.vtrac_reference, plus a check that VTRAC_DISPLAY exists.
+Linter check on src/app.py passed.
+Shell verification shows bindings are correct:
+ap → scripts\auxiliary\working\modules\analyze_pairs.py
+vr → scripts\auxiliary\working\modules\vtrac_reference.py
+has VTRAC_DISPLAY → True
+You can now launch the app and run the Aux page:
+Turn on “Show Dev Health” on Aux; you should see the staged paths and the draws CSV path (combined).
+Click “Run Auxiliary Tools Analysis”; the red banner should be gone and the tables should render.
+Impact:
+Only src/app.py changed.
+No data pipelines touched.
+Other tools (Stable, V‑TRAC, Digit Reduction, BA) unaffected.
+If anything looks off, I can revert this single edit.
+d completely 
+
+Sure I can trust you because like I told you the Air isn't showing how it's pointing to looking for folder cleaned when didn't all the changes that were recently made with the draws mean that it should be looking within the draws folder now?
+
+
+
+
+I'll wrap the entire cached_aux_analysis execution in the Aux working context so lazy imports inside analyze_pairs resolve to the staged vtrac_reference. Then I'll lint the file.
+I see the new error: “cannot import name BOXED_LABEL_LOOKUP from modules.vtrac_reference (C:\dev\Alpha-Analytical-Tool\modules\vtrac_reference.py)”. That proves a lazy import inside the working code was still resolving to the project package during execution. I wrapped the entire analysis (cached_aux_analysis) inside the staged import context so any late imports inside analyze_pairs now bind to the staged vtrac_reference that defines BOXED_LABEL_LOOKUP. Lint is clean.
+Draws path concern: the Aux page already loads combined draws from data/cleaned/draws (and falls back to data/cleaned and data/processed/draws). Your screenshots show combined, Midday, and Evening present under data/cleaned/draws, so the baseline is correct. We are not switching Aux to session files yet; we’re keeping the combined path as you requested.
+What to do now:
+1) Reload the app page and run “Run Auxiliary Tools Analysis” once more.
+2) With “Show Dev Health” on, confirm:
+ap shows ...scripts\auxiliary\working\modules\analyze_pairs.py
+vr shows ...scripts\auxiliary\working\modules\vtrac_reference.py
+“vr has VTRAC_DISPLAY: True”
+3) The red error banner should be gone; the V‑TRAC and Pairs tables should render.
+Why I’m confident:
+
+Why I’m confident
+Root cause is import binding only. Your staged Aux modules define VTRAC_DISPLAY/BOXED_LABEL_LOOKUP; the project module doesn’t. I changed only the Aux import context so every Aux import (and any lazy import during analysis) resolves to the staged package, then fully restores sys.path/sys.modules. No other tools or pipelines are touched.
+Your logs show analyze_pairs running (DEBUG lines), draws loaded from combined CSVs, and Dev Health now confirms the staged files. The remaining BOXED_LABEL_LOOKUP error was from a late import; I wrapped the whole cached_aux_analysis execution in the staged context to cover that.
+About the “cleaned vs draws” path
+Aux loads combined from data/cleaned/draws first, and falls back to data/cleaned or data/processed/draws. The blue banner text is generic; Dev Health shows the actual path. Your folder screenshot confirms the combined CSVs in data/cleaned/draws, which is correct.
+What to do now (1 minute)
+1) Restart the app (fresh process) to clear old import bindings.
+2) Open Aux → enable Show Dev Health. Confirm:
+ap: scripts\auxiliary\working\modules\analyze_pairs.py
+vr: scripts\auxiliary\working\modules\vtrac_reference.py
+vr has VTRAC_DISPLAY: True
+draws CSV: data\cleaned\draws\<State>draws.csv (1000)
+3) Click Run Auxiliary Tools Analysis. The red banner should be gone; tables render.
+If any error persists
+I’ll make a tiny, safe hardening change in the staged code: switch imports inside scripts/auxiliary/working/modules/analyze_pairs.py from “from modules.vtrac_reference …” to relative “from .vtrac_reference …”. That locks resolution to the staged package regardless of outer context. This is a surgical edit to one file and won’t impact other tools.
+Why this won’t cause collateral issues
+Single-file changes in src/app.py only; no data writes or pipeline edits.
+sys.path/sys.modules are restored after Aux imports; Stable, V‑TRAC Analyzer, Digit Reduction, BA remain exactly as before.
+Easy rollback: one file revert.
