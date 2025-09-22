@@ -5,14 +5,52 @@ Exports:
 - get_vtrac_index(winner: str) -> int
 - get_index_set(index: int) -> set[str]
 - get_index_straights(winner: str) -> set[str]
+- VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP (legacy compat)
 
 Implementation notes:
 - Uses analyzer utilities already present in the project so this module
-  does not depend on the staged Aux package.
+  does not depend on the staged Aux package for helpers, but we lazily
+  re-export the legacy constants so existing tooling remains stable.
 """
 from __future__ import annotations
 
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from typing import Set
+
+
+def _load_staged_reference():
+    """Best-effort loader for the legacy staged V-TRAC reference."""
+    try:
+        staged_path = (
+            Path(__file__).resolve().parent.parent
+            / "scripts"
+            / "auxiliary"
+            / "working"
+            / "modules"
+            / "vtrac_reference.py"
+        )
+        if not staged_path.exists():
+            return None
+        spec = spec_from_file_location("_staged_vtrac_reference", str(staged_path))
+        if not spec or not spec.loader:
+            return None
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        return module
+    except Exception:
+        return None
+
+
+_STAGED = _load_staged_reference()
+if _STAGED is not None:
+    VTRAC_DISPLAY = getattr(_STAGED, "VTRAC_DISPLAY", [])
+    BOXED_VTRAC_REFERENCE = getattr(_STAGED, "BOXED_VTRAC_REFERENCE", [])
+    BOXED_LABEL_LOOKUP = getattr(_STAGED, "BOXED_LABEL_LOOKUP", {})
+else:
+    VTRAC_DISPLAY = []
+    BOXED_VTRAC_REFERENCE = []
+    BOXED_LABEL_LOOKUP = {}
 
 
 def _norm_winner(w: str) -> str:
@@ -60,4 +98,7 @@ __all__ = [
     "get_vtrac_index",
     "get_index_set",
     "get_index_straights",
+    "VTRAC_DISPLAY",
+    "BOXED_VTRAC_REFERENCE",
+    "BOXED_LABEL_LOOKUP",
 ]

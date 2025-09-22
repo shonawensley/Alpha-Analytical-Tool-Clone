@@ -702,34 +702,35 @@ def show_control_center_page() -> None:
             import sys as _sys, os as _os
             import importlib as _il
             from pathlib import Path as _P
-            with st.expander("System Health (Winners Full)", expanded=False):
-                st.caption(f"cwd: {_os.getcwd()}")
-                st.caption(f"python: {_sys.executable}")
-                try:
-                    _modpkg = _sys.modules.get('modules')
-                    st.caption("modules bound: " + (getattr(_modpkg, '__file__', '<package>') or '<package>'))
-                except Exception as _se:
-                    st.caption("modules bound: unavailable: " + str(_se))
-                try:
-                    with _project_modules_first():
-                        _vref = _il.import_module('modules.vtrac_reference')
-                        st.caption("vtrac_reference: " + getattr(_vref, '__file__', 'unknown'))
-                except Exception as _se:
-                    st.caption("vtrac_reference: unavailable: " + str(_se))
-                try:
-                    _wrp = _P(PROJECT_ROOT) / 'modules' / 'winner_report_full.py'
-                    st.caption("winner_report_full: " + (str(_wrp) if _wrp.exists() else 'missing'))
-                except Exception:
-                    pass
-                try:
-                    if w_state2:
-                        _td = _P('data') / 'outputs' / 'tables' / w_state2
-                        st.caption(f"tables_dir: {_td} (exists={_td.exists()})")
-                        for _sec in ("Midday", "Evening", "Combined"):
-                            _f = _td / f"{w_state2}_{_sec}_combined.csv"
-                            st.caption(f"{_sec}: {_f.name} exists={_f.exists()}")
-                except Exception:
-                    pass
+            health_box = st.container()
+            health_box.markdown("**System Health (Winners Full)**")
+            health_box.caption(f"cwd: {_os.getcwd()}")
+            health_box.caption(f"python: {_sys.executable}")
+            try:
+                _modpkg = _sys.modules.get('modules')
+                health_box.caption("modules bound: " + (getattr(_modpkg, '__file__', '<package>') or '<package>'))
+            except Exception as _se:
+                health_box.caption("modules bound: unavailable: " + str(_se))
+            try:
+                with _project_modules_first():
+                    _vref = _il.import_module('modules.vtrac_reference')
+                    health_box.caption("vtrac_reference: " + getattr(_vref, '__file__', 'unknown'))
+            except Exception as _se:
+                health_box.caption("vtrac_reference: unavailable: " + str(_se))
+            try:
+                _wrp = _P(PROJECT_ROOT) / 'modules' / 'winner_report_full.py'
+                health_box.caption("winner_report_full: " + (str(_wrp) if _wrp.exists() else 'missing'))
+            except Exception:
+                pass
+            try:
+                if w_state2:
+                    _td = _P('data') / 'outputs' / 'tables' / w_state2
+                    health_box.caption(f"tables_dir: {_td} (exists={_td.exists()})")
+                    for _sec in ("Midday", "Evening", "Combined"):
+                        _f = _td / f"{w_state2}_{_sec}_combined.csv"
+                        health_box.caption(f"{_sec}: {_f.name} exists={_f.exists()}")
+            except Exception:
+                pass
         if st.button("Generate Analyzer-style Report", key="btn_gen_winner_full"):
             try:
                 # Ensure imports resolve to project modules, not staged Aux

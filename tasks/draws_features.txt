@@ -1,0 +1,929 @@
+Below is Part 1 of the implementation plan you can hand to Codex. It locks the combined baseline, introduces a clean “variant” dimension for Combined / Midday / Evening, and extends the Control Center first (your top‑priority cross‑state views: Doubles + Blackapple). It also hardens wiring so we don’t re‑live the path/import problems.
+
+I’ve written this as an engineer‑ready spec with exact contracts, steps, and acceptance tests. References to your AAT9 docs are included where relevant.
+
+0) Non‑negotiables & guardrails
+
+Keep combined features untouched. We do not change any combined‑draw logic or visuals. Use them as the reference model for Midday/Evening.
+
+Aux/BA read draws CSVs only. No string‑table Excel is ever read by Aux/BA; their inputs are data/cleaned/*_draws.csv (newest‑first).
+
+Imports must not collide. Continue to use the strengthened Aux staging and absolute‑path loader for BA so “modules” package collisions can’t recur. (BA loads via a small helper that imports modules.blackapple and modules.aux_loaders by absolute path.)
+
+Run from repo root (BAT pushes to root). If anything looks odd, run .codex/preflight.ps1 and the smoke checks before touching UI.
+
+1) Introduce the “variant” dimension (without changing combined)
+
+Goal: Treat Combined, Midday, Evening as separate analyzable entities while reusing all existing analyzers. We add one explicit parameter everywhere we touch draws: variant: Literal["combined","midday","evening"].
+
+1.1 Terms & file names
+
+Combined → <State>_draws.csv
+
+Midday → <State>_Midday_draws.csv
+
+Evening → <State>_Evening_draws.csv
+(Your folder is already there: data/cleaned/draws/… with newest‑first ordering.)
+
+1.2 Data contract (unchanged content; new selector)
+
+Input (per state+variant): list[str] of 3‑char draws, newest‑first.
+
+Loader (modules/aux_loaders.py): expose a single API that always returns (draws, path), and accepts a variant.
+
+Required API (new/extended):
+
+# modules/aux_loaders.py
+from typing import Literal, Tuple, List, Optional
+Variant = Literal["combined", "midday", "evening"]
+
+def load_state_draws(state_label: str,
+                     variant: Variant = "combined") -> Tuple[List[str], Optional[str]]:
+    """
+    Resolves to data/cleaned/draws/<State>[_Midday|_Evening]_draws.csv.
+    Returns (draws_newest_first, resolved_path). If missing, returns ([], None).
+    """
+
+
+Keep the existing tolerant filename matching you already use (underscores, trailing “4”). Just route to the right file by variant. This keeps BA/Aux code ignorant of paths.
+
+2) Control Center first (cross‑state surfaces)
+
+You asked which to do first; I recommend Control Center because:
+
+It’s where Blackapple lives primarily, and
+
+Your Doubles Since Last Double ranking is the daily global radar you use to spot opportunity.
+
+We’ll add Midday/Evening as first‑class rows next to Combined, then mirror BA across variants. Combined remains the default/first row per state (no behavior change).
+
+2.1 Doubles ranking (table)
+
+What changes
+
+We turn the existing “States Ranked by Draws Since Last Double” into a variant‑aware table.
+
+Columns
+
+State | DrawType (C/M/E) | Draws Since Last Double | Latest Double | Total Draws
+
+Ordering
+
+Primary sort: Draws Since Last Double (desc).
+
+Secondary: Combined before M/E when ties happen.
+
+Implementation
+
+Tracker function (new file under modules/module_d_auxiliary_tools/refactored/ or a small helper near BA):
+
+def compute_draws_since_last_double_all(states: List[str]) -> List[Dict]:
+    """
+    Returns rows for (state, variant) in:
+    variant in ["combined","midday","evening"] when the file exists.
+    Each row: {
+      "state": "Connecticut4",
+      "variant": "combined" | "midday" | "evening",
+      "since_last_double": int,
+      "latest_double": "xyy" or None,
+      "total": int,
+      "source": path
+    }
+    """
+
+
+Use aux_loaders.load_state_draws(state, variant) for each variant.
+
+Compute since_last_double by scanning draws until the first “double” (e.g., a==b==c or any 2 equal? — use your current “repeating pair/double” definition unchanged).
+
+UI (Control Center section):
+
+Keep the existing table for combined, but upgrade it to list all (state,variant) rows that exist.
+
+Optional: add an expander “Show sources” with the joined CSV paths (dev‑only).
+
+Acceptance checks
+
+If a state lacks Midday or Evening, only Combined appears.
+
+Sorting shows (e.g.) PR‑Evening with 8 draws above PR‑Combined with 4 draws—matching your notebook logic.
+
+Footnote shows the CSV list used (dev‑only), like your current captions.
+
+(This keeps your “separate entities” feeling while still being one clean table.)
+
+2.2 Blackapple (BA) across variants
+
+What changes
+
+BA already runs on data/cleaned/*_draws.csv and surfaces a cross‑state table in Control Center. We simply run it 3×—one per available variant—and concatenate results. BA logic stays identical; we only fan it out by variant.
+
+Why this is safe
+
+BA is intentionally draws‑only and is already wired for Control Center. We keep the absolute‑path loader and do not touch its scoring rules.
+
+Your Architecture doc already states BA’s source of truth and Control Center home.
+
+Implementation
+
+Loader change: make the BA invoker accept variant: Variant and pass it through to load_state_draws(…, variant).
+
+Rows: Emit (state, variant, BA‑Score, Status, Triggers, #Candidates, Examples…). Keep top‑3 examples visible with a “view all 12” expander, exactly as today.
+
+UI
+
+Table label: “Blackapple Alerts (All States & Variants)”.
+
+Rows show DrawType (C/M/E).
+
+Dev caption (optional) shows the draws CSV path per row.
+
+Acceptance checks
+
+If NC‑Evening is ALERT and NC‑Combined is OFF, both rows appear; Examples are variant‑specific (their candidates can diverge).
+
+Clicking “View all candidates” shows the full 12 with tags (PAIR / MIR / RS / PAT / FLT); nothing in BA’s logic changed.
+
+Dev caption confirms the per‑variant CSV path you expected.
+
+3) Variant‑aware plumbing (minimal, explicit)
+
+To avoid regressions, keep the variant parameter flowing only where we need it now (Control Center, then Aux in Part 2). Do not change analyzers; wrap them.
+
+Touch points
+
+modules/aux_loaders.py → add variant routing (Section 1).
+
+src/app.py Control Center section → call the new helpers with each variant, then render combined results.
+
+Keep Aux staging context & absolute‑path loaders intact.
+
+Do not touch
+
+V‑TRAC Analyzer, Stable Pattern, Digit Reduction pipelines.
+
+Any combined tables, or their readers/writers.
+
+4) Performance & safety notes
+
+Cost: Running BA 3× is cheap (pure Python on small lists); doubles scan is O(N) per variant per state. Control Center remains snappy.
+
+Missing files: If a Midday or Evening CSV is missing, we just skip that row. The loader returns ([], None) and the row is omitted.
+
+Order invariant: All loaders and analyzers assume newest‑first. Your latest pipeline test restored this—leave it as a hard assertion in the loader (if first draw is older than last, reverse once and log).
+
+5) Dev‑health, smoke, and acceptance tests (Part 1 scope)
+
+Run these from repo root before/after the change:
+
+5.1 Preflight
+
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+Confirms import locations and inventories data/cleaned/draws/*.csv.
+
+5.2 Smoke – BA bindings still safe
+
+BA’s doc‑driven checklist: verify modules.blackapple resolves under project root and inputs are data/cleaned/*_draws.csv.
+
+5.3 Smoke – Variant loader
+
+Add a tiny CLI script scripts/checks/smoke_draw_variants.py:
+
+For a sample state (CT, PR), call load_state_draws(state, v) for each variant, print len(draws) and path.
+
+Assert newest‑first and at least 1 draw where you expect it.
+
+5.4 Manual checks in the UI
+
+Control Center → Doubles: Table shows rows like PR | Evening | 8 … above PR | Combined | 4 … (matching your notebook).
+
+Control Center → Blackapple: Variant rows appear with variant‑specific triggers/candidates; “BA draws: …_Evening_draws.csv (N)” appears in the dev caption.
+
+6) What not to mirror (for now)
+
+Pairs PURPLE logic and Sums tweaks happen in Aux (per‑state), not in Control Center. We keep Part 1 focused on cross‑state surfaces to minimize risk and to respect your “combined stays canonical, M/E are add‑ons” requirement. (Part 2 will mirror Aux panels for M/E and apply your “no purple on pairs” rule only to those two).
+
+7) Commit & rollback discipline
+
+Single feature branch: feature/variants-cc-midday-evening.
+
+Small, reviewable commits:
+
+aux_loaders variant param,
+
+CC doubles table,
+
+CC BA variant rows,
+
+smoke script.
+
+If anything is off: git restore src/app.py modules/aux_loaders.py reverts the entire Part 1.
+
+Why this fits your “separate entities” intent
+
+This plan treats Combined, Midday, Evening as independent analyzable units—they each get their own row, score, triggers, and candidates—while keeping code paths unified and safe. In other words: we add a single, explicit variant dimension to the existing engines; the rest of the system (paths, analyzers) stays the same. That’s why it is both simple and robust.
+
+References used
+
+BA wiring, inputs, scoring, Control Center surfacing and absolute‑path loader.
+
+Canonical launch, directory layout, data contracts (Aux/BA draw CSVs), and preflight.
+
+If you want, I can proceed with Part 2 next: mirroring the Auxiliary Tools page for Midday/Evening (including “no purple in pairs” for M/E only), layout for the three side‑by‑side panels (V‑Trac grid + Pairs + Combos + Sums + BA per variant), and the exact function signatures/flags Codex should introduce to keep combined unchanged.
+
+You said:
+please proceed with part 2
+ChatGPT said:
+Request for GPT-5 Pro
+Reasoned for 6m 40s
+
+Awesome—thanks for trusting me with the “master‑architect” brief. I read your notes, studied the wiring docs, and double‑checked where Aux/BA are allowed to read from and how the app is supposed to be launched/routed. Below is Part 1 of the final, implementation‑ready plan for Codex. (Part 2 will cover the cross‑state Control Center expansion and hardening guardrails.)
+
+Part 1 — State page (Auxiliary Tools) : add Midday + Evening mirrors while keeping Combined 100% intact
+0) Non‑negotiables (what can’t change)
+
+Combined features are the baseline and must not be touched. All existing Aux tables/logic keep reading data/cleaned/<State>_draws.csv (newest‑first). Aux and BA must never read the string‑table Excel; those belong to V‑TRAC/Stable/DR only.
+
+Imports/paths: Keep the Aux staged‑module context (_aux_working_first()) exactly as we hardened it, so staged legacy V‑Trac references bind correctly and then restore the environment. (This protects the BOXED V‑Trac tables you just revived.)
+
+1) Add a variant dimension (Combined | Midday | Evening) without changing analyzers
+
+Goal: treat each draw set as its own entity for analysis (exactly your intent), but implement it as a parameter so we don’t duplicate code.
+
+Add a small enum/constant:
+
+# src/app.py (near other Aux config)
+AUX_VARIANTS = ("combined", "midday", "evening")
+
+
+Extend the trusted CSV loader so Codex can ask for one variant at a time:
+
+# modules/aux_loaders.py
+def load_state_draws(state_label: str, variant: str = "combined") -> tuple[list[str], str | None]:
+    """
+    Returns (draws_newest_first, source_path). `variant` is one of
+    {"combined","midday","evening"} and maps to:
+      combined -> data/cleaned/{State}_draws.csv
+      midday   -> data/cleaned/{State}_Midday_draws.csv
+      evening  -> data/cleaned/{State}_Evening_draws.csv
+    Matching should be tolerant for <STATE> vs <STATE>4, underscores, case.
+    Newest-first order is required by all analyzers.
+    """
+
+
+Why here? Your architecture doc designates modules.aux_loaders as the CSV‑first, draws‑only entry for Aux/BA, and pins the contract to data/cleaned/*_draws.csv. We stay inside that contract.
+
+2) Cache and analysis surface (per variant)
+
+Replace the single cached call with a keyed cache per (state, variant):
+
+# src/app.py
+@st.cache_data(show_spinner=False)
+def cached_aux_analysis(state_name: str, variant: str):
+    with _aux_working_first():
+        draws, src = load_state_draws(state_name, variant)
+        if not draws: 
+            return None
+
+        dr100  = draws[:100]  if len(draws) >= 100  else draws
+        dr1000 = draws[:1000] if len(draws) >= 1000 else draws
+
+        # existing helpers you already use:
+        nonrep, rep, pair_status = calculate_overdue_pairs(dr100)
+        vstat = get_vtrac_statuses(dr100, dr1000)
+        top5  = get_top_overdue_repeating_pairs(dr100, 5)
+        dble  = get_doubles_history({state_name: draws})
+
+        return {
+            "src": src, "draws": draws, "draws_100": dr100, "draws_1000": dr1000,
+            "nonrep": nonrep, "rep": rep, "pair_status": pair_status,
+            "vstat": vstat, "top5": top5, "doubles": dble
+        }
+
+
+Developer proofing (Dev Health): print the resolved CSV path and length for each variant under the Aux page’s “Show Dev Health” expander.
+
+3) UI layout (clear, legible mirrors that read like three separate entities)
+
+At the top of the Aux page (after the state selector), render three columns (or a tabs row on narrow screens) in this exact left‑to‑right order: Combined | Midday | Evening.
+
+Each column mirrors your current Combined widgets 1:1 (V‑Trac boxed grid, Index Hits, Pairs, Top 5, Combinations, Sums, BA panel), with a single rules tweak for Midday/Evening Pairs (see §4). All other panels remain identical.
+
+Caption beneath each column’s header:
+
+Combined (data/cleaned/<State>_draws.csv • N draws)
+Midday   (…/<State>_Midday_draws.csv     • N draws)
+Evening  (…/<State>_Evening_draws.csv    • N draws)
+
+
+(This matches your screenshots and reinforces “separate entities” visually.)
+
+4) Pairs analysis: drop Purple for Midday/Evening (keep Red/Blue only)
+
+You asked to keep Midday/Evening lean with the most “science‑backed” thresholds.
+
+Add a flag parameter and route it only for M/E:
+
+# staged modules/analyze_pairs.py
+def render_pairs_sections(dr100: list[str], *, include_purple: bool = True) -> tuple[...]:
+    """
+    Existing logic, but gate the purple bucket on the flag.
+    Red and Blue thresholds remain exactly as today.
+    """
+
+
+In the Aux page:
+
+combined = cached_aux_analysis(state, "combined")
+midday   = cached_aux_analysis(state, "midday")
+evening  = cached_aux_analysis(state, "evening")
+
+# render Combined pairs as-is (include_purple=True)
+# render Midday/Evening with include_purple=False
+
+
+Legend tweak in Midday/Evening columns: “Pairs shows Red/Blue only (Purple suppressed by design).”
+(Sums tracking remains untouched—even if it has a purple‑like third condition—per your instruction.)
+
+5) V‑Trac boxed table & index hits: mirror exactly
+
+No code changes besides calling with the variant’s draws; your revived staged reference (VTRAC_DISPLAY, BOXED_LABEL_LOOKUP) keeps producing the table. The combined column is the blueprint; Midday/Evening simply reuse the same renderer fed by their own draw list.
+
+6) Combinations, “Top‑5 overdue repeating pairs,” Doubles‑since‑last‑double: mirror exactly
+
+All three panels consume the draws_100/draws_1000 surfaces we already return from the cache and require no logic changes. The only visible difference is the data source caption per column so you can trust what you’re seeing.
+
+7) Optional: Blackapple state panel for each variant (safe mirror)
+
+BA already runs from draws CSVs and renders in Aux as an optional panel; you can show it once per column just like today: “Blackapple Alert — BA draws: <path> (N).”
+(BA is draws‑only by design and explicitly wired to data/cleaned/*_draws.csv, so this is a safe drop‑in. The Control Center remains the primary BA surface; we’ll expand CC in Part 2.)
+
+8) Acceptance checklist (what Codex must demonstrate)
+
+Dev Health shows three correct file paths + counts for the selected state.
+
+Combined column renders exactly as before (pixel‑for‑pixel where possible).
+
+Midday/Evening columns render all the same panels; Pairs panel shows only Red/Blue.
+
+Download CSV (if you expose that for the V‑Trac table now) works per column.
+
+No cross‑pollution of imports (staged Aux bindings prove in the captions); no read of Excel on Aux/BA.
+
+9) Micro‑tests Codex should run (fast smoke, no UI)
+
+Put these under scripts/checks/ so you can run them before the app.
+
+smoke_aux_variants.py (new): for a short state list (e.g., CT, GA), load each variant and assert:
+
+CSV path resolves; ≥ 100 draws available (or gracefully degrades to available length).
+
+Pairs renderer returns Red/Blue/Purple triplet for Combined; Red/Blue for M/E.
+
+V‑Trac lookup returns non‑empty hits for draws_100 (sanity).
+
+Re‑run your existing smoke_aux_vtrac.py to ensure staged reference is still bound (BOXED available).
+
+10) Safety/rollback
+
+All edits are additive and parametric. Combined code paths are unchanged.
+
+If anything looks off: flip a FEATURE_FLAG_AUX_VARIANTS = False to hide Midday/Evening columns and leave Combined only while you review.
+
+11) Small doc updates (so the next AI “gets it” in 30 seconds)
+
+docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md — add a “Variants” section:
+
+The three CSV names, newest‑first rule, and the “Pairs Purple off for M/E” note.
+
+AAT9_Live_Wiring_and_Data_Paths.md — add a one‑line that Aux now reads *_Midday_draws.csv / *_Evening_draws.csv in addition to combined, still from data/cleaned/ only.
+
+AAT9_Checkpoint_Log.md — a short entry “Aux Variants enabled: Combined/Midday/Evening mirrored; M/E Pairs: red/blue only.”
+
+Why this fulfills your intent
+
+Separate entities, zero confusion. Each column has its own data source, analytics, and legend note. You can tell, at a glance, if PR‑Evening is “hot” on doubles while combined is not—exactly like your paper tracker, but automated.
+
+Baseline preserved. Combined remains the reference and is untouched. Midday/Evening are mirrors, not forks, so long‑term maintenance stays simple.
+
+No risk to BA or string‑tables. Aux/BA continue to read the draws CSVs under data/cleaned/ only, which is the guardrail your architecture doc sets.
+
+Performance fine. The analysis is linear in the window size and cached per variant; rendering three columns for one state is well within the app’s current budget.
+
+Defaults I’m taking (you can change later)
+
+Order: Combined | Midday | Evening (left → right).
+
+Window sizes: exactly what Combined uses today (100 / 1000), shared by all.
+
+Pairs thresholds: identical to Combined; only the visibility of Purple changes for M/E.
+
+BA per‑state panels: optional; Control Center remains the primary BA surface (next part).
+
+If you’re happy with this, Codex can start on Part 1 immediately.
+Part 2 (next message) will cover the Control Center expansion: cross‑state ranking by “draws since last double” that treats Combined/Midday/Evening as separate rows (like your paper tracker), BA integration for M/E, toggles, and guardrails so you can slice the universe without losing the Combined‑only default.
+
+You said:
+thats strange looks like you did part 1 twice??? review your last 2 messages to see but anyway proceed to part 2 i guess..
+ChatGPT said:
+Request for GPT-5 Pro
+Reasoned for 7m 18s
+
+Below is Part 2 – the concrete, code‑shaped spec Codex can implement to mirror Combined features for Midday and Evening, while guaranteeing the Combined baseline stays untouched.
+
+I’ve organized it in the order Codex should work, with tiny, surgical edits and clear acceptance checks. Anywhere I say “must keep draws‑only,” that’s because Aux/BA are intentionally isolated from the string‑table pipeline and read only data/cleaned/*_draws.csv. Keep the BA absolute‑path loader to avoid any staged‑vs‑project collisions.
+
+0) Definitions & invariants (do not change)
+
+Variant: one of "combined" | "midday" | "evening".
+
+File names (newest‑first CSVs, already produced by your pipeline):
+
+"<STATE>_draws.csv" → combined
+
+"<STATE>_Midday_draws.csv" → Midday
+
+"<STATE>_Evening_draws.csv" → Evening
+
+Isolation: Aux/BA must only read these CSVs under data/cleaned/…; they must not touch string‑table Excel or its outputs.
+
+BA wiring: keep the absolute‑path import for modules.blackapple and the CSV loader (modules.aux_loaders) so the “modules” package collision cannot reappear.
+
+1) Draws loader: add a variant‑aware helper (non‑breaking)
+
+File: modules/aux_loaders.py (or the small wrapper already used by Control Center)
+
+Add a new function so the existing Combined path remains 100% untouched.
+
+# NEW – non-breaking
+def load_state_draws_variant(state_label: str, variant: str = "combined"):
+    """
+    Resolves newest-first draws and the on-disk CSV path for a given variant.
+    variant in {"combined", "midday", "evening"}.
+    """
+    base = "data/cleaned"
+    canon = {
+        "combined": f"{state_label}_draws.csv",
+        "midday":   f"{state_label}_Midday_draws.csv",
+        "evening":  f"{state_label}_Evening_draws.csv",
+    }[variant]
+    # Reuse your tolerant path matching (underscores, trailing '4', etc.)
+    draws, path = _resolve_csv_tolerant(base, canon, state_label)  # existing tolerant logic
+    return draws, path
+
+
+Acceptance: for a few states (e.g., Connecticut, Delaware), confirm:
+
+load_state_draws_variant(s, "combined") returns the same path/count as today.
+
+"midday" and "evening" return their suffixed CSVs with the correct counts.
+
+Rationale: this adds the new capability without touching any existing call sites that power Combined.
+
+2) Control Center: add per‑variant panes (Combined stays default)
+
+Where: in the Control Center page block that currently renders:
+
+“States Ranked by Draws Since Last Double”
+
+“Blackapple Alerts (All States)” (BA)
+
+2.1 UI affordance
+
+Add a small radio or tabs control: Variant: [Combined | Midday | Evening | All 3]
+Default = Combined (so we don’t change the current first‑paint).
+
+2.2 Doubles ranking per variant
+
+Refactor the existing calculation into a parameterized function:
+
+def rank_states_by_last_double(states: list[str], variant: str) -> list[dict]:
+    rows = []
+    for s in states:
+        draws, _ = load_state_draws_variant(s, variant)
+        if not draws:
+            continue
+        gap, last_double = _calc_gap_since_last_double(draws)  # existing logic
+        rows.append({"State": s, "Draws Since Last Double": gap,
+                     "Latest Double": last_double, "Total Draws": len(draws)})
+    return sorted(rows, key=lambda r: r["Draws Since Last Double"], reverse=True)
+
+
+If Variant = Combined/Midday/Evening: render one table.
+
+If Variant = All 3: render three tables stacked (Combined, Midday, Evening).
+(This matches your “treat each as its own entity” goal, while still giving a one‑glance aggregate view.)
+
+Acceptance: Numbers in the Combined table remain identical to today’s screen. Midday/Evening show the expected gaps.
+
+2.3 Blackapple (BA) per variant (Control Center)
+
+BA is already wired to read from data/cleaned/*_draws.csv and render a ranked candidate list with BA‑Score, Status, Triggers, etc. We extend the call site only to pass a variant‑specific CSV; we do not change BA’s scoring logic. BA’s current loader and absolute‑path import stay as‑is.
+
+def compute_ba_row_for_state(state: str, variant: str) -> dict | None:
+    draws, csv_path = load_state_draws_variant(state, variant)   # NEW call
+    if not draws:
+        return None
+    # Existing absolute-path loader for BA remains untouched (by design)
+    from modules.blackapple import compute_ba_summary
+    # returns score, status, triggers, candidates (12), examples (3), etc.
+    return compute_ba_summary(state, draws, csv_path)
+
+
+Render one BA table for the selected variant. If All 3, render three BA tables (Combined, then Midday, then Evening), each with its own “view all candidates” expander. (Control Center is the BA’s primary surface; this mirrors the architecture note and keeps BA draws‑only. )
+
+Acceptance: For Combined, the BA table is unchanged. Midday/Evening compute cleanly and show their own candidate sets, tags, and triggers.
+
+3) Auxiliary Tools (state page): mirror sections for Midday & Evening
+
+You asked for a visual mirror (e.g., V‑Trac boxed table) plus the smaller analytics panes. We’ll do exactly that, with three side‑by‑side columns so Combined stays the first anchor.
+
+3.1 One cache per (state, variant)
+
+Your Aux analysis is already factored as a function that returns:
+
+draws, draws_100, draws_1000
+
+pairs status & top5
+
+V‑Trac stats
+
+doubles summary
+
+Wrap that in a new, tiny adapter:
+
+@st.cache_data(show_spinner=False)
+def cached_aux_analysis_variant(state: str, variant: str):
+    draws, _ = load_state_draws_variant(state, variant)
+    if not draws:
+        return None
+    # Existing analyzers (unchanged)
+    nonrep, rep, pair_status = calculate_overdue_pairs(draws[:100])
+    vstat = get_vtrac_statuses(draws[:100], draws[:1000] if len(draws) >= 1000 else draws)
+    top5  = get_top_overdue_repeating_pairs(draws[:100], 5)
+    doubles = get_doubles_history({state: draws})
+    return {"draws": draws, "pair_status": pair_status, "top5": top5,
+            "vstat": vstat, "doubles": doubles}
+
+3.2 Layout (streamlit)
+cols = st.columns(3, gap="large")
+for col, (title, variant) in zip(cols, [("Combined", "combined"), ("Midday", "midday"), ("Evening", "evening")]):
+    with col:
+        data = cached_aux_analysis_variant(state, variant)
+        if not data:
+            st.info(f"{title}: no draws")
+            continue
+        # V‑Trac boxed table (exact mirror of your current renderer)
+        render_vtrac_boxed_table(data["vstat"], title_prefix=title)
+
+        # Pairs – **Combined shows red/blue/purple** (as today).
+        # **Midday/Evening hide purple** exactly as requested.
+        show_purple = (variant == "combined")
+        render_pairs_panels(data["pair_status"], data["top5"], show_purple=show_purple)
+
+        # Other blocks – combinations (draws since), sums panel, doubles history
+        render_combos_draws_since(data["draws"])
+        render_sums_panel(data["draws"])     # unchanged (leave purple here, per your note)
+        render_doubles_panel(data["doubles"])
+
+
+Implementation detail for pairs: Don’t touch the math. Filter presentation only.
+
+def render_pairs_panels(pair_status, top5, show_purple: bool):
+    reds   = pair_status["red"]
+    blues  = pair_status["blue"]
+    purples= pair_status.get("purple", [])
+    # For Midday/Evening, simply don’t render the purple section.
+    _render_pairs_section("Repeating", reds, blues, purples if show_purple else [])
+    _render_top5(top5)
+
+
+Acceptance:
+
+Combined column renders identical to today.
+
+Midday/Evening columns render the same widgets, without purple in the pairs analysis.
+
+The sums panel stays as is (purple unchanged), matching your request to avoid touching the advanced sums/Blackapple link.
+
+4) “Daily Tracker” view (your notebook screenshot) – optional mini panel
+
+You keep a handwritten cross‑state list like: PR E=8, PR C=4, …. We can add an optional compact tracker at the bottom of Control Center:
+
+Compute gap_since_double for each (state, variant).
+
+Sort descending by gap, and for any state that appears more than once (e.g., PR‑Evening 8 and PR‑Combined 4), show the highest gap row and display the second hit inline as a small badge “+ C=4”.
+
+This keeps the entities separate while making “dual pressure” obvious at a glance.
+
+Why optional? It’s strictly a convenience panel—your main BA and doubles tables already convey the same info in richer form.
+
+5) Performance & safety
+
+Caching: The new @st.cache_data over (state, variant) prevents recompute churn when you switch columns/tabs.
+
+No global thresholds changed. Combined’s thresholds and visuals are untouched; Midday/Evening only hide purple in pairs (UI‑level).
+
+I/O invariants: All reads are data/cleaned/*_draws.csv. BA remains draws‑only and continues to surface on Control Center as its primary panel.
+
+Import safety: Keep the absolute‑path import for BA and the “working” context you hardened for Aux earlier; nothing in this spec reopens those risks.
+
+6) Operator checks (5 minutes)
+
+Preflight (optional): run your .codex/preflight.ps1 to print CWD, interpreter, and the data/cleaned/*_draws.csv inventory; this catches path drift instantly.
+
+Control Center
+
+Variant=Combined: both Doubles ranking and BA unchanged from today.
+
+Variant=Midday and Evening: see distinct tables with expected row counts.
+
+Aux Page (any state)
+
+Three columns render; Combined equals your reference; Midday/Evening omit purple in pairs only.
+
+Boxed V‑Trac and “Combinations (Draws Since)” are present for all three.
+
+Dev captions (during bring‑up): show the CSV path under each column once; remove later.
+
+7) Docs to update (single pass)
+
+docs/AAT9_DOCS/AAT9_Live_Wiring_and_Data_Paths.md → add the “variant” note for draws (file names and loader helper).
+
+docs/AAT9_DOCS/AAT9_Blackapple_Module.md → one sentence: “BA can be run on Combined, Midday, or Evening by passing the variant’s CSV; logic unchanged.”
+
+docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md → screenshot update showing the 3‑column Aux page.
+
+8) Rollback plan
+
+These edits are additive: removing the Variant UI and new helper instantly restores today’s behavior.
+
+No thresholds changed; no core analyzers modified.
+
+If any Midday/Evening path looks off, you can disable those columns with a one‑line feature flag while you keep using Combined.
+
+Why this matches your intent
+
+Separate entities, not blurred: Each variant loads its own CSV and renders its own analytics. You can see “PR‑E=8, PR‑C=4” the way you did on paper, but with richer context.
+
+Combined is your locked reference: By never touching the existing Combined functions or thresholds (only adding new variant‑aware call sites), we preserve your baseline exactly.
+
+BA stays the Control Center workhorse: per your screenshots and BA guide, it remains draws‑only and central in Control Center; now it simply runs per variant as well.
+
+Sane scope: The only behavior change you asked for—hide purple for pairs in Midday/Evening—is implemented at render‑time so the underlying stats remain available for future scoring ideas.
+
+If you want, I can also draft a tiny smoke script (scripts/checks/smoke_variants.py) that loops over a few states and prints the head/tail of each variant’s draws to reconfirm newest‑first ordering and counts before you run the app. That keeps this class of issues from ever sneaking in again.
+
+You said:
+OK DOES YOUR PLAN ALSO GO INTO DETAIL ABOUT WHERE CODEX SHOULD BE LOOKIG FOR THINGS? OR UNDERSTADIG ALL THE TINY REFERECE OR TRACKIG TABLES WITHI THE AUXILLARY SCREEN FOR EACH STATE (WHER THE V-TRAC BOXED TABLE IS) AND HOW TO POTENTIALLY CONSIDER ORGANZING EVERYTHING? OR LIKE IF IT SHOULD START WITH BLACK APPLE FIRST BECASUE OF THE SUMS MECHANISM OR IF IT DOEST MATTER WHERE IT STARTS? DID YOU GIVE IT LIKE A VERY THOROUGH UNDERSTADNIG OF EVERYTHING THAT IT MAY BE LACKIG WITHOUT ACCESS TO VISIUALS THE WAY YOU DO? IS THERE MORE YOU WOULD WANT TO ADD OR PROVIDE TO CODEX I LIGHT OF THIS? OR MORE YOU WOULD ADD TO BE AS SUPER CLEAR ABOUT THIGNS AS POSSIBLE REMEMBER THIS WAS SIUPPSOE TO BE A OPITMAL PLA IM USIG YOUR PART 1 AD PART 2 BUT IF THERE ARE SOME "ADDITIOAL CONSDIERATIONS" TO HELP CODEX PLEASE ADD NOW
+ChatGPT said:
+Request for GPT-5 Pro
+Reasoned for 7m 51s
+
+Absolutely—here’s a tight “Part 3: Additional Considerations & Exact Wiring Map” that you can hand to Codex to eliminate ambiguity. I’ve focused on (a) where to look in the repo, (b) how to read the three draw variants safely, (c) what to mirror vs. tweak in the Aux page, (d) Control Center first or later, and (e) guardrails so Combined stays untouched.
+
+I cite two internal docs below so Codex knows I’m aligning to the app’s canonical wiring and to Blackapple’s contract.
+
+A. Canonical paths, imports, and what not to touch
+
+Launch & entry
+
+Start the app through run_app.bat → streamlit run src/app.py.
+
+Where modules live
+
+Control Center + Aux orchestration: src/app.py
+
+Draws loader (CSV‑only for Aux/BA): modules/aux_loaders.py
+
+Blackapple: modules/blackapple.py (loaded via explicit helper to avoid modules collisions).
+
+Staged Aux “working” modules (V‑Trac boxed reference, pairs analyzer): scripts/auxiliary/working/modules/… (already staged via the context you hardened).
+
+Data locations
+
+Per‑state draws (newest‑first, 3‑char strings): data/cleaned/draws/*_draws.csv, plus *_Midday_draws.csv, *_Evening_draws.csv. These are the only inputs for Aux + Control Center + BA. Do not read Excel here.
+
+Combined tables (used by V‑TRAC/Stable/DR only): under tables/ or data/outputs/tables/<STATE>/—do not use these from Aux/BA.
+
+Guardrail
+
+Do not edit existing Combined analyzers or thresholds. All Midday/Evening work must be additive, behind a variant switch (detailed below). This preserves your stable Combined features as the “gold” reference.
+
+B. Single source of truth for variant reads (Combined / Midday / Evening)
+
+Goal: one helper everyone uses so we don’t duplicate path logic.
+
+Add to modules/aux_loaders.py:
+
+load_state_draws(state_label: str, variant: Literal["combined","midday","evening"]) -> tuple[list[str], str]
+
+Name map:
+
+combined: <State>_draws.csv
+
+midday: <State>_Midday_draws.csv
+
+evening: <State>_Evening_draws.csv
+
+Keep your tolerant matching (underscores, trailing “4”) and newest‑first invariant. (BA and Control Center assume that ordering.)
+
+Return (draws, source_path); on missing files, return ([], "<expected path>") so callers can show a friendly “not found” row instead of failing.
+
+Why: Control Center, Aux page sections, and BA all call this one function with the variant they need. If the filenames ever change, you fix it once.
+
+C. Implementation order (to minimize risk)
+
+Start with Control Center, then do the state Aux page.
+
+Why: Control Center uses only draws CSV and BA; it’s simpler and validates the loader + variant wiring before you replicate many state‑level panes. BA’s “Status/Triggers/Candidates” is already defined for draws‑only and is isolated from table pipelines.
+
+Order:
+
+Loader (Section B).
+
+Control Center
+
+Add two new variant tables (Midday, Evening) alongside the existing Combined tables:
+
+“States Ranked by Draws Since Last Double” — build rows on (state, variant) keys.
+
+“Blackapple Alerts (All States)” — also per (state, variant) using the same BA logic (just pass a different variant).
+
+Result: three panels (Combined, Midday, Evening), each complete and filterable.
+
+Auxiliary Tools (per state)
+
+Mirror existing Combined sections into Midday and Evening columns (details in Section E).
+
+D. Control Center — exact changes
+
+1) Doubles tracker (ranked by draws since last double)
+
+Current code scans data/cleaned/draws/*_draws.csv for Combined. Add two passes using:
+
+load_state_draws(state, "midday")
+
+load_state_draws(state, "evening")
+
+Compute the “draws since last double” the same way you already do for Combined; tag each row with a variant chip C/M/E.
+
+Show three subtables:
+
+Combined (unchanged)
+
+Midday (new)
+
+Evening (new)
+
+Each subtable sorts descending by “draws since last double.”
+
+2) Blackapple (BA) table
+
+Keep BA’s absolute‑path import (your helper that loads modules.blackapple). It already expects draws CSV only and renders the table with BA‑Score / Status / Triggers / #Candidates / Examples.
+
+Add two more BA runs by variant:
+
+draws_midday, p_m = load_state_draws(state, "midday")
+
+draws_even, p_e = load_state_draws(state, "evening")
+
+Render three BA tables (Combined/Midday/Evening). Keep identical thresholds; the only difference is the input list.
+
+For dev confirmation, keep the small caption (already supported) that prints which CSV path BA used.
+
+Acceptance checks
+
+The Combined tables remain byte‑for‑byte identical to before for the same code revision.
+
+The new Midday/Evening tables populate only when files exist; otherwise they display a graceful “not found.”
+
+BA triggers and candidate counts appear consistent when you temporarily swap Combined draws into a Midday file (quick local sanity test).
+
+E. Auxiliary Tools (per state) — what to mirror and what to change
+
+Layout (Streamlit):
+
+Use a 3‑column grid for each feature group: Combined | Midday | Evening.
+
+Keep existing Combined column as‑is; clone it twice.
+
+Each column calls the same analyzers but reads with the variant param.
+
+Feature groups to replicate (exact mirrors)
+
+V‑Trac boxed table (working logic from staged module).
+
+V‑Trac index hits / status summary.
+
+Combinations Analysis (Draws Since).
+
+Latest Draws list.
+
+Doubles history snippet.
+
+Blackapple state panel (optional; same as Control Center, but per state).
+
+Pairs Analysis — your only requested change
+
+Combined: keep Red, Blue, Purple thresholds exactly as they are.
+
+Midday & Evening: suppress “Purple” rows and counts in the UI; compute it internally if other features rely on it, but do not display or color by Purple in these two columns.
+
+Easiest implementation:
+
+Add a show_purple: bool to the pairs renderer; pass True for Combined, False for Midday/Evening.
+
+If you have a single calculate_overdue_pairs() returning (nonrep, rep, pair_status), keep it unchanged; just filter out Purple buckets in the presentation layer for Midday/Evening.
+
+Leave Sums Tracking untouched across all three (it feeds BA and other logic indirectly, and you asked not to tinker there).
+
+Dev‑health captions (keep them)
+
+In each column, show:
+
+The bound module path for the staged Aux files (already implemented in your Dev Health).
+
+The draws CSV path and count for that variant (quick proof you’re looking at the right file).
+
+Acceptance checks
+
+Combined column pixel‑for‑pixel consistent with baseline.
+
+Midday/Evening columns render the same widgets, minus Purple in Pairs.
+
+Download/export buttons (if any) produce the per‑variant tables with accurate headers.
+
+F. Design notes so Codex doesn’t over‑engineer this
+
+Treat (state, variant) as the unit of analysis.
+
+Key: (connecticut, combined), (connecticut, midday), (connecticut, evening), etc.
+
+No cross‑mixing inside a column. Cross‑variant insights can be built later.
+
+No changes to BA scoring/thresholds for Midday/Evening. BA is intentionally variant‑agnostic—its inputs are just a different draw list.
+
+Aux staged import context must wrap the full per‑state analysis so late imports keep resolving to the staged V‑Trac reference (you already did this; Codex should not touch it).
+
+Keep Combined as the default selection in UI drop‑downs; Midday/Evening are additive.
+
+G. Test flow Codex can run (fast, deterministic)
+
+Preflight (prints CWD, module paths, and draws inventory):
+
+Run .codex/preflight.ps1 -State "Connecticut4" and confirm imports resolve to in‑repo modules.
+
+Aux smoke:
+
+python scripts/checks/smoke_aux_vtrac.py to ensure staged modules expose VTRAC_DISPLAY/BOXED_LABEL_LOOKUP. (You added this; keep it first.)
+
+Control Center
+
+Launch app → Verify three doubles tables (C/M/E).
+
+Verify three BA tables (C/M/E) and that each shows the correct CSV path in dev mode.
+
+Aux page
+
+Pick a state with all three CSVs. Confirm the three‑column layout; ensure Pairs column for Midday/Evening has no Purple sections.
+
+Regression
+
+Temporarily rename *_Midday_draws.csv for one state → Midday column should render a benign “no file” notice while Combined/Evening still work.
+
+H. What to document (one page that prevents future drift)
+
+Add a short doc (e.g., docs/AAT9_DOCS/Aux_Variants_Addendum.md) with:
+
+Contract: “Aux + Control Center consume only data/cleaned/draws CSVs; three supported variants: Combined, Midday, Evening.”
+
+Loader: one function (load_state_draws(state, variant)) is the only entry to file IO for these pages.
+
+UI rule: Pairs Purple visible only for Combined; Midday/Evening hide Purple.
+
+BA note: BA logic unchanged; it reads whichever variant you feed it (draws‑only).
+
+Known pitfalls: staged‑import context for Aux, and “never read Excel from Aux/BA.”
+
+I. Do we risk “too many indicators”?
+
+You’re safe. Each indicator is computed in isolation on a small list (≤ 1000 draws) and rendered as compact tables. The heavy combined‑tables pipeline is untouched. The right discipline is exactly what you proposed:
+
+Compute daily → render → log → archive outputs, then clear working dirs. (You already envisioned a “post” step; we can implement a simple daily write later.)
+
+Use small, composable analyzers per variant; avoid global state.
+
+J. Quick “copy block” Codex can paste into tasks
+
+Add variant‑aware loader in modules/aux_loaders.py (Section B).
+
+Control Center: replicate “doubles since last double” + BA tables for midday and evening.
+
+Aux page: clone the Combined column into Midday and Evening; pass variant to all loaders/analyzers; suppress Pairs Purple in these two columns only.
+
+Keep Dev Health captions showing module __file__ and CSV source for each column.
+
+Do not modify Combined logic or thresholds; new work is additive and behind variant.
+
+If you want, I can also provide a mini wireframe (which widget in which Streamlit column) and a pair of utility functions signatures (e.g., render_pairs_table(state, variant, show_purple) and render_vtrac_boxed(state, variant)) so Codex has named targets to implement against. But the blueprint above already tells it exactly where to look, what to change, what to keep, and how we’ll test the result—without risking the Combined baseline.
