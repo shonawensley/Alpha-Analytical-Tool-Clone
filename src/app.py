@@ -387,6 +387,20 @@ def show_vtrac_page(state: str) -> None:
                 st.caption("V-TRAC module: unavailable: " + str(_se))
 
 
+def _parse_winners_input(raw: str) -> list[str]:
+    """Normalize a comma/newline separated winners string into 3-digit tokens."""
+    winners: list[str] = []
+    if not raw:
+        return winners
+    for token in raw.replace("\n", ",").split(","):
+        cleaned = ''.join(ch for ch in token if ch.isdigit())
+        if not cleaned:
+            continue
+        if len(cleaned) == 3:
+            winners.append(cleaned)
+    return winners
+
+
 def show_stable_pattern_page(state: str) -> None:
     """Render the Stable Pattern Extractor page."""
     from core import stable_pattern_extractor as stable
@@ -433,6 +447,14 @@ def show_stable_pattern_page(state: str) -> None:
                 pass
     # --- User inputs ---------------------------------------------------
     min_occ = st.number_input("Minimum occurrences (min_occ)", min_value=1, max_value=10, value=3, step=1)
+
+    winners_raw = st.text_input(
+        "Optional winners (comma-separated 3-digit numbers)",
+        value="",
+        key=f"stable_winners_input_{state}",
+        help="Provide winners if you want the extractor to generate spotlight CSVs. Leave blank to skip."
+    )
+    winners_list = _parse_winners_input(winners_raw)
 
     if st.button("Run Stable Pattern Extraction"):
         tables_dir = ph.get_state_tables_dir(state)

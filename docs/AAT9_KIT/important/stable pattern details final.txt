@@ -1,0 +1,19 @@
+ I'm putting together a clear explanation about how the optional winners feature works, the extra CSV files it generates, and
+  where to find those files. I'll also include instructions on running the stable patterns first to get baseline outputs and how the
+  winners input cleans invalid tokens. I'll wrap up with suggestions on verifying by toggling intangible and note the output paths
+  and filenames relative to the out_dir.
+
+> - On the Stable page you’ll now see an “Optional winners (comma-separated 3-digit numbers)” field. Enter winners like 038,620
+  (commas or newlines both work); leave it blank if you don’t want the spotlight outputs.
+  - When you run the extractor, it always writes the standard files to data/outputs/analysis/patterns/<STATE>/:
+      - <STATE>_stable_patterns_report.html (interactive HTML preview)
+      - <STATE>_stable_patterns_scores.csv (all scored patterns)
+      - <STATE>_stable_patterns_families.csv (family summary)
+  - If you provided at least one valid winner, two extra CSVs appear in the same folder:
+      - <STATE>_winner_family_spotlight_raw.csv – raw pattern rows tied to each winner
+      - <STATE>_winner_family_spotlight_families.csv – condensed family view for those winners
+        (Tokens that aren’t exactly three digits are quietly ignored; if you enter text but nothing parses, the app shows a
+  warning.)
+  - The Dev Health block you pasted confirms the Stable engine and tables path are resolving correctly, so just populate the winners
+  field, click “Run Stable Pattern Extraction,” and inspect the CSVs in data/outputs/analysis/patterns/<STATE>/ (and the HTML
+  preview in the UI) to review the spotlight results.
