@@ -138,8 +138,23 @@ def _normalize_state_name(state_name: str) -> str:
     return re.sub(r"\d+$", "", state_name or "").strip().replace("_", " ")
 
 
-def _load_draws_from_csv_candidates(state_name: str):
+def _load_draws_from_csv_candidates(state_name: str, variant: str = "combined"):
+    """Fallback loader used by Aux page; prefers the canonical aux_loaders helper."""
+    try:
+        _aux = _load_aux_loaders_real()
+        load_state_draws = getattr(_aux, "load_state_draws", None)
+        if callable(load_state_draws):
+            draws, _src = load_state_draws(state_name, variant=variant)
+            if draws:
+                return draws
+    except Exception:
+        pass
+
+    if variant != "combined":
+        return []
+
     import pandas as _pd
+
     base = _normalize_state_name(state_name)
     fn = f"{base.replace(' ', '_')}_draws.csv"
     candidates = [
@@ -779,208 +794,253 @@ def show_control_center_page() -> None:
                 st.caption(str(e))
 
     try:
-        with _aux_working_first():
-            from modules.analyze_pairs import get_doubles_history
         import pandas as _pd
         from pathlib import Path as _Path
 
-        draws_root = _Path("data/cleaned/draws")
-        if not draws_root.exists():
-            draws_root = _Path("data/cleaned")
+        cache_key = "cc_variant_cache"
+        if st.button("Refresh Draw Tables", key="refresh_variant_tables"):
+            st.session_state.pop(cache_key, None)
 
-        cleaned_dir = draws_root
-        if not cleaned_dir.exists():
-            st.warning("No cleaned data found in data/cleaned.")
-            return
+        cache = st.session_state.get(cache_key)
+
+        if cache is None:
+            variant_specs = [
+                ("Combined", "combined"),
+                ("Midday", "midday"),
+                ("Evening", "evening"),
+            ]
+            variant_order = {spec[1]: idx for idx, spec in enumerate(variant_specs)}
+            variant_display = {spec[1]: spec[0] for spec in variant_specs}
 
             try:
-                show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
+                _aux_loader = _load_aux_loaders_real()
+                load_state_draws = getattr(_aux_loader, "load_state_draws", None)
             except Exception:
-                show_dev_d = False
-            if show_dev_d:
-                import sys as _sys
-                with st.expander("System Health (Digit Reduction)"):
-                    st.caption("cwd: " + os.getcwd())
-                    st.caption("python: " + _sys.executable)
-                    try:
-                        from core.module_b_digit_reduction import run_digit_reduction as _rdr
-                        import inspect as _insp
-                        st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
-                    except Exception as _se:
-                        st.caption("DR module: unavailable: " + str(_se))
-                    try:
-                        st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
-                    except Exception:
-                        pass
-                st.error("No processed tables found. Run the data pipeline first.")
+                load_state_draws = None
+
+            if not callable(load_state_draws):
+                raise RuntimeError("aux_loaders.load_state_draws unavailable")
+
+            draws_root = _Path("data/cleaned/draws")
+            if not draws_root.exists():
+                draws_root = _Path("data/cleaned")
+
+            cleaned_dir = draws_root
+            if not cleaned_dir.exists():
+                st.warning("No cleaned data found in data/cleaned.")
                 return
-        
-            # Check if the specific state directory exists
-            state_path = tables_root / state
-            if not state_path.exists():
-                st.error(f"No tables found for {state}. Available states: {[p.name for p in tables_root.iterdir() if p.is_dir()]}")
-                return
-        
-        def _compute_combined():
-            state_to_draws = {}
-            state_sources = {}
+
+            state_candidates = set()
             for csv_path in cleaned_dir.glob("*_draws.csv"):
-                if not _is_combined_csv(csv_path):
-                    continue
-                try:
-                    df = _pd.read_csv(csv_path)
-                    draws = [str(x).zfill(3) for x in df["Draw"].dropna().astype(int).astype(str).tolist()]
-                    state_name = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    if draws:
-                        state_to_draws[state_name] = draws
-                        state_sources[state_name] = str(csv_path)
-                except Exception:
-                    continue
-            if not state_to_draws:
-                return _pd.DataFrame(), {}, {}
-            doubles = get_doubles_history(state_to_draws)
-            rows = []
-            for state, draws in state_to_draws.items():
-                ds = int(doubles.get(state, 0)) if state in doubles else 0
-                latest_double = draws[ds] if 0 <= ds < len(draws) else "None"
-                rows.append({
-                    "State": state,
-                    "Draws Since Last Double": ds,
-                    "Latest Double": latest_double,
-                    "Total Draws": len(draws),
-                })
-            df = _pd.DataFrame(rows)
-            if not df.empty:
-                df = df.sort_values(["Draws Since Last Double", "State"], ascending=[False, True])
-            return df, state_to_draws, state_sources
+                stem = csv_path.stem
+                if stem.lower().endswith("_draws"):
+                    stem = stem[:-6]
+                lower = stem.lower()
+                base_stem = stem
+                for suffix in _CATEGORY_SUFFIXES:
+                    if lower.endswith(suffix.lower()):
+                        base_stem = stem[: -len(suffix)]
+                        break
+                state_candidates.add(base_stem.replace("_", " "))
 
-        if st.button("Refresh Combined Table"):
-            st.session_state.pop("combined_doubles_state", None)
-            st.session_state.pop("combined_doubles_df", None)
+            states = sorted(state_candidates)
+            if not states:
+                st.warning("No draw CSVs detected in data/cleaned/draws.")
+                return
 
-        cached = st.session_state.get("combined_doubles_state")
-        if cached is None:
-            combined_df, state_to_draws, state_sources = _compute_combined()
-            if not combined_df.empty:
-                st.session_state["combined_doubles_state"] = {
-                    "df": combined_df,
-                    "draws": state_to_draws,
-                    "sources": state_sources,
-                }
-        else:
-            combined_df = cached.get("df")
-            state_to_draws = cached.get("draws", {})
-            state_sources = cached.get("sources", {})
+            def _is_double(value: str) -> bool:
+                return len(value) == 3 and (
+                    value[0] == value[1]
+                    or value[1] == value[2]
+                    or value[0] == value[2]
+                )
 
-        if combined_df is None or combined_df.empty:
-            st.warning("No state draw files found in data/cleaned.")
-            return
+            def _draws_since_last_double(draws: list[str]) -> tuple[int, str | None]:
+                for idx, combo in enumerate(draws):
+                    if _is_double(combo):
+                        return idx, combo
+                return len(draws), None
 
-        st.subheader("States Ranked by Draws Since Last Double")
-        st.dataframe(combined_df, use_container_width=True)
-        if state_sources:
-            sample_sources = sorted(Path(src).name for src in state_sources.values())
-            preview = ", ".join(sample_sources[:5])
-            if len(sample_sources) > 5:
+            variant_rows: list[dict] = []
+            variant_sources: dict[tuple[str, str], str] = {}
+            variant_draws: dict[tuple[str, str], list[str]] = {}
+
+            for state_label in states:
+                for title, variant_key in variant_specs:
+                    draws, src = load_state_draws(state_label, variant=variant_key)
+                    if not draws:
+                        continue
+                    key = (state_label, variant_key)
+                    variant_draws[key] = draws
+                    if src:
+                        variant_sources[key] = src
+                    ds, latest = _draws_since_last_double(draws)
+                    variant_rows.append(
+                        {
+                            "State": state_label,
+                            "Variant": title,
+                            "VariantKey": variant_key,
+                            "Draws Since Last Double": ds,
+                            "Latest Double": latest or "None",
+                            "Total Draws": len(draws),
+                        }
+                    )
+
+            if not variant_rows:
+                st.warning("No draw data available for the selected variants.")
+                return
+
+            df_doubles = _pd.DataFrame(variant_rows)
+            df_doubles["VariantOrder"] = df_doubles["VariantKey"].map(lambda key: variant_order.get(key, 99))
+            df_doubles.sort_values(
+                ["Draws Since Last Double", "VariantOrder", "State"],
+                ascending=[False, True, True],
+                inplace=True,
+            )
+            df_display = df_doubles.drop(columns=["VariantKey", "VariantOrder"])
+
+            missing_variants = [
+                f"{state_label} {variant_display[variant_key]}"
+                for state_label in states
+                for _, variant_key in variant_specs
+                if variant_key != "combined" and (state_label, variant_key) not in variant_draws
+            ]
+
+            cache = {
+                "df": df_display,
+                "variant_draws": variant_draws,
+                "variant_sources": variant_sources,
+                "variant_order": variant_order,
+                "variant_display": variant_display,
+                "missing": missing_variants,
+            }
+            st.session_state[cache_key] = cache
+
+        variant_order = cache["variant_order"]
+        variant_display = cache["variant_display"]
+        df_display = cache["df"]
+        variant_draws = cache["variant_draws"]
+        variant_sources = cache["variant_sources"]
+        missing_variants = cache["missing"]
+
+        st.subheader("States Ranked by Draws Since Last Double (Combined / Midday / Evening)")
+        st.dataframe(df_display, use_container_width=True)
+
+        if variant_sources:
+            sample_sources = sorted(_Path(src).name for src in variant_sources.values())
+            preview = ", ".join(sample_sources[:6])
+            if len(sample_sources) > 6:
                 preview += " ..."
-            st.caption(f"Combined draw sources: {preview}")
+            st.caption(f"Draw sources ({len(variant_sources)} files): {preview}")
+        if missing_variants:
+            st.caption("No draws for: " + ", ".join(missing_variants))
 
-        # --- Blackapple Alerts (All States) ---
+        rows_ba: list[dict] = []
+        ba_source_sets: dict[str, set[str]] = {}
+        ba_results_cache: dict[tuple[str, str], dict] = {}
+
         try:
             _ba = _load_blackapple_real()
             analyze_blackapple = _ba.analyze_blackapple
             ba_status_label = _ba.ba_status_label
-            _aux = _load_aux_loaders_real()
-            load_state_draws = _aux.load_state_draws
 
-            rows_ba = []
-            ba_sources = set()
-            for csv_path in cleaned_dir.glob("*_draws.csv"):
-                if not _is_combined_csv(csv_path):
-                    continue
-                try:
-                    state_label = csv_path.stem.replace("_draws", "").replace("_", " ")
-                    dr, src = load_state_draws(state_label)
-                    if not dr:
-                        continue
-                    ba = analyze_blackapple(dr)
-                    status = ba_status_label(ba.get("score", 0))
-                    tr = ba.get("triggers", {})
-                    tparts = []
-                    if tr.get("mirror"):
-                        tparts.append("Mirror")
-                    roots = tr.get("root_due", [])
-                    if roots:
-                        tparts.append("Root " + "/".join(map(str, roots)))
-                    pat = tr.get("pattern", {})
-                    if pat.get("extreme_due"):
-                        tparts.append("SSS/TTT")
-                    if pat.get("mixed_due"):
-                        tparts.append("SST/STS/TSS")
-                    flt = tr.get("floating", [])
-                    if flt:
-                        tparts.append("Float " + "".join(flt))
-                    rows_ba.append({
+            for (state_label, variant_key), draws in variant_draws.items():
+                ba_input = [d for d in draws if not (isinstance(d, str) and set(d) == {'0'})]
+                if not ba_input:
+                    ba_input = draws
+                ba_result = analyze_blackapple(ba_input)
+                ba_results_cache[(state_label, variant_key)] = ba_result
+                status = ba_status_label(ba_result.get("score", 0))
+                trig = ba_result.get("triggers", {})
+                triggers: list[str] = []
+                if trig.get("mirror"):
+                    triggers.append("Mirror")
+                roots = trig.get("root_due", [])
+                if roots:
+                    triggers.append("Root " + "/".join(map(str, roots)))
+                pattern = trig.get("pattern", {})
+                if pattern.get("extreme_due"):
+                    triggers.append("SSS/TTT")
+                if pattern.get("mixed_due"):
+                    triggers.append("SST/STS/TSS")
+                floats = trig.get("floating", [])
+                if floats:
+                    triggers.append("Float " + "".join(floats))
+                candidates = ba_result.get("candidates", [])
+                examples = " ".join(c.get("combo", "") for c in candidates[:3])
+                rows_ba.append(
+                    {
                         "State": state_label,
-                        "BA-Score": ba.get("score", 0),
+                        "Variant": variant_display.get(variant_key, variant_key.title()),
+                        "VariantKey": variant_key,
+                        "BA-Score": ba_result.get("score", 0),
                         "Status": status,
-                        "Triggers": ", ".join(tparts),
-                        "#Candidates": len(ba.get("candidates", [])),
-                        "Examples": " ".join([c.get("combo", "") for c in ba.get("candidates", [])[:3]]),
-                    })
-                    if src:
-                        ba_sources.add(Path(src).name)
-                except Exception:
-                    continue
+                        "Triggers": ", ".join(triggers),
+                        "#Candidates": len(candidates),
+                        "Examples": examples,
+                    }
+                )
+                src = variant_sources.get((state_label, variant_key))
+                if src:
+                    ba_source_sets.setdefault(variant_key, set()).add(_Path(src).name)
 
             if rows_ba:
-                df_ba = _pd.DataFrame(rows_ba).sort_values(["BA-Score", "#Candidates"], ascending=[False, False]).reset_index(drop=True)
-                st.subheader("Blackapple Alerts (All States)")
-                st.dataframe(df_ba, use_container_width=True)
-                if ba_sources:
-                    sample = ", ".join(sorted(ba_sources)[:5])
-                    if len(ba_sources) > 5:
-                        sample += " ..."
-                    st.caption(f"Blackapple sources (combined locked): {sample}")
-        except Exception as _e:
-            st.caption(f"Combined BA table unavailable: {_e}")
-        # Optional: per-state full candidates view with tags
-        try:
-            for row in rows_ba:
-                state_label = row.get("State") or row.get("state")
-                if not state_label:
-                    continue
-                with st.expander(f"{state_label} â€” View all candidates"):
-                    # Re-run BA for this state to list all candidates
-                    dr, _src = load_state_draws(state_label)
-                    if not dr:
-                        st.caption("No draws available.")
-                        continue
-                    ba_full = analyze_blackapple(dr)
-                    cands = ba_full.get("candidates", [])
-                    if not cands:
+                df_ba = _pd.DataFrame(rows_ba)
+                df_ba["VariantOrder"] = df_ba["VariantKey"].map(lambda key: variant_order.get(key, 99))
+                df_ba.sort_values(
+                    ["BA-Score", "#Candidates", "VariantOrder", "State"],
+                    ascending=[False, False, True, True],
+                    inplace=True,
+                )
+                df_ba_display = df_ba.drop(columns=["VariantKey", "VariantOrder"])
+                st.subheader("Blackapple Alerts (All States / Variants)")
+                st.dataframe(df_ba_display, use_container_width=True)
+                if ba_source_sets:
+                    pieces = []
+                    for variant_key in variant_order:
+                        names = ba_source_sets.get(variant_key)
+                        if not names:
+                            continue
+                        sample = ", ".join(sorted(names)[:3])
+                        if len(names) > 3:
+                            sample += " ..."
+                        pieces.append(f"{variant_display.get(variant_key, variant_key.title())}: {sample}")
+                    if pieces:
+                        st.caption("Blackapple draw sources: " + " | ".join(pieces))
+            else:
+                st.caption("Blackapple alerts unavailable for current variants.")
+
+            for (state_label, variant_key), ba_result in ba_results_cache.items():
+                variant_label = variant_display.get(variant_key, variant_key.title())
+                exp_label = f"{state_label} ? {variant_label} candidates"
+                with st.expander(exp_label):
+                    src = variant_sources.get((state_label, variant_key))
+                    if src:
+                        st.caption(f"Draw source: {src} ({len(variant_draws[(state_label, variant_key)])})")
+                    candidates = ba_result.get("candidates", [])
+                    if not candidates:
                         st.caption("No candidates found.")
                         continue
-                    import pandas as _pd
+                    import pandas as _pd  # local import for rendering
                     rows_detail = []
-                    for c in cands:
-                        tags = c.get("tags", [])
+                    for cand in candidates:
+                        tags = cand.get("tags", [])
                         if isinstance(tags, set):
                             tags = sorted(tags)
-                        rows_detail.append({
-                            "Combo": c.get("combo", ""),
-                            "Score": c.get("score", 0),
-                            "Tags": " ".join(tags),
-                        })
+                        rows_detail.append(
+                            {
+                                "Combo": cand.get("combo", ""),
+                                "Score": cand.get("score", 0),
+                                "Tags": " ".join(tags),
+                            }
+                        )
                     st.dataframe(_pd.DataFrame(rows_detail), use_container_width=True)
-        except Exception:
-            pass
-            st.caption(f"Combined BA table unavailable: {_e}")
+        except Exception as _e:
+            st.caption(f"Blackapple table unavailable: {_e}")
     except Exception as e:
-        # System Health (development)
         try:
             import sys as _sys
-            with st.expander("System Health"):
+            with st.expander("System Health (Draws View)"):
                 st.caption(f"cwd: {os.getcwd()}")
                 st.caption(f"python: {_sys.executable}")
                 try:
@@ -990,7 +1050,7 @@ def show_control_center_page() -> None:
                     st.caption(f"BA module: unavailable: {_se}")
         except Exception:
             pass
-        st.warning(f"Combined view unavailable: {e}")
+        st.warning(f"Control Center draws view unavailable: {e}")
 def show_aux_page(state: str) -> None:
     """Render the Auxiliary Tools page."""
     import streamlit as st
@@ -1019,6 +1079,17 @@ def show_aux_page(state: str) -> None:
     
     st.title(f"Auxiliary Tools - {state}")
     st.write(f"Advanced lottery analysis tools for {state}")
+
+    variant_options = [
+        ("Combined", "combined"),
+        ("Midday", "midday"),
+        ("Evening", "evening"),
+    ]
+    variant_labels = [label for label, _ in variant_options]
+    selected_variant_label = st.radio("Draw variant", variant_labels, index=0, key="aux_variant")
+    selected_variant_key = dict(variant_options)[selected_variant_label]
+    show_purple = selected_variant_key == "combined"
+
     
     # Dev: System Health (toggle in sidebar)
     try:
@@ -1039,8 +1110,13 @@ def show_aux_page(state: str) -> None:
                 _aux = _load_aux_loaders_real()
                 load_state_draws = getattr(_aux, "load_state_draws", None)
                 if callable(load_state_draws):
-                    dr, src = load_state_draws(state)
-                    st.caption("draws CSV: " + str(src) + " (" + str(len(dr) if isinstance(dr, list) else 0) + ")")
+                    for label, variant_key in (("Combined", "combined"), ("Midday", "midday"), ("Evening", "evening")):
+                        dr, src = load_state_draws(state, variant=variant_key)
+                        if src:
+                            count = len(dr) if isinstance(dr, list) else 0
+                            st.caption(f"{label} draws: {src} ({count})")
+                        else:
+                            st.caption(f"{label} draws: missing")
             except Exception:
                 pass
             # Show which staged modules are actually bound (debug-only)
@@ -1073,37 +1149,63 @@ def show_aux_page(state: str) -> None:
 
     # Add caching for performance (working logic)
     @st.cache_data(ttl=30 * 60)
-    def cached_aux_analysis(state_name: str):
+    def cached_aux_analysis(state_name: str, variant: str):
         if not (_AUX_WORKING_AVAILABLE):
             return None
-        # Keep staged working package first during analysis to support lazy imports
         with _aux_working_first():
-            # 1) Try CSVs first (self-contained; does not touch other tools)
-            draws = _load_draws_from_csv_candidates(state_name)
-            # 2) Fallback to extractor (read-only) if available
-            if not draws and extract_draw_list is not None:
-                draws = extract_draw_list(state_name, None)
-            # If no draws, attempt to generate cleaned CSVs once from local Excel
+            draws = []
+            source = None
+            try:
+                _aux_loader = _load_aux_loaders_real()
+                load_state_draws = getattr(_aux_loader, "load_state_draws", None)
+            except Exception:
+                load_state_draws = None
+
+            if callable(load_state_draws):
+                try:
+                    draws, source = load_state_draws(state_name, variant=variant)
+                except Exception:
+                    draws, source = [], None
+
             if not draws:
+                draws = _load_draws_from_csv_candidates(state_name, variant=variant)
+
+            if not draws and variant == "combined" and extract_draw_list is not None:
+                try:
+                    draws = extract_draw_list(state_name, None)
+                except Exception:
+                    draws = []
+
+            if not draws and variant == "combined":
                 try:
                     local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
                     if os.path.exists(local_excel_path):
-                        # Use staged runner; writes only to data/cleaned
                         from modules.run_process import run_process
+
                         _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
-                        # re-try CSV read to avoid extractor conflicts
-                        draws = _load_draws_from_csv_candidates(state_name)
+                        if callable(load_state_draws):
+                            try:
+                                draws, source = load_state_draws(state_name, variant=variant)
+                            except Exception:
+                                draws, source = [], None
+                        if not draws:
+                            draws = _load_draws_from_csv_candidates(state_name, variant=variant)
                 except Exception:
                     pass
+
             if not draws:
                 return None
+
             draws_100 = draws[:100] if len(draws) >= 100 else draws
             draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
             nonrep, rep, pair_status = calculate_overdue_pairs(draws_100)
             vstat = get_vtrac_statuses(draws_100, draws_1000)
             top5 = get_top_overdue_repeating_pairs(draws_100, 5)
             doubles = get_doubles_history({state_name: draws})
+
             return {
+                "variant": variant,
+                "source": source,
                 "draws": draws,
                 "draws_100": draws_100,
                 "draws_1000": draws_1000,
@@ -1114,15 +1216,16 @@ def show_aux_page(state: str) -> None:
                 "top5": top5,
                 "doubles": doubles,
             }
-    
     if st.button("Run Auxiliary Tools Analysis", type="primary"):
-        with st.spinner(f"Running auxiliary analysis for {state}..."):
+        with st.spinner(f"Running {selected_variant_label} auxiliary analysis for {state}..."):
             try:
-                results = cached_aux_analysis(state)
+                results = cached_aux_analysis(state, selected_variant_key)
                 if not results:
                     st.error("Working modules unavailable or no draws found.")
                     return
 
+                variant_label = selected_variant_label
+                st.caption(f"Variant: {variant_label}")
                 draws = results["draws"]
                 draws_100 = results["draws_100"]
                 pair_status = results["pair_status"]
@@ -1139,9 +1242,9 @@ def show_aux_page(state: str) -> None:
                             build_sums_dataframe as _build_sums_df,
                         )
                         # Debug caption to verify import source; safe to remove later
-                        st.sidebar.caption(f"SUMS Ã¢Â¦Â¿ {_calc_sums.__module__}")
+                        st.sidebar.caption(f"[{variant_label}] SUMS Ã¢Â¦Â¿ {_calc_sums.__module__}")
                     except Exception as _e:
-                        st.sidebar.caption(f"SUMS import failed: {_e}")
+                        st.sidebar.caption(f"[{variant_label}] SUMS import failed: {_e}")
 
                 analysis_draws = st.session_state.get("analysis_draws", 100)
                 if callable(_calc_sums):
@@ -1253,12 +1356,14 @@ def show_aux_page(state: str) -> None:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
                     st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
                     st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
                 with c2:
                     st.markdown("<b>NonÃ¢â‚¬â€˜Repeating Pairs</b>", unsafe_allow_html=True)
                     st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
                     st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
 
                 # --- Top 5 Repeating Pairs ---
                 st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
@@ -1384,15 +1489,18 @@ def show_aux_page(state: str) -> None:
                     _aux = _load_aux_loaders_real()
                     load_state_draws = getattr(_aux, "load_state_draws", None)
                     if callable(load_state_draws):
-                        ba_draws, ba_src = load_state_draws(state)
+                        ba_draws, ba_src = load_state_draws(state, variant=selected_variant_key)
                     else:
                         ba_draws, ba_src = [], ""
 
-                    ba = analyze_blackapple(ba_draws or draws)
+                    ba_input = [d for d in (ba_draws or draws) if not (isinstance(d, str) and set(d) == {'0'})]
+                    if not ba_input:
+                        ba_input = ba_draws or draws
+                    ba = analyze_blackapple(ba_input)
                     status = ba_status_label(ba.get("score", 0))
                     st.subheader("Blackapple Alert")
                     if ba_src:
-                        st.caption(f"BA draws: {ba_src} ({len(ba_draws)})")
+                        st.caption(f"{variant_label} BA draws: {ba_src} ({len(ba_draws)})")
                     parts = []
                     tr = ba.get("triggers", {})
                     if tr.get("mirror"):
@@ -1507,10 +1615,10 @@ def show_aux_page(state: str) -> None:
                     st.subheader("VÃ¢â‚¬â€˜Trac Index Hits (Working logic)")
                     st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
 
-                st.success(f"Ã¢Å“â€¦ Auxiliary tools (working logic) completed for {state}")
+                st.success(f"Ã¢Å“â€¦ {variant_label} auxiliary tools (working logic) completed for {state}")
                 
             except Exception as e:
-                st.error(f"Error running auxiliary analysis: {str(e)}")
+                st.error(f"{variant_label} analysis failed: {e}")
                 st.info("Please ensure the state data files are available in data/cleaned/")
     
     else:
@@ -1604,7 +1712,6 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
-
 
 
 

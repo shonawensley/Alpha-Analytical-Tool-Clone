@@ -1,4 +1,4 @@
-# AAT9 — Quickstart Cheat Sheet
+# AAT9 - Quickstart Cheat Sheet
 
 ## Preflight (before launch)
 - Command: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
@@ -10,11 +10,12 @@
 
 ## Launch the App
 - `run_app.bat` (runs `streamlit run src\app.py` from repo root)
-- Dev tip: keep the in‑app “System Health” expander available to debug path drift.
+- Dev tip: keep the in-app "System Health" expander available to debug path drift.
 
 ## Data Sources by Page
-- Aux / Blackapple: `data/cleaned/*_draws.csv` (draws‑only)
-- V‑TRAC / Stable / Digit Reduction: combined tables via `utils.path_handler` under `tables/` or `data/outputs/tables/<STATE>/`
+- Aux / Blackapple: `data/cleaned/*_draws.csv` (draws-only)
+- Variant support: Combined / Midday / Evening. Use `modules.aux_loaders.load_state_draws(state, variant)`; Control Center and the Aux page surface all available variants.
+- V-TRAC / Stable / Digit Reduction: combined tables via `utils.path_handler` under `tables/` or `data/outputs/tables/<STATE>/`
 
 ## Combined Tables Pipeline (if needed)
 1) `generate_tables_pipeline.bat`
@@ -26,9 +27,9 @@
 - If Aux state draws empty: verify `data/cleaned/<State>_draws.csv` (preflight lists inventory).
 
 ## Useful Paths & Helpers
-- `utils.path_handler` — canonical path helpers for outputs/analysis/tables
-- `modules.aux_loaders.load_state_draws(state)` — robust draws CSV resolver
-- `alpha_analytical/stable` — YAML‑weighted stable extractor (`feature_config.yml`)
+- `utils.path_handler` - canonical path helpers for outputs/analysis/tables
+- `modules.aux_loaders.load_state_draws(state)` - robust draws CSV resolver
+- `alpha_analytical/stable` - YAML-weighted stable extractor (`feature_config.yml`)
 
 
 

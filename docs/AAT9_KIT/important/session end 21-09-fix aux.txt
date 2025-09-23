@@ -381,3 +381,29 @@ You don’t have to shelve the Midday/Evening features. The guardrails we just f
   the canonical module, and update Aux to use that same source. But that work can be scheduled after the current feature push. Keep
   the existing shim in place, avoid deleting the staged module, and document any new dependencies on the canonical API. Following
   those habits lets you keep delivering Midday/Evening functionality now without tripping over the legacy fix again.
+
+________________
+
+• I'll wrap up by highlighting the key code changes including variant handling, Control Center fixes, and documentation updates.
+  I'll also recommend verification steps like running py_compile and testing the Control Center, plus reminding to run the daily
+  pipeline as usual. A clear bulleted summary and next steps will round out the final response.
+
+> Variant Support Added
+
+  - modules/aux_loaders.py: introduced Variant literal, tolerant CSV resolver for Combined/Midday/Evening, and a clean (draws, path)
+  return so every consumer stays draw-only.
+  - src/app.py: Control Center now caches variant-aware doubles + Blackapple rows, filters out 000 fillers before scoring, and shows
+  draw sources per variant; Auxiliary Tools gets a variant switcher while suppressing purple pairs outside Combined and passing the
+  correct draws into BA.
+  - docs/AAT9_DOCS/Aux_Variants_Addendum.md (new) plus updates to Quickstart, Aux Tools official guide, Blackapple module, Unified
+  Changelog, and Checkpoint Log capture the new contracts and data flow.
+
+  Validation
+
+  - python -m py_compile modules/aux_loaders.py src/app.py
+  - python scripts/checks/smoke_aux_vtrac.py
+
+  Feel free to launch run_app.bat, toggle through Midday/Evening in Aux, and review the Control Center tables—each variant should
+  now list its draw source and BA results without manual file swaps.
+
+▌ Implement {feature}                                                    

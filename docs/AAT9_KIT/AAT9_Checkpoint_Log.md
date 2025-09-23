@@ -1,3 +1,14 @@
+## 2025-09-22 04:30 (UTC) - Aux variants + Control Center expansion
+
+- Context: Preparing for Midday/Evening tooling required exposing those draw files without disturbing the combined baseline.
+- Change:
+  - Extended `modules.aux_loaders.load_state_draws` with an explicit variant selector and tolerant staged fallback.
+  - Control Center doubles tracker + Blackapple now iterate Combined/Midday/Evening (variant-aware DataFrame, dev captions).
+  - Aux page adds a variant selector (Combined default) that reuses the working analysis; purple pair band is suppressed for Midday/Evening while BA consumes variant-specific draws.
+  - Documented the contract (`docs/AAT9_DOCS/Aux_Variants_Addendum.md`) and refreshed KIT/Blackapple docs to mention variants.
+- Impact: Combined behaviour stays identical; operators can inspect Midday/Evening draws/alerts directly in both Control Center and Aux without manual file swaps.
+- Files/Refs: `src/app.py`, `modules/aux_loaders.py`, `docs/AAT9_DOCS/Aux_Variants_Addendum.md`, `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`.
+- Follow-ups: Optional UI polish (side-by-side columns for variants), consider surfacing missing variant files in Control Center Dev Health.
 ## 2025-09-21 02:00 (UTC) - Aux staging restore
 
 - Context: Aux began failing after the Sept-16 cleanup because the rich boxed VTRAC reference (legacy) was archived. Lazily imported modules fell back to the slim canonical API, so Aux lost `BOXED_LABEL_LOOKUP` and returned empty tables.
@@ -174,5 +185,6 @@ Template
   - Remove the leftover `data/cleaned/Connecticut_Midday_draws.csv` once Excel releases the file lock.
   - When ready, wire Midday/Evening into Control Center doubles + Blackapple (combined stays the baseline).
   - Consider retiring `scripts/auxiliary/working/` once staged modules are no longer needed by the Aux page.
+
 
 

@@ -1,5 +1,9 @@
 # AAT9 — Unified Changelog
 
+## 2025-09-22 - Aux - Combined/Midday/Evening variant support - Cross-variant doubles and BA views
+- Impact: Control Center doubles tracker and Blackapple table surface Combined/Midday/Evening rows; Aux page lets you rerun working analysis per variant (purple bands suppressed for Midday/Evening).
+- Files: `src/app.py`, `modules/aux_loaders.py`, `docs/AAT9_DOCS/Aux_Variants_Addendum.md`, `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`
+
 Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
 ## 2025-09-17 — Aux — Draw pipeline restructure + archive legacy — Cleaner pipeline + clearer tooling
 - Impact: Combined Aux features stay pinned to `<State>_draws.csv`; Midday/Evening exports live under `data/cleaned/draws/`; legacy Aux packages/scripts archived for reference.
@@ -73,3 +77,4 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
 ## 2025-09-21 - Aux - Restored staged VTRAC reference & smoke check - Aux page stable again
 - Files: `src/app.py`, `scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}`, `modules/module_d_auxiliary_tools/refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}`, `scripts/checks/smoke_aux_vtrac.py`
 - Notes: hardened Aux staging context, restored legacy boxed reference loader, added smoke script and documentation manifest.
+
