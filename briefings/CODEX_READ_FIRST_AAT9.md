@@ -19,19 +19,26 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 - `docs/AAT9_KIT/AAT9_Diagrams_Guide.md` (Mermaid updates)
 - `docs/AAT9_KIT/AAT9_Unified_Changelog.md` (so you know how to log changes)
 - Also skim project rules: `AGENTS.md` and `.codex/AGENTS.universal.md`
+- Positional / Aux essentials (new engine context):
+  - `docs/AAT9_KIT/important/AAT9_Positional_Pressure.md`
+  - `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`
+  - `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`
+- Data contracts recap: Aux/BA -> draws CSVs (`data/cleaned/*_draws.csv`); V-TRAC/Stable/DR -> combined tables (`tables/<STATE>/` or `data/outputs/tables/<STATE>/`) via `utils.path_handler`. Combined is baseline; Midday/Evening are additive variants surfaced alongside Combined.
 
 ## 3) Preflight
 - Run: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 - Confirm imports resolve to in‑repo files and that draws CSVs are present.
+- Confirm `.codex/first_boot.log` is the headless Streamlit log target before any automated boot.
 
 ## 3.5) Dev Health (fast checks in UI)
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 - Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per‑state combined tables existence.
+- When touching Aux wiring, skim `docs/AAT9_KIT/important/DETAIL CODEX LOG.txt` for recent guardrails.
 
 ## 4) Plan → Implement → Verify → Document
 - Plan: small, explicit; state files to change and why; wait for approval if collaborating.
 - Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA draws‑only.
-- Verify: `python -m py_compile`, import probes, optional headless boot (120s) → `.codex/first_boot.log`.
+- Verify: `python -m py_compile`, `python scripts/checks/smoke_positional.py`, import probes, optional headless boot (120s) + `.codex/first_boot.log`.
 - Document: update KIT docs if affected; always add a Changelog entry.
 
 ## 5) Done Checklist

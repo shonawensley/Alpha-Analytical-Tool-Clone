@@ -1,0 +1,420 @@
+How I would translate this into the Positional Tool (research build)
+
+(Not the final design—just the minimal scoring frame that matches what we just observed so you can test quickly in Aux.)
+
+For each state and variant (Combined / Midday / Evening):
+
+For each position p ∈ {1,2,3}, collect the top‑3 digits and their draws‑since.
+
+Build a per‑position scoreboard over digits 0–9 with these layers:
+
+L0 – Presence (by rank & variant)
+base = w_variant[v] * w_rank[k]
+
+Suggested: w_variant: Combined=1.0, Midday=0.95, Evening=0.95.
+
+w_rank: #1=1.00, #2=0.70, #3=0.45.
+
+L1 – Draws‑since weight
+Multiply base by w_lag(ds) where w_lag rises to ~1.0 by ~35 and caps there (e.g., min(1, ds/35)).
+
+L2 – Mirror credit
+If the mirror of a candidate digit appears in the same position’s top‑3, add 0.5 * base (using that mirror’s rank/variant weights).
+
+L3 – Cross‑variant consensus bonus
+If exact digit appears in the same position across ≥2 variants: +0.4 per additional variant.
+If mirror appears instead: +0.25 per additional variant.
+
+L4 – Double pressure
+If a digit (or its mirror) is prominent (rank #1 or #2) in two positions across any variants, add +0.6 to each of those positions. If Due‑Doubles is active for the state/variant, add an extra +0.4.
+
+L5 – Position‑swap echo (small)
+If a digit is top‑3 in adjacent position in another variant, add +0.10 (mirror: +0.07). Cap at one echo per variant to avoid noise.
+
+Output per position: Top‑2 digits with their composite scores and tags: (Exact/Mirror, Consensus sources, Double pressure, Lag range).
+Optional “box to straight helper”: If two positions have strong consensus/mirror and the third is weak, float 2–3 straight candidates by permuting those two strong digits with the most plausible third (highest scored or its mirror).
+
+Why this fits what you want
+
+It keeps Midday, Evening, Combined separate (exactly as you requested) yet lets them compound where they agree.
+
+It never overwrites your Combined features—it only reads them to cross‑check positional likelihoods.
+
+It’s simple enough to compute instantly, and every point above came directly from the patterns in your screenshots, so it’s grounded—not theoretical.
+
+What I still captured from this final batch (quick per‑case verdicts)
+
+MI 878 E: 1 exact (P2), mirrors & cross‑variant for the 8 → keep.
+
+SC 525 E: mirrors carried the day (P2 & P3) → mirror credit is mandatory.
+
+TRI 166 M / 991 E: mixed, but consensus & mirrors offered weak‑to‑moderate cues → consensus bonus helps.
+
+PA 996 M: 9 pressure + P3 mirror → double‑pressure + mirror.
+
+NJ 778 M: heavy 7 pressure + 8 mirrors → double‑pressure logic.
+
+SC 273 M: two exacts + P1 mirror reinforcement → ideal compound case.
+
+FL 385: strong P3=5; others nearby (position‑swap) → add small cross‑position echo.
+
+If you want, I can package these weights as a tiny JSON the app can read (so you can tune them without code), and sketch the exact function signatures for Aux so Codex can drop this in quickly.
+
+_____________________
+
+A) Would I recreate this positional tracker inside Aux?
+
+Yes. I would add a dedicated Positional Due Index (PDI) to the Auxiliary Tools page and keep the layout you trained me on:
+
+Three variants (Midday / Evening / Combined), each its own 3×3 grid.
+
+Per position (P1–P3): show the Top‑3 most due digits by draws since at that exact position, with the count in the first column and the digit highlighted in the second (matching your screenshots).
+
+Visuals: mild color for the Top‑1, lighter for #2/#3; small badges for ties; consistent with your grids.
+
+This lives squarely in Aux and runs off the per‑state draws CSVs (so it’s fast and isolated from the combined‑tables pipeline). That separation is an explicit guardrail in your app architecture: Aux + Control Center read only data/cleaned/*_draws.csv, while V‑TRAC / Stable / Digit Reduction use the combined tables under tables/ or data/outputs/tables/<STATE>/.
+
+B) Do I have a concrete design to extract the most analytical value?
+
+Yes. From your examples I distilled a scoring model that sits on top of the raw “draws‑since” rankings and turns the tracker into an actionable positional signal. In short:
+
+Positional Due Index (PDI) — core features
+
+For each variant (M/E/C) and position (P1–P3), compute:
+
+Draws‑Since (DS) for digits 0–9 at that position, ranked (Top‑3 surfaced).
+
+Rank Pressure (RP): points for being rank #1/#2/#3, scaled by DS gaps (a #1 that’s far ahead of #2 gets extra weight).
+
+Cross‑Variant Boost (CVB): if the same digit is Top‑k in the same position across two variants (e.g., P2 in Midday and Combined), add weight. If it’s Top‑k in all three, add a small multiplicative bump (“Golden Rule” compounding).
+
+Recent‑Heat Brake (RHB): if a Top‑k digit just hit in the last X draws anywhere at that position (e.g., ≤2–3 draws), smoothly taper its weight to avoid over‑chasing fresh hits.
+
+V‑Trac Synergy (VTS): convert each candidate’s digit to its V‑Trac class (0/5, 1/6, 2/7, 3/8, 4/9). Favor candidates whose position‑Vtrac pattern aligns with the current “hot band” (see item E for vTrac‑sum hot bands).
+
+Score sketch (per position & variant):
+PDI = w1*RP + w2*DS_norm + w3*CVB - w4*RHB + w5*VTS
+
+Weights are small and additive; synergy multipliers (CVB/VTS) are capped so no single effect dominates.
+
+From positional scores to straight candidates
+
+Build a position basket: for each position, take Top‑2 (sometimes Top‑3) digits after the PDI score.
+
+Make the Cartesian product → straight list, then filter/weight by other Aux signals you already run (Pairs, Sums, V‑Trac Index), letting the user pick tight / standard / wide coverage.
+
+Tag each candidate with why it’s here (e.g., P1:ds#1, P2:cvb, P3:vtrac-hot, Pairs-OK, Sum-due), so compounding evidence is explicit—your “Golden Rule.”
+
+C) Is this practical for the system?
+
+Yes. It’s computationally cheap (single pass over the last N draws to get DS by position; simple joins for cross‑variant and synergy). It also fits your Aux contracts (draws‑only), so there’s no coupling to the combined‑table pipeline. The app wiring you already have for Aux/BA makes integrating a new Aux analyzer straightforward.
+
+I’d surface:
+
+A compact grid like your screenshots (Top‑3 per position).
+
+A small “Positional Alerts” row: when any (position, digit) crosses a DS threshold (e.g., ≥25 or a dynamic percentile), or when CVB fires across all three variants.
+
+An expander that shows the scored basket (tight/standard/wide), with tags and optional download.
+
+D) Should we add it? How does it fit with the other Aux tools?
+
+Strong yes. This becomes one of the highest‑signal feeders for your final straight list because it adds exactly what your other tools don’t: per‑position pressure.
+
+Pairs / Remaining‑Pairs foundation (27–29): great at boxing‑singles gating and pair survivorship; use it to prune the Cartesian product so we keep only straights whose internal pairs are still “alive.” (The BA write‑up you keep mirrors this foundation and why it’s effective.)
+
+Due Sums / Root sums: layer as soft filters or tie‑breakers, not hard walls.
+
+V‑Trac Index: aligns naturally with V‑Trac Synergy in the PDI.
+
+Blackapple: BA remains your cross‑signal ranker at the Control Center; the PDI can act as a pre‑filter or extra tag on BA candidates.
+
+Architecturally, it sits cleanly in Aux beside your existing parity logic (draws‑only, small pure functions, no refactors to other pages). That matches your current invariants & guardrails.
+
+E) Research review — How to fold in the two links you shared
+1) “V‑Trac sums” method (Lottery Post)
+
+What it is. Convert each digit to its V‑Trac class (0/5→0, 1/6→1, 2/7→2, 3/8→3, 4/9→4). For a Pick‑3, you then sum the three V‑Trac digits—that’s the V‑Trac Sum. Practitioners track which sums (often in the 7–11 band) are hot or due.
+
+Reference definition of V‑Trac mapping. 0/5, 1/6, 2/7, 3/8, 4/9—the 5‑class grouping used widely in Pick‑3 discussions.
+
+Why it matters to your positional tool:
+Your screenshots already show how often a winner’s digits line up with cross‑variant pressure. V‑Trac sums add a class‑level rhythm that can be read before the draw and compounded with positional pressure:
+
+Add a live V‑Trac Sum Trend row per variant: track longest‑out V‑Trac sums and mark the current hot band (e.g., 7–11), as documented in the forum method.
+
+Add a VTS (V‑Trac Synergy) component in the PDI score: if the position baskets imply many candidates with V‑Trac sums in the hot band, bump their score; if a candidate’s V‑Trac sum equals the longest‑out value for the chosen variant, add a (small) booster.
+
+2) Sums index lists (the anchored post)
+
+The anchored post includes boxed lists by sum—a way many players keep the universe organized and then focus on a due sum or a favorite band. It pairs well with the V‑Trac sums angle above because both are “band” filters that compress the search space before you assemble straights. 
+Lottery Post
+
+How to use it in the PDI workflow:
+
+Expose a Sum band control (e.g., 7–12) that highlights/filters the candidate grid after we build the positional basket.
+
+Add a small Sum‑Due badge to candidates whose standard sum matches the current due (your Aux Sums code already computes roots/sums alongside draws).
+
+Bottom line on the two links:
+Both are worth integrating as soft weight/filters. The biggest lift comes from the positional pressure itself; V‑Trac sums and standard sums give you orthogonal compression that compounds nicely with your “Golden Rule.” The result is fewer, better straights—ranked and tag‑explained.
+
+What I would ship (concrete spec)
+Data & placement
+
+Page: Auxiliary Tools → new section “Positional Due Index (PDI)”.
+
+Input: per‑state draws CSV (newest‑first, same as other Aux features).
+
+No dependency on combined tables; stays in Aux lane.
+
+UI blocks
+
+Three 3×3 grids (Midday / Evening / Combined)
+Cells = [draws‑since] [digit] with Top‑3 per position; ties indicated; hover shows last‑hit index.
+
+Signals strip (badges):
+
+CVB (cross‑variant) fires (e.g., same digit Top‑2 for P2 in M & C).
+
+VTS (V‑Trac sum hot/longest‑out match).
+
+SUM (standard sum due match).
+
+PAIR (all internal pairs survive the remaining‑pairs foundation).
+
+Candidate Expander:
+
+Tight / Standard / Wide toggles (e.g., Top‑2×Top‑2×Top‑2; or allow Top‑3 on one position).
+
+Each candidate line shows tags: P1 ds#1, P2 cvb, VtracSum=9 (hot), Sum=12 (due), Pairs=OK.
+
+Threshold controls (left rail):
+
+DS minimum to display (e.g., ≥12).
+
+“Favor Cross‑Variant overlap” on/off; “Favor V‑Trac Sum band 7–11” on/off.
+
+Coverage slider (to bound the size of the straight list).
+
+Scoring defaults (calibrated but simple)
+
+RP: 3/2/1 for ranks #1/#2/#3, plus +1 if DS gap to the next rank ≥25% of median DS.
+
+DS_norm: z‑score or scaled percentile; cap contribution to avoid runaway.
+
+CVB: +1 per extra variant confirming the same digit at the same position; +2 if all three agree (cap total CVB ≤3).
+
+RHB: −0.5 if hit in last 2 draws at that position; −0.25 if hit 3–4 draws ago.
+
+VTS: +0.5 if candidate’s V‑Trac sum in hot band; +1 if equals the longest‑out V‑Trac sum for the chosen variant.
+
+Pair foundation filter: by default “keep only candidates whose three internal pairs all survive the 27–29 remaining‑pairs foundation.” (Toggleable for exploration.)
+
+Why this will feel good in practice
+
+It mirrors the way you read your current sheets (positional top‑3 + compounding).
+
+It’s explainable: every candidate carries tags that tell you why it scored.
+
+It’s modular: you can run it alone, or let BA/Control Center consume its tags later.
+
+Final answers (quick recap)
+
+A) Yes—recreate the tracker and its three‑variant, three‑position Top‑3 layout right in Aux.
+
+B) Yes—I’ve got a concrete scoring plan (PDI) that compounds positional pressure with cross‑variant and V‑Trac/Sum synergies.
+
+C) Yes—it’s lightweight, draws‑only, and fits your Aux wiring and guardrails.
+
+D) Strong yes—it complements Pairs/Sums/V‑Trac and can become one of your most valuable Aux feeders for straight selection (especially when paired with the remaining‑pairs foundation).
+
+E) The two threads are useful: adopt V‑Trac sums (hot bands 7–11; longest‑out sum) and standard sum lists as soft boosters/filters inside the PDI, not as hard gates. 
+Lottery Post
+
+If you’re good with this direction, I’ll lay out the exact function signatures and UI wireframe next so it drops cleanly into Aux without touching the combined‑tables pages.
+
+_______________
+
+A) Should we recreate a positional tracker like your sheets (for Combined / Midday / Evening)?
+
+Yes.
+In Aux, we should add a Positional Pressure tool that reproduces exactly what your sheets do—per state and per variant:
+
+For each variant (Combined, Midday, Evening) and each position (P1, P2, P3), compute the gap (draws since digit d appeared in that position).
+
+For each position, list the Top‑3 “most due” digits by gap, exactly as you recorded (left cell = gap; right cell = digit).
+
+Display one panel per variant (3 panels), just like your images, and keep the radio toggle you already added for Aux.
+
+This gives us the same day‑to‑day read you used on paper, but now it’s machine‑readable, scored, and logged.
+
+B) Do I have an optimal design in mind (thresholds, features, scoring)?
+
+Yes. Based on your examples, we can extract more value than “Top‑3 per position” by turning each day’s table into features and a small ranked candidate list. Here’s the design I recommend (names in bold are implementable fields):
+
+1) Core signals per variant
+
+For each position p∈{1,2,3} and digit d∈{0…9}:
+
+gap[p,d] = draws since digit d last appeared at position p
+
+gap_q[p,d] = quantile of gap versus that position’s long‑run gap distribution (0–1)
+
+rank[p,d] = 1..10 by gap descending (what your sheet shows)
+
+Thresholds (defaults you can tune later):
+
+due_threshold_q = 0.75 → treat any digit with gap_q≥0.75 as “hot/due”
+
+keep_top_k = 3 → show Top‑3 per position in the UI (exactly your layout); keep Top‑2 per position for candidate building (to keep lists small)
+
+2) Cross‑variant compounding (your “golden rule”)
+
+For the same state & day, compute across variants:
+
+Same‑digit same‑position: if a digit is Top‑K at the same position in ≥2 variants → coherence_bonus
+
+Digit family (mirrors): if d is Top‑K at P1 in Midday and mirror(d) is Top‑K at P1 in Evening → mirror_bonus
+
+V‑TRAC coherence: map each Top‑K digit to its V‑TRAC 0‑4 class and check if the three positions’ classes land in a tight set (e.g., same index family you already track). → vtrac_bonus
+
+Sum alignment: if the sum of any straight candidate (built from Top‑K digits) lands in Due Sum or BA‑preferred sum band, add sum_bonus.
+
+We’ll use your BOXED_VTRAC_REFERENCE mapping to compute V‑TRAC class and index coherence with the same table you pasted, so the tool’s behavior is transparent and reproducible.
+
+3) Positional Pressure Score (per digit, per position)
+
+For each Top‑K digit at each position, compute:
+
+pps[p,d] = w_gap * gap_q[p,d]
+         + w_variant * (same-digit-at-same-position-in-other-variants ? 1 : 0)
+         + w_mirror * (mirror pair corroboration ? 1 : 0)
+         + w_vtrac * (vtrac class agrees across positions ? 1 : 0)
+
+
+Default weights (safe starters):
+w_gap=1.0, w_variant=0.5, w_mirror=0.2, w_vtrac=0.3.
+
+4) Candidate builder (compact and practical)
+
+Per variant, take Top‑2 digits at each position → at most 2×2×2 = 8 straights per variant.
+
+Filter those 8 by:
+
+Due Pairs (any adjacent pair appears in your Due Pairs list)
+
+Due V‑TRAC index (candidate’s index is “warm”)
+
+BA guardrail (if BA module says “avoid sum band X”, drop it; if it says “prefer band Y”, boost it).
+
+Score each straight as the sum of the 3 position pps plus bonuses (sum_bonus, vtrac_bonus, pair_bonus), then rank.
+
+Output per variant:
+
+The same Top‑3 tables you’re used to, plus a compact “Recommended Straights (≤8)” table with scores and reasons (“P1: 8 due (q=.86), P2: 4 corroborated across Mid/Eve, Sum=17 due, Index=24 hot …”).
+
+All features/weights are configurable per state if we learn different behaviors later.
+
+C) Is this practical and efficient for the system?
+
+Yes. The heavy lift is only a few vectorized lookups per state/day:
+
+Build a 3×10 gap matrix per variant from the day’s draws (fast in pandas/NumPy).
+
+Compute quantiles vs. a cached historical distribution (we’ll persist one per state/variant).
+
+The candidate builder touches ≤24 straights (8×3 variants) before filters—tiny.
+
+Everything logs to a compact JSON/CSV; no memory pressure.
+
+We’ll wire this into the aux pipeline (separate from string tables) and cache historical stats so a daily run is milliseconds per state. See the architecture notes about keeping Aux hard‑wired to the draws CSVs and never to string tables; this is already a pattern in AAT9 and matches the Blackapple module’s contract.
+
+D) Should we add it? How does it fit with your existing Aux set?
+
+Strong yes. It fills the one gap we still had: a straight‑oriented signal that complements:
+
+Due Doubles (Control Center)
+
+Due Sums
+
+Due V‑TRAC index
+
+Due Pairs / Due Boxed Combos
+
+From your samples, we consistently saw at least one of the winning digits appearing in the Top‑3 of the correct position, and cross‑variant agreement is common. Even when the digit wasn’t exact, its V‑TRAC class often aligned—useful when we filter by index or V‑sum. That’s exactly what the Positional Pressure + compounding bonuses capture.
+
+Where it shines: when the same digit is hot at the same position in two variants, and the resulting straight also matches a Due Sum or hot V‑TRAC index. This frequently collapses the search space to a handful of candidates—exactly what we want for a practical play.
+
+E) Research review of the two threads you shared (and how we’d use them)
+What’s in those threads (short take):
+
+“Missouri Pick 3: V‑trac sums” – compresses digits to 0–4 (V‑TRAC), then works with V‑TRAC sums and small pre‑built sets tied to those sums; it’s a way to reduce candidate space by focusing on hot V‑sums and their associated sets.
+
+“Vtrac sums: focus is 13/2024” – same idea, but with a detailed emphasis on specific V‑sum buckets (e.g., “watch V‑sum 13”), including ready‑made lists for each bucket. It’s a filtering layer that can sit on top of your other signals.
+
+What I’d adopt (practical & fits your toolchain):
+
+Add a V‑TRAC Sum Filter to the Positional tool:
+
+Compute V‑TRAC class per position, then V‑sum = class1 + class2 + class3.
+
+Maintain a per‑state history of V‑sum frequencies and a “due band” (top 2–3 sums by time‑since or z‑score).
+
+When the positional tool builds candidates, keep/boost those whose V‑sum is in the due band.
+
+Add a “Per‑position V‑class Heat” strip (tiny row below each panel):
+
+For each position, show the Top‑2 V‑TRAC classes by gap (0–4).
+
+If the three positions form a tight (small) V‑index set from your BOXED_VTRAC_REFERENCE, award a vtrac_bonus.
+
+These are low‑cost additions that align with your existing V‑TRAC reference table and cleanly compound with sums/pairs/doubles. They also set us up for your Control Center idea: “V‑TRAC Index Repeat Watch” (see below).
+
+Implementation blueprint (so Codex can ship it cleanly)
+Files & wiring (fits AAT9 patterns)
+
+Module: modules/aux_positionals.py
+
+Pure draws‑based (CSV) analytics—never touch string tables. (Same separation Blackapple and other Aux modules follow.)
+
+Runner hook: register in modules/aux_loaders.py and expose via the Aux page radio (you already have the variant toggle).
+
+Outputs:
+
+CSV: data/aux/outputs/positionals/{STATE}/{VARIANT}/YYYY‑MM‑DD_positional.csv
+
+JSON: same path, plus …_candidates.json (ranked straights with feature breakdown).
+
+Historical caches (fast quantiles / frequencies):
+
+data/cache/positionals/{STATE}/{VARIANT}_gap_hist.pkl
+
+data/cache/vtrac_sums/{STATE}/{VARIANT}_vsum_hist.pkl
+
+Algorithmic steps
+
+Ingest latest draws for {STATE, VARIANT} from data/draws/cleaned (your Aux standard).
+
+Build gap matrix (3×10) and gap quantiles per position.
+
+Extract Top‑3 per position (for UI) and Top‑2 per position (for candidates).
+
+Compute V‑class per digit, V‑sum, Due Sum alignment, Due Pair alignment, Due Index alignment.
+
+Score with pps + bonuses; produce ≤8 straights per variant.
+
+Cross‑variant compounding: if the same straight appears in ≥2 variants, elevate it to the “All‑Variant Highlights” subsection.
+
+Persist CSV/JSON + compact daily feature row for the Winners Logger.
+
+Aux UI
+
+Keep your three panels (Combined/Midday/Evening).
+
+Under each panel, add:
+
+Per‑position V‑class heat (two small 0–4 chips per position).
+
+Recommended Straights (≤8), with inline reasons:
+P1:8 (q=.86), P2:4 (coherent 2 variants), P3:3 (mirror corroborated), Sum=17 due, Vsum=13 due.

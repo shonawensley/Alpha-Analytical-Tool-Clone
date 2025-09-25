@@ -9,6 +9,10 @@ This addendum clarifies the canonical launch path, import sources, and data cont
 - Data contracts:
   - Aux/Blackapple → `data/cleaned/*_draws.csv`
   - V‑TRAC / Stable / Digit Reduction → combined tables under `tables/` or `data/outputs/tables/<STATE>/` via `utils.path_handler`
+
+**Draws interpretation (canonical):** Combined is the baseline dataset; Midday/Evening are additive variants that never replace Combined.
+Aux/Blackapple read only `data/cleaned/*_draws.csv` (newest-first strings). V-TRAC / Stable / Digit Reduction only read combined tables under `tables/<STATE>/` (or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.
+
 - Preflight (recommended): `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 
 ## Directory Quick Reference

@@ -21,12 +21,14 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 ## 3) Implement (path‑safe)
 - Use `utils.path_handler` for all outputs.
 - Aux/BA read only `data/cleaned/*_draws.csv`; other tools read combined tables via helpers.
+- Positional Pressure lives under `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; keep it draws-only and isolated from combined-table pipelines.
 - Pure functions; avoid `os.chdir`; use `pathlib.Path` joins.
 - UI: soft‑fail (captions/warnings) instead of raising.
 
 ## 4) Verify
 - Compile: `python -m py_compile` on changed files.
 - Import probes for key modules (show `__file__`).
+- Smoke: `python scripts/checks/smoke_positional.py` when positional wiring changes.
 - Optional: headless boot with log → `.codex/first_boot.log`.
 
 ## 5) Update Documentation (always)

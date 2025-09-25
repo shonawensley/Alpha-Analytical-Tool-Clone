@@ -1,5 +1,9 @@
 # AAT9 — Unified Changelog
 
+## 2025-09-24 - Aux - Positional pressure tool + Control Center heat - Draws-only positional indicators across variants
+- Impact: Aux page gains positional pressure panel with consensus/shortlist; Control Center shows positional heat badges; docs updated.
+- Files: `src/app.py`, `modules/module_d_auxiliary_tools/refactored/positional_tool.py`, `scripts/checks/smoke_positional.py`, `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`, `docs/AAT9_KIT/AAT9_Workflow_Standard.md`, `docs/AAT9_KIT/important/AAT9_Positional_Pressure.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`, `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md`
+
 ## 2025-09-22 - Aux - Combined/Midday/Evening variant support - Cross-variant doubles and BA views
 - Impact: Control Center doubles tracker and Blackapple table surface Combined/Midday/Evening rows; Aux page lets you rerun working analysis per variant (purple bands suppressed for Midday/Evening).
 - Files: `src/app.py`, `modules/aux_loaders.py`, `docs/AAT9_DOCS/Aux_Variants_Addendum.md`, `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`

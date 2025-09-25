@@ -1,0 +1,409 @@
+  - Context: Aux began failing after the Sept-16 cleanup because the rich boxed VTRAC reference (legacy) was archived. Lazily
+imported modules fell back to the slim canonical API, so Aux lost "'`BOXED_LABEL_LOOKUP` and returned empty tables.
+    - Change:
+      - Hardened `_aux_working_first()` (stages working modules for full run; restores sys.path and prior bindings).
+      - Converted staged imports to relative (`scripts/auxiliary/working/modules/*`).
+      - Updated refactored bootstrap to locate legacy assets and register them before loading Aux helpers.
+      - Removed ad-hoc sys.path tweaks in refactored helpers; added smoke script `scripts/checks/smoke_aux_vtrac.py`.
+      - Added Aux staging manifest + doc hooks (Quickstart, Live Wiring, Pitfalls).
+    - Rationale: Keep Aux draws-only flow stable while maintaining the canonical VTRAC API for Winners and other pages.
+    - Impact: Aux runs again (boxed VTRAC grid + overdue panels), Dev Health shows staged bindings, quick smoke script catches
+regressions.
+AAT9_Aux_Staging_Manifest.md; Quickstart/LW/Pitfalls updates.
+    - Follow-ups: Optional – remove duplicate legacy copies once archive-only loader is validated; consider compat shim so Aux can
+
+• Proposed Command
+  └ powershell.exe -NoProfile -Command "Get-Content -Path 'docs/AAT9_KIT/AAT9_Checkpoint_Log.md' -First 24"
+
+✔ You approved codex to run powershell.exe -NoProfile -Command "Get-Content -Path 'docs/AAT9_KIT/AAT9_Che... this time
+
+• Ran powershell.exe -NoProfile -Command "Get-Content -Path 'docs/AAT9_KIT/AAT9_Checkpoint_Log.md' -First 24"
+
+• Proposed Command
+  └ powershell.exe -NoProfile -Command '$newEntry = @'"'
+    ## 2025-09-21 02:00 (UTC) – Aux staging restore
+
+    - Context: Aux began failing after the Sept-16 cleanup because the rich boxed VTRAC reference (legacy) was archived. Lazily
+imported modules fell back to the slim canonical API, so Aux lost "'`BOXED_LABEL_LOOKUP` and returned empty tables.
+    - Change:
+      - Hardened `_aux_working_first()` (stages working modules for full run; restores sys.path and prior bindings).
+      - Converted staged imports to relative (`scripts/auxiliary/working/modules/*`).
+      - Updated refactored bootstrap to locate legacy assets and register them before loading Aux helpers.
+      - Removed ad-hoc sys.path tweaks in refactored helpers; added smoke script `scripts/checks/smoke_aux_vtrac.py`.
+      - Added Aux staging manifest + doc hooks (Quickstart, Live Wiring, Pitfalls).
+    - Rationale: Keep Aux draws-only flow stable while maintaining the canonical VTRAC API for Winners and other pages.
+    - Impact: Aux runs again (boxed VTRAC grid + overdue panels), Dev Health shows staged bindings, quick smoke script catches
+regressions.
+    - Files/Refs: src/app.py; scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}; modules/module_d_auxiliary_tools/
+refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}; scripts/checks/smoke_aux_vtrac.py; docs/AAT9_DOCS/
+AAT9_Aux_Staging_Manifest.md; Quickstart/LW/Pitfalls updates.
+    - Follow-ups: Optional – remove duplicate legacy copies once archive-only loader is validated; consider compat shim so Aux can
+    Set-Content -Path 'docs/AAT9_KIT/AAT9_Checkpoint_Log.md' -Value ("'$newEntry.TrimEnd() + "`r`n`r`n" + $oldContent)
+    '
+  └ powershell.exe -NoProfile -Command "Get-Content -Path 'docs/AAT9_KIT/AAT9_Checkpoint_Log.md' -First 24"
+
+• Ran powershell.exe -NoProfile -Command "Get-Content -Path 'docs/AAT9_KIT/AAT9_Checkpoint_Log.md' -First 24"
+    $newEntry = @'"'
+    ## 2025-09-21 02:00 (UTC) – Aux staging restore
+
+    - Context: Aux began failing after the Sept-16 cleanup because the rich boxed VTRAC reference (legacy) was archived. Lazily
+imported modules fell back to the slim canonical API, so Aux lost "'`BOXED_LABEL_LOOKUP` and returned empty tables.
+    - Change:
+      - Hardened `_aux_working_first()` (stages working modules for full run; restores sys.path and prior bindings).
+      - Converted staged imports to relative (`scripts/auxiliary/working/modules/*`).
+      - Updated refactored bootstrap to locate legacy assets and register them before loading Aux helpers.
+      - Removed ad-hoc sys.path tweaks in refactored helpers; added smoke script `scripts/checks/smoke_aux_vtrac.py`.
+      - Added Aux staging manifest + doc hooks (Quickstart, Live Wiring, Pitfalls).
+    - Rationale: Keep Aux draws-only flow stable while maintaining the canonical VTRAC API for Winners and other pages.
+    - Impact: Aux runs again (boxed VTRAC grid + overdue panels), Dev Health shows staged bindings, quick smoke script catches
+regressions.
+    - Files/Refs: src/app.py; scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}; modules/module_d_auxiliary_tools/
+refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}; scripts/checks/smoke_aux_vtrac.py; docs/AAT9_DOCS/
+consume canonical API long-term.
+    '"'@
+      - Updated refactored bootstrap to locate legacy assets and register them before loading Aux helpers.
+        regressions.
+    - Files/Refs: src/app.py; scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}; modules/module_d_auxiliary_tools/
+        refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}; scripts/checks/smoke_aux_vtrac.py; docs/AAT9_DOCS/
+        AAT9_Aux_Staging_Manifest.md; Quickstart/LW/Pitfalls updates.
+    - Follow-ups: Optional – remove duplicate legacy copies once archive-only loader is validated; consider compat shim so Aux can
+        consume canonical API long-term.
+
+
+
+__________________
+
+Thanks for flagging this. The startup flow in briefings/CODEX_READ_FIRST_AAT9.md points to the curated KIT documents, including
+  docs/AAT9_KIT/Practices/AAT9_Pitfalls_and_Patterns.md. I did read that set (Quickstart, Workflow, Coding Standards, Agent Rules,
+  Pitfalls & Patterns, etc.) when spinning up this session, and it already referenced the legacy Aux separation. Later, while
+  tracking down the break, I also checked the older briefings/PITFALLS.txt because it contains the historical “integration playbook”
+  that the newer note in Pitfalls & Patterns was derived from. That’s the file I patched first simply because the breadcrumb there
+  matched the failure message I was seeing.
+
+  To keep everything consistent:
+
+  - I’ve synced the new Aux staging reminder into the official KIT practice doc (AAT9_Pitfalls_and_Patterns.md) so both sources now
+  mention the smoke check and the manifest.
+  - Going forward, updates like this will continue to anchor in the KIT docs first (per the startup list), with the briefings file
+  treated as a historical appendix.
+_____________
+
+> Everything is now wired so this class of issue can’t sneak up again:
+
+  - _aux_working_first() keeps the staged modules at the front of sys.path for the entire Aux run, then restores the previous state.
+  Staged helpers now use relative imports so they can’t accidentally bind to the canonical modules tree.
+  - modules/module_d_auxiliary_tools/refactored/bootstrap_imports.py locates the rich legacy VTRAC reference (and analyze_pairs) in
+  either core_legacy/legacy_modules_backup or archived/vtrac_refs, registers them, and inserts the right paths. The per-page helpers
+  no longer juggle sys.path themselves.
+  - Added docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md and wired it into Quickstart, Live Wiring, Pitfalls, the cleanup note, and
+  both briefings/CODEX_READ_FIRST_AAT9.md and briefings/PITFALLS.txt.
+  - Dropped a CLI smoke test at scripts/checks/smoke_aux_vtrac.py; python scripts/checks/smoke_aux_vtrac.py confirms the staged
+  analyze_pairs and vtrac_reference expose VTRAC_DISPLAY / BOXED_LABEL_LOOKUP before you ever touch the UI.
+
+  If you’d like me to stage the changes or run the Streamlit UI for a final Dev Health screenshot, just say the word.
+
+▌ go for it proceed optimally
+
+> - _aux_working_first() now keeps the staged Aux package at the front of sys.path for the entire analysis window and restores the
+  previous bindings afterward.
+  - Staged helpers (scripts/auxiliary/working/modules/analyze_pairs.py, run_process.py) import relatives; the refactored bootstrap
+  locates the rich legacy VTRAC reference (and analyze_pairs) from legacy or archived paths and registers them, so Aux always sees
+  VTRAC_DISPLAY/BOXED_LABEL_LOOKUP.
+  - Added docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md and updated Quickstart, Live Wiring, Pitfalls, the cleanup note, and both
+  README-style briefings to point to it; there’s also a CLI smoke test at scripts/checks/smoke_aux_vtrac.py.
+  - python -m py_compile … and python scripts/checks/smoke_aux_vtrac.py both pass, confirming the staged modules are bound
+  correctly.
+
+  Next steps you might take: run the Streamlit UI (Dev Health on Aux) to visually confirm the paths; git add the touched files and
+  commit.
+
+______
+
+
+> Aux is healthy again—the Dev Health panel shows the staged modules and draw source exactly where we want them—but you’re right
+  that we just spent a lot of time getting back to baseline rather than moving the new Midday/Evening work forward. Here’s how to
+  think about the state of the world now, what we saved, and how to avoid another detour on the next pass.
+
+  ———
+
+  Where We Stand
+
+  - Staged vs canonical V‑TRAC: We intentionally still have two APIs:
+      - The canonical modules/vtrac_reference.py (slim) serves Winners Full, V‑TRAC Analyzer, Stable, etc.
+      - The staged legacy package (scripts/auxiliary/working/modules) holds the boxed mappings Aux depends on.
+        We reinstated the dependency between Aux and the legacy reference so the staged modules can run; we didn’t roll back the
+  canonical API or any Winners work.
+  - Draw pipeline for Midday/Evening: Nothing changed there. Combined CSVs still land in data/cleaned/draws/, the loader checks
+  that directory first, and the Control Center + Aux tools remain combined-draws-only. Midday/Evening integration work can pick up
+  exactly where it left off.
+  - Future unification: When someone is ready to unify around the canonical API (or build a compat layer that exposes the boxed
+  data computed from the new tables), they still can. What we added—manifest + smoke test + doc references—just ensures the staged
+  dependency is explicit until that work happens.
+
+  ———
+
+  How We Prevent Repeat Breakage
+
+  1. Aux staging manifest (docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md) lists the exact legacy files that must exist. Any cleanup
+  pass now has a written checklist.
+  2. Smoke script (python scripts/checks/smoke_aux_vtrac.py) is in the startup doc and Quickstart. Running it takes two seconds and
+  immediately shows if the staged modules are resolving correctly.
+  3. Documentation breadcrumbs – Quickstart, Live Wiring, Pitfalls, the cleanup note, and `COD
+
+  EX_READ_FIRST_AAT9.md` all point to the manifest and smoke script. Even if someone jumps in cold, the optimized startup flow
+  (which already told us what to read) now highlights Aux staging explicitly.
+
+  Put together, if someone tries to archive or rename the legacy reference again, the preflight smoke test or a quick Dev Health
+  glance will catch it before they get deep into a session.
+
+  ———
+
+  Organizing Follow‑up Work
+
+  - You don’t need an additional “AAT9_takeover” doc right now. The combination of the Checkpoint Log, Unified Changelog,
+  Quickstart, and the manifest (plus the new smoke script) already gives the next session everything they need. A separate takeover
+  doc tends to go stale unless you keep it religiously updated.
+  - When you pick up the Midday/Evening feature, start with:
+      1. Run the smoke script and .codex/preflight.ps1 to baseline.
+      2. Sketch the plan: e.g., what extra Midday/Evening tables need to be wired into Control Center/Aux, what UI toggles to add,
+  etc.
+      3. Execute with the Plan → Implement → Verify → Document loop that the startup doc lays out.
+         If we eventually unify V‑TRAC, plan that as a separate, well-scoped task (likely creating a compat layer so Aux can share
+  the canonical API without absorbing the staged package wholesale).
+
+  ———
+
+  Quick Summary of Fixes
+
+  - _aux_working_first() now stages the working modules for the entire Aux run and restores sys.path afterward.
+  - Staged helpers (analyze_pairs.py, run_process.py) import relatives; the refactored bootstrap locates the legacy reference and
+  registers it.
+  - docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md + doc updates ensure everyone knows about the dependency; scripts/checks/
+  smoke_aux_vtrac.py provides an instant check.
+
+  Suggested Next Steps
+
+  1. Run the app, toggle “Show Dev Health (Aux)” once to verify the staged paths (you’ve already done this—looks great).
+  2. Commit these changes so the repo history records the fix.
+  3. When you resume Midday/Evening work, use the manifest and smoke script as your first preflight steps so you’re on solid ground.
+
+  We lost a chunk of time, but the upside is that the guardrails are stronger, the docs call out the dependency everywhere, and a
+  one-command smoke test now catches exactly this sort of drift. Future sessions won’t have to rediscover it the hard way.
+
+_____________
+
+ Here’s the state of play and how I’d tee up the next session so you (or the next AI) can move straight into Midday/Evening feature
+  work without falling into the same trap again.
+
+  ———
+
+  ### Where Things Stand
+
+  - Combined features remain untouched. All existing Aux/Control Center logic still reads the combined draws from data/cleaned/
+  draws/<State>_draws.csv. None of the draw-processing or combined-table wiring we rely on for production was altered.
+  - Staged Aux import chain is explicit and guarded.
+      - _aux_working_first() now stages the working modules for the full analysis window, then restores sys.path.
+      - Staged helpers import relatives, and the refactored bootstrap looks in both core_legacy/legacy_modules_backup and archived/
+  vtrac_refs before registering modules.vtrac_reference/analyze_pairs.
+      - Dev Health shows those paths, and python scripts/checks/smoke_aux_vtrac.py pops red if BOXED constants ever disappear.
+  - Documentation breadcrumbs everywhere. The optimized startup doc, Quickstart, Live Wiring, Pitfalls, the cleanup note, and the
+  brand-new docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md all call out the dependency and the smoke script. If anyone forgets, the
+  preflight step should catch it within minutes.
+
+  ———
+  Suggested Next Steps
+
+  1. Run the app, toggle “Show Dev Health (Aux)” once to verify the staged paths (you’ve already done this—looks great).
+  2. Commit these changes so the repo history records the fix.
+  3. When you resume Midday/Evening work, use the manifest and smoke script as your first preflight steps so you’re on solid ground.
+
+  We lost a chunk of time, but the upside is that the guardrails are stronger, the docs call out the dependency everywhere, and a
+  one-command smoke test now catches exactly this sort of drift. Future sessions won’t have to rediscover it the hard way.
+
+▌ OK I'm running out of context with you or I would get you to work on some of these items maybe there's some minor items we can
+▌ double check or start on I know we were testing out like running the pipeline of the draws to see if that worked one thing we had
+▌ noticed is the new draws cvs had the order flipped i dont know why where as 1000 was 1# and vice versa tyep of thing i think codex
+▌ was planning to try and fix this and actually may have before shutting down? ya i see it did like a test order which seems to be
+▌ correct so i imagine if i empty the foldre ad try again it should now produce them in the correct order like the old extractions
+▌ did..hmm maybe you can add something so that Did we when I get back on with codecs what I'd like to do is start adding features to
+▌ the mayday and evening draws if you think there's some sort of information you can add somewhere that can help AI quickly jump in
+▌ and help me with these things with everything you've learned and understood that would be amazing Could maybe make up for all the
+▌ lost time 'cause I will have to retrain codecs again too I just don't trust doing it with you because I see at the bottom you only
+▌ have 17% of contacts left which suggests to me I'll probably have to restart a session but what I'll be doing so you understand
+▌ there are a lot of the features that are currently for combined draws which if you can please confirm have been locked in and
+▌ protected A lot of them will be mirrored for the Mayday evening The idea if you see it in totality is that for things like in the
+▌ Control Center that do double S across states like an aggregate feature like that we now get more insights into more draws Same
+▌ with Black Apple we get more potential draws that could be an alert status we can use to our advantage as well as all the other
+▌ auxiliary features like the pairs indicators box combination stuff like that but I don't want it to be a complete mirror i'm going
+▌ to customize exactly for the mayday in the evening Does that make sense So I'm hoping since it has the combined features to base
+▌ things off of this should allow for an easy seamless pathway at least logically I'm hoping So I'm wondering if you want to read to
+▌ that whole message and see what maybe you could quickly help me with because I'm probably going to end this session I'd start with
+▌ maybe some sort of context or something to write for an AI to jump in and rather quickly be able to help actually yeah let's just
+▌ do that for now 'cause I might shut this down after so basically everything comprehensively optimal you think you could add to
+▌ help me out with moving forward or anything else to cross off all the fixes you made and ensure this never happens again please
+▌ please proceed with that optimally actually give me your comprehensive brainstorm thoughts on that first
+
+• I'll organize a clear summary highlighting current pipeline status, suggest verifying and documenting next steps like pipeline
+  order checks, and propose creating comprehensive docs to support future work—wrapping it all up in a thoughtful handoff message
+  for the user.
+
+  ### Suggested Next Actions (for the follow-up session)
+
+  1. Re-run the draw pipeline once (empty data/cleaned/draws/test_order/*, run the CLI or Control Center exporter) to confirm the
+  Midday/Evening order fix stuck. If the staging script wrote them 1000→1 as intended, note that in the manifest or Quickstart.
+  2. Capture the current state in a short “context handoff” note (e.g., docs/AAT9_DOCS/AAT9_MiddayEvening_Context.md). Include:
+      - Where combined vs. Midday/Evening CSVs live
+      - The smoke script command
+      - The goal for the next pass (mirror key combined features into separate Midday/Evening tabs/datasets)
+  3. Plan the Midday/Evening feature work as a small roadmap. A sample breakdown:
+      - Step 1: ensure the Midday/Evening CSV order and naming are stable (done by pipeline test above)
+      - Step 2: extend loaders/Control Center to surface Midday/Evening toggles (keeping combined as default)
+      - Step 3: duplicate Aux metrics (overdue pairs, doubles tracker, etc.) with state-aware toggles
+      - Step 4: update docs (Live Wiring + Quickstart) and add regression smoke (maybe a new script per draw type)
+  4. Update the shared “Pitfalls” doc (already done) but consider adding a short section on the Midday/Evening plan, so the next
+  workflow training sees it without reading Slack logs.
+  5. Keep using the smoke script + .codex/preflight.ps1 before each session. Running those two commands before touching the app will
+  catch path drift immediately.
+
+  ———
+
+  With those guardrails in place, we can re-focus on the actual feature work when you bring the next Codex session online. When
+  you’re ready to proceed, just shout—the environment is prepped and safe, and the roadmap above will minimize backtracking.
+
+Sounds good. Everything’s in place—the smoke script and manifest are there, docs are updated, and Aux is healthy again. When
+  you’re ready to restart the next session, just run the preflight + smoke command and you’ll be straight back into Midday/Evening
+  feature work.
+
+
+___________________________
+
+HAD TO FIX WINNNERS LOGGER STOPPED WORKIING
+
+I’m putting together a clear, bullet-pointed summary referencing specific code locations and highlighting validation steps,
+  including the smoke test command and re-running the control center as recommended. This will keep the explanation straightforward
+  and easy to follow.
+
+> Fix Summary
+
+  - Restored legacy VTRAC constants (VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP) by lazily loading the staged
+  reference and re-exporting them from the canonical module so Winners Logger and other consumers regain their data without
+  disturbing Aux isolation (modules/vtrac_reference.py:23 modules/vtrac_reference.py:47 modules/vtrac_reference.py:97).
+  - Reworked the Winners Logger Dev Health panel to use a standalone container instead of a nested expander, keeping the diagnostics
+  while complying with Streamlit’s layout rules (src/app.py:700-src/app.py:720).
+
+  Validation
+
+  - python -m py_compile src/app.py modules/vtrac_reference.py
+  - python scripts/checks/smoke_aux_vtrac.py (confirms staged Aux reference still exposes required symbols)
+
+  You can now re-launch run_app.bat, open Control Center → Winners Logger, toggle Dev Health, and generate both the compact and
+  analyzer-style reports to confirm the restored outputs.
+
+▌ ok please proceed optimally
+
+• Updated Plan
+  └ □ Run quick UI smoke (launch Winners Logger to confirm full report renders) or provide instructions if manual verification
+      required, gather outputs.
+    □ Prepare changelog/checkpoint notes if needed and summarize work plus next steps.
+
+• Updated Plan
+  └ ✔ Run quick UI smoke (launch Winners Logger to confirm full report renders) or provide instructions if manual verification
+      required, gather outputs.
+    □ Prepare changelog/checkpoint notes if needed and summarize work plus next steps.
+
+• Updated Plan
+  └ ✔ Run quick UI smoke (launch Winners Logger to confirm full report renders) or provide instructions if manual verification
+      required, gather outputs.
+    ✔ Prepare changelog/checkpoint notes if needed and summarize work plus next steps.
+
+> - Winners Logger uses the legacy VTRAC dataset again: the canonical shim now lazy-loads the staged reference and re-exports
+  VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, and BOXED_LABEL_LOOKUP, while keeping the new helper APIs (modules/vtrac_reference.py:23,
+  modules/vtrac_reference.py:47, modules/vtrac_reference.py:97).
+  - Streamlit crash resolved: the Winners Full Dev Health block now renders inside a plain container, so there’s no longer a nested-
+  expander violation (src/app.py:700).
+  - Verified with python -m py_compile src/app.py modules/vtrac_reference.py and python scripts/checks/smoke_aux_vtrac.py; Aux
+  staging still reports the expected symbols.
+
+  Next steps: relaunch via run_app.bat, open Control Center → both Winners Logger panels, toggle Dev Health to confirm paths, and
+  generate a Midday/Evening report to ensure the HTML lands under data/outputs/analysis/winners/<STATE>/. If the outputs look good,
+  consider logging the change in the Unified Changelog/Checkpoint Log.
+
+_____________________________
+
+ I'm piecing together a detailed explanation referencing the docs about how canonicalization removed legacy constants causing
+  breakage; the fix brings back multi-source support. I'll outline risks, like path debt, and suggest a plan to unify later with a
+  compatibility shim to keep things smooth.
+
+> Big Picture
+
+  - The 9/21 fix did what it had to: Aux staging survived by restoring the old boxed V-TRAC reference, but we’re now straddling two
+  worlds—a slim canonical API and the legacy data blob. That duality is the real source of friction.
+  - The “unify everything” attempt failed because it dropped VTRAC_DISPLAY/BOXED_* without migrating every consumer. Anything
+  outside Aux (Control Center winners tiles, smoke scripts, docs) still expected those lists to exist. The result was predictable:
+  Aux broke first, we restored staging, and then newer features that were built on top of the canonical shim lost their data source.
+
+  Current State
+
+  - Aux paths are safe again; the staged module lives under scripts/auxiliary/working/modules/, and the recent shim now re-exports
+  those constants to non-Aux code. Winners Logger works, Stable’s spotlight works, Aux smoke passes.
+  - The architecture docs (session-end note, Pitfalls, Live Wiring) already flag the hybrid setup: Aux keeps legacy assets;
+  everything else should go through the canonical facade. Today’s patch simply finished the job by letting the facade hand out the
+  legacy constants.
+
+  Risk Level
+
+  - We’re not in “giant mess” territory, but it’s a fragile truce until we finish the full unification. Nothing is quietly
+  corrupting data; the pain is that any time we refactor the shim or forget the legacy exports, downstream tools crash.
+  - As long as the canonical module continues to re-export legacy constants (and we keep the smoke script in the loop), the project
+  is stable. The key is discipline: never delete or move the staged reference without rebuilding the shim and updating every
+  consumer.
+
+  Takeaways / Guidance
+
+  1. Treat modules/vtrac_reference as the single entry point. It can delegate to the staged file under the hood (as it does now),
+  but every consumer—old or new—should import from the canonical module. That makes future migrations explicit and reviewable.
+  2. Before touching V-TRAC again, inventory all dependents (rg "VTRAC_DISPLAY", rg "get_vtrac_index", etc.) and design the
+  migration in one sweep. Partial clean-ups are what caused the drift.
+  3. Keep the docs (Pitfalls, Live Wiring) and smoke script up to date—they’re your backstop. If those say Aux needs the staged
+  file, don’t archive it without refactoring Aux simultaneously.
+  4. Long-term, decompose the staged data into a plain JSON/CSV asset that both Aux and the canonical module can load. That removes
+  the need for dynamic imports and makes testing easier.
+
+  In short: yesterday’s restore didn’t ruin the project; it just left us with a compatibility shim we must maintain until we
+  complete the unification. With the shim in place and smoke checks active, you can resume feature work confidently—just plan any
+  future V-TRAC cleanup as a single, coordinated effort so we don’t repeat the churn. OK thank you for that detailed feedback so in light of that I have
+
+You don’t have to shelve the Midday/Evening features. The guardrails we just finished—canonical shim re-exporting the staged data
+  plus the smoke checks—give you a stable surface to build on. Treat modules.vtrac_reference as the one API and keep running the
+  quick preflight/smoke scripts whenever you touch anything V‑TRAC-related.
+
+  Long-term, yes, we should unify the reference for real: extract the legacy constants into a neutral data file, feed them through
+  the canonical module, and update Aux to use that same source. But that work can be scheduled after the current feature push. Keep
+  the existing shim in place, avoid deleting the staged module, and document any new dependencies on the canonical API. Following
+  those habits lets you keep delivering Midday/Evening functionality now without tripping over the legacy fix again.
+
+________________
+
+• I'll wrap up by highlighting the key code changes including variant handling, Control Center fixes, and documentation updates.
+  I'll also recommend verification steps like running py_compile and testing the Control Center, plus reminding to run the daily
+  pipeline as usual. A clear bulleted summary and next steps will round out the final response.
+
+> Variant Support Added
+
+  - modules/aux_loaders.py: introduced Variant literal, tolerant CSV resolver for Combined/Midday/Evening, and a clean (draws, path)
+  return so every consumer stays draw-only.
+  - src/app.py: Control Center now caches variant-aware doubles + Blackapple rows, filters out 000 fillers before scoring, and shows
+  draw sources per variant; Auxiliary Tools gets a variant switcher while suppressing purple pairs outside Combined and passing the
+  correct draws into BA.
+  - docs/AAT9_DOCS/Aux_Variants_Addendum.md (new) plus updates to Quickstart, Aux Tools official guide, Blackapple module, Unified
+  Changelog, and Checkpoint Log capture the new contracts and data flow.
+
+  Validation
+
+  - python -m py_compile modules/aux_loaders.py src/app.py
+  - python scripts/checks/smoke_aux_vtrac.py
+
+  Feel free to launch run_app.bat, toggle through Midday/Evening in Aux, and review the Control Center tables—each variant should
+  now list its draw source and BA results without manual file swaps.
+
+▌ Implement {feature}                                                    

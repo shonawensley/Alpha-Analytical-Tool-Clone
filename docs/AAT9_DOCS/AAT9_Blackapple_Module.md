@@ -46,6 +46,14 @@ Control Center UI (Primary Surface)
 - Table columns: State | BA-Score | Status | Triggers | #Candidates | Examples (first 3).
 - Under the table, each state has an expander "View all candidates" showing all 12 (combo, score, tags).
 - Draw source caption can be surfaced during dev to validate data origin.
+- Control Center also surfaces a positional heat badge per variant (P1/P2/P3 top gaps) sourced from the positional pressure engine.
+
+**How to read this table (operators):**
+- `Variant` column shows Combined / Midday / Evening for each row.
+- `#Candidates` is capped at 12 per state.
+- `Examples` lists the top-3 candidates; expand "View all candidates" to see all 12 entries.
+- *(DEV)* Add a caption such as `BA draws: <resolved path> (N)` to confirm the draws CSV source (draws-only).
+
 
 Optional State Panel (Aux Page)
 

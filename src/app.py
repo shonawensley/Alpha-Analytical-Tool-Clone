@@ -1,9 +1,10 @@
-import sys
+﻿import sys
 import os
 import pathlib
 import streamlit as st
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Dict, List, Optional
 
 # --- Canonical imports bootstrap (ensure top-level utils wins) ---------
 SRC_DIR = pathlib.Path(__file__).resolve().parent     # .../src
@@ -61,6 +62,7 @@ from utils.path_handler import get_tables_output_dir
 
 # --- AUX working modules path (staged, isolated) -----------------------
 from pathlib import Path
+from typing import Dict, List, Optional
 _AUX_WORKING_ROOT = os.path.normpath(os.path.join(Path(__file__).resolve().parent.parent, "scripts", "auxiliary", "working"))
 if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
     # Insert the parent folder so absolute imports like `modules.parse_excel` work
@@ -89,7 +91,13 @@ def _load_blackapple_real():
 def _load_aux_loaders_real():
     return _load_project_module("project_aux_loaders", "modules/aux_loaders.py")
 
-# Helpers for rendering working VÃ¢â‚¬â€˜TRAC output (used only on Aux page)
+def _load_positional_tool_real():
+    return _load_project_module(
+        "project_positional_tool",
+        "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
+    )
+
+# Helpers for rendering working VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
     # Priority: red > blue > purple (display-only severity)
     return {"red": 3, "blue": 2, "purple": 1}.get(cls or "", 0)
@@ -304,7 +312,7 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
             if flags.get("red"):
                 parts.append(f'<span class="red">{label}</span>')
             if flags.get("purple"):
-                parts.append('<span class="purple">Ã¢â‚¬Â¢</span>')
+                parts.append('<span class="purple">ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</span>')
             return " ".join(parts)
 
         s_tag = tag(f"S{s}", sflags)
@@ -316,9 +324,9 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
     except Exception:
         return ""
 
-# Ã¢ÂÂ¶ Page config FIRST (before every other st.*)
+# ÃƒÂ¢Ã‚ÂÃ‚Â¶ Page config FIRST (before every other st.*)
 st.set_page_config(page_title="Alpha-Final Analytical Tool",
-                   page_icon="Ã°Å¸Å¡â‚¬", layout="wide")
+                   page_icon="ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬", layout="wide")
 
 # Debug: show which file is running (safe to remove later)
 def main():
@@ -341,14 +349,14 @@ def main():
     ]
     
     selected_state = st.sidebar.selectbox(
-        "State Ã¢â€“Â¼",
+        "State ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼",
         states_list,
         index=0
     )
     
     # Second level: Tool selector  
     selected_tool = st.sidebar.selectbox(
-        "Tool Ã¢â€“Â¼",
+        "Tool ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼",
         [
             "V-TRAC Analyzer",
             "Stable Pattern Extractor", 
@@ -484,13 +492,13 @@ def show_stable_pattern_page(state: str) -> None:
         )
 
         if df.empty:
-            st.warning("No patterns found Ã¢â‚¬â€œ verify tables or adjust parameters.")
+            st.warning("No patterns found ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ verify tables or adjust parameters.")
         else:
             st.success(f"{len(df)} patterns extracted.")
             st.dataframe(df.head(50), height=360)
 
             if csv_f:
-                st.markdown(f"[Ã¢Â¬â€¡ Download CSV]({csv_f})")
+                st.markdown(f"[ÃƒÂ¢Ã‚Â¬Ã¢â‚¬Â¡ Download CSV]({csv_f})")
 
             if html_f and Path(html_f).exists():
                 with open(html_f, "r", encoding="utf-8") as fh:
@@ -587,7 +595,7 @@ def show_control_center_page() -> None:
         if upl is not None and st.button("Generate Tables"):
             try:
                 from core.pipeline_runner import run_pipeline_from_bytes
-                with st.spinner("Running tables pipeline (clean â†’ extract â†’ generate)..."):
+                with st.spinner("Running tables pipeline (clean Ã¢â€ â€™ extract Ã¢â€ â€™ generate)..."):
                     summary = run_pipeline_from_bytes(upl.getvalue())
                 st.success(
                     f"Cleaned: {summary.get('clean_success',0)} states; "
@@ -890,6 +898,59 @@ def show_control_center_page() -> None:
                 st.warning("No draw data available for the selected variants.")
                 return
 
+            positional_heat: Dict[tuple[str, str], str] = {}
+            positional_notes: Dict[str, str] = {}
+            try:
+                with _project_modules_first():
+                    positional_tool = _load_positional_tool_real()
+            except Exception:
+                positional_tool = None
+            if positional_tool:
+                state_variant_draws: Dict[str, Dict[str, List[str]]] = {}
+                state_double_flags: Dict[str, bool] = {}
+                for row in variant_rows:
+                    if row.get("VariantKey") == "combined":
+                        ds_val = row.get("Draws Since Last Double")
+                        flag = False
+                        try:
+                            if ds_val is not None:
+                                flag = float(ds_val) >= 71
+                        except (TypeError, ValueError):
+                            flag = False
+                        state_double_flags[row["State"]] = flag
+                for (state_label, variant_key), draws in variant_draws.items():
+                    if draws:
+                        state_variant_draws.setdefault(state_label, {})[variant_key] = draws
+                for state_label, variant_map in state_variant_draws.items():
+                    if not variant_map:
+                        continue
+                    due_flag = state_double_flags.get(state_label, False)
+                    try:
+                        report = positional_tool.analyze_state_variants(
+                            variant_map, window=150, topk=3, due_doubles_active=due_flag
+                        )
+                    except Exception:
+                        continue
+                    for variant_key, variant_result in report.variant_results.items():
+                        if not variant_result or not variant_result.draws_used:
+                            continue
+                        parts = []
+                        for pos_idx in (0, 1, 2):
+                            pos_summary = variant_result.position_summaries.get(pos_idx)
+                            if not pos_summary or not pos_summary.top_digits:
+                                continue
+                            top_entry = pos_summary.top_digits[0]
+                            parts.append(f"P{pos_idx + 1}:{top_entry.digit}({top_entry.gap})")
+                        if parts:
+                            positional_heat[(state_label, variant_key)] = " ".join(parts)
+                    note_set = sorted({note for note in report.consensus_notes if note})
+                    if note_set:
+                        positional_notes[state_label] = " | ".join(note_set)
+            for row in variant_rows:
+                key = (row["State"], row["VariantKey"])
+                row["Positional Heat"] = positional_heat.get(key, "")
+                row["Positional Notes"] = positional_notes.get(row.get("State"), "") if row.get("VariantKey") == "combined" else ""
+
             df_doubles = _pd.DataFrame(variant_rows)
             df_doubles["VariantOrder"] = df_doubles["VariantKey"].map(lambda key: variant_order.get(key, 99))
             df_doubles.sort_values(
@@ -1061,7 +1122,7 @@ def show_aux_page(state: str) -> None:
     except Exception:
         extract_draw_list = None
 
-    # Working modules (staged copy) Ã¢â‚¬â€œ used only inside Aux page
+    # Working modules (staged copy) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ used only inside Aux page
     _AUX_WORKING_AVAILABLE = False
     try:
         with _aux_working_first():
@@ -1079,6 +1140,8 @@ def show_aux_page(state: str) -> None:
     
     st.title(f"Auxiliary Tools - {state}")
     st.write(f"Advanced lottery analysis tools for {state}")
+
+    state_key = ''.join(ch if ch.isalnum() else '_' for ch in state) or 'state'
 
     variant_options = [
         ("Combined", "combined"),
@@ -1242,7 +1305,7 @@ def show_aux_page(state: str) -> None:
                             build_sums_dataframe as _build_sums_df,
                         )
                         # Debug caption to verify import source; safe to remove later
-                        st.sidebar.caption(f"[{variant_label}] SUMS Ã¢Â¦Â¿ {_calc_sums.__module__}")
+                        st.sidebar.caption(f"[{variant_label}] SUMS ÃƒÂ¢Ã‚Â¦Ã‚Â¿ {_calc_sums.__module__}")
                     except Exception as _e:
                         st.sidebar.caption(f"[{variant_label}] SUMS import failed: {_e}")
 
@@ -1255,9 +1318,150 @@ def show_aux_page(state: str) -> None:
                 else:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
+                with st.expander("Positional Pressure (Combined / Midday / Evening)", expanded=True):
+                    pos_window = st.slider(
+                        "Window (draws scanned)",
+                        min_value=60,
+                        max_value=300,
+                        value=150,
+                        step=10,
+                        key=f"aux_pos_window_{state_key}_{selected_variant_key}",
+                    )
+                    pos_topk = st.radio(
+                        "Top-K per position",
+                        options=[3, 4, 5],
+                        index=0,
+                        horizontal=True,
+                        key=f"aux_pos_topk_{state_key}_{selected_variant_key}",
+                    )
+                    try:
+                        with _project_modules_first():
+                            positional_tool = _load_positional_tool_real()
+                    except Exception as _pos_load_err:
+                        positional_tool = None
+                        st.caption(f"Positional module unavailable: {_pos_load_err}")
+                    else:
+                        variant_cache: dict[str, Optional[dict]] = {}
+                        draws_by_variant: dict[str, List[str]] = {}
+                        for option_label, option_key in variant_options:
+                            cached_variant = cached_aux_analysis(state, option_key)
+                            variant_cache[option_key] = cached_variant
+                            variant_draws = (cached_variant or {}).get("draws")
+                            if variant_draws:
+                                draws_by_variant[option_key] = variant_draws
+                        if not draws_by_variant:
+                            st.caption("No positional draws available across variants.")
+                        else:
+                            due_doubles_flag = any(ds >= 71 for ds in results.get("rep", {}).values())
+                            try:
+                                report = positional_tool.analyze_state_variants(
+                                    draws_by_variant,
+                                    window=int(pos_window),
+                                    topk=int(pos_topk),
+                                    due_doubles_active=due_doubles_flag,
+                                )
+                            except Exception as _pos_err:
+                                st.warning(f"Positional analysis unavailable: {_pos_err}")
+                            else:
+                                available_variants = [
+                                    (label, key)
+                                    for label, key in variant_options
+                                    if report.variant_results.get(key)
+                                    and report.variant_results[key].draws_used
+                                ]
+                                if not available_variants:
+                                    st.caption("Positional metrics unavailable for selected draws.")
+                                else:
+                                    tabs = st.tabs([label for label, _ in available_variants])
+                                    for tab, (label, key) in zip(tabs, available_variants):
+                                        with tab:
+                                            variant_result = report.variant_results.get(key)
+                                            cached_variant = variant_cache.get(key)
+                                            if not variant_result or not variant_result.draws_used:
+                                                st.caption("No data.")
+                                                continue
+                                            source_path = (cached_variant or {}).get("source")
+                                            if source_path:
+                                                try:
+                                                    src_name = Path(source_path).name
+                                                except Exception:
+                                                    src_name = source_path
+                                                st.caption(f"Draw source: {src_name} ({variant_result.draws_used})")
+                                            columns = st.columns(3)
+                                            for pos_idx, column in enumerate(columns):
+                                                with column:
+                                                    st.markdown(f"**P{pos_idx + 1}**")
+                                                    pos_summary = variant_result.position_summaries.get(pos_idx)
+                                                    if not pos_summary or not pos_summary.top_digits:
+                                                        st.caption("No data")
+                                                        continue
+                                                    rows = [
+                                                        {
+                                                            "Rank": digit_entry.rank,
+                                                            "Digit": digit_entry.digit,
+                                                            "Gap": digit_entry.gap,
+                                                            "Score": round(digit_entry.score, 2),
+                                                            "Tags": " ".join(sorted(digit_entry.tags)),
+                                                        }
+                                                        for digit_entry in pos_summary.top_digits
+                                                    ]
+                                                    st.dataframe(
+                                                        pd.DataFrame(rows),
+                                                        use_container_width=True,
+                                                        hide_index=True,
+                                                    )
+                                st.markdown("**Cross-variant pressure summary**")
+                                summary_cols = st.columns(3)
+                                for pos_idx, column in enumerate(summary_cols):
+                                    with column:
+                                        st.markdown(f"P{pos_idx + 1}")
+                                        agg_items = report.aggregated_digits.get(pos_idx, [])
+                                        if not agg_items:
+                                            st.caption("--")
+                                            continue
+                                        rows = []
+                                        for agg in agg_items[:5]:
+                                            hits = ", ".join(
+                                                f"{variant[:1].upper()}#{rank}" for variant, rank in agg.occurrences
+                                            )
+                                            rows.append(
+                                                {
+                                                    "Digit": agg.digit,
+                                                    "Score": round(agg.score, 2),
+                                                    "Hits": hits,
+                                                    "Tags": " ".join(sorted(agg.tags)),
+                                                }
+                                            )
+                                        st.dataframe(
+                                            pd.DataFrame(rows),
+                                            use_container_width=True,
+                                            hide_index=True,
+                                        )
+                                note_set = sorted({note for note in report.consensus_notes if note})
+                                if note_set:
+                                    st.caption(" • ".join(note_set))
+                                if report.candidates:
+                                    st.markdown("**Positional shortlist**")
+                                    candidate_rows = []
+                                    for cand in report.candidates:
+                                        candidate_rows.append(
+                                            {
+                                                "Combo": cand.combo,
+                                                "Score": round(cand.score, 2),
+                                                "Ranks": "-".join(str(r) for r in cand.ranks if r),
+                                                "Root": cand.digital_root,
+                                                "VTRAC": "" if cand.vtrac_index is None else cand.vtrac_index,
+                                                "Tags": " ".join(sorted(cand.tags)),
+                                            }
+                                        )
+                                    st.dataframe(
+                                        pd.DataFrame(candidate_rows),
+                                        use_container_width=True,
+                                        hide_index=True,
+                                    )
 
-                # --- VÃ¢â‚¬â€˜Trac Table (Working logic) ---
-                st.subheader("Ã°Å¸â€œÅ  VÃ¢â‚¬â€˜Trac Analysis (Working logic)")
+                # --- VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac Table (Working logic) ---
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac Analysis (Working logic)")
                 import pandas as _pd
                 rows = []
                 rows_plain = []
@@ -1322,14 +1526,14 @@ def show_aux_page(state: str) -> None:
                 # Download (plain)
                 df_plain = _pd.DataFrame(rows_plain)
                 st.download_button(
-                    "Download VÃ¢â‚¬â€˜Trac Table (Working) CSV",
+                    "Download VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac Table (Working) CSV",
                     df_plain.to_csv(index=False).encode("utf-8"),
                     file_name=f"{state}_vtrac_working.csv",
                     mime="text/csv",
                 )
 
                 # --- Overdue Pairs (Working logic) ---
-                st.subheader("Ã°Å¸â€Â¥ Overdue Pairs Analysis (Working logic)")
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ Overdue Pairs Analysis (Working logic)")
                 THR_NR_RED, THR_R_RED = 37, 71
                 THR_NR_BLUE, THR_R_BLUE = 56, 107
                 THR_PENDING = 25
@@ -1354,16 +1558,16 @@ def show_aux_page(state: str) -> None:
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
                 with c2:
-                    st.markdown("<b>NonÃ¢â‚¬â€˜Repeating Pairs</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (Ã¢â€°Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (Ã¢â€°Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    st.markdown("<b>NonÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœRepeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (Ã¢â€°Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
 
                 # --- Top 5 Repeating Pairs ---
                 st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
@@ -1528,30 +1732,30 @@ def show_aux_page(state: str) -> None:
                             "Combo": c.get("combo", ""),
                             "MatchScore": c.get("score", 0),
                             "Tags": " ".join(sorted(c.get("tags", []))),
-                            "Sums": f"IÎ£{t['Sigma']} sD{t['sD']} RS{t['RS']}"
+                            "Sums": f"IÃŽÂ£{t['Sigma']} sD{t['sD']} RS{t['RS']}"
                         })
                     if rows:
                         import pandas as _pd
                         st.dataframe(_pd.DataFrame(rows), use_container_width=True)
                     else:
-                        st.caption("No candidate list (insufficient overlap) â€” still watching triggers.")
+                        st.caption("No candidate list (insufficient overlap) Ã¢â‚¬â€ still watching triggers.")
                 except Exception as _e:
                     st.caption(f"Blackapple panel unavailable: {_e}")
                 # Legend / Feature Guide
                 with st.expander("Legend / Feature Guide"):
                     st.markdown("""
-                    - VÃ¢â‚¬â€˜Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
+                    - VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
                     - Combination shapes:
-                      - Red circle: Singles Ã¢â€°Â¥ 501 draws since; Doubles Ã¢â€°Â¥ 1000
-                      - Blue square: Singles Ã¢â€°Â¥ 334; Doubles Ã¢â€°Â¥ 667
+                      - Red circle: Singles ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 501 draws since; Doubles ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 1000
+                      - Blue square: Singles ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 334; Doubles ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 667
                       - Boxed combos: permutations are treated as the same combo
                     - Pairs colors (analysis window based):
-                      - Red (Late): nonÃ¢â‚¬â€˜repeating Ã¢â€°Â¥ 37, repeating Ã¢â€°Â¥ 71
-                      - Blue (Very Late): nonÃ¢â‚¬â€˜repeating Ã¢â€°Â¥ 56, repeating Ã¢â€°Â¥ 107
-                      - Purple (Pending): Ã¢â€°Â¥ 25
+                      - Red (Late): nonÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Ëœrepeating ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 37, repeating ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 71
+                      - Blue (Very Late): nonÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Ëœrepeating ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 56, repeating ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 107
+                      - Purple (Pending): ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 25
                     """)
 
-                # --- VÃ¢â‚¬â€˜Trac Index Hits (Working logic) ---
+                # --- VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac Index Hits (Working logic) ---
                 import pandas as _pd
                 idx_rows = []
                 # Build draws_since map for all indices
@@ -1612,10 +1816,10 @@ def show_aux_page(state: str) -> None:
                     df_idx["_rank_fill"] = df_idx["Rank"].apply(lambda r: int(r) if str(r).isdigit() else 0)
                     df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "RankDisplay"] ]
                     html_idx = df_idx.to_html(index=False, escape=False)
-                    st.subheader("VÃ¢â‚¬â€˜Trac Index Hits (Working logic)")
+                    st.subheader("VÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ËœTrac Index Hits (Working logic)")
                     st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
 
-                st.success(f"Ã¢Å“â€¦ {variant_label} auxiliary tools (working logic) completed for {state}")
+                st.success(f"ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ {variant_label} auxiliary tools (working logic) completed for {state}")
                 
             except Exception as e:
                 st.error(f"{variant_label} analysis failed: {e}")
@@ -1677,7 +1881,7 @@ def show_digit_reduction_page(state: str) -> None:
             )
 
         if df.empty:
-            st.warning("Digit Reduction produced no output Ã¢â‚¬â€œ verify tables exist.")
+            st.warning("Digit Reduction produced no output ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ verify tables exist.")
             return
 
         st.success(f"{len(df)} reductions extracted for {state}")
@@ -1712,6 +1916,15 @@ def show_digit_reduction_page(state: str) -> None:
 
 if __name__ == "__main__":
     main() 
+
+
+
+
+
+
+
+
+
 
 
 

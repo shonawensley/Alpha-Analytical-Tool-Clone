@@ -1,0 +1,157 @@
+Yes—that was me in this thread.
+
+Here’s exactly what I told you (and what we locked into the docs/startup text), in plain bullets so you can copy/paste anywhere:
+
+What to encode as the “draws interpretation”
+
+Combined is the baseline. Treat Combined as the default data set and the reference for parity/feature behavior.
+
+Midday/Evening are additive variants. When present, surface them alongside Combined; don’t replace or alter Combined.
+
+Data contracts (who reads what):
+
+Aux/Blackapple → read draws-only CSVs: data/cleaned/*_draws.csv (newest-first strings).
+
+V-TRAC / Stable / Digit Reduction → read combined tables under tables/<STATE>/ or data/outputs/tables/<STATE>/ via utils.path_handler.
+
+Control Center & BA table:
+
+Show Variant for each row (Combined/Midday/Evening).
+
+Examples = top-3 from the full 12 candidates (expander shows all 12).
+
+(Dev) optional caption: BA draws: <resolved path> (N) for clarity.
+
+Where to write this down (so every session knows)
+
+Quickstart Cheat Sheet – one line under “Data Sources by Page”.
+
+App Flow Addendum / Live Wiring – the full contracts (who reads draws vs tables).
+
+BA module doc – keep the “draws-only, Control Center surface, Examples = top-3” wording.
+
+READ FIRST docs (both Standard & Autonomous) – link to the above and repeat the one-line rule:
+
+Aux/BA: draws CSV only; V-TRAC/Stable/DR: combined tables. Combined is baseline; Midday/Evening are additive.
+
+Tiny code/prompt snippets you can reuse
+
+Loader call with safe fallback:
+
+# Always prefer Combined; allow variant when present
+from modules.aux_loaders import load_state_draws
+
+def resolve_draws(state: str, variant: str = "Combined"):
+    draws, src = load_state_draws(state, variant)   # may return variant quickly
+    if not draws and variant != "Combined":
+        # fallback so UX never breaks when ME files are missing
+        draws, src = load_state_draws(state, "Combined")
+    return draws, src
+
+
+Dev caption for BA table (display-only):
+
+BA draws: {resolved_path} ({row_count})
+Examples show top-3 of 12; expand to view all candidates.
+
+
+If you want, I can paste the exact one-liners into your Quickstart, App Flow Addendum, and BA guide so it’s baked into the repo text—just say where you want them placed.
+
+You said:
+and what was the problem and where did you find trhis wasnt communicated clearly and should be editing to give codex some context about fixing it please
+ChatGPT said:
+Thought for 18s
+
+Great question. Here’s the crisp “what was wrong / where it was unclear / what to edit so Codex never misreads it again.”
+
+What was the problem?
+
+Codex had to infer your draws policy from multiple places. Some docs hinted it, but none stated it in one, unmistakable sentence:
+
+Combined is the baseline dataset.
+
+Midday/Evening are additive when present (never replace Combined).
+
+Aux/BA read data/cleaned/*_draws.csv only; V-TRAC/Stable/DR read combined tables under tables/<STATE>/ (or data/outputs/tables/<STATE>/) via utils.path_handler.
+
+Because this was distributed across several docs, new sessions could treat Midday/Evening as “new default” or misinterpret what “Examples” means in the BA table.
+
+Where the confusion came from (specific places)
+
+Quickstart already lists the page data sources and mentions the variants, but it doesn’t explicitly spell out “Combined is the baseline; Midday/Evening are additive.”
+
+App Flow Addendum does define the canonical launch and contracts, but again doesn’t carry the one-liner (“Combined baseline…”) up front, so it’s easy to miss if you skim.
+
+BA Module Guide clearly says BA uses draws CSVs and surfaces in Control Center, but there’s no note that “Examples” = top-3 of 12 or that Variant reflects Combined/Midday/Evening rows. Adding that avoids table-reading mistakes.
+
+System Health/Preflight explain how to verify paths and imports, but they don’t explicitly restate the draws vs tables policy (they point to it indirectly).
+
+PITFALLS.txt contains the integration playbook but is a legacy appendix; relying on it alone can cause drift vs the newer KIT docs.
+
+Exactly what to edit (copy-paste snippets)
+
+A) Add to Quickstart (under “Data Sources by Page”, after the bullets)
+File: docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md
+
+**Policy:** Combined is the **baseline** dataset. Midday/Evening are **additive** variants that never replace Combined.  
+**Contracts:** Aux/Blackapple read only `data/cleaned/*_draws.csv` (newest-first strings).  
+V-TRAC / Stable / Digit Reduction read **combined tables** from `tables/<STATE>/` (or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.
+
+
+(Aligns with the current bullets listing who reads what.)
+
+B) Add to App Flow Addendum (near the top, right after “Canonical Setup”)
+File: docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md
+
+**Draws interpretation (canonical):**  
+Combined is baseline; Midday/Evening are additive.  
+Aux/Blackapple → `data/cleaned/*_draws.csv` only.  
+V-TRAC / Stable / Digit Reduction → `tables/<STATE>/...` (or `data/outputs/tables/<STATE>/...`) via `utils.path_handler`.
+
+
+(This centralizes the one-liner in the page that defines launch & contracts.)
+
+C) Clarify BA table semantics
+File: docs/AAT9_DOCS/AAT9_Blackapple_Module.md (end of “Control Center UI”)
+
+**How to read this table**  
+• **Variant** shows Combined / Midday / Evening for the row.  
+• **#Candidates** is capped at 12.  
+• **Examples** lists the **top-3**; use “View all candidates” to see all 12.  
+*(DEV)* BA reads **`data/cleaned/*_draws.csv`** only; show “BA draws: <path> (N)” under the table in dev mode.
+
+
+(BA guide already specifies draws-only and Control Center surface; this adds the Examples/Variant clarity.)
+
+D) Add the one-liner to both READ-FIRST docs (Standard & Autonomous)
+Files: briefings/CODEX_READ_FIRST_AAT9_STANDARD.md, briefings/CODEX_READ_FIRST_AAT9_AUTONOMOUS.md
+
+**Data contracts recap:**  
+Aux/BA → draws CSVs (`data/cleaned/*_draws.csv`).  
+V-TRAC/Stable/DR → combined tables (`tables/<STATE>/` or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.  
+Combined is baseline; Midday/Evening are additive.
+
+
+E) Optional – System Health note (one line)
+File: docs/AAT9_KIT/AAT9_Health_Helpers_2025-09-03.md
+
+Tip: When Dev Health is on, also show the resolved BA draws path and row count (DEV caption) to make the data source explicit.
+
+Boilerplate commit message
+docs: clarify “draws interpretation” & BA table semantics
+
+- Quickstart: add one-liner policy (Combined baseline; ME additive) and contracts recap
+- App Flow Addendum: add canonical draws interpretation block at top
+- BA guide: clarify Examples = top-3 of 12; Variant column; dev caption for draws path
+- READ_FIRST (Standard/Autonomous): include contracts recap line
+- Health Helpers: tip to display BA draws path in DEV
+
+Why these fixes are enough
+
+They centralize the one-liner policy into the two places Codex always reads first (Quickstart & App Flow), so there’s no inference needed.
+
+They remove table-reading ambiguity (Examples = top-3) and keep BA’s “draws-only/Control Center” behavior prominent.
+
+They don’t change code—only the wording—so your current variant support (as shown in your screenshot) keeps working exactly as-is while being crystal-clear to Codex going forward.
+
+If you want, I can turn those snippets into ready-to-commit patches against each file.

@@ -17,6 +17,10 @@
 - Variant support: Combined / Midday / Evening. Use `modules.aux_loaders.load_state_draws(state, variant)`; Control Center and the Aux page surface all available variants.
 - V-TRAC / Stable / Digit Reduction: combined tables via `utils.path_handler` under `tables/` or `data/outputs/tables/<STATE>/`
 
+**Policy:** Combined is the **baseline** dataset. Midday/Evening are **additive** variants that never replace Combined.
+**Contracts:** Aux/Blackapple read only `data/cleaned/*_draws.csv` (newest-first strings). V-TRAC / Stable / Digit Reduction read combined tables from `tables/<STATE>/` (or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.
+
+
 ## Combined Tables Pipeline (if needed)
 1) `generate_tables_pipeline.bat`
 2) Verify: `tables/<STATE>/` exists (or `data/outputs/tables/<STATE>/`)
@@ -32,6 +36,11 @@
 - `alpha_analytical/stable` - YAML-weighted stable extractor (`feature_config.yml`)
 
 
+
+## Auxiliary Tools Highlights
+- Positional Pressure (Aux page) surfaces top-3 digits per slot for Combined/Midday/Evening with configurable window/top-k controls.
+- Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
+- Control Center adds a positional heat badge per state/variant using the same draws-only engine.
 
 ## Stable Pattern extras
 - After running the Stable page you should see the HTML/CSV under `data/outputs/analysis/patterns/<STATE>/`.

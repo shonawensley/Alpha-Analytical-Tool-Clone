@@ -2,6 +2,9 @@
 
 Purpose: Map each page to its engines/modules and the exact input/output directories.
 
+**Dataset interpretation:** Combined is the baseline dataset; Midday/Evening are additive variants surfaced alongside Combined. Aux/Blackapple read `data/cleaned/*_draws.csv` (draws-only). V-TRAC / Stable / Digit Reduction read combined tables under `tables/<STATE>/` (or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.
+
+
 ## Pages → Engines → Inputs/Outputs
 - V‑TRAC Analyzer
   - Engine: `core/module_c_vtrac.py` (internal helpers under `src/utils/*` as needed)
@@ -23,9 +26,9 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
   - Outputs: `data/outputs/analysis/digit_reduction/<STATE>/`
 
 - Auxiliary Tools (working parity logic)
-  - Engines: staged/working `modules.analyze_pairs`, `modules.vtrac_reference`; sums optional under `modules/module_d_auxiliary_tools/refactored`
+    - Engines: staged/working `modules.analyze_pairs`, `modules.vtrac_reference`; positional pressure via `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; sums optional under `modules/module_d_auxiliary_tools/refactored`
   - Inputs: `data/cleaned/*_draws.csv` (draws‑only; newest‑first)
-  - Outputs: rendered in‑page (tables/captions); no writes to code folders
+    - Outputs: rendered in-page (tables/captions) plus positional shortlist/heat badges; no writes to code folders
 
 - Control Center (cross‑state doubles + BA summary)
   - Logic: scans `data/cleaned/*_draws.csv` to build a doubles table; renders BA summary across states

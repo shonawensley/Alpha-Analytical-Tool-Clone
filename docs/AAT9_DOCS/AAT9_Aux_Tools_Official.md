@@ -26,6 +26,13 @@ Control Center Map
 
 - Doubles summary: reads all draws CSVs -> builds ranked table.
 - Blackapple Alerts: for each state, loads draws -> BA analyzer -> table row with status/triggers/#candidates/examples -> expander for full list.
+Positional Pressure
+
+- Aux page panel with Combined / Midday / Evening tabs summarises top-3 digits per position (gap, score, tags).
+- Window/top-k controls mirror field workflow; outputs include cross-variant consensus notes and a ranked positional shortlist.
+- Control Center reuses the same engine to show a compact positional heat badge per state/variant.
+- Implementation lives in `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; inputs remain `data/cleaned/*_draws.csv`.
+
 
 Operational Notes
 

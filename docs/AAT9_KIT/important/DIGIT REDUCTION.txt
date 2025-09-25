@@ -1,0 +1,257 @@
+You’re not crazy—so far we’ve been analyzing your raw reduction JSON and designing an intent‑aware analyzer on top of it. You haven’t added the optimizations yet, so there’s no “second output” in your runs. What I’m proposing creates that second output: a scored slate of V‑Trac families + a compact “WHY” ledger for every pick, derived from the raw reductions and (optionally) the R2/R4/R6/R8 boxes.
+
+Below I answer your points and give you a clean, implementable plan that Codex can wire up. I’ll keep it crisp and comprehensive.
+
+What you have vs. what we’re adding
+
+Today: your Digit Reduction tool produces raw reductions (per method A/B/…/T across Set3→Set1 and 7/6/5), plus CSV tables for the boxes. That’s the “first output.”
+
+After we ship the analyzer: you’ll also get a “second output” per state/date — a ranked slate of V‑Trac families (≤8 boxed plays per family), each with a WHY packet that explains the evidence (pair‑core, latent, repeats, cross‑chart resonance, near‑hits, vertical stability, mirror‑double, etc.). Raw output stays unchanged.
+
+Think of it as: the analyzer reads the raw output, scores it, and writes a new bundle.
+
+How the optimizations “work” (at a glance)
+
+Canonical first 3‑value: score the first step that reaches exactly three value‑classes (ignore tails).
+
+Pair‑core + latent rescue: find the stable pair across 7/6/(5). If the third class {05} existed at step‑0 but got deleted later, spawn a candidate {pair + latent} as well as {pair + observed third}.
+
+Pair‑preserve alt‑path (bounded): a tiny re‑run that pins the latent class and allows one mirror follow‑through to drop the competing third. This prevents “we deleted the winner.”
+
+Repeats & resonance: credit the same triple if it repeats across columns, methods, sets, and charts (Midday/Evening/Combined).
+
+4‑value near‑hits: if a step has 4 classes but one is weak, score the nearest triple (the 4→3 you asked for).
+
+Dominance inside long strings: detect that a triple is already “filling” a long string (your 66333111 example) even before full reduction.
+
+Vertical stability: tiny tie‑break from R2/R4/R6/R8 agreement for that box (CSV read as text so Excel sci‑notation can’t corrupt digits).
+
+Mirror‑double alert: early XXY/XYY precursors nudge families with doubles.
+
+(Later) Key‑Digit / Key‑V‑Trac overlay: when a single digit or family is especially sticky, allow a few capped expansions beyond the main family. This is your “special significance” idea—parked until core is stable.
+
+Yes: detect 3‑VALUE patterns inside long strings
+
+We won’t miss a lingering triple just because the string is long.
+
+Map each digit to its mirror class (05,16,27,38,49), and compute:
+
+dominance = fraction of digits whose class ∈ triple
+
+extraneous = digits whose class ∉ triple
+
+Score triples with higher dominance and lower extraneous, especially at step‑0 and the first canonical 3‑value step.
+
+Add an exclusivity micro‑boost if a column shows the triple strongly while its neighbors don’t.
+This is exactly what you described with examples like 7266333111 and 66333111.
+
+4‑value near‑hits and “Key Digit / Key V‑Trac”
+
+4‑value near‑hit: if a step is {a,b,c,d}, drop the weakest class (fewest occurrences / least persistence) and credit the resulting triple {a,b,c} with a small proximity bonus; increase the bonus if the same triple resonates across Midday/Evening/Combined.
+
+Key Digit / Key V‑Trac (future): when a digit (or a family) shows special significance (double in step‑0/1, cross‑chart persistence, vertical stability), allow ≤3 capped expansions beyond the base triple. This is powerful, but we’ll switch it on after the core pipeline is in.
+
+What Codex should produce (the “second output” bundle)
+
+Keep your raw outputs untouched. Add a new analysis bundle per run:
+
+Files written (one state/date run):
+
+data/outputs/analysis/digit_reduction/<STATE>/<YYYY-MM-DD>/slate.json – ranked families with WHY evidence.
+
+…/evidence.csv – flat table of all scored signals (good for auditing).
+
+…/slate_readme.txt – human‑readable summary.
+
+Example slate.json schema
+
+{
+  "state": "Connecticut4",
+  "run_id": "2025-09-12T15:41:22Z",
+  "charts": ["Midday","Evening","Combined"],
+  "top_families": [
+    {
+      "index": 13,
+      "boxed": ["038","358","033","088","335","588"],
+      "score": 87,
+      "why": {
+        "pair_core": ["38","49"],
+        "latent_present": ["05"],
+        "ccts_tables": 3,
+        "repeats": {"columns": 2, "methods": 2, "sets": 2},
+        "dominance": {"step0": 0.78, "extraneous": 2},
+        "vertical": {"agreeing_boxes": 3, "double": false},
+        "mirror_double": false,
+        "near_hit_from_four": true,
+        "alt_path_used": true
+      },
+      "evidence_refs": [
+        {"chart":"Evening","set":"Set1","col":7,"method":"E","step_ids":[0,1]},
+        {"chart":"Midday","set":"Set1","col":6,"method":"A","step_ids":[0,2]}
+      ]
+    },
+    {
+      "index": 7,
+      "boxed": ["012","017","026","067","125","157","256","567"],
+      "score": 83,
+      "why": { "...": "..." },
+      "evidence_refs": [ "..." ]
+    }
+  ]
+}
+
+
+Example evidence.csv columns
+
+state,chart,set,col,method,step_id,value,classes,is_canonical3,
+pair_core,latent_classes,ccts_seen,repeat_scope,dominance,vertical_agree,
+mirror_double,near_hit_from_four,triple_index,triple_classes,score_delta
+
+Integration—how your app calls it
+
+Add an analyzer module that reads your existing JSON and (optionally) the three CSV tables (Midday/Evening/Combined):
+
+from analyzer_v2.pipeline import analyze_session
+
+bundle = analyze_session(
+    state="Connecticut4",
+    json_path="data/outputs/analysis/digit_reduction/Connecticut4/training/Connecticut4_digit_reduction_log.json",
+    csv_tables={
+      "Midday":   "data/outputs/tables/Connecticut4_Midday_combined.csv",
+      "Evening":  "data/outputs/tables/Connecticut4_Evening_combined.csv",
+      "Combined": "data/outputs/tables/Connecticut4_Combined_combined.csv"
+    },
+    slate_size=8,                  # <=8 boxed per family
+    config_path="alpha_analytical/digit_reduction/analyzer_v2/config.yaml"
+)
+bundle.write_out()  # writes slate.json, evidence.csv, slate_readme.txt
+
+
+If CSV tables are temporarily unavailable (or have sci‑notation issues), the analyzer still runs using just the JSON; vertical stability simply contributes 0.
+
+First PR for Codex (so you see results quickly)
+
+Objective: create the “second output” with the core rules. No refactors to your extractors.
+
+Add this package:
+
+alpha_analytical/digit_reduction/analyzer_v2/
+  __init__.py
+  config.yaml                 # weights & feature flags
+  loader.py                   # JSON + text-only CSV ingestion
+  features.py                 # canonical triple, pair-core, latent, dominance, near-hit, mirror-double
+  vtrac_index.py              # class-triple -> V-Trac index; index -> boxed plays
+  score.py                    # scoring functions
+  pipeline.py                 # analyze_session(), to_bundle(), write_out()
+
+
+Wire the pipeline:
+
+Load your reduction JSON; group by chart/set/col/method; compute:
+
+step‑0 latent classes;
+
+first canonical 3‑value (ignore tails);
+
+4‑value near‑hit candidate;
+
+mirror‑double alert from step‑0/1.
+
+Across columns (7/6/5), compute pair‑core consensus (min_support≥2).
+
+Spawn triple candidates:
+
+{pair + observed third}
+
+{pair + latent third} (if present).
+
+Score with:
+
+canonical triple base
+
+pair+latent bonus
+
+repeats (columns/methods/sets)
+
+cross‑chart resonance (CCTS)
+
+dominance in long strings
+
+near‑hit proximity
+
+(optional) vertical stability if CSVs are supplied
+
+mirror‑double
+
+Map top triples to V‑Trac families (≤8 boxed) and emit the bundle.
+
+Weights (config.yaml – defaults you can tweak later)
+
+weights:
+  triple_base:        10
+  pair_latent:         3
+  ccts_two:            8
+  ccts_three:         12
+  lag_sets_per:        2
+  repeat_columns:      2
+  repeat_methods:      1
+  repeat_sets:         2
+  dominance_scale:     6
+  near_hit:            2
+  vertical_box:        1
+  vertical_double:     2
+  mirror_double:       2
+limits:
+  max_families:        3
+  max_boxed_per_family: 8
+  max_evidence_refs:  10
+flags:
+  use_vertical_stability: true
+  use_pair_preserve_alt:  true
+  use_near_hit:          true
+
+What to code later (Phase 2/3)
+
+Phase 2: refine vertical stability (CSV text‑loader), strengthen CCTS tally, add small mirror‑double bump, add 4→3 near‑hit logic.
+
+Phase 3: Key‑Digit / Key‑V‑Trac overlay with strict caps and thresholds; box‑exclusivity micro‑boost.
+
+What you asked about “adjusting reductions”
+
+Yes—two places we change behavior a little:
+
+Pair‑preserve alt‑path in the reducer: when the analyzer detects pair‑core + latent at step‑0, re‑run that method once with:
+
+the latent class’s digits pinned (don’t delete),
+
+allow one mirror follow‑through to drop the competing third.
+
+hard caps (so there’s no search explosion).
+
+Everything else is read‑only analysis on your raw outputs.
+
+Workflow you can follow now
+
+Drop the analyzer_v2 package and the config file.
+
+Call analyze_session() for one state (e.g., Connecticut4) to produce slate.json.
+
+Compare the slate to the known winners (620, 038).
+
+If good, run for Florida, Indiana, Michigan.
+
+Only then, flip on Phase‑2 features; re‑run; compare.
+
+Park Key‑Digit/Key‑V‑Trac for a separate, controlled PR.
+
+One housekeeping note
+
+Some earlier uploads in this chat session have expired in my workspace. If you want me to validate the new analyzer against a specific JSON/CSV again, re‑upload those files and I’ll fold them into checks immediately.
+
+Bottom line
+
+You’ve been giving me raw outputs; I’ve been designing the analysis layer that will produce a second output (the ranked slate + WHY).
+
+The plan above is the shortest path to seeing the analyzer “come to life,” and it’s modular so we can add your advanced special significance logic next without destabilizing the core.
+
+If you want, I can package the exact file contents for analyzer_v2 (code + docstrings + a tiny test) so you can paste it into the repo as a single PR.

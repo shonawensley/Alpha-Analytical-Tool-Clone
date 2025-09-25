@@ -1,3 +1,15 @@
+## 2025-09-24 05:00 (UTC) - Positional pressure tool + Control Center heat
+
+- Context: Aux needed an in-app positional tracker (Combined/Midday/Evening) that stays draws-only and compounds with existing doubles/BA cues.
+- Change:
+  - Added `modules/module_d_auxiliary_tools/refactored/positional_tool.py` with configurable scoring (rank, lag, mirror, consensus, double pressure).
+  - Wired Aux page expander with window/top-k controls, consensus notes, positional shortlist, and explicit draw source captions.
+  - Extended Control Center doubles/BA table with a positional heat badge per state/variant using the same engine.
+  - Published smoke script and refreshed KIT/Aux docs with usage guidance.
+- Impact: Operators can read per-position pressure alongside existing Aux/BA signals without touching combined-table pipelines.
+- Files/Refs: `src/app.py`, `modules/module_d_auxiliary_tools/refactored/positional_tool.py`, `scripts/checks/smoke_positional.py`, `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`, `docs/AAT9_KIT/AAT9_Workflow_Standard.md`, `docs/AAT9_KIT/important/AAT9_Positional_Pressure.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`, `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md`.
+- Follow-ups: Monitor scoring weights (mirror/consensus boosts) and consider optional logging to Winners pipeline.
+
 ## 2025-09-22 04:30 (UTC) - Aux variants + Control Center expansion
 
 - Context: Preparing for Midday/Evening tooling required exposing those draw files without disturbing the combined baseline.
