@@ -1,0 +1,83 @@
+# CODEX READ FIRST — AAT9 (Autonomous Mode)
+
+Intent
+- Work like an expert operator. **Phase A**: brief, high‑signal brainstorm that follows the docs and my instructions, YOU CAN GO WORK ON YOUR OWN WHEN I END BRAINSTORM BY SAYING "BRAINSTORM END". **Phase B**: execute without pausing for permission except when crossing explicit guardrails. Only stop if a decision materially risks data loss, repo structure, or contradicts project rules.
+
+Session Setup
+- Model: **gpt-5-codex (High)**.
+- CWD: **C:\dev\Alpha-Analytical-Tool** (enforce continuously).
+- Read in this order:
+  1) `.codex/AGENTS.universal.md` (base rules)
+  2) `AGENTS.md` (project-specific; overrides ambiguity)
+  3) `docs/AAT9_KIT/AAT9_KIT_README.md`
+  4) `docs/AAT9_KIT/AAT9_Workflow_Standard.md`
+  5) `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`
+  6) `docs/AAT9_KIT/AAT9_Preflight_Reference.md`
+  7) `docs/AAT9_DOCS/AAT9_Live_Wiring_and_Data_Paths.md`
+  8) `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`
+  9) `docs/AAT9_KIT/AAT9_Unified_Changelog.md`
+  10) `docs/AAT9_KIT/AAT9_Checkpoint_Log.md`
+  11) `briefings/PITFALLS.txt`
+
+
+**Data contracts recap:** Aux/BA -> `data/cleaned/*_draws.csv` (draws-only). V-TRAC/Stable/DR -> combined tables (`tables/<STATE>/` or `data/outputs/tables/<STATE>/`) via `utils.path_handler`. Combined is baseline; Midday/Evening are additive variants surfaced alongside Combined.
+
+Preflight (run now, no approval needed)
+- `.codex\preflight.ps1 -State "Connecticut4"`
+- If any mismatch (cwd/import/data) → fix exactly one root cause, re‑run preflight, then proceed.
+
+Approvals profile (set now)
+- Allow (no prompt):
+  - read/list anywhere in repo
+  - write under `docs/**`, `docs/AAT9_*`, `.codex/**` (docs, logs, images)
+  - run `python -m py_compile` on touched files
+  - run `.codex\preflight.ps1`
+- Ask:
+  - edits under `src/**`, `modules/**`, `utils/**`, `alpha_analytical/**`
+  - launching Streamlit beyond headless smoke
+  - Git commits/pushes
+- Deny:
+  - network operations or writes outside the repo
+
+Phase A — Brainstorm (timebox: ~5 minutes, one screen)
+- Summarize current repo state (preflight highlights), what you will do today, exact files you expect to touch, and why.
+- Confirm any assumptions about variants (Combined vs Midday/Evening) against `AAT9_Live_Wiring_and_Data_Paths.md` and `AAT9_Blackapple_Module.md`.
+
+Phase B — Execute (autonomous)
+- Proceed without asking on:
+  - documentation improvements in `docs/**`, adding/refreshing diagrams, updating `AAT9_Unified_Changelog.md` and `AAT9_Checkpoint_Log.md`
+  - adding smoke scripts under `scripts/checks/**` that are read‑only except for repo‑internal outputs
+  - running `py_compile` and `.codex\preflight.ps1`
+- Escalate only if:
+  - you need to change app wiring, analyzers, or pipelines
+  - imports resolve outside the repo
+  - you detect data writes outside `data/**` or `data/outputs/**`
+
+Documentation & Logging (automatic)
+- If you change behavior or wiring, update KIT docs in the same PR.
+- Always append a terse line to `AAT9_Unified_Changelog.md` and a short context section to `AAT9_Checkpoint_Log.md`.
+
+Finish signal
+- When Phase A plan is printed and preflight is clean, reply: **"READY — Autonomous"** and begin Phase B immediately.
+- During Phase B, only pause for explicit guardrails listed above.
+
+SAFET WORKING REMDINERS
+
+  What’s in place now
+
+  - Repo snapshot – .codex/checkpoints/backup_20250925_163822.zip is a full archive of the project before any new changes. If something ever goes sideways, unzip it back into place or use it to cherry-pick
+  files.
+  - Command self-discipline – I’ll only run editing/testing commands; no deletions, resets, or other destructive actions. Anytime a step looks even mildly risky, I’ll ask first.
+  - Git stays local – You remain the one who pushes. After each mini-task I can make a local commit (e.g., checkpoint/task41-due-doubles) so Git Desktop shows a clean diff, but nothing will touch the remote
+  until you approve it. If you’d rather do the commit yourself, just say so.
+  - Full transparency – I’ll summarize every change set as it happens, keep diffs small, and call out any files that need your attention. If I finish a mini-task and something feels ambiguous, I’ll pause for
+  your go-ahead before moving on.
+  - Interrupts welcomed – If I hit a question (missing data, conflicting doc guidance, etc.) I’ll stop and ask. Likewise, you can halt or adjust scope at any point.
+
+  How the loop will run
+
+  1. Before each mini-task – quick plan + files to touch, so you know what’s coming.
+  2. Implement carefully – no risky commands; validate with the appropriate scripts/tests.
+  3. Checkpoint (optional) – I’ll create a local commit when a mini-task is complete unless you prefer otherwise. You can review it in Git Desktop and decide whether to push.
+  4. Report back – concise summary of what changed, verification steps taken, and anything I need you to check.
+  5. Await your green light – only after you’re happy do we move to the next mini-task.

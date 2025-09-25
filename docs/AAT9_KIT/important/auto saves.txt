@@ -1,0 +1,44 @@
+> Here’s a simple way to make the safety net almost push‑button so you don’t have to juggle manual steps each time:
+
+  1. Install a guardrail once:
+      - Add .codex/checkpoints/ to .gitignore. That way any backup we generate there will never be staged or pushed.
+      - (Optional) drop a short README in .codex/checkpoints/ so it’s clear that folder holds local snapshots only.
+  2. Automated backup script:
+      - I can add a tiny PowerShell script, e.g. scripts/util/create_checkpoint.ps1, that:
+          1. Creates .codex/checkpoints/ if it doesn’t exist.
+          2. Zips the current repo into .codex/checkpoints/backup_<timestamp>.zip (skipping .git, .codex/checkpoints, etc.).
+          3. Prints the path when finished.
+      - You’d just double‑click or run powershell -File scripts/util/create_checkpoint.ps1 before we start serious edits—or whenever you want an extra snapshot. One command, guaranteed ignored by Git.
+  3. Local checkpoint commits (optional but useful):
+      - After I finish each mini-task, I can run git add and git commit -m "checkpoint/task41-due-doubles-table" locally. You review/push whenever you’re ready.
+      - If you’d rather drive Git yourself, no problem—I’ll just tell you when it’s a good moment to commit.
+  4. Workflow going forward:
+      - You run the create_checkpoint.ps1 script before the session (takes ~30 seconds even on large projects).
+      - Tell me “go.” I work through the tasks, making local commits or pausing for your review as agreed.
+      - If you ever want a mid-session snapshot, just rerun the script; it won’t interfere with Git.
+      - Your job remains: review diffs in GitHub Desktop and decide when to push upstream.
+
+  If you like that plan, I’ll implement steps 1 and 2 (ignore rule + script) right away, show you where the script lives, and document the one-liner to run it. Then we can get back to the three mini-tasks
+  knowing the safety net is in place.
+
+
+__
+
+All set for a worry-free workflow:
+
+  • Backup safety net: The full snapshot stays at .codex/checkpoints/backup_20250925_163822.zip, but I added .codex/checkpoints/ to .gitignore, so GitHub Desktop (and Git) will never try to stage or push
+  those archives again. Your existing zip remains on disk; it’s simply ignored by version control.
+
+  • One-command checkpoints: There’s now a helper script at scripts/util/create_checkpoint.ps1. Run it any time you want a fresh snapshot:
+
+  powershell -File scripts/util/create_checkpoint.ps1
+
+  It creates .codex/checkpoints/backup_<timestamp>.zip, automatically skipping .git and previous checkpoints. The script prints the zip path when it finishes.
+
+  • No stray helper files: I removed the temporary .codex/make_backup.py script so the repo stays clean.
+
+  • Git stays in your control: push exactly as you do today. Because backups are ignored, you won’t see the 100 MB warning again. I’ll continue to make local commits (or just report diffs—your choice) after
+  each mini-task so you can review in GitHub Desktop and push whenever you’re ready.
+
+  Whenever you want a new safety point, just run the script; everything lands in .codex/checkpoints, invisible to Git, and ready if you ever need to roll back. Let me know when you’d like me to start on the
+  three mini tasks.
