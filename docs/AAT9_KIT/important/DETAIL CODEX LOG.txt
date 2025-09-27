@@ -432,7 +432,7 @@ _______________________________________
   - Engine – modules/module_d_auxiliary_tools/refactored/positional_tool.py:1 holds the draws-only positional engine.
       - It computes per-position top‑k digits across Combined/Midday/Evening, scoring with gap, mirror/swap/double pressure tags, consensus notes, and a positional shortlist.
       - Input contract is the same as Aux/BA: data/cleaned/*_draws.csv, newest-first strings.
-  - Auxiliary page wiring – src/app.py (main Aux section) now adds a “Positional Pressure” expander with window/top‑k controls, variant tabs, consensus captions, and the shortlist table. The draw-source path
+  - Auxiliary page wiring – src/app.py (main Aux section) now adds a “Positional Pressure” expander with fixed 360-window Top-3 layout with side-by-side variant columns, consensus captions, and the shortlist table. The draw-source path
   and count surface for dev validation.
   - Control Center wiring – src/app.py (Control Center doubles/BA area) reuses the engine to render a compact positional heat badge per state/variant (e.g., P1:7(34)), so operators can scan pressure alongside
   BA alerts and doubles.

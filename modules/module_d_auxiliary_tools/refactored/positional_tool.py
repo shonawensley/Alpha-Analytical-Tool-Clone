@@ -22,6 +22,20 @@ PositionIndex = Literal[0, 1, 2]
 MIRROR_MAP: Dict[int, int] = {0: 5, 5: 0, 1: 6, 6: 1, 2: 7, 7: 2, 3: 8, 8: 3, 4: 9, 9: 4}
 
 
+HARD_DUE_THRESHOLDS: Dict[Variant, int] = {
+    "combined": 55,
+    "midday": 40,
+    "evening": 40,
+}
+
+
+@dataclass(frozen=True)
+class PositionalTrackerCell:
+    digit: int
+    draws_since: int
+    hard_due: bool
+
+
 @dataclass(frozen=True)
 class WeightsConfig:
     """Tunable scoring weights for positional pressure."""
@@ -93,6 +107,7 @@ class VariantPositionalResult:
     window: int
     draws_used: int
     position_summaries: Dict[PositionIndex, PositionSummary]
+    tracker_grid: Dict[PositionIndex, List[PositionalTrackerCell]]
 
     def iter_top_digits(self) -> Iterable[PositionTopDigit]:
         for summary in self.position_summaries.values():
@@ -221,6 +236,7 @@ def analyze_variant(
         )
 
     summaries: Dict[PositionIndex, PositionSummary] = {}
+    tracker_grid: Dict[PositionIndex, List[PositionalTrackerCell]] = {}
     variant_weight = cfg.variant_weight(variant)
 
     for pos in (0, 1, 2):
@@ -282,12 +298,24 @@ def analyze_variant(
             bonus = cfg.mirror_same_variant * friend.score_components.get("base", 0.0)
             entry.add_component("mirror_local", bonus, cfg.mirror_tag)
 
+        tracker_grid[pos] = [
+            PositionalTrackerCell(
+                digit=entry.digit,
+                draws_since=entry.gap,
+                hard_due=entry.gap >= HARD_DUE_THRESHOLDS.get(variant, 55),
+            )
+            for entry in top_raw
+        ]
         summaries[pos] = PositionSummary(
             position=pos, top_digits=top_raw, population=population, window=window
         )
 
     return VariantPositionalResult(
-        variant=variant, window=window, draws_used=len(clean), position_summaries=summaries
+        variant=variant,
+        window=window,
+        draws_used=len(clean),
+        position_summaries=summaries,
+        tracker_grid=tracker_grid,
     )
 
 
@@ -498,6 +526,7 @@ __all__ = [
     "PositionTopDigit",
     "PositionSummary",
     "VariantPositionalResult",
+    "PositionalTrackerCell",
     "AggregatedDigit",
     "CandidateRecommendation",
     "StatePositionalReport",

@@ -1,0 +1,126 @@
+                # --- VÃƒÂ¢€Ã¢â‚¬ËœTrac Table (Working logic) ---
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  VÃƒÂ¢€Ã¢â‚¬ËœTrac Analysis (Working logic)")
+                import pandas as _pd
+                rows = []
+                rows_plain = []
+                # Overlay: compute Top 10 overdue indices by draws_since (display-only)
+                try:
+                    draws_1000 = results.get("draws_1000", draws)
+                    total_len = len(draws_1000)
+                    index_first_seen = {}
+                    for i, d in enumerate(draws_1000):
+                        if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
+                            continue
+                        idx_tmp = get_vtrac_index(d)
+                        if idx_tmp and idx_tmp not in index_first_seen:
+                            index_first_seen[idx_tmp] = i
+                    index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+                    _sorted_by_ds_overlay = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
+                    _top10_overdue_overlay = [i for i, _ds in _sorted_by_ds_overlay[:10]]
+                except Exception:
+                    _top10_overdue_overlay = []
+                for entry in VTRAC_DISPLAY:
+                    idx = entry["Index"]
+                    singles = entry["Singles"].split() if entry["Singles"] else []
+                    doubles = entry["Doubles"].split() if entry["Doubles"] else []
+                    sdict = vstat.get(idx, {}).get("singles_status", {})
+                    ddict = vstat.get(idx, {}).get("doubles_status", {})
+                    # Build html content
+                    # Build html content + sums badges
+                    s_html = " ".join([
+                        (_format_combo(c, sdict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in singles
+                    ]) if singles else "&nbsp;"
+                    d_html = " ".join([
+                        (_format_combo(c, ddict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in doubles
+                    ]) if doubles else "&nbsp;"
+                    # Row tint + rank badge
+                    idx_style = vstat.get(idx, {}).get("index_style", {})
+                    row_class = ""
+                    badge = ""
+                    if idx_style.get("bg") == "green":
+                        # Preserve green (recent)
+                        row_class = "row-green"
+                        badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    else:
+                        # Overlay red for Top 10 overdue (display-only)
+                        if idx in _top10_overdue_overlay:
+                            row_class = "row-red"
+                            rank_num = _top10_overdue_overlay.index(idx) + 1
+                            ds_disp = index_draws_since_overlay.get(idx, "")
+                            badge = f'<sup class="rank-badge">{rank_num} ({ds_disp})</sup>'
+                        elif idx_style.get("bg") == "red":
+                            row_class = "row-red"
+                            badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    index_cell = f'<div class="{row_class}">{idx}{badge}</div>' if row_class else f'{idx}{badge}'
+                    singles_cell = f'<div class="{row_class}">{s_html}{badge}</div>' if row_class else f'{s_html}{badge}'
+                    doubles_cell = f'<div class="{row_class}">{d_html}{badge}</div>' if row_class else f'{d_html}{badge}'
+                    rows.append({"Index": index_cell, "Singles": singles_cell, "Doubles": doubles_cell})
+                    # Plain (for CSV download)
+                    rows_plain.append({"Index": idx, "Singles": " ".join(singles), "Doubles": " ".join(doubles)})
+                df_v = _pd.DataFrame(rows)
+                st.markdown(df_v.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Download (plain)
+                df_plain = _pd.DataFrame(rows_plain)
+                st.download_button(
+                    "Download VÃƒÂ¢€Ã¢â‚¬ËœTrac Table (Working) CSV",
+                    df_plain.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{state}_vtrac_working.csv",
+                    mime="text/csv",
+                )
+
+                # --- Overdue Pairs (Working logic) ---
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ Overdue Pairs Analysis (Working logic)")
+                THR_NR_RED, THR_R_RED = 37, 71
+                THR_NR_BLUE, THR_R_BLUE = 56, 107
+                THR_PENDING = 25
+                nonrep = results["nonrep"]
+                rep = results["rep"]
+                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_blue = sorted([p for p, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
+                rep_purple = sorted([p for p, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
+                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_blue = sorted([p for p, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
+                nr_purple = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
+
+                # Thresholds info like the working app
+                st.info(
+                    "**Overdue Thresholds:**\n"
+                    f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
+                    f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
+                )
+                # Display-only note to avoid ambiguity when multiple statuses overlap
+                st.caption("Color priority (digits/pairs overlap): red > blue > purple")
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                with c2:
+                    st.markdown("<b>NonÃƒÂ¢€Ã¢â‚¬ËœRepeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+
+                # --- Top 5 Repeating Pairs ---
+                st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
+                for pair, overdue in results["top5"]:
+                    if overdue >= 107:
+                        color = "red"
+                    elif overdue >= 71:
+                        color = "blue"
+                    elif overdue >= 25:
+                        color = "purple"
+                    else:
+                        color = ""
+
+                    line = f"{pair} - {overdue} draws overdue"
+                    if color:
+                        st.markdown(f'<span class="{color}">{line}</span>', unsafe_allow_html=True)
+                    else:
+                        st.write(line)

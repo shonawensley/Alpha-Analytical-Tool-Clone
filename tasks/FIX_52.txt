@@ -1,0 +1,110 @@
+Yes—your plan is exactly what’s needed and it should restore the full Aux page without rolling anything back.
+
+To make it bullet‑proof for Codex, give it this drop‑in code and checklist so it can implement in one pass.
+
+1) Add the thresholds once, early in src/app.py
+
+Place this right after your st.set_page_config(...) and imports. Keep it ASCII.
+
+# --- Aux thresholds (single source of truth) ---
+def _define_default_thresholds():
+    g = globals()
+    # Overdue bands (repeating / non-repeating)
+    g.setdefault("THR_R_RED", 71)
+    g.setdefault("THR_R_BLUE", 107)
+    g.setdefault("THR_NR_RED", 37)
+    g.setdefault("THR_NR_BLUE", 56)
+    g.setdefault("THR_PENDING", 25)
+    # Combination shape thresholds (draws-since badges)
+    g.setdefault("THR_COMB_RED_SINGLE", 501)
+    g.setdefault("THR_COMB_RED_DOUBLE", 1000)
+    g.setdefault("THR_COMB_BLUE_SINGLE", 334)
+    g.setdefault("THR_COMB_BLUE_DOUBLE", 667)
+
+_define_default_thresholds()
+
+# Legend toggle default
+try:
+    show_purple
+except NameError:
+    show_purple = True
+
+
+This removes the NameError: THR_R_BLUE and lets Streamlit keep rendering (so the Positional Tracker and other panels appear again).
+
+2) Keep labels/captions ASCII (sanity sweep)
+
+Do not change logic—just ensure these strings exist exactly (fix if a mojibake remnant remains):
+
+"V-TRAC Analysis (Working logic)"
+
+"Overdue Pairs Analysis (Working logic)"
+
+"V-TRAC Index Hits (Working logic)"
+
+"Select State", "Select Tool"
+
+"Download V-TRAC Table (Working) CSV"
+
+"Color priority (digits/pairs overlap): red > blue > purple"
+
+Legend lines should read:
+
+"<span class='red'>Red (>= {THR_R_RED}):</span>"
+"<span class='blue'>Blue (>= {THR_R_BLUE}):</span>"
+"<span class='purple'>Purple (>= {THR_PENDING}):</span>"
+# and NR equivalents: THR_NR_RED / THR_NR_BLUE
+
+
+Purple label fix (if present):
+
+parts.append(f"<span class=\"purple\">{label}</span>")
+
+3) Don’t touch these (protect scope)
+
+scripts/auxiliary/working/modules/* (e.g., analyze_pairs.py, vtrac_reference.py)
+
+BA modules
+
+Core helpers in src/app.py: VTRAC_DISPLAY, get_vtrac_index, _format_combo, _sums_badge_for, pair_status
+
+4) Verify (so you know it’s truly fixed)
+
+Run in repo root:
+
+python -X utf8 -m py_compile src/app.py
+rg "Ã|A " -n src/app.py     # should print nothing
+
+
+Then start the app and confirm:
+
+V‑TRAC table still clean ✅
+
+Overdue Pairs renders (no error banner) ✅
+
+Positional Tracker returns (tabs/grid or the new table you had) ✅
+
+Exactly one “Top 5 Most Overdue Repeating Pairs (Working logic)” panel ✅
+
+5) Optional guard (prevents future regressions)
+
+Add near the top (dev‑only; harmless):
+
+from pathlib import Path
+def _mojibake_guard():
+    src = Path(__file__).read_text(encoding="utf-8", errors="ignore")
+    if ("Ã" in src) or ("A " in src):
+        st.warning("Mojibake detected in UI strings — sanitize src/app.py")
+# _mojibake_guard()  # enable in dev if you want
+
+Why this works
+
+The blank page pieces were a render short‑circuit: once the Overdue section crashed on THR_R_BLUE, Streamlit didn’t execute the rest of the Aux UI. Defining the THR_* constants removes the exception, and all the newer features render again.
+
+You keep today’s sanitized text, UI, and module wiring. No need to restore from a zip or lose work.
+
+If Codex wants a one‑liner summary:
+
+Edit src/app.py: add _define_default_thresholds() that sets THR_R_RED/BLUE, THR_NR_RED/BLUE, THR_PENDING and combo cutoffs, call it; ensure legends/titles are ASCII; do not touch modules; py_compile; grep for “Ã|A ”; run app and confirm all Aux panels render; commit one file.
+
+That’s it.

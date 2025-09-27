@@ -28,8 +28,8 @@ Control Center Map
 - Blackapple Alerts: for each state, loads draws -> BA analyzer -> table row with status/triggers/#candidates/examples -> expander for full list.
 Positional Pressure
 
-- Aux page panel with Combined / Midday / Evening tabs summarises top-3 digits per position (gap, score, tags).
-- Window/top-k controls mirror field workflow; outputs include cross-variant consensus notes and a ranked positional shortlist.
+- Aux page panel shows Combined / Midday / Evening side-by-side (P1/P2/P3 columns, top-3 ranks with gap/score/tags).
+- Window fixed at 360 draws with Top-3 ranks; outputs include cross-variant consensus notes and a ranked positional shortlist.
 - Control Center reuses the same engine to show a compact positional heat badge per state/variant.
 - Implementation lives in `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; inputs remain `data/cleaned/*_draws.csv`.
 

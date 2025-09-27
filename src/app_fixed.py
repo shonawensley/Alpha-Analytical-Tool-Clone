@@ -80,6 +80,7 @@ def _load_project_module(dotted_name: str, rel_file: str):
     spec = spec_from_file_location(dotted_name, str(file_path))
     mod = module_from_spec(spec)  # type: ignore[arg-type]
     assert spec and spec.loader, f"Could not load spec for {file_path}"
+    sys.modules[dotted_name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
@@ -97,7 +98,7 @@ def _load_positional_tool_real():
         "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
     )
 
-# Helpers for rendering working V-TRAC output (used only on Aux page)
+# Helpers for rendering working V¢â¬âTRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
     # Priority: red > blue > purple (display-only severity)
     return {"red": 3, "blue": 2, "purple": 1}.get(cls or "", 0)
@@ -312,7 +313,7 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
             if flags.get("red"):
                 parts.append(f'<span class="red">{label}</span>')
             if flags.get("purple"):
-                parts.append('<span class="purple">&#8226;</span>')
+                parts.append('<span class="purple">¢â¬¢</span>')
             return " ".join(parts)
 
         s_tag = tag(f"S{s}", sflags)
@@ -324,45 +325,9 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
     except Exception:
         return ""
 
-# Page config FIRST (before every other st.*)
-
-# --- Aux thresholds (single source of truth) ---
-def _define_default_thresholds():
-    g = globals()
-    g.setdefault('THR_R_RED', 71)
-    g.setdefault('THR_R_BLUE', 107)
-    g.setdefault('THR_NR_RED', 37)
-    g.setdefault('THR_NR_BLUE', 56)
-    g.setdefault('THR_PENDING', 25)
-    g.setdefault('THR_COMB_RED_SINGLE', 501)
-    g.setdefault('THR_COMB_RED_DOUBLE', 1000)
-    g.setdefault('THR_COMB_BLUE_SINGLE', 334)
-    g.setdefault('THR_COMB_BLUE_DOUBLE', 667)
-
-_define_default_thresholds()
-
-try:
-    show_purple
-except NameError:
-    show_purple = True
-def _assert_threshold_alignment():
-    assert THR_R_BLUE >= THR_R_RED, "Repeating: red must be >= blue"
-    assert THR_NR_BLUE >= THR_NR_RED, "Non-repeating: red must be >= blue"
-
-
-def _assert_no_mojibake():
-    src = Path(__file__).read_text(encoding='utf-8', errors='ignore')
-    if any(ord(ch) > 127 for ch in src):
-        try:
-            st.warning('Mojibake detected in UI strings - sanitize src/app.py')
-        except Exception:
-            pass
-
-
-_assert_threshold_alignment()
-
+# ¢¶ Page config FIRST (before every other st.*)
 st.set_page_config(page_title="Alpha-Final Analytical Tool",
-                   page_icon=":bar_chart:", layout="wide")
+                   page_icon="°¸¡â¬", layout="wide")
 
 # Debug: show which file is running (safe to remove later)
 def main():
@@ -370,11 +335,6 @@ def main():
     Main function to run the Alpha-Final Streamlit app.
     This app will have a two-level navigation: State selection and Tool selection.
     """
-    try:
-        _assert_no_mojibake()
-    except Exception:
-        pass
-
     st.sidebar.title("Navigation")
     # Debug sidebar info after context is ready
     try:
@@ -390,14 +350,14 @@ def main():
     ]
     
     selected_state = st.sidebar.selectbox(
-        "State",
+        "State ¢â¼",
         states_list,
         index=0
     )
     
     # Second level: Tool selector  
     selected_tool = st.sidebar.selectbox(
-        "Tool",
+        "Tool ¢â¼",
         [
             "V-TRAC Analyzer",
             "Stable Pattern Extractor", 
@@ -533,13 +493,13 @@ def show_stable_pattern_page(state: str) -> None:
         )
 
         if df.empty:
-            st.warning("No patterns found - verify tables or adjust parameters.")
+            st.warning("No patterns found ¢â¬â verify tables or adjust parameters.")
         else:
             st.success(f"{len(df)} patterns extracted.")
             st.dataframe(df.head(50), height=360)
 
             if csv_f:
-                st.markdown(f"[Download CSV]({csv_f})")
+                st.markdown(f"[¢¬â¡ Download CSV]({csv_f})")
 
             if html_f and Path(html_f).exists():
                 with open(html_f, "r", encoding="utf-8") as fh:
@@ -636,7 +596,7 @@ def show_control_center_page() -> None:
         if upl is not None and st.button("Generate Tables"):
             try:
                 from core.pipeline_runner import run_pipeline_from_bytes
-                with st.spinner("Running tables pipeline (clean -> extract -> generate)..."):
+                with st.spinner("Running tables pipeline (clean â extract â generate)..."):
                     summary = run_pipeline_from_bytes(upl.getvalue())
                 st.success(
                     f"Cleaned: {summary.get('clean_success',0)} states; "
@@ -1163,7 +1123,7 @@ def show_aux_page(state: str) -> None:
     except Exception:
         extract_draw_list = None
 
-    # Working modules (staged copy) - used only inside Aux page
+    # Working modules (staged copy) ¢â¬â used only inside Aux page
     _AUX_WORKING_AVAILABLE = False
     try:
         with _aux_working_first():
@@ -1346,7 +1306,7 @@ def show_aux_page(state: str) -> None:
                             build_sums_dataframe as _build_sums_df,
                         )
                         # Debug caption to verify import source; safe to remove later
-                        st.sidebar.caption(f"[{variant_label}] SUMS | {_calc_sums.__module__}")
+                        st.sidebar.caption(f"[{variant_label}] SUMS ¢¦¿ {_calc_sums.__module__}")
                     except Exception as _e:
                         st.sidebar.caption(f"[{variant_label}] SUMS import failed: {_e}")
 
@@ -1359,10 +1319,10 @@ def show_aux_page(state: str) -> None:
                 else:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
-                with st.expander("Positional Tracker (Combined / Midday / Evening)", expanded=True):
+                with st.expander("Positional Pressure (Combined / Midday / Evening)", expanded=True):
                     pos_window = 360
                     pos_topk = 3
-                    st.caption(f"Window: {pos_window} draws (Top-K per position: {pos_topk})")
+                    st.caption("Window: 360 draws (Top-K per position: 3)")
                     try:
                         with _project_modules_first():
                             positional_tool = _load_positional_tool_real()
@@ -1381,12 +1341,17 @@ def show_aux_page(state: str) -> None:
                         if not draws_by_variant:
                             st.caption("No positional draws available across variants.")
                         else:
-                            due_doubles_flag = any(ds >= THR_R_RED for ds in results.get("rep", {}).values())
+                            combined_cache = variant_cache.get("combined") or {}
+                            rep_map = combined_cache.get("rep", {})
+                            if rep_map:
+                                due_doubles_flag = any(ds >= 71 for ds in rep_map.values())
+                            else:
+                                due_doubles_flag = any(ds >= 71 for ds in results.get("rep", {}).values())
                             try:
                                 report = positional_tool.analyze_state_variants(
                                     draws_by_variant,
-                                    window=pos_window,
-                                    topk=pos_topk,
+                                    window=int(pos_window),
+                                    topk=int(pos_topk),
                                     due_doubles_active=due_doubles_flag,
                                 )
                             except Exception as _pos_err:
@@ -1401,131 +1366,124 @@ def show_aux_page(state: str) -> None:
                                 if not available_variants:
                                     st.caption("Positional metrics unavailable for selected draws.")
                                 else:
-                                    css_injected = False
-
-                                    def _render_tracker_table(title: str, variant_result, source_path: Optional[str]) -> None:
-                                        nonlocal css_injected
-                                        if not variant_result or not getattr(variant_result, "tracker_grid", None):
-                                            st.markdown(f"**{title}**")
-                                            st.caption("No positional tracker data.")
-                                            return
-                                        grid = variant_result.tracker_grid
-                                        if not css_injected:
-                                            st.markdown(
-                                                "<style>.pos-tracker-table{border-collapse:collapse;width:100%;margin-bottom:12px;}"
-                                                ".pos-tracker-table th,.pos-tracker-table td{border:1px solid #d7d7d7;padding:4px;text-align:center;font-size:13px;}"
-                                                ".pos-tracker-table caption{caption-side:top;text-align:left;font-weight:600;margin-bottom:4px;}"
-                                                "</style>",
-                                                unsafe_allow_html=True,
-                                            )
-                                            css_injected = True
-                                        ds_header = ["P1 DS", "P1 DIG", "P2 DS", "P2 DIG", "P3 DS", "P3 DIG"]
-                                        header_html = "<tr><th>Rank</th>" + "".join(f"<th>{h}</th>" for h in ds_header) + "</tr>"
-                                        max_rows = pos_topk
-                                        rows_html = []
-                                        for rank in range(max_rows):
-                                            cells_html = [f"<td>{rank + 1}</td>"]
-                                            for pos_idx in (0, 1, 2):
-                                                tracker_cells = grid.get(pos_idx, [])
-                                                if rank < len(tracker_cells):
-                                                    cell = tracker_cells[rank]
-                                                    ds_val = cell.draws_since
-                                                    style = "background-color:#ffea70;padding:0 6px;"
-                                                    if getattr(cell, "hard_due", False):
-                                                        style += "color:#d60000;"
-                                                    digit_html = f"<span style='{style}'>{cell.digit}</span>"
-                                                else:
-                                                    ds_val = ""
-                                                    digit_html = ""
-                                                cells_html.append(f"<td>{ds_val}</td>")
-                                                cells_html.append(f"<td>{digit_html}</td>")
-                                            rows_html.append("<tr>" + "".join(cells_html) + "</tr>")
-                                        table_html = (
-                                            f"<table class='pos-tracker-table'><thead>{header_html}</thead><tbody>"
-                                            + "".join(rows_html)
-                                            + "</tbody></table>"
-                                        )
-                                        st.markdown(f"**{title}**", unsafe_allow_html=True)
-                                        if source_path:
-                                            st.caption(f"Draw source: {source_path} ({variant_result.draws_used})")
-                                        st.markdown(table_html, unsafe_allow_html=True)
-
-                                    for label, key in available_variants:
-                                        variant_result = report.variant_results.get(key)
-                                        cached_variant = variant_cache.get(key) or {}
-                                        source_path = cached_variant.get("source") if isinstance(cached_variant, dict) else None
-                                        source_label = ""
-                                        if source_path:
-                                            try:
-                                                source_label = Path(source_path).name
-                                            except Exception:
-                                                source_label = source_path
-                                        _render_tracker_table(f"{state}_{label}", variant_result, source_label)
-
-                                    note_set = sorted({note for note in report.consensus_notes if note})
-                                    if note_set:
-                                        st.caption(" | ".join(note_set))
-                                    double_notes = [note for note in getattr(report, 'double_pressure_notes', []) if note]
-                                    if double_notes:
-                                        st.caption("Double pressure: " + " | ".join(double_notes))
-                                    st.markdown("**Cross-variant pressure summary**")
-                                    summary_cols = st.columns(3)
-                                    for pos_idx, column in enumerate(summary_cols):
+                                    tracker_columns = st.columns(len(available_variants))
+                                    for column, (label, key) in zip(tracker_columns, available_variants):
                                         with column:
-                                            st.markdown(f"P{pos_idx + 1}")
-                                            agg_items = report.aggregated_digits.get(pos_idx, [])
-                                            if not agg_items:
-                                                st.caption("--")
+                                            st.markdown(f"**{label}**")
+                                            variant_result = report.variant_results.get(key)
+                                            cached_variant = variant_cache.get(key)
+                                            if not variant_result or not variant_result.draws_used:
+                                                st.caption("No data")
                                                 continue
-                                            rows = []
-                                            for agg in agg_items[:5]:
-                                                hits = ", ".join(f"{variant[:1].upper()}#{rank}" for variant, rank in agg.occurrences)
-                                                rows.append({
+                                            source_path = (cached_variant or {}).get("source")
+                                            if source_path:
+                                                try:
+                                                    src_name = Path(source_path).name
+                                                except Exception:
+                                                    src_name = source_path
+                                                st.caption(f"Draw source: {src_name} ({variant_result.draws_used})")
+                                            tracker_grid = variant_result.tracker_grid
+                                            max_rows = max((len(tracker_grid.get(pos_idx, [])) for pos_idx in (0, 1, 2)), default=0)
+                                            if max_rows == 0:
+                                                st.caption("No positional ranks available")
+                                                continue
+                                            table_rows = []
+                                            for rank_idx in range(max_rows):
+                                                row = {"Rank": rank_idx + 1}
+                                                for pos_idx in (0, 1, 2):
+                                                    cells = tracker_grid.get(pos_idx, [])
+                                                    if rank_idx < len(cells):
+                                                        cell = cells[rank_idx]
+                                                        digit_style = "background-color:#ffea70;padding:0 6px;display:inline-block;font-weight:600;"
+                                                        if getattr(cell, "hard_due", False):
+                                                            digit_style += "color:#d60000;"
+                                                        row[f"P{pos_idx + 1} DS"] = cell.draws_since
+                                                        row[f"P{pos_idx + 1} DIG"] = f"<span style='{digit_style}'>{cell.digit}</span>"
+                                                    else:
+                                                        row[f"P{pos_idx + 1} DS"] = ""
+                                                        row[f"P{pos_idx + 1} DIG"] = ""
+                                                table_rows.append(row)
+                                            tracker_df = pd.DataFrame(table_rows)
+                                            st.markdown(tracker_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+                                st.markdown("**Cross-variant pressure summary**")
+                                summary_cols = st.columns(3)
+                                for pos_idx, column in enumerate(summary_cols):
+                                    with column:
+                                        st.markdown(f"P{pos_idx + 1}")
+                                        agg_items = report.aggregated_digits.get(pos_idx, [])
+                                        if not agg_items:
+                                            st.caption("--")
+                                            continue
+                                        rows = []
+                                        for agg in agg_items[:5]:
+                                            hits = ", ".join(
+                                                f"{variant[:1].upper()}#{rank}" for variant, rank in agg.occurrences
+                                            )
+                                            rows.append(
+                                                {
                                                     "Digit": agg.digit,
                                                     "Score": round(agg.score, 2),
                                                     "Hits": hits,
                                                     "Tags": " ".join(sorted(agg.tags)),
-                                                })
-                                            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-                                    if report.candidates:
-                                        st.markdown("**Positional shortlist**")
-                                        candidate_rows = []
-                                        for cand in report.candidates:
-                                            candidate_rows.append({
+                                                }
+                                            )
+                                        st.dataframe(
+                                            pd.DataFrame(rows),
+                                            use_container_width=True,
+                                            hide_index=True,
+                                        )
+                                note_set = sorted({note for note in report.consensus_notes if note})
+                                if note_set:
+                                    st.caption("; ".join(note_set))
+                                if report.candidates:
+                                    st.markdown("**Positional shortlist**")
+                                    candidate_rows = []
+                                    for cand in report.candidates:
+                                        candidate_rows.append(
+                                            {
                                                 "Combo": cand.combo,
                                                 "Score": round(cand.score, 2),
                                                 "Ranks": "-".join(str(r) for r in cand.ranks if r),
                                                 "Root": cand.digital_root,
                                                 "VTRAC": "" if cand.vtrac_index is None else cand.vtrac_index,
                                                 "Tags": " ".join(sorted(cand.tags)),
-                                            })
-                                        st.dataframe(pd.DataFrame(candidate_rows), use_container_width=True, hide_index=True)
-                # --- V-TRAC Table (Working logic) ---
-                st.subheader("V-TRAC Analysis (Working logic)")
+                                            }
+                                        )
+                                    st.dataframe(
+                                        pd.DataFrame(candidate_rows),
+                                        use_container_width=True,
+                                        hide_index=True,
+                                    )
+
+                # --- V¢â¬âTrac Table (Working logic) ---
+                st.subheader("°¸â  V¢â¬âTrac Analysis (Working logic)")
                 import pandas as _pd
                 rows = []
                 rows_plain = []
+                # Overlay: compute Top 10 overdue indices by draws_since (display-only)
                 try:
                     draws_1000 = results.get("draws_1000", draws)
                     total_len = len(draws_1000)
                     index_first_seen = {}
-                    for i, draw_value in enumerate(draws_1000):
-                        if not isinstance(draw_value, str) or len(draw_value) != 3 or len(set(draw_value)) == 1:
+                    for i, d in enumerate(draws_1000):
+                        if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
                             continue
-                        idx_tmp = get_vtrac_index(draw_value)
+                        idx_tmp = get_vtrac_index(d)
                         if idx_tmp and idx_tmp not in index_first_seen:
                             index_first_seen[idx_tmp] = i
                     index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
-                    sorted_by_ds = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
-                    top10_overdue_overlay = [i for i, _ds in sorted_by_ds[:10]]
+                    _sorted_by_ds_overlay = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
+                    _top10_overdue_overlay = [i for i, _ds in _sorted_by_ds_overlay[:10]]
                 except Exception:
-                    top10_overdue_overlay = []
+                    _top10_overdue_overlay = []
                 for entry in VTRAC_DISPLAY:
                     idx = entry["Index"]
                     singles = entry["Singles"].split() if entry["Singles"] else []
                     doubles = entry["Doubles"].split() if entry["Doubles"] else []
                     sdict = vstat.get(idx, {}).get("singles_status", {})
                     ddict = vstat.get(idx, {}).get("doubles_status", {})
+                    # Build html content
+                    # Build html content + sums badges
                     s_html = " ".join([
                         (_format_combo(c, sdict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
                         for c in singles
@@ -1534,16 +1492,19 @@ def show_aux_page(state: str) -> None:
                         (_format_combo(c, ddict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
                         for c in doubles
                     ]) if doubles else "&nbsp;"
+                    # Row tint + rank badge
                     idx_style = vstat.get(idx, {}).get("index_style", {})
                     row_class = ""
                     badge = ""
                     if idx_style.get("bg") == "green":
+                        # Preserve green (recent)
                         row_class = "row-green"
                         badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
                     else:
-                        if idx in top10_overdue_overlay:
+                        # Overlay red for Top 10 overdue (display-only)
+                        if idx in _top10_overdue_overlay:
                             row_class = "row-red"
-                            rank_num = top10_overdue_overlay.index(idx) + 1
+                            rank_num = _top10_overdue_overlay.index(idx) + 1
                             ds_disp = index_draws_since_overlay.get(idx, "")
                             badge = f'<sup class="rank-badge">{rank_num} ({ds_disp})</sup>'
                         elif idx_style.get("bg") == "red":
@@ -1553,138 +1514,163 @@ def show_aux_page(state: str) -> None:
                     singles_cell = f'<div class="{row_class}">{s_html}{badge}</div>' if row_class else f'{s_html}{badge}'
                     doubles_cell = f'<div class="{row_class}">{d_html}{badge}</div>' if row_class else f'{d_html}{badge}'
                     rows.append({"Index": index_cell, "Singles": singles_cell, "Doubles": doubles_cell})
+                    # Plain (for CSV download)
                     rows_plain.append({"Index": idx, "Singles": " ".join(singles), "Doubles": " ".join(doubles)})
                 df_v = _pd.DataFrame(rows)
                 st.markdown(df_v.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Download (plain)
                 df_plain = _pd.DataFrame(rows_plain)
                 st.download_button(
-                    "Download V-TRAC Table (Working) CSV",
+                    "Download V¢â¬âTrac Table (Working) CSV",
                     df_plain.to_csv(index=False).encode("utf-8"),
                     file_name=f"{state}_vtrac_working.csv",
                     mime="text/csv",
                 )
 
                 # --- Overdue Pairs (Working logic) ---
-                st.subheader("Overdue Pairs Analysis (Working logic)")
-                rep = results.get("rep", {})
-                nonrep = results.get("nonrep", {})
-                rep_red = sorted([pair for pair, ds in rep.items() if ds >= THR_R_BLUE])
-                rep_blue = sorted([pair for pair, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
-                rep_purple = sorted([pair for pair, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
-                nr_red = sorted([pair for pair, ds in nonrep.items() if ds >= THR_NR_BLUE])
-                nr_blue = sorted([pair for pair, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
-                nr_purple = sorted([pair for pair, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
+                st.subheader("°¸â¥ Overdue Pairs Analysis (Working logic)")
+                THR_NR_RED, THR_R_RED = 37, 71
+                THR_NR_BLUE, THR_R_BLUE = 56, 107
+                THR_PENDING = 25
+                nonrep = results["nonrep"]
+                rep = results["rep"]
+                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_blue = sorted([p for p, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
+                rep_purple = sorted([p for p, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
+                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_blue = sorted([p for p, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
+                nr_purple = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
 
+                # Thresholds info like the working app
                 st.info(
                     "**Overdue Thresholds:**\n"
                     f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
                     f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
                 )
+                # Display-only note to avoid ambiguity when multiple statuses overlap
                 st.caption("Color priority (digits/pairs overlap): red > blue > purple")
 
-                rep_col, nonrep_col = st.columns(2)
-                with rep_col:
+                c1, c2 = st.columns(2)
+                with c1:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (>= {THR_R_BLUE}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (>= {THR_R_RED}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (¢â°¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (¢â°¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (>= {THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
-                with nonrep_col:
-                    st.markdown("<b>Non-Repeating Pairs</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (>= {THR_NR_BLUE}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (>= {THR_NR_RED}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                        st.markdown(f"<span class='purple'>Purple (¢â°¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                with c2:
+                    st.markdown("<b>Non¢â¬âRepeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (¢â°¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (¢â°¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (>= {THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                        st.markdown(f"<span class='purple'>Purple (¢â°¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+
+                # --- Top 5 Repeating Pairs ---
+                st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
+                for pair, overdue in results["top5"]:
+                    if overdue >= 107:
+                        color = "red"
+                    elif overdue >= 71:
+                        color = "blue"
+                    elif overdue >= 25:
+                        color = "purple"
+                    else:
+                        color = ""
+
+                    line = f"{pair} - {overdue} draws overdue"
+                    if color:
+                        st.markdown(f'<span class="{color}">{line}</span>', unsafe_allow_html=True)
+                    else:
+                        st.write(line)
 
                 # --- Four-panels row (parity with working app) ---
-                latest_col, pairs_col, combos_col, top5_col = st.columns(4, gap="small")
-                with latest_col:
+                c1, c2, c3, c4 = st.columns(4, gap="small")
+                # Latest Draws
+                with c1:
                     st.subheader("Latest Draws")
                     import pandas as _pd
                     df_latest = _pd.DataFrame({"Draw": draws[:5]})
                     st.dataframe(df_latest, use_container_width=True)
-                with pairs_col:
+                # Pairs Analysis Results (tabular)
+                with c2:
                     st.subheader("Pairs Analysis Results")
                     times_drawn = {}
-                    for draw_value in draws[:150]:
-                        if not isinstance(draw_value, str) or len(draw_value) != 3:
+                    for i, d in enumerate(draws[:150]):
+                        if not isinstance(d, str) or len(d) != 3:
                             continue
-                        d1, d2, d3 = draw_value[0], draw_value[1], draw_value[2]
-                        for raw_pair in (d1 + d2, d2 + d3, d1 + d3):
-                            pair = "".join(sorted(raw_pair))
-                            times_drawn[pair] = times_drawn.get(pair, 0) + 1
+                        d1, d2, d3 = d[0], d[1], d[2]
+                        for raw in (d1+d2, d2+d3, d1+d3):
+                            p = ''.join(sorted(raw))
+                            times_drawn[p] = times_drawn.get(p, 0) + 1
+                    # merge overdue values
                     all_pairs = sorted(set(list(nonrep.keys()) + list(rep.keys())))
                     rows_pairs = []
-                    for pair in all_pairs:
-                        is_repeating = pair[0] == pair[1]
-                        overdue = rep.get(pair, 0) if is_repeating else nonrep.get(pair, 0)
-                        rows_pairs.append({"Pair": pair, "Times Drawn": times_drawn.get(pair, 0), "Draws Since": overdue})
+                    for p in all_pairs:
+                        is_rep = (p[0] == p[1])
+                        overdue = rep.get(p, 0) if is_rep else nonrep.get(p, 0)
+                        rows_pairs.append({"Pair": p, "Times Drawn": times_drawn.get(p, 0), "Draws Since": overdue})
                     df_pairs = _pd.DataFrame(rows_pairs)
                     if not df_pairs.empty:
                         df_pairs = df_pairs.sort_values("Draws Since", ascending=False)
                     st.dataframe(df_pairs, use_container_width=True)
-                with combos_col:
+                # Combinations Analysis (Draws Since) with shapes
+                with c3:
                     st.subheader("Combinations Analysis (Draws Since)")
                     combo_ds = vstat.get(0, {})
                     singles_ds = combo_ds.get("singles_ds", {})
                     doubles_ds = combo_ds.get("doubles_ds", {})
+                    S_RED, S_BLUE, D_RED, D_BLUE = 501, 334, 1000, 667
                     safe_rows = []
+                    # Build status to reuse shape rendering
                     for base, ds in singles_ds.items():
                         status = {}
-                        if ds >= THR_COMB_RED_SINGLE:
+                        if ds >= S_RED:
                             status[base] = {"shape_red_circle": True}
-                        elif ds >= THR_COMB_BLUE_SINGLE:
+                        elif ds >= S_BLUE:
                             status[base] = {"shape_blue_square": True}
                         html_combo = _format_combo(str(base).zfill(3), status, pair_status)
                         safe_rows.append({"Combo": html_combo, "Type": "Single", "Draws Since": int(ds)})
                     for base, ds in doubles_ds.items():
                         status = {}
-                        if ds >= THR_COMB_RED_DOUBLE:
+                        if ds >= D_RED:
                             status[base] = {"shape_red_circle": True}
-                        elif ds >= THR_COMB_BLUE_DOUBLE:
+                        elif ds >= D_BLUE:
                             status[base] = {"shape_blue_square": True}
                         html_combo = _format_combo(str(base).zfill(3), status, pair_status)
                         safe_rows.append({"Combo": html_combo, "Type": "Double", "Draws Since": int(ds)})
                     if safe_rows:
-                        safe_rows.sort(key=lambda row: row["Draws Since"], reverse=True)
+                        safe_rows.sort(key=lambda x: x["Draws Since"], reverse=True)
                         dfc_html = _pd.DataFrame(safe_rows)
                         html_table = dfc_html.to_html(escape=False, index=False)
-                        st.markdown(
-                            f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_table}</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_table}</div>', unsafe_allow_html=True)
                     else:
                         st.write("No data")
-                with top5_col:
+                with c4:
                     st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
-                    for pair, overdue in results.get("top5", []):
-                        if overdue >= THR_R_BLUE:
-                            color = "red"
-                        elif overdue >= THR_R_RED:
+                    for pair, overdue in results["top5"]:
+                        if overdue >= 107:
                             color = "blue"
-                        elif overdue >= THR_PENDING:
+                        elif overdue >= 71:
+                            color = "red"
+                        elif overdue >= 25:
                             color = "purple"
                         else:
                             color = ""
+                        style = "font-size: 1.05rem; font-weight: 600;"
                         line = f"{pair} - {overdue} draws overdue"
                         if color:
-                            st.markdown(f"<span class='{color}'>{line}</span>", unsafe_allow_html=True)
+                            st.markdown(f"<span class='{color}' style='{style}'>{line}</span>", unsafe_allow_html=True)
                         else:
-                            st.write(line)
+                            st.markdown(f"<span style='{style}'>{line}</span>", unsafe_allow_html=True)
 
                 # Sums Tracking (table)
                 if callable(_build_sums_df) and isinstance(sums_stats, dict) and sums_stats.get("by_sum"):
                     try:
-                        df_sums = _build_sums_df(sums_stats)
+                        df_sums = _build_sums_df(sums_stats)  # type: ignore[misc]
                         html_sums = df_sums.to_html(escape=False, index=False)
                         st.subheader("Sums Tracking")
-                        st.markdown(
-                            f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_sums}</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_sums}</div>', unsafe_allow_html=True)
                     except Exception:
                         pass
-
                 # --- Blackapple Alert (MVP) ---
                 try:
                     _ba = _load_blackapple_real()
@@ -1741,33 +1727,36 @@ def show_aux_page(state: str) -> None:
                             "Combo": c.get("combo", ""),
                             "MatchScore": c.get("score", 0),
                             "Tags": " ".join(sorted(c.get("tags", []))),
-                            "Sums": f"Sigma{t['Sigma']} sD{t['sD']} RS{t['RS']}"
+                            "Sums": f"I£{t['Sigma']} sD{t['sD']} RS{t['RS']}"
                         })
                     if rows:
                         import pandas as _pd
                         st.dataframe(_pd.DataFrame(rows), use_container_width=True)
                     else:
-                        st.caption("No candidate list (insufficient overlap) - still watching triggers.")
+                        st.caption("No candidate list (insufficient overlap) â still watching triggers.")
                 except Exception as _e:
                     st.caption(f"Blackapple panel unavailable: {_e}")
                 # Legend / Feature Guide
                 with st.expander("Legend / Feature Guide"):
                     st.markdown("""
-                    - V-Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
+                    - V¢â¬âTrac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
                     - Combination shapes:
-                      - Red circle: Singles >= 501 draws since; Doubles >= 1000
-                      - Blue square: Singles >= 334; Doubles >= 667
+                      - Red circle: Singles ¢â°¥ 501 draws since; Doubles ¢â°¥ 1000
+                      - Blue square: Singles ¢â°¥ 334; Doubles ¢â°¥ 667
                       - Boxed combos: permutations are treated as the same combo
                     - Pairs colors (analysis window based):
-                      - Red (Late): non-repeating >= 37, repeating >= 71
-                      - Blue (Very Late): non-repeating >= 56, repeating >= 107
-                      - Purple (Pending): >= 25
+                      - Red (Late): non¢â¬ârepeating ¢â°¥ 37, repeating ¢â°¥ 71
+                      - Blue (Very Late): non¢â¬ârepeating ¢â°¥ 56, repeating ¢â°¥ 107
+                      - Purple (Pending): ¢â°¥ 25
                     """)
 
-                # --- V-Trac Index Hits (Working logic) ---
+                # --- V¢â¬âTrac Index Hits (Working logic) ---
                 import pandas as _pd
+                idx_rows = []
+                # Build draws_since map for all indices
                 recent_ranks = vstat.get(0, {}).get("recent_index_ranks", {}) if isinstance(vstat.get(0, {}), dict) else {}
                 overdue_ranks = vstat.get(0, {}).get("overdue_index_ranks", {}) if isinstance(vstat.get(0, {}), dict) else {}
+                # If not present under 0-key, reconstruct minimal maps from per-index style
                 if not recent_ranks and not overdue_ranks:
                     for entry in VTRAC_DISPLAY:
                         idx = entry["Index"]
@@ -1776,51 +1765,56 @@ def show_aux_page(state: str) -> None:
                             recent_ranks[idx] = ist.get("rank")
                         elif ist.get("bg") == "red" and ist.get("rank"):
                             overdue_ranks[idx] = ist.get("rank")
-
+                # derive draws_since by scanning the first-seen positions over draws_1000
                 draws_1000 = results.get("draws_1000", draws)
                 total_len = len(draws_1000)
                 index_first_seen = {}
-                for i, draw_value in enumerate(draws_1000):
-                    if not isinstance(draw_value, str) or len(draw_value) != 3 or len(set(draw_value)) == 1:
+                for i, d in enumerate(draws_1000):
+                    if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
                         continue
-                    idx = get_vtrac_index(draw_value)
+                    idx = get_vtrac_index(d)
                     if idx and idx not in index_first_seen:
                         index_first_seen[idx] = i
-                index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
-                sorted_by_ds = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
-                top10_overdue_overlay = [idx for idx, _ in sorted_by_ds[:10]]
-                recent_rank_values = {}
-                for idx, rank_val in recent_ranks.items():
-                    try:
-                        recent_rank_values[idx] = int(str(rank_val))
-                    except Exception:
-                        continue
-                rows_hits = []
-                for idx in range(1, 36):
-                    ds = index_draws_since_overlay.get(idx, total_len)
-                    if idx in top10_overdue_overlay:
-                        rank_num = top10_overdue_overlay.index(idx) + 1
+                index_draws_since = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+
+                # Extend Overdue to Top 10 by draws_since (display-only); keep Recent as-is
+                _sorted_by_ds = sorted(index_draws_since.items(), key=lambda kv: kv[1], reverse=True)
+                _top10_overdue = [i for i, _ds in _sorted_by_ds[:10]]
+
+                for idx, ds in index_draws_since.items():
+                    status = "None"
+                    rank_num = 0
+                    # Overdue (Top 10 by draws_since)
+                    if idx in _top10_overdue:
                         status = "Overdue"
-                        rank_display = f"{rank_num} ({ds})"
-                    elif idx in recent_rank_values:
+                        rank_num = _top10_overdue.index(idx) + 1
+                    # Recent (from vstat) if not in Overdue
+                    elif idx in recent_ranks:
                         status = "Recent"
-                        rank_val = recent_rank_values[idx]
-                        rank_display = f"{rank_val} ({ds})" if rank_val > 0 else f"({ds})"
-                    else:
-                        status = "None"
-                        rank_display = ""
-                    rows_hits.append({
+                        try:
+                            rank_num = int(str(recent_ranks[idx])) if str(recent_ranks[idx]).isdigit() else 0
+                        except Exception:
+                            rank_num = 0
+
+                    rank_disp = f"{rank_num} ({ds})" if rank_num > 0 else ""
+                    idx_rows.append({
                         "Index": idx,
                         "Draws Since": ds,
                         "Status": status,
-                        "RankDisplay": rank_display,
+                        "Rank": rank_num,
+                        "RankDisplay": rank_disp,
                     })
-                df_hits = _pd.DataFrame(rows_hits)
-                if not df_hits.empty:
-                    df_hits = df_hits.sort_values("Index")
-                st.subheader("V-Trac Index Hits (Working logic)")
-                st.dataframe(df_hits, use_container_width=True, hide_index=True)
-                st.success(f"{variant_label} auxiliary tools (working logic) completed for {state}")
+                # Sort: Overdue desc (most due first), then Recent by rank, then others
+                df_idx = _pd.DataFrame(idx_rows)
+                if not df_idx.empty:
+                    df_idx["_overdue_sort"] = df_idx["Status"].apply(lambda s: 2 if s == "Overdue" else (1 if s == "Recent" else 0))
+                    df_idx["_rank_fill"] = df_idx["Rank"].apply(lambda r: int(r) if str(r).isdigit() else 0)
+                    df_idx = df_idx.sort_values(["_overdue_sort", "Draws Since", "_rank_fill"], ascending=[False, False, True])[ ["Index", "Draws Since", "Status", "RankDisplay"] ]
+                    html_idx = df_idx.to_html(index=False, escape=False)
+                    st.subheader("V¢â¬âTrac Index Hits (Working logic)")
+                    st.markdown(f'<div style="max-height: 320px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_idx}</div>', unsafe_allow_html=True)
+
+                st.success(f"¢â¦ {variant_label} auxiliary tools (working logic) completed for {state}")
                 
             except Exception as e:
                 st.error(f"{variant_label} analysis failed: {e}")
@@ -1882,7 +1876,7 @@ def show_digit_reduction_page(state: str) -> None:
             )
 
         if df.empty:
-            st.warning("Digit Reduction produced no output - verify tables exist.")
+            st.warning("Digit Reduction produced no output ¢â¬â verify tables exist.")
             return
 
         st.success(f"{len(df)} reductions extracted for {state}")

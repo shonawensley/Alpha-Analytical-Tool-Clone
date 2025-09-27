@@ -11,7 +11,7 @@ Purpose: surface per-position pressure across Combined/Midday/Evening variants w
   - Ranked candidate shortlist (optional straight overlay) with tags, digital root, V-TRAC index
 
 ## Streamlit Surfaces
-- **Auxiliary Tools page**: “Positional Pressure” expander mirrors the three-pillar tracker with window/top-k controls and draw source caption.
+- **Auxiliary Tools page**: “Positional Pressure” expander renders Combined/Midday/Evening in parallel (P1/P2/P3 columns, top-3 ranks) using a fixed 360-draw window; hard-due digits are marked in red and the draw source caption remains under each variant.
 - **Control Center**: positional heat badge per state/variant (e.g., `P1:7(34) P2:1(21) P3:9(45)`) supports doubles/BA triage.
 
 ## Operator Checklist

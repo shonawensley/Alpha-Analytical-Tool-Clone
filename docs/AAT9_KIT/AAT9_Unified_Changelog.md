@@ -1,3 +1,19 @@
+## 2025-09-26 – Aux – Positional tracker UI pass – Side-by-side variant table
+- Impact: Positional Pressure expander now renders Combined / Midday / Evening simultaneously (P1–P3 columns, top-3 ranks) using a fixed 360-draw window, replacing per-variant tabs/sliders while retaining consensus notes and the ranked shortlist.
+- Files: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
+
+## 2025-09-25 — Aux — Pairs window alignment
+- Overdue pair logic now scans the most-recent 360 draws so RED (≥107) / BLUE (≥71) thresholds register correctly across boxed permutations.
+- `get_vtrac_statuses` and Control Center caching reuse the same window for pair colors/top-4 doubles while preserving existing combo/double pipelines.
+- Files: `scripts/auxiliary/working/modules/analyze_pairs.py`, `src/app.py`.
+
+## 2025-09-25 — Control Center — Due Doubles table
+- Added a new "Due Doubles — Top Pairs with RED/BLUE Combo Misses" table to Control Center.
+- Reads only `data/cleaned/*_draws.csv` via `modules.aux_loaders` (Combined/Midday/Evening).
+- Ranks Combined top-4 repeating pairs (100-draw logic) and, per pair, lists double combos meeting:
+  - RED ≥ 1000 draws since (highest), BLUE ≥ 667. Tokens preserve color and show C/M/E badges.
+- Minimal, isolated edit in `src/app.py`; caching reused from existing variant draws block; soft-fails with captions.
+- No changes to combined string-table pipelines or legacy readers.
 # AAT9 — Unified Changelog
 
 ## 2025-09-24 - Aux - Positional pressure tool + Control Center heat - Draws-only positional indicators across variants
@@ -75,8 +91,8 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
 - Notes: table‑agnostic (safe for states missing string‑tables); later can overlay table‑driven details
 2025-09-16 — Winners — Analyzer-style Winners Full report + Aux restore — Adds table-aware 3‑pane HTML (purple index + green straights), restores staged Aux V‑TRAC reference, adds canonical vtrac_reference API; Files: modules/vtrac_reference.py, modules/winner_report_full.py, src/reporting (added via modules shim), src/app.py (full tile wiring); Refs: AAT9_Winners_VTrac_Report.md, AAT9_Live_Wiring_and_Data_Paths.md, AAT9_Checkpoint_Log.md, briefings/PITFALLS.txt
 
-## 2025-09-19 � Cleanup � Archived legacy Stable Pattern scripts/run artifacts � Reduced confusion; canonical extractor unchanged � Files: archived/2025-09-19_stable_cleanup/*; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
-## 2025-09-19 � Stable � Modal straight scoring + families/spotlight exports � Richer signals; winner reports get dedicated CSVs � Files: alpha_analytical/stable/__init__.py, feature_config.yml, post_pass_families.py, winner_family_spotlight.py, src/core/stable_pattern_extractor.py, src/app.py; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+## 2025-09-19 � Cleanup � Archived legacy Stable Pattern scripts/run artifacts � Reduced confusion; canonical extractor unchanged � Files: archived/2025-09-19_stable_cleanup/*; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+## 2025-09-19 � Stable � Modal straight scoring + families/spotlight exports � Richer signals; winner reports get dedicated CSVs � Files: alpha_analytical/stable/__init__.py, feature_config.yml, post_pass_families.py, winner_family_spotlight.py, src/core/stable_pattern_extractor.py, src/app.py; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
 
 ## 2025-09-21 - Aux - Restored staged VTRAC reference & smoke check - Aux page stable again
 - Files: `src/app.py`, `scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}`, `modules/module_d_auxiliary_tools/refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}`, `scripts/checks/smoke_aux_vtrac.py`

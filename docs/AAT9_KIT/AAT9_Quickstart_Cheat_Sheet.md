@@ -38,7 +38,7 @@
 
 
 ## Auxiliary Tools Highlights
-- Positional Pressure (Aux page) surfaces top-3 digits per slot for Combined/Midday/Evening with configurable window/top-k controls.
+- Positional Pressure (Aux page) renders Combined/Midday/Evening side-by-side (P1/P2/P3 columns, top-3 digits) with a fixed 360-draw window and Top-3 ranks; hard-due cells are highlighted in red.
 - Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
 - Control Center adds a positional heat badge per state/variant using the same draws-only engine.
 

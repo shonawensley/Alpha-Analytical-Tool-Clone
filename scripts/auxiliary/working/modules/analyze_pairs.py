@@ -20,6 +20,7 @@ COLOR_LATE = 'red'
 COLOR_VERY_LATE = 'blue'
 COLOR_PENDING = 'purple'
 
+PAIRS_ANALYSIS_WINDOW = 360  # draws scanned for overdue pair logic
 
 def extract_pairs(draw: str) -> Tuple[List[str], List[str]]:
     """
@@ -95,104 +96,84 @@ def track_pairs(draws: List[str]) -> Tuple[Dict[str, int], Dict[str, int]]:
     return non_repeating_last_seen, repeating_last_seen
 
 
-def calculate_overdue_pairs(draws: List[str]) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, str]]:
-    """
-    Calculates how many draws it's been since each pair was last seen.
-    Properly handles all possible pairs and applies correct thresholds.
-    
-    Args:
-        draws: List of 3-digit draw strings, most recent first (last 100 draws)
-        
-    Returns:
-        Tuple of (non_repeating_overdue, repeating_overdue, pair_status)
-    """
-    # Initialize last_seen dictionary for all possible pairs with high default value
-    last_seen = {}
-    times_drawn = {}
-    
-    # Process draws from newest to oldest (draws[0] is newest)
-    for i, draw in enumerate(draws):
-        if len(draw) != 3:
+def calculate_overdue_pairs(draws: List[str], window: int = PAIRS_ANALYSIS_WINDOW) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, str]]:
+    """Calculate draws-since status for every canonical pair within a recent window."""
+    if draws is None:
+        return {}, {}, {}
+
+    if window is None or window <= 0:
+        analysis_draws = list(draws)
+    else:
+        analysis_draws = draws[:window]
+
+    total = len(analysis_draws)
+    if total == 0:
+        return {}, {}, {}
+
+    last_seen: Dict[str, int] = {}
+    times_drawn: Dict[str, int] = {}
+
+    for i, draw in enumerate(analysis_draws):
+        if not isinstance(draw, str) or len(draw) != 3:
             continue
-            
+
         d1, d2, d3 = draw[0], draw[1], draw[2]
-        raw_pairs = [d1+d2, d2+d3, d1+d3]
-        
+        raw_pairs = [d1 + d2, d2 + d3, d1 + d3]
+
         for raw_pair in raw_pairs:
-            # Create canonical form (sorted digits)
             pair = ''.join(sorted(raw_pair))
-            
-            # Count how many times each pair appears
             times_drawn[pair] = times_drawn.get(pair, 0) + 1
-            
-            # Track first occurrence (lowest index = most recent)
             if pair not in last_seen:
                 last_seen[pair] = i
-    
-    # Generate all possible digit pairs (00-99 in canonical form)
-    non_repeating_overdue = {}
-    repeating_overdue = {}
-    pair_status = {}
-    
-    # Debug counters
+
+    non_repeating_overdue: Dict[str, int] = {}
+    repeating_overdue: Dict[str, int] = {}
+    pair_status: Dict[str, str] = {}
+
     red_count = 0
     blue_count = 0
     purple_count = 0
-    
+
     for p in range(10):
-        for q in range(p, 10):  # Start from p to avoid duplicates
+        for q in range(p, 10):
             pair = f"{p}{q}"
-            
-            # If the pair was found in the draws, use its index
-            # Otherwise, treat it as if it's max_draws overdue
-            overdue_count = last_seen.get(pair, len(draws))
+            overdue_count = last_seen.get(pair, total)
             times_seen = times_drawn.get(pair, 0)
-            
-            # Separate repeating and non-repeating pairs
-            is_repeating = (pair[0] == pair[1])
-            
+            is_repeating = pair[0] == pair[1]
+
             if is_repeating:
                 repeating_overdue[pair] = overdue_count
-                
-                # Apply thresholds for repeating pairs
+
                 if overdue_count >= THRESHOLD_VERY_LATE_REPEATING:
-                    pair_status[pair] = COLOR_VERY_LATE
-                    blue_count += 1
-                    # Debug output for verification
-                    print(f"DEBUG: Repeating pair {pair} is BLUE (very late) with {overdue_count} draws overdue, seen {times_seen} times")
-                elif overdue_count >= THRESHOLD_LATE_REPEATING:
                     pair_status[pair] = COLOR_LATE
                     red_count += 1
-                    # Debug output for verification
-                    print(f"DEBUG: Repeating pair {pair} is RED (late) with {overdue_count} draws overdue, seen {times_seen} times")
+                    print(f"DEBUG: Repeating pair {pair} is RED (>= {THRESHOLD_VERY_LATE_REPEATING}) with {overdue_count} draws overdue, seen {times_seen} times")
+                elif overdue_count >= THRESHOLD_LATE_REPEATING:
+                    pair_status[pair] = COLOR_VERY_LATE
+                    blue_count += 1
+                    print(f"DEBUG: Repeating pair {pair} is BLUE (>= {THRESHOLD_LATE_REPEATING}) with {overdue_count} draws overdue, seen {times_seen} times")
                 elif overdue_count >= THRESHOLD_PENDING_LATE:
                     pair_status[pair] = COLOR_PENDING
                     purple_count += 1
-                    # Debug output for verification
                     print(f"DEBUG: Repeating pair {pair} is PURPLE (pending) with {overdue_count} draws overdue, seen {times_seen} times")
             else:
                 non_repeating_overdue[pair] = overdue_count
-                
-                # Apply thresholds for non-repeating pairs
+
                 if overdue_count >= THRESHOLD_VERY_LATE_NONREPEATING:
-                    pair_status[pair] = COLOR_VERY_LATE
-                    blue_count += 1
-                    # Debug output for verification
-                    print(f"DEBUG: Non-repeating pair {pair} is BLUE (very late) with {overdue_count} draws overdue, seen {times_seen} times")
-                elif overdue_count >= THRESHOLD_LATE_NONREPEATING:
                     pair_status[pair] = COLOR_LATE
                     red_count += 1
-                    # Debug output for verification
-                    print(f"DEBUG: Non-repeating pair {pair} is RED (late) with {overdue_count} draws overdue, seen {times_seen} times")
+                    print(f"DEBUG: Non-repeating pair {pair} is RED (>= {THRESHOLD_VERY_LATE_NONREPEATING}) with {overdue_count} draws overdue, seen {times_seen} times")
+                elif overdue_count >= THRESHOLD_LATE_NONREPEATING:
+                    pair_status[pair] = COLOR_VERY_LATE
+                    blue_count += 1
+                    print(f"DEBUG: Non-repeating pair {pair} is BLUE (>= {THRESHOLD_LATE_NONREPEATING}) with {overdue_count} draws overdue, seen {times_seen} times")
                 elif overdue_count >= THRESHOLD_PENDING_LATE:
                     pair_status[pair] = COLOR_PENDING
                     purple_count += 1
-                    # Debug output for verification
                     print(f"DEBUG: Non-repeating pair {pair} is PURPLE (pending) with {overdue_count} draws overdue, seen {times_seen} times")
-    
-    # Summary output
+
     print(f"DEBUG: Found {red_count} RED pairs, {blue_count} BLUE pairs, and {purple_count} PURPLE pairs")
-    
+
     return non_repeating_overdue, repeating_overdue, pair_status
 
 
@@ -337,25 +318,45 @@ def compute_combo_draws_since(draws_1000: List[str]) -> Tuple[Dict[str, int], Di
     doubles_seen: Dict[str, int] = {}
     total = len(draws_1000)
 
+    singles_universe: Set[str] = set()
+    doubles_universe: Set[str] = set()
+    for entry in VTRAC_DISPLAY:
+        singles_raw = entry.get("Singles") or ""
+        doubles_raw = entry.get("Doubles") or ""
+        for combo in singles_raw.split():
+            base = ''.join(sorted(combo))
+            if base:
+                singles_universe.add(base)
+        for combo in doubles_raw.split():
+            base = ''.join(sorted(combo))
+            if base:
+                doubles_universe.add(base)
+
     for i, draw in enumerate(draws_1000):
         if not draw or len(draw) != 3:
             continue
         uniq = len(set(draw))
+        base = ''.join(sorted(draw))
         if uniq == 3:
-            base = ''.join(sorted(draw))
-            if base not in singles_seen:
-                singles_seen[base] = i
+            singles_seen.setdefault(base, i)
         elif uniq == 2:
-            base = ''.join(sorted(draw))
-            if base not in doubles_seen:
-                doubles_seen[base] = i
+            doubles_seen.setdefault(base, i)
         else:
-            # triple – ignore
+            # triple -> ignore
             continue
 
-    # Convert to draws_since, defaulting to total if never seen
-    singles_ds = {base: singles_seen.get(base, total) for base in set(singles_seen.keys())}
-    doubles_ds = {base: doubles_seen.get(base, total) for base in set(doubles_seen.keys())}
+    if not singles_universe:
+        singles_universe = set(singles_seen.keys())
+    else:
+        singles_universe |= set(singles_seen.keys())
+
+    if not doubles_universe:
+        doubles_universe = set(doubles_seen.keys())
+    else:
+        doubles_universe |= set(doubles_seen.keys())
+
+    singles_ds = {base: singles_seen.get(base, total) for base in singles_universe}
+    doubles_ds = {base: doubles_seen.get(base, total) for base in doubles_universe}
     return singles_ds, doubles_ds
 
 
@@ -400,22 +401,24 @@ def get_vtrac_statuses(draws_100: List[str], draws_1000: Optional[List[str]] = N
     Gets the status for each V-Trac index and its components.
     
     Args:
-        draws_100: List of 3-digit draw strings, most recent first (last 100 draws)
+        draws_100: List of 3-digit draw strings, most recent first (last N draws)
         draws_1000: Optional list of draws for 1000-draw history check (for underlining)
         
     Returns:
         Dict mapping V-Trac indices to their status information
     """
-    # Calculate overdue pairs from last 100 draws
-    _, _, pair_status = calculate_overdue_pairs(draws_100)
-    
+    if draws_1000 is None:
+        draws_1000 = draws_100  # Use the same draws if extended history unavailable
+
+    history_for_pairs = draws_1000 if draws_1000 is not None else draws_100
+
+    # Calculate overdue pairs from the configured window
+    _, _, pair_status = calculate_overdue_pairs(history_for_pairs)
+
     # Analyze V-Trac hits
     vtrac_appeared = analyze_vtrac_hits(draws_100)
-    
+
     # Get combos that have appeared in the last 1000 draws (for underlining)
-    if draws_1000 is None:
-        draws_1000 = draws_100  # Use the same 100 draws if 1000 not provided
-    
     appeared_combos = combos_appeared_in_1000(draws_1000)
     print(f"DEBUG: Found {len(appeared_combos)} specific combos that appeared in the draw history")
 

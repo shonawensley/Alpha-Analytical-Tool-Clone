@@ -1,3 +1,14 @@
+## 2025-09-26 06:00 (UTC) - Positional tracker UI consolidation
+
+- Context: Operators requested the Aux tracker mirror the training markup (Combined/Midday/Evening stacked) without extra sliders or tabs.
+- Change:
+  - Locked the positional engine to a 360-draw window with Top-3 ranks and removed the Streamlit slider/radio controls.
+  - Replaced per-variant tabs with a side-by-side table (P1–P3 columns per variant) while keeping draw-source captions, consensus notes, and the shortlist.
+  - Updated Quickstart, Aux overview, positional pressure brief, and detail log to describe the new layout.
+- Impact: Positional pressure is now scannable across variants at a glance, matching the documented mock and ready for downstream compound scoring.
+- Files/Refs: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
+- Follow-ups: Consider aligning other Aux tables into variant columns and logging positional hits in the winners pipeline.
+
 ## 2025-09-24 05:00 (UTC) - Positional pressure tool + Control Center heat
 
 - Context: Aux needed an in-app positional tracker (Combined/Midday/Evening) that stays draws-only and compounds with existing doubles/BA cues.

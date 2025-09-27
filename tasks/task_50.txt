@@ -1,0 +1,92 @@
+TASK: Aux page cleanup — remove mojibake UI text and delete the duplicate "Top 5 Most Overdue Repeating Pairs (Working logic)" panel. Touch ONLY src/app.py. Do not change any loaders, BA logic, pipelines, or paths.
+
+Scope & guardrails
+- File: src/app.py (Aux page rendering)
+- No refactors; no sys.path changes; no edits outside src/app.py
+- Keep all analytics the same; we are fixing text + removing a redundant UI block only.
+- All UI strings must be plain ASCII (no emoji/bullets/curly quotes).
+- Combined/Midday/Evening behavior must remain unchanged.
+
+A. One-pass mojibake cleanup (ASCII only)
+1) Ensure file is written as UTF-8 (no BOM) when saving. Add at top (harmless):
+   # -*- coding: utf-8 -*-
+2) Replace ALL garbled literals with clear ASCII. Use these exact wordings where applicable:
+   - "V-TRAC Analysis (Working logic)"
+   - "Overdue Pairs Analysis (Working logic)"
+   - "V-TRAC Index Hits (Working logic)"
+   - "Select State", "Select Tool"
+   - "Download V-TRAC Table (Working) CSV"
+   - "No patterns found — verify tables or adjust parameters."
+   - Legends:
+     "Color priority (digits/pairs overlap): red > blue > purple"
+     "Repeating Pairs (Doubles)"
+     "Non-Repeating Pairs"
+     "Red (≥{THR_R_RED}):"
+     "Blue (≥{THR_R_BLUE}):"
+     "Purple (≥{THR_PENDING}):"
+     "Red (≥{THR_NR_RED}):"
+     "Blue (≥{THR_NR_BLUE}):"
+     "Purple (≥{THR_PENDING}):"
+   Also fix the purple badge line: parts.append(f"<span class=\"purple\">{label}</span>")
+
+3) After replacements, verify no mojibake remains:
+   - Search the file text (in memory) for any of these: "Ã", "A "
+   - If found, replace with the intended ASCII phrase.
+   - Optional (DEV-only) watchdog at end of Aux block:
+     ```
+     import re, pathlib
+     if re.search(r"[Ã ]", pathlib.Path(__file__).read_text(encoding="utf-8", errors="ignore")):
+         st.warning("Mojibake detected in UI strings — sanitize src/app.py")
+     ```
+
+B. Centralize constants (if not already present)
+Place near other Aux constants (or top of file) so captions never drift:
+
+THR_R_RED = 71
+THR_R_BLUE = 107
+THR_NR_RED = 37
+THR_NR_BLUE = 56
+THR_PENDING = 25
+
+THR_COMB_RED_SINGLE = 501
+THR_COMB_RED_DOUBLE = 1000
+THR_COMB_BLUE_SINGLE = 334
+THR_COMB_BLUE_DOUBLE = 667
+
+
+Use these constants in all label strings (e.g., "Red (≥{THR_R_RED}):").
+
+C. Remove the duplicate Top‑5 panel
+- Keep the compact "Top 5 Most Overdue Repeating Pairs (Working logic)" that appears inside the four-column layout (with Latest Draws / Pairs Analysis Results / Combinations Analysis).
+- DELETE the older duplicate block further down that shows wrong color thresholds. If unsure, search the file for the heading text; there should be exactly ONE occurrence after this change.
+- Optional: extract the kept block to a small helper (render_overdue_pairs_top5(...)) and call it once.
+
+D. Verification (must show results in the reply)
+1) Compile: `python -X utf8 -m py_compile src/app.py`
+2) Grep checks (safe to run with ripgrep if available; otherwise do in-Python search):
+   - No mojibake: confirm 0 matches for `[Ã ]`
+   - Single Top‑5: confirm 1 match for `"Top 5 Most Overdue Repeating Pairs (Working logic)"`
+3) Run the app (headless is fine) and report that Aux shows:
+   - Clean ASCII headings/captions (no strange symbols)
+   - One Top‑5 panel only
+   - Legends display thresholds using the constants above
+   - No changes in BA numbers or Aux tables (render-only change)
+
+E. Commit (ONE small commit)
+Message:
+  `aux/ui: sanitize mojibake, keep one Top‑5 panel; captions use constants — no logic change (src/app.py only)`
+
+Reply back with:
+- A brief diff summary (lines changed)
+- Results of the 3 verification checks
+- A single screenshot/description of the corrected Aux section
+
+Why this is the right answer to Codex’s questions
+
+Yes: use plain ASCII for all UI text. That avoids Windows‑1252/UTF‑8 flips forever.
+
+Yes: it’s acceptable/preferable to rebuild the Aux UI block’s strings rather than scattered spot‑replaces; just keep the analytics and layout order intact.
+
+Keep the Top‑5 that sits with the four panels; remove the older one with wrong colors.
+
+If Codex follows the block above, you’ll get a single clean pass: no weird symbols anywhere and only one Top‑5 panel, with the correct thresholds pulled from constants.
