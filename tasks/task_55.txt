@@ -1,0 +1,563 @@
+modules\module_d_auxiliary_tools\refactored\positional_tool.py
+
+@@ -22,6 +22,20 @@ PositionIndex = Literal[0, 1, 2]
+MIRROR_MAP: Dict[int, int] = {0: 5, 5: 0, 1: 6, 6: 1, 2: 7, 7: 2, 3: 8, 8: 3, 4: 9, 9: 4}
+
+
+HARD_DUE_THRESHOLDS: Dict[Variant, int] = {
+    "combined": 55,
+    "midday": 40,
+    "evening": 40,
+}
+
+
+@dataclass(frozen=True)
+class PositionalTrackerCell:
+    digit: int
+    draws_since: int
+    hard_due: bool
+
+
+@dataclass(frozen=True)
+class WeightsConfig:
+    """Tunable scoring weights for positional pressure."""
+
+
+@@ -93,6 +107,7 @@ class VariantPositionalResult:
+    window: int
+    draws_used: int
+    position_summaries: Dict[PositionIndex, PositionSummary]
+    tracker_grid: Dict[PositionIndex, List[PositionalTrackerCell]]
+
+    def iter_top_digits(self) -> Iterable[PositionTopDigit]:
+        for summary in self.position_summaries.values():
+
+
+@@ -221,6 +236,7 @@ def analyze_variant(
+        )
+
+    summaries: Dict[PositionIndex, PositionSummary] = {}
+    tracker_grid: Dict[PositionIndex, List[PositionalTrackerCell]] = {}
+    variant_weight = cfg.variant_weight(variant)
+
+    for pos in (0, 1, 2):
+
+
+@@ -282,12 +298,24 @@ def analyze_variant(
+            bonus = cfg.mirror_same_variant * friend.score_components.get("base", 0.0)
+            entry.add_component("mirror_local", bonus, cfg.mirror_tag)
+
+        tracker_grid[pos] = [
+            PositionalTrackerCell(
+                digit=entry.digit,
+                draws_since=entry.gap,
+                hard_due=entry.gap >= HARD_DUE_THRESHOLDS.get(variant, 55),
+            )
+            for entry in top_raw
+        ]
+        summaries[pos] = PositionSummary(
+            position=pos, top_digits=top_raw, population=population, window=window
+        )
+
+    return VariantPositionalResult(
+        variant=variant, window=window, draws_used=len(clean), position_summaries=summaries
+        variant=variant,
+        window=window,
+        draws_used=len(clean),
+        position_summaries=summaries,
+        tracker_grid=tracker_grid,
+    )
+
+
+
+
+@@ -498,6 +526,7 @@ __all__ = [
+    "PositionTopDigit",
+    "PositionSummary",
+    "VariantPositionalResult",
+    "PositionalTrackerCell",
+    "AggregatedDigit",
+    "CandidateRecommendation",
+    "StatePositionalReport",
+
+
+______________
+
+   # --- VÃƒÂ¢€Ã¢â‚¬ËœTrac Table (Working logic) ---
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  VÃƒÂ¢€Ã¢â‚¬ËœTrac Analysis (Working logic)")
+                import pandas as _pd
+                rows = []
+                rows_plain = []
+                # Overlay: compute Top 10 overdue indices by draws_since (display-only)
+                try:
+                    draws_1000 = results.get("draws_1000", draws)
+                    total_len = len(draws_1000)
+                    index_first_seen = {}
+                    for i, d in enumerate(draws_1000):
+                        if not isinstance(d, str) or len(d) != 3 or len(set(d)) == 1:
+                            continue
+                        idx_tmp = get_vtrac_index(d)
+                        if idx_tmp and idx_tmp not in index_first_seen:
+                            index_first_seen[idx_tmp] = i
+                    index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+                    _sorted_by_ds_overlay = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
+                    _top10_overdue_overlay = [i for i, _ds in _sorted_by_ds_overlay[:10]]
+                except Exception:
+                    _top10_overdue_overlay = []
+                for entry in VTRAC_DISPLAY:
+                    idx = entry["Index"]
+                    singles = entry["Singles"].split() if entry["Singles"] else []
+                    doubles = entry["Doubles"].split() if entry["Doubles"] else []
+                    sdict = vstat.get(idx, {}).get("singles_status", {})
+                    ddict = vstat.get(idx, {}).get("doubles_status", {})
+                    # Build html content
+                    # Build html content + sums badges
+                    s_html = " ".join([
+                        (_format_combo(c, sdict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in singles
+                    ]) if singles else "&nbsp;"
+                    d_html = " ".join([
+                        (_format_combo(c, ddict, pair_status) + _sums_badge_for(c, results.get("sums_stats", {})))
+                        for c in doubles
+                    ]) if doubles else "&nbsp;"
+                    # Row tint + rank badge
+                    idx_style = vstat.get(idx, {}).get("index_style", {})
+                    row_class = ""
+                    badge = ""
+                    if idx_style.get("bg") == "green":
+                        # Preserve green (recent)
+                        row_class = "row-green"
+                        badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    else:
+                        # Overlay red for Top 10 overdue (display-only)
+                        if idx in _top10_overdue_overlay:
+                            row_class = "row-red"
+                            rank_num = _top10_overdue_overlay.index(idx) + 1
+                            ds_disp = index_draws_since_overlay.get(idx, "")
+                            badge = f'<sup class="rank-badge">{rank_num} ({ds_disp})</sup>'
+                        elif idx_style.get("bg") == "red":
+                            row_class = "row-red"
+                            badge = f'<sup class="rank-badge">{idx_style.get("rank")}</sup>' if idx_style.get("rank") else ""
+                    index_cell = f'<div class="{row_class}">{idx}{badge}</div>' if row_class else f'{idx}{badge}'
+                    singles_cell = f'<div class="{row_class}">{s_html}{badge}</div>' if row_class else f'{s_html}{badge}'
+                    doubles_cell = f'<div class="{row_class}">{d_html}{badge}</div>' if row_class else f'{d_html}{badge}'
+                    rows.append({"Index": index_cell, "Singles": singles_cell, "Doubles": doubles_cell})
+                    # Plain (for CSV download)
+                    rows_plain.append({"Index": idx, "Singles": " ".join(singles), "Doubles": " ".join(doubles)})
+                df_v = _pd.DataFrame(rows)
+                st.markdown(df_v.to_html(escape=False, index=False), unsafe_allow_html=True)
+                # Download (plain)
+                df_plain = _pd.DataFrame(rows_plain)
+                st.download_button(
+                    "Download VÃƒÂ¢€Ã¢â‚¬ËœTrac Table (Working) CSV",
+                    df_plain.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{state}_vtrac_working.csv",
+                    mime="text/csv",
+                )
+
+                # --- Overdue Pairs (Working logic) ---
+                st.subheader("ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ Overdue Pairs Analysis (Working logic)")
+                THR_NR_RED, THR_R_RED = 37, 71
+                THR_NR_BLUE, THR_R_BLUE = 56, 107
+                THR_PENDING = 25
+                nonrep = results["nonrep"]
+                rep = results["rep"]
+                rep_red = sorted([p for p, ds in rep.items() if ds >= THR_R_BLUE])
+                rep_blue = sorted([p for p, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
+                rep_purple = sorted([p for p, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
+                nr_red = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_BLUE])
+                nr_blue = sorted([p for p, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
+                nr_purple = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
+
+                # Thresholds info like the working app
+                st.info(
+                    "**Overdue Thresholds:**\n"
+                    f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
+                    f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
+                )
+                # Display-only note to avoid ambiguity when multiple statuses overlap
+                st.caption("Color priority (digits/pairs overlap): red > blue > purple")
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_RED}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_R_BLUE}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                with c2:
+                    st.markdown("<b>NonÃƒÂ¢€Ã¢â‚¬ËœRepeating Pairs</b>", unsafe_allow_html=True)
+                    st.markdown(f"<span class='red'>Red (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_RED}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
+                    st.markdown(f"<span class='blue'>Blue (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_NR_BLUE}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    if show_purple:
+                        st.markdown(f"<span class='purple'>Purple (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥{THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+
+                # --- Top 5 Repeating Pairs ---
+                st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
+                for pair, overdue in results["top5"]:
+                    if overdue >= 107:
+                        color = "red"
+                    elif overdue >= 71:
+                        color = "blue"
+                    elif overdue >= 25:
+                        color = "purple"
+                    else:
+                        color = ""
+
+                    line = f"{pair} - {overdue} draws overdue"
+                    if color:
+                        st.markdown(f'<span class="{color}">{line}</span>', unsafe_allow_html=True)
+                    else:
+                        st.write(line)
+
+
+_______________
+
+docs\AAT9_KIT\important\DETAIL CODEX LOG.txt
+
+@@ -432,7 +432,7 @@ _______________________________________
+  - Engine – modules/module_d_auxiliary_tools/refactored/positional_tool.py:1 holds the draws-only positional engine.
+      - It computes per-position top‑k digits across Combined/Midday/Evening, scoring with gap, mirror/swap/double pressure tags, consensus notes, and a positional shortlist.
+      - Input contract is the same as Aux/BA: data/cleaned/*_draws.csv, newest-first strings.
+  - Auxiliary page wiring – src/app.py (main Aux section) now adds a “Positional Pressure” expander with window/top‑k controls, variant tabs, consensus captions, and the shortlist table. The draw-source path
+  - Auxiliary page wiring – src/app.py (main Aux section) now adds a “Positional Pressure” expander with fixed 360-window Top-3 layout with side-by-side variant columns, consensus captions, and the shortlist table. The draw-source path
+  and count surface for dev validation.
+  - Control Center wiring – src/app.py (Control Center doubles/BA area) reuses the engine to render a compact positional heat badge per state/variant (e.g., P1:7(34)), so operators can scan pressure alongside
+  BA alerts and doubles.
+
+____
+
+docs\AAT9_KIT\AAT9_Checkpoint_Log.md
+@@ -1,3 +1,14 @@
+## 2025-09-26 06:00 (UTC) - Positional tracker UI consolidation
+
+- Context: Operators requested the Aux tracker mirror the training markup (Combined/Midday/Evening stacked) without extra sliders or tabs.
+- Change:
+  - Locked the positional engine to a 360-draw window with Top-3 ranks and removed the Streamlit slider/radio controls.
+  - Replaced per-variant tabs with a side-by-side table (P1–P3 columns per variant) while keeping draw-source captions, consensus notes, and the shortlist.
+  - Updated Quickstart, Aux overview, positional pressure brief, and detail log to describe the new layout.
+- Impact: Positional pressure is now scannable across variants at a glance, matching the documented mock and ready for downstream compound scoring.
+- Files/Refs: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
+- Follow-ups: Consider aligning other Aux tables into variant columns and logging positional hits in the winners pipeline.
+
+## 2025-09-24 05:00 (UTC) - Positional pressure tool + Control Center heat
+
+- Context: Aux needed an in-app positional tracker (Combined/Midday/Evening) that stays draws-only and compounds with existing doubles/BA cues.
+
+
+____
+
+docs\AAT9_KIT\important\AAT9_Positional_Pressure.md
+
+@@ -11,7 +11,7 @@ Purpose: surface per-position pressure across Combined/Midday/Evening variants w
+  - Ranked candidate shortlist (optional straight overlay) with tags, digital root, V-TRAC index
+
+## Streamlit Surfaces
+- **Auxiliary Tools page**: “Positional Pressure” expander mirrors the three-pillar tracker with window/top-k controls and draw source caption.
+- **Auxiliary Tools page**: “Positional Pressure” expander renders Combined/Midday/Evening in parallel (P1/P2/P3 columns, top-3 ranks) using a fixed 360-draw window; hard-due digits are marked in red and the draw source caption remains under each variant.
+- **Control Center**: positional heat badge per state/variant (e.g., `P1:7(34) P2:1(21) P3:9(45)`) supports doubles/BA triage.
+
+## Operator Checklist
+
+____
+
+docs\AAT9_KIT\AAT9_Unified_Changelog.md
+@@ -1,3 +1,19 @@
+## 2025-09-26 – Aux – Positional tracker UI pass – Side-by-side variant table
+- Impact: Positional Pressure expander now renders Combined / Midday / Evening simultaneously (P1–P3 columns, top-3 ranks) using a fixed 360-draw window, replacing per-variant tabs/sliders while retaining consensus notes and the ranked shortlist.
+- Files: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
+
+## 2025-09-25 — Aux — Pairs window alignment
+- Overdue pair logic now scans the most-recent 360 draws so RED (≥107) / BLUE (≥71) thresholds register correctly across boxed permutations.
+- `get_vtrac_statuses` and Control Center caching reuse the same window for pair colors/top-4 doubles while preserving existing combo/double pipelines.
+- Files: `scripts/auxiliary/working/modules/analyze_pairs.py`, `src/app.py`.
+
+## 2025-09-25 — Control Center — Due Doubles table
+- Added a new "Due Doubles — Top Pairs with RED/BLUE Combo Misses" table to Control Center.
+- Reads only `data/cleaned/*_draws.csv` via `modules.aux_loaders` (Combined/Midday/Evening).
+- Ranks Combined top-4 repeating pairs (100-draw logic) and, per pair, lists double combos meeting:
+  - RED ≥ 1000 draws since (highest), BLUE ≥ 667. Tokens preserve color and show C/M/E badges.
+- Minimal, isolated edit in `src/app.py`; caching reused from existing variant draws block; soft-fails with captions.
+- No changes to combined string-table pipelines or legacy readers.
+# AAT9 — Unified Changelog
+
+## 2025-09-24 - Aux - Positional pressure tool + Control Center heat - Draws-only positional indicators across variants
+
+
+@@ -75,8 +91,8 @@ Conventions: YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs
+- Notes: table‑agnostic (safe for states missing string‑tables); later can overlay table‑driven details
+2025-09-16 — Winners — Analyzer-style Winners Full report + Aux restore — Adds table-aware 3‑pane HTML (purple index + green straights), restores staged Aux V‑TRAC reference, adds canonical vtrac_reference API; Files: modules/vtrac_reference.py, modules/winner_report_full.py, src/reporting (added via modules shim), src/app.py (full tile wiring); Refs: AAT9_Winners_VTrac_Report.md, AAT9_Live_Wiring_and_Data_Paths.md, AAT9_Checkpoint_Log.md, briefings/PITFALLS.txt
+
+## 2025-09-19   Cleanup   Archived legacy Stable Pattern scripts/run artifacts   Reduced confusion; canonical extractor unchanged   Files: archived/2025-09-19_stable_cleanup/*; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+## 2025-09-19   Stable   Modal straight scoring + families/spotlight exports   Richer signals; winner reports get dedicated CSVs   Files: alpha_analytical/stable/__init__.py, feature_config.yml, post_pass_families.py, winner_family_spotlight.py, src/core/stable_pattern_extractor.py, src/app.py; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+## 2025-09-19   Cleanup   Archived legacy Stable Pattern scripts/run artifacts   Reduced confusion; canonical extractor unchanged   Files: archived/2025-09-19_stable_cleanup/*; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+## 2025-09-19   Stable   Modal straight scoring + families/spotlight exports   Richer signals; winner reports get dedicated CSVs   Files: alpha_analytical/stable/__init__.py, feature_config.yml, post_pass_families.py, winner_family_spotlight.py, src/core/stable_pattern_extractor.py, src/app.py; Refs: docs/AAT9_KIT/important/stable_pattern_AAT9.txt
+
+## 2025-09-21 - Aux - Restored staged VTRAC reference & smoke check - Aux page stable again
+- Files: `src/app.py`, `scripts/auxiliary/working/modules/{analyze_pairs.py,run_process.py}`, `modules/module_d_auxiliary_tools/refactored/{bootstrap_imports.py,boxed_vtrac.py,indicators.py}`, `scripts/checks/smoke_aux_vtrac.py`
+
+____
+
+docs\AAT9_KIT\AAT9_Quickstart_Cheat_Sheet.md
+
+@@ -38,7 +38,7 @@
+
+
+## Auxiliary Tools Highlights
+- Positional Pressure (Aux page) surfaces top-3 digits per slot for Combined/Midday/Evening with configurable window/top-k controls.
+- Positional Pressure (Aux page) renders Combined/Midday/Evening side-by-side (P1/P2/P3 columns, top-3 digits) with a fixed 360-draw window and Top-3 ranks; hard-due cells are highlighted in red.
+- Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
+- Control Center adds a positional heat badge per state/variant using the same draws-only engine.
+
+______-
+
+docs\AAT9_KIT\AAT9_Checkpoint_Log.md
+@@ -1,3 +1,14 @@
+## 2025-09-26 06:00 (UTC) - Positional tracker UI consolidation
+
+- Context: Operators requested the Aux tracker mirror the training markup (Combined/Midday/Evening stacked) without extra sliders or tabs.
+- Change:
+  - Locked the positional engine to a 360-draw window with Top-3 ranks and removed the Streamlit slider/radio controls.
+  - Replaced per-variant tabs with a side-by-side table (P1–P3 columns per variant) while keeping draw-source captions, consensus notes, and the shortlist.
+  - Updated Quickstart, Aux overview, positional pressure brief, and detail log to describe the new layout.
+- Impact: Positional pressure is now scannable across variants at a glance, matching the documented mock and ready for downstream compound scoring.
+- Files/Refs: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
+- Follow-ups: Consider aligning other Aux tables into variant columns and logging positional hits in the winners pipeline.
+
+## 2025-09-24 05:00 (UTC) - Positional pressure tool + Control Center heat
+
+- Context: Aux needed an in-app positional tracker (Combined/Midday/Evening) that stays draws-only and compounds with existing doubles/BA cues.
+
+_____
+
+docs\AAT9_DOCS\AAT9_Aux_Tools_Official.md
+
+@@ -28,8 +28,8 @@ Control Center Map
+- Blackapple Alerts: for each state, loads draws -> BA analyzer -> table row with status/triggers/#candidates/examples -> expander for full list.
+Positional Pressure
+
+- Aux page panel with Combined / Midday / Evening tabs summarises top-3 digits per position (gap, score, tags).
+- Window/top-k controls mirror field workflow; outputs include cross-variant consensus notes and a ranked positional shortlist.
+- Aux page panel shows Combined / Midday / Evening side-by-side (P1/P2/P3 columns, top-3 ranks with gap/score/tags).
+- Window fixed at 360 draws with Top-3 ranks; outputs include cross-variant consensus notes and a ranked positional shortlist.
+- Control Center reuses the same engine to show a compact positional heat badge per state/variant.
+- Implementation lives in `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; inputs remain `data/cleaned/*_draws.csv`.
+
+
+____________________________________________________________
+
+AI SUGGESTED FIX
+
+You’re not crazy—what you’re seeing lines up with three surgical issues, not a lost day or a need to roll back:
+
+Overdue thresholds are displayed/mapped inconsistently.
+“Red” is supposed to be the stricter / very‑late band and “Blue” the late band. After the mojibake sweep, the UI copied the names (THR_R_RED, THR_R_BLUE) literally, so the info box and the lists say RED ≥ 71, BLUE ≥ 107 even though the intent is the opposite. That’s why the “Blue” line is showing the largest delays.
+Fix: normalize the constants and the mappings (red uses the bigger cutoffs).
+
+Positional Tracker is falling through a legacy loader and returns None.
+The old block still tries to call a positional helper that sometimes returns None, then the UI calls .dict on it → 'NoneType' object has no attribute 'dict'. Nothing “deleted”—it’s just loading the stale path.
+Fix: re‑wire the loader to the current positional engine; guard it so if import fails we show a caption and skip rendering (no exception).
+
+V‑TRAC Index Hits is only showing the highlighted ones.
+The rebuilt V‑TRAC table is clean, but the Index Hits panel is still using an overlay subset.
+Fix: build the hits dataframe for all 1..35 every time (mark status/recent/overdue), then add the overlay rank on top.
+
+Below is a codex‑ready task you can paste. It restores the intended behavior without rollback, keeps the ASCII cleanup, and adds small invariants so this doesn’t regress again.
+
+Paste this to Codex (single task)
+
+Task title: Restore Aux UI wiring & invariants (thresholds, positional tracker, full index list)
+
+Context for you (Codex):
+Most mojibake is resolved and the boxed V‑TRAC table looks great. Remaining issues:
+
+Info box + lists show RED ≥ 71, BLUE ≥ 107; intent is RED = very‑late (bigger cutoff) and BLUE = late (smaller cutoff).
+
+Positional Tracker shows: Positional module unavailable: 'NoneType' object has no attribute 'dict'. This is from a legacy loader returning None.
+
+V‑TRAC Index Hits panel lists only the highlighted indices; we want 1..35 every time with status + rank overlay.
+
+Do this exactly, in one pass (surgical):
+
+Normalize thresholds (right after st.set_page_config in src/app.py):
+
+# --- Aux thresholds (single source of truth) ---
+def _define_default_thresholds():
+    # Repeating pairs (doubles)
+    global THR_R_LATE, THR_R_VERY_LATE
+    THR_R_LATE       = 71
+    THR_R_VERY_LATE  = 107
+
+    # Non‑repeating pairs
+    global THR_NR_LATE, THR_NR_VERY_LATE
+    THR_NR_LATE      = 37
+    THR_NR_VERY_LATE = 56
+
+    # Pending band used by both
+    global THR_PENDING
+    THR_PENDING      = 25
+
+    # Combination shape thresholds (unchanged)
+    global THR_COMB_RED_SINGLE, THR_COMB_RED_DOUBLE
+    global THR_COMB_BLUE_SINGLE, THR_COMB_BLUE_DOUBLE
+    THR_COMB_RED_SINGLE  = 501
+    THR_COMB_RED_DOUBLE  = 1000
+    THR_COMB_BLUE_SINGLE = 334
+    THR_COMB_BLUE_DOUBLE = 667
+
+_define_default_thresholds()
+
+
+Important: everywhere the code currently references THR_R_RED/THR_R_BLUE/THR_NR_RED/THR_NR_BLUE, remap to the normalized names:
+
+red band (very‑late) uses THR_R_VERY_LATE / THR_NR_VERY_LATE
+
+blue band (late) uses THR_R_LATE / THR_NR_LATE
+
+Update the info box strings to match the intent:
+
+Repeating pairs: RED ≥ {THR_R_VERY_LATE}, BLUE ≥ {THR_R_LATE}, PURPLE ≥ {THR_PENDING}
+Non‑repeating pairs: RED ≥ {THR_NR_VERY_LATE}, BLUE ≥ {THR_NR_LATE}, PURPLE ≥ {THR_PENDING}
+
+
+And compute the lists accordingly:
+
+rep_red    = sorted([p for p, ds in rep.items()    if ds >= THR_R_VERY_LATE])
+rep_blue   = sorted([p for p, ds in rep.items()    if THR_R_LATE <= ds < THR_R_VERY_LATE])
+rep_purple = sorted([p for p, ds in rep.items()    if THR_PENDING <= ds < THR_R_LATE])
+
+nr_red     = sorted([p for p, ds in nonrep.items() if ds >= THR_NR_VERY_LATE])
+nr_blue    = sorted([p for p, ds in nonrep.items() if THR_NR_LATE <= ds < THR_NR_VERY_LATE])
+nr_purple  = sorted([p for p, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_LATE])
+
+
+Re‑wire the Positional Tracker loader (replace the legacy None.dict path):
+
+def _load_positional_v2(draws: list[str], window: int, topk: int):
+    """
+    Return a dict with the structures the v2 UI expects.
+    Never raise; return {} on failure so the UI can skip cleanly.
+    """
+    try:
+        # Primary (current) engine
+        from scripts.auxiliary.working.modules.analyze_pairs import positional_v2_analyze as _pos_analyze
+    except Exception:
+        try:
+            # Fallbacks if names differ in repo
+            from scripts.auxiliary.working.modules.analyze_pairs import analyze_positional as _pos_analyze
+        except Exception:
+            return {}
+    try:
+        out = _pos_analyze(draws=draws, window=window, top_k=topk)
+        return out or {}
+    except Exception:
+        return {}
+
+# In the UI section:
+pos = _load_positional_v2(draws, window=window_size, topk=3)
+if not pos:
+    st.caption("Positional module unavailable — skipping tracker UI.")
+else:
+    # render the v2 markdown grid + consensus/pressure/shortlist exactly as before
+    # (use the v2 structures returned by analyze_pairs; do NOT call .dict on None)
+    _render_positional_grid(pos)
+
+
+If your prior v2 renderer lived in a helper, call it. Otherwise, re‑use the markdown table code you had (three‑position grid, consensus & shortlist) and feed it from pos.
+
+Build V‑TRAC Index Hits for all 1..35 (don’t filter to overlay):
+
+import pandas as _pd
+
+def _build_vtrac_index_hits(vstat: dict, overlay_top10: list[int] | None = None) -> _pd.DataFrame:
+    rows = []
+    overlay_top10 = overlay_top10 or []
+    for idx in range(1, 36):
+        style = (vstat.get(idx, {}) or {}).get("index_style", {})
+        ds    = int((vstat.get(idx, {}) or {}).get("draws_since", 0))
+        if style.get("bg") == "green":
+            status = "Recent"
+            rank_display = f"{style.get('rank', '')} ({ds})" if style.get('rank') else ""
+        elif idx in overlay_top10 or style.get("bg") == "red":
+            status = "Overdue"
+            # prefer overlay order if provided
+            r = overlay_top10.index(idx) + 1 if idx in overlay_top10 else style.get("rank")
+            rank_display = f"{r} ({ds})" if r else f"({ds})"
+        else:
+            status = "None"
+            rank_display = ""
+        rows.append({"Index": idx, "Draws Since": ds, "Status": status, "RankDisplay": rank_display})
+    return _pd.DataFrame(rows)
+
+
+Use that function to render the full hits table after the boxed V‑TRAC:
+
+# if you already computed an overlay list earlier, pass it; else pass []
+df_hits = _build_vtrac_index_hits(vstat, overlay_top10)
+st.dataframe(df_hits, use_container_width=True)
+
+
+Add two tiny invariants to prevent regressions:
+
+def _assert_aux_invariants():
+    # 1) red must be stricter than blue
+    assert THR_R_VERY_LATE > THR_R_LATE and THR_NR_VERY_LATE > THR_NR_LATE, "severity thresholds inverted"
+    # 2) no mojibake
+    bad = "Ã "
+    src = Path(__file__).read_text(encoding="utf-8", errors="ignore")
+    assert bad not in src, "mojibake detected; sanitize UI strings"
+
+_assert_aux_invariants()
+
+
+Verify & commit:
+
+python -X utf8 -m py_compile src/app.py (should pass)
+
+Grep UI for correctness:
+
+Select-String -Path src/app.py -SimpleMatch "Repeating pairs (00, 11, etc): RED ≥" → 107
+
+Select-String -Path src/app.py -SimpleMatch "Non-repeating pairs (01, 23, etc): RED ≥" → 56
+
+Select-String -Path src/app.py -SimpleMatch "Top 5 Most Overdue Repeating Pairs" (should exist once)
+
+Run the app and check:
+
+Info box shows RED ≥ 107, BLUE ≥ 71 and RED ≥ 56, BLUE ≥ 37
+
+Positional grid + consensus render (or clean “unavailable” caption with no exception)
+
+V‑TRAC Index Hits lists 1..35
+
+Then commit:
+
+feat(aux): restore thresholds mapping, robust positional loader, full V‑TRAC index list, add invariants; keep ASCII cleanup
+
+Why this works (and sticks)
+
+We’re not rolling back. We keep the mojibake fix and only repair three small seams introduced by the sweep.
+
+By normalizing the threshold names (late vs very‑late) and binding red → very‑late, blue → late, you’ll never read the UI wrong again—even if someone renames variables later.
+
+The positional loader no longer calls .dict on a possible None. It tries the current engine first, falls back once, and fails closed (caption) instead of throwing.
+
+The V‑TRAC hits table always enumerates 1..35, then adds any overlay rank on top, so you get the full list every time.
+
+Two asserts catch the two most common regressions (threshold inversion and mojibake).
+
+Quick answers to your questions
+
+Did not pushing to GitHub cause this?
+Not directly. But without a commit, it’s easier to “re‑introduce” a stale block while cleaning strings. After Codex applies the patch above and you verify, commit so future sweeps can’t regress silently.
+
+Can we “reinforce” this so we don’t re‑fix again?
+Yes—the two asserts + the explicit info‑box strings + central thresholds are the reinforcement. If anyone flips it, the app asserts early. You can also add a tiny smoke check script in scripts/checks/smoke_aux_vtrac.py that imports src/app.py and evaluates those invariants in CI.
+
+What should I tell Codex about the state now?
+
+“Most UI is restored and ASCII‑clean. Still wrong: thresholds are inverted in labels/mapping (red must be stricter than blue), positional tracker v2 isn’t wired (legacy loader returns None), and V‑TRAC Index Hits should list 1..35. Apply the exact patch above, verify py_compile, and run the page.”
+
+If you want, I can also distill this into a one‑file diff for src/app.py only, but the brief above is designed to be copy‑pasted into the Codex CLI and executed as a single, minimal change list.
+
+You should not need to roll back. This is fixable in place.

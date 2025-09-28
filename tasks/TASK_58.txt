@@ -1,0 +1,199 @@
+Got it. Here’s a tight handoff packet for Codex that explains what went wrong, what to change, what to verify, and which files to open first. You can paste this straight into your Codex brief.
+
+Codex Brief — Positional Tracker outage, quick repair, and guardrails
+TL;DR (1‑page)
+
+Primary break: the app’s dynamic loader for the positional tool didn’t register the module in sys.modules before executing it. Downstream code/tests look up the tool by name; because the entry was missing, lookups returned None, which bubbled up as:
+Positional module unavailable: 'NoneType' object has no attribute 'dict'.
+
+Good news: the positional engine itself is healthy. When imported normally it produces full grids; the Streamlit block already renders the 3×(P1|P2|P3) tracker once a real report object exists.
+
+Secondary friction we found and tuned alongside:
+
+Pairs analysis was still scanning the last 100 draws in one call-site, making RED (≥107) impossible to reach. We standardized a 360 window and kept thresholds intact.
+
+Threshold naming in one UI helper swapped RED/BLUE labels (values were right, names confusing). Add clear aliases to prevent future regressions.
+
+V‑TRAC mini table could show a truncated set if a variant loader faulted and a cached frame was reused. After the positional fix, re‑read joins and show all 35 indices.
+
+What Codex should change (surgical checklist)
+1) Fix the dynamic loader (root cause)
+
+In src/app.py, the helper that imports project modules must register in sys.modules before exec_module:
+
+# src/app.py  (loader helper)
+import importlib.util as _ilu, sys as _sys, pathlib as _pl
+
+def _load_project_module(dotted: str, path: str):
+    p = _pl.Path(path)
+    spec = _ilu.spec_from_file_location(dotted, p)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"spec failed for {dotted} at {p}")
+    mod = _ilu.module_from_spec(spec)
+    _sys.modules[dotted] = mod          # <-- critical line (missing before)
+    spec.loader.exec_module(mod)        # executes dataclasses against a real module
+    return mod
+
+
+Then in the positional bootstrap:
+
+def _load_positional_tool_real():
+    # try canonical first
+    try:
+        from modules.module_d_auxiliary_tools.refactored import positional_tool as pt
+        return pt
+    except Exception:
+        pass
+    # fall back to project path (keeps Aux “working logic” alive)
+    return _load_project_module(
+        "project_positional_tool",
+        "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
+    )
+
+
+Acceptance: Calling _load_positional_tool_real() returns a module whose dataclasses have a non‑empty __dict__ and expose analyze_state_variants(...).
+
+2) Positional Tracker UI — render the 3×3 grid per variant (Combined / Midday / Evening)
+
+Use the engine’s results (already produced) to render the exact grid you documented:
+
+Columns: Rank | P1 DS | P1 DIG | P2 DS | P2 DIG | P3 DS | P3 DIG.
+
+Yellow background for digits; red text if draws_since ≥ HARD_DUE (55 Combined; 40 Mid/Eve).
+
+Caption under each table: draw source filename and draw count used.
+
+Acceptance: The expander “Positional Tracker” shows three stacked tables: Combined, then Midday, then Evening, each with the 3×3 content and red‑digit hard‑due.
+
+3) Variant data sourcing — never feed an empty mapping
+
+Ensure all three variants (combined/midday/evening) are loaded into a local dict:
+
+draws_by_variant = {}
+for label, key in [("Combined","combined"),("Midday","midday"),("Evening","evening")]:
+    cached = cached_aux_analysis(state, key) or {}
+    dr = cached.get("draws") or []
+    if not dr and callable(load_state_draws):
+        dr, _src = load_state_draws(state, variant=key)  # safe fallback
+    if dr:
+        draws_by_variant[key] = dr
+
+
+If a variant is missing, soft‑caption it but still run the tracker on the others.
+
+Acceptance: analyze_state_variants(draws_by_variant, ...) receives at least Combined; Mid/Eve included when available; no empty dict crash.
+
+4) Pairs window + threshold labels
+
+Wherever pairs are computed, scan 360 draws (constant), not 100.
+
+Keep numeric thresholds; alias names to reduce confusion:
+
+THR_R_RED  = 107  # repeating RED
+THR_R_BLUE = 71   # repeating BLUE
+THR_NR_RED  = 56  # non-repeating RED
+THR_NR_BLUE = 37  # non-repeating BLUE
+THR_PENDING = 25
+
+
+Acceptance: A repeating pair with DS≥107 now appears in RED; captions show correct labels.
+
+5) V‑TRAC “Index Hits” mini table
+
+After the loader fix, ensure the mini table lists 1..35 with Status Overdue / Recent / Tracking and uses the same overlay logic as the big table for overdue Top‑10.
+
+Acceptance: All 35 indices display; red rows carry “rank (draws_since)” badges; greens are recent.
+
+6) Smoke & compile gates (one button run)
+
+Run these locally (add a tiny “Dev Health” expander item that prints pass/fail):
+
+python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py modules/aux_loaders.py modules/vtrac_reference.py
+python scripts/checks/smoke_positional.py
+python scripts/checks/smoke_aux_vtrac.py
+$env:STREAMLIT_BROWSER='none'; streamlit run src/app.py --server.headless true  # capture .codex/first_boot.log
+
+
+Acceptance: All compile + smokes pass; first boot log contains no import path or NoneType.__dict__ errors.
+
+Guardrails so this doesn’t happen again
+
+Staging manifest + smoke first: Keep the Aux staging manifest referenced in KIT docs; run smoke_aux_vtrac.py and smoke_positional.py before any UI testing.
+
+Loader contract is a test: Add a 10‑line unit smoke that asserts _load_project_module(...) puts the module into sys.modules.
+
+Pre‑push hook: a tiny Git hook that runs py_compile + both smokes; block pushes on failure.
+
+Checkpoint script: keep using scripts/util/create_checkpoint.ps1 before large edits; the ZIP appears under .codex/checkpoints/.
+
+Threshold SSOT: centralize thresholds (and names) in one helper so UI/logic don’t drift again.
+
+Variant fallbacks: if any variant is missing, render a caption and keep going—don’t poison caches with empty frames.
+
+Acceptance criteria (copy/paste)
+
+✅ No error: opening Auxiliary Tools → Positional Tracker never shows “NoneType … dict”.
+
+✅ UI: three tables (Combined, Midday, Evening) render the 3×3 grid with yellow digit cells and red for hard‑due; each shows draw filename + draw count.
+
+✅ Pairs: RED/BLUE bands appear correctly when scanning a 360‑draw window.
+
+✅ V‑TRAC mini: shows all 35 indices with proper Overdue/Recent/Tracking status and badges.
+
+✅ Smokes/compile: both smokes pass; py_compile clean; first‑boot headless log clean.
+
+✅ Docs updated: Unified Changelog + Aux guide note the loader fix and pairs window constant; KIT “preflight” references both smokes.
+
+File/package open order for Codex (fastest path to green)
+
+briefings/CODEX_READ_FIRST_AAT9.md (or docs/AAT9_KIT/AAT9_KIT_README.md) — the intended startup flow and guardrails.
+
+docs/AAT9_KIT/AAT9_Preflight_Reference.md — the quick preflight and smoke commands to run first.
+
+docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md — what reads draws vs. tables; confirms Aux is draws‑only.
+
+docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md — where the positional tracker belongs on the page and UX notes.
+
+docs/AAT9_KIT/important/AAT9_Positional_Pressure.md (or POSITIONAL TOOL.txt) — the tracker spec (Top‑3 per position; color rules).
+
+tasks/position_research.txt — the exact markdown shape of the table (use it to visually match the grid).
+
+AAT9_Unified_Changelog.md + AAT9_Checkpoint_Log.md — context of staging fixes and the pairs window change.
+
+src/app.py — implement the loader fix and the tracker table render.
+
+modules/module_d_auxiliary_tools/refactored/positional_tool.py — verify engine exports; no changes to analytics required beyond exposing the simple grid fields if not already present.
+
+scripts/checks/smoke_positional.py, scripts/checks/smoke_aux_vtrac.py — keep these green.
+
+Optional for post‑fix polish: AAT9_Post_Implementation_Checklist.md to tick items and record the time of the repair.
+
+Notes Codex should keep in mind
+
+Do not alter combined‑tables or winners analyzers to fix this. The positional tracker and pairs work live entirely in Aux and read data/cleaned/*_draws.csv.
+
+If a variant’s draws are missing, render the others and show a caption (“Midday draws missing for <STATE>”).
+
+Keep any old import shims (V‑TRAC staged assets) in place; the canonical/non‑canonical split is intentional until the full unification.
+
+“Why did this happen?” (one‑liner for the record)
+
+A refactor during mojibake cleanup dropped the dynamic module’s sys.modules registration. That left the positional tool without a module identity during class initialization, which percolated up as the 'NoneType' has no attribute 'dict' failure. The fix is to register then execute; guard it with smokes; and keep staging explicit.
+
+If you want me to also include a tiny self‑contained test snippet Codex can run inside the repo to prove the loader is now correct:
+
+python - <<'PY'
+from importlib.util import spec_from_file_location, module_from_spec
+import sys, pathlib
+p = pathlib.Path('modules/module_d_auxiliary_tools/refactored/positional_tool.py')
+name = 'project_positional_tool'
+spec = spec_from_file_location(name, p)
+mod = module_from_spec(spec)
+sys.modules[name] = mod
+spec.loader.exec_module(mod)
+assert hasattr(mod, 'analyze_state_variants'), "missing API"
+print("loader OK; analyze_state_variants available")
+PY
+
+
+That’s everything Codex needs to get you back to a clean, working Positional Tracker (and to keep it that way).

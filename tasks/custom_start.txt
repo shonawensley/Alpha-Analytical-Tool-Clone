@@ -1,0 +1,219 @@
+Got it. Here’s a crisp “hand‑off pack” you can paste into Codex so it has the right context, the exact files to open first, and a step‑by‑step repair/verification plan. I’ve also included guardrails to stop this class of break from happening again.
+
+AAT9 — Positional Tracker & Aux Layer: Context + Do‑First Checklist for Codex
+What broke & why (1‑page summary)
+
+Pairs coloring drifted because Aux was still calling calculate_overdue_pairs() with only the last 100 draws, so RED/BLUE thresholds (107/71 for repeating; 56/37 for non‑repeating) could never be reached. We lifted the analysis window to 360 and made it a constant so the thresholds register correctly.
+
+Positional tracker UI: the older Aux expander expected a simple top‑k per position table; during refactors we began returning richer objects (scored digits, tags, etc.). The Streamlit code was updated to a Tracker grid (3 ranks × P1/P2/P3) that mirrors the operator mockup, but any lingering calls that assume a .dict() (Pydantic) API—or that import the positional module before staging—will throw errors like 'NoneType' object has no attribute 'dict'. The fix is consistent imports + reading dataclass fields directly (or a to_dict() shim).
+
+V‑TRAC staging vs canonical API: we restored the staged legacy V‑TRAC reference (for Aux) and added a canonical shim for other pages. Aux must stage the working modules first so VTRAC_DISPLAY/BOXED_LABEL_LOOKUP are present; we added a smoke script + staging manifest to catch drift.
+
+Why the positional tool matters: it’s the missing “where” signal (per‑position pressure) that composes with Pairs, Sums, V‑TRAC, Doubles, and BA. We already documented how to compute/render it and how to use it operationally (PP score, consensus/mirror/double pressure).
+
+Open these files first (order of operations)
+
+Aux UI (Streamlit)
+
+src/app.py
+
+Look for the “Positional Tracker & Variant Stack” expander and helper functions that render the tracker table, V‑TRAC big table, overdue pairs, sums, and index hits.
+
+Confirm it uses the staged Aux imports behind _aux_working_first() and does not call .dict() on positional results.
+
+Positional engine
+
+modules/module_d_auxiliary_tools/refactored/positional_tool.py
+
+Key items to confirm:
+
+HARD_DUE_THRESHOLDS = {"combined": 55, "midday": 40, "evening": 40}
+
+PositionalTrackerCell dataclass and tracker_grid: Dict[int, List[PositionalTrackerCell]] in the per‑variant result.
+
+analyze_state_variants(...) returns a report whose attributes are used directly (no Pydantic dependency).
+
+Pairs analyzer (staged Aux)
+
+scripts/auxiliary/working/modules/analyze_pairs.py
+
+Ensure PAIRS_ANALYSIS_WINDOW = 360 and callers use it (no stray draws[:100]).
+
+V‑TRAC reference & shim
+
+Staged (Aux): scripts/auxiliary/working/modules/vtrac_reference.py
+
+Canonical shim: modules/vtrac_reference.py (re‑exports legacy constants for Winners/other consumers).
+
+Variant draws loader
+
+modules/aux_loaders.py — Combined/Midday/Evening resolver + draw source captions.
+
+Do‑first verification (fast smoke)
+
+Run these before changing anything:
+
+# Preflight & bindings
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+# Aux staging sanity: boxed V-TRAC constants present?
+python scripts/checks/smoke_aux_vtrac.py
+
+# Positional engine import + simple compute
+python scripts/checks/smoke_positional.py   # (exists in repo; confirms imports & basic outputs)
+
+# Compile critical surfaces
+python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py modules/aux_loaders.py modules/vtrac_reference.py
+
+
+If the Aux page is openable during dev:
+
+In Aux → Show Dev Health (Aux): verify the staged modules.analyze_pairs and modules.vtrac_reference file paths.
+
+Check that draw sources show under each variant (Combined/Midday/Evening) with correct counts.
+
+Minimal repair plan (positional + pairs + wiring)
+
+Pairs window (confirm)
+
+In scripts/auxiliary/working/modules/analyze_pairs.py verify PAIRS_ANALYSIS_WINDOW = 360 and all callers use it. This fixes RED/BLUE visibility.
+
+Positional module import & return types
+
+In src/app.py, locate where we do:
+
+with _project_modules_first(): 
+    positional_tool = _load_positional_tool_real()
+
+
+If positional_tool can be None, show the error in the caption (already handled), but do not proceed to access .dict().
+
+Everywhere the UI reads positional results, reference dataclass attributes (report.variant_results[...], .tracker_grid, .aggregated_digits, .candidates) or wrap the dataclasses with dataclasses.asdict() and read from the mapping.
+
+If you see .dict(...), replace with attributes or add a tiny to_dict() method on the report/result classes.
+
+Render the tracker exactly like the mock
+
+Keep a fixed 3×(P1/P2/P3) table per variant with columns Rank | P1 DS | P1 DIG | P2 DS | P2 DIG | P3 DS | P3 DIG.
+
+Yellow background on the DIG cells; turn digits red when hard_due=True (≥55 Combined; ≥40 Midday/Evening).
+
+Show Combined first, then Midday, then Evening; include draw‑source captions under each mini table.
+
+Consensus notes and shortlist
+
+Under the three mini tables, print cross‑variant pressure notes and the positional shortlist (top 12 caps) with tags (TOP1xN, Consensus, Mirror, Double, Root, V‑TRAC index).
+
+Keep variants side‑by‑side for other Aux panes (easy wins)
+
+Reuse the variant row helper already added in src/app.py to layout V‑TRAC, Overdue Pairs, Combinations Draws‑Since, Sums, and Index Hits in three aligned columns (C/M/E).
+
+Acceptance tests (done when all are true)
+
+Pairs: RED/BLUE repeating/non‑repeating lists actually show items on states that should have them (i.e., no “always empty” symptom). You can sanity‑check with a 360‑draw scan of a few states.
+
+Positional tracker: three stacked tables render without exceptions; hard‑due digits are red; the captions show draw source path and draws used.
+
+Notes & shortlist: consensus notes render; candidate table shows TOP1 counts, digital root, and V‑TRAC index.
+
+Dev Health: Aux shows staged module paths; smoke scripts are green.
+
+No .dict() calls remain against positional results (unless you deliberately added a to_dict() shim).
+
+Guardrails to protect “finished” tools
+
+Preflight + smoke gating
+
+Add a pre-run guard in src/app.py (Aux): if scripts/checks/smoke_aux_vtrac.py fails, show a red banner and do not render Aux tables.
+
+Keep scripts/checks/smoke_positional.py and make it part of the same guard.
+
+Checkpoint on change
+
+Use scripts/util/create_checkpoint.ps1 before any Aux refactor. Ship a short note in the Unified Changelog with the checkpoint zip name.
+
+Feature freeze contracts
+
+For protected features (V‑TRAC table, Pairs, Positional tracker):
+
+Manifest (paths + symbol names) checked by a tiny CLI (python -c "import modules.vtrac_reference as vr; assert hasattr(vr,'VTRAC_DISPLAY')" etc.).
+
+Golden queries for each pane (e.g., assert ≥1 RED repeating pair appears across all states over last N days) to catch regressions early.
+
+Pre‑commit hook (optional, low friction)
+
+Run py_compile + both smoke scripts; block commits when they fail.
+
+Import SSOT
+
+Keep _aux_working_first() as the only place that mutates sys.path. All other modules import relatives (no ad‑hoc path hacks).
+
+“Read‑these‑first” documents for Codex (short list)
+
+AAT9 KIT
+
+docs/AAT9_KIT/AAT9_KIT_README.md (entry)
+
+docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md (operator flow)
+
+docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (one‑pager)
+
+docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md (I/O & directories)
+
+Aux / Variants / Positional
+
+docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md
+
+docs/AAT9_DOCS/Aux_Variants_Addendum.md
+
+docs/AAT9_KIT/important/AAT9_Positional_Pressure.md (what the tracker shows & how to read it)
+
+Changelogs & checkpoints
+
+docs/AAT9_KIT/AAT9_Unified_Changelog.md
+
+docs/AAT9_KIT/AAT9_Checkpoint_Log.md
+
+(For the pairs fix rationale)
+
+The working note explaining the 100‑draw cap and the move to a 350/360 window.
+
+Quick command palette for Codex
+# 0) Safety checkpoint (optional)
+scripts\util\create_checkpoint.ps1
+
+# 1) Preflight + path/asset sanity
+powershell -NoProfile -File .codex\preflight.ps1 -State "Connecticut4"
+
+# 2) Smoke (staged V-TRAC available to Aux?)
+python scripts\checks\smoke_aux_vtrac.py
+
+# 3) Smoke (positional import/compute)
+python scripts\checks\smoke_positional.py
+
+# 4) Compile critical modules
+python -m py_compile src\app.py modules\module_d_auxiliary_tools\refactored\positional_tool.py modules\aux_loaders.py modules\vtrac_reference.py
+
+# 5) Run app and open Aux
+.\run_app.bat
+# In the UI: toggle "Show Dev Health (Aux)", then expand "Positional Tracker & Variant Stack"
+
+If the tracker still throws an exception, check these spots fast
+
+Import: _project_modules_first() + _load_positional_tool_real() must succeed; if we catch the exception, stop rendering and show the message.
+
+API shape: search src/app.py for .dict(; replace with attribute access (dataclasses) or add to_dict() on the result types in positional_tool.py.
+
+Hard‑due logic: confirm HARD_DUE_THRESHOLDS and the grid is built from the same window used for scoring so DS and highlights agree.
+
+Pairs window: confirm PAIRS_ANALYSIS_WINDOW is in effect (some callers had hard‑sliced draws[:100]).
+
+Why this is enough to move forward
+
+Codex has exact file paths, what to change, what to run, and what to look for in the UI.
+
+The pairs fix and the positional tracker wiring are localized; they don’t touch the winners or combined‑tables pipeline.
+
+The guardrails (smoke + preflight + import SSOT) stop path drift and symbol deletion from blindsiding Aux again.
+
+If you want, I can also draft a tiny positional_tool.to_dict() patch and a 10‑line scripts/checks/smoke_positional_ui.py that imports src.app and asserts the tracker helpers exist—just say the word.

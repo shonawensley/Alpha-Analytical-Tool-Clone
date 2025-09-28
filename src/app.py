@@ -80,6 +80,7 @@ def _load_project_module(dotted_name: str, rel_file: str):
     spec = spec_from_file_location(dotted_name, str(file_path))
     mod = module_from_spec(spec)  # type: ignore[arg-type]
     assert spec and spec.loader, f"Could not load spec for {file_path}"
+    sys.modules[dotted_name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
@@ -92,10 +93,15 @@ def _load_aux_loaders_real():
     return _load_project_module("project_aux_loaders", "modules/aux_loaders.py")
 
 def _load_positional_tool_real():
-    return _load_project_module(
-        "project_positional_tool",
-        "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
-    )
+    try:
+        from modules.module_d_auxiliary_tools.refactored import positional_tool as _pt
+
+        return _pt
+    except Exception:
+        return _load_project_module(
+            "project_positional_tool",
+            "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
+        )
 
 # Helpers for rendering working V-TRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
@@ -1372,10 +1378,28 @@ def show_aux_page(state: str) -> None:
                     else:
                         variant_cache: dict[str, Optional[dict]] = {}
                         draws_by_variant: dict[str, List[str]] = {}
+                        try:
+                            _aux_loader = _load_aux_loaders_real()
+                            load_state_draws = getattr(_aux_loader, "load_state_draws", None)
+                        except Exception:
+                            load_state_draws = None
                         for option_label, option_key in variant_options:
                             cached_variant = cached_aux_analysis(state, option_key)
-                            variant_cache[option_key] = cached_variant
-                            variant_draws = (cached_variant or {}).get("draws")
+                            payload = {}
+                            if isinstance(cached_variant, dict):
+                                payload = dict(cached_variant)
+                            variant_draws = payload.get("draws")
+                            if not variant_draws and callable(load_state_draws):
+                                try:
+                                    fallback_draws, fallback_source = load_state_draws(state, variant=option_key)
+                                except Exception:
+                                    fallback_draws, fallback_source = [], None
+                                if fallback_draws:
+                                    variant_draws = fallback_draws
+                                    payload["draws"] = variant_draws
+                                    if fallback_source:
+                                        payload.setdefault("source", fallback_source)
+                            variant_cache[option_key] = payload if payload else cached_variant
                             if variant_draws:
                                 draws_by_variant[option_key] = variant_draws
                         if not draws_by_variant:
