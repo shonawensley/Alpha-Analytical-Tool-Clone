@@ -1178,7 +1178,10 @@ def show_aux_page(state: str) -> None:
                 get_top_overdue_repeating_pairs,
                 get_vtrac_statuses,
                 get_doubles_history,
-                COLOR_LATE, COLOR_VERY_LATE, COLOR_PENDING,
+                COLOR_LATE,
+                COLOR_VERY_LATE,
+                COLOR_PENDING,
+                PAIRS_ANALYSIS_WINDOW,
             )
             from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
         _AUX_WORKING_AVAILABLE = True
@@ -1308,9 +1311,10 @@ def show_aux_page(state: str) -> None:
 
             draws_100 = draws[:100] if len(draws) >= 100 else draws
             draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
-            nonrep, rep, pair_status = calculate_overdue_pairs(draws_100)
+            draws_pair_window = draws[:PAIRS_ANALYSIS_WINDOW] if len(draws) >= PAIRS_ANALYSIS_WINDOW else draws
+            nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_ANALYSIS_WINDOW)
             vstat = get_vtrac_statuses(draws_100, draws_1000)
-            top5 = get_top_overdue_repeating_pairs(draws_100, 5)
+            top5 = get_top_overdue_repeating_pairs(draws_pair_window, 5)
             doubles = get_doubles_history({state_name: draws})
 
             return {
@@ -1436,9 +1440,9 @@ def show_aux_page(state: str) -> None:
                                         grid = variant_result.tracker_grid
                                         if not css_injected:
                                             st.markdown(
-                                                "<style>.pos-tracker-table{border-collapse:collapse;width:100%;margin-bottom:12px;}"
-                                                ".pos-tracker-table th,.pos-tracker-table td{border:1px solid #d7d7d7;padding:4px;text-align:center;font-size:13px;}"
-                                                ".pos-tracker-table caption{caption-side:top;text-align:left;font-weight:600;margin-bottom:4px;}"
+                                                "<style>.pos-tracker-table{border-collapse:separate;border-spacing:0;width:100%;margin-bottom:12px;}"
+                                                ".pos-tracker-table th{border:2px solid #c7c7c7;padding:6px;text-align:center;font-size:13px;font-weight:700;background-color:#f5f5f5;}.pos-tracker-table td{border:2px solid #e0e0e0;padding:6px;text-align:center;font-size:14px;font-weight:600;}"
+                                                ".pos-tracker-table caption{caption-side:top;text-align:left;font-weight:700;margin-bottom:6px;font-size:15px;}"
                                                 "</style>",
                                                 unsafe_allow_html=True,
                                             )
@@ -1454,7 +1458,7 @@ def show_aux_page(state: str) -> None:
                                                 if rank < len(tracker_cells):
                                                     cell = tracker_cells[rank]
                                                     ds_val = cell.draws_since
-                                                    style = "background-color:#ffea70;padding:0 6px;"
+                                                    style = "background-color:#ffea70;padding:2px 8px;border-radius:6px;font-weight:700;font-size:1.15em;display:inline-block;"
                                                     if getattr(cell, "hard_due", False):
                                                         style += "color:#d60000;"
                                                     digit_html = f"<span style='{style}'>{cell.digit}</span>"
@@ -1492,8 +1496,19 @@ def show_aux_page(state: str) -> None:
                                     double_notes = [note for note in getattr(report, 'double_pressure_notes', []) if note]
                                     if double_notes:
                                         st.caption("Double pressure: " + " | ".join(double_notes))
+                                    st.caption("Hard-due: Combined >= 55, Midday/Evening >= 40. Tags: XVAR-Cons = aligned variants, Mirror-Echo = mirror support, Double-Pressure = digit/mirror pressing two positions.")
+                                    css_style = (
+                                        "<style>"
+                                        ".pos-summary-table,.pos-shortlist-table{border-collapse:separate;border-spacing:0;width:100%;margin-bottom:10px;}"
+                                        ".pos-summary-table th,.pos-shortlist-table th{border:2px solid #c7c7c7;padding:6px 8px;text-align:center;font-size:13px;font-weight:700;background-color:#f8f8f8;}"
+                                        ".pos-summary-table td,.pos-shortlist-table td{border:2px solid #e0e0e0;padding:6px 8px;text-align:center;font-size:13px;font-weight:600;}"
+                                        ".pos-shortlist-table td:first-child{font-weight:700;}"
+                                        "</style>"
+                                    )
                                     st.markdown("**Cross-variant pressure summary**")
+                                    import pandas as pd
                                     summary_cols = st.columns(3)
+                                    meta_css_injected = False
                                     for pos_idx, column in enumerate(summary_cols):
                                         with column:
                                             st.markdown(f"P{pos_idx + 1}")
@@ -1501,6 +1516,9 @@ def show_aux_page(state: str) -> None:
                                             if not agg_items:
                                                 st.caption("--")
                                                 continue
+                                            if not meta_css_injected:
+                                                st.markdown(css_style, unsafe_allow_html=True)
+                                                meta_css_injected = True
                                             rows = []
                                             for agg in agg_items[:5]:
                                                 hits = ", ".join(f"{variant[:1].upper()}#{rank}" for variant, rank in agg.occurrences)
@@ -1510,8 +1528,12 @@ def show_aux_page(state: str) -> None:
                                                     "Hits": hits,
                                                     "Tags": " ".join(sorted(agg.tags)),
                                                 })
-                                            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                                            summary_html = pd.DataFrame(rows).to_html(classes="pos-summary-table", index=False, escape=False)
+                                            st.markdown(summary_html, unsafe_allow_html=True)
                                     if report.candidates:
+                                        if not meta_css_injected:
+                                            st.markdown(css_style, unsafe_allow_html=True)
+                                            meta_css_injected = True
                                         st.markdown("**Positional shortlist**")
                                         candidate_rows = []
                                         for cand in report.candidates:
@@ -1523,7 +1545,8 @@ def show_aux_page(state: str) -> None:
                                                 "VTRAC": "" if cand.vtrac_index is None else cand.vtrac_index,
                                                 "Tags": " ".join(sorted(cand.tags)),
                                             })
-                                        st.dataframe(pd.DataFrame(candidate_rows), use_container_width=True, hide_index=True)
+                                        shortlist_html = pd.DataFrame(candidate_rows).to_html(classes="pos-shortlist-table", index=False, escape=False)
+                                        st.markdown(shortlist_html, unsafe_allow_html=True)
                 # --- V-TRAC Table (Working logic) ---
                 st.subheader("V-TRAC Analysis (Working logic)")
                 import pandas as _pd
@@ -1600,7 +1623,7 @@ def show_aux_page(state: str) -> None:
                 nr_purple = sorted([pair for pair, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
 
                 st.info(
-                    "**Overdue Thresholds:**\n"
+                    f"**Overdue Thresholds (window {PAIRS_ANALYSIS_WINDOW} draws):**\n"
                     f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
                     f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
                 )

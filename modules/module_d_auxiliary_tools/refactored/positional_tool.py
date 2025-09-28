@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -53,9 +53,9 @@ class WeightsConfig:
     swap_echo: float = 0.10
     swap_echo_mirror: float = 0.07
     recent_heat_brake: int = 3  # draws
-    mirror_tag: str = "Mirror"
-    consensus_tag: str = "Consensus"
-    double_tag: str = "Double"
+    mirror_tag: str = "Mirror-Echo"
+    consensus_tag: str = "XVAR-Cons"
+    double_tag: str = "Double-Pressure"
     swap_tag: str = "Swap"
     max_candidate_per_position: int = 2
     max_candidates: int = 12
@@ -342,10 +342,12 @@ def _apply_cross_variant_consensus(entries: List[PositionTopDigit], cfg: Weights
             continue
         bonus = cfg.consensus_exact * (len(group) - 1)
         pos, digit = key
+        variant_letters = "".join(sorted({g.variant[0].upper() for g in group}))
+        tag_value = f"{cfg.consensus_tag}({variant_letters})" if variant_letters else cfg.consensus_tag
         for entry in group:
-            entry.add_component("consensus", bonus, cfg.consensus_tag)
+            entry.add_component("consensus", bonus, tag_value)
         variants = ", ".join(sorted({g.variant.title() for g in group}))
-        notes.append(f"P{pos + 1} digit {digit} aligns across {variants}")
+        notes.append(f"P{pos + 1} digit {digit} aligns across {variants} ({tag_value})")
 
     for key, group in by_pos_mirror.items():
         pos, pivot_digit = key
@@ -353,9 +355,11 @@ def _apply_cross_variant_consensus(entries: List[PositionTopDigit], cfg: Weights
         if len(unique_variants) <= 1:
             continue
         bonus = cfg.consensus_mirror * (len(unique_variants) - 1)
+        variant_letters = "".join(sorted({g.variant[0].upper() for g in group}))
+        mirror_tag_value = f"{cfg.mirror_tag}({variant_letters})" if variant_letters else cfg.mirror_tag
         for entry in group:
-            entry.add_component("mirror_consensus", bonus, cfg.mirror_tag)
-        notes.append(f"P{pos + 1} mirror cluster around digit {pivot_digit}")
+            entry.add_component("mirror_consensus", bonus, mirror_tag_value)
+        notes.append(f"P{pos + 1} mirror cluster around digit {pivot_digit} ({mirror_tag_value})")
 
     return notes
 
@@ -384,7 +388,8 @@ def _apply_double_pressure(entries: List[PositionTopDigit], cfg: WeightsConfig, 
             if due_doubles_active:
                 item.add_component("double_due", cfg.double_due_bonus, cfg.double_tag)
         variants = ", ".join(sorted({v for v, _ in unique_positions}))
-        notes.append(f"Digit {digit} (mirror {mirror_digit}) pressuring two positions across {variants}")
+        mirror_label = f" (mirror {mirror_digit})" if mirror_digit is not None else ""
+        notes.append(f"Digit {digit}{mirror_label} pressuring two positions across {variants} ({cfg.double_tag})")
     return notes
 
 

@@ -43,3 +43,8 @@ Tip: Use run_app.bat to launch the UI from repo root.
 - If a state doesn’t resolve: normalize the name (e.g., "Connecticut4" → base "Connecticut").
 
 
+## Quick Smokes (run after preflight)
+- `python scripts/checks/smoke_project_loader.py`
+- `python scripts/checks/smoke_positional.py`
+- `python scripts/checks/smoke_aux_vtrac.py`
+

@@ -1,3 +1,7 @@
+## 2025-09-28 - Aux - Positional loader hardening, pairs window SSOT, UI polish
+- Impact: Restored dynamic loader registration for staged modules (positional tracker), unified overdue pairs on a 360-draw window, refreshed tracker/cross-variant/shortlist styling, and renamed tags to XVAR-Cons / Mirror-Echo / Double-Pressure for clarity. Added the loader smoke to preflight docs.
+- Files: `src/app.py`, `modules/module_d_auxiliary_tools/refactored/positional_tool.py`, `scripts/checks/smoke_project_loader.py`, `docs/AAT9_KIT/AAT9_Preflight_Reference.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`.
+
 ## 2025-09-26 – Aux – Positional tracker UI pass – Side-by-side variant table
 - Impact: Positional Pressure expander now renders Combined / Midday / Evening simultaneously (P1–P3 columns, top-3 ranks) using a fixed 360-draw window, replacing per-variant tabs/sliders while retaining consensus notes and the ranked shortlist.
 - Files: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.

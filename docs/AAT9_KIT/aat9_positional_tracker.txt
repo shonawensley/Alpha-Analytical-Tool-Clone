@@ -1,0 +1,1101 @@
+﻿## 2025-09-28 Update\r\n- Loader registration restored; positional module now guaranteed to load via staged copy.\r\n- Overdue pairs unified on 360-draw window; captions and smokes reference the same constant.\r\n- Positional tags renamed to XVAR-Cons, Mirror-Echo, Double-Pressure; notes include variant initials.\r\n- Tracker/summary/shortlist tables restyled for clarity (bold headers, yellow chips, badge captions).\r\n- Preflight reference lists loader/positional/V-TRAC smokes; changelog + checkpoint log capture this recovery.\r\n\r\nHERES EVERYTHING YOU SHARED:
+
+Awesome—seeing that tracker back in action is a big win. Below is a quick validation + interpretation of what you’re seeing, tied directly to your training docs, plus a clear note on the two different meanings of “consensus” so we don’t mix them up again. I’ll also add a short QA checklist you (or Codex) can run any time to sanity‑check the numbers.
+
+1) “Consensus” means two different things in this project
+
+A. String‑table consensus (R2/R4/R6/R8)
+
+Definition: in the string tables, consensus happens when the right‑most “tail boxes” (Columns 1 or 2) in all four rows (R2, R4, R6, R8) collapse to the same 1–2 digit substring (e.g., 7/7/7/7, 44/44/44/44). This is the “R‑consensus” used by Stable/Boxed logic, and it’s a strong finishing signal in your training.
+
+Why it matters: you give bonus/weight to patterns that land in a consensus column; short tail stubs (1–2 digits) are especially meaningful.
+
+B. Positional cross‑variant consensus (tracker)
+
+Definition: in the positional tool, consensus means a digit is Top‑3 in the same position across ≥2 of Combined/Midday/Evening (2‑way or 3‑way alignments). Think “alignment across variants,” not string‑table collapse. This is exactly what your positional spec describes and what the Cross‑variant pressure summary shows.
+
+Naming to avoid confusion:
+
+Use “R‑Consensus” (or “Table Consensus”) for the R2/R4/R6/R8 tail‑box collapse.
+
+Use “XVAR Consensus” for tracker alignment across Combined/Midday/Evening.
+These labels mirror your training and keep the two concepts crisp in the UI, tags, and logs.
+
+2) What the positional tracker is computing (and how it maps to your spec)
+
+Core grid (per variant): for each position P1/P2/P3, compute draws‑since for digits 0–9, take Top‑3, render as a 3×(P1|P2|P3) grid. Yellow cell = the digit, left cell = DS (draws‑since). The red digit style is a hard‑due cue gated by thresholds.
+
+Hard‑due thresholds: default 55 for Combined, 40 for Midday/Evening; that’s the “turn the digit red” rule your doc and work log captured when the tracker was designed.
+
+Cross‑variant pressure and tags: the analyzer attaches small, stackable signals—alignment (2‑way/3‑way), mirror echo, double‑pressure, and swap echo—so you can read the same “cues” you were marking by hand.
+
+Shortlist: it builds a small set of straight candidates (typically Top‑2 per slot, capped around 8–12) and tags each with ranks per position, root, V‑TRAC index, and the alignment/mirror/double cues. This is exactly the “PPA” (Positional Pressure & Alignment) behavior outlined in your blueprint.
+
+What you see in your screenshot aligns with the spec:
+
+Three variant blocks (Combined / Midday / Evening) with Top‑3 due digits per position and DS values, with hard‑due digits colored red. That’s a direct match to the wireframe/spec.
+
+The Cross‑variant pressure summary panel lists, for each position, a Score, Hits (how many variants show that digit Top‑3 in that position), and Tags like “Consensus,” “Mirror,” “Double,” and “Swap” — these correspond to your scoring rules for XVAR consensus, mirror map (0↔5, 1↔6, 2↔7, 3↔8, 4↔9), and double‑pressure/swap echoes.
+
+The Positional shortlist shows combo, score, ranks (e.g., 2‑2‑3 meaning each digit’s rank in P1/P2/P3), root, VTRAC, and tags; this mirrors your PPA candidate definition and outputs.
+
+3) Why these features are set up this way (and how they leverage your training)
+
+Your own field rules show consistent edges that the tracker now encodes:
+
+Position‑specific pressure is the “backbone.” You asked for pure positional due‑ness (not mixed with table logic) to stay fast, draws‑only, and legible. The grid is exactly that.
+
+Cross‑variant agreement is predictive. Many of your examples hit when the same digit appears in Top‑3 for the same position across multiple variants. The tool calls that out as XVAR consensus and scores it (2‑way and 3‑way).
+
+“Two positional hits” are enough to build a small slate. Your research repeatedly used two strong positions to lock a pair and then explore the third slot—exactly how the shortlist works (Top‑2 per slot; cap around a dozen).
+
+Mirror echo = supporting cue, not driver. The tags give a small nudge when a mirror digit supports the same position in another variant—just as your notes recommend.
+
+Pairs are the glue. When the top digits in two positions form an “out” pair, the third position often decides. Your BA “remaining pairs” idea dovetails with this; the shortlist tags and (optional) pair checks make that visible.
+
+Root/V‑TRAC are annotations here. You prefer to keep the positional engine draws‑only and use V‑TRAC/Root lightly as labels, saving the heavy table‑based reasoning for the other modules. The shortlist’s root and VTRAC columns implement that “light touch.”
+
+4) Quick “sanity checks” you (or Codex) can run to validate numbers
+
+These don’t need backtests—just invariants that must hold if the tracker is wired correctly:
+
+Top‑3 ordering: within each (variant, position) block, DS should be monotone non‑increasing from Rank 1→3. (If not, ranks were mis‑assigned.)
+
+Hard‑due rule: for Combined, any red digit should have DS ≥55; for Midday/Evening, ≥40.
+
+XVAR “Hits” math: in the Cross‑variant summary for, say, P2 digit 7, Hits must equal the number of variant blocks where 7 is Top‑3 in P2. (If a mirror contributes, it should show in Tags but not inflate Hits.)
+
+Shortlist ranks: the Ranks triplet on each combo must match the per‑position rank of that digit in the grid (e.g., if a is P1’s #2, the first rank is 2).
+
+Shortlist cap: by default you should see 8–12 straights; bump to 3×3×3 only when pressures are flat, but keep hard caps (your PPA guardrail).
+
+Tip for Codex: keep the smoke_positional script in the loop; add one assertion that _load_project_module leaves entries in sys.modules (the regression you just fixed). It’s a cheap tripwire against future mojibake edits.
+
+5) A few label tweaks to keep the story crystal‑clear
+
+Rename tags in the tracker UI
+
+Consensus → XVAR‑Cons (with a suffix like C+E or C+M+E) to show which variants aligned.
+
+Mirror → Mirror‑Echo (e.g., 3↔8).
+
+Double → Double‑Pressure (digit appears in multiple positions).
+
+Keep R‑Consensus wording only on Stable/Boxed features that read string tables.
+These names line up with your docs and prevent “consensus” from being conflated.
+
+Keep thresholds centralized & ASCII‑clean
+Your _define_default_thresholds() consolidation was the right move; keep labels in one place so a future text cleanup can’t swap RED/BLUE labels again. (You already captured this as a pitfall.)
+
+6) How the screenshot’s numbers “feel right” against the training
+
+Combined as anchor: Combined often shows more stable extremes; your grid has Combined P1/P2/P3 each with clear leaders (e.g., P1’s 0 with DS≈37). That matches the “Combined doesn’t hide extremes” rule you documented.
+
+Variant echoes: Midday/Evening blocks show the same digits (or mirrors) surfacing in the same positions; the Cross‑variant summary’s Hits and Tags reflect that alignment. That’s exactly the XVAR behavior you wanted scored.
+
+Shortlist composition: Your list is built from the Top‑K per slot, includes ranks, root, VTRAC, and tags like “XVAR‑Cons Double Mirror R1/R2 Swap”; that’s a direct read‑out of the PPA design.
+
+7) If you want one fast guardrail to keep this future‑proof
+
+Keep the tracker draws‑only and treat V‑TRAC/Root as annotations (as it already does). Use XVAR consensus + two‑position locks as the primary signal, and let BA/V‑TRAC/Stable add weight later. That separation of concerns is exactly how your “raw first, then compound” playbook was written.
+
+Bottom line
+
+The values and surfaces in your screenshot are consistent with the training: Top‑3‑by‑position grids with hard‑due styling, a cross‑variant pressure summary that scores the exact alignments you’ve been marking on paper, and a small, tagged shortlist ready to compound with BA/V‑TRAC/Stable.
+
+The only place confusion can creep in is the word “consensus.” If we label “R‑Consensus” (string tables) vs “XVAR‑Consensus” (positional alignment) everywhere, the narrative stays sharp and your operators won’t mix the two.
+
+If you want, I can write the exact tag text and a one‑liner legend to paste under each panel so the UI explains itself without a doc jump.
+
+Absolutely—here’s a crisp hand‑off you can paste straight into your Codex session. I’ve split it into: (1) incident recap + root cause, (2) what’s fixed vs. what still matters, (3) the exact files Codex should open first, (4) verification commands, and (5) hardening/guardrails so this doesn’t regress.
+
+Positional Tracker Incident & Aux Hardening — Hand‑off for Codex
+1) Executive summary (what happened & why)
+
+Symptom: “Positional module unavailable: 'NoneType' object has no attribute 'dict'” on the Auxiliary Tools page’s Positional Tracker.
+
+Root cause: During the mojibake/special‑character cleanup, the dynamic loader lost its sys.modules[...] = module registration step. Python’s @dataclass finalization looks up the owning module in sys.modules; without it, class init can return None, which the Streamlit block later tried to use as a dict—hence the crash.
+
+Fix: The loader now registers the module name in sys.modules and tries the canonical import first with a clean fallback to the project‑path loader. Variant draw sourcing was also hardened to reuse cache or fall back to aux_loaders.load_state_draws, so the Positional engine never sees an empty mapping.
+
+Knock‑on finding (Pairs): The Aux overdue‑pairs code still had a hidden depth cap—only the last 100 draws—making “red ≥ 107 / blue ≥ 71” impossible to reach. We should lift this to a constant window (e.g., 350–360) so thresholds behave as designed.
+
+Context: The Positional tool is a draws‑only analyzer, designed to compose with existing Aux signals (Pairs, V‑TRAC, Sums, Doubles, BA). That orthogonality is why restoring it adds real signal rather than noise.
+
+2) What’s fixed vs. what still matters
+✅ Fixed (verified)
+
+Loader registration: src/app.py registers dynamically loaded modules in sys.modules and attempts canonical import before the project‑path fallback (prevents NoneType.__dict__ failures).
+
+Variant draw sourcing: Positional block reuses cached analysis, then falls back to modules.aux_loaders.load_state_draws(...) to guarantee Combined/Midday/Evening have data + source captions.
+
+Smokes compile clean: python -m py_compile for src/app.py, positional tool, aux_loaders, and vtrac_reference, plus smoke_positional/smoke_aux_vtrac.
+
+⚠️ Still important (quick wins)
+
+Pairs window depth
+
+Issue: Old code paths were slicing draws[:100], muting “red/blue” thresholds.
+
+Action: Centralize a constant PAIRS_ANALYSIS_WINDOW = 360 and use it everywhere we compute overdue pairs. Confirm the UI captions still show the correct bands.
+
+Threshold names (clarity)
+
+Align symbol names with their numeric meaning (e.g., THR_R_RED = 107, THR_R_BLUE = 71) so future text cleanups don’t swap them visually in captions.
+
+V‑TRAC mini‑table consistency
+
+Ensure the 35‑index mini table draws from the same rows/overlay logic as the big table (and no stale cached DF). If needed, wire it to the shared “overlay draws‑since per index” calculation.
+
+Doc sync
+
+Log this recovery in the Unified Changelog and Checkpoint Log; update Aux docs to mention the fixed loader and pair window constant so future sessions spot drift instantly.
+
+3) “Open these first” — file checklist for Codex
+
+Start with these so the next changes are fast and low‑risk.
+
+Loader & Positional
+
+src/app.py — Auxiliary Tools section; Positional loader & variant sourcing block.
+
+modules/module_d_auxiliary_tools/refactored/positional_tool.py — dataclasses and analyze_state_variants (look for tracker_grid/hard‑due thresholds).
+
+Pairs & V‑TRAC (to align windows and mini‑table)
+
+scripts/auxiliary/working/modules/analyze_pairs.py — overdue pairs window; export PAIRS_ANALYSIS_WINDOW.
+
+modules/vtrac_reference.py — public API used by non‑Aux pages (leave staged Aux V‑TRAC alone).
+
+Loaders & health
+
+modules/aux_loaders.py — load_state_draws() (Combined/Midday/Evening).
+
+.codex/preflight.ps1 — quick repo health switchboard (paths & versions).
+
+Operator/guardrail docs (skim first, they’re short and actionable)
+
+docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md
+
+docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md
+
+docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md
+
+docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md (staged V‑TRAC notes)
+
+docs/AAT9_KIT/AAT9_Unified_Changelog.md
+
+docs/AAT9_KIT/AAT9_Checkpoint_Log.md
+
+Design reference (positional)
+
+tasks/position_research.txt (the markdown mock), plus training bundle notes. These explain the exact 3×3 grid and cross‑variant reading we implemented.
+
+4) Run these to validate (paste‑ready)
+# 4.1 Compile & smokes
+python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py 
+  modules/aux_loaders.py modules/vtrac_reference.py
+python scripts/checks/smoke_positional.py
+python scripts/checks/smoke_aux_vtrac.py
+
+# 4.2 Headless boot (captures import/loader issues fast)
+$env:STREAMLIT_BROWSER="none"
+streamlit run src/app.py --server.headless true 2>&1 | Tee-Object .codex/first_boot.log
+
+# 4.3 Sanity probe for pairs window (should show >=107 reds if present)
+python - <<'PY'
+from scripts.auxiliary.working.modules.analyze_pairs import calculate_overdue_pairs, PAIRS_ANALYSIS_WINDOW
+from modules.aux_loaders import load_state_draws
+draws,_ = load_state_draws("Connecticut4", variant="combined")
+nr, rep, status = calculate_overdue_pairs(draws, window=PAIRS_ANALYSIS_WINDOW)
+print("WINDOW =", PAIRS_ANALYSIS_WINDOW, "RED repeating >= 107:",
+      sorted([p for p,ds in rep.items() if ds>=107]))
+PY
+
+5) Guardrails so this doesn’t regress (copy‑paste into a PR description)
+
+A. “Don’t break the loader” checks
+
+Add a tiny unit probe (or smoke assertion) that calls the project loader and asserts the module name is in sys.modules before exec_module. This catches the exact regression that bit us during text cleanup.
+
+B. Pairs depth as a single source of truth
+
+Define PAIRS_ANALYSIS_WINDOW = 360 in one place (export it). Replace any raw [:100] slicing with that constant. Update Aux captions to reflect the depth (keeps operator expectations aligned).
+
+C. V‑TRAC mini‑table data source
+
+Make the mini‑table read the same “index draws‑since overlay” dict we use for the big table. No duplicate logic, no stale cache.
+
+D. Preflight habit
+
+Keep .codex/preflight.ps1 + smokes as a pre‑run ritual. It flags path drift (staged vs canonical), missing CSVs, and symbol availability (e.g., VTRAC_DISPLAY for Aux). If preflight or either smoke turns red, don’t edit UI code—fix imports first.
+
+E. “Golden” snapshots for finished features
+
+After a green run, do both:
+
+Git tag a working point (e.g., git tag -a AAT9_Aux_Positional_GOLD -m "Aux Positional tracker stable"; git push --tags), and
+
+Keep using scripts/util/create_checkpoint.ps1 (zip) for local time‑capsules. That dual guard protects you from “33rd time” regressions caused by long sessions.
+
+F. Small CI‑like safety locally
+
+If you’re using pre‑commit, add a hook that runs py_compile + both smokes on touched files under src/ and modules/module_d_auxiliary_tools/ before allowing the commit.
+
+G. Documentation breadcrumbs
+
+When you touch Aux (loader, windows, thresholds), log the change in the Unified Changelog and add one bullet at the top of Checkpoint Log with “Context / Change / Impact / Follow‑ups”. That’s the fastest way for the next AI (or you in 3 weeks) to regain state in minutes.
+
+6) Why the positional tool matters (so future sessions don’t second‑guess it)
+
+It’s orthogonal to Pairs/V‑TRAC/Sums: those tell you what relates; Positional tells you where the pressure sits (P1/P2/P3). That’s exactly why it compounds well with BA and Doubles.
+
+It’s draws‑only, fast, and its outputs are explainable (ranks, gaps, tags)—ideal for logging alongside winners and for downstream learning.
+
+7) Suggested PR slice (keeps the history clean)
+
+Loader + variant fallback (already done) — commit with message:
+“Aux: restore sys.modules registration + canonical‑first import; harden variant draw fallback in positional block.”
+
+Pairs window — commit:
+“Aux: set PAIRS_ANALYSIS_WINDOW=360; remove [:100] slices; align captions & smokes.”
+
+Mini‑table alignment & docs — commit:
+“Aux: V‑TRAC mini‑table uses overlay source; doc + changelog touch‑ups (loader fix, pairs window).”
+
+One‑line recovery playbook (if anything drifts again)
+
+Run preflight and both smokes.
+
+Toggle Dev Health (Aux) to check module file paths + CSV sources (Combined/Midday/Evening).
+
+If the positional import fails, check loader registration and staged vs canonical path precedence before touching UI code.
+
+If pairs look “too quiet”, print the active window constant and confirm it’s ≥ 360.
+
+If you want, I can also provide a one‑pager “AAT9_Positional_Reader.md” (what to look for, example screenshot, common tags)—that’s the same pattern we used with BA and it saves time for any future assistant.
+
+_____
+
+*** You can please if you can please help me come up with some type of optimal list to address all the important items you've mentioned for validating and optimizing the tool as much as possible which is also universally I would say relevant or optimal in a way that we're not wasting time but ensuring to validate so it performs at optimal analytical value And for everything that's not 100 percent necessary at this point maybe we can document to do later more potentially do later is that fair So if you can help me with some optimized list for this so that this doesn't take forever but we do it in an optimal way So I would say create some comprehensive list for this or directions for codecs there are a lot of things you pointed out that I would like to make sure are either double checked or adjusted for abdominal use and so that this tool works optimally
+
+
+
+Fantastic momentum—let’s lock this down so you (and any future Codex run) can validate and optimize the Aux layer fast, without slipping back into loader/pipeline issues.
+
+Below is a single, copy‑pasteable execution checklist for Codex (with “why”, “what to open”, commands, and clear Definition of Done for each step). I’ve split items into Now (must‑do) vs Later (nice‑to‑have) so we don’t over‑scope.
+
+Aux Positional + Pairs/V‑TRAC — Validation & Optimization Checklist
+
+Assumptions
+
+Repo root: C:\dev\Alpha-Analytical-Tool
+
+Streamlit app: src/app.py
+
+Positional engine: modules/module_d_auxiliary_tools/refactored/positional_tool.py
+
+Pairs logic (Aux working): scripts/auxiliary/working/modules/analyze_pairs.py
+
+Aux loaders: modules/aux_loaders.py
+
+Canonical V‑TRAC API: modules/vtrac_reference.py
+
+A) Preflight & Safety (must‑do)
+
+Why
+Confirms the same class of issues won’t recur (path staging, loader registration, symbol availability).
+
+Open first
+
+.codex/preflight.ps1
+
+scripts/checks/smoke_positional.py
+
+scripts/checks/smoke_aux_vtrac.py
+
+(optional) scripts/checks/smoke_project_loader.py (tiny probe to assert loader registers into sys.modules)
+
+Run
+
+# compile
+python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py `
+  modules/aux_loaders.py modules/vtrac_reference.py
+
+# smokes
+python scripts/checks/smoke_positional.py
+python scripts/checks/smoke_aux_vtrac.py
+
+# headless boot (captures import/loader issues in one log)
+$env:STREAMLIT_BROWSER="none"
+streamlit run src/app.py --server.headless true 2>&1 | Tee-Object .codex/first_boot.log
+
+
+Definition of Done
+
+All four commands succeed; first_boot.log shows Aux Dev Health with correct module paths and CSV sources printed (Combined/Midday/Evening).
+
+
+
+
+B) Positional tracker – data invariants (must‑do)
+
+Why
+These are structural truths; if any fail, something’s wired wrong.
+
+Check (in the UI on a few states)
+
+Top‑3 ordering: within each (variant, position), DS must be non‑increasing rank 1→3.
+
+Hard‑due styling: Combined red digits have DS ≥ 55; Midday/Evening red digits have DS ≥ 40.
+
+XVAR Hits math: In Cross‑variant summary, Hits for a digit equals # of variant blocks where that exact digit is Top‑3 in that position (mirror contributes to tags, not to Hits).
+
+Shortlist ranks: each combo’s Ranks triplet equals those digits’ ranks in the grid.
+
+Shortlist cap: normally 8–12 items (guard‑rail), not 27.
+
+Definition of Done
+
+All five checks pass on Connecticut4 and one other state.
+
+C) Pairs depth SSOT (must‑do)
+
+Why
+Aux pairs were still clipped to [:100], making red/blue thresholds unreachable; we need a single constant window used everywhere.
+
+Change
+
+In scripts/auxiliary/working/modules/analyze_pairs.py:
+
+Introduce PAIRS_ANALYSIS_WINDOW = 360.
+
+Ensure calculate_overdue_pairs(draws, window=PAIRS_ANALYSIS_WINDOW) uses draws[:window] (or full when window=None).
+
+Sweep src/app.py for any lingering draws[:100] slices used for pairs; replace with the constant.
+
+Update the Aux caption where thresholds are explained so it states the active window.
+
+Quick probe
+
+python - <<'PY'
+from scripts.auxiliary.working.modules.analyze_pairs import calculate_overdue_pairs, PAIRS_ANALYSIS_WINDOW
+from modules.aux_loaders import load_state_draws
+draws,_ = load_state_draws("Connecticut4", variant="combined")
+nr, rep, status = calculate_overdue_pairs(draws, window=PAIRS_ANALYSIS_WINDOW)
+print("WINDOW =", PAIRS_ANALYSIS_WINDOW, "RED repeating >= 107:", sorted([p for p,ds in rep.items() if ds>=107])[:10])
+PY
+
+
+Definition of Done
+
+No [:100] remains in pairs logic; the probe prints a WINDOW = 360 line and (when data warrants) shows ≥107 repeating pairs; UI captions reflect the same window.
+
+D) V‑TRAC mini‑table alignment (must‑do)
+
+Why
+Ensure the mini table’s 35 rows and “rank badges” come from the same overlay the big table uses; avoids stale caches / double logic.
+
+Change
+
+Factor the “index draws‑since overlay” into one helper and use it for both displays.
+
+Validate all 35 indices render with Status ∈ {Overdue, Recent, Tracking}, and top‑10 overdue rows have the badge rank (draws_since).
+
+Definition of Done
+
+One overlay helper; both tables render consistently; quick scan shows 35 rows, and top‑10 badges appear (no duplicates or missing ranks).
+
+E) Terminology & tags (must‑do)
+
+Why
+Prevents confusion between string‑table “consensus” vs positional cross‑variant alignment.
+
+Change
+
+In positional tags & notes:
+
+Rename Consensus → XVAR‑Cons (optionally suffix with C+M, C+E, M+E, C+M+E).
+
+Mirror → Mirror‑Echo.
+
+Double → Double‑Pressure.
+
+Only use R‑Consensus wording inside string‑table features (Stable/Boxed).
+
+Definition of Done
+
+New tag strings appear in the Cross‑variant pressure summary and shortlist; Stable/Boxed keep “R‑Consensus” only.
+
+F) Loader guardrail (must‑do, tiny)
+
+Why
+The incident root cause was the dropped sys.modules[...] = module registration. A smoke makes this unmissable next time.
+
+Add / verify
+
+Confirm _load_project_module registers the module before exec_module.
+
+Add (or keep) a 10‑line smoke that imports via the loader and asserts sys.modules[dotted_name] exists, then cleanly unloads.
+
+Definition of Done
+
+The smoke fails if the registration line is ever removed; it’s referenced from Preflight Reference.
+
+G) Health & breadcrumbs (must‑do)
+
+Why
+So the next session regains context in minutes.
+
+Doc touches
+
+Unified Changelog: one entry noting loader fix + pairs window SSOT + V‑TRAC mini‑table alignment.
+
+Checkpoint Log: a short “Context / Change / Impact / Follow‑ups” bullet.
+
+Aux Tools guide: add a one‑liner “Positional hard‑due: 55/40, window 360; pairs window 360; tag glossary (XVAR‑Cons, Mirror‑Echo, Double‑Pressure).”
+
+Definition of Done
+
+All three docs updated; the Dev Health caption shows module paths and CSV sources (you already saw: BA path + staged vtrac + three draw files), which is exactly what we want every time.
+
+H) Golden snapshot & local CI (strongly recommended)
+
+Why
+Protects “finished and working perfectly” features from long‑session regressions.
+
+Action
+
+Create a git tag (e.g., AAT9_Aux_Positional_GOLD).
+
+Keep using scripts\util\create_checkpoint.ps1 (fix long‑path errors with \\?\ prefix if needed).
+
+Add a pre‑commit hook that runs: py_compile + both smokes on touched files under src/ and modules/module_d_auxiliary_tools/.
+
+Definition of Done
+
+Tag pushed; checkpoint zip created; pre‑commit hook blocks commits if a smoke fails.
+
+“Do later” (document now, build after the next feature)
+
+Winners logging hooks for positional
+
+Log per draw: PP_P1_hit, PP_P2_hit, PP_P3_hit, PP_2pos_hit, top‑digit IDs, and XVAR‑Cons tags.
+
+Why: invisible regression detector and great training data.
+
+AAT9_Positional_Reader.md (1‑pager with a screenshot & tag legend)
+
+Mirrors your BA reader; saves ramp‑up time for any assistant.
+
+Why: you’ll never re‑explain XVAR‑Cons vs R‑Cons.
+
+Due Doubles enhancer (later)
+
+After pairs window is unified, iterate on “Top‑4 combined pairs → intelligent doubles subset” using Aux compounds (PP heat alignment + BA status + sums).
+
+Why: leverage the PP heat as a micro‑placement cue.
+
+Quick answers to “why these matter”
+
+Pairs window SSOT: with 100‑draw caps, “RED ≥ 107 / BLUE ≥ 71” can’t be reached; raising to a constant 360 aligns with your Aux thresholds and keeps operator expectations coherent.
+
+Positional tool orthogonality: PP tells where digits want to land (P1/P2/P3), which composes with Pairs/V‑TRAC/Sums/Doubles/BA that tell what relates—this is the exact additive signal you designed it to provide.
+
+Paste‑ready PR slices (keep history clean)
+
+Loader + variant fallback
+Msg: Aux: restore sys.modules registration + canonical‑first import; harden positional variant fallback.
+
+Pairs window SSOT
+Msg: Aux: set PAIRS_ANALYSIS_WINDOW=360; remove [:100] slices; align captions & smokes.
+
+V‑TRAC mini‑table + docs
+Msg: Aux: mini‑table reads overlay helper; doc & changelog touch‑ups (loader fix, pairs window).
+
+One‑screen “Recovery playbook” (drop this near Dev Health)
+
+Run preflight + both smokes.
+
+Toggle Dev Health (Aux) to verify: BA path, staged vtrac_reference.py, and draw CSV sources for C/M/E.
+
+If the positional import fails: check loader registration and staged vs canonical path precedence before touching UI code.
+
+If pairs look “too quiet”: print PAIRS_ANALYSIS_WINDOW and confirm it’s 360.
+
+If you want, I can also draft AAT9_Positional_Reader.md and a 10‑line loader smoke in your repo’s style so Codex has zero friction adopting this. Otherwise, hand this checklist to Codex and you’ll have a stable, optimized baseline while you move on to the next tasks.
+
+
+
+Fantastic—here are the two deliverables you asked for, ready to paste into your repo as‑is:
+
+1) docs/AAT9_KIT/important/AAT9_Positional_Reader.md
+
+Purpose
+A fast, self‑contained “how to read it” guide for the Positional Tracker + pressure scoring. This mirrors your training language and disambiguates R‑Consensus (string‑tables) vs XVAR‑Consensus (positional alignment). It also codifies invariants so anyone can sanity‑check the numbers at a glance.
+
+Save as: docs/AAT9_KIT/important/AAT9_Positional_Reader.md
+Link from: docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (add under “Aux → Positional Tracker”) and from the Aux page caption (“Reader”).
+
+# AAT9 – Positional Tracker Reader
+
+_Last updated: 2025‑09‑28 • Owner: Aux module_  
+_Audience: operators & AI assistants working in Auxiliary Tools / Control Center_
+
+## What you’re looking at
+
+**Three variant panels:** Combined, Midday, Evening (always newest‑first draws).  
+Each panel is a 3×(P1|P2|P3) grid:
+
+- **Rows = Rank 1 → 3** (Top‑3 most‑due digits by **draws‑since** at that position)  
+- **Columns = P1/P2/P3**, each shown as **DS | DIG**  
+- **Styling:** DIG cell has a yellow chip; turns **red** when **hard‑due**  
+  - Combined hard‑due ≥ **55**; Mid/Eve hard‑due ≥ **40**
+
+Beneath the grids you’ll see:
+- **Cross‑variant pressure summary** (per position): score, hits, tags  
+- **Shortlist (PPA)**: 8–12 straight candidates with **Ranks**, **Root**, **V‑TRAC**, **tags**
+
+> Why this tool matters: It is *orthogonal* to Pairs/V‑TRAC/Sums—those say **what relates**, Positional says **where** it wants to land (P1/P2/P3). That’s why it compounds so well with BA and Doubles. :contentReference[oaicite:0]{index=0}
+
+---
+
+## Key terms (so we never mix concepts)
+
+- **R‑Consensus (Tables)** — in the string‑tables, R2/R4/R6/R8 *tail boxes* all collapse to the same 1–2 digits. Use only on table‑aware pages (Stable/Boxed/Winners).  
+- **XVAR‑Consensus (Positional)** — a digit appears Top‑3 in the **same position** across ≥2 variants (C/M/E). That’s the consensus you see in the **Cross‑variant summary**.
+
+In the tracker UI we only use **XVAR‑Consensus**. If a doc mentions “consensus” without “R‑”, assume XVAR.
+
+---
+
+## How to read the grids (90‑second play)
+
+1) **Anchor on Combined.** It usually exposes the strongest extremes.  
+   - Rank 1 DS should be the largest in its column (monotone non‑increasing Rank1→3).
+2) **Scan echoes in Midday/Evening** for the same digit (or its **mirror** 0↔5,1↔6,2↔7,3↔8,4↔9).  
+   - Exact matches add **XVAR‑Consensus**; mirrors add a small **Mirror‑Echo**.
+3) **Watch double‑pressure.** If a digit (or its mirror) holds Top‑2 in **two positions**, doubles are “live” for that digit.  
+   - Pair that with your **Due Doubles** board to decide when to push straights vs boxed.
+4) **Use the shortlist, not your head, to permute.** The engine already computes Top‑2 baskets per position → small straight list with tags (TOP1x2, XVAR‑Cons, Mirror, V‑TRAC index, Root).
+5) **Compound with Aux:**  
+   - **Pairs**: If 1–6 is **RED**, a P2 basket {1,6} tightens boxed and points the straight.  
+   - **V‑TRAC**: When an index is overdue, intersect its boxed family with the **position masks** you see.  
+   - **Sums/Root**: Use as soft filters; tags show when a candidate agrees.
+
+> Heads‑up on Pairs windowing: earlier code sliced `draws[:100]`, which could *never* reach REP **≥107** (RED) and made pairs look “quiet”. We lifted this to a shared window (e.g., 350–360) so RED/BLUE bands behave as designed. :contentReference[oaicite:1]{index=1}
+
+---
+
+## Tags legend (appears in Cross‑variant summary & Shortlist)
+
+- **XVAR‑Cons (C+M, C+E, M+E, C+M+E)** – digit lines up across variants in the same position  
+- **Mirror‑Echo (d↔m)** – mirror digit reinforces the same position in another variant  
+- **Double‑Pressure** – digit/mirror prominent in **two positions**  
+- **Swap** – digit appears in an adjacent position in another variant (P1↔P2, P2↔P3)  
+- **TOP1xN** – candidate carries N slots that are per‑position rank‑1  
+- **Root=r / VTRAC=k** – annotations only (draws‑only engine stays pure)
+
+---
+
+## Quick invariants (instant sanity checks)
+
+- **Ordering:** per (variant, position), DS must decrease Rank1→3  
+- **Hard‑due:** red DIG ⇒ DS ≥ 55 (Combined) or ≥ 40 (Mid/Eve)  
+- **XVAR hits math:** “Hits” for a digit equals the count of variant grids where that digit is Top‑3 (mirrors do **not** increment hits; they only add a tag)  
+- **Shortlist ranks:** tuple (e.g., `2‑2‑3`) exactly matches the grid ranks for that combo’s digits  
+- **Shortlist size:** usually 8–12; never balloons unless pressures are flat
+
+---
+
+## Troubleshooting (fast)
+
+- **Empty/partial grids:** check the **draw source captions** under each tracker (paths + draw counts).  
+- **No XVAR notes:** verify Mid/Eve CSVs exist and are newest‑first; toggle Dev Health to confirm C/M/E file paths.  
+- **Pairs look too quiet:** print the active **PAIRS_ANALYSIS_WINDOW**; it should be **≥ 350**. :contentReference[oaicite:2]{index=2}  
+- **“NoneType.dict” import crash:** run the **10‑line loader smoke** below; if it fails, fix loader registration before touching UI.
+
+---
+
+## Operator flow (daily)
+
+1) **Control Center triage** – sort by BA/Doubles; glance at Positional Heat badge.  
+2) **Aux → Positional** – confirm two strong slots and XVAR‑Consensus; note any Double‑Pressure.  
+3) **Shortlist** – pick coverage size; intersect with Pairs/V‑TRAC/Sums as you prefer.  
+4) **Log** – (optional) record PP hits with winners for learning.
+
+2) 10‑line loader smoke
+
+Purpose
+Cheap, static guardrail that ensures your dynamic loader still registers the module in sys.modules before it executes the module (the exact regression that broke the tracker). It doesn’t import Streamlit or run the app; it inspects the loader block in src/app.py.
+
+Save as: scripts/checks/smoke_loader_registration.py
+Run: python scripts/checks/smoke_loader_registration.py (exit code 0 = pass)
+
+# scripts/checks/smoke_loader_registration.py
+import re, sys, pathlib
+t = pathlib.Path("src/app.py").read_text(encoding="utf-8", errors="ignore")
+m = re.search(r"def\s+_load_project_module\s*\([^)]*\):(?P<body>.*?)(?:\n\S|\Z)", t, re.S)
+assert m, "FAIL: _load_project_module not found"
+b = m.group("body")
+i1, i2 = b.find("sys.modules["), b.find("exec_module")
+ok = (i1 != -1) and (i2 != -1) and (i1 < i2)
+print("PASS: loader registers in sys.modules before exec") if ok else sys.exit("FAIL: registration not before exec")
+
+
+Why static (text) vs dynamic (import) smoke?
+Importing src/app.py can instantiate Streamlit and page wiring; this tiny parser avoids side‑effects while catching the exact ordering mistake that caused the dataclass NoneType.__dict__ failure. If you still want a runtime probe later, we can add a 20‑line variant that calls the loader with a temp module.
+
+(Optional) One‑paste add‑ons you’ll likely want
+
+Make the smoke part of preflight: add to .codex/preflight.ps1 alongside the existing smokes (positional & V‑TRAC).
+
+Pre‑commit hook (local CI): run py_compile + all smokes on staged Python files before commit.
+
+Docs breadcrumbs: add a single line to:
+
+docs/AAT9_KIT/AAT9_Unified_Changelog.md (“Aux: Positional loader hardening + Reader added”)
+
+docs/AAT9_KIT/AAT9_Preflight_Reference.md (new smoke command)
+
+docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (link to Reader)
+
+Paste‑ready commit messages
+
+Reader
+
+docs: add AAT9_Positional_Reader (how-to, invariants, troubleshooting, tags)
+
+
+Loader smoke
+
+checks: add 10-line smoke to verify loader registers sys.modules before exec
+
+Provenance notes (for future assistants)
+
+The pairs‑window correction (lift from [:100] to a shared constant so RED/BLUE thresholds are reachable) is captured in the Aux brainstorm you logged. Keep PAIRS_ANALYSIS_WINDOW ≥ 350–360 so overdue coloring matches policy.
+
+The “Positional Pressure fits Aux orthogonally and composes with BA/Pairs/V‑TRAC/Sums” guidance is from the earlier internal rationale—keep the engine draws‑only and treat V‑TRAC/Root as annotations in this surface.
+
+If you want, I can also draft a 1‑paragraph caption you can drop directly under the Positional section in the app that links to this Reader and reminds users of the XVAR‑Consensus vs R‑Consensus distinction.
+
+
+________________________
+
+
+Awesome—glad you want the last piece too. Here’s the third deliverable I suggested: a short, practical triage one‑pager for the positional tool that operators (or a future AI) can use to read the tracker the same way every time.
+
+Drop-in path: docs/AAT9_KIT/important/AAT9_Positional_Triage.md
+Purpose: 90‑second “how to read & act” guide for the Positional Tracker and its cross‑variant cues.
+Scope: Draws‑only. Clarifies XVAR consensus vs R‑Consensus (string‑tables).
+
+AAT9 — Positional Triage (Reader’s Quick Guide)
+
+Audience: Operators & assistants using the Auxiliary Tools page.
+
+Inputs: data/cleaned/draws/<State>_draws.csv, <State>_Midday_draws.csv, <State>_Evening_draws.csv (newest‑first).
+Panels covered: Positional Tracker (Combined / Midday / Evening), Cross‑variant Pressure Summary, Positional Shortlist.
+
+0) Preflight (30s)
+
+Health check: In Aux → System Health (Aux) confirm:
+
+BA module, analyze_pairs, and staged vtrac_reference.py paths are shown.
+
+CSV sources list Connecticut_draws.csv (1000), Connecticut_Midday_draws.csv (1000), Connecticut_Evening_draws.csv (1000).
+
+Loader safety: If anything looks off, run:
+
+python scripts/checks/smoke_loader_min.py (ensures dynamic loader registers modules).
+
+python scripts/checks/smoke_positional.py and python scripts/checks/smoke_aux_vtrac.py.
+
+1) Read the tracker grid (60–90s)
+
+For each variant (C/M/E), the grid shows Top‑3 digits per position:
+
+Columns: P1 / P2 / P3 • Rows: Rank 1 → 3
+
+Left sub‑cell: DS (draws since) • Right sub‑cell: digit (yellow).
+
+Hard‑due style: digit text red when DS ≥ 55 (Combined) or ≥ 40 (Midday/Evening).
+
+Quick checks:
+
+Within a (variant, position) block, DS should decrease from Rank 1→3.
+
+Hard‑due digits (red) are your immediate anchors.
+
+2) Cross‑variant cues (what we call “XVAR”)
+
+Terminology guardrail
+
+XVAR Consensus = same digit appears Top‑3 in the same position across ≥2 of C/M/E (e.g., P2 digit 7 in Combined+Evening).
+
+R‑Consensus = string‑table tail‑box collapse (R2/R4/R6/R8). Not part of this tracker.
+Use the labels “XVAR‑Cons” vs “R‑Cons” everywhere to avoid confusion.
+
+Cues you’ll see in tags/notes:
+
+XVAR‑Cons C+M / M+E / C+M+E — exact‑digit alignment.
+
+Mirror‑Echo — mirror digit supports same slot across variants (0↔5, 1↔6, 2↔7, 3↔8, 4↔9).
+
+Double‑Pressure — same digit (or its mirror) is Top‑2 in two positions (e.g., P1 & P3).
+
+Swap‑Echo — digit tops an adjacent position in another variant (P2↔P3 or P1↔P2).
+
+3) Turn the grid into plays (2–3 minutes if needed)
+
+Anchor 2 positions. If two positions show strong Rank‑1s (or Rank‑1 + XVAR‑Cons), treat them as your backbone pair.
+
+Use pairs as glue. If the two anchor digits form a boxed pair that’s not blocked by the overdue‑pairs status, that’s a green light.
+
+Fill the third slot. Choose the top scored digit (or its mirror) in the remaining position.
+
+Shortlist sanity: The tool’s Positional Shortlist already does this for you:
+
+shows Ranks triplet (e.g., 2‑2‑3), Root, V‑TRAC, and tags (XVAR‑Cons / Mirror‑Echo / Double‑Pressure).
+
+prefer combos with TOP1 in ≥2 positions or clear XVAR‑Cons.
+
+4) When to lean in (rules of thumb)
+
+3‑way XVAR‑Cons on any position (C+M+E) → prioritize straights containing that digit in that slot.
+
+Double‑Pressure + Due Doubles ON → prioritize double straights with that digit (e.g., x44, 4x4).
+
+Anchor matches pairs RED/BLUE bands (from Aux) → keep; otherwise down‑weight.
+
+Root or V‑TRAC tag agrees with day’s trend → slight nudge only (annotations, not drivers).
+
+When to avoid over‑weighting:
+
+The Rank‑1 digit just hit at that position in the last ≤2–3 draws (the tool already tapers this via “recent heat” brake).
+
+You’re reading R‑Consensus into XVAR (don’t). Keep scopes separate.
+
+5) Fast QA (so the numbers can be trusted)
+
+Monotone ranks: DS Rank1 ≥ Rank2 ≥ Rank3 for every (variant, position).
+
+Hard‑due threshold: red digit DS ≥ 55 (C) or ≥ 40 (M/E).
+
+XVAR “Hits” math: if P2 digit 7 shows Hits = C+E, it must appear in both C & E P2 Top‑3.
+
+Shortlist ranks: each combo’s Ranks triplet must mirror the grid ranks for its digits.
+
+6) Common pitfalls & fixes
+
+Wrong CSV order (oldest‑first). Fix at the extractor/pipeline (must be newest‑first).
+
+Empty variant cache → tracker shows nothing. The page now falls back to modules.aux_loaders.load_state_draws.
+
+Pairs feel “too quiet” → confirm the pairs window constant (now centralized at ~360), not [:100].
+
+“Consensus” overload → if an operator means R‑Consensus (string‑tables), write R‑Cons explicitly.
+
+7) Micro‑legend (as used in UI tags)
+
+XVAR‑Cons C+M — digit matches in same position across Combined & Midday.
+
+Mirror‑Echo 3↔8 — mirror agreement across variants for that position.
+
+Double‑Pressure (P1&P3) — same digit (or its mirror) strong in two positions.
+
+Swap‑Echo P2→P3 — adjacent‑position echo across variants.
+
+TOP1x2 — two positions are Rank‑1 within the combo.
+
+Root=8 / VTRAC=27 — annotations only.
+
+8) Mini playbook (copy/paste into Checkpoint Log when things drift)
+
+Run preflight + both smokes.
+
+Toggle System Health (Aux); confirm staged module paths and CSV sources.
+
+If tracker fails, fix loader registration and staged‑vs‑canonical imports before touching UI.
+
+If pairs are muted, print the PAIRS_ANALYSIS_WINDOW (expect ~360).
+
+Keep using “XVAR‑Cons” tag in positional; reserve “R‑Cons” for string‑tables.
+
+Bonus: tiny pre‑commit safety (optional but recommended)
+
+Add a hook to run the 3 smokes + compile when files under src/ or modules/module_d_auxiliary_tools/ change:
+
+.pre-commit-config.yaml
+
+repos:
+  - repo: local
+    hooks:
+      - id: aat9-quick-smokes
+        name: AAT9 quick smokes
+        language: system
+        files: ^(src/|modules/module_d_auxiliary_tools/)
+        entry: bash -lc 'python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py modules/aux_loaders.py modules/vtrac_reference.py && python scripts/checks/smoke_loader_min.py && python scripts/checks/smoke_positional.py && python scripts/checks/smoke_aux_vtrac.py'
+
+
+Enable with pip install pre-commit && pre-commit install.
+
+Where this fits with the two docs you already have
+
+AAT9_Positional_Reader.md = what the tool is/does (full reference).
+
+AAT9_Positional_Triage.md (this doc) = how to read & act in 90 seconds (ops playbook).
+
+smoke_loader_min.py = tripwire for the exact bug we just fixed (module registration).
+
+If you want, I can also provide a 1‑slide PNG version of the triage steps for quick embedding in the app (under a help icon).
+
+
+
+_____________________________________
+
+
+Fantastic—love the momentum. Here’s a single, paste‑ready bundle that adds the three things you asked for:
+
+a comprehensive AAT9_Positional_Reader.md (operator/AI cheat‑sheet for the tracker),
+
+a 10‑line loader smoke that trips if the dynamic loader ever regresses again, and
+
+the “final item” we discussed: a lightweight recovery playbook + local guardrails (pre‑commit hook, quick checks, “golden snapshot” note) so this doesn’t backslide.
+
+Context (why these matter)
+
+• Your pairs logic previously sliced only the last 100 draws, making true RED (≥107) repeating pairs impossible; we agreed to lift this to a single window constant and document it.
+• The Positional tool is the missing lens (where the pressure sits by P1/P2/P3) and compounds cleanly with Pairs/V‑TRAC/Sums/BA; the reader below encodes how to use it, what the tags mean, and the sanity checks to run.
+
+A) docs/AAT9_KIT/AAT9_Positional_Reader.md (drop‑in doc)
+# AAT9 – Positional Tracker Reader (Operator & AI Cheat‑Sheet)
+
+**What it is.** A draws‑only indicator that shows the three most‑due digits by position (P1/P2/P3) for each variant
+(Combined, Midday, Evening). It’s orthogonal to Pairs/V‑TRAC/Sums: those tell you *what* relates; this tells you
+*where* the pressure sits. :contentReference[oaicite:2]{index=2}
+
+---
+
+## 1) How to read the grid
+
+Each variant panel is a 3×(P1|P2|P3) table:
+- Left sub‑cell = **DS** (draws‑since), right sub‑cell = **Digit** (yellow badge).
+- **Hard‑due** digits render red inside the yellow badge (default thresholds: Combined ≥ 55; Midday/Evening ≥ 40).
+- Rows are **Rank 1 → 3** by DS (monotone non‑increasing down the column is a basic invariant).
+
+**Quick invariants**
+- Rank order: DS must not increase from rank 1→2→3.
+- Hard‑due: any red digit respects the threshold in effect for its variant.
+
+---
+
+## 2) Tags and what they mean
+
+**XVAR‑Consensus**  
+Same **digit** is Top‑3 in the same position across ≥2 variants (e.g., `C+M`, `C+E`, or `C+M+E`). This is the strongest
+positional confirmation. (Do *not* confuse with *R‑Consensus* in string tables; that’s a tail‑box collapse in R2/R4/R6/R8.)  
+**Mirror‑Echo**  
+A digit’s mirror (0↔5, 1↔6, 2↔7, 3↔8, 4↔9) supports the same position in another variant.  
+**Double‑Pressure**  
+A digit (or its mirror class) shows in **two positions**. Stronger if Due Doubles is active.  
+**Swap‑Echo**  
+Digit appears in an adjacent position across variants (e.g., P2↔P3). Useful rhythm cue.
+
+> Naming hygiene: we always say **“XVAR‑Consensus”** here; reserve **“R‑Consensus”** for string‑table tail‑box collapse
+> used by Stable/Boxed logic. This keeps narratives crisp across modules.
+
+---
+
+## 3) Cross‑variant pressure summary
+
+Below the grids you’ll see, for P1/P2/P3, the **Digits** with:
+- **Score** (small, additive, transparent components),
+- **Hits** (which variants contributed: `C#1, M#2 …`),
+- **Tags** (XVAR‑Cons, Mirror‑Echo, Double‑Pressure, Swap‑Echo).
+
+Use this to decide which position(s) are “locked” and which remain open.
+
+---
+
+## 4) Positional shortlist (how the tool jumps to straights)
+
+We take Top‑2 per position (configurable), build a **small Cartesian product** (capped ≈ 8–12), and tag each combo with:
+- **Ranks** (e.g., `2-2-3`),
+- **Root** (digital root), **V‑TRAC index** (annotation only),
+- **Tags** (XVAR‑Cons, Mirror‑Echo, Double‑Pressure, Swap‑Echo).
+
+Keep it draws‑only here; use BA, Sums, and V‑TRAC to **compound** (not to drive) the shortlist. :contentReference[oaicite:3]{index=3}
+
+---
+
+## 5) Fast operator workflow (daily)
+
+1. **Control Center**: triage by BA status & Doubles Watch; glance at the **PP heat** badge per state/variant.  
+2. **Open Aux → Positional**:  
+   - Look for **2‑way or 3‑way XVAR‑Consensus** in the same position.  
+   - Note any **Double‑Pressure** (two positions lighting for the same digit/mirror).  
+3. **Shortlist → Compound**: cross‑check with Pairs RED/BLUE and the day’s Sums/Root band.  
+4. **Log**: record P1/P2/P3 hits alongside winners for later learning (simple boolean columns are enough).
+
+---
+
+## 6) Sanity checks (no backtest needed)
+
+- **Grid monotonicity** per position (DS down the ranks).  
+- **Hard‑due coloring** respects thresholds.  
+- **XVAR Hits** = count of variants where the exact digit is in Top‑3 for that position (mirrors do not inflate Hits).  
+- **Shortlist ranks** match the grid’s per‑position ranks.
+
+---
+
+## 7) Gotchas
+
+- Pairs window must be deep enough (≈360) or RED/BLUE won’t make sense across modules. If pairs look “quiet,” print the
+  active window. :contentReference[oaicite:4]{index=4}
+- Keep XVAR‑Consensus wording in the positional module; **R‑Consensus** stays with string‑tables to avoid conflation.
+
+---
+
+## 8) Why this adds real signal (not “more stuff”)
+
+It’s **orthogonal**: Pairs/V‑TRAC/Sums talk about relationships & families; Positional shows **placement**. Orthogonal,
+explainable signals stack best. The tracker runs in O(window) over one CSV—cheap, stable, and easy to log. :contentReference[oaicite:5]{index=5}
+
+B) scripts/checks/smoke_loader_min.py (10‑line guardrail)
+
+What it does: Imports the positional module through your Streamlit dynamic loader and asserts the module name is
+actually registered in sys.modules before class decorators run. This is the exact regression we fixed.
+
+# scripts/checks/smoke_loader_min.py
+import importlib.util, sys, pathlib
+
+root = pathlib.Path(__file__).resolve().parents[2]  # repo root
+app = root / "src" / "app.py"
+spec = importlib.util.spec_from_file_location("app_main", app)
+mod = importlib.util.module_from_spec(spec); sys.modules["app_main"] = mod; spec.loader.exec_module(mod)
+
+# call the same helper Streamlit uses
+with mod._project_modules_first():
+    pos = mod._load_positional_tool_real()
+    name = getattr(pos, "__name__", "unknown")
+    assert "positional" in name.lower() and "module" in sys.modules, "loader not registered in sys.modules"
+print("OK: positional tool import + sys.modules registration are healthy.")
+
+
+Run it:
+py -3 scripts/checks/smoke_loader_min.py
+
+C) “Final item” – Recovery playbook + local guardrails
+
+These are tiny, pragmatic protections you can adopt today without new infrastructure.
+
+C1. docs/AAT9_KIT/AAT9_Recovery_Playbook.md
+# AAT9 – Aux Recovery Playbook (1‑pager)
+
+**If anything drifts:**
+
+1) Run preflight + smokes  
+   - `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`  
+   - `py -3 scripts/checks/smoke_positional.py`  
+   - `py -3 scripts/checks/smoke_aux_vtrac.py`  
+   - `py -3 scripts/checks/smoke_loader_min.py`  ← trips the loader regression
+
+2) Open Aux → **System Health** and verify:
+   - BA module path (canonical), staged **vtrac_reference** present and exposes `VTRAC_DISPLAY`,  
+   - CSV sources: Combined/Midday/Evening all resolve and show counts (≈1000).
+
+3) If positional import fails:
+   - Check **sys.modules registration** in the loader, confirm canonical‑first import, then project fallback.
+   - Don’t touch UI code until imports are green.
+
+4) If pairs look “too quiet”:
+   - Print the active pairs window and confirm it’s **≥360**; RED (≥107) & BLUE (≥71) should be reachable. :contentReference[oaicite:6]{index=6}
+
+5) Take a golden snapshot after green:
+   - `git tag -a AAT9_Aux_Positional_GOLD -m "Aux Positional tracker stable"`; `git push --tags`.
+   - Optional local zip: `powershell -NoProfile -File scripts/util/create_checkpoint.ps1`.
+
+C2. Pre‑commit hook (local, zero‑config)
+
+Adds a very small pre‑commit that runs py_compile + the three smokes on touched code. If anything fails, the commit
+is rejected.
+
+Windows PowerShell hook → save as .git/hooks/pre-commit (no extension), contents:
+
+#Requires -Version 5
+$ErrorActionPreference = 'Stop'
+Write-Host "AAT9 pre-commit: py_compile + smokes"
+py -3 -m py_compile src/app.py modules/aux_loaders.py modules/vtrac_reference.py `
+  modules/module_d_auxiliary_tools/refactored/positional_tool.py
+py -3 scripts/checks/smoke_loader_min.py
+py -3 scripts/checks/smoke_positional.py
+py -3 scripts/checks/smoke_aux_vtrac.py
+
+
+macOS/Linux Bash hook (if needed):
+
+#!/usr/bin/env bash
+set -euo pipefail
+echo "AAT9 pre-commit: py_compile + smokes"
+python3 -m py_compile src/app.py modules/aux_loaders.py modules/vtrac_reference.py \
+  modules/module_d_auxiliary_tools/refactored/positional_tool.py
+python3 scripts/checks/smoke_loader_min.py
+python3 scripts/checks/smoke_positional.py
+python3 scripts/checks/smoke_aux_vtrac.py
+
+
+Make executable: chmod +x .git/hooks/pre-commit
+
+C3. PR checklist (paste into your PR description)
+**AAT9 – Aux PR guardrails**
+
+- [ ] Smokes pass: positional / aux_vtrac / loader_min
+- [ ] Pairs window printed ≥ 360 (RED≥107 / BLUE≥71 workable)  :contentReference[oaicite:7]{index=7}
+- [ ] System Health shows staged vtrac_reference with VTRAC_DISPLAY and BA path sane
+- [ ] Docs touched: Unified Changelog + (if thresholds/windows changed) Aux Tools guide
+
+D) (Optional but recommended) – One‑line legend under the tracker
+
+If you want the UI to be self‑explaining, drop this just beneath the three tables:
+
+st.caption("Legend: yellow = Top‑3 digit; red = hard‑due (Combined ≥ 55, Midday/Evening ≥ 40). "
+           "Tags use XVAR‑Consensus (variant overlap), Mirror‑Echo (0↔5,1↔6,2↔7,3↔8,4↔9), "
+           "Double‑Pressure (two positions), Swap‑Echo (adjacent positions).")
+
+E) (For Codex) – Small follow‑ups that keep us optimal
+
+Pairs window SSOT
+Ensure one constant (e.g., PAIRS_ANALYSIS_WINDOW = 360) is used across Aux; replace any ad‑hoc draws[:100]
+slices with the constant, and sync the Aux captions. This makes RED/BLUE thresholds meaningful and consistent.
+
+Mini‑table alignment
+Keep the V‑TRAC mini table pointed at the same “index draws‑since overlay” used by the big table so badges/ranks
+can’t drift; avoid duplicate logic. (If you already wired a shared helper, just confirm call‑sites.)
+
+How to stage these now
+
+Create the three files exactly as above:
+
+docs/AAT9_KIT/AAT9_Positional_Reader.md
+
+scripts/checks/smoke_loader_min.py
+
+docs/AAT9_KIT/AAT9_Recovery_Playbook.md
+
+Add the pre‑commit hook (PowerShell on Windows) to .git/hooks/pre-commit.
+
+Commit with:
+
+git add docs/AAT9_KIT/*.md scripts/checks/smoke_loader_min.py
+
+git commit -m "Docs: Positional reader + recovery playbook; Checks: 10‑line loader smoke + pre-commit guard"
+
+(Optional) Tag the current green point:
+
+git tag -a AAT9_Aux_Positional_GOLD -m "Aux Positional tracker stable"
+
+git push --tags
+
+That’s it—this gives you the reader, the loader tripwire, and the ops guardrails you asked for, with the pairs/mini‑table context captured in the docs so future sessions instantly know why these checks exist.
+
+If you want me to also draft a tiny UI legend PR patch (just the lines to paste in src/app.py under the tracker) or a one‑shot quick checks PowerShell runner, I can add those verbatim too.

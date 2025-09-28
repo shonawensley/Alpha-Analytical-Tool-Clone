@@ -1,4 +1,4 @@
-﻿# AAT9 - Auxiliary Tools (Official Overview)
+# AAT9 - Auxiliary Tools (Official Overview)
 
 Abstract
 
@@ -32,6 +32,8 @@ Positional Pressure
 - Window fixed at 360 draws with Top-3 ranks; outputs include cross-variant consensus notes and a ranked positional shortlist.
 - Control Center reuses the same engine to show a compact positional heat badge per state/variant.
 - Implementation lives in `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; inputs remain `data/cleaned/*_draws.csv`.
+- Hard-due styling: Combined digits turn red at >=55 draws; Midday/Evening at >=40 draws; tags surface as `XVAR-Cons(...)`, `Mirror-Echo(...)`, and `Double-Pressure`.
+- Overdue pair analysis reuses a shared 360-draw window (`PAIRS_ANALYSIS_WINDOW`) so RED (>=107) / BLUE (>=71) thresholds align across captions and smokes.
 
 
 Operational Notes

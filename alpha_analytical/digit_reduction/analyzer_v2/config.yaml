@@ -1,0 +1,48 @@
+# alpha_analytical/digit_reduction/analyzer_v2/config.yml
+version: 2
+
+thresholds:
+  early_step_k: 3
+
+weights:
+  # --- existing Part 1 weights (unchanged) ---
+  tail.exact_len3:          1.00
+  tail.unique2:             0.80
+  traj.early_terminal:      0.60
+  traj.reduction_slope:     0.30
+  pre.mirror_pair:          0.25
+  pre.core3_hint:           0.30
+  mode.agree_core:          0.80
+  mode.time_to3_delta:     -0.20
+  section.consensus_any:    0.70
+  section.consensus_strong: 1.10
+  section.pairwise_jaccard: 0.50
+  methods.core_agreement:   1.20
+  methods.early_fraction:   0.60
+  set.memory_strength:      1.00
+  set.repeat_new_box:       0.60
+  stability.order_cue:      0.70
+  stability.horiz_persist:  0.50
+
+  # --- new: V‑TRAC synergy (low default) ---
+  vtrac.hot_index:          0.50     # apply to v_hot (0..1). Keep gentle at first.
+
+penalties:
+  degenerate.empty:        -1.00
+  tail.wobble:             -0.40
+  mode.only_one:           -0.30
+
+caps:
+  score_min: 0.0
+  score_max: 100.0
+
+paths:
+  # If your V‑TRAC Analyzer writes prediction JSONs, point here (optional).
+  # See AAT9 V‑TRAC module docs for where predictions/bundles are written. 
+  # Example: data/outputs/predictions/<files>.json
+  vtrac_predictions_dir: "data/outputs/predictions"
+
+
+Add the V‑TRAC weight and (optional) a pointer where predictions JSON might live. Keep the weight low to begin with.
+
+Why paths.vtrac_predictions_dir? Your V‑TRAC module produces machine‑readable “predictions” JSON intended for learning/bundles; if those are present we can tap them. If not, we derive hot families from the DR features automatically. Either way, no app wiring changes are required.

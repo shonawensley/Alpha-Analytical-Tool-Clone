@@ -1,3 +1,13 @@
+## 2025-09-28 02:00 (UTC) - Positional loader guardrails + pairs window SSOT
+
+- Context: Post-mojibake cleanup left the positional tracker dependent on a non-registered loader module and pairs capped at 100 draws, muting RED/BLUE thresholds.
+- Change:
+  - Restored `_load_project_module` registration (sys.modules) and added a dedicated loader smoke; variant fallback now always resolves Combined/Midday/Evening draws with source captions.
+  - Standardised overdue pair analysis on a 360-draw window (`PAIRS_ANALYSIS_WINDOW`), refreshed the Overdue Pairs caption, and polished positional summary/shortlist styling with XVAR-Cons / Mirror-Echo / Double-Pressure tags.
+- Impact: Positional tracker loads reliably from staged modules, pair colours fire at documented thresholds, and operators can read cross-variant cues without tag ambiguity.
+- Files/Refs: `src/app.py`, `modules/module_d_auxiliary_tools/refactored/positional_tool.py`, `scripts/checks/smoke_project_loader.py`, `docs/AAT9_KIT/AAT9_Preflight_Reference.md`, `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`.
+- Follow-ups: Consider tagging this baseline (AAT9_Aux_Positional_GOLD) and wiring positional hits into Winners logging.
+
 ## 2025-09-26 06:00 (UTC) - Positional tracker UI consolidation
 
 - Context: Operators requested the Aux tracker mirror the training markup (Combined/Midday/Evening stacked) without extra sliders or tabs.
