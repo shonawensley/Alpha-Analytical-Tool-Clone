@@ -1,0 +1,587 @@
+You’re right to ask for a second look. I read your long message, the Codex recap/plan, the screenshots of your analyzer_v2 folder (with score.py, score_2.py, score_3.py), and the V‑TRAC reference log you pasted. Below is a concise validation + a tighter, actionable set of follow‑ups for Codex so it can finish the integration without losing analytical value.
+
+Quick validation of the previous plan
+
+What’s correct (keep):
+
+Analyzer V2 is a read‑only add‑on. It must not change the live Digit‑Reduction engine/page. It reads the reducer’s training logs under
+data/outputs/analysis/digit_reduction/<STATE>/training/ and writes its own artifacts under
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/. That is how AAT9 wiring is defined.
+
+The app’s live Digit‑Reduction flow stays: src/app.py → src/core/module_b_digit_reduction.py (orchestrator/HTML) → long_string_reducer_part1.py (methods A–E,T). It writes the tabbed/stacked HTML + the legacy *_scores.csv to the sibling folder (not analyzer_v2). Analyzer V2 must not collide with those names.
+
+Inputs/outputs and path SSOT are fixed: combined tables live under data/outputs/tables/<STATE>/ (consumed by V‑TRAC/Stable/DR), while Aux/BA consume data/cleaned/*_draws.csv. Don’t cross the streams. Use utils.path_handler to resolve directories.
+
+Your training JSON shape is right. Items include grid_position, sequence_meta, steps[], and final{value,length,unique_digits,is_3value} for own/combined, by method & location. (I spot finals that are empty or *, and step values like 2277*. The scorer must strip non‑digits where needed.)
+
+Where Codex still needs to tighten things:
+
+One canonical scorer. You currently have three files. score_3.py is the most complete “union” (it covers tails, trajectory, pre‑reduction, cross‑section, own↔combined, methods/sets/columns, stability/perms, penalties, clamp). Make score_3.py the canonical scorer score.py and stop importing the other two. Keep the extras for reference only.
+
+A true “features union.” features.py needs a wrapper that merges your Part‑1 per‑item features with the Part‑2 meta‑driven features into one dict, using consistent keys that the scorer already expects.
+
+DataFrame pivots. pivot.py still lacks several Part‑2 pivots (own↔combined deltas, method consensus counts, cross‑section/column/set memory). Those must be added and merged into the row records before scoring.
+
+Package hygiene. The folder screenshot shows init.py, not __init__.py. Without __init__.py, alpha_analytical.digit_reduction.analyzer_v2 isn’t a package. Fix that so from …analyzer_v2 import run works.
+
+V‑TRAC coupling. Keep Analyzer V2 independent of the staged legacy V‑TRAC shim. If you want the vtrac index feature, compute it locally from the final string (0↔5 … 4↔9 family) or read a data file; don’t import the Aux shim. This preserves the clean separation documented in the app wiring.
+
+“Hand‑to‑Codex” instructions (drop‑in)
+
+Paste the block below for Codex. It reflects everything above and is specific enough to implement without guesswork.
+
+✅ Scope & guardrails (do first)
+
+Do not touch these live files:
+src/core/module_b_digit_reduction.py, src/core/long_string_reducer_part1.py, src/app.py, utils/path_handler.py.
+Reason: those power the current page (HTML + legacy CSV) and define the path contracts.
+
+Analyzer V2 reads from:
+data/outputs/analysis/digit_reduction/<STATE>/training/ (JSON/CSV the reducer already wrote).
+Analyzer V2 writes to:
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/ (new artifacts).
+
+No dependency on Aux/BA or the staged V‑TRAC shim; Analyzer V2 stays self‑contained. (It may compute a light v‑trac index locally from finals.)
+
+✅ Package layout (fix names; export run)
+
+alpha_analytical/digit_reduction/analyzer_v2/
+
+__init__.py ← create/replace; export run from pipeline.py and re‑export the module surface (io, features, pivot, score, writers, vtrac_index, types).
+Example:
+
+from .pipeline import run
+__all__ = ["run", "io", "features", "pivot", "score", "writers", "vtrac_index", "types"]
+
+
+types.py — keep
+
+io.py — keep; make sure it uses utils.path_handler for roots
+
+features.py — add compute_features_union(item, cfg) (see mapping below)
+
+pivot.py — add the missing Part‑2 pivots (see list below)
+
+score.py — replace with score_3.py content and delete the imports of other scorers; keep score_2.py/old score.py unimported (reference only)
+
+writers.py — keep
+
+pipeline.py — update to the orchestration below
+
+vtrac_index.py — keep (local mapping 0↔5…4↔9 and tiny helpers)
+
+config.yml — ensure all weights/thresholds/caps used by the final scorer exist (see key list)
+
+✅ Features (unified per‑item mapping)
+
+In features.py implement:
+
+def compute_features_union(item: Item, cfg: dict) -> dict:
+    """
+    Merge Part‑1 per‑item features and Part‑2 meta features into one dict.
+    Be tolerant of missing meta; strip non‑digits when computing counts.
+    """
+    p1 = compute_item_features(item, early_k=cfg["thresholds"]["early_step_k"])
+    p2 = extract_item_core_features(item)          # uses sequence_meta + final
+
+    r = {**p1, **p2}  # p2 overwrites with canonical fields
+
+    # Canonical helper aliases expected by scorer (keep originals too)
+    r["traj.time_to_3"]       = int(r.get("time_to_3", 99))
+    r["traj.post3_span"]      = int(r.get("post3_span", 0))
+    r["terminal_len"]         = int(r.get("terminal_len", r.get("tail.final_len", 0)))
+    r["terminal_unique"]      = int(r.get("terminal_unique", r.get("tail.final_unique", 0)))
+    r["final.value"]          = str(r.get("final.value",""))
+    r["final.len_is1"]        = int(r.get("final.len_is1", 0))
+    r["final.len_is2"]        = int(r.get("final.len_is2", 0))
+    r["final.len_is3"]        = int(r.get("final.len_is3", 0))
+    r["pre.orig_unique"]      = int(r.get("pre.orig_unique", 0))
+
+    # Safety: some finals/steps include "*" or empty -> penalties rely on this
+    # Keep digits-only helpers for stability/permutation features.
+    return r
+
+
+Why: your training JSON proves we’ll see terminals that are "" or "*" and steps like "2277*"; stripping non‑digits avoids exploding uniqueness/permutation counts.
+
+✅ Pivots (add these into pivot.py)
+
+All pivots should return dicts/Series keyed by the same item identity you already use (state, area, section, set, draw, col, method, mode). You can compute them with a DataFrame over the per‑item records for the same state.
+
+Cross‑section (Midday / Evening / Combined) consensus
+
+sec.consensus_any: any agreement on final.value across the 3 sections for the same (area,set,draw,col,method,mode).
+
+sec.consensus_strong: ≥2 sections agree.
+
+sec.pairwise_jaccard: mean Jaccard over the 3 pairs (treat finals as sets of digits).
+
+Own ↔ Combined (per method/location)
+
+mode.agree_core: final.value same between mode="own" and mode="combined".
+
+mode.time_to3_delta_abs: abs(time_to_3_own - time_to_3_combined).
+
+mode.len_delta_abs: abs(terminal_len_own - terminal_len_combined).
+
+Across methods (A–E,T) for a location/mode
+
+methods.core_agreement: count of methods sharing the same final.value.
+
+method.agree_flag: 1 if ≥ thresholds.method_agree_k, else 0.
+
+method.agree_count: the raw count.
+
+Set memory / carry (Set3→2→1, same area/section/draw/col/method/mode)
+
+set.memory_strength: 1 if the Set2/Set1 final appears in Set3 chain, else 0.
+
+set.repeat_new_box: 1 if a new set repeats a previous set’s final in this location.
+
+set.linger: boolean or small count for consecutive sets keeping same final.
+
+Cross‑column agreement
+
+For LS1 use cols 7/6/5; for LS2 use 3/1.
+
+xcol.agree_count: number of other columns in the same area/section/set/draw/method/mode with the same final.
+
+Stability/permutation (per item)
+
+stability.order_cue: reuse your Part‑1 tail order signal.
+
+stability.horiz_persist: fraction of tail steps repeating the same final.
+
+perm.density: keep your normalized 0..1 proxy from Part‑1.
+
+These names match what your score_3.py already expects, so the scorer can be a pure sum of weighted features + penalties.
+
+✅ Scoring (unify on score_3.py)
+
+Make score_3.py the official score.py. It already follows the “config‑first” pattern:
+
+Weights:
+
+Tails / terminal quality: tail.exact_len3, tail.unique2, final.len_is1|2|3
+
+Trajectory: traj.early_terminal, traj.reduction_slope
+
+Pre‑reduction: pre.mirror_pair, pre.core3_hint
+
+Cross‑section: sec.consensus_any|strong|pairwise_jaccard
+
+Own vs combined: mode.agree_core, mode.time_to3_delta_abs, mode.len_delta_abs
+
+Methods/sets/columns: methods.core_agreement, methods.early_fraction, set.memory_strength, set.repeat_new_box, xcol.agree_count
+
+Stability/perms: stability.order_cue, stability.horiz_persist, perm.density, stability.survival_frac3
+
+Penalties:
+
+degenerate.empty (final empty or non‑digit)
+
+pen.tail_wobble (Part‑1 duplicate linger)
+
+mode.only_one (if only own or only combined present)
+
+Caps/clamp: score_min, score_max; scale ×10 → 0..100.
+
+Add a tiny optional V‑TRAC feature (off by default):
+vtrac.v_hot → +w if row is “hot” (from your local vtrac_index helper, or from a predictions JSON if present). Keep the weight near 0.1 initially.
+
+Make sure config.yml includes every key the scorer reads. Your current file is close; add any missing weights/penalties/caps from the bullet list.
+
+✅ Pipeline (one clean entrypoint)
+
+pipeline.py::run(state: str, analysis_root: Optional[Path] = None) -> dict
+
+Resolve paths with utils.path_handler (SSOT):
+
+training_dir = <analysis_root or 'data/outputs/analysis'> / 'digit_reduction' / state / 'training'
+
+out_dir = <analysis_root or 'data/outputs/analysis'> / 'digit_reduction' / state / 'analyzer_v2'
+Create out_dir if absent.
+
+Load training (io.load_training_json(training_dir)); tolerate no‑files → soft fail.
+
+Build per‑item rows via features.compute_features_union(item, cfg).
+
+Materialize a DataFrame; add a stable item key (key) for merges:
+(area, section, set, draw, col, method, mode).
+
+Compute pivots: call new pivot.* helpers and merge the results onto rows.
+
+(Optional) V‑TRAC:
+
+If you have a vtrac_predictions.json under data/outputs/analysis/vtrac/<STATE>/, join v_hot by key.
+
+Else derive a light vtrac_index from final.value via vtrac_index.py and set v_hot=False by default.
+Do not import the staged Aux reference; Analyzer V2 must stay independent.
+
+Score: for each row, call score.score_row(row, W, P, C).
+
+Write artifacts (use writers.py):
+
+features.csv (row‑wise union before pivots)
+
+pivots.csv (each pivot signal per key; or merged rows_enriched.csv)
+
+scored.csv (final rows + score)
+
+own_vs_combined_delta.csv (diagnostic slice)
+
+explanations.json (optional: per‑row why‑it‑scored, with the contributing weights)
+
+config_snapshot.yml (the exact W/P/C used in this run)
+
+Return a dict for UI/logging:
+{"state": state, "out_dir": str(out_dir), "n_items": len(rows), "n_scored": len(scored_df)}.
+
+✅ Edge cases (Codex must handle)
+
+Empty or non‑digit finals ("", "*") → set degenerate.empty=1 and keep the row scoreable with penalties. Strip non‑digits for uniqueness/permutation. (The training JSON shows these cases frequently.)
+
+Missing counterpart for own/combined → compute what you can; set mode.only_one=1.
+
+LS1/LS2 column sets → x‑column logic must use (7,6,5) for LS1 and (3,1) for LS2.
+
+Method consensus uses A–E,T only (ignore any experimental tags if present).
+
+✅ Smoke test (single‑command)
+
+From project root (as per AAT9’s launcher/paths):
+
+python -c "from alpha_analytical.digit_reduction.analyzer_v2 import run; import pathlib; print(run('Connecticut4', analysis_root=pathlib.Path('data/outputs/analysis')))"
+
+
+Expected: features.csv, pivots.csv (or rows_enriched.csv), scored.csv under
+data/outputs/analysis/digit_reduction/Connecticut4/analyzer_v2/, non‑empty. The upstream reducer’s HTML/CSV in the sibling folder remain untouched.
+
+Extra clarity on V‑TRAC reference (so we don’t regress)
+
+We already restored the legacy V‑TRAC constants for Aux/Winners via a canonical shim; that fix lives on the Aux side and is documented with guardrails. Analyzer V2 should not import that shim; it should compute any tiny v‑trac index locally or read a neutral predictions JSON if present. That keeps the clean split the “Live Wiring & Data Paths” doc enforces (tables‑tools vs draws‑tools).
+
+Bottom line
+
+Your previous plan was directionally right; the main gaps were “too many scorers,” missing pivots, and no features‑union.
+
+The block above gives Codex exact file‑level edits and acceptance criteria without deleting any of your work.
+
+It preserves all analytical signals from Part‑1/Part‑2, keeps Analyzer V2 independent, and stays within the AAT9 path contracts your own docs define.
+
+If you want, I can also supply a one‑page integration_notes.txt rewrite (final feature list + keys + artifact names) that matches this plan so Codex has a single truth while coding.
+
+______________________________________
+
+
+Absolutely—let’s lock what you hand to Codex.
+
+Below is a ready‑to‑paste Codex Handoff Packet that builds directly on my “second‑pass validation” response. Give Codex two things:
+
+That previous “Second‑Pass Validation & Additions for Codex” message (the checklist + guardrails you approved).
+
+The packet below (verbatim) — it’s the actionable brief Codex can execute.
+
+You do not need to resend any earlier drafts. The two items above are enough, and they won’t conflict.
+
+DIGIT‑REDUCTION · ANALYZER V2 — CODEX HANDOFF PACKET (FINAL)
+0) Ground truth (don’t change these)
+
+Live app & data contracts
+
+Entry: src/app.py via run_app.bat.
+
+Digit Reduction, Stable, V‑TRAC read combined tables via utils.path_handler; write to data/outputs/analysis/<tool>/<STATE>/.
+
+Aux/Blackapple read only data/cleaned/*_draws.csv (newest‑first) — never the combined string‑tables. Keep BA isolated.
+
+Analyzer V2 scope
+
+Lives at alpha_analytical/digit_reduction/analyzer_v2/.
+
+Reads reducer training artifacts under data/outputs/analysis/digit_reduction/<STATE>/training/.
+
+Writes its own artifacts under data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/.
+
+Do not modify src/core/module_b_digit_reduction.py or the live reducer/page wiring.
+
+1) Files already present (keep all; don’t delete)
+
+alpha_analytical/digit_reduction/analyzer_v2/
+
+__init__.py
+config.yml
+types.py
+io.py
+features.py
+pivot.py
+pipeline.py
+writers.py
+vtrac_index.py          # optional synergy helper (internal)
+score.py                # <-- make this the unified scorer
+score_2.py              # keep as reference, do not import
+score_3.py              # keep as reference, do not import
+integration_notes.txt   # you can update
+
+
+Policy: We’ll unify logic into score.py and leave score_2.py / score_3.py as inert references (no imports, no side‑effects).
+
+2) Work orders (in this exact sequence)
+A) Config normalization (config.yml)
+
+Include every weight/threshold/cap used by both P1 and P2 signals. Use three sections:
+
+thresholds: (e.g., early_step_k, method_agree_k, own_combined_delta_len_max, time_to_3_fast, etc.)
+
+weights: (all positive features; names referenced below)
+
+penalties: (e.g., degenerate.empty, tail.wobble, mode.only_one)
+
+caps: { score_min: 0.0, score_max: 100.0 } (or your preferred range)
+
+Keep keys stable (dot‑names as shown in §C Scoring). No renames beyond mapping noted there.
+
+B) Feature union (features.py)
+
+Keep existing functions, then add:
+
+def compute_features_union(item, thresholds) -> dict:
+    """Merge P1 + P2 per-item features into one row dict; zero-safe."""
+    # 1) Call the P2-style extractor (sequence_meta + finals).
+    f2 = extract_item_core_features(item)  # already present
+    # 2) Call the P1-style calculator (trajectory/tails/permutation).
+    f1 = compute_item_features(item, early_k=thresholds.get("early_step_k", 3))
+    # 3) Merge with P2 taking precedence on overlapping “time_to_3”, “terminal_*”.
+    row = {**f1, **f2}
+    # 4) Derive helpers harmonizing names:
+    #    - traj.time_to_3, post3_span, final fields, etc. (if not set)
+    #    - booleans -> ints where scorer expects numbers
+    # 5) Add any light guards (missing steps/finals -> 0/False)
+    return row
+
+
+The union must expose (non‑exhaustive):
+traj.time_to_3, post3_span, terminal_len, terminal_unique, terminal.is_3value,
+final.value, final.len_is1/2/3, tail.exact_len3, tail.unique2, traj.early_terminal, traj.reduction_slope,
+stability.survival_frac3, stability.order_cue, stability.horiz_persist, perm.density,
+pre.mirror_pair, pre.core3_hint, pre.orig_unique.
+
+C) Pivot consolidation (pivot.py)
+
+Add dataframe‑style helpers in addition to the P1 iter pivots:
+
+Section consensus (Midday / Evening / Combined)
+
+Outputs: sec.consensus_any (0/1), sec.consensus_strong (0/1), sec.pairwise_jaccard (0..1).
+
+Own vs Combined (per method & box)
+
+Outputs: mode.agree_core (0/1 if same final set), mode.time_to3_delta_abs, mode.len_delta_abs, plus a diagnostic CSV *_own_vs_combined_delta.csv.
+
+Across methods (A–E,T)
+
+Outputs: methods.core_agreement (0..1), method.agree_flag (0/1), method.agree_count (int).
+
+Set memory (Set3→2→1 linger/repeat)
+
+Outputs: set.memory_strength, set.repeat_new_box, set.linger.
+
+Cross‑column agreement (LS1 cols 7/6/5; LS2 cols 3/1)
+
+Output: xcol.agree_count (int).
+
+All helpers return a keyed dataframe you can left‑join by (state, area, section, set, draw, col, method, mode).
+
+D) Unified scoring (score.py) — this is the one we’ll use
+
+Implement a single, zero‑safe scorer:
+
+from typing import Dict, Any
+
+def score_row(r: Dict[str, Any],
+              W: Dict[str, float],
+              P: Dict[str, float],
+              C: Dict[str, float]) -> float:
+    s = 0.0
+
+    # tails / terminal quality
+    s += W.get("tail.exact_len3",0.0)       * float(r.get("tail.exact_len3",0))
+    s += W.get("tail.unique2",0.0)          * float(r.get("tail.unique2",0))
+    s += W.get("tail.final_len_is1",0.0)    * float(r.get("final.len_is1",0))
+    s += W.get("tail.final_len_is2",0.0)    * float(r.get("final.len_is2",0))
+    s += W.get("tail.final_len_is3",0.0)    * float(r.get("final.len_is3",0))
+
+    # trajectory
+    s += W.get("traj.early_terminal",0.0)   * float(r.get("traj.early_terminal",0))
+    s += W.get("traj.reduction_slope",0.0)  * float(r.get("traj.reduction_slope",0.0))
+
+    # pre-reduction
+    s += W.get("pre.mirror_pair",0.0)       * float(r.get("pre.mirror_pair",0))
+    s += W.get("pre.core3_hint",0.0)        * float(r.get("pre.core3_hint",0))
+
+    # cross-section
+    s += W.get("sec.consensus_any",0.0)     * float(r.get("sec.consensus_any",0))
+    s += W.get("sec.consensus_strong",0.0)  * float(r.get("sec.consensus_strong",0))
+    s += W.get("sec.pairwise_jaccard",0.0)  * float(r.get("sec.pairwise_jaccard",0.0))
+
+    # own vs combined
+    s += W.get("mode.agree_core",0.0)       * float(r.get("mode.agree_core",0))
+    s += W.get("mode.time_to3_delta_abs",0) * float(r.get("mode.time_to3_delta_abs",0))
+    s += W.get("mode.len_delta_abs",0)      * float(r.get("mode.len_delta_abs",0))
+
+    # across methods / sets / columns
+    s += W.get("methods.core_agreement",0.0)* float(r.get("methods.core_agreement",0.0))
+    s += W.get("methods.early_fraction",0.0)* float(r.get("methods.early_fraction",0.0))
+    s += W.get("method.agree_flag",0.0)     * float(r.get("method.agree_flag",0))
+    s += W.get("method.agree_count",0.0)    * float(r.get("method.agree_count",0))
+    s += W.get("set.memory_strength",0.0)   * float(r.get("set.memory_strength",0.0))
+    s += W.get("set.repeat_new_box",0.0)    * float(r.get("set.repeat_new_box",0))
+    s += W.get("xcol.agree_count",0.0)      * float(r.get("xcol.agree_count",0))
+
+    # stability / perms
+    s += W.get("stability.order_cue",0.0)   * float(r.get("stability.order_cue",0.0))
+    s += W.get("stability.horiz_persist",0.0)* float(r.get("stability.horiz_persist",0.0))
+    s += W.get("perm.density",0.0)          * float(r.get("perm.density",0.0))
+    s += W.get("stability.survival_frac3",0.0)* float(r.get("stability.survival_frac3",0.0))
+
+    # penalties
+    s += P.get("degenerate.empty",0.0)      * (1.0 if r.get("final.value","")=="" else 0.0)
+    s += P.get("pen.tail_wobble",0.0)       * float(r.get("pen.tail_wobble",0.0))
+    s += P.get("mode.only_one",0.0)         * float(r.get("mode.only_one",0.0))
+
+    # optional V‑TRAC synergy (internal mapping only)
+    s += W.get("vtrac.hot_index",0.0)       * float(r.get("v_hot",0))
+
+    lo = C.get("score_min",0.0); hi = C.get("score_max",100.0)
+    return max(lo, min(hi, s*10.0))  # scale ~0..100
+
+
+Mapping note: if P2 uses w_time_to_3value_fast, map that concept to traj.early_terminal using your thresholds.early_step_k.
+
+Do not import score_2.py / score_3.py; fold any missing terms into score.py and keep the others as references only.
+
+E) Pipeline orchestration (pipeline.py)
+
+Implement run(state: str, analysis_root: Path | None = None) -> dict:
+
+Locate training dir: use io.training_dir_for_state(state, analysis_root); error‑friendly if missing.
+
+Load training JSON → list of Item (see types.py).
+
+Build per‑item rows with compute_features_union(item, thresholds).
+
+Join pivots via pivot.* helpers (section, own/combined, methods, sets, xcol).
+
+Optional V‑TRAC hint: use internal vtrac_index.py (no external imports) to annotate v_hot / vtrac_index if you want low‑weight synergy.
+
+Score each row with score_row(row, W, P, C) pulling dicts from config.yml.
+
+Write artifacts via writers.py into
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/:
+
+features.csv (per‑item features)
+
+pivots.csv (merged pivot signals)
+
+scores.csv (final scored rows)
+
+own_vs_combined_delta.csv (diagnostic)
+
+log.json (summary counts + guidance)
+
+Return a dict: { "state": state, "out_dir": "<path>", "n_rows": N, "artifacts": [...] }.
+
+Important: The live reducer’s HTML and original *_digit_reduction_scores.csv remain untouched; Analyzer V2 writes only to …/analyzer_v2/. This matches the app wiring + directory contracts.
+
+3) QA / smoke (Codex can run these)
+
+One‑liner run (from repo root):
+
+python - << 'PY'
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2.pipeline import run
+print(run("Connecticut4", analysis_root=Path("data/outputs/analysis")))
+PY
+
+
+Expect: JSON‑ish dict printed; folder data/outputs/analysis/digit_reduction/Connecticut4/analyzer_v2/ with CSVs + log.
+
+If empty: verify the training folder exists (reducer must have produced training/*.json|*.csv for that state).
+
+4) Path & wiring “anti‑footguns”
+
+Always launch via run_app.bat (pushd to repo root). Imports should resolve to in‑repo modules only.
+
+Do not read string‑tables from Aux/BA; they rely on data/cleaned/*_draws.csv. Keep that boundary intact.
+
+For the analyzer’s tiny V‑TRAC hint, use only vtrac_index.py in this package. Do not import modules.vtrac_reference here (that API is shared with Winners/Aux and has a legacy shim).
+
+5) Optional: BA & Control Center context (so Codex doesn’t regress them)
+
+BA facts to respect while you work on Digit‑Reduction:
+
+BA is draw‑only; inputs are data/cleaned/*_draws.csv with newest‑first strings; it renders on Control Center.
+
+Absolute‑path loader in src/app.py isolates BA from staged aux packages; keep that pattern.
+
+Combined tables → never used by BA (avoid cross‑contamination).
+
+6) Acceptance criteria (what “done” means)
+
+pipeline.run("Connecticut4") writes all Analyzer V2 artifacts under …/analyzer_v2/ without touching the live reducer outputs.
+
+scores.csv contains both P1 and P2 signal families represented through the unified key set used by score.py.
+
+A diagnostic own_vs_combined_delta.csv is present with sensible deltas.
+
+No imports leak outside the repo; no BA/Aux regressions.
+
+7) Notes for future tuning (safe knobs)
+
+Adjust only config.yml weights/thresholds to experiment; treat code as frozen unless a defect is found.
+
+To add V‑TRAC synergy later, raise only weights.vtrac.hot_index in config; no code changes needed.
+
+Quick answers to likely Codex questions
+
+Which scorer should I use? → analyzer_v2/score.py (the unified one). Keep score_2.py / score_3.py as reference only.
+
+Do I need to touch the app page? → No. Analyzer V2 is a side‑writer.
+
+Where do I read/write? → Read: reducer’s …/training/; Write: …/analyzer_v2/.
+
+Can I pull V‑TRAC data from modules? → Not here. Use vtrac_index.py only.
+
+Why this packet is safe (citations)
+
+It follows the AAT9 data contracts and directory layout (combined tables for DR/Stable/V‑TRAC; draws CSV for Aux/BA; analysis outputs under data/outputs/analysis/...).
+
+It preserves BA isolation and Control Center wiring (draws‑only, small ranked candidate list, top‑3 examples, status OFF/WATCH/ALERT), so no cross‑tool regressions.
+
+What you should send Codex
+
+Send both:
+
+My previous “Second‑Pass Validation & Additions for Codex” message.
+
+This Handoff Packet (everything above this line).
+
+That pairing gives Codex the why (validation + guardrails) and the how (exact work orders + acceptance tests) without drowning it in earlier drafts.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

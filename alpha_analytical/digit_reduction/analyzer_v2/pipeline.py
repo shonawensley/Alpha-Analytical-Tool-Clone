@@ -1,91 +1,207 @@
-# alpha_analytical/digit_reduction/analyzer_v2/pipeline.py
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import yaml
-from typing import Dict, Any, List, Optional
-from .io import load_training_json, training_dir_for_state, analyzer_out_dir
-from .features import compute_item_features
-from .pivot import cross_section_pivot, own_vs_combined, set_memory
+
+from .features import compute_features_union
+from .io import analyzer_out_dir, load_training_json, training_dir_for_state
+from .pivot import cross_section_pivot, cross_col_agree, methods_consensus, own_vs_combined, set_memory
 from .score import score_row
-from .writers import write_csv, write_json
-from .vtrac_index import vtrac_set, try_load_hot_families_from_predictions, derive_hot_families_from_dr
+from .types import Item
+from .vtrac_index import VHotSpec, derive_hot_families_from_dr, try_load_hot_families_from_predictions, vtrac_set
+from .writers import write_artifacts
 
-def run(state: str, analysis_root: Path) -> Dict[str, Any]:
-    tdir = training_dir_for_state(analysis_root, state)
-    jpath = next(tdir.glob(f"{state}*digit_reduction_logs.json"))
-    items = load_training_json(jpath)
+SectionKey = Tuple[str, str, str, str, str, int, str, str]
+MethodKey = Tuple[str, str, str, str, str, int, str]
 
-    # load config
-    cfg = yaml.safe_load((Path(__file__).parent/"config.yml").read_text(encoding="utf-8"))
-    W = cfg["weights"]; P = cfg.get("penalties", {}); C = cfg.get("caps", {})
-    K = cfg["thresholds"]["early_step_k"]
-    vpred_dir = Path(cfg.get("paths", {}).get("vtrac_predictions_dir", "data/outputs/predictions"))
 
-    # per-item features
-    per_item_rows: List[Dict[str,Any]] = []
-    for it in items:
-        feats = compute_item_features(it, early_k=K)
-        row = {
-          "state": it.key.state, "area": it.key.area, "section": it.key.section,
-          "set": it.key.set, "draw": it.key.draw, "col": it.key.col,
-          "method": it.key.method, "mode": it.key.mode, **feats
+def _section_key_from_item(item: Item) -> SectionKey:
+    return (
+        item.key.state,
+        item.key.area,
+        item.key.section,
+        item.key.set,
+        item.key.draw,
+        item.key.col,
+        item.key.method,
+        item.key.mode,
+    )
+
+
+def _section_key_from_row(row: Dict[str, Any]) -> SectionKey:
+    return (
+        str(row.get("state", "")),
+        str(row.get("area", "")),
+        str(row.get("section", "")),
+        str(row.get("set", "")),
+        str(row.get("draw", "")),
+        int(row.get("col", 0)),
+        str(row.get("method", "")),
+        str(row.get("mode", "")),
+    )
+
+
+def _cross_section_key(row: Dict[str, Any]) -> Tuple[str, str, str, str, int, str, str]:
+    return (
+        str(row.get("state", "")),
+        str(row.get("area", "")),
+        str(row.get("set", "")),
+        str(row.get("draw", "")),
+        int(row.get("col", 0)),
+        str(row.get("method", "")),
+        str(row.get("mode", "")),
+    )
+
+
+def _method_key(row: Dict[str, Any]) -> MethodKey:
+    return (
+        str(row.get("state", "")),
+        str(row.get("area", "")),
+        str(row.get("section", "")),
+        str(row.get("set", "")),
+        str(row.get("draw", "")),
+        int(row.get("col", 0)),
+        str(row.get("mode", "")),
+    )
+
+
+def _top_candidates(per_item_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    aggregator: Dict[str, Dict[str, Any]] = {}
+    for row in per_item_rows:
+        canon = str(row.get("final.canon3", ""))
+        if not canon:
+            continue
+        entry = aggregator.setdefault(
+            canon,
+            {
+                "final.canon3": canon,
+                "score_sum": 0.0,
+                "hits": 0,
+                "sections": set(),
+                "methods": set(),
+            },
+        )
+        entry["score_sum"] += float(row.get("score", 0.0))
+        entry["hits"] += 1
+        entry["sections"].add(row.get("section"))
+        entry["methods"].add(row.get("method"))
+    board: List[Dict[str, Any]] = []
+    for entry in aggregator.values():
+        board.append(
+            {
+                "final.canon3": entry["final.canon3"],
+                "score_sum": round(entry["score_sum"], 2),
+                "hits": entry["hits"],
+                "sections": len(entry["sections"]),
+                "methods": len(entry["methods"]),
+            }
+        )
+    board.sort(key=lambda r: (-float(r["score_sum"]), -r["hits"]))
+    return board[:200]
+
+
+def _prepare_vhot(state: str, cfg_paths: Dict[str, Any], per_item_rows: List[Dict[str, Any]]) -> VHotSpec:
+    predictions_dir = Path(cfg_paths.get("vtrac_predictions_dir", "data/outputs/predictions"))
+    spec = try_load_hot_families_from_predictions(state, predictions_dir)
+    if spec is not None:
+        return spec
+    return derive_hot_families_from_dr(per_item_rows, min_methods=2, prefer_section="Combined", top_k=5)
+
+
+def run(state: str, analysis_root: Optional[Path | str] = None) -> Dict[str, Any]:
+    cfg_path = Path(__file__).parent / "config.yml"
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    thresholds = cfg.get("thresholds", {})
+    weights = cfg.get("weights", {})
+    penalties = cfg.get("penalties", {})
+    caps = cfg.get("caps", {})
+    paths_cfg = cfg.get("paths", {})
+
+    root_path: Optional[Path] = Path(analysis_root) if analysis_root is not None else None
+    training_dir_for_state(state, root_path)  # raises if missing
+    items, source_path = load_training_json(state, root_path)
+    if not items:
+        raise ValueError(f"No training items available for state {state}")
+
+    per_item_rows: List[Dict[str, Any]] = []
+    for item in items:
+        row: Dict[str, Any] = {
+            "state": item.key.state,
+            "area": item.key.area,
+            "section": item.key.section,
+            "set": item.key.set,
+            "draw": item.key.draw,
+            "col": item.key.col,
+            "method": item.key.method,
+            "mode": item.key.mode,
         }
-        # add vtrac family from final_3 canon (if available)
-        sig = row.get("tail.final_len", 0)
-        # we already recorded many details in feats; use first-3 value step core when available
-        # compute v-family from the earliest ≤3-value snapshot we found
-        # 'compute_item_features' records the canonical first-3 string via helper; reconstruct:
-        # NOTE: if you add the exact core string to features later, replace this logic with it directly.
-        final_sig = it.steps[-1].value if it.steps else ""
-        row["final_3canon"] = "".join(sorted(ch for ch in str(final_sig) if ch.isdigit()))
-        row["vtrac.set"] = vtrac_set(row["final_3canon"]) if row["final_3canon"] else ""
+        row.update(compute_features_union(item, thresholds))
         per_item_rows.append(row)
 
-    # pivots
-    sec = cross_section_pivot(items)
-    mod = own_vs_combined(items)
-    mem = set_memory(items)
+    cross_section = cross_section_pivot(items)
+    own_features, delta_rows = own_vs_combined(items)
+    set_features = set_memory(items)
+    xcol_features = cross_col_agree(items)
+    method_features = methods_consensus(items, int(thresholds.get("early_step_k", 3)))
 
-    # merge pivots
-    def k1(r): return (r["state"], r["area"], r["set"], r["draw"], r["col"], r["method"], r["mode"])
-    def k2(r): return (r["state"], r["area"], r["section"], r["set"], r["draw"], r["col"], r["method"])
-    for r in per_item_rows:
-        r.update(sec.get(k1(r), {}))
-        r.update(mem.get((r["state"], r["area"], r["section"], r["col"], r["method"], r["mode"]), {}))
-        r.update(mod.get(k2(r), {}))
+    for row in per_item_rows:
+        key = _section_key_from_row(row)
+        row.update(cross_section.get(_cross_section_key(row), {}))
+        row.update(own_features.get(key, {}))
+        row.update(set_features.get(key, {}))
+        row.update(xcol_features.get(key, {}))
+        row.update(method_features.get(_method_key(row), {}))
+        row.setdefault("mode.only_one", 0)
+        row.setdefault("mode.agree_core", 0)
+        row.setdefault("mode.time_to3_delta_abs", 0)
+        row.setdefault("mode.len_delta_abs", 0)
+        row.setdefault("set.memory_strength", 0)
+        row.setdefault("set.repeat_new_box", 0)
+        row.setdefault("set.linger", 0)
+        row.setdefault("xcol.agree_count", 0)
+        row.setdefault("methods.core_agreement", 0)
+        row.setdefault("methods.early_fraction", 0.0)
+        row.setdefault("method.agree_count", 0)
 
-    # ---------------- V‑TRAC synergy (hot families) ----------------
-    # 1) prefer predictions JSON if present & mappable
-    hot_spec = try_load_hot_families_from_predictions(state, vpred_dir)
-    if hot_spec is None:
-        # 2) derive from DR rows (graceful fallback)
-        hot_spec = derive_hot_families_from_dr(per_item_rows, min_methods=2, prefer_section="Combined", top_k=5)
+    hot_spec = _prepare_vhot(state, paths_cfg, per_item_rows)
+    fam_strength = hot_spec.detail or {}
+    for row in per_item_rows:
+        canon = str(row.get("final.canon3", ""))
+        vset = vtrac_set(canon) if canon else ""
+        row["vtrac.set"] = vset
+        row["vtrac.v_hot"] = float(fam_strength.get(vset, 0.0))
+        row["vtrac.hot_source"] = hot_spec.source
 
-    # mark v_hot per row (0..1)
-    fam_strength = hot_spec.detail or {f:1.0 for f in hot_spec.families}
-    def _v_hot(r):
-        fam = r.get("vtrac.set","")
-        return float(fam_strength.get(fam, 0.0))
-    for r in per_item_rows:
-        r["vtrac.v_hot"] = _v_hot(r)
-        r["vtrac.hot_source"] = hot_spec.source
+    for row in per_item_rows:
+        row["score"] = score_row(row, weights, penalties, caps, thresholds)
 
-    # scores
-    for r in per_item_rows:
-        r["score"] = score_row(r, W, P, C)
+    top_rows = _top_candidates(per_item_rows)
+    out_dir = analyzer_out_dir(state, root_path)
+    meta = {
+        "state": state,
+        "config_version": cfg.get("version", 0),
+        "items": len(per_item_rows),
+        "source": str(source_path),
+        "thresholds": thresholds,
+        "weights": weights,
+        "penalties": penalties,
+        "vtrac_hot_source": hot_spec.source,
+        "vtrac_hot_families": sorted(hot_spec.families),
+    }
 
-    outdir = analyzer_out_dir(analysis_root, state)
-    write_csv(outdir / f"{state}_analyzer_v2_per_item.csv", per_item_rows)
+    write_artifacts(out_dir, state, per_item_rows, delta_rows, top_rows, meta)
 
-    # Compact top candidates (A/B board style)
-    board = sorted(
-        (r for r in per_item_rows if r.get("final_3canon")),
-        key=lambda r: (-float(r["score"]), r.get("traj.first3", 99))
-    )[:120]  # keep plenty; the UI will slice further
-    write_csv(outdir / f"{state}_analyzer_v2_top_candidates.csv", board)
-
-    # meta (config + provenance + V‑TRAC source)
-    write_json(outdir / f"{state}_analyzer_v2_meta.json", {
-        "config": cfg, "source": str(jpath),
-        "vtrac_hot_source": hot_spec.source, "vtrac_hot_families": sorted(hot_spec.families)
-    })
-    return {"rows": len(per_item_rows), "outdir": str(outdir)}
+    return {
+        "state": state,
+        "rows": len(per_item_rows),
+        "out_dir": str(out_dir),
+        "artifacts": [
+            f"{state}_analyzer_v2_per_item.csv",
+            f"{state}_analyzer_v2_own_vs_combined_delta.csv",
+            f"{state}_analyzer_v2_top_candidates.csv",
+            f"{state}_analyzer_v2_meta.json",
+        ],
+        "config_version": cfg.get("version", 0),
+    }

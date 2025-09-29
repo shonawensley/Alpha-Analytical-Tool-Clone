@@ -1,0 +1,269 @@
+Short answer: Yes—tell Codex to proceed.
+Use the “Revised Work Plan” you pasted plus the GO‑BRIEF below as the authoritative build spec. It locks scope, names, paths, and acceptance checks so Codex can finish the unified Analyzer V2 without stepping on Aux/BA or the live Digit‑Reduction page.
+
+GO‑BRIEF for Codex — Digit‑Reduction · Analyzer V2 (unified)
+0) Scope & invariants (must not change)
+
+Analyzer V2 is read‑only and lives only under alpha_analytical/digit_reduction/analyzer_v2/.
+It reads the reducer’s training artifacts at
+data/outputs/analysis/digit_reduction/<STATE>/training/ and writes to
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/. Do not alter the live reducer or its HTML/CSV.
+
+Do not touch Aux/BA or their loaders. BA & Aux are draws‑only (CSV under data/cleaned/*_draws.csv) and must remain isolated from combined tables and from Analyzer V2.
+
+Follow AAT9 wiring & dirs: V‑TRAC/Stable/DR read combined tables via utils.path_handler; all analyzers write under data/outputs/analysis/<tool>/<STATE>/. Launch via run_app.bat, entry is src/app.py.
+
+V‑TRAC note: Analyzer V2 must not import modules.vtrac_reference. If you surface any V‑TRAC hint, use only the local vtrac_index.py (0↔5,1↔6,…) mapping with a low‑weight flag. This avoids the staged/canonical split that BA/Aux depend on.
+
+1) Package hygiene (first)
+
+Rename init.py → __init__.py. Export a single entry point:
+
+from .pipeline import run  # run(state: str, analysis_root: Path | str | None = None) -> dict
+__all__ = ["io","features","pivot","score","writers","vtrac_index","types","run"]
+
+
+Leave score_2.py / score_3.py in place but unimported (historical reference). The only scorer used by pipeline is score.py.
+
+2) Config (single source of truth)
+
+Keep a single config.yml and ensure every key the scorer references exists. Organize into:
+
+version: 3
+thresholds:
+  early_step_k: 3
+  method_agree_k: 2
+  own_combined_delta_len_max: 1
+  own_combined_delta_step_max: 1
+  time_to_3_fast: 3
+
+caps:
+  score_min: 0.0
+  score_max: 100.0
+
+weights:  # canonical dotted keys (see §4)
+  tail.exact_len3: ...
+  tail.unique2: ...
+  final.len_is1: ...
+  final.len_is2: ...
+  final.len_is3: ...
+  traj.early_terminal: ...
+  traj.reduction_slope: ...
+  pre.mirror_pair: ...
+  pre.core3_hint: ...
+  sec.consensus_any: ...
+  sec.consensus_strong: ...
+  sec.pairwise_jaccard: ...
+  mode.agree_core: ...
+  mode.time_to3_delta_abs: ...
+  mode.len_delta_abs: ...
+  methods.core_agreement: ...
+  methods.early_fraction: ...
+  method.agree_count: ...
+  set.memory_strength: ...
+  set.repeat_new_box: ...
+  xcol.agree_count: ...
+  stability.order_cue: ...
+  stability.horiz_persist: ...
+  stability.survival_frac3: ...
+  perm.density: ...
+  # penalties:
+  pen.degenerate_empty: ...
+  pen.tail_wobble: ...
+  pen.mode_only_one: ...
+  # optional synergy:
+  vtrac.v_hot: 0.0  # keep small; zero-safe
+
+
+No new files; don’t split into multiple YAMLs now.
+
+3) Features (unify Part‑1 + Part‑2)
+
+Implement one public builder in features.py:
+
+def compute_features_union(item: Item, thresholds: dict) -> dict:
+    """
+    Returns a per-item dict with unified keys.
+    - Calls the existing Part‑1 calculator (trajectory/tails/stability/perms/pre).
+    - Calls the Part‑2 extractor (time_to_3, post3_span, terminal_*).
+    - Merges + normalizes keys (dotted names below).
+    - Always zero/False-safe; strip non-digits; handle empty finals.
+    """
+
+
+Canonical keys the scorer expects (non‑exhaustive):
+
+Tails / terminal: tail.exact_len3, tail.unique2, final.len_is1, final.len_is2, final.len_is3, terminal.len, terminal.unique, terminal.is_3value
+
+Trajectory: traj.early_terminal, traj.reduction_slope, traj.time_to_3, post3_span
+
+Pre‑reduction: pre.mirror_pair, pre.core3_hint, pre.orig_unique
+
+Cross‑section (Midday/Evening/Combined): sec.consensus_any, sec.consensus_strong, sec.pairwise_jaccard
+
+Own vs Combined: mode.agree_core (same final), mode.time_to3_delta_abs, mode.len_delta_abs
+
+Across methods / sets / columns: methods.core_agreement, methods.early_fraction, method.agree_count, set.memory_strength, set.repeat_new_box, xcol.agree_count
+
+Stability / perms: stability.order_cue, stability.horiz_persist, stability.survival_frac3, perm.density
+
+Penalties helpers: tail.wobble, degenerate.empty (empty final), mode.only_one (if only own or only combined exists)
+
+Keep the raw sources as hidden helpers if needed (e.g., “_p2.time_to_3”) but output the dotted keys above for scoring.
+
+4) Pivots (add the missing Part‑2 dataframe pivots)
+
+Extend pivot.py with DF‑based helpers and keep the existing iter‑based ones:
+
+own_vs_combined_delta(df_items) -> pd.DataFrame
+Emits per‑(area/section/set/draw/col/method) deltas:
+mode.len_delta_abs, mode.time_to3_delta_abs, mode.agree_core (bool).
+Also return a diagnostic DF that writers.py will save as <STATE>_own_vs_combined_delta.csv.
+
+method_consensus_df(df_items) -> pd.DataFrame
+Adds method.agree_count, methods.core_agreement (fraction), methods.early_fraction.
+
+set_memory_df(df_items), xcol_agree_df(df_items)
+Adds set.memory_strength, set.repeat_new_box, xcol.agree_count.
+
+Merge order inside pipeline: items → base row dicts → join pivots (left‑join by the item key tuple) → fillna(0/False) → score.
+
+5) Scorer (one file, zero‑safe)
+
+Unify into score.py (use your richer score_3.py structure as the base; carry across any P2‑only cues that aren’t there yet).
+
+def score_row(r: dict, W: dict, P: dict, C: dict) -> float:
+    s = 0.0
+    # families
+    s += W["tail.exact_len3"]            * float(r.get("tail.exact_len3", 0))
+    s += W["tail.unique2"]               * float(r.get("tail.unique2", 0))
+    s += W["final.len_is1"]              * float(r.get("final.len_is1", 0))
+    s += W["final.len_is2"]              * float(r.get("final.len_is2", 0))
+    s += W["final.len_is3"]              * float(r.get("final.len_is3", 0))
+    s += W["traj.early_terminal"]        * float(r.get("traj.early_terminal", 0))
+    s += W["traj.reduction_slope"]       * float(r.get("traj.reduction_slope", 0))
+    s += W["pre.mirror_pair"]            * float(r.get("pre.mirror_pair", 0))
+    s += W["pre.core3_hint"]             * float(r.get("pre.core3_hint", 0))
+    s += W["sec.consensus_any"]          * float(r.get("sec.consensus_any", 0))
+    s += W["sec.consensus_strong"]       * float(r.get("sec.consensus_strong", 0))
+    s += W["sec.pairwise_jaccard"]       * float(r.get("sec.pairwise_jaccard", 0))
+    s += W["mode.agree_core"]            * float(r.get("mode.agree_core", 0))
+    s += W["mode.time_to3_delta_abs"]    * float(r.get("mode.time_to3_delta_abs", 0))
+    s += W["mode.len_delta_abs"]         * float(r.get("mode.len_delta_abs", 0))
+    s += W["methods.core_agreement"]     * float(r.get("methods.core_agreement", 0))
+    s += W["methods.early_fraction"]     * float(r.get("methods.early_fraction", 0))
+    s += W["method.agree_count"]         * float(r.get("method.agree_count", 0))
+    s += W["set.memory_strength"]        * float(r.get("set.memory_strength", 0))
+    s += W["set.repeat_new_box"]         * float(r.get("set.repeat_new_box", 0))
+    s += W["xcol.agree_count"]           * float(r.get("xcol.agree_count", 0))
+    s += W["stability.order_cue"]        * float(r.get("stability.order_cue", 0))
+    s += W["stability.horiz_persist"]    * float(r.get("stability.horiz_persist", 0))
+    s += W["stability.survival_frac3"]   * float(r.get("stability.survival_frac3", 0))
+    s += W["perm.density"]               * float(r.get("perm.density", 0))
+    # penalties
+    s += P["pen.degenerate_empty"]       * (1.0 if r.get("final.value","")=="" else 0.0)
+    s += P["pen.tail_wobble"]            * float(r.get("tail.wobble", 0))
+    s += P["pen.mode_only_one"]          * float(r.get("mode.only_one", 0))
+    # optional V‑TRAC synergy
+    s += W.get("vtrac.v_hot", 0.0)       * float(r.get("vtrac.v_hot", 0.0))
+    # clamp
+    lo = C.get("score_min", 0.0); hi = C.get("score_max", 100.0)
+    return float(max(lo, min(hi, s*10.0)))
+
+6) Pipeline (one function, deterministic outputs)
+
+In pipeline.py:
+
+def run(state: str, analysis_root: Path | str | None = None) -> dict:
+    """
+    1) Resolve training dir (io.training_dir_for_state).
+    2) Load training JSON → List[Item].
+    3) Build per-item rows via features.compute_features_union.
+    4) Build a DataFrame; join pivot DFs (own/combined delta, method consensus, set/column).
+    5) Annotate optional V‑TRAC hint: vtrac_index.vtrac_set(final.value) → set id; derive vtrac.v_hot bool/ratio (low-weight).
+    6) Score with score.score_row.
+    7) writers.write_artifacts(...).
+    8) Return summary dict: {state, out_dir, n_rows, artifacts, cfg_version}.
+    """
+
+
+Writers & artifacts (in writers.py):
+
+<STATE>_analyzer_v2_per_item.csv — one row per item with all features + score
+
+<STATE>_analyzer_v2_own_vs_combined_delta.csv — diagnostic DF from pivot
+
+<STATE>_analyzer_v2_meta.json — counts, config snapshot (thresholds/weights/caps), vtrac hint source
+
+(If you prefer to keep a separate “scores.csv”, it can be a thin projection of per‑item, but it is optional.)
+
+7) Keys & joins (to avoid drift)
+
+The item key tuple used to join pivots must be consistent everywhere:
+(area, section, set, draw, col, method, mode) plus any stable IDs you already store.
+
+Fill NA after joins (0 for numbers, False for bools). Never let missing pivot values crash scoring.
+
+8) Validation (smoke)
+
+Run once on a known state (e.g., Connecticut4):
+
+# optional environment check
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+# python one-liner smoke
+python - << 'PY'
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2 import run
+print(run("Connecticut4", analysis_root=Path("data/outputs/analysis")))
+PY
+
+
+Pass criteria:
+
+The function returns a dict with n_rows > 0 and a list of artifacts (3 files above).
+
+.../digit_reduction/Connecticut4/analyzer_v2/ contains the three artifacts.
+
+The per‑item CSV columns include every family listed in §3 and a numeric score.
+
+The delta CSV has sensible numbers for mode.len_delta_abs and mode.time_to3_delta_abs, and a boolean mode.agree_core.
+
+9) Docs you must touch (very small edits)
+
+Update alpha_analytical/digit_reduction/analyzer_v2/integration_notes.txt with:
+
+What run() does, where it reads/writes, the artifact names, and the dotted key families.
+
+Add a single line to the KIT Pitfalls/Live‑Wiring that Analyzer V2 is “read‑only, combined‑tables consumer; outputs under .../analyzer_v2/” (mirrors AAT9 layout docs).
+
+Do not modify BA/Aux docs or code; BA remains draws‑only with its own triggers and candidates.
+
+What to do with your three score*.py files
+
+Use score_3.py as the canonical logic (dotted keys), merge any extra cues you like from score_2.py, and put the final result into score.py.
+
+Leave score_2.py and score_3.py unimported (historical), so there is one scorer on the execution path.
+
+Common pitfalls to avoid (seen in your last run)
+
+__init__.py missing (imports fail silently later) → rename now.
+
+Name drift between config keys and scorer inputs → lock the dotted names exactly as in §3/§4.
+
+Importing V‑TRAC globally → don’t; use only vtrac_index.py here (keeps Aux/BA stable).
+
+Writing over the live DR outputs → always write to .../analyzer_v2/.
+
+Empty finals → guard with degenerate.empty penalty instead of crashing.
+
+Answering your meta‑question
+
+Yes, send Codex:
+
+the Revised Work Plan it drafted, and
+
+this GO‑BRIEF (it adds the exact keys, joins, artifacts, and acceptance tests).
+That pair is sufficient; you don’t need to resend older drafts.
+
+If Codex follows this brief, you’ll get a single, coherent Analyzer V2 that preserves all analytical value from both drops, stays inside AAT9’s wiring, and produces deterministic artifacts without disturbing Aux/BA or the live page.

@@ -1,149 +1,250 @@
 from __future__ import annotations
-from typing import Dict, Any, Iterable, Tuple, List, DefaultDict
-from collections import defaultdict, Counter
+
+from collections import Counter, defaultdict
+from typing import Any, DefaultDict, Dict, Iterable, List, Tuple
+
 from .types import Item
 
-def _key_no_section(k) -> Tuple:
-    return (k.state, k.area, k.set, k.draw, k.col, k.method, k.mode)
+SectionKey = Tuple[str, str, str, str, str, int, str, str]
+ModeLessKey = Tuple[str, str, str, str, str, int, str]
+LocationKey = Tuple[str, str, str, str, str, str, str]
+MethodKey = Tuple[str, str, str, str, str, int, str]
 
-def _key_no_mode(k) -> Tuple:
-    return (k.state, k.area, k.section, k.set, k.draw, k.col, k.method)
 
-def _canon3(s: str) -> str:
-    ds = [c for c in s if c.isdigit()]
-    return "".join(sorted(ds)) if ds else ""
+def _digits(value: str) -> List[str]:
+    return [ch for ch in value if ch.isdigit()]
 
-def _first3(it: Item) -> int:
-    for st in it.steps:
-        if st.is_3value or st.length <= 3 or st.unique_digits <= 2:
-            return st.step
-    return -1
 
-def _first3_core(it: Item) -> str:
-    i = _first3(it)
-    return it.steps[i].value if i >= 0 and it.steps else ""
+def _canon3(value: str) -> str:
+    digits = _digits(value)
+    return "".join(sorted(digits)) if digits else ""
 
-def cross_section_pivot(items: Iterable[Item]) -> Dict[Tuple, Dict[str, Any]]:
-    """
-    Compare Midday / Evening / Combined for same (area,set,draw,col,method,mode).
-    Emits sec.consensus_* and pairwise Jaccard on 3-digit sets.
-    """
-    groups: DefaultDict[Tuple, List[Item]] = defaultdict(list)
-    for it in items:
-        groups[_key_no_section(it.key)].append(it)
 
-    out: Dict[Tuple, Dict[str, Any]] = {}
-    for k, group in groups.items():
-        by_sec = {it.key.section: it for it in group}
-        sets = {sec: set(_canon3(_first3_core(it))) for sec, it in by_sec.items() if _first3_core(it)}
-        vals = list(sets.values())
-        consensus_any = int(len(vals) >= 2 and all(v == vals[0] for v in vals))
-        consensus_strong = int(consensus_any and len(vals) == 3)
+def _first_terminal_entry(item: Item) -> Tuple[int, str, int]:
+    for index, step in enumerate(item.steps):
+        if step.is_3value or step.length <= 3 or step.unique_digits <= 2:
+            return index, step.value, step.step
+    return -1, "", -1
 
-        # average pairwise Jaccard across available sections
-        jacc = 0.0; n = 0
-        secs = list(sets.keys())
-        for i in range(len(secs)):
-            for j in range(i+1, len(secs)):
-                a, b = sets[secs[i]], sets[secs[j]]
+
+def _section_key(item: Item) -> SectionKey:
+    return (
+        item.key.state,
+        item.key.area,
+        item.key.section,
+        item.key.set,
+        item.key.draw,
+        item.key.col,
+        item.key.method,
+        item.key.mode,
+    )
+
+
+def _group_key_no_section(item: Item) -> Tuple[str, str, str, str, int, str, str]:
+    return (
+        item.key.state,
+        item.key.area,
+        item.key.set,
+        item.key.draw,
+        item.key.col,
+        item.key.method,
+        item.key.mode,
+    )
+
+
+def _group_key_no_mode(item: Item) -> ModeLessKey:
+    return (
+        item.key.state,
+        item.key.area,
+        item.key.section,
+        item.key.set,
+        item.key.draw,
+        item.key.col,
+        item.key.method,
+    )
+
+
+def cross_section_pivot(items: Iterable[Item]) -> Dict[Tuple[str, str, str, str, int, str, str], Dict[str, Any]]:
+    groups: DefaultDict[Tuple[str, str, str, str, int, str, str], List[Item]] = defaultdict(list)
+    for item in items:
+        groups[_group_key_no_section(item)].append(item)
+
+    results: Dict[Tuple[str, str, str, str, int, str, str], Dict[str, Any]] = {}
+    for key, group in groups.items():
+        by_section = {member.key.section: member for member in group}
+        canon_sets = {
+            section: set(_canon3(_first_terminal_entry(member)[1]))
+            for section, member in by_section.items()
+            if _first_terminal_entry(member)[1]
+        }
+        signatures = list(canon_sets.values())
+        consensus_any = int(len(signatures) >= 2 and all(sig == signatures[0] for sig in signatures))
+        consensus_strong = int(consensus_any and len(signatures) == 3)
+
+        jaccard = 0.0
+        comparisons = 0
+        sections = list(canon_sets.keys())
+        for i in range(len(sections)):
+            for j in range(i + 1, len(sections)):
+                a = canon_sets[sections[i]]
+                b = canon_sets[sections[j]]
                 if a or b:
-                    jacc += len(a & b)/max(1, len(a | b)); n += 1
-        out[k] = {
+                    jaccard += len(a & b) / max(1, len(a | b))
+                    comparisons += 1
+        first_hits = [entry for entry in (_first_terminal_entry(member)[2] for member in group) if entry >= 0]
+        results[key] = {
             "sec.consensus_any": consensus_any,
             "sec.consensus_strong": consensus_strong,
-            "sec.pairwise_jaccard": (jacc/n) if n else 0.0,
-            "sec.time_to3_min": min((_first3(it) for it in group if _first3(it) >= 0), default=-1),
-            "sec.time_to3_max": max((_first3(it) for it in group if _first3(it) >= 0), default=-1),
+            "sec.pairwise_jaccard": (jaccard / comparisons) if comparisons else 0.0,
+            "sec.time_to3_min": min(first_hits) if first_hits else -1,
+            "sec.time_to3_max": max(first_hits) if first_hits else -1,
         }
-    return out
+    return results
 
-def own_vs_combined(items: Iterable[Item]) -> Dict[Tuple, Dict[str, Any]]:
-    """
-    Within same section: compare own vs combined for same (area,set,draw,col,method).
-    """
-    groups: DefaultDict[Tuple, List[Item]] = defaultdict(list)
-    for it in items:
-        groups[(it.key.state, it.key.area, it.key.section, it.key.set, it.key.draw, it.key.col, it.key.method)].append(it)
-    out: Dict[Tuple, Dict[str, Any]] = {}
-    for k, group in groups.items():
-        by_mode = {it.key.mode: it for it in group}
-        v: Dict[str, Any] = {}
-        a = by_mode.get("own"); b = by_mode.get("combined")
-        if a and b:
-            v["mode.only_one"] = 0
-            v["mode.agree_core"] = int(_canon3(_first3_core(a)) == _canon3(_first3_core(b)) and _first3_core(a) != "")
-            t_a, t_b = _first3(a), _first3(b)
-            v["mode.time_to3_delta_abs"] = abs((t_a if t_a>=0 else 99) - (t_b if t_b>=0 else 99))
-            la = a.steps[-1].length if a.steps else 0
-            lb = b.steps[-1].length if b.steps else 0
-            v["mode.len_delta_abs"] = abs(la - lb)
-        else:
-            v["mode.only_one"] = 1
-        out[k] = v
-    return out
 
-def set_memory(items: Iterable[Item]) -> Dict[Tuple, Dict[str, Any]]:
-    """
-    Same (area,section,col,method,mode) across Set3→2→1.
-    Memory = same canon core appears in ≥2 sets; repeat_new_box proxy = same canon with column change.
-    """
-    groups: DefaultDict[Tuple, List[Item]] = defaultdict(list)
-    for it in items:
-        groups[(it.key.state, it.key.area, it.key.section, it.key.col, it.key.method, it.key.mode)].append(it)
+def own_vs_combined(items: Iterable[Item]) -> Tuple[Dict[SectionKey, Dict[str, Any]], List[Dict[str, Any]]]:
+    groups: DefaultDict[ModeLessKey, List[Item]] = defaultdict(list)
+    for item in items:
+        groups[_group_key_no_mode(item)].append(item)
 
-    out: Dict[Tuple, Dict[str, Any]] = {}
-    order = {"Set3": 3, "Set2": 2, "Set1": 1}
-    for k, group in groups.items():
-        group.sort(key=lambda it: order.get(it.key.set, 0), reverse=True)  # 3→2→1
-        cores = [(it.key.set, _canon3(_first3_core(it))) for it in group if _first3_core(it)]
-        canon_nonempty = [c for _, c in cores if c]
-        mem = int(len(canon_nonempty) >= 2 and len(set(canon_nonempty)) == 1)
-        out[k] = {"set.memory_strength": mem, "set.repeat_new_box": mem}
-    return out
+    features: Dict[SectionKey, Dict[str, Any]] = {}
+    delta_rows: List[Dict[str, Any]] = []
 
-def cross_col_agree(items: Iterable[Item]) -> Dict[Tuple, Dict[str, Any]]:
-    """
-    Cross-column stability within LS area:
-      - LS1: columns 7/6/5
-      - LS2: columns 3/1
-    Emits xcol.agree_count per (area,section,set,draw,method,mode).
-    """
-    groups: DefaultDict[Tuple, List[Item]] = defaultdict(list)
-    for it in items:
-        groups[(it.key.state, it.key.area, it.key.section, it.key.set, it.key.draw, it.key.method, it.key.mode)].append(it)
+    for key, group in groups.items():
+        by_mode = {member.key.mode: member for member in group}
+        own_entry = by_mode.get("own")
+        combined_entry = by_mode.get("combined")
 
-    out: Dict[Tuple, Dict[str, Any]] = {}
-    for k, group in groups.items():
-        # map col -> canon core
-        by_col = {it.key.col: _canon3(_first3_core(it)) for it in group if _first3_core(it)}
-        cols = [7,6,5] if (group[0].key.area == "LS1") else [3,1]
-        sigs = [by_col.get(c, "") for c in cols if c in by_col]
+        own_idx, own_core, own_first_step = _first_terminal_entry(own_entry) if own_entry else (-1, "", -1)
+        combined_idx, combined_core, combined_first_step = _first_terminal_entry(combined_entry) if combined_entry else (-1, "", -1)
+
+        len_delta = 0
+        if own_entry and combined_entry:
+            own_len = own_entry.steps[-1].length if own_entry.steps else 0
+            combined_len = combined_entry.steps[-1].length if combined_entry.steps else 0
+            len_delta = abs(own_len - combined_len)
+        time_delta = 0
+        if own_entry and combined_entry:
+            a = own_first_step if own_first_step >= 0 else 99
+            b = combined_first_step if combined_first_step >= 0 else 99
+            time_delta = abs(a - b)
+        agree_core = int(own_core and combined_core and _canon3(own_core) == _canon3(combined_core))
+        mode_only_one = int(not (own_entry and combined_entry))
+
+        for entry in group:
+            features[_section_key(entry)] = {
+                "mode.only_one": mode_only_one,
+                "mode.agree_core": agree_core,
+                "mode.time_to3_delta_abs": time_delta,
+                "mode.len_delta_abs": len_delta,
+            }
+
+        delta_rows.append(
+            {
+                "state": key[0],
+                "area": key[1],
+                "section": key[2],
+                "set": key[3],
+                "draw": key[4],
+                "col": key[5],
+                "method": key[6],
+                "own.first3_step": own_first_step,
+                "combined.first3_step": combined_first_step,
+                "own.core": _canon3(own_core) if own_core else "",
+                "combined.core": _canon3(combined_core) if combined_core else "",
+                "mode.time_to3_delta_abs": time_delta,
+                "mode.len_delta_abs": len_delta,
+                "mode.agree_core": agree_core,
+                "mode.only_one": mode_only_one,
+            }
+        )
+
+    return features, delta_rows
+
+
+def set_memory(items: Iterable[Item]) -> Dict[SectionKey, Dict[str, Any]]:
+    groups: DefaultDict[Tuple[str, str, str, str, str, str], List[Item]] = defaultdict(list)
+    for item in items:
+        groups[(item.key.state, item.key.area, item.key.section, item.key.col, item.key.method, item.key.mode)].append(item)
+
+    results: Dict[SectionKey, Dict[str, Any]] = {}
+    set_order = {"Set3": 3, "Set2": 2, "Set1": 1}
+    for group_key, group in groups.items():
+        group.sort(key=lambda member: set_order.get(member.key.set, 0), reverse=True)
+        cores = [_canon3(_first_terminal_entry(member)[1]) for member in group if _first_terminal_entry(member)[1]]
+        mem_strength = int(len(cores) >= 2 and len(set(cores)) == 1)
+        linger = int(len(cores) >= 1 and len(set(cores)) == 1)
+        payload = {
+            "set.memory_strength": mem_strength,
+            "set.repeat_new_box": mem_strength,
+            "set.linger": linger,
+        }
+        for member in group:
+            results[_section_key(member)] = payload.copy()
+    return results
+
+
+def cross_col_agree(items: Iterable[Item]) -> Dict[SectionKey, Dict[str, Any]]:
+    groups: DefaultDict[LocationKey, Dict[int, str]] = defaultdict(dict)
+    for item in items:
+        location = (
+            item.key.state,
+            item.key.area,
+            item.key.section,
+            item.key.set,
+            item.key.draw,
+            item.key.method,
+            item.key.mode,
+        )
+        _, core, _ = _first_terminal_entry(item)
+        groups[location][item.key.col] = _canon3(core) if core else ""
+
+    results: Dict[SectionKey, Dict[str, Any]] = {}
+    for location, col_map in groups.items():
+        area = location[1]
+        focus_cols = [7, 6, 5] if area == "LS1" else [3, 1]
+        signatures = [col_map.get(col, "") for col in focus_cols if col in col_map]
         agree_count = 0
-        if len(sigs) >= 2:
-            base = sigs[0]
-            agree_count = sum(1 for s in sigs[1:] if s == base and s != "")
-        out[k] = {"xcol.agree_count": agree_count}
-    return out
+        if signatures:
+            anchor = signatures[0]
+            agree_count = sum(1 for sig in signatures[1:] if sig and sig == anchor)
+        for col, _canon in col_map.items():
+            results[(
+                location[0],
+                location[1],
+                location[2],
+                location[3],
+                location[4],
+                col,
+                location[5],
+                location[6],
+            )] = {"xcol.agree_count": agree_count}
+    return results
 
-def methods_consensus(items: Iterable[Item], early_k: int) -> Dict[Tuple, Dict[str, Any]]:
-    """
-    Across methods for the same location (area,section,set,draw,col,mode):
-      - methods.core_agreement: count of methods sharing the same canon3 core (>= threshold later).
-      - methods.early_fraction: fraction of methods with first3 <= early_k.
-    """
-    groups: DefaultDict[Tuple, List[Item]] = defaultdict(list)
-    for it in items:
-        groups[(it.key.state, it.key.area, it.key.section, it.key.set, it.key.draw, it.key.col, it.key.mode)].append(it)
 
-    out: Dict[Tuple, Dict[str, Any]] = {}
-    for k, group in groups.items():
-        cores = [_canon3(_first3_core(it)) for it in group if _first3_core(it)]
-        core_cnt = Counter([c for c in cores if c])
-        best_agree = max(core_cnt.values()) if core_cnt else 0
-        early_hits = sum(1 for it in group if 0 <= _first3(it) <= early_k)
+def methods_consensus(items: Iterable[Item], early_k: int) -> Dict[MethodKey, Dict[str, Any]]:
+    groups: DefaultDict[MethodKey, List[Item]] = defaultdict(list)
+    for item in items:
+        groups[(
+            item.key.state,
+            item.key.area,
+            item.key.section,
+            item.key.set,
+            item.key.draw,
+            item.key.col,
+            item.key.mode,
+        )].append(item)
+
+    results: Dict[MethodKey, Dict[str, Any]] = {}
+    for key, group in groups.items():
+        cores = [_canon3(_first_terminal_entry(member)[1]) for member in group if _first_terminal_entry(member)[1]]
+        counts = Counter([core for core in cores if core])
+        best = max(counts.values()) if counts else 0
+        early_hits = sum(1 for member in group if 0 <= _first_terminal_entry(member)[2] <= early_k)
         total = len(group) if group else 1
-        out[k] = {
-            "methods.core_agreement": best_agree,
-            "methods.early_fraction": early_hits / total
+        results[key] = {
+            "methods.core_agreement": best,
+            "methods.early_fraction": early_hits / total,
+            "method.agree_count": best,
         }
-    return out
+    return results

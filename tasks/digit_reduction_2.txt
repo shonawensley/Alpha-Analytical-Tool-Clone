@@ -1,0 +1,312 @@
+You’re right to hold the line on not losing any analytical power.
+Below is a single, optimized set of instructions you can paste to Codex so it will merge Part‑1 + Part‑2 into one Analyzer V2, without deleting anything you’ve already created.
+
+I’ve designed this to (a) keep every feature from both drops, (b) resolve name collisions cleanly, and (c) honor the app’s wiring and data contracts so paths don’t bite us. Where I make path/wiring claims I cite your AAT9 docs inline.
+
+INSTRUCTIONS FOR CODEX — “Analyzer V2 (Unified)”
+
+Context (do not change app wiring):
+
+The Digit‑Reduction page keeps calling the live orchestrator (src/core/module_b_digit_reduction.py).
+
+Analyzer V2 is read‑only; it reads the reducer’s training JSON/CSV under
+data/outputs/analysis/digit_reduction/<STATE>/training/ and writes to
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/. This mirrors the canonical app flow and directory contract.
+
+Use existing app guardrails (BAT launcher, System‑Health, Preflight) to avoid path/import drift.
+
+0) Folder (already created) — do not delete anything
+
+alpha_analytical/digit_reduction/analyzer_v2/ should contain:
+
+__init__.py
+config.yml
+types.py
+io.py
+features.py
+pivot.py
+score.py
+writers.py
+pipeline.py
+vtrac_index.py   # keep, even if the weight is low
+integration_notes.txt  # keep
+
+
+We will merge Part‑1 + Part‑2 inside these same files. No file removals.
+
+1) Unify features (keep all signals)
+
+Goal: compute a superset of features by calling both Part‑1 and Part‑2 calculators, then merging their dicts into one row.
+
+Action in features.py:
+
+Keep the Part‑1 per‑item function (e.g., compute_item_features(item, early_k)).
+
+Keep the Part‑2 per‑item function (e.g., extract_item_core_features(item)).
+
+Add a small wrapper:
+
+def compute_features_union(item, early_k: int = 3) -> dict:
+    a = {}
+    try:
+        a.update(extract_item_core_features(item))   # Part‑2
+    except Exception:
+        pass
+    try:
+        a.update(compute_item_features(item, early_k=early_k))  # Part‑1
+    except Exception:
+        pass
+    return a
+
+
+Do not rename any existing keys. We’ll reconcile collisions in the mapping below.
+
+Canonical key mapping (collision‑safe)
+
+When both parts compute the “same idea” with different names, create the unified keys on the row after computing both, leaving originals intact (so nothing is lost):
+
+Cross‑section consensus
+
+Inputs: sec.consensus_any(P1), xsec_consensus(P2)
+
+Unified: xsec.consensus_any = bool(xsec_consensus or sec.consensus_any)
+
+Own↔Combined agreement
+
+Inputs: mode.agree_core(P1), own_combined_agree(P2)
+
+Unified: mode.agree_core = bool(mode.agree_core or own_combined_agree)
+
+Keep deltas: own_combined_delta_len_abs, own_combined_delta_step_abs (P2)
+
+Across methods
+
+Inputs: method_core_agreement(P1 as count/flag), xmethod_agree(P2 as flag)
+
+Unified:
+
+method.agree_flag = bool(xmethod_agree or (method_core_agreement or 0) >= 2)
+
+method.agree_count = max(method_core_agreement or 0, int(xmethod_agree)*2)
+
+Across sets (linger)
+
+Inputs: set.memory_strength/set.repeat_new_box(P1), xset_linger(P2)
+
+Unified: set.linger = bool(xset_linger or (set.memory_strength or 0) > 0)
+
+Cross‑column support
+
+Inputs: xcol_agree(P2)
+
+Unified: col.agree = bool(xcol_agree)
+
+Tail/trajectory & pre‑reduction
+
+Keep all P1 keys (traj.*, tail.*, pre.*, stability.*) as‑is; P2 also has time_to_3, post3_span, terminal_*.
+
+Unified helper fields:
+
+traj.time_to_3 = min([k for k in (first_3value_step, time_to_3) if isinstance(k,(int,float))], default=99)
+
+tail.final_len = terminal_len if "terminal_len" in row else tail.final_len (and same for final_unique)
+
+Add this mapping at the end of per‑row assembly (in pipeline.py after merges; see §3).
+
+2) Unify pivots (section/mode/method/sets/columns)
+
+Action in pivot.py: keep all existing functions from both parts (they have overlapping logic). Ensure you expose these names:
+
+cross_section_pivot(items_or_df) → returns flags for section consensus (M/E/C).
+Accept both item‑iterable (P1) or DataFrame (P2). Detect and branch.
+
+own_vs_combined_delta(df) → DataFrame with own_combined_agree, own_combined_delta_len_abs, own_combined_delta_step_abs. (P2 logic)
+
+method_consensus(df) → at location granularity, supply method_agree (count) + xmethod_agree (flag). (P2)
+
+cross_column_agreement(df) → add xcol_agree (present on ≥2 target columns). (P2)
+
+across_set_linger(df) → add xset_linger (present in ≥2 of Set3→2→1). (P2)
+
+set_memory(items) → legacy P1 (kept) returning set.memory_strength & set.repeat_new_box.
+
+Rationale: keeping both lets scoring consume all evidence; we later unify names (see §1 mapping).
+
+3) Orchestrator (merge both passes, one output)
+
+Action in pipeline.py: use the Part‑2 runner shape (pandas‑first) but also call the Part‑1 item loop. Concrete steps:
+
+Load training JSON (and/or steps CSV) via your current io.py.
+
+Build per‑item rows with the union wrapper:
+
+rows = [compute_features_union(it, early_k=cfg["thresholds"].get("early_step_k",3)) for it in items]
+df = pd.DataFrame([r for r in rows if r])
+
+
+Pivot joins (P2 helpers on df):
+
+Section consensus → xsec_consensus
+
+Own↔Combined delta → own_combined_agree, own_combined_delta_*
+
+Method consensus → method_agree + xmethod_agree
+
+Cross‑column → xcol_agree
+
+Across sets (linger) → xset_linger
+
+P1 pivots (if available):
+
+set.memory_strength, set.repeat_new_box (merge on matching keys)
+
+Apply the mapping in §1 to create unified fields (keep originals too).
+
+Score with the unified scorer (see §4).
+
+Write artifacts to
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/ (CSV/JSON/HTML).
+This coexists safely with the live reducer outputs and follows app contracts.
+
+4) Scoring (accept both key sets; zero‑safe)
+
+Action in score.py: keep Part‑2’s structure but extend it to also read Part‑1 weights/penalties. Implement:
+
+def score_row(row: dict, W: dict, T: dict) -> float:
+    s = 0.0
+    # P2 core
+    s += W.get("w_time_to_3value_fast",0)   * int(row.get("time_to_3",99) <= 3)
+    s += W.get("w_stabilizes_after_3",0)    * int(row.get("post3_span",0) >= 1)
+    s += W.get("w_terminal_is_3value",0)    * int(row.get("terminal_unique",9) <= 3 and row.get("terminal_len",0) in (1,2,3))
+    s += W.get("w_terminal_unique_1",0)     * int(row.get("terminal_unique",9) == 1)
+    s += W.get("w_terminal_unique_2",0)     * int(row.get("terminal_unique",9) == 2)
+    s += W.get("w_terminal_len_3",0)        * int(row.get("terminal_len",0) == 3)
+    s += W.get("w_pivot_tightens",0)         * int(row.get("pivot_tightens", False))
+    s += W.get("w_pivot_same_final_set",0)   * int(row.get("pivot_same_final_set", False))
+    s += W.get("w_pivot_earlier_first3",0)   * int(row.get("pivot_time_delta", 0) > 0)
+    s += W.get("w_set_carry",0)              * int(row.get("set_carry", False) or row.get("set.linger", False))
+    s += W.get("w_box_carry",0)              * int(row.get("box_carry", False))
+    s += W.get("w_method_consensus2",0)      * int(row.get("method_agree",0) >= 2 or row.get("method.agree_flag", False))
+    s += W.get("w_method_consensus3",0)      * int(row.get("method_agree",0) >= 3)
+    s += W.get("w_method_consensus4",0)      * int(row.get("method_agree",0) >= 4)
+    s += W.get("w_prer_pure3value",0)        * int(row.get("pre.orig_unique",99) <= 3)
+    s += W.get("w_permutation_density",0)    * (row.get("perm_count",0) / 6.0)
+
+    # P1 extras
+    s += W.get("tail.exact_len3",0)          * int(row.get("tail.exact_len3",0)==1)
+    s += W.get("tail.unique2",0)             * int(row.get("tail.unique2",0)==1)
+    s += W.get("traj.early_terminal",0)      * int(row.get("traj.early_terminal",0)==1)
+    s += W.get("traj.reduction_slope",0)     * float(row.get("traj.reduction_slope",0.0))
+    s += W.get("pre.mirror_pair",0)          * int(row.get("pre.mirror_pair",0)==1)
+    s += W.get("stability.order_cue",0)      * float(row.get("stability.order_cue",0.0))
+    s += W.get("stability.horiz_persist",0)  * float(row.get("stability.horiz_persist",0.0))
+    # penalties (P1)
+    s += W.get("penalties.tail.wobble",0)    * float(row.get("tail.wobble",0.0))
+    s += W.get("penalties.mode.only_one",0)  * float(row.get("mode.only_one",0.0))
+    s += W.get("penalties.degenerate.empty",0)* float(row.get("degenerate.empty",0.0))
+
+    # Light V‑TRAC synergy (optional)
+    s += W.get("w_vtrac_hot_index",0)        * int(row.get("v_hot", False))
+
+    return float(s)
+
+
+Design: If a key is missing it contributes 0, so both parts can co‑exist. No feature is dropped.
+
+5) Config (merge; never delete keys)
+
+Action in config.yml: merge both sets of weights; keep all prior keys.
+Add any missing Part‑1 keys under the same names (tail.exact_len3, pre.mirror_pair, etc.).
+Keep Part‑2 thresholds and toggles. This file remains the only place you tune weights.
+
+6) Writers & outputs (no collisions)
+
+Action in writers.py and pipeline.py:
+Write these artifacts per state to …/analyzer_v2/:
+
+*_analyzer_v2_per_item.csv — the merged per‑row table (all features)
+
+*_own_vs_combined_delta.csv — diagnostic pivot (P2)
+
+*_analyzer_v2_top_candidates.csv — rollup by final set or signature
+
+*_analyzer_v2_meta.json — config snapshot + source path
+
+*_analyzer_v2_summary.html — tiny human summary (optional)
+
+This does not overwrite the page’s existing HTML/CSV, matching your app’s separation of concerns.
+
+7) Name‑drift guard (imports)
+
+Action in __init__.py: export only these:
+
+__all__ = ["io", "features", "pivot", "score", "writers", "pipeline", "vtrac_index"]
+from .pipeline import run
+
+
+Avoid exposing any legacy aliases (e.g., crosspivot). This prevents duplicated imports later.
+
+8) Path & wiring invariants (Codex must respect)
+
+Launch the app via run_app.bat (repo root → streamlit run src/app.py).
+
+Use utils.path_handler where available to resolve tables/ and analysis/ dirs; keep analyzer outputs under …/digit_reduction/<STATE>/analyzer_v2/.
+
+Dev health: keep/read the DEV‑only “System Health” expander and the .codex/preflight.ps1 script to surface cwd, Python, and data roots when anything looks off.
+
+Aux/BA isolation stays as‑is (draws‑CSV only); this analyzer does not touch Aux or Control Center.
+
+9) Feature‑parity matrix (sanity list)
+Family	Part‑1 signal(s)	Part‑2 signal(s)	Unified key(s)
+Section consensus	sec.consensus_any	xsec_consensus	xsec.consensus_any
+Own↔Combined	mode.agree_core	own_combined_agree, deltas	mode.agree_core, own_combined_delta_*
+Method agreement	method_core_agreement	xmethod_agree, method_agree	method.agree_flag, method.agree_count
+Set memory	set.memory_strength, set.repeat_new_box	xset_linger	set.linger (+ keep originals)
+Cross column	—	xcol_agree	col.agree
+Trajectory/Tail	traj.*, tail.*	time_to_3, post3_span, terminal_*	both; plus traj.time_to_3
+Pre‑reduction	pre.*	pre_* (subset)	keep all
+Stability/Perm	stability.*	perm_count, triple types	keep all
+
+(Table intentionally terse — prose stays in body per your formatting rules.)
+
+10) Minimal tests Codex must run (Windows)
+
+Preflight (fast):
+powershell -NoProfile -File .codex\preflight.ps1 -State "Connecticut4" — confirm repo root, Python, and paths look right.
+
+Analyzer run (headless):
+
+python -c "from alpha_analytical.digit_reduction.analyzer_v2 import run; \
+import pathlib; print(run('Connecticut4', analysis_root=pathlib.Path('data/outputs/analysis')))"
+
+
+Artifacts present: under
+data/outputs/analysis/digit_reduction/Connecticut4/analyzer_v2/
+expect the CSV/JSON listed in §6.
+
+Smoke audit: open *_own_vs_combined_delta.csv and confirm some rows with own_combined_agree = True and reasonable deltas.
+
+11) Common pitfalls Codex must avoid (and fixes)
+
+Import drift / wrong package source → only import Analyzer V2 from alpha_analytical/.... App entry remains src/app.py. Launch via BAT to pin cwd.
+
+Writing into the wrong folder → never write under the training/ folder or overwrite reducer HTML/CSV; always write to analyzer_v2/.
+
+Assuming Aux/BA tables → Analyzer V2 does not read data/cleaned/*_draws.csv; it reads the training JSON/CSV under Digit‑Reduction’s analysis tree. Keep Aux/BA isolated per docs.
+
+Big edits to app → none required. Analyzer V2 is additive; UI changes are optional later.
+
+12) One‑liner you can paste at the top of integration_notes.txt
+
+Analyzer V2 (Unified, 2025‑09‑28):
+Merge Part‑1 + Part‑2 without removing files. features.py exposes compute_features_union(); pivot.py provides both legacy and pandas pivots. pipeline.py loads training JSON, computes both sets of features, applies unified mapping, then scores with a zero‑safe scorer that accepts every key from both configs. Outputs live in …/digit_reduction/<STATE>/analyzer_v2/ and never overwrite reducer HTML/CSV. Launch & paths follow AAT9 App‑Flow and Architecture docs; use Preflight/System‑Health for drift.
+
+Why this resolves your concern
+
+We do not discard Part‑1 or Part‑2 logic. We compute both, keep every key, and then standardize a few unified names so scoring and rollups are stable.
+
+The scorer is zero‑safe: any missing signal simply contributes 0, so nothing breaks if one side didn’t compute a field for a given state/item.
+
+Paths/imports are locked to the AAT9 contracts so Codex won’t fight “mystery path bugs.”
+
+If you want, I can also hand you a ready‑to‑paste config.yml merger block next, but with the instructions above Codex can harvest every existing key from your two configs and keep them all.

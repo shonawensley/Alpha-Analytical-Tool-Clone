@@ -16,7 +16,7 @@ Checklist‑gated “Winners Logger.” Disable posting winners until {core, aux
 
 Health everywhere in dev. A small System Health expander on each page prints: cwd, sys.executable, and __file__ for modules.blackapple, modules.analyze_pairs, modules.vtrac_reference, plus the resolved CSV path per state. This catches 95% of “it’s using the wrong file” issues instantly.
 
-Smoke tests > long debugging. Ship 5 quick checks (listed below). Fail fast with a clear message if any drift is detected.
+Ensure custom loaders register staged modules in sys.modules (positional tool regression); keep `python scripts/checks/smoke_project_loader.py` in the preflight bundle.
 
 1) Canonical repo layout (use this; don’t improvise)
 repo_root/
@@ -673,3 +673,9 @@ Combined draw exports
 
 Legacy Aux reminder: keep the files listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md (boxed VTRAC reference and analyze_pairs). If Aux starts reporting missing BOXED/VTRAC_DISPLAY, run `python scripts/checks/smoke_aux_vtrac.py` and restore those files before archiving further.
 
+Digit-Reduction Analyzer V2
+- Read-only consumer: only touch alpha_analytical/digit_reduction/analyzer_v2/; never edit the live reducer or src/app.py wiring from this workspace.
+- IO contract: inputs come from data/outputs/analysis/digit_reduction/<STATE>/training/, outputs must stay in analyzer_v2/ and use the unified artifact names (per_item, own_vs_combined_delta, top_candidates, meta).
+- Scoring parity: config.yml is the single source of truth. If a feature key drifts from the scorer, fix the key or weight rather than patching individual callers.
+- VTRAC hints: derive via analyzer_v2.vtrac_index only; do not import staged modules.vtrac_reference from Aux.
+- Guard with preflight: run .codex/preflight.ps1 before edits and use the smoke command documented in integration_notes.txt after each change.

@@ -35,3 +35,8 @@ Synthesized from PITFALLS and recent integration experiences.
 
 \n## Aux Staging Legacy Dependency\n- Symptom: Aux shows `cannot import name BOXED_LABEL_LOOKUP` or Dev Health reports staged modules missing.\n- Fix: Run `python scripts/checks/smoke_aux_vtrac.py`; restore the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` before archiving.
 
+## Analyzer V2 Guardrails
+- Treat `alpha_analytical/digit_reduction/analyzer_v2/` as read-only for the live page; it only consumes reducer training logs and emits artifacts to `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`.
+- Keep feature key names aligned with `config.yml` (`final.canon3`, `method.agree_count`, etc.) so the scorer remains zero-safe; adjust the config instead of patching callers.
+- VTRAC synergy must go through `analyzer_v2.vtrac_index` (predictions JSON preferred, derived fallback). Do not import staged `modules.vtrac_reference` from Aux.
+- Run `.codex/preflight.ps1 -State <STATE>` before edits and the documented python smoke command after changes to confirm artifacts are fresh and scores populate.

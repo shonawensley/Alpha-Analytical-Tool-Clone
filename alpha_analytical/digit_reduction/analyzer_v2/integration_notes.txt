@@ -1,109 +1,41 @@
-3) UPDATE — score.py
+Analyzer V2 (Unified) � 2025-09-28
+---------------------------------
+Entry point: from alpha_analytical.digit_reduction.analyzer_v2 import run
+Usage: run(state: str, analysis_root: Path | str | None = None) -> dict
 
-Add one line to incorporate v_hot (0..1) into the composite.
+Inputs:
+- Reads reducer training artifacts under data/outputs/analysis/digit_reduction/<STATE>/training/
+  (expects *digit_reduction_logs.json + companion CSV written by the live module).
 
-4) UPDATE — pipeline.py
+Outputs (all under .../<STATE>/analyzer_v2/):
+- <STATE>_analyzer_v2_per_item.csv              # unified per-item features + score
+- <STATE>_analyzer_v2_own_vs_combined_delta.csv # location-level diagnostics
+- <STATE>_analyzer_v2_top_candidates.csv        # high-score rollup by canon
+- <STATE>_analyzer_v2_meta.json                 # config snapshot + VTRAC provenance
 
-Hook V‑TRAC family features into the flow (no changes to your reducer or app). We add:
+Feature families preserved:
+- Trajectory, tail, stability, permutation density, pre-reduction hints
+- Cross-section consensus (Midday/Evening/Combined) with Jaccard + timing spread
+- Own vs combined deltas (time-to-3, length, core agreement, missing-mode flag)
+- Across-method agreement (counts + early fraction) and cross-column alignment
+- Set memory/linger for Set3?2?1 continuity
+- Optional VTRAC synergy via analyzer_v2.vtrac_index (predictions JSON preferred, DR-derived fallback)
 
-vtrac_set for each row
+Scoring:
+- Config-driven weights/caps in config.yml (version 3) applied through score.score_row
+- Penalties: degenerate.empty, tail.wobble, mode.only_one (zero-safe when fields missing)
+- VTRAC boost keyed by weights['vtrac.v_hot'] (default 0.5; set to 0 to disable)
 
-a hot‑family finder (prefers predictions JSON if available; else derives from DR features)
+Smoke (from repo root, after reducer ran for the state):
+python -c "from pathlib import Path; from alpha_analytical.digit_reduction.analyzer_v2 import run; print(run('Connecticut4', analysis_root=Path('data/outputs/analysis')))"
 
-a normalized v_hot per row (0..1) used by scoring
+Guardrails:
+- Do NOT modify src/core/module_b_digit_reduction.py or the live reducer � Analyzer V2 is read-only
+- Always resolve directories through utils.path_handler (pipeline handles this by default)
+- No imports from modules.vtrac_reference; rely solely on analyzer_v2.vtrac_index helpers
+- Per-item rows soft-fail (0/False) when signals are absent to avoid regression in sparse data
 
-
-5) (Optional) DEV‑only UI shim for the Digit Reduction page
-
-Drop this tiny block near your Digit‑Reduction page controls to run Analyzer V2 on a state and link out to the CSVs. Keep it behind your existing dev‑gating “System Health” habit so day‑to‑day users see no new controls until you’re ready.
-
-# --- in src/app.py, inside show_digit_reduction_page(state) ---
-import os
-from pathlib import Path
-import streamlit as st
-
-def _run_analyzer_v2(state: str):
-    from alpha_analytical.digit_reduction.analyzer_v2.pipeline import run as run_v2
-    from utils.path_handler import get_analysis_dir
-    analysis_root = Path(get_analysis_dir("digit_reduction", state)).parent  # .../analysis/digit_reduction
-    return run_v2(state, analysis_root)
-
-with st.expander("Analyzer V2 (DEV)", expanded=False):
-    if st.button("Run Analyzer V2 for this state", type="primary"):
-        info = _run_analyzer_v2(state)
-        st.success(f"Analyzer V2 wrote outputs → {info['outdir']}")
-    out_dir = Path("data/outputs/analysis/digit_reduction") / state / "analyzer_v2"
-    if out_dir.exists():
-        for p in sorted(out_dir.glob(f"{state}_analyzer_v2_*.csv")):
-            st.markdown(f"• [{p.name}]({p.as_posix()})")
-        meta = out_dir / f"{state}_analyzer_v2_meta.json"
-        if meta.exists():
-            st.markdown(f"• [{meta.name}]({meta.as_posix()})  \n<small>V‑TRAC source is recorded inside</small>", unsafe_allow_html=True)
-
-
-This follows your app’s canonical layout and dev‑gating approach (single Streamlit app; System‑Health style helpers; data contracts by page). No changes to the reducer page wiring are required.
-
-Why this honors (not reduces) your original analytical power
-
-Cross‑chart & own↔combined are first‑class: We still compute section consensus and own↔combined agreement/deltas exactly where you asked—those features remain part of the score and are now joined by a light V‑TRAC prior.
-
-Set/box memory and permutation clues remain: No removal—Part 1 features, penalties, and caps are unchanged; V‑TRAC only adds a small, tunable boost where families line up.
-
-V‑TRAC synergy is optional and low‑weight: If the predictions JSONs exist, we’ll use them; if not, we compute hot families from DR evidence so you can start learning end‑to‑end immediately. This mirrors the V‑TRAC module’s “predictions JSON / winners bundle” design—clean, machine‑readable, and future‑ML friendly.
-
-Stable, app‑aligned IO: Reads the reducer’s training JSON under …/training/ and writes analyzer artifacts under …/analyzer_v2/, matching your Live‑Wiring and Dir‑Layout docs.
-
-Quick smoke test (CLI)
-
-From repo root, after you run the reducer for a state (so …/training/<STATE>digit_reduction_logs.json exists):
-
-python -c "from pathlib import Path; from alpha_analytical.digit_reduction.analyzer_v2.pipeline import run; print(run('Connecticut4', Path('data/outputs/analysis/digit_reduction')))"
-
-
-You should see:
-
-…/digit_reduction/Connecticut4/analyzer_v2/Connecticut4_analyzer_v2_per_item.csv
-
-…_top_candidates.csv
-
-…_meta.json (records whether V‑TRAC came from predictions or was derived)
-
-This flow mirrors the app’s current data contracts & paths, so you can wire the optional UI button later with confidence.
-
-Where this fits with the rest of AAT9 (for your peace of mind)
-
-Digit Reduction page: unchanged entry (show_digit_reduction_page) still calls the orchestrator that renders the big scroller HTML + legacy CSV. Analyzer V2 sits beside it and can be surfaced behind a DEV expander as shown above.
-
-V‑TRAC Analyzer: continues to own its UI and outputs; if its predictions JSON is present in data/outputs/predictions/, Analyzer V2 will automatically use it. Otherwise, DR‑derived families kick in.
-
-Stable Pattern: unchanged; uses the same V‑TRAC family mapping, so concepts align across modules.
-
-System‑Health / Preflight: your DEV‑gated health blocks and .codex/preflight.ps1 remain the one‑click way to verify environment, imports and inputs—use them if anything looks off.
-
-Operator notes (document & process)
-
-After your first successful run:
-
-Add a short line to Unified Changelog and a brief Checkpoint Log note (“Analyzer V2 Part 2: V‑TRAC synergy; adds vtrac.v_hot into score; no UI change; outputs live under analyzer_v2/”).
-
-This matches the guardrails in your Integration/Hardening notes and App‑Flow addendum.
-
-Next (when you say “Part 3”)
-
-A thin HTML summary for Analyzer V2 (one page with sortable tables + highlights) and
-
-a tiny pytest‑style smoke test that loads a real *_digit_reduction_logs.json (like your Connecticut4_digit_reduction_log1.json you just shared) and asserts basic invariants (non‑empty rows; vtrac.set computed; scores monotone under weight tweaks).
-
-If you want, we can also surface a DEV‑only System‑Health expander on the Digit Reduction page listing the analyzer’s expected inputs/outputs (consistent with your Health‑Helpers pattern).
-
-TL;DR
-
-No power lost: Part 2 only adds V‑TRAC‑aligned signals.
-
-Safe & app‑aligned: reads your reducer’s training JSON, writes to analyzer_v2/, no collisions.
-
-Config‑first: one low‑risk weight you can tune later—or let ML learn.
-
-Graceful: uses V‑TRAC predictions JSON if present; otherwise derives hot families from DR evidence.
-
-If you’re happy with this, say “Proceed Part 3,” and I’ll deliver the HTML summary + small tests exactly in this style.
+Documentation & Ops:
+- Log new analyzer runs in Unified Changelog / Checkpoint Log
+- Keep .codex/preflight.ps1 + System Health expander as the pre-run check (cwd, python, data roots)
+- Optional: add DEV-only Streamlit expander to trigger run() and list artifacts (see FIX_61/62 for snippet)

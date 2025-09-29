@@ -20,7 +20,8 @@ def training_dir_for_state(state: str, analysis_root: Optional[Path] = None) -> 
     if ph and hasattr(ph, "get_analysis_dir"):
         base = Path(ph.get_analysis_dir("digit_reduction", state))
     else:
-        base = (analysis_root or Path("data/outputs/analysis/digit_reduction") / state)
+        root = analysis_root if analysis_root is not None else Path("data/outputs/analysis/digit_reduction")
+        base = Path(root) / state
     return Path(base) / "training"
 
 def analyzer_out_dir(state: str, analysis_root: Optional[Path] = None) -> Path:
@@ -31,7 +32,8 @@ def analyzer_out_dir(state: str, analysis_root: Optional[Path] = None) -> Path:
     if ph and hasattr(ph, "get_analysis_dir"):
         base = Path(ph.get_analysis_dir("digit_reduction", state))
     else:
-        base = (analysis_root or Path("data/outputs/analysis/digit_reduction") / state)
+        root = analysis_root if analysis_root is not None else Path("data/outputs/analysis/digit_reduction")
+        base = Path(root) / state
     out = Path(base) / "analyzer_v2"
     out.mkdir(parents=True, exist_ok=True)
     return out
@@ -39,40 +41,49 @@ def analyzer_out_dir(state: str, analysis_root: Optional[Path] = None) -> Path:
 def _load_json(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
-def load_training_json(state: str, analysis_root: Optional[Path] = None) -> List[Item]:
+def load_training_json(state: str, analysis_root: Optional[Path] = None) -> Tuple[List[Item], Path]:
     tdir = training_dir_for_state(state, analysis_root)
-    # canonical name like: <STATE>digit_reduction_logs.json
-    f = None
-    for cand in tdir.glob(f"*{state}*digit_reduction*logs*.json"):
-        f = cand; break
-    if f is None:
+    target: Optional[Path] = None
+    for candidate in sorted(tdir.glob(f"*{state}*digit_reduction*logs*.json")):
+        target = candidate
+        break
+    if target is None:
         raise FileNotFoundError(f"No training JSON under {tdir}")
-    data = _load_json(f)
+    data = _load_json(target)
     items: List[Item] = []
-    for it in data.get("items", []):
+    for payload in data.get("items", []):
         key = Key(
-            state=it["state"], area=it["area"], section=it["section"],
-            set=it["set"], draw=it["draw"], col=int(it["col"]),
-            method=it["method"], mode=it["mode"]
+            state=payload["state"],
+            area=payload["area"],
+            section=payload["section"],
+            set=payload["set"],
+            draw=payload["draw"],
+            col=int(payload["col"]),
+            method=payload["method"],
+            mode=payload["mode"],
         )
-        steps = [Step(**s) for s in it.get("steps", [])]
-        items.append(Item(
-            key=key,
-            grid_position=it.get("grid_position", {}),
-            sequence_meta=it.get("sequence_meta", {}),
-            steps=steps,
-            final=it.get("final", {})
-        ))
-    return items
+        steps = [Step(**step) for step in payload.get("steps", [])]
+        items.append(
+            Item(
+                key=key,
+                grid_position=payload.get("grid_position", {}),
+                sequence_meta=payload.get("sequence_meta", {}),
+                steps=steps,
+                final=payload.get("final", {}),
+            )
+        )
+    return items, target
 
 def write_csv(path: Path, rows: List[Dict[str, Any]]):
     if not rows:
-        path.write_text("", encoding="utf-8"); return
-    cols = sorted({k for r in rows for k in r.keys()})
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        for r in rows: w.writerow(r)
+        path.write_text("", encoding="utf-8")
+        return
+    columns = sorted({key for row in rows for key in row.keys()})
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
 
 def write_json(path: Path, obj: Any):
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
