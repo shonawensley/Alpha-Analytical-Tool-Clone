@@ -1,0 +1,346 @@
+Awesome—let’s ship PART 2 of the Winners overlay for Digit‑Reduction.
+This extends Part 1 with:
+
+Multi‑variant runs in one call (Combined/Midday/Evening).
+
+A Winners “stamp” artifact that your Winners Logger (and any ML) can ingest.
+
+A compact flags CSV keyed by the DR identities (area/section/set/draw/col/method/mode) so Codex can left‑join these flags onto the analyzer’s per‑item rows without modifying the reducer or pipeline.
+
+An optional DEV expander to run all three variants from the page.
+
+Everything remains read‑only and lives inside Analyzer V2.
+
+1) Update winners_overlay.py (add batch + stamps + flags)
+
+Put this below the code you added in Part 1 (same file). It reuses the Part‑1 helpers.
+
+# --- PART 2 extensions: batch run + stamps + flags ---------------------------
+
+from typing import Literal
+import datetime as dt
+import csv
+
+Variant = Literal["Combined","Midday","Evening"]
+
+def _ensure(out: Path) -> Path:
+    out.parent.mkdir(parents=True, exist_ok=True); return out
+
+def _relative(p: Path) -> str:
+    try:
+        return str(p)
+    except Exception:
+        return str(p)
+
+def _counts_from_map(wmap: Dict[str, Any]) -> Dict[str, int]:
+    items = wmap.get("items", [])
+    return {
+        "items_total": len(items),
+        "items_exact_any": sum(1 for r in items if (r.get("earliest_exact_step", -1) >= 0 or r.get("final_exact_match"))),
+        "items_vtrac_any": sum(1 for r in items if (r.get("earliest_vtrac_step", -1) >= 0 or r.get("final_vtrac_match"))),
+        "final_exact": sum(1 for r in items if r.get("final_exact_match")),
+        "final_vtrac": sum(1 for r in items if r.get("final_vtrac_match")),
+    }
+
+def _earliest_step(items: List[Dict[str, Any]], key: str) -> int:
+    vals = [int(r.get(key, -1)) for r in items if int(r.get(key, -1)) >= 0]
+    return min(vals) if vals else -1
+
+def _write_flags_csv(outdir: Path, stamp: str, variant: Variant, wmap: Dict[str, Any]) -> Path:
+    """
+    Minimal, join‑friendly flags for analyzer rows.
+    Only rows with hits are emitted; join on full identity keys.
+    """
+    path = _ensure(outdir / f"{stamp}_{variant}_winner_flags.csv")
+    header = [
+        "area","section","set","draw","col","method","mode",
+        "dr_win_exact","dr_win_vtrac","dr_win_step_exact","dr_win_step_vtrac",
+        "dr_win_final_value","dr_win_vtrac_local_index"
+    ]
+    with path.open("w", newline="", encoding="utf-8") as f:
+        wr = csv.writer(f); wr.writerow(header)
+        for r in wmap.get("items", []):
+            wr.writerow([
+                r.get("area",""), r.get("section",""), r.get("set",""), r.get("draw",""),
+                r.get("col",""), r.get("method",""), r.get("mode",""),
+                1 if (r.get("earliest_exact_step",-1) >= 0 or r.get("final_exact_match")) else 0,
+                1 if (r.get("earliest_vtrac_step",-1) >= 0 or r.get("final_vtrac_match")) else 0,
+                int(r.get("earliest_exact_step",-1)),
+                int(r.get("earliest_vtrac_step",-1)),
+                r.get("final_value",""),
+                int(r.get("final_vtrac_local_index",-1)),
+            ])
+    return path
+
+def _write_stamp_json(
+    state: str,
+    variant: Variant,
+    spec: WinnerSpec,
+    wmap: Dict[str, Any],
+    *,
+    analysis_root: Path,
+    stamp: str,
+    overlay_html: Optional[Path],
+    map_path: Path,
+    hits_path: Path,
+    flags_path: Path,
+    mirror_to_winners: bool = True,
+) -> Dict[str, Any]:
+    """
+    Emit a compact, cross‑tool “stamp” JSON. We keep it self‑contained and
+    mirror a copy under the Winners logger tree so dashboards can ingest it.
+    """
+    items = wmap.get("items", [])
+    counts = _counts_from_map(wmap)
+    earliest = {
+        "exact_step_min": _earliest_step(items, "earliest_exact_step"),
+        "vtrac_step_min": _earliest_step(items, "earliest_vtrac_step"),
+    }
+    # keep a tiny sample of locations (cap at 12 for readability)
+    sample = []
+    for r in items[:12]:
+        sample.append({
+            "loc": {k: r.get(k,"") for k in ["area","section","set","draw","col","method","mode"]},
+            "earliest_exact_step": int(r.get("earliest_exact_step",-1)),
+            "final_exact_match": bool(r.get("final_exact_match")),
+            "earliest_vtrac_step": int(r.get("earliest_vtrac_step",-1)),
+            "final_vtrac_match": bool(r.get("final_vtrac_match")),
+            "final_value": r.get("final_value",""),
+        })
+
+    payload = {
+        "tool": "digit_reduction",
+        "state": state,
+        "variant": variant,
+        "winner": spec.combo,
+        "winner_canon": spec.canon,
+        "vtrac_local_index": spec.vtrac_idx,
+        "generated_at": dt.datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "counts": counts,
+        "earliest": earliest,
+        "paths": {
+            "overlay_html": (str(overlay_html) if overlay_html else None),
+            "winner_map_json": str(map_path),
+            "winner_hits_csv": str(hits_path),
+            "winner_flags_csv": str(flags_path),
+        },
+        "sample": sample,
+        "notes": "Local V‑TRAC family index; reducer outputs remain unchanged.",
+    }
+
+    # write under analyzer_v2/winners/…
+    a_path = analysis_root / "digit_reduction" / state / "analyzer_v2" / "winners" / f"{stamp}_{variant}_winner_stamp.json"
+    _ensure(a_path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # optional mirror to the Winners logger tree
+    mirrored = None
+    if mirror_to_winners:
+        mirrored = analysis_root / "winners" / state / "stamps" / "digit_reduction" / f"{stamp}_{variant}.json"
+        _ensure(mirrored).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    payload["stamp_paths"] = {"analyzer": str(a_path), "winners_logger": (str(mirrored) if mirrored else None)}
+    return payload
+
+def run_winner_overlay_batch(
+    state: str,
+    winners: Dict[Variant, str],
+    *,
+    analysis_root: Path | str = Path("data/outputs/analysis"),
+    when: Optional[str] = None,
+    mirror_to_winners: bool = True,
+) -> Dict[str, Any]:
+    """
+    Build overlays + stamps for any subset of {Combined, Midday, Evening}.
+    Returns a summary dict keyed by variant.
+    """
+    analysis_root = Path(analysis_root)
+    outdir = analysis_root / "digit_reduction" / state / "analyzer_v2" / "winners"
+    outdir.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now().strftime("%Y%m%d")
+
+    summary: Dict[str, Any] = {"state": state, "stamp": stamp, "results": {}}
+    for variant, combo in winners.items():
+        spec = WinnerSpec(combo, variant=variant, when=when)
+        # reuse Part‑1 one‑shot
+        res = run_winner_overlay(state, combo, variant=variant, analysis_root=analysis_root, when=when)
+        # parse the just‑written map for counts + flags
+        wmap = json.loads(Path(res["json"]).read_text(encoding="utf-8"))
+        flags_csv = _write_flags_csv(outdir, stamp, variant, wmap)
+        stamp_payload = _write_stamp_json(
+            state, variant, spec, wmap,
+            analysis_root=analysis_root, stamp=stamp,
+            overlay_html=(Path(res["html"]) if res.get("html") else None),
+            map_path=Path(res["json"]), hits_path=Path(res["csv"]), flags_path=flags_csv,
+            mirror_to_winners=mirror_to_winners,
+        )
+        summary["results"][variant] = {
+            "winner": combo,
+            "winner_canon": spec.canon,
+            "vtrac_local_index": spec.vtrac_idx,
+            "hits": wmap.get("items", []).__len__(),
+            "overlay_html": res.get("html"),
+            "map_json": res.get("json"),
+            "hits_csv": res.get("csv"),
+            "flags_csv": str(flags_csv),
+            "stamp_json_analyzer": stamp_payload["stamp_paths"]["analyzer"],
+            "stamp_json_winners": stamp_payload["stamp_paths"]["winners_logger"],
+            "counts": stamp_payload["counts"],
+        }
+
+    return summary
+# ----------------------------------------------------------------------------- 
+
+
+No other files must change to use the batch + stamps.
+(We keep v‑trac purely local to avoid coupling to the staged reference; the stamp clearly labels it as vtrac_local_index.)
+
+
+_______________________
+
+2) Export the batch runner (tiny __init__.py patch)
+# alpha_analytical/digit_reduction/analyzer_v2/__init__.py
+from .pipeline import run
+from .winners_overlay import run_winner_overlay, run_winner_overlay_batch  # ← add batch
+
+__all__ = ["run", "run_winner_overlay", "run_winner_overlay_batch"]
+
+3) How to run (CLI) — single call, all three variants
+python - <<'PY'
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
+
+res = run_winner_overlay_batch(
+    state="Connecticut4",
+    winners={
+        "Combined": "237",
+        "Midday":   "531",
+        "Evening":  "908",
+    },
+    analysis_root=Path("data/outputs/analysis"),
+    when="2025-09-28",
+    mirror_to_winners=True,   # also drops a copy under data/outputs/analysis/winners/<STATE>/stamps/digit_reduction/
+)
+print(res)
+PY
+
+
+You will get, per variant:
+
+Annotated stacked HTML with highlights (copy)
+
+JSON winners map
+
+Hits CSV (locations & steps)
+
+Flags CSV (join‑friendly)
+
+Winners stamp JSON under both:
+
+…/digit_reduction/<STATE>/analyzer_v2/winners/
+
+…/winners/<STATE>/stamps/digit_reduction/ (mirrored; can be ingested by your Winners Logger)
+
+4) Optional DEV expander (multi‑variant)
+
+Add this to the Digit‑Reduction page (DEV‑only). It runs all three at once.
+
+# --- DEV ONLY: Analyzer V2 Winners overlay (all variants) --------------------
+import streamlit as st
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
+
+with st.expander("Analyzer V2 · Winners overlay (DEV) – batch"):
+    state = st.session_state.get("selected_state", "Connecticut4")
+    c = st.text_input("Combined winner", value="237", max_chars=3)
+    m = st.text_input("Midday winner",   value="",    max_chars=3)
+    e = st.text_input("Evening winner",  value="",    max_chars=3)
+    mirror = st.checkbox("Also stamp Winners logger (recommended)", value=True)
+    if st.button("Build overlays + stamps"):
+        winners = {k:v for k,v in {"Combined":c,"Midday":m,"Evening":e}.items() if v}
+        if not winners:
+            st.warning("Enter at least one winner.")
+        else:
+            res = run_winner_overlay_batch(state, winners, analysis_root=Path("data/outputs/analysis"),
+                                           when=None, mirror_to_winners=mirror)
+            st.success("Done.")
+            for variant, r in res["results"].items():
+                st.markdown(f"**{variant}** · winner `{r['winner']}` · hits={r['hits']}")
+                if r.get("overlay_html"): st.markdown(f"[Open overlay]({r['overlay_html']})")
+                st.markdown(f"[Map JSON]({r['map_json']}) · [Hits CSV]({r['hits_csv']}) · "
+                            f"[Flags CSV]({r['flags_csv']})")
+                if r.get("stamp_json_winners"):
+                    st.markdown(f"Mirrored stamp → `{r['stamp_json_winners']}`")
+# -----------------------------------------------------------------------------
+
+5) How Winners Logger can consume the stamp (no code changes required now)
+
+Your Winners Logger (or a simple cron) can watch:
+
+data/outputs/analysis/winners/<STATE>/stamps/digit_reduction/*.json
+
+
+Every stamp contains:
+
+tool = "digit_reduction", state, variant, winner, winner_canon, vtrac_local_index.
+
+counts (exact/v‑trac, final counts).
+
+earliest step mins for exact/v‑trac.
+
+paths to overlay/JSON/CSV/flags (so the UI can link out).
+
+A 12‑row sample of where it hit.
+
+This mirrors what you already do for V‑TRAC Analyzer and Stable in the Winners area—now DR has the same footprint.
+
+6) How to use the flags CSV (join onto analyzer rows)
+
+When you (or Codex) want the per‑item analyzer table to include “hit” columns:
+
+Read your per‑item analyzer CSV (from Analyzer V2 pipeline).
+
+Read the flags CSV from this overlay run.
+
+Merge on the identity keys: ["area","section","set","draw","col","method","mode"].
+
+Example (pseudocode):
+
+import pandas as pd
+features = pd.read_csv(".../analyzer_v2/<STATE>_analyzer_v2_per_item.csv")
+flags    = pd.read_csv(".../analyzer_v2/winners/<STAMP>_Combined_winner_flags.csv")
+keys = ["area","section","set","draw","col","method","mode"]
+df = features.merge(flags, on=keys, how="left").fillna(
+     {"dr_win_exact":0,"dr_win_vtrac":0,"dr_win_step_exact":-1,"dr_win_step_vtrac":-1})
+
+
+No pipeline edits needed; totally additive.
+
+7) Acceptance checks (fast)
+
+Ensure reducer artifacts exist (stacked HTML + latest training logs).
+
+Run the batch CLI above for one state.
+
+Open the annotated HTML(s) — confirm 🟨 exact and 🟦 V‑TRAC highlights.
+
+Inspect the mirrored stamp in …/winners/<STATE>/stamps/digit_reduction/ — make sure counts and paths look right.
+
+Join the flags CSV onto your analyzer rows in a notebook and confirm flags match what you see in the overlay.
+
+8) Why this is safe
+
+We don’t modify the reducer, app flow, or existing outputs.
+
+All new artifacts sit under …/analyzer_v2/winners/, plus an optional copy under the Winners directory for your logger to pick up.
+
+V‑TRAC handling is local and deterministic (mirror‑pair families), so we don’t depend on the staged legacy reference.
+
+If you want, PART 3 can add:
+
+A tiny “latest stamp picker” on Winners Logger to render DR hits alongside V‑TRAC/Stable.
+
+A one‑liner in the Analyzer V2 pipeline to auto‑left‑join the latest flags CSV per day (still optional).
+
+But with PART 2 you already have everything you asked for: visual overlay, JSON for learning, logger‑ready stamps, and joinable flags—all without touching the live reducer.
+
+

@@ -1,0 +1,444 @@
+Absolutely—your ask is clear:
+
+Keep the reducer and the page exactly as‑is.
+
+Add a Winners overlay for Digit Reduction that (a) visually highlights where the winning 3‑digit combo and its V‑TRAC family appear inside the existing stacked HTML report, and (b) produces a machine‑readable JSON map of those hits for learning / winners logging.
+
+Do it in the Analyzer V2 package with zero impact on the live page.
+
+Below is PART 1: a drop‑in, self‑contained overlay feature. It reads your existing training JSON + stacked HTML and writes annotated outputs beside Analyzer V2. No other modules are touched.
+
+What PART 1 delivers
+
+New capability (read‑only):
+
+HTML overlay of the live stacked report with two highlights:
+
+🟨 Exact winner (any permutation of the 3 digits), and
+
+🟦 V‑TRAC‑family match (same mirror‐family as the winner).
+
+JSON overlay that pinpoints where (LS1/LS2 → section → set/draw/col → method/mode) the winner or its V‑TRAC family appears, including earliest step vs final and simple stats for ML.
+
+Outputs (per state):
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+  ├─ winners/
+  │   ├─ <yyyymmdd>_<variant>_winner_overlay.html       # stacked + highlights (copy; original untouched)
+  │   ├─ <yyyymmdd>_<variant>_winner_map.json           # machine-readable map for learning/logging
+  │   └─ <yyyymmdd>_<variant>_winner_hits.csv           # flat table for quick spreadsheet QA
+  └─ … (existing analyzer_v2 outputs remain unchanged)
+
+
+Variants supported: pass "Combined" (default), "Midday", or "Evening".
+Winner input: any 3‑digit string, e.g., "237".
+
+Files to add / modify (exact)
+
+Add alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py
+
+# alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py
+from __future__ import annotations
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, Any, Iterable, List, Tuple, Optional
+import json, re, itertools, datetime as dt
+
+from . import io  # uses your analyzer_v2 io helpers (training_dir_for_state, etc.)
+
+# ---- V-TRAC family helpers (local, no external imports) ----------------------
+
+_MIRROR = {"0":"5","1":"6","2":"7","3":"8","4":"9","5":"0","6":"1","7":"2","8":"3","9":"4"}
+
+def _digits(s: str) -> List[str]:
+    return [c for c in s if c.isdigit()]
+
+def _canon3(s: str) -> str:
+    ds = [c for c in _digits(s)][:3]
+    return "".join(sorted(ds)) if len(ds) == 3 else ""
+
+def _vtrac_local_key(s: str) -> Tuple[int, int, int]:
+    """
+    Local mirror-family key, stable and order-free.
+    Map each digit d to min(d, mirror(d)) in 0..4, sort ascending → (a,b,c).
+    """
+    ds = _digits(s)
+    if len(ds) < 3:
+        return (-1, -1, -1)
+    tri = ds[:3]
+    fam = []
+    for ch in tri:
+        d = int(ch)
+        m = int(_MIRROR[ch])
+        fam.append(min(d, m))     # 0..4
+    fam.sort()
+    return tuple(fam)  # e.g., (1,2,3)
+
+def _vtrac_local_index(s: str) -> int:
+    """
+    Deterministic 0..124 index for the local family key (base-5 encoding of sorted mirror digits).
+    NOTE: This is a local Analyzer index (does not depend on external canonical APIs).
+    """
+    a, b, c = _vtrac_local_key(s)
+    if a < 0:
+        return -1
+    return a * 25 + b * 5 + c
+
+# ---- Winner spec -------------------------------------------------------------
+
+@dataclass
+class WinnerSpec:
+    combo: str                   # "237"
+    variant: str = "Combined"    # "Combined" | "Midday" | "Evening"
+    when: Optional[str] = None   # free text or ISO date for labeling
+
+    @property
+    def canon(self) -> str:
+        return _canon3(self.combo)
+
+    @property
+    def canon_permutations(self) -> List[str]:
+        if len(self.canon) != 3: 
+            return []
+        return list({"".join(p) for p in itertools.permutations(self.canon)})
+
+    @property
+    def vtrac_idx(self) -> int:
+        return _vtrac_local_index(self.canon)
+
+# ---- Training+HTML loaders ---------------------------------------------------
+
+def _stacked_html_path(state: str, analysis_root: Path) -> Path:
+    # Original stacked report produced by the reducer
+    return analysis_root / "digit_reduction" / state / f"{state}_digit_reduction_report_stacked.html"
+
+def _training_json_latest(state: str, analysis_root: Path) -> Optional[Path]:
+    """
+    Best-effort: pick the most recent training JSON the reducer wrote:
+    data/outputs/analysis/digit_reduction/<STATE>/training/*logs.json
+    """
+    tdir = analysis_root / "digit_reduction" / state / "training"
+    if not tdir.exists():
+        return None
+    candidates = sorted(tdir.glob("*_digit_reduction_logs.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0] if candidates else None
+
+# ---- JSON map builder --------------------------------------------------------
+
+def _iter_items_from_training(training_json: Path) -> Iterable[Dict[str, Any]]:
+    data = json.loads(training_json.read_text(encoding="utf-8"))
+    # Expecting {'items':[...]} from your reducer logs; fall back if needed.
+    items = data.get("items", data if isinstance(data, list) else [])
+    for it in items:
+        yield it
+
+def _get(it: Dict[str, Any], key: str, default=None):
+    return it.get(key, default)
+
+def _first_match_step(steps: List[Dict[str, Any]], perms: List[str]) -> Tuple[int, Optional[str]]:
+    """
+    Return earliest step index (int) and value string where value is a permutation match.
+    """
+    for st in steps:
+        val = str(st.get("value", ""))
+        if len(val) == 3 and val in perms:
+            return int(st.get("step", 0)), val
+    return -1, None
+
+def _first_vtrac_match_step(steps: List[Dict[str, Any]], vidx: int) -> Tuple[int, Optional[str]]:
+    for st in steps:
+        val = str(st.get("value", ""))
+        if len(val) == 3 and _vtrac_local_index(val) == vidx:
+            return int(st.get("step", 0)), val
+    return -1, None
+
+def build_winner_map(state: str, winner: WinnerSpec, *, analysis_root: Path) -> Dict[str, Any]:
+    """
+    Scan reducer training logs and build a machine-readable map of winner/vtrac hits.
+    """
+    tj = _training_json_latest(state, analysis_root)
+    results: List[Dict[str, Any]] = []
+    if tj is None or not tj.exists():
+        return {"state": state, "winner": winner.combo, "variant": winner.variant,
+                "vtrac_local_index": winner.vtrac_idx, "items": results, "error": "training_json_missing"}
+
+    for it in _iter_items_from_training(tj):
+        section = (_get(it, "section", "") or _get(it, "area_section", "")).strip()  # 'Midday'|'Evening'|'Combined'
+        if winner.variant and section and section != winner.variant:
+            continue
+
+        steps: List[Dict[str, Any]] = it.get("steps", [])
+        final = it.get("final", {}) or {}
+        final_val = str(final.get("value", ""))
+
+        # exact-permutation match
+        s_idx, s_val = _first_match_step(steps, winner.canon_permutations)
+        f_exact = (final_val in winner.canon_permutations)
+
+        # vtrac-family match
+        v_idx, v_val = _first_vtrac_match_step(steps, winner.vtrac_idx)
+        f_vtrac = (_vtrac_local_index(final_val) == winner.vtrac_idx)
+
+        if s_idx >= 0 or v_idx >= 0 or f_exact or f_vtrac:
+            results.append({
+                "area": _get(it, "area", ""),
+                "section": section,
+                "set": _get(it, "set", ""),
+                "draw": _get(it, "draw", ""),
+                "col": _get(it, "col", ""),
+                "method": _get(it, "method", ""),
+                "mode": _get(it, "mode", ""),
+                "earliest_exact_step": s_idx,
+                "earliest_exact_value": s_val,
+                "final_exact_match": bool(f_exact),
+                "earliest_vtrac_step": v_idx,
+                "earliest_vtrac_value": v_val,
+                "final_vtrac_match": bool(f_vtrac),
+                "final_value": final_val,
+                "final_vtrac_local_index": _vtrac_local_index(final_val),
+            })
+
+    return {
+        "state": state,
+        "winner": winner.combo,
+        "winner_canon": winner.canon,
+        "variant": winner.variant,
+        "vtrac_local_index": winner.vtrac_idx,
+        "generated_at": dt.datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "items": results,
+    }
+
+# ---- Stacked HTML annotator (non-destructive) --------------------------------
+
+_CSS = """
+/* Analyzer V2 winner overlay */
+.anv2-banner {font-family: system-ui, sans-serif; font-size:14px; margin:10px 0; padding:8px 10px; border:1px solid #ddd; background:#f8f9fb;}
+.anv2-chip {display:inline-block; padding:2px 6px; margin:0 4px; border-radius:4px; font-weight:600;}
+.anv2-chip.win {background:#ffe493; border:1px solid #d24a00; color:#5b3300;}
+.anv2-chip.vtrac {background:#b4f0ff; border:1px solid #00749c; color:#003a50;}
+.anv2-win {background:#ffe493; border:2px solid #d24a00; border-radius:3px; padding:0 3px;}
+.anv2-vt  {background:#b4f0ff; border:2px solid #00749c; border-radius:3px; padding:0 3px;}
+"""
+
+def _highlight_numbers(html: str, perms: List[str], vtrac_set: set[str]) -> str:
+    """
+    Wrap 3-digit tokens that match winner permutations or share the winner's local V-TRAC index.
+    We only touch isolated 3-digit tokens (non-digit boundaries) to avoid longer Orig numbers.
+    """
+    token_re = re.compile(r'(?<!\d)(\d{3})(?!\d)')
+
+    def repl(m: re.Match) -> str:
+        tok = m.group(1)
+        if tok in perms:
+            return f"<span class='anv2-win'>{tok}</span>"
+        if tok in vtrac_set:
+            return f"<span class='anv2-vt'>{tok}</span>"
+        return tok
+
+    return token_re.sub(repl, html)
+
+def _collect_all_triplets(html: str) -> List[str]:
+    return re.findall(r'(?<!\d)(\d{3})(?!\d)', html)
+
+def annotate_stacked_html(state: str, winner: WinnerSpec, *, analysis_root: Path) -> Optional[Path]:
+    src = _stacked_html_path(state, analysis_root)
+    if not src.exists():
+        return None
+
+    html = src.read_text(encoding="utf-8")
+
+    # Build vtrac-equivalent token set from the tokens already present in the report
+    tokens = _collect_all_triplets(html)
+    vt_idx = winner.vtrac_idx
+    vtrac_equivs = {t for t in tokens if _vtrac_local_index(t) == vt_idx}
+
+    annotated = _highlight_numbers(html, winner.canon_permutations, vtrac_equivs)
+
+    banner = (
+        f"<div class='anv2-banner'>"
+        f"<strong>Analyzer V2 · Winners overlay</strong> — "
+        f"Winner <span class='anv2-chip win'>{winner.combo}</span> "
+        f"(canon: {winner.canon}) · Variant: {winner.variant} · "
+        f"V‑TRAC family <span class='anv2-chip vtrac'>#{vt_idx}</span>"
+        f"{' · ' + winner.when if winner.when else ''}"
+        f"</div>"
+    )
+    head_inject = f"<style>{_CSS}</style>\n{banner}"
+
+    # inject <style> + banner after <body> or at top if missing
+    annotated = re.sub(r'(<body[^>]*>)', r'\1' + head_inject, annotated, flags=re.IGNORECASE)
+    if annotated == html:  # no <body>; prepend
+        annotated = head_inject + annotated
+
+    outdir = analysis_root / "digit_reduction" / state / "analyzer_v2" / "winners"
+    outdir.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now().strftime("%Y%m%d")
+    out = outdir / f"{stamp}_{winner.variant}_winner_overlay.html"
+    out.write_text(annotated, encoding="utf-8")
+    return out
+
+# ---- Orchestrator ------------------------------------------------------------
+
+def run_winner_overlay(
+    state: str,
+    winner_combo: str,
+    *,
+    variant: str = "Combined",
+    analysis_root: Path | str = Path("data/outputs/analysis"),
+    when: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    One-shot overlay:
+      - builds JSON winner map from training logs
+      - produces a CSV flat table of hits
+      - writes an annotated copy of the stacked HTML with highlights
+    """
+    analysis_root = Path(analysis_root)
+    spec = WinnerSpec(winner_combo, variant=variant, when=when)
+
+    # JSON map
+    wmap = build_winner_map(state, spec, analysis_root=analysis_root)
+    outdir = analysis_root / "digit_reduction" / state / "analyzer_v2" / "winners"
+    outdir.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now().strftime("%Y%m%d")
+    jpath = outdir / f"{stamp}_{variant}_winner_map.json"
+    jpath.write_text(json.dumps(wmap, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # CSV flat table (quick QA)
+    import csv
+    cpath = outdir / f"{stamp}_{variant}_winner_hits.csv"
+    with cpath.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        header = ["area","section","set","draw","col","method","mode",
+                  "earliest_exact_step","earliest_exact_value","final_exact_match",
+                  "earliest_vtrac_step","earliest_vtrac_value","final_vtrac_match",
+                  "final_value","final_vtrac_local_index"]
+        writer.writerow(header)
+        for r in wmap.get("items", []):
+            writer.writerow([r.get(k,"") for k in header])
+
+    # HTML overlay (if the stacked HTML exists)
+    hpath = annotate_stacked_html(state, spec, analysis_root=analysis_root)
+
+    return {
+        "state": state,
+        "variant": variant,
+        "winner": spec.combo,
+        "winner_canon": spec.canon,
+        "vtrac_local_index": spec.vtrac_idx,
+        "json": str(jpath),
+        "csv": str(cpath),
+        "html": (str(hpath) if hpath else None),
+        "n_hits": len(wmap.get("items", [])),
+    }
+
+
+Patch alpha_analytical/digit_reduction/analyzer_v2/__init__.py (export the runner)
+
+# alpha_analytical/digit_reduction/analyzer_v2/__init__.py
+from .pipeline import run           # existing analyzer runner
+from .winners_overlay import run_winner_overlay  # NEW: winners overlay one-shot
+
+__all__ = [
+    "run",
+    "run_winner_overlay",
+]
+
+
+No other file changes are required for Part 1. The overlay is fully optional and read‑only.
+
+How to run it (CLI)
+
+Use any state that already has reducer outputs (stacked HTML + training logs). Example with Connecticut4:
+
+# 1) (Optional) regenerate reducer outputs the usual way from the app
+# 2) Run the winners overlay one-shot:
+python - <<'PY'
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay
+print(run_winner_overlay(
+    state="Connecticut4",
+    winner_combo="237",           # 3-digit winner
+    variant="Combined",           # or "Midday"/"Evening"
+    analysis_root=Path("data/outputs/analysis"),
+    when="2025-09-28"             # optional label in the banner
+))
+PY
+
+
+What you get:
+
+An annotated copy of the stacked report with highlights:
+…/digit_reduction/Connecticut4/analyzer_v2/winners/20250928_Combined_winner_overlay.html
+
+The machine‑readable map:
+…/analyzer_v2/winners/20250928_Combined_winner_map.json
+
+A quick QA table:
+…/analyzer_v2/winners/20250928_Combined_winner_hits.csv
+
+The original reducer HTML (…/_report_stacked.html) is never modified.
+
+Optional: tiny dev expander for the page (Streamlit)
+
+If you want a button in the existing Digit Reduction page (DEV‑only), drop this small block near where you show the stacked report:
+
+# --- DEV ONLY: Analyzer V2 Winners overlay trigger ---------------------------
+import streamlit as st
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay
+
+with st.expander("Analyzer V2 · Winners overlay (DEV)"):
+    state = st.session_state.get("selected_state", "Connecticut4")
+    winner = st.text_input("Winning combo (3 digits)", value="237", max_chars=3)
+    variant = st.selectbox("Variant", ["Combined","Midday","Evening"], index=0)
+    if st.button("Build overlay"):
+        res = run_winner_overlay(state, winner, variant=variant, analysis_root=Path("data/outputs/analysis"))
+        st.success(f"Overlay built • hits={res['n_hits']}")
+        if res.get("html"): st.markdown(f"[Open annotated HTML]({res['html']})")
+        st.markdown(f"[Map JSON]({res['json']}) · [Hits CSV]({res['csv']})")
+# -----------------------------------------------------------------------------
+
+
+This does not alter existing flows and can be removed anytime.
+
+Why this is safe and useful
+
+Zero coupling: Only reads reducer artifacts and writes into …/analyzer_v2/winners/.
+
+Exact + family signals: You’ll see where the exact winner appears and where its V‑TRAC family shows up (early or final).
+
+ML‑friendly: The JSON includes enough structure (earliest step, final flags, location keys) to feed learning or the Winners logger later.
+
+Robust to HTML layout: We highlight only 3‑digit tokens in the stacked HTML (no accidental matches inside long “Orig” numbers).
+
+What Part 2 will add (teaser)
+
+When you’re ready, Part 2 can:
+
+Accept per‑section winners in one call (Midday/Evening/Combined together).
+
+Backfill a light “stamp” into the existing Winners logger directory so the cross‑tool dashboard can surface “DR saw it here” badges.
+
+(Optional) Expose a micro‑summary row in the analyzer_v2 score table (e.g., dr_winner_exact, dr_winner_vtrac, dr_winner_first_step), making it trivially joinable downstream.
+
+Quick QA checklist (first run)
+
+Confirm you have the reducer artifacts for the state:
+
+…/digit_reduction/<STATE>/<STATE>_digit_reduction_report_stacked.html
+
+…/digit_reduction/<STATE>/training/*_digit_reduction_logs.json
+
+Run the overlay (CLI snippet above).
+
+Open the annotated HTML → verify 🟨 exact vs 🟦 V‑TRAC highlights.
+
+Inspect the JSON → check a few items where final_exact_match or final_vtrac_match is true.
+
+Save the overlay paths to your daily notes (so the learning pipeline can ingest the JSON later).
+
+If this matches your intent, go ahead and paste these files. Once you confirm the overlay looks right on a couple of states, I’ll ship Part 2 (multi‑section + winners logger stamp) on top of this without touching any reducers or UI wiring beyond the optional dev expander.
+
+_____________________________
+

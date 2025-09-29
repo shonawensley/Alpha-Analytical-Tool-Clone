@@ -1,0 +1,93 @@
+Totally with you — I re-read your latest exchange with Codex and you’re right: Codex already built/unified Analyzer V2. What’s missing is just the UI hook so you can run it like the other tools and see its outputs from the app. No rebuild required.
+
+Here’s the clean way to finish this:
+
+What’s done vs. what’s missing
+
+✅ Analyzer V2 exists and writes to
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/ (per-item CSV, own↔combined delta, meta json) when run from code/CLI. This follows the app’s data contracts (tables→DR; analysis under data/outputs/analysis/...).
+
+⏳ UI trigger not wired yet. That’s why you don’t see the analyzer’s artifacts by launching the app. The live Digit-Reduction page still only runs the reducer/orchestrator that writes the scroller HTML + legacy CSV (which is expected).
+
+Minimal, safe UI hook (DEV-only expander)
+
+Add this small block to the Dig# inside show_digit_reduction_page(state) near the bottom
+import streamlit as st
+from pathlib import Path
+
+with st.expander("Analyzer V2 (DEV)", expanded=False):
+    st.caption("Runs the unified analyzer and writes CSV/JSON beside the reducer outputs.")
+
+    if st.button("Run Analyzer V2 for this state", type="primary"):
+        try:
+            # SSOT path: data/outputs/analysis/
+            from utils.path_handler import get_analysis_output_dir
+            from alpha_analytical.digit_reduction.analyzer_v2 import run as run_v2
+
+            analysis_root = Path(get_analysis_output_dir())  # → data/outputs/analysis
+            info = run_v2(state, analysis_root=analysis_root)
+
+            st.success(f"Wrote {info.get('rows',0)} rows → {info.get('out_dir','')}")
+            out_dir = Path(info["out_dir"])
+            # quick links
+            for patt in (
+                f"{state}_analyzer_v2_per_item.csv",
+                f"{state}_analyzer_v2_own_vs_combined_delta.csv",
+                f"{state}_analyzer_v2_meta.json",
+            ):
+                p = out_dir / patt
+                if p.exists():
+                    st.markdown(f"• [{p.name}]({p.as_posix()})")
+        except Exception as e:
+            st.error(f"Analyzer V2 failed: {e}")
+it Reduction page in src/app.py (no other edits). It keeps everything read-only and aligned with the canonical launch/paths (run_app.bat → src/app.py, SSOT paths via utils.path_handler).
+
+
+Why this works:
+
+Uses the canonical SSOT for analysis roots (get_analysis_output_dir() → data/outputs/analysis).
+
+Leaves the live DR page logic untouched (reducer still writes the scroller + legacy CSV to the sibling folder).
+
+DEV-only, so normal users won’t see it.
+
+How you’ll run it now
+
+Launch via your normal app entry (run_app.bat → src/app.py). This is the canonical launch path.
+
+Open Digit Reduction → expand “Analyzer V2 (DEV)” → click Run Analyzer V2.
+
+You’ll get links to:
+
+<STATE>_analyzer_v2_per_item.csv
+
+<STATE>_analyzer_v2_own_vs_combined_delta.csv
+
+<STATE>_analyzer_v2_meta.json
+All under: data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/.
+
+If you prefer CLI first, the same run works headless and respects the same paths.
+
+Notes on V-TRAC (to avoid confusion)
+
+Analyzer V2’s optional V-TRAC hint should come from its own local helper (or be off). Do not import the Aux/Winners V-TRAC shim here; those tools are intentionally isolated and operate on data/cleaned/*_draws.csv. Keep DR/Stable/V-TRAC on the combined tables path, Aux/BA on draws CSVs only.
+
+After you see outputs: log it once
+
+If you want everything tidy for future sessions, use the KIT wrap-up:
+
+Add a one-liner to the Unified Changelog (e.g., “Digit-Reduction: add DEV expander to run Analyzer V2; writes analyzer_v2 artifacts”).
+
+Append a brief note to the Checkpoint Log (context, change, impact, files).
+
+The Post-Implementation Checklist (“document and process”) is the quick way to remember those two steps.
+
+TL;DR
+
+You are not being asked to rebuild. Codex’s summary implies Analyzer V2 is already in place.
+
+All you need is the DEV expander above to trigger it from the app and show its CSV/JSON.
+
+This keeps everything within the canonical AAT9 wiring and gives you the same “click-to-run” feel as the other tools.
+
+If you want, I can also hand you a tiny “auto-run after reducer” toggle later, but the expander is the safest first step.

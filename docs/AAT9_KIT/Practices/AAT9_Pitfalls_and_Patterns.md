@@ -40,3 +40,4 @@ Synthesized from PITFALLS and recent integration experiences.
 - Keep feature key names aligned with `config.yml` (`final.canon3`, `method.agree_count`, etc.) so the scorer remains zero-safe; adjust the config instead of patching callers.
 - VTRAC synergy must go through `analyzer_v2.vtrac_index` (predictions JSON preferred, derived fallback). Do not import staged `modules.vtrac_reference` from Aux.
 - Run `.codex/preflight.ps1 -State <STATE>` before edits and the documented python smoke command after changes to confirm artifacts are fresh and scores populate.
+- Winners Overlay: run_winner_overlay_batch() only after the reducer outputs exist; artifacts land under analyzer_v2/winners plus a mirrored stamp in the Winners tree when enabled. Merge the flags CSV back onto the analyzer per-item table via the identity columns to expose dr_win_* signals.

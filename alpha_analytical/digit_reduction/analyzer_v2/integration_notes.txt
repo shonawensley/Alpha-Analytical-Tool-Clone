@@ -39,3 +39,33 @@ Documentation & Ops:
 - Log new analyzer runs in Unified Changelog / Checkpoint Log
 - Keep .codex/preflight.ps1 + System Health expander as the pre-run check (cwd, python, data roots)
 - Optional: add DEV-only Streamlit expander to trigger run() and list artifacts (see FIX_61/62 for snippet)
+Winners Overlay (2025-09-29)
+----------------------------
+Entry points:
+- run_winner_overlay(state, winner_combo, variant="Combined", analysis_root=None, when=None)
+- run_winner_overlay_batch(state, {"Combined": "237", ...}, analysis_root=None, when=None, mirror_to_winners=True)
+
+Inputs:
+- Requires the reducer’s stacked HTML report and latest training JSON under data/outputs/analysis/digit_reduction/<STATE>/training/.
+
+Outputs (per variant):
+- analyzer_v2/winners/<STAMP>_<VARIANT>_winner_overlay.html    # annotated stacked report copy
+- analyzer_v2/winners/<STAMP>_<VARIANT>_winner_map.json        # machine-readable hits map
+- analyzer_v2/winners/<STAMP>_<VARIANT>_winner_hits.csv        # location + step details
+- analyzer_v2/winners/<STAMP>_<VARIANT>_winner_flags.csv       # joinable flags for analyzer rows
+- analyzer_v2/winners/<STAMP>_<VARIANT>_winner_stamp.json      # summary payload
+- winners/<STATE>/stamps/digit_reduction/<STAMP>_<VARIANT>_winner_stamp.json (mirrored when mirror_to_winners=True)
+
+Highlights in overlay:
+- dr-winner-exact (gold) wraps any exact permutation of the winner.
+- dr-winner-vtrac (orange) wraps any member of the winner’s mirror-family.
+
+DEV helpers:
+- Streamlit expander can trigger run_winner_overlay_batch, supplying Combined/Midday/Evening winners and optional Winners logger mirroring.
+
+Join recipe:
+- Merge flags CSV onto analyzer_v2 per-item table via [area, section, set, draw, col, method, mode].
+- dr_win_exact/dr_win_vtrac = 1 indicate the winner or its VTRAC family touched that location; step columns record earliest match.
+
+Smoke (after reducer + analyzer ran once):
+python -c "from pathlib import Path; from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch; print(run_winner_overlay_batch('Connecticut4', {'Combined': '237'}, analysis_root=Path('data/outputs/analysis'), when='20250929', mirror_to_winners=True))"

@@ -679,3 +679,9 @@ Digit-Reduction Analyzer V2
 - Scoring parity: config.yml is the single source of truth. If a feature key drifts from the scorer, fix the key or weight rather than patching individual callers.
 - VTRAC hints: derive via analyzer_v2.vtrac_index only; do not import staged modules.vtrac_reference from Aux.
 - Guard with preflight: run .codex/preflight.ps1 before edits and use the smoke command documented in integration_notes.txt after each change.
+Digit-Reduction Winners Overlay
+- Inputs come from the reducer artifacts (stacked HTML + latest training JSON); run the reducer first.
+- All overlay/stamp/flags files live under data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/winners/ (with optional mirror to data/outputs/analysis/winners/<STATE>/stamps/digit_reduction/).
+- Only append rows to the flags CSV when a location actually hits (exact or VTRAC); left-join onto analyzer per-item rows via area/section/set/draw/col/method/mode.
+- Keep VTRAC family detection local (mirror pairs); never import the staged modules.vtrac_reference.
+- Annotated HTML is a copy; never overwrite the reducer’s original stacked report.

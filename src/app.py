@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import pathlib
 import streamlit as st
@@ -1961,6 +1961,91 @@ def show_digit_reduction_page(state: str) -> None:
                 with open(html_path, "r", encoding="utf-8") as fh:
                     st.components.v1.html(fh.read(), height=900, scrolling=True)
 
+    with st.expander("Analyzer V2 (DEV)", expanded=False):
+        st.caption("Runs the unified analyzer and writes CSV/JSON beside the reducer outputs.")
+        from utils.path_handler import get_analysis_output_dir
+
+        base_analysis_dir = Path(get_analysis_output_dir())
+        run_key = f"run_analyzer_v2_{state}"
+        if st.button("Run Analyzer V2 for this state", type="primary", key=run_key):
+            try:
+                from alpha_analytical.digit_reduction.analyzer_v2 import run as run_v2
+
+                info = run_v2(state, analysis_root=base_analysis_dir)
+            except Exception as exc:
+                st.error(f"Analyzer V2 failed: {exc}")
+            else:
+                out_dir = Path(info.get("out_dir", base_analysis_dir / "digit_reduction" / state / "analyzer_v2"))
+                st.success(f"Wrote {info.get('rows', 0)} rows — {out_dir}")
+                artifacts = info.get("artifacts") or [
+                    f"{state}_analyzer_v2_per_item.csv",
+                    f"{state}_analyzer_v2_own_vs_combined_delta.csv",
+                    f"{state}_analyzer_v2_top_candidates.csv",
+                    f"{state}_analyzer_v2_meta.json",
+                ]
+                for name in artifacts:
+                    artifact_path = out_dir / name
+                    if artifact_path.exists():
+                        st.markdown(f"- [{artifact_path.name}]({artifact_path.as_posix()})")
+
+        existing_root = base_analysis_dir / "digit_reduction" / state / "analyzer_v2"
+        if existing_root.exists():
+            st.caption("Latest Analyzer V2 outputs for this state:")
+            for artifact_path in sorted(existing_root.glob(f"{state}_analyzer_v2_*")):
+                st.markdown(f"- [{artifact_path.name}]({artifact_path.as_posix()})")
+        else:
+            st.caption("No Analyzer V2 outputs found yet for this state.")
+
+    with st.expander("Analyzer V2 Winners overlay (DEV) — batch", expanded=False):
+        st.caption("Build overlays, flags, and winner stamps for any variants you populate below.")
+        from utils.path_handler import get_analysis_output_dir
+        from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
+
+        base_analysis_dir = Path(get_analysis_output_dir())
+        combined_winner = st.text_input("Combined winner", value="", max_chars=3)
+        midday_winner = st.text_input("Midday winner", value="", max_chars=3)
+        evening_winner = st.text_input("Evening winner", value="", max_chars=3)
+        mirror = st.checkbox("Mirror stamp into Winners logger", value=True)
+
+        if st.button("Build winners overlays", key=f"run_winner_overlay_batch_{state}"):
+            winners = {
+                variant: combo.strip()
+                for variant, combo in {
+                    "Combined": combined_winner,
+                    "Midday": midday_winner,
+                    "Evening": evening_winner,
+                }.items()
+                if combo and combo.strip()
+            }
+            if not winners:
+                st.warning("Enter at least one winner before running the overlay batch.")
+            else:
+                try:
+                    out = run_winner_overlay_batch(
+                        state,
+                        winners,
+                        analysis_root=base_analysis_dir,
+                        when=None,
+                        mirror_to_winners=mirror,
+                    )
+                except Exception as exc:
+                    st.error(f"Winners overlay batch failed: {exc}")
+                else:
+                    st.success("Digit Reduction winners overlays completed.")
+                    for variant, payload in out.get("results", {}).items():
+                        st.markdown(f"**{variant}** — winner `{payload.get('winner', '')}` (hits={payload.get('hits', 0)})")
+                        if payload.get("overlay_html"):
+                            st.markdown(f"- [Annotated overlay]({payload['overlay_html']})")
+                        st.markdown(
+                            "- [Winner map JSON]({}) — [Hits CSV]({}) — [Flags CSV]({})".format(
+                                payload.get("map_json", ""),
+                                payload.get("hits_csv", ""),
+                                payload.get("flags_csv", ""),
+                            )
+                        )
+                        if payload.get("stamp_json_winners"):
+                            st.markdown(f"- Mirrored stamp: `{payload['stamp_json_winners']}`")
+
 
 if __name__ == "__main__":
     main() 
@@ -2002,3 +2087,54 @@ if __name__ == "__main__":
 
 
 
+
+
+    with st.expander("Analyzer V2 Winners overlay (DEV) — batch", expanded=False):
+        st.caption("Build overlays, flags, and winner stamps for any variants you populate below.")
+        from utils.path_handler import get_analysis_output_dir
+        from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
+
+        base_analysis_dir = Path(get_analysis_output_dir())
+        combined_winner = st.text_input("Combined winner", value="", max_chars=3)
+        midday_winner = st.text_input("Midday winner", value="", max_chars=3)
+        evening_winner = st.text_input("Evening winner", value="", max_chars=3)
+        mirror = st.checkbox("Mirror stamp into Winners logger", value=True)
+
+        if st.button("Build winners overlays", key=f"run_winner_overlay_batch_{state}"):
+            winners = {
+                variant: combo.strip()
+                for variant, combo in {
+                    "Combined": combined_winner,
+                    "Midday": midday_winner,
+                    "Evening": evening_winner,
+                }.items()
+                if combo and combo.strip()
+            }
+            if not winners:
+                st.warning("Enter at least one winner before running the overlay batch.")
+            else:
+                try:
+                    out = run_winner_overlay_batch(
+                        state,
+                        winners,
+                        analysis_root=base_analysis_dir,
+                        when=None,
+                        mirror_to_winners=mirror,
+                    )
+                except Exception as exc:
+                    st.error(f"Winners overlay batch failed: {exc}")
+                else:
+                    st.success("Digit Reduction winners overlays completed.")
+                    for variant, payload in out.get("results", {}).items():
+                        st.markdown(f"**{variant}** — winner `{payload.get('winner', '')}` (hits={payload.get('hits', 0)})")
+                        if payload.get("overlay_html"):
+                            st.markdown(f"- [Annotated overlay]({payload['overlay_html']})")
+                        st.markdown(
+                            "- [Winner map JSON]({}) — [Hits CSV]({}) — [Flags CSV]({})".format(
+                                payload.get("map_json", ""),
+                                payload.get("hits_csv", ""),
+                                payload.get("flags_csv", ""),
+                            )
+                        )
+                        if payload.get("stamp_json_winners"):
+                            st.markdown(f"- Mirrored stamp: `{payload['stamp_json_winners']}`")\n
