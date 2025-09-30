@@ -1,0 +1,68 @@
+I think that plan is exactly what you need—and it matches the real root-cause: your src/app.py lost the bottom entrypoint, so Streamlit started, defined symbols, and rendered nothing.
+
+Here’s a crisp review + two tiny upgrades so this doesn’t bite you again:
+
+👍 What’s right about the plan
+
+Re-add if __name__ == "__main__": main(): this is the missing wire that produces a blank screen when absent.
+
+Make the dev overlay import optional: prevents a bad helper import from blocking page render.
+
+Compile + launch sanity: python -m py_compile src/app.py then run_app.bat (or streamlit run src/app.py) is the right smoke.
+
+🔧 Minimal, robust footer I recommend
+
+Drop this at the very bottom of src/app.py (beneath all code). It covers entrypoint + a safe “rescue boot” so you’re never blind again:
+
+# ---------------------- BOOTSTRAP (keep at end) ----------------------
+def _rescue_boot():
+    import streamlit as st
+    st.set_page_config(page_title="Alpha-Final Analytical Tool", layout="wide")
+    st.title("Alpha-Final Analytical Tool")
+    st.write("✅ App booted via rescue path. If you see this, main() wasn’t called or raised.")
+
+try:
+    # Optional: dev overlay import stays non-fatal at import time
+    try:
+        from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev
+    except Exception as _import_exc:
+        render_dr_winner_overlay_dev = None
+        DEV_OVERLAY_IMPORT_ERROR = _import_exc
+
+    # Normal entry
+    if __name__ == "__main__":
+        try:
+            main()   # or show_app()/run_app() – whichever is your router
+        except Exception as e:
+            _rescue_boot()
+            import streamlit as st
+            st.error(f"main() raised: {e}")
+except Exception as boot_exc:
+    # Absolute last resort: still show a page
+    _rescue_boot()
+    import streamlit as st
+    st.error(f"boot error: {boot_exc}")
+
+Where to call the dev overlay: only inside the Digit-Reduction page function, e.g.:
+
+if render_dr_winner_overlay_dev:
+    render_dr_winner_overlay_dev(state)
+elif 'DEV_OVERLAY_IMPORT_ERROR' in globals():
+    st.caption(f"DEV overlay unavailable: {DEV_OVERLAY_IMPORT_ERROR}")
+
+🧪 Quick test checklist (2 minutes)
+
+python -m py_compile src/app.py (catches stray \n, smart quotes, indent issues).
+
+streamlit run sanity.py (one-line sanity) if you want to double-check Streamlit itself.
+
+run_app.bat → confirm the normal home loads (you should not see the rescue banner).
+If you do see the banner, main() is still not being called—check the function name or the router block.
+
+⚠️ Two easy pitfalls to avoid
+
+Don’t put st.* calls at top-level (i.e., at import time). Keep all UI calls inside page functions or main().
+
+Stay ASCII in code for UI labels (e.g., " - " instead of an em-dash " — ") to avoid shell/encoding surprises later.
+
+If you add the footer above and keep the optional import pattern, the blank page should disappear—and you’ll have a guard if anyone ever breaks the entrypoint again.

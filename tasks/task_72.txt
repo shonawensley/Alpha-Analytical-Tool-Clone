@@ -1,0 +1,212 @@
+
+
+hort version: nothing is “mystical” here—the errors are coming from garbled edits to src/app.py (and a few places in the overlay module) caused by shell one‑liners that injected literal \n, smart punctuation (— “ ” ‘ ’), and unbalanced quotes/backticks into Python code. Once one of those lands right before a with st.expander(...) line, Python thinks you’re continuing the previous line and throws exactly the error you’re seeing:
+
+SyntaxError: unexpected character after line continuation character
+
+Below I’ll 1) explain the failure pattern you’re seeing, 2) give you a clean, minimal recovery (two edits and three quick checks), and 3) lock in a safer architecture so you never have to patch big UI blocks with shell quoting again.
+
+What’s going on (why the error keeps moving)
+
+From the log you shared:
+
+Multiple attempts wrote the expander with literal \n text in the source (not a newline), so the line literally began with the characters \n with st.expander(...). Python treats the preceding backslash as a line‑continuation and then chokes on the next character.
+
+Other passes introduced smart quotes / en‑dash in strings, e.g. — batch and “curly quotes” around strings. That’s fine if the file is UTF‑8 and the previous line is complete—but several edits also left dangling backslashes or unclosed parentheses directly above the expander, which again makes the next char “unexpected”.
+
+Some replacement commands duplicated lines (two “Mirrored stamp” lines) or partially truncated src/app.py, then tried to paste sanitized blocks back, which is why you saw “file overwritten and truncated” messages later in the log.
+
+In at least one overlay helper, I see quoting artifacts such as:
+
+if len(canon) "'!= 3:
+
+
+which is just a shell‑escape scar; it should be if len(canon) != 3:.
+
+Bottom line: shell‑driven text surgery on Python f‑strings is fragile on Windows because backticks, quotes, and Unicode punctuation all interact with PowerShell’s parser. That’s why the errors keep moving.
+
+The safe recovery (minimal, deterministic, and quick)
+
+Do these in order. It’s surgical and avoids more shell quoting.
+
+1) Restore a known‑good src/app.py (one command)
+
+If you have git history for the repo:
+
+git checkout -- src/app.py
+python -m py_compile src/app.py
+
+
+py_compile should pass now. If you’re not on git or the file isn’t recoverable, grab the last good copy from your backup/clone and run the same compile check.
+
+If py_compile still points to the same line, open src/app.py and look at the line before the failing with st.expander(...). If it ends with a backslash \ or you see a literal \n earlier, delete the backslash / fix the stray text. Save, re‑run py_compile.
+
+
+
+
+
+
+
+2) Do not paste the big expander block into app.py again
+
+Create a tiny UI wrapper module and call it from app.py. This prevents shell quoting from ever touching the main app.
+
+Create file: alpha_analytical/digit_reduction/analyzer_v2/ui_dev.py with exactly this content:
+
+# alpha_analytical/digit_reduction/analyzer_v2/ui_dev.py
+from pathlib import Path
+import streamlit as st
+
+from utils.path_handler import get_analysis_output_dir
+from .winners_overlay import run_winner_overlay_batch
+
+def render_dr_winner_overlay_dev(state: str) -> None:
+    """Small, dev-only panel to build DR winners overlays & stamps."""
+    with st.expander("Analyzer V2 Winners overlay (DEV) - batch", expanded=False):
+        st.caption("Build overlays, flags, and winner stamps for any variants you populate below.")
+
+        base_analysis_dir = Path(get_analysis_output_dir())
+        combined = st.text_input("Combined winner", value="", max_chars=3)
+        midday   = st.text_input("Midday winner",   value="", max_chars=3)
+        evening  = st.text_input("Evening winner",  value="", max_chars=3)
+        mirror   = st.checkbox("Mirror stamp into Winners logger", value=True)
+
+        if st.button(f"Build winners overlays for {state}"):
+            winners = {k: v.strip() for k, v in {
+                "Combined": combined,
+                "Midday":   midday,
+                "Evening":  evening,
+            }.items() if v and v.strip()}
+
+            if not winners:
+                st.warning("Enter at least one winner before running the overlay batch.")
+                return
+
+            try:
+                out = run_winner_overlay_batch(
+                    state,
+                    winners,
+                    analysis_root=base_analysis_dir,
+                    when=None,
+                    mirror_to_winners=mirror,
+                )
+            except Exception as exc:
+                st.error(f"Winners overlay batch failed: {exc}")
+                return
+
+            st.success("Digit Reduction winners overlays completed.")
+            for variant, payload in (out.get("results") or {}).items():
+                winner = payload.get("winner", "")
+                counts = (payload.get("counts") or {})
+                hits   = int(counts.get("items_exact_any", 0))
+                st.markdown(f"**{variant}** — winner `{winner}` (hits={hits})")
+
+                paths = payload.get("paths") or {}
+                if paths.get("overlay_html"):
+                    st.markdown(f"- [Annotated overlay]({paths['overlay_html']})")
+
+                st.markdown("- [Winner map JSON]({}) — [Hits CSV]({}) — [Flags CSV]({})".format(
+                    paths.get("winner_map_json", ""),
+                    paths.get("winner_hits_csv",  ""),
+                    paths.get("winner_flags_csv", ""),
+                ))
+
+                stamp_url = payload.get("stamp_json_winners")
+                if stamp_url:
+                    st.markdown(f"- Mirrored stamp: `{stamp_url}`")
+
+
+Now add two tiny lines in src/app.py where you want the panel to show (any existing DR dev section is fine, right after you have state available):
+
+from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev
+render_dr_winner_overlay_dev(state)
+
+
+Nothing else in app.py needs to change. This sidesteps all the quoting issues.
+
+3) Sanity‑check the overlay module (fix common quoting scars)
+
+Compile the overlay code and fix any leftover shell scars (they’re easy to spot):
+
+python -m py_compile alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py
+
+
+If it flags a line like if len(canon) "'!= 3:, change it to:
+
+if len(canon) != 3:
+
+
+Also make sure your “Mirrored stamp” line anywhere in UI uses the two‑line safe form (this avoids nested quotes in f‑strings):
+
+stamp_url = payload.get("stamp_json_winners", "")
+st.markdown(f"- Mirrored stamp: `{stamp_url}`")
+
+
+Re‑compile after edits.
+
+How to prove it works (no UI needed)
+
+Even before launching Streamlit, you can confirm the analyzer/overlay pathing is healthy:
+
+python - <<'PY'
+from pathlib import Path
+from alpha_analytical.digit_reduction.analyzer_v2.winners_overlay import run_winner_overlay_batch
+
+res = run_winner_overlay_batch(
+    'Connecticut4',
+    {'Combined': '237'},        # put a real winner here
+    analysis_root=Path('data/outputs/analysis'),
+    when='20250929',
+    mirror_to_winners=True
+)
+import pprint; pprint.pprint(list(res['results'].keys()))
+PY
+
+
+You should see artifacts in:
+
+data/outputs/analysis/digit_reduction/Connecticut4/analyzer_v2/winners/
+  20250929_Combined_winner_overlay.html
+  20250929_Combined_winner_map.json
+  20250929_Combined_winner_hits.csv
+  20250929_Combined_winner_flags.csv
+  20250929_Combined_winner_stamp.json
+
+
+…and (if mirrored):
+
+data/outputs/analysis/winners/Connecticut4/stamps/digit_reduction/
+  20250929_Combined_winner_stamp.json
+
+
+Then launch run_app.bat and use the new expander to run any combination(s) you like.
+
+Why this is the best path forward
+
+App.py is restored and stays small. You only added an import and a function call—no block‑pasting or shell quoting needed.
+
+All overlay logic lives in modules under alpha_analytical/digit_reduction/analyzer_v2/ (the right place), with clean compile checks.
+
+Unicode‑safe. The wrapper avoids fancy punctuation in code that could be mis‑encoded; the expander title uses a plain hyphen -.
+
+Traceable artifacts. The overlay emits HTML, JSON map, hits/flags CSV, and optional mirrored winners stamp—exactly what you asked for so DR can be compared, learned from, and logged alongside V‑TRAC and Stable.
+
+Guardrails to avoid a repeat
+
+Never patch Python via shell string replaces when the content contains quotes/backticks or Unicode punctuation. Edit the file directly or add a small imported module like we did.
+
+Run python -m py_compile on any file you touch before launching the app. It catches these issues instantly.
+
+Watch the line before a new block—trailing \ or an unclosed ( will make Python treat the next line as a continuation and blow up.
+
+Keep UI text ASCII‑only in code (use - not —), and if you really want em‑dashes in the UI, inject them as data, not in source.
+
+If you hit one more SyntaxError
+
+Open the file at the line it reports and look one line up for a stray backslash or a literal \n.
+
+Replace any “curly quotes” with plain quotes, and re‑compile.
+
+If it still complains, paste the 10 lines around that spot and I’ll pinpoint the exact character to delete.
+
+You have a clean way out now: restore src/app.py, add the tiny import/call, compile once, and you’re back to testing the winners overlay from the UI—without fighting quoting or encodings again.

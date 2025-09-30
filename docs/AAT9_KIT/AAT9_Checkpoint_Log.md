@@ -1,3 +1,23 @@
+## 2025-09-30 03:30 (UTC) - Control Center due doubles badges
+
+- Context: Operators needed the reinstated due-doubles columns to carry the top repeating pairs and cross-variant combo badges without the extra Latest/Total clutter.
+- Change:
+  - Load combined repeating pairs from Aux analytics and attach them to every state/variant row.
+  - Scan Combined/Midday/Evening draws for >=1000-draw doubles, merge their C/M/E badges per pair, and render compact hyphen lists.
+  - Renamed the primary metric to 'Draws Since Double' and removed legacy columns while keeping positional heat/notes untouched.
+- Impact: Due doubles view once again highlights the same critical combos surfaced in Aux, with consistent badges and without wasting table real estate.
+- Files/Refs: `src/app.py`, `tasks/task_doublescontrol.txt`, docs/AAT9_KIT/AAT9_Unified_Changelog.md.
+- Follow-ups: Consider surfacing BLUE (>=700) combos in a hover/supplement once we validate the red baseline.
+
+﻿## 2025-09-29 23:30 (UTC) - Aux unified view (DEV) + due doubles columns
+
+- Context: After restoring the Control Center due-doubles columns, we needed a safer way to inspect Combined/Midday/Evening Aux outputs together without refactoring the legacy radio flow.
+- Change:
+  - Reused the cached Aux payloads to rebuild the due doubles table (pairs + RED combos) on Control Center.
+  - Added a DEV-only “Unified Aux View” expander that renders top pairs/combos/V-TRAC summaries in side-by-side columns while keeping the original per-variant layout intact.
+- Impact: Operators can keep the familiar workflow but optionally scan all variants together; Control Center regains the columns operators rely on for doubles monitoring.
+- Files/Refs: `src/app.py`, docs/AAT9_KIT/AAT9_Unified_Changelog.md.
+- Follow-ups: Consider expanding the unified expander with sums/BA once we vet the current summaries.
 ## 2025-09-28 02:00 (UTC) - Positional loader guardrails + pairs window SSOT
 
 - Context: Post-mojibake cleanup left the positional tracker dependent on a non-registered loader module and pairs capped at 100 draws, muting RED/BLUE thresholds.
@@ -13,7 +33,7 @@
 - Context: Operators requested the Aux tracker mirror the training markup (Combined/Midday/Evening stacked) without extra sliders or tabs.
 - Change:
   - Locked the positional engine to a 360-draw window with Top-3 ranks and removed the Streamlit slider/radio controls.
-  - Replaced per-variant tabs with a side-by-side table (P1–P3 columns per variant) while keeping draw-source captions, consensus notes, and the shortlist.
+  - Replaced per-variant tabs with a side-by-side table (P1â€“P3 columns per variant) while keeping draw-source captions, consensus notes, and the shortlist.
   - Updated Quickstart, Aux overview, positional pressure brief, and detail log to describe the new layout.
 - Impact: Positional pressure is now scannable across variants at a glance, matching the documented mock and ready for downstream compound scoring.
 - Files/Refs: src/app.py, docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/important/AAT9_Positional_Pressure.md, docs/AAT9_KIT/important/DETAIL CODEX LOG.txt.
@@ -78,9 +98,9 @@
 - Impact: No runtime change  Streamlit uses `src/core/stable_pattern_extractor.py` ? `alpha_analytical/stable/__init__.py`; legacy assets are preserved for reference.
 - Files/Refs: archived/2025-09-19_stable_cleanup/*, src/app.py, docs/AAT9_KIT/important/stable_pattern_AAT9.txt, docs/AAT9_DOCS/stable_pattern_master_guide_AAT9.md, docs/AAT9_KIT/AAT9_Unified_Changelog.md.
 - Follow-ups: None required; restore specific runners from archive only if a CLI is needed.
-# AAT9 — Checkpoint Log (Running, Detailed Notes)
+# AAT9 â€” Checkpoint Log (Running, Detailed Notes)
 
-Purpose: A single, date‑tagged log for deeper explanations, context, and rationale that complement the Unified Changelog. Use this when you (or AI) want to capture more than a one‑line changelog entry.
+Purpose: A single, dateâ€‘tagged log for deeper explanations, context, and rationale that complement the Unified Changelog. Use this when you (or AI) want to capture more than a oneâ€‘line changelog entry.
 
 How to update
 - Append a new section at the top.
@@ -89,78 +109,78 @@ How to update
 
 Template
 ```
-## YYYY‑MM‑DD HH:MM (TZ) — Title
+## YYYYâ€‘MMâ€‘DD HH:MM (TZ) â€” Title
 
-- Context: one‑paragraph background
+- Context: oneâ€‘paragraph background
 - Change: what changed (bullets)
 - Rationale: why this improves stability/clarity/UX
 - Impact: runtime behavior, workflows, or docs affected
 - Files/Refs: file paths, doc sections, diagrams
-- Follow‑ups: next steps if any
+- Followâ€‘ups: next steps if any
 ```
 
 ---
 
-## 2025‑09‑06 12:00 (UTC) — Preflight Tables Check + Startup Docs
+## 2025â€‘09â€‘06 12:00 (UTC) â€” Preflight Tables Check + Startup Docs
 
-- Context: We standardized AAT9 startup (KIT + preflight) and wanted a quick, opt‑in validation for combined tables when working on Stable/DR/V‑TRAC.
+- Context: We standardized AAT9 startup (KIT + preflight) and wanted a quick, optâ€‘in validation for combined tables when working on Stable/DR/Vâ€‘TRAC.
 - Change:
   - Added `-CheckTables` to `.codex/preflight.ps1` to list `data/outputs/tables` state dirs and confirm a specific state dir exists.
   - Added `docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md` with simple operator instructions.
   - Added Codex boot doc `briefings/CODEX_READ_FIRST_AAT9.md` and a clipboard helper `TOOLS/codex_start_aat9.bat`.
-- Rationale: Keeps preflight fast by default; adds a quick on‑demand tables sanity check; standardizes session startup for both humans and agents.
-- Impact: No runtime changes; faster diagnosis when working on combined‑tables pages.
+- Rationale: Keeps preflight fast by default; adds a quick onâ€‘demand tables sanity check; standardizes session startup for both humans and agents.
+- Impact: No runtime changes; faster diagnosis when working on combinedâ€‘tables pages.
 - Files/Refs:
   - `.codex/preflight.ps1` (new flags)
   - `docs/AAT9_KIT/HUMAN_READ_FIRST_AAT9.md`
   - `briefings/CODEX_READ_FIRST_AAT9.md`, `TOOLS/codex_start_aat9.bat`
   - KIT index: `docs/AAT9_KIT/AAT9_KIT_README.md`
-- Follow‑ups: Consider Phase‑2 Aux audit after new Aux tools land.
+- Followâ€‘ups: Consider Phaseâ€‘2 Aux audit after new Aux tools land.
 
-## 2025‑09‑06 13:30 (UTC) — Tables Pipeline Runner + Control Center UI
+## 2025â€‘09â€‘06 13:30 (UTC) â€” Tables Pipeline Runner + Control Center UI
 
-- Context: Daily workflow uploads a fresh Pick3StatsC4.xlsm and regenerates combined tables; we needed a safe way to run this in‑app when needed.
+- Context: Daily workflow uploads a fresh Pick3StatsC4.xlsm and regenerates combined tables; we needed a safe way to run this inâ€‘app when needed.
 - Change:
-  - Added `src/core/pipeline_runner.py` (pure functions) that cleans → extracts → builds combined tables.
-  - Wired an optional “Tables Pipeline” expander in Control Center to upload Excel and run the pipeline.
+  - Added `src/core/pipeline_runner.py` (pure functions) that cleans â†’ extracts â†’ builds combined tables.
+  - Wired an optional â€œTables Pipelineâ€ expander in Control Center to upload Excel and run the pipeline.
 - Rationale: Keep pipeline runnable from the app, but only on demand; reuse outputs across pages; no recompute on render.
 - Impact: No changes to existing pages; optional UI only. Outputs stored under `data/cleaned` and `data/outputs/tables`.
 - Files/Refs: `src/core/pipeline_runner.py`, `src/app.py` (Control Center section), `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md`
-- Follow‑ups: None required; Phase‑2 Aux audit deferred until after new Aux tools are added.
+- Followâ€‘ups: None required; Phaseâ€‘2 Aux audit deferred until after new Aux tools are added.
 
-## 2025‑09‑07 10:10 (UTC) — Import Shadowing (utils) → SSOT Bootstrap
+## 2025â€‘09â€‘07 10:10 (UTC) â€” Import Shadowing (utils) â†’ SSOT Bootstrap
 
 - Context: Intermittent startup errors (`ImportError: cannot import name get_cleaned_data_dir` or `NameError: Path is not defined`) after adding optional pipeline UI. Data/layout were fine; errors stemmed from module resolution.
 - Root Cause: Two packages named `utils` exist (`/utils` canonical, `/src/utils` legacy). When Streamlit sys.path had `src` before project root, absolute imports (`from utils.path_handler ...`) bound to `src\utils` first, triggering a circular forwarder and partial module.
 - Fix: Add a small SSOT import bootstrap at the very top of `src/app.py`:
   - Insert project root at sys.path[0].
   - Evict premature `utils`/`src.utils` bindings if they resolve under `/src/utils`.
-  - Import and pin `utils.path_handler` from the top‑level package.
+  - Import and pin `utils.path_handler` from the topâ€‘level package.
 - Impact: Deterministic binding to canonical `utils`; no behavior changes to pages/pipeline.
 - Files: `src/app.py`; docs updated: KEEPERS.md, Pitfalls.
-- Follow‑ups: None — structural rename of `src/utils` not required now.
+- Followâ€‘ups: None â€” structural rename of `src/utils` not required now.
 
-## 2025‑09‑07 12:20 (UTC) — Aux Pairs Bands (Display‑Only)
+## 2025â€‘09â€‘07 12:20 (UTC) â€” Aux Pairs Bands (Displayâ€‘Only)
 
-- Context: Overdue pairs lists used overlapping bands (e.g., repeating red ≥ 71 and blue ≥ 107), causing label confusion. Policy: red is the highest threshold.
-- Change: Mutually‑exclusive bands (display‑only) with red highest:
-  - Repeating: red ≥ 107; blue 71..106; purple 25..70
-  - Non‑repeating: red ≥ 56; blue 37..55; purple 25..36
-- Caption updated to ASCII ">=" to avoid mojibake. Top‑5 repeating color mapping aligned; list still sorted by draws_since.
+- Context: Overdue pairs lists used overlapping bands (e.g., repeating red â‰¥ 71 and blue â‰¥ 107), causing label confusion. Policy: red is the highest threshold.
+- Change: Mutuallyâ€‘exclusive bands (displayâ€‘only) with red highest:
+  - Repeating: red â‰¥ 107; blue 71..106; purple 25..70
+  - Nonâ€‘repeating: red â‰¥ 56; blue 37..55; purple 25..36
+- Caption updated to ASCII ">=" to avoid mojibake. Topâ€‘5 repeating color mapping aligned; list still sorted by draws_since.
 - Impact: No calculation changes; UI buckets and captions now match policy.
 
-## 2025‑09‑07 12:40 (UTC) — V‑Trac Big Table: Badge Shows Draws‑Since
+## 2025â€‘09â€‘07 12:40 (UTC) â€” Vâ€‘Trac Big Table: Badge Shows Drawsâ€‘Since
 
-- Context: Small “Index Hits” shows draws_since; big table should show it too for Top‑10 red rows.
+- Context: Small â€œIndex Hitsâ€ shows draws_since; big table should show it too for Topâ€‘10 red rows.
 - Change: Red rows now use badge "rank (draws_since)"; green rows unchanged.
-- Impact: Display‑only; keeps small/big table alignment.
+- Impact: Displayâ€‘only; keeps small/big table alignment.
 
-## 2025‑09‑07 13:00 (UTC) — Digit Reduction: Stacked Report + Training Exports
+## 2025â€‘09â€‘07 13:00 (UTC) â€” Digit Reduction: Stacked Report + Training Exports
 
-- Context: Need training‑friendly exports and stacked view for better screenshots; analysis unchanged.
+- Context: Need trainingâ€‘friendly exports and stacked view for better screenshots; analysis unchanged.
 - Change:
   - Added stacked report HTML and checkbox in page to embed it.
-  - Added training CSV/JSON exports under `.../training/` with structural fields, ranks, guidance, and export‑only compaction.
+  - Added training CSV/JSON exports under `.../training/` with structural fields, ranks, guidance, and exportâ€‘only compaction.
 - Outputs:
   - `data/outputs/analysis/digit_reduction/<STATE>/<STATE>digit_reduction_report.html`
   - `.../<STATE>digit_reduction_report_stacked.html`
@@ -169,40 +189,40 @@ Template
   - `.../training/<STATE>digit_reduction_logs.json`
 - Impact: No changes to reduction algorithms or tabbed HTML; only exports and optional embed.
 
-## 2025‑09‑07 14:10 (UTC) — Winners Logger: V‑Trac Winner Report (Index Panels)
+## 2025â€‘09â€‘07 14:10 (UTC) â€” Winners Logger: Vâ€‘Trac Winner Report (Index Panels)
 
-- Context: Need a per‑state, per‑winner visual export for external training; older runs had correct “vtrac_reports” HTML under winners.
-- Change: Added an index‑based report generator and UI expander in Control Center:
-  - Inputs: State, 3‑digit winner
+- Context: Need a perâ€‘state, perâ€‘winner visual export for external training; older runs had correct â€œvtrac_reportsâ€ HTML under winners.
+- Change: Added an indexâ€‘based report generator and UI expander in Control Center:
+  - Inputs: State, 3â€‘digit winner
   - Renders 3 panels (Midday/Evening/Combined) with:
-    - Purple: stable‑pattern combos for the winner’s index
+    - Purple: stableâ€‘pattern combos for the winnerâ€™s index
     - Green: straight permutations of the winner
-  - Writes to: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
-- Impact: Does not require string‑tables; safe for states whose tables aren’t mapped yet. Later we can overlay table‑driven details.
+  - Writes to: `data/outputs/winners/<YYYYâ€‘MMâ€‘DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
+- Impact: Does not require stringâ€‘tables; safe for states whose tables arenâ€™t mapped yet. Later we can overlay tableâ€‘driven details.
 - Files: `src/core/winners_vtrac_report.py`, `src/app.py`
-## 2025-09-16 16:00 (UTC) — Winners Full Report + Aux V‑TRAC Restore
+## 2025-09-16 16:00 (UTC) â€” Winners Full Report + Aux Vâ€‘TRAC Restore
 
-- Context: The Aux tools rely on a staged V‑TRAC reference under `scripts/auxiliary/working/modules/` while the integrated app should use a canonical `modules/*`. A deleted staged `vtrac_reference.py` broke Aux; the Winners Logger (full) also failed due to imports resolving to the staged package and a missing canonical API. Goal: restore Aux, add a canonical V‑TRAC API, and enable a table‑aware analyzer‑style Winners Full report (3 panes, purple index + green straights) without touching analyzer internals.
+- Context: The Aux tools rely on a staged Vâ€‘TRAC reference under `scripts/auxiliary/working/modules/` while the integrated app should use a canonical `modules/*`. A deleted staged `vtrac_reference.py` broke Aux; the Winners Logger (full) also failed due to imports resolving to the staged package and a missing canonical API. Goal: restore Aux, add a canonical Vâ€‘TRAC API, and enable a tableâ€‘aware analyzerâ€‘style Winners Full report (3 panes, purple index + green straights) without touching analyzer internals.
 - Change:
-  - Restored staged Aux reference: `scripts/auxiliary/working/modules/vtrac_reference.py` (exports restored; draws‑only Aux unaffected).
+  - Restored staged Aux reference: `scripts/auxiliary/working/modules/vtrac_reference.py` (exports restored; drawsâ€‘only Aux unaffected).
   - Added canonical API: `modules/vtrac_reference.py` exporting `get_vtrac_index`, `get_index_set`, `get_index_straights` (backed by analyzer utilities).
-  - Implemented full builder: `modules/winner_report_full.py` (reads three combined tables, renders analyzer‑style 3‑pane HTML via analyzer renderer, applies green straights overlay, writes to `data/outputs/analysis/winners/<STATE>/...`).
-  - Wired Control Center tile: “Winners Logger (Analyzer‑style full report)” now accepts Midday/Evening and generates one HTML per input; compact tile unchanged.
-  - Import hygiene: ensured non‑Aux pages bind `modules/*` to the project tree, not the staged Aux path; added a robust import fallback in the full tile.
-- Rationale: Cleanly separates Aux (staged) from the integrated app (canonical), removes import collisions, and reuses the established pipeline tables to produce the expected analyzer‑style Winners view. The canonical API gives non‑Aux code a single, stable entrypoint, reducing drift.
+  - Implemented full builder: `modules/winner_report_full.py` (reads three combined tables, renders analyzerâ€‘style 3â€‘pane HTML via analyzer renderer, applies green straights overlay, writes to `data/outputs/analysis/winners/<STATE>/...`).
+  - Wired Control Center tile: â€œWinners Logger (Analyzerâ€‘style full report)â€ now accepts Midday/Evening and generates one HTML per input; compact tile unchanged.
+  - Import hygiene: ensured nonâ€‘Aux pages bind `modules/*` to the project tree, not the staged Aux path; added a robust import fallback in the full tile.
+- Rationale: Cleanly separates Aux (staged) from the integrated app (canonical), removes import collisions, and reuses the established pipeline tables to produce the expected analyzerâ€‘style Winners view. The canonical API gives nonâ€‘Aux code a single, stable entrypoint, reducing drift.
 - Impact:
-  - Aux tools: working again; no change to draws‑only behavior.
-  - Winners Full tile: produces analyzer‑style HTML under `data/outputs/analysis/winners/<STATE>/...` with purple index coverage + green straights overlay; compact tile remains as a safe fallback when tables are missing.
-  - No changes to analyzer internals or other tools; string‑safe CSV reads for new reporting prevent token coercion.
+  - Aux tools: working again; no change to drawsâ€‘only behavior.
+  - Winners Full tile: produces analyzerâ€‘style HTML under `data/outputs/analysis/winners/<STATE>/...` with purple index coverage + green straights overlay; compact tile remains as a safe fallback when tables are missing.
+  - No changes to analyzer internals or other tools; stringâ€‘safe CSV reads for new reporting prevent token coercion.
 - Files/Refs:
   - Code: `modules/vtrac_reference.py`, `modules/winner_report_full.py`, `src/app.py` (full tile wiring), staged `scripts/auxiliary/working/modules/vtrac_reference.py` (restored)
-  - Docs: `docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md` (usage/paths), `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md` (I/O mapping), `briefings/PITFALLS.txt` (import SSOT + string‑safe IO), `docs/AAT9_KIT/AAT9_Preflight_Reference.md` (tip for tables)
-- Follow‑ups:
-  - Optional: unify all tools on `modules/vtrac_reference.py` over time; keep Aux staged shim as a re‑export when you’re ready to retire duplicates.
-  - Optional: move full report renderer to `src/reporting/` with a template; today’s builder already mirrors analyzer layout.
+  - Docs: `docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md` (usage/paths), `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md` (I/O mapping), `briefings/PITFALLS.txt` (import SSOT + stringâ€‘safe IO), `docs/AAT9_KIT/AAT9_Preflight_Reference.md` (tip for tables)
+- Followâ€‘ups:
+  - Optional: unify all tools on `modules/vtrac_reference.py` over time; keep Aux staged shim as a reâ€‘export when youâ€™re ready to retire duplicates.
+  - Optional: move full report renderer to `src/reporting/` with a template; todayâ€™s builder already mirrors analyzer layout.
   - Add a tiny smoke CLI to generate a winners full report outside Streamlit if desired.
 
-## 2025-09-17 21:00 (UTC) — Aux Draws Pipeline + Legacy Archive
+## 2025-09-17 21:00 (UTC) â€” Aux Draws Pipeline + Legacy Archive
 
 - Context: Combined Aux features relied on historical folders (`adapters_old_module`, `legacy_2`, assorted scripts) and drew from `data/cleaned/*_draws.csv`. We now have a canonical extractor + Control Center exporter, so clutter was causing confusion and file-lock issues when rebuilding Midday/Evening draws.
 - Change:
@@ -218,6 +238,7 @@ Template
   - Remove the leftover `data/cleaned/Connecticut_Midday_draws.csv` once Excel releases the file lock.
   - When ready, wire Midday/Evening into Control Center doubles + Blackapple (combined stays the baseline).
   - Consider retiring `scripts/auxiliary/working/` once staged modules are no longer needed by the Aux page.
+
 
 
 

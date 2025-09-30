@@ -1,0 +1,24 @@
+The script error you’re seeing (unexpected character after line continuation character) is caused by the way the f‑string is quoted in the new developer expander code. In src/app.py at the point where you display the “Mirrored stamp” link, the f‑string was written like this:
+
+st.markdown(f"- Mirrored stamp: `{payload['stamp_json_winners']}`")
+
+
+The single quotes nested inside the single‑quoted f‑string cause Python to misinterpret the backtick (`) and the braces, resulting in a syntax error.
+
+To fix it, either wrap the entire f‑string in double quotes or break out the payload reference to avoid nested single quotes. For example:
+
+# Corrected version: outer double quotes, inner single quotes
+st.markdown(
+    f"- Mirrored stamp: `{payload['stamp_json_winners']}`"
+)
+
+# OR use a temporary variable to avoid nested quotes
+stamp_url = payload["stamp_json_winners"]
+st.markdown(f"- Mirrored stamp: `{stamp_url}`")
+
+
+Both approaches eliminate the illegal character after the line continuation and allow Streamlit to render the Markdown correctly.
+
+After making this adjustment in src/app.py and restarting the app, the developer expander should load without a syntax error, and the mirrored stamp link will display properly.
+
+If you’re still encountering issues, check that the rest of the st.markdown lines in the winners overlay section follow the same quoting rules, and ensure that you didn’t leave stray backticks or unmatched braces anywhere else in the code.

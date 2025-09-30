@@ -1,0 +1,168 @@
+
+
+
+
+
+You’re right to think this is a “wiring” issue. In Streamlit a totally blank page (no red error box, no sidebar, no header) almost always means:
+
+the script started successfully, but nothing wrote to the page because the entrypoint that renders the UI isn’t being called anymore.
+
+Given the edit history you shared (inline block surgery around src/app.py, duplicated/removed expander blocks, attempts to splice near if __name__ == "__main__":, stray literal \n, smart quotes, etc.), the most likely failure modes are:
+
+What most likely happened
+
+The entrypoint call got removed or skipped.
+Many Streamlit apps keep rendering inside a function like main(), show_app(), or a router. If the bottom-of-file block:
+
+if __name__ == "__main__":
+    main()     # or show_app(), run(), etc.
+
+
+…was deleted, moved above the function definition, or guarded by a condition that’s now false, the script runs and emits nothing → blank page.
+
+Early short‑circuit before rendering.
+An unconditional return, st.stop(), or a try/except that swallows an exception at the top can end execution before any st.* call is reached, again leaving a blank page.
+
+Curly quotes / stray characters broke a conditional.
+Earlier you had \n literals and an en‑dash in the new expander title. If the same kind of invisible character landed on or near the if __name__ == "__main__": line or its indent, Python will happily parse a different string or skip the block. That would compile fine and still produce no UI.
+
+The dev overlay import is now top‑level and failing silently.
+If you wrapped imports in a broad try/except: pass near the top, an ImportError or NameError could be swallowed and the script then exits early with no UI calls.
+
+Fast triage (2–3 minutes)
+
+Do these in PowerShell from the repo root:
+
+Prove Streamlit itself is fine (sanity check).
+
+Set-Content sanity.py 'import streamlit as st; st.title("Sanity OK")'
+streamlit run sanity.py
+
+
+If this shows a “Sanity OK” page, Streamlit is healthy and the blank page is your app code path.
+
+Check your entrypoint exists in src/app.py.
+
+Select-String -Path src/app.py -Pattern 'def main\(|def show_.*app\(|def run_app\('
+Select-String -Path src/app.py -Pattern '__name__\s*==\s*"__main__"'
+
+
+If you don’t see a line with __name__ == "__main__", that’s the bug.
+
+If you see it, open the last ~60 lines and confirm the call:
+
+Get-Content src/app.py -Tail 80
+
+
+You should see something like:
+
+if __name__ == "__main__":
+    main()  # or show_app(), run(), etc.
+
+
+Search for hard stops or swallowed errors.
+
+Select-String -Path src/app.py -Pattern 'st\.stop\(|return$|except Exception: pass'
+
+
+Compile once (catches hidden Unicode issues).
+
+python -m py_compile src/app.py
+
+
+This won’t catch logic skips, but it does confirm the file parses.
+
+Surgical “get me back on screen” fix
+
+If step (2) shows the entrypoint is missing or not calling anything, add this safe rescue block at the very bottom of src/app.py (below everything else):
+
+# --- RESCUE BOOT: keep at end of file ---
+def _rescue_boot():
+    import streamlit as st
+    st.set_page_config(page_title="Alpha-Final Analytical Tool", layout="wide")
+    st.title("Alpha‑Final Analytical Tool")
+    st.write("✅ App booted (rescue path). If you can read this, the main render call was being skipped.")
+    # Optionally: render a minimal home or quick links here so you can keep working.
+
+if __name__ == "__main__":
+    try:
+        main  # or show_app / run_app, depending on your app
+    except NameError:
+        _rescue_boot()
+    else:
+        try:
+            main()  # or show_app() / run_app()
+        except Exception as e:
+            _rescue_boot()
+            import streamlit as st
+            st.error(f"Main render raised: {e}")
+
+
+
+
+
+Reload run_app.bat.
+
+If you now see the “✅ App booted (rescue path)” banner, it confirms the issue was the missing/blocked entrypoint. From there you can re‑wire the correct main()/show_app() call without being blind.
+
+Clean up the risky edits that commonly cause this
+
+Dev overlay block: keep it inside the Digit Reduction page function, not at top‑level. Also prefer ASCII quotes/hyphen:
+
+with st.expander("Analyzer V2 Winners overlay (DEV) - batch", expanded=False):
+    ...
+
+
+(Avoid smart quotes and the em/en dash.)
+
+Guard the optional dev import.
+
+try:
+    from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev
+except Exception as e:
+    render_dr_winner_overlay_dev = None
+    DEV_OVERLAY_IMPORT_ERROR = e
+
+
+Call it only where appropriate.
+
+if render_dr_winner_overlay_dev:
+    render_dr_winner_overlay_dev(state)
+elif 'DEV_OVERLAY_IMPORT_ERROR' in globals():
+    st.caption(f"DEV overlay not available: {DEV_OVERLAY_IMPORT_ERROR}")
+
+
+Make sure the page router still runs.
+If you use a sidebar selectbox to choose pages, ensure that code path still executes before any early return.
+
+If it’s somehow a front‑end blank (rare)
+
+A true blank (React failed to mount) can come from corrupt frontend assets or stale cache:
+
+Hard refresh the browser (Ctrl+F5).
+
+Open DevTools → Console and look for red errors (e.g., ChunkLoadError or CORS).
+
+Clear Streamlit caches:
+
+streamlit cache clear
+streamlit clean
+
+
+But 99% of the time, with the log you shared, it’s the entrypoint call.
+
+Why I’m confident this is it
+
+Your earlier edits repeatedly targeted the bottom of src/app.py around the if __name__ == "__main__": anchor and performed regex replacements and block splices.
+
+You also had a period where the file was “overwritten and truncated” and then “reverted,” but later git reported not a repo, so it’s plausible the real footer never got put back exactly right.
+
+Streamlit is running and not showing a Python exception, which is exactly what happens when no st.* calls execute.
+
+After you get the page back
+
+If you want the Analyzer V2 button(s) visible in the app again, keep them inside the Digit Reduction page function only. The module‑level import/call pattern was the source of earlier syntax/encoding mishaps.
+
+The backend overlay code you have (winner overlay + batch stamps/flags) doesn’t block app rendering; it only runs when you click those dev buttons.
+
+If you try the rescue block and still see a blank page, the next most useful single check is to paste the last ~100 lines of src/app.py (from the if __name__ == "__main__": region downward). That will let me pinpoint whether the entrypoint call is present but being short‑circuited.

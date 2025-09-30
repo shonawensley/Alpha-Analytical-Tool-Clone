@@ -1,16 +1,18 @@
-Got it—thanks for the clarifier and the header mock. I now fully understand what you want the Due Doubles table to look like and how the cells should be populated.
+[2025-09-30] Control Center due-doubles table rebuilt: keeps positional heat, removes Latest/Total columns, adds combined top-4 pair columns and C/M/E-badged double combos (>=1000 draws).
+
+﻿[2025-09-29] Added Unified Aux View (DEV) expander for Combined/Midday/Evening summaries alongside restored due-doubles columns.\r\n\r\nGot itâ€”thanks for the clarifier and the header mock. I now fully understand what you want the Due Doubles table to look like and how the cells should be populated.
 
 Below is a crisp spec (so Codex can wire it quickly) and a small markdown mock you can paste into your CLI to see the exact visual you described.
 
-What the new table must show (one row per State × Variant)
+What the new table must show (one row per State Ã— Variant)
 
-Columns (left → right)
+Columns (left â†’ right)
 
 State
 
 Variant (Midday, Evening, Combined)
 
-Draws Since Double (the ranking metric – same as you have now)
+Draws Since Double (the ranking metric â€“ same as you have now)
 
 Most Due Pair (double pair)
 
@@ -20,85 +22,85 @@ Most Due Pair (double pair)
 
 4th Most Due Pair
 
-Combos (Most‑Due Pair) – only double combos ≥ 1000 draws out, associated with the pair
+Combos (Mostâ€‘Due Pair) â€“ only double combos â‰¥ 1000 draws out, associated with the pair
 
-Combos (2nd Pair) – same rule
+Combos (2nd Pair) â€“ same rule
 
-Combos (3rd Pair) – same rule
+Combos (3rd Pair) â€“ same rule
 
-Combos (4th Pair) – same rule
+Combos (4th Pair) â€“ same rule
 
 Cell format rules
 
-Pairs show PP – gap (e.g., 11 – 75 meaning pair 11 is 75 draws overdue).
+Pairs show PP â€“ gap (e.g., 11 â€“ 75 meaning pair 11 is 75 draws overdue).
 
-Combos cells list hyphen‑separated double combos (not triples) that are ≥ threshold and contain that pair, with a suffix badge showing where the miss qualifies:
+Combos cells list hyphenâ€‘separated double combos (not triples) that are â‰¥ threshold and contain that pair, with a suffix badge showing where the miss qualifies:
 
-E = Evening file ≥ threshold
+E = Evening file â‰¥ threshold
 
-M = Midday file ≥ threshold
+M = Midday file â‰¥ threshold
 
-C = Combined file ≥ threshold
+C = Combined file â‰¥ threshold
 
 If the same combo qualifies in multiple charts, join badges with /, e.g. 455 M/C, 233 E/C, or 299 E/M/C.
 
-Example cell: 244E‑744M‑544C (exactly like your screenshot).
+Example cell: 244Eâ€‘744Mâ€‘544C (exactly like your screenshot).
 
-If no qualifying combo exists for that pair, show —.
+If no qualifying combo exists for that pair, show â€”.
 
 Where the pair list comes from
 
-Use the Combined draws to rank repeating (double) pairs for the state (top‑4).
-(This mirrors the “Top most overdue repeating pairs” block you already have in Aux.)
+Use the Combined draws to rank repeating (double) pairs for the state (topâ€‘4).
+(This mirrors the â€œTop most overdue repeating pairsâ€ block you already have in Aux.)
 
 Where the combos come from
 
-Gather the state’s double combos whose draws‑since ≥ threshold from each chart:
+Gather the stateâ€™s double combos whose drawsâ€‘since â‰¥ threshold from each chart:
 
 Combined, Midday, Evening (three independent checks).
 
 Keep only combos that belong to the target pair:
 
-For pair PP (e.g., 44), include any double with exactly two P’s (third digit ≠ P):
+For pair PP (e.g., 44), include any double with exactly two Pâ€™s (third digit â‰  P):
 PPx, xPP, P x P (e.g., 044, 404, 440 for pair 00; exclude PPP, i.e., triples).
 
 Thresholds (confirming)
 
-RED = ≥ 1000 draws miss (default) — these are the only ones listed in the 4 “Combos …” columns.
+RED = â‰¥ 1000 draws miss (default) â€” these are the only ones listed in the 4 â€œCombos â€¦â€ columns.
 
-BLUE (softer attention in other views) = ≥ 700 draws miss (configurable; not shown in this table).
+BLUE (softer attention in other views) = â‰¥ 700 draws miss (configurable; not shown in this table).
 
 Both thresholds are already in code from the Aux tools; keep them as constants so you can tune later.
 
 Markdown mock (copy to CLI to preview)
 
-Note: Numbers below are illustrative to show formatting; they’re not live values.
+Note: Numbers below are illustrative to show formatting; theyâ€™re not live values.
 
 
 ________________________________
 
 Markdown mock (copy to CLI to preview)
 
-Note: Numbers below are illustrative to show formatting; they’re not live values.
+Note: Numbers below are illustrative to show formatting; theyâ€™re not live values.
 
-| State        | Variant  | Draws Since Double | Most Due Pair | 2nd Most Due Pair | 3rd Most Due Pair | 4th Most Due Pair | Combos (Most‑Due Pair)     | Combos (2nd Pair)           | Combos (3rd Pair)     | Combos (4th Pair) |
+| State        | Variant  | Draws Since Double | Most Due Pair | 2nd Most Due Pair | 3rd Most Due Pair | 4th Most Due Pair | Combos (Mostâ€‘Due Pair)     | Combos (2nd Pair)           | Combos (3rd Pair)     | Combos (4th Pair) |
 |--------------|----------|--------------------|---------------|-------------------|-------------------|-------------------|----------------------------|-----------------------------|-----------------------|-------------------|
-| Connecticut  | Evening  | 18                 | 11 – 75       | 66 – 47           | 22 – 39           | 55 – 38           | 011C‑211M/C‑811E           | 466C‑166M‑966E              | 022C‑422M‑722E        | 455C‑155M‑955E    |
-| NorthCarolina| Combined | 26                 | 44 – 60       | 99 – 41           | 77 – 33           | 33 – 29           | 244E‑744M‑544C             | 099E‑499C‑799M              | 077C‑707M‑170E        | 233E‑833M‑433C    |
-| Pennsylvania | Midday   | 11                 | 00 – 52       | 55 – 38           | 88 – 36           | 22 – 34           | 200C‑040E/C‑400M           | 055M‑505E‑550C              | 088C‑808M‑180E        | 022E‑620M‑402C    |
+| Connecticut  | Evening  | 18                 | 11 â€“ 75       | 66 â€“ 47           | 22 â€“ 39           | 55 â€“ 38           | 011Câ€‘211M/Câ€‘811E           | 466Câ€‘166Mâ€‘966E              | 022Câ€‘422Mâ€‘722E        | 455Câ€‘155Mâ€‘955E    |
+| NorthCarolina| Combined | 26                 | 44 â€“ 60       | 99 â€“ 41           | 77 â€“ 33           | 33 â€“ 29           | 244Eâ€‘744Mâ€‘544C             | 099Eâ€‘499Câ€‘799M              | 077Câ€‘707Mâ€‘170E        | 233Eâ€‘833Mâ€‘433C    |
+| Pennsylvania | Midday   | 11                 | 00 â€“ 52       | 55 â€“ 38           | 88 â€“ 36           | 22 â€“ 34           | 200Câ€‘040E/Câ€‘400M           | 055Mâ€‘505Eâ€‘550C              | 088Câ€‘808Mâ€‘180E        | 022Eâ€‘620Mâ€‘402C    |
 
 **Badges:** E = Evening, M = Midday, C = Combined.  
-**Only RED combos (≥ 1000 draws out) appear in the four “Combos (…)” columns.**
+**Only RED combos (â‰¥ 1000 draws out) appear in the four â€œCombos (â€¦)â€ columns.**
 
 Minimal implementation plan for Codex (fast, no new analytics)
 
-All the data already exists in Aux—this is just reshaping and filtering.
+All the data already exists in Auxâ€”this is just reshaping and filtering.
 
 Config (constants)
 
 RED_MISS = 1000   # list only these in the combos columns
 BLUE_MISS = 700   # used elsewhere; not shown here
-COMBO_SEP = "‑"   # U+2011 non‑breaking hyphen for nicer wrapping
+COMBO_SEP = "â€‘"   # U+2011 nonâ€‘breaking hyphen for nicer wrapping
 
 
 Helpers (pure functions)
@@ -159,49 +161,50 @@ def build_due_doubles_row(state, variant) -> dict:
 
     def fmt_pair(pp_gap): 
         pp, gap = pp_gap
-        return f"{pp} – {gap}"
+        return f"{pp} â€“ {gap}"
 
     combos_cols = []
     for (pp, _gap) in pairs:
         lst = combos_for_pair(badge_maps, pp)
-        combos_cols.append(COMBO_SEP.join(lst) if lst else '—')
+        combos_cols.append(COMBO_SEP.join(lst) if lst else 'â€”')
 
     return {
       'State': state,
       'Variant': variant,
       'Draws Since Double': get_draws_since_last_double(state, variant),  # you already have this
-      'Most Due Pair': fmt_pair(pairs[0]) if len(pairs) > 0 else '—',
-      '2nd Most Due Pair': fmt_pair(pairs[1]) if len(pairs) > 1 else '—',
-      '3rd Most Due Pair': fmt_pair(pairs[2]) if len(pairs) > 2 else '—',
-      '4th Most Due Pair': fmt_pair(pairs[3]) if len(pairs) > 3 else '—',
-      'Combos (Most‑Due Pair)': combos_cols[0] if combos_cols else '—',
-      'Combos (2nd Pair)': combos_cols[1] if len(combos_cols) > 1 else '—',
-      'Combos (3rd Pair)': combos_cols[2] if len(combos_cols) > 2 else '—',
-      'Combos (4th Pair)': combos_cols[3] if len(combos_cols) > 3 else '—',
+      'Most Due Pair': fmt_pair(pairs[0]) if len(pairs) > 0 else 'â€”',
+      '2nd Most Due Pair': fmt_pair(pairs[1]) if len(pairs) > 1 else 'â€”',
+      '3rd Most Due Pair': fmt_pair(pairs[2]) if len(pairs) > 2 else 'â€”',
+      '4th Most Due Pair': fmt_pair(pairs[3]) if len(pairs) > 3 else 'â€”',
+      'Combos (Mostâ€‘Due Pair)': combos_cols[0] if combos_cols else 'â€”',
+      'Combos (2nd Pair)': combos_cols[1] if len(combos_cols) > 1 else 'â€”',
+      'Combos (3rd Pair)': combos_cols[2] if len(combos_cols) > 2 else 'â€”',
+      'Combos (4th Pair)': combos_cols[3] if len(combos_cols) > 3 else 'â€”',
 
 
 Table builder
 
-Reuse your existing “States ranked by draws since last double” list to decide which (state, variant) rows to include and in what order.
+Reuse your existing â€œStates ranked by draws since last doubleâ€ list to decide which (state, variant) rows to include and in what order.
 
-For each row, call build_due_doubles_row(...), collect dicts → pd.DataFrame, and render.
+For each row, call build_due_doubles_row(...), collect dicts â†’ pd.DataFrame, and render.
 
 UI polish
 
-Keep State, Variant, Draws Since Double left‑pinned.
+Keep State, Variant, Draws Since Double leftâ€‘pinned.
 
 Put the four pair columns next, then the four combos columns.
 
-Style: render combos ≥ 1000 in red (you can apply the same CSS you already use in Aux); even though all listed combos are red by rule, keep styling for consistency.
+Style: render combos â‰¥ 1000 in red (you can apply the same CSS you already use in Aux); even though all listed combos are red by rule, keep styling for consistency.
 
 Use tight column widths and allow wrapping in the four combo columns.
 
 Quick answers to your last points
 
-Yes—this is exactly what you described. We are not recomputing any new math; we’re moving signals you already compute in Aux into the Control Center table, aligned to the top‑4 Combined repeating pairs.
+Yesâ€”this is exactly what you described. We are not recomputing any new math; weâ€™re moving signals you already compute in Aux into the Control Center table, aligned to the topâ€‘4 Combined repeating pairs.
 
-Thresholds confirmed: RED = ≥1000 (combinations listed), BLUE = ≥700 (used elsewhere, not shown here).
+Thresholds confirmed: RED = â‰¥1000 (combinations listed), BLUE = â‰¥700 (used elsewhere, not shown here).
 
 Badges show the chart(s) where the combo passes the RED threshold; the same combo can show M/C, E/C, or E/M/C.
 
-If you want, I can now jump into “agent mode” to scan your repo (Control Center page + Aux outputs) and produce the exact diff / file edits so Codex can paste them in one shot.
+If you want, I can now jump into â€œagent modeâ€ to scan your repo (Control Center page + Aux outputs) and produce the exact diff / file edits so Codex can paste them in one shot.
+

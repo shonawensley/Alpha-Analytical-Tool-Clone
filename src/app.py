@@ -54,6 +54,7 @@ except Exception:
 # ----------------------------------------------------------------------
 
 from core.module_b_digit_reduction import run_digit_reduction
+from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev
 from utils.path_handler import get_tables_output_dir
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
@@ -573,6 +574,75 @@ def show_control_center_page() -> None:
             prefix = stem
         return not any(prefix.endswith(sfx) for sfx in _CATEGORY_SUFFIXES)
 
+    _VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
+    _RED_COMBO_THRESHOLD = 1000
+
+    def _generate_double_combos() -> tuple[str, ...]:
+        combos = set()
+        digits = "0123456789"
+        for repeated in digits:
+            for other in digits:
+                if other == repeated:
+                    continue
+                combos.add(repeated * 2 + other)
+                combos.add(repeated + other + repeated)
+                combos.add(other + repeated * 2)
+        return tuple(sorted(combos))
+
+    _DOUBLE_COMBOS = _generate_double_combos()
+    _COMBO_SEPARATOR = " - "
+
+    def _double_combo_gaps(draws: List[str]) -> Dict[str, int]:
+        if not draws:
+            return {combo: 0 for combo in _DOUBLE_COMBOS}
+        default_gap = len(draws)
+        gaps = {combo: default_gap for combo in _DOUBLE_COMBOS}
+        for idx, draw in enumerate(draws):
+            value = (draw or "").strip()
+            if len(value) != 3:
+                continue
+            if value in gaps and gaps[value] == default_gap:
+                gaps[value] = idx
+        return gaps
+
+    def _combo_matches_pair(combo: str, pair: str) -> bool:
+        if not combo or not pair or len(pair) != 2:
+            return False
+        if pair[0] != pair[1]:
+            return False
+        value = combo.strip()
+        if len(value) != 3:
+            return False
+        return value.count(pair[0]) == 2 and len(set(value)) == 2
+
+    def _collect_combo_entries(pair: str, badge_maps: Dict[str, Dict[str, int]]) -> List[str]:
+        hits: Dict[str, set[str]] = {}
+        for badge, gap_map in badge_maps.items():
+            for combo, gap in gap_map.items():
+                if gap >= _RED_COMBO_THRESHOLD and _combo_matches_pair(combo, pair):
+                    hits.setdefault(combo, set()).add(badge)
+        formatted: List[str] = []
+        for combo in sorted(hits):
+            badges = "/".join(sorted(hits[combo]))
+            formatted.append(f"{combo} {badges}" if badges else combo)
+        return formatted
+
+    def _format_pair_value(entry: Optional[tuple[str, int]]) -> str:
+        if not entry:
+            return "-"
+        pair, gap = entry
+        try:
+            gap_int = int(gap)
+        except (TypeError, ValueError):
+            return f"{pair} - {gap}"
+        return f"{pair} - {gap_int}"
+
+    def _format_combo_cell(entries: List[str]) -> str:
+        if not entries:
+            return "-"
+        return _COMBO_SEPARATOR.join(entries)
+
+
     # Dev: System Health (Control Center)
     try:
         show_dev_cc = st.checkbox("Show Dev Health (Control Center)", value=False, key="dev_health_cc")
@@ -935,9 +1005,7 @@ def show_control_center_page() -> None:
                             "State": state_label,
                             "Variant": title,
                             "VariantKey": variant_key,
-                            "Draws Since Last Double": ds,
-                            "Latest Double": latest or "None",
-                            "Total Draws": len(draws),
+                            "Draws Since Double": ds,
                         }
                     )
 
@@ -957,7 +1025,7 @@ def show_control_center_page() -> None:
                 state_double_flags: Dict[str, bool] = {}
                 for row in variant_rows:
                     if row.get("VariantKey") == "combined":
-                        ds_val = row.get("Draws Since Last Double")
+                        ds_val = row.get("Draws Since Double")
                         flag = False
                         try:
                             if ds_val is not None:
@@ -998,14 +1066,90 @@ def show_control_center_page() -> None:
                 row["Positional Heat"] = positional_heat.get(key, "")
                 row["Positional Notes"] = positional_notes.get(row.get("State"), "") if row.get("VariantKey") == "combined" else ""
 
+            try:
+                with _project_modules_first():
+                    from analyze_pairs import calculate_overdue_pairs
+            except Exception:
+                calculate_overdue_pairs = None
+
+            combo_gap_maps: Dict[str, Dict[str, Dict[str, int]]] = {}
+            for (state_label, variant_key), draws in variant_draws.items():
+                badge = _VARIANT_BADGES.get(variant_key)
+                if not badge or not draws:
+                    continue
+                combo_gap_maps.setdefault(state_label, {})[badge] = _double_combo_gaps(draws)
+
+            pair_display_by_state: Dict[str, List[str]] = {}
+            combo_display_by_state: Dict[str, List[str]] = {}
+            for state_label in states:
+                combined_draws = variant_draws.get((state_label, "combined"))
+                top_pairs: List[tuple[str, int]] = []
+                if calculate_overdue_pairs and combined_draws:
+                    try:
+                        _, repeating_overdue, _ = calculate_overdue_pairs(combined_draws[:100])
+                        candidates = [
+                            (pair, gap)
+                            for pair, gap in repeating_overdue.items()
+                            if pair and len(pair) == 2 and pair[0] == pair[1]
+                        ]
+                        candidates.sort(key=lambda item: item[1], reverse=True)
+                        top_pairs = candidates[:4]
+                    except Exception:
+                        top_pairs = []
+                pair_cells: List[str] = []
+                combo_cells: List[str] = []
+                badge_maps = combo_gap_maps.get(state_label, {})
+                for idx in range(4):
+                    if idx < len(top_pairs):
+                        pair_entry = top_pairs[idx]
+                        pair_cells.append(_format_pair_value(pair_entry))
+                        combos = _collect_combo_entries(pair_entry[0], badge_maps)
+                        combo_cells.append(_format_combo_cell(combos))
+                    else:
+                        pair_cells.append("-")
+                        combo_cells.append("-")
+                pair_display_by_state[state_label] = pair_cells
+                combo_display_by_state[state_label] = combo_cells
+
+            for row in variant_rows:
+                state_label = row.get("State")
+                pair_cells = pair_display_by_state.get(state_label, ["-"] * 4)
+                combo_cells = combo_display_by_state.get(state_label, ["-"] * 4)
+                row["Most Due Pair"] = pair_cells[0]
+                row["2nd Most Due Pair"] = pair_cells[1]
+                row["3rd Most Due Pair"] = pair_cells[2]
+                row["4th Most Due Pair"] = pair_cells[3]
+                row["Combos (Most Due Pair)"] = combo_cells[0]
+                row["Combos (2nd Pair)"] = combo_cells[1]
+                row["Combos (3rd Pair)"] = combo_cells[2]
+                row["Combos (4th Pair)"] = combo_cells[3]
+
             df_doubles = _pd.DataFrame(variant_rows)
             df_doubles["VariantOrder"] = df_doubles["VariantKey"].map(lambda key: variant_order.get(key, 99))
             df_doubles.sort_values(
-                ["Draws Since Last Double", "VariantOrder", "State"],
+                ["Draws Since Double", "VariantOrder", "State"],
                 ascending=[False, True, True],
                 inplace=True,
             )
-            df_display = df_doubles.drop(columns=["VariantKey", "VariantOrder"])
+            drop_cols = [col for col in ("VariantKey", "VariantOrder") if col in df_doubles.columns]
+            df_display = df_doubles.drop(columns=drop_cols)
+            ordered_cols = [
+                "State",
+                "Variant",
+                "Draws Since Double",
+                "Positional Heat",
+                "Positional Notes",
+                "Most Due Pair",
+                "2nd Most Due Pair",
+                "3rd Most Due Pair",
+                "4th Most Due Pair",
+                "Combos (Most Due Pair)",
+                "Combos (2nd Pair)",
+                "Combos (3rd Pair)",
+                "Combos (4th Pair)",
+            ]
+            remaining = [col for col in df_display.columns if col not in ordered_cols]
+            df_display = df_display.loc[:, [col for col in ordered_cols if col in df_display.columns] + remaining]
 
             missing_variants = [
                 f"{state_label} {variant_display[variant_key]}"
@@ -1031,7 +1175,7 @@ def show_control_center_page() -> None:
         variant_sources = cache["variant_sources"]
         missing_variants = cache["missing"]
 
-        st.subheader("States Ranked by Draws Since Last Double (Combined / Midday / Evening)")
+        st.subheader("States Ranked by Draws Since Double (Combined / Midday / Evening)")
         st.dataframe(df_display, use_container_width=True)
 
         if variant_sources:
@@ -1199,6 +1343,7 @@ def show_aux_page(state: str) -> None:
         ("Evening", "evening"),
     ]
     variant_labels = [label for label, _ in variant_options]
+    variant_label_map = {key: label for label, key in variant_options}
     selected_variant_label = st.radio("Draw variant", variant_labels, index=0, key="aux_variant")
     selected_variant_key = dict(variant_options)[selected_variant_label]
     show_purple = selected_variant_key == "combined"
@@ -1868,6 +2013,63 @@ def show_aux_page(state: str) -> None:
                 st.subheader("V-Trac Index Hits (Working logic)")
                 st.dataframe(df_hits, use_container_width=True, hide_index=True)
                 st.success(f"{variant_label} auxiliary tools (working logic) completed for {state}")
+
+                variant_payloads = {selected_variant_key: results}
+                for variant_label_entry, variant_key in variant_options:
+                    if variant_key not in variant_payloads:
+                        try:
+                            extra_payload = cached_aux_analysis(state, variant_key)
+                        except Exception:
+                            extra_payload = None
+                        if extra_payload:
+                            variant_payloads[variant_key] = extra_payload
+
+                with st.expander("Unified Aux View (DEV)", expanded=False):
+                    available_keys = [vk for _, vk in variant_options if variant_payloads.get(vk)]
+                    if len(available_keys) <= 1:
+                        st.caption("Run additional variants to enable the unified view.")
+                    else:
+                        import pandas as _pd
+                        st.caption("Compact summary for Combined/Midday/Evening.")
+                        summary_cols = st.columns(len(variant_options))
+                        for col, (variant_label_entry, variant_key) in zip(summary_cols, variant_options):
+                            payload = variant_payloads.get(variant_key)
+                            with col:
+                                st.markdown(f"**{variant_label_entry}**")
+                                if not payload:
+                                    st.caption("No data available.")
+                                    continue
+                                top_pairs = payload.get("top5") or []
+                                if top_pairs:
+                                    df_pairs = _pd.DataFrame(top_pairs, columns=["Pair", "Draws Since"])
+                                    st.markdown("Top overdue pairs")
+                                    st.dataframe(df_pairs, hide_index=True, use_container_width=True)
+                                else:
+                                    st.caption("No overdue pair data.")
+                                doubles_ds = (payload.get("vstat") or {}).get(0, {}).get("doubles_ds", {})
+                                if doubles_ds:
+                                    rows = sorted(((str(combo).zfill(3), int(ds)) for combo, ds in doubles_ds.items()), key=lambda kv: kv[1], reverse=True)[:6]
+                                    df_combos = _pd.DataFrame(rows, columns=["Combo", "Draws Since"])
+                                    st.markdown("Longest-miss doubles")
+                                    st.dataframe(df_combos, hide_index=True, use_container_width=True)
+                                else:
+                                    st.caption("No double combo data.")
+                                draws_1000 = payload.get("draws_1000") or payload.get("draws") or []
+                                if isinstance(draws_1000, list) and draws_1000:
+                                    index_first_seen = {}
+                                    for i, draw_value in enumerate(draws_1000):
+                                        if isinstance(draw_value, str) and len(draw_value) == 3 and len(set(draw_value)) != 1:
+                                            idx_val = get_vtrac_index(draw_value)
+                                            if idx_val and idx_val not in index_first_seen:
+                                                index_first_seen[idx_val] = i
+                                    total_len = len(draws_1000)
+                                    index_draws = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
+                                    top_overdue = sorted(index_draws.items(), key=lambda kv: kv[1], reverse=True)[:6]
+                                    df_vtrac = _pd.DataFrame(top_overdue, columns=["V-TRAC Index", "Draws Since"])
+                                    st.markdown("Overdue V-TRAC indexes")
+                                    st.dataframe(df_vtrac, hide_index=True, use_container_width=True)
+                                else:
+                                    st.caption("No V-TRAC summary.")
                 
             except Exception as e:
                 st.error(f"{variant_label} analysis failed: {e}")
@@ -1976,7 +2178,7 @@ def show_digit_reduction_page(state: str) -> None:
                 st.error(f"Analyzer V2 failed: {exc}")
             else:
                 out_dir = Path(info.get("out_dir", base_analysis_dir / "digit_reduction" / state / "analyzer_v2"))
-                st.success(f"Wrote {info.get('rows', 0)} rows — {out_dir}")
+                st.success(f"Wrote {info.get('rows', 0)} rows - {out_dir}")
                 artifacts = info.get("artifacts") or [
                     f"{state}_analyzer_v2_per_item.csv",
                     f"{state}_analyzer_v2_own_vs_combined_delta.csv",
@@ -1996,145 +2198,7 @@ def show_digit_reduction_page(state: str) -> None:
         else:
             st.caption("No Analyzer V2 outputs found yet for this state.")
 
-    with st.expander("Analyzer V2 Winners overlay (DEV) — batch", expanded=False):
-        st.caption("Build overlays, flags, and winner stamps for any variants you populate below.")
-        from utils.path_handler import get_analysis_output_dir
-        from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
-
-        base_analysis_dir = Path(get_analysis_output_dir())
-        combined_winner = st.text_input("Combined winner", value="", max_chars=3)
-        midday_winner = st.text_input("Midday winner", value="", max_chars=3)
-        evening_winner = st.text_input("Evening winner", value="", max_chars=3)
-        mirror = st.checkbox("Mirror stamp into Winners logger", value=True)
-
-        if st.button("Build winners overlays", key=f"run_winner_overlay_batch_{state}"):
-            winners = {
-                variant: combo.strip()
-                for variant, combo in {
-                    "Combined": combined_winner,
-                    "Midday": midday_winner,
-                    "Evening": evening_winner,
-                }.items()
-                if combo and combo.strip()
-            }
-            if not winners:
-                st.warning("Enter at least one winner before running the overlay batch.")
-            else:
-                try:
-                    out = run_winner_overlay_batch(
-                        state,
-                        winners,
-                        analysis_root=base_analysis_dir,
-                        when=None,
-                        mirror_to_winners=mirror,
-                    )
-                except Exception as exc:
-                    st.error(f"Winners overlay batch failed: {exc}")
-                else:
-                    st.success("Digit Reduction winners overlays completed.")
-                    for variant, payload in out.get("results", {}).items():
-                        st.markdown(f"**{variant}** — winner `{payload.get('winner', '')}` (hits={payload.get('hits', 0)})")
-                        if payload.get("overlay_html"):
-                            st.markdown(f"- [Annotated overlay]({payload['overlay_html']})")
-                        st.markdown(
-                            "- [Winner map JSON]({}) — [Hits CSV]({}) — [Flags CSV]({})".format(
-                                payload.get("map_json", ""),
-                                payload.get("hits_csv", ""),
-                                payload.get("flags_csv", ""),
-                            )
-                        )
-                        if payload.get("stamp_json_winners"):
-                            st.markdown(f"- Mirrored stamp: `{payload['stamp_json_winners']}`")
-
+    render_dr_winner_overlay_dev(state)
 
 if __name__ == "__main__":
-    main() 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    with st.expander("Analyzer V2 Winners overlay (DEV) — batch", expanded=False):
-        st.caption("Build overlays, flags, and winner stamps for any variants you populate below.")
-        from utils.path_handler import get_analysis_output_dir
-        from alpha_analytical.digit_reduction.analyzer_v2 import run_winner_overlay_batch
-
-        base_analysis_dir = Path(get_analysis_output_dir())
-        combined_winner = st.text_input("Combined winner", value="", max_chars=3)
-        midday_winner = st.text_input("Midday winner", value="", max_chars=3)
-        evening_winner = st.text_input("Evening winner", value="", max_chars=3)
-        mirror = st.checkbox("Mirror stamp into Winners logger", value=True)
-
-        if st.button("Build winners overlays", key=f"run_winner_overlay_batch_{state}"):
-            winners = {
-                variant: combo.strip()
-                for variant, combo in {
-                    "Combined": combined_winner,
-                    "Midday": midday_winner,
-                    "Evening": evening_winner,
-                }.items()
-                if combo and combo.strip()
-            }
-            if not winners:
-                st.warning("Enter at least one winner before running the overlay batch.")
-            else:
-                try:
-                    out = run_winner_overlay_batch(
-                        state,
-                        winners,
-                        analysis_root=base_analysis_dir,
-                        when=None,
-                        mirror_to_winners=mirror,
-                    )
-                except Exception as exc:
-                    st.error(f"Winners overlay batch failed: {exc}")
-                else:
-                    st.success("Digit Reduction winners overlays completed.")
-                    for variant, payload in out.get("results", {}).items():
-                        st.markdown(f"**{variant}** — winner `{payload.get('winner', '')}` (hits={payload.get('hits', 0)})")
-                        if payload.get("overlay_html"):
-                            st.markdown(f"- [Annotated overlay]({payload['overlay_html']})")
-                        st.markdown(
-                            "- [Winner map JSON]({}) — [Hits CSV]({}) — [Flags CSV]({})".format(
-                                payload.get("map_json", ""),
-                                payload.get("hits_csv", ""),
-                                payload.get("flags_csv", ""),
-                            )
-                        )
-                        if payload.get("stamp_json_winners"):
-                            st.markdown(f"- Mirrored stamp: `{payload['stamp_json_winners']}`")\n
+    main()
