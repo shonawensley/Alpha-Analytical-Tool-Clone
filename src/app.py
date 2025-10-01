@@ -59,6 +59,23 @@ except Exception:
 
 from core.module_b_digit_reduction import run_digit_reduction
 from utils.path_handler import get_tables_output_dir
+from core.aux_config import (
+    PAIRS_WINDOW,
+    POSITIONAL_WINDOW,
+    SUMS_WINDOW,
+    VTRAC_INDEX_WINDOW,
+    COMBINATION_WINDOW,
+    REPEATING_LATE,
+    REPEATING_VERY_LATE,
+    NONREPEATING_LATE,
+    NONREPEATING_VERY_LATE,
+    PAIR_PENDING,
+    COMBO_SINGLE_LATE,
+    COMBO_SINGLE_VERY_LATE,
+    COMBO_DOUBLE_LATE,
+    COMBO_DOUBLE_VERY_LATE,
+    WINDOW_CAPTIONS,
+)
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
 # ----------------------------------------------------------------------
@@ -172,6 +189,96 @@ def _format_combo(combo: str, status_dict: dict, pair_status: dict) -> str:
         return inner
     return f'<span class="{" ".join(classes)}">{inner}</span>'
 
+
+
+def _resolve_vtrac_index(draw: str, resolver) -> str | None:
+    """Return canonical V-TRAC index for a draw, skipping invalid inputs."""
+    if not isinstance(draw, str) or len(draw) != 3:
+        return None
+    if len(set(draw)) == 1:
+        return None
+    try:
+        idx = resolver(draw)
+    except Exception:
+        return None
+    return idx
+
+
+def _build_vtrac_overlay(draws: list[str], resolver, window: int = VTRAC_INDEX_WINDOW) -> dict:
+    """Compute draws-since overlay data for all 35 V-TRAC indexes."""
+    trimmed = list(draws[:window]) if window else list(draws)
+    total_len = len(trimmed)
+    index_first_seen: dict[int, int] = {}
+    for offset, draw in enumerate(trimmed):
+        idx = _resolve_vtrac_index(draw, resolver)
+        if idx and isinstance(idx, int) and 1 <= idx <= 35 and idx not in index_first_seen:
+            index_first_seen[idx] = offset
+    draws_since = {idx: index_first_seen.get(idx, total_len) for idx in range(1, 36)}
+    sorted_overdue = sorted(draws_since.items(), key=lambda item: item[1], reverse=True)
+    return {
+        "draws_since": draws_since,
+        "sorted_overdue": sorted_overdue,
+        "top_overdue": [idx for idx, _ in sorted_overdue[:10]],
+        "window": total_len,
+    }
+
+
+def _summarize_vtrac_repeats(draws: list[str], resolver, window: int = VTRAC_INDEX_WINDOW) -> dict:
+    """Summarize repeat streak stats for a sequence of draws."""
+    trimmed = list(draws[:window]) if window else list(draws)
+    valid_stream: list[int] = []
+    for draw in trimmed:
+        idx = _resolve_vtrac_index(draw, resolver)
+        if idx is not None:
+            valid_stream.append(idx)
+        else:
+            valid_stream.append(None)  # keep placeholders for offset math
+    # Determine current streak from the head of the stream
+    current_index = None
+    current_streak = 0
+    for value in valid_stream:
+        if value is None:
+            if current_index is None:
+                continue
+            break
+        if current_index is None:
+            current_index = value
+            current_streak = 1
+        elif value == current_index:
+            current_streak += 1
+        else:
+            break
+    # Walk the stream again to capture last repeat and max streak
+    last_repeat_gap = None
+    last_repeat_index = None
+    max_streak = 0
+    prev_idx = None
+    streak = 0
+    for offset, value in enumerate(valid_stream):
+        if value is None:
+            prev_idx = None
+            streak = 0
+            continue
+        if value == prev_idx:
+            streak += 1
+        else:
+            streak = 1
+            prev_idx = value
+        if streak > max_streak:
+            max_streak = streak
+        if streak >= 2 and last_repeat_gap is None:
+            last_repeat_gap = offset
+            last_repeat_index = value
+    if max_streak < current_streak:
+        max_streak = current_streak
+    return {
+        "current_index": current_index,
+        "current_streak": current_streak,
+        "last_repeat_gap": last_repeat_gap,
+        "last_repeat_index": last_repeat_index,
+        "max_streak": max_streak,
+        "window": len(trimmed),
+    }
 # --- Helpers: robust draw loading without touching other tools ----------
 def _normalize_state_name(state_name: str) -> str:
     import re
@@ -359,28 +466,31 @@ def _sums_badge_for(combo: str, sums_stats: dict) -> str:
 
 # Page config FIRST (before every other st.*)
 
-# --- Aux thresholds (single source of truth) ---
-def _define_default_thresholds():
-    g = globals()
-    g.setdefault('THR_R_RED', 71)
-    g.setdefault('THR_R_BLUE', 107)
-    g.setdefault('THR_NR_RED', 37)
-    g.setdefault('THR_NR_BLUE', 56)
-    g.setdefault('THR_PENDING', 25)
-    g.setdefault('THR_COMB_RED_SINGLE', 501)
-    g.setdefault('THR_COMB_RED_DOUBLE', 1000)
-    g.setdefault('THR_COMB_BLUE_SINGLE', 334)
-    g.setdefault('THR_COMB_BLUE_DOUBLE', 667)
+# --- Aux thresholds (single source of truth via aux_config) ---
+REPEATING_LATE_THRESHOLD = REPEATING_LATE
+REPEATING_VERY_LATE_THRESHOLD = REPEATING_VERY_LATE
+NONREPEATING_LATE_THRESHOLD = NONREPEATING_LATE
+NONREPEATING_VERY_LATE_THRESHOLD = NONREPEATING_VERY_LATE
+PAIR_PENDING_THRESHOLD = PAIR_PENDING
 
-_define_default_thresholds()
+COMBO_SINGLE_LATE_THRESHOLD = COMBO_SINGLE_LATE
+COMBO_SINGLE_VERY_LATE_THRESHOLD = COMBO_SINGLE_VERY_LATE
+COMBO_DOUBLE_LATE_THRESHOLD = COMBO_DOUBLE_LATE
+COMBO_DOUBLE_VERY_LATE_THRESHOLD = COMBO_DOUBLE_VERY_LATE
+
+assert REPEATING_VERY_LATE_THRESHOLD >= REPEATING_LATE_THRESHOLD, "Repeating: red must be >= blue"
+assert NONREPEATING_VERY_LATE_THRESHOLD >= NONREPEATING_LATE_THRESHOLD, "Non-repeating: red must be >= blue"
+
+PAIRS_ANALYSIS_WINDOW = PAIRS_WINDOW
 
 try:
     show_purple
+
 except NameError:
     show_purple = True
 def _assert_threshold_alignment():
-    assert THR_R_BLUE >= THR_R_RED, "Repeating: red must be >= blue"
-    assert THR_NR_BLUE >= THR_NR_RED, "Non-repeating: red must be >= blue"
+    assert REPEATING_VERY_LATE_THRESHOLD >= REPEATING_LATE_THRESHOLD, "Repeating: red must be >= blue"
+    assert NONREPEATING_VERY_LATE_THRESHOLD >= NONREPEATING_LATE_THRESHOLD, "Non-repeating: red must be >= blue"
 
 
 def _assert_no_mojibake():
@@ -955,6 +1065,12 @@ def show_control_center_page() -> None:
             if not callable(load_state_draws):
                 raise RuntimeError("aux_loaders.load_state_draws unavailable")
 
+            try:
+                with _project_modules_first():
+                    from modules.vtrac_reference import get_vtrac_index as _cc_get_vtrac_index
+            except Exception:
+                _cc_get_vtrac_index = None
+
             draws_root = _Path("data/cleaned/draws")
             if not draws_root.exists():
                 draws_root = _Path("data/cleaned")
@@ -1095,7 +1211,7 @@ def show_control_center_page() -> None:
                 top_pairs: List[tuple[str, int]] = []
                 if calculate_overdue_pairs and combined_draws:
                     try:
-                        _, repeating_overdue, _ = calculate_overdue_pairs(combined_draws[:100])
+                        _, repeating_overdue, _ = calculate_overdue_pairs(combined_draws[:PAIRS_WINDOW])
                         candidates = [
                             (pair, gap)
                             for pair, gap in repeating_overdue.items()
@@ -1186,6 +1302,49 @@ def show_control_center_page() -> None:
 
         st.subheader("States Ranked by Draws Since Double (Combined / Midday / Evening)")
         st.dataframe(df_display, use_container_width=True)
+        if _cc_get_vtrac_index:
+            repeat_rows: list[dict] = []
+            for (state_label, variant_key), draws in variant_draws.items():
+                if not draws:
+                    continue
+                overlay = _build_vtrac_overlay(draws, _cc_get_vtrac_index)
+                repeat_summary = _summarize_vtrac_repeats(draws, _cc_get_vtrac_index)
+                repeat_rows.append({
+                    "State": state_label,
+                    "Variant": variant_display.get(variant_key, variant_key.title()),
+                    "VariantKey": variant_key,
+                    "Current Index": repeat_summary.get("current_index") or "-",
+                    "Current Streak": repeat_summary.get("current_streak", 0),
+                    "Last Repeat (draws)": repeat_summary.get("last_repeat_gap"),
+                    "Last Repeat Index": repeat_summary.get("last_repeat_index") or "-",
+                    "Max Streak": repeat_summary.get("max_streak", 0),
+                    "Window": overlay.get("window", len(draws)),
+                })
+            if repeat_rows:
+                df_repeats = _pd.DataFrame(repeat_rows)
+                df_repeats["VariantOrder"] = df_repeats["VariantKey"].map(lambda key: variant_order.get(key, 99))
+                df_repeats.sort_values(
+                    ["Current Streak", "Last Repeat (draws)", "VariantOrder", "State"],
+                    ascending=[False, True, True, True],
+                    inplace=True,
+                )
+                repeat_display = df_repeats[[
+                    "State",
+                    "Variant",
+                    "Current Index",
+                    "Current Streak",
+                    "Last Repeat (draws)",
+                    "Last Repeat Index",
+                    "Max Streak",
+                    "Window",
+                ]]
+                st.subheader(f"V-TRAC Repeat Watch (window {VTRAC_INDEX_WINDOW} draws)")
+                repeat_display = repeat_display.fillna("-")
+                st.dataframe(repeat_display, use_container_width=True)
+                st.caption("Last repeat counts from the most recent draw (0 = immediate repeat).")
+        else:
+            st.caption("V-TRAC repeat watch unavailable (resolver missing).")
+
 
         if variant_sources:
             sample_sources = sorted(_Path(src).name for src in variant_sources.values())
@@ -1309,6 +1468,7 @@ def show_control_center_page() -> None:
                     st.caption(f"BA module: {getattr(_ba, '__file__', 'unknown')}")
                 except Exception as _se:
                     st.caption(f"BA module: unavailable: {_se}")
+            st.caption(f"windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
         except Exception:
             pass
         st.warning(f"Control Center draws view unavailable: {e}")
@@ -1334,7 +1494,7 @@ def show_aux_page(state: str) -> None:
                 COLOR_LATE,
                 COLOR_VERY_LATE,
                 COLOR_PENDING,
-                PAIRS_ANALYSIS_WINDOW,
+                PAIRS_WINDOW,
             )
             from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
         _AUX_WORKING_AVAILABLE = True
@@ -1373,6 +1533,7 @@ def show_aux_page(state: str) -> None:
                 st.caption("BA module: " + str(getattr(_ba, "__file__", "unknown")))
             except Exception as _se:
                 st.caption("BA module: unavailable: " + str(_se))
+            st.caption("windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
             try:
                 _aux = _load_aux_loaders_real()
                 load_state_draws = getattr(_aux, "load_state_draws", None)
@@ -1463,13 +1624,16 @@ def show_aux_page(state: str) -> None:
             if not draws:
                 return None
 
-            draws_100 = draws[:100] if len(draws) >= 100 else draws
-            draws_1000 = draws[:1000] if len(draws) >= 1000 else draws
-            draws_pair_window = draws[:PAIRS_ANALYSIS_WINDOW] if len(draws) >= PAIRS_ANALYSIS_WINDOW else draws
-            nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_ANALYSIS_WINDOW)
+            draws_100 = draws[:PAIRS_WINDOW] if len(draws) >= PAIRS_WINDOW else draws
+            draws_1000 = draws[:VTRAC_INDEX_WINDOW] if len(draws) >= VTRAC_INDEX_WINDOW else draws
+            draws_pair_window = draws[:PAIRS_WINDOW] if len(draws) >= PAIRS_WINDOW else draws
+            nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_WINDOW)
             vstat = get_vtrac_statuses(draws_100, draws_1000)
             top5 = get_top_overdue_repeating_pairs(draws_pair_window, 5)
             doubles = get_doubles_history({state_name: draws})
+
+            overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
+            repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
 
             return {
                 "variant": variant,
@@ -1483,6 +1647,8 @@ def show_aux_page(state: str) -> None:
                 "vstat": vstat,
                 "top5": top5,
                 "doubles": doubles,
+                "vtrac_overlay": overlay,
+                "repeat_summary": repeat_summary,
             }
     if st.button("Run Auxiliary Tools Analysis", type="primary"):
         with st.spinner(f"Running {selected_variant_label} auxiliary analysis for {state}..."):
@@ -1514,7 +1680,7 @@ def show_aux_page(state: str) -> None:
                     except Exception as _e:
                         st.sidebar.caption(f"[{variant_label}] SUMS import failed: {_e}")
 
-                analysis_draws = st.session_state.get("analysis_draws", 100)
+                analysis_draws = st.session_state.get("analysis_draws", SUMS_WINDOW)
                 if callable(_calc_sums):
                     try:
                         sums_stats = _calc_sums(draws, window=analysis_draws)
@@ -1524,9 +1690,9 @@ def show_aux_page(state: str) -> None:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
                 with st.expander("Positional Tracker (Combined / Midday / Evening)", expanded=True):
-                    pos_window = 360
+                    pos_window = POSITIONAL_WINDOW
                     pos_topk = 3
-                    st.caption(f"Window: {pos_window} draws (Top-K per position: {pos_topk})")
+                    st.caption(f"Window: {POSITIONAL_WINDOW} draws (Top-K per position: {pos_topk})")
                     try:
                         with _project_modules_first():
                             positional_tool = _load_positional_tool_real()
@@ -1563,7 +1729,7 @@ def show_aux_page(state: str) -> None:
                         if not draws_by_variant:
                             st.caption("No positional draws available across variants.")
                         else:
-                            due_doubles_flag = any(ds >= THR_R_RED for ds in results.get("rep", {}).values())
+                            due_doubles_flag = any(ds >= REPEATING_LATE_THRESHOLD for ds in results.get("rep", {}).values())
                             try:
                                 report = positional_tool.analyze_state_variants(
                                     draws_by_variant,
@@ -1706,21 +1872,18 @@ def show_aux_page(state: str) -> None:
                 import pandas as _pd
                 rows = []
                 rows_plain = []
-                try:
+                overlay = results.get("vtrac_overlay")
+                if not overlay:
                     draws_1000 = results.get("draws_1000", draws)
-                    total_len = len(draws_1000)
-                    index_first_seen = {}
-                    for i, draw_value in enumerate(draws_1000):
-                        if not isinstance(draw_value, str) or len(draw_value) != 3 or len(set(draw_value)) == 1:
-                            continue
-                        idx_tmp = get_vtrac_index(draw_value)
-                        if idx_tmp and idx_tmp not in index_first_seen:
-                            index_first_seen[idx_tmp] = i
-                    index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
-                    sorted_by_ds = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
-                    top10_overdue_overlay = [i for i, _ds in sorted_by_ds[:10]]
-                except Exception:
-                    top10_overdue_overlay = []
+                    overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
+                    results["vtrac_overlay"] = overlay
+                repeat_summary = results.get("repeat_summary")
+                if not repeat_summary:
+                    draws_1000 = results.get("draws_1000", draws)
+                    repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
+                    results["repeat_summary"] = repeat_summary
+                index_draws_since_overlay = overlay.get("draws_since", {})
+                top10_overdue_overlay = overlay.get("top_overdue", [])
                 for entry in VTRAC_DISPLAY:
                     idx = entry["Index"]
                     singles = entry["Singles"].split() if entry["Singles"] else []
@@ -1766,38 +1929,76 @@ def show_aux_page(state: str) -> None:
                 )
 
                 # --- Overdue Pairs (Working logic) ---
+
                 st.subheader("Overdue Pairs Analysis (Working logic)")
                 rep = results.get("rep", {})
                 nonrep = results.get("nonrep", {})
-                rep_red = sorted([pair for pair, ds in rep.items() if ds >= THR_R_BLUE])
-                rep_blue = sorted([pair for pair, ds in rep.items() if THR_R_RED <= ds < THR_R_BLUE])
-                rep_purple = sorted([pair for pair, ds in rep.items() if THR_PENDING <= ds < THR_R_RED])
-                nr_red = sorted([pair for pair, ds in nonrep.items() if ds >= THR_NR_BLUE])
-                nr_blue = sorted([pair for pair, ds in nonrep.items() if THR_NR_RED <= ds < THR_NR_BLUE])
-                nr_purple = sorted([pair for pair, ds in nonrep.items() if THR_PENDING <= ds < THR_NR_RED])
+                rep_red = sorted([pair for pair, ds in rep.items() if ds >= REPEATING_VERY_LATE_THRESHOLD])
+                rep_blue = sorted([
+                    pair for pair, ds in rep.items()
+                    if REPEATING_LATE_THRESHOLD <= ds < REPEATING_VERY_LATE_THRESHOLD
+                ])
+                rep_purple = sorted([
+                    pair for pair, ds in rep.items()
+                    if PAIR_PENDING_THRESHOLD <= ds < REPEATING_LATE_THRESHOLD
+                ])
+                nr_red = sorted([pair for pair, ds in nonrep.items() if ds >= NONREPEATING_VERY_LATE_THRESHOLD])
+                nr_blue = sorted([
+                    pair for pair, ds in nonrep.items()
+                    if NONREPEATING_LATE_THRESHOLD <= ds < NONREPEATING_VERY_LATE_THRESHOLD
+                ])
+                nr_purple = sorted([
+                    pair for pair, ds in nonrep.items()
+                    if PAIR_PENDING_THRESHOLD <= ds < NONREPEATING_LATE_THRESHOLD
+                ])
 
                 st.info(
-                    f"**Overdue Thresholds (window {PAIRS_ANALYSIS_WINDOW} draws):**\n"
-                    f"- Repeating pairs (00, 11, etc): RED>= {THR_R_BLUE}, BLUE>= {THR_R_RED}, PURPLE>= {THR_PENDING}\n"
-                    f"- Non-repeating pairs (01, 23, etc): RED>= {THR_NR_BLUE}, BLUE>= {THR_NR_RED}, PURPLE>= {THR_PENDING}"
+                    ("**Overdue thresholds**\n"
+                     f"- Window: {PAIRS_WINDOW} draws\n"
+                     f"- Repeating pairs (00, 11, etc): red >= {REPEATING_VERY_LATE_THRESHOLD}, blue >= {REPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}\n"
+                     f"- Non-repeating pairs (01, 23, etc): red >= {NONREPEATING_VERY_LATE_THRESHOLD}, blue >= {NONREPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}")
                 )
                 st.caption("Color priority (digits/pairs overlap): red > blue > purple")
 
                 rep_col, nonrep_col = st.columns(2)
                 with rep_col:
                     st.markdown("<b>Repeating Pairs (Doubles)</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (>= {THR_R_BLUE}):</span> " + (", ".join(rep_red) if rep_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (>= {THR_R_RED}):</span> " + (", ".join(rep_blue) if rep_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span class='red'>Red (>= {REPEATING_VERY_LATE_THRESHOLD}):</span> "
+                        + (", ".join(rep_red) if rep_red else "None"),
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<span class='blue'>Blue (>= {REPEATING_LATE_THRESHOLD}):</span> "
+                        + (", ".join(rep_blue) if rep_blue else "None"),
+                        unsafe_allow_html=True,
+                    )
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (>= {THR_PENDING}):</span> " + (", ".join(rep_purple) if rep_purple else "None"), unsafe_allow_html=True)
+                        st.markdown(
+                            f"<span class='purple'>Purple (>= {PAIR_PENDING_THRESHOLD}):</span> "
+                            + (", ".join(rep_purple) if rep_purple else "None"),
+                            unsafe_allow_html=True,
+                        )
                 with nonrep_col:
                     st.markdown("<b>Non-Repeating Pairs</b>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='red'>Red (>= {THR_NR_BLUE}):</span> " + (", ".join(nr_red) if nr_red else "None"), unsafe_allow_html=True)
-                    st.markdown(f"<span class='blue'>Blue (>= {THR_NR_RED}):</span> " + (", ".join(nr_blue) if nr_blue else "None"), unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span class='red'>Red (>= {NONREPEATING_VERY_LATE_THRESHOLD}):</span> "
+                        + (", ".join(nr_red) if nr_red else "None"),
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<span class='blue'>Blue (>= {NONREPEATING_LATE_THRESHOLD}):</span> "
+                        + (", ".join(nr_blue) if nr_blue else "None"),
+                        unsafe_allow_html=True,
+                    )
                     if show_purple:
-                        st.markdown(f"<span class='purple'>Purple (>= {THR_PENDING}):</span> " + (", ".join(nr_purple) if nr_purple else "None"), unsafe_allow_html=True)
+                        st.markdown(
+                            f"<span class='purple'>Purple (>= {PAIR_PENDING_THRESHOLD}):</span> "
+                            + (", ".join(nr_purple) if nr_purple else "None"),
+                            unsafe_allow_html=True,
+                        )
 
-                # --- Four-panels row (parity with working app) ---
+                # --- Four-panels row
                 latest_col, pairs_col, combos_col, top5_col = st.columns(4, gap="small")
                 with latest_col:
                     st.subheader("Latest Draws")
@@ -1832,17 +2033,17 @@ def show_aux_page(state: str) -> None:
                     safe_rows = []
                     for base, ds in singles_ds.items():
                         status = {}
-                        if ds >= THR_COMB_RED_SINGLE:
+                        if ds >= COMBO_SINGLE_VERY_LATE_THRESHOLD:
                             status[base] = {"shape_red_circle": True}
-                        elif ds >= THR_COMB_BLUE_SINGLE:
+                        elif ds >= COMBO_SINGLE_LATE_THRESHOLD:
                             status[base] = {"shape_blue_square": True}
                         html_combo = _format_combo(str(base).zfill(3), status, pair_status)
                         safe_rows.append({"Combo": html_combo, "Type": "Single", "Draws Since": int(ds)})
                     for base, ds in doubles_ds.items():
                         status = {}
-                        if ds >= THR_COMB_RED_DOUBLE:
+                        if ds >= COMBO_DOUBLE_VERY_LATE_THRESHOLD:
                             status[base] = {"shape_red_circle": True}
-                        elif ds >= THR_COMB_BLUE_DOUBLE:
+                        elif ds >= COMBO_DOUBLE_LATE_THRESHOLD:
                             status[base] = {"shape_blue_square": True}
                         html_combo = _format_combo(str(base).zfill(3), status, pair_status)
                         safe_rows.append({"Combo": html_combo, "Type": "Double", "Draws Since": int(ds)})
@@ -1856,14 +2057,15 @@ def show_aux_page(state: str) -> None:
                         )
                     else:
                         st.write("No data")
+
                 with top5_col:
                     st.subheader("Top 5 Most Overdue Repeating Pairs (Working logic)")
                     for pair, overdue in results.get("top5", []):
-                        if overdue >= THR_R_BLUE:
+                        if overdue >= REPEATING_VERY_LATE_THRESHOLD:
                             color = "red"
-                        elif overdue >= THR_R_RED:
+                        elif overdue >= REPEATING_LATE_THRESHOLD:
                             color = "blue"
-                        elif overdue >= THR_PENDING:
+                        elif overdue >= PAIR_PENDING_THRESHOLD:
                             color = "purple"
                         else:
                             color = ""
@@ -1873,12 +2075,13 @@ def show_aux_page(state: str) -> None:
                         else:
                             st.write(line)
 
-                # Sums Tracking (table)
+# Sums Tracking (table)
                 if callable(_build_sums_df) and isinstance(sums_stats, dict) and sums_stats.get("by_sum"):
                     try:
                         df_sums = _build_sums_df(sums_stats)
                         html_sums = df_sums.to_html(escape=False, index=False)
                         st.subheader("Sums Tracking")
+                        st.caption(f"Window: {SUMS_WINDOW} draws")
                         st.markdown(
                             f'<div style="max-height: 420px; overflow-y: auto; border: 1px solid #eee; padding: 6px;">{html_sums}</div>',
                             unsafe_allow_html=True,
@@ -1978,18 +2181,14 @@ def show_aux_page(state: str) -> None:
                         elif ist.get("bg") == "red" and ist.get("rank"):
                             overdue_ranks[idx] = ist.get("rank")
 
-                draws_1000 = results.get("draws_1000", draws)
-                total_len = len(draws_1000)
-                index_first_seen = {}
-                for i, draw_value in enumerate(draws_1000):
-                    if not isinstance(draw_value, str) or len(draw_value) != 3 or len(set(draw_value)) == 1:
-                        continue
-                    idx = get_vtrac_index(draw_value)
-                    if idx and idx not in index_first_seen:
-                        index_first_seen[idx] = i
-                index_draws_since_overlay = {i: index_first_seen.get(i, total_len) for i in range(1, 36)}
-                sorted_by_ds = sorted(index_draws_since_overlay.items(), key=lambda kv: kv[1], reverse=True)
-                top10_overdue_overlay = [idx for idx, _ in sorted_by_ds[:10]]
+                overlay = results.get("vtrac_overlay")
+                if not overlay:
+                    draws_1000 = results.get("draws_1000", draws)
+                    overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
+                    results["vtrac_overlay"] = overlay
+                total_len = overlay.get("window", len(results.get("draws_1000", draws)))
+                index_draws_since_overlay = overlay.get("draws_since", {})
+                top10_overdue_overlay = overlay.get("top_overdue", [])
                 recent_rank_values = {}
                 for idx, rank_val in recent_ranks.items():
                     try:

@@ -11,3 +11,8 @@
 - Files: src/core/module_c_vtrac.py.
 
 
+## 2025-10-02 - Aux SSOT windows & V-TRAC repeat watch
+- Impact: Added core/aux_config.py as the single source of truth for Aux windows/thresholds, surfaced the values in UI captions/dev health, unified the V-TRAC overlay for the working table and index hits, and introduced a Control Center repeat watch panel backed by new overlay helpers.
+- Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, 	ests/test_analyze_pairs_semantics.py.
+
+

@@ -6,21 +6,31 @@ import os
 from typing import Dict, List, Tuple, Set, Optional
 import pandas as pd
 import numpy as np
+from itertools import combinations
+from core.aux_config import (
+    PAIRS_WINDOW,
+    REPEATING_LATE,
+    REPEATING_VERY_LATE,
+    NONREPEATING_LATE,
+    NONREPEATING_VERY_LATE,
+    PAIR_PENDING,
+)
+
 from .vtrac_reference import get_vtrac_index, VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP
 
 # Thresholds for different overdue categories
-THRESHOLD_LATE_NONREPEATING = 37  # Red for non-repeating pairs
-THRESHOLD_LATE_REPEATING = 71     # Red for repeating pairs (doubles)
-THRESHOLD_VERY_LATE_NONREPEATING = 56  # Blue for non-repeating pairs
-THRESHOLD_VERY_LATE_REPEATING = 107    # Blue for repeating pairs
-THRESHOLD_PENDING_LATE = 25       # Purple for any pairs
+THRESHOLD_LATE_NONREPEATING = NONREPEATING_LATE
+THRESHOLD_LATE_REPEATING = REPEATING_LATE
+THRESHOLD_VERY_LATE_NONREPEATING = NONREPEATING_VERY_LATE
+THRESHOLD_VERY_LATE_REPEATING = REPEATING_VERY_LATE
+THRESHOLD_PENDING_LATE = PAIR_PENDING
 
 # Color codes for styling
 COLOR_LATE = 'red'
 COLOR_VERY_LATE = 'blue'
 COLOR_PENDING = 'purple'
 
-PAIRS_ANALYSIS_WINDOW = 360  # draws scanned for overdue pair logic
+PAIRS_ANALYSIS_WINDOW = PAIRS_WINDOW  # draws scanned for overdue pair logic
 
 def extract_pairs(draw: str) -> Tuple[List[str], List[str]]:
     """
@@ -60,7 +70,14 @@ def extract_pairs(draw: str) -> Tuple[List[str], List[str]]:
     # Remove duplicates
     non_repeating_pairs = list(set(non_repeating_pairs))
     repeating_pairs = list(set(repeating_pairs))
-    
+
+    if __debug__:
+        expected_pairs = ["".join(sorted(pair)) for pair in combinations(draw, 2)]
+        expected_non = {pair for pair in expected_pairs if pair[0] != pair[1]}
+        expected_rep = {pair for pair in expected_pairs if pair[0] == pair[1]}
+        assert set(non_repeating_pairs) == expected_non, (draw, non_repeating_pairs, expected_non)
+        assert set(repeating_pairs) == expected_rep, (draw, repeating_pairs, expected_rep)
+
     return non_repeating_pairs, repeating_pairs
 
 

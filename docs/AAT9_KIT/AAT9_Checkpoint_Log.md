@@ -270,3 +270,20 @@ Template
 - Impact: Digit Reduction and V-TRAC pages now load without Mojibake warnings after a fresh pipeline run.
 
 
+## 2025-10-02 02:30 (UTC) - Aux SSOT + V-TRAC repeat watch
+
+- Context: Windows/thresholds for Aux features were scattered across the app and staged modules, the working V-TRAC table and index hits recomputed overlays separately, and Control Center lacked a quick view of repeat streaks. Pair extraction also relied on implicit behaviour without regression coverage.
+- Change:
+  - Added src/core/aux_config.py as the single source for Aux windows/thresholds and wired captions/dev health to show the active values.
+  - Refactored src/app.py to reuse one _build_vtrac_overlay helper for the working table and index hits, and cached the overlay/repeat summary in cached_aux_analysis.
+  - Introduced _summarize_vtrac_repeats and a Control Center "V-TRAC Repeat Watch" table that ranks state variants by current streaks/last repeats.
+  - Hardened pair semantics by asserting the Any-Position box rules in scripts/auxiliary/working/modules/analyze_pairs.py and adding 	ests/test_analyze_pairs_semantics.py.
+- Impact:
+  - Aux thresholds/windows now stay in sync across captions, preflight, and staged modules; operators see the active depth immediately.
+  - V-TRAC UI uses a single overlay source, eliminating mismatched top-10 lists and redundant scans.
+  - Control Center highlights hot repeat streaks (with draws-since context) alongside the doubles table, improving cross-state monitoring.
+  - Pair extraction has explicit guards + regression tests, reducing risk when staging logic changes.
+- Follow-ups:
+  - Consider exposing the cached repeat summary in Aux (e.g., badge near the V-TRAC table) for quicker variant-level insight.
+  - Expand the repeat watch to include trend deltas (e.g., compare against previous run) once run logging is in place.
+
