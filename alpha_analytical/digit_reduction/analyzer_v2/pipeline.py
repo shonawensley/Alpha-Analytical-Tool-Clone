@@ -17,6 +17,20 @@ SectionKey = Tuple[str, str, str, str, str, int, str, str]
 MethodKey = Tuple[str, str, str, str, str, int, str]
 
 
+def _as_int(value: Any) -> int:
+    try:
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return 0
+        return int(value)
+    except (TypeError, ValueError):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return 0
+
+
 def _section_key_from_item(item: Item) -> SectionKey:
     return (
         item.key.state,
@@ -37,7 +51,7 @@ def _section_key_from_row(row: Dict[str, Any]) -> SectionKey:
         str(row.get("section", "")),
         str(row.get("set", "")),
         str(row.get("draw", "")),
-        int(row.get("col", 0)),
+        _as_int(row.get("col", 0)),
         str(row.get("method", "")),
         str(row.get("mode", "")),
     )
@@ -49,7 +63,7 @@ def _cross_section_key(row: Dict[str, Any]) -> Tuple[str, str, str, str, int, st
         str(row.get("area", "")),
         str(row.get("set", "")),
         str(row.get("draw", "")),
-        int(row.get("col", 0)),
+        _as_int(row.get("col", 0)),
         str(row.get("method", "")),
         str(row.get("mode", "")),
     )
@@ -62,7 +76,7 @@ def _method_key(row: Dict[str, Any]) -> MethodKey:
         str(row.get("section", "")),
         str(row.get("set", "")),
         str(row.get("draw", "")),
-        int(row.get("col", 0)),
+        _as_int(row.get("col", 0)),
         str(row.get("mode", "")),
     )
 

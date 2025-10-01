@@ -1,10 +1,14 @@
-﻿import sys
+import sys
 import os
 import pathlib
+import subprocess
 import streamlit as st
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, List, Optional
+
+render_dr_winner_overlay_dev = None
+DEV_OVERLAY_IMPORT_ERROR = None
 
 # --- Canonical imports bootstrap (ensure top-level utils wins) ---------
 SRC_DIR = pathlib.Path(__file__).resolve().parent     # .../src
@@ -54,7 +58,6 @@ except Exception:
 # ----------------------------------------------------------------------
 
 from core.module_b_digit_reduction import run_digit_reduction
-from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev
 from utils.path_handler import get_tables_output_dir
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
@@ -62,8 +65,6 @@ from utils.path_handler import get_tables_output_dir
  
 
 # --- AUX working modules path (staged, isolated) -----------------------
-from pathlib import Path
-from typing import Dict, List, Optional
 _AUX_WORKING_ROOT = os.path.normpath(os.path.join(Path(__file__).resolve().parent.parent, "scripts", "auxiliary", "working"))
 if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
     # Insert the parent folder so absolute imports like `modules.parse_excel` work
@@ -103,6 +104,31 @@ def _load_positional_tool_real():
             "project_positional_tool",
             "modules/module_d_auxiliary_tools/refactored/positional_tool.py",
         )
+
+# Digit-Reduction path helpers
+
+def _digit_reduction_dirs(state: str, analysis_root: Path) -> tuple[Path, Path, Path]:
+    base = analysis_root / "digit_reduction" / state
+    training = base / "training"
+    analyzer = base / "analyzer_v2"
+    return base, training, analyzer
+
+
+def _open_path_in_explorer(path: Path) -> bool:
+    target = path if path.exists() else path.parent
+    if not target.exists():
+        return False
+    try:
+        if os.name == "nt":
+            os.startfile(str(target))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(target)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(target)], check=False)
+        return True
+    except Exception:
+        return False
+
 
 # Helpers for rendering working V-TRAC output (used only on Aux page)
 def _severity(cls: str) -> int:
@@ -436,26 +462,9 @@ def main():
 
 
 def show_vtrac_page(state: str) -> None:
-    """Render the V-TRAC Analyzer page."""
+    """Render the integrated V-TRAC analyzer page."""
     from core import module_c_vtrac  # lazy import
-    st.title(f"V-TRAC Analyzer - {state}")
-    st.info(f"Running V-TRAC analysis for {state}")
-    module_c_vtrac.main()
-    # Dev: System Health (V-TRAC)
-    try:
-        show_dev_v = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_vtrac")
-    except Exception:
-        show_dev_v = False
-    if show_dev_v:
-        import os, sys as _sys
-        with st.expander("System Health (V-TRAC)"):
-            st.caption("cwd: " + os.getcwd())
-            st.caption("python: " + _sys.executable)
-            try:
-                import core.module_c_vtrac as _v
-                st.caption("V-TRAC module: " + str(getattr(_v, "__file__", "unknown")))
-            except Exception as _se:
-                st.caption("V-TRAC module: unavailable: " + str(_se))
+    module_c_vtrac.render(state)
 
 
 def _parse_winners_input(raw: str) -> list[str]:
@@ -2094,91 +2103,162 @@ def show_digit_reduction_page(state: str) -> None:
 
     tables_root = Path(get_tables_output_dir())
     if not tables_root.exists():
-        # Dev: System Health (Digit Reduction)
         try:
             show_dev_d = st.sidebar.checkbox("Show Dev Health", value=False, key="dev_health_dr")
         except Exception:
             show_dev_d = False
         if show_dev_d:
-            import os, sys as _sys
+            import sys as _sys
             with st.expander("System Health (Digit Reduction)"):
                 st.caption("cwd: " + os.getcwd())
                 st.caption("python: " + _sys.executable)
                 try:
                     from core.module_b_digit_reduction import run_digit_reduction as _rdr
-                    import inspect as _insp
                     st.caption("DR module: " + str(getattr(_rdr, "__module__", "unknown")))
                 except Exception as _se:
                     st.caption("DR module: unavailable: " + str(_se))
-                try:
-                    st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
-                except Exception:
-                    pass
+                st.caption("tables_root: " + str(tables_root) + " (exists=" + str(tables_root.exists()) + ")")
         st.error("No processed tables found. Run the data pipeline first.")
         return
 
-    # Check if the specific state directory exists
-    state_path = tables_root / state
-    if not state_path.exists():
-        st.error(f"No tables found for {state}. Available states: {[p.name for p in tables_root.iterdir() if p.is_dir()]}")
+    state_tables_dir = tables_root / state
+    if not state_tables_dir.exists():
+        available = [p.name for p in tables_root.iterdir() if p.is_dir()]
+        st.error(f"No tables found for {state}. Available states: {available}")
         return
 
-    if st.button("Run Digit Reduction"):
+    base_analysis_dir = Path(get_analysis_output_dir())
+    base_dir, training_dir, analyzer_dir = _digit_reduction_dirs(state, base_analysis_dir)
+
+    def _scan_training_logs() -> list[Path]:
+        patterns = [
+            f"{state}_digit_reduction_log*.json",
+            f"*{state}*digit_reduction_log*.json",
+            f"*{state}*digit_reduction_logs*.json",
+        ]
+        candidates: list[Path] = []
+        if training_dir.exists():
+            for pattern in patterns:
+                candidates.extend(training_dir.glob(pattern))
+        candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        unique: list[Path] = []
+        seen = set()
+        for cand in candidates:
+            resolved = cand.resolve()
+            if resolved in seen:
+                continue
+            unique.append(cand)
+            seen.add(resolved)
+        return unique
+
+    def _scan_analyzer_artifacts() -> list[Path]:
+        if not analyzer_dir.exists():
+            return []
+        return sorted(
+            analyzer_dir.glob(f"{state}_analyzer_v2_*"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+
+    training_logs = _scan_training_logs()
+    analyzer_files = _scan_analyzer_artifacts()
+    has_tables = any(state_tables_dir.glob("*.csv"))
+
+    st.subheader("Preflight Checks")
+    status_entries = [
+        ("Tables CSVs", has_tables, state_tables_dir),
+        ("Training JSON", bool(training_logs), training_dir),
+        ("Analyzer outputs", bool(analyzer_files), analyzer_dir),
+    ]
+    for idx, (label, ok, path_obj) in enumerate(status_entries):
+        cols = st.columns([4, 1])
+        status_text = "[OK]" if ok else "[TODO]"
+        with cols[0]:
+            st.write(f"{status_text} {label}: {path_obj}")
+        with cols[1]:
+            if st.button("Open", key=f"open_{label.replace(' ', '_')}_{state}"):
+                if not _open_path_in_explorer(path_obj):
+                    st.warning(f"Unable to open {path_obj}")
+
+    run_digit_reduction_requested = st.button("Run Digit Reduction", key=f"run_digit_reduction_{state}")
+    reducer_result = None
+
+    if not has_tables:
+        st.warning("No tables detected. Run the data pipeline before digit reduction.")
+    elif not training_logs:
+        cols = st.columns([3, 1, 1])
+        with cols[0]:
+            st.info("Training JSON not found for this state. Run digit reduction to generate it.")
+        with cols[1]:
+            if st.button("Open training folder", key=f"open_training_dir_{state}"):
+                if not _open_path_in_explorer(training_dir):
+                    st.warning("Training folder is not available yet.")
+        with cols[2]:
+            if st.button("Run reducer now", key=f"run_digit_reduction_shortcut_{state}"):
+                run_digit_reduction_requested = True
+    else:
+        if st.button("Open training folder", key=f"open_training_dir_existing_{state}"):
+            if not _open_path_in_explorer(training_dir):
+                st.warning("Training folder is not available yet.")
+
+    if run_digit_reduction_requested and has_tables:
         with st.spinner(f"Running Digit Reduction for {state}..."):
             df, html_path, csv_path = run_digit_reduction(
                 state,
-                tables_path=state_path,
+                tables_path=state_tables_dir,
             )
-
         if df.empty:
             st.warning("Digit Reduction produced no output - verify tables exist.")
             return
+        reducer_result = (df, html_path, csv_path)
+        training_logs = _scan_training_logs()
+        analyzer_files = _scan_analyzer_artifacts()
 
+    if reducer_result:
+        df, html_path, csv_path = reducer_result
         st.success(f"{len(df)} reductions extracted for {state}")
         st.dataframe(df, use_container_width=True)
-
         if csv_path:
             st.download_button(
                 "Download CSV",
                 Path(csv_path).read_bytes(),
                 file_name=Path(csv_path).name,
             )
-
         if html_path and Path(html_path).exists():
-            # Offer a stacked view toggle for easier screenshotting/training review
             stacked = st.checkbox("Stacked view (show all methods)", value=False)
-            # If stacked is requested, attempt to load the pre-rendered stacked report
+            primary_path = Path(html_path)
+            target_html = primary_path
             if stacked:
-                stacked_path = Path(html_path).with_name(
-                    Path(html_path).name.replace("_digit_reduction_report.html", "_digit_reduction_report_stacked.html")
+                stacked_path = primary_path.with_name(
+                    primary_path.name.replace("_digit_reduction_report.html", "_digit_reduction_report_stacked.html")
                 )
                 if stacked_path.exists():
-                    with open(stacked_path, "r", encoding="utf-8") as fh:
-                        st.components.v1.html(fh.read(), height=3200, scrolling=True)
-                else:
-                    # Fallback to the standard report at a larger height
-                    with open(html_path, "r", encoding="utf-8") as fh:
-                        st.components.v1.html(fh.read(), height=3200, scrolling=True)
-            else:
-                with open(html_path, "r", encoding="utf-8") as fh:
-                    st.components.v1.html(fh.read(), height=900, scrolling=True)
+                    target_html = stacked_path
+            with open(target_html, "r", encoding="utf-8") as fh:
+                height = 3200 if stacked else 900
+                st.components.v1.html(fh.read(), height=height, scrolling=True)
 
     with st.expander("Analyzer V2 (DEV)", expanded=False):
         st.caption("Runs the unified analyzer and writes CSV/JSON beside the reducer outputs.")
-        from utils.path_handler import get_analysis_output_dir
-
-        base_analysis_dir = Path(get_analysis_output_dir())
-        run_key = f"run_analyzer_v2_{state}"
-        if st.button("Run Analyzer V2 for this state", type="primary", key=run_key):
+        latest_training = training_logs[0] if training_logs else None
+        if latest_training:
+            st.caption(f"Using training log: {latest_training.name}")
+        else:
+            st.warning("Training JSON not found. Run Digit Reduction first.")
+        if st.button("Open analyzer folder", key=f"open_analyzer_dir_{state}"):
+            if not _open_path_in_explorer(analyzer_dir):
+                st.warning("Analyzer folder is not available yet.")
+        disabled = latest_training is None
+        if st.button("Run Analyzer V2 for this state", type="primary", key=f"run_analyzer_v2_{state}", disabled=disabled):
             try:
                 from alpha_analytical.digit_reduction.analyzer_v2 import run as run_v2
-
                 info = run_v2(state, analysis_root=base_analysis_dir)
             except Exception as exc:
                 st.error(f"Analyzer V2 failed: {exc}")
             else:
-                out_dir = Path(info.get("out_dir", base_analysis_dir / "digit_reduction" / state / "analyzer_v2"))
+                out_dir = Path(info.get("out_dir", analyzer_dir))
                 st.success(f"Wrote {info.get('rows', 0)} rows - {out_dir}")
+                analyzer_files = _scan_analyzer_artifacts()
                 artifacts = info.get("artifacts") or [
                     f"{state}_analyzer_v2_per_item.csv",
                     f"{state}_analyzer_v2_own_vs_combined_delta.csv",
@@ -2189,16 +2269,36 @@ def show_digit_reduction_page(state: str) -> None:
                     artifact_path = out_dir / name
                     if artifact_path.exists():
                         st.markdown(f"- [{artifact_path.name}]({artifact_path.as_posix()})")
-
-        existing_root = base_analysis_dir / "digit_reduction" / state / "analyzer_v2"
-        if existing_root.exists():
+                if not artifacts:
+                    st.caption("Analyzer completed without artifacts list.")
+        if analyzer_files:
             st.caption("Latest Analyzer V2 outputs for this state:")
-            for artifact_path in sorted(existing_root.glob(f"{state}_analyzer_v2_*")):
+            for artifact_path in analyzer_files:
                 st.markdown(f"- [{artifact_path.name}]({artifact_path.as_posix()})")
-        else:
-            st.caption("No Analyzer V2 outputs found yet for this state.")
 
-    render_dr_winner_overlay_dev(state)
+    if callable(render_dr_winner_overlay_dev):
+        render_dr_winner_overlay_dev(state)
+    elif DEV_OVERLAY_IMPORT_ERROR:
+        st.caption(f"Digit Reduction DEV overlay unavailable: {DEV_OVERLAY_IMPORT_ERROR}")
+
+try:
+    from alpha_analytical.digit_reduction.analyzer_v2.ui_dev import render_dr_winner_overlay_dev as _render_dr_overlay
+except Exception as _import_exc:
+    DEV_OVERLAY_IMPORT_ERROR = _import_exc
+    render_dr_winner_overlay_dev = None
+else:
+    DEV_OVERLAY_IMPORT_ERROR = None
+    render_dr_winner_overlay_dev = _render_dr_overlay
+
+
+def _rescue_boot() -> None:
+    st.title("Alpha Analytical Tool")
+    st.write("Rescue boot path active. main() did not render.")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        _rescue_boot()
+        st.error(f"main() raised: {exc}")

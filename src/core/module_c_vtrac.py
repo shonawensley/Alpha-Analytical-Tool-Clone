@@ -37,7 +37,7 @@ from utils.path_handler import (
     get_tables_output_dir,
     get_winners_output_dir
 )
-from utils.state_utils import STATES
+from utils.state_utils import STATES, get_state_file_name
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
 from utils.table_generator import generate_tables
@@ -198,30 +198,67 @@ def check_excel_file():
     return excel_path, excel_exists
 
 @st.cache_data(show_spinner=False)
-def load_state_data(state_name):
-    """Load all tables for a state from disk."""
-    tables = {}
-    output_dir = get_tables_output_dir()
-    state_dir = os.path.join(output_dir, state_name)
-    
-    if not os.path.exists(state_dir):
-        print(f"[ERROR] No tables directory found for {state_name}")
+def load_state_data(state_name: str):
+    """Load the combined tables for a state from the canonical tables directory."""
+    root = Path(get_tables_output_dir())
+    if not root.exists():
+        print(f"[ERROR] Tables root does not exist: {root}")
         return None
-    
-    # Load only combined tables (no R2)
-    for section in ["Midday", "Evening", "Combined"]:
-        csv_path = os.path.join(state_dir, f"{state_name}_{section}_combined.csv")
-        if os.path.exists(csv_path):
+
+def _normalize_state_slug(state: str) -> str:
+    slug = get_state_file_name(state)
+    return slug or state
+
+
+def _ensure_vtrac_session_state() -> None:
+    if 'vtrac_results' not in st.session_state:
+        st.session_state.vtrac_results = {}
+    if 'vtrac_reports' not in st.session_state:
+        st.session_state.vtrac_reports = {}
+    if 'last_analysis_time' not in st.session_state:
+        st.session_state.last_analysis_time = {}
+
+
+def _clear_vtrac_cache(state: str) -> None:
+    _ensure_vtrac_session_state()
+    for key in ('vtrac_results', 'vtrac_reports', 'last_analysis_time'):
+        cache = st.session_state.get(key)
+        if isinstance(cache, dict):
+            cache.pop(state, None)
+
+
+    # Normalise the state slug (Connecticut4 -> Connecticut4, etc.)
+    slugs = []
+    slug = get_state_file_name(state_name)
+    if slug:
+        slugs.append(slug)
+    if state_name:
+        slugs.append(state_name)
+    if slug.endswith("4"):
+        slugs.append(slug[:-1])
+
+    tables: dict[str, pd.DataFrame] = {}
+    for candidate in slugs:
+        state_dir = (root / candidate).resolve()
+        if not state_dir.exists() or not state_dir.is_dir():
+            continue
+
+        combined_tables: dict[str, pd.DataFrame] = {}
+        for csv_path in sorted(state_dir.glob("*_combined.csv")):
+            parts = csv_path.stem.split("_")
+            if len(parts) < 3:
+                continue
+            section = parts[-2]
+            key = f"{section}_combined"
             try:
-                tables[f"{section}_combined"] = pd.read_csv(csv_path)
-            except Exception as e:
-                print(f"[ERROR] Failed to load {csv_path}: {e}")
-    
-    if not tables:
-        print(f"[ERROR] No valid tables found for {state_name}")
-        return None
-    
-    return tables
+                combined_tables[key] = pd.read_csv(csv_path)
+            except Exception as exc:
+                print(f"[ERROR] Failed to load {csv_path}: {exc}")
+        if combined_tables:
+            return combined_tables
+
+    print(f"[ERROR] No valid combined tables found for {state_name} under {root}")
+    return None
 
 # ------------------------------------------------------------------------------
 # V-TRAC ANALYZER FUNCTIONS (from vtrac_analyzer.py)
@@ -559,7 +596,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Midday_combined" in tables:
         html += generate_table_html(tables["Midday_combined"], f"{state_name} Midday Combined Table")
     if "Midday_r2" in tables:
-        html += f"<h5>Midday – R2-only</h5>"
+        html += f"<h5>Midday - R2-only</h5>"
         html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table")
     html += '</div>'
     
@@ -569,7 +606,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Evening_combined" in tables:
         html += generate_table_html(tables["Evening_combined"], f"{state_name} Evening Combined Table")
     if "Evening_r2" in tables:
-        html += f"<h5>Evening – R2-only</h5>"
+        html += f"<h5>Evening - R2-only</h5>"
         html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table")
     html += '</div>'
     
@@ -579,7 +616,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     if "Combined_combined" in tables:
         html += generate_table_html(tables["Combined_combined"], f"{state_name} Combined Combined Table")
     if "Combined_r2" in tables:
-        html += f"<h5>Combined – R2-only</h5>"
+        html += f"<h5>Combined - R2-only</h5>"
         html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table")
     html += '</div>'
     
@@ -846,10 +883,10 @@ def main():
     st.title("Alpha Analytical Tool")
     
     tabs = st.tabs([
-        "📊 Process Data", 
-        "👁 View Results", 
-        "🏆 Log Winners", 
-        "📈 V-TRAC Analyzer"
+        "Process Data", 
+        "View Results", 
+        "Log Winners", 
+        "V-TRAC Analyzer"
     ])
     
     with tabs[0]:
@@ -1243,14 +1280,14 @@ def log_winners_tab():
                                 f.write(html_str)
                             
                             # Show quick link in UI
-                            st.markdown(f"✅ **HTML saved** → `{html_path}`")
+                            st.markdown(f"[OK] **HTML saved** -> `{html_path}`")
                     
                     # Create bundle
                     pred_json_path = Path("data/outputs/predictions") / f"{state_name}_{date_str}_predictions.json"
                     winners_json_path = Path("data/outputs/winners_json") / f"{state_name}_{date_str}_winners.json"
                     if pred_json_path.exists() and winners_json_path.exists():
                         bundle_path = bundle_day(state_name, date_str, pred_json_path, winners_json_path)
-                        st.success(f"Bundle saved → {bundle_path}")
+                        st.success(f"Bundle saved -> {bundle_path}")
                 
                 progress = (i + 1) / len(states_to_process)
                 progress_bar.progress(progress)
@@ -1403,7 +1440,7 @@ def log_winners_tab():
                                         f.write(html_str)
                                     
                                     # Show quick link in UI
-                                    st.markdown(f"✅ **HTML saved** → `{html_path}`")
+                                    st.markdown(f"[OK] **HTML saved** -> `{html_path}`")
                     
                             # Create bundle
                             bundle_day(state_name, date_str)
@@ -1442,7 +1479,7 @@ def log_winners_tab():
                 if files:
                     st.write("Recent prediction files:")
                     for f in files:
-                        st.text(f"• {f}")
+                        st.text(f"- {f}")
                 else:
                     st.info("No prediction files found yet")
     
@@ -1454,7 +1491,7 @@ def log_winners_tab():
                 if files:
                     st.write("Recent winner files:")
                     for f in files:
-                        st.text(f"• {f}")
+                        st.text(f"- {f}")
                 else:
                     st.info("No winner files found yet")
 
@@ -1620,6 +1657,143 @@ def vtrac_analyzer_tab():
             st.info("No HTML reports were generated. Analysis might not have produced enough results.")
     else:
         st.info("No analysis results found. Please run an analysis first.")
+
+def render(state: str) -> None:
+    """Render the V-TRAC analyzer for the integrated app."""
+    _ensure_vtrac_session_state()
+
+    state_slug = _normalize_state_slug(state)
+    st.title(f"V-TRAC Analyzer - {state_slug}")
+    st.caption("Uses the combined tables produced by the data pipeline.")
+
+    tables_root = Path(get_tables_output_dir())
+    slug_candidates = []
+    for name in [state_slug, state_slug[:-1] if state_slug.endswith("4") else None, state]:
+        if name and name not in slug_candidates:
+            slug_candidates.append(name)
+
+    resolved_dir = None
+    for name in slug_candidates:
+        candidate = (tables_root / name).resolve()
+        if candidate.exists() and candidate.is_dir():
+            resolved_dir = candidate
+            break
+    if resolved_dir is None:
+        resolved_dir = (tables_root / state_slug).resolve()
+
+    combined_paths = []
+    if resolved_dir.exists():
+        combined_paths = sorted(path for path in resolved_dir.glob("*_combined.csv"))
+
+    statuses = [
+        ("Tables root", tables_root.exists(), str(tables_root)),
+        (f"State directory ({resolved_dir.name})", resolved_dir.exists(), str(resolved_dir)),
+        ("Combined tables", bool(combined_paths), ", ".join(p.name for p in combined_paths) if combined_paths else "(none)"),
+    ]
+
+    st.subheader("Preflight Checks")
+    for label, ok, detail in statuses:
+        icon = "[OK]" if ok else "[WARN]"
+        st.write(f"{icon} {label}: {detail}")
+
+    try:
+        show_dev = st.sidebar.checkbox("Show Dev Health (V-TRAC)", value=False, key=f"dev_health_vtrac_{state_slug}")
+    except Exception:
+        show_dev = False
+
+    if show_dev:
+        with st.expander("System Health (V-TRAC)", expanded=False):
+            st.caption(f"tables_root: {tables_root} (exists={tables_root.exists()})")
+            st.caption(f"state_dir: {resolved_dir} (exists={resolved_dir.exists()})")
+            if combined_paths:
+                st.caption("Combined tables:")
+                for path in combined_paths:
+                    try:
+                        size = path.stat().st_size
+                    except OSError:
+                        size = 0
+                    st.caption(f"- {path.name} ({size:,} bytes)")
+            else:
+                st.caption("Combined tables: none found")
+
+    if st.button("Rescan tables & clear cache", key=f"vtrac_rescan_{state_slug}"):
+        _clear_vtrac_cache(state_slug)
+        st.info("Cache cleared. Re-run analysis to refresh results.")
+
+    if not combined_paths:
+        st.warning("No combined tables found. Run the tables pipeline for this state before analyzing V-TRAC.")
+
+    run_disabled = not combined_paths
+    if st.button("Run V-TRAC Analysis", type="primary", key=f"vtrac_run_{state_slug}", disabled=run_disabled):
+        with st.spinner(f"Running V-TRAC analysis for {state_slug}..."):
+            _clear_vtrac_cache(state_slug)
+            tables = load_state_data(state_slug)
+            if not tables:
+                st.warning(f"No tables available for {state_slug}. Run the tables pipeline first.")
+            else:
+                results = analyze_all_indexes(state_slug)
+                if not results:
+                    st.warning(f"No analyzable V-TRAC data found for {state_slug}.")
+                else:
+                    json_path = save_predictions_as_json(state_slug, results, top_n=3)
+                    reports = generate_top_reports(state_slug, results, top_n=3)
+                    _ensure_vtrac_session_state()
+                    st.session_state.vtrac_results[state_slug] = results
+                    st.session_state.vtrac_reports[state_slug] = reports
+                    st.session_state.last_analysis_time[state_slug] = time.time()
+                    st.success(f"V-TRAC analysis complete for {state_slug}.")
+                    if json_path:
+                        st.caption(f"Predictions JSON saved to {json_path}.")
+
+    _ensure_vtrac_session_state()
+    results = st.session_state.get('vtrac_results', {}).get(state_slug)
+    if not results:
+        return
+
+    top_limit = min(3, len(results))
+    st.subheader(f"Top {top_limit} V-TRAC indexes for {state_slug}")
+
+    df = pd.DataFrame({
+        "Rank": [r["rank"] for r in results[:top_limit]],
+        "Index": [r["index"] for r in results[:top_limit]],
+        "Score": [f"{r['score']:.2f}" for r in results[:top_limit]],
+    })
+    st.dataframe(df, use_container_width=True)
+
+    last_ts = st.session_state.get('last_analysis_time', {}).get(state_slug)
+    if last_ts:
+        last_dt = datetime.fromtimestamp(last_ts)
+        st.caption(f"Last analyzed on {last_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    reports = st.session_state.get('vtrac_reports', {}).get(state_slug, [])
+    if not reports:
+        return
+
+    st.subheader("Detailed Analysis Reports")
+    tabs = st.tabs([f"Rank #{r['rank']} (Index {r['index']})" for r in reports[:3]])
+    for tab, report in zip(tabs, reports[:3]):
+        with tab:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"V-TRAC Index: {report['index']} | Score: {report['score']:.2f}")
+            with col2:
+                st.download_button(
+                    label=f"Download HTML (Rank #{report['rank']})",
+                    data=report['html'],
+                    file_name=report['filename'],
+                    mime="text/html",
+                    key=f"dl_html_{state_slug}_{report['rank']}"
+                )
+                if st.button(
+                    f"Open in Browser (Rank #{report['rank']})",
+                    key=f"open_browser_{state_slug}_{report['rank']}"
+                ):
+                    webbrowser.open(f"file://{os.path.abspath(report['filepath'])}")
+            expand_key = f"expand_{state_slug}_{report['rank']}"
+            expand_view = st.checkbox("Expand View", key=expand_key)
+            height = 4000 if expand_view else 3000
+            st.components.v1.html(report['html'], height=height, scrolling=True)
+
 
 if __name__ == "__main__":
     main()

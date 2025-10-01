@@ -1,0 +1,178 @@
+our screenshots show the app is healthy again and both DEV expanders are present. Here’s a crisp walkthrough and fixes for the small things you flagged.
+
+1) What happens when you click each button, and where the outputs land
+A) Run Analyzer V2 for this state (top expander)
+
+Runs analyzer_v2.pipeline.run(state).
+
+Outputs (per state) →
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+
+<STATE>_analyzer_v2_per_item.csv — one row per (area/section/set/draw/col/method/mode) with features + score.
+
+<STATE>_analyzer_v2_own_vs_combined_delta.csv — own↔combined agreement & deltas (diagnostic).
+
+<STATE>_analyzer_v2_top_candidates.csv — roll-up of strongest final sets.
+
+<STATE>_analyzer_v2_meta.json — config snapshot + source path.
+
+This is the analysis layer for Digit-Reduction proper.
+
+B) Analyzer V2 Winners overlay (DEV) – batch (second expander)
+
+Runs winners_overlay.run_winner_overlay_batch(state, winners={...}).
+
+Inputs required: the reducer’s artifacts (existing)
+…/digit_reduction/<STATE>/training/*_digit_reduction_logs.json and
+…/digit_reduction/<STATE>/<STATE>_digit_reduction_report_stacked.html
+
+Outputs (per variant you provide) →
+…/digit_reduction/<STATE>/analyzer_v2/winners/
+
+<STAMP>_<VAR>_winner_overlay.html — a copy of the stacked report with highlights:
+
+🟨 exact winner permutations
+
+🟦 same local V-TRAC family
+
+<STAMP>_<VAR>_winner_map.json — machine-readable hits (earliest step, final flags, identity keys).
+
+<STAMP>_<VAR>_winner_hits.csv — flat table of the hits for quick QA.
+
+<STAMP>_<VAR>_winner_flags.csv — join-friendly flags keyed by identity columns (merge onto per-item CSV).
+
+<STAMP>_<VAR>_winner_stamp.json — small summary “stamp”.
+If “Mirror stamp into Winners logger” is ticked, the same JSON is also mirrored to:
+data/outputs/analysis/winners/<STATE>/stamps/digit_reduction/
+
+This is the winner-overlay layer—for visual proof and ML/Logger ingestion.
+
+2) “Legacy top table” still showing
+
+That’s the old reducer summary. You can hide it now and delete later:
+
+Quick hide (no code delete): wrap the legacy top-table block with a dev flag:
+
+SHOW_LEGACY_DR_SUMMARY = False
+if SHOW_LEGACY_DR_SUMMARY:
+    # legacy top table render here
+    ...
+
+
+Or, simply collapse it by default with with st.expander("Legacy summary", expanded=False):. You can remove it entirely once you’re happy with Analyzer V2 outputs.
+
+3) Combined vs Midday/Evening inputs (overlay behavior)
+
+Your intent: even if the winner happened in Midday/Evening, you still want to see it mapped through Combined (since you evaluate patterns in all three datasets). Today the batch overlay only runs the variants you fill in, filtering by that section.
+
+Minimal improvement: auto-run Combined for any Midday/Evening winner you enter.
+
+If Combined is blank but Midday and/or Evening are provided, the overlay will also run Combined for that same 3-digit winner (once per unique winner).
+
+The result: you’ll get the Midday overlay, the Evening overlay, and the Combined overlay—so you can see formation across all three tables.
+
+This is a small patch to the batch wrapper; no UI change needed (you can still type Combined explicitly if you want a different number there).
+
+4) How to test now (step-by-step)
+
+Analyzer run
+
+Click Run Analyzer V2 for this state.
+
+Expect a green toast like your screenshot (e.g., “Wrote 396 rows”).
+
+Click the four links; verify files exist in:
+…/digit_reduction/<STATE>/analyzer_v2/.
+
+Winner overlay (DEV)
+
+In Analyzer V2 Winners overlay (DEV) – batch, enter a winner in any field:
+
+e.g., Combined = 237 or Midday = 237.
+(With the auto-Combined tweak, entering Midday = 237 will also produce Combined = 237 overlay.)
+
+Keep “Mirror stamp into Winners logger” on (recommended).
+
+Click Build winners overlays.
+
+Expect new artifacts under:
+…/analyzer_v2/winners/<STAMP>_* and the mirrored stamp under
+…/analysis/winners/<STATE>/stamps/digit_reduction/.
+
+Open the overlay HTML and confirm highlights:
+
+🟨 exact 237 (any permutation)
+
+🟦 tokens in the same local mirror-family
+
+Join flags back to analyzer rows (optional QA)
+
+Merge the flags CSV onto per-item rows (keys: area,section,set,draw,col,method,mode).
+
+Check that rows tagged dr_win_exact == 1 or dr_win_vtrac == 1 match what you see in the overlay.
+
+5) Why the overlay is useful (what it’s “doing” analytically)
+
+It closes the loop: you no longer have to eyeball external winners to gauge whether DR “had it.” The overlay tells you: did DR hit the exact winner, how early in steps, and did its mirror-family appear?
+
+It produces structured evidence (JSON + flags) so the Winners Logger and ML can learn from it:
+
+Earliest step for exact/v-trac, final exact/v-trac flags.
+
+Joinable flags so you can weight analyzer scores against “winner presence.”
+
+6) The “Stacked view” toggle blanks the page
+
+That checkbox renders the big HTML report (*_digit_reduction_report_stacked.html). A blank after clicking usually means an exception during HTML load, and Streamlit quietly re-runs the page (so you jump back up).
+
+Most common causes:
+
+The HTML path is wrong or file missing (case differences, state string).
+
+Encoding/escape issue on st.components.v1.html(...).
+
+An exception is swallowed by a broad except: pass around the render.
+
+Fix pattern (wrap & log):
+
+import streamlit as st
+from pathlib import Path
+from streamlit import components
+
+if st.checkbox("Stacked view (show all methods)", value=False):
+    try:
+        p = Path("data/outputs/analysis/digit_reduction") / state / f"{state}_digit_reduction_report_stacked.html"
+        html = p.read_text(encoding="utf-8")
+        components.v1.html(html, height=1200, scrolling=True)
+    except FileNotFoundError:
+        st.error(f"Stacked HTML not found: {p}")
+    except Exception as e:
+        st.exception(e)  # don't swallow: show the error so we can fix fast
+
+
+If you still bounce back to the top, this will show the actual error instead of a silent re-run.
+
+7) My quick feedback on your screenshots
+
+✅ Analyzer V2 button and links: great—this is the right flow: top-level analyzer produces per-item, deltas, meta, and top-candidates; links refresh after a run.
+
+✅ Winners overlay (DEV) panel: inputs are clear; the “Mirror stamp” tick box is exactly how we thread into Winners Logger.
+
+⚠️ Legacy top table: keep collapsed or hide with a flag (see §2) so you don’t confuse it with Analyzer V2.
+
+⚠️ Stacked view: add the try/except shown above so you don’t get a silent blank.
+
+🔄 Combined auto-run for Midday/Evening winners: small tweak improves the “see it in all three tables” use-case.
+
+8) What I’d do next (small, safe tweaks)
+
+Auto-run Combined in the batch overlay when Midday/Evening winners are provided and Combined is blank.
+(Ensures you always see the formation through Combined without manual duplicate typing.)
+
+Hide or collapse legacy reducer summary by default so the new Analyzer V2 layer is front-and-center.
+
+Wrap stacked view render in try/except with visible error reporting (st.exception) so you never get a silent blank.
+
+If you want, I can draft those three tiny patches in a single response, but none of them require heavy surgery—the app is in good shape and doing what we intended: producing deep DR analysis, plus a winners overlay and logger-ready stamps.
+
+If you give me one real winner (Midday or Evening) for a state, I can outline exactly what you should see in the overlay and the flags after a run.

@@ -1,3 +1,25 @@
+## 2025-10-01 04:15 (UTC) - V-TRAC tables & cache alignment
+
+- Context: Legacy mini-pipeline inside the V-TRAC page was desyncing from the global tables pipeline, leading to "analysis completed" but missing tables for states like Delaware4.
+- Change:
+  - Removed the in-page Process/Clean/Extract/Generate controls so the analyzer only consumes pipeline tables.
+  - Added preflight/status rows, system-health details, and a cache reset button on the V-TRAC tab.
+  - Loader now tolerates slug variants and lists the actual `_combined` files before running.
+- Impact: The V-TRAC Analyzer now reads the canonical combined tables, exposes diagnostics when files are missing, and no longer masks stale results.
+- Files/Refs: `src/app.py`, `src/core/module_c_vtrac.py`.
+- Follow-ups: Consider wiring winners logging to the consolidated bundle once other tools align.
+
+## 2025-10-01 03:45 (UTC) - Digit Reduction training/analyzer alignment
+
+- Context: New Pick3StatsC4 run exposed missing training logs and analyzer crashes on empty strings, plus the occasional Streamlit blank screen warning.
+- Change:
+  - Reducer now always writes `digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json` (legacy plural file cleaned up).
+  - Analyzer tolerates blank/whitespace numeric fields and reuses the newest training log automatically.
+  - Digit Reduction UI shows preflight status, folder shortcuts, disables Analyzer until training JSON exists, and wraps the dev overlay import/rescue boot.
+- Impact: Fresh pipeline runs for any state immediately produce the training JSON, Analyzer V2 no longer fails on empty ints, and the tab guides operators instead of blank-screening.
+- Files/Refs: `src/app.py`, `src/core/module_b_digit_reduction.py`, `alpha_analytical/digit_reduction/analyzer_v2/{io.py,pipeline.py}`.
+- Follow-ups: Monitor first full-state run; expand preflight to include slate artifacts if helpful.
+
 ## 2025-09-30 03:30 (UTC) - Control Center due doubles badges
 
 - Context: Operators needed the reinstated due-doubles columns to carry the top repeating pairs and cross-variant combo badges without the extra Latest/Total clutter.
@@ -240,5 +262,11 @@ Template
   - Consider retiring `scripts/auxiliary/working/` once staged modules are no longer needed by the Aux page.
 
 
+
+
+## 2025-10-01 23:30 (UTC) - V-TRAC ASCII cleanup
+- Context: Streamlit surfaced the Mojibake guard after piping new tables; inspection showed the V-TRAC analyzer UI still rendered emoji arrows and en dashes.
+- Change: Replaced the non-ASCII glyphs in `src/core/module_c_vtrac.py` and `src/core/module_b_digit_reduction.py` with bracketed ASCII markers so the guard stays silent while keeping the preflight readability.
+- Impact: Digit Reduction and V-TRAC pages now load without Mojibake warnings after a fresh pipeline run.
 
 

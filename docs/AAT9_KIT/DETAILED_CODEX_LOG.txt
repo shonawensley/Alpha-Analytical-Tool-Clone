@@ -1,3 +1,16 @@
+## 2025-10-01 - V-TRAC: consume pipeline tables & surface health
+- Swapped the integrated V-TRAC page over to the canonical combined tables (no more built-in Process/Clean/Generate UI).
+- Added preflight/status rows, a dev-health expander, and a cache reset so stale results and missing files are obvious.
+- Loader now normalizes slug variants (Connecticut vs Connecticut4) and lists the actual `_combined` CSVs before analysis.
+- Verification: `python -m py_compile src/app.py src/core/module_c_vtrac.py`.
+
+## 2025-10-01 - Digit Reduction: training log SSOT + analyzer hardening
+- Added `_digit_reduction_dirs` helpers and UI preflight rows so every state checks tables/JSON/analyzer folders with one click.
+- Reducer now writes `digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json` (deleting the old plural form).
+- Analyzer I/O (`io.py`, `pipeline.py`) uses safe int parsing, auto-creates training folders, and picks the newest log.
+- Streamlit tab disables the analyzer button until training JSON exists, keeps folder shortcuts, and wraps the dev overlay import with a rescue boot.
+- Verification: `python -m py_compile src/app.py src/core/module_b_digit_reduction.py alpha_analytical/digit_reduction/analyzer_v2/{io.py,pipeline.py}`.
+
 ## 2025-09-30 - Control Center due doubles badges
 - Action: Updated the Control Center due-doubles grid to pull combined top-4 repeating pairs from Aux, append C/M/E-badged >=1000-draw doubles per pair, and trim the legacy Latest/Total columns while keeping positional heat/notes.
 - Verification: python -m py_compile src/app.py.
@@ -2164,3 +2177,4 @@ ___________________________________________________
   You can now open the new expander in Digit Reduction (DEV) or call the batch runner directly to get annotated HTML,
   map/flags CSVs, and Winners stamps for any state/variant without touching the original reducer outputs.                                                   
 
+2025-10-01 23:30 UTC\n- Sanitized src/core/module_c_vtrac.py UI strings: swapped emoji bullets, arrows, and en dashes for ASCII markers ([OK]/[WARN], '->') so Streamlit's Mojibake guard no longer triggers after a fresh pipeline run.\n- Verified affected modules compile: python -m py_compile src/app.py src/core/module_b_digit_reduction.py src/core/module_c_vtrac.py alpha_analytical/digit_reduction/analyzer_v2/io.py alpha_analytical/digit_reduction/analyzer_v2/pipeline.py.\n\n

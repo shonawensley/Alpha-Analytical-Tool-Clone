@@ -1,5 +1,5 @@
 # long_string_reducer_part2.py
-"""Run‑time orchestrator + HTML writer for the Digit‑Reduction / Long‑String module.
+"""Run-time orchestrator + HTML writer for the Digit-Reduction / Long-String module.
 
 USAGE (from project root):
     python long_string_reducer_part2.py --json data/big_table.json
@@ -7,7 +7,7 @@ USAGE (from project root):
     python long_string_reducer_part2.py --csv_dir tables/
 
 It will read the required R2 strings (Area 1 & Area 2),
-run the four reduction methods (A–D) in both draw modes (own / combined),
+run the four reduction methods (A-D) in both draw modes (own / combined),
 generate a full HTML report under outputs/ and optionally a JSON dump.
 
 Part 1 (long_string_reducer_part1.py) must be importable.
@@ -36,7 +36,7 @@ from .long_string_reducer_part1 import (
     method_t,
     SECTION_NAMES,
 )
-from .long_string_reducer_part1 import run_reduction_progression  # exposed by part‑1
+from .long_string_reducer_part1 import run_reduction_progression  # exposed by part-1
 
 METHOD_FUNCS = {
     "A": method_a,
@@ -75,7 +75,7 @@ def build_html_for_cell(location_id: str, variation_logs: Dict[Tuple[str, str], 
 
     # rows --------------------------------------------------
     for idx in range(max_rows):
-        label = STEP_LABEL.get(idx, idx)          # 0 → "Orig", else number
+        label = STEP_LABEL.get(idx, idx)          # 0 -> "Orig", else number
         row_cells = [f"<td class='step'>{label}</td>"]
         for key in COLUMNS_ORDER:
             step_log = variation_logs.get(key, [])
@@ -245,7 +245,7 @@ def build_full_html(
     for meth, md in COLUMNS_ORDER:
         sec_id = f"{meth}-{md}"
         parts.append(f'<section class="method" id="{sec_id}">')
-        parts.append(f'<h2>Method {meth} – {md}</h2>')
+        parts.append(f'<h2>Method {meth} - {md}</h2>')
         # LONG-STRING 1  (cols 7/6/5)
         ls1 = [c for c in results_area1 if any(c["location_id"].endswith(f"col{x}") for x in (7,6,5))]
         parts.append('<h3>Long-String 1  (columns 7 / 6 / 5)</h3>')
@@ -315,14 +315,14 @@ def _load_big_data_from_tables(csv_dir: Path) -> dict:
         sect_node = big["sections"].setdefault(section, {"sets": {}})
 
         for _, row in df.iterrows():
-            # -------- normalise & sanity‑clean -------------------------
+            # -------- normalise & sanity-clean -------------------------
             set_name  = str(row.get("Set",  "") or "").strip()
             draw_name = str(row.get("Draw", "") or "").strip()
             row_type  = str(row.get("RowType", "") or "").strip().upper()
             if not (set_name and draw_name and row_type):
                 continue
 
-            # Accept mixed‑case / dashes
+            # Accept mixed-case / dashes
             if row_type in {"DRAW_DATA", "DRAW"}:
                 row_type = "DRAW_DATA"
             elif row_type.replace("-", "") == "R2":
@@ -341,7 +341,7 @@ def _load_big_data_from_tables(csv_dir: Path) -> dict:
 
             if row_type == "DRAW_DATA":
                 draw_node["draw_data"] = col_values
-            else:            # R2, R3, …
+            else:            # R2, R3, ...
                 draw_node["pattern_variations"].setdefault(row_type, col_values)
 
     return big
@@ -378,7 +378,7 @@ def run_digit_reduction(
     Parameters
     ----------
     state : str
-        State identifier (e.g. "Connecticut4") – only used for naming outputs.
+        State identifier (e.g. "Connecticut4") - only used for naming outputs.
     tables_path : Path
         Directory containing the *_combined.csv tables for that state.
     out_path : Path | str | None, optional
@@ -390,8 +390,8 @@ def run_digit_reduction(
     Returns
     -------
     df_scores : pandas.DataFrame
-    html_path : str – absolute path to generated HTML report
-    csv_path  : str – absolute path to generated CSV file ("" if no data)
+    html_path : str - absolute path to generated HTML report
+    csv_path  : str - absolute path to generated CSV file ("" if no data)
     """
     import pandas as pd  # local import
 
@@ -647,17 +647,18 @@ def run_digit_reduction(
             pass
 
         # JSON (logs) with guidance (JSON has no native comments, so we embed guidance fields)
-        logs_json_path = train_dir / f"{state}_digit_reduction_logs.json"
+        training_json_path = train_dir / f"{state}_digit_reduction_log.json"
+        legacy_json_path = train_dir / f"{state}_digit_reduction_logs.json"
         guidance = {
-            "purpose": "Training guidance for interpreting Digit‑Reduction outputs.",
+            "purpose": "Training guidance for interpreting Digit-Reduction outputs.",
             "notes": [
                 "Use fields area (LS1/LS2), section (Midday/Evening/Combined), set (Set1/2/3), draw (Draw1..7), col (numeric + label) to align panels.",
-                "Own‑table analysis: filter section to the same value (e.g., Midday) and compare across col_rank 7/6/5 (LS1) or 3/1 (LS2).",
-                "Cross‑chart analysis: group by [area, set_rank, draw_rank, col_rank, method, mode] and pivot over section_rank (1=Midday,2=Evening,3=Combined).",
+                "Own-table analysis: filter section to the same value (e.g., Midday) and compare across col_rank 7/6/5 (LS1) or 3/1 (LS2).",
+                "Cross-chart analysis: group by [area, set_rank, draw_rank, col_rank, method, mode] and pivot over section_rank (1=Midday,2=Evening,3=Combined).",
                 "Compaction: steps are trimmed after terminal start (length<=3 or unique_digits<=2); after terminal we allow at most one identical duplicate per distinct value.",
-                "Meaning: steps preserve all distinct states up to stabilization, with minimal end‑tail noise for readability.",
+                "Meaning: steps preserve all distinct states up to stabilization, with minimal end-tail noise for readability.",
                 "Ordering: sort by [area_rank, section_rank, set_rank desc, draw_rank, col_rank, method, mode] to reproduce the grid order seen in the UI.",
-                "Final state is provided at item.final; step‑level features include length, unique_digits, is_3value.",
+                "Final state is provided at item.final; step-level features include length, unique_digits, is_3value.",
                 "Keys grid_position and sequence_meta are provided to speed up grouping and diagnostics.",
             ],
             "sort_suggestion": [
@@ -666,7 +667,7 @@ def run_digit_reduction(
             "schema": {
                 "item": {
                     "state": "State identifier (e.g., Connecticut4)",
-                    "area": "LS1|LS2 (Long‑String 1 vs Long‑String 2)",
+                    "area": "LS1|LS2 (Long-String 1 vs Long-String 2)",
                     "section": "Midday|Evening|Combined",
                     "set": "Set1|Set2|Set3",
                     "draw": "Draw1..Draw7",
@@ -683,8 +684,8 @@ def run_digit_reduction(
                         "col_rank": "column number as integer"
                     },
                     "sequence_meta": {
-                        "first_3value_step": "first step with unique_digits<=3 (‑1 if none)",
-                        "last_change_step": "largest index i where value[i]!=value[i‑1]",
+                        "first_3value_step": "first step with unique_digits<=3 (-1 if none)",
+                        "last_change_step": "largest index i where value[i]!=value[i-1]",
                         "steps_total_before_compaction": "raw step count",
                         "steps_kept_after_compaction": "after trimming terminal tail and allowing at most one identical duplicate per distinct value"
                     },
@@ -694,7 +695,12 @@ def run_digit_reduction(
             }
         }
         payload = {"state": state, "guidance": guidance, "items": items}
-        logs_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        training_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        if legacy_json_path.exists() and legacy_json_path != training_json_path:
+            try:
+                legacy_json_path.unlink()
+            except Exception:
+                pass
     except Exception:
         # Training exports are optional; failures must not block the main report
         pass
@@ -714,21 +720,21 @@ def run_digit_reduction(
 
 # Re-export for convenience
 try:
-    import pandas as pd  # noqa: F401 – re-export check
+    import pandas as pd  # noqa: F401 - re-export check
 except ModuleNotFoundError:
     pass
 
 __all__ = [
-    # existing exports … (implicitly) add new symbol
+    # existing exports ... (implicitly) add new symbol
     "run_digit_reduction",
 ]
 
 # ---------------------------------------------------------------------------
-# Command‑line interface
+# Command-line interface
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Digit‑Reduction module and build HTML report.")
+    parser = argparse.ArgumentParser(description="Run Digit-Reduction module and build HTML report.")
     g = parser.add_mutually_exclusive_group(required=True)
     g.add_argument("--json", type=Path, help="Path to the big lottery JSON file")
     g.add_argument("--csv_dir", type=Path, help="Path to the directory containing CSV tables")
@@ -790,7 +796,7 @@ def main():
             "Set1" in big_data["sections"][sec]["sets"] and 
             "Draw1" in big_data["sections"][sec]["sets"]["Set1"]["draws"]):
             dd = big_data["sections"][sec]["sets"]["Set1"]["draws"]["Draw1"].get("draw_data", {})
-            # col1 is newest → if it exists grab it, else first non-empty col
+            # col1 is newest -> if it exists grab it, else first non-empty col
             latest = next((dd.get(str(c)) for c in ("1","2","3","4","5","6","7") if dd.get(str(c))), "")
             draw_heads[sec] = latest
 
@@ -800,9 +806,9 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     html_path = args.out / f"digit_reduction_{ts}.html"
     html_path.write_text(html, encoding="utf-8")
-    print(f"[✓] HTML report written to {html_path}")
+    print(f"[OK] HTML report written to {html_path}")
 
-    # Optional JSON snapshot (comment‑in if desired)
+    # Optional JSON snapshot (comment-in if desired)
     # json_path = args.out / f"digit_reduction_{ts}.json"
     # json_path.write_text(json.dumps({"area1": analysed_area1, "area2": analysed_area2}, indent=2))
 
