@@ -1533,7 +1533,7 @@ def show_aux_page(state: str) -> None:
                 st.caption("BA module: " + str(getattr(_ba, "__file__", "unknown")))
             except Exception as _se:
                 st.caption("BA module: unavailable: " + str(_se))
-            st.caption("windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
+            st.caption(f"windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
             try:
                 _aux = _load_aux_loaders_real()
                 load_state_draws = getattr(_aux, "load_state_draws", None)
@@ -1952,12 +1952,13 @@ def show_aux_page(state: str) -> None:
                     if PAIR_PENDING_THRESHOLD <= ds < NONREPEATING_LATE_THRESHOLD
                 ])
 
-                st.info(
-                    ("**Overdue thresholds**\n"
-                     f"- Window: {PAIRS_WINDOW} draws\n"
-                     f"- Repeating pairs (00, 11, etc): red >= {REPEATING_VERY_LATE_THRESHOLD}, blue >= {REPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}\n"
-                     f"- Non-repeating pairs (01, 23, etc): red >= {NONREPEATING_VERY_LATE_THRESHOLD}, blue >= {NONREPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}")
-                )
+                info_lines = [
+                    "**Overdue thresholds**",
+                    f"- Window: {PAIRS_WINDOW} draws",
+                    f"- Repeating pairs (00, 11, etc): red >= {REPEATING_VERY_LATE_THRESHOLD}, blue >= {REPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}",
+                    f"- Non-repeating pairs (01, 23, etc): red >= {NONREPEATING_VERY_LATE_THRESHOLD}, blue >= {NONREPEATING_LATE_THRESHOLD}, purple >= {PAIR_PENDING_THRESHOLD}",
+                ]
+                st.info("\n".join(info_lines))
                 st.caption("Color priority (digits/pairs overlap): red > blue > purple")
 
                 rep_col, nonrep_col = st.columns(2)

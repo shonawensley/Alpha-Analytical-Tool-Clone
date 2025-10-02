@@ -287,3 +287,18 @@ Template
   - Consider exposing the cached repeat summary in Aux (e.g., badge near the V-TRAC table) for quicker variant-level insight.
   - Expand the repeat watch to include trend deltas (e.g., compare against previous run) once run logging is in place.
 
+## 2025-10-02 07:45 (UTC) - Aux SSOT polish & staged import fallback
+
+- Context: The Aux overdue-threshold caption injection was fragile (leading to syntax errors), and the staged smoke runner could no longer import `core.aux_config` once the SSOT moved under `src/`.
+- Change:
+  - Replaced the multi-line `st.info` injection with a joined list so thresholds render reliably from the SSOT constants.
+  - Patched `scripts/auxiliary/working/modules/analyze_pairs.py` to add the project `src/` directory to `sys.path` when the module is executed from the staged copy, then re-import `core.aux_config`.
+  - Regenerated `.codex/first_boot.log` via a headless Streamlit boot to confirm the page loads cleanly.
+- Impact:
+  - Aux UI now surfaces threshold text without risking syntax errors from scripted replacements.
+  - Aux smoke (`python scripts/checks/smoke_aux_vtrac.py`) binds to the same SSOT as the app, keeping staging and prod in sync.
+- Verification:
+  - `python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py`
+  - `pytest -q tests/test_analyze_pairs_semantics.py`
+  - `python scripts/checks/smoke_aux_vtrac.py`
+  - Headless boot logged to `.codex/first_boot.log`

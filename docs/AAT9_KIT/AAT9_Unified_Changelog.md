@@ -16,3 +16,6 @@
 - Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, 	ests/test_analyze_pairs_semantics.py.
 
 
+## 2025-10-02 - Aux SSOT follow-up (UI + smoke)
+- Impact: Replaced the overdue-threshold info panel with a safe join using the SSOT constants and added a fallback in the staged analyze_pairs module so Aux smokes import core/aux_config even when launched from scripts/.
+- Files: src/app.py, scripts/auxiliary/working/modules/analyze_pairs.py.

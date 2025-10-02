@@ -3193,3 +3193,7 @@ All the Digit Reduction work is already logged where it needs to be:
 ▌ ▌ You can now view your Streamlit app in your browser.
 
 
+2025-10-02 07:45 UTC
+- Touched `src/app.py` to replace the Aux overdue thresholds `st.info` block with a `"\n".join(info_lines)` pattern that reads straight from the SSOT constants, and fixed the Dev Health caption so it shows live window values.
+- Patched `scripts/auxiliary/working/modules/analyze_pairs.py` to bootstrap `src/` onto `sys.path` when imported from the staged copy, ensuring the Aux smoke still resolves `core.aux_config`.
+- Validation: `python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py`; `pytest -q tests/test_analyze_pairs_semantics.py`; `python scripts/checks/smoke_aux_vtrac.py`; headless `streamlit run src/app.py --server.headless true` (logs captured in `.codex/first_boot.log`).

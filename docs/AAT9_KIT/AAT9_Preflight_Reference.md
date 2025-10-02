@@ -41,6 +41,7 @@ Tip: Use run_app.bat to launch the UI from repo root.
 - If imports point outside the repo: re‑launch from repo root (`run_app.bat`) or fix the active interpreter.
 - If draws inventory is empty: confirm CSVs exist under `data/cleaned/`.
 - If a state doesn’t resolve: normalize the name (e.g., "Connecticut4" → base "Connecticut").
+- Aux windows/thresholds live in `core/aux_config.py`; if Aux captions or the Control Center Repeat Watch look off, sanity-check that SSOT before touching staged modules.
 
 
 ## Quick Smokes (run after preflight)

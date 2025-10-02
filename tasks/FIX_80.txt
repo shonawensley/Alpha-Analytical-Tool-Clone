@@ -1,0 +1,209 @@
+for the detailed hand‑off and the two logs. I read through DETAILED_CODEX_LOG.txt and EDITS.txt you attached and cross‑checked them against the Aux plan we aligned on (SSOT windows/thresholds, V‑TRAC overlay reuse + repeat watch, pair‑semantics assertions, captions/dev‑health surfacing, no scoring/ML yet). Here’s a clear, practical readout.
+
+Executive verdict (short)
+
+Codex largely stayed on the rails and attacked the right Phase‑1 items: SSOT for Aux windows/thresholds, unified V‑TRAC overlay + repeat watch, pair‑semantics assertions, surface captions, docs updates.
+
+The breakage you saw is real but looks limited to string/indentation mishaps inside src/app.py (multi‑line UI copy injected by script replacements).
+
+Direction: Keep scope contained to Aux Phase‑1 (finish SSOT/captions, V‑TRAC overlay + repeat watch, pair semantics), fix the string/indent issues, re‑run smokes. Defer any heavier “feature scoring”/aggregation until the app is green again.
+
+What Codex actually changed (from your logs)
+
+1) Single‑source‑of‑truth (SSOT) for Aux windows & thresholds
+
+Created src/core/aux_config.py with constants like PAIRS_WINDOW, SUMS_WINDOW, VTRAC_INDEX_WINDOW, COMBINATION_WINDOW and thresholds: REPEATING_LATE, REPEATING_VERY_LATE, NONREPEATING_LATE, NONREPEATING_VERY_LATE, PAIR_PENDING, plus combo cutoffs (COMBO_*).
+
+Rewired src/app.py to import those and defined legacy aliases (THR_R_RED, THR_R_BLUE, etc.) to avoid regressions while we transition. Also replaced raw [:100] slices with [:PAIRS_WINDOW].
+
+Added assertions to enforce consistent relations (e.g., “very late ≥ late”).
+
+2) Unified V‑TRAC overlay + repeat watch
+
+Added helper sketches (per log) for _build_vtrac_overlay(draws, resolver, window=VTRAC_INDEX_WINDOW) returning a 35‑index “draws since” overlay + top‑overdue list.
+
+Added _summarize_vtrac_repeats(...) to compute current streak, last repeat age, last repeat index, max streak.
+
+Wired a “V‑TRAC Repeat Watch” table in Control Center to surface those streaks (state/variant).
+
+Fed both the working V‑TRAC table and index‑hits panel from the same overlay cache in cached_aux_analysis.
+
+3) Pair‑semantics guardrails
+
+Added tests/test_analyze_pairs_semantics.py to assert Any‑Position box rules (for ABC → {AB, AC, BC}; for AAA → {AA}).
+
+Ran python -m py_compile on src/app.py and analyze_pairs.py and invoked pytest (per log).
+
+4) UI captions and docs trail
+
+Attempted to inject an st.info block that prints windows/thresholds dynamically (the bit that broke).
+
+Appended entries to docs/AAT9_KIT/AAT9_Unified_Changelog.md and AAT9_Checkpoint_Log.md describing SSOT/overlay/repeat watch work.
+
+What looks good (green)
+
+SSOT direction: Right call. Centralizing Aux windows/thresholds + keeping legacy aliases prevents doc drift and won’t surprise existing code.
+
+Overlay reuse: Having one _build_vtrac_overlay(...) that both the big table and index‑hits panel consume is exactly what we asked for (no duplicated logic, fewer cache bugs).
+
+Repeat watch: The current streak / last repeat telemetry is the minimal viable slice for the Control Center watchlist we discussed.
+
+Pair semantics tests: Great tripwire. Those cheap tests stop accidental changes to pair extraction.
+
+What broke (and why it’s fixable)
+
+Syntax errors in src/app.py during string injection:
+
+Log shows SyntaxError: unexpected character after line continuation character while trying to build a multiline st.info(...) with f‑strings and escaped newlines fed by a script.
+
+There’s also evidence of a dangling with ...: earlier in your session (classic symptom when an injected block didn’t close parentheses/quotes or bumped indentation inside a try:).
+
+Why this is small: it’s not logic; it’s string/indent/quote handling in a UI block. A clean rewrite of that single caption panel fixes it.
+
+Scope drift check
+
+Stayed mostly in Aux Phase‑1. No evidence of a scoring aggregator, ML, or unrelated modules being edited. The repeat watch in Control Center is within the light “ops panel” scope we agreed to.
+
+No red flags about touching stable/DR engines or changing business rules.
+
+Recommended “repair + finish” plan (tell Codex to do exactly this)
+
+A. Stabilize src/app.py UI captions safely
+
+Replace the injected st.info(...) with a minimal, safe block (no manual escape gymnastics):
+
+st.info("\n".join([
+    "**Overdue thresholds**",
+    f"- Window: {PAIRS_WINDOW} draws",
+    f"- Repeating pairs (00,11,…): red ≥ {REPEATING_VERY_LATE}, blue ≥ {REPEATING_LATE}, purple ≥ {PAIR_PENDING}",
+    f"- Non‑repeating pairs: red ≥ {NONREPEATING_VERY_LATE}, blue ≥ {NONREPEATING_LATE}",
+]))
+st.caption("Color priority (digits/pairs overlap): red > blue > purple")
+
+
+Don’t build that string via ad‑hoc regex replacements. Just edit the file in place (or template it) so quotes/indentation are correct.
+
+B. Finish SSOT wiring cleanly
+
+Ensure every reference to pair/combo windows in Aux uses PAIRS_WINDOW/COMBINATION_WINDOW (and that captions show the active window).
+
+Keep the legacy aliases for one release so older notes don’t break: THR_R_RED, THR_R_BLUE, etc.
+
+C. V‑TRAC overlay & repeat watch
+
+Verify _build_vtrac_overlay returns:
+
+draws_since: Dict[index, draws_since]
+
+top_overdue: List[(index, draws_since)] sorted desc
+
+Verify _summarize_vtrac_repeats returns a per‑variant record with:
+
+current_index, current_streak, last_repeat_gap, last_repeat_index, max_streak, window
+
+In Control Center, display Top‑10 overdue (red) and Recent‑5 (green) lists from the same overlay, and the Repeat Watch table by variant.
+
+D. Tests & smokes (must be green before we move on)
+
+python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py
+
+pytest -q tests/test_analyze_pairs_semantics.py
+
+python scripts/checks/smoke_aux_vtrac.py
+
+Headless boot to catch import/layout errors:
+set STREAMLIT_BROWSER=none && streamlit run src/app.py --server.headless true → store .codex/first_boot.log
+
+E. Docs breadcrumbs
+
+Keep today’s entries in Unified Changelog and Checkpoint Log. Add one bullet to Preflight Reference noting the new SSOT file and Repeat Watch panel.
+
+“Go/No‑Go” on continuing Phase‑1
+
+Go, with the above fixes. Codex should not jump to feature scoring/aggregation yet. Phase‑1 is functionally 80–90% done; let’s close it properly:
+
+Fix the caption block (the only clear runtime blocker).
+
+Verify overlay/repeat watch outputs populate as intended.
+
+Run smokes and headless boot until clean.
+
+Only then move to the small remaining Phase‑1 items we previously agreed:
+
+Surface active windows in captions for sums and positional where applicable.
+
+Confirm the mini V‑TRAC table truly reads from the unified overlay (no duplicate logic).
+
+Keep the pair semantics test in CI/pre‑commit (if you’re using pre‑commit scripts).
+
+What to ask Codex to report back (once it claims “done”)
+
+Exact code locations it ended with for:
+
+core/aux_config.py (show constants defined)
+
+_build_vtrac_overlay and _summarize_vtrac_repeats in src/app.py
+
+The Streamlit caption block it installed (the st.info snippet)
+
+Output screenshots (or table heads) of:
+
+Top‑10 Overdue / Recent‑5 indexes in Aux
+
+Repeat Watch table in Control Center
+
+The outputs of:
+python -m py_compile …, pytest -q tests/test_analyze_pairs_semantics.py, scripts/checks/smoke_aux_vtrac.py, and the last 20 lines of .codex/first_boot.log.
+
+That set of artifacts will prove the changes are safe and match the plan.
+
+Answers to your specific concerns
+
+“Did Codex go off the rails?”
+No. It targeted Phase‑1 items we approved. The breakage is string/indent related, not design drift.
+
+“Should it stay contained within auxiliary adjustments?”
+Yes. Finish SSOT + overlay + repeat watch + tests + captions. Only after that, we can consider the self‑contained Aux feature extraction module and winners logging hooks (the next, separate milestone).
+
+“What’s still left?”
+
+Repair the caption block & re‑compile.
+
+Verify the unified overlay feeds both V‑TRAC tables.
+
+Ensure all Aux windows/thresholds pull from aux_config.py (no stray literals).
+
+Run smokes/headless boot.
+
+Update docs (done partly; quick pass to confirm).
+
+If you want me to review code diffs next
+
+If you’d like, share (or ask Codex to paste) the final versions of:
+
+src/core/aux_config.py
+
+The two helper functions and the V‑TRAC Repeat Watch section in src/app.py
+
+The caption block installed under Aux
+
+I’ll do a line‑level pass and give you patch‑accurate notes. If your GitHub clone is current, I can also read the repository directly via the GitHub connector you enabled.
+
+TL;DR you can forward to Codex
+
+Finish Phase‑1 Aux hardening exactly as follows:
+
+Replace the broken st.info with a safe "\n".join([...]) version (no regex injection).
+
+Ensure all Aux windows/thresholds come from core/aux_config.py and show in captions.
+
+Keep legacy threshold aliases for one release.
+
+Confirm the unified _build_vtrac_overlay + _summarize_vtrac_repeats feed both the working V‑TRAC table and the “V‑TRAC Repeat Watch” panel.
+
+Run py_compile, pytest -q tests/test_analyze_pairs_semantics.py, smoke_aux_vtrac.py, and a headless Streamlit boot; attach outputs.
+
+Update Unified Changelog + Checkpoint Log (short entries).
+Do not start feature scoring/aggregation yet.
+
+Once that’s green, we’ll move to the self‑contained Aux feature extractor + winners logging hook as the next milestone.

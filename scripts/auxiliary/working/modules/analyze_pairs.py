@@ -7,14 +7,33 @@ from typing import Dict, List, Tuple, Set, Optional
 import pandas as pd
 import numpy as np
 from itertools import combinations
-from core.aux_config import (
-    PAIRS_WINDOW,
-    REPEATING_LATE,
-    REPEATING_VERY_LATE,
-    NONREPEATING_LATE,
-    NONREPEATING_VERY_LATE,
-    PAIR_PENDING,
-)
+
+try:
+    from core.aux_config import (
+        PAIRS_WINDOW,
+        REPEATING_LATE,
+        REPEATING_VERY_LATE,
+        NONREPEATING_LATE,
+        NONREPEATING_VERY_LATE,
+        PAIR_PENDING,
+    )
+except ModuleNotFoundError:
+    import sys
+    from pathlib import Path as _Path
+
+    _PROJECT_SRC = _Path(__file__).resolve().parents[4] / 'src'
+    if _PROJECT_SRC.exists():
+        _project_src_str = str(_PROJECT_SRC)
+        if _project_src_str not in sys.path:
+            sys.path.insert(0, _project_src_str)
+    from core.aux_config import (
+        PAIRS_WINDOW,
+        REPEATING_LATE,
+        REPEATING_VERY_LATE,
+        NONREPEATING_LATE,
+        NONREPEATING_VERY_LATE,
+        PAIR_PENDING,
+    )
 
 from .vtrac_reference import get_vtrac_index, VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP
 
