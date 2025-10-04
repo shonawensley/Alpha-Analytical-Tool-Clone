@@ -1,0 +1,212 @@
+—your instinct is right: keep the Positional Tracker “small and sharp,” let it use C+M+E pressure together, and let V‑TRAC act as a light compound boost (never the boss). That’s consistent with the way you framed “Brain 1 vs Brain 2,” play‑gates, and training/logging in your strategy notes.
+
+Below is a final, implementable optimization spec for the Positional Tracker. I split it into Part 1 (must‑do minimal patch) and Part 2 (optional boosters) so Codex can land it safely without destabilizing other tools.
+
+Part 1 — “Signal‑aware shortlist” (minimal patch that will surface cases like 989)
+0) Naming (prevent Combined/confusion)
+
+Variant keys: {"combined","midday","evening"}.
+
+All‑Variant consensus: label as “C+M+E (All‑Variant)” in UI; never call this “Combined.”
+
+1) Inputs the tracker already computes (reuse them)
+
+Top‑K per position per variant (e.g., top 3 digits at P1/P2/P3 for C, M, E) + their per‑position scores and ranks.
+
+Lane hits: which digits are hot per lane (C/M/E) at each position.
+
+Tags already produced per digit: XVAR-Cons(…), Mirror‑Echo(…), Double‑Pressure, R‑swaps.
+
+(From Aux cache) V‑TRAC overlay heat and Top‑5 double families (for small boosts in Part 2).
+
+2) Candidate streams (three small generators)
+
+All‑Variant union cartesian
+
+For each position, take the union of top‑K digits across C+M+E (K default 3).
+
+Cartesian product (P1×P2×P3), dedupe, cap (e.g., 48).
+
+Repeat‑endcap
+
+If the same digit is top‑K at both P1 & P3 in any lanes, enumerate d _ d with bridges from:
+
+P2’s top‑K union plus any P2 digits hot in the same lane as the repeated endcaps.
+
+This is the rule that emits 9‑8‑9 when 9 is E#1 at P1 and P3 and 8 carries Evening support.
+
+Lane‑concordance
+
+For each lane ∈ {C,M,E}, form a tiny set using top‑2 per position from that lane only (≤8 combos per lane).
+
+Captures “pure Evening” / “pure Midday” patterns the cartesian step can underrate.
+
+Keep your original TOP1×N variants; the three generators above add candidates—they don’t remove anything.
+
+3) Transparent scoring (weights in config, not hard‑coded)
+
+Let every candidate xyz receive a sum of simple, explainable terms:
+
+Score(xyz) =
+  w_rank * Σ_pos rank_score(pos,digit)                      [1.0]
++ w_xvar * Σ_pos xvar_hits(pos,digit)                       [2.5]
++ w_echo * Σ_pos mirror_echo(pos,digit)                     [1.0]
++ w_dblp * Σ_pos double_pressure(pos,digit)                 [1.0]
++ w_rep  * 1{P1==P3} * 0.30 * (score(P1,d)+score(P3,d))     [0.3 scaled]
++ w_lane * 1{lane‑pure} * 0.15 * base_score                 [0.15 scaled]
++ w_root * root_weight(xyz)                                 [0.4]
+(+ small V‑TRAC nudges in Part 2)
+
+
+Defaults (put in core/aux_config.py):
+
+POS_SHORTLIST_K_TOP = 3
+POS_SHORTLIST_MAX   = 16      # rows shown
+POS_SHORTLIST_CAP   = 64      # internal candidate cap
+POS_SHORTLIST_WEIGHTS = {
+    "w_rank": 1.0, "w_xvar": 2.5, "w_echo": 1.0, "w_dblp": 1.0,
+    "w_rep": 1.0,  "w_lane": 1.0, "w_root": 0.4,
+    "w_vtrac_index": 0.8, "w_vtrac_family": 0.6   # used in Part 2
+}
+
+
+Why this works:
+
+XVAR lets C+M+E together move the score—this is what pulls 989 up when 9 is Evening #1 at both ends and 8 has Evening/Combined support.
+
+Repeat‑endcap and lane‑concordance bonuses are small but decisive in the exact scenario you pointed out.
+
+Mirror‑Echo & Double‑Pressure remain additive (your current tags now “count,” instead of being printed and ignored).
+
+4) Output & explainability
+
+Keep current columns; add a “Why” tooltip:
+P1[9 E#1], P2[8 C#1/E#2], P3[9 E#1] • repeat‑endcap • lane(E) • XVAR=7 • Echo=2 • DP=2
+
+In the VTRAC column print idx=21 (and family if double; Part 2 adds small boosts but we show them even if weights are 0).
+
+5) Acceptance checks (tiny tests Codex can drop in)
+
+Repeat‑endcap tripwire: if a digit is top‑3 at both P1 & P3 in any lane → at least one d _ d combo is present.
+
+Lane‑pure tripwire: if each position has ≥2 hot digits in the same lane → at least one lane‑pure combo appears.
+
+Union sanity: at least one shortlist combo must be impossible from Combined‑only digits whenever C, M, and E disagree strongly.
+
+989 case (Delaware snapshot): P1=9(E#1), P2=8(E#2/C support), P3=9(E#1) → 989 appears and ranks above at least one 84* cartesian variant.
+
+6) Files & functions (so Codex knows where/how)
+
+core/aux_config.py — add the constants above.
+
+src/app.py — new helpers near the existing tracker code:
+
+merged_top_digits(topk_by_variant, pos, k=3) -> List[str]
+
+gen_candidates_union(...), gen_candidates_repeat_endcap(...), gen_candidates_lane(...)
+
+score_positional_combo(combo, evidence, weights, aux_nudges)
+
+Wire them in the Positional Tracker section where the current shortlist is built; keep old code as a fallback flag POS_SHORTLIST_V2 = True.
+
+Part 2 — Light V‑TRAC boosters (self‑contained; no redesign)
+
+These do not gate; they add small weight only when Aux says “warm.”
+
+Index heat (+w_vtrac_index)
+
+Map xyz → vtrac_index (you already compute).
+
+If that index is in the Top‑10 overdue or on Repeat‑Watch for the same state/variant, add w_vtrac_index.
+
+Double family presence (+w_vtrac_family)
+
+If xyz is a double, find its family (e.g., 0/5–4/9); if that family is in the Top‑5 column strip for that state row in Control Center, add w_vtrac_family.
+
+Variant‑aware nudge (optional)
+
+If a combo’s strongest lane (where it got most of its per‑position xvar hits) matches the lane where the index is hot, add half of w_vtrac_index.
+
+Keep the defaults small (0.8, 0.6); they should never drown the string‑evidence signals. This matches your “auxiliary features enhance, not dominate” rule.
+
+V‑TRAC “relations” inside the Positional Tracker (your question)
+
+You asked if we can exploit V‑TRAC inside this tool without pulling in other modules. With the patch above:
+
+We implicitly exploit V‑TRAC through mirror classes already captured by Mirror‑Echo and lane‑consistent pressure.
+
+We explicitly add small index/family boosters (Part 2) using the cached Aux overlay/strips—no heavy cross‑tool coupling, just a read.
+
+Result: the tracker remains self‑contained but aware of V‑TRAC context, which is exactly what you wanted.
+
+What this changes for the 989 example
+
+The repeat‑endcap generator will create 9 _ 9.
+
+P2=8 is included by the lane‑bridge rule (E‑support) even if it isn’t the raw #1 at P2 in Combined.
+
+Scoring grants XVAR hits + small repeat‑endcap bonus + (if warm) a tiny V‑TRAC nudge → 989 surfaces in the shortlist with clear “why.”
+
+Guardrails (so we don’t overcorrect)
+
+Caps: keep internal candidates ≤ 64; show ≤ 16 rows.
+
+Weights in config: you can tune without code edits.
+
+No gating on Aux: all V‑TRAC joins are additive and optional.
+
+Boxed vs straight: Positional Tracker keeps straight candidates; elsewhere (Combination Builder) you can decide BOX vs STRAIGHT coverage.
+
+“Ready for Codex” checklist
+
+Config
+
+Add POS_SHORTLIST_* constants & defaults to core/aux_config.py.
+
+Builders
+
+Implement three generators + scorer in src/app.py.
+
+Replace the old shortlist call with build_positional_shortlist_v2(...) behind a flag.
+
+Evidence & UI
+
+Add “Why” tooltip per row showing per‑position lane evidence and which bonuses triggered.
+
+Rename labels: “All‑Variant consensus (C+M+E)” vs “Combined”.
+
+Aux reads
+
+Reuse cached_aux_analysis(state, variant) to obtain:
+
+overlay.index_heat (Top‑10/Repeat‑Watch) → index nudge
+
+double_family_top5 → family nudge
+
+Tests
+
+tests/test_positional_shortlist.py with 3 small tests:
+
+repeat‑endcap emission,
+
+lane‑pure emission,
+
+union sanity (must emit ≥1 non‑Combined‑only combo).
+
+Docs
+
+One line in the Unified Changelog: “Positional shortlist v2: C+M+E union + repeat‑endcap + lane‑concordance, small V‑TRAC nudges; weights in aux_config.”
+
+Add a short note in the Positional Tracker section of your KIT docs on the meaning of the new “Why” tooltip (“what moved the score”).
+
+Why this aligns with your broader plan
+
+Brain 1 improves per‑state selection using transparent, configurable scoring; Brain 2 (Control Center) still handles cross‑state economics and alerts.
+
+The shortlist now emits structured reasons you can log for winners‑logging and future training, consistent with your “collect, learn, and gate by thresholds” approach.
+
+Approve/Decline guidance
+
+If this looks good, give Codex the checklist “as is.” It’s a contained refactor (one config file, one code section, one small test file) that doesn’t change your other modules and gets you the behavior you expected—especially in examples like 989.
+
+If you want, after Codex lands it, I’ll sanity‑read the shortlist for two or three states and hand you a micro “tuning map” (weights only) to lock the behavior in.

@@ -25,15 +25,19 @@ Wiring & Isolation
 Control Center Map
 
 - Doubles summary: reads all draws CSVs -> builds ranked table.
+  - Top-5 V-TRAC double families per state (variant badges + severity) mirror the Aux Hot Families panel and replace the ad-hoc pair/combo columns.
+- V-TRAC heatboard: hazard-ranked index metrics (draws-since, avg gap, freq <=100/101-200, trend) appear in both Control Center and Aux for quick pressure scans.
+- Sums analytics: per-sum buckets expose `deficit` (hit pct minus expected) and `z_tail` (cold-side z) for downstream scoring without altering current UI.
 - Blackapple Alerts: for each state, loads draws -> BA analyzer -> table row with status/triggers/#candidates/examples -> expander for full list.
 Positional Pressure
 
-- Aux page panel shows Combined / Midday / Evening side-by-side (P1/P2/P3 columns, top-3 ranks with gap/score/tags).
-- Window fixed at 360 draws with Top-3 ranks; outputs include cross-variant consensus notes and a ranked positional shortlist.
-- Control Center reuses the same engine to show a compact positional heat badge per state/variant.
-- Implementation lives in `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; inputs remain `data/cleaned/*_draws.csv`.
-- Hard-due styling: Combined digits turn red at >=55 draws; Midday/Evening at >=40 draws; tags surface as `XVAR-Cons(...)`, `Mirror-Echo(...)`, and `Double-Pressure`.
-- Overdue pair analysis reuses a shared 360-draw window (`PAIRS_ANALYSIS_WINDOW`) so RED (>=107) / BLUE (>=71) thresholds align across captions and smokes.
+- Aux page panel shows All-Variant (Combined), Midday, Evening grids side-by-side; the 360-draw window + Top-K/pool caps live in `core/aux_config.POS_SHORTLIST_CONFIG` and surface in the UI caption/tuning expander.
+- Shortlist builder unifies cartesian union, repeat-endcap lanes, and lane concordance groups (SSOT defaults: topk=3, pool=6, max_internal=64, max_rows=16) and lets operators toggle each feature per state.
+- Candidates now ship with structured evidence (per-position ranks + lane marks, repeat-endcap lane notes, V-TRAC nudges) and tag hot families/indices for downstream scoring.
+- V-TRAC overlay data (top overdue indexes + double families) is shared with Control Center via `_rank_double_families`, keeping Aux recommendations and state dashboards aligned.
+- Implementation remains in `modules/module_d_auxiliary_tools/refactored/positional_tool.py` with Streamlit wiring in `src/app.py`; inputs stay `data/cleaned/*_draws.csv`.
+- Hard-due styling unchanged: All-Variant digits flag red at >=55 draws, Midday/Evening at >=40 draws, with tags such as `XVAR-Cons`, `Mirror-Echo`, and `Double-Pressure`.
+- Overdue pair analysis continues to use the shared 360-draw window (`PAIRS_ANALYSIS_WINDOW`) so color thresholds stay consistent across captions and smokes.
 
 
 Operational Notes

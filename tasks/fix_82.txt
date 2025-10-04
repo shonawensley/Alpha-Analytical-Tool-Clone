@@ -1,0 +1,267 @@
+I’m going to keep this focused, concrete, and immediately actionable so you can shift into “training mode” without waiting on me to run Agent Mode.
+
+Below is a tight readiness check + a minimal “Training Mode shell” you can put in place now, without locking you into any final scoring design. It lets you keep iterating on tools while still capturing clean, date‑stamped artifacts you can mine later.
+
+I’ll also show exactly how the pieces map to the “two‑brains” vision you documented (state brain + aggregate brain) and the daily “Official Post” idea (one click to freeze a day’s outputs into an immutable run folder).
+
+0) “Can I start training today?” — a quick Go/No‑Go gate
+
+Green = start collecting data now. If anything below is red, fix that item and retry—the rest of the plan doesn’t change.
+
+App boots cleanly (no Streamlit/syntax errors) and the Aux page renders.
+
+If the Aux page throws on the overdue caption block, replace it with the safe version you already have in your notes (the "\n".join([...]) pattern that reads thresholds from aux_config).
+
+Single‑source windows/thresholds exist (core/aux_config.py) and captions visibly echo them on Aux / Dev Health.
+
+V‑TRAC overlay + Repeat Watch load for at least one state (even with mock/partial data).
+
+Pair semantics test passes locally (the tiny pytest you/CodeX added).
+
+If all four are true, you’re ready to log runs while you continue improving tools.
+
+1) Training Mode shell (works with unfinished tools)
+
+Goal: you keep running any tool in any order while you experiment. When you’re satisfied for the day, you hit “Official Post” and the app freezes that day’s artifacts into a consistent, dated bundle.
+
+1.1 Folder contract (single day)
+runs/
+  2025-10-03/                      # run_id = YYYY-MM-DD
+    manifest.json                  # day-level summary (see schema)
+    states/
+      CT/
+        midday/
+          inputs/
+            pick3statsc4.xlsx      # the workbook used
+            draws.csv              # the cleaned draws used (optional)
+          tools/
+            stable_pattern/        # raw + tidy outputs from module A
+              table.json
+              table.csv
+              qa.html
+            digit_reduction/       # LS1/LS2 analyzer v2 (when ready)
+              ls_report.json
+              features.jsonl       # one row per candidate triple
+              qa.html
+            vtrac_analyzer/
+              overlay.json         # 35-index “draws since” + top lists
+              repeat_watch.json    # current streak, last repeat, etc.
+              winners_view.html    # human QA page (optional)
+            hot_zones/             # placeholder until coded
+              summary.json
+          aux/
+            pairs.json             # overdue buckets, window, thresholds
+            sums.json              # BlackApple sums snapshot
+            positional.json        # positional consensus/pressure
+          winners/
+            official_winners.jsonl # one line per draw (labels & refs)
+            analyzer_view.html     # the “how it formed in strings” print
+        evening/
+          ... (same structure)
+      NY/
+        midday/...
+        evening/...
+
+
+Why this works now: each tool can dump whatever it currently has as CSV/JSON/HTML. No scoring/ML required. Tomorrow’s run doesn’t overwrite today’s.
+
+This mirrors your “two brains” vision: each state/variant folder is Brain‑1; the top‑level manifest.json plus day‑level summaries power Brain‑2 / Control Center.
+
+2) One button: “Official Post” (freeze the day)
+
+Add a small controller that:
+
+Verifies minimum inputs exist for each state/variant you choose to post:
+
+stable_pattern table (JSON or CSV),
+
+V‑TRAC overlay (overlay.json),
+
+Aux snapshots you care about today (pairs at minimum),
+
+winners for Midday and/or Evening (entered by you in the UI).
+
+Stamps the run_id = yyyy‑mm‑dd (or yyyy‑mm‑ddThhmm if you want multiple runs per day).
+
+Copies/link‑writes all artifacts into the runs/<run_id>/... structure.
+
+Writes the manifest (schema below) and a Control‑Center day summary (see §4).
+
+You can expose it as a Streamlit button (“Post day ⟶ runs/2025‑10‑03”) with a dry‑run preview right above it.
+
+3) Lean schemas (so future ML and profitability have what they need)
+3.1 manifest.json (day level)
+{
+  "run_id": "2025-10-03",
+  "states": ["CT","NY", "..."],
+  "variants": ["midday","evening"],
+  "tools_present": ["stable_pattern","digit_reduction","vtrac_analyzer","hot_zones","aux"],
+  "windows": {
+    "pairs": 300,
+    "sums": 360,
+    "vtrac_index": 1000,
+    "combination": 1000
+  },
+  "thresholds": {
+    "repeating_late": 71,
+    "repeating_very_late": 107,
+    "nonrepeating_late": 37,
+    "nonrepeating_very_late": 56,
+    "pair_pending": 28
+  },
+  "posted_at_utc": "2025-10-03T23:59:17Z",
+  "notes": "Optional free text"
+}
+
+
+(Windows/thresholds are read from your SSOT so the bundle always documents the context that day.)
+
+3.2 official_winners.jsonl (state/variant level; one line per draw)
+
+Each line ties the winning result to where it showed up across tools.
+
+{
+  "date": "2025-10-03",
+  "state": "CT",
+  "variant": "midday",
+  "winning": { "combo": "620", "vtrac_index": 14, "box": true, "straight": false },
+  "links": {
+    "stable_row_id": "SP:CT:midday:row_482",
+    "dr_candidate_id": "DR:CT:midday:ls1:mA:e2:cand_17",
+    "vtrac_overlay_ref": "VTRAC:index:14"
+  },
+  "aux_hits": {
+    "pairs": ["62","20"],         // marked overdue or pending that day
+    "sums": { "sum": 8, "ba_flag": "active" },
+    "positional": { "consensus": ["2@pos2"], "double_pressure": false }
+  },
+  "labels": { "hit_box": 1, "hit_straight": 0 }
+}
+
+
+You don’t need to fill every link today. Even just winning.combo + vtrac_index + which Aux features were “on” is enough to start learning later. This format also supports your plan to boost (compound) string‑pattern candidates with auxiliary features without letting Aux drive the base scores.
+
+4) Control Center “day summary” (Brain‑2)
+
+When you post a day, generate a tiny JSON + a one‑screen table:
+
+V‑TRAC Repeat Watch: for each state/variant → current streak, last repeat (draws), last index, max streak.
+
+Aux Watch Heat (self‑contained): for each state/variant → count of aux signals “on” (e.g., overdue pairs ≥ red, BA active sum window, positional consensus). Rank states by this heat (that’s your aggregate aux ranked table).
+
+Results strip: Midday / Evening winners per state for that day—to visually validate whether any of the watch lists “hit”.
+
+This aligns with the “two brains” blueprint you wrote and uses the same artifacts you’re already producing.
+
+5) Minimal operator flow (what you do each day)
+
+Upload the day’s Pick3StatsC4 (as you already do).
+
+Run tools you’re currently iterating (Stable, DR, V‑TRAC, Aux).
+
+Enter winners (Midday/Evening) in the Winners panel.
+
+Hit “Official Post” → the app validates presence, writes runs/YYYY‑MM‑DD/..., and emits:
+
+a day manifest,
+
+per‑state artifacts,
+
+Control Center day summary.
+
+You can now keep tinkering on tools freely—nothing overwrites the posted run.
+
+6) What to do now vs later (so you can start training)
+Do now (small, safe changes)
+
+Add the runs/… structure and the Official Post controller.
+
+Wire the manifest writer to SSOT windows/thresholds.
+
+Save V‑TRAC overlay (overlay.json) and Repeat Watch (repeat_watch.json).
+
+Save Aux snapshots you already trust today (start with pairs; sums/positional if stable).
+
+Save a Stable Pattern table (CSV/JSON) and the Analyzer‑style “how it formed” HTML (for human QA).
+
+Save official_winners.jsonl (you can always enrich lines later as more links are available).
+
+Park for later (after you’re posting daily)
+
+DR analyzer v2 features (LS1/LS2 consensus, own↔combined pivots, etc.).
+
+The scoring layer that compounds Aux with string patterns (keep it off the critical path; your data will be ready for it).
+
+Profitability module and progressive wagering sim (consumes the posted runs).
+
+Hot Zones module (slot is reserved in the folder).
+
+This sequencing keeps you moving while honoring your “auxiliary features enhance but don’t override” rule.
+
+7) “Basis for analysis” — the short list you can hand to any AI/helper
+
+These are the signals we’ll score later (you don’t need weights yet; just log the fields):
+
+Stable Pattern:
+
+terminal 3‑value set, coverage across R2/R4/R6/R8, 7→1 tail proximity, V‑TRAC mapping, cross‑chart repeats.
+
+Digit Reduction (LS1/LS2):
+
+time_to_first_3value, stabilizes_after_3, terminal_set, method consensus across A–E,T, own↔combined pivot, Set carryover (Set3→Set2→Set1) and box carryover (R2/R4/R6/R8), pre‑reduction strong substrings preserved by reduction.
+
+These explicitly reflect your “lingering 3‑value patterns” concept and how winning patterns often persist across boxes and methods.
+
+V‑TRAC:
+
+35‑index draws‑since, Top‑10 overdue, Last‑5 recent (green), Repeat Watch (current streak, last repeat, max streak).
+
+Aux (self‑contained & compounding):
+
+Pairs overdue (pending/late/very‑late by window), sums (BlackApple flagging), positional consensus/pressure.
+
+These are logged as independent booleans/scalars and later compounded with string‑pattern candidates (your design).
+
+8) What to tell CodeX (copy/paste)
+
+Objective: Enable “Training Mode” with an Official Post that freezes daily artifacts into runs/YYYY-MM-DD/... while I continue iterating on tools. No scoring/ML yet.
+
+Deliverables:
+
+Implement the run folder contract above and the Official Post controller (Streamlit button + dry‑run preview + validation).
+
+Write manifest.json with windows/thresholds pulled from core/aux_config.py.
+
+Save per‑state/variant artifacts we already have:
+
+Stable Pattern: table (CSV/JSON) + QA HTML.
+
+V‑TRAC: overlay.json (35 indexes + Top‑10, Last‑5), repeat_watch.json.
+
+Aux: snapshot JSONs for pairs (and sums/positional if stable).
+
+Winners: official_winners.jsonl (schema above; minimal fields OK).
+
+Emit a Control Center day summary JSON + table (V‑TRAC Repeat Watch, Aux Heat, Results strip).
+
+Do not implement scoring/aggregation—just log fields so we can learn later.
+
+Notes: Keep my ability to run tools ad‑hoc. “Official Post” must not delete/overwrite prior runs.
+
+9) Why this aligns with your long‑term plan
+
+It operationalizes the two‑brains design (state vs aggregate) you described and starts collecting the exact signals you want to learn/score later.
+
+It keeps Aux as compounders rather than primary drivers, matching your intent to “boost but not override” string‑pattern evidence.
+
+It lets you start training immediately (with 10 backfiles or today forward) without freezing your tools—because each day’s artifacts are immutable and version‑documented.
+
+If you want, next I can draft the tiny helper functions (pure Python) for:
+
+writing manifest.json from SSOT,
+
+emitting overlay.json/repeat_watch.json contracts,
+
+and the official_winners.jsonl writer (so you only fill three fields in the UI and it builds the rest).
+
+But you don’t have to wait for that to begin collecting runs—the structure above is enough to “turn the lights on” for Training Mode and keep momentum.

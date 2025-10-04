@@ -1,3 +1,9 @@
+## 2025-10-03 Update (pos_5 hardening)
+- SSOT defaults now lock shortlist tuning (topk=3, pool=6, max_internal=64, max_rows=16) so operators start from the validated baseline.
+- Streamlit labels clarify the All-Variant consensus blend (Combined/Midday/Evening) and the window caption spells out the cross-variant scope to avoid the Combined naming collision.
+- Shortlist scoring reuses the Control Center V-TRAC overlay + family rankings; hot indices/family tags in the UI now come directly from the shared cache.
+- Added regression tests for repeat-endcap bridges (e.g., 989), lane-concordance lanes, and union pool coverage, keeping the tracker from regressing on high-pressure examples.
+
 ﻿## 2025-09-28 Update\r\n- Loader registration restored; positional module now guaranteed to load via staged copy.\r\n- Overdue pairs unified on 360-draw window; captions and smokes reference the same constant.\r\n- Positional tags renamed to XVAR-Cons, Mirror-Echo, Double-Pressure; notes include variant initials.\r\n- Tracker/summary/shortlist tables restyled for clarity (bold headers, yellow chips, badge captions).\r\n- Preflight reference lists loader/positional/V-TRAC smokes; changelog + checkpoint log capture this recovery.\r\n\r\nHERES EVERYTHING YOU SHARED:
 
 Awesome—seeing that tracker back in action is a big win. Below is a quick validation + interpretation of what you’re seeing, tied directly to your training docs, plus a clear note on the two different meanings of “consensus” so we don’t mix them up again. I’ll also add a short QA checklist you (or Codex) can run any time to sanity‑check the numbers.

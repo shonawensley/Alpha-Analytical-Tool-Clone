@@ -84,12 +84,18 @@ def _analyze_categories(
         c = counts.get(k, 0)
         z = _zscore(c, window, p)
         gap = draws_since_map[k]
+        hit_rate = c / window if window else 0.0
+        exp_rate = p
+        deficit = hit_rate - exp_rate
+        z_tail = min(0.0, z)
         out[k] = {
             "count": c,
             "expected": window * p,
-            "hit_rate": c / window if window else 0.0,
-            "exp_rate": p,
+            "hit_rate": hit_rate,
+            "exp_rate": exp_rate,
+            "deficit": deficit,
             "z": z,
+            "z_tail": z_tail,
             "draws_since": gap,
             "flags": _class_flags(z, gap),
         }

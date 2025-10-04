@@ -1,3 +1,14 @@
+## 2025-10-02 06:30 (UTC) - Aux heatboard + sums guardrails
+
+- Context: Operators needed the new double-family strips to mirror Aux styling and wanted faster visibility into V-TRAC pressure while preparing downstream scoring hooks.
+- Change:
+  - Replaced the legacy pair/combination columns with shared Top-5 family strips (C/M/E severity tokens) so Control Center and Aux stay aligned.
+  - Added a hazard-based "V-TRAC Heatboard" to both Control Center and Aux using the shared overlay cache.
+  - Extended sums stats with `deficit`/`z_tail` fields for future scoring without altering existing UI consumers.
+- Impact: The doubles view now matches Aux, hot indices surface at a glance, and sums analytics are ready for future compounding while Black Apple keeps working as-is.
+- Files/Refs: src/app.py, modules/module_d_auxiliary_tools/refactored/sums_analysis.py, src/core/vtrac_families.py, tests/test_vtrac_families.py.
+- Follow-ups: Consider per-variant heatboard filters and fold the sums deficit into Black Apple once the scoring pass begins.
+
 ## 2025-10-01 04:15 (UTC) - V-TRAC tables & cache alignment
 
 - Context: Legacy mini-pipeline inside the V-TRAC page was desyncing from the global tables pipeline, leading to "analysis completed" but missing tables for states like Delaware4.
@@ -302,3 +313,53 @@ Template
   - `pytest -q tests/test_analyze_pairs_semantics.py`
   - `python scripts/checks/smoke_aux_vtrac.py`
   - Headless boot logged to `.codex/first_boot.log`
+## 2025-10-02 08:05 (UTC) - Aux roadmap snapshot
+
+- Added `docs/AAT9_KIT/AAT9_Aux_Roadmap.md` summarizing current Aux state (SSOT constants, repeat watch), Phase-1B follow-ups (feature extractor + logging, fresh-data validation), and deferred Phase-2 goals with references to AUX_WATCH/BIG_PICTURE/FIX_80.
+- Ready for operators to resume training runs while keeping the next coding steps visible.
+## 2025-10-02 08:30 (UTC) - Aux scoring roadmap note
+- Added an "Aux Scoring Outlook" section to `docs/AAT9_KIT/AAT9_Aux_Roadmap.md`, outlining ready signals, staged feature extraction/logging work, and future scoring/Control Center integration tasks.
+
+## 2025-10-02 09:10 (UTC) - Control Center V-TRAC double families
+
+- Context: Due doubles table still showed ad-hoc pair/combination columns and Aux lacked a family-aware summary.
+- Change:
+  - Added a `core.vtrac_families` helper to group boxed doubles by mirror-class families (indices + combo sets).
+  - Control Center now ranks Top-5 families per state (variant badges, severity) and displays them in the aggregated doubles table.
+  - Aux V-TRAC section shows a matching "Hot Doubles Families" panel plus a family column for each index row.
+- Impact: Operators get a compact, consistent watchlist of high-pressure doubles without scanning Aux manually; Control Center & Aux stay in sync.
+- Verification: `python -m py_compile src/app.py src/core/vtrac_families.py`; `pytest -q tests/test_analyze_pairs_semantics.py tests/test_vtrac_families.py`.
+## 2025-10-02 10:45 (UTC) - Positional tracker shortlist revamp
+
+- Context: The Aux positional shortlist still relied on a fixed cartesian union, lacked V-TRAC awareness, and the UI could not tune caps/features without code edits.
+- Change:
+  - Promoted shortlist caps/weights/feature toggles into `core/aux_config.POS_SHORTLIST_CONFIG` and wired a Streamlit expander so operators can adjust Top-K/pool/feature flags per state.
+  - Replaced the legacy shortlist builder with the new cartesian + repeat-endcap + lane concordance pipeline, feeding V-TRAC hot index/family data from the shared overlay helper.
+  - Updated the candidate table to surface structured evidence (per-lane descriptors, repeat endcap lanes, V-TRAC nudges) and tag hot families/indices for cross-tool scoring.
+- Impact:
+  - Positional Tracker recommendations reflect the same SSOT thresholds used elsewhere, stay aligned with Control Center, and are easier to audit thanks to inline evidence.
+  - Future tuning (weights, caps, feature tweaks) can be staged centrally without chasing scattered constants.
+- Verification:
+  - `python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py`
+  - `PYTHONPATH=src;. pytest tests/test_positional_shortlist.py`
+  - `PYTHONPATH=src;. pytest tests/test_vtrac_families.py`
+  - `PYTHONPATH=src;. pytest tests/test_analyze_pairs_semantics.py`
+
+## 2025-10-03 00:35 (UTC) - Positional shortlist hardening (pos_5)
+
+- Context: pos_5 review flagged loose ends (Combined vs All-Variant terminology, V-TRAC cache reuse, repeat-endcap coverage, pool limits).
+- Change:
+  - Updated `core/aux_config.POS_SHORTLIST_CONFIG` to the agreed defaults (topk=3, pool=6, max_internal=64, max_rows=16) and synced the dataclass fallbacks.
+  - Clarified the Streamlit copy to say "All-Variant consensus" and surfaced the window caption so operators know C/M/E are blended.
+  - Cached V-TRAC hot indices/family rankings inside `results` and reused them for both shortlist scoring and the on-page family strip.
+  - Added regression tests covering repeat-endcap (989 bridge), lane-concordance candidates, and union pool variant coverage.
+- Impact:
+  - Delaware-style 989 scenarios now appear with the correct repeat-endcap evidence.
+  - Shortlist stays bounded (≤64 internal seeds, ≤16 rows) while using the same V-TRAC data the Control Center displays.
+  - UI copy avoids the Combined vs All-Variant confusion noted in the audit.
+- Verification:
+  - `python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py`
+  - `PYTHONPATH=scripts/auxiliary/working;src;. pytest tests/test_analyze_pairs_semantics.py`
+  - `PYTHONPATH=src;. pytest tests/test_positional_shortlist.py`
+  - `PYTHONPATH=src;. pytest tests/test_vtrac_families.py`
+

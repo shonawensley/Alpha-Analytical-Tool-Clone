@@ -33,3 +33,34 @@ WINDOW_CAPTIONS = {
     "vtrac_index": VTRAC_INDEX_WINDOW,
     "combinations": COMBINATION_WINDOW,
 }
+
+
+# Positional shortlist configuration (All-Variant union logic)
+POS_SHORTLIST_CONFIG = {
+    "topk_per_pos": 3,
+    "pool_per_pos": 6,
+    "max_internal": 64,
+    "max_rows": 16,
+    "caps": {
+        "cartesian": 48,
+        "repeat_endcap": 36,
+        "lane": 36,
+    },
+    "weights": {
+        "rank": 1.0,
+        "xvar": 2.5,
+        "mirror_echo": 1.0,
+        "double_pressure": 1.0,
+        "repeat_endcap": 0.30,
+        "lane_concordance": 0.15,
+        "root": 0.0,
+        "vtrac_index": 0.80,
+        "vtrac_family": 0.60,
+    },
+    "features": {
+        "enable_repeat_endcap": True,
+        "enable_lane_concordance": True,
+        "enable_vtrac_boosts": True,
+    },
+}
+

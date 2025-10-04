@@ -1,0 +1,221 @@
+thanks for the thorough hand‑off and for calling out the agent‑mode/time‑outs. I’m not going to “guess at code”; I’ll stay strictly inside what your logs say Codex did and give you a crisp, actionable path so you can pivot into training.
+
+Below is a compact, operator‑ready status + go/no‑go + what to ask Codex to do next, followed by a “Training Mode” shell that lets you start collecting learning data daily without waiting for the bigger phases.
+
+1) Where we stand (based on your most recent Codex logs)
+
+Phase‑1 Aux hardening (intended scope):
+
+SSOT for windows/thresholds — src/core/aux_config.py added and imported; legacy aliases kept (e.g., THR_R_RED, etc.). Good.
+
+V‑TRAC overlay reuse — single _build_vtrac_overlay(...) feeding both the big V‑TRAC table and index‑hits, plus a Repeat Watch summary _summarize_vtrac_repeats(...). Good (needs smoke verify).
+
+Pair semantics guardrails — tests/test_analyze_pairs_semantics.py enforces Any‑Position rules; py_compile + pytest were run in the log. Good.
+
+UI captions — initial injected st.info(...) block caused a syntax/indent break; Codex then replaced it with a safe "\n".join([...]) block reading directly from SSOT. Fixed in log; verify.
+
+Docs trail — Unified Changelog / Checkpoint Log entries were appended describing SSOT+Overlay+Repeat Watch. Good.
+
+Open edges before you train:
+
+One last UI caption sanity pass (the block that announces: window, red/blue/purple cutoffs).
+
+Overlay plumbing sanity (confirm both the big V‑TRAC table and mini‑table read the same cached overlay; no dupe logic).
+
+3 smoke checks: py_compile, pytest -q tests/test_analyze_pairs_semantics.py, and a headless Streamlit boot to catch page layout/import errors.
+
+Dev‑Health/Preflight shows the active SSOT windows (pairs/positional/sums/index) in captions as designed.
+
+That’s it for Phase‑1. No scoring aggregator or ML was merged (as intended).
+
+2) Go / No‑Go to start training
+
+Verdict: GO—with guardrails.
+Once Codex confirms the three smokes are green and the Aux page renders with the SSOT caption, you’re safe to begin “training mode” runs. This keeps scope contained (Aux Phase‑1), lets you start logging, and doesn’t block on later phases.
+
+Quick manual check you can do in seconds:
+
+Aux page: You should see a small st.info panel with:
+
+Window: <PAIRS_WINDOW> draws
+
+Repeating/non‑repeating red/blue/purple cutoffs echoed numerically.
+
+V‑TRAC panel: Two lists come from the same overlay: Top‑10 Overdue (red) and Recent‑5 (green); Repeat Watch table shows current streak/last repeat.
+
+Pair semantics test: run once (pytest -q tests/test_analyze_pairs_semantics.py) → should pass.
+
+3) What to tell Codex to do now (no drift; just finish & prove)
+
+Freeze the Aux caption block (no regex edits, just a clean literal in src/app.py):
+
+info_lines = [
+    "**Overdue thresholds**",
+    f"- Window: {PAIRS_WINDOW} draws",
+    f"- Repeating pairs (00,11,…): red ≥ {REPEATING_VERY_LATE}, blue ≥ {REPEATING_LATE}, purple ≥ {PAIR_PENDING}",
+    f"- Non‑repeating pairs: red ≥ {NONREPEATING_VERY_LATE}, blue ≥ {NONREPEATING_LATE}",
+]
+st.info("\n".join(info_lines))
+st.caption("Color priority (digits/pairs overlap): red > blue > purple")
+
+
+Verify SSOT coverage: every Aux reference uses PAIRS_WINDOW, COMBINATION_WINDOW, etc., and the captions expose the active values. Keep legacy aliases for one release.
+
+Overlay reuse proof: both V‑TRAC tables consume results["vtrac_overlay"]; mini‑table does not recompute.
+
+Run smokes and paste results:
+
+python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py
+
+pytest -q tests/test_analyze_pairs_semantics.py
+
+set STREAMLIT_BROWSER=none && streamlit run src/app.py --server.headless true (attach tail of .codex/first_boot.log)
+
+Small doc breadcrumb: one bullet in Preflight noting core/aux_config.py and the new Repeat Watch panel.
+
+Ask Codex to paste back:
+
+The final caption block it installed.
+
+The two helper function signatures (_build_vtrac_overlay, _summarize_vtrac_repeats).
+
+A screenshot (or head of the dataframes) of Top‑10 / Recent‑5 and Repeat Watch.
+
+The three smoke outputs.
+
+4) “Training Mode” shell — start collecting data now (without changing tool logic)
+
+This is the minimal, hands‑off framework so you can run daily, optimize tools in place, and still have clean, dated logs for learning later.
+
+4.1 Directory & run‑package
+runs/
+  2025-10-04/
+    meta.json                # run_id, Pick3StatsC4 date, SSOT windows, code version/hash
+    per_state/
+      CT_midday.jsonl        # one line per *predictable outcome* (triple/day)
+      CT_evening.jsonl
+      ... (other states)
+    control_center.json      # aggregate flags (due doubles, BA, V-TRAC repeats, Aux watch ranks)
+
+4.2 One JSON object per predictable outcome (row in per_state/*.jsonl)
+{
+  "run_id": "2025-10-04",
+  "state": "CT",
+  "variant": "midday",
+  "draw_date": "2025-10-04",
+  "tools": {
+    "stable_pattern": {
+      "candidates": [...],           // canonical triples,  VTRAC index, column, tail/consensus flags
+      "top_n": 15,
+      "notes": "column 2 tail consensus; R2 carryover=1"
+    },
+    "digit_reduction": {
+      "LS1": {"terminal_set": "468", "time_to_first3": 5, "stabilizes_after_3": 1, "methods_agree": 4},
+      "LS2": {"terminal_set": "468", "time_to_first3": 4, "methods_agree": 3},
+      "carryover": {"set3_to_set1": true, "r2_to_r4": true},
+      "own_vs_combined": {"same_terminal": true, "combined_faster": true}
+    },
+    "vtrac": {
+      "overlay": {"index": 17, "draws_since": 88, "top10_rank": 3},
+      "repeat_watch": {"current_streak": 2, "last_repeat_gap": 5}
+    },
+    "aux": {
+      "pairs": {"46": "blue", "68": "red", "48": "purple"},
+      "sums": {"sum": 18, "bucket": "late"},
+      "positional": {"double_pressure": true, "consensus_score": 2}
+    }
+  },
+  "predictions": {
+    "box_triples": ["468","486","648","684","846","864"],   // whatever your Combination Builder yields
+    "scoring": {"stable": 7.5, "dr": 6.0, "vtrac": 5.0, "aux": 3.5, "total": 22.0}
+  },
+  "winner": {
+    "drawn": "684",
+    "hit_box": true,
+    "hit_straight": false,
+    "vtrac_index": 17
+  },
+  "ssot": {
+    "pairs_window": 300,
+    "vtrac_index_window": 1000,
+    "thresholds": {
+      "rep_blue": 71, "rep_red": 100, "nr_blue": 56, "nr_red": 37, "pair_pending": 28
+    }
+  }
+}
+
+
+(Numbers are illustrative; your SSOT values drive these.)
+
+4.3 How you operate it day‑to‑day
+
+Keep all tools exactly as they are while you optimize them.
+
+Add a simple UI toggle on Control Center: “Official Post”. When you flip it:
+
+The app compiles a run package for the current Pick3StatsC4 date under runs/<date>/….
+
+It writes every tool’s current outputs (as‑is) into the JSONL rows per state/variant.
+
+It saves a Control Center aggregate (control_center.json) with: V‑TRAC repeat hits that day, Aux Watch top states, Due Doubles/Blackapple flags, and result rows (midday/evening).
+
+It appends to a tiny winners ledger (CSV or JSONL) so you can audit later.
+
+This gives you the learning dataset you want now while leaving the tools free to evolve. It aligns with the “two‑brain” idea (state‑level analysis + aggregate Control Center) you already laid out, and with your plan to build scoring that gates wagering later (Box vs Straight, progressive windows, ROI).
+
+5) What to park for later (log it, don’t build it yet)
+
+Aux feature scoring/weights (self‑contained rankings + compounding into string patterns). Keep recording raw feature vectors in the JSON rows; we’ll add simple weights later.
+
+Profitability module & progressive ladders (use the JSON logs to simulate first).
+
+ML experiments (start with a notebook that reads the JSONL, but keep rules gating in front).
+
+Hot Zones module (design later; no impact on your ability to train now).
+All of the above are already captured in your big‑picture notes about the two brains, gating, and learning bundles; we’re just sequencing them behind a stable training log.
+
+6) Minimal “evidence package” to request from Codex before you start
+
+Ask Codex to paste (exact code or screenshots/heads):
+
+Caption block installed on Aux page (the st.info("\n".join([...])) lines).
+
+_build_vtrac_overlay and _summarize_vtrac_repeats definitions.
+
+DataFrame head/screenshot of Top‑10 Overdue, Recent‑5, and Repeat Watch.
+
+Outputs of:
+
+python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py
+
+pytest -q tests/test_analyze_pairs_semantics.py
+
+tail of .codex/first_boot.log from the headless boot.
+
+Once those are green, flip Official Post and begin your 10‑day backfill.
+
+7) Why this gets you unstuck (and closer to ROI)
+
+You stop relying on copy/paste: one button produces a dated, machine‑readable run package.
+
+You can train while you build—every day’s outputs are captured consistently across states/draws, so later you can layer scoring and ML on the same rows.
+
+It reflects your principle that string‑pattern tools lead and Aux features compound, without entangling weights prematurely. This is exactly the staging you described in your “two‑brain” outline: tool‑by‑tool optimization first, then aggregate analysis and profitability gating.
+
+TL;DR you can forward to Codex
+
+Finish Phase‑1 Aux hardening (no new scope):
+
+Lock the Aux caption block ("\n".join([...])).
+
+Prove overlay reuse (one overlay feeds big + mini tables) and paste DF heads.
+
+Run py_compile, pytest -q tests/test_analyze_pairs_semantics.py, and headless Streamlit; attach outputs.
+
+Add a Preflight bullet for SSOT + Repeat Watch.
+
+Add “Official Post” toggle that writes runs/<date>/ packages with per‑state JSONL and a Control Center aggregate. Do not change tool logic; just log current outputs.
+
+After that’s green, the user will begin 10‑day backfill and daily training runs. Scoring/weights/ML come after we have a week of clean logs.
+
+If you want, I can also draft the exact JSON keys we’ll use for each tool (Stable, Digit Reduction LS1/LS2, V‑TRAC, Aux) so Codex can implement the writer 1:1 with your existing outputs.

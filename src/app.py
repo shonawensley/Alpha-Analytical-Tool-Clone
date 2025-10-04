@@ -1,11 +1,14 @@
-import sys
+﻿import sys
 import os
 import pathlib
 import subprocess
+from collections import defaultdict
+import math
+import copy
 import streamlit as st
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 render_dr_winner_overlay_dev = None
 DEV_OVERLAY_IMPORT_ERROR = None
@@ -58,7 +61,7 @@ except Exception:
 # ----------------------------------------------------------------------
 
 from core.module_b_digit_reduction import run_digit_reduction
-from utils.path_handler import get_tables_output_dir
+from utils.path_handler import get_tables_output_dir, get_analysis_output_dir
 from core.aux_config import (
     PAIRS_WINDOW,
     POSITIONAL_WINDOW,
@@ -75,7 +78,9 @@ from core.aux_config import (
     COMBO_DOUBLE_LATE,
     COMBO_DOUBLE_VERY_LATE,
     WINDOW_CAPTIONS,
+    POS_SHORTLIST_CONFIG,
 )
+from core.vtrac_families import VTRAC_DOUBLE_FAMILIES
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
 # ----------------------------------------------------------------------
@@ -189,7 +194,179 @@ def _format_combo(combo: str, status_dict: dict, pair_status: dict) -> str:
         return inner
     return f'<span class="{" ".join(classes)}">{inner}</span>'
 
+# --- V-TRAC family helpers ----------------------------------------------
+_FAMILY_TOKEN_STYLE = """
+<style>
+.family-token-red, .family-token-blue {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 0.95em;
+}
+.family-token-red { color: #d43c3c; }
+.family-token-blue { color: #1f5eff; }
+.family-token-red sup, .family-token-blue sup {
+    margin-left: 2px;
+    font-size: 0.65em;
+}
+</style>
+"""
 
+_FAMILY_COMBOS = {combo for fam in VTRAC_DOUBLE_FAMILIES for combo in fam.combos}
+_VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
+
+
+def _canon_combo(combo: str) -> str:
+    value = (combo or "").strip()
+    if len(value) != 3 or not value.isdigit():
+        return ""
+    return "".join(sorted(value))
+
+
+def _classify_double_gap(draws_since: int) -> str | None:
+    if draws_since >= COMBO_DOUBLE_VERY_LATE:
+        return "R"
+    if draws_since >= COMBO_DOUBLE_LATE:
+        return "B"
+    return None
+
+
+def _render_family_token(combo: str, severity: str, badge: str, draws_since: int) -> str:
+    css = "family-token-red" if severity == "R" else "family-token-blue"
+    sup = f"<sup>{badge}</sup>" if badge else ""
+    return f"<span class='{css}' title='Draws since: {draws_since}'>{combo}{sup}</span>"
+
+
+def _rank_double_families(variant_draws: dict[str, List[str]], limit: int = 5) -> List[dict]:
+    gap_maps: dict[str, dict[str, int]] = {}
+    for variant_key, draws in variant_draws.items():
+        if not draws:
+            continue
+        default_gap = len(draws)
+        gap_map = {combo: default_gap for combo in _FAMILY_COMBOS}
+        for idx, draw in enumerate(draws):
+            canonical = _canon_combo(draw)
+            if canonical and canonical in gap_map and gap_map[canonical] == default_gap:
+                gap_map[canonical] = idx
+        gap_maps[variant_key] = gap_map
+    stats_by_variant: dict[str, dict[str, dict[str, int]]] = {}
+    for variant_key, gap_map in gap_maps.items():
+        statuses: dict[str, dict[str, int]] = {}
+        for combo, ds in gap_map.items():
+            severity = _classify_double_gap(ds)
+            if severity:
+                statuses[combo] = {"severity": severity, "draws_since": ds}
+        if statuses:
+            stats_by_variant[variant_key] = statuses
+    rankings: List[dict] = []
+    for family in VTRAC_DOUBLE_FAMILIES:
+        tokens: List[tuple[str, int, str]] = []
+        members: List[dict[str, object]] = []
+        score = 0
+        best_gap = 0
+        for variant_key, combo_stats in stats_by_variant.items():
+            badge = _VARIANT_BADGES.get(variant_key, variant_key[:1].upper())
+            for combo in family.combos:
+                status = combo_stats.get(combo)
+                if not status:
+                    continue
+                severity = status["severity"]
+                ds = status["draws_since"]
+                score += 2 if severity == "R" else 1
+                if ds > best_gap:
+                    best_gap = ds
+                token_html = _render_family_token(combo, severity, badge, ds)
+                tokens.append((severity, ds, token_html))
+                members.append(
+                    {
+                        "combo": combo,
+                        "canonical": _canon_combo(combo),
+                        "severity": severity,
+                        "variant": variant_key,
+                        "draws_since": ds,
+                        "badge": badge,
+                    }
+                )
+        if tokens:
+            tokens.sort(key=lambda item: (item[0] != "R", -item[1]))
+            rankings.append(
+                {
+                    "label": family.label,
+                    "score": score,
+                    "best_gap": best_gap,
+                    "display": f"<b>{family.label}</b>: " + " ".join(token for _, _, token in tokens),
+                    "members": members,
+                }
+            )
+    rankings.sort(key=lambda item: (item["score"], item["best_gap"]), reverse=True)
+    return rankings[:limit]
+
+
+def _percentile(sorted_values: List[int], quantile: float) -> float | None:
+    if not sorted_values:
+        return None
+    if quantile <= 0:
+        return float(sorted_values[0])
+    if quantile >= 1:
+        return float(sorted_values[-1])
+    pos = (len(sorted_values) - 1) * quantile
+    lower = math.floor(pos)
+    upper = math.ceil(pos)
+    if lower == upper:
+        return float(sorted_values[lower])
+    lower_val = sorted_values[lower]
+    upper_val = sorted_values[upper]
+    return float(lower_val + (upper_val - lower_val) * (pos - lower))
+
+
+def _build_vtrac_heatboard(
+    draws: List[str],
+    resolver,
+    overlay: Optional[dict] = None,
+    window: int = VTRAC_INDEX_WINDOW,
+    short_threshold: int = 100,
+    long_threshold: int = 200,
+) -> dict[int, dict[str, float | int | None]]:
+    trimmed = list(draws[:window]) if window else list(draws)
+    gap_history: dict[int, List[int]] = {idx: [] for idx in range(1, 36)}
+    last_seen: dict[int, Optional[int]] = {idx: None for idx in range(1, 36)}
+    for pos, draw in enumerate(trimmed):
+        idx = _resolve_vtrac_index(draw, resolver)
+        if idx is None or not (1 <= idx <= 35):
+            continue
+        prev = last_seen[idx]
+        if isinstance(prev, int):
+            gap = pos - prev
+            if gap > 0:
+                gap_history[idx].append(gap)
+        last_seen[idx] = pos
+    draws_since_map = overlay.get("draws_since") if isinstance(overlay, dict) else None
+    total_len = len(trimmed)
+    stats: dict[int, dict[str, float | int | None]] = {}
+    for idx in range(1, 36):
+        gaps = gap_history[idx]
+        avg_gap = float(sum(gaps)) / len(gaps) if gaps else None
+        q80 = _percentile(sorted(gaps), 0.8) if gaps else None
+        freq_short = sum(1 for gap in gaps if gap <= short_threshold)
+        freq_long = sum(1 for gap in gaps if short_threshold < gap <= long_threshold)
+        hazard = 0.0
+        if avg_gap:
+            hazard = 1.0 / max(1.0, avg_gap)
+        last_index = last_seen[idx]
+        if isinstance(draws_since_map, dict) and idx in draws_since_map:
+            ds = draws_since_map[idx]
+        else:
+            ds = last_index if isinstance(last_index, int) else total_len
+        stats[idx] = {
+            "ds": ds,
+            "freq_short": freq_short,
+            "freq_long": freq_long,
+            "avg_gap": avg_gap,
+            "q80_gap": q80,
+            "hazard": hazard,
+            "trend": freq_short - freq_long,
+            "sample_size": len(gaps),
+        }
+    return stats
 
 def _resolve_vtrac_index(draw: str, resolver) -> str | None:
     """Return canonical V-TRAC index for a draw, skipping invalid inputs."""
@@ -284,7 +461,6 @@ def _normalize_state_name(state_name: str) -> str:
     import re
     # Drop trailing digits like "Connecticut4" -> "Connecticut"
     return re.sub(r"\d+$", "", state_name or "").strip().replace("_", " ")
-
 
 def _load_draws_from_csv_candidates(state_name: str, variant: str = "combined"):
     """Fallback loader used by Aux page; prefers the canonical aux_loaders helper."""
@@ -1197,57 +1373,24 @@ def show_control_center_page() -> None:
             except Exception:
                 calculate_overdue_pairs = None
 
-            combo_gap_maps: Dict[str, Dict[str, Dict[str, int]]] = {}
-            for (state_label, variant_key), draws in variant_draws.items():
-                badge = _VARIANT_BADGES.get(variant_key)
-                if not badge or not draws:
-                    continue
-                combo_gap_maps.setdefault(state_label, {})[badge] = _double_combo_gaps(draws)
-
-            pair_display_by_state: Dict[str, List[str]] = {}
-            combo_display_by_state: Dict[str, List[str]] = {}
+            family_rankings_by_state: Dict[str, List[dict]] = {}
             for state_label in states:
-                combined_draws = variant_draws.get((state_label, "combined"))
-                top_pairs: List[tuple[str, int]] = []
-                if calculate_overdue_pairs and combined_draws:
-                    try:
-                        _, repeating_overdue, _ = calculate_overdue_pairs(combined_draws[:PAIRS_WINDOW])
-                        candidates = [
-                            (pair, gap)
-                            for pair, gap in repeating_overdue.items()
-                            if pair and len(pair) == 2 and pair[0] == pair[1]
-                        ]
-                        candidates.sort(key=lambda item: item[1], reverse=True)
-                        top_pairs = candidates[:4]
-                    except Exception:
-                        top_pairs = []
-                pair_cells: List[str] = []
-                combo_cells: List[str] = []
-                badge_maps = combo_gap_maps.get(state_label, {})
-                for idx in range(4):
-                    if idx < len(top_pairs):
-                        pair_entry = top_pairs[idx]
-                        pair_cells.append(_format_pair_value(pair_entry))
-                        combos = _collect_combo_entries(pair_entry[0], badge_maps)
-                        combo_cells.append(_format_combo_cell(combos))
-                    else:
-                        pair_cells.append("-")
-                        combo_cells.append("-")
-                pair_display_by_state[state_label] = pair_cells
-                combo_display_by_state[state_label] = combo_cells
+                variant_map: Dict[str, List[str]] = {}
+                for _, variant_key in variant_specs:
+                    draws = variant_draws.get((state_label, variant_key))
+                    if draws:
+                        variant_map[variant_key] = draws
+                if variant_map:
+                    family_rankings_by_state[state_label] = _rank_double_families(variant_map, limit=5)
+                else:
+                    family_rankings_by_state[state_label] = []
 
             for row in variant_rows:
-                state_label = row.get("State")
-                pair_cells = pair_display_by_state.get(state_label, ["-"] * 4)
-                combo_cells = combo_display_by_state.get(state_label, ["-"] * 4)
-                row["Most Due Pair"] = pair_cells[0]
-                row["2nd Most Due Pair"] = pair_cells[1]
-                row["3rd Most Due Pair"] = pair_cells[2]
-                row["4th Most Due Pair"] = pair_cells[3]
-                row["Combos (Most Due Pair)"] = combo_cells[0]
-                row["Combos (2nd Pair)"] = combo_cells[1]
-                row["Combos (3rd Pair)"] = combo_cells[2]
-                row["Combos (4th Pair)"] = combo_cells[3]
+                rankings = family_rankings_by_state.get(row["State"], [])
+                for idx in range(5):
+                    label = f"Family {idx + 1}"
+                    value = rankings[idx]["display"] if idx < len(rankings) else "-"
+                    row[label] = value
 
             df_doubles = _pd.DataFrame(variant_rows)
             df_doubles["VariantOrder"] = df_doubles["VariantKey"].map(lambda key: variant_order.get(key, 99))
@@ -1264,14 +1407,11 @@ def show_control_center_page() -> None:
                 "Draws Since Double",
                 "Positional Heat",
                 "Positional Notes",
-                "Most Due Pair",
-                "2nd Most Due Pair",
-                "3rd Most Due Pair",
-                "4th Most Due Pair",
-                "Combos (Most Due Pair)",
-                "Combos (2nd Pair)",
-                "Combos (3rd Pair)",
-                "Combos (4th Pair)",
+                "Family 1",
+                "Family 2",
+                "Family 3",
+                "Family 4",
+                "Family 5",
             ]
             remaining = [col for col in df_display.columns if col not in ordered_cols]
             df_display = df_display.loc[:, [col for col in ordered_cols if col in df_display.columns] + remaining]
@@ -1301,7 +1441,9 @@ def show_control_center_page() -> None:
         missing_variants = cache["missing"]
 
         st.subheader("States Ranked by Draws Since Double (Combined / Midday / Evening)")
-        st.dataframe(df_display, use_container_width=True)
+        html_table = df_display.to_html(escape=False, index=False)
+        st.markdown(_FAMILY_TOKEN_STYLE, unsafe_allow_html=True)
+        st.markdown(f"<div style='overflow-x:auto'>{html_table}</div>", unsafe_allow_html=True)
         if _cc_get_vtrac_index:
             repeat_rows: list[dict] = []
             for (state_label, variant_key), draws in variant_draws.items():
@@ -1309,12 +1451,34 @@ def show_control_center_page() -> None:
                     continue
                 overlay = _build_vtrac_overlay(draws, _cc_get_vtrac_index)
                 repeat_summary = _summarize_vtrac_repeats(draws, _cc_get_vtrac_index)
+                heat_stats = _build_vtrac_heatboard(draws, _cc_get_vtrac_index, overlay)
+                hot_index: str | int = "-"
+                hot_hazard = 0.0
+                hot_avg_gap = None
+                if heat_stats:
+                    candidates = [
+                        (idx, metrics)
+                        for idx, metrics in heat_stats.items()
+                        if metrics.get("sample_size", 0)
+                    ]
+                    if candidates:
+                        idx_best, best_metrics = max(
+                            candidates,
+                            key=lambda item: (item[1].get("hazard", 0.0), item[1].get("ds", 0)),
+                        )
+                        hot_index = idx_best
+                        hot_hazard = best_metrics.get("hazard", 0.0) or 0.0
+                        hot_avg_gap = best_metrics.get("avg_gap")
+
                 repeat_rows.append({
                     "State": state_label,
                     "Variant": variant_display.get(variant_key, variant_key.title()),
                     "VariantKey": variant_key,
                     "Current Index": repeat_summary.get("current_index") or "-",
                     "Current Streak": repeat_summary.get("current_streak", 0),
+                    "Heat Index": hot_index,
+                    "Heat Hazard": round(hot_hazard, 3) if hot_hazard else 0.0,
+                    "Heat Avg Gap": round(hot_avg_gap, 1) if hot_avg_gap else None,
                     "Last Repeat (draws)": repeat_summary.get("last_repeat_gap"),
                     "Last Repeat Index": repeat_summary.get("last_repeat_index") or "-",
                     "Max Streak": repeat_summary.get("max_streak", 0),
@@ -1333,6 +1497,9 @@ def show_control_center_page() -> None:
                     "Variant",
                     "Current Index",
                     "Current Streak",
+                    "Heat Index",
+                    "Heat Hazard",
+                    "Heat Avg Gap",
                     "Last Repeat (draws)",
                     "Last Repeat Index",
                     "Max Streak",
@@ -1689,10 +1856,55 @@ def show_aux_page(state: str) -> None:
                 else:
                     sums_stats = {"window": 0, "by_sum": {}, "by_root_sum": {}}
                 results["sums_stats"] = sums_stats
-                with st.expander("Positional Tracker (Combined / Midday / Evening)", expanded=True):
+                with st.expander("Positional Tracker (All-Variant consensus / Midday / Evening)", expanded=True):
                     pos_window = POSITIONAL_WINDOW
-                    pos_topk = 3
-                    st.caption(f"Window: {POSITIONAL_WINDOW} draws (Top-K per position: {pos_topk})")
+                    shortlist_config_data = copy.deepcopy(POS_SHORTLIST_CONFIG or {})
+                    tuning_prefix = f"pos_shortlist_{state_key}"
+                    with st.expander("Shortlist tuning", expanded=False):
+                        col_topk, col_pool, col_rows = st.columns(3)
+                        topk_val = col_topk.number_input(
+                            "Top digits / position",
+                            min_value=1,
+                            max_value=6,
+                            value=int(shortlist_config_data.get("topk_per_pos", 3)),
+                            key=f"{tuning_prefix}_topk",
+                        )
+                        pool_val = col_pool.number_input(
+                            "Pool per position",
+                            min_value=1,
+                            max_value=10,
+                            value=int(shortlist_config_data.get("pool_per_pos", 4)),
+                            key=f"{tuning_prefix}_pool",
+                        )
+                        rows_val = col_rows.number_input(
+                            "Shortlist rows",
+                            min_value=5,
+                            max_value=30,
+                            value=int(shortlist_config_data.get("max_rows", 16)),
+                            key=f"{tuning_prefix}_rows",
+                        )
+                        feature_flags = dict(shortlist_config_data.get("features", {}))
+                        feature_flags["enable_repeat_endcap"] = st.checkbox(
+                            "Enable repeat-endcap",
+                            value=feature_flags.get("enable_repeat_endcap", True),
+                            key=f"{tuning_prefix}_repeat_endcap",
+                        )
+                        feature_flags["enable_lane_concordance"] = st.checkbox(
+                            "Enable lane concordance",
+                            value=feature_flags.get("enable_lane_concordance", True),
+                            key=f"{tuning_prefix}_lane",
+                        )
+                        feature_flags["enable_vtrac_boosts"] = st.checkbox(
+                            "Enable V-TRAC nudges",
+                            value=feature_flags.get("enable_vtrac_boosts", True),
+                            key=f"{tuning_prefix}_vtrac",
+                        )
+                        shortlist_config_data["features"] = feature_flags
+                        shortlist_config_data["topk_per_pos"] = int(topk_val)
+                        shortlist_config_data["pool_per_pos"] = int(pool_val)
+                        shortlist_config_data["max_rows"] = int(rows_val)
+                    pos_topk = int(shortlist_config_data.get("topk_per_pos", 3))
+                    st.caption(f"Window: {POSITIONAL_WINDOW} draws -- All-Variant consensus blends Combined/Midday/Evening; Top-K per position: {pos_topk}")
                     try:
                         with _project_modules_first():
                             positional_tool = _load_positional_tool_real()
@@ -1726,16 +1938,62 @@ def show_aux_page(state: str) -> None:
                             variant_cache[option_key] = payload if payload else cached_variant
                             if variant_draws:
                                 draws_by_variant[option_key] = variant_draws
+                        family_rankings: list[dict[str, object]] = []
+                        vtrac_family_hot_map: dict[str, str] = {}
+                        hot_indices: list[int] = []
                         if not draws_by_variant:
                             st.caption("No positional draws available across variants.")
                         else:
                             due_doubles_flag = any(ds >= REPEATING_LATE_THRESHOLD for ds in results.get("rep", {}).values())
+                            overlay = results.get("vtrac_overlay")
+                            if not overlay:
+                                draws_1000 = results.get("draws_1000", draws)
+                                overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
+                                if overlay:
+                                    results["vtrac_overlay"] = overlay
+                            hot_indices = list((overlay or {}).get("top_overdue", []) or [])
+                            family_variant_draws: dict[str, List[str]] = {key: val for key, val in draws_by_variant.items() if val}
+                            if not family_variant_draws and draws:
+                                family_variant_draws[selected_variant_key] = draws
+                            vtrac_family_hot_map = {}
+                            family_rankings = _rank_double_families(family_variant_draws, limit=5) if family_variant_draws else []
+                            if not family_rankings and callable(load_state_draws):
+                                fallback_map: dict[str, List[str]] = {}
+                                for variant_key in ("combined", "midday", "evening"):
+                                    if variant_key in family_variant_draws:
+                                        continue
+                                    try:
+                                        variant_draws, _ = load_state_draws(state, variant=variant_key)
+                                    except Exception:
+                                        variant_draws = []
+                                    if variant_draws:
+                                        fallback_map[variant_key] = variant_draws
+                                if fallback_map:
+                                    family_variant_draws.update(fallback_map)
+                                    family_rankings = _rank_double_families(family_variant_draws, limit=5)
+                            for entry in family_rankings:
+                                label = entry.get("label")
+                                if not label:
+                                    continue
+                                for member in entry.get("members", []):
+                                    canonical = member.get("canonical")
+                                    severity = member.get("severity")
+                                    if not canonical or severity not in ("R", "B"):
+                                        continue
+                                    if canonical not in vtrac_family_hot_map:
+                                        vtrac_family_hot_map[canonical] = label
+                            results["vtrac_hot_indices"] = hot_indices
+                            results["vtrac_family_rankings"] = family_rankings
+                            results["vtrac_family_hot_map"] = vtrac_family_hot_map
                             try:
                                 report = positional_tool.analyze_state_variants(
                                     draws_by_variant,
                                     window=pos_window,
                                     topk=pos_topk,
                                     due_doubles_active=due_doubles_flag,
+                                    shortlist_cfg=shortlist_config_data,
+                                    vtrac_hot_indices=hot_indices,
+                                    vtrac_hot_families=vtrac_family_hot_map,
                                 )
                             except Exception as _pos_err:
                                 st.warning(f"Positional analysis unavailable: {_pos_err}")
@@ -1857,6 +2115,9 @@ def show_aux_page(state: str) -> None:
                                         st.markdown("**Positional shortlist**")
                                         candidate_rows = []
                                         for cand in report.candidates:
+                                            evidence_lines = [f"&bull; {line}" for line in cand.evidence]
+                                            evidence_html = "<br>".join(evidence_lines) if evidence_lines else ""
+                                            seed_label = cand.source.replace('_', ' ').title() if cand.source else ""
                                             candidate_rows.append({
                                                 "Combo": cand.combo,
                                                 "Score": round(cand.score, 2),
@@ -1864,9 +2125,17 @@ def show_aux_page(state: str) -> None:
                                                 "Root": cand.digital_root,
                                                 "VTRAC": "" if cand.vtrac_index is None else cand.vtrac_index,
                                                 "Tags": " ".join(sorted(cand.tags)),
+                                                "Seed": seed_label,
+                                                "Why": evidence_html,
                                             })
                                         shortlist_html = pd.DataFrame(candidate_rows).to_html(classes="pos-shortlist-table", index=False, escape=False)
                                         st.markdown(shortlist_html, unsafe_allow_html=True)
+                if family_rankings:
+                    st.subheader("Hot Doubles Families")
+                    st.markdown(_FAMILY_TOKEN_STYLE, unsafe_allow_html=True)
+                    for entry in family_rankings:
+                        st.markdown(entry["display"], unsafe_allow_html=True)
+
                 # --- V-TRAC Table (Working logic) ---
                 st.subheader("V-TRAC Analysis (Working logic)")
                 import pandas as _pd
@@ -1882,6 +2151,7 @@ def show_aux_page(state: str) -> None:
                     draws_1000 = results.get("draws_1000", draws)
                     repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
                     results["repeat_summary"] = repeat_summary
+                heat_stats_overlay = _build_vtrac_heatboard(draws_1000, get_vtrac_index, overlay)
                 index_draws_since_overlay = overlay.get("draws_since", {})
                 top10_overdue_overlay = overlay.get("top_overdue", [])
                 for entry in VTRAC_DISPLAY:
@@ -1927,6 +2197,28 @@ def show_aux_page(state: str) -> None:
                     file_name=f"{state}_vtrac_working.csv",
                     mime="text/csv",
                 )
+
+                heat_rows = []
+                for idx, metrics in heat_stats_overlay.items():
+                    if not metrics.get("sample_size", 0):
+                        continue
+                    heat_rows.append({
+                        "Index": idx,
+                        "Draws Since": metrics.get("ds"),
+                        "Hazard": round(metrics.get("hazard", 0.0), 3),
+                        "Avg Gap": round(metrics.get("avg_gap"), 1) if metrics.get("avg_gap") else None,
+                        "80% Gap": metrics.get("q80_gap"),
+                        "Freq <=100": metrics.get("freq_short"),
+                        "Freq 101-200": metrics.get("freq_long"),
+                        "Trend": metrics.get("trend"),
+                    })
+                if heat_rows:
+                    heat_df = _pd.DataFrame(heat_rows)
+                    heat_df.sort_values(["Hazard", "Draws Since"], ascending=[False, False], inplace=True)
+                    st.markdown("**V-TRAC Heatboard (<=200 draws)**")
+                    st.dataframe(heat_df.head(10), use_container_width=True)
+                    st.caption("Hazard ~ 1 / avg gap; Trend compares hits <=100 vs 101-200 draws.")
+
 
                 # --- Overdue Pairs (Working logic) ---
 

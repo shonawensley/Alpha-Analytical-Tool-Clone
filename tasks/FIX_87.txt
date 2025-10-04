@@ -1,0 +1,373 @@
+Thanks for the thorough context, screenshots, and the FL/CT CSV extracts. I read everything carefully and I’m going to answer the three numbered items head‑on, plus the two incidental errors you flagged (“mojibake” and the _cc_get_vtrac_index crash). I’ll give you an exact “tell‑Codex” patch plan with drop‑in code, smoke checks, and acceptance criteria so you can get this cleaned up and move on to training.
+
+1) Due‑Doubles family strips: what’s wrong, what to change, and exact patches
+Quick confirmations
+
+Are my first and second messages proposing the same fix?
+Yes. Both point to the same root causes and the same remedies:
+
+Classify doubles with the doubles thresholds (blue ≥ 667, red ≥ 1000; boxed permutations) per variant (C/M/E).
+
+Render variant‑specific tokens (e.g., R225C B225M B225E) instead of one “R…CEM” union token.
+The second message simply spelled out the display tokens and ranking order in more detail.
+
+Your new CT lists (Combined/Midday/Evening) match the recomputation I did earlier (boxed; doubles: 667/1000). That means the source V‑TRAC tables are fine; the problem is the new family strip builder.
+
+What’s wrong in the new family code (from your log + UI symptoms)
+
+It’s classifying with the singles cutoffs (blue ≥ 334, red ≥ 501) while collecting doubles. That’s why you see lots of spurious …E badges and so many “CEM” triples.
+
+It unions badges at the family level and then prints a single severity prefix (“R”), yielding misleading tokens like R225CEM even when only C is red and M/E are blue.
+
+In a few rows, combos got in when they were not red/blue (likely because the family logic didn’t filter at the combo level first).
+
+Minimal, safe patch plan (exactly what to ask Codex to do)
+
+Scope: one helper block + one Control Center render block. No changes to your V‑TRAC math, no redesigns.
+
+A. Add a small, explicit classifier (use SSOT constants)
+# src/app.py  (or src/core/aux_config.py if you prefer constants there)
+COMBO_SINGLE_LATE = 334
+COMBO_SINGLE_VERY_LATE = 501
+COMBO_DOUBLE_LATE = 667
+COMBO_DOUBLE_VERY_LATE = 1000
+
+def _canon_boxed(s: str) -> str:
+    return "".join(sorted((s or "").strip().zfill(3)))
+
+def _combo_type(boxed: str) -> str:
+    a, b, c = boxed[0], boxed[1], boxed[2]
+    if a == b == c: return "triple"
+    if a == b or b == c: return "double"
+    return "single"
+
+def _classify_gap(ds: int, boxed: str) -> str | None:
+    t = _combo_type(boxed)
+    if t == "double":
+        if ds >= COMBO_DOUBLE_VERY_LATE: return "R"
+        if ds >= COMBO_DOUBLE_LATE:      return "B"
+        return None
+    if t == "single":
+        if ds >= COMBO_SINGLE_VERY_LATE: return "R"
+        if ds >= COMBO_SINGLE_LATE:      return "B"
+        return None
+    # triples (rare): treat like doubles for overdue signaling
+    if ds >= COMBO_DOUBLE_VERY_LATE: return "R"
+    if ds >= COMBO_DOUBLE_LATE:      return "B"
+    return None
+
+B. Build per‑variant gaps → per‑variant combo classes; filter strictly
+# assume variant_draws = {"combined": [...], "midday": [...], "evening": [...]}
+_VARIANT_BADGE = {"combined": "C", "midday": "M", "evening": "E"}
+
+def _draws_since(draws: list[str], boxed_combo: str) -> int:
+    tgt = _canon_boxed(boxed_combo)
+    for i, d in enumerate(draws):
+        if _canon_boxed(d) == tgt:
+            return i
+    return len(draws)
+
+def _all_boxed_doubles() -> tuple[str, ...]:
+    s = set()
+    for r in "0123456789":
+        for o in "0123456789":
+            if r == o: 
+                continue
+            s.add(_canon_boxed(r+r+o))
+            s.add(_canon_boxed(r+o+r))
+            s.add(_canon_boxed(o+r+r))
+    return tuple(sorted(s))
+
+def _variant_combo_classes(variant_draws: dict[str, list[str]]) -> tuple[dict[str, dict[str, int]],
+                                                                         dict[str, dict[str, str|None]]]:
+    all_doubles = _all_boxed_doubles()
+    gaps: dict[str, dict[str, int]] = {}
+    cls:  dict[str, dict[str, str|None]] = {}
+    for vkey, draws in variant_draws.items():
+        gmap = {c: _draws_since(draws, c) for c in all_doubles}
+        cmap = {c: _classify_gap(gmap[c], c) for c in all_doubles}
+        gaps[vkey], cls[vkey] = gmap, cmap
+    return gaps, cls
+
+
+Filter rule: a combo qualifies for the family strip only if it is R or B in at least one of C/M/E.
+
+C. Group by V‑TRAC mirror family and render variant‑specific tokens
+_MIRROR = {0:0,5:0, 1:1,6:1, 2:2,7:2, 3:3,8:3, 4:4,9:4}
+
+def _family_key_for_double(boxed: str) -> tuple[int,int]:
+    # boxed is sorted; doubles: middle is a repeated digit
+    a,b,c = int(boxed[0]), int(boxed[1]), int(boxed[2])
+    if not (a==b or b==c):
+        raise ValueError("expected a double")
+    repeated = b
+    singleton = a if a!=b else c
+    return (_MIRROR[repeated], _MIRROR[singleton])
+
+def _rank_double_families(variant_draws: dict[str, list[str]], limit: int=5):
+    gaps, cls = _variant_combo_classes(variant_draws)
+    families: dict[tuple[int,int], list[str]] = {}
+    tokens_by_family: dict[tuple[int,int], list[str]] = {}
+    score_by_family: dict[tuple[int,int], int] = {}
+    bestgap_by_family: dict[tuple[int,int], int] = {}
+
+    for c in _all_boxed_doubles():
+        # keep only if any variant is hot
+        v_hits = [(v, cls[v][c]) for v in ("combined","midday","evening") if cls[v][c] in ("R","B")]
+        if not v_hits:
+            continue
+        fkey = _family_key_for_double(c)
+        families.setdefault(fkey, []).append(c)
+        for v, k in v_hits:
+            badge = _VARIANT_BADGE[v]
+            token = f"{k}{c}{badge}"      # e.g., R225C or B225M
+            tokens_by_family.setdefault(fkey, []).append(token)
+            score_by_family[fkey] = score_by_family.get(fkey, 0) + (2 if k=="R" else 1)
+            g = gaps[v][c]
+            bestgap_by_family[fkey] = min(bestgap_by_family.get(fkey, g), g)
+
+    # order tokens within a family: R before B, then larger gap first
+    def _tok_sort_key(tok: str):
+        k = 0 if tok[0]=="R" else 1
+        combo = tok[1:4]
+        v = {"C":"combined","M":"midday","E":"evening"}[tok[-1]]
+        return (k, -gaps[v][combo], tok)
+
+    rows = []
+    for fkey, toks in tokens_by_family.items():
+        toks.sort(key=_tok_sort_key)
+        rows.append({
+            "family": fkey, 
+            "display": " ".join(toks),
+            "score": score_by_family.get(fkey, 0),
+            "best_gap": bestgap_by_family.get(fkey, 10**9),
+        })
+    rows.sort(key=lambda r: (-r["score"], r["best_gap"]))
+    return rows[:limit]
+
+
+Render: in the Control Center “Due Doubles” table, fill Family 1..5 with row["display"].
+Never print R{combo}CEM. If you later want your “collapse” rule (C only when M&E both hot), do it after this is correct.
+
+Keep your pair/shape cues: wherever you build combo HTML badges, reuse that function for each RxxxC/BxxxM token so the pair highlights and red/blue shapes carry across.
+
+D. Fix the Control Center crash and the mojibake banner
+
+Crash
+At top‑level of src/app.py (or the Control Center module), bind the resolver unconditionally:
+
+try:
+    from modules.vtrac_reference import get_vtrac_index as _cc_get_vtrac_index
+except Exception:
+    def _cc_get_vtrac_index(_: str) -> str | None:
+        return None
+
+
+Do not reassign _cc_get_vtrac_index inside a function. If you need an alternate, give the local a different name.
+
+“Mojibake detected in UI strings”
+Replace any injected st.info(f"...\n...") escape soup with a simple join (UTF‑8 file):
+
+st.info("\n".join([
+    "**Overdue thresholds**",
+    f"- Doubles: blue ≥ {COMBO_DOUBLE_LATE}, red ≥ {COMBO_DOUBLE_VERY_LATE}",
+    f"- Singles: blue ≥ {COMBO_SINGLE_LATE}, red ≥ {COMBO_SINGLE_VERY_LATE}",
+]))
+st.caption("Badges show per-variant status (C/M/E). Families are V‑TRAC mirror pairs.")
+
+
+Save the file as UTF‑8. Avoid writing docs with cp1252 from PowerShell (that’s how those @' ... '@ heredocs bit you earlier).
+
+Smokes & acceptance checks (fast)
+
+Run these four and attach the heads/tails in the log:
+
+python -m py_compile src/app.py
+pytest -q tests/test_analyze_pairs_semantics.py   # already in repo
+
+
+Add a tiny threshold tripwire (new file tests/test_double_thresholds_variants.py):
+
+def _boxed(s): return "".join(sorted(s))
+def test_ct_combined_reds(ct_combined_draws):
+    assert classify_variant(ct_combined_draws, _boxed("225")) == "R"
+    assert classify_variant(ct_combined_draws, _boxed("677")) == "R"
+
+def test_fl_evening_008_is_not_hot(fl_evening_draws):
+    assert draws_since(fl_evening_draws, _boxed("008")) < 667  # must not be hot
+
+
+Visual acceptance (with your screenshots):
+
+FL Combined lead family cell should include R008C and R366C (no …E).
+
+CT Combined family cells should show things like R225C B225M B225E and R466E B466C B466M (i.e., per‑variant tokens, not R…CEM).
+
+The Control Center banner no longer shows _cc_get_vtrac_index error nor Mojibake.
+
+2) Sums flags: why you see “red purple”, and the tiny enhancement we discussed
+
+From your Sums table:
+
+Window: 360
+Sum 1 → Draws Since = 360 → flags: red purple
+Sum 9, 11, 16, 7 → flags: red purple (negative Z and overdue)
+Sum 13, 17, 21, 8 → flags: blue (recent strength)
+
+
+What’s happening now (and it’s reasonable):
+
+Overdue coloring is applied on draws since using sums cutoffs inside SSOT (not the doubles cutoffs).
+Example rule of thumb that fits your table:
+blue if DS ≥ SUM_LATE, red if DS ≥ SUM_VERY_LATE.
+
+“purple” is an independent under‑performance signal (e.g., Z ≤ −1.5 or (Hit% - Exp%) below a negative threshold).
+That’s why a row can be red purple simultaneously: it’s both very late and underperforming vs expectation in the window.
+
+Did we land the “slight sums tweak” you asked for (BA‑friendly)?
+Not fully. The table is computing Z and overdue flags (good), but the BA‑friendly banding we discussed (tiny, read‑only features for later scoring) isn’t in UI yet.
+
+Minimal, no‑risk enhancement (doesn’t touch BA logic; just surfaces two numbers for future scoring):
+
+Compute and store alongside each sum bucket:
+
+deficit = Hit% - Exp% (negative = under‑hit), and
+
+z_tail = min(0, Z) (clipped negative Z as an “under tail” strength).
+
+Keep the exact current flags/thresholds; just add two hidden columns to the JSON payload so later scoring can use them.
+
+def _sum_flags(ds, z, late, very_late):
+    flags = []
+    if ds >= very_late: flags.append("red")
+    elif ds >= late:    flags.append("blue")
+    if z <= -1.5:       flags.append("purple")
+    return " ".join(flags)
+
+row["deficit"] = row["hit_pct"] - row["exp_pct"]
+row["z_tail"]  = min(0.0, row["z"])
+row["flags"]   = _sum_flags(row["draws_since"], row["z"], SUM_LATE, SUM_VERY_LATE)
+
+
+This gives you the “slight adjustment” for scoring/compounding later, without changing Black Apple’s use of Sums today.
+
+3) V‑TRAC index tracking beyond “Top‑10/Last‑5”: what’s already there vs. what to add
+
+What you already have (and it’s good):
+
+Overlay reuse so both the main V‑TRAC grid and the Index‑Hits panel use the same “draws since per index” cache.
+
+A Repeat Watch table that shows: current index, current streak, last repeat gap, last repeat index, max streak, window.
+
+What we haven’t delivered yet (this is the “more advantageous” bit we discussed):
+
+An Index Heatboard metric per index/variant with:
+
+ds (draws since),
+
+freq_k (hits in last K),
+
+avg_gap_k (mean gap in last K),
+
+q80_gap (80th percentile return gap),
+
+hazard = 1 / max(1, avg_gap_k) as a simple “ready to recur” proxy,
+
+trend = freq_100 - freq_200 (short vs long recency).
+
+Drop‑in helper (computed right after you build the overlay):
+
+def _index_heat(draws, resolver, window=1000, k=200):
+    # returns dict[index] = metrics
+    hits = {i: [] for i in range(1, 36)}
+    last_seen = {i: None for i in range(1, 36)}
+    for pos, draw in enumerate(draws):
+        idx = resolver(draw)  # 1..35
+        if last_seen[idx] is not None:
+            hits[idx].append(pos - last_seen[idx])
+        last_seen[idx] = pos
+    out = {}
+    for i in range(1, 36):
+        gaps = hits[i][-k:] if k else hits[i]
+        freq_k = len([g for g in gaps if g <= k])
+        avg_gap = (sum(gaps)/len(gaps)) if gaps else None
+        q80 = sorted(gaps)[int(0.8*len(gaps))] if gaps else None
+        out[i] = {
+            "ds": (len(draws) - (last_seen[i] or len(draws))),
+            "freq_k": freq_k,
+            "avg_gap_k": avg_gap,
+            "q80_gap": q80,
+            "hazard": (0 if not avg_gap else 1/avg_gap),
+        }
+    return out
+
+
+Surface it two ways (simple, immediately useful):
+
+In Aux → V‑TRAC area, a small “Heatboard” table for the current variant: Index, DS, freq200, avg_gap200, hazard.
+
+In Control Center, sort states by “best hot index hazard” if you want a quick cross‑state lens (totally optional).
+
+This dovetails with the Repeat Watch panel you already show.
+
+Extra: mirroring the Aux combo badges (pairs inside the token)
+
+Yes—this is a good idea and cheap to do. Keep the token text as R225C/B225M/… but render it with the same badge builder used in Aux so you inherit:
+
+the red/blue shape for the combo, and
+
+pair highlights within the combo (a big reason you wanted to surface combos, not just pairs).
+
+Concretely, if your Aux already has something like _render_combo_badge(combo, cls, badge, pair_highlights), call that for each token when constructing the family cell; just stack them with a thin space.
+
+Error banners you asked about
+
+_cc_get_vtrac_index UnboundLocalError → fixed by binding at module scope (shown above).
+
+Mojibake banner → replace the f‑string escape soup with a simple "\n".join([...]) and save UTF‑8. That’s it.
+
+What to tell Codex (copy/paste)
+
+Due‑Doubles family strip
+
+Classify per combo, per variant using the doubles thresholds (667/1000) and boxed permutations.
+
+Keep a combo only if class ∈ {R,B} in any variant.
+
+Render variant‑specific tokens (R225C B225M B225E), never R…CEM.
+
+Group by V‑TRAC mirror families; rank by 2*#R + #B (ties: lower best gap).
+
+Reuse the Aux combo badge renderer so pair highlights and shapes carry over.
+
+Fixes
+
+Bind _cc_get_vtrac_index at module scope with a safe fallback.
+
+Replace the caption/info block with a "\n".join([...]) UTF‑8 string.
+
+Sums
+
+Keep current flags; add two numeric fields (deficit, z_tail) to the JSON for future scoring.
+
+V‑TRAC heatboard (optional but recommended)
+
+Compute freq_k, avg_gap_k, q80_gap, hazard per index and show a small table in Aux.
+
+Evidence to return
+
+python -m py_compile src/app.py (green).
+
+Screenshot of FL/CT rows in the Control Center Due‑Doubles table where families show per‑variant tokens (e.g., R008C only, no “E”; R225C B225M B225E rather than R225CEM).
+
+A tiny test proving FL Evening 008 is not hot and CT Combined 225/677 are red.
+
+Bottom line
+
+Your concept is right: “bring over red/blue doubles from C/M/E and group by V‑TRAC relation.”
+
+The current oddities are from threshold mix‑ups and unioned badges.
+
+The patches above are small, deterministic, and will give you a clean, trustworthy Top‑5 family strip so you can get on with training.
+
+If you want, I’ll also give you a one‑page “operator checklist” you can keep next to the UI (e.g., “FL Combined must show R008C R366C; CT Combined should show R225C B225M B225E…”). That makes spot‑checks trivial while you iterate.

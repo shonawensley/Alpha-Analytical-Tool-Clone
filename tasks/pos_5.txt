@@ -1,0 +1,162 @@
+sending positions work.docx—I read it end‑to‑end. Here’s a straight, engineering‑level assessment of what Codex implemented for the Positional Tracker shortlist, what’s solid, what’s risky/missing, and the minimal fixes I’d ask for before you approve.
+
+Executive verdict
+
+On‑plan: Codex implemented the exact shape we discussed:
+three candidate streams (cartesian, repeat‑endcap, lane‑concordance), configurable weights/caps, and evidence tags. It also added light V‑TRAC boosts (index/family) as compound nudges, not drivers. This aligns with the “use C+M+E together and let V‑TRAC enhance, not dominate” rule.
+
+What’s good: The helper layer is cleanly structured (pool/seed/score/merge). Weighting and caps are configurable. Variant‑aware “lane hits” and “digit variants per position” are present. Repeat‑endcap uses lanes to grow the P2 bridge set (exactly what we wanted).
+
+What still needs tightening (small, contained):
+
+Naming collisions: “Combined (dataset)” vs “All‑Variant” (C+M+E consensus) still read similarly in places.
+
+Unit acceptance tests: Stubs are referenced; I don’t see firm tests checked in.
+
+UI strings/encoding: Prior mojibake note suggests at least one panel still uses fragile string injection.
+
+V‑TRAC hooks are present, but you should confirm they’re reading the same overlay/hot families you see in Control Center (avoid recomputing a second view).
+
+Caps/limits sanity: Make sure pool sizes and max seeds can’t explode runtime on large states.
+
+None of these are design rethinks—they’re “finish and harden” touches. The core approach is right.
+
+What Codex added (mapped to the plan)
+1) Candidate generation (✅)
+
+Cartesian seeds from a union pool per position (not Combined‑only). This is the fix that makes 9‑8‑9 constructible when 9 is top‑K at P1 & P3 in Evening and 8 is live at P2 (E/C).
+
+Repeat‑endcap seeds: when the same digit is top‑K at P1 and P3, build d _ d and expand P2 using both top‑K and lane bridges for the lanes where that digit is strongest. That’s the precise path that yields 989 in your Delaware example.
+
+Lane‑concordance seeds: form a few lane‑pure combos (same lane across positions) and give them a small bonus.
+
+✅ This directly addresses why 989 was missed: the old cartesian never formed “repeat‑endcap” or “lane‑pure” branches; the new code does.
+
+2) Scoring with explainability (✅)
+
+Score now sums per‑position aggregated scores and adds explicit weights for:
+
+Cross‑variant hits (how many of C/M/E a digit occupies at that position),
+
+Mirror‑Echo and Double‑Pressure tags,
+
+Repeat‑endcap bonus and Lane‑concordance bonus,
+
+Small V‑TRAC boosts (index hot / double‑family hot),
+
+Optional Root nudge.
+
+Each candidate carries evidence strings (e.g., P1:9 [E#1] | lanes E, Repeat endcap, V‑TRAC idx 21 hot), so users see why it ranked.
+
+✅ This makes the shortlist finally “signal‑aware” instead of just looking like a Combined cartesian.
+
+3) Configuration (✅)
+
+A ShortlistConfig mapping (caps, weights, feature toggles) is loaded/merged from config (POS_SHORTLIST_CONFIG). Weights like rank, xvar, mirror_echo, double_pressure, repeat_endcap, lane_concordance, vtrac_index, vtrac_family, and optional root are all surfaced.
+
+✅ This gives you safe knobs to tune without editing code.
+
+4) V‑TRAC integration (⚠️ verify source)
+
+The scorer expects two boolean‑style signals:
+
+index heat (e.g., in Top‑10 overdue or Repeat Watch),
+
+family hot (combo’s double family is in Top‑5).
+
+Both are used as small additive weights, consistent with “Aux enhances, not dominates.”
+
+⚠️ Ask Codex to confirm these are sourced from the same overlay + family rankings shown in Control Center (not recomputed). If they aren’t, have it read those cached structures instead.
+
+Gaps / Risks to close before approval
+
+Label clarity (Combined vs All‑Variant)
+In code & UI, ensure:
+
+variant_key ∈ {"combined","midday","evening"} refers strictly to the draw stream.
+
+“All‑Variant consensus (C+M+E)” is used for cross‑variant analytics & pools.
+This prevents recurrence of the “looks Combined‑only” confusion.
+
+Acceptance tests (add the two tripwires):
+
+Repeat‑endcap: If a digit is top‑3 at P1 and P3 in any lane, at least one d _ d candidate must appear.
+Your Delaware case: 9 at P1 and P3 in Evening ⇒ 989 appears.
+
+Lane‑pure: If each position has at least one digit in the same lane, at least one lane‑pure candidate should appear.
+Also add a “union sanity” test: the pool must include digits from all three variants when present.
+
+UI strings / mojibake
+Anywhere Codex injected big f‑strings via ad‑hoc replacement should be rewritten as explicit Python lists + "\n".join(...), and all writes should use encoding="utf-8" to avoid cp1252 artifacts. (You hit this once already on the Aux captions.)
+
+Seed caps / runtime
+Confirm conservative defaults in config:
+
+topk_per_pos (3 is good), pool_per_pos (≤ 6), max_internal (≤ 64 total seeds before scoring), and final max_output (12–16).
+This guarantees the shortlist stays snappy and readable.
+
+Evidence tags parity
+Make sure the shortlist “Tags/Evidence” strings are drawn from the same tag calculators the summaries use (Mirror‑Echo, Double‑Pressure, XVAR‑Cons). No re‑implementations inside the shortlist code—just consume what’s already computed upstream.
+
+Why this won’t “break the app’s brain” (what doubles families actually are)
+
+The double families you saw are purely a grouping/visualization on the Due Doubles panels (e.g., family 0/5–4/9 contains 004, 009, 044, 099, 445, 449, 455, 559). They:
+
+Do not change how the positional tracker generates candidates.
+
+Are not a new scoring brain; they’re just a compact watch‑strip moving red/blue doubles over from the V‑TRAC pages and grouping them sensibly.
+If tomorrow you removed the family strip, the Positional shortlist logic described above would still work exactly the same.
+
+“Approve / No‑Go” checklist you can hand to Codex
+
+Approve when all are true (takes minutes to verify):
+
+989 acceptance: With your Delaware snapshot, shortlist contains 989 and its evidence shows E‑lane endcaps + P2 lane support.
+
+Combined vs All‑Variant labels: UI shows “All‑Variant consensus (C+M+E)” where appropriate; “Combined” is only the dataset.
+
+V‑TRAC boosts source: The shortlist reports “V‑TRAC idx X hot” / “Family m/n hot” only when those are hot in Control Center.
+
+Caps: Seeds ≤ 64 (internal), output ≤ 16. No slowdowns.
+
+Tests: The two tripwires pass (repeat‑endcap, lane‑pure).
+(If you’re not running pytest, Codex can paste the test output snippet into the hand‑off.)
+
+UI strings: No mojibake; captions render cleanly.
+
+If you want my default weights to start
+
+These land well on the case you showed and are intentionally conservative:
+
+# core/aux_config.py (POS_SHORTLIST_CONFIG)
+caps:
+  topk_per_pos: 3
+  pool_per_pos: 6
+  max_internal: 64
+  max_output: 16
+
+weights:
+  rank:             1.0
+  xvar:             2.5    # cross-variant hits carry the shortlist
+  mirror_echo:      1.0
+  double_pressure:  1.0
+  repeat_endcap:    0.30   # times (P1+P3 score) for the repeated digit
+  lane_concordance: 0.15   # times base score for lane-pure
+  vtrac_index:      0.8
+  vtrac_family:     0.6
+  root:             0.0    # keep off unless you want that nudge
+features:
+  enable_repeat_endcap: true
+  enable_lane_concordance: true
+  enable_vtrac_boosts: true
+
+
+These are additive (not gates), so they won’t swamp the rank signal.
+
+Bottom line
+
+The implementation in your doc matches the architecture we agreed to and does not endanger the rest of the app. It’s a targeted refactor of how the shortlist is formed/scored, with small optional ties into V‑TRAC signals you already compute elsewhere.
+
+Approve it once the handful of “finish and harden” items above are confirmed (labels, tests, string safety, caps, V‑TRAC source).
+
+After that, you can start training on the tools with confidence—the shortlist will actually reflect the cross‑variant and mirror‑echo pressure you’ve been reading by eye (so examples like 989 won’t slip

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+import itertools
 import math
 import statistics
 
@@ -15,6 +16,11 @@ try:
     from modules.vtrac_reference import get_vtrac_index  # type: ignore
 except Exception:  # pragma: no cover - staged Aux path may not exist outside app runtime
     get_vtrac_index = None  # type: ignore
+
+try:
+    from core.aux_config import POS_SHORTLIST_CONFIG  # type: ignore
+except Exception:  # pragma: no cover
+    POS_SHORTLIST_CONFIG = None  # type: ignore
 
 Variant = Literal["combined", "midday", "evening"]
 PositionIndex = Literal[0, 1, 2]
@@ -124,6 +130,87 @@ class AggregatedDigit:
     tags: List[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ShortlistCaps:
+    cartesian: int
+    repeat_endcap: int
+    lane: int
+
+
+@dataclass(frozen=True)
+class ShortlistWeights:
+    rank: float
+    xvar: float
+    mirror_echo: float
+    double_pressure: float
+    repeat_endcap: float
+    lane_concordance: float
+    root: float
+    vtrac_index: float
+    vtrac_family: float
+
+
+@dataclass(frozen=True)
+class ShortlistFeatures:
+    enable_repeat_endcap: bool
+    enable_lane_concordance: bool
+    enable_vtrac_boosts: bool
+
+
+@dataclass(frozen=True)
+class ShortlistConfig:
+    topk_per_pos: int
+    pool_per_pos: int
+    max_internal: int
+    max_rows: int
+    caps: ShortlistCaps
+    weights: ShortlistWeights
+    features: ShortlistFeatures
+
+    @staticmethod
+    def from_mapping(data: Mapping[str, Any]) -> "ShortlistConfig":
+        caps_map = data.get("caps", {})
+        weights_map = data.get("weights", {})
+        features_map = data.get("features", {})
+        caps = ShortlistCaps(
+            cartesian=int(caps_map.get("cartesian", 48)),
+            repeat_endcap=int(caps_map.get("repeat_endcap", 36)),
+            lane=int(caps_map.get("lane", 36)),
+        )
+        weights = ShortlistWeights(
+            rank=float(weights_map.get("rank", 1.0)),
+            xvar=float(weights_map.get("xvar", 2.5)),
+            mirror_echo=float(weights_map.get("mirror_echo", 1.0)),
+            double_pressure=float(weights_map.get("double_pressure", 1.0)),
+            repeat_endcap=float(weights_map.get("repeat_endcap", 0.3)),
+            lane_concordance=float(weights_map.get("lane_concordance", 0.15)),
+            root=float(weights_map.get("root", 0.0)),
+            vtrac_index=float(weights_map.get("vtrac_index", 0.8)),
+            vtrac_family=float(weights_map.get("vtrac_family", 0.6)),
+        )
+        features = ShortlistFeatures(
+            enable_repeat_endcap=bool(features_map.get("enable_repeat_endcap", True)),
+            enable_lane_concordance=bool(features_map.get("enable_lane_concordance", True)),
+            enable_vtrac_boosts=bool(features_map.get("enable_vtrac_boosts", True)),
+        )
+        return ShortlistConfig(
+            topk_per_pos=int(data.get("topk_per_pos", 3)),
+            pool_per_pos=int(data.get("pool_per_pos", 6)),
+            max_internal=int(data.get("max_internal", 64)),
+            max_rows=int(data.get("max_rows", 16)),
+            caps=caps,
+            weights=weights,
+            features=features,
+        )
+
+
+@dataclass(frozen=True)
+class CandidateSeed:
+    digits: Tuple[int, int, int]
+    source: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 @dataclass
 class CandidateRecommendation:
     combo: str
@@ -132,6 +219,8 @@ class CandidateRecommendation:
     tags: List[str]
     digital_root: int
     vtrac_index: Optional[int]
+    evidence: List[str] = field(default_factory=list)
+    source: str = ""
 
 
 @dataclass
@@ -436,58 +525,336 @@ def _aggregate_scores(entries: List[PositionTopDigit]) -> Dict[PositionIndex, Di
     return aggregated
 
 
-def _build_candidates(
-    aggregated: Dict[PositionIndex, Dict[int, AggregatedDigit]],
-    entries: List[PositionTopDigit],
-    cfg: WeightsConfig,
-) -> List[CandidateRecommendation]:
-    import itertools
+def _collect_digit_variants(entries: List[PositionTopDigit]) -> Dict[PositionIndex, Dict[int, Set[Variant]]]:
+    mapping: Dict[PositionIndex, Dict[int, Set[Variant]]] = {0: {}, 1: {}, 2: {}}
+    for entry in entries:
+        slot = mapping[entry.position].setdefault(entry.digit, set())
+        slot.add(entry.variant)
+    return mapping
 
-    position_digits: Dict[PositionIndex, List[AggregatedDigit]] = {}
-    for pos, digit_map in aggregated.items():
-        ranked = sorted(digit_map.values(), key=lambda item: (item.score, -item.digit), reverse=True)
-        position_digits[pos] = ranked[: cfg.max_candidate_per_position]
 
-    if not all(position_digits.values()):
-        return []
+def _collect_lane_hits(
+    variant_results: Dict[Variant, VariantPositionalResult],
+    topk: int,
+) -> Dict[Variant, Dict[PositionIndex, List[int]]]:
+    lane_hits: Dict[Variant, Dict[PositionIndex, List[int]]] = {}
+    for variant, result in variant_results.items():
+        lane_hits[variant] = {}
+        for pos in (0, 1, 2):
+            summary = result.position_summaries.get(pos)
+            digits: List[int] = []
+            if summary:
+                digits = [digit_entry.digit for digit_entry in summary.top_digits[:topk]]
+            lane_hits[variant][pos] = digits
+    return lane_hits
 
-    combos: List[CandidateRecommendation] = []
-    for choice in itertools.product(position_digits[0], position_digits[1], position_digits[2]):
-        digits = [item.digit for item in choice]
-        combo = f"{digits[0]}{digits[1]}{digits[2]}"
-        score = sum(item.score for item in choice)
-        ranks: List[int] = []
-        tags: List[str] = []
-        top1_count = 0
-        for agg in choice:
-            for _, rank in agg.occurrences:
-                ranks.append(rank)
-                if rank == 1:
-                    top1_count += 1
-            tags.extend(agg.tags)
-        if top1_count >= 2:
-            score += 0.5
-            tags.append(f"TOP1x{top1_count}")
 
-        digital_root = _digital_root(combo)
-        vtrac_idx: Optional[int] = None
-        if callable(get_vtrac_index):  # pragma: no cover - relies on staged module
-            try:
-                vtrac_idx = int(get_vtrac_index(combo))
-            except Exception:
-                vtrac_idx = None
-        candidate = CandidateRecommendation(
-            combo=combo,
-            score=float(score),
-            ranks=(ranks[0] if len(ranks) > 0 else 0, ranks[1] if len(ranks) > 1 else 0, ranks[2] if len(ranks) > 2 else 0),
-            tags=sorted(set(tags)),
-            digital_root=digital_root,
-            vtrac_index=vtrac_idx,
+def _build_union_pool(
+    aggregated_sorted: Dict[PositionIndex, List[AggregatedDigit]],
+    cfg: ShortlistConfig,
+) -> Dict[PositionIndex, List[AggregatedDigit]]:
+    pool: Dict[PositionIndex, List[AggregatedDigit]] = {}
+    for pos, items in aggregated_sorted.items():
+        selected: List[AggregatedDigit] = []
+        seen: Set[int] = set()
+        for agg in items:
+            if agg.digit in seen:
+                continue
+            seen.add(agg.digit)
+            selected.append(agg)
+            if len(selected) >= cfg.pool_per_pos:
+                break
+        pool[pos] = selected
+    return pool
+
+
+def _generate_cartesian_seeds(
+    pool: Dict[PositionIndex, List[AggregatedDigit]],
+    limit: int,
+) -> List[CandidateSeed]:
+    seeds: List[CandidateSeed] = []
+    if limit <= 0:
+        return seeds
+    for agg0 in pool.get(0, []):
+        for agg1 in pool.get(1, []):
+            for agg2 in pool.get(2, []):
+                seeds.append(CandidateSeed((agg0.digit, agg1.digit, agg2.digit), "cartesian"))
+                if len(seeds) >= limit:
+                    return seeds
+    return seeds
+
+
+def _generate_repeat_endcap_seeds(
+    pool: Dict[PositionIndex, List[AggregatedDigit]],
+    aggregated_map: Dict[PositionIndex, Dict[int, AggregatedDigit]],
+    digit_variants: Dict[PositionIndex, Dict[int, Set[Variant]]],
+    lane_hits: Dict[Variant, Dict[PositionIndex, List[int]]],
+    cfg: ShortlistConfig,
+    limit: int,
+) -> List[CandidateSeed]:
+    seeds: List[CandidateSeed] = []
+    if limit <= 0:
+        return seeds
+    shared: List[Tuple[int, float]] = []
+    for agg0 in pool.get(0, []):
+        digit = agg0.digit
+        agg2 = aggregated_map[2].get(digit)
+        if agg2 is None:
+            continue
+        shared.append((digit, agg0.score + agg2.score))
+    shared.sort(key=lambda item: item[1], reverse=True)
+    for digit, _score in shared:
+        lanes = set()
+        lanes.update(digit_variants[0].get(digit, set()))
+        lanes.update(digit_variants[2].get(digit, set()))
+        bridge_candidates: List[Tuple[int, float]] = []
+        seen: Set[int] = set()
+        for agg in pool.get(1, []):
+            if agg.digit in seen:
+                continue
+            bridge_candidates.append((agg.digit, agg.score))
+            seen.add(agg.digit)
+        for lane in lanes:
+            for candidate_digit in lane_hits.get(lane, {}).get(1, []):
+                if candidate_digit in seen:
+                    continue
+                agg = aggregated_map[1].get(candidate_digit)
+                if agg is None:
+                    continue
+                bridge_candidates.append((candidate_digit, agg.score))
+                seen.add(candidate_digit)
+        bridge_candidates.sort(key=lambda item: item[1], reverse=True)
+        for bridge_digit, _ in bridge_candidates[: cfg.pool_per_pos]:
+            seeds.append(
+                CandidateSeed(
+                    (digit, bridge_digit, digit),
+                    "repeat_endcap",
+                    metadata={"lanes": sorted(lanes)},
+                )
+            )
+            if len(seeds) >= limit:
+                return seeds
+    return seeds
+
+
+def _generate_lane_concordance_seeds(
+    aggregated_map: Dict[PositionIndex, Dict[int, AggregatedDigit]],
+    lane_hits: Dict[Variant, Dict[PositionIndex, List[int]]],
+    cfg: ShortlistConfig,
+    limit: int,
+) -> List[CandidateSeed]:
+    seeds: List[CandidateSeed] = []
+    if limit <= 0:
+        return seeds
+    for lane, pos_map in lane_hits.items():
+        lane_lists: List[List[int]] = []
+        for pos in (0, 1, 2):
+            digits: List[Tuple[int, float]] = []
+            for digit in pos_map.get(pos, []):
+                agg = aggregated_map[pos].get(digit)
+                if agg is None:
+                    continue
+                digits.append((digit, agg.score))
+            if not digits:
+                lane_lists = []
+                break
+            digits.sort(key=lambda item: item[1], reverse=True)
+            lane_lists.append([val for val, _ in digits[: cfg.pool_per_pos]])
+        if not lane_lists or len(lane_lists) != 3:
+            continue
+        for combo in itertools.product(*lane_lists):
+            seeds.append(CandidateSeed(tuple(combo), "lane", metadata={"lane": lane}))
+            if len(seeds) >= limit:
+                return seeds
+    return seeds
+
+
+def _merge_nested(base: Mapping[str, Any], override: Mapping[str, Any], key: str) -> Dict[str, Any]:
+    result = dict(base.get(key, {})) if isinstance(base.get(key, {}), Mapping) else dict()
+    updates = override.get(key, {}) if isinstance(override.get(key, {}), Mapping) else {}
+    result.update(updates)
+    return result
+
+
+def _load_shortlist_config(user_cfg: Optional[Mapping[str, Any]]) -> ShortlistConfig:
+    base_mapping: Mapping[str, Any] = POS_SHORTLIST_CONFIG or {}
+    override = user_cfg or {}
+    merged = dict(base_mapping)
+    merged.update(override)
+    merged['caps'] = _merge_nested(base_mapping, override, 'caps')
+    merged['weights'] = _merge_nested(base_mapping, override, 'weights')
+    merged['features'] = _merge_nested(base_mapping, override, 'features')
+    return ShortlistConfig.from_mapping(merged)
+
+
+def _score_candidate_seed(
+    seed: CandidateSeed,
+    aggregated_map: Dict[PositionIndex, Dict[int, AggregatedDigit]],
+    digit_variants: Dict[PositionIndex, Dict[int, Set[Variant]]],
+    cfg: ShortlistConfig,
+    vtrac_hot_indices: Set[int],
+    vtrac_hot_families: Dict[str, str],
+) -> Optional[CandidateRecommendation]:
+    digits = seed.digits
+    combo = f"{digits[0]}{digits[1]}{digits[2]}"
+    total = 0.0
+    tags: Set[str] = set()
+    evidence: List[str] = []
+    ranks: List[int] = []
+    weights = cfg.weights
+    features = cfg.features
+    for pos, digit in enumerate(digits):
+        agg = aggregated_map[pos].get(digit)
+        if agg is None:
+            return None
+        total += weights.rank * agg.score
+        occ = sorted(f"{variant[:1].upper()}#{rank}" for variant, rank in agg.occurrences)
+        ranks.extend(rank for _, rank in agg.occurrences)
+        lane_marks = digit_variants[pos].get(digit, set())
+        if lane_marks:
+            total += weights.xvar * len(lane_marks)
+        descriptor = f"P{pos + 1}:{digit}"
+        if occ:
+            descriptor += f" [{', '.join(occ)}]"
+        if lane_marks:
+            descriptor += f" | lanes {'/'.join(sorted(v[:1].upper() for v in lane_marks))}"
+        evidence.append(descriptor)
+        for tag in agg.tags:
+            tags.add(tag)
+        if 'Mirror-Echo' in agg.tags:
+            total += weights.mirror_echo
+        if 'Double-Pressure' in agg.tags:
+            total += weights.double_pressure
+    if digits[0] == digits[2]:
+        bonus = weights.repeat_endcap * (
+            aggregated_map[0][digits[0]].score + aggregated_map[2][digits[2]].score
         )
-        combos.append(candidate)
+        total += bonus
+        tags.add('Repeat-Endcap')
+        lanes = seed.metadata.get('lanes')
+        if lanes:
+            evidence.append(f"Repeat endcap lanes: {'/'.join(lanes)}")
+        else:
+            evidence.append("Repeat endcap")
+    lane_label = seed.metadata.get('lane')
+    if lane_label:
+        lane_bonus = weights.lane_concordance * (
+            aggregated_map[0][digits[0]].score
+            + aggregated_map[1][digits[1]].score
+            + aggregated_map[2][digits[2]].score
+        )
+        total += lane_bonus
+        tags.add(f"Lane-{str(lane_label)[:1].upper()}")
+        evidence.append(f"Lane concordance: {lane_label}")
+    digital_root = _digital_root(combo)
+    if weights.root:
+        root_bonus = weights.root * (9 - digital_root) / 9.0
+        if root_bonus:
+            total += root_bonus
+            evidence.append(f"Root bonus ({digital_root})")
+    vtrac_idx: Optional[int] = None
+    if callable(get_vtrac_index):  # pragma: no cover
+        try:
+            vtrac_idx = int(get_vtrac_index(combo))
+        except Exception:
+            vtrac_idx = None
+    if features.enable_vtrac_boosts and vtrac_idx is not None:
+        if vtrac_idx in vtrac_hot_indices:
+            total += weights.vtrac_index
+            tags.add('VTRAC-Hot')
+            evidence.append(f"V-TRAC idx {vtrac_idx} hot")
+    if features.enable_vtrac_boosts:
+        canonical = ''.join(sorted(combo))
+        family_label = vtrac_hot_families.get(canonical)
+        if family_label:
+            total += weights.vtrac_family
+            tags.add(f"Family-{family_label}")
+            evidence.append(f"Family {family_label} hot")
+    ranks_tuple = (
+        ranks[0] if len(ranks) > 0 else 0,
+        ranks[1] if len(ranks) > 1 else 0,
+        ranks[2] if len(ranks) > 2 else 0,
+    )
+    return CandidateRecommendation(
+        combo=combo,
+        score=float(total),
+        ranks=ranks_tuple,
+        tags=sorted(tags),
+        digital_root=digital_root,
+        vtrac_index=vtrac_idx,
+        evidence=evidence,
+        source=seed.source,
+    )
 
-    combos.sort(key=lambda c: (c.score, -c.digital_root, c.combo), reverse=True)
-    return combos[: cfg.max_candidates]
+
+def _build_shortlist_candidates(
+    aggregated_sorted: Dict[PositionIndex, List[AggregatedDigit]],
+    aggregated_map: Dict[PositionIndex, Dict[int, AggregatedDigit]],
+    digit_variants: Dict[PositionIndex, Dict[int, Set[Variant]]],
+    lane_hits: Dict[Variant, Dict[PositionIndex, List[int]]],
+    cfg: ShortlistConfig,
+    vtrac_hot_indices: Set[int],
+    vtrac_hot_families: Dict[str, str],
+) -> List[CandidateRecommendation]:
+    if not aggregated_sorted or not all(aggregated_sorted.values()):
+        return []
+    pool = _build_union_pool(aggregated_sorted, cfg)
+    if not all(pool.values()):
+        return []
+    seeds: List[CandidateSeed] = []
+    remaining = cfg.max_internal
+
+    def extend_with(new_seeds: List[CandidateSeed]) -> None:
+        nonlocal remaining
+        for seed in new_seeds:
+            if remaining <= 0:
+                break
+            seeds.append(seed)
+            remaining -= 1
+
+    extend_with(_generate_cartesian_seeds(pool, min(cfg.caps.cartesian, remaining)))
+    if cfg.features.enable_repeat_endcap and remaining > 0:
+        extend_with(
+            _generate_repeat_endcap_seeds(
+                pool,
+                aggregated_map,
+                digit_variants,
+                lane_hits,
+                cfg,
+                min(cfg.caps.repeat_endcap, remaining),
+            )
+        )
+    if cfg.features.enable_lane_concordance and remaining > 0:
+        extend_with(
+            _generate_lane_concordance_seeds(
+                aggregated_map,
+                lane_hits,
+                cfg,
+                min(cfg.caps.lane, remaining),
+            )
+        )
+
+    best: Dict[str, CandidateRecommendation] = {}
+    for seed in seeds:
+        candidate = _score_candidate_seed(
+            seed,
+            aggregated_map,
+            digit_variants,
+            cfg,
+            vtrac_hot_indices,
+            vtrac_hot_families,
+        )
+        if candidate is None:
+            continue
+        existing = best.get(candidate.combo)
+        if existing is None or candidate.score > existing.score:
+            best[candidate.combo] = candidate
+    shortlist = sorted(
+        best.values(),
+        key=lambda item: (item.score, -item.digital_root, item.combo),
+        reverse=True,
+    )
+    return shortlist[: cfg.max_rows]
 
 
 def analyze_state_variants(
@@ -497,8 +864,12 @@ def analyze_state_variants(
     topk: int = 3,
     weights: Optional[WeightsConfig] = None,
     due_doubles_active: bool = False,
+    shortlist_cfg: Optional[Mapping[str, Any]] = None,
+    vtrac_hot_indices: Optional[Iterable[int]] = None,
+    vtrac_hot_families: Optional[Mapping[str, str]] = None,
 ) -> StatePositionalReport:
     cfg = weights or WeightsConfig()
+    shortlist_config = _load_shortlist_config(shortlist_cfg)
     variant_results: Dict[Variant, VariantPositionalResult] = {}
     for variant, draws in draws_by_variant.items():
         variant_results[variant] = analyze_variant(draws, variant, window=window, topk=topk, weights=cfg)
@@ -511,11 +882,31 @@ def analyze_state_variants(
     _apply_swap_echo(entries, cfg)
 
     aggregated = _aggregate_scores(entries)
-    candidates = _build_candidates(aggregated, entries, cfg)
-
+    aggregated_map: Dict[PositionIndex, Dict[int, AggregatedDigit]] = {
+        pos: dict(digit_map) for pos, digit_map in aggregated.items()
+    }
     sorted_aggregated: Dict[PositionIndex, List[AggregatedDigit]] = {}
-    for pos, digit_map in aggregated.items():
-        sorted_aggregated[pos] = sorted(digit_map.values(), key=lambda item: (item.score, -item.digit), reverse=True)
+    for pos, digit_map in aggregated_map.items():
+        sorted_aggregated[pos] = sorted(
+            digit_map.values(),
+            key=lambda item: (item.score, -item.digit),
+            reverse=True,
+        )
+
+    digit_variants = _collect_digit_variants(entries)
+    lane_hits = _collect_lane_hits(variant_results, shortlist_config.topk_per_pos)
+    hot_indices = set(vtrac_hot_indices or [])
+    hot_families = dict(vtrac_hot_families or {})
+
+    candidates = _build_shortlist_candidates(
+        sorted_aggregated,
+        aggregated_map,
+        digit_variants,
+        lane_hits,
+        shortlist_config,
+        hot_indices,
+        hot_families,
+    )
 
     return StatePositionalReport(
         variant_results=variant_results,
@@ -526,6 +917,7 @@ def analyze_state_variants(
     )
 
 
+
 __all__ = [
     "WeightsConfig",
     "PositionTopDigit",
@@ -534,6 +926,7 @@ __all__ = [
     "PositionalTrackerCell",
     "AggregatedDigit",
     "CandidateRecommendation",
+    "ShortlistConfig",
     "StatePositionalReport",
     "analyze_variant",
     "analyze_state_variants",

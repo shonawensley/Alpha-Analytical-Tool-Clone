@@ -1,3 +1,8 @@
+## 2025-10-02 - Aux heatboard & sums metadata
+- Action: Shared the V-TRAC double family helper between Control Center and Aux, rendering Top-5 family tokens with consistent CSS; added a hazard-based heatboard (hazard, avg gap, freq buckets, trend) to both views; and extended sums stats with `deficit`/`z_tail` for future scoring.
+- Verification: `python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/sums_analysis.py`; `pytest -q tests/test_analyze_pairs_semantics.py tests/test_vtrac_families.py`.
+- Notes: Heatboard leverages the existing overlay cache, so runtime stays fast; the new sums fields are additive (Black Apple unaffected) and ready for downstream guards.
+
 ## 2025-10-01 - V-TRAC: consume pipeline tables & surface health
 - Swapped the integrated V-TRAC page over to the canonical combined tables (no more built-in Process/Clean/Generate UI).
 - Added preflight/status rows, a dev-health expander, and a cache reset so stale results and missing files are obvious.
@@ -3197,3 +3202,22 @@ All the Digit Reduction work is already logged where it needs to be:
 - Touched `src/app.py` to replace the Aux overdue thresholds `st.info` block with a `"\n".join(info_lines)` pattern that reads straight from the SSOT constants, and fixed the Dev Health caption so it shows live window values.
 - Patched `scripts/auxiliary/working/modules/analyze_pairs.py` to bootstrap `src/` onto `sys.path` when imported from the staged copy, ensuring the Aux smoke still resolves `core.aux_config`.
 - Validation: `python -m py_compile src/app.py scripts/auxiliary/working/modules/analyze_pairs.py`; `pytest -q tests/test_analyze_pairs_semantics.py`; `python scripts/checks/smoke_aux_vtrac.py`; headless `streamlit run src/app.py --server.headless true` (logs captured in `.codex/first_boot.log`).
+2025-10-02 08:05 UTC
+- Authored `docs/AAT9_KIT/AAT9_Aux_Roadmap.md` capturing Aux Phase-1 status, Phase-1B follow-ups (feature extractor + fresh-data validation), and deferred goals tied to AUX_WATCH/BIG_PICTURE/FIX_80.
+- Appended a checkpoint + changelog note so future sessions know where to pick up.
+2025-10-02 08:30 UTC
+- Documented Aux scoring roadmap stages (feature extractor, evidence gathering, weighting, Control Center integration) in `docs/AAT9_KIT/AAT9_Aux_Roadmap.md` so future sessions know how to evolve the signals once data is logged.
+
+2025-10-02 09:10 UTC
+- Reworked Control Center's due-doubles table to surface Top-5 V-TRAC double families per state (severity + variant tags) using the new `core.vtrac_families` helper; Aux now shows a matching hot-families panel and a family column on the V-TRAC grid.
+
+2025-10-02 10:50 UTC
+- Refactored the Aux positional tracker wiring in `src/app.py`: new shortlist tuning expander, shared V-TRAC overlay feed, and evidence-rich candidate table aligned with Control Center.
+- Extended `modules/module_d_auxiliary_tools/refactored/positional_tool.py` with the shortlist config dataclasses, repeat-endcap / lane concordance seed builders, and V-TRAC hot index/family scoring.
+- Added `tests/test_positional_shortlist.py` plus SSOT wiring in `src/core/aux_config.py` so future tweaks stay centralized.
+- Validation: `python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py`; `PYTHONPATH=src;. pytest tests/test_positional_shortlist.py`; `PYTHONPATH=src;. pytest tests/test_vtrac_families.py`; `PYTHONPATH=src;. pytest tests/test_analyze_pairs_semantics.py`.
+
+2025-10-03 00:35 UTC
+- Dialed in the pos_5 checklist: SSOT shortlist defaults (topk=3, pool=6, max_internal=64), All-Variant consensus wording, cached V-TRAC hot indices/family map for reuse, and regression tests for repeat-endcap (989 bridge), lane concordance, and union sanity.
+- Commands: python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py; PYTHONPATH=src;. pytest tests/test_positional_shortlist.py; PYTHONPATH=src;. pytest tests/test_vtrac_families.py; PYTHONPATH=scripts/auxiliary/working;src;. pytest tests/test_analyze_pairs_semantics.py.
+
