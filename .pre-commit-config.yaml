@@ -1,10 +1,13 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
+  - repo: local
     hooks:
-      - id: black
-        language_version: python3.10
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.4.3
-    hooks:
-      - id: ruff 
+      - id: py-compile
+        name: py_compile
+        entry: python scripts/hooks/py_compile.py
+        language: system
+        types: [python]
+      - id: pytest-smoke
+        name: pytest smoke subset
+        entry: python scripts/hooks/run_pytest_smoke.py
+        language: system
+        types: [python]

@@ -1,4 +1,4 @@
-﻿"""Streamlit helpers for Analyzer V2 dev controls."""
+"""Streamlit helpers for Analyzer V2 dev controls."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,12 +11,30 @@ from .winners_overlay import run_winner_overlay_batch
 
 
 def _collect_winners(combined: str, midday: str, evening: str) -> Dict[str, str]:
-    winners = {}
-    for label, value in ("Combined", combined), ("Midday", midday), ("Evening", evening):
+    winners: Dict[str, str] = {}
+    ordered = [
+        ("Combined", combined),
+        ("Midday", midday),
+        ("Evening", evening),
+    ]
+    for label, value in ordered:
         trimmed = value.strip()
         if trimmed:
             winners[label] = trimmed
+    if "Combined" not in winners:
+        for fallback in ("Midday", "Evening"):
+            if fallback in winners:
+                winners["Combined"] = winners[fallback]
+                break
     return winners
+
+
+def _format_step(value) -> str:
+    try:
+        ivalue = int(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    return "n/a" if ivalue < 0 else str(ivalue)
 
 
 def render_dr_winner_overlay_dev(state: str) -> None:
@@ -32,6 +50,7 @@ def render_dr_winner_overlay_dev(state: str) -> None:
 
         if st.button(f"Build winners overlays for {state}"):
             winners = _collect_winners(combined, midday, evening)
+            auto_combined = (not combined.strip()) and "Combined" in winners and any(label in winners for label in ("Midday", "Evening"))
             if not winners:
                 st.warning("Enter at least one winner before running the overlay batch.")
                 return
@@ -49,6 +68,8 @@ def render_dr_winner_overlay_dev(state: str) -> None:
                 return
 
             st.success("Digit Reduction winners overlays completed.")
+            if auto_combined:
+                st.caption("Combined overlay reused the Midday/Evening winner input.")
             for variant, details in (payload.get("results") or {}).items():
                 winner = details.get("winner", "")
                 hits = int(details.get("hits", 0) or 0)
@@ -68,3 +89,15 @@ def render_dr_winner_overlay_dev(state: str) -> None:
                 stamp_url = details.get("stamp_json_winners")
                 if stamp_url:
                     st.markdown(f"- Mirrored stamp: `{stamp_url}`")
+
+                summary = details.get("summary") or {}
+                counts = summary.get("counts") or {}
+                earliest_exact = _format_step(summary.get("earliest_exact_step"))
+                earliest_vtrac = _format_step(summary.get("earliest_vtrac_step"))
+                total_hits = int(counts.get("items_total", hits) or 0)
+                final_exact = int(counts.get("final_exact", 0) or 0)
+                final_vtrac = int(counts.get("final_vtrac", 0) or 0)
+                st.caption(
+                    f"Earliest exact step: {earliest_exact} | Earliest V-TRAC step: {earliest_vtrac} | Final exact hits: {final_exact} | Final V-TRAC hits: {final_vtrac} | Items logged: {total_hits}"
+                )
+

@@ -2,8 +2,34 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Dict
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ensure_canonical_utils() -> None:
+    root = str(PROJECT_ROOT)
+    if root in sys.path:
+        try:
+            sys.path.remove(root)
+        except ValueError:
+            pass
+    sys.path.insert(0, root)
+    mod = sys.modules.get('utils')
+    if not mod:
+        return
+    mod_path = str(getattr(mod, '__file__', '')).replace('\\', '/').lower()
+    if '/src/utils/' not in mod_path:
+        return
+    targets = [name for name in list(sys.modules) if name == 'utils' or name.startswith('utils.')]
+    for name in targets:
+        sys.modules.pop(name, None)
+
+
+_ensure_canonical_utils()
 
 from utils import path_handler as ph
 from utils.table_io import read_csv_strsafe

@@ -1,3 +1,49 @@
+## 2025-10-06 04:20 (UTC) - Winners full report import guard
+
+- Context: Control Center's Analyzer-style winner export intermittently failed ("Full report unavailable") whenever the legacy src/utils shim shadowed the canonical utils package during mixed module sessions.
+- Change:
+  - Updated modules/winner_report_full to pin PROJECT_ROOT to the front of sys.path, evict the shimmed utils modules, and import the canonical path helpers before touching the renderer.
+  - Hardened src/_import_hygiene.project_modules_first to reorder sys.path and clear the shim so buttons that rely on the bootstrap always see the real modules tree.
+  - Added tests/test_winner_report_full.py to simulate the shim shadowing scenario and ensure future bootstraps cannot regress the import guard.
+- Impact:
+  - The full Winners tile reliably renders again after the fixes, and future changes to the bootstrap will trip the regression test instead of silently breaking the report.
+  - Dev Health continues to show canonical module bindings, making it obvious if the shim ever leaks back in.
+- Verification:
+  - python -m pytest tests/test_winner_report_full.py tests/test_digit_reduction_overlay.py
+  - python -m py_compile modules/winner_report_full.py src/_import_hygiene.py src/app.py
+## 2025-10-05 18:45 (UTC) - Digit Reduction overlay + scorer guardrails\n\n- Context: Winner overlay fixes addressed only the tail-row highlight; analyzer scoring lacked SSOT winner signals and there were no direct tests catching regressions.\n- Change:\n  - Replaced the overlay highlighter to scan every reduction step (exact + V-TRAC) and emit a legend/summary banner alongside map/flags/stamp metadata.\n  - Pulled the overlay flag CSV into Analyzer V2, added winner-weight entries to config.yml, and displayed earliest-step counts inside the Streamlit dev expander.\n  - Created 	ests/test_digit_reduction_overlay.py covering highlight, flag ingestion, and score-row contributions.\n- Impact:\n  - DEV overlays now make it obvious when/where the winner (or its V-TRAC mirrors) surfaced, and Combined autocompletes when only Midday/Evening winners are supplied.\n  - Analyzer CSVs carry dr.win_* evidence for downstream scoring/analysis, and the dev pane reports earliest-step metrics without manual JSON inspection.\n  - Unit coverage guards the overlay/scoring plumbing before future refactors.\n- Verification:\n  - python -m py_compile alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py alpha_analytical/digit_reduction/analyzer_v2/pipeline.py alpha_analytical/digit_reduction/analyzer_v2/score.py alpha_analytical/digit_reduction/analyzer_v2/ui_dev.py src/app.py\n  - pytest tests/test_digit_reduction_overlay.py\n\n## 2025-10-05 05:40 (UTC) - Doubles variants regression net
+
+- Context: Regressions around merged C/M/E badges and missing variant files kept recurring when doubles families were touched.
+- Change:
+  - Captured a 1,000-draw CT/FL snapshot (`tests/fixtures/acceptance/doubles/`) and wired both a ranker unit test plus a Streamlit acceptance case so per-variant tokens stay locked.
+  - Added loader coverage (`tests/test_aux_loaders_variants.py`) to ensure Combined/Midday/Evening CSVs resolve predictably, refreshed the positional acceptance assertions, and let `.codex/preflight.ps1 -CheckDoubles` + `run_acceptance.py --with-doubles-health` call the audit automatically.
+  - Introduced `scripts/health/check_doubles_variants.py` for post-import audits, updated the startup briefing + Aux docs + Testing Roadmap to call out the new guardrails, and made the pre-commit smoke hook respect `AAT9_RUN_DOUBLES_HEALTH`.
+- Impact: Any future edit that collapses badges back to `CEM`, misroutes draw files, or drops a variant now fails fast in unit/acceptance/pre-commit; operators also get a one-command health check before/after data refreshes.
+- Files/Refs: .codex/preflight.ps1, scripts/run_acceptance.py, scripts/hooks/run_pytest_smoke.py, scripts/health/check_doubles_variants.py, tests/fixtures/acceptance/doubles/*, tests/test_vtrac_family_ranker_regression.py, tests/acceptance/test_control_center_doubles.py, tests/test_aux_loaders_variants.py, tests/acceptance/test_positional_delaware.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md, docs/AAT9_KIT/AAT9_Testing_Roadmap.md.
+- Verification: `pytest tests/test_vtrac_family_ranker_regression.py tests/test_aux_loaders_variants.py`, `python scripts/run_acceptance.py --marker acceptance`, `python scripts/run_acceptance.py --marker smoke`, `.codex/preflight.ps1 -CheckDoubles`.
+
+## 2025-10-03 09:10 (UTC) - Digit reduction winners overlay acceptance
+
+- Context: After wiring the reducer/analyzer acceptance we still lacked guardrails for the winners overlay and its reliance on the new training log naming.
+- Change:
+  - Updated the overlay loader to search for both singular and legacy plural training JSON filenames so recent reducer runs are discovered.
+  - Extended the acceptance scenario to cover Delaware and Florida, running the batch overlay and asserting HTML/map/hits/flags/stamp artifacts for each state.
+  - Replaced `datetime.utcnow()` stamps in the overlay with timezone-aware equivalents and documented the expanded coverage in the Testing Roadmap and startup briefing.
+- Impact: Acceptance now fails if the overlay stops emitting artifacts or if training logs drift, keeping the digit-reduction flow safe end-to-end.
+- Files/Refs: alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py, tests/acceptance/test_digit_reduction_delaware.py, tests/fixtures/acceptance/digit_reduction/{Delaware4,Florida4}/*, docs/AAT9_KIT/AAT9_Testing_Roadmap.md, briefings/CODEX_READ_FIRST_AAT9.md.
+- Follow-ups: Add winners overlay fixtures for additional states once captured, and consider a smoke-level assertion for the batch overlay timestamp output.
+
+## 2025-10-03 07:45 (UTC) - Digit reduction acceptance guard
+
+- Context: The acceptance harness only exercised Aux positional logic and the analyzer could still crash when reducer fixtures lacked own/combined cores.
+- Change:
+  - Hardened mode.agree_core in the analyzer pivot so empty own/combined terminals no longer raise int('').
+  - Added a Delaware digit-reduction acceptance test that runs reducer + analyzer in an isolated analysis root and asserts the expected artifacts.
+  - Documented the new coverage in the Testing Roadmap and updated the startup briefing.
+- Impact: Acceptance now breaks if digit-reduction artifacts drift, and the analyzer gracefully handles sparse fixtures instead of crashing mid-run.
+- Files/Refs: alpha_analytical/digit_reduction/analyzer_v2/pivot.py, tests/acceptance/test_digit_reduction_delaware.py, tests/fixtures/acceptance/digit_reduction/Delaware4/*, scripts/run_acceptance.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_KIT/AAT9_Testing_Roadmap.md.
+- Follow-ups: Add a winners-overlay acceptance slice and broaden digit-reduction fixtures beyond Delaware once more states are captured.
+
 ## 2025-10-02 06:30 (UTC) - Aux heatboard + sums guardrails
 
 - Context: Operators needed the new double-family strips to mirror Aux styling and wanted faster visibility into V-TRAC pressure while preparing downstream scoring hooks.
@@ -362,4 +408,20 @@ Template
   - `PYTHONPATH=scripts/auxiliary/working;src;. pytest tests/test_analyze_pairs_semantics.py`
   - `PYTHONPATH=src;. pytest tests/test_positional_shortlist.py`
   - `PYTHONPATH=src;. pytest tests/test_vtrac_families.py`
+
+## 2025-10-03 02:40 (UTC) - Testing infrastructure baseline
+
+- Context: We needed automated verification beyond health helpers so future sessions can trust refactors.
+- Change:
+  - Created `scripts/run_acceptance.py` (+ PowerShell wrapper) and seeded `tests/acceptance/test_positional_delaware.py` with fixtures under `tests/fixtures/acceptance/positional/`.
+  - Added pre-commit hooks (py_compile + smoke acceptance), a positional stress harness, and a mutmut convenience wrapper.
+  - Authored `docs/AAT9_KIT/AAT9_Testing_Roadmap.md` and updated Aux/briefing docs to reference the new process.
+- Impact: Developers now have a one-command smoke suite, visible roadmap, and stress scaffolding before touching Aux/positional logic.
+- Verification:
+  - `python scripts/run_acceptance.py`
+  - `python scripts/run_acceptance.py --marker smoke`
+  - `python scripts/tools/stress_positional.py --iterations 1 --state Delaware4`
+
+
+
 

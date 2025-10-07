@@ -80,6 +80,42 @@ def score_row(
     # Optional V-TRAC synergy
     s += w("vtrac.v_hot") * _as_float(row.get("vtrac.v_hot"))
 
+    # Winner overlay signals
+    max_step = _as_int(thresholds.get('dr_max_step', 10))
+    if max_step <= 0:
+        max_step = 10
+    s += w('dr.win_exact') * _as_float(row.get('dr.win_exact'))
+    s += w('dr.win_vtrac') * _as_float(row.get('dr.win_vtrac'))
+    s += w('dr.win_drop_exact') * _as_float(row.get('dr.win_drop_exact'))
+    s += w('dr.win_drop_vtrac') * _as_float(row.get('dr.win_drop_vtrac'))
+    s += w('dr.win_3val_exact') * _as_float(row.get('dr.win_three_value_exact', row.get('dr.win_3val_exact', 0)))
+    s += w('dr.win_3val_vtrac') * _as_float(row.get('dr.win_three_value_vtrac', row.get('dr.win_3val_vtrac', 0)))
+    step_exact = _as_int(row.get('dr.win_step_exact', -1))
+    if step_exact >= 0:
+        normalized = (max_step + 1 - min(step_exact, max_step)) / (max_step + 1)
+        s += w('dr.win_early_exact') * normalized
+    step_vtrac = _as_int(row.get('dr.win_step_vtrac', -1))
+    if step_vtrac >= 0:
+        normalized = (max_step + 1 - min(step_vtrac, max_step)) / (max_step + 1)
+        s += w('dr.win_early_vtrac') * normalized
+
+    step_drop_exact = _as_int(row.get('dr.win_step_drop_exact', -1))
+    if step_drop_exact >= 0:
+        normalized = (max_step + 1 - min(step_drop_exact, max_step)) / (max_step + 1)
+        s += w('dr.win_early_drop_exact') * normalized
+    step_drop_vtrac = _as_int(row.get('dr.win_step_drop_vtrac', -1))
+    if step_drop_vtrac >= 0:
+        normalized = (max_step + 1 - min(step_drop_vtrac, max_step)) / (max_step + 1)
+        s += w('dr.win_early_drop_vtrac') * normalized
+    step_family_exact = _as_int(row.get('dr.win_step_family_exact', -1))
+    if step_family_exact >= 0:
+        normalized = (max_step + 1 - min(step_family_exact, max_step)) / (max_step + 1)
+        s += w('dr.win_early_3val_exact') * normalized
+    step_family_vtrac = _as_int(row.get('dr.win_step_family_vtrac', -1))
+    if step_family_vtrac >= 0:
+        normalized = (max_step + 1 - min(step_family_vtrac, max_step)) / (max_step + 1)
+        s += w('dr.win_early_3val_vtrac') * normalized
+
     # Penalties
     s += float(penalties.get("pen.degenerate_empty", 0.0)) * (1.0 if _as_int(row.get("degenerate.empty")) else 0.0)
     s += float(penalties.get("pen.tail_wobble", 0.0)) * _as_float(row.get("tail.wobble"))

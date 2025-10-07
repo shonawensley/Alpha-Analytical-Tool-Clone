@@ -1,7 +1,8 @@
 param(
   [string]$State = '',
   [switch]$CheckTables,
-  [string]$TablesRoot = ''
+  [string]$TablesRoot = '',
+  [switch]$CheckDoubles
 )
 
 Write-Host 'AAT9 Preflight (Windows)'
@@ -50,6 +51,16 @@ if (Test-Path $cleaned) {
   $csvs | Select-Object -First 20 | ForEach-Object { ' - ' + $_.Name }
 } else {
   Write-Warning 'data/cleaned not found.'
+}
+
+
+if ($CheckDoubles) {
+  Write-Host "\nRunning doubles variant audit..."
+  try {
+    & python scripts/health/check_doubles_variants.py
+  } catch {
+    Write-Warning ("Doubles audit failed: " + $_.Exception.Message)
+  }
 }
 
 if ($State) {

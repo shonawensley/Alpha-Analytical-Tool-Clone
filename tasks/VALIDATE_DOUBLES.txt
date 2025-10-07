@@ -1,0 +1,257 @@
+. I ran a full, boxed‑combo validation on the six CSVs you gave me (CT and FL: Combined / Midday / Evening). Below is a crisp readout of what’s correct, what’s off, and the exact changes I’d ask Codex to make so the “Due Doubles” strip in Control Center reflects your intent (and only that intent).
+
+TL;DR
+
+Your source V‑TRAC tables are calculating red/blue correctly.
+Using your thresholds (boxed combos; doubles: red ≥ 1000, blue ≥ 667; singles: red ≥ 501, blue ≥ 334) I recomputed “draws since” straight from the CSVs and got the same red/blue calls you listed for Florida and Connecticut across Combined/Midday/Evening.
+
+The “CEM” triple‑badge you’re seeing is mostly a display/aggregation bug in the new family strip: Codex is unioning the variant badges at the family level and then printing a single class (“R” or “B”) for all of them. That’s why you get tokens like R225CEM even when the class differs by variant.
+
+There can be legitimate triples (e.g., CT 225: Combined=red, Midday=blue, Evening=blue), but they must be shown with variant‑specific classes (e.g., R225C / B225M / B225E)—not a single “R…CEM”.
+
+The Control Center error
+cannot access local variable '_cc_get_vtrac_index'…
+is a small scoping bug (a helper is referenced before it’s defined or inside a conditional). It’s unrelated to red/blue math.
+
+Once the two small fixes below land—(1) combo‑level variant tags & filters, (2) variant‑specific class rendering—your Due‑Doubles columns will match the simple intent you described: “bring over red/blue doubles from the three V‑TRAC tables and group them into mirror families.”
+
+What I verified (from your CSVs)
+
+All checks are boxed (permutations collapsed). “DS” = draws since.
+
+Connecticut — Combined
+
+Red: 225 (DS = 1000), 677 (DS = 1000)
+
+Blue: 448 (847), 004 (845), 223 (835), 099 (811), 001 (809), 466 (804), 066 (703), 044 (700)
+
+Connecticut — Midday
+
+Red: 002 (1000), 116 (1000), 446 (1000), 669 (917), 677 (779)
+
+Blue: 337 (751), 889 (748), 225 (725), 077 (708), 009 (698), 117 (684)
+
+Connecticut — Evening
+
+Red: 466 (1000)
+
+Blue: 255 (933), 228 (888), 088 (886), 223 (847), 225 (810), 668 (708), 399 (707), 044 (700), 133 (703)
+
+➡️ Legit triple example: 225 = red in C (1000) + blue in M (751) + blue in E (810).
+This should render as R225C / B225M / B225E, not R225CEM.
+
+Florida — Combined
+
+Red: 008 (1000), 366 (1000)
+
+Blue: 009 (889), 455 (886), 588 (886), 277 (881), 224 (863), 288 (847), 337 (845), 889 (835), 499 (703)
+
+Florida — Midday
+
+Red: 033 (1000), 119 (1000), 366 (1000), 669 (1000), 477 (1000), 488 (1000)
+
+Blue: 557 (1000), 003 (1000), 008 (888), 011 (886), 066 (886), 266 (880), 118 (863), 122 (847), 339 (845)
+
+Florida — Evening
+
+Red: 566 (1000)
+
+Blue: 088 (914), 133 (886), 688 (886), 224 (845), 889 (845)
+
+Everything above matches your manual lists. That tells us the source overdue logic is sound and the extraction from the V‑TRAC pages is correct.
+
+Why you see lots of “CEM”
+
+What Codex did (from the logs and the UI snapshot):
+
+It grouped doubles into V‑TRAC families (e.g., 0/5–4/9 family contains: 004, 009, 044, 099, 445, 449, 455, 559).
+
+It aggregated exposures across all three variants for the family, and
+
+Printed one class (R/B) + the union of badges (CEM).
+
+That means a family that has:
+
+R225C (Combined red) and
+
+B225M, B225E (blue in midday/evening)
+
+…will be emitted as R225CEM—which looks like “red in all three”, even though only Combined is red. That’s the confusion.
+
+Minimal fix (do exactly this)
+
+Goal: keep it simple, exactly as you described.
+
+“Bring over the red/blue doubles from the three V‑TRAC tables and group them into V‑TRAC families. Show five columns with the top 5 families, and for each family list the variant‑tagged combos that are red/blue. Do not invent new analytics here.”
+
+1) Classify per variant, per combo (not per family)
+
+Build gap maps per variant:
+gaps['C'][combo], gaps['M'][combo], gaps['E'][combo].
+
+Classify each (R/B/None) by combo type (double vs single) with your thresholds.
+
+Filter: keep a combo iff any of C/M/E is R or B.
+
+2) Render variant‑specific tokens
+
+For a qualifying combo, build separate tokens:
+
+R225C if Combined is red
+
+B225M if Midday is blue
+
+B225E if Evening is blue
+
+Join them with a thin space inside the family cell:
+R225C B225M B225E
+
+Never print R…CEM. If you want a compact view, you can show 225(C:R, M:B, E:B) as an alternative, but keep classes per variant.
+
+3) Grouping & ordering (keep it light)
+
+Family key for a double (boxed aab):
+family = (mirror_class(a), mirror_class(b)) where mirror classes are {0/5,1/6,2/7,3/8,4/9}.
+
+Rank families only by a simple score:
+score = (#R tokens)*2 + (#B tokens)*1 (ties → lowest min draws‑since).
+
+Show top 5 families left→right. If fewer → leave blanks.
+
+4) Guardrails
+
+Boxed only (canonical sort of the 3 digits).
+
+Only doubles for this strip (skip singles/triples).
+
+Don’t show pending/purple or neutral.
+
+Keep your existing pair highlights inside the combo badge; we’re just moving the red/blue combos over.
+
+Drop‑in helper (Codex can paste this)
+
+This is pure Python logic—no Streamlit code—so Codex can graft it into the Aux layer and wire it to your Control Center table. Inputs are just the three draw lists per state (most recent first) and the V‑TRAC family mapping.
+
+from collections import defaultdict
+from typing import Dict, List, Tuple, Optional
+
+MIRROR_CLASS = {0:0,5:0, 1:1,6:1, 2:2,7:2, 3:3,8:3, 4:4,9:4}
+VARIANT_BADGE = {"combined": "C", "midday": "M", "evening": "E"}
+
+def canon_boxed(s: str) -> str:
+    return "".join(sorted((s or "").strip().zfill(3)))
+
+def combo_type(s: str) -> str:
+    c = canon_boxed(s)
+    return "triple" if c[0]==c[1]==c[2] else ("double" if c[0]==c[1] or c[1]==c[2] else "single")
+
+def draws_since(draws: List[str], combo: str) -> int:
+    tgt = canon_boxed(combo)
+    for idx, d in enumerate(draws):
+        if canon_boxed(d) == tgt:
+            return idx
+    return len(draws)
+
+def classify(ds: int, combo: str) -> Optional[str]:
+    t = combo_type(combo)
+    if t == "double":
+        return "R" if ds >= 1000 else ("B" if ds >= 667 else None)
+    if t == "single":
+        return "R" if ds >= 501 else ("B" if ds >= 334 else None)
+    # triples uncommon; treat like doubles for overdue signaling
+    return "R" if ds >= 1000 else ("B" if ds >= 667 else None)
+
+def mirror_class(d: int) -> int: return MIRROR_CLASS[d]
+
+def family_key_for_double(combo: str) -> Tuple[int,int]:
+    """Key for V‑TRAC double family (mirror_class(repeated), mirror_class(singleton))."""
+    c = canon_boxed(combo)             # e.g., '225' or '044'
+    if not (c[0]==c[1] or c[1]==c[2]): # only doubles
+        raise ValueError("family_key_for_double expects a double")
+    repeated = int(c[1])               # middle is always one of the repeated digits in sorted form
+    singleton = int(c[0] if c[0]!=c[1] else c[2])
+    return (mirror_class(repeated), mirror_class(singleton))
+
+def build_due_double_families(
+    draws_by_variant: Dict[str, List[str]],  # {'combined': [...], 'midday': [...], 'evening': [...]}
+    combos: List[str]                        # all 90 boxed doubles, or precomputed set
+) -> List[Dict]:
+    # 1) per-variant gaps and classes
+    gaps: Dict[str, Dict[str, int]] = {}
+    cls:  Dict[str, Dict[str, Optional[str]]] = {}
+    for vkey, draws in draws_by_variant.items():
+        gaps[vkey] = {c: draws_since(draws, c) for c in combos}
+        cls[vkey]  = {c: classify(gaps[vkey][c], c) for c in combos}
+
+    # 2) keep only combos that are R/B in at least one variant
+    qualifying = [c for c in combos if any(cls[v][c] in ("R","B") for v in ["combined","midday","evening"])]
+
+    # 3) group into families
+    fam_bins: Dict[Tuple[int,int], List[str]] = defaultdict(list)
+    for c in qualifying:
+        fam_bins[family_key_for_double(c)].append(c)
+
+    # 4) score families and build display tokens
+    out = []
+    for fkey, members in fam_bins.items():
+        tokens = []
+        score = 0
+        best_gap = None
+        for c in sorted(set(members)):
+            for vkey in ("combined","midday","evening"):
+                badge = VARIANT_BADGE[vkey]
+                k = cls[vkey][c]
+                if k in ("R","B"):
+                    tokens.append(f"{k}{c}{badge}")
+                    score += 2 if k=="R" else 1
+                    g = gaps[vkey][c]
+                    best_gap = g if best_gap is None else min(best_gap, g)
+        # order tokens: R before B, then by larger gap, then by text
+        tokens.sort(key=lambda t: (0 if t[0]=="R" else 1, -int(gaps[[k for k,v in VARIANT_BADGE.items() if VARIANT_BADGE[k]==t[-1]][0]][t[1:4]]), t))
+        out.append({"family": fkey, "tokens": " ".join(tokens), "score": score, "best_gap": best_gap or 0})
+
+    # 5) rank families by score (ties: lowest best_gap)
+    out.sort(key=lambda r: (-r["score"], r["best_gap"]))
+    return out[:5]  # top 5 families
+
+
+Rendering in Control Center: add 5 columns Family 1..5 and fill with row["tokens"] for each state. If a state has <5 families, write “—”.
+
+Quick fixes & checks to give Codex
+
+Fix the triple‑badge rendering
+
+Replace union token R{combo}CEM with variant‑specific tokens (R{combo}C B{combo}M …) built from the combo‑level class dictionary.
+
+Filter strictly: include a combo only if class ∈ {R,B} in at least one variant.
+
+Keep it boxed
+
+Ensure every combo is canonicalized (sorted digits) before family keying or gap lookup.
+
+Scoping error in Control Center
+
+Move the _cc_get_vtrac_index helper above its first use (or define it unconditionally), and return a safe default when the current row lacks an index.
+
+Typical fix is: define helper at the top of the Control Center section; avoid defining it inside if blocks.
+
+Sanity script (fast)
+
+Add a tiny smoke that counts how many doubles are red/blue per variant and prints the top family tokens for one state. If totals are unexpectedly huge (e.g., nearly all 90 doubles), that’s a signal you’re defaulting gaps to the window size.
+
+Why your intuition was right
+
+Seeing lots of …CEM is a great clue that the badges were unioned and classes flattened. The math underneath is fine (as our CSV validation shows); it’s the presentation/aggregation that’s misleading.
+
+The “1/6”, “0/5” labels you asked about are exactly the V‑TRAC mirror classes. Your “family” grouping idea (e.g., 004 / 009 / 044 / 099 / 445 / 449 / 455 / 559) is the right way to harvest cross‑related pressure without over‑complicating the Aux logic.
+
+What you can run right now (to validate future states fast)
+
+Take any state’s three draw CSVs (most recent first).
+
+For any combo, compute boxed draws‑since; classify with the thresholds above.
+If it’s red/blue in any variant, it should appear in a family column with only those variants’ badges.
+
+If you want, I can generate a compact checklist you can hand to Codex for the exact file/line edits (UI rendering, helper placement) you’re seeing, but the logic above is the important part: make the decision per variant, per combo; render per variant.
+
+When those two little changes land, you’ll have exactly the simple, high‑value strip you asked for—and you’ll be in great shape to start the broader tool training.

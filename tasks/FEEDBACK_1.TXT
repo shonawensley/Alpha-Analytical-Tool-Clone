@@ -1,0 +1,279 @@
+AAT9 Architecture Health & Test Strategy Report
+1. Architectural Health and Stability of AAT9
+
+Structured, Guardrailed Design: The AAT9 integrated Streamlit app has been reorganized into a canonical structure with clear data contracts and invariants to maximize stability
+GitHub
+GitHub
+. The run_app.bat launcher explicitly sets the working directory to repo root and starts src/app.py
+GitHub
+, ensuring imports resolve to in-repo modules (e.g. utils.path_handler, modules.blackapple, etc.) rather than any external or legacy copies
+GitHub
+. All analytic pages (V-TRAC, Stable Pattern, Digit Reduction, Aux Tools, Control Center) share a consistent data flow: “combined tables” feed the main pattern/digit analysis tools, while raw per-draw CSVs feed Aux/Blackapple utilities
+GitHub
+GitHub
+. This one-way flow (illustrated in the Mermaid diagram) prevents circular dependencies and keeps each tool’s scope isolated
+GitHub
+GitHub
+. Crucially, legacy entry points and old pipeline code have been archived to eliminate confusion – only the new directory layout and modules are active
+GitHub
+GitHub
+. These measures greatly reduce the risk of “drift” where a page might accidentally use outdated data or wrong import paths.
+
+Built-in Health Checks: AAT9 includes a PowerShell preflight script and in-app “System Health” panels that act as early warning systems for environment or data issues. The preflight (.codex/preflight.ps1) prints the current working directory, Python executable, confirms the import source of key modules, and inventories the expected data files
+GitHub
+. This helps catch path problems (e.g. running from the wrong folder, or a name collision in PYTHONPATH) before launching the app. Likewise, the Streamlit sidebar has a “Show Dev Health” toggle that reveals expander panels on key pages (Control Center, Aux Tools, etc.) showing the runtime environment: current directory, which file the Blackapple module was loaded from, and whether the expected draw CSVs or table files are found
+GitHub
+GitHub
+. These health helpers are read-only and DEV-gated, so they never interfere with actual analytics logic
+GitHub
+GitHub
+. Instead, they make otherwise hidden issues immediately visible – preventing “mystery bugs” by confirming at a glance that you’re using the right interpreter, the correct module (no shadowed imports), and valid input data
+GitHub
+. Since these checks don’t affect control flow, they can safely remain in production code as guardrails without impacting normal operation
+GitHub
+.
+
+Stability Achievements: The concerted effort to standardize the app’s wiring has already paid off. For example, a prior fragility was a mini-pipeline embedded in the old V-TRAC page that could get out of sync with the main data pipeline. This caused situations where the app said “analysis completed” but a state’s table was missing or stale. That was resolved by removing the ad-hoc processing UI from V-TRAC and forcing it to consume the unified tables/ outputs only
+GitHub
+. Now V-TRAC always operates on the single source of truth, and the page includes status/preflight info and even a cache-reset button to handle missing files gracefully
+GitHub
+. Another example: an earlier approach to inject threshold text into the Aux page UI via string concatenation was fragile and even caused syntax errors in Streamlit. This was replaced with a safer method building the message from constants, eliminating that risk
+GitHub
+. In the same update, the Aux “working” loader logic was hardened to ensure it properly registers legacy modules when needed, fixing cases where Aux tools failed after a refactor
+GitHub
+. Furthermore, known import pitfalls (like the modules/ vs src/modules shadowing issue) have been proactively addressed – the app now enforces a canonical import of critical modules at startup so that an old path can’t override the new one
+GitHub
+. The docs note that if an import error for utils.path_handler ever occurs, it likely meant a legacy folder took precedence, but “the app now enforces a canonical binding at startup to prevent this”
+GitHub
+. All these changes contribute to a much more robust system.
+
+Residual Fragility Risks: Overall, AAT9’s architecture is in good health – “the app is stable, the surface is clean, and the workflow is codified” as one briefing put it
+GitHub
+. Most obvious points of failure have been guarded: running from the wrong directory is caught by preflight, missing or misnamed input files are surfaced by health panels, and inconsistent data flows have been unified. That said, some complexity remains which warrants attention as the project grows. The Aux Tools module still interacts with a “staging” area of legacy code (under scripts/auxiliary/working/...) to reuse older analytics without a full refactor
+GitHub
+. This dual-layer (refactored Aux vs. staged legacy logic) could be fragile if not kept in sync. The team mitigated it by adding an Aux staging manifest and smoke tests to ensure the staged modules run using the new core config
+GitHub
+. There is a plan to eventually remove these duplicated legacy pieces (“remove duplicate legacy copies once archive-only loader is validated”
+GitHub
+), which will simplify the system and eliminate that potential point of failure. Until then, careful documentation and tests around the staging mechanism are important. Another area to watch is strict adherence to the data contract (e.g. Aux must only read data/cleaned/*_draws.csv and never touch combined tables
+GitHub
+GitHub
+). If a future contributor accidentally violates this (or mixes up a path), it could introduce subtle bugs. Fortunately, the health expanders and the controlled directory layout make such mix-ups obvious. In summary, no glaring fragility is evident now – the architecture has been intentionally hardened. The remaining risks lie in human factors (deviating from the established patterns or skipping the provided safeguards). By continuing to follow the Workflow Standard (which mandates small, reversible changes and doc updates for any wiring changes
+GitHub
+GitHub
+), AAT9 should maintain its stability even as new features are added. Any places that feel “brittle” (e.g. custom caching or legacy shims) are well-documented with follow-up notes to refine them, so they can be monitored and improved as needed rather than becoming ticking time bombs.
+
+2. Persistent Memory Servers for Codex CLI (CORE, Chrome, Vercel, etc.)
+
+Modern Model Context Protocol (MCP) servers can give your AI coding assistant a persistent memory or external tool access beyond the transient chat context. Here’s an overview of relevant MCP servers and how they stack up for use with a CLI-based workflow like OpenAI’s Codex CLI:
+
+CORE MCP (Contextual Observation & Recall Engine): CORE is a popular open-source persistent memory system that acts as a knowledge graph “memory layer” for AI tools
+github.com
+. It stores facts and conversation snippets in a structured graph, enabling the AI to recall who-said-what across sessions. The big appeal of CORE is that it unifies context across multiple tools – you can connect it to Cursor IDE, ChatGPT, Claude, Codex CLI, etc., and the same memory follows you everywhere
+github.com
+github.com
+. Under the hood, CORE builds a temporal knowledge graph of your inputs (with relationships, timestamps, sources) rather than just a text blob, aiming for more accurate long-term recall. Using CORE with Codex CLI is officially supported; in fact the CORE docs provide a step-by-step integration guide. In Codex CLI’s ~/.codex/config.toml, you add an MCP server entry pointing to CORE’s cloud endpoint with your API key, for example:
+
+[mcp_servers.corememory]
+command = "npx"
+args = ["-y", "mcp-remote", "https://core.heysol.ai/api/v1/mcp?source=codex", 
+        "--header", "Authorization:${AUTH_HEADER}"]
+env = { AUTH_HEADER = "Bearer <YOUR_CORE_API_KEY>" }
+
+
+This configuration (from CORE’s documentation) tells Codex to spin up a remote MCP client that connects to CORE’s hosted API
+docs.heysol.ai
+. After adding this and obtaining an API token from the CORE dashboard, you launch Codex CLI, which will authenticate and then have persistent memory available
+docs.heysol.ai
+. The process is straightforward and well-documented by CORE. Trade-offs: CORE’s hosted service is convenient and reportedly quite powerful (their benchmarks show high accuracy on long-term reasoning tasks)
+github.com
+. You do need to sign up for an account (the service is currently free to use) and trust a third-party with your data – though CORE is open-source, the default usage sends your info to their cloud. For many, that’s acceptable for coding context (they even have a privacy-focused “Zero Data Retention” mode, and you can delete memories). If your project is sensitive and you prefer self-hosting, CORE’s codebase can be deployed on your own server or Docker – they provide Docker images and documentation for self-hosting
+docs.heysol.ai
+. That route gives you full control (and you’d just adjust the Codex config to point to your own CORE endpoint). CORE is relatively new but backed by active development; it’s a polished option to “outsource” remembering project details, conversations, and decisions so the AI doesn’t forget them between CLI sessions. In short, if you want a turn-key memory for Codex CLI, CORE is a top choice right now.
+
+Chrome MCP: The “Chrome MCP” server is not a memory store per se, but an MCP-compatible tool server that lets the AI control a Chrome browser. It’s essentially a bridge to web browsing and automation. There are a few implementations (e.g. the open-source chrome-devtools-mcp or undetected-chrome-mcp servers). When connected, Codex (or another AI client) gains tools like “chrome_navigate”, “chrome_screenshot”, “chrome_evaluate JavaScript”, etc., allowing it to browse websites, click buttons, take screenshots, and scrape content via the Chrome DevTools protocol
+github.com
+github.com
+. This is extremely useful if your coding workflow needs the AI to read documentation pages or search for solutions – effectively, Chrome MCP gives the AI a sandboxed web browser it can operate autonomously. In a Codex CLI context, you could configure an MCP server entry that runs the Chrome server locally. For example, after installing one of the Chrome MCP packages (pip install undetected-chrome-mcp-server), your config might include:
+
+[mcp_servers.browser]
+command = "python"
+args = ["-m", "undetected_chrome_mcp.server"]
+
+
+(along with any needed env vars like the path to your Chrome executable). Then, in Codex CLI, you’d have commands like /mcp browser chrome_navigate{"url": "https://docs.python.org"} to fetch pages. Compatibility: Chrome MCP servers are fully compatible with CLI workflows – they run as local processes that the MCP client (Codex) communicates with. They don’t require a GUI; the Chrome instance runs headlessly. Trade-offs: Unlike memory servers, Chrome MCP doesn’t retain long-term conversational context – it’s focused on real-time web data. It’s “persistent” in the sense that the Chrome session can persist across queries in one Codex session (e.g. you can navigate to a page, then on the next command the page is still loaded). But if you restart the Codex CLI, the browser session resets (unless you save state manually). In terms of reliability, the undetected-chrome variant tries to handle cloudflare and bot detection, but any web automation can hit snags if sites aggressively block automation. Running a Chrome MCP is heavier on resources (it spawns a Chrome in the background), but on a dev machine this is usually fine. Privacy-wise, you’re running it locally, so the only data going out is whatever websites you visit (no third-party memory store seeing your code). When to use: If your focus is persistent knowledge of your codebase, Chrome MCP is not the tool – use it when you want the AI to have browsing capabilities (e.g. fetch the latest StackOverflow answer, read API docs, etc.). It can complement a memory server: one gives long-term recall of your project, the other gives on-demand access to external info.
+
+Vercel MCP: Vercel (the deployment platform) offers an official MCP server to let AI assistants manage Vercel projects via OAuth. This is a specialized server – it’s essentially a remote integration that exposes tools for things like searching Vercel docs, listing deployments, viewing logs, and managing projects on your Vercel account
+vercel.com
+vercel.com
+. It’s not a general-purpose memory; rather, it’s Vercel’s way of allowing AI to act as your DevOps assistant for your web deployments. If you’re using Codex CLI purely for coding on AAT9, Vercel MCP isn’t directly relevant unless AAT9 is hosted on Vercel and you want to orchestrate deployments through AI. Compatibility with Codex CLI is currently unclear – Vercel MCP is in beta and officially lists support for clients like Claude Code, ChatGPT, Cursor, etc.
+vercel.com
+vercel.com
+. Codex CLI isn’t explicitly named, perhaps because OpenAI has its own deployment integrations. However, since Codex CLI supports custom MCP servers, one could attempt to connect by treating it as a remote HTTP MCP endpoint (the URL is https://mcp.vercel.com for general use
+vercel.com
+). Keep in mind Vercel restricts access to approved clients for security, so if Codex CLI isn’t on their approved list, it may not authenticate. Trade-offs: Being a cloud service by Vercel, you have to log in and authorize the AI’s access to your projects. It’s great for letting an AI query your deployment status or adjust environment variables, but it doesn’t store arbitrary context – it’s not “memory” for your code, just a toolset for a specific platform. In terms of privacy, it’s as secure as Vercel’s API (OAuth tokens etc.), but you are allowing an AI (via the MCP server) to perform actions on your account, so caution is needed. For most coding workflows, Vercel MCP is optional – use it if your development tasks involve a lot of cloud deployment management that you’d like the AI to handle. Otherwise, it’s not something to “explore” for memory purposes.
+
+Other Persistent Memory MCPs: Beyond CORE, there are community-driven memory servers emerging. One notable example is Cognee MCP, an open-source “AI memory engine” that you can run locally. Cognee provides a persistent knowledge graph and vector store on your machine, so the AI can store and retrieve information without anything leaving your device
+blog.continue.dev
+. This appeals to those who want CORE-like functionality but with full offline privacy. Cognee exposes ~11 tools via MCP (for memory management, searching knowledge, etc.) and is designed to be easy to run (their hosted version is essentially the same open-source code on a cloud service, but you can just pip-install and run it yourself)
+blog.continue.dev
+. Integrating Cognee with Codex CLI would be similar: add an MCP server entry that launches the Cognee server (or connect to its port). The benefit is that your codebase knowledge stays local (no API keys or external accounts needed). Cognee uses a combination of graph database and embeddings, which means it can do semantic search on stored memories and maintain relationships between facts. It’s relatively new but gaining traction among “AI agent” users who run tools like Continue or CLI assistants and want a DIY memory solution. Trade-offs: Because it’s local, you need to have the resources for whatever DB it uses (likely it can use something like SQLite or PostgreSQL for storage – one reference mentions PostgreSQL for persistent storage
+pulsemcp.com
+). Setup might be a bit more involved than CORE (which is plug-and-play via cloud). That said, Cognee emphasizes simplicity (their marketing calls it “memory in 6 lines of code”). If you value privacy and control over convenience, Cognee is worth a look. On reliability, a local server means if your machine is shut down, the memory isn’t accessible – but since it’s persistent on disk, it will be there next session when you restart the server. It also means no external outages to worry about.
+
+Aside from Cognee, the official reference Memory server from the MCP project can also be used. The MCP spec’s reference implementation “Memory” is a knowledge-graph-based persistent memory system as well
+modelcontextprotocol.io
+. It can be launched with a single command (npx @modelcontextprotocol/server-memory or via Python mcp-server-memory package) and will serve a basic long-term memory store for the AI. This might be backed by an in-memory graph or simple database – it’s mainly for demonstration, but it is fully functional. If you want something quick and open-source without signing up anywhere, this is an option. The trade-off here is minimal polish (likely no nice web dashboard like CORE, and you might need to configure where it stores data). But it’s MCP-compliant and easy to spin up in a CLI or CI environment. For instance, you could configure Codex CLI with:
+
+[mcp_servers.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+
+
+which would start the Node-based memory server on the fly. This is ephemeral by default (it’ll lose data when stopped unless it has a persistence mechanism), so check its docs if you intend to keep a long-lived store. Some community projects also integrate vector databases (like Pinecone, Weaviate) via MCP for memory – but those tend to be more complex to set up and often cloud-based.
+
+Which to Explore? For AAT9’s needs (persistent coding context and possibly tool usage in Codex CLI), CORE MCP is a strong candidate to try first. It’s actively maintained and specifically mentions support for Codex CLI
+github.com
+. The integration process is clearly documented and the benefit is immediate – you get a memory that persists across Codex CLI sessions and even accessible in other AI interfaces if you use them. If you’re concerned about cloud privacy, you could experiment with Cognee MCP in parallel, since it’s free and local. In fact, some developers use CORE and Cognee together (one as a primary, one as a backup) or migrate to Cognee after prototyping with CORE. Chrome MCP is worth exploring if you find yourself frequently asking the AI to get external info (like “search for algorithm X” or “open the docs for library Y”). It’s less about memory and more about giving the AI eyes on the web. Setting up Chrome MCP is more involved (since you need Chrome and possibly to deal with driver versions), so I’d rank it after you’ve set up a core memory. Vercel MCP is probably not worth focusing on unless your development routine involves deployment tasks that you want AI assistance with. It’s a cool concept for DevOps, but not directly related to codebase understanding or memory. In summary: start with CORE (or the open-source memory server of your choice) to give Codex CLI long-term recall of AAT9’s architecture and past instructions. This will address any context-window limits by letting Codex retrieve historical info on demand. Augment that with Chrome MCP if needed for research. Both of these are compatible with CLI workflows – Codex CLI has native support for launching MCP servers via the config file
+github.com
+, so once configured, using them is seamless (you issue /mcp commands or the AI does so autonomously). The combination of a persistent memory and on-demand web access can significantly enhance Codex’s effectiveness on a large project like AAT9, without you having to restate information or manually copy in docs repeatedly.
+
+3. Optimal Automated Testing Strategy for AAT9
+
+With AAT9’s architecture now fairly mature, it’s a great time to bolster automated testing. The current “health checks” (preflight script and in-app expanders) are extremely useful for environment sanity checks, but they don’t exercise the correctness of the analytical logic – they’re focused on setup (paths, imports, presence of files)
+GitHub
+. To ensure AAT9 remains robust as complexity grows, a multi-pronged testing strategy is advisable:
+
+a. Leverage Existing Health Helpers, but Recognize Their Scope: The .codex/preflight.ps1 and System Health UI expanders act like smoke tests for the infrastructure of the app – they confirm “Can we import everything? Do we have the input files? Is the right module loaded?”
+GitHub
+GitHub
+. Passing these is a necessary baseline for any run. However, they don’t verify that the algorithms produce correct results; for example, preflight won’t tell you if the Stable Pattern extractor is flagging the right patterns, only that it can import and sees the data. Thus, we should keep these helpers (they are fast and have essentially zero maintenance cost) but build additional tests on top.
+
+b. Expand Unit and Regression Tests for Analytics Modules: Each core module (Stable Pattern, Digit Reduction, V-TRAC, Aux tools, Blackapple, etc.) should have focused unit tests that validate its logic with controlled inputs. This is already happening to some extent – the team has been writing tests for new components as they refactor. For instance, when the V-TRAC “families” feature was added, they also added a tests/test_vtrac_families.py and corresponding pytest calls to ensure the grouping logic works as expected
+GitHub
+. Similarly, the Aux repeat-analysis got a test_analyze_pairs_semantics.py to cover edge cases (like the dreaded 989 repeat scenario)
+GitHub
+. We should continue this practice and backfill tests for any older modules that lack them. Specifically:
+
+Stable Pattern Extractor: This is a foundational module (Module A) that transforms raw combined tables into feature-rich outputs. The Stable Pattern Master Guide explicitly advises to “Keep unit tests tiny – a 4-row toy CSV can fully exercise consensus / dominant / mirror logic.”
+GitHub
+. We should follow that advice: create a small dummy combined table CSV (with a handful of draws) and write tests to ensure the stable pattern extractor output meets expectations. For example, if the test CSV has a known pattern that should be flagged “HOT” or “consensus”, verify that the output CSV/DF has the corresponding flag column set. Since the stable extractor’s output is deterministic given an input CSV and feature_config.yml, we can even hand-craft an expected output for the toy input and assert the module produces exactly that (or at least that key computed features match known values). This will catch any accidental changes to the feature engineering logic. It also ensures that fixes like the “consensus flag bug” remain fixed (once patched, lock in a test so it doesn’t regress). The stable pattern module was described as something to “finish and freeze” (weights can change via config, but code logic should stay stable)
+GitHub
+, which is ideal for thorough unit tests – we can treat it as a pure function from CSV->CSV and validate it deeply one time.
+
+Digit Reduction (Module B): This has two parts: the training phase that generates a <STATE>_digit_reduction_log.json, and the analysis phase that reads that log and produces some output/indicators. Tests here should cover scenarios like: running the training on a small input yields a JSON with expected keys/structure, and running the analyzer on that JSON (or with it placed in the expected folder) yields correct results. The recent changes ensure the analyzer handles empty or whitespace fields without crashing
+GitHub
+, and that it won’t run unless a training file exists (the UI disables the button)
+GitHub
+. We can simulate these conditions in tests. For example, call the training function on a minimal dataset (perhaps stub out the part that reads the giant Excel by feeding it a trimmed-down DataFrame) and then call the analyzer function – assert that no exception is thrown and the result indicates “no data” or similar instead of a blank screen. Also test the preflight status for Digit Reduction: they added preflight checks that ensure the directories exist and the newest log is picked up
+GitHub
+. A test could create a temp directory structure mimicking data/outputs/digit_reduction/<STATE>/training/… with some dummy files and ensure the module correctly finds the “newest” log, etc. Essentially, we want to unit-test the logic in src/core/module_b_digit_reduction.py (which likely contains functions for checking file paths and enabling/disabling the analyzer).
+
+V-TRAC & Families (Module C): Tests can cover the clustering logic and the new family grouping. The devs have already written test_vtrac_families.py to validate the family ranking output
+GitHub
+. We should run those tests regularly (ensure they are in CI) and perhaps extend them: e.g., feed a small synthetic V-TRAC cluster input and verify that the top-5 families computed match an expected set (checking grouping by mirror indices, etc.). Also, since V-TRAC now just reads combined tables via utils.path_handler, a test can simulate missing table files: ensure that the V-TRAC page’s loader function gracefully handles when a _combined.csv for a state isn’t there (the update on 2025-10-01 added diagnostics for that)
+GitHub
+. A headless test might call the core.module_c_vtrac.analyze() function (if one exists) and confirm it returns an error status or message instead of crashing. Essentially, for any logic in V-TRAC that isn’t purely visual, add tests.
+
+Auxiliary Tools & Blackapple: Aux tools have quite a few moving parts (overdue pairs, doubles tracker, positional analysis, etc.), but they are being refactored into coherent functions. For instance, there’s an integration.run_aux_tools(state) function that returns a dictionary of results (boxed vtrac table, overdue pairs table, doubles tracker table)
+GitHub
+. We can unit test that easily: call run_aux_tools("Connecticut4") in a test environment where sample CSV data is available, and assert that the returned dict has the expected keys and each value is a DataFrame as intended
+GitHub
+. The team has already created tests/test_aux_run_smoke.py which does exactly this kind of check (verifying keys, types, columns, even handling of a non-existent state)
+GitHub
+GitHub
+. We should run and extend those smoke tests – e.g., test not just structure but simple content (if we know the sample CSV for Connecticut4, perhaps we know one of the top overdue pairs and can assert it appears in the result). Another important aspect is positional tracker outputs. As of recent changes, they added regression tests for positional shortlist generation (covering tricky cases like the “989 bridge” scenario to ensure repeat-endcap logic works)
+GitHub
+. We should maintain those and add more as needed: each time a subtle bug is fixed in Aux logic, lock in a test that would fail if the bug reappears. Over time this builds a regression suite that catches issues if future modifications inadvertently reintroduce them.
+
+Core Utilities: Functions like utils.path_handler that define file paths could have simple tests to ensure they return correct paths given certain inputs (this might be trivial but could catch typos in directory names). Also, the “absolute path import” for Blackapple (a custom loader in app.py) could be tested by manipulating sys.path in a test to simulate a fake modules package and seeing if the loader still pulls the in-repo modules/blackapple.py. This is a more involved test (and somewhat tests implementation details), so it might not be a priority if the health panel already reveals such issues. But having a test ensures the loader code doesn’t break if someone refactors app.py.
+
+In all these unit tests, small, synthetic inputs are key. The goal is to exercise logic without needing the entire production dataset. The code was designed for modularity and pure functions where possible (e.g. “pure functions; avoid os.chdir; no global state” is a golden rule
+GitHub
+), which makes it easier to test in isolation. We can create minimal CSVs/JSONs on the fly within tests (using Python’s tempfile or io.StringIO to avoid even writing to disk when possible). The Stable Pattern guide even notes that a tiny 4-row CSV is enough to test most features – this keeps tests fast and focused
+GitHub
+. By ensuring each module’s corner cases and expected outputs are covered, we reduce the chance that a future code change will produce incorrect analytics without us noticing.
+
+c. Integration and End-to-End Tests: While unit tests ensure each piece works, we should also test the integration of components – i.e. does the whole app work together? One approach is to automate a headless run of the Streamlit app or critical sequences. The team already uses a “headless boot” smoke test (running Streamlit with a dummy display and logging the output to .codex/first_boot.log)
+GitHub
+. This is primarily to catch any import errors or early exceptions on startup. We can include that in an automated test pipeline: e.g., have a script that launches src/app.py with a test flag (Streamlit has a --headless mode) and waits a few seconds, then checks that the process is alive and no errors were logged. This won’t verify that every UI element is correct, but it does validate that the app can fully start up (all pages mount, no runtime exceptions). Another integration test could simulate a user action in a non-UI way. For example, since the app’s pages call functions in src/core, we can script an “end-to-end” test for a particular state: run the pipeline that produces combined tables (if there’s a script for that), then call the core functions for Stable, Digit Reduction, Aux, etc., in the same sequence the user would, and ensure the outputs can all be generated without error. If actual values can be predicted or checked, do so; otherwise just the fact that all modules complete is a good smoke test.
+
+For Streamlit UI specifically, fully automated UI testing is tricky (you’d need a testing framework or to use Selenium to click through the web app). It might not be worth the effort given that most logic is in the backend. Instead, consider a behavior-driven testing approach at the level of module behavior (not pixel-clicking). Using a framework like pytest-bdd or behave, we can write scenarios based on the product requirements (PRD). For example:
+
+Scenario: “Digit Reduction analysis requires a training log” – Given no training JSON is present for state X, when the user tries to run the Digit Reduction analyzer, then it should refuse (or produce a message). We can implement this scenario by directly calling the analyzer function in that state without creating a log file and asserting that it returns an error or that a flag analyzer_enabled is False. This ties back to the requirement that the UI disables the button until training is done
+GitHub
+, but we validate it at the logic level.
+
+Scenario: “Stable Pattern outputs features as per spec” – Given a known small input, when stable pattern extractor runs, then the output columns and flags match the spec (e.g. a pattern that is mirror-symmetric gets the mirror flag = True, etc.). We could encode those expectations from the PRD directly into test assertions, ensuring the code’s behavior aligns with the design document.
+
+Using BDD language (Given/When/Then) can make tests more readable in terms of requirements, but even standard pytest with good naming can serve the same purpose. The key is to base tests on the documented expected behavior (e.g. from the PRD or design docs) rather than just the current code. This way, if code deviates from the intended behavior, tests catch it even if the code still “runs.” It’s a form of regression test that protects the features of the system. For instance, the PRD likely says something about performance (e.g. “Stable Pattern should process one state in under X seconds”). We could have a performance test that runs the stable pattern on a moderate dataset and checks it finishes within, say, 5 seconds. If a future change makes it 50 seconds, the test fails, flagging a performance regression.
+
+d. Where to Implement Tests: The repository already has a tests/ directory; we should continue placing new tests there (e.g., tests/test_stable_pattern.py, tests/test_digit_reduction.py, etc.). Pytest will discover these. We might also maintain some lightweight test scripts under scripts/ (like scripts/checks/smoke_*.py are used for quick manual runs
+GitHub
+). It’s fine to have both, but ideally any script that can be turned into an assert-based test should migrate to the pytest suite for automation. For test data, we can create a tests/data/ folder to hold any static sample files (tiny CSVs, JSON) needed for consistent testing. Alternatively, generate data on the fly within tests to keep them self-contained.
+
+One challenge is that some modules expect data files in specific locations (like under data/cleaned/ or tables/). In tests, we can parametrize the path handler or functions to point to a temp dir. For example, if run_aux_tools(state, data_dir=Path(...)) is allowed (and indeed in the Aux smoke test they added such a parameter for missing data case)
+GitHub
+, we can use that to avoid relying on the real data/cleaned. If not, we might simulate the presence of files by copying a small CSV to the expected path during the test, then cleaning up. Pytest fixtures can help manage this setup/teardown.
+
+e. Ensuring Test Maintenance as Complexity Grows: One risk with automated tests is they can be neglected or become outdated as the code evolves. To avoid that, we should integrate test-running into the development workflow. Following the existing Workflow Standard, after “Implement” comes “Verify,” which already includes running compile checks and smoke tests
+GitHub
+. We should simply extend that to “run the pytest suite.” For example, in the Post-Implementation Checklist, alongside updating docs and changelogs, add “Run pytest and ensure all tests pass” (or even have an agent do it and report). If using CI (GitHub Actions or similar), set up a workflow to run pytest -q on push/PR. This will catch failures early. Since many tests will be quick unit tests, this should be fine. The slower integration tests (like full first_boot or large data tests) can be marked with a pytest marker and perhaps run on a schedule or when specifically requested, to avoid slowing down every commit.
+
+We also want tests to remain resilient to intentional changes. That means writing assertions that are specific enough to catch real bugs but not so brittle that any minor UI text change fails them. For example, if testing DataFrame outputs, it’s better to assert the presence of columns and valid ranges of values rather than exact numeric values that might legitimately change if an algorithm’s weighting is tweaked. Focus on invariants: e.g., in an overdue pairs table, maybe “Draws_Overdue” should always be >= 0 and if a pair hasn’t appeared it should be 1000+ – we can assert things like that. Or simply that the table is never empty if the state has data. For performance tests, we can set generous thresholds so they only fail on an egregious slowdown, not slight fluctuations.
+
+f. Additional Test Types – Mutation and AI-assisted Testing: To ensure our test suite is robust, we could introduce mutation testing. This involves using a tool (like mutmut for Python) that intentionally injects small bugs into the code (e.g., flips a comparison, changes a constant) and seeing if the test suite catches it. If it doesn’t, that indicates a gap in coverage. Mutation testing can be time-consuming, so it might be something to run periodically or on critical modules. Even without a formal tool, a simpler approach is property-based testing for some algorithms: using Hypothesis (a property-based testing library) to generate random input scenarios and verify general properties. For instance, generate random small draws datasets and ensure that the Stable Pattern extractor’s output always has <= some number of patterns, never duplicates a pattern, etc. This can uncover edge cases that we didn’t think to hard-code.
+
+Given that the team heavily uses AI (Codex) in development, we can also use AI to assist in test generation. For example, after implementing a new feature, prompt the Codex CLI: “Write pytest tests for the new function X, focusing on edge cases”. The agent can draft some tests which we then review and incorporate. This seems to have been done already – the style of some tests (like test_aux_run_smoke.py) looks like it was systematically generated to cover keys, types, etc. Using the AI in this way can quickly scaffold tests for happy-path and edge cases, which we then refine. It’s a low-effort way to keep test coverage high as new code is added. There are also AI-driven testing tools emerging (for instance, some IDE plugins attempt to generate tests based on function docstrings or past bugs). We could explore those, but since we already have Codex at our disposal, manually prompting it might suffice for now.
+
+g. Tools Integration: We will continue using Pytest as the core test runner – it’s already in use and works well with CLI. We might integrate pytest-cov to track code coverage and ensure we’re covering most of the codebase (especially the critical modules). For performance benchmarking, pytest-benchmark plugin can automate timing comparisons. For BDD style, behave could be introduced if we want non-developers or product folks to read scenarios, but that might be overkill – writing clear pytest tests with good descriptions could be enough.
+
+Given AAT9 is a Streamlit app, one tool to consider is Streamlit’s testing utilities. Streamlit doesn’t have an official testing library, but there is a pattern to refactor your Streamlit code so that the UI logic is minimal and testable. For example, define functions that return data or figures given inputs, and call those in the st.button callbacks – then test those functions normally. The good news: AAT9 already follows this approach by separating src/core functions from the app.py UI. So we’re mostly dealing with pure Python logic in tests. If down the line we want to test the UI layout (e.g., ensure that the Control Center page displays certain text given a state), we might use Playwright or Selenium to run the app and inspect elements. This would be more of a full integration test (possibly in CI with a headless browser). It’s doable (Spin up the app on localhost, then automated browser hits it), but I’d treat it as a nice-to-have since the value may not justify the complexity right now.
+
+h. Hardening Potential Fragile Areas via Tests: Finally, wherever the architecture felt delicate in the past, we add tests to guard those areas. For example, the Aux “overdue threshold caption” was a fragile bit – now that it’s fixed with a join-list, we could have a test that renders the caption text and ensures it contains no curly braces or malformed syntax (essentially proving the bug is gone). The positional loader had an issue with not registering modules leading to import errors – we can simulate that by clearing sys.modules entry and calling the loader, asserting it registers properly (this is advanced, but it locks in the loader fix). If there’s any part of the system that we fear could break (like the interplay between scripts/auxiliary/working and the main app), we should add a targeted test. For instance, we might invoke the smoke_aux_vtrac.py script from within a test to ensure it exits cleanly (since that script exercises the staging area). This way, even the obscure glue code is always verified.
+
+In summary, the automated testing strategy is: keep the quick sanity checks (preflight, dev expander) for daily use, build out unit tests for all analytic computations (using small deterministic inputs), lock in regression tests for every bugfix or edge case (so we don’t reintroduce issues like we had historically), and add integration tests to ensure all pieces work in concert (app boots, pipelines run end-to-end). By placing tests alongside code changes and running them often (locally and in CI), we’ll catch issues early. This is especially important as AAT9 grows (more states, more tools, perhaps an ML module) – a strong test suite will give confidence that refactoring or extending the system won’t break existing functionality. And by incorporating AI assistance in generating and even running tests, we can manage this without an excessive manual burden. The end goal is that as AAT9 continues to evolve, both humans and AIs contributing to it have a safety net: if something goes off-track, a failing test or health check will alert us before it ever reaches an end user.
+
+Sources:
+
+AAT9 Architecture & Directory Layout
+GitHub
+GitHub
+
+AAT9 System Health Helpers
+GitHub
+GitHub
+
+AAT9 Workflow Standard (Dev Health in UI)
+GitHub
+
+AAT9 Human Readme (stability note)
+GitHub
+
+AAT9 Checkpoint Log (fragile injection fix)
+GitHub
+
+CORE Memory – OpenAI Codex Integration Guide
+docs.heysol.ai
+docs.heysol.ai
+
+CORE Memory overview (persistent unified memory)
+github.com
+
+Codex CLI – MCP support in config
+github.com
+
+Vercel MCP description
+vercel.com
+vercel.com
+
+Pytest Aux tools smoke test example
+GitHub
+GitHub
+
+Stable Pattern module guide (testing and philosophy)
+GitHub
+
+Checkpoint notes – regression tests added
+GitHub
+GitHub

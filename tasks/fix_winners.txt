@@ -1,0 +1,901 @@
+# AAT9 — KIT (Curated, Up‑To‑Date) Documentation
+
+Purpose: A single, current source for AAT9 usage, structure, workflow, and update practices. Use this KIT first; older documents remain in `docs/AAT9_DOCS` for history.
+
+## Contents\\n- AAT9_Workflow_Standard.md   The step-by-step workflow and required doc updates\\n- AAT9_Task_Template.md   Copy-paste template for new tasks
+- AAT9_Quickstart_Cheat_Sheet.md — Preflight → launch → data checks → common CLI
+- AAT9_AI_Contributor_Guide.md — How to build safely, add tools, and update docs
+- AAT9_Unified_Changelog.md — Rolling log of meaningful changes
+- AAT9_Preflight_Reference.md — Expected outputs and quick triage
+- AAT9_Diagrams_Guide.md — Mermaid usage and update workflow
+- AAT9_Digit_Reduction_Training_Exports.md — Stacked view + training CSV/JSON
+- AAT9_Winners_VTrac_Report.md — Per‑winner V‑Trac index panels (training export)
+- Canonical Architecture & Flow (referenced)
+  - docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md
+  - docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md
+
+## Canonical Setup (Quick)
+- Launch: `run_app.bat` → `streamlit run src\app.py` (from repo root)
+- Imports resolve to in‑repo files:
+  - `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`
+- Data contracts:
+  - Aux/Blackapple → `data/cleaned/*_draws.csv`
+  - V‑TRAC / Stable / Digit Reduction → combined tables under `tables/` or `data/outputs/tables/<STATE>/` via `utils.path_handler`
+- Preflight: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
+
+## Dev Health Cheat Sheet (fast diagnostics)
+- Control Center: shows bindings for `utils.path_handler`, `modules.vtrac_reference`, `modules.winner_report_full`, `modules.blackapple`, `modules.aux_loaders`, `core.pipeline_runner`, and tables root inventory.
+- Winners Full tile: shows actual `modules` binding, `modules.vtrac_reference` path, builder presence, and per‑state combined tables existence.
+- V‑TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
+
+Tip: Use these before running pipelines or generating reports to quickly confirm environment, imports, and data availability.
+
+
+__________________________________________
+
+
+# AAT9 — Pitfalls & Fast Fixes
+
+Synthesized from PITFALLS and recent integration experiences.
+
+## Stray If / Def Indentation
+- Symptom: `IndentationError: expected an indented block` near `if` or a `def` under an `if`.
+- Fix: remove stray `if` or add a body (e.g., `pass`); keep function at correct indentation.
+
+## Mixed Imports (bare vs namespaced)
+- Symptom: Different modules with same names; silent empties or mismatched outputs.
+- Fix: Use canonical imports (`modules.*`, `alpha_analytical.stable`); add forwarders/SSOT where needed.
+
+## Duplicate Package Shadowing (`utils`)
+- Symptom: `ImportError: cannot import name ...` from `utils.path_handler` resolving to `src\utils\path_handler.py`, or `NameError: Path is not defined`.
+- Cause: Two `utils` packages exist (`/utils` canonical, `/src/utils` legacy). If `src` is first on `sys.path`, `utils.*` may bind to the legacy package.
+- Fix:
+  - SSOT bootstrap at app entry: ensure project root is first, evict premature `utils` bindings that point to `/src/utils`, and import canonical `utils.path_handler`.
+  - Do not import from `src/utils` (see KEEPERS). Keep the legacy tree for reference only.
+
+## Wrong CWD / Interpreter
+- Symptom: Missing files, odd paths (OneDrive/home) in logs.
+- Fix: Launch via `run_app.bat` from repo root; use preflight to confirm cwd and Python.
+
+## Expensive Compute on Render
+- Symptom: Slow navigation; repeated reruns.
+- Fix: Compute on button click; cache or write outputs and render from them.
+
+## Artifacts in Source Tree
+- Symptom: JSON/CSV files under `src/` or `modules/`.
+- Fix: Write only under `data/outputs/analysis/...` or `data/runs` (if used).
+
+## Aux/BA Using Wrong Data Source
+- Symptom: BA candidates inconsistent; Aux tables empty.
+- Fix: Ensure draws come from `data/cleaned/*_draws.csv` via `modules.aux_loaders`.
+
+\n## Aux Staging Legacy Dependency\n- Symptom: Aux shows `cannot import name BOXED_LABEL_LOOKUP` or Dev Health reports staged modules missing.\n- Fix: Run `python scripts/checks/smoke_aux_vtrac.py`; restore the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` before archiving.
+
+## Analyzer V2 Guardrails
+- Treat `alpha_analytical/digit_reduction/analyzer_v2/` as read-only for the live page; it only consumes reducer training logs and emits artifacts to `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`.
+- Keep feature key names aligned with `config.yml` (`final.canon3`, `method.agree_count`, etc.) so the scorer remains zero-safe; adjust the config instead of patching callers.
+- VTRAC synergy must go through `analyzer_v2.vtrac_index` (predictions JSON preferred, derived fallback). Do not import staged `modules.vtrac_reference` from Aux.
+- Run `.codex/preflight.ps1 -State <STATE>` before edits and the documented python smoke command after changes to confirm artifacts are fresh and scores populate.
+- Winners Overlay: run_winner_overlay_batch() only after the reducer outputs exist; artifacts land under analyzer_v2/winners plus a mirrored stamp in the Winners tree when enabled. Merge the flags CSV back onto the analyzer per-item table via the identity columns to expose dr_win_* signals.
+
+
+
+
+____________________________
+
+# AAT9 — Winners Logger: V‑Trac Winner Report
+
+## Purpose
+Generate a per‑state, per‑winner HTML export showing the winner’s V‑Trac index across Midday/Evening/Combined panels:
+- Purple: stable‑pattern combos for the index
+- Green: straight permutations of the winning number
+
+## Where in the App
+- Control Center → expand “Winners Logger (V‑Trac winner report)”
+- Inputs: State (single), Winning number (3 digits)
+- Click “Generate V‑Trac Winner Report”
+
+## Outputs
+- Path: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
+- HTML contains three inline panels (Midday/Evening/Combined) with colored tags for combos related to the index and straight permutations.
+
+## Implementation Notes
+- Renderer: `src/core/winners_vtrac_report.py::build_vtrac_winner_report(state, winner, ...)`
+- Mapping: reuses `modules.vtrac_reference::VTRAC_DISPLAY, get_vtrac_index`
+- Does not require state string‑tables; table‑agnostic for robustness.
+- Future: overlay table‑driven details once state tables are finalized/mapped.
+
+## Pitfalls
+- Winner must be exactly 3 digits.
+- State label should match your per‑state conventions.
+- Windows path issues: paths resolved via `utils.path_handler` where applicable; HTML uses UTF‑8.
+# AAT9 — Winners: V‑Trac Reports
+
+## Overview
+Two Winners experiences exist in the integrated app:
+- Winners Logger (V‑Trac winner report): compact index panel (table‑agnostic), safe when string‑tables are missing.
+- Winners Logger (Analyzer‑style full report): 3‑pane HTML (Midday/Evening/Combined) identical to the analyzer layout; requires combined tables.
+
+## Analyzer‑Style Full Report (new)
+- Entry: Control Center → “Winners Logger (Analyzer‑style full report)”
+- Inputs:
+  - State (e.g., Connecticut4)
+  - Midday winner (3 digits) — optional
+  - Evening winner (3 digits) — optional
+  - Date (implicit in filename; defaults to today)
+- Data source: reads `data/outputs/tables/<STATE>/<STATE>_{Midday,Evening,Combined}_combined.csv` (string‑safe loader)
+- Rendering:
+  - Purple: full index coverage (`modules.vtrac_reference.get_index_set(index)`).
+  - Green: winner straights overlay (`modules.vtrac_reference.get_index_straights(winner)`); overrides purple where overlapping.
+- Output path:
+  - `data/outputs/analysis/winners/<STATE>/<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html`
+  - Path helper: `utils.path_handler.get_analysis_dir("winners", <STATE>)`
+- Fallback: if tables are missing, use the compact Winners tile.
+
+### Minimal Flow
+1) Ensure combined tables exist for the state (pipeline ran once).
+2) Open the full Winners tile and enter winners.
+3) Open the generated HTML(s); expect three panes with purple+green highlights.
+
+## Compact Index Panel (existing)
+- Entry: “Winners Logger (V‑Trac winner report)”
+- Behavior: renders purple/green index panel without reading string‑tables; safe for states without tables.
+- Output path: `data/outputs/winners/<YYYY-MM-DD>/vtrac_reports/<STATE>/*.html`
+
+## Developer Notes
+- Canonical V‑Trac API: `modules/vtrac_reference.py` provides `get_vtrac_index`, `get_index_set`, `get_index_straights` for non‑Aux pages.
+- Aux isolation: Aux still uses a staged `modules.vtrac_reference` under `scripts/auxiliary/working/modules/`; only the Aux page binds to it.
+- String‑safe IO: table reads use `dtype=str, keep_default_na=False, na_filter=False` to preserve tokens.
+- CLI smoke: `python scripts/smoke/build_winners_full.py <STATE4> <WINNER>` prints the saved full report path.
+
+
+
+_____________________
+
+FIXING WINNERS LOGGING
+
+
+codex
+Added a Dev Health panel to the Winners Full tile and finished the docs pass. Dev Health doesn’t change behavior; it’s purely diagnostic so you can immediately see path bindings and tables presence when
+something’s off.
+
+What I Added
+
+- Winners Full Dev Health (src/app.py)
+    - Checkbox “Show Dev Health (Winners Full)”.
+    - Expander shows:
+    - cwd and python executable
+    - Which `modules` package is currently bound (file path)
+    - `modules.vtrac_reference` file path
+    - `modules/winner_report_full.py` presence
+    - Tables directory for the selected state and existence of Midday/Evening/Combined CSVs
+
+- Docs
+    - Changelog: Added 2025‑09‑16 entry for Winners Full + Aux restore + canonical API.
+    - Checkpoint Log: Detailed write‑up of context, changes, rationale, impact, refs, and follow‑ups.
+    - Winners doc: Added analyzer‑style Full report section (inputs, outputs, overlay rules, fallback).
+    - Wiring/Paths: Added the Winners Full mapping from inputs → outputs.
+    - Pitfalls: Added guidance on:
+    - Preventing `modules` import collisions (staged vs project)
+    - Canonical V‑TRAC API for non‑Aux pages
+    - String‑safe CSV reads
+    - Renderer coupling and fallback
+    - Keeping the Aux path tweak strictly local to the Aux page
+
+Where It Helps
+
+- Dev Health helps diagnose:
+    - If non‑Aux pages accidentally bound modules to the staged Aux path.
+    - If modules.vtrac_reference or the builder file are missing.
+    - If any of the three combined CSVs are missing for the selected state.
+- It doesn’t affect processing; it just makes drift visible so you don’t lose time guessing.
+
+Quick Use
+
+- Open “Winners Logger (Analyzer‑style full report)”.
+- Select a state; toggle “Show Dev Health (Winners Full)” to inspect the environment.
+- Enter Midday/Evening winners and generate; outputs land in:
+    - data\outputs\analysis\winners\<STATE>\<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html
+
+Why We Finally Landed It
+
+- We separated Aux (staged working/modules) from the integrated app (project modules/*).
+- We created a canonical V‑TRAC API for non‑Aux pages, so imports don’t collide and logic stays consistent.
+- The builder reads the same three pipeline tables the analyzer uses, renders identical 3 panes, and overlays green straights after purple (clear precedence).
+- Compact Winners remains as your safe fallback.
+
+
+
+
+
+
+____________________________________________
+
+
+bsolutely—this is the exact problem to solve once and solve forever. Below is a drop‑in Integration Playbook you can hand to any coding AI (or dev) so new tools/modules wire in cleanly without path drama, re‑runs, or “where is that file?” mysteries.
+
+I wrote it as a copy‑pasteable spec plus ready‑to‑use snippets. It folds in what we already proved works (bootstrap import shim, absolute‑path loaders, run ledger, health expanders, combined table wiring, etc.) and codifies it so future integrations don’t regress. It also references your Blackapple module notes so teams follow the same pattern when they add that feature.
+
+0) One‑page TL;DR (hand this to the coding AI)
+
+Golden rules
+
+Single source of truth (SSOT) modules. Put every shared analyzer under modules/ and always import with from modules.<name> import .... If legacy code uses bare imports (e.g., import vtrac_reference), install the bootstrap shim so both names resolve to the same file.
+
+Absolute repo root & deterministic paths. Compute REPO = Path(__file__).resolve().parents[n] once and build every path from it (no os.chdir, no relative I/O).
+
+Run once per upload. When a Pick3StatsC4 file is processed, mint a run_id and write all outputs to runs/<run_id>/.... Every page reads from this cache. Never recompute on navigation; only on Process or Recompute.
+
+Checklist‑gated “Winners Logger.” Disable posting winners until {core, aux, combined} are all green for the active run.
+
+Health everywhere in dev. A small System Health expander on each page prints: cwd, sys.executable, and __file__ for modules.blackapple, modules.analyze_pairs, modules.vtrac_reference, plus the resolved CSV path per state. This catches 95% of “it’s using the wrong file” issues instantly.
+
+Ensure custom loaders register staged modules in sys.modules (positional tool regression); keep `python scripts/checks/smoke_project_loader.py` in the preflight bundle.
+
+1) Canonical repo layout (use this; don’t improvise)
+repo_root/
+├─ app/
+│  ├─ app.py                     # Streamlit entry point
+│  └─ pages/                     # Streamlit pages
+├─ modules/
+│  ├─ __init__.py
+│  ├─ analyze_pairs.py
+│  ├─ vtrac_reference.py
+│  ├─ blackapple.py              # when enabled; see BA notes
+│  └─ bootstrap_imports.py       # the shim (see §3)
+├─ core/
+│  └─ run_controller.py          # run_id, pipeline, checklist
+├─ storage/
+│  └─ run_ledger.py              # load/save checklist, gating
+├─ data/
+│  ├─ cleaned/                   # *_draws.csv per state
+│  └─ runs/                      # all cached outputs (gitignored)
+├─ scripts/
+│  ├─ preflight.ps1              # Windows preflight
+│  └─ preflight.sh               # macOS/Linux preflight
+├─ .env.example
+├─ .gitignore                    # includes /data/runs
+└─ README-INTEGRATION.md         # paste this playbook here
+
+
+Non‑negotiables
+
+Everything shared lives in modules/.
+
+All I/O is under data/ (never in source folders).
+
+The only mutable cache is data/runs/ (git‑ignored).
+
+2) Absolute paths & repo root (one tiny helper)
+# modules/_paths.py
+from pathlib import Path
+
+def repo_root() -> Path:
+    # This file lives in repo_root/modules/_paths.py -> parents[1] is repo_root
+    return Path(__file__).resolve().parents[1]
+
+def data_dir() -> Path:
+    d = repo_root() / "data"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+def runs_dir() -> Path:
+    r = data_dir() / "runs"
+    r.mkdir(parents=True, exist_ok=True)
+    return r
+
+
+Import this everywhere for file paths.
+
+Never call os.chdir.
+
+Never build paths with string concatenation; always use Path.
+
+3) Bootstrap import shim (kills “which module did I import?”)
+
+Use this to make both names (vtrac_reference and modules.vtrac_reference) resolve to the same file (same for analyze_pairs). Drop‑in works on Windows/macOS/Linux.
+
+# modules/bootstrap_imports.py
+import importlib, sys
+from pathlib import Path
+
+def _alias(module_name: str, alias: str):
+    if alias not in sys.modules:
+        sys.modules[alias] = sys.modules[module_name]
+
+def ensure_ssot():
+    # Always import the canonical modules under 'modules.'
+    v = importlib.import_module("modules.vtrac_reference")
+    a = importlib.import_module("modules.analyze_pairs")
+
+    # Back-compat aliases (OLD code may use bare names)
+    _alias("modules.vtrac_reference", "vtrac_reference")
+    _alias("modules.analyze_pairs",   "analyze_pairs")
+
+    # Guardrail: if someone imported bare first, ensure it's the same file
+    try:
+        vb = importlib.import_module("vtrac_reference")
+        ab = importlib.import_module("analyze_pairs")
+        assert Path(v.__file__).resolve() == Path(vb.__file__).resolve(), \
+            f"Two different VTRAC modules:\n{v.__file__}\n{vb.__file__}"
+        assert Path(a.__file__).resolve() == Path(ab.__file__).resolve(), \
+            f"Two different analyze_pairs modules:\n{a.__file__}\n{ab.__file__}"
+    except Exception:
+        # If bare names aren't used, it's fine.
+        pass
+
+    return {"vtrac": v.__file__, "analyze_pairs": a.__file__}
+
+
+Usage (top of every page or pipeline entry):
+
+from modules.bootstrap_imports import ensure_ssot
+_ = ensure_ssot()  # optional: print(_) inside dev-only expander
+
+4) Run controller & cache (run once, read everywhere)
+# core/run_controller.py
+import hashlib, json
+from pathlib import Path
+from datetime import datetime
+from modules._paths import runs_dir
+
+def short_md5(b: bytes) -> str: return hashlib.md5(b).hexdigest()[:8]
+
+def start_run(excel_bytes: bytes, date_label: str) -> str:
+    run_id = f"{date_label}_{short_md5(excel_bytes)}"
+    (runs_dir() / run_id).mkdir(parents=True, exist_ok=True)
+    with (runs_dir()/run_id/"run.json").open("w", encoding="utf-8") as f:
+        json.dump({"run_id": run_id, "date_label": date_label,
+                   "created": datetime.utcnow().isoformat()+"Z"}, f, indent=2)
+    return run_id
+
+
+Process computes everything once and writes JSON/CSV under data/runs/<run_id>/....
+
+Every page reads from this cache; no extra “Run” buttons.
+
+Recompute only if the user clicks it (or the file changed).
+
+5) Run ledger & winners gating
+# storage/run_ledger.py
+import json
+from pathlib import Path
+from modules._paths import runs_dir
+
+def _path(run_id: str) -> Path: return runs_dir()/run_id/"checklist.json"
+
+def load(run_id: str) -> dict:
+    p = _path(run_id)
+    return json.loads(p.read_text()) if p.exists() else \
+           {"core_done": False, "aux_done": False, "combined_done": False, "winners_posted": False}
+
+def mark(run_id: str, key: str, val: bool=True):
+    ck = load(run_id); ck[key] = val
+    _path(run_id).write_text(json.dumps(ck, indent=2))
+
+def block_winners(run_id: str) -> bool:
+    ck = load(run_id)
+    return not (ck["core_done"] and ck["aux_done"] and ck["combined_done"])
+
+
+Winners page must disable submit if block_winners(run_id) is True.
+
+After saving winners, set winners_posted=True and write a small summary.md.
+
+6) Dev “System Health” expander (paste once; reuse everywhere)
+# app/_dev_health.py
+import sys
+from pathlib import Path
+import streamlit as st
+from modules._paths import repo_root
+from modules.bootstrap_imports import ensure_ssot
+
+def dev_health_expander(title="System Health (DEV)"):
+    if not st.session_state.get("DEV_HEALTH", False):
+        return
+    with st.expander(title, expanded=False):
+        ss = ensure_ssot()
+        st.write({"cwd": str(Path.cwd()),
+                  "python": sys.executable,
+                  "modules": ss})
+
+
+Add a DEV checkbox in the sidebar: st.sidebar.checkbox("Show Dev Health", key="DEV_HEALTH").
+
+Never hide this behind complex logic; we want it always available in dev.
+
+Why this matters: it instantly exposes the usual culprits—wrong cwd, wrong interpreter, wrong module file—without touching analytics.
+
+7) UI wiring rules (so pages don’t fight the pipeline)
+
+Control Center
+
+Upload file → start_run(...) → Process → run all tools once → set {core_done, aux_done, combined_done}.
+
+Show Run Checklist and a Recompute [module] button per section.
+
+Auxiliary Tools / State pages
+
+Never compute on render; just load data/runs/<run_id>/<state>/*.json and display.
+
+Optional per‑page Recompute Aux for this run if you need a one‑off refresh.
+
+Winners Logger
+
+Disabled until the checklist is green.
+
+On submit: write winners.json, mark winners_posted, produce summary.md.
+
+8) Smoke tests (5 checks every integration must pass)
+
+Add a tiny dev page or CLI script that fails fast with clear text:
+
+VTrac parity: there are exactly 35 boxed rows (no more, no less).
+
+Top repeating pairs (100‑draw window) sample for a known state matches the legacy snapshot (kept in a tiny JSON fixture).
+
+Combined “Aggregated Doubles” is non‑empty and lists sensible values.
+
+Blackapple candidates (if enabled): #Candidates == len(ba["candidates"]) and Examples show the first 3 (not hard‑coded “12”).
+
+Health paths: the expander shows modules/*.py under your repo, not site‑packages or a temp dir.
+
+These catch mixed imports, empty tables caused by wrong windows, and stale UI stubs.
+
+9) Common failures & the 10‑second fixes
+
+IndentationError after an if (like your screenshot).
+A merge left an empty if block before def .... Add pass or remove the stray if. Also enable an .editorconfig with indent_style = space and run a quick linter pass.
+
+Mixed imports (bare vs. modules.*).
+Symptom: Aux numbers don’t match legacy or tables are empty. Fix: add the bootstrap shim call at the top, replace bare imports with from modules..., re‑run smoke tests.
+
+Wrong cwd / wrong interpreter.
+Symptom: draws not found, paths resolve to ~ or OneDrive. Fix: always launch via a preflight that prints cwd, python, and confirms the CSV inventory. Health expander confirms at runtime.
+
+Re‑processing on every page click.
+Symptom: streamlit logs show reruns and long waits. Fix: make pages read from runs/<run_id>/** and only recompute on button click.
+
+Artifacts inside source tree.
+Symptom: git diffs show JSON spew in /app or /modules. Fix: write only under data/runs.
+
+10) Preflight (CLI) you can run before Streamlit
+
+PowerShell (Windows):
+
+# scripts/preflight.ps1
+param([string]$ExcelPath, [string]$DateLabel)
+Write-Host "CWD:" (Get-Location)
+Write-Host "Python:" (Get-Command python).Source
+python - << 'PY'
+from modules.bootstrap_imports import ensure_ssot
+from modules._paths import repo_root
+print("Repo:", repo_root())
+print("Modules:", ensure_ssot())
+PY
+
+
+bash (macOS/Linux): mirror the above.
+
+11) Ready‑to‑paste Combined “Aggregated Doubles S” (brief)
+# modules/combined_doubles.py
+from collections import defaultdict
+from typing import Dict, List
+def draws_since_last_double(draws: List[str]) -> int:
+    for i, d in enumerate(draws):
+        if len(set(d)) < 3:  # any double or triple
+            return i
+    return len(draws)
+
+def aggregated_doubles(states_draws: Dict[str, List[str]], window=100):
+    per_state = []
+    per_pair  = defaultdict(lambda: {})
+    for st, dr in states_draws.items():
+        ds = draws_since_last_double(dr[:window])
+        # last double base per state (optional: track which '11','22',...)
+        per_state.append({"State": st, "DrawsSince": ds})
+        # per double base across states (illustrative: treat '11','22',...'99')
+        for x in range(10):
+            pair = f"{x}{x}"
+            # naive: gap since any draw containing that pair in any position
+            g = next((i for i,d in enumerate(dr[:window]) if pair in (d[0]+d[1], d[1]+d[2], d[0]+d[2])), window)
+            per_pair[pair][st] = g
+    # summarize max & states
+    agg = []
+    for pair, m in per_pair.items():
+        mx = max(m.values()) if m else 0
+        top = [s for s,v in m.items() if v == mx]
+        agg.append({"Double": pair, "MaxGap": mx, "States": ", ".join(top)})
+    # sort for display
+    per_state.sort(key=lambda r: r["DrawsSince"], reverse=True)
+    agg.sort(key=lambda r: r["MaxGap"], reverse=True)
+    return per_state, agg
+
+
+Render both tables on Combined and write them to runs/<run_id>/combined/aggregated_doubles.json.
+
+12) Integration contract (“what pages expect as inputs”)
+
+Every state page receives:
+
+state_data = {
+  "draws": ["531","890",...],             # newest-first
+  "vtrac_statuses": {...},                # from modules.analyze_pairs
+  "top_overdue_pairs": [("11", 75), ...], # sample
+  # optional:
+  "blackapple": {...},                    # if BA is enabled (score/triggers/candidates)
+}
+
+
+Every module you add must:
+
+Accept only what it needs (usually draws).
+
+Return a pure dict that can be JSON‑serialized under runs/<run_id>/<state>/<module>.json.
+
+Never reach into global state or change working directories.
+
+When you enable Blackapple, reuse the same pattern and UI hooks we documented earlier so it slots in without new wiring.
+
+13) PR / AI delivery checklist (paste into every task)
+
+ All imports under modules.*; shim installed (ensure_ssot() called at entry).
+
+ All file I/O via modules._paths; outputs under data/runs/<run_id>.
+
+ Added/kept System Health expander printing cwd, python, module __file__.
+
+ Added or updated Run Checklist flags.
+
+ Page reads from cache; no compute in render.
+
+ Smoke tests pass (VTrac=35, pairs snapshot, non‑empty aggregated doubles, BA candidates counts consistent, health paths correct).
+
+ No artifacts committed outside data/runs/ (git clean).
+
+ .editorconfig in repo and basic lint passes (ruff/flake8 acceptable).
+
+14) Two tiny helpers that prevent 2 hours of pain
+
+(a) Fail fast if cwd isn’t repo root
+
+from modules._paths import repo_root
+from pathlib import Path
+assert repo_root().name in str(Path.cwd()), \
+    f"Unexpected CWD: {Path.cwd()}\nLaunch from repo root or use the preflight script."
+
+
+(b) Safe empty if‑block during refactors
+
+if st.session_state.get("DEV_ONLY", False):
+    # TODO: future panel
+    pass
+
+
+Prevents the exact IndentationError: expected an indented block after 'if' you saw.
+
+15) Where this ties into Blackapple (for future additions)
+
+When you drop in modules/blackapple.py (MVP we already specced), follow the same patterns:
+
+Import via from modules.blackapple import analyze_blackapple, ba_status_label.
+
+Compute once in the run pipeline; write blackapple.json; render from cache on pages.
+
+In Combined, the #Candidates column should be len(ba["candidates"]), and the “Examples” cell should show the first 3—never hard‑code that number (we already called this out earlier).
+
+Appendix A — Minimal “day‑zero” code you can drop in
+
+Add to app/app.py right after imports:
+
+from modules.bootstrap_imports import ensure_ssot
+_ = ensure_ssot()
+
+
+Add to sidebar once:
+
+import streamlit as st
+st.sidebar.checkbox("Show Dev Health", key="DEV_HEALTH", value=False)
+
+
+Show the health expander on each page (dev only):
+
+from app._dev_health import dev_health_expander
+dev_health_expander()
+
+
+Process button flow (Control Center):
+
+uploaded = st.file_uploader("Pick3StatsC4", type=["xls","xlsx","xlsm"])
+date_label = st.text_input("Date label (YYYY-MM-DD)")
+if st.button("Process") and uploaded and date_label:
+    from core.run_controller import start_run
+    run_id = start_run(uploaded.getvalue(), date_label)
+    # call your pipeline -> write JSON/CSV under data/runs/<run_id> and mark the checklist
+    st.session_state["ACTIVE_RUN_ID"] = run_id
+
+Appendix B — What “good” looks like & how to validate in 60 seconds
+
+Health expander: cwd is the repo root; python is your intended venv; modules print under repo_root/modules/*.py.
+
+Combined: “Aggregated Doubles S” table is filled; “Draws Since Last Double” shows different values across states.
+
+State page: VTrac grid has 35 rows; top‑5 repeating pairs look sane; no page recomputes on navigation.
+
+Winners Logger: the “Post” button is disabled until the checklist is all green; after posting, a summary.md appears under the run folder.
+
+Blackapple (when enabled): Status pill reflects the BA score; candidates list shows tags; Combined shows “Examples” (not the full list) and #Candidates equals the true length.
+
+Final note
+
+If the team simply follows this playbook, the usual 3‑day rabbit holes (wrong imports, recomputes per page, relative path chaos, mystery “empty tables”) go away:
+
+One canonical place for code (modules/…)
+
+One canonical way to import (modules.* + bootstrap alias)
+
+One canonical run flow (run_id + cache)
+
+One canonical health view (cwd/python/module paths)
+
+If you want this as a single Markdown doc to drop into your repo (README-INTEGRATION.md) I can format exactly that text, but everything you need is already here.
+
+You said:
+ISNT THIS SPECIFIC TO ONLY AUXILLARY TOOLS? BUT MAYBE THATS ALL YOUR FAIMILAR WITH AS IT WAS ALL YOU REALLY HAD ISGHTS ITO I GUESS I WAS HOPING MORE IN GENERAL..I CANT REMEMBER IF YOU WERE THE CHAT I SHOWED THE ENTIRE CRAZY DIRECTORY TOO, IM MORE COCRNED WITH WHEN ADDING A FEW OF THE REMAINGING MODULES IF THERE IS A IDEAL WAY TO DO THIS TO AVOID ALL THE PROBLEMS IF UNDRSTNADING HOW TIHIGS RUN THER WAS ENOUGH INSIGHTS YOU GET WHAT I MEAN?
+
+Now in terms of the auxiliary tool specifically what I was thinking of when we are officially done which we are pretty close to I still want to add a couple easy light auxiliary items I was thinking since I believe we unified the Vtrack stuff? This conversations context may have got way too out of control for you to remember everything Codex completed but I think it did this Can you remember? 'cause I feel like Black Apple was the final task in the plan we had but anyways I was thinking once auxiliary is pretty much finished we could archive or delete any of the additional auxiliary scripts that were pasted into the project to avoid any confusion or get rid of some of the clutter Do you know what I mean? Like in terms of all the different legacy attempts I made a pasting in all the scripts from the other application I did this a few times and we finally wired in what seems like the finalized working auxiliary structure and tools So whether this means even renaming aspects within the directory to fit in with the rest of the project I don't know if this is just asking for problems and path problems but do you kindly understand what I'm getting at? Mainly suggesting locking in everything programmed into the integrated app and getting rid of any scripts I pasted in that we no longer need that were part of past attempts is I guess a quick way to summarize what I'm suggesting I should probably finish those last couple features Hopefully that's not gonna be too much of a problem and I can use your above pointers specific for that since it seems specific to the auxiliary layout but hopefully you get what I mean from most of what I'm saying here in your response make sure to stay specific to this task that we're speaking on which you also touched on in your last message.
+ChatGPT said:
+Request for GPT-5 Pro
+Reasoned for 3m 25s
+
+You’re thinking about exactly the right thing: freeze what now works, make one canonical import path for shared logic, and move everything else out of Python’s search path. Below is a concrete, project‑wide playbook you can use for any module you add (not just Aux), plus a safe “archive & rename” procedure for cleaning up the legacy scripts without reigniting path chaos.
+
+A. “Add a new module” — the 10‑step playbook (works for any tool)
+
+0) Snapshot & freeze (1 minute)
+
+Commit what works. Tag it (e.g., aux-v1.0-freeze).
+
+From now on, all new work happens on a feature branch (e.g., feature/blackapple, feature/sums).
+
+1) One and only one package root
+
+Treat <repo>/modules/ as the single source of truth (SSOT) for reusable code: modules/vtrac_reference.py, modules/analyze_pairs.py, etc.
+
+Rule: no top‑level duplicates like vtrac_reference.py outside modules/.
+
+Launcher sets PYTHONPATH=%CD% (Windows) before starting Streamlit so modules.* resolves cleanly.
+
+2) Import policy (make drift impossible)
+
+Always import shared code as from modules.X import Y.
+
+Never import bare names (from vtrac_reference import …) or mutate sys.path inside modules.
+
+Add a tiny guard at app startup to fail fast if a duplicate sneaks in:
+
+import importlib
+v = importlib.import_module("modules.vtrac_reference")
+try:
+    alias = importlib.import_module("vtrac_reference")
+    assert getattr(alias, "__file__", None) == getattr(v, "__file__", None), \
+           f"Two different VTRACs detected:\n{v.__file__}\n{alias.__file__}"
+except Exception:
+    pass
+
+
+3) Adapter first, then UI
+
+Before wiring a new page, write a tiny adapter that converts your app’s raw state (draws, dates) into the exact shape the module expects. That’s how you kept Aux stable; reuse that pattern for every module.
+
+4) Health block on every new page (DEV‑only)
+
+In each page, add the System Health expander you already use: print cwd, Python path, and __file__ for the module you just added. This instantly confirms you’re importing from <repo>\modules\..., not a stray copy.
+
+5) “Run once per dataset” contract
+
+New modules must read inputs from the active run cache (e.g., runs/<run_id>/inputs.json) and write outputs back under runs/<run_id>/<module>/….
+
+UI tabs should read from that cache; only a single Process button (per run) performs the heavy compute. This eliminates “press again on every page.”
+
+6) Checklists gate winners
+
+Add the module’s completion flag to the Run Checklist (e.g., blackapple_done: true).
+
+Winners Logger is enabled only when required flags are green (core, Aux, new module).
+
+This guarantees your “day” has a full, consistent set of outputs before posting winners.
+
+7) Naming & constants
+
+Put all thresholds/knobs for the module at the top of its file (constants), not sprinkled through the code, and don’t expose sidebar sliders until you truly need them. (This keeps runs deterministic.)
+
+8) Minimal acceptance test (copy/paste template)
+
+For each module, add a 30‑line script under scripts/verify_<module>.py that:
+
+prints the module path (__file__),
+
+loads a small test draw list,
+
+asserts 2–3 invariants (e.g., non‑empty candidates, expected row counts).
+
+Run it once pre‑commit. If this passes, the UI almost always “just works.”
+
+9) Persist & ignore
+
+All module outputs live under runs/…; add /runs/ to .gitignore.
+
+Don’t write outputs into source folders—keeps the repo clean and diffs sane.
+
+10) Document the surface
+
+Each module should expose one function (e.g., analyze_blackapple(draws) -> dict) and one label helper, plus a 5‑line docstring telling future AIs what the function returns.
+
+For Blackapple, you already have the contract: score, triggers, top candidates, status label.
+
+B. “Archive & rename” without breaking anything (what you asked to do now)
+
+You absolutely can—and should—lock the integrated app and remove the pasted legacy clutter. Do it in three safe passes:
+
+Pass 1 — Quarantine out of the import path
+
+Create /_archive/ at the repo root.
+
+Move all old/duplicate Aux scripts and experimental folders there (use git mv so history follows).
+
+Ensure /_archive/ has no __init__.py and is not added to PYTHONPATH.
+
+Grep for any remaining references:
+
+git grep -n "from vtrac_reference import"
+git grep -n "from analyze_pairs import"
+git grep -n "sys.path.append"
+
+
+Fix callers to from modules.* import …; delete any sys.path edits.
+
+Pass 2 — Canonicalize names
+
+Inside modules/, rename files to match how they’re imported today (use git mv):
+
+vtrac_reference.py, analyze_pairs.py, etc.
+
+If you must keep compatibility for older scripts, leave a tiny shim:
+
+# vtrac_reference.py (compat shim at repo root, optional)
+from modules.vtrac_reference import *
+
+
+(Better: delete shims once the grep shows no direct imports.)
+
+Pass 3 — Prove it works
+
+Start the app; open the Health expanders on each page and read the path line.
+
+You should only see <repo>\modules\….
+
+Run the minimal verifiers (Step 8).
+
+When green, delete any leftover shims at the root.
+
+Why this avoids path bugs: Python only finds one copy (under modules/). Nothing in code alters sys.path. Anything “old” sits outside the import path in /_archive/. The Health block tells you instantly if a stray import reappears.
+
+C. Specific to Aux now (VTrac + Blackapple + small adds)
+
+VTrac is unified if and only if every import is from modules.vtrac_reference import … and the Health block shows that file path. If you still have any bare from vtrac_reference import …, fix those now; that single change removes 90% of “mystery mismatches.”
+
+Blackapple stays a single module file (e.g., modules/blackapple.py) with a short, documented interface. Your Control Center table should show BA‑Score, Status, Triggers, #Candidates, Examples; when you need the full list, open an expander. That keeps the UI crisp while still exposing all 12 recommendations if you choose to show them.
+
+Light Aux adds (that won’t destabilize paths): sums/short‑sums tags beside combos, an index watchlist, and the “Aggregated Doubles S” card on Combined. Each of these can be implemented as pure readers over the same run cache—no extra loaders, no new import entry points.
+
+D. “Do we delete or rename?” — my recommendation
+
+Don’t hard‑delete immediately. Move all non‑used scripts to /_archive/ and commit.
+
+Leave them there for one or two weeks of daily runs. If no one misses anything, you can prune the archive later.
+
+This gives you the clarity of a clean tree and an easy rollback path if you discover a hidden dependency.
+
+E. Tiny kit you can paste in today
+
+Launcher (Windows start_app.bat)
+
+@echo off
+pushd %~dp0
+set PYTHONPATH=%CD%
+set APP_DEV=1
+streamlit run src\app.py
+popd
+
+
+Health expander snippet (drop at top of each page block)
+
+import sys, os, importlib
+if os.getenv("APP_DEV") == "1" and st.sidebar.checkbox("Show Dev Health", False):
+    st.caption("System Health")
+    st.code(f"cwd: {os.getcwd()}\npython: {sys.executable}")
+    for name in ["modules.vtrac_reference", "modules.analyze_pairs", "modules.blackapple"]:
+        try:
+            m = importlib.import_module(name)
+            st.write(f"{name} → {getattr(m,'__file__','<n/a>')}")
+        except Exception as e:
+            st.write(f"{name} → <import failed: {e}>")
+
+
+Run checklist (example shape stored at runs/<run_id>/checklist.json)
+
+{
+  "core_done": true,
+  "aux_done": true,
+  "combined_done": true,
+  "blackapple_done": true,
+  "winners_posted": false
+}
+
+
+Only enable “Post Winners” when the first four are true.
+
+F. When you add the next modules
+
+Use the same 10 steps. In practice, the two places people slip are (a) dropping a duplicate file outside modules/, or (b) leaving a single from X import … import that bypasses modules.*. The Health expander will catch (a); the grep catches (b). Build that into your done‑definition and you’ll stop losing days to import drift.
+
+TL;DR you can hand to any coding AI
+
+SSOT: All shared code lives under modules/. Always import as from modules.X import Y. No sys.path edits in code.
+
+Quarantine: Move all legacy/attempt scripts into /_archive/ (not on PYTHONPATH).
+
+Health: Each page prints the actual __file__ for modules.vtrac_reference, modules.analyze_pairs, and the page’s module when “Show Dev Health” is on.
+
+Run‑once: Process the uploaded dataset once per run_id; all tabs read/run from runs/<run_id>/….
+
+Checklist gate: Winners Logger enabled only after required module flags are green.
+
+API surface: Each module exposes one analyze_* function and an optional label helper; constants live at the top of the file.
+
+Verify scripts: Add scripts/verify_<module>.py to assert imports & invariants.
+
+No drift: Grep the repo for bare imports; replace with modules.*.
+
+Blackapple UI: Status (OFF/WATCH/ALERT), triggers line, #Candidates, first 3 examples, with a per‑row expander to view all candidates. (Design and interface documented in the BA notes.)
+
+If you follow that, you can safely finish the last Aux touches, lock the integrated app, and archive the noise without reintroducing path issues.
+Import collisions (modules binding)
+- Symptom: `No module named 'modules.winner_report_full'` or imports resolve to `scripts/auxiliary/working/modules/...` on non‑Aux pages.
+- Fix: Ensure repo root is on `sys.path` early; evict staged `modules` binding for non‑Aux pages so imports resolve to project `modules/*`. Only the Aux page should prepend the staged `working/modules` path.
+
+Canonical V‑TRAC API
+- Problem: Multiple V‑Trac reference copies (staged vs ad‑hoc) cause drift. Non‑Aux pages must not import from staged.
+- Fix: Provide `modules/vtrac_reference.py` with `get_vtrac_index`, `get_index_set`, `get_index_straights` backed by analyzer utilities. Aux keeps its staged copy for parity, isolated to the Aux page.
+
+String‑safe table reads
+- Symptom: scientific notation, lost leading zeros, missed overlays.
+- Fix: use `pd.read_csv(..., dtype=str, keep_default_na=False, na_filter=False)` for string‑tables.
+
+Renderer coupling
+- Symptom: full Winners tile “missing renderer/tables.”
+- Fix: full tile reads three combined tables and calls a stable renderer (or a reporting builder) with purple+green overlay. Keep compact tile as fallback.
+
+Per‑page sys.path tweaks
+- Guidance: Only the Aux page should mutate `sys.path` to bind the staged `working/modules`. All other pages must import from project `modules/*` and `src/*`.
+
+Combined draw exports
+- Symptom: `PermissionError: [Errno 13]` when running the Aux draw pipeline/CLI because Excel or another editor still has an old CSV open.
+- Fix: Close the spreadsheet before regenerating; the exporter now writes to `data/cleaned/draws/`. Do not drop new CSVs back into `data/cleaned/`—leave that folder for the cleaned Excel sheets only.
+- Reminder: Combined draws remain the source of truth for Aux/Control Center/Blackapple; Midday/Evening wiring should add features without overwriting the combined feed.
+
+Legacy Aux reminder: keep the files listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md (boxed VTRAC reference and analyze_pairs). If Aux starts reporting missing BOXED/VTRAC_DISPLAY, run `python scripts/checks/smoke_aux_vtrac.py` and restore those files before archiving further.
+
+Digit-Reduction Analyzer V2
+- Read-only consumer: only touch alpha_analytical/digit_reduction/analyzer_v2/; never edit the live reducer or src/app.py wiring from this workspace.
+- IO contract: inputs come from data/outputs/analysis/digit_reduction/<STATE>/training/, outputs must stay in analyzer_v2/ and use the unified artifact names (per_item, own_vs_combined_delta, top_candidates, meta).
+- Scoring parity: config.yml is the single source of truth. If a feature key drifts from the scorer, fix the key or weight rather than patching individual callers.
+- VTRAC hints: derive via analyzer_v2.vtrac_index only; do not import staged modules.vtrac_reference from Aux.
+- Guard with preflight: run .codex/preflight.ps1 before edits and use the smoke command documented in integration_notes.txt after each change.
+Digit-Reduction Winners Overlay
+- Inputs come from the reducer artifacts (stacked HTML + latest training JSON); run the reducer first.
+- All overlay/stamp/flags files live under data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/winners/ (with optional mirror to data/outputs/analysis/winners/<STATE>/stamps/digit_reduction/).
+- Only append rows to the flags CSV when a location actually hits (exact or VTRAC); left-join onto analyzer per-item rows via area/section/set/draw/col/method/mode.
+- Keep VTRAC family detection local (mirror pairs); never import the staged modules.vtrac_reference.
+- Annotated HTML is a copy; never overwrite the reducer s original stacked report.

@@ -1,0 +1,225 @@
+and I’m sorry for the confusion earlier. Let me reset things crisply and line up the fixes so Codex can implement them exactly as you want.
+
+First—your rules (confirmed)
+
+Three independent datasets per state: Combined, Midday, Evening — each has its own 1,000‑draw history CSV.
+
+Boxed doubles only in this strip. Permutations collapse to one combo (e.g., 688 == 886 == 868).
+
+Thresholds (doubles): blue ≥ 667, red ≥ 1000 draws since.
+
+Badges are a trace, never a substitute. If a combo is hot in multiple variants, show all of the badges it actually earned (e.g., 633M+C). Do not collapse or replace M/E with C for display—ever.
+
+Prefer re‑using the exact V‑TRAC boxed statuses (red circle / blue square), and keep the pair highlighting that appears in the V‑TRAC table when we render the family cells.
+
+That’s the standard. I will keep the rest of my guidance consistent with that.
+
+What’s going wrong right now (from your screenshots)
+
+CEM badge pile‑ups in the Control Center family columns.
+That can only happen legitimately if many doubles are ≥1000 in all three streams at once (rare). More likely:
+
+(a) The family builder was unioning badges at the family level (severity from one variant + badges from others), instead of keeping a per‑variant result per combo; and/or
+
+(b) Draws‑since are getting defaulted to the window length when a combo isn’t found because of a file/boxing bug (e.g., reading the wrong CSV, not canonicalizing digits), which makes everything look ≥1000 everywhere.
+
+We fixed this once, but your new snapshot suggests the family code regressed to a family‑level union and/or the “not found” path is firing too often. (I address the concrete fix below.)
+
+Aux page blows up: “Expanders may not be nested inside other expanders.”
+That exception stops the page before draw CSVs are even read, which is why you see the generic “Please ensure the state data files are available in data/cleaned/” banner underneath—it’s not the root cause. We need to remove nested st.expander(...) usage (Streamlit disallows expander‑inside‑expander) and the page will run again.
+
+Mojibake banner (“sanitize src/app.py”).
+Some UI strings are not UTF‑8 clean (likely a pasted symbol or Windows‐1252 character). We need to normalize/encode before writing to Streamlit.
+
+Combined vs “All‑Variant” wording.
+The app still uses the word “Combined” two ways: as the draw stream and (elsewhere) as “C+M+E consensus”. That ambiguity has caused confusion in code and discussion. We’ll lock the labels so “Combined” can refer only to the Combined draws CSV, and never to “C+M+E together.” (This also matches the operating model documented for the app pages and data paths. )
+
+The fixes (logic + UI) — do exactly this
+A) Family / Due‑Doubles strip — build it variant‑first, never family‑first
+
+Goal: For each boxed double, compute its red/blue per variant, attach the variant badge(s) to that combo, then group into V‑TRAC families for display. No collapsing. Also carry shape/pair styling through from the V‑TRAC analyzer.
+
+Source of truth & loaders
+
+Read each stream from data/cleaned/<State>_draws.csv, data/cleaned/<State>_Midday_draws.csv, data/cleaned/<State>_Evening_draws.csv. The Aux/Control‑Center architecture already expects this.
+
+Boxing and gap
+
+def canon3(s: str) -> str:            # '689' -> '689', '986' -> '689'
+    return ''.join(sorted(s.strip().zfill(3)))
+
+def draws_since(draws: list[str], combo: str) -> tuple[int, bool]:
+    """returns (gap, unseen) where unseen=True if not found in window."""
+    tgt = canon3(combo)
+    for i, d in enumerate(draws):
+        if canon3(d) == tgt:
+            return i, False
+    return len(draws), True  # your rule: unseen in 1,000 → treat as RED; we’ll flag it.
+
+
+Classification (doubles thresholds only):
+
+DOUBLE_BLUE = 667
+DOUBLE_RED  = 1000
+
+def classify_double_gap(gap: int) -> str|None:
+    if gap >= DOUBLE_RED:  return "R"
+    if gap >= DOUBLE_BLUE: return "B"
+    return None
+
+
+Per‑variant map (the important part):
+
+# status[variant][combo] = {"sev": "R"/"B", "gap": int, "unseen": bool}
+status = {v:{} for v in ("combined","midday","evening")}
+for v, draws in draws_by_variant.items():
+    for combo in ALL_BOXED_DOUBLES:
+        gap, unseen = draws_since(draws, combo)
+        sev = classify_double_gap(gap)
+        if sev:
+            status[v][combo] = {"sev": sev, "gap": gap, "unseen": unseen}
+
+
+Render tokens (never collapse):
+
+Build one token per (combo, variant) that is R/B, with the variant badge appended (C/M/E) and the right shape (red circle / blue square).
+
+If unseen=True, add a tiny dot marker (e.g., •) or tooltip “red via unseen (≥window)”—this keeps your semantics (unseen==very overdue) while making diagnostics obvious.
+
+Examples:
+
+R066C (●066C) means 066 is red in Combined.
+
+B066M (■066M) means 066 is blue in Midday.
+
+If the same combo is hot in more than one variant, print both tokens: ●066C ■066M.
+
+Family grouping & ranking:
+
+Group combos into the mirror families (e.g., 0/5–4/9 contains 004, 009, 044, 099, 445, 449, 455, 559).
+
+Score a family by counting tokens, not by unioning them:
+
+score = 2 * (# of 'R' tokens across all variants & members)
+      + 1 * (# of 'B' tokens across all variants & members)
+
+
+Sort tokens within a family as: R first, then by larger gap, then text.
+
+Display the family label and the exact tokens, e.g.
+
+0/5–4/9:
+●004C ■009E ●044M ●455C
+
+
+This keeps your traceability 1:1 with the three datasets and stops the “everything shows CEM” effect that happens when severities/badges are unioned at the wrong level.
+
+Carry the pair/mirror styling through
+
+The V‑TRAC analyzer already knows which pair is highlighted inside each combo (your blue/red pair tags on the V‑TRAC table). Don’t recompute—reuse: expose those pair tags from the same function that builds the V‑TRAC boxed rows and include them in the token’s HTML class (e.g., wrap the repeated digit with <span class="pair-hot">33</span>).
+
+This is consistent with how the Aux pages are wired to reuse the working-tool engines and CSVs so pages don’t drift.
+
+Why I’m insisting on “variant‑first”: this matches the app’s design: Aux operates on per‑state draw CSVs and Control Center summarizes across those CSVs; they are intentionally kept separate from the combined string‑table pipeline so modules don’t step on each other.
+
+B) Do not collapse badges (final)
+
+Remove any code path that tries to “summarize” M+E as C or prefers C over M/E. The badge list must be exactly the set of variants where the combo is hot—no substitutions. (Thank you for calling this out firmly.)
+
+Tripwire test:
+
+If a combo is blue in M and E but not C, rendered tokens must include both ■…M and ■…E and must not include …C.
+
+C) “Unseen in window” (your rule) — keep it, but label it
+
+You’re right: with a 1,000‑draw window, “not found” == red by your semantics. We’ll keep it that way and simply surface it:
+
+Add a tiny ●/■ marker (or a tooltip) when unseen=True, so you can tell at a glance whether a red came from a true ≥1000 gap vs. “no sightings in window.”
+
+This prevents mystery explosions while preserving your intended meaning.
+
+If you later decide you want a different treatment, we can change only the tooltip; your badges won’t change.
+
+D) Fix the Aux page expander error (and the Mojibake)
+
+Streamlit rule: st.expander() cannot be nested inside another st.expander(). Replace the outer expander with st.container() or use st.tabs() to organize sections (“Pairs”, “V‑TRAC”, “Sums”, “Doubles families”). Then, inside each tab, you may safely use one level of st.expander().
+
+This exception is why your Delaware runs failed across Combined/Midday/Evening; once fixed, the CSVs will load again (you already have them under data/cleaned/draws/ per your screenshots). The Aux pages and the Control Center were designed to read exactly from those files.
+
+Mojibake: wrap any user‑facing string with a small sanitizer, and open files with encoding="utf-8":
+
+def ui(txt: str) -> str:
+    return (txt or "").encode("utf-8", "replace").decode("utf-8")
+st.markdown(ui(big_string_from_docs))
+
+E) Label cleanup (clarity & future bugs)
+
+In code and UI:
+
+Variant keys: combined, midday, evening (and badges C/M/E).
+
+All‑variant concepts: say “All‑Variant (C+M+E) consensus,” never “combined.”
+This matches the app‑flow docs and prevents accidental cross‑wiring in the future.
+
+Acceptance checks (you can do these in seconds)
+
+Badge parity check (NY example you pointed to): Pick 6–8 doubles. For each variant, click into the Aux V‑TRAC table and jot the red/blue. Then confirm the family tokens show exactly those badges (no extra, no missing). If V‑TRAC says 066 is C:red, M:blue, E:–, the family cell must show ●066C ■066M and nothing else.
+
+Triple‑badge reality check: Count how many doubles are C+M+E in V‑TRAC for a state; the family strip should show roughly the same count of “triple‑badge members.” If they spike far beyond V‑TRAC, it means something is still unioning at the wrong level.
+
+Unseen flag check: In a small state, pick a double you know hasn’t shown in the last 1,000 in Evening. Family token for …E should be red with the unseen marker/tooltip.
+
+Aux page opens: No “expander nested” error; each section renders.
+
+Encoding: No Mojibake banner at the top.
+
+Why this won’t “break the rest of the app”
+
+This work is inside the Aux/Control Center lane that already runs off data/cleaned/*_draws.csv and reuses the working‑tool engines for parity. It does not touch your combined‑table pipeline (Stable Patterns, Digit Reduction, V‑TRAC Analyzer) which remain on their own inputs. This isolation is intentional in your app design.
+
+It also supports your “two‑brain” vision: Brain 1 (state tools) stays self‑contained; Brain 2 (Control Center) rolls up state signals cleanly. We’re just making the doubles family strip faithfully reflect the three datasets so the aggregate view is trustworthy.
+
+What to tell Codex (copy/paste)
+
+1) Do not collapse badges. Show one token per (combo, variant) that is R/B, with the correct variant badge (C/M/E) and the shape (red circle / blue square). If the combo is hot in multiple variants, show multiple tokens. Never substitute or union badges across variants.
+
+2) Compute per‑variant, per‑combo first; then group into families.
+Replace any code that builds badges at the family level. Keep a dict:
+
+status[variant][combo] = {"sev": "R"/"B", "gap": int, "unseen": bool}
+
+
+Use doubles thresholds (667/1000) and boxed matching.
+
+3) Carry V‑TRAC pair highlighting through to tokens.
+Reuse the pair/mirror marks from the V‑TRAC analyzer and include them in the HTML markup for the family tokens (e.g., <span class="pair-hot">33</span> inside 366).
+
+4) Add an “unseen in window” marker.
+Keep your semantics (unseen == RED) but add a small dot or tooltip so we can tell why it’s red.
+
+5) Fix the Aux UI error.
+Flatten expanders (no st.expander inside another). Use st.container() + child expanders or st.tabs() + child expanders. This error is currently aborting the page.
+
+6) Sanitize UI strings and open text with UTF‑8.
+Implement ui() helper above; call it on any large Markdown block. Ensure open(..., encoding='utf-8') everywhere.
+
+7) Label hygiene.
+Reserve “Combined” strictly for the Combined draws stream; whenever you mean “C+M+E together,” say “All‑Variant (C+M+E).” Update any constants/labels accordingly.
+
+8) Add tripwires / tests.
+
+Badges mirror V‑TRAC: for a fixed seed of combos, compare to Aux V‑TRAC tables; assert the same badges per variant.
+
+No collapse test: a combo hot in M & E but not C must render …M …E and not …C.
+
+Unseen marker test: force a missing combo in a test draw list; assert RED with unseen flag.
+
+No nested expander test: CI greps the UI for prohibited patterns (or keep it as code review guidance).
+
+Quick note on your data folders
+
+Your screenshots show data/cleaned/draws/ populated with *_draws.csv, *_Midday_draws.csv, *_Evening_draws.csv for all states. That’s exactly what the Aux/Control Center pages are designed to consume; once the expander exception is removed the pages will read them as intended.
+
+If you want me to, I can also draft the exact HTML/CSS for the token shapes (●/■) and the pair hot‑spot styling so Codex can paste it and be done. But the big picture is simple: keep the three datasets separate, keep their badges separate, and render exactly what the V‑TRAC boxed tables say—no collapsing. That aligns with your architecture and with how you described “Brain 1 / Brain 2” from the start.
+
+You’re not “destroying” analytical power here—this tightens the Aux/Control Center loop so the strip becomes a trustworthy dashboard tile, and it stays completely isolated from your other tools.

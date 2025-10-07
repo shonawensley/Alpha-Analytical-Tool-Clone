@@ -32,3 +32,27 @@ def test_family_combo_sizes():
             assert len(combo_set) == 2
         else:
             assert len(combo_set) == 8
+
+def test_rank_double_families_badges_and_unseen():
+    from core.vtrac_family_ranker import rank_double_families
+
+    variant_draws = {
+        "combined": ["004", "009", "044", "099", "445", "559", "599"],
+        "midday": ["004", "009", "120", "455", "044"],
+        "evening": ["455", "004", "009"],
+    }
+    rankings = rank_double_families(variant_draws, red_threshold=4, blue_threshold=2, limit=20)
+    members = []
+    for entry in rankings:
+        for member in entry["members"]:
+            if member["combo"] == "455":
+                members.append(member)
+    assert {m["variant"] for m in members} == {"combined", "midday"}
+    combined_entry = next(m for m in members if m["variant"] == "combined")
+    assert combined_entry["severity"] == "R"
+    assert combined_entry["unseen"] is True
+    midday_entry = next(m for m in members if m["variant"] == "midday")
+    assert midday_entry["severity"] == "B"
+    assert midday_entry["unseen"] is False
+
+

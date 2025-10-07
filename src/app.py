@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import pathlib
 import subprocess
@@ -61,6 +61,8 @@ except Exception:
 # ----------------------------------------------------------------------
 
 from core.module_b_digit_reduction import run_digit_reduction
+from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle
+from alpha_analytical.digit_reduction.analyzer_v2.training_bundle import TrainingBundleError
 from utils.path_handler import get_tables_output_dir, get_analysis_output_dir
 from core.aux_config import (
     PAIRS_WINDOW,
@@ -2767,6 +2769,69 @@ def show_digit_reduction_page(state: str) -> None:
             st.caption("Latest Analyzer V2 outputs for this state:")
             for artifact_path in analyzer_files:
                 st.markdown(f"- [{artifact_path.name}]({artifact_path.as_posix()})")
+
+        st.markdown("---")
+        st.caption("Package Digit Reduction training bundles for AI review.")
+        latest_stamp = training_bundle.find_latest_stamp(state, analysis_root=base_analysis_dir)
+        if latest_stamp is None:
+            st.info("Run the winners overlay batch to generate bundle-ready artifacts.")
+        stamp_input = st.text_input(
+            "Bundle stamp (YYYYMMDD)",
+            value=latest_stamp or "",
+            key=f"bundle_stamp_{state}",
+            help="Defaults to the latest overlay stamp; adjust if you want to package a specific run.",
+        )
+        include_hits = st.checkbox(
+            "Include winner hits CSV", value=True, key=f"bundle_hits_{state}"
+        )
+        include_overlay = st.checkbox(
+            "Include overlay HTML previews", value=False, key=f"bundle_overlay_{state}"
+        )
+        make_zip = st.checkbox(
+            "Create zip copy alongside the folder", value=False, key=f"bundle_zip_{state}"
+        )
+        chosen_stamp = (stamp_input or "").strip() or latest_stamp
+        bundle_disabled = chosen_stamp is None
+        if st.button(
+            "Package training bundle",
+            key=f"bundle_button_{state}",
+            disabled=bundle_disabled,
+        ):
+            try:
+                result = training_bundle.package_training_bundle(
+                    state,
+                    stamp=chosen_stamp,
+                    analysis_root=base_analysis_dir,
+                    include_overlay=include_overlay,
+                    include_hits=include_hits,
+                    make_zip=make_zip,
+                )
+            except TrainingBundleError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.exception(exc)
+            else:
+                st.success(f"Training bundle ready: {result['bundle_dir']}")
+                if result.get("zip_path"):
+                    st.caption(f"Zip archive: {result['zip_path']}")
+        bundles = training_bundle.list_training_bundles(state, analysis_root=base_analysis_dir)
+        if bundles:
+            st.caption("Existing bundles (most recent first):")
+            for bundle_path in bundles[:6]:
+                st.markdown(f"- [{bundle_path.name}]({bundle_path.as_posix()})")
+            if st.button(
+                "Delete all training bundles",
+                key=f"bundle_cleanup_{state}",
+            ):
+                removed = training_bundle.cleanup_training_bundles(
+                    state, analysis_root=base_analysis_dir
+                )
+                if removed:
+                    st.warning("Removed: " + ", ".join(path.name for path in removed))
+                else:
+                    st.info("No bundles found to delete.")
+        else:
+            st.caption("No training bundles generated yet.")
 
     if callable(render_dr_winner_overlay_dev):
         render_dr_winner_overlay_dev(state)

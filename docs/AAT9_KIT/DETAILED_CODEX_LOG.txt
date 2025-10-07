@@ -1,3 +1,18 @@
+## 2025-10-06 - Winners full report bootstrap fix
+- Action: Hardened the Analyzer-style winner report import path by (a) relocating PROJECT_ROOT to the front of sys.path inside modules/winner_report_full, (b) evicting the legacy src/utils shim before importing path helpers, and (c) updating src/_import_hygiene.project_modules_first to do the same when Control Center buttons run.
+- Action: Added tests/test_winner_report_full.py that stubs a shimmed utils module to guard against future bootstrap edits reintroducing the regression.
+- Verification: python -m pytest tests/test_winner_report_full.py tests/test_digit_reduction_overlay.py; python -m py_compile modules/winner_report_full.py src/_import_hygiene.py src/app.py.
+- Notes: Control Center's winners tile now consistently renders the three-pane HTML, and Dev Health continues to reflect canonical module bindings even after staged Aux interactions.
+## 2025-10-03 - Digit reduction overlay acceptance (multi-state)
+- Action: Patched `_training_json_latest` to look for both `{state}_digit_reduction_log.json` and the legacy plural variant, parameterised the acceptance test to cover Delaware and Florida, and asserted that `run_winner_overlay_batch` emits HTML/map/hits/flags/stamp artifacts per state while swapping utcnow stamps for timezone-aware values.
+- Verification: `python scripts/run_acceptance.py --marker acceptance`; `python scripts/run_acceptance.py --marker smoke`; `python -m py_compile alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py tests/acceptance/test_digit_reduction_delaware.py`.
+- Notes: Overlay acceptance uses the first top-candidate canon as a stand-in winner; continue expanding fixtures to additional states and consider dedicated overlay smokes once more data is captured.
+
+## 2025-10-03 - Digit Reduction acceptance + pivot guard
+- Action: Patched own_vs_combined to treat missing terminal cores as 0-agreement and added 	ests/acceptance/test_digit_reduction_delaware.py (with fixture tables) so reducer + analyzer artifacts are covered alongside the positional smoke. Briefings and the testing roadmap were refreshed to call out the new flow.
+- Verification: python scripts/run_acceptance.py --marker acceptance; python scripts/run_acceptance.py --marker smoke; python -m py_compile alpha_analytical/digit_reduction/analyzer_v2/pivot.py tests/acceptance/test_digit_reduction_delaware.py.
+- Notes: Acceptance now redlines if digit-reduction outputs drift; next slices should cover the winners overlay batch and additional states once fixtures are curated.
+
 ## 2025-10-02 - Aux heatboard & sums metadata
 - Action: Shared the V-TRAC double family helper between Control Center and Aux, rendering Top-5 family tokens with consistent CSS; added a hazard-based heatboard (hazard, avg gap, freq buckets, trend) to both views; and extended sums stats with `deficit`/`z_tail` for future scoring.
 - Verification: `python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/sums_analysis.py`; `pytest -q tests/test_analyze_pairs_semantics.py tests/test_vtrac_families.py`.
@@ -3220,4 +3235,14 @@ All the Digit Reduction work is already logged where it needs to be:
 2025-10-03 00:35 UTC
 - Dialed in the pos_5 checklist: SSOT shortlist defaults (topk=3, pool=6, max_internal=64), All-Variant consensus wording, cached V-TRAC hot indices/family map for reuse, and regression tests for repeat-endcap (989 bridge), lane concordance, and union sanity.
 - Commands: python -m py_compile src/app.py modules/module_d_auxiliary_tools/refactored/positional_tool.py; PYTHONPATH=src;. pytest tests/test_positional_shortlist.py; PYTHONPATH=src;. pytest tests/test_vtrac_families.py; PYTHONPATH=scripts/auxiliary/working;src;. pytest tests/test_analyze_pairs_semantics.py.
+
+2025-10-03 02:40 UTC
+- Added acceptance harness (scripts/run_acceptance.py + fixtures) and smoke marker; documented usage in CODEX_READ_FIRST_AAT9.md and Aux docs.
+- Introduced stress/mutation helpers for positional analyzer and wired a minimal Testing Roadmap for future coverage tracking.
+- Commands: python scripts/run_acceptance.py --marker smoke; python scripts/run_acceptance.py; python scripts/tools/stress_positional.py --iterations 1 --state Delaware4.
+
+
+2025-10-05 05:40 UTC | Doubles regression guardrails\n- Captured CT/FL 1,000-draw fixtures under tests/fixtures/acceptance/doubles and wired unit (	ests/test_vtrac_family_ranker_regression.py) + acceptance (	ests/acceptance/test_control_center_doubles.py) coverage for variant tokens.\n- Added loader regression (	ests/test_aux_loaders_variants.py), extended the positional acceptance assertions, and introduced scripts/health/check_doubles_variants.py for post-import audits.\n- Updated briefings, Aux docs, and Testing Roadmap to reference the new safety net.\n- Tests: python -m py_compile src/app.py src/core/vtrac_family_ranker.py scripts/health/check_doubles_variants.py tests/test_vtrac_family_ranker_regression.py tests/acceptance/test_control_center_doubles.py tests/test_aux_loaders_variants.py; pytest tests/test_vtrac_family_ranker_regression.py tests/test_aux_loaders_variants.py -q; python scripts/run_acceptance.py --marker acceptance; python scripts/run_acceptance.py --marker smoke.\n
+- Automation: .codex/preflight.ps1 -CheckDoubles, python scripts/run_acceptance.py --with-doubles-health, and pre-commit env AAT9_RUN_DOUBLES_HEALTH=1 (optional).
+2025-10-05 19:00 UTC\n- Reworked the digit reduction winner overlay to scan every reduction step (exact + V-TRAC), emit a legend/summary banner, and auto-fill the Combined slot when only Midday/Evening winners are supplied.\n- Pulled the overlay flag CSV into Analyzer V2, added winner-evidence weights to config.yml, and exposed the earliest-step recap inside the Streamlit dev expander.\n- Added 	ests/test_digit_reduction_overlay.py plus doc/briefing updates so future sessions rerun the guard.\n- Commands: python -m py_compile alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py alpha_analytical/digit_reduction/analyzer_v2/pipeline.py alpha_analytical/digit_reduction/analyzer_v2/score.py alpha_analytical/digit_reduction/analyzer_v2/ui_dev.py src/app.py; pytest tests/test_digit_reduction_overlay.py.\n\n
 

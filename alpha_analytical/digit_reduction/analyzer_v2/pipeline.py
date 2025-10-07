@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import csv
+import re
 import yaml
 
 from .features import compute_features_union
@@ -15,6 +17,56 @@ from .writers import write_artifacts
 
 SectionKey = Tuple[str, str, str, str, str, int, str, str]
 MethodKey = Tuple[str, str, str, str, str, int, str]
+
+
+FLAG_KIND_ORDER = ['exact', 'vtrac', 'drop_exact', 'drop_vtrac', 'family_exact', 'family_vtrac']
+
+FLAG_PATH_PATTERN = re.compile(r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_winner_flags$")
+
+
+def _load_winner_flags(state: str, analysis_root: Optional[Path | str]) -> Dict[SectionKey, Dict[str, Any]]:
+    base_dir = analyzer_out_dir(state, analysis_root)
+    winners_dir = Path(base_dir) / "winners"
+    if not winners_dir.exists():
+        return {}
+
+    latest: Dict[str, Path] = {}
+    for candidate in winners_dir.glob("*_winner_flags.csv"):
+        match = FLAG_PATH_PATTERN.match(candidate.stem)
+        if not match:
+            continue
+        variant = match.group("variant")
+        current = latest.get(variant)
+        if current is None or candidate.stat().st_mtime > current.stat().st_mtime:
+            latest[variant] = candidate
+
+    flags: Dict[SectionKey, Dict[str, Any]] = {}
+    for variant, csv_path in latest.items():
+        with csv_path.open("r", newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                key: SectionKey = (
+                    state,
+                    str(row.get("area", "")),
+                    str(row.get("section", "")),
+                    str(row.get("set", "")),
+                    str(row.get("draw", "")),
+                    _as_int(row.get("col", 0)),
+                    str(row.get("method", "")),
+                    str(row.get("mode", "")),
+                )
+                data = {
+                    "dr.win_variant": variant,
+                    "dr.win_final_value": str(row.get("dr_win_final_value", "")),
+                    "dr.win_drop_digit": str(row.get("dr_win_drop_digit", "")),
+                    "dr.win_vtrac_local_index": _as_int(row.get("dr_win_vtrac_local_index", -1)),
+                }
+                for kind in FLAG_KIND_ORDER:
+                    data[f"dr.win_{kind}"] = _as_int(row.get(f"dr_win_{kind}", 0))
+                    data[f"dr.win_step_{kind}"] = _as_int(row.get(f"dr_win_step_{kind}", -1))
+                flags[key] = data
+
+    return flags
 
 
 def _as_int(value: Any) -> int:
@@ -154,6 +206,8 @@ def run(state: str, analysis_root: Optional[Path | str] = None) -> Dict[str, Any
         row.update(compute_features_union(item, thresholds))
         per_item_rows.append(row)
 
+    flags_map = _load_winner_flags(state, root_path)
+
     cross_section = cross_section_pivot(items)
     own_features, delta_rows = own_vs_combined(items)
     set_features = set_memory(items)
@@ -167,6 +221,17 @@ def run(state: str, analysis_root: Optional[Path | str] = None) -> Dict[str, Any
         row.update(set_features.get(key, {}))
         row.update(xcol_features.get(key, {}))
         row.update(method_features.get(_method_key(row), {}))
+
+        flag = flags_map.get(key)
+        for kind in FLAG_KIND_ORDER:
+            row[f"dr.win_{kind}"] = 0
+            row[f"dr.win_step_{kind}"] = -1
+        row["dr.win_final_value"] = ""
+        row["dr.win_drop_digit"] = ""
+        row["dr.win_vtrac_local_index"] = -1
+        row["dr.win_variant"] = str(row.get("section", ""))
+        if flag:
+            row.update(flag)
         row.setdefault("mode.only_one", 0)
         row.setdefault("mode.agree_core", 0)
         row.setdefault("mode.time_to3_delta_abs", 0)
@@ -219,3 +284,8 @@ def run(state: str, analysis_root: Optional[Path | str] = None) -> Dict[str, Any
         ],
         "config_version": cfg.get("version", 0),
     }
+
+
+
+
+
