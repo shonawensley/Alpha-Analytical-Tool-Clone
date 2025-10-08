@@ -1,0 +1,407 @@
+
+
+What we actually documented before (re: “double pass” and R2/R4/R6/R8)
+
+You did document a two‑stage idea for V‑TRAC/cluster scoring (first find occurrences, then do a deeper scoring sweep). It isn’t called “double‑pass R2/R4/R6/R8” verbatim, but the intent shows up alongside R‑row milestones and cluster detection across the ladders. The notes talk about hot‑zone milestones (R4/R6/R8) and cross‑row stability, and the examples repeatedly show the same pattern spilling from R2 to R8 with markers like [V] and [W] (value/straight hints).】】】
+
+Your clustering doc also explicitly frames the machine view as “count every target pattern directly in the raw strings,” and proposes counting those targets per R‑row column—exactly what a first pass would do—before higher‑level scoring. It also calls out building features like “how many index‑family strings hit R2 vs R4 vs R6 vs R8,” which implies a second, aggregating pass.】】
+
+In the “vision/blueprint” notes you also recorded the R2→R8 ladder concept and pattern runs / cross‑section alignment as things to score (stability/consensus), which again implies scanning each R‑row then combining the signals (effectively two passes).】】
+
+Bottom line: yes—your materials reflect a two‑pass philosophy and an R2/R4/R6/R8 ladder scan. What is not yet locked in the Winners overlay is:
+
+a gap‑tolerant second pass (to catch “hidden by one value” like 9·3·4 inside 9304/90334), and
+
+a ladder propagation (if a hit is found in R2, actively probe the same row’s R4/R6/R8 for superset/gapped versions and mark them too).
+
+That’s exactly why you’re seeing missing highlights for many 894‑family hits (e.g., 934/343/…) in your screenshots.
+
+What to implement now (hand this to Codex)
+
+Goal: make the Winners overlays (both compact “V‑Trac Winner Report” and “Analyzer‑style full report”) exhaustive and consistent:
+
+Pass A (strict): contiguous 3‑digit matches of all winner straights (6 perms) + all index family combos (get_index_set(idx)).
+
+Pass B (tolerant): allow a single wildcard digit between any adjacent digits to catch “hidden by one value” (e.g., 93?4 catches 9304 / 9034 / 934).
+
+Ladder propagation: for each (Set, Draw) row, if a target is found in R2, proactively probe R4/R6/R8 and mark hits; repeat from R4→R6/R8 and R6→R8.
+
+Keep green (winner straights) overriding purple (index family) exactly as you already do.
+
+1) Drop‑in helpers (pure functions, no path changes)
+
+File: modules/winner_report_full.py (top of file; below existing imports)
+
+# --- Winners overlay search helpers (strict + 1-gap tolerant) ---
+import re
+from typing import Iterable, Tuple, List, Dict
+
+_NON_DIGITS = re.compile(r"[^0-9]+")
+
+def _digits(s: str) -> str:
+    return _NON_DIGITS.sub("", str(s or ""))
+
+def build_targets_for_winner(winner: str, vtrac_api) -> Dict[str, List[str]]:
+    w = _digits(winner)
+    straights = sorted({"".join(p) for p in set(__import__("itertools").permutations(w, 3))})
+    idx = vtrac_api.get_vtrac_index(w)
+    family = sorted(set(map(_digits, vtrac_api.get_index_set(idx))))
+    return {"straights": straights, "family": family}
+
+def compile_gap1_regexes(target: str) -> re.Pattern:
+    # allow a single digit gap between any adjacent pair; keep order
+    a, b, c = target[0], target[1], target[2]
+    return re.compile(fr"{a}\d?{b}\d?{c}")
+
+def find_hits(cell: str, targets: Iterable[str], allow_gap: bool) -> Tuple[set, set]:
+    s = _digits(cell)
+    strict, gap1 = set(), set()
+    if not s:
+        return strict, gap1
+    for t in targets:
+        if t in s:
+            strict.add(t)
+        elif allow_gap and compile_gap1_regexes(t).search(s):
+            gap1.add(t)
+    return strict, gap1
+
+2) Apply helpers inside the two Winners builders
+
+Files:
+
+modules/winner_report_full.py (analyzer‑style)
+
+src/core/winners_vtrac_report.py (compact index report)
+
+Where: right before you color cells, build the target sets once:
+
+# vtrac_api is modules.vtrac_reference
+tg = build_targets_for_winner(winner, vtrac_api)
+T_STRAIGHTS = tg["straights"]      # paint GREEN
+T_FAMILY    = tg["family"]         # paint PURPLE
+
+
+Per row (Set/Draw): scan the four R‑columns using Pass A then Pass B, then do ladder propagation:
+
+# order matters for ladder propagation
+R_ORDER = ("R2", "R4", "R6", "R8")
+
+row_hits = {r: {"S_strict": set(), "S_gap": set(), "F_strict": set(), "F_gap": set()} for r in R_ORDER}
+
+for r in R_ORDER:
+    cell = df.loc[row_idx, r]  # or however you read the cell in that pane
+    s_s, s_g = find_hits(cell, T_STRAIGHTS, allow_gap=True)  # straights first (green priority)
+    f_s, f_g = find_hits(cell, T_FAMILY,    allow_gap=True)
+    row_hits[r]["S_strict"] |= s_s
+    row_hits[r]["S_gap"]    |= s_g
+    row_hits[r]["F_strict"] |= f_s
+    row_hits[r]["F_gap"]    |= f_g
+
+# Ladder propagation (propagate any hit “down” to longer rows and rescan strictly to confirm)
+for i, rsrc in enumerate(R_ORDER):
+    for rdst in R_ORDER[i+1:]:
+        if any(row_hits[rsrc][k] for k in ("S_strict","S_gap","F_strict","F_gap")):
+            cell_dst = df.loc[row_idx, rdst]
+            # re-check with strict first (we prefer strict highlight if present)
+            s_s, _ = find_hits(cell_dst, T_STRAIGHTS, allow_gap=False)
+            f_s, _ = find_hits(cell_dst, T_FAMILY,    allow_gap=False)
+            if s_s: row_hits[rdst]["S_strict"] |= s_s
+            if f_s: row_hits[rdst]["F_strict"] |= f_s
+
+
+Coloring rule (keep your existing precedence):
+
+If S_strict: GREEN (solid).
+
+Else if S_gap: GREEN (dotted/amber border) to indicate “hidden by one value”.
+
+Else if F_strict: PURPLE (solid).
+
+Else if F_gap: PURPLE (dotted/amber border).
+
+If you prefer to avoid new CSS, you can use a light‑amber background for the gap1 cases and keep purple/green text; just make sure the legend explains the difference.
+
+3) Coverage audit (tiny safety net)
+
+At the end of each pane, compute what you expected to find vs what you actually painted. Show it under the Dev‑Health expander so you’ll immediately see if the overlay missed permutations:
+
+expected = set(T_STRAIGHTS) | set(T_FAMILY)
+found = set().union(*[
+    row_hits[r]["S_strict"] | row_hits[r]["S_gap"] |
+    row_hits[r]["F_strict"] | row_hits[r]["F_gap"]
+    for r in R_ORDER
+])
+missing = sorted(expected - found)
+dev_health["overlay_coverage"] = {
+   "expected_total": len(expected),
+   "found_total": len(found),
+   "missing_examples": missing[:10]
+}
+
+4) Make it switchable (so you can A/B quickly)
+
+Add a checkbox “Enable 1‑gap tolerant search (hidden‑by‑one‑value)” on both Winners tiles. Wire it to allow_gap=True/False and the “dotted/amber” style. Default ON.
+
+5) Tests (fast asserts Cursor can run)
+
+Unit: Put three 1‑liners in a new tests/test_overlay_gap.py:
+
+find_hits("90334", ["934"], allow_gap=True) hits gap1 for 934.
+
+find_hits("9304", ["934"], allow_gap=True) hits gap1 for 934.
+
+find_hits("9304", ["934"], allow_gap=False) does not hit.
+
+Smoke: A scripted check (like you already do for repro) that calls the full builder for Connecticut4 winner 894 and asserts:
+
+at least one strict and one gap hit appear in R4 or R6 for 934 or 343 family.
+
+UI: Turn on the checkbox and confirm the coverage audit no longer lists straights (6) as missing.
+
+Why this fixes what you circled
+
+Your screenshots show lots of near‑misses where the 3‑digit family appears but is split by a single digit (e.g., 9304, 90334). The new Pass B regex (a\d?b\d?c) is built exactly for that case.
+
+Some matches live in longer R rows even when the shorter one has the obvious seed. The ladder propagation makes us actively probe R4/R6/R8 after we see an R2 hint so those cells get marked too.
+
+The coverage audit will tell you, in numbers, if any permutation is still not being recognized. That prevents silent regressions later.
+
+Where this connects to your docs (for your records)
+
+The “machine view” / count‑then‑score approach and per‑column features that the ML would use — this patch operationalizes that idea inside the Winners overlays.】
+
+The R‑ladder and cross‑section stability you called out in the legacy/plan notes are respected; we’re explicitly scanning R2→R8 and recording coverage, which is what your “pattern runs / milestones” descriptions were pointing toward.】】
+
+Quick guidance for Codex (pasteable checklist)
+
+Do not touch sys.path anywhere here; these changes are pure analytics.
+
+Edit:
+
+modules/winner_report_full.py → add helpers + call them during render.
+
+src/core/winners_vtrac_report.py → same helpers for the compact report.
+
+Add a UI toggle: st.checkbox("Enable 1-gap tolerant search", value=True).
+
+Style:
+
+Strict: existing green/purple.
+
+Gap‑tolerant: same hue with dotted outline or amber bg (legend note).
+
+Add coverage numbers to the Winners Full Dev Health expander.
+
+Tests: add tests/test_overlay_gap.py with the three asserts above.
+
+Are we “doomed”?
+
+No. The app is fine. This is a detection policy gap, not structural rot. Your own notes anticipated this kind of two‑stage/ladder logic; we just hadn’t wired it into the Winners overlays yet. Add the gap‑tolerant pass + ladder propagation and your 894 example will light up everything you expect (including 934/343 family cases that are “hidden by one value”).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_____________________________________________________
+
+
+
+B. Why the overlay is missing hits (what you circled)
+
+Cells contain markers (quotes, asterisks, daggers, thin spaces): e.g., 705934** or 00337'. A naïve if "934" in cell will fail depending on where the punctuation lands.
+
+Only contiguous triads are checked. We never look for “one‑digit‑interrupted” occurrences like 90334, 93 0 4, or 9x34 where a single extra digit breaks the visual pattern.
+
+Winner straights are not exhaustively overlaid. For winner 894, you expect all straights of its V‑Trac family (and the set’s purple coverage) to be green on top; some are missed when punctuation or a single extra digit sits between the digits.
+
+C. One, clean upgrade to the matcher (exact steps + code)
+
+Goal: Highlight (1) contiguous winner straights and index combos and (2) gap‑1 versions where a single extra digit interrupts the triad — across R2/R4/R6/R8 rows in Midday/Evening/Combined.
+
+1) Add a normalizer for table cells
+
+File: modules/winner_report_full.py (or wherever the overlay scans cells)
+
+import re
+
+_PUNCT_RE = re.compile(r"[^\d]+")  # anything that's not 0–9
+
+def _digits_only(s: str) -> str:
+    """Return just the digits from a cell (preserves order). Handles *, ' , thin spaces, etc."""
+    if not s:
+        return ""
+    return _PUNCT_RE.sub("", str(s))
+
+
+2) Build both contiguous and “gap‑1” regexes for the winner straights
+
+from itertools import permutations
+
+def _winner_regexes(winner: str):
+    # All 3-digit straights for the winner
+    perms = {''.join(p) for p in permutations(winner, 3)}
+    # e.g., '934|943|349|394|439|493'
+    strict = re.compile('|'.join(perms))
+    # Allow a single *digit* between each pair: 9\d?3\d?4 etc.
+    gap1  = re.compile('|'.join(f"{a}\\d?{b}\\d?{c}" for (a, b, c) in {tuple(p) for p in perms}))
+    return strict, gap1
+
+
+If the “purple” V‑Trac index set is also triads (it is in your doc), build the same pair of regexes for those combos once, not per‑cell.
+
+3) Match strategy per cell
+
+def _hits_cell(cell_text: str, strict_rx, gap1_rx) -> bool:
+    s = _digits_only(cell_text)         # normalize once
+    if not s:
+        return False
+    # Fast path: contiguous first
+    if strict_rx.search(s):
+        return True
+    # Second pass: allow one extra digit interrupting the pattern
+    return gap1_rx.search(s) is not None
+
+
+4) Apply in the renderer
+
+Where you currently test if token in cell:, replace with:
+
+winner_strict, winner_gap1 = _winner_regexes(winner)
+# and similarly index_strict, index_gap1 for the purple set
+
+def cell_is_green(cell):
+    return _hits_cell(cell, winner_strict, winner_gap1)
+
+def cell_is_purple(cell):
+    return _hits_cell(cell, index_strict, index_gap1)
+
+# Overlay rule remains: green overrides purple when both hit.
+
+
+5) Don’t miss R2/R4/R6/R8
+
+Make sure your scan iterates only over RowType in {"R2","R4","R6","R8"} rows of each pane (Midday, Evening, Combined). If you already do, keep it. If you filter by index, keep it case‑insensitive:
+
+if str(row["RowType"]).upper() in {"R2","R4","R6","R8"}:
+    ...
+
+
+6) Keep reads string‑safe (so zeros aren’t mangled)
+
+You already set it, but double‑check the loader used here:
+
+pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
+
+D. Acceptance tests (quick, copy/paste)
+
+Add tests/test_winners_matcher.py:
+
+import re
+from modules.winner_report_full import _digits_only, _winner_regexes, _hits_cell
+
+def test_digits_only_strip():
+    assert _digits_only("705934**") == "705934"
+    assert _digits_only("00’337*") == "00337"
+
+def test_contiguous_and_gap1():
+    strict, gap1 = _winner_regexes("894")
+
+    # Contiguous hits
+    assert _hits_cell("...5894...", strict, gap1)
+    assert _hits_cell("...948...",  strict, gap1)
+
+    # One-digit interrupted should still hit
+    assert _hits_cell("90334", strict, gap1)   # 9 0 3 3 4 contains 9-?3-?4
+    assert _hits_cell("9304",  strict, gap1)   # 9 3 0 4 contains 9-?3-?4
+    assert _hits_cell("...9x3y4...", strict, gap1) is False  # only digits allowed as gaps
+
+
+Run:
+
+python -m pytest tests/test_winners_matcher.py -q
+
+E. Optional: small UX niceties
+
+Dev Health: show the two regexes (or at least their sizes). It’s a fast sanity check that the page compiled both patterns and isn’t using stale state:
+
+st.write({"winner_perms": len(perms), "gap1_enabled": True})
+
+
+Console quietness (black window): Streamlit suppresses logs after boot. To watch activity:
+
+streamlit run src/app.py --logger.level=debug
+
+
+or add export STREAMLIT_LOG_LEVEL=debug to your launcher.
+
+F. What to tell Codex (exact todo list)
+
+Branch: feature/winners-gap1-matcher
+Touch files: modules/winner_report_full.py, tests/test_winners_matcher.py
+Do not edit CSVs, tables, or staged Aux modules.
+
+In modules/winner_report_full.py:
+
+Add _digits_only, _winner_regexes, _hits_cell exactly as above.
+
+Replace existing “contains string” checks with _hits_cell(...) for both green (winner straights) and purple (index set).
+
+Ensure we scan R2/R4/R6/R8 only.
+
+Confirm CSV reads use dtype=str, keep_default_na=False, na_filter=False.
+
+In src/app.py (Winners tiles):
+
+Ensure import os is only at module top‑level. Remove/rename any local import os or os = ... inside functions.
+
+Add tests/test_winners_matcher.py with the assertions above.
+
+Run:
+
+python -m py_compile modules/winner_report_full.py src/app.py
+python -m pytest tests/test_winners_matcher.py -q
+
+
+and then open the Winners Full tile for Connecticut4 with winner 894.
+Expected: the circles you drew now highlight; all straights (contiguous and gap‑1) are green; index coverage is purple with green precedence.
+
+Update docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md with a one‑liner under “Rendering”:
+“Matching is two‑pass: contiguous triads, then gap‑1 (one extra digit between positions) for both winner straights (green) and index set (purple).”
+
+G. Why this is safe & future‑proof
+
+Pure read‑only change. We normalize the cell text in memory and enhance matching; no data format changes.
+
+Fast and deterministic. Two pre‑compiled regexes; per‑cell cost is minimal.
+
+Guarded by tests. The new unit test will fail if anyone weakens the matcher or re‑introduces literal‑string checks.
+
+No coupling to Aux. This lives entirely in the Winners builder; Aux staging paths/imports don’t matter.
+
+TL;DR for you
+
+The red banner came from a local import os in a function. Removing that fixes the crash.
+
+The missing highlights come from a too‑literal matcher. Add the normalization + two‑pass (strict + gap‑1) regexes above and the view will light up the patterns you circled (including 90334/9304 style interruptions) across R2/R4/R6/R8 in Midday/Evening/Combined.
+
+If you want, I can phrase the above as a single “apply patch” block for Codex next.

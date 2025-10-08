@@ -1,3 +1,17 @@
+## 2025-10-08 - Winners VT-straight coverage + download guard
+- Impact: Extended the matcher to emit blue VT-straight spans (strict + value-block), added legend chips, and wired the compact/analyzer tiles to reuse the spans so R2/R4/R6/R8 overlays stay in sync.
+- Impact: Replaced Streamlit link navigation with download buttons so Control Center opens analyzer reports without /pages routing errors; smoke/tests updated to assert new classes.
+- Files: modules/vtrac_matchers.py, src/core/module_c_vtrac.py, src/core/winners_vtrac_report.py, src/app.py, tests/test_vtrac_matchers.py, tests/test_winners_renderer.py, scripts/smoke_winners_logger.py, docs/AAT9_KIT/{AAT9_Winners_VTrac_Report.md,AAT9_Live_Wiring_and_Data_Paths.md,AAT9_Testing_Roadmap.md,AAT9_Preflight_Reference.md,PITFALLS.txt}, briefings/CODEX_READ_FIRST_AAT9.md.
+
+## 2025-10-07 - Winners pattern-matcher overhaul
+- Impact: Analyzer-style reports now use the shared matcher to highlight winner straights (strict + gap-1) and index-family combos across R2/R4/R6/R8, mirroring the digit-reduction overlay; gap hits get dashed styling and a legend.
+- Impact: Compact V-TRAC winner report reuses the same targets so singles/doubles panels flag actual winner/family combos instead of literal string matches.
+- Impact: Added modules/vtrac_matchers.py with utilities, plus unit tests guarding the matcher and the no-local-import os rule.
+- Files: modules/vtrac_matchers.py, src/core/module_c_vtrac.py, src/core/winners_vtrac_report.py, modules/winner_report_full.py, src/app.py, tests/test_vtrac_matchers.py, tests/test_winner_report_full.py, docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md.
+## 2025-10-07 - Winners full-report os-shadow fix
+- Impact: Refactored the Control Center winners tiles to use a shared loader and eliminated function-level import os, preventing the UnboundLocalError that blocked the analyzer-style export.
+- Impact: Added a regression unit test so future edits cannot reintroduce local import os shadowing inside src/app.py.
+- Files: src/app.py, tests/test_winner_report_full.py.
 ## 2025-10-06 - Winners full report import hardening
 - Impact: Control Center now normalizes sys.path before running the Analyzer-style winner report, evicts the legacy src/utils shim, and guarantees the builder imports the canonical helpers, so the V-TRAC full report no longer disappears during mixed sessions.
 - Impact: Added a regression unit test that simulates the legacy shim shadowing utils to keep future bootstrap edits from reintroducing the failure.
@@ -47,6 +61,8 @@
 ## 2025-10-02 - Control Center V-TRAC double families
 - Impact: Replaced the due-doubles pair/combination columns with Top-5 V-TRAC double family strips (severity + variant tags) and surfaced the same rankings on the Aux page with a family column.
 - Files: src/app.py, src/core/vtrac_families.py, docs/AAT9_KIT/AAT9_Aux_Roadmap.md.
+
+
 
 
 

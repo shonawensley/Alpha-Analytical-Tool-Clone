@@ -661,7 +661,9 @@ String‑safe table reads
 
 Renderer coupling
 - Symptom: full Winners tile “missing renderer/tables.”
-- Fix: full tile reads three combined tables and calls a stable renderer (or a reporting builder) with purple+green overlay. Keep compact tile as fallback.
+- Fix: full tile reads three combined tables and calls a stable renderer (or a reporting builder) with green/blue/purple overlays. Keep compact tile as fallback.
+- Update: blue VT-straight spans (strict + value-block) depend on modules.vtrac_matchers.collect_spans; rerun pytest tests/test_vtrac_matchers.py and tests/test_winners_renderer.py if coverage drops.
+- UI note: always open reports via the download button; direct /pages navigation strips CSS/highlights.
 
 Per‑page sys.path tweaks
 - Guidance: Only the Aux page should mutate `sys.path` to bind the staged `working/modules`. All other pages must import from project `modules/*` and `src/*`.

@@ -1,0 +1,278 @@
+
+like the “Full report unavailable” banner is just a generic fallback – the real error is coming from Python itself.
+
+In your screenshot the V‑Trac winner report button fails with:
+
+“cannot access local variable ‘os’ where it is not associated with a value”
+screenshot
+.
+
+This happens when a function contains a local import os (or any assignment to a name os) after using os elsewhere in that function. Python then assumes os is a local variable for the entire function, so earlier references to os blow up with an UnboundLocalError. That’s exactly what is happening in the Winners Logger handler – the code tries to call os.path.relpath(path_out) after a later import os, so os is considered unbound
+screenshot
+.
+
+How to fix it
+
+Remove all function‑local import os statements in the winners logger code. Make sure import os appears only at the top of the module (or not at all if you convert to pathlib). This will stop Python from treating os as a local variable and will eliminate the UnboundLocalError shown in the Streamlit UI
+screenshot
+.
+
+Ensure the full report code imports the canonical utilities. The other failure you hit earlier (an ImportError for utils.path_handler) was due to Python importing the legacy src/utils package instead of the canonical utils package. To prevent that, add a small guard at the top of modules/winner_report_full.py and at the call‑site in src/app.py:
+
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC = PROJECT_ROOT / "src"
+
+# make sure repo root comes first in sys.path
+for p in [str(PROJECT_ROOT), str(SRC)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+# if a legacy src/utils is bound, evict it so the real utils loads
+mod = sys.modules.get("utils")
+if mod and "/src/utils/" in str(getattr(mod, "__file__", "")).replace("\\", "/").lower():
+    for name in [n for n in list(sys.modules) if n == "utils" or n.startswith("utils.")]:
+        sys.modules.pop(name, None)
+
+from utils import path_handler as ph
+from utils.table_io import read_csv_strsafe
+
+
+Then import write_winner_full_report inside a similar project_modules_first() context in the control‑centre button handler. This ensures the winner report always sees the correct utils and modules packages.
+
+Run the report outside of Streamlit to verify it works. From the repo root, you can run:
+
+python - <<'PY'
+import sys
+from pathlib import Path
+root = Path(__file__).resolve().parent
+src  = root / "src"
+sys.path.insert(0, str(root))
+sys.path.insert(1, str(src))
+from modules.winner_report_full import write_winner_full_report
+print(write_winner_full_report("Connecticut4", "894"))
+PY
+
+
+That should emit an HTML path under data/outputs/analysis/winners/Connecticut4/….
+
+Add a tiny test to prevent regressions. A pytest test like this will fail if someone accidentally puts import os back inside the winners logger:
+
+from pathlib import Path
+import re
+
+def test_no_local_os_shadowing():
+    text = Path("src/app.py").read_text(encoding="utf-8")
+    # look in the Winners Full handler for a local "import os"
+    m = re.search(r"def .*winners.*full.*:\n((?:.*\n){0,200})", text, re.IGNORECASE)
+    if m:
+        assert "import os" not in m.group(1), \
+            "remove function-local import os in Winners Full"
+
+
+Running pytest will then catch the problem immediately in future edits.
+
+With these changes in place, the “Generate V‑Trac Winner Report” and “Generate Analyzer‑style Report” buttons should no longer throw the os-related error and will correctly generate the HTML reports. The black command‑window remaining blank is simply because Streamlit no longer prints anything to stdout during successful runs; errors will still print there if they occur.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__________________________________________________
+
+doomed. The failure you’re seeing is not a data/tables problem (your Dev Health shows all three combined tables exist) and it’s not a general “bad architecture” problem. It’s a very specific Python scoping bug in the Winners tiles plus some over‑aggressive import gymnastics that keep re‑triggering it.
+
+What’s actually breaking
+
+Local import of os inside the Winners tiles
+In src/app.py there’s an inner block (both the V‑Trac Winner Report and the Analyzer‑style full report tiles) that does something like:
+
+# ... earlier in the same function we already used os:
+_wr_path = os.path.join(...)
+
+# much later, still inside the same function:
+for label, path_out in generated:
+    import os   # ← local import
+    print(label, path_out, os.path.relpath(path_out))
+
+
+Because import os appears inside the function, Python treats os as a local variable for that whole function. Every earlier use of os in that function (e.g., _wr_path = os.path.join(...)) now refers to a local that hasn’t been bound yet, so when the exception path executes you get:
+
+UnboundLocalError: cannot access local variable 'os' where it is not associated with a value
+
+That’s why both Winner tiles throw the same error.
+
+Unnecessary module popping/fallback plumbing in the tile
+The tile code also tries to sys.modules.pop("modules")/fall back‑load a file with importlib.util. When that import fails once (e.g., from a momentary utils binding), the tile ends up in the exception path that uses os before the late import os, which guarantees the UnboundLocalError.
+
+None of this is about missing tables or a bad renderer; your Dev Health proves the inputs are present and the canonical modules are bound:
+
+Modules are supposed to resolve from the repo’s own packages and paths (run from repo root, import in‑repo modules) .
+
+The kit and addendum reinforce the same “canonical launch + in‑repo imports” rule; the winners tiles should just import and call your builder without live sys.path surgery. .
+
+Optimal fix (surgical; stable)
+
+Goal: make the Winners tiles dead‑simple callers that (a) import the canonical builder once, (b) never shadow os, and (c) gracefully show a message if the builder isn’t available.
+
+A) Clean the imports and remove the local os bindings
+
+In src/app.py (module top) ensure these exist once:
+
+import os
+import sys
+from pathlib import Path
+import importlib.util as iu
+
+
+Then, add this helper at module top (outside any function):
+
+def _load_write_winner_full_report():
+    """
+    Returns the callable write_winner_full_report or None.
+    No sys.modules popping; no late imports.
+    """
+    try:
+        from modules.winner_report_full import write_winner_full_report
+        return write_winner_full_report
+    except Exception:
+        wr_path = Path(__file__).resolve().parents[1] / "modules" / "winner_report_full.py"
+        if wr_path.exists():
+            spec = iu.spec_from_file_location("modules.winner_report_full_fallback", str(wr_path))
+            mod = iu.module_from_spec(spec)
+            assert spec and spec.loader
+            spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+            return getattr(mod, "write_winner_full_report", None)
+        return None
+
+
+Inside each Winners tile block:
+
+Delete every import os that appears inside the function.
+
+Do not assign to a variable named os (e.g., except Exception as os:) – rename to _e.
+
+Replace the current import/popping block with:
+
+write_winner_full_report = _load_write_winner_full_report()
+if not callable(write_winner_full_report):
+    st.warning("Full report renderer unavailable. Use the compact index above while we investigate.")
+else:
+    generated = []
+    if len(mid_win) == 3 and mid_win.isdigit():
+        p_mid = write_winner_full_report(state, mid_win)
+        if p_mid:
+            generated.append(("Midday", p_mid))
+    if len(eve_win) == 3 and eve_win.isdigit():
+        p_eve = write_winner_full_report(state, eve_win)
+        if p_eve:
+            generated.append(("Evening", p_eve))
+    for label, path_out in generated:
+        st.success(f"{label}: saved → {os.path.relpath(path_out)}")
+
+
+This removes the entire class of “os is local here” errors and stops the winners tiles from fighting Python’s module system. It also gives a clear, user‑facing message if the builder truly can’t be imported.
+
+B) Quick sanity in the builder module (one glance)
+
+Open modules/winner_report_full.py and confirm:
+
+import os is at file top, not inside a function.
+
+The public API is write_winner_full_report(state:str, winner:str) -> str and it always returns the path it saved (string), not None.
+
+No other changes needed in this file right now.
+
+C) Remove the “import hygiene” within the tile
+
+Keep the canonical “run from repo root; import project modules” rule. We already codified this in the docs and preflight, and it’s the stable path: launch via run_app.bat → streamlit run src\app.py; read tables via utils.path_handler; don’t modify sys.path from inside UI handlers.
+
+What to tell Codex (exact, step‑by‑step)
+
+Don’t refactor the app. Make only these small, explicit edits.
+
+Open src/app.py.
+
+At file top, ensure import os, sys, pathlib.Path, importlib.util as iu exist once.
+
+Paste the _load_write_winner_full_report() helper just below the imports.
+
+In both Winners tiles (the compact V‑Trac report and the Analyzer‑style full report):
+
+Delete any import os statements inside the functions.
+
+Rename any except Exception as os: to except Exception as _e:.
+
+Replace the current import/popping/fallback block with the 15‑line snippet above that calls _load_write_winner_full_report() and prints the saved relative path.
+
+Open modules/winner_report_full.py.
+
+Confirm import os is at top‑level; not inside a function.
+
+Confirm the public function returns a string path.
+
+No other files changed. Do not touch sys.path in the tiles.
+We already have canonical launch & import guardrails documented and enforced elsewhere.
+
+How to verify (fast, deterministic)
+
+Headless sanity (from repo root):
+
+# Confirm imports are in-repo and tables are present
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+# Call the builder directly
+python - << 'PY'
+from modules.winner_report_full import write_winner_full_report
+print("MID:", write_winner_full_report("Connecticut4","894"))
+print("EVE:", write_winner_full_report("Connecticut4","059"))
+PY
+
+
+You should see two absolute paths printed under data/outputs/analysis/winners/Connecticut4/....
+
+In the app:
+
+Start via run_app.bat (repo root).
+
+Open Winners Logger (Analyzer‑style full report) → enter 894 and 059 → Generate.
+
+Expect a green message with a relative path like analysis/winners/Connecticut4/...html. If the builder can’t import, you’ll see the clear “renderer unavailable” warning instead of the cryptic os error.
+
+Why your console window looks “quiet”
+
+Streamlit prints the “You can now view your Streamlit app” banner and then logs very little by default. Errors thrown inside widget callbacks are surfaced in the browser (yellow box/red box), not in the terminal. That’s normal.
+
+Hardening so this doesn’t regress
+
+Keep imports at module top and avoid function‑local imports for stdlib/modules. Add a tiny lint gate later (flake8 E402) or a grep in preflight if you want an automated check.
+
+Keep following the canonical rules we documented (single app entrypoint, in‑repo imports, tables under data/outputs/tables/<STATE>/ via utils.path_handler). That’s the stable contract for V‑TRAC and Winners.
+
+One last note on that GitHub Desktop warning
+
+The screenshot showing “This diff contains a change in line endings from ‘LF’ to ‘CRLF’” is harmless for runtime but can create noisy diffs. You can set a .gitattributes rule (*.py text eol=lf) to normalize if you want, but it’s not related to the error.
+
+TL;DR for Codex to execute
+
+Do: move import os to the top of src/app.py, add _load_write_winner_full_report(), and use it in both Winners tiles. Remove local import os and any except ... as os.
+
+Don’t: touch sys.path in the tiles; don’t refactor unrelated code.
+
+Verify: run preflight; call the builder headlessly; then generate from the UI and look for the green “saved → …” message.
+
+This is a small, contained fix. Your app structure and data wiring are fine (as the KIT and architecture docs specify) — you just tripped a classic Python scoping edge case inside a UI callback. Once the local os shadowing is gone, the Winners tiles will behave.

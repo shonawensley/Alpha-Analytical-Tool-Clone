@@ -1,3 +1,39 @@
+## 2025-10-08 05:30 (UTC) - Winners VT-straight + download hardening
+
+- Context: Needed to capture 3344/336644-style VT-straight hits and avoid Streamlit /pages errors when opening reports.
+- Change:
+  - Extended modules/vtrac_matchers.collect_spans with VT-straight strict + value-block detection (digit-to-VT mapping + run-length logic).
+  - Refreshed module_c_vtrac CSS/legend (blue classes) and both renderers to consume the new spans; compact winner report now styles green/blue/purple consistently.
+  - Control Center winners tiles now serve an 'Open report (HTML)' download button instead of page navigation; smoke/tests updated for new classes.
+- Impact:
+  - Analyzer + compact reports highlight VT-straight patterns alongside winner/family hits, matching the training overlay behaviour.
+  - Operators open reports reliably (no more missing CSS); unit + smoke guards catch regressions.
+
+## 2025-10-07 22:15 (UTC) - Winners ladder matcher upgrade
+
+- Context: Winners Logger was still missing many R2/R4/R6/R8 hits (and gap-hidden winners) because the renderer only did naive substring checks.
+- Change:
+  - Added modules/vtrac_matchers with shared helpers (digits-only normalisation, strict + gap-1 matcher, span collection) and rewired module_c_vtrac.generate_index_html_report to call them.
+  - Updated the Streamlit tile to use the shared loader, dropped the ad-hoc green overlay, and refreshed the compact logger so singles/doubles panels reflect the same hits.
+  - Added regression tests for the matcher and legend/highlight classes.
+- Impact:
+  - Winners overlays now light up the patterns you called out (including gap-hidden sequences) across Midday/Evening/Combined ladders; legend clarifies the styling.
+  - Compact panel stays in sync with analyzer results, and automated tests guard the matcher + import hygiene.
+- Verification:
+  - python -m pytest tests/test_vtrac_matchers.py tests/test_winner_report_full.py tests/test_digit_reduction_overlay.py
+  - python -m py_compile modules/vtrac_matchers.py modules/winner_report_full.py src/core/{module_c_vtrac.py,winners_vtrac_report.py} src/app.py
+## 2025-10-07 20:45 (UTC) - Winners logger os-shadow guard
+
+- Context: Control Center's winners tiles were still shadowing the module-level os import, so both the compact and analyzer-style buttons crashed with UnboundLocalError even though the renderer and tables were healthy.
+- Change:
+  - Added _load_write_winner_full_report() and reused it in the analyzer tile, dropping the inline import gymnastics and letting our bootstrap handle canonical modules.
+  - Removed every function-level import os inside the Control Center helpers and appended a unit test that fails if we reintroduce one.
+- Impact:
+  - Both Winners buttons now call the builder reliably; the full analyzer HTML is produced instead of the "Full report unavailable" warning.
+  - Future edits that accidentally add a local import os will fail CI rather than silently breaking the UI.
+- Verification:
+  - python -m pytest tests/test_winner_report_full.py tests/test_digit_reduction_overlay.py
+  - python -m py_compile src/app.py modules/winner_report_full.py src/_import_hygiene.py
 ## 2025-10-06 04:20 (UTC) - Winners full report import guard
 
 - Context: Control Center's Analyzer-style winner export intermittently failed ("Full report unavailable") whenever the legacy src/utils shim shadowed the canonical utils package during mixed module sessions.
@@ -421,6 +457,8 @@ Template
   - `python scripts/run_acceptance.py`
   - `python scripts/run_acceptance.py --marker smoke`
   - `python scripts/tools/stress_positional.py --iterations 1 --state Delaware4`
+
+
 
 
 

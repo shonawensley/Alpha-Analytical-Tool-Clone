@@ -38,6 +38,7 @@ from utils.path_handler import (
     get_winners_output_dir
 )
 from utils.state_utils import STATES, get_state_file_name
+from modules.vtrac_matchers import WinnerTargets, build_winner_targets, collect_spans
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
 from utils.table_generator import generate_tables
@@ -442,6 +443,78 @@ def rank_by_occurrence(tables, top=10):
     counts.sort(key=lambda x: x[1], reverse=True)
     return [idx for idx, _ in counts[:top]]
 
+HIGHLIGHT_PRIORITY = {
+    "family_gap": 1,
+    "family_strict": 2,
+    "vt_straight_gap": 3,
+    "vt_straight_strict": 4,
+    "winner_gap": 5,
+    "winner_strict": 6,
+}
+
+WINNER_STYLE_BLOCK = """
+<style>
+  .legend { margin: 8px 0 12px; font: 13px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial; }
+  .legend .chip { display:inline-block; margin-right:10px; padding:2px 6px; border-radius:4px; font-weight:600; border:1px solid #bbb; }
+  .hit-winner { background-color:#e1f7d5; color:#0b6b00; border-color:#74c476; }
+  .hit-winner-gap { background-color:#f1fde7; color:#23690c; border-style:dashed; border-color:#74c476; }
+  .hit-vt-straight { background-color:#e8f0ff; color:#0b69ff; border-color:#8ab4ff; }
+  .hit-vt-straight-gap { background-color:#f1f6ff; color:#0b69ff; border-style:dashed; border-color:#8ab4ff; }
+  .hit-family { background-color:#ede3ff; color:#4b0082; border-color:#b39ddb; }
+  .hit-family-gap { background-color:#f2ecff; color:#4b0082; border-style:dashed; border-color:#b39ddb; }
+  td .hit-winner, td .hit-winner-gap, td .hit-vt-straight, td .hit-vt-straight-gap, td .hit-family, td .hit-family-gap { padding:0 2px; border-radius:2px; }
+</style>
+<div class="legend">
+  <span class="chip hit-winner">Winner</span>
+  <span class="chip hit-winner-gap">Winner (gap)</span>
+  <span class="chip hit-vt-straight">V-TRAC straight</span>
+  <span class="chip hit-vt-straight-gap">V-TRAC straight (value)</span>
+  <span class="chip hit-family">Index family</span>
+  <span class="chip hit-family-gap">Family (gap)</span>
+</div>
+"""
+
+HIGHLIGHT_CLASS = {
+    "winner_strict": "hit-winner",
+    "winner_gap": "hit-winner-gap",
+    "vt_straight_strict": "hit-vt-straight",
+    "vt_straight_gap": "hit-vt-straight-gap",
+    "family_strict": "hit-family",
+    "family_gap": "hit-family-gap",
+}
+
+
+def _highlight_value(raw_value: str, targets: WinnerTargets) -> str:
+    if targets is None:
+        return raw_value
+    spans = collect_spans(raw_value, targets)
+    if not any(spans.values()):
+        return raw_value
+    chars = list(str(raw_value))
+    labels = [None] * len(chars)
+    for category in ("family_gap", "family_strict", "vt_straight_gap", "vt_straight_strict", "winner_gap", "winner_strict"):
+        priority = HIGHLIGHT_PRIORITY[category]
+        for start, end in spans.get(category, []):
+            for idx in range(start, min(end, len(labels))):
+                current = labels[idx]
+                if current is None or HIGHLIGHT_PRIORITY[current] < priority:
+                    labels[idx] = category
+    result = []
+    idx = 0
+    while idx < len(chars):
+        label = labels[idx]
+        if label is None:
+            result.append(chars[idx])
+            idx += 1
+        else:
+            cls = HIGHLIGHT_CLASS[label]
+            j = idx
+            while j < len(chars) and labels[j] == label:
+                j += 1
+            segment = ''.join(chars[idx:j])
+            result.append(f'<span class="{cls}">{segment}</span>')
+            idx = j
+    return ''.join(result)
 def analyze_all_indexes(state_name: str) -> list:
     """Loop all VTRAC indices, compute score, produce final sorted list of results."""
     tables = load_state_data(state_name)
@@ -472,11 +545,13 @@ def analyze_all_indexes(state_name: str) -> list:
         r["rank"] = i+1
     return results
 
-def generate_index_html_report(state_name, index, patterns, tables, score, rank, timestamp=None):
+def generate_index_html_report(state_name, index, patterns, tables, score, rank, timestamp=None, winner_combo: str | None = None):
     """Generate an HTML report for a specific V-TRAC index"""
     if timestamp is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
+    targets = build_winner_targets(winner_combo or "", patterns)
+
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -561,6 +636,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
 </head>
 <body>
 """
+    html += WINNER_STYLE_BLOCK
 
     def generate_table_html(df, title):
         if df is None or df.empty:
@@ -575,9 +651,8 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
             for col in header_cols:
                 if col in df.columns:
                     value = str(row[col])
-                    for pattern in patterns:
-                        if pattern in value:
-                            value = value.replace(pattern, f'<span class="highlight">{pattern}</span>')
+                    if targets and (col.isdigit() or col.upper().startswith('R')) and any(ch.isdigit() for ch in value):
+                        value = _highlight_value(value, targets)
                     table_html += f"<td>{value}</td>"
             table_html += "</tr>"
         
@@ -695,7 +770,8 @@ def generate_top_reports(state_name, results, top_n=3):
             tables,
             result["score"],
             rank,
-            timestamp
+            timestamp,
+            winner_combo=None
         )
         
         filename = f"{state_name}_vtrac_rank{rank}_index{result['index']}_v{timestamp}.html"
@@ -1797,3 +1873,5 @@ def render(state: str) -> None:
 
 if __name__ == "__main__":
     main()
+
+

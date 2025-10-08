@@ -1,0 +1,165 @@
+Codex is on the right track, but to fully capture what you circled (V‑TRAC “straights”, plus the tolerant “value‑blocked” cases) we need to tighten the spec and the matching rules, set clear precedence with the existing green/purple signals, and add one small UI fix for “Open report.” Below is a concrete, copy‑pasteable brief you can hand to Codex. I’m also anchoring the file locations to your canonical layout so we don’t regress wiring.
+(Blackapple/Control Center stays unaffected; it reads only data/cleaned/*_draws.csv and uses an absolute‑path loader. Keep it as‑is. )
+
+What we already have (and should not break)
+
+Green = exact winner permutations found in R2/R4/R6/R8 strings (“strict”) and green‑dashed = winner with a single digit‑gap (one unrelated single digit inserted).
+
+Purple = V‑TRAC family (index family) hits (“strict”) and purple‑dashed = family with a single digit‑gap.
+
+Renderer inlines the legend + CSS; Control Center’s “Open report” sometimes tries to navigate to a filesystem path, which Streamlit can’t render as a page (that explains your “Page not found” modal).
+
+This is consistent with what you’re seeing now.
+
+What’s missing (from your examples) and why
+
+V‑TRAC “straights” (e.g., you circled 3344 for winner 894) are currently colored as purple (generic family). We need a distinct signal and color so they pop.
+
+Value‑blocked straights (your “double‑digit gap” case like 336644 → 3344) aren’t recognized by the current single‑digit gap logic; the inserted block is a run (e.g., 66), not a single digit.
+
+Precedence needs to be explicit so signals don’t step on each other.
+
+SPEC FOR CODEX — make the matcher exhaustive and unambiguous
+A) Terminology & precedence (one row/cell can carry multiple marks; we render the highest‑priority chip)
+
+Winner (strict / gap‑1) – unchanged (green / green‑dashed)
+
+V‑TRAC straight (strict / value‑blocked) – new (proposed blue / blue‑dashed)
+
+V‑TRAC family (strict / gap‑1) – unchanged (purple / purple‑dashed)
+
+Priority: Winner > V‑TRAC straight > V‑TRAC family.
+
+B) Where to implement
+
+Matcher: modules/vtrac_matchers.py
+
+Analyzer renderer (inline CSS + legend + highlight plumbing): src/core/module_c_vtrac.py
+
+Compact Winners logger: src/core/winners_vtrac_report.py (reuse same matcher + legend)
+
+Control Center “Open report”: src/app.py (use st.download_button or an <a download> with the file path instead of trying to route the file as a Streamlit page)
+
+(These placements follow your canonical app layout and keep Aux/BA isolated. )
+
+C) V‑TRAC straight definition (what to detect)
+
+Given the winner (e.g., 894), compute its V‑TRAC class triple (e.g., 3 4 4 conceptually; exact mapping comes from modules.vtrac_reference).
+A V‑TRAC straight in the 4‑digit strings is an AABB or BBAA run where A and B are the two distinct V‑TRAC digits from the winner’s class triple.
+
+Strict: contiguous runs: A{2,}B{2,} or B{2,}A{2,} (examples you circled like 3344).
+
+Value‑blocked (dashed): allow exactly one intervening run (≥2 of the same foreign digit) between the two pair‑runs:
+
+A{2,}[c]{2,}B{2,} or B{2,}[c]{2,}A{2,}, where c ∉ {A,B} and the middle group is one run (e.g., 336644 → 33 + 66 + 44).
+
+Why this shape? The strings in R2/R4/R6/R8 are made of runs of the same digit. Treating “value‑blocked” as one foreign run between the two required pair‑runs matches your “remove the double gap digit” intuition and avoids over‑matching.
+
+Implementation tip (robust and simple):
+Work on run‑length encoded cells (list of (digit, length)):
+
+def rle(s: str):
+    out = []
+    last = None; k = 0
+    for ch in s:
+        if ch == last: k += 1
+        else:
+            if last is not None: out.append((last, k))
+            last = ch; k = 1
+    if last is not None: out.append((last, k))
+    return out
+
+
+Strict VT‑straight hit if any consecutive pair in RLE equals (A, ≥2), (B, ≥2) or (B, ≥2), (A, ≥2).
+
+Value‑blocked VT‑straight if any triple equals (A, ≥2), (c, ≥2), (B, ≥2) with c∉{A,B}, or the symmetric case.
+
+D) How to get (A,B) for a winner
+
+Reuse modules/vtrac_reference (already in your repo) to map each 3‑digit winner to its V‑TRAC triple. If the module is only one‑way (VT→combos), build a reverse dict at import time:
+
+# modules/vtrac_matchers.py
+from modules import vtrac_reference as VT
+
+COMBO_TO_VT = _build_reverse(VT.VT_TO_COMBOS)  # { "894": "344", ... }
+
+def vt_digits_for_winner(w: str) -> tuple[str, str]:
+    vt = COMBO_TO_VT[w]                   # e.g., "344"
+    uniq = sorted(set(vt), key=vt.index)  # keep order as seen
+    if len(uniq) == 2:
+        return uniq[0], uniq[1]          # A, B
+    # If all three digits distinct, you can skip (no AABB form),
+    # or choose a policy later; today's fixes focus the 2‑digit class.
+
+
+In practice your highlighted straights are those two‑digit class cases (like 3 and 4), which is exactly what this catches.
+
+E) Renderer & legend
+
+Add two new CSS classes and chips to the inline style/legend block:
+
+.hit-vt-straight { color: #0B69FF; background: #E8F0FF; border: 1px solid #C7DAFF; }
+
+.hit-vt-straight-gap { color: #0B69FF; background: #F1F6FF; border: 1px dashed #C7DAFF; }
+
+Precedence: when multiple hits overlap in the same token, emit the higher‑priority class (Winner > VT‑Straight > Family). Keep your current green/purple styles as‑is.
+
+F) Tests (quick and surgical)
+
+Create tests/test_vtrac_straights.py with deterministic cases:
+
+Strict straight: cell = "....3344...."; winner "894" → find .hit-vt-straight once.
+
+Value‑blocked straight: cell contains "33 66 44" (no spaces in real data) → .hit-vt-straight-gap.
+
+Don’t over‑match: "3434" shouldn’t count; "33 4" shouldn’t count; only AABB/BBAA patterns with run lengths ≥2 (and optional single foreign run ≥2 for dashed).
+
+Winner/family unaffected: keep existing tests for green/purple; add one that asserts precedence when a token satisfies both family and vt‑straight → it renders blue.
+
+Smoke stays the same; add a quick class‑presence check for .hit-vt-straight.
+
+G) Control Center “Open report”
+
+Replace the navigation attempt with a download link or st.download_button pointing at the generated HTML path. Streamlit can’t “route” a filesystem HTML as an app page, hence the “Page not found” popup you saw. This change is UI‑only and doesn’t affect analysis.
+
+Why this matches what you circled
+
+Your red circles (3344 = 894) become blue (VT‑straight strict).
+
+Your orange circles (pairs with a double block like 336644) become blue‑dashed (VT‑straight value‑blocked).
+
+The many regular family hits remain purple; exact winners remain green.
+
+This makes the super‑hot columns visually honest: exacts (green), true VT‑straights (blue), broader family (purple).
+
+Developer notes for Codex (wiring & safety)
+
+Don’t move files or change imports; keep the analyzer code under src/core/module_c_vtrac.py and the reusable matchers in modules/. That’s the canonical split for analyzers vs. utility modules in this repo.
+
+Blackapple and the Control Center’s BA table use only data/cleaned/*_draws.csv and absolute‑path loaders; nothing in this fix should touch that.
+
+Keep the preflight habit (the .codex/preflight.ps1 script and the in‑app “System Health” expander) if imports/data go weird after edits.
+
+Quick verification checklist (what you should do after Codex ships this)
+
+In Control Center → Generate Analyzer‑style Report again for your same case (e.g., Connecticut4 / 894).
+
+Click Open report → it should download or open in a new tab (no “Page not found”).
+
+Top legend shows Winner / Winner (gap) / Index family / Family (gap) / V‑TRAC straight / V‑TRAC straight (gap).
+
+In your screenshot spots:
+
+3344 is blue (strict straight).
+
+336644‑type forms are blue‑dashed (value‑blocked straight).
+
+Existing green/purple hits still appear as before.
+
+If any one of those four points fails, we’ll know exactly which layer to adjust (matcher vs. precedence vs. CSS vs. UI link).
+
+Bottom line
+
+Are we doomed? No. The current plan is directionally good; the spec above closes the two gaps you called out (distinct V‑TRAC straights + tolerant “double‑run” recognition) and keeps the app’s wiring within your canonical layout.
+
+This is a contained change: one matcher module, two core files, a tiny UI fix, and a few tests. Once merged, you’ll see the blue straights lighting up precisely where you expect—especially in the super‑hot columns—without losing the green/purple signals you already rely on.

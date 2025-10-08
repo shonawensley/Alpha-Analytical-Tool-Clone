@@ -43,14 +43,16 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
   - App entry: Control Center → “Tables Pipeline (optional)”
   - CLI (optional): can be wired via a small script in `scripts/pipeline/`
 
-## Winners Logger (V‑Trac Winner Report)
-- Entry: Control Center → “Winners Logger (V‑Trac winner report)”
+## Winners Logger (V-Trac Winner Report)
+- Entry: Control Center -> "Winners Logger (V-Trac winner report)"
 - Inputs: State (single), winning number (3 digits)
-- Behavior: renders index panels (Midday/Evening/Combined) using V‑Trac mapping
-  - Purple: stable‑pattern combos for the winner’s index
-  - Green: straight permutations of the winner (order‑specific)
-- Outputs: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
-- Notes: table‑agnostic (does not require state tables); safe to use for states still missing string‑tables
+- Behavior: renders index panels (Midday/Evening/Combined) using V-Trac mapping with green / blue / purple overlays.
+  - Green: winner permutations (strict + gap-1).
+  - Blue: V-Trac straights (AABB/BBAA) including value-block runs.
+  - Purple: index-family combos aligned to the winner's index.
+- Outputs: data/outputs/winners/<YYYY-MM-DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html
+- UI: Control Center surfaces an 'Open report (HTML)' download button (no Streamlit /pages routing).
+- Notes: table-agnostic (does not require state tables); safe for states still missing string-tables.
 
 ## Inventories & Preflight
 - Draws (Aux/BA): `data/cleaned/*_draws.csv` (preflight lists inventory)
@@ -63,10 +65,12 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
 - Stable: `alpha_analytical/stable/{__init__.py, feature_config.yml}`
 
 ## Winners Logger (Analyzer-style Full Report)
-- Entry: Control Center + “Winners Logger (Analyzer-style full report)”
-- Inputs (read-only): `data/outputs/tables/<STATE>/<STATE>_{Midday,Evening,Combined}_combined.csv`
-- Logic: compute index via `modules.vtrac_reference.get_vtrac_index(winner)`; purple coverage via `get_index_set(index)`; green overlay via `get_index_straights(winner)`; render analyzer-style 3 panes
-- Outputs (HTML): `data/outputs/analysis/winners/<STATE>/<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html`
-- Notes: compact Winners tile remains as fallback when tables are missing
+- Entry: Control Center -> "Winners Logger (Analyzer-style full report)"
+- Inputs (read-only): data/outputs/tables/<STATE>/<STATE>_{Midday,Evening,Combined}_combined.csv
+- Logic: compute index via modules.vtrac_reference.get_vtrac_index(winner); apply green (winner), blue (VT-straight), purple (family) overlays via modules.vtrac_matchers.collect_spans; render analyzer-style 3 panes.
+- Outputs (HTML): data/outputs/analysis/winners/<STATE>/<STATE>_<Draw>_<YYYY-MM-DD>_winner_<NNN>_analyzer.html
+- UI: download button mirrors the compact tile (no /pages routing).
+- Notes: compact Winners tile remains as fallback when tables are missing.
+
 
 - Legacy dependency: Aux loads boxed VTRAC data via the staged package listed in docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md.

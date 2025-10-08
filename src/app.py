@@ -2,6 +2,7 @@ import sys
 import os
 import pathlib
 import subprocess
+import importlib.util as _importlib_util
 from collections import defaultdict
 import math
 import copy
@@ -59,6 +60,35 @@ except Exception:
     _aux_columns = None
     _aux_extractor = None
 # ----------------------------------------------------------------------
+
+
+
+def _load_write_winner_full_report():
+    """Return the project winner report builder, ensuring canonical modules."""
+    from _import_hygiene import project_modules_first as _pmf
+    with _pmf():
+        import sys as _sys
+        mod_name = 'modules.winner_report_full'
+        try:
+            _sys.modules.pop(mod_name)
+        except KeyError:
+            pass
+        module = __import__(mod_name, fromlist=['write_winner_full_report'])
+        return getattr(module, 'write_winner_full_report')
+
+
+def _offer_report_download(path: str, *, key: str, label: str = "Open report (HTML)") -> Path | None:
+    """Render a download button for a generated HTML report."""
+    report_path = Path(path)
+    try:
+        data = report_path.read_bytes()
+    except OSError as exc:
+        st.warning(f"Unable to read report at {report_path}: {exc}")
+        return None
+    st.download_button(label=label, data=data, file_name=report_path.name, mime="text/html", key=key)
+    return report_path
+
+
 
 from core.module_b_digit_reduction import run_digit_reduction
 from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle
@@ -782,7 +812,7 @@ def show_stable_pattern_page(state: str) -> None:
     except Exception:
         show_dev_s = False
     if show_dev_s:
-        import os, sys as _sys, importlib as _il
+        import sys as _sys, importlib as _il
         from utils import path_handler as ph
         from pathlib import Path as _P
         with st.expander("System Health (Stable)"):
@@ -946,7 +976,7 @@ def show_control_center_page() -> None:
     except Exception:
         show_dev_cc = False
     if show_dev_cc:
-        import os, sys as _sys, importlib as _il
+        import sys as _sys, importlib as _il
         from pathlib import Path as _P
         from utils import path_handler as _ph
         with st.expander("System Health (Control Center)", expanded=False):
@@ -989,7 +1019,7 @@ def show_control_center_page() -> None:
         except Exception:
             show_dev_pipe = False
         if show_dev_pipe:
-            import os, sys as _sys, importlib as _il
+            import sys as _sys, importlib as _il
             from pathlib import Path as _P
             from utils import path_handler as _ph
             with st.expander("System Health (Pipeline)", expanded=False):
@@ -1112,9 +1142,11 @@ def show_control_center_page() -> None:
                 else:
                     with st.spinner("Building winner report..."):
                         out_path = build_vtrac_winner_report(w_state, w_number)
-                    rel = os.path.relpath(out_path)
                     st.success("Winner report generated.")
-                    st.markdown(f"[Open report]({rel})")
+                    download_key = f"winners_compact_{w_state}_{(w_number or 'latest').replace(' ', '_')}"
+                    report_path = _offer_report_download(out_path, key=download_key)
+                    if report_path:
+                        st.caption(f"Saved to {report_path}")
             except Exception as e:
                 st.error(f"Winners Logger failed: {e}")
 
@@ -1170,31 +1202,7 @@ def show_control_center_page() -> None:
                 pass
         if st.button("Generate Analyzer-style Report", key="btn_gen_winner_full"):
             try:
-                # Ensure imports resolve to project modules, not staged Aux
-                import sys as _sys, os as _os, importlib.util as _iu
-                from _import_hygiene import project_modules_first as _pmf
-                with _pmf():
-                    try:
-                        _sys.modules.pop('modules')
-                        _sys.modules.pop('modules.winner_report_full')
-                    except KeyError:
-                        pass
-                    try:
-                        from modules.winner_report_full import write_winner_full_report
-                    except Exception as _ie:
-                        # Fallback: import the builder directly from file path
-                        _wr_path = _os.path.join(str(PROJECT_ROOT), 'modules', 'winner_report_full.py')
-                        if _os.path.exists(_wr_path):
-                            _spec = _iu.spec_from_file_location('modules.winner_report_full_fallback', _wr_path)
-                            if _spec and _spec.loader:
-                                _mod = _iu.module_from_spec(_spec)
-                                _spec.loader.exec_module(_mod)
-                                write_winner_full_report = getattr(_mod, 'write_winner_full_report', None)
-                        if not callable(locals().get('write_winner_full_report', None)):
-                            # provide debugging breadcrumbs
-                            _mod_pkg = _sys.modules.get('modules')
-                            _mf = getattr(_mod_pkg, '__file__', 'unknown') if _mod_pkg else 'unbound'
-                            raise ImportError(f"winner_report_full import failed: {_ie}; modules.__file__={_mf}")
+                write_winner_full_report = _load_write_winner_full_report()
                 generated = []
                 if mid_win and len(mid_win) == 3 and mid_win.isdigit():
                     with st.spinner("Building full report (Midday)..."):
@@ -1208,9 +1216,11 @@ def show_control_center_page() -> None:
                     st.warning("Enter at least one 3-digit winner (Midday or Evening).")
                 else:
                     for label, path_out in generated:
-                        rel_full = os.path.relpath(path_out)
                         st.success(f"{label} winner report generated.")
-                        st.markdown(f"[Open report]({rel_full})")
+                        download_key = f"winners_full_{label.replace(' ', '_')}_{Path(path_out).stem}"
+                        report_path = _offer_report_download(path_out, key=download_key, label=f"Open report ({label})")
+                        if report_path:
+                            st.caption(f"Saved to {report_path}")
             except Exception as e:
                 st.warning("Full report unavailable (missing tables or renderer). Use compact index report above.")
                 st.caption(str(e))
@@ -1693,7 +1703,7 @@ def show_aux_page(state: str) -> None:
     except Exception:
         show_dev = False
     if show_dev:
-        import os, sys as _sys
+        import sys as _sys
         with st.expander("System Health (Aux)"):
             st.caption("cwd: " + os.getcwd())
             st.caption("python: " + _sys.executable)

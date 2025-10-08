@@ -13,8 +13,11 @@ This document tracks the automated verification layers that protect AAT9. Treat 
   - `tests/acceptance/test_digit_reduction_delaware.py::test_digit_reduction_pipeline_delaware` - runs reducer + analyzer on Delaware fixtures and checks score/artifact outputs.
   - `tests/acceptance/test_digit_reduction_delaware.py::test_digit_reduction_winner_overlay_delaware` - exercises the batch overlay to ensure maps, flags, and stamp JSON land beside analyzer outputs.
 - Unit regression:
-  - `tests/test_vtrac_family_ranker_regression.py` keeps the doubles-family ranker aligned with the CT/FL snapshot (no merged badges, unseen handling).
-  - `tests/test_aux_loaders_variants.py` locks the combined/midday/evening file resolution logic.
+  - tests/test_vtrac_family_ranker_regression.py keeps the doubles-family ranker aligned with the CT/FL snapshot (no merged badges, unseen handling).
+  - tests/test_aux_loaders_variants.py locks the combined/midday/evening file resolution logic.
+  - tests/test_vtrac_matchers.py verifies winner/family hits plus VT-straight strict/value-block spans.
+  - tests/test_winners_renderer.py checks the legend/classes rendered in the analyzer-style report.
+
 
 - Pending additions:
   - V-TRAC analyzer render path (uses combined tables only).

@@ -1,0 +1,496 @@
+
+different things are happening:
+
+Your full/compact Winners HTML does contain hit markup (e.g., <span class="hit-winner">984</span>), but the highlight CSS is missing or not being applied—so the page renders “blank” (no green/purple).
+
+Independently, the analyzer needs a more diligent matcher to catch (a) the winner straights, (b) the whole index family, and (c) the “broken‑by‑one‑digit” (“gap‑1”) variants across all R2/R4/R6/R8 cells. You’ve asked for this “double pass” before; the idea is to scan each cell twice: exact and gap‑1.
+
+Below is an optimal, copy‑pasteable set of instructions you can hand to Codex to fix both reliability (blank styling) and coverage (missed patterns) in one pass. I’ve kept it surgical and reversible.
+
+A. First get the highlights to actually show (CSS/legend fix)
+
+Symptom you see: HTML exists at
+data/outputs/analysis/winners/<STATE>/<STATE>_vtrac<index>_winner_*.html, it contains classes like hit-winner, hit-family, etc., but no colors.
+
+Cause: The page is missing, or failing to inject, the CSS that styles those classes.
+
+Fix (one-time): Ensure the builder inlines a small <style> block at the top of the HTML. Add this exact CSS helper and call it in both the Analyzer‑style and Compact Winners builders.
+
+File: modules/winner_report_full.py (and the compact renderer if separate, e.g., src/core/winners_vtrac_report.py)
+Add near top (after imports):
+
+def _winner_styles() -> str:
+    # Inline CSS so the HTML is self-contained and never "blank"
+    return """
+<style>
+  .legend { margin: 8px 0 12px; font: 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+  .legend .chip { display:inline-block; margin-right:10px; padding:2px 6px; border-radius:4px; font-weight:600; border:1px solid #bbb; }
+  .hit-winner      { background-color:#e1f7d5; color:#0b6b00; border-color:#74c476; }     /* green solid */
+  .hit-winner-gap  { background-color:#f1fde7; color:#23690c; border-style:dashed; }      /* green dashed */
+  .hit-family      { background-color:#ede3ff; color:#4b0082; border-color:#b39ddb; }     /* purple solid */
+  .hit-family-gap  { background-color:#f2ecff; color:#4b0082; border-style:dashed; }      /* purple dashed */
+  td .hit-winner, td .hit-winner-gap, td .hit-family, td .hit-family-gap { padding:0 2px; border-radius:2px; }
+</style>
+<div class="legend">
+  <span class="chip hit-winner">Winner</span>
+  <span class="chip hit-winner-gap">Winner (gap)</span>
+  <span class="chip hit-family">Index family</span>
+  <span class="chip hit-family-gap">Family (gap)</span>
+</div>
+""".strip()
+
+
+Then, when composing the HTML (string or template), prepend + _winner_styles() just after <body> (or as the very first part of the body), e.g.:
+
+html = "<html><head><meta charset='utf-8'></head><body>"
+html += _winner_styles()
+html += rendered_tables_html  # your existing 3-panel table HTML
+html += "</body></html>"
+
+
+Why this is safe: the CSS is inline, so even if Streamlit caching or external files drift, the colors will appear. If your file already has a legend, keep only one copy (prefer the inline one above).
+
+Quick verification (no app needed):
+
+Open any new file written after the patch and confirm the <style> block exists near the top and the Legend shows colored chips.
+
+If you still see no colors in the browser: hard‑refresh (Ctrl+F5) or open in another browser to avoid cache.
+
+B. Make the detection exhaustive (winner + family + the “gap‑1” pass)
+
+Goal: For a winner like 894, highlight:
+
+Green solid: any contiguous “984/894/849/… (all straights)** found in any R2/R4/R6/R8 cell.
+
+Green dashed: gap‑1 straights—where exactly one extra digit interrupts the straight (e.g., a b c becomes a ? b c or a b ? c) inside the same cell text.
+
+Purple solid: any index‑family 3‑digit combo for the detected V‑TRAC index (as returned by modules.vtrac_reference), contiguous.
+
+Purple dashed: gap‑1 family combos.
+
+Implementation plan (minimal new code, deterministic):
+
+New helper module: modules/vtrac_matchers.py
+(One pure function that inspects a cell’s text and returns HTML with spans inserted.)
+
+# modules/vtrac_matchers.py
+from itertools import permutations
+import re
+from typing import Iterable, Set, Tuple
+
+_DIGITS = re.compile(r"\d")
+
+def _digits_only(s: str) -> str:
+    return re.sub(r"\D", "", s or "")
+
+def _perms(d3: str) -> Set[str]:
+    # Unique set of all 3-digit permutations (e.g., '894' -> {'894','849','984','948','489','498'})
+    return {''.join(p) for p in set(permutations(d3, 3))}
+
+def _gap1_patterns(pat: str) -> Tuple[re.Pattern, re.Pattern]:
+    # For 'abc' allow exactly one extra digit either between a&b or b&c
+    a, b, c = pat
+    # Note: we search *within* the digits-only token, but we wrap the whole token for simplicity/robustness
+    return (
+        re.compile(fr"{a}\d{b}{c}"),  # a ? b c
+        re.compile(fr"{a}{b}\d{c}"),  # a b ? c
+    )
+
+def tag_cell_html(cell_html: str, *, winner3: str, family3: Iterable[str]) -> str:
+    """
+    Scan the textual content of a table cell and wrap:
+      - winner straights        -> <span class="hit-winner">...</span>
+      - winner gap-1            -> <span class="hit-winner-gap">...</span>
+      - family straights        -> <span class="hit-family">...</span>
+      - family gap-1            -> <span class="hit-family-gap">...</span>
+    Strategy: we split cell content into "digit tokens" vs "other" and only wrap entire digit tokens
+    that contain the requested pattern (contiguous or gap-1).
+    This is conservative but very fast and visually clear.
+    """
+    if not cell_html:
+        return cell_html
+
+    # Build detection sets/patterns
+    w_perms = _perms(winner3)
+    f_set   = set(family3)  # already canonical 3-digit codes
+
+    # Precompile regexes for gap-1 of all perms
+    w_gap = [gp for p in w_perms for gp in _gap1_patterns(p)]
+    f_gap = [gp for p in f_set   for gp in _gap1_patterns(p)]
+
+    # Split the cell into alternating non-digits / digits tokens so we can wrap digits safely
+    parts = re.split(r"(\d+)", cell_html)  # keeps delimiters
+    for i in range(1, len(parts), 2):  # every odd index is a digits-token
+        token = parts[i]
+        d = token  # already digits by split()
+
+        # Winner contiguous?
+        if any(p in d for p in w_perms):
+            parts[i] = f'<span class="hit-winner">{token}</span>'
+            continue
+        # Winner gap-1?
+        if any(rx.search(d) for rx in w_gap):
+            parts[i] = f'<span class="hit-winner-gap">{token}</span>'
+            continue
+        # Family contiguous?
+        if any(p in d for p in f_set):
+            parts[i] = f'<span class="hit-family">{token}</span>'
+            continue
+        # Family gap-1?
+        if any(rx.search(d) for rx in f_gap):
+            parts[i] = f'<span class="hit-family-gap">{token}</span>'
+            continue
+
+    return "".join(parts)
+
+
+Wire it in one place (both full analyzer and compact winners share it):
+In the code that renders each of the three panels (Midday/Evening/Combined), when you build each cell’s HTML, call:
+
+from modules.vtrac_matchers import tag_cell_html
+from modules.vtrac_reference import get_index_set, get_vtrac_index
+
+idx = get_vtrac_index(winner3)                      # e.g., 34
+family3 = list(get_index_set(idx))                  # iterable of 3-digit strings for that index
+# when emitting a table cell
+cell_html = tag_cell_html(cell_text, winner3=winner3, family3=family3)
+
+
+Note: We wrap the entire digits token (e.g., 5903347) rather than the inner 3 digits. That makes the hit visually obvious and avoids HTML slicing bugs in strings that also carry */quotes. If you want sub‑string granularity later, we can extend tag_cell_html to compute sub‑ranges.
+
+Keep reads string‑safe (you already do this):
+pd.read_csv(..., dtype=str, keep_default_na=False, na_filter=False) so leading zeros and markers survive.
+
+Legend and styles are injected by _winner_styles() (part A), so users know solid vs dashed.
+
+C. Kill the recurring “cannot access local variable os…” error (if you still see it)
+
+That is Python treating os as a local variable because something in the same function assigns to os later (even indirectly via retry code). The fix is trivial and permanent:
+
+Do not reuse the name os as a local.
+
+Or import as an alias and use the alias everywhere in rendering paths:
+
+import os as _os
+# ...
+rel = _os.path.relpath(path_out)
+
+
+If a Streamlit callback has a local os = something, rename that local to op_sys or os_name. This removes the UnboundLocalError forever.
+
+D. Minimal tests/smoke so this never regresses
+
+Add these tiny tests. They take seconds and will catch 95% of future breakage:
+
+1) tagger unit test
+tests/test_vtrac_matchers.py
+
+from modules.vtrac_matchers import tag_cell_html
+
+def _plain(s):  # strip tags for simple asserts when needed
+    import re; return re.sub(r"<[^>]+>", "", s)
+
+def test_winner_contiguous_and_gap1():
+    cell = "50033827 5903347 984 90334*"
+    out  = tag_cell_html(cell, winner3="894", family3=["934","493","349","439","394","943"])
+    assert "hit-winner" in out          # '984'
+    assert "hit-winner-gap" in out      # '5903347' or '90334*' (digits token part)
+    assert _plain(out).replace(" ", "") == "50033827590334798490334*"
+
+
+2) full report smoke
+scripts/smoke_winners_logger.py
+
+# Renders one HTML and asserts the legend + any hit exists
+from modules.winner_report_full import write_winner_full_report
+p = write_winner_full_report("Connecticut4", "894")
+txt = open(p, encoding="utf-8").read()
+assert "class=\"legend\"" in txt
+assert "hit-winner" in txt or "hit-family" in txt
+print("OK:", p)
+
+
+Run after any change that touches winners/renderer:
+
+python -m pytest -q tests/test_vtrac_matchers.py
+python scripts/smoke_winners_logger.py
+
+E. Answers to your other concerns
+
+GitHub Desktop warning about “LF → CRLF”: that’s only line‑endings on Windows; not related to highlights. You can add a simple .gitattributes with *.py text eol=lf to normalize if you like. Not urgent.
+
+Terminal “black screen” while clicking: Streamlit often logs less when you aren’t printing. That’s normal; rely on the page’s Dev Health and the smoke script for certainty.
+
+“Missing many patterns” in your screenshots: that is exactly what the gap‑1 pass covers (e.g., 5903347, 90334*). The matcher above will now flag those (dashed styles), plus all exact straights and family hits.
+
+F. One‑shot checklist Codex can execute
+
+Add _winner_styles() and inject it into both Winners renderers (Analyzer‑style and Compact).
+
+Create modules/vtrac_matchers.py exactly as above.
+
+In the builders, call tag_cell_html(cell_text, winner3, family3) for every R2/R4/R6/R8 cell.
+
+Fix any local variables named os (rename or import os as _os).
+
+Add tests/test_vtrac_matchers.py and scripts/smoke_winners_logger.py.
+
+Run:
+
+python -m py_compile modules/vtrac_matchers.py modules/winner_report_full.py
+python -m pytest -q tests/test_vtrac_matchers.py
+python scripts/smoke_winners_logger.py
+
+
+Open the newest HTML under data/outputs/analysis/winners/<STATE>/…html and verify:
+
+Legend chips are colored.
+
+You see green for “984/894/…” straight hits.
+
+You see green dashed for 5903347/90334* etc. (gap‑1).
+
+You see purple & purple dashed for the index family of the winner’s V‑TRAC index.
+
+Bottom line
+
+The “blank” page is a styling injection issue—fixed by inlining CSS once.
+
+The “missed patterns” are a coverage issue—fixed by the two‑pass matcher above (exact + gap‑1) applied to every R2/R4/R6/R8 cell.
+
+The os error is a naming collision—trivial to rename.
+
+Execute the checklist above and you’ll get visible, exhaustive winner/family hits with a legend that makes the semantics obvious, and a small test/smoke net so we don’t chase this again.
+
+
+
+
+
+_________________________________________
+
+
+not doomed. Two separate things are biting you:
+
+The “Open report” link is wrong.
+Streamlit is trying to open your HTML path as if it were a page inside the app (hence the “no file was found in the app's pages/ directory” dialog and that second blank tab). You want the browser to open a local file, not a Streamlit page.
+
+Highlighting logic/style isn’t guaranteed to render.
+Even when the markup is there, the CSS block isn’t always present/loaded the way you expect, so everything looks “blank.” Also, your matcher needs a gap‑1 mode (i.e., “pattern hidden by one digit”) in addition to the strict mode, and it must scan every R2/R4/R6/R8 token twice (clean digits pass + relaxed subsequence pass).
+
+Below is a clean, minimal plan you can feed to Codex. It fixes the link, restores reliable styling, and adds the missing “double‑pass” + gap‑1 detection across R2/R4/R6/R8 for both the Analyzer‑style report and the compact Winners tile.
+
+A. Fix “Open report” (no more Streamlit page routing)
+
+Where: the Winners Full tile in src/app.py (the place that shows Open report after you generate).
+
+from pathlib import Path
+import streamlit as st
+
+# after you compute path_out (the saved HTML)
+uri = Path(path_out).resolve().as_uri()  # file:///C:/dev/.../winner_894_....html
+
+# Show both options (works on Windows and macOS):
+st.markdown(f'<a href="{uri}" target="_blank">Open report</a>',
+            unsafe_allow_html=True)
+with open(path_out, "rb") as fh:
+    st.download_button("Download report (HTML)", fh.read(),
+                       file_name=Path(path_out).name, mime="text/html")
+
+
+Why: as_uri() produces a file:/// URL so the browser opens the file directly. A relative path (e.g., data/outputs/...) makes Streamlit attempt to route to a non‑existent page, which is the error you saw.
+
+B. Make highlights unmissable (CSS + legend always injected)
+
+Where: modules/winner_report_full.py (or wherever you compose the HTML).
+
+Add once near the top of the document you write:
+
+STYLE = """
+<style>
+  .legend{font:12px/1.3 system-ui;margin:.5rem 0}
+  .legend span{display:inline-block;margin-right:.6rem;padding:.1rem .4rem;border-radius:4px}
+  .hit-winner{background:rgba(0,200,83,.25);box-shadow:inset 0 0 0 2px rgba(0,200,83,.9)}
+  .hit-winner-gap{background:rgba(0,200,83,.12);border-bottom:2px dashed rgba(0,200,83,.9)}
+  .hit-family{background:rgba(156,39,176,.23);box-shadow:inset 0 0 0 2px rgba(156,39,176,.9)}
+  .hit-family-gap{background:rgba(156,39,176,.10);border-bottom:2px dashed rgba(156,39,176,.9)}
+</style>
+<div class="legend">
+  Legend:
+  <span class="hit-winner">Winner</span>
+  <span class="hit-winner-gap">Winner (gap‑1)</span>
+  <span class="hit-family">Index family</span>
+  <span class="hit-family-gap">Family (gap‑1)</span>
+</div>
+"""
+
+
+Prepend STYLE to the HTML you write. That guarantees the colors/legend are present even if the HTML is opened outside Streamlit.
+
+C. Add the double‑pass matcher with gap‑1 detection
+
+Create one shared helper and use it in both renderers (Analyzer‑style and compact tile).
+
+New file: modules/vtrac_matchers.py
+
+# modules/vtrac_matchers.py
+import re
+from itertools import permutations
+from typing import Dict, Iterable, List
+
+_DIGITS_RE = re.compile(r"\d+")
+
+def _digits_only(text: str) -> str:
+    # pass 1: keep only digits, collapse separators
+    return "".join(_DIGITS_RE.findall(text or ""))
+
+def winner_perms(winner: str) -> List[str]:
+    w = "".join(ch for ch in (winner or "") if ch.isdigit())[:3]
+    return sorted({ "".join(p) for p in permutations(w, 3) })
+
+def _gap1_patterns(seq: str) -> List[str]:
+    # allow exactly one digit between neighbors (9.3 4 or 9 3.4)
+    a,b,c = seq
+    return [f"{a}\\d{b}{c}", f"{a}{b}\\d{c}"]
+
+def build_winner_regexes(winner: str) -> Dict[str, List[re.Pattern]]:
+    regs = {"win": [], "win_gap": []}
+    for p in winner_perms(winner):
+        regs["win"].append(re.compile(p))
+        for pat in _gap1_patterns(p):
+            regs["win_gap"].append(re.compile(pat))
+    return regs
+
+def build_family_regexes(family: Iterable[str]) -> Dict[str, List[re.Pattern]]:
+    regs = {"fam": [], "fam_gap": []}
+    uniq = sorted({ s for s in (family or []) if s and s.isdigit() and len(s)==3 })
+    if not uniq: 
+        return regs
+    regs["fam"] = [re.compile("|".join(uniq))]
+    gap_list = []
+    for t in uniq:
+        a,b,c = t[0], t[1], t[2]
+        gap_list.append(f"{a}\\d{b}{c}")
+        gap_list.append(f"{a}{b}\\d{c}")
+    regs["fam_gap"] = [re.compile("|".join(gap_list))]
+    return regs
+
+def find_hits(cell_text: str, winner: str, family: Iterable[str]) -> Dict[str, List[str]]:
+    """Double pass: raw cell, then digits‑only string."""
+    out = {"win":[], "win_gap":[], "fam":[], "fam_gap":[]}
+
+    joined = _digits_only(cell_text)
+    wregs = build_winner_regexes(winner)
+    fregs = build_family_regexes(family)
+
+    for lbl, patterns in (("win", wregs["win"]), ("win_gap", wregs["win_gap"])):
+        for rg in patterns:
+            out[lbl].extend(rg.findall(joined))
+
+    for lbl, patterns in (("fam", fregs["fam"]), ("fam_gap", fregs["fam_gap"])):
+        for rg in patterns:
+            out[lbl].extend(rg.findall(joined))
+
+    # de‑dup and prefer longer matches first for safe replacement
+    for k in out:
+        out[k] = sorted(set(out[k]), key=len, reverse=True)
+    return out
+
+
+Use it in the renderer(s): inside modules/winner_report_full.py (and your compact builder):
+
+from modules.vtrac_matchers import find_hits
+from modules.vtrac_reference import get_index_set  # your canonical API
+
+def _annotate_cell(text: str, winner: str, index_set) -> str:
+    hits = find_hits(text, winner, index_set)
+
+    # overlay order: winner strict > winner gap > family strict > family gap
+    def wrap(t, cls): return f'<span class="{cls}">{t}</span>'
+    out = text
+    for t in hits["win"]:
+        out = out.replace(t, wrap(t, "hit-winner"))
+    for t in hits["win_gap"]:
+        out = out.replace(t, wrap(t, "hit-winner-gap"))
+    for t in hits["fam"]:
+        out = out.replace(t, wrap(t, "hit-family"))
+    for t in hits["fam_gap"]:
+        out = out.replace(t, wrap(t, "hit-family-gap"))
+    return out
+
+
+Call _annotate_cell(...) for every R2/R4/R6/R8 cell (Midday, Evening, Combined) as you stream rows into HTML. That is the “double pass” (digits cleaned + relaxed subsequence) applied everywhere.
+
+Notes
+
+This hits all six permutations of the winner (strict), and both gap‑1 placements (after 1st or 2nd digit).
+
+We also apply the same gap‑1 logic to the index family (purple).
+
+Green (winner) always overrides purple (family) because we replace in that order.
+
+D. Quick smoke to prove it
+
+Add a tiny runner (keeps you sane when making edits):
+
+scripts/smoke_winners_logger.py
+
+from pathlib import Path
+from modules.winner_report_full import write_winner_full_report  # your existing entry
+
+state, win = "Connecticut4", "894"
+path = write_winner_full_report(state, win)
+print("OK ->", Path(path).resolve())
+print("Open:", Path(path).resolve().as_uri())
+
+
+Run it once; then open the printed file:///…html URL in your browser.
+
+E. Why the “black console” stayed quiet
+
+If the button handler doesn’t print() anything, Streamlit’s terminal won’t show logs. Nothing’s wrong—this particular action is mostly string processing + file write; it doesn’t necessarily emit console output.
+
+F. Guardrails you already have (and should keep using)
+
+Launch from repo root and keep imports pinned to the canonical packages (no staged Aux for non‑Aux pages). Your AAT9 architecture doc is explicit about this layout and data contracts (combined tables for V‑TRAC/Stable/DR; draws CSV for Aux/Control Center). Keep following it so page wiring stays stable.
+
+Blackapple is isolated to draws CSV and shouldn’t interfere with Winners/V‑TRAC paths; your BA guide spells out that separation and the absolute‑path loader.
+
+G. Sanity checklist for you (non‑dev)
+
+Generate the Analyzer‑style report (Midday “894”).
+
+Click Open report (it should open a new tab to file:///…winner_894_YYYYMMDD_*.html).
+
+In the HTML you should see the legend at the top and green/purple highlights throughout the R2/R4/R6/R8 rows.
+
+Solid green = exact 3‑digit straight
+
+Dashed green = winner with one digit interrupt (gap‑1)
+
+Solid purple = index family straight
+
+Dashed purple = index family, gap‑1
+
+If the above three work, the pipes are good. From there, tune colors or keep the current contrast.
+
+TL;DR (what to tell Codex)
+
+Fix link: use Path(path).resolve().as_uri() and show it via an HTML <a> or st.download_button so the browser opens the file directly (no Streamlit routing).
+
+Inject CSS + legend in the generated HTML so highlights are obvious outside the app.
+
+Add a shared matcher (modules/vtrac_matchers.py) that:
+
+scans every R2/R4/R6/R8 cell twice (raw→digits‑only),
+
+matches all 6 winner permutations (strict) and gap‑1 variants,
+
+does the same for the index family,
+
+orders overlays so green (winner) outranks purple (family).
+
+Call the matcher from both the Analyzer‑style Winners builder and the compact Winners tile.
+
+Add a tiny smoke script to verify path + highlight end‑to‑end.
+
+Once those are in, you’ll get more (not fewer) highlights—including patterns “hidden by one digit”—and the Open report button will stop spawning a second app or that “Page not found” popup.

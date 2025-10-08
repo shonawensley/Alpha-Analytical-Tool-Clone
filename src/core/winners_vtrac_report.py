@@ -5,19 +5,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from utils import path_handler as ph
-
-
-def _permutations_straight(winner: str) -> List[str]:
-    try:
-        w = str(winner or "").strip()
-        if len(w) != 3 or not w.isdigit():
-            return []
-        perms = set()
-        a, b, c = w[0], w[1], w[2]
-        perms.update([a+b+c, a+c+b, b+a+c, b+c+a, c+a+b, c+b+a])
-        return sorted(perms)
-    except Exception:
-        return []
+from modules.vtrac_matchers import build_winner_targets, digits_only
 
 
 def build_vtrac_winner_report(state: str, winner: str, tables_dir: str | None = None, out_dir: str | None = None) -> str:
@@ -38,7 +26,8 @@ def build_vtrac_winner_report(state: str, winner: str, tables_dir: str | None = 
 
     singles = entry.get("Singles", "").split()
     doubles = entry.get("Doubles", "").split()
-    straights = _permutations_straight(winner)
+    targets = build_winner_targets(winner, singles + doubles)
+    straights = targets.straights
 
     # Minimal CSS for purple/green overlays
     css = """
@@ -47,8 +36,8 @@ def build_vtrac_winner_report(state: str, winner: str, tables_dir: str | None = 
       .box   { border: 1px solid #ddd; padding: 8px; margin: 6px; border-radius: 4px; }
       .title { font-weight: 600; margin-bottom: 6px; }
       .combo { display: inline-block; margin: 2px 6px; font-family: monospace; }
-      .purple { color: #6a0dad; font-weight: 700; }
-      .green { color: #0a7f00; font-weight: 700; }
+      .hit-winner { background-color:#e1f7d5; color:#0b6b00; border:1px solid #74c476; border-radius:3px; padding:0 4px; font-weight:700; }
+      .hit-family { background-color:#ede3ff; color:#4b0082; border:1px solid #b39ddb; border-radius:3px; padding:0 4px; font-weight:700; }
       .muted { opacity: .6; }
     </style>
     """
@@ -59,17 +48,25 @@ def build_vtrac_winner_report(state: str, winner: str, tables_dir: str | None = 
         # Singles row
         row_s = []
         for c in singles:
-            cls = "purple"
-            if c in straights:
-                cls = "green"
+            token = digits_only(c)
+            if token in targets.straights:
+                cls = "hit-winner"
+            elif token in targets.family:
+                cls = "hit-family"
+            else:
+                cls = "muted"
             row_s.append(f'<span class="combo {cls}">{c}</span>')
         items.append('<div class="box">' + ''.join(row_s) + '</div>')
         # Doubles row
         row_d = []
         for c in doubles:
-            cls = "purple"
-            if c in straights:
-                cls = "green"
+            token = digits_only(c)
+            if token in targets.straights:
+                cls = "hit-winner"
+            elif token in targets.family:
+                cls = "hit-family"
+            else:
+                cls = "muted"
             row_d.append(f'<span class="combo {cls}">{c}</span>')
         items.append('<div class="box">' + ''.join(row_d) + '</div>')
         return '<div class="panel">' + ''.join(items) + '</div>'

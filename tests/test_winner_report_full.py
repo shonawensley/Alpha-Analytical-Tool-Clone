@@ -53,3 +53,8 @@ def test_winner_report_full_import_survives_legacy_utils_shadowing():
             if name == "utils" or name.startswith("utils.") or name.startswith("modules.winner_report_full"):
                 sys.modules.pop(name, None)
         sys.modules.update(preserved_modules)
+
+def test_no_function_local_import_os():
+    text = Path("src/app.py").read_text(encoding="utf-8")
+    shadow_lines = [line for line in text.splitlines() if line.strip().startswith("import os") and line.strip() != "import os"]
+    assert not shadow_lines, f"unexpected function-level os imports: {shadow_lines}"

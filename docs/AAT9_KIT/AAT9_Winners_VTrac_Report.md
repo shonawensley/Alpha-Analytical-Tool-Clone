@@ -2,8 +2,9 @@
 
 ## Purpose
 Generate a per‑state, per‑winner HTML export showing the winner’s V‑Trac index across Midday/Evening/Combined panels:
-- Purple: stable‑pattern combos for the index
-- Green: straight permutations of the winning number
+- Green (solid / dashed): winner permutations detected as strict hits or single-digit gaps.
+- Blue (solid / dashed): V-TRAC straights (AABB/BBAA) including value-block runs (e.g., 33 66 44).
+- Purple (solid / dashed): index-family combos aligned to the winner's V-TRAC index.
 
 ## Where in the App
 - Control Center → expand “Winners Logger (V‑Trac winner report)”
@@ -13,9 +14,11 @@ Generate a per‑state, per‑winner HTML export showing the winner’s V‑Trac
 ## Outputs
 - Path: `data/outputs/winners/<YYYY‑MM‑DD>/vtrac_reports/<STATE>/<STATE>_vtrac<index>_winner_<timestamp>.html`
 - HTML contains three inline panels (Midday/Evening/Combined) with colored tags for combos related to the index and straight permutations.
+- Streamlit tile exposes an 'Open report (HTML)' download button to avoid /pages routing errors.
 
 ## Implementation Notes
 - Renderer: `src/core/winners_vtrac_report.py::build_vtrac_winner_report(state, winner, ...)`
+- Matching: two-pass across R2/R4/R6/R8 cells — strict permutations, gap-1 winner hits, and VT-straight detection (AABB + value-block) feeding green / blue / purple overlays.
 - Mapping: reuses `modules.vtrac_reference::VTRAC_DISPLAY, get_vtrac_index`
 - Does not require state string‑tables; table‑agnostic for robustness.
 - Future: overlay table‑driven details once state tables are finalized/mapped.
@@ -54,7 +57,7 @@ Two Winners experiences exist in the integrated app:
 
 ## Compact Index Panel (existing)
 - Entry: “Winners Logger (V‑Trac winner report)”
-- Behavior: renders purple/green index panel without reading string‑tables; safe for states without tables.
+- Behavior: renders green / blue / purple index panel without reading string‑tables; safe for states without tables.
 - Output path: `data/outputs/winners/<YYYY-MM-DD>/vtrac_reports/<STATE>/*.html`
 
 ## Developer Notes
@@ -62,3 +65,5 @@ Two Winners experiences exist in the integrated app:
 - Aux isolation: Aux still uses a staged `modules.vtrac_reference` under `scripts/auxiliary/working/modules/`; only the Aux page binds to it.
 - String‑safe IO: table reads use `dtype=str, keep_default_na=False, na_filter=False` to preserve tokens.
 - CLI smoke: `python scripts/smoke/build_winners_full.py <STATE4> <WINNER>` prints the saved full report path.
+- Unit guardrails: run pytest tests/test_vtrac_matchers.py (VT-straight spans) and pytest tests/test_winners_renderer.py (legend/classes).
+- Smoke: run python scripts/smoke_winners_logger.py to confirm legend tokens (winner, VT-straight, family) render in the analyzer-style report.

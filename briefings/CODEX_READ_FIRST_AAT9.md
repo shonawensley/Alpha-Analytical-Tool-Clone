@@ -1,8 +1,8 @@
-﻿# CODEX READ FIRST â€” AAT9 Optimized Startup
+# CODEX READ FIRST — AAT9 Optimized Startup
 
 
 
-Read and follow this sequence exactly before coding. Goal: highestâ€‘quality planning, pathâ€‘safe execution, and consistent documentation/logging.
+Read and follow this sequence exactly before coding. Goal: highest‑quality planning, path‑safe execution, and consistent documentation/logging.
 
 
 
@@ -14,9 +14,9 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 
 - Ensure CWD is the repo root: `C:\dev\Alpha-Analytical-Tool`.
 
-- Printâ€‘only sanity: `git status -s`, `git branch -vv`, `git remote -v` (no changes to remotes).
+- Print‑only sanity: `git status -s`, `git branch -vv`, `git remote -v` (no changes to remotes).
 
-- Confirm launch path: `run_app.bat` â†’ `streamlit run src\app.py`.
+- Confirm launch path: `run_app.bat` → `streamlit run src\app.py`.
 
 
 
@@ -24,9 +24,9 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 
 - `docs/AAT9_KIT/AAT9_KIT_README.md` (index)
 
-- `docs/AAT9_KIT/AAT9_Workflow_Standard.md` (stepâ€‘byâ€‘step workflow)
+- `docs/AAT9_KIT/AAT9_Workflow_Standard.md` (step‑by‑step workflow)
 
-- `docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md` (pathâ€‘safe coding)
+- `docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md` (path‑safe coding)
 
 - `docs/AAT9_KIT/Practices/AAT9_Agent_Operating_Rules.md` (guardrails)
 
@@ -58,7 +58,9 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 - Run: `powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"`
 - Add `-CheckDoubles` after data refreshes to run the doubles audit automatically.
 
-- Confirm imports resolve to inâ€‘repo files and that draws CSVs are present.
+- After preflight (or before launching Streamlit), run `python scripts/smoke_winners_logger.py` to verify the analyzer-style winners report still renders with highlights.
+
+- Confirm imports resolve to in‑repo files and that draws CSVs are present.
 
 - Confirm `.codex/first_boot.log` is the headless Streamlit log target before any automated boot.
 
@@ -68,7 +70,7 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 
-- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and perâ€‘state combined tables existence.
+- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per‑state combined tables existence.
 
 - When touching Aux wiring, skim `docs/AAT9_KIT/important/DETAIL CODEX LOG.txt` for recent guardrails.
 
@@ -100,11 +102,11 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 
 
 
-## 4) Plan â†’ Implement â†’ Verify â†’ Document
+## 4) Plan → Implement → Verify → Document
 
 - Plan: small, explicit; state files to change and why; wait for approval if collaborating.
 
-- Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA drawsâ€‘only.
+- Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA draws‑only.
 
 - Verify: `python -m py_compile`, `python scripts/checks/smoke_positional.py`, import probes, optional headless boot (120s) + `.codex/first_boot.log`.
 
@@ -126,7 +128,7 @@ Read and follow this sequence exactly before coding. Goal: highestâ€‘qualit
 
 - Never write outside the repo; do not modify git remotes.
 
-- Archiveâ€‘first for cleanup; no deletions; keep changes reversible.
+- Archive‑first for cleanup; no deletions; keep changes reversible.
 
 
 
@@ -158,4 +160,5 @@ Note: If Aux throws legacy import errors, run python scripts/checks/smoke_aux_vt
 - Select your stamp (defaults to the newest overlay), choose whether to include hits CSV / overlay HTML, and optionally create a zip copy.
 - Bundles are written to `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/` with a `manifest.json` listing the files.
 - Use the **Delete all training bundles** button to clear the folder before a fresh run if desired.
+
 
