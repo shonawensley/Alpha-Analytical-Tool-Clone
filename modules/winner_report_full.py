@@ -18,6 +18,13 @@ def _ensure_canonical_utils() -> None:
         except ValueError:
             pass
     sys.path.insert(0, root)
+    src = str(PROJECT_ROOT / 'src')
+    if src in sys.path:
+        try:
+            sys.path.remove(src)
+        except ValueError:
+            pass
+    sys.path.insert(1, src)
     mod = sys.modules.get('utils')
     if not mod:
         return

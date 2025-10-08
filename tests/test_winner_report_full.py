@@ -7,8 +7,11 @@ from types import ModuleType
 
 
 def test_winner_report_full_import_survives_legacy_utils_shadowing():
-    root = Path(__file__).resolve().parents[1]
-    src = root / "src"
+    repo_root = Path(__file__).resolve().parents[1]
+    src_dir = repo_root / "src"
+    modules_dir = repo_root / "modules"
+    repo_root_str = repo_root.as_posix()
+    src_str = src_dir.as_posix()
 
     original_sys_path = list(sys.path)
     preserved_modules = {
@@ -17,16 +20,19 @@ def test_winner_report_full_import_survives_legacy_utils_shadowing():
         if name == "utils" or name.startswith("utils.") or name.startswith("modules.winner_report_full")
     }
     try:
-        if str(src) not in sys.path:
-            sys.path.insert(0, str(src))
-        if str(root) not in sys.path:
-            sys.path.insert(1, str(root))
+        new_sys_path = []
+        for path_entry in sys.path:
+            entry_norm = Path(path_entry).as_posix()
+            if repo_root_str in entry_norm or src_str in entry_norm:
+                continue
+            new_sys_path.append(path_entry)
+        new_sys_path.insert(0, str(modules_dir))
+        sys.path[:] = new_sys_path
 
-        # Create stub legacy modules that look like the shim.
         legacy_utils = ModuleType("utils")
-        legacy_utils.__file__ = str(src / "utils" / "__init__.py")
+        legacy_utils.__file__ = str(src_dir / "utils" / "__init__.py")
         legacy_path_handler = ModuleType("utils.path_handler")
-        legacy_path_handler.__file__ = str(src / "utils" / "path_handler.py")
+        legacy_path_handler.__file__ = str(src_dir / "utils" / "path_handler.py")
 
         sys.modules["utils"] = legacy_utils
         sys.modules["utils.path_handler"] = legacy_path_handler
@@ -36,8 +42,11 @@ def test_winner_report_full_import_survives_legacy_utils_shadowing():
 
         assert hasattr(module, "write_winner_full_report")
         utils_module = importlib.import_module("utils")
-        utils_path = str(getattr(utils_module, "__file__", "")).replace("\\", "/")
-        assert "/src/utils/" not in utils_path
+        utils_path = Path(getattr(utils_module, "__file__", "")).as_posix()
+        assert repo_root_str in utils_path and "/src/utils/" not in utils_path
+
+        core_module = importlib.import_module("core.module_c_vtrac")
+        assert core_module is not None
     finally:
         sys.path[:] = original_sys_path
         for name in list(sys.modules):

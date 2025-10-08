@@ -17,6 +17,13 @@ def ensure_project_root_on_syspath() -> None:
         except ValueError:
             pass
     sys.path.insert(0, rp)
+    src = str(PROJECT_ROOT / 'src')
+    if src in sys.path:
+        try:
+            sys.path.remove(src)
+        except ValueError:
+            pass
+    sys.path.insert(1, src)
 
 
 def evict_staged_modules_for_non_aux() -> None:
