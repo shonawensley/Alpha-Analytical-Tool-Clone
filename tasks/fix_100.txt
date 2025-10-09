@@ -1,0 +1,106 @@
+you’re getting a lot more signal now. Quick take:
+
+The matcher upgrades are working. I can see strict winner hits (solid green), winner‑gap (light green), index‑family hits (solid purple), family‑gap (light purple), and the new V‑TRAC straight channel (dark blue). That’s exactly what we wanted: more detections without losing the meaning of each class.
+
+The only real UX issue is contrast. The dark blue V‑TRAC‑straight is a bit subtle against the other cool colors. If your eyes catch it now and you’re happy, you can ship it; otherwise, a tiny CSS tweak will make it pop without re‑running any analysis.
+
+Should we change the V‑TRAC‑straight color now?
+
+Minimal + safe recommendation: keep the hue but add a light background and a thin border so it “reads” instantly, even for tired eyes or dim screens. This is a style‑only change—no pipeline re‑runs, no logic changes.
+
+Drop‑in CSS (where the legend/styles are inlined):
+
+/* V‑TRAC straight (strict) */
+.hit-vt-straight {
+  color: #0d47a1;             /* dark blue text */
+  background: #e6f0ff;        /* pale blue chip */
+  border: 1px solid #0d47a1;  /* thin border like the green/purple chips */
+  padding: 0 3px; border-radius: 4px;
+}
+
+/* V‑TRAC straight (value-collapsed / tolerant) */
+.hit-vt-straight-gap {
+  color: #1565c0;             /* slightly lighter blue */
+  background: #f0f6ff;
+  border: 1px dashed #1565c0;
+  padding: 0 3px; border-radius: 4px;
+}
+
+
+Result: blue reads as its own channel (distinct from the green/purple families), and the dashed/solid pattern still tells strict vs tolerant at a glance.
+
+If you prefer a warmer standout, swap the blue for teal (#00695c / #e0f2f1)—teal stays distinct from green/purple while remaining print‑friendly.
+
+Quick QA checklist (what I looked for in your image)
+
+V‑TRAC straights in “super‑hot” columns (your red circles): they’re now flagged blue even when the family around them is purple—good. This protects “3344 = 894” style cases, which were previously buried as generic family.
+
+“Value‑blocked” cases (e.g., 336644 → 3344, 999008833 → 9988333): I can see dashed blue where the tolerant pass collapses repeated digits. Strict (solid) always wins over tolerant (dashed); green (winner) still outranks blue; and purple sits below both. That priority stack keeps the semantics clean.
+
+If anything still looks “missing”
+
+Two tiny guardrails keep recall high without noise:
+
+Order of passes: strict winner → strict V‑TRAC straight → strict family → tolerant V‑TRAC straight → tolerant family.
+
+No double‑counting a cell: apply multiple classes but render the highest‑priority style (CSS specificity or class order).
+
+That’s already how your renderer is behaving from the screenshot; keep it.
+
+“Open report” popup you saw
+
+That Streamlit modal happens when you try to navigate to a file outside the app’s pages/ folder. The analysis HTML is correctly written under data/outputs/analysis/..., so instead of routing to it, embed or link it:
+
+Embed: st.components.v1.html(open(html_path).read(), height=900, scrolling=True)
+
+Or download/open: st.download_button + a caption with the full OS path.
+
+This fits your app’s canonical wiring (run via src/app.py, analysis outputs under data/outputs/analysis/...).
+(And FYI, Blackapple uses only data/cleaned/*_draws.csv, so it’s unrelated to these table overlays.)
+
+Hand‑off to Codex (concise, actionable)
+
+Goal: keep current logic; only improve visibility + keep tests green.
+
+CSS tweak (visibility): in the inlined style block (renderer):
+
+Add the snippet above for .hit-vt-straight and .hit-vt-straight-gap.
+
+Make legend chips reuse the same classes so the legend preview matches the table.
+
+Priority + dedupe (no regressions):
+
+Ensure the highlight order remains
+winner > vt_straight_strict > family_strict > vt_straight_value > family_value.
+
+When multiple matches occur, attach all classes but style with the first in that order.
+
+Smoke & unit tests:
+
+Smoke: confirm the latest HTML has all legend chips and at least one of each class.
+
+Unit: sample cells for:
+
+Winner strict (e.g., …984… with winner 894),
+
+V‑TRAC straight strict (3344 for 894),
+
+V‑TRAC straight tolerant (336644 → 3344),
+
+Family strict/tolerant (purple).
+
+Assert the CSS class priority (only the top style visually applies).
+
+Open‑report action:
+
+Replace “Open report” route with st.components.v1.html(...) embed or a st.download_button pointing to the OS path.
+
+That’s it—no data rebuilds needed, just style + embed.
+
+My recommendation
+
+Functionally: you’re in great shape—the detector is now exhaustive and the straight channel is separated.
+
+Visually: ship the tiny CSS enhancement now so blue “pops,” and keep the rest as‑is. If you later want a “High‑contrast mode,” add a toggle that switches to bolder backgrounds for all chips.
+
+If you’d like, I can draft a one‑pager for your docs that explains the chips in plain language (Winner / Winner‑gap / V‑TRAC straight / V‑TRAC straight‑value / Family / Family‑gap) so future contributors see the intent at a glance.

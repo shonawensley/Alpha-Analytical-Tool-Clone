@@ -6,6 +6,7 @@ import importlib.util as _importlib_util
 from collections import defaultdict
 import math
 import copy
+from datetime import datetime
 import streamlit as st
 from contextlib import contextmanager
 from pathlib import Path
@@ -28,6 +29,9 @@ try:
         sys.modules.pop('src.utils.path_handler', None)
 except Exception:
     pass
+
+from alpha_analytical.control_center import batch_runner
+from alpha_analytical.control_center import draws_refresh
 # Ensure 'modules' resolves to project modules for non-Aux pages
 try:
     m = sys.modules.get('modules')
@@ -113,6 +117,7 @@ from core.aux_config import (
     POS_SHORTLIST_CONFIG,
 )
 from core.vtrac_families import VTRAC_DOUBLE_FAMILIES
+from modules.draw_catalog import draws_since_last_double, scan_draw_files
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
 # ----------------------------------------------------------------------
@@ -853,6 +858,10 @@ def show_stable_pattern_page(state: str) -> None:
         help="Provide winners if you want the extractor to generate spotlight CSVs. Leave blank to skip."
     )
     winners_list = _parse_winners_input(winners_raw)
+    write_bundle_flag = st.checkbox("Create training bundle for this run", value=False, key=f"stable_bundle_flag_{state}")
+    bundle_stamp_input = ""
+    if write_bundle_flag:
+        bundle_stamp_input = st.text_input("Bundle stamp (optional, e.g., 20250621)", value="", key=f"stable_bundle_stamp_{state}")
 
     if st.button("Run Stable Pattern Extraction"):
         tables_dir = ph.get_state_tables_dir(state)
@@ -864,6 +873,8 @@ def show_stable_pattern_page(state: str) -> None:
             out_path=out_dir,
             min_occ=min_occ,
             winners=winners_list if winners_list else None,
+            bundle_stamp=bundle_stamp_input.strip() or None,
+            write_bundle=write_bundle_flag,
         )
 
         if df.empty:
@@ -871,6 +882,16 @@ def show_stable_pattern_page(state: str) -> None:
         else:
             st.success(f"{len(df)} patterns extracted.")
             st.dataframe(df.head(50), height=360)
+
+            bundle_info = df.attrs.get("training_bundle")
+            if write_bundle_flag:
+                if bundle_info:
+                    st.success(f"Training bundle saved to {bundle_info['bundle_dir']}")
+                    manifest_path = bundle_info.get('manifest')
+                    if manifest_path and Path(manifest_path).exists():
+                        st.markdown(f"[Manifest]({manifest_path})")
+                else:
+                    st.warning("Training bundle was not created.")
 
             if csv_f:
                 st.markdown(f"[Download CSV]({csv_f})")
@@ -1074,6 +1095,11 @@ def show_control_center_page() -> None:
                 "Include specials (Morning/Noon/Nite where available)",
                 value=False,
             )
+            clear_existing = st.checkbox(
+                "Delete existing draw CSVs before writing",
+                value=True,
+                help="When enabled, removes the current draw CSVs for the selected states so the regeneration starts clean.",
+            )
 
             excel_default = Path("data/original/Pick3StatsC4.xlsm")
             excel_path = st.text_input(
@@ -1093,6 +1119,14 @@ def show_control_center_page() -> None:
                     try:
                         excel_file = Path(excel_path)
                         out_dir = Path(out_path)
+                        removed_files = []
+                        if clear_existing:
+                            removed_files = draws_refresh.purge_draw_csvs(
+                                selected_states,
+                                out_dir,
+                                include_combined=include_combined,
+                                include_specials=include_specials,
+                            )
                         with st.spinner("Generating draw CSVs..."):
                             _aux_extractor.save_category_csvs(
                                 excel_path=excel_file,
@@ -1102,6 +1136,11 @@ def show_control_center_page() -> None:
                                 include_specials=include_specials,
                             )
                         st.success("Aux draw export complete.")
+                        if removed_files:
+                            st.caption(f"Removed {len(removed_files)} existing file(s) before regeneration.")
+                            preview_removed = "\n".join(f.name for f in removed_files[:12])
+                            if preview_removed:
+                                st.code(preview_removed, language="text")
                         preview_lines = []
                         for label in selected_states:
                             canonical = _aux_columns.canonical_state(label) or label
@@ -1225,6 +1264,115 @@ def show_control_center_page() -> None:
                 st.warning("Full report unavailable (missing tables or renderer). Use compact index report above.")
                 st.caption(str(e))
 
+    with st.expander("Batch winners + training bundles"):
+        st.caption("Paste the Pick3StatsC4 state winners in the standard order. Untracked states stay in the preview so you keep the alignment.")
+        raw_winners_text = st.text_area(
+            "Paste winners (standard state order)",
+            height=220,
+            key="cc_batch_winners_text",
+        )
+        entries = batch_runner.parse_winner_sheet(raw_winners_text)
+        tracked_entries = batch_runner.filter_tracked(entries)
+        skipped_states = [entry.canonical for entry in entries if not entry.tracked]
+        if entries:
+            import pandas as pd
+
+            preview_rows = []
+            for idx, entry in enumerate(entries, start=1):
+                preview_rows.append(
+                    {
+                        "Pos": idx,
+                        "State": entry.canonical,
+                        "Project": entry.project_state or "-",
+                        "Midday": entry.midday or "",
+                        "Evening": entry.evening or "",
+                        "Tracked": "Yes" if entry.tracked else "No",
+                    }
+                )
+            st.dataframe(
+                pd.DataFrame(preview_rows),
+                use_container_width=True,
+                height=min(320, 40 * len(preview_rows) + 80),
+            )
+            if skipped_states:
+                st.caption("Skipped (not tracked): " + ", ".join(skipped_states))
+        else:
+            st.info("Paste the winners list above to preview the parsed order.")
+
+        if "cc_batch_bundle_stamp" not in st.session_state:
+            st.session_state["cc_batch_bundle_stamp"] = datetime.now().strftime("%Y%m%d")
+        bundle_stamp = st.text_input(
+            "Bundle stamp (YYYYMMDD)",
+            key="cc_batch_bundle_stamp",
+        )
+
+        col_flags = st.columns(3)
+        with col_flags[0]:
+            run_winners_flag = st.checkbox("Run winners logger", value=True, key="cc_batch_flag_winners")
+        with col_flags[1]:
+            run_stable_flag = st.checkbox("Run Stable bundle", value=True, key="cc_batch_flag_stable")
+        with col_flags[2]:
+            write_bundle_flag = st.checkbox("Write training bundle", value=True, key="cc_batch_flag_write")
+
+        if st.button("Run batch workflow", key="cc_batch_run"):
+            if not entries:
+                st.warning("Paste the winners list above before running the batch workflow.")
+            elif not tracked_entries:
+                st.warning("No tracked states were detected in the pasted winners list.")
+            else:
+                if run_winners_flag:
+                    with st.spinner("Generating winners reports..."):
+                        winner_results = batch_runner.run_winner_reports(tracked_entries)
+                    winner_success = [r for r in winner_results if "path" in r]
+                    winner_errors = [r for r in winner_results if "error" in r and "path" not in r]
+                    if winner_success:
+                        st.success(
+                            "Winners logger completed for: "
+                            + ", ".join(f"{r['state']} {r['label']} {r['winner']}" for r in winner_success)
+                        )
+                        for item in winner_success:
+                            path_disp = item.get("path")
+                            link = f" [{Path(path_disp).name}]({path_disp})" if path_disp else ""
+                            st.markdown(f"- `{item['state']}` {item['label']} winner `{item['winner']}`{link}")
+                    if winner_errors:
+                        st.error(
+                            "Winners logger issues:\n"
+                            + "\n".join(
+                                f"{r['state']} {r['label']} {r['winner']}: {r['error']}" for r in winner_errors
+                            )
+                        )
+
+                if run_stable_flag:
+                    if write_bundle_flag and not (bundle_stamp and bundle_stamp.strip()):
+                        st.warning("Provide a bundle stamp (YYYYMMDD) before writing training bundles.")
+                    else:
+                        with st.spinner("Running Stable Pattern extractor..."):
+                            stable_results = batch_runner.run_stable_bundles(
+                                tracked_entries,
+                                min_occ=3,
+                                bundle_stamp=(bundle_stamp or "").strip() or None,
+                                write_bundle=write_bundle_flag,
+                            )
+                        stable_success = [r for r in stable_results if "error" not in r]
+                        stable_errors = [r for r in stable_results if "error" in r]
+                        if stable_success:
+                            st.success(
+                                "Stable extractor completed: "
+                                + ", ".join(f"{r['state']} ({r.get('patterns', 0)} patterns)" for r in stable_success)
+                            )
+                            for item in stable_success:
+                                bundle_dir = item.get("bundle_dir")
+                                if write_bundle_flag and bundle_dir:
+                                    manifest = item.get("manifest")
+                                    manifest_link = (
+                                        f" [{Path(manifest).name}]({manifest})" if manifest else ""
+                                    )
+                                    st.markdown(f"- `{item['state']}` bundle -> `{bundle_dir}`{manifest_link}")
+                        if stable_errors:
+                            st.error(
+                                "Stable extractor issues:\n"
+                                + "\n".join(f"{r['state']}: {r['error']}" for r in stable_errors)
+                            )
     try:
         import pandas as _pd
         from pathlib import Path as _Path
@@ -1233,72 +1381,53 @@ def show_control_center_page() -> None:
         if st.button("Refresh Draw Tables", key="refresh_variant_tables"):
             st.session_state.pop(cache_key, None)
 
+        variant_specs = [
+            ("Combined", "combined"),
+            ("Midday", "midday"),
+            ("Evening", "evening"),
+        ]
+        variant_order = {spec[1]: idx for idx, spec in enumerate(variant_specs)}
+        variant_display = {spec[1]: spec[0] for spec in variant_specs}
+
+        draw_dirs = []
+        draws_root = _Path("data/cleaned/draws")
+        if draws_root.exists():
+            draw_dirs.append(draws_root)
+        legacy_root = _Path("data/cleaned")
+        if legacy_root.exists() and legacy_root not in draw_dirs:
+            draw_dirs.append(legacy_root)
+
+        if not draw_dirs:
+            st.warning("No cleaned data found in data/cleaned.")
+            return
+
+        snapshot, states = scan_draw_files(draw_dirs, category_suffixes=_CATEGORY_SUFFIXES)
+        if not states:
+            st.warning("No draw CSVs detected in data/cleaned/draws.")
+            return
+
         cache = st.session_state.get(cache_key)
+        cached_snapshot = cache.get("snapshot") if cache else None
+        if cache and cached_snapshot != snapshot:
+            st.session_state.pop(cache_key, None)
+            cache = None
+
+        try:
+            _aux_loader = _load_aux_loaders_real()
+            load_state_draws = getattr(_aux_loader, "load_state_draws", None)
+        except Exception:
+            load_state_draws = None
+
+        if not callable(load_state_draws):
+            raise RuntimeError("aux_loaders.load_state_draws unavailable")
+
+        try:
+            with _project_modules_first():
+                from modules.vtrac_reference import get_vtrac_index as _cc_get_vtrac_index
+        except Exception:
+            _cc_get_vtrac_index = None
 
         if cache is None:
-            variant_specs = [
-                ("Combined", "combined"),
-                ("Midday", "midday"),
-                ("Evening", "evening"),
-            ]
-            variant_order = {spec[1]: idx for idx, spec in enumerate(variant_specs)}
-            variant_display = {spec[1]: spec[0] for spec in variant_specs}
-
-            try:
-                _aux_loader = _load_aux_loaders_real()
-                load_state_draws = getattr(_aux_loader, "load_state_draws", None)
-            except Exception:
-                load_state_draws = None
-
-            if not callable(load_state_draws):
-                raise RuntimeError("aux_loaders.load_state_draws unavailable")
-
-            try:
-                with _project_modules_first():
-                    from modules.vtrac_reference import get_vtrac_index as _cc_get_vtrac_index
-            except Exception:
-                _cc_get_vtrac_index = None
-
-            draws_root = _Path("data/cleaned/draws")
-            if not draws_root.exists():
-                draws_root = _Path("data/cleaned")
-
-            cleaned_dir = draws_root
-            if not cleaned_dir.exists():
-                st.warning("No cleaned data found in data/cleaned.")
-                return
-
-            state_candidates = set()
-            for csv_path in cleaned_dir.glob("*_draws.csv"):
-                stem = csv_path.stem
-                if stem.lower().endswith("_draws"):
-                    stem = stem[:-6]
-                lower = stem.lower()
-                base_stem = stem
-                for suffix in _CATEGORY_SUFFIXES:
-                    if lower.endswith(suffix.lower()):
-                        base_stem = stem[: -len(suffix)]
-                        break
-                state_candidates.add(base_stem.replace("_", " "))
-
-            states = sorted(state_candidates)
-            if not states:
-                st.warning("No draw CSVs detected in data/cleaned/draws.")
-                return
-
-            def _is_double(value: str) -> bool:
-                return len(value) == 3 and (
-                    value[0] == value[1]
-                    or value[1] == value[2]
-                    or value[0] == value[2]
-                )
-
-            def _draws_since_last_double(draws: list[str]) -> tuple[int, str | None]:
-                for idx, combo in enumerate(draws):
-                    if _is_double(combo):
-                        return idx, combo
-                return len(draws), None
-
             variant_rows: list[dict] = []
             variant_sources: dict[tuple[str, str], str] = {}
             variant_draws: dict[tuple[str, str], list[str]] = {}
@@ -1309,10 +1438,10 @@ def show_control_center_page() -> None:
                     if not draws:
                         continue
                     key = (state_label, variant_key)
-                    variant_draws[key] = draws
+                    variant_draws[key] = list(draws)
                     if src:
                         variant_sources[key] = src
-                    ds, latest = _draws_since_last_double(draws)
+                    ds, _ = draws_since_last_double(draws)
                     variant_rows.append(
                         {
                             "State": state_label,
@@ -1346,9 +1475,9 @@ def show_control_center_page() -> None:
                         except (TypeError, ValueError):
                             flag = False
                         state_double_flags[row["State"]] = flag
-                for (state_label, variant_key), draws in variant_draws.items():
-                    if draws:
-                        state_variant_draws.setdefault(state_label, {})[variant_key] = draws
+                for (state_label, variant_key), draws_list in variant_draws.items():
+                    if draws_list:
+                        state_variant_draws.setdefault(state_label, {})[variant_key] = draws_list
                 for state_label, variant_map in state_variant_draws.items():
                     if not variant_map:
                         continue
@@ -1389,9 +1518,9 @@ def show_control_center_page() -> None:
             for state_label in states:
                 variant_map: Dict[str, List[str]] = {}
                 for _, variant_key in variant_specs:
-                    draws = variant_draws.get((state_label, variant_key))
-                    if draws:
-                        variant_map[variant_key] = draws
+                    draws_list = variant_draws.get((state_label, variant_key))
+                    if draws_list:
+                        variant_map[variant_key] = draws_list
                 if variant_map:
                     family_rankings_by_state[state_label] = _rank_double_families(variant_map, limit=5)
                 else:
@@ -1442,6 +1571,7 @@ def show_control_center_page() -> None:
                 "variant_order": variant_order,
                 "variant_display": variant_display,
                 "missing": missing_variants,
+                "snapshot": snapshot,
             }
             st.session_state[cache_key] = cache
 
@@ -2869,3 +2999,4 @@ if __name__ == "__main__":
     except Exception as exc:
         _rescue_boot()
         st.error(f"main() raised: {exc}")
+

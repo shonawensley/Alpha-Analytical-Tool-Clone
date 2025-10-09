@@ -1,0 +1,202 @@
+pause Codex for a moment. The yellow “long‑string (digit‑reduction) box” overlay is a good idea, but the log shows a few non‑fatal issues (quoting + path drift) that will keep burning time and may leave files half‑edited. Below I explain what you’re seeing, why it isn’t a disaster, and the clean, 1‑commit way to ship the overlay safely (with exactly what to tell Codex).
+
+What those errors mean (and whether to worry)
+
+1) stream error: 400 {"detail":"Unsupported model"}
+These lines come from a helper trying to talk to an external LLM to auto‑edit docs. They’re not your app and they don’t affect rendering or tests. Safe to ignore.
+
+2) PowerShell “ParserError / Unexpected token 'chip' / MissingEndParenthesis”
+That’s just quoting. The script tried to splice HTML/CSS text into Python using double‑quotes inside double‑quotes. Nothing is wrong with your Python; the patch command itself is malformed. Use here‑strings or (better) edit the Python once directly rather than “replace in place” from PowerShell.
+
+3) Cannot find path 'C:\Users\User\src\core\module_c_vtrac.py' and similar
+These happen when commands run outside the repo root or when the file path is slightly different. Your canonical layout’s entry and pages live under src/app.py and src/core/…; always run from the repo root (that’s what run_app.bat does) to avoid path drift.
+
+4) “The directory name is invalid (os error 267)”
+Usually the same root cause as (3) or a $path variable that includes stray quotes/newlines.
+
+Bottom line: nothing here corrupts your data. It’s just automation struggling with quoting and paths. Don’t “let it keep running” in this state—ship the overlay with a tiny, deterministic patch instead.
+
+The minimal, safe way to ship the yellow overlay
+
+The key is to treat “long‑string windows” as data and keep the V‑TRAC renderer ignorant of how they’re produced—only whether a given (Set, Draw, RowType, Column) is inside one of those windows.
+
+1) A tiny descriptor module (if not already present)
+
+File: alpha_analytical/digit_reduction/long_string_windows.py
+
+# alpha_analytical/digit_reduction/long_string_windows.py
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import List, Tuple, Literal
+
+TableKind = Literal["midday", "evening", "combined"]
+
+@dataclass(frozen=True)
+class LongStringBox:
+    table: TableKind
+    sets: Tuple[str, ...]
+    draws: Tuple[str, ...]
+    row_types: Tuple[str, ...]
+    columns: Tuple[int, ...]     # numeric table columns to tint
+
+# LS “windows” we want to keep visible during analysis.
+_COMMON_WINDOWS: List[Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...], Tuple[int, ...]]] = [
+    (("Set3", "Set2", "Set1"), ("Draw1",), ("R2",), (7, 6, 5)),  # top band across 7/6/5
+    (("Set1",),               ("Draw4",), ("R2",), (3,)),        # S1/D4 col 3
+    (("Set1",),               ("Draw6",), ("R2",), (1,)),        # S1/D6 col 1
+]
+
+_VALID_TABLES: Tuple[TableKind, ...] = ("midday", "evening", "combined")
+
+def get_long_string_boxes(table: str) -> List[LongStringBox]:
+    key = str(table).lower()
+    if key not in _VALID_TABLES:
+        return []
+    return [
+        LongStringBox(table=key, sets=a, draws=b, row_types=c, columns=d)
+        for (a, b, c, d) in _COMMON_WINDOWS
+    ]
+
+
+Why here? It keeps the “where to highlight” logic next to Digit‑Reduction and away from BA/Aux (which only read draws CSVs and do not touch string tables). That matches your architecture decisions.
+
+2) Add a tiny lookup in the V‑TRAC renderer
+
+File: src/core/module_c_vtrac.py (your HTML table builder)
+
+Import and memoize the coordinates.
+
+Add a parameter table_kind: str to your generate_table_html(...).
+
+When you build each <td>, if the cell is inside an LS window, add classes ls-box ls-box-edge.
+
+Patch (conceptual diff):
+
+from functools import lru_cache
+from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
+
+def _norm(x: str) -> str:
+    return str(x or "").strip()
+
+@lru_cache(None)
+def _ls_coords(table_kind: str) -> set[tuple[str, str, str, int]]:
+    coords: set[tuple[str, str, str, int]] = set()
+    for box in get_long_string_boxes(table_kind):
+        for s in box.sets:
+            for d in box.draws:
+                for r in box.row_types:
+                    for c in box.columns:
+                        coords.add((s, d, r, int(c)))
+    return coords
+
+def _is_ls_cell(table_kind: str, set_name: str, draw: str, row_type: str, col: int) -> bool:
+    return (_norm(set_name), _norm(draw), _norm(row_type), int(col)) in _ls_coords(table_kind)
+
+def generate_table_html(df, title: str, table_kind: str):
+    ...
+    for _, row in df.iterrows():
+        set_name  = str(row.get("Set", ""))
+        draw_name = str(row.get("Draw", ""))
+        row_type  = str(row.get("RowType", ""))
+        table_html += "<tr>"
+        for col in header_cols:
+            if col in df.columns:
+                cell_classes: list[str] = []
+                value = row[col]
+                # your existing winner/family/vt‑straight classes come first...
+                # then:
+                if _is_ls_cell(table_kind, set_name, draw_name, row_type, col):
+                    cell_classes.extend(["ls-box", "ls-box-edge"])
+                class_attr = (" class=\"" + " ".join(cell_classes) + "\"") if cell_classes else ""
+                table_html += f"<td{class_attr}>{value}</td>"
+        table_html += "</tr>"
+
+
+Update the call sites (once each) to pass table_kind:
+
+html += generate_table_html(tables["Midday_combined"],   f"{state} Midday Combined Table",   "midday")
+html += generate_table_html(tables["Evening_combined"],  f"{state} Evening Combined Table",  "evening")
+html += generate_table_html(tables["Combined_combined"], f"{state} Combined Combined Table", "combined")
+# (and if you render R2-only tables, pass the same table_kind for those)
+
+3) Inline a tiny style + legend chip (no quoting headaches)
+
+Place this next to your existing legend CSS:
+
+<style>
+  td.ls-box       { background:#FFF7BF; }               /* pale yellow */
+  td.ls-box-edge  { box-shadow: inset 0 0 0 1px #E6C94F; }  /* crisp edge */
+</style>
+
+<div class="legend">
+  ...existing chips...
+  <span class="chip" style="background:#FFF7BF;border:1px solid #E6C94F">Long‑string (DR) box</span>
+</div>
+
+
+Because this is inside Python as a single triple‑quoted string, you avoid PowerShell’s quoting minefield entirely.
+
+What to tell Codex (exact, small spec)
+
+Goal: highlight the fixed long‑string Digit‑Reduction windows (LS1/LS2) in the V‑TRAC tables with a pale‑yellow background + thin edge, without touching scoring.
+
+Create alpha_analytical/digit_reduction/long_string_windows.py exactly as above (returns boxes for "midday"|"evening"|"combined" with windows: S3/S2/S1×Draw1×R2@cols 7‑6‑5, S1×D4×R2@col 3, S1×D6×R2@col 1).
+
+Edit src/core/module_c_vtrac.py:
+
+from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
+
+Add _ls_coords(...) and _is_ls_cell(...) helpers.
+
+Change generate_table_html(df, title) → generate_table_html(df, title, table_kind:str).
+
+When outputting <td>, if _is_ls_cell(...) → add classes ls-box ls-box-edge.
+
+Add the small CSS and legend chip shown above.
+
+Update the 3 (or 6, if R2 tables too) call sites to pass "midday"|"evening"|"combined".
+
+Add a tiny test tests/test_long_string_overlay.py:
+
+import src.core.module_c_vtrac as vtrac
+
+def test_is_ls_cell_windows():
+    assert vtrac._is_ls_cell('midday', 'Set1', 'Draw4', 'R2', 3)
+    assert vtrac._is_ls_cell('evening', 'Set3', 'Draw1', 'R2', 7)
+    assert not vtrac._is_ls_cell('midday', 'Set2', 'Draw2', 'R4', 5)
+
+
+Do not patch files via PowerShell “replace‑in‑place” with nested quotes; edit Python directly.
+
+Run from repo root (per run_app.bat) so relative paths match the canonical layout.
+
+Quick verification (takes 60–90 seconds)
+
+Compile / unit test
+
+python -m py_compile alpha_analytical/digit_reduction/long_string_windows.py src/core/module_c_vtrac.py
+python -m pytest -q tests/test_long_string_overlay.py
+
+
+Smoke the winners page (whatever script you already use):
+
+python scripts/smoke_winners_logger.py
+
+
+Confirm the legend now includes “Long‑string (DR) box” and the LS windows are pale yellow.
+
+Open a fresh report (Explorer → double‑click the generated HTML) and visually confirm the exact boxes you circled are tinted. (Avoid the Streamlit “Open report” router—open the file path directly.)
+
+Should you let the current automation “finish”?
+
+Not as‑is. The errors you’re seeing are automation‑only (quoting + wrong working directory) and won’t fix themselves. You’ll get there faster by applying the small patch above than by retrying the scripted replaces.
+
+Once this is in and green, you can absolutely let Codex add niceties (e.g., making the yellow chip optional, or exposing the LS windows in a config file) — but ship the core overlay first.
+
+Why this separation matters later
+
+BA/Aux must stay draws‑only; long‑string overlays belong in V‑TRAC/DR space. Your docs already codify this separation of concerns, and keeping it makes future changes safer.
+
+Running from the repo root and editing the core files (not shell‑script replacements) follows the canonical layout and avoids the path drift that caused several of those errors.
+
+If you want, I can also give Codex a one‑line CSS variant with a slightly deeper yellow or a thicker edge so “LS” pops more; for now I kept it subtle so it doesn’t overpower the green/purple hits.

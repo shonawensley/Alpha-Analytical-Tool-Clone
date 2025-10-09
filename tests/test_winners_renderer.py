@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from pathlib import Path
 
 import pytest
@@ -18,5 +18,6 @@ def test_winner_report_contains_highlights(tmp_path: Path, monkeypatch: pytest.M
     out_path = Path(wrf.write_winner_full_report("Connecticut4", "934"))
     assert out_path.exists()
     html = out_path.read_text(encoding="utf-8")
-    for token in ["legend", "hit-winner", "hit-winner-gap", "hit-vt-straight", "hit-vt-straight-gap", "hit-family"]:
+    for token in ["legend", "hit-winner", "hit-winner-gap", "hit-vt-straight", "hit-vt-straight-gap", "hit-family", "Long-string (DR) box"]:
         assert token in html
+

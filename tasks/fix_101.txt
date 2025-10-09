@@ -1,0 +1,152 @@
+the pattern coverage looks much richer now. Let’s add your “long–string boxes” overlay in a way that’s safe, obvious (soft yellow), and future‑proof so it never drifts from the Digit‑Reduction module.
+
+Below is a drop‑in spec you can hand to Codex. It’s small, isolated, and won’t change any scoring—just the visualization.
+
+Goal
+
+Permanently shade the “long‑string Digit‑Reduction boxes” in the V‑TRAC HTML (Midday/Evening/Combined tables) so you can instantly see when hits come from those windows. Use a soft yellow background so existing green/purple/blue text highlights remain readable.
+
+Implementation plan (tight, low‑risk)
+1) Make the long‑string windows a single source of truth
+
+Create a tiny shared config that both the Digit‑Reduction module and the V‑TRAC renderer read.
+
+Option A (code constant):
+
+alpha_analytical/digit_reduction/long_string_windows.py
+
+# returns a list of box descriptors per table-kind
+# table_kind ∈ {"midday","evening","combined"}
+from dataclasses import dataclass
+from typing import Iterable, Literal
+
+TableKind = Literal["midday","evening","combined"]
+
+@dataclass(frozen=True)
+class LSBox:
+    table: TableKind
+    sets: Iterable[int]        # e.g. [1,2,3] (Set numbers)
+    draws: Iterable[int]       # e.g. [1,2,3,4,5,6,7]
+    row_types: Iterable[str]   # subset of {"R2","R4","R6","R8","DRAW_DATA"}
+    cols: Iterable[int]        # column indices 1..7 in the grid header
+
+def get_long_string_boxes(table: TableKind) -> list[LSBox]:
+    # TODO: fill with the exact windows already used by the long-string Digit‑Reduction module
+    # (mirror them 1:1 so visuals can’t drift from the logic)
+    return [...]
+
+
+Option B (YAML):
+
+configs/long_string_boxes.yml
+
+midday:
+  - sets: [ ... ]
+    draws: [ ... ]
+    row_types: [R2, R4, R6, R8]
+    cols: [1,2,3,4,5,6,7]
+evening:
+  - ...
+combined:
+  - ...
+
+
+Add a tiny loader (e.g., alpha_analytical/digit_reduction/ls_boxes.py) that reads this YAML and returns the same structure as LSBox.
+
+Why this matters: We avoid hard‑coding coordinates twice. The Digit‑Reduction module already “knows” these windows—codify that once and import everywhere. This aligns with your repo’s “single data contract per page/tool” rule and keeps the app stable as it grows.
+
+2) Add the overlay to the V‑TRAC renderer
+
+File: src/core/module_c_vtrac.py
+
+CSS: extend the inline WINNER_STYLE_BLOCK:
+
+<style>
+  .chip { /* existing */ }
+
+  /* Long‑string (Digit‑Reduction) overlay */
+  .ls-box { background: #FFF7BF; }              /* soft yellow */
+  .ls-box-edge { box-shadow: inset 0 0 0 1px #E6C94F; }  /* subtle edge so it reads on light/dark */
+  @media (prefers-color-scheme: dark) {
+    .ls-box { background: #3B3616; }            /* warm dark yellow */
+    .ls-box-edge { box-shadow: inset 0 0 0 1px #C5A93A; }
+  }
+</style>
+
+
+Legend: add a chip next to your existing ones:
+
+<div class="legend">
+  <span class="chip hit-winner">Winner</span>
+  <span class="chip hit-winner-gap">Winner (gap)</span>
+  <span class="chip hit-vt-straight">V‑TRAC straight</span>
+  <span class="chip hit-vt-straight-gap">V‑TRAC straight (value)</span>
+  <span class="chip hit-family">Index family</span>
+  <span class="chip hit-family-gap">Family (gap)</span>
+  <span class="chip" style="background:#FFF7BF;border:1px solid #E6C94F">Long‑string (DR) box</span>
+</div>
+
+
+Cell hook: wherever each <td> is emitted, add:
+
+from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
+
+# build a fast lookup set at render-time
+_boxes = get_long_string_boxes(table_kind)  # "midday"/"evening"/"combined"
+LS = {(b.table, s, d, rt, c) for b in _boxes
+      for s in b.sets for d in b.draws for rt in b.row_types for c in b.cols}
+
+def _is_ls_box(table_kind, set_no, draw_no, row_type, col_index) -> bool:
+    return (table_kind, set_no, draw_no, row_type, col_index) in LS
+
+# when building each cell...
+classes = []
+if _is_ls_box(table_kind, set_no, draw_no, row_type, col_index):
+    classes += ["ls-box","ls-box-edge"]   # background + edge
+# retain existing winner/family/straight class logic (text color stays on top)
+td = f'<td class="{" ".join(classes)}">{cell_html}</td>'
+
+
+Important: The yellow is a background layer; your green/purple/blue matchers remain as text spans, so nothing is lost. No ranking or logic changes—purely visual.
+
+3) Control Center “Open report” button (optional)
+
+The Streamlit inline open sometimes tries to route to a non‑page path. If you want zero friction:
+
+Replace “Open report” with a st.download_button (serves the generated HTML path) and an “Open in browser” link using file:// for local viewing.
+
+This matches the app’s “stable launch/paths” guardrail without touching Aux/BA (which reads draws CSV only).
+
+4) Tests & smoke
+
+Unit: tests/test_vtrac_ls_overlay.py
+
+Build a tiny fake grid where one known coordinate is in the LS config—assert the cell contains class="ls-box".
+
+Smoke: extend scripts/smoke_winners_logger.py
+
+After generating a sample HTML, assert it includes the legend text Long‑string (DR) box.
+
+Both are quick and will keep future edits honest.
+
+Verification checklist (what you’ll see)
+
+Re‑generate a report → legend shows a Long‑string (DR) box chip.
+
+The windows you circled are shaded soft yellow across Midday, Evening, and Combined tables.
+
+Existing green (winner), blue (V‑TRAC straight), and purple (family) still show inside those boxes.
+
+Dark‑mode looks clean (no low‑contrast surprises).
+
+Why this is safe
+
+Single source of truth for the windows—no duplication, no drift.
+
+Visual only—no changes to detection or ranking.
+
+All code is localized to the renderer + a tiny shared config.
+
+Tests and smoke keep it from regressing later.
+
+If you’d like, I can also provide a starter long_string_boxes.yml with placeholders that Codex can fill using the same coordinates your Digit‑Reduction module already uses. Once it’s wired, you’ll have those boxes permanently lit in yellow, exactly as you described.

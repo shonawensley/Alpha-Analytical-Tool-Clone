@@ -17,12 +17,17 @@ This document tracks the automated verification layers that protect AAT9. Treat 
   - tests/test_aux_loaders_variants.py locks the combined/midday/evening file resolution logic.
   - tests/test_vtrac_matchers.py verifies winner/family hits plus VT-straight strict/value-block spans.
   - tests/test_winners_renderer.py checks the legend/classes rendered in the analyzer-style report.
+  - tests/test_draw_catalog.py locks the draw snapshot hashing and newest-first double detection used by Control Center due-doubles + positional hard-due cues.
+  - tests/test_long_string_overlay.py ensures the long-string Digit-Reduction windows stay highlighted in the V-TRAC tables.
+  - tests/test_batch_runner.py keeps the Pick3StatsC4 state parser aligned with the Control Center batch workflow.
+  - tests/test_draws_refresh.py ensures the Control Center draw purge removes the expected CSVs before regeneration.
+  - tests/test_aux_validation.py covers Aux double thresholds, multi-variant alerts, and family badge extraction.
 
 
 - Pending additions:
   - V-TRAC analyzer render path (uses combined tables only).
   - Blackapple alert flow (ensures triggers/candidates render for a known state).
-  - Control Center state toggle stress case.
+  - Control Center state toggle stress case.`r`n- Re-verify due-doubles combination tagging so M/E/C flags only light up when the combo is actually late in that variant (current tables still show every combo with all three tags).
 
 ## 2. Stress Harnesses
 - `scripts/tools/stress_positional.py`
@@ -54,6 +59,10 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 - Evaluate browser-level smoke tests (Playwright) once core flows are locked.
 
 Keep this file up to date whenever you add or expand tests so future sessions know the current safety net.
+
+
+
+
 
 
 

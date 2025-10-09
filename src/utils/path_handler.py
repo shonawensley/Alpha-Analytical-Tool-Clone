@@ -1,16 +1,19 @@
-"""
-Forwarder shim for path handler (AAT9)
+"""Compat shim exposing the project-level `utils.path_handler` to src.* modules."""
+from __future__ import annotations
 
-This legacy module re-exports all public symbols from the canonical
-`utils.path_handler` so older code importing `src.utils.path_handler`
-continues to work. Do not add new logic here; update utils/path_handler.py.
-"""
+import importlib.util
+from pathlib import Path
 
-from utils.path_handler import *  # noqa: F401,F403
-from utils import path_handler as _ph
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_ORIGINAL_PATH_HANDLER = _PROJECT_ROOT / "utils" / "path_handler.py"
 
-# Ensure __all__ reflects the canonical module
-try:
-    __all__ = [n for n in dir(_ph) if not n.startswith('_')]
-except Exception:
-    __all__ = []
+_spec = importlib.util.spec_from_file_location("_aat9_path_handler", _ORIGINAL_PATH_HANDLER)
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"Unable to load canonical path_handler from {_ORIGINAL_PATH_HANDLER}")
+
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+
+__all__ = [name for name in dir(_module) if not name.startswith('_')]
+for name in __all__:
+    globals()[name] = getattr(_module, name)

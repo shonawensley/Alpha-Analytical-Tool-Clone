@@ -1,11 +1,9 @@
 from importlib import import_module
 from pathlib import Path
-from datetime import datetime
 import pandas as pd
 
 from alpha_analytical.stable.post_pass_families import build_family_summary
 from alpha_analytical.stable.winner_family_spotlight import build_winner_spotlight
-from alpha_analytical.stable.training_bundle import write_training_bundle
 _ex = import_module("alpha_analytical.stable")
 
 
@@ -18,8 +16,6 @@ def run_stable_pattern_extraction(
     out_path: Path | str | None = None,
     min_occ: int = 3,
     winners: list[str] | None = None,
-    bundle_stamp: str | None = None,
-    write_bundle: bool = False,
 ):
     """Convenience wrapper around the canonical Stable-Pattern Extractor.
 
@@ -36,10 +32,6 @@ def run_stable_pattern_extraction(
         the canonical patterns folder is used.
     min_occ : int, default=3
         Minimum number of occurrences a pattern must have before being returned.
-    bundle_stamp : str | None, default=None
-        Optional identifier used when writing a training bundle.
-    write_bundle : bool, default=False
-        When True, copies the generated artefacts into a versioned training bundle directory.
 
     Returns
     -------
@@ -149,32 +141,11 @@ def run_stable_pattern_extraction(
 
     if not df_scores.empty:
         df_scores.to_csv(csv_path, index=False)
-        csv_path_str = str(csv_path)
     else:
         # If nothing to write, fall back to empty string so callers can test truthiness
-        csv_path_str = ""
+        csv_path = ""
 
-    html_path_str = str(html_path)
-
-    bundle_info = None
-    if write_bundle and csv_path_str:
-        stamp = bundle_stamp or datetime.now().strftime("%Y%m%d_%H%M%S")
-        analysis_root = out_path.parent
-        bundle_info = write_training_bundle(
-            state=state,
-            stamp=stamp,
-            analysis_root=analysis_root,
-            scores_path=csv_path_str,
-            html_path=html_path_str,
-            families_path=families_path or None,
-            spotlight_raw_path=spotlight_raw_path or None,
-            spotlight_family_path=spotlight_family_path or None,
-            winners=winners,
-        )
-
-    df_scores.attrs["training_bundle"] = bundle_info
-
-    return df_scores, html_path_str, csv_path_str
+    return df_scores, str(html_path), str(csv_path)
 
 
 # Optional convenience re-exports (if they exist in the underlying module)

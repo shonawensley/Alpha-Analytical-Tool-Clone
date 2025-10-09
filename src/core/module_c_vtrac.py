@@ -26,6 +26,7 @@ import webbrowser
 from PIL import Image
 import time
 import json  # Added for JSON export
+from functools import lru_cache
 
 # Import utility modules
 from utils.extract_data import process_state
@@ -39,6 +40,7 @@ from utils.path_handler import (
 )
 from utils.state_utils import STATES, get_state_file_name
 from modules.vtrac_matchers import WinnerTargets, build_winner_targets, collect_spans
+from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
 from utils.table_generator import generate_tables
@@ -49,6 +51,69 @@ from utils.vtrac_utils import (
     highlight_string_with_matches
 )
 from utils.bundler import bundle_day
+_LONG_STRING_TABLES = ("midday", "evening", "combined")
+
+
+def _normalize_set(value: str) -> str:
+    return str(value or "").strip().replace(" ", "").lower()
+
+
+def _normalize_draw(value: str) -> str:
+    raw = str(value or "").strip().replace(" ", "")
+    if not raw:
+        return ""
+    raw_lower = raw.lower()
+    if raw_lower.startswith("draw"):
+        return raw_lower
+    if raw.isdigit():
+        return f"draw{raw}"
+    return raw_lower
+
+
+def _normalize_row_type(value: str) -> str:
+    raw = ''.join(ch for ch in str(value or "") if ch.isalnum())
+    return raw.upper()
+
+
+@lru_cache(maxsize=None)
+def _long_string_lookup() -> dict:
+    mapping: dict[str, frozenset[tuple[str, str, str, int]]] = {}
+    for table in _LONG_STRING_TABLES:
+        coords = set()
+        for box in get_long_string_boxes(table):
+            for set_name in box.sets:
+                for draw_name in box.draws:
+                    for row_type in box.row_types:
+                        for column in box.columns:
+                            coords.add(
+                                (
+                                    _normalize_set(set_name),
+                                    _normalize_draw(draw_name),
+                                    _normalize_row_type(row_type),
+                                    int(column),
+                                )
+                            )
+        mapping[table] = frozenset(coords)
+    return mapping
+
+
+def _is_long_string_cell(
+    table_kind: str,
+    set_name: str,
+    draw_name: str,
+    row_type: str,
+    column: int,
+) -> bool:
+    table_key = str(table_kind or "").lower()
+    coords = _long_string_lookup().get(table_key)
+    if not coords:
+        return False
+    return (
+        _normalize_set(set_name),
+        _normalize_draw(draw_name),
+        _normalize_row_type(row_type),
+        int(column),
+    ) in coords
 
 # (Page config now handled centrally in src/app.py)
 
@@ -458,8 +523,14 @@ WINNER_STYLE_BLOCK = """
   .legend .chip { display:inline-block; margin-right:10px; padding:2px 6px; border-radius:4px; font-weight:600; border:1px solid #bbb; }
   .hit-winner { background-color:#e1f7d5; color:#0b6b00; border-color:#74c476; }
   .hit-winner-gap { background-color:#f1fde7; color:#23690c; border-style:dashed; border-color:#74c476; }
-  .hit-vt-straight { background-color:#e8f0ff; color:#0b69ff; border-color:#8ab4ff; }
-  .hit-vt-straight-gap { background-color:#f1f6ff; color:#0b69ff; border-style:dashed; border-color:#8ab4ff; }
+  .hit-vt-straight { color:#0d47a1; background:#e6f0ff; border:1px solid #0d47a1; }
+  .hit-vt-straight-gap { color:#1565c0; background:#f0f6ff; border:1px dashed #1565c0; }
+  .ls-box { background-color:#fff7bf; }
+  .ls-box-edge { box-shadow: inset 0 0 0 1px #e6c94f; }
+  @media (prefers-color-scheme: dark) {
+    .ls-box { background-color:#3b3616; }
+    .ls-box-edge { box-shadow: inset 0 0 0 1px #c5a93a; }
+  }
   .hit-family { background-color:#ede3ff; color:#4b0082; border-color:#b39ddb; }
   .hit-family-gap { background-color:#f2ecff; color:#4b0082; border-style:dashed; border-color:#b39ddb; }
   td .hit-winner, td .hit-winner-gap, td .hit-vt-straight, td .hit-vt-straight-gap, td .hit-family, td .hit-family-gap { padding:0 2px; border-radius:2px; }
@@ -471,6 +542,7 @@ WINNER_STYLE_BLOCK = """
   <span class="chip hit-vt-straight-gap">V-TRAC straight (value)</span>
   <span class="chip hit-family">Index family</span>
   <span class="chip hit-family-gap">Family (gap)</span>
+  <span class="chip" style="background:#FFF7BF;border:1px solid #E6C94F">Long-string (DR) box</span>
 </div>
 """
 
@@ -638,27 +710,43 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
 """
     html += WINNER_STYLE_BLOCK
 
-    def generate_table_html(df, title):
+    def generate_table_html(df, title, table_kind):
         if df is None or df.empty:
             return f"<h2>{title}</h2><p>No data available</p>"
-        
-        table_html = f"<h2>{title}</h2><table>"
+
+        table_key = str(table_kind).lower()
         header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
+        table_html = f"<h2>{title}</h2><table>"
         table_html += "<tr>" + "".join([f"<th>{col}</th>" for col in header_cols if col in df.columns]) + "</tr>"
-        
+
         for _, row in df.iterrows():
+            set_name = str(row.get("Set", ""))
+            draw_name = str(row.get("Draw", ""))
+            row_type = str(row.get("RowType", ""))
             table_html += "<tr>"
             for col in header_cols:
                 if col in df.columns:
-                    value = str(row[col])
-                    if targets and (col.isdigit() or col.upper().startswith('R')) and any(ch.isdigit() for ch in value):
-                        value = _highlight_value(value, targets)
-                    table_html += f"<td>{value}</td>"
+                    raw_value = str(row[col])
+                    display_value = raw_value
+                    if targets and (col.isdigit() or col.upper().startswith('R')) and any(ch.isdigit() for ch in raw_value):
+                        display_value = _highlight_value(raw_value, targets)
+
+                    cell_classes = []
+                    if col.isdigit():
+                        col_idx = int(col)
+                        if _is_long_string_cell(table_key, set_name, draw_name, row_type, col_idx):
+                            cell_classes.extend(["ls-box", "ls-box-edge"])
+
+                    if cell_classes:
+                        class_attr = " class=\"" + " ".join(cell_classes) + "\""
+                    else:
+                        class_attr = ""
+
+                    table_html += f"<td{class_attr}>{display_value}</td>"
             table_html += "</tr>"
-        
+
         table_html += "</table>"
         return table_html
-    
     # Horizontal layout styling
     html += '<style>.horizontal-layout{display:flex; flex-direction:row; justify-content:space-between; width:100%; margin:0; padding:0;} .section{flex:1; margin:0 2px;}</style>'
     
@@ -669,30 +757,30 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     html += '<div class="section">'
     html += '<h2>Midday Data</h2>'
     if "Midday_combined" in tables:
-        html += generate_table_html(tables["Midday_combined"], f"{state_name} Midday Combined Table")
+        html += generate_table_html(tables["Midday_combined"], f"{state_name} Midday Combined Table", "midday")
     if "Midday_r2" in tables:
         html += f"<h5>Midday - R2-only</h5>"
-        html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table")
+        html += generate_table_html(tables["Midday_r2"], f"{state_name} Midday R2-only Table", "midday")
     html += '</div>'
     
     # Evening
     html += '<div class="section">'
     html += '<h2>Evening Data</h2>'
     if "Evening_combined" in tables:
-        html += generate_table_html(tables["Evening_combined"], f"{state_name} Evening Combined Table")
+        html += generate_table_html(tables["Evening_combined"], f"{state_name} Evening Combined Table", "evening")
     if "Evening_r2" in tables:
         html += f"<h5>Evening - R2-only</h5>"
-        html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table")
+        html += generate_table_html(tables["Evening_r2"], f"{state_name} Evening R2-only Table", "evening")
     html += '</div>'
     
     # Combined
     html += '<div class="section">'
     html += '<h2>Combined Data</h2>'
     if "Combined_combined" in tables:
-        html += generate_table_html(tables["Combined_combined"], f"{state_name} Combined Combined Table")
+        html += generate_table_html(tables["Combined_combined"], f"{state_name} Combined Combined Table", "combined")
     if "Combined_r2" in tables:
         html += f"<h5>Combined - R2-only</h5>"
-        html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table")
+        html += generate_table_html(tables["Combined_r2"], f"{state_name} Combined R2-only Table", "combined")
     html += '</div>'
     
     html += '</div>'  # close horizontal-layout
@@ -1873,5 +1961,12 @@ def render(state: str) -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
 
 

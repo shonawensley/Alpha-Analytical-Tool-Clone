@@ -1,3 +1,21 @@
+## 2025-10-10 - Aux double validation harness\n- Impact: Added ux_validation helpers and a CLI to recompute double draws-since per variant directly from the draws CSVs, making it easy to cross-check Control Center badges.\n- Impact: New unit tests cover threshold classification, variant overlap, and family badge extraction so regressions are caught automatically.\n- Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_doubles.py, tests/test_aux_validation.py.\n\n﻿## 2025-10-10 - Aux draw refresh guardrail
+- Impact: Aux draw regeneration now offers a “delete existing draw CSVs” toggle that purges the selected state files before writing, preventing stale data from lingering between runs.
+- Impact: Added `alpha_analytical.control_center.draws_refresh.purge_draw_csvs` with unit coverage so the Control Center refresh stays clean and reproducible.
+- Files: alpha_analytical/control_center/draws_refresh.py, src/app.py, tests/test_draws_refresh.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.
+## 2025-10-10 - Control Center batch winners workflow
+- Impact: Control Center now exposes a batch expander that parses the Pick3StatsC4 winners list, runs the winners logger across all tracked states, and optionally kicks off Stable Pattern training bundles in one pass.
+- Impact: Added batch_runner utilities (state-order parser, project-state fallbacks) plus unit coverage so the pasted sheet stays aligned with tracked outputs.
+- Files: alpha_analytical/control_center/{__init__.py,batch_runner.py}, src/app.py, tests/test_batch_runner.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}, briefings/CODEX_READ_FIRST_AAT9.md.
+## 2025-10-09 - Stable extractor training bundle\n- Impact: Stable Pattern runs can now emit versioned training bundles (scores, families, spotlight) with manifests for downstream ML; the Streamlit page exposes a toggle to create them per run.\n- Files: alpha_analytical/stable/training_bundle.py, src/core/stable_pattern_extractor.py, src/app.py, tests/test_stable_training_bundle.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.\n\n## 2025-10-09 - V-TRAC long-string highlight overlay
+- Impact: Introduced a shared long-string window map so V-TRAC tables permanently tint the Digit-Reduction LS1/LS2 boxes in pale yellow, making it obvious when winners originate from the reduction zones.
+- Impact: Wired the renderer to layer the overlay alongside existing winner/V-TRAC/family spans, added CSS legend chips, and enforced the behaviour with unit + smoke tests.
+- Files: alpha_analytical/digit_reduction/{__init__.py,long_string_windows.py}, src/core/module_c_vtrac.py, src/utils/path_handler.py, tests/test_long_string_overlay.py, tests/test_winners_renderer.py, scripts/smoke_winners_logger.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.
+
+## 2025-10-09 - Due-doubles cache + snapshot guard
+- Impact: Control Center now snapshots draw CSV mtimes/sizes and rebuilds the due-doubles table automatically, eliminating stale draws-since metrics after data refreshes and keeping positional hard-due flags honest.
+- Impact: Added `modules/draw_catalog` helpers plus `tests/test_draw_catalog.py`; briefings/testing docs updated so future sessions rerun the guardrails after loader edits.
+- Files: src/app.py, modules/draw_catalog.py, tests/test_draw_catalog.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.
+
 ## 2025-10-08 - Winners VT-straight coverage + download guard
 - Impact: Extended the matcher to emit blue VT-straight spans (strict + value-block), added legend chips, and wired the compact/analyzer tiles to reuse the spans so R2/R4/R6/R8 overlays stay in sync.
 - Impact: Replaced Streamlit link navigation with download buttons so Control Center opens analyzer reports without /pages routing errors; smoke/tests updated to assert new classes.
@@ -61,6 +79,10 @@
 ## 2025-10-02 - Control Center V-TRAC double families
 - Impact: Replaced the due-doubles pair/combination columns with Top-5 V-TRAC double family strips (severity + variant tags) and surfaced the same rankings on the Aux page with a family column.
 - Files: src/app.py, src/core/vtrac_families.py, docs/AAT9_KIT/AAT9_Aux_Roadmap.md.
+
+
+
+
 
 
 

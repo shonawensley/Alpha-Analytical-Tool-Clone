@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
@@ -21,10 +21,11 @@ if not out_path.exists():
     sys.exit(1)
 
 content = out_path.read_text(encoding="utf-8")
-required = ["legend", "hit-winner", "hit-winner-gap", "hit-vt-straight", "hit-vt-straight-gap", "hit-family"]
+required = ["legend", "hit-winner", "hit-winner-gap", "hit-vt-straight", "hit-vt-straight-gap", "hit-family", "Long-string (DR) box"]
 missing = [token for token in required if token not in content]
 if missing:
     print(f"FAIL: report missing markers: {missing}")
     sys.exit(1)
 
 print(f"OK: winners logger smoke passed ({out_path})")
+

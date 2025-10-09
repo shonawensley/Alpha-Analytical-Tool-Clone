@@ -1,8 +1,8 @@
-# CODEX READ FIRST — AAT9 Optimized Startup
+﻿# CODEX READ FIRST ??? AAT9 Optimized Startup
 
 
 
-Read and follow this sequence exactly before coding. Goal: highest‑quality planning, path‑safe execution, and consistent documentation/logging.
+Read and follow this sequence exactly before coding. Goal: highest???quality planning, path???safe execution, and consistent documentation/logging.
 
 
 
@@ -14,9 +14,9 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 
 - Ensure CWD is the repo root: `C:\dev\Alpha-Analytical-Tool`.
 
-- Print‑only sanity: `git status -s`, `git branch -vv`, `git remote -v` (no changes to remotes).
+- Print???only sanity: `git status -s`, `git branch -vv`, `git remote -v` (no changes to remotes).
 
-- Confirm launch path: `run_app.bat` → `streamlit run src\app.py`.
+- Confirm launch path: `run_app.bat` ??? `streamlit run src\app.py`.
 
 
 
@@ -24,9 +24,9 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 
 - `docs/AAT9_KIT/AAT9_KIT_README.md` (index)
 
-- `docs/AAT9_KIT/AAT9_Workflow_Standard.md` (step‑by‑step workflow)
+- `docs/AAT9_KIT/AAT9_Workflow_Standard.md` (step???by???step workflow)
 
-- `docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md` (path‑safe coding)
+- `docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md` (path???safe coding)
 
 - `docs/AAT9_KIT/Practices/AAT9_Agent_Operating_Rules.md` (guardrails)
 
@@ -59,8 +59,11 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 - Add `-CheckDoubles` after data refreshes to run the doubles audit automatically.
 
 - After preflight (or before launching Streamlit), run `python scripts/smoke_winners_logger.py` to verify the analyzer-style winners report still renders with highlights.
+- Control Center due-doubles now auto-refreshes when draw CSV snapshots change; still click **Refresh Draw Tables** after a bulk data load to clear any manual overrides.
+- When regenerating draw CSVs through the Control Center Aux Draws pipeline, keep “Delete existing draw CSVs before writing” checked so the pipeline purges stale files before writing fresh ones.
+- After regenerating draws, optionally run python scripts/tools/validate_aux_doubles.py <STATE> to confirm the due-doubles badges match the raw CSVs.
 
-- Confirm imports resolve to in‑repo files and that draws CSVs are present.
+- Confirm imports resolve to in???repo files and that draws CSVs are present.
 
 - Confirm `.codex/first_boot.log` is the headless Streamlit log target before any automated boot.
 
@@ -70,7 +73,7 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 
-- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per‑state combined tables existence.
+- Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per???state combined tables existence.
 
 - When touching Aux wiring, skim `docs/AAT9_KIT/important/DETAIL CODEX LOG.txt` for recent guardrails.
 
@@ -89,7 +92,7 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
   - Control Center doubles families (Connecticut, Florida) using the frozen 1,000-draw snapshot so merged C/M/E badges cannot return.
   - Digit-reduction reducer/analyzer/overlay flows for Delaware and Florida.
   Fixtures live under `tests/fixtures/acceptance/`.
-- Unit guardrails: `pytest tests/test_vtrac_family_ranker_regression.py tests/test_aux_loaders_variants.py` after doubles/loader changes.
+- Unit guardrails: `pytest tests/test_vtrac_family_ranker_regression.py tests/test_aux_loaders_variants.py tests/test_draw_catalog.py tests/test_long_string_overlay.py tests/test_stable_training_bundle.py` after doubles/loader changes.
 - Health helper: `python scripts/health/check_doubles_variants.py [--state STATE]` audits live draws (missing variants, unseen-overdue badges, merged tokens).
 
 - Stress helpers live under `scripts/tools/` (e.g., `stress_positional.py`); use them when touching positional logic.
@@ -102,11 +105,11 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 
 
 
-## 4) Plan → Implement → Verify → Document
+## 4) Plan ??? Implement ??? Verify ??? Document
 
 - Plan: small, explicit; state files to change and why; wait for approval if collaborating.
 
-- Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA draws‑only.
+- Implement: minimal diffs; use `utils.path_handler` for outputs; Aux/BA draws???only.
 
 - Verify: `python -m py_compile`, `python scripts/checks/smoke_positional.py`, import probes, optional headless boot (120s) + `.codex/first_boot.log`.
 
@@ -128,7 +131,7 @@ Read and follow this sequence exactly before coding. Goal: highest‑quality pla
 
 - Never write outside the repo; do not modify git remotes.
 
-- Archive‑first for cleanup; no deletions; keep changes reversible.
+- Archive???first for cleanup; no deletions; keep changes reversible.
 
 
 
@@ -157,8 +160,11 @@ Note: If Aux throws legacy import errors, run python scripts/checks/smoke_aux_vt
 
 #### Training bundles
 - After running Digit Reduction and Analyzer V2 + the winners overlay, open the **Analyzer V2 (DEV)** expander and click **Package training bundle**.
+- Control Center now has a **Batch winners + training bundles** expander; paste the Pick3StatsC4 winners list there to run the winners logger across all tracked states and optionally fire the Stable Pattern bundle workflow in one click.
 - Select your stamp (defaults to the newest overlay), choose whether to include hits CSV / overlay HTML, and optionally create a zip copy.
 - Bundles are written to `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/` with a `manifest.json` listing the files.
 - Use the **Delete all training bundles** button to clear the folder before a fresh run if desired.
+
+
 
 

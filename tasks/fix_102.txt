@@ -1,0 +1,71 @@
+To address your request efficiently and without over‑complicating things, here’s an actionable plan you can give to Codex to highlight the Digit‑Reduction long‑string boxes. The key is to reuse the existing long‑string window definitions that already drive the Digit‑Reduction module, so you don’t have to guess the coordinates.
+
+🧭 Where the windows live
+
+Your codebase defines the long‑string Digit‑Reduction windows in a small data structure (either in alpha_analytical/digit_reduction/long_string_windows.py or an equivalent YAML/JSON). In the current setup, there are three window definitions:
+
+Set 3, Set 2 & Set 1 → Draw 1 → R2 → columns 7,6,5
+
+Set 1 → Draw 4 → R2 → column 3
+
+Set 1 → Draw 6 → R2 → column 1
+
+These definitions apply identically to the Midday, Evening, and Combined tables. Each tuple identifies a box in the 3‑panel view that should be shaded to signal it’s part of the Digit‑Reduction long‑string analysis.
+
+✅ What to do
+
+Expose the window definitions once
+Keep a single get_long_string_boxes(table_kind) function (or load from YAML) in alpha_analytical/digit_reduction/long_string_windows.py. It should return a list of simple descriptors like (set_names, draw_names, row_types, columns) for the requested table_kind (“midday”, “evening”, “combined”). This prevents duplication and keeps Digit‑Reduction and V‑TRAC in sync.
+
+Add a yellow overlay style
+In the V‑TRAC renderer (src/core/module_c_vtrac.py), extend the inline CSS and legend:
+
+<style>
+  … existing styles …
+  .ls-box { background: #FFF7BF; }  /* long‑string window background */
+  .ls-box-edge { box-shadow: inset 0 0 0 1px #E6C94F; }  /* subtle border */
+</style>
+…
+<span class="chip" style="background:#FFF7BF;border:1px solid #E6C94F">Long‑string (DR) box</span>
+
+
+This uses a soft yellow with a faint border; it will be visible on both light and dark themes without clashing with the green/purple/blue digit highlights.
+
+Highlight the cells
+In the table‑rendering function (where each <td> is built), look up whether the cell’s coordinates match a long‑string box:
+
+from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
+
+# At the start of the render, build a quick lookup set:
+LS = set()
+for box in get_long_string_boxes(table_kind):
+    for set_name in box.sets:
+        for draw_name in box.draws:
+            for row_type in box.row_types:
+                for col in box.columns:
+                    LS.add((set_name, draw_name, row_type, col))
+
+# Later, when building a cell:
+classes = []
+if (set_name, draw_name, row_type, col_index) in LS:
+    classes += ["ls-box", "ls-box-edge"]
+# Add any winner/vtrac/family classes after this
+td_html = f'<td class="{" ".join(classes)}">{cell_html}</td>'
+
+
+This simply wraps the whole <td> with the yellow class if it matches one of the Digit‑Reduction boxes; the existing winner/family highlights (greens, blues, purples) remain intact inside the cell text.
+
+Update the legend and tests
+
+Add a “Long‑string (DR) box” chip to the legend so users know what yellow means.
+
+Add a unit test that confirms at least one known coordinate (e.g., Set1/Draw4/R2/col3) ends up with the class ls-box.
+
+Optionally extend your smoke script to check that the rendered HTML contains the legend text “Long‑string (DR) box”.
+
+No changes to detection logic
+This is purely a visual overlay. It does not alter how winners or V‑TRAC straights are detected. There’s no need to re‑run the combined tables or adjust Digit‑Reduction; the tables are read as‑is and simply painted differently.
+
+🎯 In summary
+
+By centralizing the long‑string box definitions and adding a low‑impact overlay, you get a permanent “Digit‑Reduction zone” marker that doesn’t interfere with the existing green/purple/blue highlights. It will make training and interpretation much quicker, and you’ll be able to visually trace when a winner comes from those long‑string R2 windows.
