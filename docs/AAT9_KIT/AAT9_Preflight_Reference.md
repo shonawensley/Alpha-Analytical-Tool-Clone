@@ -34,7 +34,7 @@ State: Connecticut4
 Source: data\cleaned\Connecticut_draws.csv
 Draws: 1000
 --------------------------------
-Tip: Use run_app.bat to launch the UI from repo root.
+Tip: Use run_app.bat to launch the UI from repo root; it now runs scripts/tools/validate_aux_all.ps1 before Streamlit starts so doubles/pairs, repeat-watch, V-TRAC, sums, and shortlist outputs stay in sync.
 ```
 
 ## Triage Tips
@@ -48,4 +48,5 @@ Tip: Use run_app.bat to launch the UI from repo root.
 - `python scripts/checks/smoke_project_loader.py`
 - `python scripts/checks/smoke_positional.py`
 - `python scripts/checks/smoke_aux_vtrac.py`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tools/validate_aux_all.ps1` (manual replay if you want the guardrail without launching Streamlit)
 

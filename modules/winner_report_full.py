@@ -58,11 +58,19 @@ def write_winner_full_report(state: str, winner: str, out_dir: str | None = None
 
     # Load tables (string-safe) directly from tables dir
     tables_dir = os.path.join("data", "outputs", "tables", state_name)
-    def _p(section: str) -> str:
-        return os.path.join(tables_dir, f"{state_name}_{section}_combined.csv")
-    paths = {s: _p(s) for s in ("Midday", "Evening", "Combined")}
-    if not all(os.path.exists(p) for p in paths.values()):
-        missing = [k for k, p in paths.items() if not os.path.exists(p)]
+    def _resolve_table(section: str) -> str | None:
+        candidates = [
+            os.path.join(tables_dir, f"{state_name}_{section}_combined.csv"),
+            os.path.join(tables_dir, f"{section}_Combined.csv"),
+            os.path.join(tables_dir, f"{section}_combined.csv"),
+        ]
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
+        return None
+    paths = {s: _resolve_table(s) for s in ("Midday", "Evening", "Combined")}
+    missing = [k for k, p in paths.items() if not p]
+    if missing:
         raise RuntimeError(f"Missing combined tables for {state_name}: {', '.join(missing)}")
     tables: Dict[str, object] = {
         "Midday_combined": read_csv_strsafe(paths["Midday"]),

@@ -189,7 +189,7 @@ def run_winner_reports(entries: Sequence[ParsedWinnerEntry]) -> List[Dict[str, s
 def run_stable_bundles(
     entries: Sequence[ParsedWinnerEntry],
     *,
-    min_occ: int = 3,
+    min_occ: int = 1,
     bundle_stamp: Optional[str] = None,
     write_bundle: bool = True,
 ) -> List[Dict[str, object]]:

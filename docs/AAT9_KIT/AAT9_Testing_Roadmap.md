@@ -21,7 +21,7 @@ This document tracks the automated verification layers that protect AAT9. Treat 
   - tests/test_long_string_overlay.py ensures the long-string Digit-Reduction windows stay highlighted in the V-TRAC tables.
   - tests/test_batch_runner.py keeps the Pick3StatsC4 state parser aligned with the Control Center batch workflow.
   - tests/test_draws_refresh.py ensures the Control Center draw purge removes the expected CSVs before regeneration.
-  - tests/test_aux_validation.py covers Aux double thresholds, multi-variant alerts, and family badge extraction.
+  - tests/test_aux_validation.py covers Aux double thresholds, pair severity, multi-variant alerts, family badge extraction, repeat-watch streaks, positional hard-due flags, V-TRAC overlays/heatboard stats, and sums analytics.
 
 
 - Pending additions:

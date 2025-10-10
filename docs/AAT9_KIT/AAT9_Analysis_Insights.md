@@ -64,4 +64,6 @@ _Add rows as new analytical signals land (e.g., Aux compound scoring, Hot Zones 
 
 
 
-- **Aux validation CLI** - scripts/tools/validate_aux_doubles.py recomputes variant draws-since from CSVs and surfaces combos flagged across variants for quick sanity checks.
+- **Aux validation CLI** - scripts/tools/validate_aux_doubles.py now recomputes variant doubles *and* pair windows directly from the draws CSVs, highlighting overdue tokens across Combined/Midday/Evening for quick sanity checks.
+- **Aux repeat/positional CLI** - scripts/tools/validate_aux_repeat.py replays repeat-watch streaks and positional hard-due flags from the raw CSV streams so Control Center badges can be verified without Streamlit.
+- **Aux V-TRAC/sums CLI** - scripts/tools/validate_aux_vtrac.py surfaces top overdue indexes, heatboard metrics, and sums diagnostics directly from the CSVs, mirroring the Control Center overlays.

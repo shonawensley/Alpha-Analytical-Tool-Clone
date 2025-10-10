@@ -3,6 +3,7 @@ from pathlib import Path
 
 from core.aux_config import POS_SHORTLIST_CONFIG, POSITIONAL_WINDOW
 from modules.module_d_auxiliary_tools.refactored import positional_tool
+from alpha_analytical.control_center import aux_validation as av
 
 pytestmark = [pytest.mark.acceptance, pytest.mark.smoke]
 
@@ -45,3 +46,37 @@ def test_positional_shortlist_delaware_repeat_endcap():
     assert tagged_candidates, "Expected shortlist candidates to carry tag metadata"
 
     assert all(cand.score >= 0 for cand in report.candidates[:10]), "Scores should be non-negative"
+
+
+
+def test_positional_shortlist_report_aligns_with_helper(monkeypatch):
+    state = "Delaware4"
+    draws_cache = {variant: _load_variant_draws(state, variant) for variant in ("combined", "midday", "evening")}
+
+    def fake_loader(state_label, variant="combined", base=None, max_n=1000):
+        return draws_cache[variant], f"fixture/{state_label}_{variant}"
+
+    monkeypatch.setattr(av, "load_state_draws", fake_loader)
+
+    shortlist = av.positional_shortlist_report(
+        state,
+        window=POSITIONAL_WINDOW,
+        topk=int(POS_SHORTLIST_CONFIG.get("topk_per_pos", 3)),
+    )
+
+    combos = [entry["combo"] for entry in shortlist["candidates"][:5]]
+    assert combos == ["845", "145", "545", "844", "144"]
+
+    consensus_notes = shortlist.get("consensus_notes", [])
+    assert any("XVAR-Cons" in note for note in consensus_notes)
+
+    double_pressure_notes = shortlist.get("double_pressure_notes", [])
+    assert any("Double-Pressure" in note for note in double_pressure_notes)
+
+    variant_top_digits = shortlist["variant_top_digits"]
+    combined_top = variant_top_digits["combined"][0]
+    assert combined_top["position"] == 0
+    assert combined_top["digit"] == 8
+
+    midday_digits = {entry["digit"] for entry in variant_top_digits["midday"]}
+    assert 0 in midday_digits

@@ -117,6 +117,7 @@ from core.aux_config import (
     POS_SHORTLIST_CONFIG,
 )
 from core.vtrac_families import VTRAC_DOUBLE_FAMILIES
+from alpha_analytical.control_center import aux_validation as _aux_validation
 from modules.draw_catalog import draws_since_last_double, scan_draw_files
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
@@ -248,7 +249,6 @@ _FAMILY_TOKEN_STYLE = """
 </style>
 """
 
-_FAMILY_COMBOS = {combo for fam in VTRAC_DOUBLE_FAMILIES for combo in fam.combos}
 _VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
 
 
@@ -259,14 +259,6 @@ def _canon_combo(combo: str) -> str:
     return "".join(sorted(value))
 
 
-def _classify_double_gap(draws_since: int) -> str | None:
-    if draws_since >= COMBO_DOUBLE_VERY_LATE:
-        return "R"
-    if draws_since >= COMBO_DOUBLE_LATE:
-        return "B"
-    return None
-
-
 def _render_family_token(combo: str, severity: str, badge: str, draws_since: int) -> str:
     css = "family-token-red" if severity == "R" else "family-token-blue"
     sup = f"<sup>{badge}</sup>" if badge else ""
@@ -274,26 +266,13 @@ def _render_family_token(combo: str, severity: str, badge: str, draws_since: int
 
 
 def _rank_double_families(variant_draws: dict[str, List[str]], limit: int = 5) -> List[dict]:
-    gap_maps: dict[str, dict[str, int]] = {}
+    stats_by_variant: dict[str, dict[str, dict[str, int]]] = {}
     for variant_key, draws in variant_draws.items():
         if not draws:
             continue
-        default_gap = len(draws)
-        gap_map = {combo: default_gap for combo in _FAMILY_COMBOS}
-        for idx, draw in enumerate(draws):
-            canonical = _canon_combo(draw)
-            if canonical and canonical in gap_map and gap_map[canonical] == default_gap:
-                gap_map[canonical] = idx
-        gap_maps[variant_key] = gap_map
-    stats_by_variant: dict[str, dict[str, dict[str, int]]] = {}
-    for variant_key, gap_map in gap_maps.items():
-        statuses: dict[str, dict[str, int]] = {}
-        for combo, ds in gap_map.items():
-            severity = _classify_double_gap(ds)
-            if severity:
-                statuses[combo] = {"severity": severity, "draws_since": ds}
-        if statuses:
-            stats_by_variant[variant_key] = statuses
+        stats = _aux_validation.compute_double_stats(draws)
+        if stats:
+            stats_by_variant[variant_key] = stats
     rankings: List[dict] = []
     for family in VTRAC_DOUBLE_FAMILIES:
         tokens: List[tuple[str, int, str]] = []
