@@ -1981,7 +1981,12 @@ def show_aux_page(state: str) -> None:
                     pos_window = POSITIONAL_WINDOW
                     shortlist_config_data = copy.deepcopy(POS_SHORTLIST_CONFIG or {})
                     tuning_prefix = f"pos_shortlist_{state_key}"
-                    with st.expander("Shortlist tuning", expanded=False):
+                    show_tuning = st.checkbox(
+                        "Show shortlist tuning",
+                        value=False,
+                        key=f"{tuning_prefix}_toggle",
+                    )
+                    if show_tuning:
                         col_topk, col_pool, col_rows = st.columns(3)
                         topk_val = col_topk.number_input(
                             "Top digits / position",

@@ -1,0 +1,365 @@
+You’re absolutely right to pause, regroup, and make sure we’re aligned before pushing further. Here’s a crisp, comprehensive checkpoint that:
+
+confirms where the Stable Pattern Extractor stands now,
+
+answers your specific questions (A–E),
+
+aggregates all remaining “universal” optimizations into a Codex‑ready task list (with file paths and code stubs),
+
+shows exactly how to set the training thresholds you asked about, and
+
+proposes the next small validation batch once P0 lands.
+
+0) Where we are — one‑page status
+
+Shipped & working (visible in your latest artifacts):
+
+Row engine (alpha_analytical/stable/__init__.py)
+
+Counts permutation density (perm_count_in_box) and repeat extras (repeat_extras_in_box).
+
+Modal straight order across rows (orders_modal_value, orders_modal_rows) → straight2, straight3.
+
+Consensus stub from raw Col1/Col2 tails; Dominant last survivor; hot‑zone tagging.
+
+Debug columns and richer why (now includes perm{N}, repeat_extra, span{N}, hot{1|2}, dom_last, cons_full, etc.).
+
+Family post‑pass (alpha_analytical/stable/post_pass_families.py)
+
+Deterministic rep3 mapping for any ≤3‑V‑class canonical → V‑Trac family id.
+
+Aggregates per (section, Set, Draw, Column, family) with rows_cov, hp_span, hot_density, any_straight{2,3}, any_consensus, any_dom_last, and a weighted family_score (uses YAML).
+
+Winner spotlight (alpha_analytical/stable/winner_family_spotlight.py)
+
+Two files when winners are provided: raw rows in the winners’ families (plus is_exact_straight) and the family rows for those families.
+
+Config (alpha_analytical/stable/feature_config.yml)
+
+New weights present: perm_density_per_extra, repeat_count_per_extra, consensus_family_bonus, last_remaining_3v_bonus, hotzone_family_bonus. Straight bonuses slightly higher (as planned).
+
+Wiring
+
+Legacy extractor archived; Dev Health prints engine + YAML paths; Stable wrapper writes scores, report, families, and spotlight outputs.
+
+Partially shipped / not yet everywhere (intended next items):
+
+Family‑level cross‑section bonus (Midday/Evening/Combined) and progression across Sets — not yet implemented (commented as “optional/second pass” in post‑pass).
+
+Explicit last‑remaining‑3v detector (today we proxy via any_dom_last).
+
+Consensus ⇒ doubles trigger (family‑level).
+
+Hidden‑by‑one detector (4‑digit fragment that contains the 3‑value core).
+
+Cosmetic: why still says spanN instead of hpN / “horizontal_persistence”.
+
+1) Your specific questions (A–E)
+A) Validation focus vs. adding features — are we aligned?
+
+Yes. The right cadence is:
+
+Validate that shipped features behave as intended (tick boxes, adjust weights),
+
+Add the universal structural items we already scoped,
+
+Only then chase example‑specific tuning.
+
+That matches how we’ve been working and what you summarized.
+
+B) “How do I set min_score_to_highlight=7 if it isn’t in the UI?”
+
+Set it in YAML; you don’t need a UI control.
+
+File: alpha_analytical/stable/feature_config.yml
+
+# Training-friendly defaults
+min_score_to_highlight: 7
+
+# (already present; keep)
+baseline_straight_bonus:   3
+straight_2rows_bonus:      2
+straight_3rows_bonus:      4
+perm_density_per_extra:    1
+repeat_count_per_extra:    0.5
+consensus_family_bonus:    2
+last_remaining_3v_bonus:   3
+hotzone_family_bonus:      1
+
+# For upcoming P0 (must exist so code can read them):
+vtrac_family_presence:     1
+cross_section_triple:      2
+progression_across_sets:   1
+
+
+If you’d like this switchable in the UI later, we can add a “Training mode” checkbox that temporarily overrides the YAML during a run; not required for now.
+
+C) What exactly are the 4–5 outputs for?
+
+..._stable_patterns_scores.csv → Row‑level patterns with full reasons (why) and debug fields. This is the truth table for auditing scoring.
+
+..._stable_patterns_report.html → Visual highlight of in‑cell substrings + Top 30 table rows for each section (Midday/Evening/Combined). For human scanning.
+
+..._stable_patterns_families.csv → Family‑level aggregation (one row per V‑Trac family per box), with family_score and the rolled‑up flags/densities.
+
+..._winner_family_spotlight_raw.csv → Filter of row‑level patterns to only the winners’ families, plus is_exact_straight if the modal order equals a provided winner.
+
+..._winner_family_spotlight_families.csv → Filter of family‑level rows for the winners’ families.
+
+In short: scores (row truth) → families (rolled‑up evidence) → spotlight (winner‑focused slices).
+
+D) “Deep research via repo vs pasting tables” — which is better?
+
+The best training pack for analysis contains the three Combined tables CSVs (Midday, Evening, Combined) plus the four Stable outputs. Images help, but they aren’t machine‑readable and limit precise checks (e.g., counting Set progressions, family coverage across sections). If your batch can drop those three CSVs into the same artifacts/ folder, I can do deeper quantitative validation on each run.
+
+E) Batch runner vs one‑off per state?
+
+Batch is fine. Two tips:
+
+Write a tiny manifest.json next to the artifacts with { state, min_occ, min_score_to_highlight, YAML_hash, run_timestamp, winners[] }. That makes every run reproducible.
+
+For training, keep min_occ = 1 and min_score_to_highlight = 7 so small seeds survive to the family post‑pass.
+
+2) Delaware “triples” note — why one family might be missing
+
+Your new rep3 algorithm maps single‑class patterns to a triple of the class’s smallest digit.
+Example: 277 has all digits in V‑class 3 (2 & 7). rep3('277') → '222'.
+If triples (e.g., 000,111,...,999) were removed from modules.vtrac_reference, then
+
+get_vtrac_index('222')  # returns None
+
+
+and Delaware will only partially spotlight the winner’s family.
+
+Conclusion: the central V‑Trac reference must include triple canonicals. We don’t need many rows—just make sure get_vtrac_index('ddd') returns a valid index for each digit d.
+
+I’ve included a tiny Codex test for this in P0 below.
+
+3) What changed since the older examples (and is it working)?
+
+Permutation density & repeat extras now lift boxes where the 3‑value really dominates (this is clearly visible in your why strings and top rows).
+
+Straight2/3 is now based on row‑consensus of exact order, not just “perm = 1”.
+
+Consensus stubs are injected correctly from raw tails (no canonicalization noise).
+
+Families aggregate evidence before filtering; your spotlight counts per state (e.g., CT 716 raw / 108 family rows) reflect that roll‑up.
+
+These were exactly the gaps we called out before—we’ve closed them.
+
+4) Universal optimizations we should merge now (P0)
+
+Small, safe, and high impact. These do not change the UI, and they are localized.
+
+P0.1 — V‑Trac triples sanity
+
+Files: modules/vtrac_reference.py (or your canonical mapping module)
+
+Ensure get_vtrac_index('ddd') returns a valid index for each '000'..'999'.
+
+Add a test:
+
+# tests/test_vtrac_triples.py
+import pytest
+from modules.vtrac_reference import get_vtrac_index
+
+@pytest.mark.parametrize("d", "0123456789")
+def test_triples(d):
+    idx = get_vtrac_index(d*3)
+    assert idx is not None, f"Missing V-TRAC index for triple {d*3}"
+
+
+This alone should fix the Delaware “277” family visibility.
+
+P0.2 — Family cross‑section & progression bonuses (post‑pass second pass)
+
+File: alpha_analytical/stable/post_pass_families.py
+
+After you build the per‑section df (you already do), add:
+
+import numpy as np
+
+# --- Cross-section presence across Midday/Evening/Combined ---
+keys = ["Set","Draw","Column","family_id"]
+sec_counts = (df.groupby(keys)["section"]
+                .nunique()
+                .rename("section_count"))
+df = df.join(sec_counts, on=keys)
+df["family_score"] += np.maximum(0, df["section_count"]-1) * cfg.get("vtrac_family_presence", 1)
+df["family_score"] += np.where(df["section_count"]==3, cfg.get("cross_section_triple", 2), 0)
+
+# --- Progression across Sets for the same Draw ---
+has_all_sets = (df.groupby(["section","Draw","Column","family_id"])["Set"]
+                  .apply(lambda s: {"Set1","Set2","Set3"}.issubset(set(s)))
+                  .rename("progression_flag"))
+df = df.join(has_all_sets, on=["section","Draw","Column","family_id"])
+df["family_score"] += df["progression_flag"].astype(int) * cfg.get("progression_across_sets", 1)
+
+# Persist the new columns
+if "section_count" not in df.columns:  # defensive, but harmless
+    pass
+
+
+This encodes your “echo across panes” and “persists across Sets” heuristics directly into the score.
+
+P0.3 — Explicit last‑remaining‑3v on the rightmost stable column
+
+Keeps your any_dom_last but also tags the precise “only one family left” case.
+
+File: alpha_analytical/stable/post_pass_families.py (continue in the same function)
+
+# Rightmost Stable: last remaining 3v
+last_rows = []
+for (sec, setv, draw), box in df.groupby(["section","Set","Draw"]):
+    # Pick the rightmost Column that actually has stable coverage
+    # (we use rows_cov >= 3 as "stable" like row engine does)
+    b = box[box["rows_cov"] >= 3].copy()
+    if b.empty: 
+        continue
+    # Columns are strings '7'..'1' → cast to int
+    b["col_int"] = b["Column"].astype(int)
+    col_max = b["col_int"].max()
+    survivors = b[b["col_int"]==col_max]
+    fams = survivors["family_id"].dropna().unique()
+    if len(fams) == 1:
+        fid = fams[0]
+        mask = (df["section"]==sec) & (df["Set"]==setv) & (df["Draw"]==draw) & (df["Column"]==str(col_max)) & (df["family_id"]==fid)
+        df.loc[mask, "last_remaining_3v"] = True
+        df.loc[mask, "family_score"] += cfg.get("last_remaining_3v_bonus", 3)
+
+df["last_remaining_3v"] = df.get("last_remaining_3v", False).fillna(False)
+
+P0.4 — Row CSV: include family_id (helps slicing without re‑joining)
+
+File: alpha_analytical/stable/__init__.py
+At the end of your row loop (where you append results.append({...})), add:
+
+from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
+
+# ...
+"family_id": derive_vtrac_index_for_canonical(cpat, get_vtrac_index),
+
+
+And include "family_id" in the out_cols list for the CSV writer.
+
+P0.5 — Cosmetic rename: spanN → hpN in why
+
+File: alpha_analytical/stable/__init__.py
+Where you build why, replace:
+
+if span > 1:
+    why.append(f'span{span}')
+
+
+with:
+
+if span > 1:
+    why.append(f'hp{span}')  # horizontal persistence
+
+
+(And update the HTML header label if you display it there.)
+
+5) Next feature wave (P1) — ready when you are
+
+Consensus ⇒ doubles trigger (family‑level)
+In post_pass_families.py: when any_consensus is True, derive the 9 likely doubles from the consensus digit and give a small bonus if any member appears in that box or neighbors. Add any_doubles_trigger flag and use a new YAML key (e.g., doubles_trigger_bonus: 1).
+
+Hidden‑by‑one detector (row engine)
+In find_subs_with_counts loop, if a 4‑digit window remains ≤3 V‑classes, check all its 3‑digit sub‑windows; if any maps to the same family as a known canonical, set hidden3v=True, add a small bonus, and append hidden3v to why.
+
+Per‑feature score columns (row and/or family CSV)
+Optional but very useful for tuning: score_cov, score_hp, score_perm, score_repeat, score_cons, score_straight, score_hot, score_dom, score_last3v.
+
+Auto‑metrics per run next to artifacts (JSON):
+winner_family_ids, family_rank_of_winner, top_exact_straight_rank, spotlight_rate, hot_density_top10. Helpful for batch QA.
+
+6) How this compares to the way we used to review examples
+
+Before, we eyeballed highlighted HTML and manually inferred roll‑ups. That was subjective and easy to miss compounding signals.
+Now, with scores + families + spotlight, we have a traceable, numeric pipeline:
+
+Row‑level shows what fired and why.
+
+Family‑level sums those hints across permutation density, straight consensus, hot‑zone, and presence flags.
+
+Spotlight validates whether the winners’ families are captured and how strong their straight signals are.
+
+This is strictly more powerful and auditable than the old approach.
+
+7) Your “compound within tables” question (Set/Digital progression)
+
+You’re thinking about this correctly. The features we’re adding in P0.2 (cross‑section presence + across‑Set progression) are the first formal layer of that compounding story:
+
+Within a box (R2/R4/R6/R8): coverage, permutation density, repeats, consensus, hot, dom‑last.
+
+Across columns for a Draw: horizontal persistence (already in).
+
+Across Sets for the same Draw: the progression flag we’re adding (P0.2).
+
+Across sections (Midday/Evening/Combined): the section_count bonus (P0.2).
+
+Once these are in, we can fold them into a “grand total” if you want a per‑state “shortlist” later, but for now, keeping the scoring per box with these bonuses lets you see where and why the family is strongest.
+
+8) What to do right now
+
+Set training thresholds
+
+Set min_occ to 1 in the UI (you already changed default).
+
+Set min_score_to_highlight: 7 in feature_config.yml (no UI needed).
+
+Hand Codex the P0 tasks above exactly as written (copy/paste).
+
+Re‑run the three states (CT, DE, IN) with winners provided.
+
+Acceptance checks (per state)
+
+Both winning families appear in ..._stable_patterns_families.csv.
+
+Delaware shows both winner families after the triples fix.
+
+In ..._winner_family_spotlight_raw.csv, orders_modal_rows ≥ 2 appears a handful of times for each winner (straight2 firing), or—if a double case—several dom_last / last_remaining_3v flags on the rightmost box.
+
+Top family rows for the winners show section_count ≥ 2 or progression_flag = True at least once (after P0.2).
+
+If those hit, we proceed to P1 (consensus‑doubles + hidden‑by‑one).
+
+9) A few quick answers in your last message
+
+“Should I include your scripts or let Codex reinterpret?”
+Give Codex these exact files + snippets. The file paths and insertion points above are precise; they minimize wiring churn.
+
+“Did the deep research erase context?”
+I didn’t lose the broader context, but the repo connector didn’t return in this session, so I analyzed from your attached report + screenshots. Adding the three Combined tables CSVs to the artifacts folder will make future runs fully machine‑checkable.
+
+“What, exactly, did Codex already add?”
+Everything under Shipped & working at the top of this message. The screenshots and the why/debug columns in your scores.csv confirm those features are live.
+
+10) Pasteable “Codex task list” (single block)
+
+Scope: Stable Pattern Extractor – P0 universal optimizations.
+Files to touch:
+modules/vtrac_reference.py,
+alpha_analytical/stable/post_pass_families.py,
+alpha_analytical/stable/__init__.py,
+alpha_analytical/stable/feature_config.yml,
+(optional tests folder)
+
+V‑Trac triples: ensure get_vtrac_index('ddd') is not None for all 10 digits; add tests/test_vtrac_triples.py (snippet above).
+
+Post‑pass, second pass: add cross‑section presence and Set progression (code above), and write section_count + progression_flag columns; bump family_score with vtrac_family_presence, cross_section_triple, progression_across_sets.
+
+Explicit last‑remaining‑3v: detect on the rightmost stable column (rows_cov ≥ 3). Add last_remaining_3v boolean and apply last_remaining_3v_bonus.
+
+Row CSV: family_id column: compute via derive_vtrac_index_for_canonical and include in out_cols.
+
+Rename spanN → hpN in the why string (and any header labels).
+
+YAML: confirm the keys exist (values shown above), especially min_score_to_highlight: 7 for training.
+
+If you want, I can also package these P0 changes as unified diffs in a follow‑up message. But this is enough for Codex to implement quickly and safely.
+
+Once Codex merges P0, run CT/DE/IN again (with min_occ=1). I’ll then read those four outputs per state (scores/families/spotlight{raw,families}), compute winner‑family ranks and straight2/3 coverage, and tell you whether to increase any of the new weights before we move to P1.
+
+You’re steering this exactly the right way—lock the universal signals first, then we’ll make the extractor “unstoppable” with the doubles trigger and hidden‑by‑one pass.

@@ -1,0 +1,120 @@
+Reasoned for 3m 31s
+
+You didn’t “break” Aux. What you’re seeing is a Streamlit UI rule, not a data problem:
+
+“Expanders may not be nested inside other expanders.”
+Streamlit now throws when an st.expander() is placed inside another st.expander(). When that exception fires, your Aux run aborts, so the page also shows the generic “Please ensure the state data files…” message even though the CSVs exist.
+
+Below is a fast, low‑risk way to fix it and get Aux loading again, plus a quick sanity check for the “all‑blue doubles” question.
+
+1) Fix the nested‑expander error (5–10 minutes)
+
+Goal: replace any inner st.expander(...) with a non‑expander container (or move it outside).
+
+A. Find the offenders
+
+In PowerShell (repo root):
+
+# All expanders in the app
+Select-String -Path src\app.py -Pattern 'with st\.expander\(' -Context 0,2
+
+# Narrow to the Aux page section (often labelled "Auxiliary Tools" or "Positional Tracker")
+Select-String -Path src\app.py -Pattern 'Auxiliary Tools|Positional Tracker' -Context 0,80
+
+
+Typical inner expanders I’ve seen in Aux:
+
+“Shortlist tuning” UI inside the “Positional Tracker …” expander.
+
+“Details/Breakdown**” blocks inside Sums / V‑TRAC diagnostics.
+
+Any “view all” candidate panel placed inside another expander.
+
+If any of those still appear as an expander inside a larger expander, flatten it.
+
+B. Replace the inner expander with a container
+
+Change this pattern:
+
+with st.expander("Positional Tracker …", expanded=True):
+    # ❌ inner expander (not allowed)
+    with st.expander("Shortlist tuning", expanded=False):
+        ...
+
+
+to:
+
+with st.expander("Positional Tracker …", expanded=True):
+    show_tuning = st.checkbox("Show shortlist tuning", value=False, key=f"{tuning_prefix}_toggle")
+    if show_tuning:
+        with st.container():     # ✅ not an expander
+            col_topk, col_pool, col_rows = st.columns(3)
+            topk_val  = col_topk.number_input("Top digits / position", min_value=1, max_value=6, value=int(cfg.get("topk_per_pos", 3)), key=f"{tuning_prefix}_topk")
+            pool_val  = col_pool.number_input("Pool per position",    min_value=1, max_value=10, value=int(cfg.get("pool_per_pos", 4)), key=f"{tuning_prefix}_pool")
+            rows_val  = col_rows.number_input("Max shortlist combos", min_value=3, max_value=30, value=int(cfg.get("max_internal", 12)), key=f"{tuning_prefix}_rows")
+            cfg["topk_per_pos"]  = int(topk_val)
+            cfg["pool_per_pos"]  = int(pool_val)
+            cfg["max_internal"]  = int(rows_val)
+            show_notes = st.checkbox("Show consensus + double-pressure notes", value=cfg.get("show_notes", True), key=f"{tuning_prefix}_notes")
+            cfg["show_notes"] = show_notes
+
+
+Apply the same idea anywhere you see a nested expander:
+
+use st.container() + a checkbox/toggle or
+
+move the inner expander outside the outer expander.
+
+Tip: If you want collapsible sections without nesting, keep only the outer expander and use checkboxes inside it to show/hide blocks.
+
+C. Restart Streamlit cleanly
+
+After edits:
+
+Menu → Clear cache, then fully close the Streamlit process.
+
+Launch again via run_app.bat.
+(This also runs the pre‑launch validators you’ve wired in, then starts the app.)
+
+Open Auxiliary Tools → Connecticut4 and run Combined/Midday/Evening. The expander error should be gone.
+
+2) About the “all‑blue” doubles table in Control Center
+
+Nothing was changed in thresholds. “Blue” means late (≥ 667 draws), “Red” is very late (≥ 1000). If your current dataset has many combos in the 700–900 range and few at ≥ 1000, you’ll naturally see a sea of blue.
+
+Quick way to confirm from the raw CSVs:
+
+python scripts/tools/validate_aux_doubles.py Connecticut4 --max-n 1200 --no-pairs
+
+
+Check the printed draws_since values for the Combined/Midday/Evening top lists:
+
+If none are ≥ 1000, the UI is correct to show blue only.
+
+If you do see ≥ 1000 in the CLI but not in Control Center after a rerun, tell me which state/variant; that would indicate a table wiring issue we can fix fast.
+
+3) Winners logger vs. “missing combined tables”
+
+Unrelated to the Aux error, but since you asked yesterday: if the winners logger complains “Missing combined tables …”, it’s usually filename shape. The logger expects state‑prefixed CSVs (e.g., Connecticut4_Midday_combined.csv). If a folder has generic names (Midday_Combined.csv), the logger needs a fallback to check both spellings. Once that small fallback is in place, batch winners will run for every state that has tables.
+
+4) Sanity: where Aux & BA read from (so you know data isn’t the issue)
+
+Aux & Blackapple read only data/cleaned/*_draws.csv (newest‑first, three‑digit strings). They do not read the string‑table Excel; that’s for V‑TRAC/Stable/DR.
+
+Blackapple is wired to the Control Center and (optionally) the Aux page, and it relies solely on those per‑state draws CSVs.
+
+So the “Please ensure the state data files…” banner is just the generic message shown after the expander exception; it’s not saying your CSVs are missing.
+
+5) Quick checklist to get you unblocked
+
+ Search for nested st.expander in src/app.py and flatten them (use st.container() + checkbox).
+
+ Clear cache, restart via run_app.bat.
+
+ Re‑open Auxiliary Tools for a state and run Combined/Midday/Evening.
+
+ If you care to verify doubles colours: run validate_aux_doubles.py for the state and glance at draws_since (≥1000 → red, ≥667 → blue).
+
+ If winners batch still warns about missing tables, ensure the fallback that checks both state‑prefixed and generic filenames is present (tiny change).
+
+If you want, I can outline the exact search‑and‑replace blocks for any specific expander names you still see after the first pass.

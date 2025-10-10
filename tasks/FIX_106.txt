@@ -1,0 +1,119 @@
+Great question—and you’re thinking about it exactly the right way. Here’s the crisp clarification and what to do next.
+
+Short answer
+
+Excluding pure triples (000, 111, … 999) from the V‑TRAC reference is fine and not the cause of the Delaware issue.
+
+277 is not a pure triple. It’s a double whose V‑class pattern is 333 (because 2→3 and 7→3 in your DIGIT→V map).
+With the reference you pasted, get_vtrac_index("277") must return 26 (Index 26: VTRAC 333, Doubles [227, 277]).
+
+If your Delaware run only surfaced family id 2 (for 010) and not 26 (for 277), the problem is almost certainly a lookup wiring or population gap, not your decision to omit pure triples.
+
+Why this is true (one level deeper)
+
+Your guard in get_vtrac_index that returns None for triples only fires when the raw digits are all identical (len(set("000"))==1).
+It does not (and should not) fire for “class triples” like 277 where all digits map to the same V‑class.
+
+In the rows table you shared, Index 26 (V‑TRAC 333) explicitly lists "Doubles": ["227","277"], so if that table is what your runtime loads, 277 → 26 is guaranteed.
+
+What likely went wrong in Delaware
+
+One of these is almost always the culprit:
+
+Wrong module being imported
+alpha_analytical/vtrac forwards to modules.vtrac_reference. If the app (or winner_family_spotlight.py) is actually importing an older copy (e.g., under scripts/auxiliary/working/modules/), it may be missing 277 in Index 26.
+
+Lookup population missed 277
+If the working reference rows omitted "277" in the doubles for 333, the in‑memory VTRAC_LOOKUP would never learn it—even though your canonical list should include it.
+
+Over‑zealous normalization
+A stray “dedupe digits” step before lookup could reduce "277" to "27" or "77". (Your current helper shouldn’t do this, but it’s worth checking.)
+
+Quick, decisive triage (copy/paste to Python REPL)
+
+Run these against the same environment the app uses:
+
+from modules.vtrac_reference import get_vtrac_index, get_index_set
+
+print("277 ->", get_vtrac_index("277"))     # EXPECT: 26
+print("227 ->", get_vtrac_index("227"))     # EXPECT: 26
+print("010 ->", get_vtrac_index("010"))     # EXPECT: 2
+print("000 ->", get_vtrac_index("000"))     # EXPECT: None  (by design)
+
+# sanity: Index 26 contents
+idx26 = get_index_set(26)
+print("Index 26:", idx26)                   # EXPECT: contains '227' and '277' under Doubles
+
+
+If 277 prints None, you’re hitting one of the three issues above.
+
+Codex‑ready fixes (pick one, preferably both)
+A) Ensure the working reference truly includes 277
+
+File to check: the active modules/vtrac_reference.py (the one your app imports at runtime).
+
+In the rows definition, confirm:
+
+{"Index": 26, "VTRAC": "333", "Singles": [], "Doubles": ["227","277"]}
+
+
+In the lookup initializer, make sure you add all permutations of each listed draw into the hash:
+
+for draw in singles + doubles:
+    for p in set(''.join(t) for t in itertools.permutations(draw, 3)):
+        VTRAC_LOOKUP[p] = index
+
+B) Add a safe fallback by class (prevents future table drift)
+
+Inside get_vtrac_index(s) after trying the table lookup:
+
+# 1) try explicit table (fast path)
+idx = VTRAC_LOOKUP.get(s)
+if idx is not None:
+    return idx
+
+# 2) bail only for *pure* triples of raw digits
+if len(set(s)) == 1:
+    return None  # keep legacy behaviour for 000/111/...
+
+# 3) fallback by class (makes 277 -> '333' -> 26 even if rows missed it)
+DIGIT2V = {'0':1,'5':1,'1':2,'6':2,'2':3,'7':3,'3':4,'8':4,'4':5,'9':5}
+vcode = ''.join(sorted(str(DIGIT2V[d]) for d in s))
+idx = INDEX_BY_VTRAC.get(vcode)  # e.g., {'111':1,'112':2,...,'333':26,...}
+return idx
+
+
+This keeps your intent (no pure triples) while making doubles like 277 resolve correctly even if someone forgets to list them explicitly under Index 26.
+
+Tiny test you should add (locks this in)
+
+Create tests/test_vtrac_triples.py:
+
+from modules.vtrac_reference import get_vtrac_index
+
+def test_doubles_with_class_triple_map():
+    assert get_vtrac_index("277") == 26
+    assert get_vtrac_index("227") == 26
+    assert get_vtrac_index("010") == 2
+
+def test_pure_triples_are_none():
+    assert get_vtrac_index("000") is None
+    assert get_vtrac_index("777") is None
+
+One more housekeeping note (you asked about setting min_score_to_highlight)
+
+That value lives in alpha_analytical/stable/feature_config.yml.
+Set:
+
+min_score_to_highlight: 7
+
+
+For training, also keep min_occ=1 in the Stable page wrapper (you already flipped the default, good).
+
+Bottom line
+
+Your intuition is correct: 277 should always map to Index 26 even if you exclude pure triples (000, 111, …).
+
+If you saw only one family id for Delaware (010 → 2) in the spotlight, it’s a wiring/table drift problem. Apply A) (reference rows check) and, ideally, B) (fallback by class). Add the tiny unit test above so this never regresses.
+
+If you want, I can turn the fallback into a ready‑to‑drop patch against your modules/vtrac_reference.py with precise insertion points.
