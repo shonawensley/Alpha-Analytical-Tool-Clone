@@ -98,3 +98,6 @@
 
 
 
+## 2025-10-11 - Aux canonical draw loader & module cleanup
+- Impact: Locked Aux/BA/Control Center draw resolution to `data/cleaned/draws/`, vendored the working analyze_pairs / vtrac_reference modules, flattened the remaining expander, and bound the 360/1000 windows via safe defaults. Aux now renders without staged fallbacks and the red tier returns consistently.
+- Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.

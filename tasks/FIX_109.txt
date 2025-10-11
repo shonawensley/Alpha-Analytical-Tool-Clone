@@ -1,0 +1,171 @@
+Should Codex continue? Yes, but pivot to this surgical plan
+
+The goal is to fix the UI crash and harden the draws_1000 binding—no more wide edits. Keep your SSOT bootstrap, stop changing unrelated modules, and verify with tiny, targeted checks.
+
+✅ Step 0 — Safety & preflight (1–2 min)
+
+Create a quick branch: git checkout -b fix/aux-draws-window.
+
+Run preflight (prints cwd, python, and draws inventory):
+.codex\preflight.ps1 -State "Connecticut4"
+You should see data\cleaned\draws\Connecticut_*_draws.csv with (1000) counts, which the Dev Health panel also showed.
+
+✅ Step 1 — Remove nested expanders (the real crash)
+
+File: src/app.py (Aux panel only)
+
+Find any expander inside an expander (examples in your page: “Positional Tracker” → “Shortlist tuning”; V‑TRAC overlays inside another expander; sums diagnostics inside another expander).
+
+Replace the inner expanders with st.container() plus a checkbox to show/hide the body:
+
+# BEFORE (illegal now: expander inside expander)
+with st.expander("Positional Tracker"):
+    with st.expander("Shortlist tuning"):  # <- remove
+        ...controls...
+
+# AFTER
+with st.expander("Positional Tracker"):
+    show_tuning = st.checkbox("Show shortlist tuning", value=False, key="aux_show_tuning")
+    with st.container():
+        if show_tuning:
+            ...controls...
+
+
+After editing: “☰ → Clear cache” in Streamlit, then restart via run_app.bat.
+
+This alone will stop the early throw so the page can bind draws_1000.
+
+✅ Step 2 — Make draws_1000 impossible to miss (one tiny helper)
+
+We keep the canonical import pattern you already shipped (SSOT bootstrap), but we add one non‑invasive helper so the window variables are always bound regardless of branch.
+
+File: modules/analyze_pairs.py (your thin canonical wrapper that loads the staged working module)
+
+Add this near the top‑level (outside the staged import section), so it’s available to src/app.py:
+
+# --- AUX window helpers (canonical; safe to call from src/app.py) ---
+
+def _slice(draws, n):
+    try:
+        return list(draws)[:n]
+    except Exception:
+        return []
+
+def build_aux_windows(draws, pairs_window=360, vtrac_index_window=1000):
+    """
+    Always return two lists: (draws_100, draws_1000).
+    - If fewer than N draws exist, we return the shorter list (never None).
+    - This matches the intent you've said out loud: "if it's not in the list, that *is* the 1000-draw view."
+    """
+    d100  = _slice(draws, pairs_window)
+    d1000 = _slice(draws, vtrac_index_window)
+    return d100, d1000
+
+
+Then in src/app.py, change the Aux analysis glue to use it:
+
+from modules import analyze_pairs as ap
+
+draws, source = load_state_draws(state_label, variant=variant)
+draws_100, draws_1000 = ap.build_aux_windows(draws)
+
+# keep downstream calls the same:
+nonrep, rep, pair_status = ap.calculate_overdue_pairs(draws, window=PAIRS_WINDOW)
+vtrac_status = ap.get_vtrac_statuses(draws_100, draws_1000)
+overlay      = _build_vtrac_overlay(draws_1000, get_vtrac_index)       # unchanged
+repeat_sum   = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)    # unchanged
+
+
+Why this works:
+
+We never rely on a branch to assign draws_1000.
+
+Your “interpretation” (if not enough rows, the list itself is the 1000‑draw view) is respected.
+
+No changes to the staged file; we leave its logic intact and simply wrap the window binding.
+
+✅ Step 3 — Keep SSOT; make Dev Health easier to read
+
+You already added modules/bootstrap_imports.ensure_ssot() and a thin wrapper for Aux modules. Keep those.
+
+In the Dev Health display, show both:
+
+modules.analyze_pairs.__file__ (should be your wrapper in /modules/…)
+
+modules.analyze_pairs.SOURCE_PATH (the staged file in /scripts/auxiliary/working/modules/…)
+
+This removes confusion when the caption prints a staged path—the import is canonical, but the wrapped source is staged. (That is expected with the wrapper.)
+
+✅ Step 4 — Validate doubles & restore red tier
+
+Once the page renders without the exception:
+
+Confirm the “Hot Doubles Families” strip shows red entries again (the ≥1000 gap tier).
+
+CLI cross‑check (optional): run your doubles validator script against the draws CSV to verify thresholds directly (per VALIDATE_DOUBLES doc). The symptom where everything was blue is exactly what happens when the draws_1000 slice never binds.
+
+Do not change thresholds in code. The data/logic were fine; the missing window is what neutralized the red tier.
+
+✅ Step 5 — V‑TRAC boxed table sanity
+
+With draws_1000 now set, the boxed V‑TRAC panel should render. If you still want the extra belt‑and‑suspenders:
+
+Keep triplets behavior: only pure triples (000/111/…/999) should bail; “class triples” like 277 must still resolve via the reference index. (If you want, add the tiny unit tests we discussed earlier so 277→26 and 000→None never regress.)
+
+Leave the table as your staged file defines; your runtime already loads the staged reference. No need to rewrite that again now.
+
+What not to change right now
+
+Don’t refactor or relocate the draws loaders. The contract for Aux/Control Center is draws CSVs under data/cleaned, and your inventory already shows the right files. Leave that steady.
+
+Don’t intertwine Digit Reduction changes into this patch. DR uses tables, while Aux/BA use draws CSVs—they’re deliberately isolated so we avoid cross‑breakage.
+
+Don’t remove the SSOT bootstrap. It’s the right guard against staged/legacy imports hijacking the app.
+
+One‑pass checklist Codex can execute
+
+Branch: git checkout -b fix/aux-draws-window.
+
+Flatten expanders in src/app.py (Aux panel only). Replace inner expanders with st.container + checkbox.
+
+Add build_aux_windows() helper to modules/analyze_pairs.py (canonical wrapper).
+
+Use that helper in Aux analysis glue (src/app.py) to bind draws_100/draws_1000.
+
+Clear cache + restart the app.
+
+Verify:
+
+Dev Health shows draws CSVs under data/cleaned/draws/… and the wrapper path for modules.analyze_pairs, with staged SOURCE_PATH noted.
+
+V‑TRAC boxed table renders; no red banner.
+
+Doubles strip includes red rows where appropriate.
+
+Commit: “Aux: remove nested expanders; harden draws windows; restore V‑TRAC/doubles.”
+
+If something still looks off
+
+Toggle the Aux “window sizes” in your config (pairs 360 / vtrac 1000) and confirm the windows printed in Dev Health match those values.
+
+If the doubles strip is still all blue in a state that should have ≥1000 gaps, print the latest 5 gap values in the Aux debug block to prove draws_1000 is actually being used by the doubles function.
+
+Only if a state has <1000 rows in its CSV will everything be blue—by definition. (Your health readout shows (1000), so you’re fine.)
+
+Why this plan is safe
+
+We’re fixing the UI contract (no nested expanders), not changing analytics.
+
+We’re adding a single tiny helper that guarantees windows bind (no behavioral surprises).
+
+We’re operating inside the documented wiring: Aux/Control Center use draws CSVs; V‑TRAC/Stable/DR use tables. Keeping that separation is a hard invariant.
+
+Final answer to your question
+
+Yes, Codex should continue, but focus on this minimal, documented fix set:
+
+remove nested expanders; 2) add build_aux_windows() and use it; 3) keep SSOT; 4) re‑verify doubles & V‑TRAC.
+
+Avoid broader edits until Aux renders cleanly; then we can resume DR/Batch enhancements on a separate branch.
+
+If you want, I can also draft the exact snippets for your specific src/app.py Aux block with the checkbox containers dropped in—just say the word and I’ll write them so Codex can paste with zero guesswork.

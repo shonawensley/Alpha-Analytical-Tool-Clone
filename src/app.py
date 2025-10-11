@@ -98,38 +98,86 @@ from core.module_b_digit_reduction import run_digit_reduction
 from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle
 from alpha_analytical.digit_reduction.analyzer_v2.training_bundle import TrainingBundleError
 from utils.path_handler import get_tables_output_dir, get_analysis_output_dir
-from core.aux_config import (
-    PAIRS_WINDOW,
-    POSITIONAL_WINDOW,
-    SUMS_WINDOW,
-    VTRAC_INDEX_WINDOW,
-    COMBINATION_WINDOW,
-    REPEATING_LATE,
-    REPEATING_VERY_LATE,
-    NONREPEATING_LATE,
-    NONREPEATING_VERY_LATE,
-    PAIR_PENDING,
-    COMBO_SINGLE_LATE,
-    COMBO_SINGLE_VERY_LATE,
-    COMBO_DOUBLE_LATE,
-    COMBO_DOUBLE_VERY_LATE,
-    WINDOW_CAPTIONS,
-    POS_SHORTLIST_CONFIG,
-)
+try:
+    from core.aux_config import (
+        PAIRS_WINDOW as DEFAULT_PAIRS_WINDOW,
+        POSITIONAL_WINDOW,
+        SUMS_WINDOW,
+        VTRAC_INDEX_WINDOW as DEFAULT_VTRAC_INDEX_WINDOW,
+        COMBINATION_WINDOW,
+        REPEATING_LATE,
+        REPEATING_VERY_LATE,
+        NONREPEATING_LATE,
+        NONREPEATING_VERY_LATE,
+        PAIR_PENDING,
+        COMBO_SINGLE_LATE,
+        COMBO_SINGLE_VERY_LATE,
+        COMBO_DOUBLE_LATE,
+        COMBO_DOUBLE_VERY_LATE,
+        WINDOW_CAPTIONS,
+        POS_SHORTLIST_CONFIG,
+    )
+except Exception:
+    DEFAULT_PAIRS_WINDOW = 360
+    POSITIONAL_WINDOW = 360
+    SUMS_WINDOW = 360
+    DEFAULT_VTRAC_INDEX_WINDOW = 1000
+    COMBINATION_WINDOW = 1000
+    REPEATING_LATE = 71
+    REPEATING_VERY_LATE = 107
+    NONREPEATING_LATE = 37
+    NONREPEATING_VERY_LATE = 56
+    PAIR_PENDING = 25
+    COMBO_SINGLE_LATE = 334
+    COMBO_SINGLE_VERY_LATE = 501
+    COMBO_DOUBLE_LATE = 667
+    COMBO_DOUBLE_VERY_LATE = 1000
+    WINDOW_CAPTIONS = {
+        "pairs": DEFAULT_PAIRS_WINDOW,
+        "positional": POSITIONAL_WINDOW,
+        "sums": SUMS_WINDOW,
+        "vtrac_index": DEFAULT_VTRAC_INDEX_WINDOW,
+        "combinations": COMBINATION_WINDOW,
+    }
+    POS_SHORTLIST_CONFIG = {
+        "topk_per_pos": 3,
+        "pool_per_pos": 6,
+        "max_internal": 64,
+        "max_rows": 16,
+        "caps": {"cartesian": 48, "repeat_endcap": 36, "lane": 36},
+        "weights": {
+            "rank": 1.0,
+            "xvar": 2.5,
+            "mirror_echo": 1.0,
+            "double_pressure": 1.0,
+            "repeat_endcap": 0.30,
+            "lane_concordance": 0.15,
+            "root": 0.0,
+            "vtrac_index": 0.80,
+            "vtrac_family": 0.60,
+        },
+        "features": {
+            "enable_repeat_endcap": True,
+            "enable_lane_concordance": True,
+            "enable_vtrac_boosts": True,
+        },
+    }
 from core.vtrac_families import VTRAC_DOUBLE_FAMILIES
 from alpha_analytical.control_center import aux_validation as _aux_validation
 from modules.draw_catalog import draws_since_last_double, scan_draw_files
+from modules.bootstrap_imports import ensure_ssot
+
+# Ensure canonical module bindings (avoids staged auxiliary imports)
+ensure_ssot()
+
+PAIRS_WINDOW = DEFAULT_PAIRS_WINDOW
+VTRAC_INDEX_WINDOW = DEFAULT_VTRAC_INDEX_WINDOW
 
 # --- path hook (kept; bootstrap above already inserted PROJECT_ROOT) ---
 # ----------------------------------------------------------------------
  
 
-# --- AUX working modules path (staged, isolated) -----------------------
-_AUX_WORKING_ROOT = os.path.normpath(os.path.join(Path(__file__).resolve().parent.parent, "scripts", "auxiliary", "working"))
-if os.path.isdir(_AUX_WORKING_ROOT) and _AUX_WORKING_ROOT not in sys.path:
-    # Insert the parent folder so absolute imports like `modules.parse_excel` work
-    sys.path.insert(0, _AUX_WORKING_ROOT)
-# ----------------------------------------------------------------------
+# --- Aux modules load from canonical package ---------------------------
 from importlib.util import spec_from_file_location, module_from_spec
 
 def _load_project_module(dotted_name: str, rel_file: str):
@@ -551,44 +599,10 @@ def _project_modules_first():
 
 @contextmanager
 def _aux_working_first():
-    """Temporarily prefer staged Aux modules and restore project bindings afterwards."""
-    prev_modules = sys.modules.get("modules")
-    prev_children = {
-        name: sys.modules.get(name)
-        for name in (
-            "modules.analyze_pairs",
-            "modules.vtrac_reference",
-            "modules.run_process",
-        )
-    }
-    old_sys_path = list(sys.path)
-    try:
-        # Ensure the staged working root is first on sys.path so that
-        # imports of `modules.*` resolve to scripts/auxiliary/working/modules.
-        if _AUX_WORKING_ROOT in sys.path:
-            try:
-                sys.path.remove(_AUX_WORKING_ROOT)
-            except ValueError:
-                pass
-        sys.path.insert(0, _AUX_WORKING_ROOT)
+    """No-op context manager now that Aux modules are canonical."""
+    yield
 
-        # Evict any existing bindings so we get a fresh import from the staged copy
-        sys.modules.pop("modules", None)
-        for name in prev_children:
-            sys.modules.pop(name, None)
-        yield
-    finally:
-        # Restore original sys.path
-        sys.path[:] = old_sys_path
-        if prev_modules is not None:
-            sys.modules["modules"] = prev_modules
-        else:
-            sys.modules.pop("modules", None)
-        for name, mod in prev_children.items():
-            if mod is not None:
-                sys.modules[name] = mod
-            else:
-                sys.modules.pop(name, None)
+
 
 @contextmanager
 def _project_blackapple_ctx():
@@ -1871,6 +1885,8 @@ def show_control_center_page() -> None:
                 except Exception as _se:
                     st.caption(f"BA module: unavailable: {_se}")
             st.caption(f"windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
+            from utils.path_handler import get_cleaned_draws_dir as _get_cleaned_draws_dir
+            st.caption("draw root: " + str(_get_cleaned_draws_dir()))
         except Exception:
             pass
         st.warning(f"Control Center draws view unavailable: {e}")
@@ -1893,6 +1909,7 @@ def show_aux_page(state: str) -> None:
                 get_top_overdue_repeating_pairs,
                 get_vtrac_statuses,
                 get_doubles_history,
+                build_aux_windows,
                 COLOR_LATE,
                 COLOR_VERY_LATE,
                 COLOR_PENDING,
@@ -2026,9 +2043,12 @@ def show_aux_page(state: str) -> None:
             if not draws:
                 return None
 
-            draws_100 = draws[:PAIRS_WINDOW] if len(draws) >= PAIRS_WINDOW else draws
-            draws_1000 = draws[:VTRAC_INDEX_WINDOW] if len(draws) >= VTRAC_INDEX_WINDOW else draws
-            draws_pair_window = draws[:PAIRS_WINDOW] if len(draws) >= PAIRS_WINDOW else draws
+            draws_100, draws_1000 = build_aux_windows(
+                draws,
+                pairs_window=PAIRS_WINDOW,
+                vtrac_index_window=VTRAC_INDEX_WINDOW,
+            )
+            draws_pair_window = list(draws_100)
             nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_WINDOW)
             vstat = get_vtrac_statuses(draws_100, draws_1000)
             top5 = get_top_overdue_repeating_pairs(draws_pair_window, 5)
@@ -2688,7 +2708,12 @@ def show_aux_page(state: str) -> None:
                 except Exception as _e:
                     st.caption(f"Blackapple panel unavailable: {_e}")
                 # Legend / Feature Guide
-                with st.expander("Legend / Feature Guide"):
+                show_legend = st.checkbox(
+                    "Show legend / feature guide",
+                    value=False,
+                    key=f"{tuning_prefix}_legend",
+                )
+                if show_legend:
                     st.markdown("""
                     - V-Trac index row tints: light green = last 5 hit (rank 1..5), light red = 5 most overdue (rank 1..5).
                     - Combination shapes:
@@ -3097,8 +3122,3 @@ if __name__ == "__main__":
     except Exception as exc:
         _rescue_boot()
         st.error(f"main() raised: {exc}")
-
-
-
-
-

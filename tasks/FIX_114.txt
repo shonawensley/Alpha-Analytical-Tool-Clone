@@ -1,0 +1,205 @@
+You’re not crazy—what you’re seeing is the classic “path drift + unbound local” double‑whammy, and your screenshots make it very clear why Aux keeps flipping between “no files” and those odd UnboundLocalError messages.
+
+Below is a straight, do‑this‑and‑it‑will-work set of instructions you can hand to Codex. I structured it as (A) what’s wrong (with evidence from your images/logs), and (B) the exact fixes (with copy‑pasteable snippets and verification steps). I’ve also called out a couple of things not to worry about (e.g., Python’s path).
+
+A) What’s actually wrong (why we’ve been going in circles)
+
+Aux is looking in the wrong place (sometimes).
+Your data are correct and present under:
+
+data/cleaned/draws/
+  Connecticut_draws.csv
+  Connecticut_Midday_draws.csv
+  Connecticut_Evening_draws.csv
+  ...
+
+
+(You showed a full directory listing of those CSVs.) But the Aux page intermittently claims “No state data files found” and “Working modules unavailable or no draws found.” That means some call paths are still resolving to data/cleaned/*_draws.csv (top‑level) instead of data/cleaned/draws/*_draws.csv (subfolder). Your own V‑TRAC preflight proves tables are fine, and Control Center’s draw pipeline also writes to data\cleaned\draws. So this is a path‑contract mismatch across different bits of code.
+
+Your architecture doc still says Aux/BA read data/cleaned/*_draws.csv (top‑level, no /draws subfolder). In practice, your app and pipeline now place them in data/cleaned/draws/…. That mismatch is the root of the “no files” banner.
+
+A small scoping bug is killing Aux before it renders.
+The “Rescue boot path active. main() did not render. main() raised: cannot access local variable PAIRS_WINDOW…” message is a textbook Python UnboundLocalError: somewhere in the Aux page code a function references PAIRS_WINDOW before assigning to a local with the same name. That crash happens before any data load, so it cascades into “no files” UI and the V‑TRAC box table not rendering.
+
+The “all blue doubles / no reds” was a side‑effect.
+When the page crashes before binding the long window, the code falls back to the short window, so the ≥1000‑draw tier never gets populated. Everything then skews blue. (Your validation logs do show reds once the long window exists—so math is fine; the UI kept crashing first.)
+
+Python path is normal.
+Seeing python: C:\Users\User\AppData\Local\Programs\Python\Python313\python.exe in Dev Health is expected. That’s just the interpreter location, not a project path. Not a problem.
+
+Staged vs canonical imports added fragility.
+The wrapper that tries to load staged Aux modules (scripts/auxiliary/working/...) is brittle. When those files aren’t present (or their relative imports change), the wrapper path fails, and Aux enters the “Rescue boot” branch. We can remove this fragility by vendoring the final Aux modules into modules/ and always importing those canonically.
+
+Side note (for BA): BA’s own doc says it loads draws via a robust loader and should never touch string tables—so once the draws path is fixed, BA’s panel is fine.
+
+B) The exact fixes to apply (hand this to Codex)
+
+Goal: make Aux/Control Center always resolve to data/cleaned/draws/, eliminate the PAIRS_WINDOW scoping trap, flatten any nested expanders, and stop depending on “staged” Aux modules at runtime.
+
+1) Freeze the cleaned‑draws directory (single source of truth)
+
+utils/path_handler.py — add or correct:
+
+from pathlib import Path
+
+def get_cleaned_draws_dir() -> Path:
+    # Canonical location for per‑state draw CSVs
+    return Path("data/cleaned/draws")
+
+
+Why: Every Aux/BA/Control Center loader must call this, not build paths ad‑hoc. (Your architecture doc defines where Aux loads draws; we’re updating code to the current on‑disk reality under /draws.)
+
+2) Harden the draws loader (tolerant resolution + clear errors)
+
+modules/aux_loaders.py — make the loader tolerant and explicit:
+
+from pathlib import Path
+import csv
+from utils.path_handler import get_cleaned_draws_dir
+
+def _aliases(state: str):
+    # "Connecticut4" → ["Connecticut4","Connecticut"]
+    base = state.rstrip("4")
+    # normalize separators; add a compact alias (optional)
+    norm = base.replace(" ", "_").replace("-", "_")
+    return [norm, base]
+
+def resolve_draw_csv(state: str, variant: str | None) -> Path | None:
+    draws_dir = get_cleaned_draws_dir()
+    candidates: list[Path] = []
+    for s in _aliases(state):
+        if variant and variant.lower() in ("midday", "evening"):
+            candidates.append(draws_dir / f"{s}_{variant.capitalize()}_draws.csv")
+        candidates.append(draws_dir / f"{s}_draws.csv")
+
+    # final fallback: legacy top‑level (older layout)
+    legacy = Path("data/cleaned")
+    for s in _aliases(state):
+        if variant and variant.lower() in ("midday", "evening"):
+            candidates.append(legacy / f"{s}_{variant.capitalize()}_draws.csv")
+        candidates.append(legacy / f"{s}_draws.csv")
+
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+def load_state_draws(state: str, variant: str = "combined"):
+    csv_path = resolve_draw_csv(state, None if variant == "combined" else variant)
+    if not csv_path:
+        return [], "(not found)"
+    draws: list[str] = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        for row in csv.reader(f):
+            if not row:
+                continue
+            s = row[0].strip()
+            if len(s) == 3 and s.isdigit():
+                draws.append(s)
+    # newest‑first expected; reverse here if your CSVs are oldest‑first
+    return draws, str(csv_path)
+
+
+Why: This guarantees that Connecticut4 resolves to Connecticut files, variants resolve correctly, we prefer data/cleaned/draws but gracefully accept legacy top‑level if it exists, and we return a clear “(not found)” when empty.
+
+3) Kill the PAIRS_WINDOW UnboundLocalError
+
+In the Aux page (likely src/app.py, Aux section), do not assign to PAIRS_WINDOW in any function. Import defaults under different names and use local variables:
+
+from core.aux_config import PAIRS_WINDOW as DEFAULT_PAIRS_WINDOW, VTRAC_INDEX_WINDOW as DEFAULT_VTRAC_WINDOW
+
+def render_aux(...):
+    # Never assign to PAIRS_WINDOW here—use locals
+    pairs_window = int(st.session_state.get("aux_pairs_win", DEFAULT_PAIRS_WINDOW))
+    vtrac_window = int(st.session_state.get("aux_vtrac_win", DEFAULT_VTRAC_WINDOW))
+
+    # use pairs_window and vtrac_window throughout
+
+
+If you currently do anything like:
+
+def render_aux(...):
+    print(PAIRS_WINDOW)       # <-- reference
+    PAIRS_WINDOW = ...        # <-- later assignment
+
+
+that will always raise the error you saw. Rename locals as above and the exception disappears.
+
+4) Remove nested Streamlit expanders (this one does crash now)
+
+Anywhere you have an expander inside an expander, flatten it:
+
+with st.expander("Positional Tracker"):
+    show_tuning = st.checkbox("Show shortlist tuning", value=False)
+    if show_tuning:
+        box = st.container()  # was: with st.expander("Tuning"):
+        # ... tuning controls in this container ...
+
+
+Why: Streamlit hardened this rule, and your own “FIX_105 / TASK_90” notes point at it. The nested expander crash is what often prevented the 1000‑draw window from binding in the first place.
+
+5) Stop importing staged Aux modules at runtime
+
+Drop the wrapper that imports from scripts/auxiliary/working/.... Instead:
+
+Vendor the working Aux modules into modules/ as the canonical modules/analyze_pairs.py, modules/vtrac_reference.py.
+
+Keep the small alias map you added (modules/bootstrap_imports.py) if you need to preserve old names for compatibility, but make the canonical files real, not wrappers.
+
+This eliminates the “Working modules unavailable…” path entirely. (Your BA doc also stresses using absolute imports from the repo to avoid module name collisions.)
+
+6) Make Dev Health show exactly what we’re loading
+
+In the Aux “System Health” block, print:
+
+get_cleaned_draws_dir()
+
+The resolved CSV path for the selected variant (from load_state_draws)
+
+Counts for pairs window and 1000 window (len(draws[:pairs_window]), len(draws[:vtrac_window]))
+
+This lets you confirm, in‑app, that we’re reading data\cleaned\draws\Connecticut_draws.csv (1000) again (you showed that earlier, then it regressed).
+
+C) Verification steps (quick)
+
+Regenerate draws (if needed): Control Center → “Aux Draws Pipeline” → Output directory data\cleaned\draws (your screenshot already shows this) → Generate.
+
+Clear Streamlit cache (menu → “Clear cache”) and restart via run_app.bat.
+
+Aux → Combined → Run. You should not see “No state data files found.”
+
+Dev Health must show the resolved path under data\cleaned\draws\… and counts for 360/1000.
+
+The V‑TRAC boxed table renders; doubles strip shows red items again when a ≥1000 gap exists.
+
+Optional sanity: run the CLI validator for doubles (the one you were using) against Connecticut to confirm the thresholds match what you see in the UI.
+
+D) Answers to your side questions
+
+Why does BA/Control Center say “python: …\Python313\python.exe”?
+That’s just the interpreter location. Perfectly normal; it isn’t supposed to be “inside” your repo.
+
+Are the tables in /data/outputs/tables correct even with the _r2.csv duplicates?
+Yes—your V‑TRAC preflight shows the expected “Combined/Midday/Evening” combined tables are present and pass checks. Aux/BA do not read these tables at all, only draw CSVs, so their presence/duplication won’t cause the Aux “no files” banner. (BA doc explicitly says draws‑only for Aux/BA, tables are for V‑TRAC/Stable/DR.)
+
+TL;DR to hand to Codex
+
+Fix Aux now
+
+Canonicalize draw paths: implement utils.path_handler.get_cleaned_draws_dir() → "data/cleaned/draws".
+
+Update modules/aux_loaders.load_state_draws() to resolve Connecticut4 and variant CSVs under /draws, falling back to legacy top‑level only if needed (use the snippet above).
+
+Remove any local assignments to PAIRS_WINDOW/VTRAC_INDEX_WINDOW in functions; import defaults as DEFAULT_* and use local names (pairs_window, vtrac_window).
+
+Flatten all nested expanders in Aux (replace inner expanders with st.container() + checkboxes).
+
+Stop importing staged Aux modules at runtime; vendor the final Aux files into modules/ and import them directly.
+
+Enhance the Aux Dev Health block to print the exact resolved draw CSV path and the slice sizes (360/1000).
+
+Once those are in, Aux will stop reporting “no files,” the rescue path won’t trigger, and the long window (1000) will bind reliably—bringing back the red tier and the V‑TRAC boxed table.
+
+If you want, I can also give you a two‑line guard that fails loudly when resolve_draw_csv doesn’t find a file (showing the exact patterns it tried). That prevents silent “blue‑only” fallbacks from ever sneaking back in.
+
+You’ve done the hard part by keeping the data and docs organized; this is a contained wiring/scoping cleanup. Focus on the six steps above and you’ll be out of the loop.

@@ -463,3 +463,18 @@ Template
 
 
 
+## 2025-10-11 01:10 (UTC) - Aux canonical draw pipeline
+
+- Context: FIX_107/FIX_115 confirmed Aux was still resolving legacy draw paths and staging modules, so the page alternated between "no files" and UnboundLocal errors.
+- Change:
+  - Locked `utils.path_handler.get_cleaned_draws_dir()` and `modules.aux_loaders.load_state_draws()` to `data/cleaned/draws/*.csv` (legacy root only as an explicit fallback).
+  - Vendored the working `analyze_pairs`/`vtrac_reference` modules into `modules/` and removed the staged sys.path shim.
+  - Imported Aux windows as defaults (360/1000) so the rescue path no longer crashes; kept the legend/tuning UI as checkbox containers.
+  - Dev Health now prints the resolved CSV path, module __file__, and window lengths for Combined/Midday/Evening.
+- Impact:
+  - Aux/Control Center/BA consistently bind the same draw history (reds back on doubles; V-TRAC overlay renders).
+  - Restarting Streamlit can no longer fall back to staged modules or the legacy draw root.
+- Verification:
+  - `python scripts/tools/validate_aux_doubles.py Connecticut4 --max-n 1200 --no-pairs`
+  - `python -c "from modules.aux_loaders import load_state_draws; from modules.analyze_pairs import build_aux_windows; from src.app import _build_vtrac_overlay; from modules.vtrac_reference import get_vtrac_index; draws,_=load_state_draws('Connecticut4'); d100,d1000=build_aux_windows(draws); overlay=_build_vtrac_overlay(d1000, get_vtrac_index); print(len(d100), len(d1000))"`
+  - Manual Streamlit smoke via `run_app.bat`.

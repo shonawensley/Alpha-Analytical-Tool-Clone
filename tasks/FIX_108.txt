@@ -1,0 +1,122 @@
+Absolutely—here’s a clean, decisive plan you can hand to Codex. I’ve reviewed the KIT docs you provided (wiring/quickstart/workflow), the Pitfalls/Health Helpers, the four task notes you asked me to read (FIX_105, TASK_90, VALIDATE_DOUBLES, FIX_WINNERS), and the snippets of the Codex run/log you pasted. My goal below is to stop the loop, get Aux/Control Center behaving again, and lock in a minimal, well‑documented fix path.
+
+First — confirmation you asked for
+
+Yes: I’m running the high‑reasoning preset for this project. Your AAT9 boot instructions explicitly say to start with the AAT9 KIT, run preflight, and ensure canonical, in‑repo imports before launch; that’s the model/flow I’m following. The KIT’s “HUMAN READ FIRST” and Quickstart spell this out and are the source of truth for how Codex should start each session.
+
+Executive summary (what’s really breaking Aux)
+
+The Aux crash is a UI rule, not a data problem.
+Streamlit forbids nested st.expander(...). Your Aux page places an expander inside another (e.g., “Shortlist tuning” under “Positional Tracker”), which throws before any CSVs are read. That’s why the page also shows the generic “Please ensure state data files…” banner and why you see the draws_1000 UnboundLocal error—it never got to the point where draws_1000 was assigned. Flatten those expanders, and Aux will run.
+
+The “everything is BLUE” doubles view isn’t a destroyed threshold.
+Your rules are still Blue ≥ 667 and Red ≥ 1000. If the current 1 000‑draw window has many late doubles in the 700–900 range and few ≥ 1000, the strip will (correctly) skew blue. There’s a small CLI to verify gaps straight from the draws CSVs.
+
+Data contracts are correct and must not be changed.
+Aux/Blackapple only read data/cleaned/*_draws.csv (Combined/Midday/Evening). V‑TRAC/Stable/Digit Reduction read from tables via utils.path_handler. Your KIT repeatedly enforces these contracts—stick to them.
+
+Startup discipline prevents this from recurring.
+Always: preflight → launch via run_app.bat → use Dev Health to verify bindings. The KIT shows exactly what “good” looks like (repo cwd, Python exe, modules bound under your repo, draws CSV paths).
+
+Exactly what to tell Codex (copy/paste)
+
+Goal: Get Aux working and the doubles family strip trustworthy without refactors. Keep changes tightly scoped, documented in the KIT, and covered by quick checks.
+
+0) Preflight & launch (no guessing)
+
+Run preflight from repo root:
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+Confirm cwd is repo root, imports resolve from in‑repo files, and data/cleaned/*_draws.csv are inventoried.
+
+Launch via run_app.bat (which runs your pre‑launch validators, then streamlit run src\app.py).
+
+1) Fix the Aux UI crash (nested expanders)
+
+Find & flatten nested expanders in src/app.py under the Aux section (“Auxiliary Tools”, “Positional Tracker”, Sums, V‑TRAC diagnostics):
+
+Replace any inner st.expander(...) with st.container() + checkbox toggles, or move the inner expander to a sibling level.
+
+Use the concrete replacement pattern from FIX_105 (paste exactly).
+
+Restart cleanly: Streamlit menu → Clear cache, fully close the process, then re‑run run_app.bat. Open Aux and run Combined / Midday / Evening again. You should no longer see the draws_1000 error.
+
+(Optional defensive hardening): In the Aux builder function that prepares the V‑TRAC overlay, initialize draws_1000 = [] before the block that computes it and soft‑fail (st.warning) if a sub‑step raises. This prevents an UnboundLocal if something else interrupts before assignment. The KIT’s Workflow Standard asks for UI soft‑failures, not hard exceptions.
+
+2) Keep data & imports canonical (no “path drift”)
+
+Do not touch data contracts.
+Aux/Blackapple → data/cleaned/*_draws.csv.
+V‑TRAC/Stable/DR → tables via utils.path_handler. (Do not read string‑tables in Aux.)
+
+Confirm module bindings via the Dev Health expander: Blackapple, Aux loaders, and (if shown) V‑TRAC must point under your repo (not site‑packages). This is exactly what Health Helpers are for.
+
+(Note) You already added an SSOT bootstrap to normalize canonical modules. Keep it, but the Aux fix is the expanders; don’t keep churning imports now. The KIT addresses import drift and shows the right “reporting” in Dev Health.
+
+3) Doubles strip correctness (per‑variant, no collapsing)
+
+Compute per‑variant first; then group into families.
+Maintain:
+
+status[variant][combo] = {"sev": "R"/"B", "gap": int, "unseen": bool}
+
+
+Classify with DOUBLE_BLUE = 667, DOUBLE_RED = 1000; unseen in window counts as RED but flag with a marker/tooltip so we know why it’s red. Do not union/merge badges across variants.
+
+Badge rendering: one token per (combo, variant) that is R/B, append the correct variant badge (C/M/E), carry V‑TRAC pair/mirror styling through to the token.
+
+Labels: reserve “Combined” strictly for the Combined stream; when you mean C+M+E together say “All‑Variant (C+M+E)”. Adjust any constants that still conflate the terms.
+
+4) Sanity checks & quick validators (so we don’t regress)
+
+CLI check for doubles (proves thresholds & gaps are right straight from CSVs):
+python scripts/tools/validate_aux_doubles.py Connecticut4 --max-n 1200 --no-pairs
+
+If none ≥ 1000, BLUE‑only UI is correct. If CLI shows ≥ 1000 but UI doesn’t, that’s wiring (tell me which state/variant).
+
+Unit/acceptance (already in your repo per changelog): run the aux/V‑TRAC validators and acceptance tests to keep Aux and Control Center aligned with the fixtures.
+
+No‑nested‑expander “tripwire”: add a grep to CI (or a tiny test) that fails if we ever re‑introduce expander‑inside‑expander. (TASK_90 calls this out explicitly.)
+
+5) Two small hygiene items (they keep biting)
+
+UTF‑8 UI strings: normalize any large Markdown/text via a tiny helper and always open files with encoding="utf-8".
+
+Workflow discipline: follow the KIT Workflow Standard—Preflight → Plan small → Implement path‑safe → Verify → Document—and use the “document and process” trigger to update Changelog/Checkpoint after this fix.
+
+Why I’m not proposing more invasive changes right now
+
+Your data is where it should be and the contracts are consistent across KIT docs. Changing paths won’t solve a UI‑thrown exception.
+
+The blue‑only observation is expected with current gaps; the CLI makes this transparent so we avoid chasing ghosts.
+
+You already implemented SSOT/forwarders; the Dev Health view confirms bindings. The win is to stabilize the UI and re‑enable Aux, not to keep editing imports.
+
+What you can expect after these steps
+
+Aux page renders again (positional tracker + V‑TRAC overlay, no draws_1000 crash).
+
+Doubles family strip shows separate R/B tokens for C/M/E and aligns with the V‑TRAC pair/mirror cues.
+
+Control Center and Aux stay consistent, with validators and acceptance tests guarding the behavior.
+
+(Optional) one‑liner you can give Codex to kick this off
+
+Do exactly this:
+
+Run preflight per KIT, then launch via run_app.bat.
+
+In src/app.py remove all nested st.expander(...) in the Aux page—replace inner expanders with st.container() + checkboxes using the FIX_105 snippet. Clear cache; relaunch.
+
+Keep Aux/BA strictly on data/cleaned/*_draws.csv and verify via Dev Health that modules bind under the repo.
+
+Rebuild the doubles family strip per‑variant first (667/1000), render one token per (combo,variant), carry V‑TRAC pair markers, add an unseen flag; don’t collapse badges.
+
+Run: python scripts/tools/validate_aux_doubles.py Connecticut4 --max-n 1200 --no-pairs and the V‑TRAC validator tests; confirm UI agrees with CLI/fixtures.
+
+Document the change using the KIT “Workflow Standard” and update the Unified Changelog + Checkpoint Log.
+
+(Refs: Quickstart, Health Helpers, Workflow Standard, FIX_105, TASK_90, Unif. Changelog.)
+
+Final note
+
+You haven’t made it “too complex”—you’ve documented it well. The Aux crash was a small UI rule violation amplified by the page’s importance. Flatten the expanders, keep the data contracts, verify with the CLI/tests, and move on to optimizing tools with confidence.
