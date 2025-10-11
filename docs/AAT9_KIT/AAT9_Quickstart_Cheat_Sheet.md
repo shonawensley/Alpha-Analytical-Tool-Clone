@@ -35,9 +35,7 @@
 - `modules.aux_loaders.load_state_draws(state)` - robust draws CSV resolver
 - `alpha_analytical/stable` - YAML-weighted stable extractor (`feature_config.yml`)
 
-
-
-## Auxiliary Tools Highlights
+\n\n## Control Center Batch Workflow\n- Paste the Pick3StatsC4 winners list into the Control Center batch expander.\n- Use the toggles to run the winners logger, Stable Pattern extractor (with optional bundle), and the Digit Reduction pipeline (reducer refresh, Analyzer V2 overlays, optional Digit Reduction bundle).\n- Set the bundle stamp before enabling Stable or Digit Reduction bundle options so artifacts land under the desired `data/outputs/analysis/.../<STAMP>/` folder.\n- Ensure combined tables exist for every tracked state you refresh; the expander writes Digit Reduction outputs under `data/outputs/analysis/digit_reduction/<STATE>/`.\n\n## Auxiliary Tools Highlights
 - Positional Pressure (Aux page) renders Combined/Midday/Evening side-by-side (P1/P2/P3 columns, top-3 digits) with a fixed 360-draw window and Top-3 ranks; hard-due cells are highlighted in red.
 - Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
 - Control Center adds a positional heat badge per state/variant using the same draws-only engine.
@@ -59,4 +57,6 @@
 ## Default model preset (Pro)
 - Select gpt-5-codex (High) after launch; switch to Medium only when you need lower latency.
 - If Aux shows legacy import errors, run `python scripts/checks/smoke_aux_vtrac.py` and confirm the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` are present.
+
+
 

@@ -1,4 +1,4 @@
-Ôªø# CODEX READ FIRST ??? AAT9 Optimized Startup
+# CODEX READ FIRST ??? AAT9 Optimized Startup
 
 
 
@@ -60,11 +60,11 @@ Read and follow this sequence exactly before coding. Goal: highest???quality pla
 
 - After preflight (or before launching Streamlit), run `python scripts/smoke_winners_logger.py` to verify the analyzer-style winners report still renders with highlights.
 - Control Center due-doubles now auto-refreshes when draw CSV snapshots change; still click **Refresh Draw Tables** after a bulk data load to clear any manual overrides.
-- When regenerating draw CSVs through the Control Center Aux Draws pipeline, keep ‚ÄúDelete existing draw CSVs before writing‚Äù checked so the pipeline purges stale files before writing fresh ones.
+- When regenerating draw CSVs through the Control Center Aux Draws pipeline, keep ìDelete existing draw CSVs before writingî checked so the pipeline purges stale files before writing fresh ones.
 - After regenerating draws, optionally run python scripts/tools/validate_aux_doubles.py <STATE> [--no-pairs] [--pairs-window N] to confirm the double and pair badges match the raw CSVs.
 - Run python scripts/tools/validate_aux_repeat.py <STATE> [--no-positional] [--window 150] to confirm repeat-watch streaks and positional hard-due tags align with the CSVs.
 - Run python scripts/tools/validate_aux_vtrac.py <STATE> [--limit 10] [--window 150] to verify V-TRAC overlays, heatboard stats, and sums analytics against the CSVs.
-
+- Use the Control Center batch expander to run winners logging, Stable bundles, and Digit Reduction refresh/bundles from the same winners list; set the bundle stamp before enabling either bundle toggle.
 - Confirm imports resolve to in???repo files and that draws CSVs are present.
 
 - Confirm `.codex/first_boot.log` is the headless Streamlit log target before any automated boot.
@@ -166,6 +166,10 @@ Note: If Aux throws legacy import errors, run python scripts/checks/smoke_aux_vt
 - Select your stamp (defaults to the newest overlay), choose whether to include hits CSV / overlay HTML, and optionally create a zip copy.
 - Bundles are written to `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/` with a `manifest.json` listing the files.
 - Use the **Delete all training bundles** button to clear the folder before a fresh run if desired.
+
+
+
+
 
 
 

@@ -128,7 +128,7 @@ def own_vs_combined(items: Iterable[Item]) -> Tuple[Dict[SectionKey, Dict[str, A
             a = own_first_step if own_first_step >= 0 else 99
             b = combined_first_step if combined_first_step >= 0 else 99
             time_delta = abs(a - b)
-        agree_core = int(own_core and combined_core and _canon3(own_core) == _canon3(combined_core))
+        agree_core = int(bool(own_core and combined_core and _canon3(own_core) == _canon3(combined_core)))
         mode_only_one = int(not (own_entry and combined_entry))
 
         for entry in group:

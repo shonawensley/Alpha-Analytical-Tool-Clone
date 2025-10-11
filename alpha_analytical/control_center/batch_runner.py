@@ -235,3 +235,156 @@ def run_stable_bundles(
         results.append(record)
     return results
 
+
+
+
+
+def _collect_digit_reduction_winners(entry: ParsedWinnerEntry) -> Dict[str, str]:
+    winners: Dict[str, str] = {}
+    if entry.midday:
+        winners["Midday"] = entry.midday
+    if entry.evening:
+        winners["Evening"] = entry.evening
+    for extra in entry.raw_digits[2:]:
+        if len(extra) == 3 and extra.isdigit() and extra not in winners.values():
+            winners.setdefault("Combined", extra)
+    if winners and "Combined" not in winners:
+        winners["Combined"] = winners.get("Midday") or winners.get("Evening") or next(iter(winners.values()))
+    return {k: v for k, v in winners.items() if v}
+
+
+def run_digit_reduction_workflow(
+    entries: Sequence[ParsedWinnerEntry],
+    *,
+    run_reducer: bool = True,
+    run_overlay: bool = True,
+    run_analyzer: bool = True,
+    run_bundle: bool = False,
+    bundle_stamp: Optional[str] = None,
+    mirror_to_winners: bool = True,
+    include_overlay_html: bool = False,
+    include_hits: bool = True,
+    make_zip: bool = False,
+) -> List[Dict[str, object]]:
+    analysis_root = Path(ph.get_analysis_output_dir())
+    tables_root = Path(ph.get_tables_output_dir())
+    stamp_input = bundle_stamp.strip() if isinstance(bundle_stamp, str) else None
+    results: List[Dict[str, object]] = []
+
+    reducer_fn = None
+    analyzer_fn = None
+    overlay_fn = None
+    bundle_pkg = None
+    bundle_exc = None
+
+    for entry in entries:
+        state = entry.project_state
+        if not state:
+            continue
+        state_tables = tables_root / state
+        state_dir = Path(ph.get_analysis_dir("digit_reduction", state))
+        record: Dict[str, object] = {"state": state, "winners": _collect_digit_reduction_winners(entry)}
+        reducer_ok = True
+
+        if run_reducer:
+            if reducer_fn is None:
+                from core.module_b_digit_reduction import run_digit_reduction as reducer_fn  # type: ignore
+            if not state_tables.exists():
+                record["reducer"] = {"error": f"Missing tables at {state_tables}"}
+                reducer_ok = False
+            else:
+                try:
+                    df, html_path, csv_path = reducer_fn(state, state_tables, out_path=state_dir)
+                    record["reducer"] = {"rows": int(len(df)), "html": str(html_path), "csv": str(csv_path)}
+                except Exception as exc:  # pragma: no cover - integration tested via acceptance suite
+                    record["reducer"] = {"error": str(exc)}
+                    reducer_ok = False
+        else:
+            record["reducer"] = {"skipped": True}
+
+        winners_map = record.get("winners") or {}
+        overlay_ok = False
+        overlay_result: Dict[str, object] | None = None
+        stamp_for_bundle = stamp_input or None
+
+        if run_overlay and winners_map:
+            if overlay_fn is None:
+                from alpha_analytical.digit_reduction.analyzer_v2.winners_overlay import run_winner_overlay_batch as overlay_fn  # type: ignore
+            if reducer_ok or not run_reducer:
+                try:
+                    overlay_result = overlay_fn(
+                        state,
+                        {k: str(v) for k, v in winners_map.items()},
+                        analysis_root=analysis_root,
+                        when=stamp_input,
+                        mirror_to_winners=mirror_to_winners,
+                    )
+                    overlay_ok = True
+                    stamp_for_bundle = overlay_result.get("stamp") or stamp_for_bundle
+                    variant_details: Dict[str, Dict[str, object]] = {}
+                    for variant, payload in (overlay_result.get("results") or {}).items():
+                        variant_details[variant] = {
+                            "winner": payload.get("winner"),
+                            "hits": int(payload.get("hits", 0) or 0),
+                            "overlay_html": payload.get("overlay_html"),
+                            "flags_csv": payload.get("flags_csv"),
+                        }
+                    record["overlay"] = {"stamp": overlay_result.get("stamp"), "results": variant_details}
+                except Exception as exc:  # pragma: no cover - integration tested via acceptance suite
+                    record["overlay"] = {"error": str(exc)}
+            else:
+                record["overlay"] = {"skipped": "reducer failed"}
+        elif run_overlay:
+            record["overlay"] = {"skipped": "no winners provided"}
+        else:
+            record["overlay"] = {"skipped": True}
+
+        analyzer_ok = True
+        if run_analyzer:
+            if analyzer_fn is None:
+                from alpha_analytical.digit_reduction.analyzer_v2 import run as analyzer_fn  # type: ignore
+            if reducer_ok or not run_reducer:
+                try:
+                    info = analyzer_fn(state, analysis_root=analysis_root)
+                    analyzer_dir = state_dir / "analyzer_v2"
+                    record["analyzer"] = {
+                        "rows": int(info.get("rows", 0) or 0),
+                        "per_item": str(analyzer_dir / f"{state}_analyzer_v2_per_item.csv"),
+                        "top_candidates": str(analyzer_dir / f"{state}_analyzer_v2_top_candidates.csv"),
+                    }
+                except Exception as exc:  # pragma: no cover - integration tested via acceptance suite
+                    record["analyzer"] = {"error": str(exc)}
+                    analyzer_ok = False
+            else:
+                record["analyzer"] = {"skipped": "reducer failed"}
+                analyzer_ok = False
+        else:
+            record["analyzer"] = {"skipped": True}
+
+        if run_bundle:
+            if bundle_pkg is None or bundle_exc is None:
+                from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle as bundle_pkg  # type: ignore
+                from alpha_analytical.digit_reduction.analyzer_v2.training_bundle import TrainingBundleError as bundle_exc  # type: ignore
+            if analyzer_ok and overlay_ok:
+                try:
+                    bundle_result = bundle_pkg.package_training_bundle(
+                        state,
+                        stamp=stamp_for_bundle,
+                        analysis_root=analysis_root,
+                        include_overlay=include_overlay_html,
+                        include_hits=include_hits,
+                        make_zip=make_zip,
+                    )
+                    record["bundle"] = bundle_result
+                except bundle_exc as exc:  # type: ignore
+                    record["bundle"] = {"error": str(exc)}
+                except Exception as exc:  # pragma: no cover - integration tested via acceptance suite
+                    record["bundle"] = {"error": str(exc)}
+            else:
+                record["bundle"] = {"skipped": "overlay/analyzer unavailable"}
+        else:
+            record["bundle"] = {"skipped": True}
+
+        results.append(record)
+
+    return results

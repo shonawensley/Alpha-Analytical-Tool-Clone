@@ -71,4 +71,5 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 - Control Center: shows bindings for utils.path_handler, modules.vtrac_reference, modules.winner_report_full, modules.blackapple, modules.aux_loaders, core.pipeline_runner, and tables root inventory.
 - Winners Full tile: shows actual modules binding, modules.vtrac_reference path, builder presence, and per-state combined tables existence.
 - V-TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
+- Control Center batch winners expander now runs winners logging, Stable bundles, and the Digit Reduction pipeline (reducer/analyzer/overlay with optional bundle) from the same pasted sheet; set the bundle stamp before enabling either bundle toggle.
 

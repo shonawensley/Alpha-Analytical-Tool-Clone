@@ -1285,13 +1285,47 @@ def show_control_center_page() -> None:
             key="cc_batch_bundle_stamp",
         )
 
-        col_flags = st.columns(3)
+        col_flags = st.columns(4)
         with col_flags[0]:
             run_winners_flag = st.checkbox("Run winners logger", value=True, key="cc_batch_flag_winners")
         with col_flags[1]:
             run_stable_flag = st.checkbox("Run Stable bundle", value=True, key="cc_batch_flag_stable")
         with col_flags[2]:
             write_bundle_flag = st.checkbox("Write training bundle", value=True, key="cc_batch_flag_write")
+        with col_flags[3]:
+            run_digit_flag = st.checkbox("Run Digit Reduction", value=True, key="cc_batch_flag_digit")
+
+        dr_run_reducer = False
+        dr_run_overlay = False
+        dr_run_analyzer = False
+        run_dr_bundle_flag = False
+        dr_mirror_to_winners = True
+        dr_bundle_include_hits = True
+        dr_bundle_include_overlay = False
+        dr_bundle_make_zip = False
+
+        if run_digit_flag:
+            dr_cols = st.columns(3)
+            with dr_cols[0]:
+                dr_run_reducer = st.checkbox("Refresh reducer", value=True, key="cc_batch_dr_refresh")
+            with dr_cols[1]:
+                dr_run_overlay = st.checkbox("Build overlays", value=True, key="cc_batch_dr_overlay")
+            with dr_cols[2]:
+                dr_run_analyzer = st.checkbox("Run analyzer", value=True, key="cc_batch_dr_analyzer")
+
+            run_dr_bundle_flag = st.checkbox("Package Digit Reduction bundle", value=True, key="cc_batch_dr_bundle")
+            dr_mirror_to_winners = st.checkbox("Mirror overlays to Winners logger", value=True, key="cc_batch_dr_mirror")
+
+            if run_dr_bundle_flag:
+                dr_bundle_cols = st.columns(3)
+                with dr_bundle_cols[0]:
+                    dr_bundle_include_hits = st.checkbox("Include hits CSV", value=True, key="cc_batch_dr_bundle_hits")
+                with dr_bundle_cols[1]:
+                    dr_bundle_include_overlay = st.checkbox("Include overlay HTML", value=False, key="cc_batch_dr_bundle_overlay")
+                with dr_bundle_cols[2]:
+                    dr_bundle_make_zip = st.checkbox("Zip bundle", value=False, key="cc_batch_dr_bundle_zip")
+        else:
+            run_dr_bundle_flag = False
 
         if st.button("Run batch workflow", key="cc_batch_run"):
             if not entries:
@@ -1352,6 +1386,86 @@ def show_control_center_page() -> None:
                                 "Stable extractor issues:\n"
                                 + "\n".join(f"{r['state']}: {r['error']}" for r in stable_errors)
                             )
+
+                if run_digit_flag or run_dr_bundle_flag:
+                    with st.spinner("Running Digit Reduction workflow..."):
+                        dr_results = batch_runner.run_digit_reduction_workflow(
+                            tracked_entries,
+                            run_reducer=dr_run_reducer,
+                            run_overlay=dr_run_overlay,
+                            run_analyzer=dr_run_analyzer,
+                            run_bundle=run_dr_bundle_flag,
+                            bundle_stamp=(bundle_stamp or "").strip() or None,
+                            mirror_to_winners=dr_mirror_to_winners,
+                            include_overlay_html=dr_bundle_include_overlay,
+                            include_hits=dr_bundle_include_hits,
+                            make_zip=dr_bundle_make_zip,
+                        )
+                    for item in dr_results:
+                        state = item.get("state")
+                        step_errors = []
+                        for key in ("reducer", "overlay", "analyzer", "bundle"):
+                            step = item.get(key, {})
+                            err = step.get("error") if isinstance(step, dict) else None
+                            if err:
+                                step_errors.append(f"{key}: {err}")
+                        if step_errors:
+                            st.error(f"Digit Reduction issues for `{state}`: " + " | ".join(step_errors))
+                            continue
+                        summary_bits = []
+                        if dr_run_reducer:
+                            rows = item.get("reducer", {}).get("rows")
+                            if rows is not None:
+                                summary_bits.append(f"{rows} reducer rows")
+                        if dr_run_overlay:
+                            stamp = item.get("overlay", {}).get("stamp")
+                            if stamp:
+                                summary_bits.append(f"overlay stamp {stamp}")
+                        if dr_run_analyzer:
+                            a_rows = item.get("analyzer", {}).get("rows")
+                            if a_rows is not None:
+                                summary_bits.append(f"analyzer rows {a_rows}")
+                        summary_text = "; ".join(summary_bits) if summary_bits else "completed"
+                        st.success(f"Digit Reduction completed for `{state}` ({summary_text})")
+                        reducer_info = item.get("reducer", {})
+                        if dr_run_reducer and isinstance(reducer_info, dict):
+                            report_path = reducer_info.get("html")
+                            scores_path = reducer_info.get("csv")
+                            if report_path:
+                                st.markdown(f"- [Report]({report_path})")
+                            if scores_path:
+                                st.markdown(f"- [Scores CSV]({scores_path})")
+                        if dr_run_overlay:
+                            overlay_details = item.get("overlay", {}).get("results") or {}
+                            for variant, payload in overlay_details.items():
+                                overlay_path = payload.get("overlay_html")
+                                flags_path = payload.get("flags_csv")
+                                link_bits = []
+                                if overlay_path:
+                                    link_bits.append(f"[overlay]({overlay_path})")
+                                if flags_path:
+                                    link_bits.append(f"[flags]({flags_path})")
+                                if link_bits:
+                                    st.markdown(f"- {variant}: " + " | ".join(link_bits))
+                        if dr_run_analyzer:
+                            analyzer_info = item.get("analyzer", {})
+                            per_item = analyzer_info.get("per_item")
+                            top_candidates = analyzer_info.get("top_candidates")
+                            if per_item or top_candidates:
+                                links = []
+                                if per_item:
+                                    links.append(f"[per-item]({per_item})")
+                                if top_candidates:
+                                    links.append(f"[top candidates]({top_candidates})")
+                                st.markdown(f"- Analyzer artifacts: " + " | ".join(links))
+                        if run_dr_bundle_flag:
+                            bundle_info = item.get("bundle", {})
+                            bundle_dir = bundle_info.get("bundle_dir") if isinstance(bundle_info, dict) else None
+                            if bundle_dir:
+                                st.markdown(f"- Bundle -> `{bundle_dir}`")
+                            zip_path = bundle_info.get("zip_path") if isinstance(bundle_info, dict) else None
+                            if zip_path:
+                                st.markdown(f"  - [Zip]({zip_path})")
     try:
         import pandas as _pd
         from pathlib import Path as _Path
@@ -2983,4 +3097,8 @@ if __name__ == "__main__":
     except Exception as exc:
         _rescue_boot()
         st.error(f"main() raised: {exc}")
+
+
+
+
 

@@ -1,4 +1,4 @@
-﻿# AAT9 ??? Analysis Insights
+# AAT9 ??? Analysis Insights
 
 ## Role & Scope
 - Captures the analytical signals and pattern-recognition features implemented across AAT9 so every tool can reuse them without re-deriving the wiring.
@@ -42,7 +42,7 @@ _Add rows as new analytical signals land (e.g., Aux compound scoring, Hot Zones 
 - Each module should produce: (a) analysis output (HTML/CSV/JSON), (b) winners logging artifact (index family, VT hits, metadata), (c) optional training bundle entry (e.g., `digit_reduction/Analyzer V2/winners`).
 - Span metadata (green/blue/purple) must accompany scores so future rules/ML can see which signals fired.
 - Digit Reduction overlay already logs these signals; Stable extractor and upcoming modules should emit comparable JSON rows.
-- Control Center batch expander (`alpha_analytical.control_center.batch_runner`) parses the Pick3StatsC4 sheet, runs winners logging for every tracked state, and can trigger Stable Pattern training bundles in one click.
+- Control Center batch expander (`alpha_analytical.control_center.batch_runner`) parses the Pick3StatsC4 sheet, runs winners logging for every tracked state, and can trigger Stable Pattern bundles and the Digit Reduction pipeline (reducer/analyzer/overlay, optional DR bundle) in one click.
 
 ## Pending & Future Signals
 - Stable Pattern extractor - build a helper that normalises long three-value runs and feeds the matcher.
