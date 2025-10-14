@@ -65,7 +65,7 @@ class TestBoxedVTracChart:
         
         # Calculate SHA-1 hash of the CSV structure (without the actual data which may vary)
         # We check the header and structure rather than exact values
-        lines = csv_string.strip().split('\n')
+        lines = csv_string.strip().splitlines()
         header = lines[0]
         
         # Verify header structure
@@ -157,7 +157,7 @@ class TestBoxedVTracChart:
         
         # Test CSV structure hash for known data
         csv_output = df.to_csv(index=False)
-        lines = csv_output.strip().split('\n')
+        lines = csv_output.strip().splitlines()
         
         # Verify structure hasn't changed
         assert len(lines) == 36, "CSV should have 36 lines"

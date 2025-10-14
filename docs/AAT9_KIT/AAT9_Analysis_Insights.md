@@ -51,6 +51,15 @@ _Add rows as new analytical signals land (e.g., Aux compound scoring, Hot Zones 
 - Profitability dashboard - log which signals were present when a wager passes thresholds so scoring aligns with visual cues.
 
 ## Update Log
+## 2025-10-12 - Stable extractor cross-section & progression signals
+- Impact: Row payloads now expose `family_id` and rename the horizontal bonus to `horizontal_persistence_repeat`, keeping terminology consistent with future reduction tooling.
+- Impact: Family post-pass adds `section_count`, `progression_flag`, and `last_remaining_3v` with configurable weights; Delawareâ€™s 277 family and similar doubles now surface via the V-TRAC fallback.
+- Impact: Added regression guard `tests/test_vtrac_triples.py` for the 277 â†’ 26 mapping and wired the fallback by V-class code inside `modules.vtrac_reference`.
+- Validation snapshots (min_occ=1, min_score=7):
+  - **Connecticut4 (281, 835)** â€“ winner families (id 13, 21) reach `section_count = 3`, `progression_flag = True`, and hold Combined/Midday/Evening coverage in the spotlight CSV.
+  - **Delaware4 (979, 127)** â€“ both families (20, 31) surface across all three sections with progression flagged; 277 now resolves to family 20.
+  - **Indiana4 (174, 702)** â€“ families (10, 22) reside in Combined only, but `progression_flag` toggles on the Set run, confirming the Set-compounding logic.
+
 ## 2025-10-09 - Due-doubles snapshot guard
 - Impact: Control Center now snapshots draw CSV mtimes/sizes and refreshes the due-doubles table automatically, preventing stale draws-since metrics when data updates.
 - Impact: Added `modules/draw_catalog` helpers and regression tests so newest-first detection stays in sync with positional hard-due flags.
@@ -67,3 +76,13 @@ _Add rows as new analytical signals land (e.g., Aux compound scoring, Hot Zones 
 - **Aux validation CLI** - scripts/tools/validate_aux_doubles.py now recomputes variant doubles *and* pair windows directly from the draws CSVs, highlighting overdue tokens across Combined/Midday/Evening for quick sanity checks.
 - **Aux repeat/positional CLI** - scripts/tools/validate_aux_repeat.py replays repeat-watch streaks and positional hard-due flags from the raw CSV streams so Control Center badges can be verified without Streamlit.
 - **Aux V-TRAC/sums CLI** - scripts/tools/validate_aux_vtrac.py surfaces top overdue indexes, heatboard metrics, and sums diagnostics directly from the CSVs, mirroring the Control Center overlays.
+### 2025-10-13 – Stable Pattern Extractor (Regression Shield) – Paused
+- Row payload now emits per-component score fields (score_cov…score_hidden) and a hidden-by-one flag; YAML gains doubles_trigger_bonus / hidden3v_bonus.
+- Family summary exports fam_* score parts plus placeholders for section/progression bonuses.
+- Outstanding: consensus?doubles support, section/progression bonus plumbing, last_remaining_3v bonus, per-state metrics writer, regression guard tests/hooks. See tasks/FIX_122.txt for the checklist.
+- Files touched: alpha_analytical/stable/{__init__.py,post_pass_families.py,feature_config.yml}, tests/test_stable_contracts.py.
+### 2025-10-13 – Stable Regression Shield (paused mid-integrate)
+- Row payload now emits per-component score fields (score_cov…score_hidden) and hidden-by-one flag; YAML adds doubles_trigger_bonus / hidden3v_bonus.
+- Family summary exports fam_* score parts and placeholders for section/progression bonuses.
+- Outstanding before we resume: consensus?doubles flag/weight, section+progression+last_remaining bonuses, metrics writer, regression guard tests/hooks. See tasks/FIX_122.txt.
+- Files touched: alpha_analytical/stable/{__init__.py,post_pass_families.py,feature_config.yml}, tests/test_stable_contracts.py.

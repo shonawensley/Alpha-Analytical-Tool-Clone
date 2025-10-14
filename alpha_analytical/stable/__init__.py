@@ -13,7 +13,7 @@ This version includes all features discussed:
  - Hot Zone level tagging
  - Detailed 'why' string for score traceability
 """
-import os, sys, re, argparse, yaml, csv, itertools
+import os, sys, re, argparse, csv, itertools
 from datetime import datetime
 from collections import defaultdict, Counter
 import pandas as pd
@@ -24,17 +24,16 @@ try:
 except ImportError:
     st = None
 
+from alpha_analytical.stable.feature_config import CFG, CONFIG_PATH as _CONFIG_PATH
+from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
+
 # --- Config & Constants ---
-# Load weights from YAML file located next to the script
-try:
-    SCRIPT_DIR_PATH = Path(__file__).resolve().parent
-    CFG_PATH = SCRIPT_DIR_PATH / "feature_config.yml"
-    with open(CFG_PATH, "r", encoding="utf-8") as _cf:
-        CFG = yaml.safe_load(_cf) or {}
-except FileNotFoundError:
-    print(f"FATAL ERROR: feature_config.yml not found at {CFG_PATH}")
-    print("Please ensure the config file is in the same directory as this script.")
-    sys.exit(1)
+# Retain legacy attributes for downstream callers (e.g., Streamlit Dev Health)
+SCRIPT_DIR_PATH = Path(__file__).resolve().parent
+CFG_PATH = _CONFIG_PATH
+if not CFG_PATH.exists():
+    raise FileNotFoundError(f"feature_config.yml not found at {CFG_PATH}")
 
 COLS = ['7','6','5','4','3','2','1']
 digit2v = {'0':1,'5':1,'1':2,'6':2,'2':3,'7':3,'3':4,'8':4,'4':5,'9':5}
@@ -70,6 +69,26 @@ def find_subs_with_counts(cell: str, min_len: int = 3, max_len: int = 8):
             if is_3value(sub):
                 hits[sub] += 1
     return hits
+
+
+def _has_hidden_three_value(raw_digits: str, family_id: int | None) -> bool:
+    """Detect a 3-value pattern hidden inside a 4-digit window that maps to the same family."""
+    if family_id is None or len(raw_digits) < 4:
+        return False
+    window = raw_digits
+    for start in range(len(window) - 3):
+        segment = window[start:start + 4]
+        if not is_3value(segment):
+            continue
+        indices = ((0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3))
+        for idx_tuple in indices:
+            candidate = ''.join(segment[i] for i in idx_tuple)
+            if not is_3value(candidate):
+                continue
+            candidate_family = derive_vtrac_index_for_canonical(canon(candidate), get_vtrac_index)
+            if candidate_family == family_id:
+                return True
+    return False
 
 
 # --- Main Analysis Function ---
@@ -202,6 +221,7 @@ def analyse(df: pd.DataFrame, section: str):
         if is_cons_box and not box_info.get('stub_done', False):
             tail_cpat = box_info.get('tail', '')
             if tail_cpat:
+                stub_family = derive_vtrac_index_for_canonical(canon(tail_cpat), get_vtrac_index)
                 results.append(dict(
                     section=sec,
                     Set=setv,
@@ -221,6 +241,25 @@ def analyse(df: pd.DataFrame, section: str):
                     dom_last=False,
                     dom_pair=(len(tail_cpat) == 2),
                     hot=hot,
+                    family_id=stub_family,
+                    hidden3v=False,
+                    perm_count_in_box=1,
+                    repeat_extras_in_box=0,
+                    horizontal_persistence_repeat=1,
+                    orders_modal_value='',
+                    orders_modal_rows=0,
+                    score_cov=0,
+                    score_hpr=0,
+                    score_perm=0,
+                    score_repeat=0,
+                    score_straight=0,
+                    score_single=0,
+                    score_cons=0,
+                    score_hot=0,
+                    score_mirror=0,
+                    score_dom=0,
+                    score_len=0,
+                    score_hidden=0,
                     why='consensus_stub'
                 ))
                 box_info['stub_done'] = True
@@ -251,33 +290,55 @@ def analyse(df: pd.DataFrame, section: str):
         if len(cpat) <= 2 and not (cons_full or dom_pair):
             continue
 
+        family_id = derive_vtrac_index_for_canonical(cpat, get_vtrac_index)
+        hidden3v_flag = _has_hidden_three_value(raw_digits, family_id)
+
         col_factor = 2 if col == '1' else 1
         extra_len_bonus = ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char']) if info['patterns'] else 0
-        perm_bonus = max(0, perm_count_in_box - 1) * CFG.get('perm_density_per_extra', 0)
-        repeat_bonus = repeat_extras_in_box * CFG.get('repeat_count_per_extra', 0)
+
+        # === AAT9-SCORE-CONTRACT: BEGIN (ROW) ===
+        score_cov = rowcov * CFG['vertical_coverage_per_row']
+        score_hpr = span * CFG['horizontal_persistence_repeat_bonus']
+        score_perm = max(0, perm_count_in_box - 1) * CFG.get('perm_density_per_extra', 0)
+        score_repeat = repeat_extras_in_box * CFG.get('repeat_count_per_extra', 0)
+        score_straight = (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) \
+            + (CFG['straight_2rows_bonus'] if straight2 else 0) \
+            + (CFG['straight_3rows_bonus'] if straight3 else 0)
+        score_single = CFG['single_left_bonus'] if single_left else 0
+        score_cons = CFG['consensus_full_bonus'] if cons_full else 0
+        score_hot = _hot_bonus(col, hot)
+        score_mirror = CFG['mirror_bonus'] if mirror else 0
+        score_len = extra_len_bonus
+        score_hidden = CFG.get('hidden3v_bonus', 0) if hidden3v_flag else 0
+        score_dom = 0.0
+        if dom_last:
+            score_dom += CFG.get('dominant_last_bonus', 0)
+            if len(cpat) == 3 and len(set(cpat)) == 2:
+                score_dom += CFG.get('dominant_double3_bonus', 0)
+            if straight:
+                score_dom += 0.5
+        if dom_pair:
+            score_dom += CFG.get('dominant_pair_bonus', 0)
 
         base = (
-            rowcov * CFG['vertical_coverage_per_row'] +
-            span * CFG['horizontal_span_per_col'] +
-            (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) +
-            (CFG['mirror_bonus'] if mirror else 0) +
-            (CFG['straight_2rows_bonus'] if straight2 else 0) +
-            (CFG['straight_3rows_bonus'] if straight3 else 0) +
-            extra_len_bonus +
-            (CFG['single_left_bonus'] if single_left else 0) +
-            (CFG['consensus_full_bonus'] if cons_full else 0) +
-            (CFG['hot_level_1_bonus'] * col_factor if hot == 1 else 0) +
-            (CFG['hot_level_2_bonus'] * col_factor if hot == 2 else 0) +
-            (CFG.get('dominant_last_bonus', 0) if dom_last else 0) +
-            (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0) +
-            (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat) == 3 and len(set(cpat)) == 2) else 0) +
-            (0.5 if (dom_last and straight) else 0) +
-            perm_bonus + repeat_bonus
+            score_cov
+            + score_hpr
+            + score_perm
+            + score_repeat
+            + score_straight
+            + score_single
+            + score_cons
+            + score_hot
+            + score_mirror
+            + score_dom
+            + score_len
+            + score_hidden
         )
+        # === AAT9-SCORE-CONTRACT: END (ROW) ===
 
         why = ['straight' if straight else 'boxed', f'cov{rowcov}']
         if span > 1:
-            why.append(f'span{span}')
+            why.append(f'hp_repeat{span}')
         if straight2:
             why.append('vstr2')
         if straight3:
@@ -300,6 +361,8 @@ def analyse(df: pd.DataFrame, section: str):
             why.append(f'perm{perm_count_in_box}')
         if repeat_extras_in_box > 0:
             why.append('repeat_extra')
+        if hidden3v_flag:
+            why.append('hidden3v')
 
         results.append(dict(
             section=sec,
@@ -322,9 +385,23 @@ def analyse(df: pd.DataFrame, section: str):
             hot=hot,
             perm_count_in_box=perm_count_in_box,
             repeat_extras_in_box=repeat_extras_in_box,
-            hp_span=span,
+            horizontal_persistence_repeat=span,
             orders_modal_value=orders_modal_value,
             orders_modal_rows=orders_modal_rows,
+            family_id=family_id,
+            hidden3v=hidden3v_flag,
+            score_cov=score_cov,
+            score_hpr=score_hpr,
+            score_perm=score_perm,
+            score_repeat=score_repeat,
+            score_straight=score_straight,
+            score_single=score_single,
+            score_cons=score_cons,
+            score_hot=score_hot,
+            score_mirror=score_mirror,
+            score_dom=score_dom,
+            score_len=score_len,
+            score_hidden=score_hidden,
             why='|'.join(why)
         ))
 
@@ -432,8 +509,13 @@ def main_cli():
       "section","Set","Draw","Column","Canonical","type","score","rows",
       "mirror","straight2","straight3","single_left",
       "cons_full","cons_3v","cons_stub",
-      "dom_last","dom_pair","perm_count_in_box","repeat_extras_in_box",
-      "hp_span","orders_modal_value","orders_modal_rows","hot","why"
+      "dom_last","dom_pair","family_id","hidden3v",
+      "perm_count_in_box","repeat_extras_in_box",
+      "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
+      "score_cov","score_hpr","score_perm","score_repeat","score_straight",
+      "score_single","score_cons","score_hot","score_mirror","score_dom",
+      "score_len","score_hidden",
+      "why"
     ]
     with open(args.csv,'w',newline='',encoding='utf-8') as fc:
         w=csv.DictWriter(fc,fieldnames=out_cols); w.writeheader()

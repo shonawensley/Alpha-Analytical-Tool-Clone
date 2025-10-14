@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: py-compile
         name: py_compile
-        entry: python scripts/hooks/py_compile.py
+        entry: python scripts/hooks/run_py_compile.py
         language: system
         types: [python]
       - id: pytest-smoke
@@ -11,3 +11,13 @@ repos:
         entry: python scripts/hooks/run_pytest_smoke.py
         language: system
         types: [python]
+      - id: aux-guard
+        name: aux canonical guard
+        entry: python scripts/hooks/validate_aux_draws.py
+        language: system
+        types: [python]
+      - id: check_contract
+        name: stable contract guard
+        entry: python scripts/hooks/check_contract.py
+        language: system
+        pass_filenames: false

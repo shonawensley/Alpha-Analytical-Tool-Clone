@@ -20,7 +20,7 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 
 ## 3) Implement (path‑safe)
 - Use `utils.path_handler` for all outputs.
-- Aux/BA read only `data/cleaned/*_draws.csv`; other tools read combined tables via helpers.
+- Aux/BA read only `data/cleaned/draws/*_draws.csv`; other tools read combined tables via helpers.
 - Positional Pressure lives under `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; keep it draws-only and isolated from combined-table pipelines.
 - Pure functions; avoid `os.chdir`; use `pathlib.Path` joins.
 - UI: soft‑fail (captions/warnings) instead of raising.
@@ -29,6 +29,8 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 - Compile: `python -m py_compile` on changed files.
 - Import probes for key modules (show `__file__`).
 - Smoke: `python scripts/checks/smoke_positional.py` when positional wiring changes.
+- Auxiliary guardrail: `powershell -NoProfile -File scripts/tools/validate_aux_all.ps1` after draw refreshes or Aux wiring changes; it fails fast if the canonical loader drifts.
+- Commits run the Aux pre-commit guard (`python scripts/hooks/validate_aux_draws.py`). Only bypass with `AAT9_SKIP_AUX_GUARD=1` in rare emergencies.
 - Optional: headless boot with log → `.codex/first_boot.log`.
 
 ## 5) Update Documentation (always)
@@ -59,12 +61,20 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
   - Risks/Follow‑ups
 
 ## 9) Trigger Phrase
-- “document and process” → Agents execute the Post‑Implementation Checklist and return a concise report with links.
+- “document and process” → Agents execute the Post-Implementation Checklist and return a concise report with links.
+
+## 10) Example-Driven Optimisation Loop
+- Run the tool on the chosen state(s) with training thresholds (e.g., `min_occ=1`, `min_score_to_highlight=7`) and save all artefacts to `artifacts/`.
+- Drop the three Combined/Midday/Evening input CSVs alongside the outputs so follow-up analysis can replay the exact run.
+- Log key observations in `docs/AAT9_KIT/AAT9_Analysis_Insights.md` (winners, section_count, progression, noteworthy features).
+- File the smallest follow-up tasks (feature additions, weight tweaks) with explicit file lists.
+- Add a regression test or hook entry for every new feature so the next batch run “just works.”
+- Repeat until the checklist for the tool is complete; only then tune winner-specific heuristics.
 
 ## 8) Golden Rules (AAT9)
 - Run from repo root; never rely on `C:\Windows\System32` defaults.
 - Never change remotes or repo config.
-- Keep BA draws‑only; don’t mix combined string‑tables with Aux/BA.
+- Keep BA draws-only; don’t mix combined string-tables with Aux/BA.
 - Keep changes reversible and documented.
 
 ### Dev Health (quick checks in UI)

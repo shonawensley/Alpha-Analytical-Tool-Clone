@@ -11,7 +11,9 @@ Script: `.codex/preflight.ps1`
 - Python interpreter path
 - Import file paths for:
   - `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`
-- `data/cleaned/*_draws.csv` inventory (first 20 shown)
+- Draw inventories for:
+  - `data/cleaned/draws/` (primary Aux/BA source)
+  - legacy `data/cleaned/` root (fallback only; should be empty in normal runs)
 - If `-State` provided: resolved CSV path and draw count for that state
 
 ## Example Output (abbrev.)
@@ -25,13 +27,13 @@ Imports:
   "modules.blackapple": ".../modules/blackapple.py",
   "modules.aux_loaders": ".../modules/aux_loaders.py",
   "alpha_analytical.stable": ".../alpha_analytical/stable/__init__.py" }
-data/cleaned inventory: 18
+draw inventory [data\cleaned\draws]: 18
  - Connecticut_draws.csv
  ...
 
 Selected state resolution:
 State: Connecticut4
-Source: data\cleaned\Connecticut_draws.csv
+Source: data\cleaned\draws\Connecticut_draws.csv
 Draws: 1000
 --------------------------------
 Tip: Use run_app.bat to launch the UI from repo root; it now runs scripts/tools/validate_aux_all.ps1 before Streamlit starts so doubles/pairs, repeat-watch, V-TRAC, sums, and shortlist outputs stay in sync.
@@ -39,7 +41,7 @@ Tip: Use run_app.bat to launch the UI from repo root; it now runs scripts/tools/
 
 ## Triage Tips
 - If imports point outside the repo: re‑launch from repo root (`run_app.bat`) or fix the active interpreter.
-- If draws inventory is empty: confirm CSVs exist under `data/cleaned/`.
+- If draws inventory is empty: confirm CSVs exist under `data/cleaned/draws/` (or re-run the Control Center Aux draws pipeline).
 - If a state doesn’t resolve: normalize the name (e.g., "Connecticut4" → base "Connecticut").
 - Aux windows/thresholds live in `core/aux_config.py`; if Aux captions or the Control Center Repeat Watch look off, sanity-check that SSOT before touching staged modules.
 

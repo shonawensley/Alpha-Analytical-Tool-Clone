@@ -1,0 +1,30 @@
+Recommended workflow to start a session
+
+Double‑click TOOLS\codex_run.bat (this opens Codex in the correct directory).
+
+When Codex prompts for input, paste the single‑line boot instruction:
+
+Read briefings\CODEX_READ_FIRST_AAT9.md and follow it exactly. Select model preset gpt‑5‑codex (High), run preflight + Dev Health, then reply: READY.
+
+
+That tells Codex to load the optimized startup guide. Do not paste the entire doc—Codex reads it itself.
+
+In a separate terminal, run the preflight script from the repo root:
+
+powershell -NoProfile -File .codex\preflight.ps1 -State "Connecticut4"
+
+
+This script checks your current working directory, Python interpreter, and draws CSV inventory. If it shows errors, fix them before continuing.
+
+Launch the app only when you need the Dev Health toggles:
+
+run_app.bat
+
+
+In the Streamlit UI, expand the “Dev Health” panels to see which modules and paths are loaded.
+
+Ensure Codex is set to gpt‑5‑codex, High reasoning via /status or /model commands. High reasoning is appropriate for complex wiring/refactoring tasks; use Medium only to save latency on routine edits.
+
+Work through your planned tasks. For each change, follow the Plan → Implement → Verify → Document steps, and update the unified changelog and checkpoint log when you complete something significant.
+
+By following this sequence and using the briefings/CODEX_READ_FIRST_AAT9.md as your single source of startup instructions, you avoid conflicting “read‑this” files and ensure Codex always operates with the highest reasoning level in the correct context.

@@ -1,0 +1,256 @@
+You’re not crazy—your Codex session really did leave things half‑patched and in a confused state. I went line‑by‑line through the log you pasted and here’s what it shows, what it means, and how to recover cleanly (with exact steps you can hand to a fresh Codex session).
+
+What the log proves (and why the app still “does nothing”)
+
+Edits didn’t land because Codex wasn’t in the repo root.
+You see repeated failures like:
+
+Get-Content src\app.py … path not found
+
+Select-String -Path modules\analyze_pairs.py … path not found
+
+Get-Content modules\aux_loaders.py … path not found
+
+Those happen when PowerShell’s CWD is C:\Users\User instead of C:\dev\Alpha-Analytical-Tool. So Codex thought it edited files, but most ops never touched your project. The log even shows Python checks failing to import core because src wasn’t on sys.path (again, wrong CWD).
+
+The Aux loader still points at the wrong directory.
+Your screenshots show the real draw CSVs live at data/cleaned/draws/ (e.g., Connecticut_draws.csv, Connecticut_Midday_draws.csv, Connecticut_Evening_draws.csv). The Aux page still says “No state data files found”, which means the code is still looking under data/cleaned/ (root) instead of data/cleaned/draws/. Your own repo docs say Aux/Control Center consume data/cleaned/*_draws.csv and do not read the Excel/string tables; the canonical loaders are in modules.aux_loaders.
+
+The “PAIRS_WINDOW unbound” error is a real bug, not a data issue.
+main() raised: cannot access local variable 'PAIRS_WINDOW' is a textbook Python scoping error: somewhere inside a function you reference PAIRS_WINDOW and also assign to it (or to a name that Python thinks is local). Python then treats it as a local and raises UnboundLocalError when you touch it before assignment. This is why your “Rescue boot path active” banner appears—Streamlit never reaches the real render.
+
+The staged/legacy Aux modules are still in play.
+The “Working modules unavailable or no draws found” message and the need for a sys.path “shim” tell me parts of the app still import the staged Aux code rather than the canonical modules/*. Your docs call out the canonical modules and the absolute‑path loaders used to avoid module‑name collisions; the log shows Codex attempted a “bootstrap_imports.ensure_ssot()” but never actually committed the change in src/app.py (again: wrong CWD).
+
+The 401/520 errors and “exceeded retry limit” are Codex connectivity/auth problems, not your app.
+Those lines are the Codex client failing to reach OpenAI. That explains the half‑done edits and why the session “forgot” what succeeded.
+
+Bottom line: you went in circles because (a) edits weren’t saved to your files, (b) Aux was still looking in the wrong directory, (c) a scoping bug kills the Aux page, and (d) staged modules sometimes win the import race.
+
+What to do right now (single pass, deterministic)
+
+Use this like a run‑book in a fresh Codex session. Every step has a verification so you know it stuck.
+
+0) Start clean & confirm you’re in the repo root
+cd C:\dev\Alpha-Analytical-Tool
+git status -sb
+
+
+You should see your branch and the working tree. If not, stop and fix the path.
+
+1) Lock the draws path (one source of truth)
+
+Goal: Aux/BA loaders should read data/cleaned/draws/*.csv first, with an optional legacy fallback to data/cleaned/.
+
+A. Add (or confirm) this helper
+
+utils/path_handler.py – add these if missing:
+
+from pathlib import Path
+
+def get_repo_root() -> Path:
+    here = Path(__file__).resolve()
+    for p in (here,) + tuple(here.parents):
+        if (p / "src").exists() and (p / "modules").exists():
+            return p
+    return here.parents[1]
+
+def get_data_dir() -> Path:
+    return get_repo_root() / "data"
+
+def get_cleaned_data_dir() -> Path:
+    return get_data_dir() / "cleaned"
+
+def get_cleaned_draws_dir() -> Path:
+    return get_cleaned_data_dir() / "draws"
+
+
+B. Make the loader use it
+
+modules/aux_loaders.py – minimal robust loader:
+
+from pathlib import Path
+import csv
+from utils.path_handler import get_cleaned_draws_dir, get_cleaned_data_dir
+
+def _normalize(label: str) -> str:
+    s = label.strip().replace(" ", "").replace("_", "")
+    return s[:-1] if s.endswith("4") else s  # Connecticut4 -> Connecticut
+
+def _names(name: str, variant: str):
+    v = variant.lower()
+    if v == "combined":
+        yield f"{name}_draws.csv"
+    elif v == "midday":
+        yield f"{name}_Midday_draws.csv"
+    elif v == "evening":
+        yield f"{name}_Evening_draws.csv"
+    else:
+        raise ValueError(f"unknown variant: {variant}")
+
+def _read_csv(path: Path):
+    out = []
+    with path.open("r", encoding="utf-8", newline="") as f:
+        for row in csv.reader(f):
+            if row:
+                s = row[0].strip()
+                if s:
+                    out.append(s)
+    return out
+
+def load_state_draws(state_label: str, variant: str = "combined"):
+    name = _normalize(state_label)
+    for root in (Path(get_cleaned_draws_dir()), Path(get_cleaned_data_dir())):  # new -> legacy
+        for fn in _names(name, variant):
+            p = root / fn
+            if p.exists():
+                return _read_csv(p), str(p)
+    # last-resort glob
+    for root in (Path(get_cleaned_draws_dir()), Path(get_cleaned_data_dir())):
+        hits = list(root.glob(f"{name}*draws*.csv"))
+        if hits:
+            p = hits[0]
+            return _read_csv(p), str(p)
+    return [], f"NOT FOUND: {state_label} ({variant})"
+
+
+Verify:
+
+python - <<'PY'
+import sys
+sys.path.insert(0, r"C:\dev\Alpha-Analytical-Tool\src")
+sys.path.insert(0, r"C:\dev\Alpha-Analytical-Tool")
+from modules.aux_loaders import load_state_draws
+for v in ("combined","midday","evening"):
+    draws, path = load_state_draws("Connecticut4", variant=v)
+    print(v, len(draws), path)
+PY
+
+
+Expected: non‑zero counts and paths under data\cleaned\draws\…. This matches the design that Aux/Control Center use the per‑state draw CSVs, not the Excel string tables.
+
+2) Fix the PAIRS_WINDOW UnboundLocal once and for all
+
+At the top of src/app.py (after any bootstrap), import defaults safely and never reassign the imported names inside functions:
+
+try:
+    from core.aux_config import (
+        PAIRS_WINDOW as DEFAULT_PAIRS_WINDOW,
+        VTRAC_INDEX_WINDOW as DEFAULT_VTRAC_INDEX_WINDOW,
+    )
+except Exception:
+    DEFAULT_PAIRS_WINDOW = 100
+    DEFAULT_VTRAC_INDEX_WINDOW = 1000
+
+
+Then, wherever Aux builds its windows, do this (outside of try/except, unconditionally):
+
+from modules.aux_loaders import load_state_draws
+draws, source = load_state_draws(state, variant=variant)  # variant: combined/midday/evening
+pairs_window = DEFAULT_PAIRS_WINDOW
+index_window = DEFAULT_VTRAC_INDEX_WINDOW
+draws_100  = draws[:pairs_window]
+draws_1000 = draws[:index_window]
+
+
+Never write to PAIRS_WINDOW/VTRAC_INDEX_WINDOW inside a function. Use locals (pairs_window, index_window) like above to avoid UnboundLocal.
+
+Verify: run Streamlit from the repo root:
+
+run_app.bat
+
+
+Aux page should no longer show the UnboundLocal crash (even if data is missing).
+
+3) Stop importing staged Aux modules at runtime
+
+Search for any import or path shims that reference the staged tree (e.g., scripts\auxiliary\working\...) or that dynamically mount “staged” packages. Remove them or guard them behind a dev‑only flag. Your architecture doc is explicit: pages must import the canonical modules: modules.aux_loaders, modules.blackapple, etc., and you launch via run_app.bat from the repo root.
+
+If you added a bootstrap like modules/bootstrap_imports.py with an ensure_ssot() that aliases old names to canonical ones, make sure it is actually imported in src/app.py (the previous session never saved it because CWD was wrong).
+
+Verify: In the Aux page’s “System Health” panel, print:
+
+cwd (should be the repo root),
+
+modules.aux_loaders.__file__ (under your repo),
+
+the resolved CSV path and counts for the currently selected variant.
+
+4) (Optional but recommended) fix the Streamlit expander nesting
+
+You saw earlier that nested expanders can crash newer Streamlit builds. Replace inner st.expander blocks with st.container() + st.checkbox toggles. This avoids a pre‑render exception that masks deeper causes.
+
+5) One‑click validation you can trust
+
+Add a tiny dev script so you don’t need Codex to tell you if Aux is healthy:
+
+scripts\dev\check_aux.py:
+
+import sys
+sys.path.insert(0, r"C:\dev\Alpha-Analytical-Tool\src")
+sys.path.insert(0, r"C:\dev\Alpha-Analytical-Tool")
+from modules.aux_loaders import load_state_draws
+from modules.vtrac_reference import get_vtrac_index
+from modules.analyze_pairs import get_vtrac_statuses
+
+state = "Connecticut4"
+for v in ("combined","midday","evening"):
+    draws, path = load_state_draws(state, variant=v)
+    d100 = draws[:100]
+    d1000 = draws[:1000]
+    print(f"{v:8} n={len(draws)} path={path}")
+    print("vtrac_status_len:", len(get_vtrac_statuses(d100, d1000)))
+
+
+Run:
+
+python scripts\dev\check_aux.py
+
+
+This bypasses Streamlit and tells you, conclusively, whether the loader and 100/1000 windows bind.
+
+Why the Python path looked “outside the project”
+
+sys.executable pointing at C:\Users\User\AppData\Local\Programs\Python\Python313\python.exe is normal—that’s the interpreter, not your code. The project files should be imported from your repo; they don’t live inside the Python install. If you prefer isolation, create a venv:
+
+py -3.13 -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+run_app.bat
+
+
+Your docs also recommend launching with run_app.bat (pushd to repo root), which ensures imports resolve to in‑repo modules.
+
+Why you kept going in circles
+
+Codex lost connectivity (401/520) and ran commands from the wrong directory, so its edits didn’t touch your files.
+
+The loader continued to look in the legacy folder, so Aux said “no files” even though your CSVs are present under data/cleaned/draws/. The canonical contract is clear about using data/cleaned/*_draws.csv for Aux/BA.
+
+An UnboundLocal bug in src/app.py made the Aux page crash as soon as it tried to compute windows.
+
+A staged import path sometimes beat the canonical modules, re‑introducing the bugs.
+
+Hand this “ready‑to‑run” checklist to your next Codex session
+
+Confirm CWD: cd C:\dev\Alpha-Analytical-Tool && git status -sb.
+
+Add/confirm get_cleaned_draws_dir() in utils/path_handler.py.
+
+Patch modules/aux_loaders.py with the loader shown above.
+
+Guard constants in src/app.py (use DEFAULT_* names; do not reassign imports).
+
+Remove staged shims; ensure src/app.py imports canonical modules (optional: call ensure_ssot() if you keep a bootstrap).
+
+(Optional) de‑nest any expanders on Aux.
+
+Run python scripts\dev\check_aux.py → see non‑zero lengths and paths under data\cleaned\draws\….
+
+Launch app: run_app.bat → Aux “System Health” should show the same CSV path and counts; run analysis without errors.
+
+Commit: git add -A && git commit -m "Aux: canonical draws dir, UnboundLocal fix, staged imports removed".
+
+Follow that exactly and you’ll stop the “no files / unbound window” loop for good. And yes—based on the repo docs and the BA guide, this brings Aux/Control Center back in line with the intended contracts (draws CSVs from data/cleaned and canonical imports under modules/…).
+
+If you want, I can also draft a tiny “preflight” Streamlit section that prints the resolved draws directory and first 3 filenames—so any time something drifts, you’ll see it instantly without reading logs.

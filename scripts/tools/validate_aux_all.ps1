@@ -7,13 +7,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "[Aux validation] Checking doubles/pairs..."
-python scripts/tools/validate_aux_doubles.py $DoubleStates --max-n 1000 | Write-Host
+function Invoke-AuxValidationCommand {
+    param(
+        [string]$Message,
+        [string[]]$CommandArgs
+    )
 
-Write-Host "[Aux validation] Checking repeat-watch / positional shortlist..."
-python scripts/tools/validate_aux_repeat.py $RepeatStates --max-n 1000 --window 150 --shortlist-limit 5 | Write-Host
+    Write-Host $Message
+    Write-Host ("Command: python {0}" -f ($CommandArgs -join ' '))
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $output = & python @CommandArgs 2>&1
+    $exitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousPreference
+    $output | ForEach-Object { Write-Host $_ }
+    if ($exitCode -ne 0) {
+        throw "Aux validation command failed: $($CommandArgs -join ' ')"
+    }
+}
 
-Write-Host "[Aux validation] Checking V-TRAC overlays / heatboard / sums..."
-python scripts/tools/validate_aux_vtrac.py $VtracStates --max-n 1000 --window 150 --limit 10 | Write-Host
+Invoke-AuxValidationCommand -Message "[Aux validation] Checking doubles/pairs..." -CommandArgs (@("scripts/tools/validate_aux_doubles.py") + $DoubleStates + @("--max-n", "1000"))
+
+Invoke-AuxValidationCommand -Message "[Aux validation] Checking repeat-watch / positional shortlist..." -CommandArgs (@("scripts/tools/validate_aux_repeat.py") + $RepeatStates + @("--max-n", "1000", "--window", "150", "--shortlist-limit", "5"))
+
+Invoke-AuxValidationCommand -Message "[Aux validation] Checking V-TRAC overlays / heatboard / sums..." -CommandArgs (@("scripts/tools/validate_aux_vtrac.py") + $VtracStates + @("--max-n", "1000", "--window", "150", "--limit", "10"))
 
 Write-Host "[Aux validation] All checks completed."

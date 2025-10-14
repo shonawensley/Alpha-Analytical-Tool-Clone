@@ -37,6 +37,9 @@ def test_write_training_bundle(tmp_path):
     spotlight_fam_path = state_dir / f"{state}_winner_family_spotlight_families.csv"
     pd.DataFrame({"family_id": [5], "family_score": [8]}).to_csv(spotlight_fam_path, index=False)
 
+    metrics_path = state_dir / f"{state}_metrics.json"
+    metrics_path.write_text('{"state": "TestState"}', encoding="utf-8")
+
     info = write_training_bundle(
         state=state,
         stamp="20250621",
@@ -46,6 +49,7 @@ def test_write_training_bundle(tmp_path):
         families_path=families_path,
         spotlight_raw_path=spotlight_raw_path,
         spotlight_family_path=spotlight_fam_path,
+        metrics_path=metrics_path,
         winners=["059"],
     )
 
@@ -62,6 +66,11 @@ def test_write_training_bundle(tmp_path):
     assert manifest["stats"]["total_patterns"] == 2
     assert manifest["stats"]["section_counts"] == {"Combined": 1, "Midday": 1}
     assert set(manifest["stats"]["family_ids"]) == {5, 34}
+    metrics_entry = manifest["files"]["metrics_json"]
+    assert metrics_entry is not None
+    metrics_entry_path = Path(metrics_entry)
+    assert metrics_entry_path.parts[0] == "artifacts"
+    assert metrics_entry_path.name == metrics_path.name
 
     artifacts_dir = bundle_dir / "artifacts"
     copied_files = {p.name for p in artifacts_dir.iterdir()}
@@ -71,5 +80,6 @@ def test_write_training_bundle(tmp_path):
         families_path.name,
         spotlight_raw_path.name,
         spotlight_fam_path.name,
+        metrics_path.name,
     }
     assert expected.issubset(copied_files)

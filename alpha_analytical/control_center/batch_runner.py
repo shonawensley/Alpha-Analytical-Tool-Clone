@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import re
 import unicodedata
 
 from pathlib import Path
+
+import pandas as pd
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from utils import path_handler as ph
 
@@ -227,6 +229,27 @@ def run_stable_bundles(
                     "csv": csv_path,
                 }
             )
+            attrs = getattr(df, "attrs", {})
+            metrics_data = attrs.get("metrics")
+            metrics_path = attrs.get("metrics_path")
+            if metrics_data:
+                record["metrics"] = metrics_data
+            if metrics_path:
+                record["metrics_path"] = metrics_path
+            families_path = attrs.get("families_path")
+            if winners and csv_path:
+                try:
+                    from alpha_analytical.stable.winners_enrich import attach_stable_evidence
+
+                    winners_frame = pd.DataFrame([{"Winner": w} for w in winners])
+                    evidence_df = attach_stable_evidence(
+                        winners_frame,
+                        families_path=families_path,
+                        scores_path=csv_path,
+                    )
+                    record["winners_evidence"] = evidence_df.to_dict(orient="records")
+                except Exception:  # pragma: no cover - defensive; evidence is supplemental
+                    pass
             if write_bundle:
                 bundle_info = getattr(df, "attrs", {}).get("training_bundle")
                 if bundle_info:

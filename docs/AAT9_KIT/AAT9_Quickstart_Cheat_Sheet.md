@@ -6,14 +6,14 @@
   - CWD is repo root
   - Python path
   - Import sources for `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`
-  - `data/cleaned/*_draws.csv` inventory and selected state resolution
+  - Draw inventory lines for `data/cleaned/draws` (should be non-zero) and selected state resolution
 
 ## Launch the App
 - `run_app.bat` (runs `streamlit run src\app.py` from repo root)
 - Dev tip: keep the in-app "System Health" expander available to debug path drift.
 
 ## Data Sources by Page
-- Aux / Blackapple: `data/cleaned/*_draws.csv` (draws-only)
+- Aux / Blackapple: `data/cleaned/draws/*_draws.csv` (draws-only; Combined/Midday/Evening all live here)
 - Variant support: Combined / Midday / Evening. Use `modules.aux_loaders.load_state_draws(state, variant)`; Control Center and the Aux page surface all available variants.
 - V-TRAC / Stable / Digit Reduction: combined tables via `utils.path_handler` under `tables/` or `data/outputs/tables/<STATE>/`
 
@@ -28,7 +28,9 @@
 ## Common Checks
 - If a page shows "missing data": ensure the expected directory exists (per above contracts).
 - If BA shows import issues: verify `modules/blackapple.py` path in System Health.
-- If Aux state draws empty: verify `data/cleaned/<State>_draws.csv` (preflight lists inventory).
+- If Aux state draws empty: verify `data/cleaned/draws/<State>_draws.csv` (preflight lists inventory) and rerun `scripts/tools/validate_aux_all.ps1`.
+- After any draws refresh or CSV edit, run `scripts/tools/validate_aux_all.ps1` from repo root; it fails fast if the Aux loaders drift from the canonical directory.
+- Commits automatically run the Aux guard (`python scripts/hooks/validate_aux_draws.py`). Only bypass in emergencies via `AAT9_SKIP_AUX_GUARD=1` before `git commit`.
 
 ## Useful Paths & Helpers
 - `utils.path_handler` - canonical path helpers for outputs/analysis/tables

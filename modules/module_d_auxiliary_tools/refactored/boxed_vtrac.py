@@ -61,7 +61,13 @@ def generate_boxed_vtrac_table(draws: List[str]) -> pd.DataFrame:
     if not draws:
         logger.warning("No draws provided for V-TRAC table generation")
         print("[DEBUG] No draws provided - returning empty DataFrame")
-        return pd.DataFrame(columns=['Index', 'Singles', 'Doubles'])
+        return pd.DataFrame(
+            {
+                'Index': range(1, 36),
+                'Singles': [''] * 35,
+                'Doubles': [''] * 35,
+            }
+        )
     
     try:
         # Use last 100 draws for overdue logic; last 1000 for underline checks

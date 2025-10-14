@@ -46,9 +46,25 @@ try {
 # Draws CSV inventory
 $cleaned = Join-Path (Get-Location) 'data/cleaned'
 if (Test-Path $cleaned) {
-  $csvs = Get-ChildItem $cleaned -Filter '*_draws.csv' -ErrorAction SilentlyContinue
-  Write-Host ("data/cleaned inventory: " + ($csvs | Measure-Object).Count)
-  $csvs | Select-Object -First 20 | ForEach-Object { ' - ' + $_.Name }
+  $drawsDir = Join-Path $cleaned 'draws'
+  $drawDirs = @()
+  if (Test-Path $drawsDir) { $drawDirs += (Resolve-Path $drawsDir).Path }
+  if (Test-Path $cleaned) { $drawDirs += (Resolve-Path $cleaned).Path }
+  $drawDirs = $drawDirs | Select-Object -Unique
+  if ($drawDirs.Count -eq 0) {
+    Write-Warning 'No draw directories found under data/cleaned.'
+  } else {
+    foreach ($dir in $drawDirs) {
+      $csvs = Get-ChildItem $dir -Filter '*_draws.csv' -ErrorAction SilentlyContinue
+      $label = if ($dir.StartsWith((Get-Location).Path, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $dir.Substring((Get-Location).Path.Length).TrimStart('\')
+      } else {
+        $dir
+      }
+      Write-Host ("draw inventory [" + $label + "]: " + ($csvs | Measure-Object).Count)
+      $csvs | Select-Object -First 20 | ForEach-Object { ' - ' + $_.Name }
+    }
+  }
 } else {
   Write-Warning 'data/cleaned not found.'
 }

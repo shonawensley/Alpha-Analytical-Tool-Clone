@@ -1,0 +1,333 @@
+I read your Codex log as your lead architect (not as a passive reviewer). Here’s a tight, actionable “GO packet” you can hand to Codex now. It confirms what is done, calls out the few things to fix/lock, and lays down precise Phase‑2 implementation specs with insertion points and mini‑diffs. This keeps momentum fast and safe.
+
+✅ Phase‑1 — Final Acceptance (with 4 small corrections)
+
+What Phase‑1 delivered (and is wired correctly):
+
+Row payload (alpha_analytical/stable/__init__.py)
+
+family_id added per row via derive_vtrac_index_for_canonical(..., get_vtrac_index).
+
+Rename carried through: span → horizontal_persistence_repeat (and hp_repeatN in why).
+
+Modal straight logic + permutation density + repeat extras + richer debug columns intact.
+
+Family post‑pass (alpha_analytical/stable/post_pass_families.py)
+
+Deterministic rep‑3 mapping, aggregation per (section, Set, Draw, Column, family_id).
+
+New: section_count, progression_flag, explicit last_remaining_3v (rightmost stable column survivor) and their weights.
+
+V‑TRAC guardrail (modules/vtrac_reference.py)
+
+Order of resolution: direct → permutation → V‑class fallback.
+
+277/227 reliably resolve to Index 26; pure triples (000,111,…) remain suppressed (None).
+
+Regression tests added.
+
+Guardrails & doc loop
+
+Pre‑commit now green (py‑compile wrapper renamed), pytest smoke + Aux guard pass.
+
+Optimization loop captured in KIT docs.
+
+Small corrections to apply now (quick):
+
+Restore dropped family terms (a refactor clipped a few lines):
+
+In post_pass_families.py inside the first family score sum (before section/progression/last‑remaining adds), ensure these are present:
+
+fam_score = (
+    rows_cov * cfg["vertical_coverage_per_row"]
+    + gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+    + max(0, gg["perm_count_in_box"]-1) * cfg["perm_density_per_extra"]
+    + gg["repeat_extras_in_box"] * cfg["repeat_count_per_extra"]
+    + (cfg["consensus_family_bonus"] if gg["any_consensus"] else 0)
+    + (cfg["hotzone_family_bonus"] if hot_density >= 0.5 else 0)
+    + (cfg["straight_2rows_bonus"] if gg["any_straight2"] else 0)
+    + (cfg["straight_3rows_bonus"] if gg["any_straight3"] else 0)
+)
+
+
+Phase‑1 diffs showed these three lines were dropped during rename. Put them back.
+
+Only award last_remaining_3v_bonus where last_remaining_3v == True
+You already compute the explicit flag; do not award via any_dom_last any more (removes double counting).
+
+Initialize lookups cleanly in modules/vtrac_reference.py
+In initialize_vtrac_lookup(), clear both BOXED_LABEL_LOOKUP and INDEX_BY_VTRAC before rebuilding:
+
+VTRAC_LOOKUP.clear()
+BOXED_LABEL_LOOKUP.clear()
+INDEX_BY_VTRAC.clear()
+
+
+(Codex partially addressed this—make sure both maps are cleared.)
+
+Docs key rename sweep
+Replace any lingering horizontal_span_per_col references with horizontal_persistence_repeat_bonus in:
+
+docs/AAT9_KIT/important/*stable* notes
+
+any TASK/FIX docs that still mention the old key
+
+Training thresholds (lock them):
+
+In alpha_analytical/stable/feature_config.yml:
+
+min_score_to_highlight: 7     # training profile
+
+
+Keep wrapper default min_occ = 1 for training runs (you already did that).
+
+🛡️ Regression Shield (do this once; protects against future feature loss)
+
+The point is: we never lose working features again unless explicitly approved. Codex should implement these guardrails now, alongside the fixes above.
+
+A) Row‑level score parts (schema contract)
+
+File: alpha_analytical/stable/__init__.py
+Right before assembling results.append(...), compute and emit part scores:
+
+score_cov   = rowcov * CFG['vertical_coverage_per_row']
+score_hpr   = span * CFG['horizontal_persistence_repeat_bonus']
+score_perm  = max(0, perm_count_in_box-1) * CFG.get('perm_density_per_extra', 0)
+score_repeat= repeat_extras_in_box * CFG.get('repeat_count_per_extra', 0)
+score_stra  = (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) \
+              + (CFG['straight_2rows_bonus'] if straight2 else 0) \
+              + (CFG['straight_3rows_bonus'] if straight3 else 0)
+score_hot   = _hot_bonus(col, hot)
+score_dom   = (CFG.get('dominant_last_bonus', 0) if dom_last else 0) \
+              + (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0) \
+              + (CFG.get('dominant_double3_bonus', 0) if (dom_last and len(cpat)==3 and len(set(cpat))==2) else 0)
+score_mirr  = (CFG['mirror_bonus'] if mirror else 0)
+score_cons  = (CFG['consensus_full_bonus'] if cons_full else 0)
+score_len   = extra_len_bonus
+
+base = score_cov + score_hpr + score_perm + score_repeat + score_stra \
+       + score_hot + score_dom + score_mirr + score_cons + score_len
+
+
+Then include these in the CSV:
+
+out_cols = [
+  "section","Set","Draw","Column","Canonical","type","score","rows",
+  "mirror","straight2","straight3","single_left",
+  "cons_full","cons_3v","cons_stub",
+  "dom_last","dom_pair","family_id",
+  "perm_count_in_box","repeat_extras_in_box","horizontal_persistence_repeat",
+  "orders_modal_value","orders_modal_rows","hot",
+  "score_cov","score_hpr","score_perm","score_repeat","score_stra",
+  "score_hot","score_dom","score_mirr","score_cons","score_len",
+  "why"
+]
+
+B) Family‑level score parts (schema contract)
+
+File: alpha_analytical/stable/post_pass_families.py
+When building out.append({...}), also compute and emit fam_ parts* (mirrors row parts concept):
+
+fam_cov   = rows_cov * cfg["vertical_coverage_per_row"]
+fam_hpr   = gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+fam_perm  = max(0, gg["perm_count_in_box"]-1) * cfg["perm_density_per_extra"]
+fam_repeat= gg["repeat_extras_in_box"] * cfg["repeat_count_per_extra"]
+fam_cons  = (cfg["consensus_family_bonus"] if gg["any_consensus"] else 0)
+fam_hot   = (cfg["hotzone_family_bonus"] if hot_density >= 0.5 else 0)
+fam_stra2 = (cfg["straight_2rows_bonus"] if gg["any_straight2"] else 0)
+fam_stra3 = (cfg["straight_3rows_bonus"] if gg["any_straight3"] else 0)
+
+family_score = fam_cov + fam_hpr + fam_perm + fam_repeat + fam_cons + fam_hot + fam_stra2 + fam_stra3
+
+
+Include these columns in the families CSV:
+
+fam_cov,fam_hpr,fam_perm,fam_repeat,fam_cons,fam_hot,fam_stra2,fam_stra3
+
+
+Then, in the second pass, add:
+
+section_count terms:
+
+family_score += max(0, section_count - 1) * cfg.get("vtrac_family_presence", 1)
+family_score += (cfg.get("cross_section_triple", 2) if section_count == 3 else 0)
+
+
+progression_flag term:
+
+family_score += (cfg.get("progression_across_sets", 1) if progression_flag else 0)
+
+
+last_remaining_3v_bonus only where last_remaining_3v == True.
+
+C) Output schema tests
+
+File: tests/test_output_schema.py
+
+Assert row CSV has:
+
+family_id, horizontal_persistence_repeat, perm_count_in_box, repeat_extras_in_box,
+score_cov, score_hpr, score_perm, score_repeat, score_stra, score_hot, score_dom, score_mirr, score_cons, score_len
+
+
+Assert families CSV has:
+
+family_id, family_score, section_count, progression_flag, last_remaining_3v,
+fam_cov, fam_hpr, fam_perm, fam_repeat, fam_cons, fam_hot, fam_stra2, fam_stra3
+
+D) Feature‑config schema test
+
+File: tests/test_feature_config_schema.py
+Load YAML and assert presence of all keys used in code (list from the plan above). Fail loudly if any are missing.
+
+E) “Why” token lint
+
+File: tests/test_why_tokens.py
+
+If horizontal_persistence_repeat > 1 → why contains hp_repeatN.
+
+If straight2==True → why contains vstr2; if straight3==True → vstr3.
+
+If cons_full==True → cons_full in why.
+
+F) Contract guard hook (pre‑commit)
+
+Files:
+
+scripts/hooks/check_contract.py — scan staged diffs; fail if it detects removal of any of the mandatory CSV columns or YAML keys, or if it finds the score‑contract markers removed.
+
+.pre-commit-config.yaml — add the hook after run_py_compile:
+
+-   repo: local
+    hooks:
+    -   id: score_contract_guard
+        name: score_contract_guard
+        entry: python scripts/hooks/check_contract.py
+        language: system
+
+
+Wrap the score blocks in both files with markers so the hook can detect accidental deletions:
+
+# === AAT9-SCORE-CONTRACT: BEGIN (ROW) ===
+# ... part-score assembly & base = ...
+# === AAT9-SCORE-CONTRACT: END (ROW) ===
+
+# === AAT9-SCORE-CONTRACT: BEGIN (FAMILY) ===
+# ... fam_* parts & initial family_score ...
+# === AAT9-SCORE-CONTRACT: END (FAMILY) ===
+
+G) Metrics writer (tiny, but invaluable)
+
+After each Stable run, emit <STATE>_metrics.json next to artifacts with:
+
+winner family IDs,
+
+best rank of each winner family in families.csv,
+
+best rank of any exact straight row,
+
+spotlight rates,
+
+hot‑density mean for top‑10 families,
+
+compression ratio (families rows / raw rows).
+
+This becomes our batch QA “receipt” and helps you spot regressions at a glance.
+
+🚀 Phase‑2 Features (implement right after the shield)
+1) Consensus ⇒ doubles trigger (family‑level)
+
+File: alpha_analytical/stable/post_pass_families.py
+When a family box has any_consensus == True, generate double candidates and check near‑box support.
+
+Heuristic (simple and effective):
+
+Let the consensus tail be the 2‑digit string tracked in your consensus box logic (e.g., 'ab').
+
+Define two peg digits: a and b (use the last digit if you want just one peg).
+
+Build the set of boxed doubles canonicals for each peg: {a,a,x} and {b,b,x} for all x ∈ 0..9\{peg}.
+
+Map each canonical to family_id and test presence in the same box or adjacent columns (±1).
+
+If any present → set any_doubles_support=True and add cfg['doubles_trigger_bonus'].
+
+Additions:
+
+YAML: doubles_trigger_bonus: 1
+
+families CSV: any_doubles_support (bool) and (optionally) fam_doubles score part.
+
+2) Hidden‑by‑one detector (row‑level)
+
+File: alpha_analytical/stable/__init__.py
+Inside find_subs_with_counts loop, also slide a length‑4 window; if its V‑class count ≤ 3, check all of its 3‑digit sub‑windows:
+
+If any sub‑window maps to the same family as the current row’s Canonical, mark hidden3v=True and add a small bonus.
+
+Additions:
+
+YAML: hidden3v_bonus: 0.5
+
+Rows CSV: hidden3v (bool) and include score_len already accounts for extra chars; add score_hidden = CFG.get('hidden3v_bonus',0) into row base as a supportive term.
+
+Why: append hidden3v.
+
+Sketch:
+
+def _is_hidden_3v(raw: str, canon: str) -> bool:
+    L = len(raw)
+    for i in range(L-3):
+        w = raw[i:i+4]
+        if not is_3value(w): continue
+        for j in ((0,1,2),(0,1,3),(0,2,3),(1,2,3)):
+            sub = ''.join(w[k] for k in j)
+            if is_3value(sub):
+                if derive_vtrac_index_for_canonical(canon, get_vtrac_index) == \
+                   derive_vtrac_index_for_canonical(canon(sub), get_vtrac_index):
+                    return True
+    return False
+
+
+Call this where you compute extra_len_bonus; if True: score_hidden = CFG.get('hidden3v_bonus',0) and why.append('hidden3v').
+
+3) Tiny tests for the new features
+
+tests/test_stable_consensus_doubles.py — craft a minimal dataframe with a consensus box and a known double present at Col±1 → expect any_doubles_support=True and family score delta equals doubles_trigger_bonus.
+
+tests/test_stable_hidden3v.py — fabricate a cell with a 4‑digit ≤3‑class window containing a 3‑digit sub‑window that maps to the same family. Expect hidden3v==True, bonus applied, and why token present.
+
+Update golden fixture to include the new columns.
+
+📦 Run & Verify (what to do after Codex lands the above)
+
+Pre‑commit should pass (py‑compile, pytest, Aux guard, score_contract_guard).
+
+Run Stable on CT, DE, IN (min_occ=1; min_score=7).
+For each state check:
+
+families.csv contains section_count, progression_flag, last_remaining_3v, all fam_* parts, and (now) any_doubles_support.
+
+scores.csv contains all score_* parts, family_id, hidden3v if triggered.
+
+<STATE>_metrics.json exists with the metrics above.
+
+Update docs/AAT9_KIT/AAT9_Analysis_Insights.md with 3 bullets per state (winner family best rank, any straight3, spotlight rate).
+
+Add a Changelog entry for Phase‑2 (brief impact + file list).
+
+A word on the triples question (final clarity)
+
+Pure triples (000, 111, …): remain intentionally unmapped (return None) because we don’t wager them.
+
+Double‑3 cases (e.g., 277): map via normal lookup (and are additionally safe via the V‑class fallback). Your Index 26 “333” → Doubles ["227","277"] mapping is exactly what we want—and is now guaranteed.
+
+Bottom line
+
+Phase‑1: accepted; apply the 4 small corrections.
+
+Regression Shield: add now (score parts, schema tests, contract hook, metrics). This is your insurance policy against future “feature drift.”
+
+Phase‑2: ship consensus→doubles and hidden‑by‑one, with their tests and YAML knobs.
+
+If you want, I can also provide drop‑in code blocks for each Phase‑2 function (ready‑to‑paste, with import lines). But the spec above has exact files, logic, and field names so Codex can implement cleanly and quickly.

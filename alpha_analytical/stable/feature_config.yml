@@ -1,36 +1,43 @@
+# Stable Pattern Extractor Weights (AAT9)
+#
+# These tuning parameters feed the row-level scorer (alpha_analytical/stable/__init__.py)
+# and the family post-pass aggregator (alpha_analytical/stable/post_pass_families.py).
+# Keep keys stable; regression guards reference this schema.
 
-# existing keys (tuned)
+# Row scoring weights
 vertical_coverage_per_row: 2
-horizontal_span_per_col:   1      # shown in UI as "horizontal_persistence"
-mirror_bonus:              1
+horizontal_persistence_repeat_bonus: 1   # surfaced as "horizontal_persistence" in UI
+mirror_bonus: 1
 
-baseline_straight_bonus:   3      # +1
-baseline_boxed_bonus:      1
+baseline_straight_bonus: 3
+baseline_boxed_bonus: 1
 
-straight_2rows_bonus:      2      # +1
-straight_3rows_bonus:      4      # +1
+straight_2rows_bonus: 2
+straight_3rows_bonus: 4
 
-extra_digit_per_char:      1
-single_left_bonus:         4
+extra_digit_per_char: 1
+single_left_bonus: 4
 
-consensus_full_bonus:      4
-stub_consensus_score:      4
+consensus_full_bonus: 4
+stub_consensus_score: 4
 
-hot_level_1_bonus:         1
-hot_level_2_bonus:         2
+hot_level_1_bonus: 1
+hot_level_2_bonus: 2
 
-dominant_last_bonus:       3      # +1
-dominant_pair_bonus:       1
-dominant_double3_bonus:    1
+dominant_last_bonus: 3
+dominant_pair_bonus: 1
+dominant_double3_bonus: 1
 
-min_score_to_highlight:    7      # -1 for training runs
+min_score_to_highlight: 7   # training profile (Combined baseline)
 
-# NEW keys (used now or by post-pass)
-perm_density_per_extra:    1
-repeat_count_per_extra:    0.5
-vtrac_family_presence:     1
-cross_section_triple:      2
-progression_across_sets:   1
-last_remaining_3v_bonus:   3
-consensus_family_bonus:    2
-hotzone_family_bonus:      1
+# Family / aggregation weights
+perm_density_per_extra: 1
+repeat_count_per_extra: 0.5
+vtrac_family_presence: 1
+cross_section_triple: 2
+progression_across_sets: 1
+last_remaining_3v_bonus: 3
+consensus_family_bonus: 2
+hotzone_family_bonus: 1
+doubles_trigger_bonus: 1
+hidden3v_bonus: 0.5

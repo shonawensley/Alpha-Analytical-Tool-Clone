@@ -1,3 +1,8 @@
+## 2025-10-12 - Aux canonical draws guardrail
+- Impact: Canonicalised Aux and Control Center draw loading through `modules.aux_loaders.load_state_draws`, removed staged fallbacks, and patched the V-TRAC overlay to reuse cached draw windows so the Aux page no longer crashes when staged modules disappear.
+- Impact: Added regression coverage that asserts live data resolves under `data/cleaned/draws`, updated workflow docs, and standardised the Aux validation harness as the go-to guardrail after draw refreshes.
+- Files: src/app.py, tests/test_aux_loader_canonical_paths.py, docs/AAT9_KIT/{AAT9_Quickstart_Cheat_Sheet.md,AAT9_Workflow_Standard.md,AAT9_Unified_Changelog.md}, scripts/checks/smoke_positional.py, .codex/preflight.ps1.
+
 ## 2025-10-10 - Digit Reduction batch workflow\n- Impact: Control Center batch workflow can now refresh Digit Reduction outputs, build Analyzer V2 overlays, and optionally assemble Digit Reduction training bundles alongside the winners logger and Stable pipeline so all auxiliary artefacts stay in sync.\n- Impact: Added batch runner helpers and Streamlit toggles covering reducer/overlay/analyzer/bundle steps plus mirror controls; UI now surfaces per-state artefact links and guards missing tables.\n- Impact: Hardened Analyzer V2 own_vs_combined to treat empty cores as False, preventing ValueErrors during class-triple runs.\n- Impact: Added regression coverage for the batch workflow scaffolding and the pivot guard.\n- Files: alpha_analytical/control_center/batch_runner.py, src/app.py, alpha_analytical/digit_reduction/analyzer_v2/pivot.py, tests/test_control_center_batch_runner.py, tests/test_digit_reduction_overlay.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Workflow_Standard.md,AAT9_Quickstart_Cheat_Sheet.md,AAT9_Unified_Changelog.md}, briefings/CODEX_READ_FIRST_AAT9.md.\n\n## 2025-10-10 - Aux double/pair validation harness\n- Impact: Added aux_validation helpers and a CLI to recompute double and pair draws-since per variant directly from the draws CSVs, making it easy to cross-check Control Center badges and pair severity.\n- Impact: New unit tests cover thresholds, variant overlap, family badge extraction, and pair severity so regressions are caught automatically.\n- Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_doubles.py, tests/test_aux_validation.py.
 - Impact: Added repeat-watch and positional hard-due validators plus a CLI so streak summaries and hard-due tags can be replayed directly from CSVs without launching Streamlit.\n- Impact: Extended unit coverage to lock repeat streak metrics and hard-due tagging against the acceptance fixtures.\n- Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_repeat.py, tests/test_aux_validation.py.
 - Impact: Introduced V-TRAC overlay/heatboard and sums validators plus a CLI so Control Center overlays can be cross-checked directly from the CSVs.
@@ -101,3 +106,24 @@
 ## 2025-10-11 - Aux canonical draw loader & module cleanup
 - Impact: Locked Aux/BA/Control Center draw resolution to `data/cleaned/draws/`, vendored the working analyze_pairs / vtrac_reference modules, flattened the remaining expander, and bound the 360/1000 windows via safe defaults. Aux now renders without staged fallbacks and the red tier returns consistently.
 - Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.
+
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.

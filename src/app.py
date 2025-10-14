@@ -98,6 +98,7 @@ from core.module_b_digit_reduction import run_digit_reduction
 from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle
 from alpha_analytical.digit_reduction.analyzer_v2.training_bundle import TrainingBundleError
 from utils.path_handler import get_tables_output_dir, get_analysis_output_dir
+from core.vtrac_family_ranker import rank_double_families as _core_rank_double_families
 try:
     from core.aux_config import (
         PAIRS_WINDOW as DEFAULT_PAIRS_WINDOW,
@@ -169,6 +170,63 @@ from modules.bootstrap_imports import ensure_ssot
 
 # Ensure canonical module bindings (avoids staged auxiliary imports)
 ensure_ssot()
+
+# Canonical module handles (paths surfaced in Dev Health later)
+try:
+    import modules.aux_loaders as _AUX_LOADERS_MODULE  # type: ignore
+
+    CANONICAL_LOAD_STATE_DRAWS = getattr(_AUX_LOADERS_MODULE, "load_state_draws", None)
+    AUX_LOADERS_MODULE_PATH = getattr(_AUX_LOADERS_MODULE, "__file__", "")
+except Exception:
+    CANONICAL_LOAD_STATE_DRAWS = None
+    AUX_LOADERS_MODULE_PATH = None
+
+try:
+    import modules.analyze_pairs as _AUX_ANALYZE_MODULE  # type: ignore
+    from modules.analyze_pairs import (  # type: ignore
+        calculate_overdue_pairs,
+        get_top_overdue_repeating_pairs,
+        get_vtrac_statuses,
+        get_doubles_history,
+        build_aux_windows,
+        COLOR_LATE,
+        COLOR_VERY_LATE,
+        COLOR_PENDING,
+    )
+
+    AUX_ANALYZE_MODULE_PATH = getattr(_AUX_ANALYZE_MODULE, "__file__", "")
+    AUX_ANALYZE_AVAILABLE = True
+except Exception:
+    AUX_ANALYZE_MODULE_PATH = None
+    AUX_ANALYZE_AVAILABLE = False
+    calculate_overdue_pairs = None  # type: ignore
+    get_top_overdue_repeating_pairs = None  # type: ignore
+    get_vtrac_statuses = None  # type: ignore
+    get_doubles_history = None  # type: ignore
+    build_aux_windows = None  # type: ignore
+    COLOR_LATE = "red"
+    COLOR_VERY_LATE = "blue"
+    COLOR_PENDING = "purple"
+
+try:
+    import modules.vtrac_reference as _AUX_VTRAC_MODULE  # type: ignore
+    from modules.vtrac_reference import (  # type: ignore
+        VTRAC_DISPLAY,
+        get_vtrac_index,
+        BOXED_LABEL_LOOKUP,
+    )
+
+    AUX_VTRAC_MODULE_PATH = getattr(_AUX_VTRAC_MODULE, "__file__", "")
+    AUX_VTRAC_AVAILABLE = True
+except Exception:
+    AUX_VTRAC_MODULE_PATH = None
+    AUX_VTRAC_AVAILABLE = False
+    VTRAC_DISPLAY = []  # type: ignore
+
+    def get_vtrac_index(*_args, **_kwargs):  # type: ignore
+        return None
+
+    BOXED_LABEL_LOOKUP = {}  # type: ignore
 
 PAIRS_WINDOW = DEFAULT_PAIRS_WINDOW
 VTRAC_INDEX_WINDOW = DEFAULT_VTRAC_INDEX_WINDOW
@@ -314,54 +372,25 @@ def _render_family_token(combo: str, severity: str, badge: str, draws_since: int
 
 
 def _rank_double_families(variant_draws: dict[str, List[str]], limit: int = 5) -> List[dict]:
-    stats_by_variant: dict[str, dict[str, dict[str, int]]] = {}
-    for variant_key, draws in variant_draws.items():
-        if not draws:
-            continue
-        stats = _aux_validation.compute_double_stats(draws)
-        if stats:
-            stats_by_variant[variant_key] = stats
-    rankings: List[dict] = []
-    for family in VTRAC_DOUBLE_FAMILIES:
+    rankings = _core_rank_double_families(
+        variant_draws,
+        red_threshold=COMBO_DOUBLE_VERY_LATE,
+        blue_threshold=COMBO_DOUBLE_LATE,
+        limit=limit,
+    )
+    for entry in rankings:
         tokens: List[tuple[str, int, str]] = []
-        members: List[dict[str, object]] = []
-        score = 0
-        best_gap = 0
-        for variant_key, combo_stats in stats_by_variant.items():
+        for member in entry.get("members", []):
+            combo = member.get("combo")
+            severity = member.get("severity")
+            variant_key = member.get("variant", "")
+            draws_since = int(member.get("draws_since", 0))
             badge = _VARIANT_BADGES.get(variant_key, variant_key[:1].upper())
-            for combo in family.combos:
-                status = combo_stats.get(combo)
-                if not status:
-                    continue
-                severity = status["severity"]
-                ds = status["draws_since"]
-                score += 2 if severity == "R" else 1
-                if ds > best_gap:
-                    best_gap = ds
-                token_html = _render_family_token(combo, severity, badge, ds)
-                tokens.append((severity, ds, token_html))
-                members.append(
-                    {
-                        "combo": combo,
-                        "canonical": _canon_combo(combo),
-                        "severity": severity,
-                        "variant": variant_key,
-                        "draws_since": ds,
-                        "badge": badge,
-                    }
-                )
-        if tokens:
-            tokens.sort(key=lambda item: (item[0] != "R", -item[1]))
-            rankings.append(
-                {
-                    "label": family.label,
-                    "score": score,
-                    "best_gap": best_gap,
-                    "display": f"<b>{family.label}</b>: " + " ".join(token for _, _, token in tokens),
-                    "members": members,
-                }
-            )
-    rankings.sort(key=lambda item: (item["score"], item["best_gap"]), reverse=True)
+            token_html = _render_family_token(combo, severity, badge, draws_since)
+            tokens.append((severity, draws_since, token_html))
+        tokens.sort(key=lambda item: (item[0] != "R", -item[1]))
+        entry["display"] = f"<b>{entry.get('label')}</b>: " + " ".join(token for _, _, token in tokens)
+        entry["tokens"] = tokens
     return rankings[:limit]
 
 
@@ -528,15 +557,23 @@ def _normalize_state_name(state_name: str) -> str:
 
 def _load_draws_from_csv_candidates(state_name: str, variant: str = "combined"):
     """Fallback loader used by Aux page; prefers the canonical aux_loaders helper."""
-    try:
-        _aux = _load_aux_loaders_real()
-        load_state_draws = getattr(_aux, "load_state_draws", None)
-        if callable(load_state_draws):
-            draws, _src = load_state_draws(state_name, variant=variant)
+    if callable(CANONICAL_LOAD_STATE_DRAWS):
+        try:
+            draws, _src = CANONICAL_LOAD_STATE_DRAWS(state_name, variant=variant)
             if draws:
                 return draws
-    except Exception:
-        pass
+        except Exception:
+            pass
+    else:
+        try:
+            _aux = _load_aux_loaders_real()
+            load_state_draws = getattr(_aux, "load_state_draws", None)
+            if callable(load_state_draws):
+                draws, _src = load_state_draws(state_name, variant=variant)
+                if draws:
+                    return draws
+        except Exception:
+            pass
 
     if variant != "combined":
         return []
@@ -1395,6 +1432,40 @@ def show_control_center_page() -> None:
                                         f" [{Path(manifest).name}]({manifest})" if manifest else ""
                                     )
                                     st.markdown(f"- `{item['state']}` bundle -> `{bundle_dir}`{manifest_link}")
+                                metrics = item.get("metrics")
+                                evidence = item.get("winners_evidence") or []
+                                metrics_path = item.get("metrics_path")
+                                if metrics or evidence:
+                                    import pandas as pd  # local import for rendering
+
+                                    exp_label = f"{item['state']} — Stable metrics & winners evidence"
+                                    with st.expander(exp_label, expanded=False):
+                                        if metrics:
+                                            st.subheader("Metrics summary")
+                                            metrics_df = pd.DataFrame([metrics])
+                                            st.dataframe(metrics_df, use_container_width=True)
+                                            if metrics_path:
+                                                st.caption(f"Metrics JSON: {metrics_path}")
+                                        if evidence:
+                                            evidence_df = pd.DataFrame(evidence)
+                                            if not evidence_df.empty:
+                                                display_cols = [
+                                                    "stable_winner",
+                                                    "family_id",
+                                                    "family_rank",
+                                                    "family_score",
+                                                    "section_count",
+                                                    "progression_flag",
+                                                    "last_remaining_3v",
+                                                    "any_doubles_support",
+                                                    "row_score",
+                                                    "row_type",
+                                                    "row_why",
+                                                ]
+                                                available = [c for c in display_cols if c in evidence_df.columns]
+                                                st.subheader("Winners evidence")
+                                                st.dataframe(evidence_df[available], use_container_width=True)
+                                                st.caption("Additional evidence columns are available in the exported data.")
                         if stable_errors:
                             st.error(
                                 "Stable extractor issues:\n"
@@ -1519,20 +1590,11 @@ def show_control_center_page() -> None:
             st.session_state.pop(cache_key, None)
             cache = None
 
-        try:
-            _aux_loader = _load_aux_loaders_real()
-            load_state_draws = getattr(_aux_loader, "load_state_draws", None)
-        except Exception:
-            load_state_draws = None
-
+        load_state_draws = CANONICAL_LOAD_STATE_DRAWS if callable(CANONICAL_LOAD_STATE_DRAWS) else None
         if not callable(load_state_draws):
             raise RuntimeError("aux_loaders.load_state_draws unavailable")
 
-        try:
-            with _project_modules_first():
-                from modules.vtrac_reference import get_vtrac_index as _cc_get_vtrac_index
-        except Exception:
-            _cc_get_vtrac_index = None
+        _cc_get_vtrac_index = get_vtrac_index if AUX_VTRAC_AVAILABLE else None
 
         if cache is None:
             variant_rows: list[dict] = []
@@ -1900,25 +1962,17 @@ def show_aux_page(state: str) -> None:
     except Exception:
         extract_draw_list = None
 
-    # Working modules (staged copy) - used only inside Aux page
-    _AUX_WORKING_AVAILABLE = False
-    try:
-        with _aux_working_first():
-            from modules.analyze_pairs import (
-                calculate_overdue_pairs,
-                get_top_overdue_repeating_pairs,
-                get_vtrac_statuses,
-                get_doubles_history,
-                build_aux_windows,
-                COLOR_LATE,
-                COLOR_VERY_LATE,
-                COLOR_PENDING,
-                PAIRS_WINDOW,
-            )
-            from modules.vtrac_reference import VTRAC_DISPLAY, get_vtrac_index
-        _AUX_WORKING_AVAILABLE = True
-    except Exception:
-        _AUX_WORKING_AVAILABLE = False
+    aux_function_ready = all(
+        callable(fn)
+        for fn in (
+            calculate_overdue_pairs,
+            get_top_overdue_repeating_pairs,
+            get_vtrac_statuses,
+            get_doubles_history,
+            build_aux_windows,
+        )
+    )
+    loader_callable = callable(CANONICAL_LOAD_STATE_DRAWS)
     
     st.title(f"Auxiliary Tools - {state}")
     st.write(f"Advanced lottery analysis tools for {state}")
@@ -1954,31 +2008,30 @@ def show_aux_page(state: str) -> None:
                 st.caption("BA module: unavailable: " + str(_se))
             st.caption(f"windows: pairs={PAIRS_WINDOW}, positional={POSITIONAL_WINDOW}, sums={SUMS_WINDOW}, vtrac_index={VTRAC_INDEX_WINDOW}, combinations={COMBINATION_WINDOW}")
             try:
-                _aux = _load_aux_loaders_real()
-                load_state_draws = getattr(_aux, "load_state_draws", None)
-                if callable(load_state_draws):
-                    for label, variant_key in (("Combined", "combined"), ("Midday", "midday"), ("Evening", "evening")):
-                        dr, src = load_state_draws(state, variant=variant_key)
-                        if src:
-                            count = len(dr) if isinstance(dr, list) else 0
-                            st.caption(f"{label} draws: {src} ({count})")
-                        else:
-                            st.caption(f"{label} draws: missing")
+                from utils.path_handler import get_cleaned_draws_dir as _get_cleaned_draws_dir  # type: ignore
+
+                st.caption("draw root: " + str(_get_cleaned_draws_dir()))
             except Exception:
                 pass
-            # Show which staged modules are actually bound (debug-only)
-            try:
-                with _aux_working_first():
-                    import modules.analyze_pairs as _ap  # type: ignore
-                    import modules.vtrac_reference as _vr  # type: ignore
-                st.caption("ap: " + str(getattr(_ap, "__file__", "unknown")))
-                st.caption("vr: " + str(getattr(_vr, "__file__", "unknown")))
-                try:
-                    st.caption("vr has VTRAC_DISPLAY: " + str(hasattr(_vr, "VTRAC_DISPLAY")))
-                except Exception:
-                    pass
-            except Exception as _e_dbg:
-                st.caption("aux staged bindings: unavailable: " + str(_e_dbg))
+            loader = CANONICAL_LOAD_STATE_DRAWS if loader_callable else None
+            if callable(loader):
+                for label, variant_key in (("Combined", "combined"), ("Midday", "midday"), ("Evening", "evening")):
+                    try:
+                        dr, src = loader(state, variant=variant_key)
+                    except Exception as _load_exc:
+                        st.caption(f"{label} draws: error ({_load_exc})")
+                        continue
+                    if src:
+                        count = len(dr) if isinstance(dr, list) else 0
+                        st.caption(f"{label} draws: {src} ({count})")
+                    else:
+                        st.caption(f"{label} draws: missing")
+            else:
+                st.caption("load_state_draws: unavailable")
+            st.caption("aux_loaders module: " + (AUX_LOADERS_MODULE_PATH or "unavailable"))
+            st.caption("analyze_pairs module: " + (AUX_ANALYZE_MODULE_PATH or "unavailable"))
+            st.caption("vtrac_reference module: " + (AUX_VTRAC_MODULE_PATH or "unavailable"))
+            st.caption("aux functions ready: " + ("yes" if aux_function_ready else "no"))
     # Basic styles for working renderer
     st.markdown("""
     <style>
@@ -1997,87 +2050,95 @@ def show_aux_page(state: str) -> None:
     # Add caching for performance (working logic)
     @st.cache_data(ttl=30 * 60)
     def cached_aux_analysis(state_name: str, variant: str):
-        if not (_AUX_WORKING_AVAILABLE):
+        if not aux_function_ready:
             return None
-        with _aux_working_first():
-            draws = []
-            source = None
+
+        draws: List[str] = []
+        source: Optional[str] = None
+        loader = CANONICAL_LOAD_STATE_DRAWS if callable(CANONICAL_LOAD_STATE_DRAWS) else None
+
+        if callable(loader):
             try:
-                _aux_loader = _load_aux_loaders_real()
-                load_state_draws = getattr(_aux_loader, "load_state_draws", None)
+                draws, source = loader(state_name, variant=variant)
             except Exception:
-                load_state_draws = None
+                draws, source = [], None
 
-            if callable(load_state_draws):
-                try:
-                    draws, source = load_state_draws(state_name, variant=variant)
-                except Exception:
-                    draws, source = [], None
+        if not draws:
+            draws = _load_draws_from_csv_candidates(state_name, variant=variant)
 
-            if not draws:
-                draws = _load_draws_from_csv_candidates(state_name, variant=variant)
+        if not draws and variant == "combined" and extract_draw_list is not None:
+            try:
+                draws = extract_draw_list(state_name, None)
+            except Exception:
+                draws = []
 
-            if not draws and variant == "combined" and extract_draw_list is not None:
-                try:
-                    draws = extract_draw_list(state_name, None)
-                except Exception:
-                    draws = []
+        if not draws and variant == "combined":
+            try:
+                local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
+                if os.path.exists(local_excel_path):
+                    from modules.run_process import run_process
 
-            if not draws and variant == "combined":
-                try:
-                    local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
-                    if os.path.exists(local_excel_path):
-                        from modules.run_process import run_process
+                    _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
+                    if callable(loader):
+                        try:
+                            draws, source = loader(state_name, variant=variant)
+                        except Exception:
+                            draws, source = [], None
+                    if not draws:
+                        draws = _load_draws_from_csv_candidates(state_name, variant=variant)
+            except Exception:
+                pass
 
-                        _ = run_process(local_excel_path, max_draws=1000, analysis_draws=100)
-                        if callable(load_state_draws):
-                            try:
-                                draws, source = load_state_draws(state_name, variant=variant)
-                            except Exception:
-                                draws, source = [], None
-                        if not draws:
-                            draws = _load_draws_from_csv_candidates(state_name, variant=variant)
-                except Exception:
-                    pass
+        if not draws:
+            return None
 
-            if not draws:
-                return None
+        if not callable(build_aux_windows) or not callable(calculate_overdue_pairs):
+            return None
 
-            draws_100, draws_1000 = build_aux_windows(
-                draws,
-                pairs_window=PAIRS_WINDOW,
-                vtrac_index_window=VTRAC_INDEX_WINDOW,
-            )
-            draws_pair_window = list(draws_100)
-            nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_WINDOW)
-            vstat = get_vtrac_statuses(draws_100, draws_1000)
-            top5 = get_top_overdue_repeating_pairs(draws_pair_window, 5)
-            doubles = get_doubles_history({state_name: draws})
+        draws_100, draws_1000 = build_aux_windows(
+            draws,
+            pairs_window=PAIRS_WINDOW,
+            vtrac_index_window=VTRAC_INDEX_WINDOW,
+        )
+        draws_pair_window = list(draws_100)
+        nonrep, rep, pair_status = calculate_overdue_pairs(draws, window=PAIRS_WINDOW)
 
-            overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
-            repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
+        vstat = get_vtrac_statuses(draws_100, draws_1000) if callable(get_vtrac_statuses) else {}
+        top5 = (
+            get_top_overdue_repeating_pairs(draws_pair_window, 5)
+            if callable(get_top_overdue_repeating_pairs)
+            else []
+        )
+        doubles = (
+            get_doubles_history({state_name: draws})
+            if callable(get_doubles_history)
+            else {}
+        )
 
-            return {
-                "variant": variant,
-                "source": source,
-                "draws": draws,
-                "draws_100": draws_100,
-                "draws_1000": draws_1000,
-                "nonrep": nonrep,
-                "rep": rep,
-                "pair_status": pair_status,
-                "vstat": vstat,
-                "top5": top5,
-                "doubles": doubles,
-                "vtrac_overlay": overlay,
-                "repeat_summary": repeat_summary,
-            }
+        overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
+        repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
+
+        return {
+            "variant": variant,
+            "source": source,
+            "draws": draws,
+            "draws_100": draws_100,
+            "draws_1000": draws_1000,
+            "nonrep": nonrep,
+            "rep": rep,
+            "pair_status": pair_status,
+            "vstat": vstat,
+            "top5": top5,
+            "doubles": doubles,
+            "vtrac_overlay": overlay,
+            "repeat_summary": repeat_summary,
+        }
     if st.button("Run Auxiliary Tools Analysis", type="primary"):
         with st.spinner(f"Running {selected_variant_label} auxiliary analysis for {state}..."):
             try:
                 results = cached_aux_analysis(state, selected_variant_key)
                 if not results:
-                    st.error("Working modules unavailable or no draws found.")
+                    st.error("Aux modules unavailable or no draws found. Check Dev Health for details.")
                     return
 
                 variant_label = selected_variant_label
@@ -2401,14 +2462,14 @@ def show_aux_page(state: str) -> None:
                 import pandas as _pd
                 rows = []
                 rows_plain = []
+                draws_full = results.get("draws", [])
+                draws_1000 = results.get("draws_1000") or list(draws_full)
                 overlay = results.get("vtrac_overlay")
                 if not overlay:
-                    draws_1000 = results.get("draws_1000", draws)
                     overlay = _build_vtrac_overlay(draws_1000, get_vtrac_index)
                     results["vtrac_overlay"] = overlay
                 repeat_summary = results.get("repeat_summary")
                 if not repeat_summary:
-                    draws_1000 = results.get("draws_1000", draws)
                     repeat_summary = _summarize_vtrac_repeats(draws_1000, get_vtrac_index)
                     results["repeat_summary"] = repeat_summary
                 heat_stats_overlay = _build_vtrac_heatboard(draws_1000, get_vtrac_index, overlay)
@@ -2850,8 +2911,10 @@ def show_aux_page(state: str) -> None:
             available_states = get_available_states()
         except Exception:
             available_states = []
-        else:
+        if not available_states:
             st.warning("No state data files found. Please ensure cleaned data is available.")
+        else:
+            st.caption("Available states: " + ", ".join(sorted(available_states)))
 
 
 def show_digit_reduction_page(state: str) -> None:

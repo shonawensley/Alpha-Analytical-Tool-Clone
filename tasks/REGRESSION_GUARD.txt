@@ -1,0 +1,293 @@
+**OK THERE IS ONE VERY VERY VITAL ITEM I WANT TO REVIEW AND IM GLAD THIS CAME UP NOW SO WE CA ASSURE ITS NOT A RE-OCCURRING ISSUE***
+
+You mentioned how some features were removed. During one of the recent optimizations. This is one of the biggest fears I have. Sometimes with AI coding I notice this can happen. It will. Go to Add optimizations. And when rewriting code. Will eliminate previous features worked on or scoring details or something to this effect as I'm sure you get what I need. We need to find a way to protect from this, as in the AI knows when it's making optimizations unless it's actively. Replacing something. For a legit reason. It should not be taking out items, features, details from code or scoring or the analytical tools if you're try kind of getting what I mean by this. How can we protect things so this never happens? There has to be a way to safeguard where it knows to be adding to a tool and not replacing features. In a way, this can just make us lose progress because we'd be going back to reintegrate things that were worked on and we know score properly. See, the thing is, I had tested some of these scoring features already and compared against results to make sure they're scoring things properly, which can be tricky sometimes to make sure the code is working as per its intact. This is why it's important that we protect what's already built in and only remove if given. Permission to remove everything should be treated as an optimization or add to the tool unless instructed to remove. A feature or scoring item or something to this effect? Do you get what I mean by this? But we should address this comprehensively. So things like this don't happen like where you told me in the last optimization it had dropped some previous details or scoring items. This is unacceptable and we have to try and avoid. I hope you understand what I'm trying to say. In an optimal way we can find to ensure this doesn't happen, or to deal with this OPTMALLY? 
+
+
+
+
+absolutely right to be worried about “optimizations” quietly removing features. That’s the single fastest way to lose signal we already validated. I read your Codex log as if I’m the lead architect signing off on the implementation, and I’ll do two things here:
+
+Call out the one real regression I see and give the exact fix.
+
+Install a concrete, codified “Regression Shield” so future edits can’t drop features without an explicit, visible choice.
+
+Side note: a few earlier uploads in this workspace look expired. If you want me to re‑read any specific CSVs/docs here, please re‑upload the files.
+
+0) One immediate regression to fix (tiny patch)
+
+During the rename to horizontal_persistence_repeat and the second‑pass additions, the base family score line in post_pass_families.py lost three bonuses that were present before:
+
+consensus_family_bonus
+
+hotzone_family_bonus
+
+straight_2rows_bonus
+
+You did add an explicit last_remaining_3v bonus later in the second pass (good), but those three should remain in the main sum. Here is the surgical patch to restore parity and keep all Phase‑1 gains:
+
+File: alpha_analytical/stable/post_pass_families.py
+Block: inside the loop that builds fam_score (where we already changed span → horizontal_persistence_repeat)
+
+# before (regressed version)
+fam_score = (
+    rows_cov * cfg["vertical_coverage_per_row"]
+    + gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+    # (several bonuses accidentally dropped here)
+    + (cfg["straight_3rows_bonus"] if gg["any_straight3"] else 0)
+)
+
+# after (restores intended Phase‑1 feature set)
+fam_score = (
+    rows_cov * cfg["vertical_coverage_per_row"]
+    + gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+    + max(0, gg["perm_count_in_box"] - 1) * cfg.get("perm_density_per_extra", 0)
+    + gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
+    + (cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0)
+    + (cfg.get("hotzone_family_bonus", 0) if hot_density >= 0.5 else 0)
+    + (cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0)
+    + (cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0)
+)
+
+
+Nothing else changes; your new second pass still adds:
+
+section_count → vtrac_family_presence (+ optional cross_section_triple)
+
+progression_flag → progression_across_sets
+
+last_remaining_3v (+ last_remaining_3v_bonus)
+
+This hotfix makes the family score additive again and prevents future confusion about “what happened to consensus / hot‑zone / straight‑2”.
+
+1) The Regression Shield (what we add now so this doesn’t happen again)
+
+Think of this as a 10‑layer seatbelt. It’s light, automated, and it forces “add, don’t silently remove”.
+
+A. Score contract = explicit components (row‑level)
+
+Files: alpha_analytical/stable/__init__.py
+
+Add a tiny structure that computes a dict of score parts, then sums them. We also emit each part to CSV so tests can guard them.
+
+parts = {
+    "cov": rowcov * CFG["vertical_coverage_per_row"],
+    "hpr": span * CFG["horizontal_persistence_repeat_bonus"],
+    "straight_base": (CFG["baseline_straight_bonus"] if straight else CFG["baseline_boxed_bonus"]),
+    "straight2": (CFG["straight_2rows_bonus"] if straight2 else 0),
+    "straight3": (CFG["straight_3rows_bonus"] if straight3 else 0),
+    "mirror": (CFG["mirror_bonus"] if mirror else 0),
+    "perm": max(0, perm_count_in_box - 1) * CFG.get("perm_density_per_extra", 0),
+    "repeat": repeat_extras_in_box * CFG.get("repeat_count_per_extra", 0),
+    "single_left": (CFG["single_left_bonus"] if single_left else 0),
+    "cons_full": (CFG["consensus_full_bonus"] if cons_full else 0),
+    "hot": _hot_bonus(col=col, hot=hot),
+    "dom": (CFG.get("dominant_last_bonus", 0) if dom_last else 0) +
+           (CFG.get("dominant_pair_bonus", 0) if dom_pair else 0) +
+           (CFG.get("dominant_double3_bonus", 0) if (dom_last and len(cpat)==3 and len(set(cpat))==2) else 0),
+}
+score = sum(parts.values())
+
+
+Then add these columns to the CSV once (keeps tuning honest):
+
+score_cov, score_hpr, score_straight_base, score_straight2, score_straight3,
+score_mirror, score_perm, score_repeat, score_single_left, score_cons_full,
+score_hot, score_dom
+
+
+Why: If any feature contribution disappears, tests and diffs show it instantly.
+
+B. Family score contract (family‑level)
+
+File: alpha_analytical/stable/post_pass_families.py
+
+Mirror the idea: compute fam_parts = {...} before summing. Include:
+
+fam_cov, fam_hpr, fam_perm, fam_repeat,
+
+fam_consensus, fam_hotzone, fam_straight2, fam_straight3,
+
+fam_section_presence, fam_section_triple, fam_progression, fam_last_remaining_3v.
+
+Write these to the families CSV. If someone “forgets” a term, the missing column will break tests.
+
+C. Output schema tests
+
+File: tests/test_output_schema.py
+
+Assert row CSV has all required columns (including every score_* and the existing debug flags).
+
+Assert families CSV has all required columns (including every fam_*, section_count, progression_flag, last_remaining_3v).
+
+Assert winner spotlight contains is_exact_straight.
+
+Minimal example (Codex can fill concrete paths/fixtures):
+
+def test_scores_schema_columns():
+    cols = set(read_csv("..._stable_patterns_scores.csv").columns)
+    must = {
+        "section","Set","Draw","Column","Canonical","type","score","rows",
+        "family_id","perm_count_in_box","repeat_extras_in_box",
+        "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows",
+        "score_cov","score_hpr","score_straight_base","score_straight2","score_straight3",
+        "score_mirror","score_perm","score_repeat","score_single_left","score_cons_full",
+        "score_hot","score_dom",
+    }
+    assert must.issubset(cols)
+
+def test_families_schema_columns():
+    cols = set(read_csv("..._stable_patterns_families.csv").columns)
+    must = {
+        "section","Set","Draw","Column","family_id","family_score",
+        "rows_cov","horizontal_persistence_repeat","hot_density",
+        "any_straight2","any_straight3","any_consensus","any_dom_last",
+        "section_count","progression_flag","last_remaining_3v",
+        "fam_cov","fam_hpr","fam_perm","fam_repeat","fam_consensus","fam_hotzone",
+        "fam_straight2","fam_straight3","fam_section_presence","fam_section_triple",
+        "fam_progression","fam_last_remaining_3v",
+    }
+    assert must.issubset(cols)
+
+D. Golden‑run snapshot test
+
+File: tests/test_stable_golden.py
+
+Ship a tiny, stable fixture CSV (10–20 rows) that is representative. Run the extractor against it and snapshot:
+
+Top‑N families.csv rows (by family_score)
+
+Presence of key flags in why (e.g., hp_repeat, cons_full, dom_last)
+
+Any accidental change flips the snapshot diff.
+
+E. YAML schema lock
+
+File: tests/test_feature_config_schema.py
+
+Load feature_config.yml and assert the full key set is present:
+
+required = {
+  "vertical_coverage_per_row", "horizontal_persistence_repeat_bonus",
+  "baseline_straight_bonus", "straight_2rows_bonus", "straight_3rows_bonus",
+  "mirror_bonus", "single_left_bonus",
+  "perm_density_per_extra", "repeat_count_per_extra",
+  "consensus_full_bonus", "consensus_family_bonus",
+  "hotzone_family_bonus", "last_remaining_3v_bonus",
+  "vtrac_family_presence", "cross_section_triple", "progression_across_sets",
+  "min_score_to_highlight"
+}
+
+
+Fail if any are missing. This prevents “oh, that weight disappeared” regressions.
+
+F. “Why tokens” lint
+
+File: tests/test_why_tokens.py
+
+Parse the row CSV and assert that when a flag is True, the corresponding token exists in why.
+Examples: any_straight2 → vstr2, any_consensus → cons_full, horizontal_persistence_repeat>1 → hp_repeatN.
+
+G. Symbol presence tests (functions/features)
+
+File: tests/test_api_surface.py
+
+Import alpha_analytical.stable and post_pass_families and assert functions exist:
+
+analyse, build_html, _eval_single_left
+
+derive_vtrac_index_for_canonical, build_family_summary
+
+Fail if any go missing.
+
+H. Pre‑commit guard that forbids removal of contracts
+
+Files: scripts/hooks/check_contract.py, .pre-commit-config.yaml
+
+A tiny script that inspects the staged diff and fails if it sees deletions of:
+
+Any of the CSV column names above
+
+Any required YAML keys
+
+The guarded comment blocks (see I)
+
+This is a cheap, highly effective stop‑sign for AI edits.
+
+I. Guarded code blocks (human/AI hint)
+
+Add obvious sentinels around critical score code:
+
+# === AAT9-SCORE-CONTRACT: BEGIN (do not remove fields; adjust weights via YAML) ===
+# ... score_parts construction here ...
+# === AAT9-SCORE-CONTRACT: END ===
+
+
+Codex will “see” this and be less likely to rewrite the block. If it does, the pre‑commit guard in (H) blocks the commit.
+
+J. Metrics file on every run
+
+Drop a tiny metrics.json next to artifacts:
+
+winner family ids
+
+best rank of each winner family in families.csv
+
+best rank of any exact straight in scores.csv
+
+spotlight coverage (% rows in spotlight)
+
+compression ratio = families_rows / raw_rows
+
+A quick script can compute this in ~30 lines. We can alert when a metric worsens unexpectedly.
+
+2) Triples clarification (your design is correct)
+
+Pure triples (000, 111, …): still return None in get_vtrac_index (by design; almost never wagered).
+
+Double‑3 V‑class cases like 277: must resolve (your table’s Index 26 “333” carries doubles 227,277).
+The new fallback maps by V‑class code (333) to 26 if permutations aren’t present. You also have unit tests for this already—leave them in.
+
+3) Codex‑ready checklist (paste this as the next task)
+
+Title: Reinstate family bonuses + install Regression Shield
+
+post_pass_families.py — restore dropped bonuses in fam_score (see patch above).
+Keep second‑pass bonuses unchanged.
+
+init.py (row engine) — compute parts = {...} and export score_* columns.
+
+post_pass_families.py — compute fam_parts = {...} and export fam_* columns.
+
+tests/
+
+test_output_schema.py (columns present in scores/families/spotlight).
+
+test_stable_golden.py (golden snapshot from a small fixture CSV).
+
+test_feature_config_schema.py (YAML key set).
+
+test_why_tokens.py (tokens align with flags).
+
+test_api_surface.py (function existence).
+
+scripts/hooks/check_contract.py — fail if staged diff removes any required CSV columns, YAML keys, or guarded comments.
+Wire it into .pre-commit-config.yaml after run_py_compile & pytest.
+
+feature_config.yml — ensure min_score_to_highlight: 7 (training) and the full key set above.
+
+metrics writer — emit metrics.json per state run with ranks & coverage.
+
+Definition of Done:
+Pre‑commit runs green; tests pass; families.csv regains the three bonuses in its score math; CSVs include the new score_* / fam_* columns; a golden snapshot exists; the hook blocks future deletions of contract keys/columns.
+
+4) Are we good to move quickly now?
+
+Yes—once the tiny restore patch and the Regression Shield are in, you can keep shipping features rapidly without fear of silent loss:
+
+Every feature has a column (and a test).
+
+Every removal is blocked by hooks or breaks a test.
+
+YAML is the only place we expect tuning, and it’s schema‑locked.
+
+If you want, I can also sketch the code stubs for the Phase‑2 features (consensus→doubles trigger, hidden‑by‑one, metrics writer) in the same “drop‑in” style so Codex can paste and run immediately.

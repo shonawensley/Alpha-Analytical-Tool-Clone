@@ -18,6 +18,15 @@ from __future__ import annotations
 
 from typing import Dict, List, Set, Optional
 
+DIGIT2V: Dict[str, int] = {
+    '0': 1, '5': 1,
+    '1': 2, '6': 2,
+    '2': 3, '7': 3,
+    '3': 4, '8': 4,
+    '4': 5, '9': 5,
+}
+INDEX_BY_VTRAC: Dict[str, int] = {}
+
 # ======================================================================================
 # Full permutation V‑TRAC reference — each entry has the index and its singles/doubles.
 # These values mirror the legacy reference used by Aux and older tools.
@@ -427,15 +436,25 @@ def initialize_vtrac_lookup() -> None:
     """Build VTRAC_LOOKUP and BOXED_LABEL_LOOKUP from BOXED_VTRAC_REFERENCE."""
     VTRAC_LOOKUP.clear()
     BOXED_LABEL_LOOKUP.clear()
+    INDEX_BY_VTRAC.clear()
 
     for entry in BOXED_VTRAC_REFERENCE:
         idx = int(entry["Index"])
+        sample_combo: Optional[str] = None
         for key in ("Singles", "Doubles"):
             for combo in entry[key]:  # type: ignore[index]
+                if sample_combo is None and combo:
+                    sample_combo = combo
                 for perm in _permutations3(combo):
                     VTRAC_LOOKUP[perm] = idx
                     # Map each perm back to its canonical boxed label (the combo)
                     BOXED_LABEL_LOOKUP[perm] = combo
+        if sample_combo:
+            vcode = ''.join(
+                sorted(str(DIGIT2V[d]) for d in sample_combo if d in DIGIT2V)
+            )
+            if len(vcode) == 3:
+                INDEX_BY_VTRAC.setdefault(vcode, idx)
 
 # Build lookups at import
 initialize_vtrac_lookup()
@@ -451,15 +470,23 @@ def get_vtrac_index(draw: str) -> Optional[int]:
     s = normalize_draw(draw)
     if s is None:
         return None
+    idx = VTRAC_LOOKUP.get(s)
+    if idx is not None:
+        return idx
     if len(set(s)) == 1:  # triples suppressed
         return None
-    # Fast direct + permutation lookup
-    if s in VTRAC_LOOKUP:
-        return VTRAC_LOOKUP[s]
     for perm in _permutations3(s):
-        if perm in VTRAC_LOOKUP:
-            return VTRAC_LOOKUP[perm]
-    return None
+        idx = VTRAC_LOOKUP.get(perm)
+        if idx is not None:
+            return idx
+    vcode_parts: List[str] = []
+    for ch in s:
+        v = DIGIT2V.get(ch)
+        if v is None:
+            return None
+        vcode_parts.append(str(v))
+    vcode = ''.join(sorted(vcode_parts))
+    return INDEX_BY_VTRAC.get(vcode)
 
 def get_index_set(index: int) -> Set[str]:
     """

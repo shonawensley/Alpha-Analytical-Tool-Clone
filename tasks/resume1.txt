@@ -1,0 +1,444 @@
+
+› ok can you possibly give me a detailed summarry for this? • I'm noting the current status: some modifications are applied, including partial regression shielding. I'll outline remaining plans and provide clear instructions on how to proceed with the next steps. This will help keep the process organized and the user informed. - File: alpha_analytical/stable/__init__.py - Initial tests in tests/test_stable_contracts.py assert the presence of row columns, check the YAML key schema, sniff the API surface, and include a simple hidden-by-one check. - Need to finish the consensus/double adjacency logic and expose fam_doubles. 3. Last-remaining bonus - Need to ensure only rows marked last_remaining_3v receive last_remaining_3v_bonus, and store the bonus in fam_last_remaining_bonus. 4. Phase-2 features not yet added - Consensus→doubles detection, hidden-by-one test coverage, metrics JSON writer, consensus-based winners tests, etc. (per FIX_122 plan). 5. Regression shield tests - Golden fixture, schema contract test, why token lint, check_contract pre-commit hook—still outstanding. 1. Start a fresh Codex session (in the CLI or UI). 2. Paste a brief “current state” summary (you can use the bullet list above). 3. Include the remaining TODO list from FIX_122 (consensus→doubles, hidden-by-one tests, metrics, regression guard steps). Next Steps restart: 1. Changelog (docs/AAT9_KIT/AAT9_Unified_Changelog.md): Add an entry noting that we’ve finished the hidden-by-one feature, score-part exports, and YAML updates, but that consensus→doubles plus the regression shield is still in progress. 2. Analysis Insight (docs/AAT9_KIT/AAT9_Analysis_Insights.md): Add a short “work paused” section mentioning which files were touched and what remains. 3. Pitfalls or Workflow doc (whichever we agreed holds the “how to restart” note): note that the regression shield implementation is mid-flight and to consult the plan in FIX_122 when resuming. - docs/AAT9_KIT/AAT9_Analysis_Insights.md Give me a moment and I’ll report back once the documentation is patched. › please proceed optimally page no longer crashes when staged modules disappear. - Impact: Added regression coverage that asserts live data resolves under data/cleaned/draws, updated workflow docs, and standardised the Aux validation harness as the go-to guardrail after draw refreshes. - Files: src/app.py, tests/test_aux_loader_canonical_paths.py, docs/AAT9_KIT/{AAT9_Quickstart_Cheat_Sheet.md,AAT9_Workflow_Standard.md,AAT9_Unified_Changelog.md}, scripts/checks/ smoke_positional.py, .codex/preflight.ps1. • Ran python -c 'from datetime import date │ print(date.today())' └ 2025-10-13 • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ## 2025-10-13 - Stable extractor regression shield (work paused) │ - Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus. │ … +6 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command "Get-Content 'docs/AAT9_KIT/AAT9_Unified_Changelog.md'" └ ## 2025-10-12 - Aux canonical draws guardrail - Impact: Canonicalised Aux and Control Center draw loading through modules.aux_loaders.load_state_draws, removed staged fallbacks, and patched the V-TRAC overlay to reuse cached draw windows so the Aux page no longer crashes when staged modules disappear. … +7 lines - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist). - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py. • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ## 2025-10-13 - Stable extractor regression shield (work paused) │ - Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus. │ … +5 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ## 2025-10-13 - Stable extractor regression shield (work paused) │ - Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus. │ … +6 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ## 2025-10-13 - Stable extractor regression shield (work paused) │ - Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus. │ … +5 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command "Get-Content 'docs/AAT9_KIT/AAT9_Analysis_Insights.md'" └ # AAT9 ??? Analysis Insights … +7 lines - **Aux repeat/positional CLI** - scripts/tools/validate_aux_repeat.py replays repeat-watch streaks and positional hard-due flags from the raw CSV streams so Control Center badges can be verified without Streamlit. - **Aux V-TRAC/sums CLI** - scripts/tools/validate_aux_vtrac.py surfaces top overdue indexes, heatboard metrics, and sums diagnostics directly from the CSVs, mirroring the Control Center overlays. • Ran python "- <<'PY' │ from datetime import date │ print(date.today()) │ … +1 lines └ Unknown option: - usage: python [option] ... [-c cmd | -m mod | file | -] [arg] ... Try python -h' for more information. • Ran python -c 'from datetime import date │ print(date.today())' └ 2025-10-13 • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ### 2025-10-13 – Stable Pattern Extractor (Regression Shield) – Paused │ - Row payload now emits per-component score fields (score_cov…score_hidden) and a hidden-by-one flag; YAML gains doubles_trigger_bonus / hidden3v_bonus. │ … +5 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ ### 2025-10-13 – Stable Regression Shield (paused mid-integrate) │ - Row payload now emits per-component score fields (score_cov…score_hidden) and hidden-by-one flag; YAML adds doubles_trigger_bonus / hidden3v_bonus. │ … +6 lines └ (no output) • Ran powershell.exe -NoLogo -NoProfile -Command "Get-Content 'docs/AAT9_KIT/PITFALLS.txt' -First 5" └ Absolutelyâ€”this is the exact problem to solve once and solve forever. Below is a dropâ€‘in Integration Playbook you can hand to any coding AI (or dev) so new tools/modules wire in cleanly without path drama, reâ€‘runs, or â€œwhere is that file?â€ mysteries. I wrote it as a copyâ€‘pasteable spec plus readyâ€‘toâ€‘use snippets. It folds in what we already proved works (bootstrap import shim, absoluteâ€‘path loaders, run ledger, health expanders, combined table wiring, etc.) and codifies it so future integrations donâ€™t regress. It also references your Blackapple module notes so teams follow the same pattern when they add that feature. 0) Oneâ€‘page TL;DR (hand this to the coding AI) • Ran powershell.exe -NoLogo -NoProfile -Command '$entry = @" │ Stable Ragnarök Paused (2025-10-13) │ - Stable regression shield in progress; consensus→doubles flag, section/progression bonuses, metrics writer, regression-guard tests/hooks still outstanding. See changelog and tasks/FIX_122.txt before │ … +4 lines └ (no output) • Ran git status -sb └ ## fix/aux-draws-window...origin/fix/aux-draws-window M .codex/preflight.ps1 … +7 lines ?? tests/test_stable_contracts.py ?? tests/test_vtrac_triples.py • Ran python -c 'import json │ from pathlib import Path │ print(json.dumps({"fix": "paused"}))' └ {"fix": "paused"} ─ Worked for 2m 01s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── • Here’s everything documented so you (or the next session) can pick up cleanly: ——— ### Code/Docs/state captured - Edits so far are already saved to disk (row score parts, hidden-by-one, partial family score exports, YAML knobs, new tests). - I added a “work paused” entry in docs/AAT9_KIT/AAT9_Unified_Changelog.md and docs/AAT9_KIT/AAT9_Analysis_Insights.md summarising what’s complete and what still needs attention. - docs/AAT9_KIT/PITFALLS.txt now includes a quick note (Stable Regression Shield (paused mid-integrate)) pointing future work to tasks/FIX_122.txt for the checklist. ### Resume instructions (for the next Codex session) When you open a new session: 1. Run git status to review the current diffs; all in-progress changes are present. 2. Re-read: - docs/AAT9_KIT/AAT9_Unified_Changelog.md (new 2025‑10‑13 entry). - docs/AAT9_KIT/AAT9_Analysis_Insights.md (new note in the Update Log). - docs/AAT9_KIT/PITFALLS.txt (new bullet under “Stable Regression Shield”). - tasks/FIX_122.txt (complete Phase‑2 checklist of remaining work). 3. Continue with the outstanding items: consensus→doubles trigger, section/progression bonus plumbing, last-remaining bonus, metrics writer, regression guard hook & tests, etc. ### Nothing else changed All code tweaks beyond these documents are exactly where we left them; there are no hidden modifications outside the diff. Once you spin up a fresh Codex session and feed in the summary above, it can pick up right where we paused.
+
+
+
+___________________________________________________________________________________________________________________________________________________
+
+___________________________________________________________________________________________________________________________________________________
+
+
+Got it—I read your Codex log end‑to‑end and treated this like a forensic code review plus a rescue plan. Below is exactly what Codex finished, what drifted, and the drop‑in patches to get you back to a clean, testable state before continuing Phase‑2.
+
+1) What Codex did (good)
+
+Row engine (alpha_analytical/stable/__init__.py)
+
+Added per‑component score exports: score_cov/hpr/perm/repeat/straight/single/cons/hot/mirror/dom/len/hidden.
+
+Added hidden3v detector and included its bonus in the score + why token.
+
+Renamed span → horizontal_persistence_repeat in both math and why (hp_repeatN).
+
+Left the existing straight/consensus/dom‑last logic intact.
+
+Config (feature_config.yml)
+
+Added the new knobs: doubles_trigger_bonus, hidden3v_bonus.
+
+Tests
+
+Created tests/test_stable_contracts.py with row schema, YAML‑key sanity, and API‑surface checks.
+
+Your earlier tests/test_vtrac_triples.py (277 → index 26; pure triples → None) is still there—good guard.
+
+V‑TRAC
+
+Lookup fallback by V‑class code (so 277 resolves even if the table drifts).
+
+2) What drifted / is unfinished (must fix before proceeding)
+
+Row CSV header dropped key columns
+The out_cols list no longer includes family_id (and also omits dom_last, dom_pair, and hidden3v). Because the writer uses DictWriter(fieldnames=out_cols), those values won’t be written even though they’re present in the row dict—breaking downstream aggregation and your test expectations.
+
+Family post‑pass (post_pass_families.py) left mid‑edit
+
+any_doubles_support used before assignment ⇒ NameError.
+
+Incomplete consensus⇢doubles logic & adjacency check.
+
+The new fam_* component columns (fam_cov/hpr/perm/…) aren’t consistently computed or written.
+
+Section/progression/last‑remaining logic is partly present, but the score terms/columns (e.g., fam_section_bonus, fam_progression_bonus, fam_last_remaining_bonus) aren’t cleanly emitted.
+
+Some places treat Column as a string (e.g., "Draw1" landed in one experiment) – adjacency logic expects numeric columns.
+
+Hot bonus helper used, not defined
+
+Row scoring references _hot_bonus(col, hot) but no helper exists → latent NameError if that path is hit.
+
+Consensus stub rows
+
+You now create consensus_stub rows (good), but many tails are 2‑digit (“27”), so family_id can be None. That’s fine as long as the family aggregator never depends on stub rows having an id (we’ll make sure it ignores None).
+
+3) Minimal, safe patch set to restore green and finish P0/P1
+
+These are drop‑ins. Codex can paste each patch into the indicated file and run tests.
+
+3.1 alpha_analytical/stable/__init__.py — restore required CSV columns + hot helper
+
+Add this helper near the top (after CFG is loaded), because row scoring now calls _hot_bonus:
+
+# helper: hot bonus (col 1 gets x2 weight)
+def _hot_bonus(col, hot):
+    try:
+        col_int = int(str(col))
+    except ValueError:
+        col_int = 0
+    col_factor = 2 if col_int == 1 else 1
+    if hot == 2:
+        return CFG.get('hot_level_2_bonus', 0) * col_factor
+    if hot == 1:
+        return CFG.get('hot_level_1_bonus', 0) * col_factor
+    return 0
+
+
+Ensure the writer header keeps legacy + new fields (put this right before you open the CSV):
+
+out_cols = [
+    "section","Set","Draw","Column","Canonical","type","score","rows",
+    "mirror","straight2","straight3","single_left",
+    "cons_full","cons_3v","cons_stub",
+    "dom_last","dom_pair","family_id","hidden3v",
+    "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
+    "score_cov","score_hpr","score_perm","score_repeat","score_straight",
+    "score_single","score_cons","score_hot","score_mirror","score_dom",
+    "score_len","score_hidden",
+    "why"
+]
+
+
+(This preserves everything older code expects and your new per‑component parts.)
+
+Tip: keep family_id on the row. Your new tests require it; the family post‑pass groups by it.
+
+3.2 alpha_analytical/stable/post_pass_families.py — finish families, doubles, section/progression/last‑remaining
+
+At the top:
+
+from typing import Optional
+import numpy as np
+import pandas as pd
+from collections import defaultdict, Counter
+
+
+In the row aggregation loop, keep collecting:
+
+rows_covered (add the row label)
+
+perm_count_in_box, repeat_extras_in_box
+
+horizontal_persistence_repeat (max across rows)
+
+hot_total/hot_hits
+
+flags any_straight2/3, any_consensus (from cons_full), any_dom_last
+
+collect numeric column and double/consensus signals for doubles adjacency:
+
+g = defaultdict(lambda: {
+    "rows_covered": set(),
+    "perm_count_in_box": 0,
+    "repeat_extras_in_box": 0,
+    "horizontal_persistence_repeat": 0,
+    "hot_total": 0, "hot_hits": 0,
+    "any_straight2": False, "any_straight3": False,
+    "any_consensus": False, "any_dom_last": False,
+    "canonicals": Counter(),
+    "modal_orders": Counter(),
+    "rows_detail": [],              # NEW
+})
+consensus_by_key = defaultdict(set)  # (section, Set, Draw, family_id) -> {col_int,...}
+doubles_by_key   = defaultdict(set)  # (section, Set, Draw, family_id) -> {col_int,...}
+
+
+Inside the loop where you visit each row r:
+
+key  = (section, Set, Draw, Col, vti)
+gg   = g[key]
+
+# accumulate coverage + stats (existing lines) ...
+gg["rows_covered"].add(r.get("rows",""))
+gg["perm_count_in_box"] += int(r.get("perm_count_in_box", 0))
+gg["repeat_extras_in_box"] += float(r.get("repeat_extras_in_box", 0))
+gg["horizontal_persistence_repeat"] = max(
+    gg["horizontal_persistence_repeat"],
+    int(r.get("horizontal_persistence_repeat", 1))
+)
+hot = int(r.get("hot", 0))
+gg["hot_total"] += 1
+gg["hot_hits"]  += (1 if hot > 0 else 0)
+
+gg["any_straight2"] |= bool(r.get("straight2", False))
+gg["any_straight3"] |= bool(r.get("straight3", False))
+gg["any_consensus"] |= bool(r.get("cons_full", False))
+gg["any_dom_last"]  |= bool(r.get("dom_last", False))
+
+canon = str(r.get("Canonical","")).strip()
+gg["canonicals"][canon] += 1
+mv = str(r.get("orders_modal_value","")).strip()
+if mv:
+    gg["modal_orders"][mv] += int(r.get("orders_modal_rows", 0))
+
+# detail for doubles/consensus adjacency
+try:
+    col_int = int(str(Col))
+except ValueError:
+    col_int = None
+is_double = False
+c = "".join(ch for ch in canon if ch.isdigit())
+if len(c) == 3 and len(set(c)) == 2:
+    is_double = True
+
+gg["rows_detail"].append({
+    "col_int": col_int, "is_double": is_double, "is_consensus": bool(r.get("cons_full", False))
+})
+
+if vti is not None and col_int is not None:
+    fam_key = (section, Set, Draw, vti)
+    if gg["rows_detail"][-1]["is_consensus"]:
+        consensus_by_key[fam_key].add(col_int)
+    if is_double:
+        doubles_by_key[fam_key].add(col_int)
+
+
+Now build the family rows and include all component parts (including section/progression/last‑remaining and doubles). Replace your current scoring block with the following inside the loop “for (section, Set, Draw, Col, vti), gg in g.items():”:
+
+hot_density = (gg["hot_hits"] / gg["hot_total"]) if gg["hot_total"] else 0.0
+rows_cov    = len([x for x in gg["rows_covered"] if x])
+
+# === AAT9-SCORE-CONTRACT: BEGIN (FAMILY) ===
+fam_cov   = rows_cov * cfg["vertical_coverage_per_row"]
+fam_hpr   = gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+fam_perm  = max(0, gg["perm_count_in_box"]-1) * cfg.get("perm_density_per_extra", 0)
+fam_repeat = gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
+fam_cons   = cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0
+fam_hot    = cfg.get("hotzone_family_bonus", 0)  if hot_density >= 0.5 else 0
+fam_straight2 = cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0
+fam_straight3 = cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0
+fam_dom       = cfg.get("dominant_last_bonus", 0) if gg["any_dom_last"] else 0
+# section/progression/last_remaining will be added after we compute those flags
+# doubles support computed below
+# === AAT9-SCORE-CONTRACT: END (FAMILY) ===
+
+# Consensus→doubles adjacency (same box or adjacent columns)
+any_doubles_support = False
+fam_doubles = 0
+if vti is not None:
+    fam_key = (section, Set, Draw, vti)
+    cons_cols   = consensus_by_key.get(fam_key, set())
+    double_cols = doubles_by_key.get(fam_key, set())
+    if cons_cols and double_cols:
+        for c1 in cons_cols:
+            for c2 in double_cols:
+                if c1 == c2 or abs(c1 - c2) == 1:
+                    any_doubles_support = True
+                    break
+            if any_doubles_support:
+                break
+if any_doubles_support:
+    fam_doubles = cfg.get("doubles_trigger_bonus", 0)
+
+family_score = (
+    fam_cov + fam_hpr + fam_perm + fam_repeat + fam_cons + fam_hot
+    + fam_straight2 + fam_straight3 + fam_dom + fam_doubles
+)
+
+out.append({
+    "section": section, "Set": Set, "Draw": Draw, "Column": Col,
+    "family_id": vti,
+    "rows_cov": rows_cov,
+    "hot_density": round(hot_density, 3),
+    "horizontal_persistence_repeat": gg["horizontal_persistence_repeat"],
+    "perm_count_in_box": gg["perm_count_in_box"],
+    "repeat_extras_in_box": gg["repeat_extras_in_box"],
+    "any_consensus": gg["any_consensus"],
+    "any_straight2": gg["any_straight2"],
+    "any_straight3": gg["any_straight3"],
+    "any_dom_last": gg["any_dom_last"],
+    "any_doubles_support": any_doubles_support,
+    # components
+    "fam_cov": fam_cov, "fam_hpr": fam_hpr, "fam_perm": fam_perm,
+    "fam_repeat": fam_repeat, "fam_cons": fam_cons, "fam_hot": fam_hot,
+    "fam_straight2": fam_straight2, "fam_straight3": fam_straight3,
+    "fam_dom": fam_dom, "fam_doubles": fam_doubles,
+    "family_score": float(family_score),
+})
+
+
+Second pass (cross‑section + progression + last‑remaining) — after building df = pd.DataFrame(out):
+
+if df.empty:
+    return df
+
+# section coverage (how many of Combined/Midday/Evening)
+keys = ["Set", "Draw", "Column", "family_id"]
+df["section_count"] = df.groupby(keys)["section"].transform("nunique")
+df["fam_section_bonus"] = np.maximum(0, df["section_count"] - 1) * cfg.get("vtrac_family_presence", 1)
+df.loc[df["section_count"] == 3, "fam_section_bonus"] += cfg.get("cross_section_triple", 2)
+df["family_score"] += df["fam_section_bonus"]
+
+# progression across sets (SetN → SetN-1)
+def _normalize_set_value(value: object) -> Optional[int]:
+    if value is None: return None
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    return int(digits) if digits else None
+
+def _has_progression(values: list[Optional[int]]) -> bool:
+    seq = sorted({v for v in values if v is not None})
+    if len(seq) < 2:
+        return False
+    # reward consecutive runs like 3→2→1 (we only need a run length >=2)
+    run = 1
+    for i in range(1, len(seq)):
+        if seq[i] == seq[i-1] + 1 or seq[i] == seq[i-1] - 1:
+            run += 1
+            if run >= 2:
+                return True
+        else:
+            run = 1
+    return False
+
+df["_set_num"] = df["Set"].apply(_normalize_set_value)
+df["progression_flag"] = df.groupby(["section","Draw","Column","family_id"])["_set_num"] \
+                           .transform(lambda nums: _has_progression(nums.tolist()))
+df["fam_progression_bonus"] = df["progression_flag"].astype(int) * cfg.get("progression_across_sets", 1)
+df["family_score"] += df["fam_progression_bonus"]
+
+# last remaining 3‑V on the rightmost stable column of each (section, Set, Draw)
+df["last_remaining_3v"] = False
+for (sec, setv, draw), box in df.groupby(["section","Set","Draw"]):
+    stable = box[box["rows_cov"] >= 3].copy()
+    if stable.empty:
+        continue
+    stable["col_int"] = pd.to_numeric(stable["Column"], errors="coerce")
+    stable = stable.dropna(subset=["col_int"])
+    if stable.empty:
+        continue
+    col_max = int(stable["col_int"].max())
+    survivors = stable[stable["col_int"] == col_max]
+    fams = survivors["family_id"].dropna().unique()
+    if len(fams) == 1:
+        fid = fams[0]
+        mask = (
+            (df["section"] == sec)
+            & (df["Set"] == setv)
+            & (df["Draw"] == draw)
+            & (pd.to_numeric(df["Column"], errors="coerce") == col_max)
+            & (df["family_id"] == fid)
+        )
+        df.loc[mask, "last_remaining_3v"] = True
+
+df["fam_last_remaining_bonus"] = df["last_remaining_3v"].astype(int) * cfg.get("last_remaining_3v_bonus", 3)
+df["family_score"] += df["fam_last_remaining_bonus"]
+
+# Cleanup and ordering
+df.drop(columns=["_set_num"], inplace=True)
+df = df.sort_values(["section","Set","Draw","Column","family_score"],
+                    ascending=[True, True, True, True, False]).reset_index(drop=True)
+return df
+
+
+Why this fixes your log errors
+
+The NameError is gone because any_doubles_support is computed before use.
+
+Doubles support now fires when a consensus box and a double for the same family appear in the same column or an adjacent one.
+
+We expose fam_* parts and any_doubles_support, section_count, progression_flag, last_remaining_3v, and their bonuses, and we add those to family_score.
+
+Column adjacency works because we normalize Column to int where needed.
+
+Last‑remaining bonus only applies when the explicit flag is true—no double counting.
+
+3.3 alpha_analytical/stable/feature_config.yml — confirm keys
+
+Make sure these keys exist (values are examples; keep your current tuning):
+
+vertical_coverage_per_row: 2
+horizontal_persistence_repeat_bonus: 1
+baseline_boxed_bonus: 1
+baseline_straight_bonus: 3
+straight_2rows_bonus: 2
+straight_3rows_bonus: 4
+extra_digit_per_char: 0
+single_left_bonus: 0
+mirror_bonus: 1
+consensus_full_bonus: 4
+consensus_family_bonus: 2
+dominant_last_bonus: 3
+dominant_double3_bonus: 1
+hot_level_1_bonus: 0
+hot_level_2_bonus: 0
+hotzone_family_bonus: 1
+perm_density_per_extra: 1
+repeat_count_per_extra: 0.5
+vtrac_family_presence: 1
+cross_section_triple: 2
+progression_across_sets: 1
+last_remaining_3v_bonus: 3
+doubles_trigger_bonus: 1
+hidden3v_bonus: 0.5
+min_score_to_highlight: 7   # training
+
+4) Quick validation sequence (what Codex should run next)
+
+Unit tests
+
+pytest -q tests/test_vtrac_triples.py
+pytest -q tests/test_stable_contracts.py
+
+
+If test_stable_contracts.py assumes the new family columns, it should pass once the patches above are in.
+
+Smoke a minimal synthetic (Codex already did this interactively with 9449/227/277—repeat after patches).
+
+Run 3 states (training profile)
+
+min_occ=1, min_score_to_highlight=7.
+
+Winners provided for CT/DE/IN (as in your prior batch).
+
+Confirm the 5 artifacts per state are produced and that:
+
+Row CSV includes family_id + hidden3v + score parts.
+
+Families CSV includes all fam_* parts, any_doubles_support, section_count, progression_flag, last_remaining_3v.
+
+5) About the Codex CLI context change & how to work efficiently
+
+The screenshot you shared shows Pro is active, but sessions still have a finite working context. Recent Codex CLI builds favor explicit session restarts once that fills.
+
+Best practice that avoids re‑training:
+
+Check in a “GO packet” file in tasks/SESSION_SEED.md (or your FIX_122). Keep the “current state + next steps” in 25–40 lines, and update it once per chunk.
+
+Small batches: One feature per session chunk (e.g., “finish families post‑pass” → “add metrics writer” → “regression guard hook”).
+
+Always commit when a chunk is green (pre-commit run --all-files + pytest), then start a fresh session with the next chunk.
+
+Keep tests & hooks as the truth—Codex can re‑discover state from git status + tests.
+
+If you want me to, I can draft scripts/hooks/check_contract.py next (the pre‑commit that refuses to drop columns/keys), but let’s first land the two code patches above so the build is green again.
+
+6) One‑page handoff to paste into a fresh Codex session
+
+GO PACKET – Resume Stable Regression Shield
+
+Goal (this chunk): finish family post‑pass (doubles support + fam_* parts + section/progression/last‑remaining bonuses) and restore row CSV columns.
+
+Apply patches:
+• alpha_analytical/stable/__init__.py — add _hot_bonus, restore out_cols header (include family_id/dom_last/dom_pair/hidden3v + score_).
+• alpha_analytical/stable/post_pass_families.py — implement doubles adjacency, fam_ parts, section/progression/last‑remaining bonuses (as per spec).
+• Confirm feature_config.yml contains keys listed in spec.
+
+Then run:
+pytest -q tests/test_vtrac_triples.py
+pytest -q tests/test_stable_contracts.py
+If green, run CT/DE/IN training runs (min_occ=1, min_score_to_highlight=7) and commit.
+
+Do not remove any existing columns or keys; only add.
+
+7) Quick note about uploaded files
+
+Some earlier uploads in this chat may have expired. If you want me to re‑inspect any specific CSVs or reports directly here, re‑upload those files and I’ll fold them into the next pass.
+
+Bottom line
+
+Phase‑1 is still solid; we just need to finish the family aggregator and restore the row CSV header.
+
+The patches above resolve the NameError, re‑expose the required columns, and complete the second‑pass bonuses exactly as we planned.
+
+Once green, we can proceed to the metrics writer and the regression‑guard hook with confidence.
+
+If you want, I can also provide a tiny metrics_writer.py and the check_contract.py hook in the same drop‑in style next.
