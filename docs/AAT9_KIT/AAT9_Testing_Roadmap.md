@@ -18,10 +18,12 @@ This document tracks the automated verification layers that protect AAT9. Treat 
   - tests/test_vtrac_matchers.py verifies winner/family hits plus VT-straight strict/value-block spans.
   - tests/test_winners_renderer.py checks the legend/classes rendered in the analyzer-style report.
   - tests/test_draw_catalog.py locks the draw snapshot hashing and newest-first double detection used by Control Center due-doubles + positional hard-due cues.
-  - tests/test_long_string_overlay.py ensures the long-string Digit-Reduction windows stay highlighted in the V-TRAC tables.
-  - tests/test_batch_runner.py keeps the Pick3StatsC4 state parser aligned with the Control Center batch workflow.
-  - tests/test_draws_refresh.py ensures the Control Center draw purge removes the expected CSVs before regeneration.
-  - tests/test_aux_validation.py covers Aux double thresholds, pair severity, multi-variant alerts, family badge extraction, repeat-watch streaks, positional hard-due flags, V-TRAC overlays/heatboard stats, and sums analytics.
+- tests/test_long_string_overlay.py ensures the long-string Digit-Reduction windows stay highlighted in the V-TRAC tables.
+- tests/test_batch_runner.py keeps the Pick3StatsC4 state parser aligned with the Control Center batch workflow.
+- tests/test_draws_refresh.py ensures the Control Center draw purge removes the expected CSVs before regeneration.
+- tests/test_aux_validation.py covers Aux double thresholds, pair severity, multi-variant alerts, family badge extraction, repeat-watch streaks, positional hard-due flags, V-TRAC overlays/heatboard stats, and sums analytics.
+- tests/test_digit_training_bundle.py locks the Analyzer V2 training bundle defaults (Midday/Evening) plus the Combined opt-in and error handling for missing artifacts.
+- tests/test_stable_doubles_adjacency_negative.py ensures Stable doubles support only fires when consensus digits share a column, protecting the Control Center evidence bus from false positives.
 
 
 - Pending additions:

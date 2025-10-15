@@ -1466,6 +1466,14 @@ def show_control_center_page() -> None:
                                                 st.subheader("Winners evidence")
                                                 st.dataframe(evidence_df[available], use_container_width=True)
                                                 st.caption("Additional evidence columns are available in the exported data.")
+                                                csv_bytes = evidence_df.to_csv(index=False).encode('utf-8')
+                                                st.download_button(
+                                                    label="Download winners evidence CSV",
+                                                    data=csv_bytes,
+                                                    file_name=f"{item['state']}_winners_evidence.csv",
+                                                    mime="text/csv",
+                                                    key=f"cc_evidence_download_{item['state']}"
+                                                )
                         if stable_errors:
                             st.error(
                                 "Stable extractor issues:\n"

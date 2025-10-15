@@ -195,7 +195,19 @@ def run_stable_bundles(
     bundle_stamp: Optional[str] = None,
     write_bundle: bool = True,
 ) -> List[Dict[str, object]]:
-    from src.core import stable_pattern_extractor as stable  # local import
+    try:
+        from src.core import stable_pattern_extractor as stable  # local import
+    except FileNotFoundError as exc:  # pragma: no cover - configuration safeguard
+        message = f"Stable configuration missing: {exc}"
+        return [
+            {
+                "state": entry.project_state,
+                "winners": entry.winners(),
+                "error": message,
+            }
+            for entry in entries
+            if entry.project_state
+        ]
 
     results: List[Dict[str, object]] = []
     for entry in entries:

@@ -5,22 +5,12 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
+from alpha_analytical import stable as stable_module
 from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
 from alpha_analytical.vtrac import get_vtrac_index
 
 
 _WINNER_KEYS = ("Canonical", "Winner", "winner", "Combo", "combo")
-
-
-def _digits_only(value: str | int | float | None) -> str:
-    if value is None:
-        return ""
-    return "".join(ch for ch in str(value) if ch.isdigit())
-
-
-def _canonical(value: str | int | float | None) -> str:
-    digits = _digits_only(value)
-    return "".join(sorted(digits)) if digits else ""
 
 
 def _load_csv(path: Optional[str | Path]) -> pd.DataFrame:
@@ -75,7 +65,14 @@ def attach_stable_evidence(
         scores = pd.DataFrame()
 
     winners_df["stable_winner"] = winners_df.apply(_winner_value, axis=1)
-    winners_df["stable_canonical"] = winners_df["stable_winner"].map(_canonical)
+
+    def _stable_canon(value: str | int | float | None) -> str:
+        if value is None:
+            return ""
+        digits = stable_module.digits_only(str(value))
+        return stable_module.canon(digits) if digits else ""
+
+    winners_df["stable_canonical"] = winners_df["stable_winner"].map(_stable_canon)
 
     def _family_for(canon: str) -> Optional[int]:
         if not canon:
@@ -123,7 +120,7 @@ def attach_stable_evidence(
     row_evidence = pd.DataFrame()
     if not scores.empty and "score" in scores.columns:
         sc = scores.copy()
-        sc["stable_canonical"] = sc["Canonical"].map(_canonical)
+        sc["stable_canonical"] = sc["Canonical"].map(_stable_canon)
         sc.sort_values("score", ascending=False, inplace=True, ignore_index=True)
         row_columns: Iterable[str] = [
             "stable_canonical",
@@ -214,5 +211,23 @@ def attach_stable_evidence(
     # Ensure canonical helper columns appear at the end
     base_cols = [col for col in enriched.columns if col not in ("stable_winner", "stable_canonical")]
     enriched = enriched[base_cols + ["stable_winner", "stable_canonical"]]
+
+    bool_columns = [
+        "progression_flag",
+        "last_remaining_3v",
+        "any_doubles_support",
+        "mirror",
+        "straight2",
+        "straight3",
+        "single_left",
+        "cons_full",
+        "cons_3v",
+        "dom_last",
+        "dom_pair",
+        "hidden3v",
+    ]
+    for column in bool_columns:
+        if column in enriched.columns:
+            enriched[column] = enriched[column].astype("boolean")
 
     return enriched

@@ -1,3 +1,18 @@
+ï»¿## 2025-10-14 - Stable winners guardrail polish
+- Impact: Winners enrichment now reuses the Stable canon helpers, coerces diagnostic booleans to nullable dtypes, and adds a pre-commit guard so the CSV export keeps the evidence columns; manifest tests assert evidence schema versions stay recorded.
+- Impact: Digit Reduction bundle packaging verified in-situ (20251011 stamp) and Control Center batch smoke confirmed Stable metrics + winners evidence + lean DR bundles continue to land together.
+- Files: alpha_analytical/stable/winners_enrich.py, scripts/hooks/check_winners_export.py, tests/test_stable_training_bundle.py, tests/test_stable_doubles_adjacency_negative.py, .pre-commit-config.yaml, .gitignore, docs/AAT9_KIT/AAT9_Testing_Roadmap.md
+
+## 2025-10-14 - Docs - Onboarding compass and startup briefing refresh
+- Impact: Added AAT9_Onboarding_Compass.md to centralize onboarding flow, validation loop, and documentation expectations.
+- Impact: Updated CODEX_READ_FIRST briefing and KIT README to point at the compass and remove redundant checklists.
+- Files: docs/AAT9_KIT/{AAT9_Onboarding_Compass.md,AAT9_KIT_README.md}, briefings/CODEX_READ_FIRST_AAT9.md
+
+## 2025-10-13 - Stable evidence bus + lean Digit Reduction bundles
+- Impact: Streamlined the Stable winners evidence flow so Control Center exposes consolidated metrics/evidence (downloadable CSV) and the training manifest records schema versions.
+- Impact: Digit Reduction training bundles now package Midday/Evening winner artifacts by default (10 files) with an `include_combined` toggle; runtime overlays still emit Combined for diagnostics.
+- Files: alpha_analytical/stable/{metrics.py,training_bundle.py,winners_enrich.py}, alpha_analytical/control_center/batch_runner.py, alpha_analytical/digit_reduction/analyzer_v2/training_bundle.py, tests/test_digit_training_bundle.py, src/app.py, docs/AAT9_KIT/{AAT9_Quickstart_Cheat_Sheet.md}.
+
 ## 2025-10-12 - Aux canonical draws guardrail
 - Impact: Canonicalised Aux and Control Center draw loading through `modules.aux_loaders.load_state_draws`, removed staged fallbacks, and patched the V-TRAC overlay to reuse cached draw windows so the Aux page no longer crashes when staged modules disappear.
 - Impact: Added regression coverage that asserts live data resolves under `data/cleaned/draws`, updated workflow docs, and standardised the Aux validation harness as the go-to guardrail after draw refreshes.
@@ -9,7 +24,7 @@
 - Acceptance: added tests/acceptance/test_vtrac_overlay_connecticut.py to snapshot overlay/heatboard/sums outputs for Connecticut, keeping the CLI and UI aligned with fixtures.
 - Impact: Unit coverage now compares overlay and heatboard outputs against the Streamlit helpers to catch drift immediately.
 - Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_vtrac.py, tests/test_aux_validation.py.\n\n?## 2025-10-10 - Aux draw refresh guardrail
-- Impact: Aux draw regeneration now offers a “delete existing draw CSVs” toggle that purges the selected state files before writing, preventing stale data from lingering between runs.
+- Impact: Aux draw regeneration now offers a delete existing draw CSVs toggle that purges the selected state files before writing, preventing stale data from lingering between runs.
 - Impact: Added `alpha_analytical.control_center.draws_refresh.purge_draw_csvs` with unit coverage so the Control Center refresh stays clean and reproducible.
 - Files: alpha_analytical/control_center/draws_refresh.py, src/app.py, tests/test_draws_refresh.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.
 ## 2025-10-10 - Control Center batch winners workflow
@@ -108,22 +123,25 @@
 - Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.
 
 ## 2025-10-13 - Stable extractor regression shield (work paused)
-- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
 ## 2025-10-13 - Stable extractor regression shield (work paused)
-- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
 ## 2025-10-13 - Stable extractor regression shield (work paused)
-- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
 ## 2025-10-13 - Stable extractor regression shield (work paused)
-- Impact: Row payload now exports per-component score fields (score_cov…score_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+
+
+

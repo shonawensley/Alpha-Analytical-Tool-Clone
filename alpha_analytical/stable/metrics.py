@@ -123,6 +123,8 @@ def build_metrics(
         "winner_family_best_rank": {winner: rank for winner, rank in winner_rank_by_family.items()},
         "best_straight_rank": best_straight_rank,
         "spotlight_rate": spotlight_rate,
+        "evidence_schema_version": 1,
+        "stable_contract_version": 1,
     }
 
     return metrics

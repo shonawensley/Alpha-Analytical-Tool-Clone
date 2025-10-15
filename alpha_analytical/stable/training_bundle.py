@@ -43,6 +43,18 @@ def _load_optional_csv(path: Optional[str | Path]) -> Optional[pd.DataFrame]:
     except Exception:
         return None
 
+def _load_optional_json(path: Optional[str | Path]) -> Optional[dict]:
+    if not path:
+        return None
+    json_path = Path(path)
+    if not json_path.exists():
+        return None
+    try:
+        return json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
 
 def write_training_bundle(
     *,
@@ -78,6 +90,7 @@ def write_training_bundle(
     df_scores = _load_optional_csv(scores_path)
     df_spotlight = _load_optional_csv(spotlight_raw_path)
     df_spotlight_families = _load_optional_csv(spotlight_family_path)
+    metrics_data = _load_optional_json(metrics_path)
 
     stats = {
         "total_patterns": int(df_scores.shape[0]) if df_scores is not None else 0,
@@ -86,6 +99,9 @@ def write_training_bundle(
         "spotlight_rows": int(df_spotlight.shape[0]) if df_spotlight is not None else 0,
         "spotlight_family_rows": int(df_spotlight_families.shape[0]) if df_spotlight_families is not None else 0,
     }
+    if metrics_data:
+        stats.setdefault("evidence_schema_version", metrics_data.get("evidence_schema_version"))
+        stats.setdefault("stable_contract_version", metrics_data.get("stable_contract_version"))
 
     winners_list = [str(w).strip() for w in (winners or []) if str(w).strip()]
 
@@ -105,6 +121,12 @@ def write_training_bundle(
         },
         "stats": stats,
     }
+
+    if metrics_data:
+        manifest["versions"] = {
+            "evidence_schema": metrics_data.get("evidence_schema_version"),
+            "stable_contract": metrics_data.get("stable_contract_version"),
+        }
 
     manifest_path = bundle_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")

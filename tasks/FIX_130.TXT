@@ -1,0 +1,123 @@
+Quick read on the 15 “winners” outputs
+
+For each variant the overlay emits five artifacts:
+
+*_winner_map.json (machine‑readable hits map),
+
+*_winner_flags.csv (row‑level joinable flags),
+
+*_winner_stamp.json (stamp/summary),
+
+*_winner_hits.csv (aggregates / earliest step),
+
+*_winner_overlay.html (human visual).
+
+These are the right five; the only excess was duplicating them for Combined in the package. (Combined is still useful for cross‑variant context; we just don’t need it packaged by default.)
+
+My assessment of Codex’s work
+
+What’s good
+
+Scoped fix to packaging only; no analyzer/overlay logic was changed.
+
+Added tests so the default bundle = 10 files (5×Midday, 5×Evening); opt‑in returns the full 15.
+
+Manifest now carries packaged_variants and include_combined for auditability.
+
+Watch‑outs
+
+They rewrote the training‑bundle test in one pass (PowerShell edits). It ends green, but let’s keep the tests simple and readable going forward.
+
+Make sure we didn’t silently loosen error handling: when a variant is requested for packaging, all five artifacts for that variant must exist or we raise TrainingBundleError (no half‑bundles).
+
+Overall: ✅ Sound, low‑risk, and aligned with your intent and the design charter (self‑contained modules; explainable outputs; reduce noise, keep evidence).
+
+What to tell Codex to do next (paste‑ready)
+
+Goal: Keep generating Combined for analytics/UI; package only Midday/Evening by default. Do not touch overlay logic.
+
+TASK: Lean Digit‑Reduction training bundle (finalize)
+
+1) Packaging defaults
+   - In alpha_analytical/digit_reduction/analyzer_v2/training_bundle.py:
+     PACKAGED_VARIANTS_DEFAULT = ("Midday", "Evening")
+     def package_training_bundle(..., include_combined: bool = False, ...):
+       # Resolve available variants for the chosen stamp
+       variants = stamp_variants[stamp]                # from _collect_available_stamps()
+       packaged_variants = list(PACKAGED_VARIANTS_DEFAULT)
+       if include_combined and "Combined" in variants:
+           packaged_variants.append("Combined")
+       # Copy 3+2 artifacts per packaged variant:
+       #  winner_map.json, winner_flags.csv, winner_stamp.json
+       #  + winner_hits.csv (if include_hits) + winner_overlay.html (if include_overlay)
+       # Raise TrainingBundleError if any required artifact is missing.
+       # Record in manifest:
+       manifest["packaged_variants"] = packaged_variants
+       manifest["include_combined"] = include_combined
+
+2) Control Center / CLI wiring
+   - Add "Include Combined artifacts" boolean next to the bundle button;
+     pass include_combined into package_training_bundle(...).
+
+3) Tests (keep them small & explicit)
+   - tests/test_digit_training_bundle.py
+     • test_package_training_bundle_defaults → ships only Midday+Evening; assert 10 files present; Combined absent.
+     • test_package_training_bundle_include_combined → ships all 15 when flag=True.
+     • test_package_training_bundle_missing_files_raises → required file missing ⇒ TrainingBundleError.
+
+4) Docs & guardrails
+   - Update AAT9 Checkpoint / Unified changelog: “Digit‑Reduction training bundle defaults to 10 files;
+     include_combined flag restores 15.”
+   - Add a short “How to verify” snippet to HUMAN_READ_FIRST / KIT README:
+     powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+     python -m pytest -q
+     run_app.bat    # optional integrated sanity check
+
+5) Verification (acceptance)
+   - Repackage any state (e.g., Connecticut4, latest stamp):
+     Confirm training_sets/<STAMP>/winners has only Midday+Evening by default.
+     Confirm analyzer_v2/winners still holds all three variants (Combined included) for QA.
+
+Answers to your specific concerns
+
+“Are Combined patterns still highlighted and detectable?”
+Yes. The overlay engine still generates Combined artifacts next to Midday/Evening under analyzer_v2/winners/. We only exclude Combined from the training bundle by default; nothing analytic is removed. If you need to ship the Combined artifacts, set include_combined=True when packaging. This preserves the “environment (Combined/Midday/Evening context; inter‑variant echoes)” you use for evidence stacking.
+
+“Why keep Combined at all?”
+It’s a second independent “sensor.” When Combined + Midday/Evening agree, confidence increases (exactly the stacked‑instrument idea we’ve been following). We keep it for analysis, we just stop duplicating it in bundles by default.
+
+(Optional next improvement, not required for this fix)
+
+If you want cross‑variant support to be visible at a glance inside the Midday/Evening outputs, add a light “echo” tag:
+
+In winners_overlay.py, after building the three *_winner_map.json dicts, mark echo_in_combined=1 (or echo_variants=["Combined"]) in the Midday/Evening winner_flags.csv whenever the same coordinates fire in Combined.
+
+This preserves a 10‑file package but exposes cross‑variant reinforcement directly on the files you review most.
+
+This aligns with your “evidence over folklore” ethos and makes the signal explicit without adding more files.
+
+Recap / What you can ship today
+
+Keep Codex’s revert and the new packaging filter.
+
+Package emits 10 winners artifacts by default (Midday + Evening).
+
+Combined artifacts still exist on disk, still analyzed, and can be included on demand.
+
+Tests + pre‑commit stayed green.
+
+If you want, I can also give you a one‑liner checklist you can paste into Codex to run after any DR packaging change (preflight → pytest → headless app boot), as already laid out in the “Human Read First” and “Practices/Preflight” docs.
+
+Appendix — “what each artifact is for” (quick reference)
+
+*_winner_map.json: machine‑readable cell/grid hits; ideal for ML/Winners Logger.
+
+*_winner_flags.csv: row‑level joinable flags (keys align to analyzer’s per‑item CSV).
+
+*_winner_hits.csv: aggregates and earliest‑step timing (QA timing evidence).
+
+*_winner_stamp.json: compact summary stamp (also mirrored to the Winners Logger if enabled).
+
+*_winner_overlay.html: human‑readable visual proof (yellow exact; blue family).
+
+This keeps us fully aligned with the “stacked signals + explainability” north star while cleaning the training bundle to the two real draws.
