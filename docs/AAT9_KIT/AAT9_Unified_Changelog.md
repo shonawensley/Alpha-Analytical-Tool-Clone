@@ -1,4 +1,9 @@
-﻿## 2025-10-14 - Stable winners guardrail polish
+## 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
+- Impact: Replaced the placeholder enhanced analyzer with the production engine: ring/column survival, hot-zone boosts, cross-section consensus, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Added a headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) plus a feature-gated Streamlit wrapper (`src/core/module_c_vtrac_enhanced.py`). Legacy engine stays default until A/B review.
+- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py}, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, tests/fixtures/vtrac/**, src/core/module_c_vtrac_enhanced.py
+
+## 2025-10-14 - Stable winners guardrail polish
 - Impact: Winners enrichment now reuses the Stable canon helpers, coerces diagnostic booleans to nullable dtypes, and adds a pre-commit guard so the CSV export keeps the evidence columns; manifest tests assert evidence schema versions stay recorded.
 - Impact: Digit Reduction bundle packaging verified in-situ (20251011 stamp) and Control Center batch smoke confirmed Stable metrics + winners evidence + lean DR bundles continue to land together.
 - Files: alpha_analytical/stable/winners_enrich.py, scripts/hooks/check_winners_export.py, tests/test_stable_training_bundle.py, tests/test_stable_doubles_adjacency_negative.py, .pre-commit-config.yaml, .gitignore, docs/AAT9_KIT/AAT9_Testing_Roadmap.md
@@ -90,7 +95,7 @@
 
 ## 2025-10-02 - Aux SSOT windows & V-TRAC repeat watch
 - Impact: Added core/aux_config.py as the single source of truth for Aux windows/thresholds, surfaced the values in UI captions/dev health, unified the V-TRAC overlay for the working table and index hits, and introduced a Control Center repeat watch panel backed by new overlay helpers.
-- Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, 	ests/test_analyze_pairs_semantics.py.
+- Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, ests/test_analyze_pairs_semantics.py.
 
 
 ## 2025-10-02 - Aux SSOT follow-up (UI + smoke)
@@ -122,10 +127,11 @@
 - Impact: Locked Aux/BA/Control Center draw resolution to `data/cleaned/draws/`, vendored the working analyze_pairs / vtrac_reference modules, flattened the remaining expander, and bound the 360/1000 windows via safe defaults. Aux now renders without staged fallbacks and the red tier returns consistently.
 - Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.
 
-# 2025-10-15 - Enhanced V-TRAC analyzer (feature-gated rollout)
-- Impact: Added new `modules.vtrac_enhanced` engine with tunable weights, rich evidence capture, and straight ranking; produces JSON bundles under `data/outputs/analysis/vtrac_enhanced/<STATE>/`.
-- Impact: CLI (`tools/vtrac_enhanced_cli.py`) and unit test (`tests/test_vtrac_enhanced_basic.py`) cover the new pipeline; Streamlit page optionally uses the enhanced analyzer behind `AAT9_FLAGS.ENHANCED_VTRAC`.
-- Files: modules/vtrac_enhanced/**, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, src/core/module_c_vtrac_enhanced.py, src/app.py, tasks/VTRAC_ENHANCED_IMPLEMENTATION.md.
+# 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
+- Impact: Replaced the placeholder enhanced analyzer with the production engine: ring/column survival, hot-zone boosts, cross-section consensus, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Added a headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) so the analyzer can be smoked outside Streamlit. Feature-gated UI wrapper (`src/core/module_c_vtrac_enhanced.py`) mirrors the legacy page while storing results and bundles in session state.
+- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py}, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, tests/fixtures/vtrac/**, src/core/module_c_vtrac_enhanced.py.
+- Notes: Tuning/Why panels and learning capsules remain future work; flag `AAT9_FLAGS.ENHANCED_VTRAC` stays false until cross-validated.
 
 ## 2025-10-13 - Stable extractor regression shield (work paused)
 - Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
@@ -147,6 +153,7 @@
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+
 
 
 

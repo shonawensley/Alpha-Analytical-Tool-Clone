@@ -39,7 +39,8 @@ from utils.path_handler import (
     get_winners_output_dir
 )
 from utils.state_utils import STATES, get_state_file_name
-from modules.vtrac_matchers import WinnerTargets, build_winner_targets, collect_spans
+from modules.vtrac_matchers import WinnerTargets, build_winner_targets
+from modules.vtrac_enhanced.evidence import BoxKey as EvidenceBoxKey, build_grid as build_evidence_grid
 from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
@@ -508,15 +509,6 @@ def rank_by_occurrence(tables, top=10):
     counts.sort(key=lambda x: x[1], reverse=True)
     return [idx for idx, _ in counts[:top]]
 
-HIGHLIGHT_PRIORITY = {
-    "family_gap": 1,
-    "family_strict": 2,
-    "vt_straight_gap": 3,
-    "vt_straight_strict": 4,
-    "winner_gap": 5,
-    "winner_strict": 6,
-}
-
 WINNER_STYLE_BLOCK = """
 <style>
   .legend { margin: 8px 0 12px; font: 13px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial; }
@@ -546,47 +538,6 @@ WINNER_STYLE_BLOCK = """
 </div>
 """
 
-HIGHLIGHT_CLASS = {
-    "winner_strict": "hit-winner",
-    "winner_gap": "hit-winner-gap",
-    "vt_straight_strict": "hit-vt-straight",
-    "vt_straight_gap": "hit-vt-straight-gap",
-    "family_strict": "hit-family",
-    "family_gap": "hit-family-gap",
-}
-
-
-def _highlight_value(raw_value: str, targets: WinnerTargets) -> str:
-    if targets is None:
-        return raw_value
-    spans = collect_spans(raw_value, targets)
-    if not any(spans.values()):
-        return raw_value
-    chars = list(str(raw_value))
-    labels = [None] * len(chars)
-    for category in ("family_gap", "family_strict", "vt_straight_gap", "vt_straight_strict", "winner_gap", "winner_strict"):
-        priority = HIGHLIGHT_PRIORITY[category]
-        for start, end in spans.get(category, []):
-            for idx in range(start, min(end, len(labels))):
-                current = labels[idx]
-                if current is None or HIGHLIGHT_PRIORITY[current] < priority:
-                    labels[idx] = category
-    result = []
-    idx = 0
-    while idx < len(chars):
-        label = labels[idx]
-        if label is None:
-            result.append(chars[idx])
-            idx += 1
-        else:
-            cls = HIGHLIGHT_CLASS[label]
-            j = idx
-            while j < len(chars) and labels[j] == label:
-                j += 1
-            segment = ''.join(chars[idx:j])
-            result.append(f'<span class="{cls}">{segment}</span>')
-            idx = j
-    return ''.join(result)
 def analyze_all_indexes(state_name: str) -> list:
     """Loop all VTRAC indices, compute score, produce final sorted list of results."""
     tables = load_state_data(state_name)
@@ -623,6 +574,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     targets = build_winner_targets(winner_combo or "", patterns)
+    evidence_grid = build_evidence_grid(tables).evaluate(targets)
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -714,6 +666,7 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
         if df is None or df.empty:
             return f"<h2>{title}</h2><p>No data available</p>"
 
+        variant_label = str(table_kind or "").capitalize()
         table_key = str(table_kind).lower()
         header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
         table_html = f"<h2>{title}</h2><table>"
@@ -728,8 +681,19 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
                 if col in df.columns:
                     raw_value = str(row[col])
                     display_value = raw_value
-                    if targets and (col.isdigit() or col.upper().startswith('R')) and any(ch.isdigit() for ch in raw_value):
-                        display_value = _highlight_value(raw_value, targets)
+                    if col.isdigit() and any(ch.isdigit() for ch in raw_value):
+                        column_index = int(col)
+                        box_key = EvidenceBoxKey(
+                            variant=variant_label,
+                            set_name=set_name,
+                            draw=draw_name,
+                            column=column_index,
+                        )
+                        box = evidence_grid.boxes.get(box_key)
+                        if box:
+                            cell = box.cells.get(row_type)
+                            if cell and cell.spans:
+                                display_value = cell.render_highlighted()
 
                     cell_classes = []
                     if col.isdigit():

@@ -1,63 +1,54 @@
-from modules.vtrac_enhanced import (
-    DEFAULT_WEIGHTS,
-    build_engine_input_from_tables,
-    run_analysis,
-    write_prediction_bundle,
-)
-from modules.vtrac_enhanced.types import Cell, EngineInput, PatternsGrid, SectionData
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from modules import vtrac_enhanced as ve
 
 
-def _empty_ring() -> tuple[Cell, ...]:
-    return tuple(Cell(digits="") for _ in range(7))
+FIXTURE_STATE = "SampleState"
+FIXTURE_ROOT = Path("tests/fixtures/vtrac/SampleState")
 
 
-def _cells(*values: str) -> tuple[Cell, ...]:
-    padded = list(values) + [""] * (7 - len(values))
-    cells = []
-    for idx, value in enumerate(padded):
-        col_number = 7 - idx
-        hot = col_number <= 2
-        superhot = col_number == 1
-        cells.append(Cell(digits=value, hot=hot, superhot=superhot))
-    return tuple(cells)
+def _build_engine_input() -> ve.EngineInput:
+    return ve.build_engine_input_from_tables(FIXTURE_STATE, tables_root=FIXTURE_ROOT.parent)
 
 
-def test_run_analysis_scores_index() -> None:
-    r2 = _cells("", "", "", "", "", "045", "059")
-    grid = PatternsGrid(
-        by_r={
-            "R2": r2,
-            "R4": _empty_ring(),
-            "R6": _empty_ring(),
-            "R8": _empty_ring(),
-        }
-    )
-    engine_input = EngineInput(
-        sections=[SectionData(section="Combined", set_name="Set1", patterns=grid)],
-        recent_draws=("059",),
-        winner_hint=None,
-    )
+def test_run_analysis_orders_indices(tmp_path):
+    engine_input = _build_engine_input()
+    output = ve.run_analysis(engine_input)
 
-    output = run_analysis(engine_input, DEFAULT_WEIGHTS)
-    assert output.indices_ranked, "Expected at least one scored index"
+    assert output.indices_ranked, "Expected indices to be ranked"
     top = output.indices_ranked[0]
-    assert top.index == 5, f"Expected index 5 to be highest, got {top.index}"
+    assert top.index == 5, f"Expected index 5 to score highest, got {top.index}"
     assert top.score > 0
-    assert any(s.straight == "045" or s.straight == "059" for s in top.straights)
+    assert any(candidate.straight == "059" for candidate in top.straights)
+
+    bundle = ve.write_prediction_bundle("TestState", output, analysis_root=tmp_path)
+    data = json.loads(bundle.read_text(encoding="utf-8"))
+    assert data["indices_ranked"][0]["index"] == 5
+    assert data["straights_ranked"], "Expected straight candidates in bundle"
 
 
-def test_write_prediction_bundle(tmp_path) -> None:
-    r2 = _cells("", "", "", "", "", "045", "059")
-    grid = PatternsGrid(
-        by_r={"R2": r2, "R4": _empty_ring(), "R6": _empty_ring(), "R8": _empty_ring()}
-    )
-    engine_input = EngineInput(
-        sections=[SectionData(section="Combined", set_name="Set1", patterns=grid)],
-        recent_draws=("059",),
-    )
+def test_mask_digit_suggestion():
+    engine_input = _build_engine_input()
+    mask = ve.suggested_mask_digits(engine_input.recent_draws)
+    assert mask == {"4", "3", "8"}
 
-    output = run_analysis(engine_input)
-    out_path = write_prediction_bundle("TestState", output, analysis_root=tmp_path)
-    assert out_path.exists()
-    data = out_path.read_text(encoding="utf-8")
-    assert '"TestState"' in data
+
+def test_cli_smoke(tmp_path, monkeypatch):
+    cmd = [
+        "python",
+        "tools/vtrac_enhanced_cli.py",
+        "--state",
+        FIXTURE_STATE,
+        "--tables-root",
+        str(FIXTURE_ROOT.parent),
+        "--analysis-root",
+        str(tmp_path),
+    ]
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    assert "Bundle written to" in result.stdout
+    bundles = sorted(tmp_path.glob("vtrac/SampleState/*.json"))
+    assert bundles, "CLI did not write prediction bundle"
