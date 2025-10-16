@@ -68,3 +68,44 @@ def test_attach_stable_evidence_uses_stable_canon():
     for column in bool_columns:
         if column in enriched.columns:
             assert str(enriched[column].dtype) == "boolean"
+
+
+def test_attach_stable_evidence_handles_extended_substrings():
+    winner_value = "758"
+    winner_canonical = stable_module.canon(stable_module.digits_only(winner_value))
+    family_id = derive_vtrac_index_for_canonical(winner_canonical, get_vtrac_index)
+
+    winners = pd.DataFrame([{"Winner": winner_value}])
+    families_df = pd.DataFrame(
+        {
+            "family_id": [family_id],
+            "family_score": [21.5],
+            "section_count": [2],
+            "progression_flag": [False],
+            "last_remaining_3v": [False],
+            "any_doubles_support": [True],
+        }
+    )
+    scores_df = pd.DataFrame(
+        {
+            "Canonical": ["007788"],
+            "family_id": [family_id],
+            "section": ["Combined"],
+            "score": [15.0],
+            "type": ["straight"],
+            "rows": ["R6"],
+            "why": ["extended cluster"],
+        }
+    )
+
+    enriched = attach_stable_evidence(
+        winners,
+        families_df=families_df,
+        scores_df=scores_df,
+    )
+
+    assert enriched.loc[0, "family_id"] == family_id
+    assert enriched.loc[0, "row_canonical"] == "007788"
+    assert enriched.loc[0, "row_score"] == 15.0
+    assert enriched.loc[0, "row_type"] == "straight"
+    assert enriched.loc[0, "evidence_status"] == "ok"

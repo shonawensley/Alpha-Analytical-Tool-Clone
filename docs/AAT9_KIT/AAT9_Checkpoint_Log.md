@@ -478,3 +478,17 @@ Template
   - `python scripts/tools/validate_aux_doubles.py Connecticut4 --max-n 1200 --no-pairs`
   - `python -c "from modules.aux_loaders import load_state_draws; from modules.analyze_pairs import build_aux_windows; from src.app import _build_vtrac_overlay; from modules.vtrac_reference import get_vtrac_index; draws,_=load_state_draws('Connecticut4'); d100,d1000=build_aux_windows(draws); overlay=_build_vtrac_overlay(d1000, get_vtrac_index); print(len(d100), len(d1000))"`
   - Manual Streamlit smoke via `run_app.bat`.
+## 2025-10-15 21:20 (UTC) - V-TRAC enhanced engine scaffold
+
+- Context: Tasks/VTRAC_ANALYZER_RESEARCH - FINAL, RE-DESIGN, and FINAL specs requested a next-gen analyzer with richer evidence without breaking existing UI/logging.
+- Change:
+  - Added `modules.vtrac_enhanced` package (types, config, features, engine, adapters) plus Streamlit wrapper `src/core/module_c_vtrac_enhanced.py`.
+  - Exposed CLI smoke (`tools/vtrac_enhanced_cli.py`) and unit test (`tests/test_vtrac_enhanced_basic.py`), producing JSON bundles under `data/outputs/analysis/vtrac_enhanced/<STATE>/`.
+  - Introduced `AAT9_FLAGS.ENHANCED_VTRAC` in `src/app.py` so the legacy analyzer stays available until the enhanced engine is promoted.
+  - Captured implementation blueprint in `tasks/VTRAC_ENHANCED_IMPLEMENTATION.md` for future calibration/tuning steps.
+- Impact:
+  - Analyzer now ranks indices using right-column survival, cross-section echoes, mask-drop detection, mirror/reduction assists, and straight order cues; outputs ship with per-index evidence for downstream ML.
+  - Control Center / Winners Logger remain untouched; operators can A/B the new engine via flag before full rollout.
+- Verification:
+  - `pytest tests/test_vtrac_enhanced_basic.py`
+  - `python tools/vtrac_enhanced_cli.py --state Connecticut4 --no-mask`

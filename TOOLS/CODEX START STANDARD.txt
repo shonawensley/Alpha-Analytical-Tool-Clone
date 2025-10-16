@@ -1,24 +1,24 @@
-1) briefings/CODEX_READ_FIRST_AAT9.md — Standard (collaborative, yolo=false)
-# CODEX READ FIRST — AAT9 Optimized Startup (Standard)
+﻿1) briefings/CODEX_READ_FIRST_AAT9.md ΓÇö Standard (collaborative, yolo=false)
+# CODEX READ FIRST ΓÇö AAT9 Optimized Startup (Standard)
 
-**Goal:** fast, correct spin‑up with path‑safe execution and consistent documentation.  
+**Goal:** fast, correct spinΓÇæup with pathΓÇæsafe execution and consistent documentation.  
 **Mode:** collaborative; *yolo = false* (ask before destructive changes).
 
 ---
 
 ## 0) Session Setup
-- **Model preset:** `gpt-5-codex` → Reasoning **High** for wiring/refactors; **high** for routine edits.
+- **Model preset:** `gpt-5-codex` ΓåÆ Reasoning **High** for wiring/refactors; **high** for routine edits.
 - **Trust:** `trust_level = "standard"` (ask before executing shell, edits outside repo, or bulk changes).
 - **Repo root (CWD):** `C:\dev\Alpha-Analytical-Tool`
-- **Print‑only sanity:**  
+- **PrintΓÇæonly sanity:**  
   `git status -s`, `git branch -vv`, `git remote -v` (no edits to remotes)
-- **Launch path:** `run_app.bat` → `streamlit run src\app.py`
+- **Launch path:** `run_app.bat` ΓåÆ `streamlit run src\app.py`
 
-> Architecture, data contracts, and canonical layout live in `docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md`. Read this if anything path‑related looks odd. :contentReference[oaicite:1]{index=1}
+> Architecture, data contracts, and canonical layout live in `docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md`. Read this if anything pathΓÇærelated looks odd. :contentReference[oaicite:1]{index=1}
 
 ---
 
-## 1) Read These First (KIT index → Practices → Live Wiring)
+## 1) Read These First (KIT index ΓåÆ Practices ΓåÆ Live Wiring)
 1. `docs/AAT9_KIT/AAT9_KIT_README.md` *(KIT index)*
 2. `docs/AAT9_KIT/AAT9_Workflow_Standard.md`
 3. **Practices**
@@ -50,22 +50,22 @@ CWD is repo root; Python path is expected.
 
 Import locations for utils.path_handler, modules.blackapple, modules.aux_loaders, alpha_analytical.stable.
 
-Draw CSV inventory under data/cleaned. (BA and Aux read only draws CSVs; V‑TRAC/Stable/DR read combined tables via utils.path_handler.)
+Draw CSV inventory under data/cleaned. (BA and Aux read only draws CSVs; VΓÇæTRAC/Stable/DR read combined tables via utils.path_handler.)
 
-In‑app, toggle System Health (DEV) to print: cwd, sys.executable, and module __file__ paths.
+InΓÇæapp, toggle System Health (DEV) to print: cwd, sys.executable, and module __file__ paths.
 
 3) Operating Contracts (what reads what)
 
-Aux/Blackapple: inputs = data/cleaned/*_draws.csv (newest‑first strings).
+Aux/Blackapple: inputs = data/cleaned/*_draws.csv (newestΓÇæfirst strings).
 Control Center renders BA alerts across Combined/Midday/Evening.
 
-V‑TRAC / Stable / Digit Reduction: inputs = combined tables under tables/ or data/outputs/tables/<STATE>/ via utils.path_handler.
+VΓÇæTRAC / Stable / Digit Reduction: inputs = combined tables under tables/ or data/outputs/tables/<STATE>/ via utils.path_handler.
 
-4) Plan → Implement → Verify → Document
+4) Plan ΓåÆ Implement ΓåÆ Verify ΓåÆ Document
 
 Plan (small + explicit): list files to change and why; confirm approach if collaborating.
 Implement: minimal diffs; never write outside repo; use utils.path_handler for outputs.
-Verify: python -m py_compile, import probes; optional headless boot → .codex/first_boot.log.
+Verify: python -m py_compile, import probes; optional headless boot ΓåÆ .codex/first_boot.log.
 Document: always update:
 
 docs/AAT9_KIT/AAT9_Unified_Changelog.md
@@ -77,7 +77,7 @@ If structure/wiring changes, refresh AAT9_Architecture_Dir_Layout_2025-09-06.md 
 
 App launches; pages render without path errors.
 
-BA table shows rows for active states/variants; “Examples” show top 3; expander lists all candidates.
+BA table shows rows for active states/variants; ΓÇ£ExamplesΓÇ¥ show top 3; expander lists all candidates.
 
 All changes logged in Unified Changelog; a short, dated entry added to Checkpoint Log.
 
@@ -85,10 +85,10 @@ If data flow/paths changed, docs updated (Architecture + Live Wiring).
 
 6) Guardrails (standard mode)
 
-No deletions; archive‑first; keep changes reversible.
+No deletions; archiveΓÇæfirst; keep changes reversible.
 
 No git remote changes; no .ssh/credential edits.
 
 No edits under OS/user folders; write only under repo roots documented above.
 
-If Dev Health shows modules outside the repo or staged Aux leaking into non‑Aux pages, stop and fix imports.
+If Dev Health shows modules outside the repo or staged Aux leaking into nonΓÇæAux pages, stop and fix imports.

@@ -122,6 +122,11 @@
 - Impact: Locked Aux/BA/Control Center draw resolution to `data/cleaned/draws/`, vendored the working analyze_pairs / vtrac_reference modules, flattened the remaining expander, and bound the 360/1000 windows via safe defaults. Aux now renders without staged fallbacks and the red tier returns consistently.
 - Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.
 
+# 2025-10-15 - Enhanced V-TRAC analyzer (feature-gated rollout)
+- Impact: Added new `modules.vtrac_enhanced` engine with tunable weights, rich evidence capture, and straight ranking; produces JSON bundles under `data/outputs/analysis/vtrac_enhanced/<STATE>/`.
+- Impact: CLI (`tools/vtrac_enhanced_cli.py`) and unit test (`tests/test_vtrac_enhanced_basic.py`) cover the new pipeline; Streamlit page optionally uses the enhanced analyzer behind `AAT9_FLAGS.ENHANCED_VTRAC`.
+- Files: modules/vtrac_enhanced/**, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, src/core/module_c_vtrac_enhanced.py, src/app.py, tasks/VTRAC_ENHANCED_IMPLEMENTATION.md.
+
 ## 2025-10-13 - Stable extractor regression shield (work paused)
 - Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.

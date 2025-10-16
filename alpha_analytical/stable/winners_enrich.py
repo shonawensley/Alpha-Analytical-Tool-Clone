@@ -79,7 +79,7 @@ def attach_stable_evidence(
             return None
         return derive_vtrac_index_for_canonical(canon, get_vtrac_index)
 
-    winners_df["family_id"] = winners_df["stable_canonical"].map(_family_for)
+    winners_df["family_id"] = winners_df["stable_canonical"].map(_family_for).astype("Int64")
 
     family_evidence = pd.DataFrame()
     if not families.empty and "family_score" in families.columns:
@@ -120,50 +120,80 @@ def attach_stable_evidence(
     row_evidence = pd.DataFrame()
     if not scores.empty and "score" in scores.columns:
         sc = scores.copy()
-        sc["stable_canonical"] = sc["Canonical"].map(_stable_canon)
-        sc.sort_values("score", ascending=False, inplace=True, ignore_index=True)
-        row_columns: Iterable[str] = [
-            "stable_canonical",
-            "score",
-            "type",
-            "rows",
-            "why",
-            "score_cov",
-            "score_hpr",
-            "score_perm",
-            "score_repeat",
-            "score_straight",
-            "score_single",
-            "score_cons",
-            "score_hot",
-            "score_mirror",
-            "score_dom",
-            "score_len",
-            "score_hidden",
-            "mirror",
-            "straight2",
-            "straight3",
-            "single_left",
-            "cons_full",
-            "cons_3v",
-            "dom_last",
-            "dom_pair",
-            "hidden3v",
-        ]
-        available_cols = [col for col in row_columns if col in sc.columns]
-        row_evidence = sc.loc[:, available_cols].drop_duplicates(subset=["stable_canonical"], keep="first")
-        row_evidence.rename(
-            columns={
-                "score": "row_score",
-                "type": "row_type",
-                "rows": "row_rows",
-                "why": "row_why",
-            },
-            inplace=True,
-        )
+        if "family_id" not in sc.columns or sc["family_id"].isna().all():
+            sc["stable_canonical"] = sc["Canonical"].map(_stable_canon)
+            sc["family_id"] = sc["stable_canonical"].map(_family_for)
+        sc = sc.dropna(subset=["family_id", "score"]).copy()
+        if not sc.empty:
+            sc["family_id"] = sc["family_id"].astype("Int64")
+            section_col = sc.get("section")
+            if section_col is not None:
+                section_lower = section_col.astype(str).str.lower()
+                sc["_section_priority"] = section_lower.map({"combined": 0, "midday": 1, "evening": 1})
+            else:
+                sc["_section_priority"] = pd.Series([None] * len(sc), index=sc.index)
+            sc["_section_priority"] = sc["_section_priority"].fillna(2).astype(int)
+            sc.sort_values(
+                ["family_id", "_section_priority", "score"],
+                ascending=[True, True, False],
+                inplace=True,
+                ignore_index=True,
+            )
+            sc = sc.drop_duplicates(subset=["family_id"], keep="first")
+            row_columns: Iterable[str] = [
+                "family_id",
+                "Canonical",
+                "score",
+                "type",
+                "rows",
+                "why",
+                "score_cov",
+                "score_hpr",
+                "score_perm",
+                "score_repeat",
+                "score_straight",
+                "score_single",
+                "score_cons",
+                "score_hot",
+                "score_mirror",
+                "score_dom",
+                "score_len",
+                "score_hidden",
+                "mirror",
+                "straight2",
+                "straight3",
+                "single_left",
+                "cons_full",
+                "cons_3v",
+                "dom_last",
+                "dom_pair",
+                "hidden3v",
+            ]
+            available_cols = [col for col in row_columns if col in sc.columns]
+            row_evidence = sc.loc[:, available_cols].copy()
+            row_evidence.rename(
+                columns={
+                    "Canonical": "row_canonical",
+                    "score": "row_score",
+                    "type": "row_type",
+                    "rows": "row_rows",
+                    "why": "row_why",
+                },
+                inplace=True,
+            )
+            row_evidence.drop(
+                columns=[col for col in ("_section_priority",) if col in row_evidence],
+                errors="ignore",
+                inplace=True,
+            )
 
     enriched = winners_df.merge(family_evidence, on="family_id", how="left")
-    enriched = enriched.merge(row_evidence, on="stable_canonical", how="left")
+    if not row_evidence.empty:
+        enriched = enriched.merge(row_evidence, on="family_id", how="left")
+    else:
+        for col in ["row_canonical", "row_score", "row_type", "row_rows", "row_why"]:
+            if col not in enriched.columns:
+                enriched[col] = pd.NA
 
     evidence_order = [
         "family_id",
@@ -178,6 +208,7 @@ def attach_stable_evidence(
         "fam_section_bonus",
         "fam_progression_bonus",
         "fam_last_remaining_bonus",
+        "row_canonical",
         "row_score",
         "row_type",
         "row_rows",
@@ -207,6 +238,13 @@ def attach_stable_evidence(
     for col in evidence_order:
         if col not in enriched.columns:
             enriched[col] = pd.NA
+
+    enriched["evidence_status"] = "ok"
+    enriched.loc[enriched["family_id"].isna(), "evidence_status"] = "no_family_id"
+    enriched.loc[
+        enriched["family_id"].notna() & enriched["row_score"].isna(),
+        "evidence_status",
+    ] = "no_row_for_family"
 
     # Ensure canonical helper columns appear at the end
     base_cols = [col for col in enriched.columns if col not in ("stable_winner", "stable_canonical")]

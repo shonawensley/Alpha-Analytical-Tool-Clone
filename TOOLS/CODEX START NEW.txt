@@ -1,18 +1,18 @@
-You didn’t do anything “wrong.” What’s tripping you up is:
+﻿You didnΓÇÖt do anything ΓÇ£wrong.ΓÇ¥ WhatΓÇÖs tripping you up is:
 
 some BATs only copy a sentence to your clipboard (they never launch Codex)
 
 some BATs launch Codex (no clipboard)
 
-you then pasted whole docs into Codex instead of the one‑line boot instruction
+you then pasted whole docs into Codex instead of the oneΓÇæline boot instruction
 
-Let’s make this dead‑simple and remove the guesswork.
+LetΓÇÖs make this deadΓÇæsimple and remove the guesswork.
 
-The 60‑second, no‑fail startup
+The 60ΓÇæsecond, noΓÇæfail startup
 
 A. Start Codex (the way that already works for you)
-Double‑click: C:\dev\Alpha-Analytical-Tool\TOOLS\codex_run.bat
-You’ll see Codex CLI open at the correct folder (C:\dev\Alpha-Analytical-Tool).
+DoubleΓÇæclick: C:\dev\Alpha-Analytical-Tool\TOOLS\codex_run.bat
+YouΓÇÖll see Codex CLI open at the correct folder (C:\dev\Alpha-Analytical-Tool).
 
 B. Paste exactly this one line into Codex (not the whole doc)
 
@@ -26,40 +26,40 @@ C. Run preflight (from your Windows terminal, repo root):
 powershell -NoProfile -File .codex\preflight.ps1 -State "Connecticut4"
 
 
-This prints: your working directory, Python path, module import locations, plus draws/tables inventory. That’s all it does—it doesn’t launch the app.
+This prints: your working directory, Python path, module import locations, plus draws/tables inventory. ThatΓÇÖs all it doesΓÇöit doesnΓÇÖt launch the app.
 
 D. Launch the app (only when you need the UI / Dev Health toggles):
 
 run_app.bat
 
-What are “Dev Health” toggles?
+What are ΓÇ£Dev HealthΓÇ¥ toggles?
 
-They’re checkboxes/expanders inside the Streamlit app UI (not in Codex).
-You’ll see them on:
+TheyΓÇÖre checkboxes/expanders inside the Streamlit app UI (not in Codex).
+YouΓÇÖll see them on:
 
-Control Center → shows bindings for utils.path_handler, v‑trac refs, BA modules, etc., plus a quick inventory of tables/ and data/cleaned/
+Control Center ΓåÆ shows bindings for utils.path_handler, vΓÇætrac refs, BA modules, etc., plus a quick inventory of tables/ and data/cleaned/
 
-Winners Full, V‑TRAC, Stable → page‑specific module paths + health notes
+Winners Full, VΓÇæTRAC, Stable ΓåÆ pageΓÇæspecific module paths + health notes
 
-They simply print diagnostic info (which module files are loaded, which directories are found). They do not change settings. If you don’t run the app, you won’t see them—this is why Codex said “Dev Health UI toggles likely require the UI.” That’s normal.
+They simply print diagnostic info (which module files are loaded, which directories are found). They do not change settings. If you donΓÇÖt run the app, you wonΓÇÖt see themΓÇöthis is why Codex said ΓÇ£Dev Health UI toggles likely require the UI.ΓÇ¥ ThatΓÇÖs normal.
 
-Why the other BATs felt “broken”
+Why the other BATs felt ΓÇ£brokenΓÇ¥
 
-codex_start_aat9.bat (old) only copied the boot sentence to your clipboard. It never ran Codex. That’s why it looked dead.
+codex_start_aat9.bat (old) only copied the boot sentence to your clipboard. It never ran Codex. ThatΓÇÖs why it looked dead.
 
 codex_bootline.bat only copied a different sentence (to the older CODEX_READ_THIS.md). Again: no Codex launch.
 
 codex_start.bat opened codex_boot.md in Notepad and copied a line. Still no Codex launch unless you started it separately.
 
-codex_run.bat is the only one that actually runs the codex program. That’s why it’s the one that “works.”
+codex_run.bat is the only one that actually runs the codex program. ThatΓÇÖs why itΓÇÖs the one that ΓÇ£works.ΓÇ¥
 
-There’s nothing magical about VS Code here. Some older BATs opened a doc in an editor—that’s why VS Code used to pop. You don’t need VS Code for Codex.
+ThereΓÇÖs nothing magical about VS┬áCode here. Some older BATs opened a doc in an editorΓÇöthatΓÇÖs why VS┬áCode used to pop. You donΓÇÖt need VS┬áCode for Codex.
 
 If you want one simple launcher that also copies the boot line
 
-You can keep using codex_run.bat exactly as is and manually paste the line (above). That’s reliable and you already know it works.
+You can keep using codex_run.bat exactly as is and manually paste the line (above). ThatΓÇÖs reliable and you already know it works.
 
-If you prefer the BAT to also copy the AAT9 sentence automatically, replace the contents of TOOLS\codex_run.bat with this (but only if you’re comfortable editing):
+If you prefer the BAT to also copy the AAT9 sentence automatically, replace the contents of TOOLS\codex_run.bat with this (but only if youΓÇÖre comfortable editing):
 
 @echo off
 setlocal EnableExtensions
@@ -79,42 +79,42 @@ codex
 endlocal
 
 
-If you don’t want to change anything right now, don’t. Your current flow works: run codex_run.bat → paste the one‑liner → done.
+If you donΓÇÖt want to change anything right now, donΓÇÖt. Your current flow works: run codex_run.bat ΓåÆ paste the oneΓÇæliner ΓåÆ done.
 
 What lives where (so it finally makes sense)
 
-TOOLS\ — the launchers. Only one matters: codex_run.bat (your working one).
+TOOLS\ ΓÇö the launchers. Only one matters: codex_run.bat (your working one).
 
-briefings\ — startup docs for Codex. For AAT9 use CODEX_READ_FIRST_AAT9.md (the optimized path).
+briefings\ ΓÇö startup docs for Codex. For AAT9 use CODEX_READ_FIRST_AAT9.md (the optimized path).
 
-docs\AAT9_KIT\ — the curated, always‑current KIT docs (Quickstart, Workflow, Practices, Preflight, etc.).
+docs\AAT9_KIT\ ΓÇö the curated, alwaysΓÇæcurrent KIT docs (Quickstart, Workflow, Practices, Preflight, etc.).
 
-.codex\ — helper scripts like preflight.ps1 and always_root.ps1 (print‑only checks; no app launch).
+.codex\ ΓÇö helper scripts like preflight.ps1 and always_root.ps1 (printΓÇæonly checks; no app launch).
 
-To avoid future confusion, ignore the other BATs. If you like, move them into archived\TOOLS_legacy\ so you don’t click them accidentally.
+To avoid future confusion, ignore the other BATs. If you like, move them into archived\TOOLS_legacy\ so you donΓÇÖt click them accidentally.
 
-“Am I in the right folder?”
+ΓÇ£Am I in the right folder?ΓÇ¥
 
 If Codex shows:
 
 directory: C:\dev\Alpha-Analytical-Tool
 
 
-you’re in the right place. Your screenshot shows exactly that.
+youΓÇÖre in the right place. Your screenshot shows exactly that.
 
 Quick answers to your specific questions
 
-“Do I paste the whole doc?”
+ΓÇ£Do I paste the whole doc?ΓÇ¥
 No. Paste the one line boot instruction (I put it in a code block above). Codex will read the doc file on disk.
 
-“Why did Dev Health complain?”
-Because the app wasn’t running. Dev Health lives inside the Streamlit UI. Launch with run_app.bat, then use the toggles in the UI.
+ΓÇ£Why did Dev Health complain?ΓÇ¥
+Because the app wasnΓÇÖt running. Dev Health lives inside the Streamlit UI. Launch with run_app.bat, then use the toggles in the UI.
 
-“Do I need VS Code?”
-No. Codex CLI + PowerShell is enough. VS Code can be used if you want, but it’s not part of the startup.
+ΓÇ£Do I need VS┬áCode?ΓÇ¥
+No. Codex CLI + PowerShell is enough. VS┬áCode can be used if you want, but itΓÇÖs not part of the startup.
 
-“Is GitHub set up?”
-If git remote -v shows your origin and preflight passes, you’re good. Codex won’t change remotes unless you explicitly approve it.
+ΓÇ£Is GitHub set up?ΓÇ¥
+If git remote -v shows your origin and preflight passes, youΓÇÖre good. Codex wonΓÇÖt change remotes unless you explicitly approve it.
 
 TL;DR
 
@@ -124,7 +124,7 @@ Then paste this into Codex:
 Read briefings\CODEX_READ_FIRST_AAT9.md and follow it exactly. Select model preset gpt-5-codex (High), run preflight + Dev Health, then reply: READY.
 
 
-Run preflight, and when you need the Dev Health toggles, start the app with run_app.bat. That’s the entire flow.
+Run preflight, and when you need the Dev Health toggles, start the app with run_app.bat. ThatΓÇÖs the entire flow.
 
 
 
@@ -137,13 +137,13 @@ Run preflight, and when you need the Dev Health toggles, start the app with run_
 ____________
 
 
-Totally hear you. Let’s lock this down so you can start, catch‑up, and continue without guesswork.
+Totally hear you. LetΓÇÖs lock this down so you can start, catchΓÇæup, and continue without guesswork.
 
 How to start (keep it simple)
 
-Double‑click: TOOLS\codex_run.bat (the one that works).
+DoubleΓÇæclick: TOOLS\codex_run.bat (the one that works).
 
-Paste this one line into Codex (don’t paste whole docs):
+Paste this one line into Codex (donΓÇÖt paste whole docs):
 
 Read briefings\CODEX_READ_FIRST_AAT9.md and follow it exactly. Select model preset gpt-5-codex (High), run preflight + Dev Health, then reply: READY.
 
@@ -157,15 +157,15 @@ Launch UI only when needed (for Dev Health toggles):
 
 run_app.bat
 
-What “Dev Health” actually is (and why you saw that message)
+What ΓÇ£Dev HealthΓÇ¥ actually is (and why you saw that message)
 
 Lives in the Streamlit app UI (not in Codex).
 
-You’ll see a “Dev Health” expander/toggle on Control Center, Winners Full, V‑TRAC, and Stable pages.
+YouΓÇÖll see a ΓÇ£Dev HealthΓÇ¥ expander/toggle on Control Center, Winners Full, VΓÇæTRAC, and Stable pages.
 
 It prints diagnostics (which module files were loaded, what dirs were found).
 
-If the app isn’t running, Codex can’t “toggle Dev Health”—that’s why it said “pending.”
+If the app isnΓÇÖt running, Codex canΓÇÖt ΓÇ£toggle Dev HealthΓÇ¥ΓÇöthatΓÇÖs why it said ΓÇ£pending.ΓÇ¥
 
 The doc set Codex should always know (AAT9)
 
@@ -177,7 +177,7 @@ docs/AAT9_KIT/AAT9_KIT_README.md (index)
 
 docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (daily flow)
 
-docs/AAT9_KIT/AAT9_Workflow_Standard.md (Plan → Implement → Verify → Document)
+docs/AAT9_KIT/AAT9_Workflow_Standard.md (Plan ΓåÆ Implement ΓåÆ Verify ΓåÆ Document)
 
 docs/AAT9_KIT/AAT9_Preflight_Reference.md (what preflight prints, options)
 
@@ -201,11 +201,11 @@ docs/AAT9_KIT/AAT9_Architecture_Dir_Layout_2025-09-06.md
 
 docs/AAT9_KIT/AAT9_App_Flow_Addendum_2025-09-06.md
 
-A “catch‑up + verify” message you can paste into Codex
+A ΓÇ£catchΓÇæup + verifyΓÇ¥ message you can paste into Codex
 
 Paste the block below in Codex right after you start it (after Step 2 above).
 
-Please do an AAT9 catch‑up:
+Please do an AAT9 catchΓÇæup:
 
 1) Confirm model + effort:
    - Run /status and show me the current model and reasoning effort.
@@ -220,47 +220,47 @@ Please do an AAT9 catch‑up:
    - docs/AAT9_KIT/AAT9_Health_Helpers_2025-09-03.md
    - briefings/PITFALLS.txt
 
-   Summarize anything that changes how we should operate today (1–2 bullets per file).
+   Summarize anything that changes how we should operate today (1ΓÇô2 bullets per file).
 
 3) Check our logs and tell me the latest entries:
    - docs/AAT9_KIT/AAT9_Unified_Changelog.md
    - docs/AAT9_KIT/AAT9_Checkpoint_Log.md
-   - If the current work-in-progress isn’t logged, propose the minimal entries and stop for my OK.
+   - If the current work-in-progress isnΓÇÖt logged, propose the minimal entries and stop for my OK.
 
 4) Confirm environment readiness (preflight is already run separately by me):
    - Ask me to paste the latest preflight tail if you want to double-check modules/data.
-   - List the app pages where I should toggle “Dev Health” and exactly what I should expect to see.
+   - List the app pages where I should toggle ΓÇ£Dev HealthΓÇ¥ and exactly what I should expect to see.
 
 5) End with a short READY line:
    - Model / effort
    - Preflight status (seen/awaiting)
    - Log status (up-to-date or proposed entries)
-   - Today’s next concrete step
+   - TodayΓÇÖs next concrete step
 
 
-That prompt makes Codex re‑read the right docs, confirm model, verify logs, and tell you exactly what to do next. If it misses anything, it’s now explicit what to ask for.
+That prompt makes Codex reΓÇæread the right docs, confirm model, verify logs, and tell you exactly what to do next. If it misses anything, itΓÇÖs now explicit what to ask for.
 
-How to confirm “highest reasoning” quickly
+How to confirm ΓÇ£highest reasoningΓÇ¥ quickly
 
 In Codex: type /status. It should show:
 
 model: gpt-5-codex
 
-model_reasoning_effort: high (or an equivalent “High” preset)
+model_reasoning_effort: high (or an equivalent ΓÇ£HighΓÇ¥ preset)
 
 If not:
 
-/model → choose gpt‑5‑codex and High
+/model ΓåÆ choose gptΓÇæ5ΓÇæcodex and High
 
 or /config model_reasoning_effort=high, then /status again
 
-How to know the checkpoint “saved”
+How to know the checkpoint ΓÇ£savedΓÇ¥
 
-Open docs/AAT9_KIT/AAT9_Checkpoint_Log.md → the top should have today’s entry or the last one you approved.
+Open docs/AAT9_KIT/AAT9_Checkpoint_Log.md ΓåÆ the top should have todayΓÇÖs entry or the last one you approved.
 
-Open docs/AAT9_KIT/AAT9_Unified_Changelog.md → should have a one‑liner for the same change.
+Open docs/AAT9_KIT/AAT9_Unified_Changelog.md ΓåÆ should have a oneΓÇæliner for the same change.
 
-If they’re missing, tell Codex: “document and process”. That phrase means:
+If theyΓÇÖre missing, tell Codex: ΓÇ£document and processΓÇ¥. That phrase means:
 
 update Unified Changelog
 
@@ -276,6 +276,6 @@ Preflight is a terminal script that prints environment sanity.
 
 Dev Health lives in the app UI and only prints diagnostics (bindings, inventory).
 
-Logs (Checkpoint + Changelog) are your running record; Codex updates them when you say “document and process.”
+Logs (Checkpoint + Changelog) are your running record; Codex updates them when you say ΓÇ£document and process.ΓÇ¥
 
-Follow the 4 steps under How to start, paste the catch‑up block, and you’ll be 100% in sync with the docs and logs—no more second‑guessing.
+Follow the 4 steps under How to start, paste the catchΓÇæup block, and youΓÇÖll be 100% in sync with the docs and logsΓÇöno more secondΓÇæguessing.

@@ -3,7 +3,8 @@ import pytest
 
 from alpha_analytical import stable
 from alpha_analytical.stable.metrics import build_metrics
-from alpha_analytical.stable.post_pass_families import build_family_summary
+from alpha_analytical.stable.post_pass_families import build_family_summary, derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
 
 
 def _build_table(pattern_map, set_label="Set1", draw_label="Draw1"):
@@ -41,3 +42,36 @@ def test_build_metrics_basic():
         assert metrics["compression_ratio"] == pytest.approx(expected_ratio)
     assert metrics["spotlight_rate"] == pytest.approx(1.0)
     assert metrics["winner_family_ids"], "expected at least one winner family id"
+
+
+def test_build_metrics_detects_winner_by_family():
+    winner = "926"
+    canonical = stable.canon(stable.digits_only(winner))
+    family_id = derive_vtrac_index_for_canonical(canonical, get_vtrac_index)
+    df_scores = pd.DataFrame(
+        [
+            {
+                "family_id": family_id,
+                "score": 14.2,
+                "type": "straight",
+                "Canonical": "007926",
+            }
+        ]
+    )
+    families_df = pd.DataFrame(
+        [
+            {
+                "family_id": family_id,
+                "family_score": 42.0,
+            }
+        ]
+    )
+    metrics = build_metrics(
+        state="TestState",
+        df_scores=df_scores,
+        families_df=families_df,
+        winners=[winner],
+    )
+    assert metrics["spotlight_rate"] == pytest.approx(1.0)
+    assert metrics["winner_family_ids"] == [family_id]
+    assert metrics["winner_family_best_rank"][winner] == 1

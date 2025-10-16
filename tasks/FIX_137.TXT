@@ -1,0 +1,266 @@
+ot it—thanks for the bundle. I read through your newest Codex session log and compared it to the earlier sessions and FIX_125 / FIX_126 guidance. Below is a clear, no‑nonsense assessment of where things stand after Phase‑2, what looks solid, what’s still a soft spot, and exactly what I’d verify on the New Jersey / New York outputs you attached.
+
+Quick note on files: I can’t open the attachments programmatically from this environment right now (my local execution tool is timing out), so I’m going to (1) give you a precise health read based on the Codex work logs & tests, and (2) provide copy‑paste checks you can run on NJ/NY immediately to confirm everything with numbers. That way we keep momentum without risking regressions.
+
+Executive summary
+
+Overall status: GREEN with a couple low‑risk follow‑ups.
+
+✅ Stability regained after the import break in post_pass_families.py. The consensus → doubles adjacency (±1 column, same box) is in place; row & family schemas are locked; hidden3v is strictly boolean; config is centralized via alpha_analytical.stable.feature_config.CFG.
+
+✅ Regression shield is real now: contract tests (row/family parts & bonuses), negative adjacency test, pre‑commit guard (check_contract), smoke/aux guards all pass in the log.
+
+✅ Telemetry: metrics writer produces <STATE>_metrics.json; those metrics are wired into the Control Center, copied into bundles, and now stamped with evidence_schema_version and stable_contract_version.
+
+✅ Winners evidence bus: attach_stable_evidence() exists with unit tests, integrated in batch_runner and surfaced in the UI with an expander (plus CSV download).
+
+⚠️ Minor polish still worth doing (no blockers):
+
+Canonical helper SSOT — reuse the single canonicalizer from stable in both metrics.py and winners_enrich.py (some places still have a local _canonical).
+
+Guard on winners export schema — add a tiny pre‑commit check to ensure any CSV/JSON winners export includes family_id + key evidence fields.
+
+Edge cases — a couple extra tests will lock in leading‑zero winners, tie‑breaks on equal row scores, and “no‑hot” divisions.
+
+If NJ/NY pass the spot‑checks below, I’m comfortable declaring Phase‑2 complete and moving to Phase‑3 integration polish.
+
+What Codex did right (and why it matters)
+
+Config hygiene
+
+Unified loader (feature_config.py) and restored commented YAML; consumers import CFG.
+
+This eliminates drift from ad‑hoc YAML reads and makes future tuning safe.
+
+Row & family contracts
+
+Row CSV carries all score parts (score_cov, score_hpr, … score_hidden) and flags (cons_*, dom_*, hidden3v, etc.).
+
+Family CSV carries every fam_* component plus fam_section_bonus, fam_progression_bonus, fam_last_remaining_bonus, and the total family_score.
+
+Tests now assert sum(parts) == family_score and confirm bonus gating (progression & last‑remaining).
+
+Doubles adjacency discipline
+
+any_doubles_support only fires when there is true adjacency (±1 column) and there is consensus in that V‑TRAC family.
+
+There’s also a negative adjacency test to make sure we never regress back to “global doubles”.
+
+Metrics writer + bundle integration
+
+Writes <STATE>_metrics.json, computes spotlight rate, compression, avg top‑hot density, winner family ranks, etc., and is fed into the bundle manifest.
+
+Control Center shows these metrics and a CSV download for winners evidence.
+
+Winners evidence bus
+
+attach_stable_evidence() joins winners → (family, row) evidence, ranking families and picking the best row by score.
+
+Batch runner stores winners_evidence and UI renders it; unit test exercises the 227/277 fixture.
+
+Operational ergonomics
+
+py_compile pre‑commit no longer leaves pyc; smoke/aux guards run clean; Windows newline tolerance added to tests.
+
+Soft spots / follow‑ups (concrete & small)
+
+Single canonicalizer (prevent silent drift)
+
+Replace local _canonical functions with from alpha_analytical import stable as _stable; _stable.canon(...) in:
+
+alpha_analytical/stable/metrics.py
+
+alpha_analytical/stable/winners_enrich.py
+
+Benefit: a single truth for digit canonicalization; fixes edge cases (leading zeros, non‑digit noise) once.
+
+Winners export schema guard (so chips never disappear)
+
+Extend scripts/hooks/check_contract.py with a Winners Evidence Required Columns set, and fail if exported winners CSV/JSON misses:
+["stable_winner","stable_canonical","family_id","family_score","family_rank","any_doubles_support","last_remaining_3v","progression_flag","row_score","row_type","row_why"]
+
+This is a <30‑line change and eliminates future “where did this column go?” surprises.
+
+Edge‑case regression tests
+
+Leading‑zero winners (e.g., "027"): assert canonicalization & family mapping behave.
+
+Row score ties: ensure the evidence bus consistently picks the top row by score (and a deterministic tiebreak—e.g., favor type=="straight" if needed).
+
+No‑hot families: guard avg_top_hot_density against empty/NaN cases (it looks handled, but one focused test is cheap).
+
+UI nicety (optional)
+
+When feature_config.yml is missing and batch_runner returns a friendly error, surface the advice inline (e.g., “Ensure feature_config.yml exists next to stable/__init__.py.”)
+
+None of these require touching the core scoring/aggregation logic.
+
+NJ & NY: what to verify right now (copy‑paste checks)
+
+You can run each block interactively in your environment. They validate the most regression‑prone areas using your attached *_scores.csv, *_families.csv, *_winner_family_spotlight_*.csv, and *_metrics.json.
+
+1) Metrics JSON ↔ artifacts agree
+import json, pandas as pd, pathlib as p
+
+state = "NewJersey4"   # change to "NewYork4" and re-run
+root = p.Path(".") / ""  # adjust if needed
+
+scores = pd.read_csv(root / f"{state}_stable_patterns_scores.csv")
+families = pd.read_csv(root / f"{state}_stable_patterns_families.csv")
+metrics = json.loads((root / f"{state}_metrics.json").read_text(encoding="utf-8"))
+
+assert metrics["total_patterns"] == len(scores)
+assert metrics["total_families"] == len(families)
+print("OK: metrics counts match CSVs")
+
+
+What to expect: both asserts pass.
+
+2) Family score parts sum to total
+parts = ["fam_cov","fam_hpr","fam_perm","fam_repeat","fam_cons","fam_hot",
+         "fam_straight2","fam_straight3","fam_doubles","fam_section_bonus",
+         "fam_progression_bonus","fam_last_remaining_bonus"]
+
+families_num = families.copy()
+for c in parts + ["family_score"]:
+    families_num[c] = pd.to_numeric(families_num[c], errors="coerce").fillna(0.0)
+
+bad = families_num[abs(families_num[parts].sum(axis=1) - families_num["family_score"]) > 1e-6]
+print(f"sum(parts)==family_score violations: {len(bad)}")
+
+
+What to expect: 0 violations.
+
+3) Bonus gating invariants
+# Progression gate
+viol_prog = families.loc[families["fam_progression_bonus"] > 0].loc[~families["progression_flag"].astype(bool)]
+# Last-remaining gate
+viol_last = families.loc[families["fam_last_remaining_bonus"] > 0].loc[~families["last_remaining_3v"].astype(bool)]
+print(len(viol_prog), len(viol_last))
+
+
+What to expect: both zeros.
+
+4) Doubles adjacency discipline (family level)
+families["any_doubles_support"] = families["any_doubles_support"].fillna(False).astype(bool)
+viol_doubles = families[(families["any_doubles_support"]) & (families["fam_doubles"] <= 0)]
+ok_zero = families[(~families["any_doubles_support"]) & (families["fam_doubles"] == 0)]
+print(f"adjacency violations: {len(viol_doubles)} | ok_zero: {len(ok_zero)}")
+
+
+What to expect: adjacency violations: 0.
+
+(We already have a negative adjacency unit test; this is a live sanity check on NJ/NY outputs.)
+
+5) Hidden 3‑value flag type sanity
+scores["hidden3v_type"] = scores["hidden3v"].map(type).astype(str).value_counts()
+print(scores["hidden3v"].dropna().unique()[:5], "\n", scores["hidden3v_type"])
+
+
+What to expect: values are strictly True/False (or empty/NaN when not applicable), and not numpy.bool_ if you care about identity checks.
+
+6) Winners mapping quality (spotlight vs. families)
+w_raw  = pd.read_csv(root / f"{state}_winner_family_spotlight_raw.csv")
+w_fams = pd.read_csv(root / f"{state}_winner_family_spotlight_families.csv")
+
+print("winners provided:", w_raw["Winner"].dropna().nunique())
+print("winners mapped:", w_fams["Winner"].dropna().nunique())
+
+# If metrics.json has winner ranks, compare
+if "winner_family_best_rank" in metrics:
+    ranks = pd.Series(metrics["winner_family_best_rank"])
+    print("winner → best family rank:", ranks.to_dict())
+
+
+What to expect: “winners mapped” equals “winners provided”, and the ranks dictionary contains small integers for each winner.
+
+7) Evidence bus alignment (replicate attach)
+def canon(s): return "".join(sorted(ch for ch in str(s) if ch.isdigit()))
+scores["stable_canonical"] = scores["Canonical"].map(canon)
+
+# best row per canonical by score
+best_rows = (scores.sort_values("score", ascending=False)
+                   .drop_duplicates(subset=["stable_canonical"], keep="first")
+                   [["stable_canonical","score","type","why","family_id"]])
+
+# family ranks by family_score
+ranked = (families.sort_values("family_score", ascending=False)
+                 .drop_duplicates(subset=["family_id"], keep="first"))
+ranked["family_rank"] = ranked["family_score"].rank(method="dense", ascending=False).astype(int)
+fam_rank = ranked[["family_id","family_rank","family_score","any_doubles_support","last_remaining_3v","progression_flag"]]
+
+# join against winners
+w = w_raw.assign(stable_canonical=w_raw["Winner"].map(canon))
+enriched = (w.merge(best_rows, on="stable_canonical", how="left")
+              .merge(fam_rank, on="family_id", how="left"))
+enriched[['Winner','stable_canonical','family_id','family_rank','score','type','any_doubles_support','last_remaining_3v','progression_flag']].head()
+
+
+What to expect: non‑null family_id/family_rank for each winner; score corresponds to the best row for that canonical.
+
+How to interpret the NJ/NY metrics once you run the checks
+
+When you open *_metrics.json or the expander in the app:
+
+compression_ratio = total_families / total_patterns
+
+Lower is more selective. Big swings between NJ and NY can indicate much noisier input tables for one state.
+
+avg_top_hot_density (mean hot density among top N families by score)
+
+Helps you spot states where strong families aren’t supported by hot‑zone evidence. If this is unexpectedly low for one state, drill into top families and confirm hot_hits / hot_total in families.csv makes sense.
+
+winner_family_ids and winner_family_best_rank
+
+If winners exist, these are the V‑TRAC family IDs and their rank among families.
+
+Look for winners ranking inside the top decile of families. If not, either the winner’s family is genuinely weak or your set/draw inputs are off.
+
+best_straight_rank
+
+First occurrence of a type=="straight" row in the score‑sorted table. If this is large but winners mapped well, straights might be underweighted—worth noting, not immediately a bug.
+
+Likely failure modes (and what the checks above will catch)
+
+Bonus leakage: non‑zero fam_progression_bonus or fam_last_remaining_bonus when their flags are false.
+Caught by #3 (gating).
+
+Adjacency regressions: any_doubles_support==True but fam_doubles==0.
+Caught by #4. (There’s also a unit test guarding this.)
+
+Type drift: hidden3v written as string/NumPy bool rather than Python bool.
+Caught by #5.
+
+Evidence bus tie‑breaks: winners mapping to a non‑best row when multiple rows share a canonical.
+Surfaces in #7—if you see surprising row_type/row_score, consider a deterministic tie‑break.
+
+Metrics/CSV mismatch: accidental edits to writers leaving JSON out of sync.
+Caught by #1.
+
+What this means for Phase‑3
+
+Assuming the NJ/NY checks pass:
+
+Freeze the contract: bump evidence_schema_version and stable_contract_version in one place and document them in RELEASE notes. Avoid renames for 1–2 iterations; use additive fields only.
+
+Broaden evidence bus: Feed the same enriched winners frame to every winners surface (Control Center, Aux CLIs, BA modules). This is mostly plumbing; the helper is in place.
+
+Guard winners exports: add the winners schema check to pre‑commit so no surface silently drops evidence columns.
+
+UI cadence: use the existing expander to explore a couple more friendly fields (e.g., chips for any_doubles_support, last_remaining_3v, progression_flag)—but keep it as a thin layer over the CSV to avoid over‑editing.
+
+Batch runs: when you’re ready, repeat the NJ/NY checks on CT/DE/IN to de‑risk statewide variance before we finalize Phase‑3 polish.
+
+If you want me to compute the NJ/NY numbers for you
+
+I can do that as soon as I’m able to run code here again, or you can paste the contents of NewJersey4_metrics.json and NewYork4_metrics.json inline and I’ll sanity‑check them against what the CSVs should imply. Either way, the checks above will give you a fast green/red on the current outputs.
+
+Bottom line
+
+Codex did the right work and put real guardrails around it.
+
+We’re feature‑complete for Phase‑2 with strong tests and hooks.
+
+Knock out the tiny follow‑ups (canonical helper reuse, winners export schema guard, a couple more edge tests), run the NJ/NY checks above, and we’re set to move confidently into Phase‑3.
+
+If you want, send me the results of the checks (just the printouts), and I’ll translate them into a short “Go/No‑Go” with any tuning notes.

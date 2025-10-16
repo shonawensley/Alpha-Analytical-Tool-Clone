@@ -7,6 +7,10 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
+from alpha_analytical import stable as stable_module
+from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
+
 
 def _digits_only(value: str | int | float | None) -> str:
     if value is None:
@@ -17,6 +21,14 @@ def _digits_only(value: str | int | float | None) -> str:
 def _canonical(value: str | int | float | None) -> str:
     digits = _digits_only(value)
     return "".join(sorted(digits)) if digits else ""
+
+
+def _winner_family_id(value: str | int | float | None) -> Optional[int]:
+    digits = stable_module.digits_only(value)
+    canonical = stable_module.canon(digits)
+    if not canonical:
+        return None
+    return derive_vtrac_index_for_canonical(canonical, get_vtrac_index)
 
 
 def _to_int(value: Optional[float | int]) -> Optional[int]:
@@ -64,40 +76,49 @@ def build_metrics(
     winners_list = [str(w).strip() for w in (winners or []) if str(w).strip()]
 
     # Map winner canonicals to family IDs using the highest-scoring matching row.
-    detected_winners = []
+    detected_winners: list[str] = []
     winner_family_ids: list[int] = []
     winner_rank_by_family: dict[str, Optional[int]] = {}
 
-    if not df_scores.empty:
-        # ensure we have Canonical column for lookups
-        score_lookup = df_scores.reset_index(drop=True)
-        score_lookup = score_lookup.sort_values("score", ascending=False, ignore_index=True)
-        families_rank_map: dict[int, int] = {}
-        if not families_df.empty and "family_id" in families_df and "family_score" in families_df:
-            ranked = families_df.sort_values("family_score", ascending=False, ignore_index=True)
-            families_rank_map = {
-                _to_int(row.family_id): idx + 1
-                for idx, row in ranked.iterrows()
-                if _to_int(row.family_id) is not None
-            }
+    families_rank_map: dict[int, int] = {}
+    if not families_df.empty and {"family_id", "family_score"}.issubset(families_df.columns):
+        ranked = families_df.sort_values("family_score", ascending=False, ignore_index=True)
+        families_rank_map = {
+            _to_int(row.family_id): idx + 1
+            for idx, row in ranked.iterrows()
+            if _to_int(row.family_id) is not None
+        }
+    elif not df_scores.empty and "family_id" in df_scores.columns:
+        tmp = (
+            df_scores.dropna(subset=["family_id", "score"])
+            .groupby("family_id", dropna=True)["score"]
+            .max()
+            .reset_index()
+            .sort_values("score", ascending=False, ignore_index=True)
+        )
+        families_rank_map = {
+            _to_int(row.family_id): idx + 1
+            for idx, row in tmp.iterrows()
+            if _to_int(row.family_id) is not None
+        }
 
-        for winner in winners_list:
-            canonical = _canonical(winner)
-            if not canonical:
-                winner_rank_by_family[winner] = None
-                continue
-            matches = score_lookup[score_lookup["Canonical"] == canonical]
-            if matches.empty:
-                winner_rank_by_family[winner] = None
-                continue
+    score_family_set: set[int] = set()
+    if not df_scores.empty and "family_id" in df_scores.columns:
+        score_family_set = {
+            fid for fid in (_to_int(val) for val in df_scores["family_id"].dropna())
+            if fid is not None
+        }
+
+    for winner in winners_list:
+        fam_id_raw = _winner_family_id(winner)
+        fam_id = _to_int(fam_id_raw)
+        if fam_id is None:
+            winner_rank_by_family[winner] = None
+            continue
+        winner_family_ids.append(fam_id)
+        if fam_id in families_rank_map or fam_id in score_family_set:
             detected_winners.append(winner)
-            best_row = matches.iloc[0]
-            fam_id = _to_int(best_row.get("family_id"))
-            if fam_id is not None:
-                winner_family_ids.append(fam_id)
-                winner_rank_by_family[winner] = families_rank_map.get(fam_id)
-            else:
-                winner_rank_by_family[winner] = None
+        winner_rank_by_family[winner] = families_rank_map.get(fam_id)
 
     best_straight_rank = None
     if not df_scores.empty and "type" in df_scores.columns:
@@ -107,9 +128,7 @@ def build_metrics(
                 best_straight_rank = idx + 1
                 break
 
-    spotlight_rate = None
-    if winners_list:
-        spotlight_rate = round(len(detected_winners) / len(winners_list), 4)
+    spotlight_rate = round(len(detected_winners) / len(winners_list), 4) if winners_list else None
 
     metrics = {
         "state": state,

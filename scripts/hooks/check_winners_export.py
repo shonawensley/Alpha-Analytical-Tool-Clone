@@ -21,10 +21,12 @@ REQUIRED_COLUMNS = {
     "progression_flag",
     "last_remaining_3v",
     "any_doubles_support",
+    "row_canonical",
     "row_score",
     "row_type",
     "row_rows",
     "row_why",
+    "evidence_status",
 }
 
 BOOLEAN_COLUMNS = {
@@ -67,6 +69,8 @@ def _build_sample_frames() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         [
             {
                 "Canonical": "227",
+                "family_id": 12,
+                "section": "Combined",
                 "score": 12.5,
                 "type": "straight",
                 "rows": "R2,R4,R6",

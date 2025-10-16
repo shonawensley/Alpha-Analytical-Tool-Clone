@@ -12,6 +12,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
+class AAT9_FLAGS:
+    ENHANCED_VTRAC: bool = False
+
 render_dr_winner_overlay_dev = None
 DEV_OVERLAY_IMPORT_ERROR = None
 
@@ -816,7 +820,14 @@ def main():
 
 def show_vtrac_page(state: str) -> None:
     """Render the integrated V-TRAC analyzer page."""
-    from core import module_c_vtrac  # lazy import
+    if getattr(AAT9_FLAGS, "ENHANCED_VTRAC", False):
+        try:
+            from core import module_c_vtrac_enhanced as module_c_vtrac  # type: ignore
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            st.warning(f"Enhanced V-TRAC unavailable ({exc}); using legacy analyzer.")
+            from core import module_c_vtrac  # type: ignore
+    else:
+        from core import module_c_vtrac  # type: ignore
     module_c_vtrac.render(state)
 
 
