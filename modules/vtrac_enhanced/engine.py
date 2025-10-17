@@ -33,17 +33,33 @@ def run_analysis(
         raw = evidence.raw
         presence = float(raw.get("presence_score", 0.0))
         sections: Sequence[str] = raw.get("sections", [])
+        set_presence: Sequence[str] = raw.get("set_presence", [])
+        columns_by_ring: Dict[str, Sequence[int]] = raw.get("columns_by_ring", {})
         first_col = raw.get("first_col")
         max_streak = raw.get("max_streak", 0)
         total_hits = raw.get("total_hits", 0)
+        hot_hits = raw.get("hot_hits", 0)
+        super_hot_hits = raw.get("super_hot_hits", 0)
 
-        score = presence
+        score = 0.0
+        if presence:
+            score += presence
+            if weights.emit_evidence:
+                evidence.add("presence", presence, total_hits=total_hits)
+
         if len(sections) >= 2:
             intensity = min(1.0, (len(sections) - 1) / 2.0 + 0.5)
             bonus = weights.bonus_cross_section * intensity
             score += bonus
             if weights.emit_evidence:
                 evidence.add("cross_section", bonus, sections=sections, intensity=intensity)
+
+        unique_sets = sorted({s for s in set_presence})
+        if len(unique_sets) >= 2:
+            bonus = weights.bonus_set_echo * min(len(unique_sets) - 1, 2)
+            score += bonus
+            if weights.emit_evidence:
+                evidence.add("set_echo", bonus, sets=unique_sets)
 
         if first_col:
             # closer to column 1 earns the full bonus
@@ -53,11 +69,46 @@ def run_analysis(
             if weights.emit_evidence:
                 evidence.add("first_hit", bonus, first_column=first_col, multiplier=multiplier)
 
+        columns: Set[int] = set()
+        for cols in columns_by_ring.values():
+            columns.update(cols)
+        if columns:
+            near = sum(1 for col in columns if col <= 3)
+            far = len(columns) - near
+            coverage = 0.0
+            if near:
+                coverage += near / 3.0
+            if far:
+                coverage += 0.35 * min(far, 4) / 4.0
+            bonus = weights.bonus_column_span * min(coverage, 1.6)
+            if bonus:
+                score += bonus
+                if weights.emit_evidence:
+                    evidence.add("column_span", bonus, columns=sorted(columns))
+
         if max_streak and max_streak >= 2:
             bonus = weights.bonus_persistence * min(1.0, max_streak / 4.0)
             score += bonus
             if weights.emit_evidence:
                 evidence.add("persistence", bonus, streak=max_streak)
+
+        if total_hits:
+            bonus = weights.bonus_total_hits * min(total_hits, 12)
+            score += bonus
+            if weights.emit_evidence:
+                evidence.add("hit_volume", bonus, total_hits=total_hits)
+
+        if hot_hits:
+            bonus = weights.bonus_hot_support * hot_hits
+            score += bonus
+            if weights.emit_evidence:
+                evidence.add("hot_support", bonus, hot_hits=hot_hits)
+
+        if super_hot_hits:
+            bonus = weights.bonus_super_hot_support * super_hot_hits
+            score += bonus
+            if weights.emit_evidence:
+                evidence.add("super_hot_support", bonus, super_hot_hits=super_hot_hits)
 
         if raw.get("mask_drop") and weights.enable_reduction_assist:
             bonus = weights.bonus_mask_drop + (weights.bonus_reduction * raw.get("reduction_hits", 0))

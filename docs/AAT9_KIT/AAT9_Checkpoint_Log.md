@@ -2,10 +2,11 @@
 
 - Context: Previous 'enhanced' drop only added scaffolding. Rebuilt the module to match the redesign (evidence features, straight rationale, tooling) without disturbing Winners Logger or the legacy UI.
 - Change:
-  - Replaced modules/vtrac_enhanced types/config/features/engine/adapters with the production implementation (ring/column weighting, hot-zone boosts, cross-section consensus, mask-drop + mirror assists, order-sensitive straights).
-  - Added headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) plus a feature-gated Streamlit wrapper storing bundles in session state.
+  - Replaced modules/vtrac_enhanced types/config/features/engine/adapters with the production implementation (shared evidence grid, ring/column weighting, set echoes, cross-section consensus, column-span depth, hot/support bonuses, mask-drop + mirror assists, order-sensitive straights).
+  - Added headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py`, `tests/test_vtrac_evidence.py`) plus a feature-gated Streamlit wrapper storing bundles in session state.
 - Impact:
   - `python tools/vtrac_enhanced_cli.py --state Connecticut4` now produces ranked indices/straights and JSON bundles under data/outputs/analysis/vtrac/<STATE>/...; tests lock evidence/mask behaviour.
+  - V-TRAC winners HTML now consumes the same evidence grid as the analyzer, so highlights and scoring line up.
   - Legacy analyzer remains default (AAT9_FLAGS.ENHANCED_VTRAC = False) so orchestration stays stable while we cross-check outputs.
 - Verification:
   - `pytest tests/test_vtrac_enhanced_basic.py`

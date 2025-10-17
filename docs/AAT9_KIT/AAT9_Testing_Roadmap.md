@@ -1,4 +1,4 @@
-ï»¿# AAT9 Testing Roadmap
+# AAT9 Testing Roadmap
 
 This document tracks the automated verification layers that protect AAT9. Treat it as the single source of truth for which flows are covered, what scripts to run, and what remains on the backlog.
 
@@ -24,6 +24,8 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 - tests/test_aux_validation.py covers Aux double thresholds, pair severity, multi-variant alerts, family badge extraction, repeat-watch streaks, positional hard-due flags, V-TRAC overlays/heatboard stats, and sums analytics.
 - tests/test_digit_training_bundle.py locks the Analyzer V2 training bundle defaults (Midday/Evening) plus the Combined opt-in and error handling for missing artifacts.
 - tests/test_stable_doubles_adjacency_negative.py ensures Stable doubles support only fires when consensus digits share a column, protecting the Control Center evidence bus from false positives.
+- tests/test_vtrac_evidence.py + tests/test_vtrac_enhanced_basic.py cover the shared V-TRAC evidence layer and enhanced analyzer scoring (top index straight rationale). CLI smoke: `python tools/vtrac_enhanced_cli.py --state SampleState --tables-root tests/fixtures/vtrac --analysis-root tests/fixtures/tmp_out`.
+- Batch smoke (optional): use the helper script in `analysis_2` (“temp_run_vtrac.py”) to iterate all states and refresh `data/outputs/analysis/vtrac/analysis_summary.json` (top 5 indices/straights per state).
 
 
 - Pending additions:
@@ -57,7 +59,7 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 ## 6. Backlog / TODOs
 - Acceptance scenarios for each major module (see section 1 Pending additions).
 - Broaden digit reduction acceptance fixtures beyond Delaware (more states, overlay expectations).
-- Integrate coverage reporting (`pytest --cov`) to monitor acceptance coverage.
+- Promote enhanced V-TRAC analyzer after A/B versus legacy; wire Control Center toggles to consume JSON summaries.
 - Evaluate browser-level smoke tests (Playwright) once core flows are locked.
 
 Keep this file up to date whenever you add or expand tests so future sessions know the current safety net.

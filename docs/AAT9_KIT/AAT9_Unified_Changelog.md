@@ -1,7 +1,8 @@
 ## 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
-- Impact: Replaced the placeholder enhanced analyzer with the production engine: ring/column survival, hot-zone boosts, cross-section consensus, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Replaced the placeholder analyzer with the production engine: ring/column survival, set echoes, cross-section consensus, column-span depth, hot/super-hot support, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Introduced a shared evidence grid (`modules/vtrac_enhanced/evidence.py`) consumed by both the analyzer and the V-TRAC winners logger, so highlights and scoring share the same data.
 - Impact: Added a headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) plus a feature-gated Streamlit wrapper (`src/core/module_c_vtrac_enhanced.py`). Legacy engine stays default until A/B review.
-- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py}, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, tests/fixtures/vtrac/**, src/core/module_c_vtrac_enhanced.py
+- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py,evidence.py}, tools/vtrac_enhanced_cli.py, tests/{test_vtrac_enhanced_basic.py,test_vtrac_evidence.py}, tests/fixtures/vtrac/**, src/core/module_c_vtrac.py, src/core/module_c_vtrac_enhanced.py
 
 ## 2025-10-14 - Stable winners guardrail polish
 - Impact: Winners enrichment now reuses the Stable canon helpers, coerces diagnostic booleans to nullable dtypes, and adds a pre-commit guard so the CSV export keeps the evidence columns; manifest tests assert evidence schema versions stay recorded.
