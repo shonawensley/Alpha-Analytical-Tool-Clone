@@ -25,10 +25,25 @@ def test_run_analysis_orders_indices(tmp_path):
     assert top.score > 0
     assert any(candidate.straight == "059" for candidate in top.straights)
 
-    bundle = ve.write_prediction_bundle("TestState", output, analysis_root=tmp_path)
+    bundle = ve.write_prediction_bundle(
+        "TestState",
+        output,
+        analysis_root=tmp_path,
+        engine_input=engine_input,
+    )
     data = json.loads(bundle.read_text(encoding="utf-8"))
     assert data["indices_ranked"][0]["index"] == 5
     assert data["straights_ranked"], "Expected straight candidates in bundle"
+    summaries = data.get("section_summaries")
+    assert summaries, "section_summaries should be present in bundle"
+    for section_name in ("Midday", "Evening", "Combined"):
+        assert section_name in summaries, f"{section_name} summary missing"
+        section = summaries[section_name]
+        metrics = section.get("analyzer_metrics")
+        assert metrics is not None, f"{section_name} analyzer metrics missing"
+        for key in ("indices_considered", "mask_drop_count", "reduction_hits", "mirror_supported", "double_hits", "top_straights"):
+            assert key in metrics, f"{section_name} missing '{key}' metric"
+        assert isinstance(metrics["top_straights"], list)
 
 
 def test_mask_digit_suggestion():

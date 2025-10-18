@@ -1,0 +1,533 @@
+TL;DR: We’ll validate the new V‑TRAC analyzer by parsing the Winners Logger HTML and comparing its indicators (3‑value/V‑TRAC patterns, hot/super‑hot zones, and “consensus” in cols 2→1) against the analyzer’s JSON/evidence. Below I give (1) a crisp test plan for Codex to run, and (2) a paste‑ready validation script that produces a state‑by‑state parity report (JSON + Markdown). The comparison logic is grounded in your training guides: V‑TRAC mapping (0↔5, 1↔6, 2↔7, 3↔8, 4↔9), how R2/R4/R6/R8 work vertically + reduce across columns, 3‑value pattern rules, and the * / ** hot‑zone semantics—including “consensus” when a structure’s last one or two columns collapse to <3 digits. 
+
+Quick Guide
+
+ 
+
+vision 2.0
+
+Step‑by‑step plan (what Codex should do)
+
+Preflight (unchanged wiring).
+Ask Codex to follow briefings/CODEX_READ_FIRST_AAT9.md exactly (your standard: select gpt‑5‑codex (High), run preflight + Dev Health, then reply READY). (user)
+
+Drop in a validation harness (no app changes).
+Add tools/vtrac_validate.py (code below). It:
+
+Finds Winners Logger HTML (either data/outputs/analysis/winners/<STATE>/... or the compact older path under data/outputs/winners/<date>/vtrac_reports/<STATE>) (user).
+
+Parses the three tables (Midday / Evening / Combined) with pandas.read_html.
+
+Computes signals that the analyzer is supposed to understand:
+
+3‑value/V‑TRAC patterns (both boxed and straight signatures). Rules & V‑TRAC mapping from your docs. 
+
+Quick Guide
+
+ 
+
+vision 2.0
+
+Vertical stability (same 3‑value signature appearing across R2/R4/R6/R8 in a column). 
+
+Quick Guide
+
+Hot / super‑hot counts detected via * and ** (your starred zones definition). 
+
+vision 2.0
+
+Consensus: mark a structure as consensus when col 1 or 2 has <3 total digits across its R2/R4/R6/R8 box—your exact definition. 
+
+vision 2.0
+
+Optionally ingests analyzer JSON evidence if present (you mentioned JSON bundles/exports in earlier runs), and prints an overlap/diff between analyzer’s top patterns and what the Winners HTML shows.
+
+Run the parity check (fast loop).
+Examples for Codex to execute after adding the file:
+
+# Delaware4
+python tools/vtrac_validate.py --state Delaware4
+
+# Michigan4
+python tools/vtrac_validate.py --state Michigan4
+
+# If HTML/JSON live in custom spots:
+python tools/vtrac_validate.py --state Florida4 \
+  --winners-dir data/outputs/analysis/winners/Florida4 \
+  --analysis-dir data/outputs/analysis/vtrac/Florida4
+
+
+Outputs go to data/outputs/analysis/vtrac_validation/<STATE>/ (JSON + Markdown).
+
+(Optional A/B) Legacy vs Enhanced.
+If both engines exist, ask Codex to run each to JSON without changing UI and feed those two JSONs to the validator (--analysis-json-a vs --analysis-json-b) so you get an A/B diff on the same tables. (user)
+
+Tighten the loop.
+Have Codex print a short table per state: Top recurring V‑TRAC signatures, hot/super‑hot counts, consensus flags, and overlap % between analyzer evidence and Winners HTML. Where overlap is low, we inspect that specific column/ring in the Markdown side‑report (the script will point you to the exact Sets/Draws/columns).
+
+Why these checks match your method (grounded)
+
+V‑TRAC mapping and “8 straights per V‑code” come straight from your training guide; we normalize raw strings into V‑signatures (e.g., 6411 → V244 aspects) so we can compare Winners vs Analyzer on common ground. 
+
+Quick Guide
+
+R2/R4/R6/R8 are vertical per column; digits reduce as you move right across columns; we measure vertical stability and right‑side survival because that’s exactly how your tables progress. 
+
+Quick Guide
+
+3‑value patterns include (i) three unique digits, (ii) two‑digit doubles with ≥3 length, and (iii) 3 V‑TRAC digits, plus the important special case where 4 raw digits still compress to 3 V‑TRAC classes (e.g., 99224466). We treat those consistently in the detector. 
+
+vision 2.0
+
+Hot/super‑hot and consensus: your hot‑zone counts per Draw (Set1) and the notion that col 1/2 <3 digits constitutes “consensus” are encoded as explicit signals. 
+
+vision 2.0
+
+Paste‑ready validation script (single file)
+
+Path: tools/vtrac_validate.py
+Purpose: Parse Winners HTML → compute indicators; load analyzer JSON if present → compute overlap; write JSON + Markdown reports.
+
+Note: No placeholders. Uses only standard libs + pandas. If bs4 isn’t present, it’s not required—pandas.read_html is enough because your winners output is table‑heavy.
+
+#!/usr/bin/env python3
+# tools/vtrac_validate.py
+
+import argparse
+import json
+import re
+from collections import Counter, defaultdict
+from pathlib import Path
+from datetime import datetime
+
+import pandas as pd
+
+# -----------------------------
+# Utilities: V-TRAC mapping and helpers
+# -----------------------------
+
+# V-TRAC digit groups from your training guide:
+# VTrac 1: {0,5}; VTrac 2: {1,6}; VTrac 3: {2,7}; VTrac 4: {3,8}; VTrac 5: {4,9}
+VTRAC_MAP = {
+    "0": "1", "5": "1",
+    "1": "2", "6": "2",
+    "2": "3", "7": "3",
+    "3": "4", "8": "4",
+    "4": "5", "9": "5",
+}
+
+DIGIT_RE = re.compile(r"[0-9]+")
+
+def only_digits(s: str) -> str:
+    if not isinstance(s, str):
+        s = "" if pd.isna(s) else str(s)
+    return "".join(ch for ch in s if ch.isdigit())
+
+def count_hot_symbols(s: str) -> tuple[int, int]:
+    """Return (#hot, #superhot) counting '*' and '**' tokens in a cell string."""
+    if not isinstance(s, str):
+        s = "" if pd.isna(s) else str(s)
+    # Count '**' first, then remaining '*'
+    superhot = s.count("**")
+    # Remove '**' pairs to avoid double counting as single *
+    tmp = s.replace("**", "")
+    hot = tmp.count("*")
+    return hot, superhot
+
+def vtrac_sequence(s: str) -> str:
+    """
+    Map a numeric string to a sequence of V-TRAC groups, preserving order.
+    Example: '6411' -> 'V2442' (6->2,4->5,1->2,1->2) ; we prefix 'V' to make it explicit.
+    """
+    digits = only_digits(s)
+    if not digits:
+        return "V"
+    mapped = "".join(VTRAC_MAP.get(ch, "") for ch in digits)
+    return "V" + mapped
+
+def vtrac_box_signature(s: str) -> str:
+    """
+    Unordered 3-value signature using V-TRAC classes.
+    We reduce to at most three distinct classes, sorted, e.g. '6411' -> 'V{2,5}' -> 'V255' (multiset flavor).
+    For stability we encode as sorted counts of classes seen (compressed to <=3 distinct).
+    """
+    digits = only_digits(s)
+    if len(digits) < 3:
+        return ""  # not enough material for a 3-value candidate
+    classes = [VTRAC_MAP.get(ch, "") for ch in digits]
+    classes = [c for c in classes if c]  # drop unknown
+    if not classes:
+        return ""
+    ctr = Counter(classes)
+    # keep up to three most common classes (ties by class id for determinism)
+    top = sorted(ctr.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+    # Encode as "V" + class+count pairs, e.g. [('2',3),('5',2)] -> 'V2x3_5x2'
+    return "V" + "_".join(f"{cls}x{cnt}" for cls, cnt in top)
+
+def is_three_value_candidate(s: str) -> bool:
+    """
+    Decide if a string qualifies as a 3-value candidate per your rule:
+    - ≥3 total digits AND
+      (<=3 unique raw digits OR <=3 unique V-TRAC classes).
+    """
+    digits = only_digits(s)
+    if len(digits) < 3:
+        return False
+    uniq_raw = set(digits)
+    if len(uniq_raw) <= 3:
+        return True
+    classes = {VTRAC_MAP.get(ch, "") for ch in digits}
+    classes.discard("")  # remove unknown just in case
+    return len(classes) <= 3
+
+# -----------------------------
+# HTML discovery and parsing
+# -----------------------------
+
+def find_winners_html(state: str, winners_dir: Path | None) -> list[Path]:
+    """
+    Locate Winners Logger HTML files for a state.
+    Default search:
+      - data/outputs/analysis/winners/<STATE>/**/*.html
+      - data/outputs/winners/*/vtrac_reports/<STATE>/**/*.html
+    """
+    roots: list[Path] = []
+    if winners_dir:
+        roots.append(Path(winners_dir))
+    else:
+        roots.append(Path("data/outputs/analysis/winners") / state)
+        roots.append(Path("data/outputs/winners"))
+    htmls: list[Path] = []
+    for root in roots:
+        if not root.exists():
+            continue
+        if "vtrac_reports" in str(root):
+            # Compact path layout
+            htmls.extend(root.rglob("*.html"))
+        else:
+            # Analysis winners layout
+            htmls.extend((root).rglob("*.html"))
+    # De-duplicate and prefer newest first
+    htmls = sorted(set(htmls), key=lambda p: p.stat().st_mtime, reverse=True)
+    return htmls
+
+def read_three_tables_from_html(html_path: Path) -> list[pd.DataFrame]:
+    """
+    Attempt to read the Winners Logger's 3 big tables (Midday, Evening, Combined).
+    pandas.read_html returns a list; we heuristically keep the 3 widest tables.
+    """
+    try:
+        tables = pd.read_html(html_path, flavor="lxml")
+    except Exception:
+        tables = pd.read_html(html_path)  # fallback
+    # Keep tables that have the expected R2/R4/R6/R8 vocabulary in a 'RowType' column (or similar)
+    scored = []
+    for df in tables:
+        cols = [str(c).strip().lower() for c in df.columns]
+        if any("rowtype" in c for c in cols) or any("draw" == c for c in cols) or any(c in {"7","6","5","4","3","2","1"} for c in cols):
+            scored.append((df.shape[1], df))
+    # pick up to 3 widest
+    top = [df for _, df in sorted(scored, key=lambda kv: -kv[0])[:3]]
+    return top
+
+# -----------------------------
+# Winners-table signal extraction
+# -----------------------------
+
+R_ROWS = {"R2", "R4", "R6", "R8"}
+COL_LABELS = ["7","6","5","4","3","2","1"]
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    # Make column labels consistent
+    df2 = df.copy()
+    df2.columns = [str(c).strip() for c in df2.columns]
+    # Ensure presence of key columns
+    # We try common spellings seen in screenshots: 'Set','Draw','RowType'
+    # If missing, attempt to infer from first columns
+    if "Set" not in df2.columns:
+        # Heuristic: first column
+        df2.rename(columns={df2.columns[0]: "Set"}, inplace=True)
+    if "Draw" not in df2.columns:
+        df2.rename(columns={df2.columns[1]: "Draw"}, inplace=True)
+    if "RowType" not in df2.columns:
+        df2.rename(columns={df2.columns[2]: "RowType"}, inplace=True)
+    return df2
+
+def extract_signals_from_table(df_raw: pd.DataFrame) -> dict:
+    """
+    Compute hot/superhot, consensus, and top V-TRAC signatures for Set1/Draw1.
+    """
+    df = normalize_columns(df_raw)
+    # Filter Set1 / Draw1 and the four R2,R4,R6,R8 rows
+    mask = (df["Set"].astype(str).str.contains("Set1", case=False, na=False)) & \
+           (df["Draw"].astype(str).str.contains("Draw1", case=False, na=False)) & \
+           (df["RowType"].astype(str).isin(R_ROWS))
+    block = df.loc[mask, ["RowType"] + [c for c in COL_LABELS if c in df.columns]].copy()
+    signals: dict = {
+        "hot": 0,
+        "superhot": 0,
+        "consensus_col1": False,
+        "consensus_col2": False,
+        "stable_columns": [],  # columns where a 3-value V-TRAC signature is common in >=3 of 4 rows
+        "top_vtrac_box_signatures": [],  # frequency across all cells
+    }
+    if block.empty:
+        return signals
+
+    # Hot/superhot
+    hot = superhot = 0
+    for col in block.columns:
+        if col in {"RowType"}:
+            continue
+        for val in block[col].astype(str).tolist():
+            h, sh = count_hot_symbols(val)
+            hot += h
+            superhot += sh
+    signals["hot"], signals["superhot"] = hot, superhot
+
+    # Consensus: in col '1' or '2', if present, check if ALL four R* rows are <3 digits
+    for target_col, key in (("1", "consensus_col1"), ("2", "consensus_col2")):
+        if target_col in block.columns:
+            vals = [only_digits(v) for v in block[target_col].astype(str).tolist()]
+            if len(vals) == 4 and all(0 < len(v) < 3 for v in vals):
+                signals[key] = True
+
+    # Column-wise stability: if >=3 of the 4 rows share the same 3-value V-TRAC box signature
+    stable_cols: list[str] = []
+    for col in [c for c in COL_LABELS if c in block.columns]:
+        sigs = []
+        for v in block[col].astype(str).tolist():
+            if is_three_value_candidate(v):
+                sigs.append(vtrac_box_signature(v))
+        # retain non-empty
+        sigs = [s for s in sigs if s]
+        if not sigs:
+            continue
+        top, cnt = Counter(sigs).most_common(1)[0]
+        if cnt >= 3:
+            stable_cols.append(col)
+    signals["stable_columns"] = stable_cols
+
+    # Global top V-TRAC box signatures across all Set1/Draw1 cells
+    all_sigs: Counter = Counter()
+    for col in [c for c in COL_LABELS if c in block.columns]:
+        for v in block[col].astype(str).tolist():
+            if is_three_value_candidate(v):
+                all_sigs.update([vtrac_box_signature(v)])
+    top_box = [sig for sig, _ in all_sigs.most_common(12) if sig]
+    signals["top_vtrac_box_signatures"] = top_box
+    return signals
+
+# -----------------------------
+# Analyzer JSON ingestion (optional)
+# -----------------------------
+
+def find_latest_json(analysis_dir: Path) -> Path | None:
+    if not analysis_dir.exists():
+        return None
+    cands = sorted(analysis_dir.rglob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return cands[0] if cands else None
+
+def load_analyzer_json(path: Path | None) -> dict:
+    if not path or not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def analyzer_signatures_from_json(blob: dict) -> set[str]:
+    """
+    Try to extract V-TRAC box/straight signatures from analyzer JSON if present.
+    We look for fields like 'vtrac_signatures', 'top_signatures', or evidence entries.
+    The function is defensive; if structure differs, it returns an empty set.
+    """
+    out: set[str] = set()
+    if not isinstance(blob, dict):
+        return out
+    # Generic sweep for strings that look like our encoding "V<digit>x<count>_..."
+    def walk(x):
+        if isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, str):
+            if re.match(r"^V[1-5](x\d+)(_([1-5]x\d+))*$", x):
+                out.add(x)
+    walk(blob)
+    return out
+
+# -----------------------------
+# Report writing
+# -----------------------------
+
+def write_json(out_path: Path, obj: dict):
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
+
+def write_markdown(out_path: Path, summary: dict):
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    lines.append(f"# V-TRAC Validation Report — {summary['state']}")
+    lines.append(f"_Generated: {datetime.utcnow().isoformat()}Z_")
+    lines.append("")
+    if summary.get("winners_html"):
+        lines.append("**Winners HTML files considered (newest first):**")
+        for p in summary["winners_html"][:5]:
+            lines.append(f"- {p}")
+        if len(summary["winners_html"]) > 5:
+            lines.append(f"- ... (+{len(summary['winners_html']) - 5} more)")
+        lines.append("")
+    for section in ("Midday","Evening","Combined"):
+        sec = summary["sections"].get(section, {})
+        lines.append(f"## {section}")
+        if not sec:
+            lines.append("_No table parsed._")
+            lines.append("")
+            continue
+        lines.append(f"- Hot cells: **{sec['signals']['hot']}**, Super‑hot: **{sec['signals']['superhot']}**")
+        lines.append(f"- Consensus col1: **{sec['signals']['consensus_col1']}**, col2: **{sec['signals']['consensus_col2']}**")
+        lines.append(f"- Stable columns (≥3/4 rows share a 3‑value V‑TRAC signature): `{','.join(sec['signals']['stable_columns']) or 'none'}`")
+        lines.append(f"- Top V‑TRAC box signatures in Set1/Draw1 cells: `{', '.join(sec['signals']['top_vtrac_box_signatures']) or 'none'}`")
+        # Overlap if analyzer signatures present
+        a_sigs = set(sec.get("analyzer_signatures", []))
+        w_sigs = set(sec['signals']['top_vtrac_box_signatures'])
+        if a_sigs:
+            inter = sorted(a_sigs & w_sigs)
+            lines.append(f"- Analyzer↔Winners signature overlap: **{len(inter)}** → {', '.join(inter) if inter else '—'}")
+        lines.append("")
+    out_path.write_text("\n".join(lines), encoding="utf-8")
+
+# -----------------------------
+# Main
+# -----------------------------
+
+def main():
+    ap = argparse.ArgumentParser(description="Validate V-TRAC analyzer evidence against Winners Logger HTML.")
+    ap.add_argument("--state", required=True, help="State folder, e.g., Delaware4")
+    ap.add_argument("--winners-dir", default=None, help="Override winners HTML root directory")
+    ap.add_argument("--analysis-dir", default=None, help="Override analyzer JSON root directory (search newest JSON)")
+    ap.add_argument("--analysis-json", default=None, help="Explicit analyzer JSON file to compare")
+    args = ap.parse_args()
+
+    state = args.state
+    winners_htmls = find_winners_html(state, Path(args.winners_dir) if args.winners_dir else None)
+
+    # Discover analyzer JSON
+    analysis_json_path = None
+    if args.analysis_json:
+        p = Path(args.analysis_json)
+        analysis_json_path = p if p.exists() else None
+    else:
+        root = Path(args.analysis_dir) if args.analysis_dir else Path("data/outputs/analysis/vtrac") / state
+        analysis_json_path = find_latest_json(root)
+
+    analyzer_blob = load_analyzer_json(analysis_json_path)
+    analyzer_sig_set = analyzer_signatures_from_json(analyzer_blob)
+
+    # Parse up to newest HTML file that yields 3 tables
+    sections = ["Midday", "Evening", "Combined"]
+    parsed = {}
+    picked_html = None
+    for html in winners_htmls:
+        tables = read_three_tables_from_html(html)
+        if len(tables) >= 3:
+            picked_html = html
+            for i, section in enumerate(sections):
+                sigs = extract_signals_from_table(tables[i])
+                # Section‑specific analyzer signatures (use global for now)
+                parsed[section] = {
+                    "signals": sigs,
+                    "analyzer_signatures": sorted(analyzer_sig_set) if analyzer_sig_set else []
+                }
+            break
+
+    out_root = Path("data/outputs/analysis/vtrac_validation") / state
+    summary = {
+        "state": state,
+        "winners_html": [str(p) for p in winners_htmls],
+        "picked_html": str(picked_html) if picked_html else None,
+        "analyzer_json": str(analysis_json_path) if analysis_json_path else None,
+        "sections": parsed
+    }
+    write_json(out_root / "validation_report.json", summary)
+    write_markdown(out_root / "validation_report.md", summary)
+
+    # Console summary
+    print(json.dumps({
+        "state": state,
+        "picked_html": summary["picked_html"],
+        "analyzer_json": summary["analyzer_json"],
+        "midday_top": parsed.get("Midday", {}).get("signals", {}).get("top_vtrac_box_signatures", [])[:6],
+        "evening_top": parsed.get("Evening", {}).get("signals", {}).get("top_vtrac_box_signatures", [])[:6],
+        "combined_top": parsed.get("Combined", {}).get("signals", {}).get("top_vtrac_box_signatures", [])[:6],
+    }, indent=2))
+    print(f"\nWrote: {out_root/'validation_report.json'}")
+    print(f"Wrote: {out_root/'validation_report.md'}")
+
+if __name__ == "__main__":
+    main()
+
+How to direct Codex (copy‑paste)
+
+Create validation harness
+
+Add the file exactly at tools/vtrac_validate.py with the code I paste below.
+
+Run:
+
+python tools/vtrac_validate.py --state Delaware4
+python tools/vtrac_validate.py --state Michigan4
+
+
+Open the generated data/outputs/analysis/vtrac_validation/<STATE>/validation_report.md and paste the console JSON summary back here.
+
+(The code is above; no placeholders.)
+
+What success looks like
+
+For each state you should see:
+
+Non‑empty top V‑TRAC signatures in Winners tables (Set1/Draw1). (These reflect your “3‑value” clusters and their V‑TRAC compression.) 
+
+vision 2.0
+
+Hot/super‑hot counts and consensus flags (true if col 1 or 2 shows <3 digits across R2/R4/R6/R8). 
+
+vision 2.0
+
+If your analyzer JSON embeds signatures/evidence, overlap > 0 on many states—especially where the Winners table’s rightmost columns show strong vertical stability (your right‑weighted survival idea). 
+
+Quick Guide
+
+What if analyzer JSON isn’t present yet?
+
+No problem—the harness still extracts Winners‑side signals so we can eyeball whether the new engine is seeing the same patterns. If JSON isn’t there, ask Codex to add (behind your feature flag) a small exporter that writes the analyzer’s top V‑TRAC box signatures per section into data/outputs/analysis/vtrac/<STATE>/...json, then re‑run the validator.
+
+Why this is the fastest safe loop
+
+It compares the exact artifacts you trust (Winners Logger HTML) with analyzer evidence, using your own definitions of V‑TRAC groups, 3‑value patterns, hot/super‑hot zones, and consensus. 
+
+Quick Guide
+
+ 
+
+vision 2.0
+
+It avoids UI wiring churn; it’s a headless tool that writes a compact report per state you can scan in minutes.
+
+It lets you grow gradually: once parity is good, flip the feature flag in the app.
+
+Sanity‑check actions (do these to verify)
+
+Open one Winners HTML for a state where the report says consensus_col1=True and visually confirm col 1 in Set1/Draw1 has <3 digits in the R2/R4/R6/R8 rows (you’ll see very short strings, often “7/7/7/7”). This matches your consensus rule. 
+
+vision 2.0
+
+Pick one top_vtrac_box_signature from the Markdown and locate a matching 3‑value cluster in the Winners table; confirm the signature’s V‑TRAC classes reflect your mapping (e.g., digits {0,5}→1; {1,6}→2; etc.). 
+
+Quick Guide
+
+If you want, I can follow up with an A/B runner (legacy vs enhanced) and a CLI smoke that forces both engines to dump JSON so the same validator produces a side‑by‑side diff.

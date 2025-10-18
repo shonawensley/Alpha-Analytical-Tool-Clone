@@ -28,7 +28,12 @@ def run_cli(
     engine_input = ve.build_engine_input_from_tables(state, tables_root=tables_root)
     digits_to_mask = set(mask_digits) if mask_digits else ve.suggested_mask_digits(engine_input.recent_draws)
     output = ve.run_analysis(engine_input, digits_to_mask=digits_to_mask)
-    bundle_path = ve.write_prediction_bundle(state, output, analysis_root=analysis_root)
+    bundle_path = ve.write_prediction_bundle(
+        state,
+        output,
+        analysis_root=analysis_root,
+        engine_input=engine_input,
+    )
     _print_summary(output, digits_to_mask)
     return bundle_path
 

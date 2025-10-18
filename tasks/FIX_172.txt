@@ -1,0 +1,244 @@
+keep using Codex for the runs and artifact generation, and use me for the analysis & steering. Please have Codex produce a small, consistent set of validation artifacts per state (JSON + Markdown) from the Winners Logger HTML and the analyzer JSON; then upload those artifacts here and I’ll audit them, call out gaps, and give tuning changes. Below I give (1) exactly what to ask Codex to do next (copy‑paste task), (2) what to send me, and (3) how this validates the features we designed (3‑value/V‑TRAC, hot/super‑hot, consensus, vertical stability, straights). All definitions & checks match your training docs: tables are Section→Set→Draw with vertical “box” (R2/R4/R6/R8) semantics and right‑edge consensus on col 1–2; V‑TRAC mapping 0/5→1, 1/6→2, 2/7→3, 3/8→4, 4/9→5; hot/super‑hot as right‑side boosts. 
+
+DATASET_final
+
+ 
+
+AI training aggregated
+
+ 
+
+vision 2.0
+
+ 
+
+Quick Guide
+
+1) What Codex should do now (paste‑ready task)
+
+Task name: VTRACA_3 — Enhanced Analyzer Validation (Phase 1)
+
+Goal. For each chosen state, parse the Winners Logger HTML (three tables: Midday/Evening/Combined), recompute signals, optionally ingest the analyzer JSON bundle, and write a parity report (JSON + Markdown). Keep paths canonical and do not touch the UI.
+
+Inputs & paths (assumed):
+
+Winners Logger HTML under data/outputs/analysis/winners/<STATE>/... (new layout) or under data/outputs/winners/<date>/vtrac_reports/<STATE>/... (older layout). (Matches current app outputs.) 
+
+DATASET_final
+
+Enhanced analyzer bundles under data/outputs/analysis/vtrac/<STATE>/*.json (plus analysis_summary.json at data/outputs/analysis/vtrac/). (As already noted in your run log.)
+
+The r2/r4/r6/r8/Set/Draw schema and “box” vertical semantics are the source of truth. (See “Basis for Analysis”.) 
+
+DATASET_final
+
+Signals to compute (Winners side):
+
+Three‑value/V‑TRAC candidates (≤3 unique raw digits or ≤3 unique V‑TRAC classes) inside each box (column viewed vertically across R2/R4/R6/R8). 
+
+DATASET_final
+
+ 
+
+AI training aggregated
+
+Vertical stability per column: a 3‑value V‑TRAC signature seen in ≥3 of the 4 rows (R2/R4/R6/R8). 
+
+DATASET_final
+
+Right‑edge consensus on column 1–2 (identical 1–2‑digit tail across R2/R4/R6/R8). This is a finishing signal. 
+
+DATASET_final
+
+ 
+
+vision 2.0
+
+Hot / super‑hot counts (based on * vs ** markers) as column boosts. 
+
+DATASET_final
+
+Top V‑TRAC box signatures in Set1/Draw1 (the priority view) for each Section. 
+
+DATASET_final
+
+Analyzer JSON (if present):
+
+Read the latest <STATE>_vtrac_enhanced_*.json. Extract any exported top signatures, mask digits, hot counts, consensus flags, and top straights.
+
+Outputs per state:
+
+data/outputs/analysis/vtrac_validation/<STATE>/validation_report.json
+
+data/outputs/analysis/vtrac_validation/<STATE>/validation_report.md
+
+(Optional) data/outputs/analysis/vtrac_validation/matrix.csv — one row per state with: winners‑HTML found?, analyzer‑JSON found?, hot counts, consensus flags, #stable columns, #signature overlaps, #top‑straights overlap.
+
+Batch to run now (start small, proven in your examples):
+Delaware4, Florida4, Michigan4, NewJersey4, NewYork4, Pennsylvania4
+
+Acceptance criteria (for each state):
+
+Markdown lists hot & super‑hot totals and consensus_col1/col2 booleans per section. (Hot/super‑hot and consensus are core mechanics.) 
+
+DATASET_final
+
+ 
+
+vision 2.0
+
+Shows stable columns (≥3/4 agreement) and top V‑TRAC signatures in Set1/Draw1. (This captures vertical stability & 3‑value clustering.) 
+
+DATASET_final
+
+If analyzer JSON exists, overlap between analyzer vs winners signatures is computed and printed. (Sanity that the enhanced engine “sees what the logger shows”.)
+
+matrix.csv aggregates a one‑line summary for the six states.
+
+CLI examples to include in the task (Codex should run all):
+
+python tools/vtrac_validate.py --state Delaware4
+python tools/vtrac_validate.py --state Florida4
+python tools/vtrac_validate.py --state Michigan4
+python tools/vtrac_validate.py --state NewJersey4
+python tools/vtrac_validate.py --state NewYork4
+python tools/vtrac_validate.py --state Pennsylvania4
+
+
+Note: The validator must keep to the r2/r4/r6/r8 box definition (vertical) and the 7→1 right‑weighted columns, with right‑edge consensus checks explicitly on columns 1–2, exactly as in your docs. 
+
+DATASET_final
+
+2) What to share back with me (so I can analyze fast)
+
+Please upload for two of the states (e.g., Florida4 and Michigan4):
+
+The generated validation_report.md and validation_report.json.
+
+The analyzer JSON bundle the validator used (the file path will appear in the report).
+
+(Already good: you’ve uploaded several Winners HTML files—those help me spot‑check visual parity.)
+
+With just those, I can (a) verify winners↔analyzer parity; (b) identify which features are under‑ or over‑counted; and (c) give precise tweaks (weights, boosts, evidence exports) that Codex can implement in one pass.
+
+Should you still paste outputs here sometimes?
+Yes—selectively. We’ve moved away from manual copy‑paste as the primary method, but pasting a few key report slices (or uploading the .md/.json) is the fastest way for me to confirm the validator is reading your artifacts correctly.
+
+3) Why this validates the features we programmed
+
+3‑value / V‑TRAC detection: Your method treats “≤3 unique digits” or “≤3 unique V‑TRAC classes” as a candidate; mapping digits → V‑TRAC (0/5→1, 1/6→2, 2/7→3, 3/8→4, 4/9→5) is the canonical backbone. The validator recomputes these directly from the HTML. 
+
+AI training aggregated
+
+ 
+
+Quick Guide
+
+Vertical stability inside a box (R2/R4/R6/R8) and horizontal progression (7→1) are exactly how your tables are read; consensus on col 1–2 is the strong finishing signal. The reports print both stability and consensus. 
+
+DATASET_final
+
+ 
+
+vision 2.0
+
+Hot / super‑hot counts act as right‑edge boosts; we count */** and include them in the parity report. 
+
+DATASET_final
+
+Straights alignment: the analyzer’s promoted straights (when exported) can be compared to the Winners indicators; your guides define V‑TRAC straights (8 mirrors per code) which the analyzer should be surfacing around strong 3‑value clusters. 
+
+Quick Guide
+
+If any exported field is missing in the analyzer JSON (e.g., it doesn’t yet write “top_vtrac_box_signatures”), Codex can add a tiny exporter behind the feature flag so the same validator instantly reflects parity.
+
+4) Do you need me to “see everything inside the repo” or run agent mode?
+
+I can’t directly access your file system or run the code. But the artifacts are enough. If Codex (or you) uploads:
+
+the state‑level validation_report.md/.json,
+
+the analyzer JSON bundle(s), and
+
+a couple of the Winners HTML used,
+I can do a deep, evidence‑based review and return concrete fixes and parameter adjustments.
+
+If you want a single file for me to review per batch: ask Codex to also emit data/outputs/analysis/vtrac_validation/matrix.csv (summary) and findings.md (bulleted anomalies & highlights). I’ll read those and then ask for any deeper files only where needed.
+
+5) Where we go after the first validator run
+
+If parity is good (overlaps present; hot/consensus/stability consistent): we’ll lock the exporter shape and wire an end‑to‑end regression test that freezes one HTML + one JSON fixture so future refactors don’t drift. Your Testing Roadmap calls out this gap—this will close it cleanly. 
+
+DATASET_final
+
+If parity is poor in specific ways, I’ll give exact changes. Typical fixes:
+
+Export missing analyzer evidence fields (top signatures per section, consensus flags, counts).
+
+Tune the weight of right‑edge stability vs ring/column survival to better match the Winners signal (we control these in config). (Your docs emphasize right‑edge consensus & stability.) 
+
+DATASET_final
+
+ 
+
+vision 2.0
+
+Add a detector for “3‑value by V‑TRAC even when raw digits are 4+” (you highlighted 99224466‑style compressions). The validator already measures this; we can ensure the analyzer mirrors it. 
+
+AI training aggregated
+
+Quick answers to your questions
+
+“Do you want to see outputs?”
+Yes—upload the generated validation_report.md/.json for 2 states + their analyzer JSON; that’s the most efficient way for me to verify everything without falling back to screenshot‑driven analysis.
+
+“Should Codex do everything?”
+Codex should run & generate artifacts; I should interpret and steer. That split plays to each tool’s strength.
+
+“Can this approach still surface rich, analyst‑grade insights?”
+Absolutely. Your training guides show repeatable signals: right‑edge consensus, vertical stability, V‑TRAC 3‑value clustering, and hot/super‑hot pressure. The validator extracts each of those so we can compare what the analyzer “saw” to what the Winners Logger rendered. 
+
+AI training aggregated
+
+ 
+
+vision 2.0
+
+Exactly what to paste to Codex (minimal task stub)
+# VTRACA_3 — run validator on six states and summarize
+# Preconditions: tools/vtrac_validate.py present exactly as spec’d; do not modify app UI.
+
+$python tools/vtrac_validate.py --state Delaware4
+$python tools/vtrac_validate.py --state Florida4
+$python tools/vtrac_validate.py --state Michigan4
+$python tools/vtrac_validate.py --state NewJersey4
+$python tools/vtrac_validate.py --state NewYork4
+$python tools/vtrac_validate.py --state Pennsylvania4
+
+# Then: collect to data/outputs/analysis/vtrac_validation/matrix.csv
+# and emit findings.md (top anomalies + highlights).
+
+
+When it finishes, please upload:
+
+.../vtrac_validation/Florida4/validation_report.md
+
+.../vtrac_validation/Florida4/validation_report.json
+
+the analyzer JSON it used for Florida4 (the validator prints the path)
+
+the same three files for Michigan4
+
+That’s enough for me to produce the first tuning pass.
+
+Sanity‑check (do these quick verifications on your side)
+
+Open one validation_report.md and confirm Consensus col1/col2 is True for a state where your Winners HTML clearly shows a 1–2‑digit tail repeated across R2/R4/R6/R8 in column 1 (e.g., 7/7/7/7). This is the exact definition we’re enforcing. 
+
+vision 2.0
+
+Check the listed Top V‑TRAC box signatures include patterns you can visually see repeating in Set1/Draw1 on the Winners HTML (e.g., a {1,3,8} cluster encoded as a V‑TRAC signature). The mapping 0/5→1, 1/6→2, 2/7→3, 3/8→4, 4/9→5 is canonical. 
+
+Quick Guide
+
+If this looks good, I’m ready to review the first two state reports and give you precise, code‑ready tuning next.

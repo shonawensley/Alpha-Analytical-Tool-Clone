@@ -1,3 +1,15 @@
+## 2025-10-18 - Validator regression guardrails + batch metrics
+- Impact: Section summaries now capture mask-drop/reduction/mirror/doubles stats per variant; validator compares straight occurrences and surfaces analyzer metrics/straights alongside Winners HTML.
+- Impact: Added fixture-backed regression (	ests/test_vtrac_validate_fixture.py) with frozen Delaware4/Florida4 HTML+JSON pairs so validator outputs stay populated; new batch helper (	ools/vtrac_validate_batch.py) prints precision@K and supports comparison bundles.
+- Impact: Florida4 Combined review confirmed the absence of 3-value clusters is expected (columns collapse to two digits); documentation updated with findings and new validator/batch workflows.
+- Files: modules/vtrac_enhanced/adapters.py, tools/vtrac_validate.py, tools/vtrac_validate_batch.py, tests/test_vtrac_validate_fixture.py, tests/fixtures/vtrac_validation/**, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}
+
+## 2025-10-17 - Validation - Enhanced V-TRAC parity harness and bundle summaries
+- Impact: Added `tools/vtrac_validate.py` to parse Winners Logger HTML, recompute 3-value V-TRAC signatures, hot/super-hot counts, consensus flags, and compare them to analyzer outputs (supports single run and optional A/B inputs).
+- Impact: Extended `modules.vtrac_enhanced.write_prediction_bundle` so JSON bundles now include per-section summaries (`hot_count`, `superhot_count`, `consensus`, `stable_columns`, `top_box_signatures`, `ring_votes`) and `top_straights`, enabling downstream parity checks without re-reading tables.
+- Impact: Updated Streamlit wrapper, headless CLI, and regression test to pass the engine input into the bundle writer; refreshed sample validations for Delaware4, Michigan4, Florida4, NewJersey4, and Virginia4 with overlap now visible in `data/outputs/analysis/vtrac_validation/`.
+- Files: tools/vtrac_validate.py, modules/vtrac_enhanced/adapters.py, tools/vtrac_enhanced_cli.py, src/core/module_c_vtrac_enhanced.py, tests/test_vtrac_enhanced_basic.py, docs/AAT9_KIT/AAT9_Analysis_Insights.md
+
 ## 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
 - Impact: Replaced the placeholder analyzer with the production engine: ring/column survival, set echoes, cross-section consensus, column-span depth, hot/super-hot support, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
 - Impact: Introduced a shared evidence grid (`modules/vtrac_enhanced/evidence.py`) consumed by both the analyzer and the V-TRAC winners logger, so highlights and scoring share the same data.

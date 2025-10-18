@@ -4,16 +4,17 @@ Adapters for building engine inputs from combined tables and writing outputs.
 
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple, Set
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Set
 
 import pandas as pd
 
 from utils.path_handler import get_analysis_output_dir, get_tables_output_dir
 
-from .types import COLUMN_LABELS, EngineInput, PatternsGrid, SectionData, Cell, RINGS, SECTIONS, SETS
+from .types import COLUMN_LABELS, EngineInput, EngineOutput, IndexScore, PatternsGrid, SectionData, Cell, RINGS, SECTIONS, SETS
 
 HOT_WINDOWS: dict[str, Tuple[int, int]] = {
     "DRAW1": (5, 3),
@@ -132,11 +133,202 @@ def suggested_mask_digits(recent_draws: Sequence[str]) -> Set[str]:
     return {ch for ch in str(recent_draws[0]) if ch.isdigit()}
 
 
+_VTRAC_CLASS_MAP = {
+    "0": "1",
+    "5": "1",
+    "1": "2",
+    "6": "2",
+    "2": "3",
+    "7": "3",
+    "3": "4",
+    "8": "4",
+    "4": "5",
+    "9": "5",
+}
+
+
+def _is_three_value_candidate(digits: str) -> bool:
+    digits = "".join(ch for ch in str(digits or "") if ch.isdigit())
+    if len(digits) < 3:
+        return False
+    if len(set(digits)) <= 3:
+        return True
+    classes = {_VTRAC_CLASS_MAP.get(ch) for ch in digits}
+    classes.discard(None)
+    return len(classes) <= 3
+
+
+def _vtrac_box_signature(digits: str) -> str:
+    digits = "".join(ch for ch in str(digits or "") if ch.isdigit())
+    if len(digits) < 3:
+        return ""
+    counts = Counter(_VTRAC_CLASS_MAP.get(ch) for ch in digits if _VTRAC_CLASS_MAP.get(ch))
+    if not counts:
+        return ""
+    top = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:3]
+    return "V" + "_".join(f"{cls}x{cnt}" for cls, cnt in top)
+
+
+def _summarise_section(engine_input: EngineInput, section: str) -> dict:
+    summary = {
+        "hot_count": 0,
+        "superhot_count": 0,
+        "consensus_col1": False,
+        "consensus_col2": False,
+        "stable_columns": [],
+        "top_box_signatures": [],
+        "ring_votes": {},
+    }
+
+    target: Optional[SectionData] = None
+    for sec in engine_input.sections:
+        if sec.section.lower() == section.lower() and sec.set_name.strip().lower() == "set1":
+            target = sec
+            break
+    if not target:
+        return summary
+
+    grid: PatternsGrid = target.patterns
+    signature_counter: Counter[str] = Counter()
+    stable_columns: List[str] = []
+    ring_signature_counts = {ring: Counter() for ring in RINGS}
+
+    for ring in RINGS:
+        cells = tuple(grid.columns(ring))
+        summary["hot_count"] += sum(1 for cell in cells if cell.hot)
+        summary["superhot_count"] += sum(1 for cell in cells if cell.superhot)
+
+    for idx, column in enumerate(COLUMN_LABELS):
+        column_signatures: List[str] = []
+        ring_digits: List[str] = []
+        for ring in RINGS:
+            cells = tuple(grid.columns(ring))
+            cell = cells[idx] if idx < len(cells) else None
+            digits = cell.digits if cell else ""
+            ring_digits.append(digits)
+            if _is_three_value_candidate(digits):
+                signature = _vtrac_box_signature(digits)
+                if signature:
+                    column_signatures.append(signature)
+                    ring_signature_counts[ring][signature] += 1
+                    signature_counter.update([signature])
+
+        if column == 1:
+            summary["consensus_col1"] = all(0 < len(d) < 3 for d in ring_digits)
+        if column == 2:
+            summary["consensus_col2"] = all(0 < len(d) < 3 for d in ring_digits)
+
+        if column_signatures:
+            sig, count = Counter(column_signatures).most_common(1)[0]
+            if count >= 3:
+                stable_columns.append(str(column))
+
+    summary["stable_columns"] = stable_columns
+    summary["top_box_signatures"] = [sig for sig, _ in signature_counter.most_common(12)]
+    summary["ring_votes"] = {
+        ring: dict(counter.most_common())
+        for ring, counter in ring_signature_counts.items()
+        if counter
+    }
+    return summary
+
+
+def _collect_analyzer_section_metrics(output: Optional[EngineOutput]) -> Dict[str, dict]:
+    metrics: Dict[str, dict] = {
+        section: {
+            "indices_considered": 0,
+            "mask_drop_count": 0,
+            "reduction_hits": 0,
+            "mirror_supported": 0,
+            "double_hits": 0,
+            "top_straights": [],  # populated later with list[dict]
+        }
+        for section in SECTIONS
+    }
+    if not output:
+        return metrics
+
+    index_sections: Dict[int, Sequence[str]] = {}
+    for score in output.indices_ranked:
+        sections = [
+            sec for sec in score.evidence.raw.get("sections", []) if sec in SECTIONS
+        ]
+        index_sections[score.index] = sections
+        mask_drop = bool(score.evidence.raw.get("mask_drop"))
+        reduction_hits = int(score.evidence.raw.get("reduction_hits", 0))
+        mirror_supported = bool(score.evidence.raw.get("mirror_supported"))
+        double_hits = int(score.evidence.raw.get("double_hits", 0))
+
+        for section in sections:
+            entry = metrics.setdefault(section, {
+                "indices_considered": 0,
+                "mask_drop_count": 0,
+                "reduction_hits": 0,
+                "mirror_supported": 0,
+                "double_hits": 0,
+                "top_straights": [],
+            })
+            entry["indices_considered"] += 1
+            if mask_drop:
+                entry["mask_drop_count"] += 1
+            entry["reduction_hits"] += reduction_hits
+            if mirror_supported:
+                entry["mirror_supported"] += 1
+            entry["double_hits"] += double_hits
+
+    for candidate in output.straights_ranked:
+        sections = index_sections.get(candidate.index, [])
+        for section in sections:
+            entry = metrics.setdefault(section, {
+                "indices_considered": 0,
+                "mask_drop_count": 0,
+                "reduction_hits": 0,
+                "mirror_supported": 0,
+                "double_hits": 0,
+                "top_straights": [],
+            })
+            if len(entry["top_straights"]) >= 12:
+                continue
+            entry["top_straights"].append(
+                {
+                    "straight": candidate.straight,
+                    "score": candidate.score,
+                    "index": candidate.index,
+                }
+            )
+
+    return metrics
+
+
+def _build_section_summaries(
+    engine_input: Optional[EngineInput],
+    output: Optional[EngineOutput],
+) -> dict:
+    summaries: Dict[str, dict] = {
+        section: _summarise_section(engine_input, section)
+        for section in SECTIONS
+    } if engine_input else {section: {} for section in SECTIONS}
+
+    analyzer_metrics = _collect_analyzer_section_metrics(output)
+    for section, metrics in analyzer_metrics.items():
+        summaries.setdefault(section, {})
+        summaries[section]["analyzer_metrics"] = {
+            "indices_considered": metrics["indices_considered"],
+            "mask_drop_count": metrics["mask_drop_count"],
+            "reduction_hits": metrics["reduction_hits"],
+            "mirror_supported": metrics["mirror_supported"],
+            "double_hits": metrics["double_hits"],
+            "top_straights": metrics["top_straights"],
+        }
+    return summaries
+
+
 def write_prediction_bundle(
     state: str,
     output: EngineOutput,
     *,
     analysis_root: Optional[Path] = None,
+    engine_input: Optional[EngineInput] = None,
 ) -> Path:
     """
     Persist analyzer output under data/outputs/analysis/vtrac/<STATE>/.
@@ -148,6 +340,23 @@ def write_prediction_bundle(
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = target_dir / f"{state}_vtrac_enhanced_{timestamp}.json"
+
+    if engine_input is None:
+        try:
+            engine_input = build_engine_input_from_tables(state)
+        except Exception:
+            engine_input = None
+
+    section_summaries = _build_section_summaries(engine_input, output)
+
+    top_straights: List[str] = []
+    seen_straights: Set[str] = set()
+    for candidate in output.straights_ranked:
+        if candidate.straight not in seen_straights:
+            seen_straights.add(candidate.straight)
+            top_straights.append(candidate.straight)
+        if len(top_straights) >= 24:
+            break
 
     payload = {
         "state": state,
@@ -184,6 +393,8 @@ def write_prediction_bundle(
             for candidate in output.straights_ranked
         ],
         "telemetry": output.telemetry,
+        "section_summaries": section_summaries,
+        "top_straights": top_straights,
     }
 
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

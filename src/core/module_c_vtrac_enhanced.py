@@ -45,7 +45,7 @@ def render(state: str) -> None:
     if st.button(run_label, type="primary"):
         with st.spinner("Analyzing V-TRAC indices..."):
             output = ve.run_analysis(engine_input, weights=weights, digits_to_mask=mask_set)
-            bundle_path = ve.write_prediction_bundle(state, output)
+            bundle_path = ve.write_prediction_bundle(state, output, engine_input=engine_input)
         _store_session(state, output, bundle_path)
         st.success("Enhanced analysis complete.")
         st.caption(f"Bundle written to {bundle_path}")

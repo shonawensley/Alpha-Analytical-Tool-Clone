@@ -25,13 +25,18 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 - tests/test_digit_training_bundle.py locks the Analyzer V2 training bundle defaults (Midday/Evening) plus the Combined opt-in and error handling for missing artifacts.
 - tests/test_stable_doubles_adjacency_negative.py ensures Stable doubles support only fires when consensus digits share a column, protecting the Control Center evidence bus from false positives.
 - tests/test_vtrac_evidence.py + tests/test_vtrac_enhanced_basic.py cover the shared V-TRAC evidence layer and enhanced analyzer scoring (top index straight rationale). CLI smoke: `python tools/vtrac_enhanced_cli.py --state SampleState --tables-root tests/fixtures/vtrac --analysis-root tests/fixtures/tmp_out`.
+- tests/test_vtrac_validate_fixture.py ensures the validator keeps section metrics/straight exports populated for frozen HTML + analyzer bundles (Delaware4 & Florida4 snapshots).
 - Batch smoke (optional): use the helper script in `analysis_2` (“temp_run_vtrac.py”) to iterate all states and refresh `data/outputs/analysis/vtrac/analysis_summary.json` (top 5 indices/straights per state).
 
 
 - Pending additions:
   - V-TRAC analyzer render path (uses combined tables only).
   - Blackapple alert flow (ensures triggers/candidates render for a known state).
-  - Control Center state toggle stress case.`r`n- Re-verify due-doubles combination tagging so M/E/C flags only light up when the combo is actually late in that variant (current tables still show every combo with all three tags).
+  - Control Center state toggle stress case.
+
+  - Re-verify due-doubles combination tagging so M/E/C flags only light up when the combo is actually late in that variant (current tables still show every combo with all three tags).
+
+  - Fixture-backed parity test for `tools/vtrac_validate.py` (freeze HTML+JSON for two states and assert section overlaps stay non-zero).
 
 ## 2. Stress Harnesses
 - `scripts/tools/stress_positional.py`
@@ -55,6 +60,9 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 - `.codex/preflight.ps1` - environment sanity before coding (add `-CheckDoubles` after data refreshes to run the doubles audit).
 - Streamlit Dev Health expanders - confirm module bindings and data sources.
 - `python scripts/health/check_doubles_variants.py [--state STATE]` - post-import audit for missing variant files, unseen-overdue combos, or merged badges. Set `AAT9_RUN_DOUBLES_HEALTH=1` to enable this audit inside the pre-commit smoke hook.
+
+- `python tools/vtrac_validate.py --state <STATE>` - compare Winners Logger HTML against the latest enhanced analyzer bundle (supports `--analysis-json-a/--analysis-json-b` for A/B checks).
+- `python tools/vtrac_validate_batch.py --states ...` - batch validator runner with precision@K summary (accepts optional comparison pattern).
 
 ## 6. Backlog / TODOs
 - Acceptance scenarios for each major module (see section 1 Pending additions).
