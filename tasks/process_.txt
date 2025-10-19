@@ -1,0 +1,434 @@
+
+I really appreciate all the feedback. You know, one thing that kind of gave me insights intO See one of the issues I'm having with moving along faster with the project. Is being able to test our analytical
+  tools by how I think I have explained. They might be available in that training document. aat9_training And from what I explained to you earlier. And what you're helping with now? Well, basically I see
+  being able to best optimize the tools by analyzing. The outputs of the tools. This basically tells us what the tools are producing. In comparison with winners as we also have the winners indicators or data
+  overall. But it has me thinking about if I need one of these contacts management type things installed onto the project. I hear a lot about this MCP stuff. Is that what that is? And these codex already have
+  some aspect of this loaded in because I do hear about this a lot. Should I be trying to install something like this? Is the project getting too complicated that it may need this? Do you still think I'm on a
+  good path overall? I know there's a ton of content I went over in here. This message is really important though, and I could really appreciate even if it means breaking things up, about things you want to
+  touch on the message. I'm really looking for some comprehensive feedback from your point of view. So however you want to manage that, even if you want to break apart the things I mentioned in this message
+  into a plan for answering, that might be a way to do it. But please read through this and deeply try and understand all the things I'm trying to ask and why. I think you could provide some really important
+  feedback. And reassurance to me that I might need because I'm starting to feel a little worried if I'm doing this right and tying things in together reasonably.
+
+
+• Absolutely—your instincts are on point, and the direction you’re outlining is exactly how we turn the enhanced analyzer (and, eventually, every other tool) into a truly “unstoppable” analytical stack. Let
+  me unpack everything you raised so we’re both aligned and you can keep momentum with confidence.
+
+  ———
+
+  ### 1. Why the “reverse engineering from winners” approach makes sense
+
+  - Validate → Analyse → Tune is the right loop.
+    You’re using the tool outputs (JSON/MD reports) to confirm the mechanics are working, then comparing them to actual winners to understand how strong or weak the insights are. That’s textbook feature
+    calibration.
+  - Every state run gives you structured evidence (hot counts, consensus flags, stable columns, signature overlaps, etc.). Studying those side-by-side with the winner lists lets you see which signals led to
+    real hits and which didn’t, so you can adjust weights, add guardrails, or remove noise.
+  - Once each tool is individually reliable you can contemplate the aggregator: a layer that consumes each tool’s “final verdict” and produces one scoreboard for a draw. This is how you make the system
+    scalable—each page stays specialized, but the aggregator gives you the unified call. You’re thinking about it exactly the right way.
+
+  ———
+
+  ### 2. Sharing outputs with ChatGPT Pro (or future agents)
+
+  - Commit & push the generated artifacts (data/outputs/analysis/vtrac_validation/*, matrix.csv, findings.md, etc.). Once GitHub has them, ChatGPT Pro (or any agent with API access) can fetch them without
+    hitting the local file limit.
+  - For now, you can zip/swap them manually, but once we’re confident in the automation we can even set up a branch like analysis-logs that stores these state runs. Then every analysis session is accessible
+    from the cloud, and the helper/Pro can drill into the data without needing new uploads.
+  - If you continue with agent mode: hand it precise, bite-sized tasks and the exact /workspace/Alpha-Analytical-Tool/... path. The attempts you saw were just the agent looking in the wrong directory (and the
+    GitHub API returning 404 because we hadn’t pushed). It’s not broken—just needs explicit guidance.
+
+  ———
+
+  ### 3. Do you need “MCP” or additional context tooling?
+
+  - MCP refers to Anthropic’s “Multi-step Contextualization” (their agent framework). Codex doesn’t have that built in; what we do have are the current docs (AGENTS.md, briefings, Analysis_Insights, etc.) and
+    your own instructions.
+  - What matters most is that each session tells Codex which docs to scan (Onboarding Compass, AGENTS.md, Quickstart, etc.) so we rehydrate context quickly. So far that’s been working—just call out any doc
+    (like docs/AAT9_KIT/AAT9_Analysis_Insights.md) if you know we added important notes recently.
+  - If the project grows much larger, we could consider a dedicated “context pack” (a curated summary doc) or hooking into MCP-like tooling, but right now our documentation structure + reminders are enough.
+
+  ———
+
+  ### 4. Confirmation: everything we ran is in the repo
+
+  - The enhanced bundles and validator reports we just generated are in your local repo under data/outputs/analysis/vtrac/… and data/outputs/analysis/vtrac_validation/….
+  - They’re not on GitHub until you push. The agent’s GitHub API 404 was simply because there’s no commit that contains those files yet. Nothing to worry about.
+  - Once you’re ready, committing them (or the summary outputs) will let ChatGPT Pro/others fetch them via API instantly.
+
+  ———
+
+  ### 5. Next steps to keep this loop productive
+
+  1. Package and hand the current outputs to the helper (they asked for validation_report.json/md + analyzer JSON for a couple states, plus the matrix and findings we produced).
+  2. Let ChatGPT Pro digest them if you want deeper commentary—now that the files exist locally it just needs them pushed or uploaded.
+  3. Keep iterating: state run → validator → note the signature overlaps → adjust weights/thresholds → rerun. Over a few cycles you’ll build sharp intuition about the strongest signals.
+  4. When ready, move toward the aggregator: once tools like VTRAC, Stable, etc. all have stable “final outputs,” we can design the aggregator’s scoring logic and start experimenting with composite views
+     per draw.
+
+  ———
+
+  ### 6. Reassurance & overall assessment
+
+  - You are on the right path. The work you and I just did (exports, validator upgrades, regression tests, batch summary) is precisely the infrastructure you need to make data-driven tweaks efficiently.
+  - Experimenting with agent mode was a good idea; it highlighted the need to give simple instructions and the value of committing outputs for cloud access.
+  - No need to fear you’re missing some secret ingredient. The key is exactly what you’re doing: keep improving the tools, archive the evidence, and share the outputs in a way your analysts (human or AI)
+    can consume.
+
+  ———
+
+  If you’d like, I can lay out a concrete checklist for the next iteration (commit outputs, run Pro, document observations, etc.). Just let me know. Otherwise, feel free to push the bundle/report/matrix files
+  and feed them to ChatGPT Pro—the helper can start analyzing right away.
+
+
+› OK, that's a lot more encouraging to hear, I guess. Here's the thing in terms of what we were talking about about. Helping evaluate and get the outputs most efficiently to chat. GPT Pro. Yes. To begin, I'm
+  just going to attach in the conversation. As you are suggesting and by going into the explorer folders and attaching the conversation. But I mentioned how there's limits with this as I can only review like
+  6 files or whatever at a time. Sometimes they even get errors with it. I'd like to understand a bit more about the better process options, like I I'm a beginner so I kind of need like to deeply understand
+  this a bit more if not like a total breakdown on our options, maybe a way you can explain it so. When I review it with chatty bitty Pro, I can have a deeper discussion about it. If that makes sense, that's
+  usually what I do is plan and discuss with chat, GPT Pro and then combine that with your help. I still don't quite understand anything. API that much. I'm trying to learn about that a bit more from what I
+  understand. A little better now is API is just like a computer's way of accessing like Internet things or Internet based tools. It can utilize or databases or something to this effect? But anyways, is there
+  more you can tell me about if that's a good option? If I want to more efficiently get some outputs to chat? GPT Pro so we can continue with our process as efficiently as possible and it can investigate runs
+  and outputs and how tools are working? You get what I mean by this? Besides that, just so I understand the whole zip stuff again because sometimes I get confused by it. I see things in very simple form of
+  life. The alphabets are created and they are in some folder. I usually just grab them and drag them into a chat. When we talk about like zip folders, does that just refer to all the files being in a single
+  folder? I know sometimes for some other aspects of like software in the past. It means you have to literally, like unzip things, like do something to them. Do I also need to do this when you're talking
+  about zipping? And what is the context of zipping or providing zip versions of outputs or folders instead of just general outputs? If you know what I mean. I just want to make sure I get that a bit better.
+  I don't know, like I can say, I'm just trying to find the best ways to have data. Analyzed and output share for because I'm sure you can see how much. This could speed things off and have us. Yet these
+  tools optimize the best way. Because if I'm messing around just trying to attach. A couple files. It just becomes a total of a mess and I'm wasting hours of time on something pretty trivial and stupid, if
+  you get what I mean. But I did like a lot of what you shared I think is valuable that I can likely follow up on. Even in terms of Github, I'm kind of new to understanding overall. What I know about it is
+  that it allows me to kind of lock down aspects of the project when they're finished. I have like checkpoints. And having the Jito desktop is helpful to make this really easy. But the slides are. I don't
+  really understand it. For anything more than that, really. At least not yet.  I also get a bit intimidated by the whole machine learning aspect. On the project. I'm hoping you have some insights into how
+  I'm trying to build this kind in a hybrid way. The idea being it can work and be analytically powerful with minimal AI or machine learning. Mainly only because it's quite intimidating to me trying to design
+  this. But I know that we've been incorporating, I'm hoping like intelligent machine learning aspects of the system. I know like by like certain tags and stuff. Like this?  Maybe. Well, here's the thing. I
+  just hear a lot on a line of the whole. AI agents or. AI. Working and taking over systems is kind of overblown, and a lot of this stuff doesn't actually work. How it's supposed to and these workflows are
+  like? Exaggerated. I don't know if this is just the Internet. Certain people complaining. Or how much truth there is to that. But because I'm a beginner it makes me very wary about how much AI or machine
+  learning to. I guess the way to frame it would be make responsible for things or the functioning of the system. Like I guess there's a way you could incorporate. OK. AI, try and run everything and predict
+  and all that. Would be an example of something that would likely straight up fail or might not be possible. Where I'm trying to come at it from. The frame of incorporate aspects of AI that makes sense
+  slowly. Or in certain cases, hopefully that it would make sense.  That is straightforward enough that you should feel confident that it should run. Is that a fairway to kind of think about it? And is it
+  fair to say there isn't anything super sophisticated within my integrated app yet? That doesn't somewhat honor this. I honestly don't really know how much AIS even incorporated at all. I would think not
+  very minimally if at all yet. Again, if there's some way, you could provide some comprehensive thoughts. To what I said throughout this message would be appreciated. I still haven't shown the activity Pro
+  at first. Round I guess of all the analysis outputs. I am interested in you saying you could give me a concrete checklist for the next iteration. Does that mean like the next run of things? See things like
+  that might be a good thing for me to reference. Moving forward as a framework. For doing this all quicker, but these are things we're learning as we go, which is good. If you could provide some more
+  comprehensive feedback to everything I mentioned would be appreciated.
+
+
+• Absolutely—let me walk through each theme you raised and give you a concrete path forward.
+
+  ———
+
+  ## 1. Getting Outputs to ChatGPT Pro (or any analyst) efficiently
+
+  What API access really means
+
+  - An API is simply a machine-readable interface that lets other tools request data automatically (no browser/drag-and-drop needed).
+  - Using GitHub’s API (or a raw file URL) is exactly how the agent tried to fetch matrix.csv. It failed only because those files haven’t been committed/pushed yet.
+  - Once you commit/push, any tool (including ChatGPT Pro) can grab the files via URL: https://raw.githubusercontent.com/<user>/<repo>/<branch>/<path>.
+
+  Three good sharing options:
+
+  1. Commit and push the artifacts
+      - Pros: Always up-to-date on GitHub; ChatGPT Pro can fetch via API/URL; versioned history.
+      - Cons: You need to be okay with storing generated outputs or summaries in the repo. If you want to keep the repo lean, commit only the summary files (matrix.csv, findings.md, maybe
+        validation_report.json for a few states).
+  2. Zip and upload
+      - Take the whole data/outputs/analysis/vtrac_validation directory, compress it (Compress-Archive on Windows, zip -r on mac/Linux), and upload that one file to ChatGPT.
+      - Pros: One upload limit; includes all states.
+      - Cons: Must re-zip after every new run; the assistant can read the zip’s contents, but you (or ChatGPT) have to extract it virtually.
+  3. Targeted upload
+      - If you only need ChatGPT to look at (say) Florida4 in detail, you can upload Florida4/validation_report.md, the bundle JSON, and matrix.csv. That stays within the 6-file limit but may still be fiddly.
+
+  For ease and reproducibility, I’d recommend committing matrix.csv, findings.md, and any state reports you want to discuss. Then ChatGPT Pro can pull them directly.
+
+  ———
+
+  ## 2. What does “zipping” actually do?
+
+  - A zip file (.zip) is a container that compresses multiple files into one.
+  - To create a zip on Windows: right-click folder → “Send to” → “Compressed (zipped) folder”. Or in PowerShell: Compress-Archive -Path data\outputs\analysis\vtrac_validation -DestinationPath
+    vtrac_validation.zip.
+  - When ChatGPT receives a zip, it can open it; you don’t need to pre-extract it manually.
+  - It’s just a way to send many files at once.
+
+  ———
+
+  ## 3. Understanding GitHub beyond commits
+
+  - You already use GitHub Desktop — perfect for taking “snapshots” of the project.
+  - The extra step is: once you have outputs meant for analysis, run git add / git commit / git push (or the Desktop equivalents).
+  - Then you can send ChatGPT the GitHub raw URLs, e.g.:
+
+    https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/matrix.csv
+  - That’s exactly what the agent was trying to do automatically—it just couldn’t find the file because you hadn’t pushed it yet.
+
+  ———
+
+  ## 4. A reasonable next-iteration checklist (so the process stays slick)
+
+  1. Run the analyzer for chosen states
+
+     python tools/vtrac_enhanced_cli.py --state <STATE>
+  2. Run the validator
+
+     python tools/vtrac_validate.py --state <STATE>
+  3. Generate summary
+
+     python tools/vtrac_validate_batch.py --states ...
+     The script we just ran also produces matrix.csv and findings.md.
+  4. Commit & push (if you want ChatGPT Pro to read them via URL):
+
+     git add data/outputs/analysis/vtrac_validation
+     git commit -m "Add VTRAC validator outputs for run YYYY-MM-DD"
+     git push
+  5. Share/link with ChatGPT Pro
+      - Send the raw URLs or upload a zip.
+  6. Review feedback
+      - Use ChatGPT Pro to analyze, note insights, adjust weights/configs.
+  7. Iterate
+      - Change configs, rerun CLI/validator, commit new results, repeat.
+
+  ———
+
+  ## 5. Machine Learning vs. Rules — and your current system
+
+  - Right now, the system is rule-based (boosts for hot zones, consensus, etc.), which is great: everything is transparent.
+  - “ML” is just pattern-learning automation; you can add it later without rewriting everything. For example, once you log enough validation runs, you might fit a lightweight model on the straight scores—
+    all optional.
+  - Your hybrid approach (strong deterministic logic now; possible ML enhancements later) keeps the system maintainable and understandable.
+  - There’s no hidden AI or ML in your current code beyond the logic we’ve explicitly added, so nothing to be wary of.
+
+  ———
+
+  ## 6. Why codex vs. ChatGPT Pro vs. agents?
+
+  - Codex lives in the repo, can run commands, edit code, generate outputs.
+  - ChatGPT Pro is great for text-only reasoning, especially once you hand it the outputs.
+  - Agents (like the one you tried) are more experimental—they need precise instructions and enough time; in your test it just looked in the wrong directory.
+
+  A simple workflow is: codex generates the outputs → you push them → ChatGPT Pro (or you) analyze them.
+
+  ———
+
+  ## 7. If you want that “concrete next-pass plan”, here it is:
+
+  1. Pick a state list for the next tuning cycle (e.g. Florida4, Michigan4, NewJersey4).
+  2. python tools/vtrac_enhanced_cli.py --state ...
+  3. python tools/vtrac_validate.py --state ...
+  4. python tools/vtrac_validate_batch.py --states ...
+  5. Commit & push the new matrix.csv, findings.md, and whichever state reports you want to discuss.
+  6. Check docs/AAT9_KIT/AAT9_Analysis_Insights.md and add bullet-point observations (e.g. “Florida Combined still empty, expected due to 2-digit tails”).
+  7. Hand the raw GitHub links to ChatGPT Pro so it can read the data without upload limits.
+  8. Iterate weights/configs based on the interpretation.
+
+  ———
+
+  ## 8. Summary / reassurance
+
+  - Your “reverse engineer from winners, validate the features, adjust, and eventually build an aggregator” vision is exactly right.
+  - The hurdle isn’t conceptual—it’s just the practical step of giving analysts easy access to the outputs.
+  - Push the summaries (matrix.csv, findings.md, key reports) or zip them, and ChatGPT Pro can do the deeper analysis without hitting upload limits.
+  - This remains a rule-driven engine; you’re in control; you can sprinkle ML later if/when it’s comfortable.
+
+  Stay the course—the groundwork you’ve laid is exactly what you need to optimize each tool and eventually the full aggregator. Let me know when you want to tee up the next state run or if you’d like help
+  packaging the current outputs for ChatGPT Pro.
+
+
+
+Here's one thing I wanted to ask that came to mind without even looking at the Alchemist's life yet. But it goes back again to things that are starting to pop into my head that. Can be cross relational.
+  From the other aspects of tools starting to come together, you know any of the straight insights that we got from the track analyzer? Does it attempt to utilize anything in regards to the V track straights?
+  I think there's like a table within the system which is used for the winners logging as the winners logging I think actually identifies all the detect streak patterns. The idea of this is it can give us
+  insights into potential straight patterns coming. When we look at related, we track straight patterns that are stable. Guessing you might have some context into this. I'm just curious. If from what?
+  Everything you did if you know. Whether this is utilized at all in a similar way in the analyzer? Or visit street mechanism different.  And also you know how apparently you can now see. Or interpret what I
+  can visually see in the winner's logger. I think you confirmed that that's working now. But does this include all of those pattern markers and the one is logging? Like the Utrecht streets I'm talking about.
+  Anything else that's in the legend? I guess I think this is a really important thing to ask. And I'm not sure if you know or if this is something that could be better understood through investigating the
+  outputs, but any insights is appreciated.
+
+
+• Great questions—here’s how the “straight” pieces fit together today and where the gaps are:
+
+  ———
+
+  ### 1. Does the enhanced analyzer reuse the V-TRAC straight families from the Winners Logger?
+
+  Yes. Both the Winners Logger and the enhanced analyzer call into the same V‑TRAC reference data (modules/vtrac_reference, via the helper get_index_set). That table defines each index’s eight straight
+  permutations (mirrors). In the analyzer:
+
+  - We track how often those permutations appear (see order_counts in the bundle’s evidence.raw).
+  - We surface the strongest straights in straights_ranked; in the validator report you’ll see lines like straights: 063(26.13), 036(23.55)….
+  - So the analyzer is definitely scoring the same “V-trac straight families” the Winners Logger uses.
+
+  What we haven’t done yet is wire in the extra heuristics the Winners Logger uses around strait stability (“vt_straight gap”, “family gap”, etc.). Those highlight markers exist on the HTML side; the analyzer
+  just scores them via counts.
+
+  ———
+
+  ### 2. Does the validator cross-check straight insights?
+
+  Partly. The validator reads the Winners Logger tables and pulls straight_occurrences. In the states we ran, the Winners HTML didn’t list any upcoming straight totals (all zero), so the overlap column stayed
+  empty. If we process a state where the logger has non-zero entries, the “straight overlap” in the Markdown/matrix.csv will light up. To go deeper (e.g., compare “vt-straight gap” markers), we’d need to
+  extend the validator to parse the legend sections in the HTML.
+
+  ———
+
+  ### 3. Do we capture every legend highlight?
+
+  No. Right now we only extract:
+
+  - the main table (hot/super-hot, consensus, 3-value signatures, stable columns)
+  - straight counts (if present)
+  - the analyzer’s own metrics.
+
+  Legend markers like hit-vt-straight, family-gap, etc., live inside the table cells styled with those classes—we aren’t decoding every class yet. If you want to tie those markers into the analyzer
+  comparison, it’s doable; we’d need to extend the parser to inspect the cell class attributes and record where those highlight types occur.
+
+  ———
+
+  ### Summary
+
+  - Straight families: yes, the analyzer uses the same V‑TRAC definitions as the logger; the difference is purely how the evidence is scored/presented.
+  - Legend markers: not yet reproduced/exported wholesale; we currently focus on the structural signals (consensus, hot, 3-value signatures). We can add them if needed.
+  - Validator: ready to confirm straight overlaps once the logger emits non-zero stats; otherwise it’s all zero by default.
+
+  Let me know if you’d like the logger’s highlight markers pulled into the validator output—happy to help wire that up or show you where to integrate it.
+
+____________________________
+_______________________
+
+PROCESS 2***********************
+
+I’ll answer as a world-famous “data-ops for AI workflows” expert, winner of the Canadian Open Data Leadership Award.
+
+TL;DR: Yes—give me raw GitHub URLs to your outputs and I can read them directly; this avoids chat upload limits. Best path: commit + push summary artifacts (e.g., matrix.csv, findings.md) and share their raw.githubusercontent.com/... links; zips are a solid fallback for bulk drops. 
+
+process_
+
+ 
+
+process_
+
+Step-by-step, concrete plan (no fluff)
+
+Make the outputs fetchable (no more piecemeal uploads).
+
+Once you commit & push, any tool—including ChatGPT Pro—can fetch files via a raw GitHub URL like: https://raw.githubusercontent.com/<user>/<repo>/<branch>/<path>. 
+
+process_
+
+Example from your tree:
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/matrix.csv (pattern shown in your notes). 
+
+process_
+
+If the agent previously 404’d, it’s because files weren’t pushed yet; push fixes that immediately. 
+
+process_
+
+Choose one of three sharing modes (ranked).
+A. Commit & push artifacts (recommended). Versioned, URL-readable; keep repo lean by pushing just matrix.csv, findings.md, and key state reports. 
+
+process_
+
+
+B. Zip big folders (e.g., data/outputs/analysis/vtrac_validation) and upload a single file to chat; I can open it without you pre-extracting. On Windows:
+Compress-Archive -Path data\outputs\analysis\vtrac_validation -DestinationPath vtrac_validation.zip 
+
+process_
+
+ 
+
+process_
+
+ 
+
+process_
+
+
+C. Targeted uploads (few files when you want to deep-dive a single state). 
+
+process_
+
+Minimal GitHub routine (Desktop or CLI).
+
+Do the work locally, then:
+
+git add data/outputs/analysis/vtrac_validation
+git commit -m "Add VTRAC validator outputs for run YYYY-MM-DD"
+git push
+
+
+(Same flow via GitHub Desktop “Commit to main” → “Push origin”.) After this, share the raw URLs with me. 
+
+process_
+
+ 
+
+process_
+
+Repeatable “analysis cycle” (so this stays fast every run).
+
+Run analyzer for chosen states, e.g. Florida4, Michigan4, NewJersey4. 
+
+process_
+
+python tools/vtrac_enhanced_cli.py --state Florida4 
+
+process_
+
+python tools/vtrac_validate.py --state Florida4 
+
+process_
+
+Batch summaries (produces matrix.csv & findings.md):
+python tools/vtrac_validate_batch.py --states Florida4 Michigan4 NewJersey4 
+
+process_
+
+Commit & push; paste me the raw URLs (or upload a zip). 
+
+process_
+
+I review, you adjust weights/configs, rerun. 
+
+process_
+
+API, simply put.
+An API is just a machine-readable doorway—exactly how tools fetch your raw.githubusercontent files automatically (no dragging). That’s the mechanism we’re using here. 
+
+process_
+
+Where your stack is today (rules first, ML later).
+Your system is rule-based right now (transparent boosts like hot-zones/consensus). ML is optional seasoning later once you’ve logged enough validation runs—no hidden “AI control plane” in your code yet. 
+
+process_
+
+What you asked about “reprocessing” and “can you explore a folder URL?”
+
+I can’t recursively walk a GitHub folder by just a repo web URL; but if you push and give me either (a) direct raw file links or (b) a zip of that folder, I can analyze the whole set without the 6-file pain. That is the optimal, low-friction path captured above. 
+
+process_
+
+ 
+
+process_
+
+Quick starter list for you (copy/do now)
+
+Push summaries: matrix.csv, findings.md, plus any validation_report.md/json you want discussed. 
+
+process_
+
+Send me the raw URLs (or one zip). I’ll parse and give you prioritized tuning notes. 
+
+process_
+
+ 
+
+process_
+
+Sanity Check — two things you can do to verify
+
+Open one pushed file in your browser via raw.githubusercontent.com/... and confirm you see plain CSV/JSON; if yes, I can read it too. 
+
+process_
+
+Zip data\outputs\analysis\vtrac_validation with the PowerShell command above; confirm the .zip opens and lists all state subfolders—then upload that single file to chat. 
+
+process_
+
+If you want, send me three raw URLs right now (matrix.csv, one state’s validation_report.md, and that state’s analyzer JSON) and I’ll dive straight in.

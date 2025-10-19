@@ -12,3 +12,14 @@
 - Florida4 Combined re-check: Combined Set1/Draw1 cells collapse to two-digit strings (`03**`, `033**`, etc.), so no valid 3-value signatures exist; analyzer’s empty Combined set is expected, while Midday/Evening retain full overlap.
 - Remaining watch: Combined coverage can legitimately be empty when reductions collapse to two digits (Florida4 confirmed); keep an eye on future runs for unexpected gaps.
 - Next steps: (1) Promote fixtures for two states into `tests/` to regression-test `section_summaries`; (2) Evaluate precision@K hooks once legacy vs enhanced A/B harness is ready.
+
+## 2025-10-18 - Data hand-off & aggregation strategy
+- Documented the validation loop in `AAT9_Data_Validation_Workflow.md`: generate enhanced bundles, run the validator, produce batch summaries (`matrix.csv`, `findings.md`), and choose a sharing strategy (commit/push vs. zip vs. targeted upload).
+- Confirmed that the enhanced analyzer and Winners Logger share the same straight families; validator straight overlap remains zero until the logger flags upcoming straights with non-zero counts.
+- Sharing best practices:
+  - Commit & push summaries to GitHub so ChatGPT Pro (or agents) can read `raw.githubusercontent` URLs without upload limits.
+  - Alternatively, zip `data/outputs/analysis/vtrac_validation` or upload key state reports (`validation_report.md/json` + bundle JSON) for focused reviews.
+- Aggregator outlook:
+  - Keep each tool’s validator pass in the tuning loop; once all pages emit reliable summaries, feed those into a draw-level aggregator.
+  - Stay rule-driven today; optional ML layers can be explored later when we have durable logs of validation runs.
+- Action items captured for future cycles: commit/push artifacts before requesting remote analysis, expand validator parsing if we want to compare HTML legend highlights (vt-straight gap, family gap), and continue logging observations in this file after every sweep.

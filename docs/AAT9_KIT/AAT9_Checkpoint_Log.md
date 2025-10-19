@@ -1,3 +1,18 @@
+## 2025-10-18 03:30 (UTC) - Validation workflow & data hand-off playbook
+
+- Context: After landing the validator/batch tooling we needed a single reference covering how to run the enhanced analyzer sweep, where artifacts live, and how to share them with ChatGPT Pro / human reviewers.
+- Change:
+  - Authored `docs/AAT9_KIT/AAT9_Data_Validation_Workflow.md` (generate bundles, run validator, produce matrix/findings, share via push/zip/targeted upload).
+  - Logged sharing considerations and aggregator outlook in `AAT9_Analysis_Insights.md`.
+  - Cleaned `AAT9_Unified_Changelog.md` entry describing the validator regression work.
+- Impact:
+  - Every state run now leaves behind predictable evidence (`validation_report.{md,json}`, matrix.csv, findings.md) ready for analysts or assistants.
+  - Documented workflow lets future sessions (Codex, human, or agent) jump straight into analysis without re-deriving the process.
+  - Reinforces rule-based tuning today while leaving hooks for ML later once we have richer validation history.
+- Next:
+  - Commit/push summaries before handing them to ChatGPT Pro to avoid upload limits.
+  - Extend validator parsing if we want to compare Winners legend markers (vt-straight/family gap) in addition to the table metrics.
+
 ## 2025-10-16 00:30 (UTC) - Enhanced V-TRAC engine implementation
 
 - Context: Previous 'enhanced' drop only added scaffolding. Rebuilt the module to match the redesign (evidence features, straight rationale, tooling) without disturbing Winners Logger or the legacy UI.

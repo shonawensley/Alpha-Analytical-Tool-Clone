@@ -1,6 +1,11 @@
+## 2025-10-18 - Data validation workflow + insights refresh
+- Impact: Added a dedicated workflow guide (`AAT9_Data_Validation_Workflow.md`) capturing the full loop for generating enhanced bundles, running the validator, producing `matrix.csv`/`findings.md`, and handing artifacts to reviewers (commit/push, zip, or targeted upload).
+- Impact: Logged data-sharing best practices and aggregator outlook in `AAT9_Analysis_Insights.md`, emphasising continued rule-based tuning with optional ML later.
+- Files: docs/AAT9_KIT/{AAT9_Data_Validation_Workflow.md,AAT9_Analysis_Insights.md}
+
 ## 2025-10-18 - Validator regression guardrails + batch metrics
 - Impact: Section summaries now capture mask-drop/reduction/mirror/doubles stats per variant; validator compares straight occurrences and surfaces analyzer metrics/straights alongside Winners HTML.
-- Impact: Added fixture-backed regression (	ests/test_vtrac_validate_fixture.py) with frozen Delaware4/Florida4 HTML+JSON pairs so validator outputs stay populated; new batch helper (	ools/vtrac_validate_batch.py) prints precision@K and supports comparison bundles.
+- Impact: Added fixture-backed regression (`tests/test_vtrac_validate_fixture.py`) with frozen Delaware4/Florida4 HTML+JSON pairs so validator outputs stay populated; new batch helper (`tools/vtrac_validate_batch.py`) prints precision@K and supports comparison bundles.
 - Impact: Florida4 Combined review confirmed the absence of 3-value clusters is expected (columns collapse to two digits); documentation updated with findings and new validator/batch workflows.
 - Files: modules/vtrac_enhanced/adapters.py, tools/vtrac_validate.py, tools/vtrac_validate_batch.py, tests/test_vtrac_validate_fixture.py, tests/fixtures/vtrac_validation/**, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}
 
