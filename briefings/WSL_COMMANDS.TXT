@@ -73,7 +73,9 @@ Copy code
 
 ## 4) Start Codex in the right place (two easy ways)
 
-**A. From Ubuntu terminal (recommended)**
+**A. From Ubuntu terminal (recommended)**:
+
+
 ```bash
 cd ~/code/Alpha-Analytical-Tool-Clone
 codex
@@ -148,4 +150,77 @@ No. Desktop will manage the same remote; you just point it at the WSL path. Code
 Why did wsl -d Ubuntu show “command not found” in Ubuntu earlier?
 That’s expected: wsl is a Windows command to start Linux. Inside Linux you don’t use wsl.
 
-If you follow the Next section above, you’ll be fully set. If any prompt looks different, tell me exactly what it says and I’ll adjust the step that corresponds.
+If you follow the Next section above, you’ll be fully set. If any prompt looks different, tell me exactly what it says and I’ll adjust the step that 
+
+corresponds.
+
+
+
+________
+_______
+
+
+
+Finish signal
+
+When preflight is clean and the Plan is printed, reply: READY (WSL) and proceed within the agreed scope.
+
+
+**One-line boot to paste into Codex**  :
+
+
+Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt-5-codex (High), run the WSL preflight command, then reply: READY (WSL).
+
+
+---
+
+## D) VS Code quirks you saw (and how to stop them)
+
+- “**The host ‘wsl.localhost’ is not in allowed hosts**” → check **Permanently allow host ‘wsl.localhost’** → **Allow**.
+- “**Another instance of Code is running**” → close all Code windows → in **Task Manager** end any **Code.exe** processes → open again via:
+  ```bash:
+
+  cd ~/code/Alpha-Analytical-Tool-Clone
+  code .
+
+
+Python/Aider warnings in the bottom panel are unrelated. You can ignore or disable that extension. If you need Python inside WSL later, we’ll add a virtualenv there.
+
+E) Start Codex from the right folder (two ways)
+
+Ubuntu terminal (recommended):
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+codex
+
+
+Windows one-click .bat (keep it simple):
+Create TOOLS\codex_run_wsl.bat:
+
+@echo off
+wsl.exe -d Ubuntu bash -lc "cd ~/code/Alpha-Analytical-Tool-Clone && codex"
+
+
+
+
+___________
+
+
+you’re actually in good shape now — we just need to lock two things:
+
+VS Code: confirm you’re really editing the WSL repo and keep it to a single window.
+
+Git/Push: finish your identity once in WSL (so CLI is happy), or just push via Desktop.
+
+I’ll keep this very short, literal, and in order.
+
+0) One-time choices when prompts appear
+
+“wsl.localhost not in allowed hosts” → check Permanently allow → Allow.
+
+VS Code: always open from Ubuntu with code -r . (don’t click “Open in VS Code” in Desktop).
+
+GitHub Desktop: keep
+
+
+
