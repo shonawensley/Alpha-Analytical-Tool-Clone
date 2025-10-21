@@ -1,8 +1,8 @@
-CODEX_READ_FIRST_AAT9_WSL.md
+briefings/CODEX_READ_FIRST_AAT9_WSL.md (FINAL)
 
 # CODEX READ FIRST — AAT9 (WSL/Ubuntu Optimized)
 
-Follow this sequence each session. Goal: reliable setup, path‑safe execution, and consistent docs.
+Follow this sequence each session. Goal: reliable setup, path-safe execution, and consistent docs.
 
 ---
 
@@ -22,6 +22,7 @@ Follow this sequence each session. Goal: reliable setup, path‑safe execution, 
 ```bash
 cd ~/code/Alpha-Analytical-Tool-Clone
 git status -s && git branch -vv && git remote -v && pwd
+
 2) Read these (KIT first)
 
 Read in this order:
@@ -30,7 +31,7 @@ docs/AAT9_KIT/AAT9_KIT_README.md (index)
 
 docs/AAT9_KIT/AAT9_Workflow_Standard.md (workflow)
 
-docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md (path‑safe coding)
+docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md (path-safe coding)
 
 docs/AAT9_KIT/Practices/AAT9_Agent_Operating_Rules.md (guardrails)
 
@@ -42,9 +43,9 @@ docs/AAT9_KIT/AAT9_Diagrams_Guide.md (Mermaid updates)
 
 docs/AAT9_KIT/AAT9_Unified_Changelog.md (how to log)
 
-AGENTS.md (project-specific) and .codex/AGENTS.universal.md (global rules)
+AGENTS.md and .codex/AGENTS.universal.md (project & universal rules)
 
-WSL alignment notes
+WSL alignment:
 
 Treat repo root as /home/ser/code/Alpha-Analytical-Tool-Clone.
 
@@ -67,7 +68,7 @@ Preflight must be clean before coding.
 3.5) Dev Health (optional)
 
 Only toggle Dev Health in the Streamlit UI when explicitly requested.
-Skip it during startup if it stalls or isn’t needed for this session.
+Skip during startup if it stalls or isn’t needed for this session.
 
 Linux app launch (when needed):
 
@@ -77,7 +78,7 @@ STREAMLIT_BROWSER=none python3 -m py_compile $(git ls-files '*.py') || true
 streamlit run src/app.py
 
 
-Windows .bat launchers are for Windows shells. Inside WSL, prefer streamlit run above.
+Windows .bat launchers are for Windows shells. Inside WSL, use streamlit run above.
 
 4) Plan → Implement → Verify → Document
 
@@ -85,9 +86,9 @@ Plan: list files to edit and why; keep diffs minimal.
 
 Implement: use utils.path_handler for outputs; respect data contracts:
 
-Aux/Blackapple → data/cleaned/*_draws.csv (newest‑first strings)
+Aux/Blackapple → data/cleaned/*_draws.csv (newest-first strings)
 
-V‑TRAC / Stable / Digit Reduction → combined string tables via utils.path_handler
+V-TRAC / Stable / Digit Reduction → combined string tables via utils.path_handler
 
 Verify:
 
@@ -107,13 +108,13 @@ App runs from streamlit run src/app.py without path/import errors.
 
 Changes logged in AAT9_Unified_Changelog.md.
 
-Architecture/app‑flow docs updated if wiring changed.
+Architecture/app-flow docs updated if wiring changed.
 
-Guardrails & approvals (WSL‑aware)
+Guardrails & approvals (WSL-aware)
 
 Never write outside the repo. Never edit Git remotes/config.
 
-Ask before: changing analyzers, pipelines, or app wiring; long‑running jobs.
+Ask before: changing analyzers, pipelines, or app wiring; long-running jobs.
 
 Allowed without asking: docs under docs/**, .codex/**; python3 -m py_compile; the preflight command.
 
@@ -121,7 +122,7 @@ Path & tool hygiene (WSL)
 
 Use Linux tools: python3, pip3, node, npm, git.
 
-Version check (read‑only):
+Version check (read-only):
 
 python3 --version && pip3 --version && node -v && npm -v
 
