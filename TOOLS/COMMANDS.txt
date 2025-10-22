@@ -1,0 +1,91 @@
+Read briefings\CODEX_READ_FIRST_AAT9_STANDARD.md and follow it exactly. Select model preset gpt-5-codex (High). Run .codex\preflight.ps1 -State "Connecticut4". Then wait for my approval and reply: READY.
+
+
+Read briefings\CODEX_READ_FIRST_AAT9_AUTONOMOUS.md and follow it exactly. Select model preset gpt-5-codex (High). Run preflight as instructed, print the Phase A plan, then proceed into Phase B without further prompts unless a guardrail triggers. Reply when Phase A is done: READY — Autonomous.
+
+PROPER NEW
+____
+________
+
+
+
+🧹 Kill command (reset before each fresh start)
+
+Run this in PowerShell (Windows terminal):
+
+***
+
+taskkill /F /IM Code.exe 2>$null
+wsl --shutdown
+
+
+This closes all VS Code processes and resets Ubuntu.
+
+🚀 Clean manual startup (current best practice)
+
+After the kill/reset, open Ubuntu and run:
+
+****
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+pwd
+git remote -v
+code -r .
+
+
+✅ Expected result
+
+VS Code opens showing “WSL: Ubuntu” (your correct environment).
+
+You can then open GitHub Desktop manually if needed.
+
+⚡ Quick daily flow
+
+Run the kill commands (PowerShell).
+
+Open Ubuntu, run the 3 commands above.
+
+(Optional) launch Codex CLI if you’re doing analysis:
+
+****
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+codex
+
+
+(Optional) click your AAT9 – WSL Explorer icon for file browsing.
+
+🧩 Why you see both icons
+
+That’s normal:
+
+The AAT9 – WSL Explorer icon opens Windows Explorer inside the WSL repo.
+
+The VS Code (WSL) icon is the editor itself.
+They’re connected to the same place — just two views of the same WSL folder.
+
+You don’t need to remove either; just remember:
+
+Always open from Ubuntu or from your AAT9 – WSL Explorer shortcut — never from the plain “Visual Studio Code” icon.
+
+
+
+
+🧠 Codex CLI intro message (the “boot” line)
+
+When Codex CLI launches and asks what to do, paste this single line (your WSL-optimized version):
+
+****
+
+Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt-5-codex (High), run the WSL preflight command, then reply: READY (WSL).
+
+
+That’s all you need — Codex will:
+
+read your startup doc (CODEX_READ_FIRST_AAT9_WSL.md),
+
+check the repo structure,
+
+verify imports, and
+
+prepare your workflow with correct WSL/Ubuntu settings.

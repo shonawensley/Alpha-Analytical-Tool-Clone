@@ -1,0 +1,226 @@
+Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt‑5‑codex (High), run the WSL preflight command, then reply: READY (WSL).
+
+
+**Agents files:** Yes—this doc explicitly tells Codex to read **both** `AGENTS.md` (project‑specific) and `.codex/AGENTS.universal.md` (global rules). Keep just one `AGENTS.md` at the repo root plus the universal file under `.codex/`.
+
+---
+
+## 2) Fix the GitHub Desktop “owned by another user” warning
+
+That dialog is expected when adding a repo from a WSL network path (`\\wsl$\...`). You have two equivalent ways to resolve it:
+
+### Option A — Use the Desktop UI (easiest)
+1. In the **Add local repository** dialog, click the blue link **“add an exception for this directory.”**  
+2. Confirm/trust the path `\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone`.  
+3. Click **Add repository**.
+
+### Option B — Mark the path safe in Git (also helps command‑line Git)
+Open **Windows PowerShell** and run:
+```powershell
+git config --global --add safe.directory "\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone"
+
+
+______________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0) Where the new repo lives (so you can see it)
+
+Linux/WSL path (inside Ubuntu terminal):
+
+/home/ser/code/Alpha-Analytical-Tool-Clone
+
+
+Windows Explorer path (what to click):
+Open File Explorer → Linux → Ubuntu → home → ser → code → Alpha-Analytical-Tool-Clone
+(Your screenshots show you at Linux ▸ Ubuntu ▸ home ▸ ser already—go into code then the repo folder.)
+
+This is a separate working copy from your old Windows copies:
+
+C:\dev\Alpha-Analytical-Tool (old Windows working copy)
+
+C:\Users\User\OneDrive\Documents\GitHub\Alpha-Analytical-Tool-Clone (older Desktop clone)
+
+From now on, do real work only in the WSL copy at /home/ser/code/Alpha-Analytical-Tool-Clone.
+Keep the Windows copies for reference/backup, but don’t edit/push from them—otherwise things get confusing.
+
+
+______________
+
+**One‑line boot you paste into Codex:**
+Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt‑5‑codex (High), run the WSL preflight command, then reply: READY (WSL).
+
+yaml
+Copy code
+
+> Your earlier doc was 95% there—main fixes were code‑fence closures and making the preflight/launch commands copy‑paste‑safe in WSL.
+
+---
+
+## 4) Start Codex in the right place (two easy ways)
+
+**A. From Ubuntu terminal (recommended)**:
+
+
+```bash
+cd ~/code/Alpha-Analytical-Tool-Clone
+codex
+
+
+
+_________
+__________
+
+
+
+
+5) Sanity checks to know you’re in the right root
+
+Run these in Ubuntu before you start work:
+
+pwd                               # should print /home/ser/code/Alpha-Analytical-Tool-Clone
+git remote -v                     # should show your GitHub origin
+git status -s                     # should list your edits, e.g. the new WSL doc
+
+
+If pwd shows /mnt/c/... you’re in the Windows copy—cd ~/code/Alpha-Analytical-Tool-Clone to fix it.
+
+6) About the VS Code “another instance” prompt
+
+If you see it again:
+
+Close all VS Code windows.
+
+Kill Code processes in Task Manager.
+
+In Ubuntu: code .
+
+Allow wsl.localhost and Trust the workspace.
+
+7) What to do next (short, practical)
+
+Save the corrected CODEX_READ_FIRST_AAT9_WSL.md into
+/home/ser/code/Alpha-Analytical-Tool-Clone/briefings/.
+
+In Ubuntu:
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+git add briefings/CODEX_READ_FIRST_AAT9_WSL.md
+git commit -m "Add WSL-optimized Codex startup guide"
+git push
+
+
+(Or use GitHub Desktop after adding the WSL repo.)
+
+Start Codex in that folder (terminal or your .bat).
+
+Paste the one‑line boot from above.
+When Codex tries “Dev Health”, it’s fine to skip it unless you’re actively validating the UI.
+
+Work only in this WSL repo going forward. Consider renaming the old Windows copy to something like Alpha-Analytical-Tool-Windows-Archive so you won’t click it by mistake.
+
+Quick answers to the specific questions you asked
+
+Is the path /home/ser/code/Alpha-Analytical-Tool-Clone correct?
+Yes—that’s the correct WSL working copy. You can browse it in Explorer via
+\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone.
+
+Why did I see fewer files when browsing?
+You were looking inside subfolders (e.g., briefings/) which only contain a few docs.
+The repo root will show all the app folders (docs/, modules/, src/, etc.).
+Also note: if your Windows copy had uncommitted local files, they won’t appear in the WSL clone until you commit & push them (then pull in WSL).
+
+Do I lose anything by keeping GitHub Desktop push control?
+No. Desktop will manage the same remote; you just point it at the WSL path. Codex won’t push unless you tell it to.
+
+Why did wsl -d Ubuntu show “command not found” in Ubuntu earlier?
+That’s expected: wsl is a Windows command to start Linux. Inside Linux you don’t use wsl.
+
+If you follow the Next section above, you’ll be fully set. If any prompt looks different, tell me exactly what it says and I’ll adjust the step that 
+
+corresponds.
+
+
+
+________
+_______
+
+
+
+Finish signal
+
+When preflight is clean and the Plan is printed, reply: READY (WSL) and proceed within the agreed scope.
+
+
+**One-line boot to paste into Codex**  :
+
+
+Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt-5-codex (High), run the WSL preflight command, then reply: READY (WSL).
+
+
+---
+
+## D) VS Code quirks you saw (and how to stop them)
+
+- “**The host ‘wsl.localhost’ is not in allowed hosts**” → check **Permanently allow host ‘wsl.localhost’** → **Allow**.
+- “**Another instance of Code is running**” → close all Code windows → in **Task Manager** end any **Code.exe** processes → open again via:
+  ```bash:
+
+  cd ~/code/Alpha-Analytical-Tool-Clone
+  code .
+
+
+Python/Aider warnings in the bottom panel are unrelated. You can ignore or disable that extension. If you need Python inside WSL later, we’ll add a virtualenv there.
+
+E) Start Codex from the right folder (two ways)
+
+Ubuntu terminal (recommended):
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+codex
+
+
+Windows one-click .bat (keep it simple):
+Create TOOLS\codex_run_wsl.bat:
+
+@echo off
+wsl.exe -d Ubuntu bash -lc "cd ~/code/Alpha-Analytical-Tool-Clone && codex"
+
+
+
+
+___________
+
+
+you’re actually in good shape now — we just need to lock two things:
+
+VS Code: confirm you’re really editing the WSL repo and keep it to a single window.
+
+Git/Push: finish your identity once in WSL (so CLI is happy), or just push via Desktop.
+
+I’ll keep this very short, literal, and in order.
+
+0) One-time choices when prompts appear
+
+“wsl.localhost not in allowed hosts” → check Permanently allow → Allow.
+
+VS Code: always open from Ubuntu with code -r . (don’t click “Open in VS Code” in Desktop).
+
+GitHub Desktop: keep
+
+
+
