@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from utils.path_handler import get_cleaned_draws_dir, get_cleaned_data_dir
 from typing import Dict, List, Optional, Tuple, Literal
 
 import pandas as pd
@@ -31,8 +32,8 @@ _SUFFIX_VARIANT_MAP: Dict[str, str] = {
     "_noon": "noon",
 }
 
-_DRAWS_ROOT = Path("data") / "cleaned" / "draws"
-_LEGACY_DRAWS_ROOT = Path("data") / "cleaned"
+_DRAWS_ROOT = Path(get_cleaned_draws_dir())
+_LEGACY_DRAWS_ROOT = Path(get_cleaned_data_dir())
 
 
 def _iter_draw_roots(base: Optional[Path]) -> List[Path]:
@@ -182,3 +183,4 @@ def load_state_draws(
 
 
 __all__ = ["Variant", "load_state_draws"]
+

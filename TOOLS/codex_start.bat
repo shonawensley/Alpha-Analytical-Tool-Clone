@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal
 set ROOT=C:\dev\Alpha-Analytical-Tool
 set BOOT=%ROOT%\briefings\codex_boot.md

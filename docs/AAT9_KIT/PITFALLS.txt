@@ -6,6 +6,30 @@ I wrote it as a copyâ€‘pasteable spec plus readyâ€‘toâ€‘use snippets. It folds i
 
 Golden rules
 
+Aux draw-path drift (2025-10)
+
+Symptom checklist
+- Aux page shows "Working modules unavailable or no draws found" while Dev Health reports canonical module paths.
+- V-TRAC analysis throws `draws_1000` / local variable errors despite CSVs living under `data/cleaned/draws/`.
+- `.codex/preflight.ps1` lists zero draws while Control Center pipelines still regenerate CSVs successfully.
+
+Root cause
+- Streamlit Aux page still imported staged "working" modules which weren’t present, so constants never bound and the rescue path cleared draws.
+- Older tooling (preflight, smokes) kept globbing `data/cleaned/*.csv`, masking the real directory layout.
+
+Resolution pattern
+- Canonicalise everything on `modules.aux_loaders.load_state_draws` (Combined/Midday/Evening) and remove staged fallbacks.
+- Cache draw windows once per run and reuse them for V-TRAC overlays/heatboards.
+- For docs and tests, assert live data resolves under `data/cleaned/draws/`.
+
+Guardrails (must run)
+- `.codex/preflight.ps1 -State <State>` – now prints inventories for `data/cleaned/draws` first.
+- `python scripts/checks/smoke_positional.py` – looks in the canonical directory before legacy fallbacks.
+- `powershell -NoProfile -File scripts/tools/validate_aux_all.ps1` – runs doubles/repeat/V-TRAC validators and fails fast if the canonical loader drifts.
+- `python -m pytest tests/test_aux_loader_canonical_paths.py` – regression test that ensures Combined/Midday/Evening map to `data/cleaned/draws`.
+- Pre-commit guard (`python scripts/hooks/validate_aux_draws.py`) fires on every commit; only bypass with `AAT9_SKIP_AUX_GUARD=1` in true emergencies.
+
+
 Single source of truth (SSOT) modules. Put every shared analyzer under modules/ and always import with from modules.<name> import .... If legacy code uses bare imports (e.g., import vtrac_reference), install the bootstrap shim so both names resolve to the same file.
 
 Absolute repo root & deterministic paths. Compute REPO = Path(__file__).resolve().parents[n] once and build every path from it (no os.chdir, no relative I/O).
@@ -687,3 +711,7 @@ Digit-Reduction Winners Overlay
 - Only append rows to the flags CSV when a location actually hits (exact or VTRAC); left-join onto analyzer per-item rows via area/section/set/draw/col/method/mode.
 - Keep VTRAC family detection local (mirror pairs); never import the staged modules.vtrac_reference.
 - Annotated HTML is a copy; never overwrite the reducer’s original stacked report.
+
+
+Stable Ragnarök Paused (2025-10-13)
+- Stable regression shield in progress; consensus?doubles flag, section/progression bonuses, metrics writer, regression-guard tests/hooks still outstanding. See changelog and tasks/FIX_122.txt before resuming.

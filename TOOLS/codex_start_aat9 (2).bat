@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 
 rem === Adjust only if your repo root is in a different folder ===

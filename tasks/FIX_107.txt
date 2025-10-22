@@ -1,0 +1,172 @@
+Thanks for the full dump. I read through your screenshots, the Aux “System Health,” and the big CODEX log, and I also cross‑checked the wiring docs you attached. Below is a tight diagnosis and a no‑drama fix plan you can apply immediately.
+
+First: model + doc contract
+
+Yes — I’m GPT‑5 Pro, the highest‑reasoning preset you asked for under “READ THIS AAT9.”
+
+The AAT9 wiring docs say (paraphrasing):
+
+Auxiliary & Control Center must read per‑state draw CSVs only from data/cleaned/*_draws.csv (newest‑first). They must not touch the string tables.
+
+Blackapple (and Aux) sit on those draw CSVs; V‑TRAC/Stable/Digit Reduction use the tables side (data/outputs/tables/<STATE>/…).
+
+Your “System Health (Aux)” shows the right CSVs and counts (1000) but the V‑TRAC Analysis area still crashes with:
+
+“Combined analysis failed: cannot access local variable draws_1000 where it is not associated with a value.”
+
+…and the Due Doubles are all blue.
+
+What’s actually wrong (evidence‑based)
+
+There are two issues interacting:
+
+1) A staged Aux import is still in play
+
+Your health panel prints:
+
+ap: C:\dev\...\scripts\auxiliary\working\modules\analyze_pairs.py
+vr: C:\dev\...\scripts\auxiliary\working\modules\vtrac_reference.py
+
+
+That means the page is still executing the staged Aux module (under scripts/auxiliary/working/...) rather than the canonical import path you intended to force. The wrapper you added plus ensure_ssot() helped for some flows, but the Aux page is still binding to the staged file (or using symbols/rel‑imports that resolve back there). The staged file contains the brittle local variable you’re hitting.
+
+2) A classic UnboundLocal in the staged V‑TRAC panel
+
+From your banner message and debug lines, the staged Aux code has a pattern like:
+
+if variant == "Midday":
+    draws_1000 = midday_draws[:1000]
+elif variant == "Evening":
+    draws_1000 = evening_draws[:1000]
+# (no assignment for "Combined")
+
+# later...
+use(draws_1000)  # -> UnboundLocalError when Combined
+
+
+So Combined takes the “no‑assignment” path and throws UnboundLocalError. That instantly kills the V‑TRAC panel, and anything that needs the 1000‑draw window (your “very‑late/red” layer for doubles) falls back to base windows → everything shows blue only in Due Doubles.
+
+You can see this fingerprint plainly in your run: positional tracker works (window=360), but V‑TRAC + very‑late doubles collapse whenever the 1000‑draw local isn’t bound.
+
+The minimal, safe fix (two tiny patches)
+
+Goal: unbreak Combined and bring back the 1000‑draw tier without reshuffling your architecture.
+
+A) Force canonical imports before any Aux code binds
+
+At the very top of src/app.py, before any other imports that can pull Aux modules, add:
+
+from modules.bootstrap_imports import ensure_ssot
+ensure_ssot()  # do this before importing any 'analyze_pairs'/* aux modules
+
+
+Always import via the canonical package name:
+
+import modules.analyze_pairs as ap
+import modules.vtrac_reference as vr
+
+
+Why: per the AAT9 directory contract, Aux/BA code should come from modules/*, not scripts/auxiliary/working/.... Doing the SSOT bootstrap first ensures any legacy alias gets rebound to the canonical modules.
+
+Tip (Dev Health): print both ap.__file__ and (if you keep a SOURCE_PATH) so you can see the wrapper file and the staged source it wraps — that’s fine; the important part is that every import path resolves through modules.*.
+
+B) Make draws_1000 impossible to be unbound (one function)
+
+In the staged Aux helper (analyze_pairs.py) where the V‑TRAC/combos logic is built, add a tiny selector that always binds the windowed list:
+
+WINDOWS = {"combinations": 1000}  # you already print this in System Health
+
+def _windowed_draws(variant, combined, midday, evening, take=None):
+    take = int(take or WINDOWS.get("combinations", 1000))
+    picks = {
+        "combined": combined or [],
+        "midday":   midday or [],
+        "evening":  evening or [],
+    }
+    return list(picks.get(variant, []))[:take]
+
+
+Then, wherever the code used draws_1000, replace the scattered conditionals with:
+
+draws_1000 = _windowed_draws(variant, draws_combined, draws_midday, draws_evening)
+if not draws_1000:
+    # graceful fallback — show a friendly “no 1000-draw view” notice,
+    # but do NOT crash the panel; optionally soften the colors/tiers.
+    ...
+
+
+That ends the UnboundLocalError for Combined and restores the “very‑late 1000” tier used by your red doubles classification.
+
+Why this aligns with your docs (so we don’t guess)
+
+Aux/Control Center: draw CSVs only (data/cleaned/*_draws.csv). No string tables. That’s exactly what your health panel shows and what the BA/Aux guides prescribe. The fix doesn’t touch that — it just pins imports and binds the 1000‑draw view safely.
+
+Architecture guardrails: launch through src/app.py, canonical modules under modules/, paths isolated via utils.path_handler and “draws/live” contracts. The SSOT bootstrap + canonical imports are precisely what the AAT9 architecture doc calls for to avoid staged package collisions.
+
+What this should immediately fix in your UI
+
+V‑TRAC Analysis (Working logic): no more “cannot access local variable draws_1000”; the Combined card renders.
+
+Due Doubles: red tier returns (the “very‑late/1000‑draw” checks are alive again), so the table won’t be “all blue.”
+
+Boxed V‑TRAC table: the “appeared/not appeared in last 1000” underlining logic stops short‑circuiting.
+
+Quick verification steps (copy/paste)
+
+Confirm imports are canonical (after you add ensure_ssot() and re‑launch):
+
+import modules.analyze_pairs as ap, modules.vtrac_reference as vr
+print("AP module:", ap.__file__)
+print("VR module:", vr.__file__)
+
+
+You want both resolving via modules\... (your wrapper may still display the staged SOURCE_PATH for transparency — that’s OK).
+
+Smoke the combiner (any small REPL):
+
+from modules.analyze_pairs import _windowed_draws
+print(len(_windowed_draws("combined", ["123"]*1200, None, None)))  # expect 1000
+print(len(_windowed_draws("midday", None, ["123"]*800, None)))     # expect 800 (or 800 clipped if you set 1000)
+
+
+Reload Aux page and check:
+
+No red banner under V‑TRAC; the Combined section renders.
+
+Due Doubles now show red entries (not all blue).
+
+About “doubles validation” in /tasks
+
+Even without opening it: given the symptoms, that task likely asserts “very‑late window must be present” and/or checks tier coloring. Once the two patches above are in, that validation should pass again. If the task file also mentions thresholds, don’t worry — your System Health already prints the intended windows (pairs=360, combinations=1000, etc.); fixing the draws_1000 binding revives those thresholds automatically.
+
+(Optional) V‑TRAC “277” note
+
+This isn’t the blocker right now, but for completeness: your staged reference maps 277/227 → Index 26 (V‑TRAC 333); the right defensive improvement is to keep the explicit table and add a class‑fallback (derive class “333” when a permutation is missing) so table drift can’t hide a family. You already sanity‑tested get_vtrac_index('277') → 26, so park this until Aux is stable.
+
+Why you saw this loop of regressions
+
+The auto‑validation you added at startup is fine; it didn’t cause the break. The break was a staged import + unbound local that only trips on the Combined variant. Because the “very‑late” (1000) layer depends on that same variable, it looked like thresholds vanished — in reality, the 1000‑draw view never came alive.
+
+The fix above avoids editing the analytical logic and pins imports to your SSOT, per the AAT9 architecture.
+
+Tiny hardening (later, not urgent)
+
+Add a one‑liner guard where you render the Combined V‑TRAC card:
+
+try:
+    ...  # build the panel
+except UnboundLocalError:
+    st.info("V‑TRAC skipped: 1000‑draw window unavailable for this variant.")
+
+
+Add a unit test that builds the Combined card with empty draws and asserts “no crash.”
+
+Bottom line
+
+This isn’t a big refactor. It’s a two‑step hygiene fix:
+
+Pin imports to canonical (ensure_ssot() at the very top, then import modules.analyze_pairs as ap).
+
+Bind draws_1000 for all variants via a tiny _windowed_draws() helper.
+
+That will stop the Combined crash, restore your red doubles tier, and get Aux behaving like your docs specify. If you want, I can write the exact diff blocks for the two files you’ll touch (src/app.py and the staged analyze_pairs.py) so you can paste them in._

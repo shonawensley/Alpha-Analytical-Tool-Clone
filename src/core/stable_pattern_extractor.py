@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
+from alpha_analytical.stable.metrics import build_metrics, write_metrics
 from alpha_analytical.stable.post_pass_families import build_family_summary
 from alpha_analytical.stable.winner_family_spotlight import build_winner_spotlight
 from alpha_analytical.stable.training_bundle import write_training_bundle
@@ -147,6 +148,17 @@ def run_stable_pattern_extraction(
     df_scores.attrs["spotlight_raw_path"] = spotlight_raw_path
     df_scores.attrs["spotlight_family_path"] = spotlight_family_path
 
+    metrics_data = build_metrics(
+        state=state,
+        df_scores=df_scores,
+        families_df=families_df,
+        winners=winners,
+    )
+    metrics_path_obj = write_metrics(out_path, state, metrics_data)
+    metrics_path = str(metrics_path_obj)
+    df_scores.attrs["metrics"] = metrics_data
+    df_scores.attrs["metrics_path"] = metrics_path
+
     if not df_scores.empty:
         df_scores.to_csv(csv_path, index=False)
         csv_path_str = str(csv_path)
@@ -169,6 +181,7 @@ def run_stable_pattern_extraction(
             families_path=families_path or None,
             spotlight_raw_path=spotlight_raw_path or None,
             spotlight_family_path=spotlight_family_path or None,
+            metrics_path=metrics_path or None,
             winners=winners,
         )
 

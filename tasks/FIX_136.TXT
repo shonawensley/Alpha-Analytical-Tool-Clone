@@ -1,0 +1,122 @@
+Thanks for the rich packet—this was genuinely useful. I pulled signal from your three attachments and the prior codex logs to answer four things you asked for:
+
+Where the Stable Pattern Extractor stands (Phase‑2)
+
+What looks solid vs. risky / incomplete
+
+What to double‑touch before Phase‑3
+
+A focused run plan + quick checks so we avoid regressions
+
+Below is my consolidated read, with citations to the specific log/doc lines that support each call‑out.
+
+1) Where we are (Phase‑2 status)
+
+Stable “evidence bus” exists and is wired end‑to‑end.
+Codex added attach_stable_evidence(...) to join winners with Stable row/family evidence (family score, rank, doubles support, score parts), and a unit test that builds a small 227/277 fixture to assert the join. That’s exactly what FIX_125/FIX_126 asked for. In the diff log you can see the evidence columns and join order, plus the new test scaffolding.
+
+Evidence and health are surfaced in the app.
+The roadmap/flow docs you attached line up with what Codex implemented—Control Center adds small, dev‑gated health panes and the winners logging path is defined (runs directory, per‑winner JSON shape). It’s consistent with the way metrics and evidence are displayed under a batch expander in Control Center.
+
+Phase‑2 run notes across four states
+Your “Stable Pattern Review” write‑up shows a successful batch: Indiana4, Michigan4, NewJersey4, NewYork4; bundles with scores CSV, family summary, spotlight raw, metrics JSON, and manifest. The doc also records V‑TRAC family mappings for winners (e.g., Indiana winners tied to v‑trac 15 and 23; New York winners to 17 and 8).
+
+Integration/hardening choices match the plan
+The “Integration & Hardening” notes (absolute‑path loader, CSV‑only for BA, deterministic BAT, “System Health” expander) match the risk controls you wanted for cross‑tool stability.
+
+2) Green / Yellow / Red
+✅ Green (looks solid)
+
+Evidence join + schema discipline. The evidence bus joins winners → family (family_id) and winners → row (Canonical), pre‑seeds a stable set of output columns, and has a unit test. This closes the biggest Phase‑2 gap from FIX_125.
+
+App health + winners logging spec. The kit/roadmap docs define “System Health” and the MVP winners logging shapes (runs dir layout, per‑winner JSON), which aligns with how Codex exposes metrics in Control Center.
+
+Control Center doubles acceptance + adjacency rule. Prior acceptance fixtures were updated to reflect adjacency‑aware tokens (±1 column), and the acceptance tests are hooked into the guardrails. (You can see the updated expectations in the acceptance fixture snippet.)
+
+🟨 Yellow (watch closely / likely quick fixes)
+
+Canonicalization single‑source‑of‑truth. In the winners enricher, there’s an internal _canonical(...) helper. FIX_126 asked us to reuse the Stable module’s canon to avoid rare mismatches (e.g., leading zero handling, whitespace). I didn’t see the replacement recorded in the follow‑up logs, so I’m treating this as still pending. This is small but important—it directly affects the row‑evidence join.
+
+UI download/export guard. FIX_126 suggested an explicit CSV export (and schema guard) for the enriched winners evidence. Codex added the expander, and the plan mentions download, but I don’t see the final “download CSV” call recorded in these excerpts—flagging to confirm in-code. (It’s optional, but it helps QA.)
+
+🟥 Red (fix before Phase‑3)
+
+“Winner spotlight rows” missing → row evidence NaN for winners.
+Your review notes that *_winner_family_spotlight_raw.csv did not contain rows scoped to the actual winners for all four states; manifests show non‑zero spotlight totals, but the winner‑specific rows came back empty. That’s why your winners‑evidence JSON shows NaN for row‑level fields even though families/metrics look healthy. This is the one item I’d fix before Phase‑3. Likely root causes below.
+
+3) What to double‑touch (with likely root causes & minimal fixes)
+A) Winner‑specific spotlight rows are empty
+
+Symptoms: Family evidence (scores, doubles, bonuses) is present; but when we expect a row in “winner spotlight raw” keyed to the winner’s canonical, it’s missing, and the join yields NaNs on row_score, row_type, row_why, etc.
+
+Most likely causes & targeted patches
+
+Canonical mismatch (winner ↔ row)
+
+Why it happens: winner strings like 680 vs. canonical like 068 (leading zero) or whitespace/padding differences; or our enricher’s _canonical does not exactly match Stable’s canon.
+
+Patch: Replace the local canonicalizer with Stable’s canonical helper (SSOT); normalize winners via the same canon() used to write scores.csv. (This is exactly what FIX_126 requested.)
+
+Spotlight filter is too strict (exact‑type only)
+
+Why it happens: The “winner spotlight” filter may be requiring a specific type (e.g., straight) or specific section when the winner actually appears in a different row‑type/section in the underlying evidence; result: spotlight totals exist at the family level, but nothing qualifies as a “winner row.”
+
+Patch: In the spotlight writer, relax filters to accept the best row per canonical (max score) regardless of row‑type, and default to Combined if Mid/Eve are empty. Write a short test asserting that a known winner produces ≥1 spotlight row across sections.
+
+Join key uses Canonical where the source uses another label
+
+Why it happens: If the writer emitted canonical_form but the enricher expects Canonical (or vice‑versa), the join fails silently.
+
+Patch: Confirm column names in scores.csv and spotlight raw (Canonical vs canonical_form). Align them or add a column alias before the join.
+
+Minimal validation: After applying (1) and (2), your winners evidence table should show row_score, row_type, and row_why populated for each winner in the four‑state sample you ran. The Phase‑2 “Notable finding” should vanish.
+
+B) Canonical helper reuse (SSOT)
+
+Replace the local _canonical in the enricher with the Stable module helper; this prevents stray edge cases (e.g., 011 vs 11, trimming, ordering) from breaking joins. It’s a one‑file change and exactly what FIX_126 flagged.
+
+C) Winners evidence export affordance
+
+Ensure the Control Center expander includes a CSV download for the enriched winners evidence (nice‑to‑have for your reviews and for attaching to PRs). This was mentioned as a follow‑up in the Codex notes; if it’s not already in, it’s a 5‑line Streamlit addition.
+
+4) Readiness checkpoint for Phase‑3 (what I’d run now)
+
+Run this tiny, repeatable checklist on one state (e.g., New York) and then on the other three from the review:
+
+Batch run Stable (same seeds you used in the review) to regenerate: scores CSV, family summary CSV, spotlight raw CSV, metrics JSON, manifest. Confirm the per‑run evidence pane appears for that state in Control Center. The run shapes and logging directory pattern are documented in your roadmap.
+
+Winner join sanity
+
+Verify each winner has: family_id, family_score, family_rank, any_doubles_support, and row evidence (row_score, row_type, row_why). If row evidence is still NaN, re‑check the canonical helper swap and spotlight filter. (This targets the red item above.)
+
+Spotlight presence
+
+Confirm *_winner_family_spotlight_raw.csv contains ≥1 row per winner canonical (any section/row‑type), and that the row’s canonical equals the enricher’s stable_canonical. That was the gap your review highlighted.
+
+Doubles adjacency / acceptance
+
+Re‑run the doubles acceptance to ensure your updated adjacency logic (±1 column) still matches expected tokens. (You already updated the fixture once; this just guards against drift.)
+
+Health & winners logging
+
+Hit the System Health expander and (optionally) log one winner via the MVP spec to ensure paths/versions are stamped correctly prior to Phase‑3 work.
+
+If all five pass on one state, scale to the other three; if they still pass, Phase‑3 is safe to start.
+
+Extra context I extracted from your files (why I’m confident)
+
+The evidence columns and merge order for the winners enricher are explicit in your diff log (family → row order; pre‑seeding column list). That’s the right shape for downstream analytics and for consistent exports.
+
+Your internal app‑flow/roadmap documents already codify the run directory layout and the MVP winner logging JSON shape, which matches how Codex is displaying per‑run metrics/evidence under a batch expander now. This alignment is what we want before we add Phase‑3 features.
+
+The Phase‑2 “Stable Pattern Review” captured the precise failure mode (no winner‑specific spotlight rows), which points straight at canonicalization/filters rather than scoring math—and that’s a small, low‑risk fix.
+
+The Integration & Hardening doc backs up the path/import/data isolation choices (absolute‑path BA loader, CSV‑only sources, deterministic BAT), reducing surprise regressions as we iterate.
+
+Bottom line
+
+Overall: Phase‑2 is in good shape. The evidence bus, schema discipline, and Control Center wiring are there.
+
+Fix before Phase‑3: (1) swap the enricher to use Stable’s canon (SSOT); (2) loosen/align the spotlight filters so each winner emits at least one row into *_winner_family_spotlight_raw.csv. Those two micro‑patches should clear the row‑evidence NaNs you observed in the review.
+
+If you want, send me the latest four artifacts for one state (scores CSV, family summary CSV, winner spotlight raw CSV, metrics JSON) and I’ll spot‑check the joins immediately using the checklist above. Otherwise, I’m comfortable green‑lighting a small verification run and then moving on to Phase‑3 once the two fixes are in.

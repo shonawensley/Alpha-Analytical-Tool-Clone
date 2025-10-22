@@ -10,7 +10,11 @@ from typing import Dict, Iterable, List, Optional, Sequence
 
 DEFAULT_ANALYSIS_ROOT = Path("data/outputs/analysis")
 VARIANT_NAMES: Sequence[str] = ("Combined", "Midday", "Evening")
+PACKAGED_VARIANTS_DEFAULT: Sequence[str] = ("Midday", "Evening")
 _MAP_STAMP_RE = re.compile(r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_winner_map\.json$")
+_ARTIFACT_RE = re.compile(
+    r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_(?P<artifact>winner_(map|flags|stamp|hits|overlay)\.(json|csv|html))$"
+)
 
 
 class TrainingBundleError(RuntimeError):
@@ -86,6 +90,7 @@ def package_training_bundle(
     analysis_root: Optional[Path | str] = None,
     include_overlay: bool = False,
     include_hits: bool = True,
+    include_combined: bool = False,
     make_zip: bool = False,
 ) -> Dict[str, Optional[str]]:
     root = _analysis_root(analysis_root)
@@ -105,6 +110,8 @@ def package_training_bundle(
             f"Stamp {stamp} not found for state {state}. Available: {sorted(stamp_variants)}"
         )
     variants = stamp_variants[stamp]
+    packaged_variants = list(PACKAGED_VARIANTS_DEFAULT if not include_combined else VARIANT_NAMES)
+    packaged_variants = [variant for variant in variants if variant in packaged_variants]
 
     bundle_root = state_root / "training_sets" / stamp
     if bundle_root.exists():
@@ -132,30 +139,27 @@ def package_training_bundle(
     for essential in essentials:
         copied.append(_copy_file(essential, bundle_root))
 
-    winners_files: List[Path] = []
-    for variant in variants:
-        stem = f"{stamp}_{variant}"
-        winners_files.extend(
-            [
-                winners_dir / f"{stem}_winner_map.json",
-                winners_dir / f"{stem}_winner_flags.csv",
-                winners_dir / f"{stem}_winner_stamp.json",
-            ]
-        )
-        if include_hits:
-            winners_files.append(winners_dir / f"{stem}_winner_hits.csv")
-        if include_overlay:
-            winners_files.append(winners_dir / f"{stem}_winner_overlay.html")
-
-    missing_winners = [path.name for path in winners_files if not path.exists()]
-    if missing_winners:
-        raise TrainingBundleError(
-            "Missing winner artifacts: " + ", ".join(missing_winners)
-        )
-
+    packaged_variants = list(packaged_variants)
     winners_dir_target = bundle_root / "winners"
-    for wf in winners_files:
-        copied.append(_copy_file(wf, winners_dir_target))
+    winners_dir_target.mkdir(parents=True, exist_ok=True)
+
+    for variant in packaged_variants:
+        stem = f"{stamp}_{variant}"
+        for artifact in ("winner_map.json", "winner_flags.csv", "winner_stamp.json"):
+            path_obj = winners_dir / f"{stem}_{artifact}"
+            if not path_obj.exists():
+                raise TrainingBundleError(f"Missing winner artifact: {path_obj.name}")
+            copied.append(_copy_file(path_obj, winners_dir_target))
+        if include_hits:
+            path_obj = winners_dir / f"{stem}_winner_hits.csv"
+            if not path_obj.exists():
+                raise TrainingBundleError(f"Missing winner artifact: {path_obj.name}")
+            copied.append(_copy_file(path_obj, winners_dir_target))
+        if include_overlay:
+            path_obj = winners_dir / f"{stem}_winner_overlay.html"
+            if not path_obj.exists():
+                raise TrainingBundleError(f"Missing winner artifact: {path_obj.name}")
+            copied.append(_copy_file(path_obj, winners_dir_target))
 
     manifest = {
         "state": state,
@@ -164,8 +168,9 @@ def package_training_bundle(
         "analysis_root": str(root.resolve()),
         "include_overlay": include_overlay,
         "include_hits": include_hits,
+        "include_combined": include_combined,
         "make_zip": make_zip,
-        "variants": variants,
+        "packaged_variants": packaged_variants,
         "files": [
             {
                 "name": path.name,

@@ -111,4 +111,4 @@ bash
 Copy code
 powershell.exe -NoProfile -File "$(wslpath -w .)\path\to\script.ps1"
 Finish signal
-When preflight is clean and the Plan is printed, reply: READY (WSL) and proceed within the agreed 
+When preflight is clean and the Plan is printed, reply: READY (WSL) and proceed within the agreed scope.

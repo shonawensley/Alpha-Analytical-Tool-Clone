@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 set "ROOT=C:\dev\Alpha-Analytical-Tool"
 cd /d "%ROOT%"

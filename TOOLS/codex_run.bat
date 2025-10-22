@@ -1,2 +1,6 @@
-@echo off
-wsl.exe -d Ubuntu bash -lc "cd ~/code/Alpha-Analytical-Tool-Clone && codex"
+﻿@echo off
+REM Minimal reliable Codex launcher from repo root
+cd /d C:\dev\Alpha-Analytical-Tool
+codex
+
+

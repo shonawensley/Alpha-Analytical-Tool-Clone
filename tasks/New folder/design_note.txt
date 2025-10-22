@@ -1,0 +1,161 @@
+A design charter for an “unstoppable” pattern‑recognition & prediction stack
+
+Mission. We’re reverse‑engineering wins from real examples and turning those lessons into portable evidence signals. Each tool is optimized on its own first; later we aggregate the signals into a single, explainable score that decides when a state is qualified for wagering. We will bias toward: fewer bets, higher confidence, higher profit.
+
+North stars.
+
+Evidence over folklore. Use measurable features and reduction methods that explain how a winning pattern formed in the strings.
+
+Explainability at every layer. A candidate is never “just ranked”; it carries tags that show why it scored (e.g., remaining‑pairs coverage, root‑due, mirror, floats, cluster fit, R2/R4/R6/R8 box context).
+
+Self‑contained first, integrated later. Each module (V‑TRAC, Stable Pattern, Digit Reduction, Aux/Blackapple) has clear inputs/outputs and its own verification. Then we wire them together. The data contracts remain strict: Aux/BA consume data/cleaned/*_draws.csv; V‑TRAC/Stable/DR read combined tables via utils.path_handler.
+
+Hybrid by design. The rules/analytics must stand on their own; ML is added as a supporting role that tunes weights, highlights anomalies, and proposes new features—not as a black box.
+
+The weather analogy (fully fleshed out)
+
+“It’s dark and cloudy, so I think it’ll rain” is a weak heuristic.
+Meteorologists stack many instruments: satellite imagery, Doppler radar, dew point, barometric trend, wind shear, frontal boundaries, ensemble models. When multiple independent sensors align, they issue a Watch or Warning with a quantified confidence.
+
+We’re doing the same with string patterns:
+
+Simple look (“dark & cloudy”) → single cues like “a big gap” or “one exciting streak.”
+
+Stacked instrumentation → multiple independent, well‑defined signals that line up at once.
+
+Mapping the instruments
+Weather “sensor”	Our “sensor” (examples)	What it contributes
+Satellite / radar	Remaining‑pairs foundation (27–29 method)—structural coverage of pairs before we even talk sums or mirrors	Narrows the search to structurally valid candidates; gives a base universe you can actually play
+Dew point / humidity	Floating digits (dryness)—digits absent in the recent window	Recency pressure—when a dry digit coincides with structure, we lean in
+Barometric trend	Root‑sum / digital‑root gap (hazard toward a due root, e.g., RS 7 or 3/6/9 cluster)	Directional pressure; we prefer candidates whose RS matches what’s due
+Front boundaries	Cluster/box context (R2/R4/R6/R8; V‑TRAC families)	Where the storm “lives” inside the grid—boxed + straight interactions and cluster motion
+Wind shear	Pattern regime shifts—SSS/TTT extremes and SST/STS/TSS mixed group dynamics	Signals a break or continuation—helps time entries
+Nowcast vs forecast	Near‑term flags (Aux/BA) vs arc detectors (Stable/V‑TRAC)	Aux/BA are your nowcast; Stable/V‑TRAC characterize the medium‑range arc that births the winner
+Radar tilts to see through occlusion	Hidden‑behind‑a‑digit / digit‑shift scans	If a pattern is occluded by a specific digit position/value, we “tilt” the scan (shift/unwrap) to expose it
+
+When several of these agree, the “weather service” (our integrated score) upgrades the state from OFF → WATCH → ALERT → QUALIFIED FOR WAGERING.
+
+In practice we already use stacked triggers in the BA layer—mirror event, root‑due, pattern due, floating digits, and a remaining‑pairs foundation—surfaced primarily on Control Center. We’ll keep those as first‑class signals and add others from Stable/V‑TRAC/DR in the aggregate score.
+
+Reverse‑engineering wins (how we learn from real examples)
+
+For each winner we log:
+
+What pattern won (and where it sat in R2/R4/R6/R8; boxed vs straight; cluster lineage).
+
+Which signals were present at the time (structure, due roots/sums, floats, mirrors, family pressure, occlusion/shift detections).
+
+Lead time (how many draws between ALERT and the hit).
+
+Environment (Combined/Midday/Evening context; inter‑variant echoes).
+
+Counterfactuals (what nearly won; which signals were misleading).
+
+Those logs feed two outcomes:
+
+Portable feature functions (pure, unit‑tested) that any tool can call.
+
+Weights & thresholds for the integrated scorer, tuned to prioritize profitability (play less, with higher confidence).
+
+The evidence stack → a single, explainable score
+
+Signals. Each signal is a pure function that returns {present: bool, strength: float, tags: set, window: int, lead_time: estimate}.
+
+Weights. Start conservative. Structural signals (e.g., remaining‑pairs coverage) earn base weight. Situational signals (mirror, floats) nudge. Statistical/hazard signals (root‑due, sums bands) calibrate timing.
+
+Score.
+StateScore = Σ (weight_i × strength_i) with gates:
+
+Gate 1 (Structure): candidates must satisfy structural coverage (e.g., all three internal pairs still “out”) to be considered.
+
+Gate 2 (Stack): require ≥N independent signals to be present (e.g., structure + root‑due + one of {mirror, floats, extreme pattern}).
+
+Gate 3 (Risk): use per‑state hazard baselines to avoid over‑firing during noisy regimes.
+
+Ladder.
+
+OFF: score < 2 (or stack < 2 signals)
+
+WATCH: score ≥ 2
+
+ALERT: score ≥ 3 (stack ≥ 3 signals)
+
+QUALIFIED FOR WAGERING: score ≥ T (e.g., 4–5) and passes bankroll/risk constraints (below)
+
+The BA layer already uses a similar OFF/WATCH/ALERT notion and caps candidates (e.g., top‑12 with tags) for readability; the integrated scorer should preserve that UX because it trains the operator’s eye while staying explainable.
+
+Profit focus: spend less, win more
+
+Expense management is a feature. The easiest profit lever is not betting when confidence is low. We enforce this with:
+
+A play/pass gate at “Qualified for Wagering.”
+
+Ticket caps tied to confidence tiers (e.g., 2, 6, 12).
+
+Cooldowns after a miss to prevent churn.
+
+Confidence tags drive stake sizing. Keep it simple at first:
+Green (Qualified), Amber (ALERT), Gray (WATCH/OFF).
+
+Why “more detail” (not less) is the right call
+
+The more precisely we describe how a pattern forms and what environmental conditions surround it, the more levers we have to (a) score correctly, (b) generalize across states/variants, and (c) keep the system powerful even without ML. Detail does not mean noise: every feature must be measurable, portable, and tested against real winners.
+
+Portability: reusing working ideas across tools
+
+Feature spec (one page per signal):
+
+Name & purpose. (e.g., Hidden‑behind‑digit exposure.)
+
+Inputs. draw strings + window; optional variant context (Combined/Midday/Evening).
+
+Method. deterministic algorithm (e.g., shift/unwrap/occlusion check).
+
+Output. {present, strength, tags} + minimal provenance (what it saw).
+
+Compatibility. Which tools can consume it (Stable, V‑TRAC, Aux/BA).
+
+Tests. Three real winners where it fired correctly and three where it declined to fire.
+
+You can lift a working signal from the V‑TRAC Winners Logger straight into the Stable Pattern Extractor by packaging it in this spec. The same goes for BA triggers (mirror, root‑due, floats, remaining‑pairs) that already run off draws CSVs.
+
+Example wording you can hand to an AI when porting a feature
+
+Goal. Add Hidden‑Behind‑Digit Exposure to the Stable Pattern Extractor.
+Background. This logic already works in the V‑TRAC Winners Logger: it searches for a target pattern that is occluded by a specific digit/position, then “tilts” the scan (digit shift/unwrap) to expose the pattern and confirm cluster/box alignment.
+Spec. Implement a pure function expose_hidden_pattern(draws, window, schema) → {present, strength, tags}. Return present=True when a valid exposure is found and the candidate also satisfies structural coverage (all internal pairs in remaining‑pairs set). Tag with HID, include the discovered shift (SHIFT=+1/-1) and the box/cluster where it lands (e.g., R4→R6).
+Integration. Add this as a signal in Stable’s scoring stack; weight small at first (+0.2) and only after structural gate passes.
+
+“Approved for Wagering” in one picture
+
+Sensors fire (structure, root‑due, mirror/floats, cluster/box, hidden‑behind‑digit, etc.).
+
+Stack & gate → OFF/WATCH/ALERT.
+
+Risk & bankroll → Qualified for Wagering (or Pass).
+
+Candidates (small, explainable list with tags) go to Control Center and tool‑specific panels. BA’s Control Center table is the template to follow here (score, status, triggers, examples).
+
+Hybrid path for ML (later, not required)
+
+Phase 0 (now). Rule‑based, explainable signals + conservative weights.
+
+Phase 1. ML tunes weights/thresholds per state; suggests new features by mining mis‑scored examples.
+
+Phase 2. ML proposes composite signals (learned combinations) but must publish human‑readable tags and ablations (“this worked because X+Y+Z”).
+
+Guardrail. ML never bypasses the data contracts or page wiring defined in the architecture/layout doc.
+
+Operator checklist (so this becomes muscle memory)
+
+Optimize one tool at a time: confirm inputs, add features, log winners, prove the signal is portable.
+
+Package each feature with the spec above; write one page of examples.
+
+Add the feature to the evidence stack with small weights; re‑score backtests; track precision@K and alert coverage.
+
+Only then surface it in the integrated score and Control Center.
+
+Bottom line
+
+Your instinct is right: go deep on the details that actually explain the winner’s formation—structure, timing, environment, and occlusion—then stack those details into an explainable, portable scoring system. That depth is what lets you (a) bet less, (b) win more, and (c) keep the tool powerful with or without ML. The BA/Control Center scaffolding you already have is the perfect baseline for surfacing those stacked, tagged signals and gating a state as Qualified for Wagering.

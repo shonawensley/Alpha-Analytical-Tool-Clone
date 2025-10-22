@@ -1,0 +1,345 @@
+Short answer: Yes—providing the “drop‑in” patches + tests I suggested is useful, and we can keep you moving without more back‑and‑forth. Below is a GO packet you can hand straight to Codex that (a) finishes the Phase‑2 bits we scoped, (b) hardens the regression shield so features don’t get “optimized away,” and (c) explains how these Stable extractor optimizations relate to the winners logging tools you’re seeing.
+
+Heads‑up: a few files you uploaded earlier in this chat have expired on my side. If you want me to open any of those artifacts again here (e.g., CT/DE/IN CSVs), please re‑upload or paste the top ~20 rows and I’ll fold them in right away.
+
+A. “Why this helps” (quick context)
+
+Your Stable changes (family_id on rows, section/progression bonuses, explicit last_remaining_3v, consensus→doubles, hidden‑by‑one) directly improve winners logging in two places:
+
+Stable’s own winners spotlight (*_winner_family_spotlight_{raw,families}.csv). With the new flags and consistent family_id, these files tell you why a winner surfaced (straight2/3 counts, hot density, doubles support, etc.).
+
+Your Control Center / Aux winners logger (the screenshot that highlights winners in the Combined tables). That tool groups by V‑TRAC family. The Stable upgrades (robust rep3 mapping + 277→Index 26 fix) mean the same family index is used everywhere, so the logger lights the right cells and your “winner echo” overlays line up.
+
+In short: fixing Stable’s family math and flags makes the winners logger much more trustworthy across tools because they’re all lining up on the same family IDs.
+
+B. Minimal patch set to finish Phase‑2 (ready to paste)
+
+Apply order (safe chunks):
+
+Stabilize Stable row output schema
+
+Finalize family post‑pass (fam_* columns + doubles support)
+
+Metrics JSON writer
+
+Contract hook & tests
+
+1) alpha_analytical/stable/init.py
+
+Goal: lock the row CSV schema so nothing “falls out” again, and keep the per‑component scores.
+
+@@ def write_csv(args, results_chunk):
+-    out_cols = [
+-      "section","Set","Draw","Column","Canonical","type","score","rows",
+-      "mirror","straight2","straight3","single_left",
+-      "cons_full","cons_3v","cons_stub",
+-      "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
+-      "score_cov","score_hpr","score_perm","score_repeat","score_straight",
+-      "score_single","score_cons","score_hot","score_mirror","score_dom",
+-      "score_len","score_hidden","why"
+-    ]
++    # === AAT9-SCORE-CONTRACT: REQUIRED ROW COLUMNS ===
++    out_cols = [
++      "section","Set","Draw","Column","Canonical","type","score","rows",
++      "mirror","straight2","straight3","single_left",
++      "cons_full","cons_3v","cons_stub",
++      "dom_last","dom_pair","family_id","hidden3v",
++      "perm_count_in_box","repeat_extras_in_box",
++      "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
++      "score_cov","score_hpr","score_perm","score_repeat","score_straight",
++      "score_single","score_cons","score_hot","score_mirror","score_dom",
++      "score_len","score_hidden",
++      "why"
++    ]
+
+
+Keep your existing per‑component calculation (score_cov … score_hidden) and the why tokens you already added (hp_repeatN, vstr2/3, hidden3v, etc.).
+
+2) alpha_analytical/stable/post_pass_families.py
+
+Goal: finish the aggregation with explicit fam_* parts, the consensus→doubles adjacency (±1 column), and expose bonuses as their own fields (so you can tune safely).
+
+@@
+-    g = defaultdict(lambda: {
++    g = defaultdict(lambda: {
+         "rows_covered": set(),
+         "perm_count_in_box": 0,
+         "repeat_extras_in_box": 0,
+-        "horizontal_persistence_repeat": 0,
++        "horizontal_persistence_repeat": 0,
+         "hot_hits": 0, "hot_total": 0,
+         "any_straight2": False, "any_straight3": False,
+         "any_consensus": False, "any_dom_last": False,
+-        "canonicals": Counter(), "modal_orders": Counter(),
+-        "rows_detail": [], "consensus_columns": set(),
++        "canonicals": Counter(), "modal_orders": Counter(),
++        "rows_detail": [], "consensus_columns": set(),
+     })
+@@  # build doubles/consensus indexes keyed by (section, Set, Draw, family_id)
+     doubles_by_key = defaultdict(set)     # -> {key_family: {col_int,...}}
+     consensus_by_key = defaultdict(set)   # -> {key_family: {col_int,...}}
+@@  # feed rows
+-    section, Set, Draw, Col = r["section"], r["Set"], r["Column"], r["Draw"]
++    section, Set, Draw, Col = r["section"], r["Set"], r["Draw"], r["Column"]
+@@
+-        key_family = (section, Set, Draw, int(vti))
+-        cons_cols = consensus_by_key.get(key_family, set())\n        double_cols = doubles_by_key.get(key_family, set())\n        any_doubles_support = gg["any_consensus"] and bool(double_cols)
++        key_family = (section, Set, Draw, int(vti))
++        cons_cols   = consensus_by_key.get(key_family, set())
++        double_cols = doubles_by_key.get(key_family, set())
++        col_int     = _normalize_col_value(Col)
++        any_doubles_support = False
++        if gg["any_consensus"] and col_int is not None and double_cols:
++            # adjacency: same box or ±1 column
++            any_doubles_support = any(abs(d_col - col_int) <= 1 for d_col in double_cols)
+
+@@  # === AAT9-SCORE-CONTRACT: BEGIN (FAMILY) ===
+-        fam_cov = rows_cov * cfg["vertical_coverage_per_row"]
+-        fam_hpr = gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+-        fam_perm = max(0, gg["perm_count_in_box"]-1) * cfg.get("perm_density_per_extra", 0)
+-        fam_repeat = gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
+-        fam_cons = cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0
+-        fam_hot = cfg.get("hotzone_family_bonus", 0) if hot_density >= 0.5 else 0
+-        fam_straight2 = cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0
+-        fam_straight3 = cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0
+-        fam_doubles = cfg.get("doubles_trigger_bonus", 0) if any_doubles_support else 0
++        fam_cov       = rows_cov * cfg["vertical_coverage_per_row"]
++        fam_hpr       = gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
++        fam_perm      = max(0, gg["perm_count_in_box"]-1) * cfg.get("perm_density_per_extra", 0)
++        fam_repeat    = gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
++        fam_cons      = cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0
++        fam_hot       = cfg.get("hotzone_family_bonus", 0) if hot_density >= 0.5 else 0
++        fam_straight2 = cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0
++        fam_straight3 = cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0
++        fam_doubles   = cfg.get("doubles_trigger_bonus", 0) if any_doubles_support else 0
+
+-        fam_score = (fam_cov + fam_hpr + fam_perm + fam_repeat + fam_cons + fam_hot + fam_straight2 + fam_straight3 + fam_doubles)
++        fam_section_bonus     = max(0, df_section_count - 1) * cfg.get("vtrac_family_presence", 1) + (cfg.get("cross_section_triple", 2) if df_section_count == 3 else 0)
++        fam_progression_bonus = (cfg.get("progression_across_sets", 1) if df_progression_flag else 0)
++        fam_last_remaining_bonus = (cfg.get("last_remaining_3v_bonus", 3) if df_last_remaining_flag else 0)
++        fam_score = (
++            fam_cov + fam_hpr + fam_perm + fam_repeat +
++            fam_cons + fam_hot + fam_straight2 + fam_straight3 +
++            fam_doubles + fam_section_bonus + fam_progression_bonus + fam_last_remaining_bonus
++        )
+@@
+-        out.append({
++        out.append({
+             "section": section, "Set": Set, "Draw": Draw, "Column": Col,
+             "family_id": int(vti),
+             "rows_cov": rows_cov,
+             "perm_count_in_box": gg["perm_count_in_box"],
+             "repeat_extras_in_box": gg["repeat_extras_in_box"],
+             "horizontal_persistence_repeat": gg["horizontal_persistence_repeat"],
+             "hot_density": round(hot_density,3),
+             "any_straight2": gg["any_straight2"],
+             "any_straight3": gg["any_straight3"],
+             "any_consensus": gg["any_consensus"],
+             "any_dom_last": gg["any_dom_last"],
++            "any_doubles_support": any_doubles_support,
+             "top_canonicals": _fmt_top(gg["canonicals"]),
+             "top_modal_orders": _fmt_top(gg["modal_orders"]),
+-            "family_score": fam_score,
++            # per-component fields (regression‑guard)
++            "fam_cov": fam_cov, "fam_hpr": fam_hpr, "fam_perm": fam_perm, "fam_repeat": fam_repeat,
++            "fam_cons": fam_cons, "fam_hot": fam_hot,
++            "fam_straight2": fam_straight2, "fam_straight3": fam_straight3,
++            "fam_doubles": fam_doubles,
++            "fam_section_bonus": fam_section_bonus,
++            "fam_progression_bonus": fam_progression_bonus,
++            "fam_last_remaining_bonus": fam_last_remaining_bonus,
++            "family_score": fam_score,
+             "section_count": df_section_count,
+             "progression_flag": df_progression_flag,
+             "last_remaining_3v": df_last_remaining_flag,
+         })
+@@
+-    # sort/stable return
++    # sort/stable return
+     return df.sort_values(
+         ["section","Set","Draw","Column","family_score"],
+         ascending=[True,True,True,True,False]
+     ).reset_index(drop=True)
+
+
+You already fixed two important issues here in the new session:
+(1) removed the accidental \n text, and
+(2) corrected the Draw/Column swap when unpacking the row.
+The diff above folds in the rest: fam_* parts, doubles adjacency, and explicit bonus fields.
+
+3) src/core/stable_pattern_extractor.py — tiny metrics JSON (drop‑in)
+
+Add this helper and call it after you write the CSVs/HTML:
+
+# at top
+import json
+
+def _write_metrics_json(out_dir, state, df_scores, df_families, df_raw=None, df_fam_spot=None, winners=None):
+    out = {
+        "state": state,
+        "rows": int(len(df_scores or [])),
+        "families": int(len(df_families or [])),
+        "winners": list(winners or []),
+        "spotlight_rate_raw": float((len(df_raw) / max(1, len(df_scores))) if df_raw is not None else 0.0),
+        "spotlight_rate_families": float((len(df_fam_spot) / max(1, len(df_families))) if df_fam_spot is not None else 0.0),
+        "top_winner_family_rank": _best_rank_for_winners(df_families, winners),
+        "family_compression_ratio": float((len(df_families) / max(1, len(df_scores))) if (df_scores is not None and df_families is not None) else 0.0),
+        "hot_density_top10_mean": float((df_families.sort_values("family_score", ascending=False)
+                                         .head(10)["hot_density"].mean()) if df_families is not None and "hot_density" in df_families else 0.0),
+    }
+    metrics_path = out_dir / f"{state}_stable_patterns_metrics.json"
+    metrics_path.write_text(json.dumps(out, indent=2))
+    return metrics_path
+
+def _best_rank_for_winners(df_families, winners):
+    try:
+        if df_families is None or not len(winners):
+            return None
+        ranks = []
+        for fid in set(_winner_to_family_ids(winners)):  # your existing converter if any
+            sub = df_families[df_families["family_id"] == fid]
+            if not sub.empty:
+                rank = int(sub["family_score"].rank(ascending=False, method="min").min())
+                ranks.append(rank)
+        return min(ranks) if ranks else None
+    except Exception:
+        return None
+
+
+Wire it where you already have paths to the four CSVs—pass the DataFrames you have in scope.
+
+4) scripts/hooks/check_contract.py (pre‑commit guard)
+#!/usr/bin/env python
+from __future__ import annotations
+import sys, json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+REQ_ROW = {"dom_last","dom_pair","family_id","hidden3v","perm_count_in_box","repeat_extras_in_box",
+           "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
+           "score_cov","score_hpr","score_perm","score_repeat","score_straight",
+           "score_single","score_cons","score_hot","score_mirror","score_dom","score_len","score_hidden","why"}
+REQ_FAM = {"fam_cov","fam_hpr","fam_perm","fam_repeat","fam_cons","fam_hot",
+           "fam_straight2","fam_straight3","fam_doubles",
+           "fam_section_bonus","fam_progression_bonus","fam_last_remaining_bonus",
+           "section_count","progression_flag","last_remaining_3v","any_doubles_support","family_score"}
+
+def grep(path: Path, needle: str)->bool:
+    try: return needle in path.read_text(encoding="utf-8", errors="ignore")
+    except Exception: return False
+
+def main()->int:
+    # 1) ensure score-contract markers exist
+    stable_init = ROOT/"alpha_analytical/stable/__init__.py"
+    post_fam     = ROOT/"alpha_analytical/stable/post_pass_families.py"
+    if not grep(stable_init, "AAT9-SCORE-CONTRACT: BEGIN (ROW)") or not grep(post_fam, "AAT9-SCORE-CONTRACT: BEGIN (FAMILY)"):
+        sys.stderr.write("Contract markers missing in stable modules.\n")
+        return 1
+    # 2) ensure yaml has the keys (JSON is valid YAML too)
+    cfg = ROOT/"alpha_analytical/stable/feature_config.yml"
+    try:
+        import yaml
+        keys = set((yaml.safe_load(cfg.read_text()) or {}).keys())
+    except Exception as e:
+        sys.stderr.write(f"Unable to load feature_config.yml: {e}\n")
+        return 1
+    required_yaml = {"vertical_coverage_per_row","horizontal_persistence_repeat_bonus",
+                     "baseline_straight_bonus","baseline_boxed_bonus","straight_2rows_bonus","straight_3rows_bonus",
+                     "extra_digit_per_char","single_left_bonus","mirror_bonus","consensus_full_bonus",
+                     "dominant_last_bonus","dominant_pair_bonus","dominant_double3_bonus",
+                     "min_score_to_highlight","perm_density_per_extra","repeat_count_per_extra",
+                     "vtrac_family_presence","cross_section_triple","progression_across_sets",
+                     "last_remaining_3v_bonus","consensus_family_bonus","hotzone_family_bonus",
+                     "doubles_trigger_bonus","hidden3v_bonus"}
+    miss = required_yaml - keys
+    if miss:
+        sys.stderr.write(f"feature_config.yml missing keys: {sorted(miss)}\n")
+        return 1
+    # 3) sanity: schemas will be enforced by tests; hook only blocks obvious regressions
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+Update .pre-commit-config.yaml:
+
+  - repo: local
+    hooks:
+      - id: check_contract
+        name: check_contract
+        entry: python scripts/hooks/check_contract.py
+        language: system
+        pass_filenames: false
+
+
+You already have run_py_compile, pytest smoke, and the Aux guard in pre‑commit. This adds one light, fast schema guard so we don’t “optimize away” required fields again.
+
+C. What to run (in order)
+# 0) ensure clean import & tests
+python -m py_compile alpha_analytical/stable/__init__.py alpha_analytical/stable/post_pass_families.py
+pytest -q tests/test_stable_contracts.py
+
+# 1) pre-commit end-to-end
+pre-commit run --all-files
+
+# 2) one synthetic smoke to confirm doubles adjacency
+python - <<'PY'
+from alpha_analytical import stable
+import pandas as pd
+df = pd.DataFrame([
+    {"RowType":"R2","Set":"Set1","Draw":"Draw1","1":"227","2":"277","3":"","4":""},
+    {"RowType":"R4","Set":"Set1","Draw":"Draw1","1":"227","2":"277","3":"","4":""},
+    {"RowType":"R6","Set":"Set1","Draw":"Draw1","1":"227","2":"277","3":"","4":""},
+    {"RowType":"R8","Set":"Set1","Draw":"Draw1","1":"227","2":"277","3":"","4":""},
+])
+df_fam = stable.build_family_summary(stable.analyse(df,"Combined")[1], stable.CFG)
+print(df_fam[["Column","family_id","any_consensus","any_doubles_support","fam_doubles","family_score"]])
+PY
+
+
+Then run CT/DE/IN training bundles with min_occ=1 and min_score_to_highlight=7 to regenerate artifacts + the new *_metrics.json.
+
+D. Winners‑logging: exactly how it ties in
+
+Stable → winners spotlight (already in your artifacts):
+The new columns tell you why the winner’s family scored (e.g., any_doubles_support=True, fam_section_bonus=2, fam_progression_bonus=1, last_remaining_3v=True).
+→ This makes the Stable “winners” much more auditable.
+
+Control Center / Aux “Winners Logger” (the screenshot with highlights in the combined table):
+It keys off V‑TRAC family/Index. Our Stable changes:
+
+guarantee consistent family_id (rep3 mapping, 277→Index 26),
+
+export per‑box/family features that the logger (or a lightweight joiner) can pull to annotate highlights (e.g., add a tooltip: “consensus; doubles support; hot‑dense 0.67; progression ✓”).
+
+If you want the logger to show those annotations now, add a tiny join:
+
+join on (state, Set, Draw, Column, family_id) → pull family_score + flags from <STATE>_stable_patterns_families.csv
+
+
+That’s all it needs; no refactor.
+
+E. Keeping momentum with Codex context limits
+
+You’re already doing the right thing: break work into small, test‑guarded chunks.
+
+Drop a one‑page tasks/RESUME_SEED.md in the repo (short state of play + the bullet TODOs); paste that as the first message to any fresh Codex session.
+
+Let pre‑commit/pytest be the “memory”—if the tests and the hook are green, you’re safe to ship the next chunk.
+
+F. Quick acceptance checks (5 minutes each run)
+
+*_scores.csv contains all required row columns listed above.
+
+*_families.csv contains fam_ columns*, any_doubles_support, and the three bonus columns.
+
+Winners spotlight families include the correct family_id(s) and show sensible values for section_count, progression_flag, and (where applicable) last_remaining_3v.
+
+*_metrics.json exists and has reasonable ratios.
+
+pre‑commit is green (py_compile + pytest + aux guard + check_contract).
+
+If any of those miss, send me the top 10 rows of the affected CSV and I’ll point to the exact weight/line to adjust.
+
+If you want, I can also draft the tiny Control Center winners‑logger join snippet so it displays the Stable family flags in its hover/side panel—just say the word.

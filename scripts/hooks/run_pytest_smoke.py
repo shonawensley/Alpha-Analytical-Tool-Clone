@@ -19,6 +19,7 @@ def build_env() -> dict[str, str]:
     if existing:
         paths.append(existing)
     env["PYTHONPATH"] = os.pathsep.join(paths)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
 
 

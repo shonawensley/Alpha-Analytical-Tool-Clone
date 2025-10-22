@@ -1,0 +1,169 @@
+You didn’t break anything. The overlay code is already reverted to the last‑known‑good state, so you’re on stable ground. What you want next is pure packaging control—leave the overlay engine producing all three variants (M/E/C) for diagnostics, but ship only Midday + Evening in the training bundle by default.
+
+Below is a paste‑ready plan you can give Codex. I’m also recapping what each output does so the directory layout finally “clicks.”
+
+What each folder/file is (so we’re aligned)
+
+digit_reduction/<STATE>/training/
+
+*_digit_reduction_log.json → the reducer’s full ladders (the raw training log the analyzer consumes).
+
+*_digit_reduction_steps.csv → step‑by‑step ladder table (human‑readable).
+
+digit_reduction/<STATE>/analyzer_v2/
+
+*_analyzer_v2_per_item.csv → one row per box (R2 is the box key). Features + (soon) merged dr.win_* flags.
+
+*_analyzer_v2_top_candidates.csv → rolled‑up strongest sets/boxes.
+
+*_analyzer_v2_meta.json → config, weights, and source paths.
+
+analyzer_v2/winners/<STAMP>_* → runtime overlay artifacts (15 files today = 5 artifacts × 3 variants).
+
+digit_reduction/<STATE>/training_sets/<STAMP>/ (the bundle you hand to AI/analysis)
+
+A snapshot: copies of the analyzer CSVs/JSON + a subset of winners artifacts + a manifest.json.
+
+We’ll change only what lands in training_sets. The engine can keep writing Combined under analyzer_v2/winners for debugging and UI, but the bundle will default to Midday+Evening only.
+
+This matches your “R2‑as‑box‑ID” model and the scoring/guardrails we’ve been using (R2 identifies the box; R4/R6/R8 are intra‑box stability views; repeat across different R2 strings = cross‑box survival), which is why we keep R2 as the join key and add stability metrics across the steps.
+
+Paste‑ready instructions for Codex (safe, low‑risk)
+
+Goal: Keep producing all three variants (M/E/C) at runtime, but package only Midday & Evening winners by default (10 files: 5 artifacts × 2 variants). Add an opt‑in to include Combined when needed. No overlay code changes.
+
+1) Packaging filter (the only behavior change)
+
+File: alpha_analytical/digit_reduction/analyzer_v2/training_bundle.py
+
+At top‑level (near existing regexes):
+
+PACKAGED_VARIANTS_DEFAULT = ("Midday", "Evening")
+
+# If not present already, a single regex that works for the five artifact types:
+ARTIFACT_RE = re.compile(
+    r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_"
+    r"(?P<artifact>winner_(map|stamp|flags|hits|overlay)\.(json|csv|html))$"
+)
+
+
+In package_training_bundle(... ) (or the helper that gathers winners files), add a parameter and filter:
+
+def package_training_bundle(..., include_combined: bool = False, ...):
+    packaged_variants = (
+        ("Midday", "Evening", "Combined") if include_combined
+        else PACKAGED_VARIANTS_DEFAULT
+    )
+
+    winners_src = analysis_root / state / "analyzer_v2" / "winners"
+    winners_dst = bundle_root / "winners"
+    winners_dst.mkdir(parents=True, exist_ok=True)
+
+    for f in winners_src.glob(f"{stamp}_*_winner_*.*"):
+        m = ARTIFACT_RE.match(f.name)
+        if not m:
+            continue
+        if m["variant"] not in packaged_variants:
+            continue
+        shutil.copy2(f, winners_dst / f.name)
+        manifest["files"].append(str(Path("winners") / f.name))
+
+    # also record what we chose
+    manifest["packaged_variants"] = list(packaged_variants)
+
+
+Important: Do not delete or suppress the Combined files under analyzer_v2/winners/. We’re only filtering what the bundle copies.
+
+2) UI / CLI to opt‑in Combined (optional but nice)
+
+Files: src/app.py (packaging block), analyzer_v2/ui_dev.py if used for DEV panel.
+
+Add a checkbox “Include Combined artifacts in training bundle” that passes include_combined=True to package_training_bundle(...).
+
+3) Tests (additive)
+
+Files: tests/test_digit_training_bundle.py (or create one)
+
+New test case:
+
+Create a fake winners dir with 15 files ({stamp}_{variant}_winner_{map,stamp,flags,hits,overlay}).
+
+Call the packager without include_combined → assert manifest["packaged_variants"] == ["Midday","Evening"] and len(bundled_winners) is 10 (no Combined filenames).
+
+Call again with include_combined=True → assert 15 bundled files.
+
+No change to overlay acceptance tests: they still expect all three variants to be produced at runtime.
+
+4) Docs & change log
+
+docs/AAT9_KIT/... and AAT9_Unified_Changelog.md: add a short entry
+“Digit Reduction training bundles now include Midday & Evening winner artifacts by default (10 files). Use Include Combined to ship all 15.”
+
+HUMAN_READ_FIRST_AAT9.md: add one‑liner under “Training bundles.”
+
+5) Verification script (DEV convenience)
+
+Provide a quick helper (or just these commands):
+
+# Rebuild one state’s bundle
+python -m alpha_analytical.digit_reduction.analyzer_v2.training_bundle \
+  --state Connecticut4 --stamp 20251011
+
+# Expect: digit_reduction/Connecticut4/training_sets/20251011/winners contains only:
+#   20251011_Midday_winner_{map.json,stamp.json,flags.csv,hits.csv,overlay.html}
+#   20251011_Evening_winner_{map.json,stamp.json,flags.csv,hits.csv,overlay.html}
+
+Why this approach (and why it’s safe)
+
+We aren’t touching overlay logic at all. Overlay still generates all 3 variants so your analysis & UI keep seeing Combined context. We only change what the bundle copies, which avoids edge‑case regressions.
+
+It preserves your architecture principle: self‑contained modules with explainable evidence; later we aggregate, but each tool keeps its own verified outputs.
+
+What to actually say to Codex (copy/paste)
+
+Task: Lean Digit Reduction training bundles from 15 to 10 winners artifacts by default.
+Do not change overlay generation. Only change the packaging step.
+
+In analyzer_v2/training_bundle.py, add:
+
+PACKAGED_VARIANTS_DEFAULT = ("Midday", "Evening")
+
+A unified ARTIFACT_RE that matches the five winners files.
+
+Parameter include_combined: bool = False on package_training_bundle(...).
+
+When copying winners files into the bundle, filter by ("Midday","Evening") unless include_combined=True.
+
+Record manifest["packaged_variants"].
+
+App/CLI: add “Include Combined artifacts” and thread the boolean to the packager.
+
+Tests: add a unit test that bundles 10 files by default and 15 when include_combined=True. Keep overlay acceptance tests unchanged.
+
+Docs: update KIT + changelog with the new default and the opt‑in flag.
+
+Verify by repackaging one state (e.g., Connecticut4, stamp 20251011) and confirming training_sets/<STAMP>/winners/ contains only Midday & Evening files unless the flag is set.
+
+Quick answers to your other points
+
+Why you saw 15 files: the overlay currently writes 5 artifacts for each variant (M/E/C). That’s intentional for diagnostics, but it’s noisy in a bundle. The plan above cuts the bundle to 10 without losing Combined evidence in the app/tests.
+
+Which outputs are “vital” per state (for training):
+
+*_digit_reduction_log.json (reducer log),
+
+*_analyzer_v2_per_item.csv,
+
+*_analyzer_v2_top_candidates.csv,
+
+*_analyzer_v2_meta.json,
+
+winners/ → Midday & Evening:
+winner_map.json, winner_stamp.json, winner_flags.csv, winner_hits.csv, winner_overlay.html.
+That’s the six analyzer/reducer files + ten winner artifacts we’ve been standardizing on.
+
+R2/R4/R6/R8 and stability scoring: keep R2 as the join key (one box), but compute per‑class earliest_step, persistence across R2→R8, final_presence, dup_density, and residual_purity—these are the stability bonuses we feed to the scorer, aligned with your Basis for Analysis.
+
+Final reassurance
+
+You can let Codex proceed with the packaging change above. The revert already put you back to the green state; the change we’re making is isolated, covered by a small test, and won’t affect the analyzer/overlay themselves. Once this is in, the training bundles will be clean (10 files), while your runtime/diagnostics stay rich (all 3 variants available).

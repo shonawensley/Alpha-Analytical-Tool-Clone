@@ -1,10 +1,53 @@
+## 2025-10-18 - Data validation workflow + insights refresh
+- Impact: Added a dedicated workflow guide (`AAT9_Data_Validation_Workflow.md`) capturing the full loop for generating enhanced bundles, running the validator, producing `matrix.csv`/`findings.md`, and handing artifacts to reviewers (commit/push, zip, or targeted upload).
+- Impact: Logged data-sharing best practices and aggregator outlook in `AAT9_Analysis_Insights.md`, emphasising continued rule-based tuning with optional ML later.
+- Files: docs/AAT9_KIT/{AAT9_Data_Validation_Workflow.md,AAT9_Analysis_Insights.md}
+
+## 2025-10-18 - Validator regression guardrails + batch metrics
+- Impact: Section summaries now capture mask-drop/reduction/mirror/doubles stats per variant; validator compares straight occurrences and surfaces analyzer metrics/straights alongside Winners HTML.
+- Impact: Added fixture-backed regression (`tests/test_vtrac_validate_fixture.py`) with frozen Delaware4/Florida4 HTML+JSON pairs so validator outputs stay populated; new batch helper (`tools/vtrac_validate_batch.py`) prints precision@K and supports comparison bundles.
+- Impact: Florida4 Combined review confirmed the absence of 3-value clusters is expected (columns collapse to two digits); documentation updated with findings and new validator/batch workflows.
+- Files: modules/vtrac_enhanced/adapters.py, tools/vtrac_validate.py, tools/vtrac_validate_batch.py, tests/test_vtrac_validate_fixture.py, tests/fixtures/vtrac_validation/**, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}
+
+## 2025-10-17 - Validation - Enhanced V-TRAC parity harness and bundle summaries
+- Impact: Added `tools/vtrac_validate.py` to parse Winners Logger HTML, recompute 3-value V-TRAC signatures, hot/super-hot counts, consensus flags, and compare them to analyzer outputs (supports single run and optional A/B inputs).
+- Impact: Extended `modules.vtrac_enhanced.write_prediction_bundle` so JSON bundles now include per-section summaries (`hot_count`, `superhot_count`, `consensus`, `stable_columns`, `top_box_signatures`, `ring_votes`) and `top_straights`, enabling downstream parity checks without re-reading tables.
+- Impact: Updated Streamlit wrapper, headless CLI, and regression test to pass the engine input into the bundle writer; refreshed sample validations for Delaware4, Michigan4, Florida4, NewJersey4, and Virginia4 with overlap now visible in `data/outputs/analysis/vtrac_validation/`.
+- Files: tools/vtrac_validate.py, modules/vtrac_enhanced/adapters.py, tools/vtrac_enhanced_cli.py, src/core/module_c_vtrac_enhanced.py, tests/test_vtrac_enhanced_basic.py, docs/AAT9_KIT/AAT9_Analysis_Insights.md
+
+## 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
+- Impact: Replaced the placeholder analyzer with the production engine: ring/column survival, set echoes, cross-section consensus, column-span depth, hot/super-hot support, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Introduced a shared evidence grid (`modules/vtrac_enhanced/evidence.py`) consumed by both the analyzer and the V-TRAC winners logger, so highlights and scoring share the same data.
+- Impact: Added a headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) plus a feature-gated Streamlit wrapper (`src/core/module_c_vtrac_enhanced.py`). Legacy engine stays default until A/B review.
+- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py,evidence.py}, tools/vtrac_enhanced_cli.py, tests/{test_vtrac_enhanced_basic.py,test_vtrac_evidence.py}, tests/fixtures/vtrac/**, src/core/module_c_vtrac.py, src/core/module_c_vtrac_enhanced.py
+
+## 2025-10-14 - Stable winners guardrail polish
+- Impact: Winners enrichment now reuses the Stable canon helpers, coerces diagnostic booleans to nullable dtypes, and adds a pre-commit guard so the CSV export keeps the evidence columns; manifest tests assert evidence schema versions stay recorded.
+- Impact: Digit Reduction bundle packaging verified in-situ (20251011 stamp) and Control Center batch smoke confirmed Stable metrics + winners evidence + lean DR bundles continue to land together.
+- Files: alpha_analytical/stable/winners_enrich.py, scripts/hooks/check_winners_export.py, tests/test_stable_training_bundle.py, tests/test_stable_doubles_adjacency_negative.py, .pre-commit-config.yaml, .gitignore, docs/AAT9_KIT/AAT9_Testing_Roadmap.md
+
+## 2025-10-14 - Docs - Onboarding compass and startup briefing refresh
+- Impact: Added AAT9_Onboarding_Compass.md to centralize onboarding flow, validation loop, and documentation expectations.
+- Impact: Updated CODEX_READ_FIRST briefing and KIT README to point at the compass and remove redundant checklists.
+- Files: docs/AAT9_KIT/{AAT9_Onboarding_Compass.md,AAT9_KIT_README.md}, briefings/CODEX_READ_FIRST_AAT9.md
+
+## 2025-10-13 - Stable evidence bus + lean Digit Reduction bundles
+- Impact: Streamlined the Stable winners evidence flow so Control Center exposes consolidated metrics/evidence (downloadable CSV) and the training manifest records schema versions.
+- Impact: Digit Reduction training bundles now package Midday/Evening winner artifacts by default (10 files) with an `include_combined` toggle; runtime overlays still emit Combined for diagnostics.
+- Files: alpha_analytical/stable/{metrics.py,training_bundle.py,winners_enrich.py}, alpha_analytical/control_center/batch_runner.py, alpha_analytical/digit_reduction/analyzer_v2/training_bundle.py, tests/test_digit_training_bundle.py, src/app.py, docs/AAT9_KIT/{AAT9_Quickstart_Cheat_Sheet.md}.
+
+## 2025-10-12 - Aux canonical draws guardrail
+- Impact: Canonicalised Aux and Control Center draw loading through `modules.aux_loaders.load_state_draws`, removed staged fallbacks, and patched the V-TRAC overlay to reuse cached draw windows so the Aux page no longer crashes when staged modules disappear.
+- Impact: Added regression coverage that asserts live data resolves under `data/cleaned/draws`, updated workflow docs, and standardised the Aux validation harness as the go-to guardrail after draw refreshes.
+- Files: src/app.py, tests/test_aux_loader_canonical_paths.py, docs/AAT9_KIT/{AAT9_Quickstart_Cheat_Sheet.md,AAT9_Workflow_Standard.md,AAT9_Unified_Changelog.md}, scripts/checks/smoke_positional.py, .codex/preflight.ps1.
+
 ## 2025-10-10 - Digit Reduction batch workflow\n- Impact: Control Center batch workflow can now refresh Digit Reduction outputs, build Analyzer V2 overlays, and optionally assemble Digit Reduction training bundles alongside the winners logger and Stable pipeline so all auxiliary artefacts stay in sync.\n- Impact: Added batch runner helpers and Streamlit toggles covering reducer/overlay/analyzer/bundle steps plus mirror controls; UI now surfaces per-state artefact links and guards missing tables.\n- Impact: Hardened Analyzer V2 own_vs_combined to treat empty cores as False, preventing ValueErrors during class-triple runs.\n- Impact: Added regression coverage for the batch workflow scaffolding and the pivot guard.\n- Files: alpha_analytical/control_center/batch_runner.py, src/app.py, alpha_analytical/digit_reduction/analyzer_v2/pivot.py, tests/test_control_center_batch_runner.py, tests/test_digit_reduction_overlay.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Workflow_Standard.md,AAT9_Quickstart_Cheat_Sheet.md,AAT9_Unified_Changelog.md}, briefings/CODEX_READ_FIRST_AAT9.md.\n\n## 2025-10-10 - Aux double/pair validation harness\n- Impact: Added aux_validation helpers and a CLI to recompute double and pair draws-since per variant directly from the draws CSVs, making it easy to cross-check Control Center badges and pair severity.\n- Impact: New unit tests cover thresholds, variant overlap, family badge extraction, and pair severity so regressions are caught automatically.\n- Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_doubles.py, tests/test_aux_validation.py.
 - Impact: Added repeat-watch and positional hard-due validators plus a CLI so streak summaries and hard-due tags can be replayed directly from CSVs without launching Streamlit.\n- Impact: Extended unit coverage to lock repeat streak metrics and hard-due tagging against the acceptance fixtures.\n- Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_repeat.py, tests/test_aux_validation.py.
 - Impact: Introduced V-TRAC overlay/heatboard and sums validators plus a CLI so Control Center overlays can be cross-checked directly from the CSVs.
 - Acceptance: added tests/acceptance/test_vtrac_overlay_connecticut.py to snapshot overlay/heatboard/sums outputs for Connecticut, keeping the CLI and UI aligned with fixtures.
 - Impact: Unit coverage now compares overlay and heatboard outputs against the Streamlit helpers to catch drift immediately.
 - Files: alpha_analytical/control_center/aux_validation.py, scripts/tools/validate_aux_vtrac.py, tests/test_aux_validation.py.\n\n?## 2025-10-10 - Aux draw refresh guardrail
-- Impact: Aux draw regeneration now offers a “delete existing draw CSVs” toggle that purges the selected state files before writing, preventing stale data from lingering between runs.
+- Impact: Aux draw regeneration now offers a delete existing draw CSVs toggle that purges the selected state files before writing, preventing stale data from lingering between runs.
 - Impact: Added `alpha_analytical.control_center.draws_refresh.purge_draw_csvs` with unit coverage so the Control Center refresh stays clean and reproducible.
 - Files: alpha_analytical/control_center/draws_refresh.py, src/app.py, tests/test_draws_refresh.py, briefings/CODEX_READ_FIRST_AAT9.md, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Testing_Roadmap.md,AAT9_Unified_Changelog.md}.
 ## 2025-10-10 - Control Center batch winners workflow
@@ -70,7 +113,7 @@
 
 ## 2025-10-02 - Aux SSOT windows & V-TRAC repeat watch
 - Impact: Added core/aux_config.py as the single source of truth for Aux windows/thresholds, surfaced the values in UI captions/dev health, unified the V-TRAC overlay for the working table and index hits, and introduced a Control Center repeat watch panel backed by new overlay helpers.
-- Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, 	ests/test_analyze_pairs_semantics.py.
+- Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, ests/test_analyze_pairs_semantics.py.
 
 
 ## 2025-10-02 - Aux SSOT follow-up (UI + smoke)
@@ -94,6 +137,40 @@
 
 
 
+
+
+
+
+## 2025-10-11 - Aux canonical draw loader & module cleanup
+- Impact: Locked Aux/BA/Control Center draw resolution to `data/cleaned/draws/`, vendored the working analyze_pairs / vtrac_reference modules, flattened the remaining expander, and bound the 360/1000 windows via safe defaults. Aux now renders without staged fallbacks and the red tier returns consistently.
+- Files: utils/path_handler.py, modules/aux_loaders.py, modules/analyze_pairs.py, modules/vtrac_reference.py, src/app.py.
+
+# 2025-10-16 - Enhanced V-TRAC analyzer (engine + tooling delivered)
+- Impact: Replaced the placeholder enhanced analyzer with the production engine: ring/column survival, hot-zone boosts, cross-section consensus, reduction/mirror assists, and order-sensitive straight scoring. Outputs now land under `data/outputs/analysis/vtrac/<STATE>/...` with rich evidence.
+- Impact: Added a headless CLI (`tools/vtrac_enhanced_cli.py`) and regression suite (`tests/test_vtrac_enhanced_basic.py` + fixtures) so the analyzer can be smoked outside Streamlit. Feature-gated UI wrapper (`src/core/module_c_vtrac_enhanced.py`) mirrors the legacy page while storing results and bundles in session state.
+- Files: modules/vtrac_enhanced/{__init__.py,types.py,config.py,features.py,engine.py,adapters.py}, tools/vtrac_enhanced_cli.py, tests/test_vtrac_enhanced_basic.py, tests/fixtures/vtrac/**, src/core/module_c_vtrac_enhanced.py.
+- Notes: Tuning/Why panels and learning capsules remain future work; flag `AAT9_FLAGS.ENHANCED_VTRAC` stays false until cross-validated.
+
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
+## 2025-10-13 - Stable extractor regression shield (work paused)
+- Impact: Row payload now exports per-component score fields (score_covscore_hidden) and flags hidden 3-value patterns; YAML gained doubles_trigger_bonus / hidden3v_bonus.
+- Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
+- Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
+- Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
 
 
 

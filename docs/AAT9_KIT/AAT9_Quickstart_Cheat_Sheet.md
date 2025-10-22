@@ -6,14 +6,14 @@
   - CWD is repo root
   - Python path
   - Import sources for `utils.path_handler`, `modules.blackapple`, `modules.aux_loaders`, `alpha_analytical.stable`
-  - `data/cleaned/*_draws.csv` inventory and selected state resolution
+  - Draw inventory lines for `data/cleaned/draws` (should be non-zero) and selected state resolution
 
 ## Launch the App
 - `run_app.bat` (runs `streamlit run src\app.py` from repo root)
 - Dev tip: keep the in-app "System Health" expander available to debug path drift.
 
 ## Data Sources by Page
-- Aux / Blackapple: `data/cleaned/*_draws.csv` (draws-only)
+- Aux / Blackapple: `data/cleaned/draws/*_draws.csv` (draws-only; Combined/Midday/Evening all live here)
 - Variant support: Combined / Midday / Evening. Use `modules.aux_loaders.load_state_draws(state, variant)`; Control Center and the Aux page surface all available variants.
 - V-TRAC / Stable / Digit Reduction: combined tables via `utils.path_handler` under `tables/` or `data/outputs/tables/<STATE>/`
 
@@ -28,14 +28,17 @@
 ## Common Checks
 - If a page shows "missing data": ensure the expected directory exists (per above contracts).
 - If BA shows import issues: verify `modules/blackapple.py` path in System Health.
-- If Aux state draws empty: verify `data/cleaned/<State>_draws.csv` (preflight lists inventory).
+- If Aux state draws empty: verify `data/cleaned/draws/<State>_draws.csv` (preflight lists inventory) and rerun `scripts/tools/validate_aux_all.ps1`.
+- After any draws refresh or CSV edit, run `scripts/tools/validate_aux_all.ps1` from repo root; it fails fast if the Aux loaders drift from the canonical directory.
+- Commits automatically run the Aux guard (`python scripts/hooks/validate_aux_draws.py`). Only bypass in emergencies via `AAT9_SKIP_AUX_GUARD=1` before `git commit`.
 
 ## Useful Paths & Helpers
 - `utils.path_handler` - canonical path helpers for outputs/analysis/tables
 - `modules.aux_loaders.load_state_draws(state)` - robust draws CSV resolver
 - `alpha_analytical/stable` - YAML-weighted stable extractor (`feature_config.yml`)
 
-\n\n## Control Center Batch Workflow\n- Paste the Pick3StatsC4 winners list into the Control Center batch expander.\n- Use the toggles to run the winners logger, Stable Pattern extractor (with optional bundle), and the Digit Reduction pipeline (reducer refresh, Analyzer V2 overlays, optional Digit Reduction bundle).\n- Set the bundle stamp before enabling Stable or Digit Reduction bundle options so artifacts land under the desired `data/outputs/analysis/.../<STAMP>/` folder.\n- Ensure combined tables exist for every tracked state you refresh; the expander writes Digit Reduction outputs under `data/outputs/analysis/digit_reduction/<STATE>/`.\n\n## Auxiliary Tools Highlights
+\n\n## Control Center Batch Workflow\n- Paste the Pick3StatsC4 winners list into the Control Center batch expander.\n- Use the toggles to run the winners logger, Stable Pattern extractor (with optional bundle), and the Digit Reduction pipeline (reducer refresh, Analyzer V2 overlays, optional Digit Reduction bundle).\n- Set the bundle stamp before enabling Stable or Digit Reduction bundle options so artifacts land under the desired `data/outputs/analysis/.../<STAMP>/` folder.\n- Ensure combined tables exist for every tracked state you refresh; the expander writes Digit Reduction outputs under `data/outputs/analysis/digit_reduction/<STATE>/`.
+- Digit Reduction training bundles copy Midday + Evening winner artifacts by default (10 files). Use the `include_combined` flag/checkbox when you need the Combined artifacts as well.\n\n## Auxiliary Tools Highlights
 - Positional Pressure (Aux page) renders Combined/Midday/Evening side-by-side (P1/P2/P3 columns, top-3 digits) with a fixed 360-draw window and Top-3 ranks; hard-due cells are highlighted in red.
 - Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
 - Control Center adds a positional heat badge per state/variant using the same draws-only engine.
@@ -44,6 +47,7 @@
 - After running the Stable page you should see the HTML/CSV under `data/outputs/analysis/patterns/<STATE>/`.
 - A new winners field accepts comma-separated 3-digit numbers; when supplied, the run produces `<STATE>_winner_family_spotlight_raw.csv` and `<STATE>_winner_family_spotlight_families.csv` alongside `<STATE>_stable_patterns_families.csv`.
 - Use Dev Health (Stable) to confirm the engine path, YAML path, and the generated file locations.
+- Batch runs write `<STATE>_metrics.json` (stable evidence schema) and manifest entries so Control Center can display per-state metrics and download links after successful runs.
 ## Dev Health (fast UI checks)
 - Control Center: toggle Dev Health to see key module bindings (path_handler, vtrac_reference, winner_report_full, blackapple, aux_loaders, pipeline_runner) and tables root inventory.
 - Winners Full tile: toggle Dev Health to confirm `modules` binding, canonical vtrac_reference path, builder presence, and per-state combined tables existence.

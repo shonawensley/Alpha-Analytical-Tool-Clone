@@ -1,0 +1,300 @@
+Got it—I read your new Codex session log carefully and I’ll respond in two parts:
+
+Architect review of what Codex actually changed / fixed, what’s still risky, and the tight next steps.
+
+Exactly how the Stable Pattern optimizations relate to “winners logging,” and which winners logs we mean across tools.
+
+1) Architect review of this Codex session
+✅ What Codex fixed correctly (matches our plan)
+
+Broken import in post_pass_families.py.
+The literal \n that was spliced into the consensus/doubles line was removed and replaced with proper code. Good.
+
+Consensus → doubles support (first slice).
+It now computes any_doubles_support when a double for the same family is present in the same or ±1 adjacent column and the box has consensus. This is what we wanted for Phase‑2.
+
+Draw/Column swap bug.
+It corrected section, Set, Draw, Col = r["section"], r["Set"], r["Draw"], r["Column"] (previously reversed). This was quietly corrupting group keys; the fix is essential.
+
+Row score components & hidden‑by‑one.
+alpha_analytical/stable/__init__.py now exports per‑part fields (score_cov, score_hpr, score_perm, …, score_hidden) and adds a hidden3v detector. That’s the “regression shield” foundation we asked for.
+
+Config knobs added.
+doubles_trigger_bonus and hidden3v_bonus keys were added. Good.
+
+Targeted tests pass.
+pytest -q tests/test_stable_contracts.py ran and passed after the fixes. 👍
+
+⚠️ Things that are working but fragile (please tighten)
+
+Config loader duplication.
+Codex introduced alpha_analytical/stable/feature_config.py with CFG/reload(), and also left the older in‑module YAML reading in stable/__init__.py (per earlier history). Two ways to load config = drift risk.
+
+Architect directive:
+Make feature_config.py the single source of truth and import from alpha_analytical.stable.feature_config import CFG everywhere (row engine, family post‑pass, spotlight, training bundle). Remove any duplicate YAML reads.
+
+feature_config.yml was saved as JSON text.
+YAML is a superset of JSON so it parses, but:
+
+we lost inline comments, and
+
+other tooling may expect traditional YAML.
+
+Architect directive: keep the file as proper YAML (not JSON‑looking). If you like the new loader, keep it—but re‑format the file back to YAML with comments.
+
+hidden3v type coercion hack.
+Codex set hidden3v=None on stub rows to make the column dtype “object” and placate a type identity check in tests. That’s brittle: downstream code should not depend on Python bool vs numpy.bool_.
+
+Architect directive:
+
+Keep hidden3v strictly boolean (True/False) in the CSV.
+
+Change the test to assert truthiness (bool(row["hidden3v"])) or pd.isna(row["hidden3v"]) where relevant—do not require a Python bool identity.
+
+If you need tri‑state for stubs, add a separate flag (e.g., is_stub_row) instead of overloading the hidden3v dtype.
+
+Schema surface may still be inconsistent.
+In one diff, I saw an out_cols list that dropped dom_last, dom_pair, family_id, hidden3v; in another place those appeared again. Tests currently pass, but this is exactly what our contract hook is meant to prevent.
+
+Architect directive:
+
+Canonicalize one out_cols definition that includes all expected columns (the superset we designed).
+
+Add the pre‑commit contract hook (scripts/hooks/check_contract.py) to fail the commit if any required column disappears. (You already planned this; now wire it.)
+
+Consensus → doubles: “family double” detection reliability.
+The adjacency check is correct, but make sure the “is this a double for the same family?” predicate is aligned with our V‑TRAC mapping (i.e., not string‑pattern only). It looks like you used the family key; keep it that way.
+
+🧩 What remains to finish before we batch more runs
+
+Here’s a compact, Codex‑ready checklist. These are surgical; no big rewrites.
+
+P0 – Tighten current implementation
+
+Unify config loading.
+
+Remove any direct YAML reads in stable/__init__.py and post_pass_families.py.
+
+from alpha_analytical.stable.feature_config import CFG everywhere.
+
+Make feature_config.yml YAML again.
+
+Keep the same keys/values, but restore comments and YAML formatting.
+
+Normalize row schema & tests.
+
+Keep hidden3v as True/False always; add is_stub_row for stubs.
+
+Update test to check bool(row["hidden3v"]) (not type identity).
+
+Ensure one out_cols list holds the superset of columns.
+
+Family CSV: ensure all fam_ parts emit.*
+
+Confirm fam_cov, fam_hpr, fam_perm, fam_repeat, fam_cons, fam_hot, fam_straight2, fam_straight3, fam_doubles, plus fam_section_bonus, fam_progression_bonus, fam_last_remaining_bonus are all present and sum exactly to family_score (within floating tolerance).
+
+Add a family_score_parts_sum column during tests to assert equality.
+
+Last‑remaining discipline.
+
+Verify we only add last_remaining_3v_bonus when last_remaining_3v == True—never from a proxy (this was called out in FIX_122).
+
+Pre‑commit contract hook.
+
+Add scripts/hooks/check_contract.py that loads the latest one row from *_scores.csv and *_families.csv in the artifacts dir (or uses known schemas) and asserts required columns exist.
+
+Wire it after run_py_compile in .pre-commit-config.yaml.
+
+P1 – Finish Phase‑2 features (already partly landed)
+
+Consensus → doubles score.
+
+You set any_doubles_support; also add fam_doubles = + CFG['doubles_trigger_bonus'] and emit it in the family parts so family_score reflects it.
+
+Metrics writer.
+
+After a run, write <STATE>_metrics.json with:
+
+winner family ids,
+
+best rank of each winner family in families.csv,
+
+best rank of any exact straight row in scores.csv (is_exact_straight from spotlight),
+
+spotlight rates,
+
+average hot‑density in top‑10 families,
+
+family compression ratio (family rows / raw rows).
+
+Put it next to the artifacts and add it to the training bundle.
+
+Tests you still need (small, focused):
+
+test_family_score_parts_sum() asserting ≈ equality to family_score.
+
+test_consensus_doubles_adds_bonus() (create a mini DataFrame with consensus + adjacent double).
+
+test_last_remaining_only_when_flag_true().
+
+When those are green, we’re ready for a clean CT/DE/IN batch.
+
+2) How Stable Pattern optimizations connect to “winners logging” (and which one)
+
+There are three “winners logging” surfaces in your ecosystem. The Stable upgrades help all three, but each in a different way.
+
+A. Stable extractor “Winner Family Spotlight” (this repo)
+
+Files:
+
+.../<STATE>_winner_family_spotlight_raw.csv
+
+.../<STATE>_winner_family_spotlight_families.csv
+
+What the recent optimizations do for this logger
+
+Correct family mapping (V‑TRAC fallback, triple handling) ⇒ the right family gets pulled even for edge cases like 277.
+
+Better evidence in the CSVs: any_doubles_support, last_remaining_3v, section_count, progression_flag, hidden3v, row/family score parts.
+
+Order‑aware straights (straight2/straight3 from modal order) + is_exact_straight make it obvious when the exact winner straight actually appears.
+
+Why it matters: this spotlight is our auditing lens—if a winner’s family isn’t near the top with strong family evidence, we know where to tune.
+
+B. Winners Logger in the Control Center / AUX tooling
+
+(Where you showed screenshots of the combined R2/R4/R6/R8 tables with winners highlighted.)
+
+How Stable feeds this
+
+Stable now emits family_id on every row and a condensed families view with family_score.
+
+The AUX winners logger can join on family_id (and Set/Draw/Column) to:
+
+decorate its table boxes with Stable’s “evidence flags” (any_consensus, any_doubles_support, last_remaining_3v), and
+
+optionally color‑weight cells by family_score or hot_density.
+
+Why it matters: the AUX view becomes more than a static highlight—it inherits Stable’s reasoning, so you can see why a winner area was compelling (or not).
+
+C. Training bundle / manifest “winners” tag
+
+(You pasted those JSON-ish blocks showing winners: ["894","059"] etc.)
+
+How Stable upgrades help here
+
+The bundle already includes the spotlight CSVs; adding a small metrics.json (best ranks, spotlight rates, compression, hot density) lets you:
+
+scan dozens of states and see where Stable’s family search is strong/weak,
+
+gate merges and weight tweaks with quick KPIs.
+
+Why it matters: this turns “winners logging” into something measurable across runs and states, not just per‑example anecdotes.
+
+TL;DR on the relationship
+
+The Stable optimizations (family roll‑up, cross‑section presence, set progression, consensus→doubles, last_remaining_3v, hidden‑by‑one, row/family score parts) create richer, more reliable evidence about the winner’s family.
+
+That evidence powers:
+
+Stable’s own spotlight (audit & ranking),
+
+AUX winners logger (visual overlay + reasons),
+
+Training bundle metrics (batch QA & tuning feedback).
+
+The end state is one language: everything talks in terms of family_id + structured evidence, so the different “winners logs” stop diverging.
+
+One‑pager you can paste to Codex now (final send‑off)
+
+Goal: finish Phase‑2 cleanly, prevent regressions, and unify config.
+
+Unify config
+
+Edit alpha_analytical/stable/__init__.py and post_pass_families.py to use:
+
+from alpha_analytical.stable.feature_config import CFG
+
+
+Ensure there are no direct YAML reads left.
+
+Convert alpha_analytical/stable/feature_config.yml back to proper YAML with comments (same keys/values).
+
+Row schema discipline
+
+Keep hidden3v strictly boolean; add is_stub_row for stubs.
+
+Ensure one out_cols list includes:
+section,Set,Draw,Column,Canonical,type,score,rows,mirror,straight2,straight3,single_left,cons_full,cons_3v,cons_stub,dom_last,dom_pair,family_id,hidden3v,perm_count_in_box,repeat_extras_in_box,horizontal_persistence_repeat,orders_modal_value,orders_modal_rows,hot,score_cov,score_hpr,score_perm,score_repeat,score_straight,score_single,score_cons,score_hot,score_mirror,score_dom,score_len,score_hidden,why
+
+Family CSV discipline
+
+For each family box, compute parts:
+
+fam_cov, fam_hpr, fam_perm, fam_repeat, fam_cons, fam_hot, fam_straight2, fam_straight3, fam_doubles, fam_section_bonus, fam_progression_bonus, fam_last_remaining_bonus
+
+Set:
+
+family_score = fam_cov + fam_hpr + fam_perm + fam_repeat + fam_cons + fam_hot \
+               + fam_straight2 + fam_straight3 + fam_doubles \
+               + fam_section_bonus + fam_progression_bonus + fam_last_remaining_bonus
+
+
+Only add fam_last_remaining_bonus when last_remaining_3v=True.
+
+Consensus → doubles
+
+Keep your any_doubles_support logic (±1 adjacency).
+
+Add:
+
+fam_doubles = CFG.get("doubles_trigger_bonus", 0) if any_doubles_support else 0
+
+
+Emit any_doubles_support and fam_doubles in the family row.
+
+Metrics writer
+
+After a run, write <STATE>_metrics.json with:
+
+winner family ids,
+
+best rank of each winner family in families,
+
+best rank of any exact straight row in scores,
+
+spotlight rate,
+
+avg hot‑density in top‑10 families,
+
+compression ratio (family rows / raw rows).
+
+Add to training bundle.
+
+Contract tests & hook
+
+Add tests:
+
+test_family_score_parts_sum(),
+
+test_consensus_doubles_adds_bonus(),
+
+test_last_remaining_only_when_flag_true().
+
+Add scripts/hooks/check_contract.py; wire after run_py_compile in .pre-commit-config.yaml. The hook fails if any required column vanishes.
+
+Smoke
+
+Run CT/DE/IN with min_occ=1 and min_score_to_highlight=7.
+
+Confirm the new flags/bonuses appear in both spotlight files and families CSV.
+
+Quick note on your Codex CLI context issue
+
+You did nothing wrong. The new CLI build appears to not roll context seamlessly; when the window fills, you must start a new session. To keep momentum:
+
+Keep a tiny tasks/resume_CURRENT.txt in the repo (2–4 bullet points: “what’s done,” “what’s next,” “files touched”). Paste that as the first message in each new Codex session.
+
+Keep changes small and atomic (like the 7 bullets above) so each session finishes a chunk and commits with the guardrails green.
+
+If you want, I can turn the “contract hook” and a minimal metrics_writer into ready‑to‑paste code blocks. Otherwise, you’re green‑lit: let Codex implement the seven bullets above and then we’ll A/B the next CT/DE/IN batch.

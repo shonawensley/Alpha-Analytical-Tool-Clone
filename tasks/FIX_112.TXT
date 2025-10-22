@@ -1,0 +1,226 @@
+Thanks for giving me the full trail (screens, logs, and KIT docs). I read through everything you shared and cross‑checked the wiring docs you asked me to use (Live Wiring, Aux Official/Checkpoint, Roadmap, Pitfalls, Task notes). Below is a clear, copy‑paste set of instructions for Codex that will stop the loop and get Aux loading again.
+
+First—confirmation
+
+Yes—I am GPT‑5 Pro, running the high‑reasoning preset. That is the “highest reasoning” profile your CODEX_READ_FIRST_AAT9 brief expects.
+
+What the screenshots + docs are telling us
+From your screenshots
+
+V‑TRAC Analyzer preflight is green (tables under data/outputs/tables/... are fine).
+
+Aux page says “No state data files found” → then after clicking Run, you get
+“Working modules unavailable or no draws found.”
+
+A separate rescue banner appears: “main() raised: cannot access local variable PAIRS_WINDOW …”
+
+From your docs (the paper trail that matters)
+
+Live Wiring & Aux docs say Aux consumes per‑state draws CSVs data/cleaned/*_draws.csv (not the string tables).
+
+The Roadmap/Checkpoint repeats the same: Aux operates on *_draws.csv; Control Center rolls those up.
+
+But Pitfalls and Task notes also mention the exporter writing under a subfolder data/cleaned/draws/ (a newer layout) and advise not to drop CSVs back in the root data/cleaned. That’s a second, conflicting path in the corpus.
+
+The Task notes also remind us that Streamlit now forbids nested expanders; when the inner expander throws, Aux aborts before reading CSVs, which is why you saw that generic “ensure data/cleaned/” banner earlier.
+
+Net of the evidence
+
+You have two independent faults that can each produce the current symptoms:
+
+Import/boot fallback bug in src/app.py: if from core.aux_config import PAIRS_WINDOW fails during early boot, later code still references PAIRS_WINDOW → UnboundLocalError. That explains the rescue banner and the truncated Dev‑Health output on the Aux page.
+
+Path/name drift for draws CSVs:
+
+The code/docs disagree between data/cleaned/*_draws.csv and data/cleaned/draws/*_draws.csv.
+
+There’s also a state‑name normalization wrinkle (Connecticut4 in the UI, but the draws CSVs are named Connecticut_*draws.csv). The official Aux docs explicitly allow normalizing underscores/trailing “4”.
+
+Either of those will yield “no draws found / working modules unavailable”.
+
+What to tell Codex (copy‑paste)
+
+Goal: make Aux robust again by (A) fixing the boot import bug, (B) harmonizing draws path/name resolution, and (C) removing any remaining nested expanders. Do exactly the steps below—no broader edits.
+
+0) Quick sanity checks (no code changes)
+
+Verify the CSVs exist after you click Control Center → Generate Aux Draw CSVs:
+
+dir data\cleaned\draws\Connecticut*_draws.csv
+
+(and/or) dir data\cleaned\Connecticut*_draws.csv
+
+Reopen Aux → Dev Health and confirm cwd prints the repo root (it does in your screenshots) and that Python shows a system interpreter. That’s expected—the interpreter should be outside the repo; only cwd must be the project root. (So the Python path you highlighted is fine.)
+
+If CSVs exist but Aux still claims “no data”, proceed with the fixes below.
+
+1) Fix the boot import so PAIRS_WINDOW is always bound
+
+File: src/app.py (top of file; where PAIRS_WINDOW/VTRAC_INDEX_WINDOW are imported)
+
+# --- SSOT windows (Aux) ---
+try:
+    from core.aux_config import PAIRS_WINDOW, VTRAC_INDEX_WINDOW, SUMS_WINDOW
+except Exception as _exc:
+    # Rescue defaults (match SSOT): keep Aux alive even if imports fail early
+    PAIRS_WINDOW = 360
+    VTRAC_INDEX_WINDOW = 1000
+    SUMS_WINDOW = 360
+    RESCUE_BOOT = True  # optional: drive that red banner you show
+
+
+Why: your rescue path is firing (ModuleNotFound or similar), and later code references PAIRS_WINDOW as a local that never got bound—hence the exact error you saw.
+
+Reference: SSOT windows/thresholds are defined centrally; Aux relies on those values.
+
+2) Make draws resolution bullet‑proof (handles both folder shapes + name variants)
+
+File: modules/aux_loaders.py (or wherever load_state_draws lives; if it’s inside src/app.py, keep it there but isolate the helper)
+
+Add a single resolver and use it everywhere Aux/Control Center read draws:
+
+from pathlib import Path
+import re
+
+DRAW_DIRS = [Path("data/cleaned/draws"), Path("data/cleaned")]  # prefer subfolder
+
+def _canon_draws_basename(state: str) -> str:
+    """Normalize project state to draws CSV basename."""
+    s = state.strip()
+    # normalize trailing '4' and underscores vs spaces, as per Aux docs
+    s = re.sub(r"\s+", "_", s)
+    s = s[:-1] if s.endswith("4") else s
+    return s
+
+def resolve_draw_csv(state: str, variant: str) -> Path | None:
+    base = _canon_draws_basename(state)
+    names = {
+        "combined": f"{base}_draws.csv",
+        "midday":   f"{base}_Midday_draws.csv",
+        "evening":  f"{base}_Evening_draws.csv",
+    }
+    for root in DRAW_DIRS:
+        p = root / names[variant.lower()]
+        if p.exists():
+            return p
+    return None  # tell the caller exactly what we tried
+
+def load_state_draws(state: str, variant: str):
+    p = resolve_draw_csv(state, variant)
+    if not p:
+        tried = [str(Path(d) / f) for d in DRAW_DIRS for f in {
+            f"{_canon_draws_basename(state)}_draws.csv",
+            f"{_canon_draws_basename(state)}_Midday_draws.csv",
+            f"{_canon_draws_basename(state)}_Evening_draws.csv",
+        }]
+        raise FileNotFoundError(f"No draws CSV for {state}/{variant}. Tried: {tried}")
+    # read file → return newest-first list[str]
+    rows = Path(p).read_text(encoding="utf-8").splitlines()
+    draws = [r.strip().split(",")[0] for r in rows if r.strip()]  # adjust if you have headers
+    return draws, str(p)
+
+
+Why: Your corpus has both data/cleaned/*_draws.csv (older docs) and data/cleaned/draws/*_draws.csv (new exporter). This resolver accepts either, preferring the subfolder mentioned in Pitfalls/Tasks.
+It also implements the state normalization Aux officially supports (underscores/trailing “4”).
+
+After adding this, print the resolved path in the Dev Health (Aux) block so operators always see exactly which file fed the analysis (that’s how the Health Helpers are supposed to work).
+
+3) Keep the 360/1000 windows always bound even if a variant is short
+
+Wherever Aux builds the windows, replace ad‑hoc draws_1000 = ... with:
+
+def build_aux_windows(draws: list[str]) -> tuple[list[str], list[str], list[str]]:
+    # Always return lists; never leave locals unbound
+    w360  = draws[:360]  if len(draws) >= 360  else draws[:]
+    w1000 = draws[:1000] if len(draws) >= 1000 else draws[:]
+    wpair = draws[:360]  if len(draws) >= 360  else draws[:]
+    return w360, w1000, wpair
+
+
+Use that for Combined/Midday/Evening each time. This removes the classic “draws_1000 not associated with a value” crash (even when a stream has <1000 rows).
+
+4) Remove nested expanders that still exist on Aux
+
+Search and replace inner st.expander(...) with a st.container() behind a checkbox toggle (exactly as the fix note shows). Then clear Streamlit cache and relaunch via the BAT.
+
+5) Dev Health: show exactly what the app is using
+
+In the Aux Dev‑Health expander print:
+
+cwd, Python exe, BA __file__ (you already do)
+
+resolved draws paths per variant (from resolve_draw_csv)
+
+window sizes actually computed (len of 360/1000 slices)
+
+Those are the fields your Health Helpers doc calls for and they end the guesswork.
+
+6) One small documentation touch‑up (to stop the path ping‑pong)
+
+In Live Wiring / Quickstart, change the data‑contract line to:
+“Draws source: data/cleaned/draws/*_draws.csv (primary) with fallback to data/cleaned/*_draws.csv.”
+That aligns the docs with Pitfalls + Tasks (exporter writes into the draws/ subfolder) and makes the resolver above “by‑the‑book.”
+
+How you’ll know it’s fixed (operator check)
+
+Control Center → Generate Aux Draw CSVs for a couple of states (leave output dir = data\cleaned\draws).
+
+Aux → Dev Health now shows, for each variant:
+
+Combined draws: data\cleaned\draws\Connecticut_draws.csv (1000) (or whichever path the resolver picked)
+
+window sizes (360/1000) and no rescue banner
+
+Run Aux: the boxed V‑TRAC overlay + doubles strip render; no “Working modules unavailable” message; no generic “please ensure…” banner.
+
+If you still see a sea of blue in the doubles table, confirm via the CLI validator (your doc’s suggested command) that there truly aren’t many ≥1000 gaps in the current data; that’s expected behaviour.
+
+Why the Python path looks “outside the project”
+
+That line shows the interpreter location (e.g., Python313\python.exe). That’s normal. The part that must point to your repo is cwd (and your BAT already pushes to the repo root). The Health Helper explicitly checks both.
+
+TL;DR to paste into Codex
+
+Fix Aux boot + draws resolution
+
+In src/app.py, wrap SSOT imports in a try/except and set PAIRS_WINDOW=360, VTRAC_INDEX_WINDOW=1000 defaults on failure so the rescue path can’t crash.
+
+Add resolve_draw_csv() that tries data/cleaned/draws/ first, then data/cleaned/, and normalizes state names (drop trailing 4, normalize underscores) per Aux docs; use it in load_state_draws.
+
+Replace ad‑hoc draws_1000 slicing with a build_aux_windows() helper that always returns lists (never unbound locals).
+
+Flatten all nested expanders on the Aux page (inner expander → st.container() + checkbox), then Clear cache and relaunch via the BAT.
+
+Extend the Dev Health expander to print the resolved draws paths and window sizes; that’s our smoke tripwire.
+
+Update the KIT line to document primary data/cleaned/draws/ with fallback to data/cleaned/ so future sessions don’t drift.
+
+These changes stay within the documented architecture (Aux is draws‑only; tables power the other tools) and follow your KIT guidance to the letter.
+
+Why we were going in circles
+
+A UI rule (nested expanders) killed Aux before data even loaded; the page then showed its generic “no data” banner, which looked like a data problem.
+
+At the same time, draws path/name drift (root vs draws/ subfolder and Connecticut4 vs Connecticut) meant that even when the UI didn’t crash, the loader sometimes pointed to the wrong place. The resolver above ends that for good.
+
+You didn’t make this “too complex”—you captured a lot of moving pieces. We just needed to close the two small gaps that were amplifying each other.
+
+If you want, I can also give you a one‑liner PowerShell probe you (or Codex) can run to print the exact CSV path per variant that the resolver would choose for a given state; but the Dev‑Health printout should make that unnecessary once the patch is in.
+
+
+
+______________________
+
+___________________
+
+
+MY WRITE UP:
+
+
+
+
+
+
+
+Yeah I'm legit starting to lose my mind here with this stuff there's definitely something screwy going on with the data sets here a bit i'm trying to show you images of everything about the data sets so you can see where in cleaned we have those cleaned state sheets WHICH IS LIKE THE CLEANED EXCEL STATE SHEETS OF THE TABLES PRIOR TO BEIG IMPORTED INTO THE APP? AND THEN MADE INTO THE ACTUAL TABLES I GUESS? THAT IN TABLES? BUT I SEE EVEN A PROBLEM WITHIN THEIR Explain this properly When we originally were mapping out the data sets it would map out what becomes the combined tables and like an R2 strings table we don't use the R2 strings table anymore just the regular combined tables but if you can see within the tables folder it has basically all of those and then like duplicates of justice the combined tables i'm hoping you can see that in the list I ALSO INLCUDED THE STATE DRAWS IN THE DRAWS FOLDER NOTHIG SEEMS TO BE WROG I DONT THINK? I WILL NOTE THE DRAWS MIDDAY ADN EVEING GET A LABEL ADN THE NON LABEL IN THE TITEL IS THE COMBIEND BECAUSE WE USE TO ONLY HAVE COMBIEND I DONT THIK THERES AN ISSUE WITH THIS? I THOUGHT THERE WAS LIEK AN AUX LOADER DEALIGN WITH ALL THAT...I WANT TO SAY THERE SINT A PROBLEM THERE? NO YOU DID MENTION SOME CONFLICITNG PATH OR DATASET LOADING I HAVE TO IMAGE THATS CAUSING A RPOBLEM? ALSO WHATS WITH THE AUX DEV HELPERS SHOWING PATHS NOT EVEN IN THE PROJECT BELOW THE PYTHON PATH? System Health (Aux) cwd: C:\dev\Alpha-Analytical-Tool python: C:\Users\User\AppData\Local\Programs\Python\Python313\python.exe BA module: C:\dev\Alpha-Analytical-Tool\modules\blackapple.py _____________ The only other thing I can think of recently was we added this odds loader thing that resets all the I think aux draws files Could there be some problem involving that but I thought that was to make everything cleaner and just do a reset run if you ever want it? Is there an issue because I'm not sure if that reruns both draws and tables? But to be honest I don't think that they had to be entwined anyways? _______ The only other thing is all that comprehensive validating stuff we did if that caused some issues you know how there's now that OGGS validation that runs prior to the app starting? DIDNNT WE ALREADY DETERMINE THATS WRONG IN SOME WAY BECAUSE ITS NOT PRODUCIG ANY REDS? BUT APPARENTLY ITS NOT THE VALIDATIONS FAULT? [Aux validation] Checking doubles/pairs... [Connecticut4] Combined top doubles (draws since >= thresholds): 999: 936 (B) 111: 920 (B) 145: 895 (B) 448: 837 (B) 004: 828 (B) 223: 809 (B) 099: 800 (B) 001: 783 (B) 127: 782 (B) 466: 735 (B) [Connecticut4] Midday top doubles (draws since >= thresholds): 333: 891 (B) 337: 854 (B) 889: 824 (B) 234: 775 (B) 225: 751 (B) 077: 732 (B) 009: 725 (B) 279: 698 (B) 117: 684 (B) 128: 682 (B) [Connecticut4] Evening top doubles (draws since >= thresholds): 255: 933 (B) 034: 910 (B) 228: 888 (B) 088: 886 (B) 223: 847 (B) 666: 835 (B) 225: 810 (B) 678: 711 (B) 668: 708 (B) 399: 707 (B) [Connecticut4] double combos flagged in multiple variants: 044 -> combined:695(B); evening:703(B) 145 -> combined:895(B); evening:672(B) 223 -> combined:809(B); evening:847(B) 225 -> evening:810(B); midday:751(B) ------------------------------------------------------------ [Connecticut4] Combined pairs ù repeating (top 10): 33: 163 red 88: 29 purple 44: 28 purple 55: 23 99: 21 11: 14 66: 11 77: 8 22: 5 00: 4 [Connecticut4] Combined pairs ù non-repeating (top 10): 14: 85 red 03: 43 blue 56: 39 blue 04: 38 blue 15: 37 blue 47: 35 purple 68: 27 purple 27: 26 purple 57: 25 purple 17: 22 [Connecticut4] Midday pairs ù repeating (top 10): 33: 81 blue 11: 72 blue 00: 40 purple 44: 37 purple 77: 23 88: 14 55: 11 99: 10 66: 5 22: 2 [Connecticut4] Midday pairs ù non-repeating (top 10): 18: 90 red 69: 67 red 14: 42 blue 04: 34 purple 45: 30 purple 58: 30 purple 67: 26 purple 01: 25 purple 09: 25 purple 28: 24 [Connecticut4] Evening pairs ù repeating (top 10): 33: 84 blue 88: 49 purple 55: 31 purple 99: 15 44: 14 66: 12 11: 7 22: 5 77: 4 00: 2 [Connecticut4] Evening pairs ù non-repeating (top 10): 35: 88 red 14: 77 red 15: 72 red 56: 72 red 16: 43 blue 08: 35 purple 03: 33 purple 57: 31 purple 39: 30 purple 34: 29 purple [Connecticut4] pairs flagged in multiple variants: 03 -> combined:43(blue); evening:33(purple) 04 -> combined:38(blue); midday:34(purple) 14 -> combined:85(red); evening:77(red); midday:42(blue) 15 -> combined:37(blue); evening:72(red) 33 -> combined:163(red); evening:84(blue); midday:81(blue) 44 -> combined:28(purple); midday:37(purple) 47 -> combined:35(purple); evening:29(purple) 56 -> combined:39(blue); evening:72(red) 57 -> combined:25(purple); evening:31(purple) 88 -> combined:29(purple); evening:49(purple) ============================================================ [Florida4] Combined top doubles (draws since >= thresholds): 499: 966 (B) 009: 915 (B) 889: 893 (B) 337: 867 (B) 277: 840 (B) 224: 799 (B) 288: 780 (B) 189: 763 (B) 455: 754 (B) 137: 752 (B) [Florida4] Midday top doubles (draws since >= thresholds): 118: 956 (B) 555: 954 (B) 066: 913 (B) 011: 901 (B) 003: 899 (B) 266: 852 (B) 008: 833 (B) 557: 789 (B) 122: 766 (B) 126: 754 (B) [Florida4] Evening top doubles (draws since >= thresholds): 389: 957 (B) 688: 939 (B) 088: 877 (B) 888: 843 (B) 222: 836 (B) 333: 805 (B) 133: 767 (B) 999: 765 (B) 224: 759 (B) 889: 726 (B) [Florida4] double combos flagged in multiple variants: 189 -> combined:763(B); evening:667(B) 222 -> combined:687(B); evening:836(B) 224 -> combined:799(B); evening:759(B) 889 -> combined:893(B); evening:726(B) ------------------------------------------------------------ [Florida4] Combined pairs ù repeating (top 10): 00: 62 purple 77: 61 purple 99: 46 purple 11: 17 88: 12 44: 11 66: 6 55: 3 22: 2 33: 1 [Florida4] Combined pairs ù non-repeating (top 10): 07: 92 red 47: 67 red 37: 51 blue 19: 49 blue 69: 46 blue 48: 45 blue 04: 40 blue 02: 37 blue 06: 37 blue 17: 36 purple [Florida4] Midday pairs ù repeating (top 10): 88: 114 red 22: 104 blue 66: 79 blue 99: 36 purple 00: 32 purple 77: 30 purple 11: 8 44: 5 55: 1 33: 0 [Florida4] Midday pairs ù non-repeating (top 10): 18: 92 red 69: 86 red 17: 61 red 07: 54 blue 12: 53 blue 16: 43 blue 14: 40 blue 24: 33 purple 47: 33 purple 04: 27 purple [Florida4] Evening pairs ù repeating (top 10): 33: 77 blue 55: 43 purple 77: 40 purple 00: 31 purple 99: 23 11: 13 44: 7 88: 6 66: 3 22: 1 [Florida4] Evening pairs ù non-repeating (top 10): 06: 61 red 48: 47 blue 07: 46 blue 46: 44 blue 37: 41 blue 47: 40 blue 27: 38 blue 19: 35 purple 05: 32 purple 23: 28 purple [Florida4] pairs flagged in multiple variants: 00 -> combined:62(purple); evening:31(purple); midday:32(purple) 04 -> combined:40(blue); midday:27(purple) 06 -> combined:37(blue); evening:61(red) 07 -> combined:92(red); evening:46(blue); midday:54(blue) 17 -> combined:36(purple); midday:61(red) 19 -> combined:49(blue); evening:35(purple) 23 -> combined:25(purple); evening:28(purple) 37 -> combined:51(blue); evening:41(blue); midday:25(purple) 47 -> combined:67(red); evening:40(blue); midday:33(purple) 48 -> combined:45(blue); evening:47(blue) 69 -> combined:46(blue); midday:86(red) 77 -> combined:61(purple); evening:40(purple); midday:30(purple) 99 -> combined:46(purple); midday:36(purple) ============================================================ [Aux validation] Checking repeat-watch / positional shortlist... [Connecticut4] Combined repeat-watch: current=21 streak=1 max=2 last_repeat_gap=3 last_index=7 [Connecticut4] Midday repeat-watch: current=24 streak=1 max=3 last_repeat_gap=31 last_index=14 [Connecticut4] Evening repeat-watch: current=21 streak=1 max=3 last_repeat_gap=23 last_index=31 ------------------------------------------------------------ [Connecticut4] Combined positional hard-due: none [Connecticut4] Midday positional hard-due: none [Connecticut4] Evening positional hard-due: none ============================================================ [Connecticut4] positional shortlist top 5: 135: score=37.70 tags=Double-Pressure,Lane-C,Mirror-Echo 185: score=37.66 tags=Double-Pressure,Lane-C,Mirror-Echo 137: score=37.16 tags=Double-Pressure,Lane-C,Mirror-Echo 535: score=36.88 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE) 585: score=36.85 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM) [Connecticut4] consensus notes: - P1 digit 1 aligns across Combined, Midday (XVAR-Cons(CM)) - P1 digit 5 aligns across Combined, Midday (XVAR-Cons(CM)) - P1 digit 3 aligns across Combined, Evening (XVAR-Cons(CE)) - P2 digit 4 aligns across Combined, Evening (XVAR-Cons(CE)) - P2 digit 8 aligns across Combined, Midday (XVAR-Cons(CM)) - P2 digit 3 aligns across Combined, Evening (XVAR-Cons(CE)) - P3 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)) - P3 digit 5 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)) - P3 digit 6 aligns across Combined, Evening (XVAR-Cons(CE)) - P1 mirror cluster around digit 6 (Mirror-Echo(CM)) - P1 mirror cluster around digit 0 (Mirror-Echo(CM)) - P1 mirror cluster around digit 8 (Mirror-Echo(CE)) - P2 mirror cluster around digit 9 (Mirror-Echo(CE)) - P2 mirror cluster around digit 3 (Mirror-Echo(CM)) - P2 mirror cluster around digit 8 (Mirror-Echo(CE)) - P3 mirror cluster around digit 2 (Mirror-Echo(CEM)) - P3 mirror cluster around digit 0 (Mirror-Echo(CEM)) - P3 mirror cluster around digit 1 (Mirror-Echo(CE)) - Digit 0 (mirror 5) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 1 (mirror 6) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 2 (mirror 7) pressuring two positions across combined, midday (Double-Pressure) - Digit 3 (mirror 8) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 4 (mirror 9) pressuring two positions across combined, midday (Double-Pressure) [Connecticut4] double-pressure notes: - Digit 0 (mirror 5) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 1 (mirror 6) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 2 (mirror 7) pressuring two positions across combined, midday (Double-Pressure) - Digit 3 (mirror 8) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 4 (mirror 9) pressuring two positions across combined, midday (Double-Pressure) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ [Florida4] Combined repeat-watch: current=22 streak=1 max=2 last_repeat_gap=32 last_index=14 [Florida4] Midday repeat-watch: current=33 streak=1 max=3 last_repeat_gap=15 last_index=14 [Florida4] Evening repeat-watch: current=22 streak=1 max=2 last_repeat_gap=8 last_index=15 ------------------------------------------------------------ [Florida4] Combined positional hard-due -> P1:3 (59) [Florida4] Midday positional hard-due -> P2:1 (51) [Florida4] Evening positional hard-due -> P1:3 (51) ============================================================ [Florida4] positional shortlist top 5: 010: score=50.19 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM) 310: score=50.06 tags=Double-Pressure,Lane-C,Mirror-Echo 080: score=47.17 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM) 380: score=46.74 tags=Double-Pressure,Lane-C,Mirror-Echo 090: score=45.61 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE) [Florida4] consensus notes: - P1 digit 3 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)) - P1 digit 0 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)) - P1 digit 7 aligns across Combined, Evening (XVAR-Cons(CE)) - P2 digit 1 aligns across Combined, Midday (XVAR-Cons(CM)) - P2 digit 8 aligns across Combined, Midday (XVAR-Cons(CM)) - P2 digit 9 aligns across Combined, Evening (XVAR-Cons(CE)) - P3 digit 0 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)) - P3 digit 4 aligns across Combined, Evening (XVAR-Cons(CE)) - P1 mirror cluster around digit 8 (Mirror-Echo(CEM)) - P1 mirror cluster around digit 5 (Mirror-Echo(CEM)) - P1 mirror cluster around digit 2 (Mirror-Echo(CE)) - P2 mirror cluster around digit 6 (Mirror-Echo(CM)) - P2 mirror cluster around digit 3 (Mirror-Echo(CM)) - P2 mirror cluster around digit 4 (Mirror-Echo(CE)) - P3 mirror cluster around digit 5 (Mirror-Echo(CEM)) - P3 mirror cluster around digit 9 (Mirror-Echo(CE)) - Digit 0 (mirror 5) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure) - Digit 3 (mirror 8) pressuring two positions across combined, evening, midday (Double-Pressure) [Florida4] double-pressure notes: - Digit 0 (mirror 5) pressuring two positions across combined, evening, midday (Double-Pressure) - Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure) - Digit 3 (mirror 8) pressuring two positions across combined, evening, midday (Double-Pressure) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ [Aux validation] Checking V-TRAC overlays / heatboard / sums... [Connecticut4] Combined V-TRAC overlay top 10: 13:168, 2:131, 4:81, 23:72, 8:66, 14:61, 10:45, 15:41, 6:39, 9:38 [Connecticut4] Midday V-TRAC overlay top 10: 26:142, 13:123, 19:104, 23:90, 17:72, 2:65, 8:57, 27:49, 31:46, 5:43 [Connecticut4] Evening V-TRAC overlay top 10: 20:223, 2:171, 15:144, 32:130, 16:117, 34:93, 13:84, 4:55, 6:53, 33:49 ------------------------------------------------------------ [Connecticut4] Combined heatboard top 10: 13:ds=150 fs=0 fl=0, 2:ds=131 fs=0 fl=0, 4:ds=81 fs=1 fl=0, 23:ds=72 fs=1 fl=0, 8:ds=66 fs=4 fl=0, 14:ds=61 fs=4 fl=0, 10:ds=45 fs=2 fl=0, 15:ds=41 fs=3 fl=0, 6:ds=39 fs=5 fl=0, 9:ds=38 fs=3 fl=0 [Connecticut4] Midday heatboard top 10: 26:ds=142 fs=0 fl=0, 13:ds=123 fs=0 fl=0, 19:ds=104 fs=0 fl=0, 23:ds=90 fs=1 fl=0, 17:ds=72 fs=2 fl=0, 2:ds=65 fs=2 fl=0, 8:ds=57 fs=6 fl=0, 27:ds=49 fs=2 fl=0, 31:ds=46 fs=4 fl=0, 5:ds=43 fs=2 fl=0 [Connecticut4] Evening heatboard top 10: 2:ds=150 fs=0 fl=0, 20:ds=150 fs=0 fl=0, 15:ds=144 fs=0 fl=0, 32:ds=130 fs=0 fl=0, 16:ds=117 fs=1 fl=0, 34:ds=93 fs=1 fl=0, 13:ds=84 fs=2 fl=0, 4:ds=55 fs=3 fl=0, 6:ds=53 fs=1 fl=0, 33:ds=49 fs=2 fl=0 ============================================================ [Connecticut4] Combined sums (window=150): S0:ds=150 flags=purple, S1:ds=150 flags=purple, S26:ds=150 flags=purple, S27:ds=150 flags=purple, S24:ds=140 flags=purple [Connecticut4] Midday sums (window=150): S0:ds=150 flags=purple, S1:ds=150 flags=purple, S2:ds=150 flags=purple, S3:ds=150 flags=red+purple, S25:ds=150 flags=purple [Connecticut4] Evening sums (window=150): S0:ds=150 flags=purple, S1:ds=150 flags=purple, S26:ds=150 flags=purple, S27:ds=150 flags=purple, S21:ds=93 flags=red+purple ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [Aux validation] All checks completed. _______________ THE ONLY OTHER THING I CAN THINK IS THERE WAS A RECENT EXPANSION TO THE "BATCH" BUT THAT HAS MORE TO DO WITH OUTPUT OF ANALYSIS RESULTS I DOUBT THATS A PROBLEM ____ THERES CLEARLY SOME PATH PROBLEMS GOIG ON I THK AS YOU ALREADY IDENTIFIED, ID OT KNOW THIS SEEMS HOPELESS I WAS TOLD BY CODEX IT WAS LIKE 95% KEW WAHT WAS WROG AND NOW ITS WORSE, YOU EVEN ONFIRMED THE PLAN...LIEK IM LEGIT LOSING MY MIND NOW AND THINKIG OF GIVIG UP ON THIS PROJECT AFTER ALL THIS HARD WORK WHAT IN THE WORLD... CHECKA LL IAGES TO HELP
+

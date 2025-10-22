@@ -1,0 +1,178 @@
+Thanks for the full log. I read it end‑to‑end and compared it against the plan we set (stable_1/2 → FIX_125 → FIX_126). Here’s a clear, no‑nonsense readout of where you are, what’s good, what’s risky, and exactly what I’d do next.
+
+Executive snapshot
+
+Status: strong GREEN with a few YELLOW polish items
+Regression net: solid — compile hook ✓, contract tests ✓, acceptance tests ✓, pre‑commit stack ✓
+
+What landed (and looks correct):
+
+Config unification: all stable modules import CFG from one loader; YAML restored to commented format.
+
+Row schema discipline: hidden3v is strictly boolean; out_cols covers the full contract.
+
+Family aggregator hardening: ±1 column doubles adjacency is live; fam_* parts are explicit; family_score = sum(parts) (and it’s tested).
+
+Metrics & bundling: build_metrics/write_metrics added; metrics path stored and copied into bundle; metrics show ranks / spotlight / density.
+
+Pre‑commit guard: check_contract.py enforces row/family/YAML schema; the compile hook no longer leaves stray pycs; smoke/aux guards run.
+
+Winners evidence bus: attach_stable_evidence() merges winners with Stable families + top row; used in Control Center; unit test added.
+
+UI wiring: Control Center surfaces metrics + per‑winner evidence table; (per the last actions) a CSV download button is in place.
+
+Safety: alpha_analytical/stable/__init__.py now raises if config is missing; batch_runner catches and reports nicely instead of crashing.
+
+Adjacency negative test: confirmed — no false doubles support beyond ±1.
+
+Bottom line: Codex did not go off the rails. The core stabilization, evidence bus, and guardrails are in, and the system compiles/tests cleanly. Good work.
+
+How this ties to “winners logging”
+
+Short version: Stable is now the evidence engine behind every winners surface.
+
+When you enter Midday/Evening winners, the “winners evidence bus” enriches those winners with Stable family flags (e.g., any_doubles_support, last_remaining_3v, family_score, family_rank, hot_density) and the best matching row evidence (row_score, row_type, row_why, score parts).
+
+That same evidence language can be shown in Control Center, Aux CLI, and any other winners reports (BA overlays, HTML panels), keeping all “winners logs” consistent.
+
+Risks & gaps (ordered by impact)
+
+Single‑source canonicalization (SSOT)
+
+winners_enrich.py still has its own _canonical helper. This can drift from the Stable canon rules.
+
+Fix: import and use stable.canon so everyone (rows, families, metrics, evidence bus) canonicalizes identically.
+
+Evidence schema versioning – tests
+
+You stamped versions into metrics & bundle manifest (great). I don’t see a test that asserts the manifest contains versions.evidence_schema_version and versions.stable_contract_version.
+
+Fix: add a tiny test so future changes can’t silently drop those keys.
+
+Winners export schema guard
+
+The new pre‑commit guard checks Stable row/family contracts, but not that winners CSV/JSON exports include the minimum evidence fields.
+
+Fix: add a check_winners_export.py (sibling to check_contract.py) to verify the winners export columns exist.
+
+Booleans in enriched output
+
+After merges, some booleans (progression_flag, last_remaining_3v, any_doubles_support, hidden3v) may arrive as pandas NA/object.
+
+Fix: coerce to nullable Boolean dtype ('boolean') before display/export so UI and downstream code see consistent truthiness.
+
+Fixture churn risk
+
+You updated acceptance fixtures for doubles to match adjacency changes. That’s correct by spec, but whenever fixtures change, we should lock in a brief why note (in the test) so future readers don’t “fix back” to old behavior.
+
+Fix: inline comment in the acceptance test explaining adjacency ±1 and why tokens changed.
+
+Repo hygiene
+
+analysis_2/ showed up.
+
+Fix: either commit it intentionally (document purpose) or add it to .gitignore.
+
+Minimal, targeted patches (ready to apply)
+1) Winners bus → reuse Stable canon
+# alpha_analytical/stable/winners_enrich.py
+from alpha_analytical import stable  # add
+
+# ...remove local _canonical and _digits_only helpers...
+
+def attach_stable_evidence(...):
+    # ...
+    winners_df["stable_winner"] = winners_df.apply(_winner_value, axis=1)
+    winners_df["stable_canonical"] = winners_df["stable_winner"].map(stable.canon)  # <- SSOT
+    # for row evidence:
+    if not scores.empty and "Canonical" in scores.columns:
+        sc = scores.copy()
+        sc["stable_canonical"] = sc["Canonical"].map(stable.canon)
+        # ...
+
+2) Normalize booleans in enriched winners
+# end of attach_stable_evidence, before return
+bool_cols = [
+    "progression_flag", "last_remaining_3v", "any_doubles_support",
+    "mirror", "straight2", "straight3", "single_left", "cons_full",
+    "cons_3v", "dom_last", "dom_pair", "hidden3v",
+]
+for c in bool_cols:
+    if c in enriched.columns:
+        enriched[c] = enriched[c].astype("boolean")
+
+3) Test: versions present in bundle manifest
+# tests/test_stable_training_bundle.py
+def test_bundle_versions_present(manifest_path=...):
+    manifest = json.loads(Path(manifest_path).read_text())
+    versions = manifest.get("versions") or {}
+    assert "evidence_schema_version" in versions
+    assert "stable_contract_version" in versions
+
+4) Pre‑commit winners export guard (optional but good)
+
+scripts/hooks/check_winners_export.py (pattern like check_contract.py):
+
+Load a tiny DataFrame with a fake winner ("227") → run attach_stable_evidence() → assert presence of:
+
+{"stable_winner","stable_canonical","family_id","family_score","family_rank",
+ "any_doubles_support","last_remaining_3v","row_score","row_type","row_why"}
+
+
+Add to .pre-commit-config.yaml after the contract guard.
+
+5) Acceptance test comment
+
+Add a two‑line comment above the updated expected tokens explaining that adjacency is same box or ±1 column, hence tokens differ from the earlier fixture.
+
+6) .gitignore
+
+Add analysis_2/ (or commit with README).
+
+Validation gates (quick checklist)
+
+Unit/contract/acceptance suites: all green (already are).
+
+Pre‑commit stack: py‑compile, smoke, aux guard, stable contract guard, (new) winners export guard → all green.
+
+Manual UI sanity: run Control Center batch on 1–2 states; confirm:
+
+Metrics expander shows JSON path; numbers present.
+
+Winners evidence table: family flags + top row fields populated.
+
+CSV download works and includes the key columns above.
+
+When you’re ready to run a fresh analysis (what to upload here)
+
+For each state run (e.g., CT/DE/IN):
+
+scores.csv — Stable rows (the big table).
+
+families.csv — post‑pass families.
+
+<STATE>_metrics.json — metrics file.
+
+(Optional) winners_evidence.csv — if you hit the new download button.
+
+With those, I can:
+
+sanity‑check score parts & totals,
+
+spot‑check winners mapping → family/rank,
+
+confirm adjacency flags for a few hand‑picked doubles,
+
+and call out any anomalies before you scale to many states.
+
+My read vs FIX_125 / FIX_126
+
+FIX_125: Done: config SSOT, schema locks, metrics write + bundle, contract hook; the big remaining ask there (“attach Stable evidence to every winners surface”) is largely done for Control Center and has a unit test.
+
+FIX_126: You implemented most of the follow‑ups (UI metrics, version stamping, negative adjacency, friendly errors). The one substantive remaining item is canonicalization SSOT in the winners bus (above). The other two are light process hardeners (winners export guard + small tests).
+
+Go/No‑Go
+
+Go, with the SSOT canonicalization patch and winners export guard added. After those land, I’d call the Stable + Winners integration “Phase‑2 complete.”
+
+If you’d like, I can also give you a tiny “smoke protocol” you can copy/paste into PowerShell to produce the four artifacts above for a couple states. Otherwise, upload your latest outputs and I’ll review them immediately.

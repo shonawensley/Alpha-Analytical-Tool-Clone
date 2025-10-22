@@ -140,3 +140,9 @@ if __name__ == "__main__":
     # Create directories
     create_output_directories()
     print("\nAll required directories have been created.") 
+
+def get_cleaned_draws_dir():
+    """Get the directory that stores cleaned draw CSVs"""
+    draws_dir = os.path.join(get_cleaned_data_dir(), "draws")
+    os.makedirs(draws_dir, exist_ok=True)
+    return draws_dir

@@ -1,0 +1,222 @@
+I went through your full Codex session log carefully and compared it to the architect plan I gave you earlier. Below is a no‑nonsense status check, what Codex got right, where risk still lives, and the exact follow‑ups I recommend. I’ll also answer your question about how the Stable pattern work ties into the winners logging.
+
+TL;DR — Are we on track?
+
+Yes. The log shows Codex recovered from the earlier \n injection bug, finished the config unification, row/family schema locks, regression shield, metrics writer, and winners evidence bus, and integrated all of that into Control Center. Unit + acceptance + pre‑commit hooks are green.
+
+The current state is stable and consistent with the design. The new guardrails significantly lower the chance of regressions re‑occurring.
+
+What Codex accomplished (and why it’s good)
+
+1) Config unification
+
+Feature weights now live in a commented alpha_analytical/stable/feature_config.yml and are loaded once via alpha_analytical.stable.feature_config (CFG, CONFIG_PATH).
+
+Stable code no longer re‑parses YAML ad‑hoc; tests and runtime share the same loader.
+
+alpha_analytical/stable/__init__.py now raises FileNotFoundError if the config is missing (cleaner than sys.exit).
+
+2) Row & family score decomposition (“regression shield”)
+
+Row CSV now exports score_cov, score_hpr, score_perm, score_repeat, score_straight, score_single, score_cons, score_hot, score_mirror, score_dom, score_len, score_hidden, plus hidden3v (strict boolean) and the full diagnostics (why, perm_count_in_box, etc).
+
+Family CSV now exports fam_* parts (fam_cov, fam_hpr, fam_perm, fam_repeat, fam_cons, fam_hot, fam_straight2, fam_straight3, fam_doubles, fam_section_bonus, fam_progression_bonus, fam_last_remaining_bonus) and guarantees family_score == sum(fam_*).
+
+Doubles adjacency (±1 column) is computed in the family pass and surfaced as any_doubles_support + fam_doubles.
+
+3) Tests + pre‑commit hooks that enforce contracts
+
+Unit tests now assert row/family schema, YAML key presence, why‑token hygiene, hidden3v flagging, family score sums, last‑remaining gating, and the metrics writer.
+
+Contract hook scripts/hooks/check_contract.py blocks commits if the CSV schemas or required YAML keys are missing.
+
+py_compile hook writes to a temp .pyc and cleans up; PYTHONDONTWRITEBYTECODE prevents stray bytecode noise.
+
+Acceptance tests for the Control Center doubles overlay were updated and now pass.
+
+4) Metrics writer + training bundle
+
+alpha_analytical/stable/metrics.py computes <STATE>_metrics.json (patterns/families counts, compression, top‑hot density, winner family ranks, best straight rank, spotlight rate).
+
+training_bundle includes the metrics JSON in the manifest; Control Center reads and displays it in an expander.
+
+5) Winners Evidence Bus
+
+alpha_analytical/stable/winners_enrich.py::attach_stable_evidence() joins any winners list with Stable families + scores to add:
+
+family_id, family_score, family_rank, section_count, progression_flag, last_remaining_3v, any_doubles_support, hot_density, fam_* parts
+
+row_score, row_type, row_rows, row_why, per‑row parts, and flags (mirror, straight2/3, cons_full/3v, dom_*, hidden3v).
+
+Control Center batch flow calls this helper and displays the evidence + metrics per state in an expander; acceptance tests were adapted and pass.
+
+Bottom line: The core of FIX_122/FIX_125 is implemented and guarded. This is the right foundation to move quickly.
+
+Where Stable pattern optimization meets winners logging (your question)
+
+Before: “Winners logging” (Control Center, Aux overlays, winner_report_full) mostly showed where a winner hits, with limited why.
+
+Now: Stable is producing explanations—per-row parts, family rollups, consensus, doubles adjacency, progression, last‑remaining.
+The Winners Evidence Bus uses those artifacts to annotate winners with consistent, explainable evidence and ranks.
+
+Which winners logging?
+
+Control Center Winners Logger / batch overlay — now enriched with Stable evidence and metrics (already integrated).
+
+Modules / CLI winners reports (e.g., modules/winner_report_full.py) — can call attach_stable_evidence() to add the same evidence columns.
+
+Any future winners surface (BA module or external reports) — point them at the same helper for a single “evidence language.”
+
+That’s the connection: Stable’s signal → unified evidence bus → every winners UI/report speaks the same truth.
+
+Small risks / polish I’d address next (surgical items)
+
+None of these are red flags; they’re low‑effort hardening to keep quality high and avoid surprises.
+
+Canonicalization consistency in the winners bus
+
+winners_enrich implements its own _canonical(). To avoid drift (e.g., leading zeros corner cases), prefer importing and using stable.canon() where possible.
+Why: one source of truth for canonical digits helps when we later tweak canonical rules.
+
+Metrics manifest versioning
+
+Add evidence_schema_version: 1 and stable_contract_version to the training bundle manifest + metrics JSON.
+Why: if we tweak columns/weights later, we can reconcile historical bundles quickly.
+
+Graceful config-missing handling in the app
+
+Since Stable raises FileNotFoundError when feature_config.yml is missing, ensure the Control Center catches this and renders a friendly message (it probably already does; just confirm).
+Why: better UX if the file goes missing on a new machine.
+
+Negative test for doubles adjacency
+
+Add a unit test asserting no any_doubles_support when doubles are ≥2 columns away (e.g., winners at col 1, doubles only at col 4).
+Why: protects the ±1 adjacency rule from accidental broadening.
+
+Winners evidence export & CSV schema guard
+
+When Control Center offers “download winners,” include the Stable evidence columns, and (optionally) add a tiny CLI test that loads the export and asserts a minimal evidence set is present.
+Why: consistent external consumption; prevents silent column drops.
+
+Docs touch‑ups
+
+In AAT9_Workflow_Standard.md, add a blurb on the new evidence bus + metrics JSON and how other surfaces should call it.
+Why: ensures the next integration follows the same pattern.
+
+Quick audit of the changes that could have gone off the rails (but look correct)
+
+The \n literal in post_pass_families.py was fixed and replaced with proper code.
+
+Draw/Column swap in the aggregator was corrected (section, Set, Draw, Col = r["section"], r["Set"], r["Draw"], r["Column"]).
+
+Hidden‐by‐one (hidden3v) now stays boolean on real rows and False for stub rows; tests check truthiness, not identity—good.
+
+YAML restored to commented format; tests read it with yaml.safe_load. Good move.
+
+pre-commit stack: py_compile, smoke pytest, Aux guard, and the new stable contract guard all run; Windows newline quirks handled in tests via splitlines().
+
+Acceptance fixtures for doubles were updated (adjacency-aware). That’s fine, because we intentionally changed the scoring semantics and now lock them with tests.
+
+Control Center now shows metrics and winners evidence in an expander with a light column set—exactly what we wanted for transparency without clutter.
+
+Everything there matches the architectural intent.
+
+“Green/Yellow/Red” dashboard
+
+GREEN
+
+Config loader unification
+
+Row/family score part exports
+
+Family doubles adjacency (±1) and gating
+
+Last‑remaining bonus gating
+
+Metrics writer + inclusion in bundles
+
+Tests across contracts + acceptance
+
+Pre‑commit hook enforcement
+
+YELLOW (polish)
+
+Use stable.canon() inside winners_enrich for canonicalization
+
+Add evidence_schema_version and stable_contract_version to metrics/manifest
+
+One negative test for doubles adjacency (distance > 1)
+
+Confirm app error handling for missing feature_config.yml
+
+Winners export includes evidence + (optional) schema check
+
+RED
+
+None at this point.
+
+Concrete, minimal follow‑ups (drop‑in)
+
+You can hand these to Codex as the last mile checklist:
+
+Winners bus canonicalization
+
+Change _canonical(...) to call stable.canon(...) (import from alpha_analytical.stable.__init__) and remove the duplicate helper.
+
+Versioning the evidence/metrics
+
+In metrics.build_metrics(), add:
+
+"evidence_schema_version": 1,
+"stable_contract_version": 1,
+
+
+In training_bundle manifest, copy those into manifest["stats"] or manifest["versions"].
+
+Doubles adjacency (negative) test
+
+New test (e.g., tests/test_stable_doubles_adjacency_negative.py) ensuring any_doubles_support stays False when doubles exist only at columns farther than ±1 from the consensus box.
+
+Control Center—download enriched winners
+
+Where you display the evidence DataFrame, add an optional “Download CSV” (st.download_button) using the enriched DataFrame.
+
+Optional mini contract check: ensure ["family_id","family_score","row_score"] are present before enabling the button.
+
+App‑level FileNotFoundError guard
+
+Wrap Stable imports or the run in a try/except and show a clean Streamlit warning if feature_config.yml is missing. (You likely have a “System Health” expander—add it there.)
+
+Docs
+
+Add a short section: “Winners Evidence Bus — How to use” with one snippet calling attach_stable_evidence().
+
+If you want, I can write those small patches in the same “drop‑in” style as the earlier stubs, but they’re genuinely tiny and localized.
+
+Release / sanity commands
+
+When you merge this batch (and after the small follow‑ups), run:
+
+# 1) Fast local smoke
+pre-commit run --all-files
+
+# 2) Unit + acceptance
+pytest -q
+
+# 3) Three‑state training sanity
+python src/core/stable_pattern_extractor.py --state CT --write-bundle
+python src/core/stable_pattern_extractor.py --state DE --write-bundle
+python src/core/stable_pattern_extractor.py --state IN --write-bundle
+
+# 4) Open Control Center and verify the new expander shows
+#    metrics + evidence for each state; download the CSV; spot‑check columns.
+
+Closing call
+
+You are not off the rails. The work is aligned with the architecture and protected by tests and pre‑commit hooks.
+
+The winners evidence bus is the bridge between Stable’s deeper signals and every winners surface—now in place.
+
+Finish the handful of polish items above, and you’ll have a very hard‑to‑regress foundation that speeds up future optimization, not slows it down.
+
+If you’d like those tiny follow‑up patches as ready‑to‑paste diffs, say the word and I’ll produce them in one go.

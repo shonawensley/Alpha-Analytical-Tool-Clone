@@ -1,0 +1,3155 @@
+VTRAC Analyzer — Part 1 of the Comprehensive Optimization & Coding Plan
+(Core scoring engine, straighthunt logic, evidence features, I/O contracts, and guardrails)
+Below is the first, selfcontained installment of the implementation plan that turns your current VTRAC Analyzer into a tighter, highsignal predictor while staying faithful to how the module already works inside AAT9 (data paths, UI, and winners logging). I’m focusing on (1) how we select/score indices, (2) how we surface straight clues, and (3) how we wire outputs so they feed training later.
+
+0) Scope, nongoals, and invariants
+Scope now (Part 1):
+* Define evidence features VTRAC should extract from R2/R4/R6/R8 string charts (Set3?Set2?Set1; Columns 7?1), including hotzone emphasis, crosssection consensus, and order/permutation signals for straights.
+* Specify a transparent scoring function that ranks indices and, separately, ranks straight permutations inside each top index.
+* Lock I/O contracts (predictions JSON, bundle write path, analysis artifacts) to align with your existing AAT9 wiring so winners logging and “bundle_day()” keep working. 
+Nongoals in this part: UI refactors and the crosstool aggregator. (Those will come after we finish index/straight scoring and logging.)
+Invariants to keep:
+* VTRAC reads combined tables produced by your pipeline, not the Aux/BA drawsonly CSVs. Inputs live under data/outputs/tables/<STATE>/ (Midday/Evening/Combined). 
+* Outputs must live under the AAT9 canonical tree so bundle + training scripts pick them up later. 
+* Winners logging and bundle JSON remain the machinelearning source of truth (predictions + winners joined). 
+
+1) Data contracts & wiring (no surprises)
+* Inputs (readonly):
+data/outputs/tables/<STATE>/Midday_Combined.csv, Evening_Combined.csv, Combined_Combined.csv. These are the same tables you review visually; VTRAC consumes them programmatically. 
+* Outputs (write):
+o data/outputs/predictions/<STATE>/<DATE>_vtrac_predictions.json (top indices + straight picks + full feature vector snapshot).
+o data/outputs/analysis/vtrac/<STATE>/<DATE>/… (optional HTML/CSV evidence dumps for debugging).
+o After you log winners, utils/bundler.bundle_day() merges the predictions + winners into:
+data/outputs/bundles/<STATE>_<DATE>_bundle.json (training payload). 
+* Launch & app flow: no change. Use run_app.bat ? src/app.py. VTRAC page reads tables via utils.path_handler and writes outputs under data/outputs/.... 
+
+2) Evidence the scorer will read (what we measure)
+This mirrors how you actually read the charts: vertical box checks (inside R2/R4/R6/R8), horizontal progression (Columns 7?1), and crosssection agreement (Midday/Evening/Combined). We’ll compute perindex features plus order/permutation features for straights.
+2.1 Ring/column presence & progression
+For each section (Midday/Evening/Combined), set (Set3 older ? Set1 newest), ring (R2, R4, R6, R8), and column (7?1):
+* Presence: does any boxed combo from the index (Singles or Doubles) appear as a contiguous 3digit in that cell’s string?
+* Persistence: how many consecutive columns (rightward) did that index survive?
+* Firsthit depth: rightmost column where the index first appears (1=best).
+* Ring emphasis: weight R2 a bit higher (longer strings frequently carry the most stable “spine” of the pattern). 
+Why: your guides emphasize the rightmost columns and the “Set1 Draw 4..7 hot zones” as the strongest tells; R2 carries a lot of the persistent backbone. We’ll encode both. 
+2.2 Hotzone intensity
+From your rules:
+* Draw1: last 5 items = hot (last 3 = superhot)
+* Draw2: last 4 (last 2 = superhot)
+* Draw3: last 3 (last 2 = superhot)
+* Draw4–5: last 2 (both superhot)
+We translate that to perpresence multipliers (+h, +H). 
+2.3 Crosssection consensus
+Count how many sections (Midday/Evening/Combined) confirm the same index in the last k columns (default k=3). Weight Combined slightly higher because it’s a synthesis panel, but do not let it swamp the independent Midday/Evening evidence. (Combined weight +15% is a good starting point.) 
+2.4 Set survival (recency)
+Give Set1 (today’s context) full weight, Set2 ~0.6, Set3 ~0.4. This bakes in the “progression through days” you use: Set3 ? Set2 ? Set1, with more credit for signals that persist into Set1. 
+2.5 Straightorder (permutation) clues
+For each index, we track order evidence for each straight permutation of its digits:
+* Contiguous 3digit matches (e.g., 241, 641, 9221 ? order clues: 241; 641; 9221).
+* Subsequence order matches (digits appear in order with ?1 gap).
+We count these per ring/column, with the same hotzone, set, and section weights. This yields a Permutation Score for each of the 6 straights (for singles) or the relevant orderings for doubles. Your examples (e.g., 241 / 9221 / 6411 pointing to 691 straight) are exactly this kind of evidence, and we will let the scorer prefer the sameorder VTRAC straights when the charts echo them. 
+2.6 Mirror & digitreduction assists (optional gates)
+Two safe assists that amplify alreadypresent evidence:
+* Transitdigit reduction: remove the previous draw’s transit/mirror digit(s) from long strings before scanning; rescan to see if a threevalue spine emerges (you do this by hand today). We record a boolean “reductionsurvives” flag per index if the index persists after this reduction. 
+* Mirror check: mirror transforms that convert e.g., hidden 554008 into …408… variants will set an “mconfirm” bit on the index when they reinforce the same 3value spine across rings. (We log the before/after examples in the analysis CSV for audit.) 
+These two are not used to invent signals—only to strengthen patterns you already see.
+2.7 Doubles affinity
+For indices whose boxed set is doublesheavy (e.g., 1, 10, 13, 15, 16, 23, 25, 26, 29, 31, 32, 33, 34, 35), track:
+* Doublepair silhouette (e.g., ..44.., ..99..) in hotzone cells,
+* Twovalue spines (like 5445), and
+* Whether the doubled digit also appears as a float/mirror in recent context (light +w).
+This lets VTRAC pivot cleanly when the day favors doubles (you also maintain doubles logs separately). (BA uses floats/mirror as triggers on drawsonly; we reapply a narrow variant here as a minor weight, keeping VTRAC stringcentric.) 
+
+3) Scoring function (clear, tunable, and conservative)
+We keep it explicit (sum of weighted evidence). Let an IndexScore be:
+IndexScore(i) =
+  ?_sections ?_sets ?_rings ?_cols [
+     Presence(i, s, set, ring, col)
+     × w_ring(ring) × w_col(col) × w_set(set) × w_section(section)
+     × (1 + h_hot + h_superhot)             # hot-zone boosts
+  ]
+  + ? * CrossSectionConsensus(i)            # same index confirmed across sections in last k cols
+  + ? * FirstHitBonus(i)                    # first hits that occur at col?{1,2}
+  + ? * PersistenceBonus(i)                 # survived across ?m consecutive cols
+  + ? * ReductionSurvives(i)                # optional gate boost if post-reduction survives
+  + ? * DoublesAffinity(i)                  # only for doubles-heavy indices
+Defaults (can be in a YAML config):
+* w_ring: R2=1.25, R4=1.10, R6=1.0, R8=1.0.
+* w_col: col1=1.00, col2=0.85, col3=0.70, col4=0.55, col5=0.40, col6=0.25, col7=0.15.
+* w_set: Set1=1.00, Set2=0.60, Set3=0.40.
+* w_section: Combined=1.15, Midday=1.00, Evening=1.00.
+* h_hot=+0.10, h_superhot=+0.20.
+* ?=+0.50, ?=+0.40, ?=+0.40, ?=+0.25, ?=+0.25.
+Rationale: These constants encode what your Hit Guides already show—rightmost, Set1, R2 and hotzone matter more; agreement across panels matters; and reduction/mirror are supportive nudges, not kingmakers. The plan also honors the “Columns 1–2 focus” you documented. 
+
+4) Straighthunt module (permutation ranking)
+For each top index i, compute PermutationScore over its valid straights (6 for allunique, fewer for doubles). Use the same structure as IndexScore but counting order evidence only:
+PermutationScore(i, perm) =
+  ?_sections ?_sets ?_rings ?_cols [
+     OrderEvidence(perm, s, set, ring, col)   # contiguous or near-subsequence hit
+     × w_ring × w_col × w_set × w_section
+     × (1 + h_hot + h_superhot)
+  ]
+  + ? * SameOrderEcho(perm)                   # appears in ?2 rings or ?2 sections at col?2
+  + ? * TailAnchor(perm)                      # perm’s last digit seen at col1 repeatedly
+Defaults: ?=+0.30, ?=+0.20. Output a probability distribution per index by softnormalizing the scores. Straight candidates are then (index, perm) pairs prioritized by IndexScore × PermutationProb. (This is how we capture the “241 / 9221 / 6411” ? 691 straight effect you highlighted.) 
+Remember: a VTRAC cluster always yields 8 boxable combos (the “VTRAC straights” table). We’re simply prioritizing the orders most echoed by your strings to chase straight payouts opportunistically without exploding cost. 
+
+5) Candidate generation & thresholds (what we output daily)
+Indices:
+* Rank all 35 by IndexScore.
+* Apply a floor (e.g., require at least one Set1 hotzone presence OR a strong crosssection consensus) to avoid lowevidence picks.
+* Default TopN indices = 3 (matches your enhancement doc), but store the full ranked list in the predictions JSON for learning later. 
+Straights:
+* For each selected index, output up to 8 VTRAC straights ranked by IndexScore × PermutationProb.
+* If a Doubles day flag (from doubles affinity) is high for an index, include the best orderings for that double explicitly (fewer unique orders, but keep them ranked).
+Explainability:
+* Alongside each pick, attach the why payload: which sections/sets/rings/columns hit, hotzone flags, any reductionsurvives/mirrorconfirm bits, and the top permutation clues. (This is crucial for trust and will be written into the predictions JSON.)
+
+6) Outputs & schemas (so training “just works”)
+* Predictions JSON (data/outputs/predictions/<STATE>/<DATE>_vtrac_predictions.json):
+{
+  "date": "2025-09-29",
+  "state": "OntarioCanada4",
+  "engine": "vtrac_core@1.0.0",
+  "indices_ranked": [
+    {
+      "index": 22,
+      "score": 183.5,
+      "evidence": {
+        "presence_hits": [{"section":"Midday","set":"Set1","ring":"R2","col":2,"hot":"H"}],
+        "consensus": {"sections":["Midday","Combined"], "k_last_cols": 2},
+        "reduction_survives": true,
+        "doubles_affinity": 0.0
+      },
+      "straights": [
+        {"perm":"691","perm_score":0.74,"why":["order echo R2@col2","tail@col1"]},
+        {"perm":"619","perm_score":0.18},
+        {"perm":"…","perm_score":0.08}
+      ],
+      "vtrac_boxed": ["124","129","147","179","246","269","467","679"]   // example for the index
+    },
+    {"index": 30, "...": "..."}
+  ]
+}
+* Bundle JSON is produced by the existing bundle_day() after you log winners; no change to its schema (that doc shows the example) — we’re just ensuring our predictions JSON carries richer evidence for learning. 
+
+7) Implementation plan (what we code in Part 1)
+7.1 Module boundaries (no churn to app shell)
+* Keep VTRAC as the page that reads combined tables and writes predictions + analysis. Page wiring stays under src/app.py; VTRAC engine lives under src/core/module_c_vtrac.py (or core/vtrac_core.py), using utils.path_handler for paths. 
+7.2 New core functions (pure, testable)
+1. scan_evidence(grids, config) -> dict[index -> features]
+o Grids = parsed CSVs for Midday/Evening/Combined; each yields Set3/2/1 × Draw1..7 × R2/4/6/8 × columns 7?1 strings (your Describe Datasets map). 
+o Extract presence, persistence, firsthit depth, hot bits, consensus counts, reductionsurvives flags, doubles affinity.
+2. score_indices(features, config) -> list[(index, score, attribs)]
+o Implements the explicit formula from §3 (with config weights).
+3. rank_permutations(features, top_indices, config) -> dict[index -> list[(perm, prob, why)]]
+o Implements §4 (order evidence scoring).
+4. make_predictions_json(state, date, ranked, perms, features) -> dict
+o Assembles full explainable output.
+5. write_artifacts(state, date, preds, debug_frames)
+o Writes JSON + optional CSV/HTML inspection tables to data/outputs/analysis/vtrac/<STATE>/<DATE>/….
+7.3 Config (one YAML)
+Create configs/vtrac_core.yml with:
+* weights (w_ring, w_col, w_set, w_section, ?..?, ?, ?),
+* thresholds (k for consensus, minimum evidence floors),
+* toggles (enable_reduction_assist, enable_mirror_assist, doubles_mode).
+7.4 Dev health & guardrails (quick wins)
+* Add a DEV Health expander to the VTRAC page mirroring Aux’s helpers: show cwd, Python path, resolved tables dir, counts (per section). This prevents path drift and matches your existing “System Health Helpers” pattern. 
+
+8) How this stays aligned with the rest of AAT9
+* App flow & architecture: we respect the canonical launch, imports, and directory layout you standardized (no “mystery” paths; no touching Aux/BA). 
+* Stable Pattern Extractor: remains the authoritative string?features normalizer upstream; VTRAC is intentionally stringnative but can optionally ingest a few stable features later. (Your master guide is clear that extractor outputs become the shared substrate—good to keep that door open.) 
+* Winners logging & bundles: unchanged; we simply produce richer prediction evidence so a later training script can recompute/learn weights from raw tables while using bundles as the pairing key. 
+
+9) What will ship in Part 2 (next message)
+* Pseudocode ? real code skeletons for scan_evidence, score_indices, and rank_permutations with careful handling of leading zeros and canonical boxed labels (uses your VTRAC lookup helpers).
+* A small unittest pack (headless) that feeds synthetic grids to confirm column weighting, hotzone boosts, and permutation scoring.
+* The predictions JSON writer and one minimal debug CSV to visualize why a top index scored higher than another.
+
+Why this plan is “safeaggressive”
+* It amplifies what the logs already prove works: rightmost emphasis, R2 backbone, crosssection agreement, and sameorder straight echoes. Your examples (e.g., …32244 / 3244… ? 324 spine ? 379 straight; …554008… ? 408, via mirror/reduction) become features and boosts—not anecdotes. 
+* It stays inside AAT9’s established contracts (paths, bundle, page ownership), so we don’t break anything else while we get sharper. 
+If you’re happy with this foundation, I’ll proceed with Part 2: code skeletons for the scoring engine + the predictions writer, plus a tiny test harness to keep changes verifiable as we iterate.
+
+______________________________________________________________
+_________________________________________________________________
+
+
+
+
+
+Absolutely—I get it, and I’m aligned with your “selfcontained first, aggregate later” plan.
+At its core, the VTRAC Analyzer started as a winnerslogging lens: you’d overlay the winner’s VTRAC index on the R2/R4/R6/R8 string charts so we can see how the winning VTRAC relationships were already forming (and often persisting) in the progression. That same lens is powerful enough to act as a predictor: if we can score “how strongly a VTRAC index is expressing itself right now” (and which straight permutations are being hinted at), we can rank candidate indexes and straight plays—then learn from what worked by logging outcomes every day. That is exactly the hybrid you’ve been asking for: a scoringfirst system that can accumulate evidence and optionally layer beginnerfriendly ML later. The app and docs you’ve assembled already support this workflow (daily run ? log winners/inputs ? iterate), so we’re building on solid ground. 
+Below is my concise “intermission” read—what I understand, why the VTRAC Analyzer has unique value, and how clustering / progression methods apply in a customized way to your data and tools.
+
+1) Do I fully understand the concept and the value of this tool?
+Yes. The VTRAC Analyzer is valuable because it turns “string progressions” (R2/R4/R6/R8) into structured, indexlabeled signals. That gives us:
+* Boxed and straight awareness: every VTRAC index maps to 8 “VTRAC straights” (all permutations). The string charts frequently hint at order—not just membership—so we can extract straightdirection clues in addition to index selection.
+* Pattern progression context: survival into the rightmost columns, crosschart agreement (Midday/Evening/Combined), hotzone flags, digitreduction masks, and mirror/shift effects—all visible and countable.
+* Daily learning loop: each run produces a small, comparable feature set we can log (what the charts “said” vs. what actually hit), so the tool can be tuned with scoring first, and small ML later. Your “Winners Logging” plan and health helpers were designed precisely for this iterateandlearn cycle.
+Importantly, your integrated app already separates concerns cleanly: VTRAC/Stable/DR consume combined tables; Auxiliary/Blackapple consume draws CSVs. That lets us keep VTRAC analysis selfcontained while still benefiting from shared run hygiene, logging, and preflight checks.
+
+2) Why turning “logging” into “prediction” is sound for VTRAC
+Because the same ingredients that make a good posthoc explanation (index persistence, crosssection agreement, endcolumn survival, straightorder consistency) can be quantified at prediction time. The Analyzer’s job becomes:
+1. Translate charts ? features (evidence for each index and, when possible, for each straight order),
+2. Score those features with transparent weights (scoring “beast”), and
+3. Log what we predicted vs. what hit (to update thresholds later).
+Your internal roadmap explicitly targets a winnerslogging channel and a lightweight, hybridML pass once evidence accrues—exactly this workflow. 
+
+3) How “pattern clustering” and “pattern progression” methods apply here (customized, not generic)
+Think of each day’s window (e.g., last 7 draws rendered as R2/R4/R6/R8) as a feature vector per VTRAC index:
+* Progression features (per index): counts by column; survival to rightmost columns; hotzone hits; crosschart (Midday/Evening/Combined) intersections; stability (repeats across sets/days); “momentum” (net change in the last 1–2 columns); and straights evidence (does the chart hint a consistent order like 241 ? 9221 ? 691?).
+* Overlap features: number of other indexes in the same “VTRAC family” copresent; whether the candidate index’s internal pairs remain “alive” in the strings (an analog to the BA remainingpairs foundation, but done inside the string tables).
+* Digit overlays: digitreduction masks (removing transit digits from the most recent draw), mirror transforms, and shift transforms applied to the visible patterns to see which index evidence survives those overlays—this often sharpens the field late in the progression.
+Once you compute those per window:
+* Clustering (e.g., hierarchical or kmeans on these window features) discovers regimes—recurring states of the string system. In a “tight regime,” survival to the last column + crosschart agreement may be a stronger tell; in another “noisy regime,” straightorder cues + digitreduction overlays might dominate. The Analyzer can learn a regime ? weight profile without changing your UI.
+* Markov / transition modeling across VTRAC indexes captures common index progressions. If 33?34?15 is a frequent path in your examples, the current mix of visible indexes can boost the next index’s prior.
+* Hazardstyle scoring (timesinceevidence) reranks indexes that have persisted without payoff—useful when several indexes look equally “hot”.
+All of this is scoringfirst: no black boxes required. When you’re ready, you can fit a small logistic/GBM offline on those features to learn slightly better weights, but the tool remains fully usable (and tunable) with the transparent scores alone. Your app’s wiring and data contracts already support this incremental strategy.
+
+4) Why the “universal scoring schema” across tools is worth it—even while we optimize VTRAC alone
+You’re right that aggregation comes later, but designing VTRAC’s output now with a shared schema makes that future painless. Concretely, each Analyzer (VTRAC, Stable, DR, BA) can emit a tiny JSON row per day with:
+* index_score (0..1), index_rank, straight_score (0..1), straight_top8,
+* stability_right_cols, cross_section_agreement, hot_zone_hits,
+* digit_reduction_support, mirror_support, shift_support,
+* pairs_coverage (if applicable), root_sum_support (if applicable),
+* regime_id (if clustering is enabled), and an explain list of feature?weight.
+This mirrors your Winners Logging MVP idea and “System Health” helpers (so runs are reproducible, easy to diagnose, and comparable across days/states). It preserves the “selfcontained now, aggregate later” plan—and it’s consistent with your current app’s separation of inputs and page responsibilities.
+
+5) Where this fits in your integrated app (so nothing fights anything)
+* VTRAC Analyzer keeps reading the combined tables produced by your pipeline.
+* Auxiliary/Blackapple continues to operate from cleaned draws CSVs with their own scoring (mirror, floats, rootdue, remaining pairs, etc.).
+* Control Center remains the crossstate surface with BA; VTRAC remains a focused state tool.
+* Health/Preflight stays in place to verify imports, CWD, and data resolution before runs.
+That’s exactly how your docs describe the app: pages are selfcontained but share common run hygiene and logging; Aux stays drawsonly; VTRAC/Stable/DR stay on the combined tables.
+
+6) Bottom line (and how I’ll apply this in Part 2)
+* I fully grasp the why: we’re not guessing—we’re measuring how indexes and orders express through the R2/R4/R6/R8 progressions, and we’re logging outcomes to improve.
+* I’ll keep it hybrid and beginnerfriendly: transparent scoring first; optional small ML later.
+* The customization is real: clustering and progression aren’t generic buzzwords—they’re specific to your charts (survival, momentum, crosssection agreement, straightorder evidence, overlays like digitreduction/mirror/shift).
+* I’ll keep the Analyzer selfcontained and produce a small, stable evidence JSON each day so we can aggregate across tools later without refactors.
+When you’re ready, ask for Part 2 and I’ll turn this into a concrete, stepbystep coding plan (with guardrails), starting with the feature extractors, the scoring function, straightorder inference, and the daily logging artifacts—laid out to mirror your existing app and data contracts. 
+If you want a onepager to pin in the repo explaining the “VTRAC Analyzer signals” (like we did for Blackapple’s triggers and remainingpairs concept), I can include that too so every future run has the same mental model. 
+
+_______________________________________________________________
+__________________________________________________________________
+You’re absolutely right to expect full, pasteready code in parts. I defaulted to a designfirst writeup in Part?1 to avoid breaking the integrated app without honoring your data contracts and wiring (VTRAC reads combined tables; Aux/BA read draws CSVs; SystemHealth + Preflight guardrails). That caution came from your docs emphasizing stability, absolutepath loaders, and page boundaries. 
+But you’re also right: the way you work best is large, comprehensive modules delivered as multiple parts so you can paste them together with no feature compromises. I’m aligned. Below is a true Part?1 code drop (selfcontained, highquality, productionstyle) that you can add to the repo without disturbing existing pages. It mirrors how the current VTRAC Analyzer functions, but layers the advanced patternprogression logic we discussed (column survival, crosssection consensus, VTRAC straights, reduction/mirror overlays, 3digit sliding windows over R2/R4/R6/R8 strings, doubles awareness), and it’s built to plug into the page later under a feature flag. It also respects your winners logging + hybridML plan so the engine emits structured evidence per index for later learning. 
+
+Part?1 — Core “Enhanced VTRAC” Engine (code you can paste now)
+What this includes
+* A new, isolated package modules/vtrac_enhanced/ with: config, features, engine, adapters (JSON adapter for the example format you provided; a placeholder “tables” adapter we’ll wire in Part?2).
+* A minimal core wrapper under src/core/module_c_vtrac_enhanced.py (kept noninvasive; later we’ll add the Streamlit page toggle).
+* A tiny CLI driver you can run locally to sanitycheck against your JSON examples.
+* Lightweight tests you can run with pytest.
+Folder map
+modules/
+  vtrac_enhanced/
+    __init__.py
+    config.py
+    features.py
+    engine.py
+    adapters.py
+    scoring_types.py
+src/
+  core/
+    module_c_vtrac_enhanced.py
+tools/
+  vtrac_enhanced_cli.py
+tests/
+  test_vtrac_enhanced_basic.py
+
+modules/vtrac_enhanced/__init__.py
+# SPDX-License-Identifier: MIT
+from .config import EnhancedVtracConfig, DEFAULT_CONFIG
+from .engine import score_vtrac_indices, select_top_indices, rank_index_combos
+from .adapters import load_from_training_json
+from .scoring_types import (
+    PatternCell, PatternSet, SectionPatterns, EngineInput, IndexScore, ComboScore, Evidence
+)
+
+__all__ = [
+    "EnhancedVtracConfig", "DEFAULT_CONFIG",
+    "score_vtrac_indices", "select_top_indices", "rank_index_combos",
+    "load_from_training_json",
+    "PatternCell", "PatternSet", "SectionPatterns", "EngineInput",
+    "IndexScore", "ComboScore", "Evidence",
+]
+
+modules/vtrac_enhanced/config.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Dict, List
+
+@dataclass
+class EnhancedVtracConfig:
+    # Column weights (left ? right) for R2/R4/R6/R8 progressions
+    # Rightmost columns (end-strings) are most important.
+    col_weights: Dict[str, List[float]] = field(default_factory=lambda: {
+        "R2": [1.0, 1.2, 1.4, 1.7, 2.2, 3.2, 4.5],
+        "R4": [1.0, 1.2, 1.4, 1.8, 2.4, 3.3, 4.6],
+        "R6": [1.0, 1.2, 1.5, 2.0, 2.7, 3.6, 4.8],
+        "R8": [1.0, 1.3, 1.7, 2.3, 3.1, 4.1, 5.2],
+    })
+    # Section weights — Combined ? Midday/Evening
+    section_weights: Dict[str, float] = field(default_factory=lambda: {
+        "Midday": 1.0, "Evening": 1.0, "Combined": 1.25
+    })
+    # Feature weights
+    w_index_presence: float = 1.0          # any VTRAC index occurs in a triad
+    w_column_survival: float = 0.35        # same triad shows up across multiple columns
+    w_cross_section: float = 0.4           # same index present across sections
+    w_hotzone: float = 0.25                # sheet metadata says hot zone
+    w_straight_clue: float = 0.9           # triad equals one of winner straights set
+    w_straight_chain: float = 0.6          # consecutive overlapping straighttriads
+    w_double_bias: float = 0.3             # doublesleaning boost when doubles context
+    w_digit_mirror_overlay: float = 0.25   # overlay after mirror/reduction pass
+    w_index_frequency_decay: float = 0.85  # softly decay repeats to avoid runaway
+
+    # Straight candidates: how many combos to emit per top index
+    per_index_top_straights: int = 4
+    per_index_top_boxed: int = 6
+
+    # Optional: treat indices with only doubles as “doublesleaning”
+    doubles_lean_indices: set[int] = field(default_factory=lambda: {1,16,26,32,35})
+
+    # For later logging/ML
+    emit_evidence: bool = True
+
+DEFAULT_CONFIG = EnhancedVtracConfig()
+
+modules/vtrac_enhanced/scoring_types.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple, Iterable
+
+@dataclass
+class PatternCell:
+    r_key: str              # "R2" | "R4" | "R6" | "R8"
+    column_idx: int         # 0..N-1 (left ? right)
+    digits: str             # e.g., "559244133877" (raw string column)
+    hot: bool = False       # from metadata (sheet/scenario)
+    section: str = "Combined"   # "Midday" | "Evening" | "Combined"
+
+@dataclass
+class PatternSet:
+    # all columns left?right per r_key
+    by_r: Dict[str, List[PatternCell]]
+
+@dataclass
+class SectionPatterns:
+    section: str                    # "Midday" | "Evening" | "Combined"
+    patterns: PatternSet
+
+@dataclass
+class EngineInput:
+    sections: List[SectionPatterns]
+    # optional: most recent actual draw for mirror/reduction overlay
+    last_draw: Optional[str] = None
+    winner_hint: Optional[str] = None  # use when you validate against known hits (training)
+    doubles_context: bool = False
+
+@dataclass
+class Evidence:
+    feature: str
+    details: Dict[str, object]
+
+@dataclass
+class IndexScore:
+    index: int
+    score: float = 0.0
+    # per feature list of evidences (only if config.emit_evidence)
+    ev: Dict[str, List[Evidence]] = field(default_factory=dict)
+
+@dataclass
+class ComboScore:
+    index: int
+    combo: str
+    score: float = 0.0
+    tags: List[str] = field(default_factory=list)
+
+modules/vtrac_enhanced/features.py
+from __future__ import annotations
+from typing import Dict, Iterable, List, Optional, Tuple
+from collections import defaultdict
+
+# Import the canonical reference already in your repo.
+from modules.vtrac_reference import (
+    get_vtrac_index, get_index_straights, get_index_set, normalize_draw
+)
+
+MIRROR_MAP = str.maketrans({"0":"5","1":"6","2":"7","3":"8","4":"9","5":"0","6":"1","7":"2","8":"3","9":"4"})
+
+def slide_triad_windows(s: str) -> List[str]:
+    """Unique triads seen when sliding 3 over a string like '5592441338'."""
+    out = []
+    for i in range(len(s)-2):
+        triad = s[i:i+3]
+        # ignore triples like '000','111' etc (VTRAC returns None)
+        if len(set(triad)) == 1:
+            continue
+        out.append(triad)
+    return out
+
+def triads_to_indices(triads: Iterable[str]) -> List[Tuple[str, Optional[int]]]:
+    out = []
+    for t in triads:
+        idx = get_vtrac_index(t)
+        out.append((t, idx))
+    return out
+
+def mirror_string(s: str) -> str:
+    return s.translate(MIRROR_MAP)
+
+def count_survival_across_columns(columns: List[str]) -> Dict[str, int]:
+    """
+    For a sequence of columns (left?right), count how many distinct columns
+    a triad appears in. Reward triads that survive toward the right.
+    """
+    seen_by_triad = defaultdict(set)
+    for c_idx, col in enumerate(columns):
+        for tri in set(slide_triad_windows(col)):
+            seen_by_triad[tri].add(c_idx)
+    return {tri: len(cols) for tri, cols in seen_by_triad.items()}
+
+def straight_chain_strength(col: str, winner: Optional[str]) -> Dict[str, int]:
+    """
+    Reward adjacent overlapping triads that both belong to winner straights.
+    Returns triad -> chain length indicator (0/1/2...).
+    """
+    if not winner:
+        return {}
+    straights = get_index_straights(winner)  # set of 6 perms
+    tris = slide_triad_windows(col)
+    strength = defaultdict(int)
+    for i in range(len(tris)-1):
+        if tris[i] in straights and tris[i+1] in straights:
+            # overlapping chain found, reward both ends
+            strength[tris[i]] += 1
+            strength[tris[i+1]] += 1
+    return strength
+
+def index_frequency(triad_idx_pairs: Iterable[Tuple[str, Optional[int]]]) -> Dict[int, int]:
+    c = defaultdict(int)
+    for t, idx in triad_idx_pairs:
+        if idx is not None:
+            c[idx] += 1
+    return dict(c)
+
+def combos_for_index(index: int) -> List[str]:
+    """Return all boxed 3digit combos (singles + doubles) for an index."""
+    return sorted(get_index_set(index))
+
+modules/vtrac_enhanced/engine.py
+from __future__ import annotations
+from typing import Dict, List, Tuple, Optional
+from collections import defaultdict
+
+from .config import EnhancedVtracConfig
+from .scoring_types import EngineInput, IndexScore, ComboScore, Evidence, SectionPatterns, PatternCell
+from .features import (
+    slide_triad_windows, triads_to_indices, mirror_string,
+    count_survival_across_columns, straight_chain_strength,
+    index_frequency, combos_for_index
+)
+from modules.vtrac_reference import get_vtrac_index, get_index_straights, normalize_draw
+
+def _add_ev(acc: Dict[str, List[Evidence]], feat: str, ev: Evidence, emit: bool):
+    if not emit: return
+    acc.setdefault(feat, []).append(ev)
+
+def score_vtrac_indices(inp: EngineInput, cfg: EnhancedVtracConfig) -> Dict[int, IndexScore]:
+    """
+    Core scoring over R2/R4/R6/R8 pattern strings across sections.
+    """
+    scores: Dict[int, IndexScore] = {}
+    # Precompute winner straights (if known) for straight clues/chains
+    w_tris = set()
+    if inp.winner_hint:
+        w_tris = get_index_straights(inp.winner_hint)
+
+    # pass 1: raw presence + column weights + section weights + survival + straight clues
+    section_seen: Dict[int, set] = defaultdict(set)  # index -> set(section)
+    for sec in inp.sections:
+        sec_w = cfg.section_weights.get(sec.section, 1.0)
+        # group columns per r_key
+        by_r = sec.patterns.by_r
+        for r_key, cells in by_r.items():
+            # Guarantee 7 columns weighting; if fewer, align from the right
+            cols = [c.digits for c in cells]
+            col_weights = cfg.col_weights.get(r_key, [1.0]*len(cols))
+            # align right
+            if len(col_weights) != len(cols):
+                if len(cols) < len(col_weights):
+                    col_weights = col_weights[-len(cols):]
+                else:
+                    # if more columns than weights, extend by the last weight
+                    col_weights = col_weights + [col_weights[-1]]*(len(cols)-len(col_weights))
+
+            # survival map for this r_key
+            survival_map = count_survival_across_columns(cols)
+            for c_idx, cell in enumerate(cells):
+                cw = col_weights[c_idx] * sec_w
+                # straight chains in this single column
+                chain = straight_chain_strength(cell.digits, inp.winner_hint)
+
+                triads = slide_triad_windows(cell.digits)
+                for triad, idx in triads_to_indices(triads):
+                    if idx is None: 
+                        continue
+                    sc = scores.setdefault(idx, IndexScore(index=idx))
+                    # base presence
+                    sc.score += cfg.w_index_presence * cw
+                    _add_ev(sc.ev, "presence", Evidence("presence", {
+                        "section": sec.section, "r": r_key, "col": c_idx, "triad": triad, "cw": cw
+                    }), cfg.emit_evidence)
+                    # survival
+                    surv = survival_map.get(triad, 1)
+                    if surv > 1:
+                        sc.score += cfg.w_column_survival * (surv-1) * cw
+                        _add_ev(sc.ev, "survival", Evidence("survival", {
+                            "triad": triad, "cols": surv, "r": r_key, "col": c_idx, "cw": cw
+                        }), cfg.emit_evidence)
+                    # straight clue
+                    if inp.winner_hint and triad in w_tris:
+                        sc.score += cfg.w_straight_clue * cw
+                        _add_ev(sc.ev, "straight_clue", Evidence("straight_clue", {
+                            "triad": triad, "r": r_key, "col": c_idx, "cw": cw
+                        }), cfg.emit_evidence)
+                    # straight chain
+                    ch = chain.get(triad, 0)
+                    if ch > 0:
+                        sc.score += cfg.w_straight_chain * ch * cw
+                        _add_ev(sc.ev, "straight_chain", Evidence("straight_chain", {
+                            "triad": triad, "links": ch, "r": r_key, "col": c_idx, "cw": cw
+                        }), cfg.emit_evidence)
+
+                    section_seen[idx].add(sec.section)
+
+                # hot zone bonus
+                if cell.hot:
+                    for triad, idx in triads_to_indices(triads):
+                        if idx is None: 
+                            continue
+                        sc = scores.setdefault(idx, IndexScore(index=idx))
+                        sc.score += cfg.w_hotzone * cw
+                        _add_ev(sc.ev, "hotzone", Evidence("hotzone", {
+                            "section": sec.section, "r": r_key, "col": c_idx, "cw": cw
+                        }), cfg.emit_evidence)
+
+    # pass 2: crosssection consensus
+    for idx, secs in section_seen.items():
+        if len(secs) >= 2:
+            sc = scores.setdefault(idx, IndexScore(index=idx))
+            sc.score += cfg.w_cross_section * (len(secs) - 1)
+            _add_ev(sc.ev, "cross_section", Evidence("cross_section", {
+                "sections": sorted(secs)
+            }), cfg.emit_evidence)
+
+    # pass 3: mirror/reduction overlay using last draw (optional)
+    if inp.last_draw:
+        last = normalize_draw(inp.last_draw)
+        if last:
+            mirrored = mirror_string("".join(last))
+            # treat mirrored last as a short “string column” hint
+            for triad, idx in triads_to_indices(slide_triad_windows(mirrored)):
+                if idx is None: 
+                    continue
+                sc = scores.setdefault(idx, IndexScore(index=idx))
+                sc.score += cfg.w_digit_mirror_overlay
+                _add_ev(sc.ev, "mirror_overlay", Evidence("mirror_overlay", {
+                    "from_last": last, "triad": triad
+                }), cfg.emit_evidence)
+
+    # pass 4: doubles context
+    if inp.doubles_context:
+        for idx in list(scores.keys()):
+            if idx in cfg.doubles_lean_indices:
+                scores[idx].score += cfg.w_double_bias
+                _add_ev(scores[idx].ev, "doubles_bias", Evidence("doubles_bias", {
+                    "reason": "targeting doubles", "index": idx
+                }), cfg.emit_evidence)
+
+    # soft decay to reduce runaway from huge strings
+    for sc in scores.values():
+        sc.score *= cfg.w_index_frequency_decay
+
+    return scores
+
+def select_top_indices(scores: Dict[int, IndexScore], k: int = 8) -> List[IndexScore]:
+    return sorted(scores.values(), key=lambda x: x.score, reverse=True)[:k]
+
+def rank_index_combos(top_idx: List[IndexScore], winner_hint: Optional[str], cfg: EnhancedVtracConfig) -> Dict[int, List[ComboScore]]:
+    """
+    Within each top index, emit a list of straightleaning combos first,
+    then boxed support, tagged for UI.
+    """
+    out: Dict[int, List[ComboScore]] = {}
+    w_perms = set()
+    if winner_hint:
+        w_perms = {winner_hint} | set()  # normalize in caller if needed
+
+    for sc in top_idx:
+        combos = combos_for_index(sc.index)
+        # heuristics: prefer singles combos first (len(set)==3); then doubles
+        singles = [c for c in combos if len(set(c)) == 3]
+        doubles = [c for c in combos if len(set(c)) == 2]
+
+        ranked: List[ComboScore] = []
+
+        # Straight “lane” preference: award small bonus if combo itself equals any triad
+        # seen among straight clues in evidence
+        straight_triads = set()
+        for evs in sc.ev.values():
+            for ev in evs:
+                if ev.feature in ("straight_clue", "straight_chain"):
+                    t = ev.details.get("triad")
+                    if isinstance(t, str) and len(t) == 3:
+                        straight_triads.add(t)
+
+        def _score_combo(c: str) -> float:
+            base = 0.0
+            if c in straight_triads:
+                base += 0.6
+            # small nudge for more frequent digit variety
+            if len(set(c)) == 3:
+                base += 0.2
+            return base
+
+        # rank singles then doubles by the heuristic
+        singles_ranked = sorted(singles, key=_score_combo, reverse=True)[:cfg.per_index_top_straights]
+        doubles_ranked = sorted(doubles, key=_score_combo, reverse=True)[:cfg.per_index_top_boxed]
+
+        for c in singles_ranked + doubles_ranked:
+            cs = ComboScore(index=sc.index, combo=c, score=sc.score * 0.05, tags=[])
+            if c in straight_triads:
+                cs.tags.append("STRAIGHTCLUE")
+            if len(set(c)) == 2:
+                cs.tags.append("DOUBLE")
+            ranked.append(cs)
+
+        out[sc.index] = ranked
+
+    return out
+
+modules/vtrac_enhanced/adapters.py
+from __future__ import annotations
+from typing import Dict, List
+from .scoring_types import SectionPatterns, PatternSet, PatternCell, EngineInput
+
+def load_from_training_json(d: Dict) -> EngineInput:
+    """
+    Adapter for the JSON example you provided in the message.
+    """
+    sections: List[SectionPatterns] = []
+    for section_name, section_body in d.get("sections", {}).items():
+        for set_name, set_body in section_body.get("sets", {}).items():
+            # We will take Draw1..Draw7 under this set and build columns per R2/R4/R6/R8
+            # The example structure: pattern_variations -> R2: [col0, col1, ...]
+            draw_map = set_body.get("draws", {})
+            # The 'progression' is Draw1 (7 cols) ? … ? Draw7 (1 col)
+            # We will read ONLY Draw1 here (it carries all columns).
+            if "Draw1" not in draw_map:
+                # fall back to any draw that exists
+                if not draw_map:
+                    continue
+                first = sorted(draw_map.keys())[0]
+                draw = draw_map[first]
+            else:
+                draw = draw_map["Draw1"]
+            pvar = draw.get("pattern_variations", {})
+            by_r = {}
+            for r_key, cols in pvar.items():
+                cells = []
+                for c_idx, col_str in enumerate(cols):
+                    cells.append(PatternCell(
+                        r_key=r_key, column_idx=c_idx, digits=col_str,
+                        hot=bool(draw.get("metadata", {}).get("is_hot_zone", False)),
+                        section=section_name
+                    ))
+                by_r[r_key] = cells
+            sections.append(SectionPatterns(section=section_name, patterns=PatternSet(by_r=by_r)))
+    last_draw = None
+    winner = None
+    if "analysis_guide" in d:
+        # Optional enrichment if present elsewhere
+        pass
+    return EngineInput(sections=sections, last_draw=last_draw, winner_hint=winner, doubles_context=False)
+
+# Placeholder for Part 2: read combined tables from disk (via utils.path_handler)
+def load_from_tables_root(*args, **kwargs):
+    raise NotImplementedError("Part 2 will wire the real tables loader.")
+
+src/core/module_c_vtrac_enhanced.py
+from __future__ import annotations
+from typing import Dict, Any
+from modules.vtrac_enhanced import (
+    EnhancedVtracConfig, DEFAULT_CONFIG,
+    score_vtrac_indices, select_top_indices, rank_index_combos
+)
+from modules.vtrac_enhanced.scoring_types import EngineInput
+
+def run_vtrac_enhanced(inp: EngineInput, cfg: EnhancedVtracConfig = DEFAULT_CONFIG) -> Dict[str, Any]:
+    scores = score_vtrac_indices(inp, cfg)
+    top = select_top_indices(scores, k=8)
+    combos = rank_index_combos(top, inp.winner_hint, cfg)
+    return {
+        "scores": top,                 # list[IndexScore]
+        "combos": combos,              # index -> [ComboScore]
+    }
+
+tools/vtrac_enhanced_cli.py
+# Quick sanity CLI so you can run:
+#   python tools/vtrac_enhanced_cli.py path/to/example.json
+import json, sys
+from modules.vtrac_enhanced import load_from_training_json, DEFAULT_CONFIG
+from src.core.module_c_vtrac_enhanced import run_vtrac_enhanced
+
+def main():
+    if len(sys.argv) < 2:
+        print("usage: python tools/vtrac_enhanced_cli.py example.json")
+        sys.exit(2)
+    with open(sys.argv[1], "r", encoding="utf-8") as f:
+        data = json.load(f)
+    eng_in = load_from_training_json(data)
+    result = run_vtrac_enhanced(eng_in, DEFAULT_CONFIG)
+    # Pretty print
+    print("TOP INDEX SCORES:")
+    for sc in result["scores"]:
+        print(f"  idx={sc.index:<2} score={sc.score:7.3f} feats={list(sc.ev.keys())[:6]}")
+    print("\nCANDIDATE COMBOS (per top index):")
+    for idx, lst in result["combos"].items():
+        combos = ", ".join([f"{x.combo} ({'/'.join(x.tags)})" if x.tags else x.combo for x in lst])
+        print(f"  {idx:>2}: {combos}")
+
+if __name__ == "__main__":
+    main()
+
+tests/test_vtrac_enhanced_basic.py
+from modules.vtrac_enhanced import DEFAULT_CONFIG
+from modules.vtrac_enhanced.adapters import load_from_training_json
+from src.core.module_c_vtrac_enhanced import run_vtrac_enhanced
+
+EXAMPLE = {
+  "state_name": "OntarioCanada4",
+  "sections": {
+    "Midday": {
+      "sets": {
+        "Set1": {
+          "draws": {
+            "Draw1": {
+              "pattern_variations": {
+                "R2": ["559244133877","5924133877","9241338","24138","213","13","13"],
+                "R4": ["255983344771","2598334771","2983341","28341","231","31","31"],
+                "R6": ["817755933244","8177593324","8193324","81324","132","13","13"],
+                "R8": ["771983324455","7719833245","1983324","18324","132","13","13"]
+              },
+              "metadata": { "is_hot_zone": True }
+            }
+          }
+        }
+      }
+    },
+    "Combined": {
+      "sets": {
+        "Set1": {
+          "draws": {
+            "Draw1": {
+              "pattern_variations": {
+                "R2": ["55244001167","552401167","554116","554116","55411","55411","55411"],
+                "R4": ["25500644711","255064711","556411","556411","55411","55411","55411"],
+                "R6": ["61170055244","611705524","611554","611554","11554","11554","11554"],
+                "R8": ["70011624455","701162455","116455","116455","11455","11455","11455"]
+              },
+              "metadata": { "is_hot_zone": True }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+def test_basic_scoring_runs():
+    eng_in = load_from_training_json(EXAMPLE)
+    res = run_vtrac_enhanced(eng_in, DEFAULT_CONFIG)
+    assert "scores" in res and "combos" in res
+    assert len(res["scores"]) > 0
+
+How this fits your app (and why I didn’t dump code earlier)
+* Boundaries honored. The new engine is isolated; it doesn’t change existing imports or app flow. Later, we can add a Streamlit toggle on the VTRAC page to run both classic and enhanced engines sidebyside, guarded by your dev health/preflight habits (exactly how your docs recommend evolving modules). 
+* Data contracts preserved. VTRAC uses combined tables; Aux/BA use draws CSVs. I kept the loader for combined tables as a Part?2 task so we can adapt to your actual ondisk table shapes via utils.path_handler (as documented). For now, the JSON adapter lets you validate the logic on your saved training snapshots. 
+* Winners logging ready. The engine emits perfeature evidence attached to each top index score. That plugs directly into your “log winners / hybridML later” roadmap (simple feature rows per run). 
+* Nonregression workflow. You’ve emphasized small, reversible diffs, devgated health, and consistent launch paths. Delivering code in parts lets you paste, run, compare, and iterate without destabilizing other pages. 
+What you can do right now
+1. Paste these files into your repo under the listed paths.
+2. Run pytest -q and python tools/vtrac_enhanced_cli.py <your JSON example> to see top indexes + combos.
+3. (Optional) Hand me one of your JSON snapshots (the large example you shared already conforms), and I’ll calibrate weights if needed.
+
+TL;DR on your process question
+* Yes, your “break into parts and dump full code” approach is optimal here. I now provided a complete Part?1 module instead of prose so you get the best of both: correctness and comprehensiveness.
+* The only reason I led with design language first was to protect your integrated app’s stability and keep faith with the wiring & contracts recorded in your AAT9 docs. Now that alignment is clear, we can keep delivering fullscale parts (Part?2: table adapters + page toggle; Part?3: straightlane refinement + calibration + logging glue), exactly in the format you prefer. 
+If this matches what you had in mind, say the word and I’ll proceed with Part?2 (table adapters + Streamlit wiring + DEV toggle), keeping the same “full code, pasteready” standard.
+
+
+
+
+
+
+
+
+
+
+
+
+__________________________________________________________
+_______________________________________________________________
+
+
+
+your interruption didn’t derail the design. It improved it. Two quick confirmations before we ship Part 2:
+* I understand the winnerlogger (“VTRAC logger”) is both (a) a training/report surface and (b) a discovery aid (e.g., straight hints, “hidden behind a digit,” legendclassified clusters). In the redesign I treat it as an evidence recorder that the Analyzer can also consume—so we never lose those cues. I’ll wire outputs in the same runs/YYYYMMDD/<run_id>/… style you’ve already planned for the project’s winner logging, so your Control Center + logs stay consistent. 
+* This Part 2 delivers a full, productionstyle core engine (pure Python) that can be called by the existing VTRAC page. It does not change your Control Center, Aux Tools, or BA wiring (those stay CSVonly and separate). The Analyzer will continue to read the combined stringtables pipeline; Aux/BA continue to read data/cleaned/*_draws.csv. That separation is by design in AAT9 and I’m keeping it.
+
+VTRAC Analyzer — Part 2 (Core Engine + Scorers)
+What this ships: a complete, selfcontained engine that takes the stringtable structures (R2/R4/R6/R8 across columns 7?1 for Midday/Evening/Combined), scores each VTRAC Index and VTRAC straight using the progression rules you trained (rightcolumn survival, hotzones, crosssection reinforcement, hiddenbehinddigit recovery, mirror/“transit” elimination), and returns ranked predictions + explainable evidence.
+Safe to drop in: it imports your vtrac_reference (Index dictionary, lookups, normalization).
+Logging hooks: optional JSON writer in the same family as your Winners Logger layout, so runs can be analyzed later or fused into the Control Center’s daily ledger. 
+File suggested: modules/vtrac_enhanced.py
+(A thin wrapper src/core/module_c_vtrac_ext.py can be added in Part 3 to read tables via your existing utils.path_handler and render in the VTRAC page; no change to Aux/BA/Control Center.)
+
+Part 2A — Types, Config, and Core Utilities
+# modules/vtrac_enhanced.py
+from __future__ import annotations
+
+import re, json, math, itertools
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Set, Tuple, Optional, Iterable
+from pathlib import Path
+from datetime import datetime
+
+# --- Import the canonical VTRAC reference you already ship ---
+# Keep the import path exactly as used in Aux parity to avoid drift.
+try:
+    # Preferred (project-local)
+    from modules.vtrac_reference import (
+        get_vtrac_index, get_index_set, get_index_straights,
+        normalize_draw, BOXED_LABEL_LOOKUP
+    )
+except Exception:  # graceful fallback if moved alongside this file
+    from vtrac_reference import (
+        get_vtrac_index, get_index_set, get_index_straights,
+        normalize_draw, BOXED_LABEL_LOOKUP
+    )
+
+# ------------------------------
+# Data model for string-tables
+# ------------------------------
+
+@dataclass
+class StringCell:
+    """A single cell in the R2/R4/R6/R8 grids."""
+    section: str            # 'Midday' | 'Evening' | 'Combined'
+    rowtype: str            # 'R2' | 'R4' | 'R6' | 'R8'
+    colpos: int             # 7..1 (left?right progression)
+    text: str               # raw string in the cell
+    is_hot_zone: bool = False
+    set_label: Optional[str] = None  # e.g., 'Set1'... (optional)
+    draw_label: Optional[str] = None # e.g., 'Draw1'... (optional)
+
+@dataclass
+class SectionInput:
+    name: str               # 'Midday' | 'Evening' | 'Combined'
+    cells: List[StringCell] = field(default_factory=list)
+    last_draw: Optional[str] = None   # e.g., last Combined draw "898" for transit/mirror
+    # Optional knobs specific to section (can be None to use global defaults)
+    col_weights: Optional[Dict[int, float]] = None
+    rowtype_weights: Optional[Dict[str, float]] = None
+    hot_zone_bonus: Optional[float] = None
+
+@dataclass
+class AnalyzerConfig:
+    """
+    Global knobs (tuned to your examples). All are safe to tweak without touching logic.
+    """
+    # Emphasize rightmost survival (columns 3/2/1 carry more predictive weight)
+    column_weights: Dict[int, float] = field(default_factory=lambda: {
+        7: 1.00, 6: 1.00, 5: 1.10, 4: 1.25, 3: 1.60, 2: 2.00, 1: 2.60
+    })
+    # Heavier strings at deeper reductions (R8>R6>R4>R2)
+    rowtype_weights: Dict[str, float] = field(default_factory=lambda: {
+        "R2": 1.00, "R4": 1.15, "R6": 1.30, "R8": 1.45
+    })
+    # Cross-section bonuses to reward agreement
+    section_weights: Dict[str, float] = field(default_factory=lambda: {
+        "Midday": 1.00, "Evening": 1.00, "Combined": 1.15
+    })
+    hot_zone_bonus: float = 0.40
+
+    # Hidden-behind-digit recovery and digit-shift (3-of-4) bonuses
+    hidden_triplet_bonus: float = 0.30      # when a 4/5-digit cluster hides a valid 3-digit index
+    shift_bonus: float = 0.25               # when elimination exposes a previously hidden 3-digit
+    # Mirror/“transit” elimination (penalty if candidate uses last combined draw digits or mirrors)
+    transit_penalty: float = 0.40
+
+    # Straight discovery
+    straight_presence_weight: float = 0.80  # weight for exact 3-digit straight repeats across cols
+    straight_right_bias: float = 0.35       # extra for straights surviving into cols 3/2/1
+    straight_cross_section_bonus: float = 0.25
+
+    # Damp repeated counting within one cell
+    per_cell_presence_only: bool = True
+
+    # Tokenization
+    min_token_len: int = 3
+    max_token_len: int = 12   # guardrail to avoid pathological strings
+
+@dataclass
+class IndexEvidence:
+    score: float = 0.0
+    # audit trail
+    hits_by_col: Dict[int, int] = field(default_factory=dict)
+    hits_by_rowtype: Dict[str, int] = field(default_factory=dict)
+    sections_present: Set[str] = field(default_factory=set)
+    hot_zone_hits: int = 0
+    hidden_hits: int = 0
+    shift_hits: int = 0
+    transit_penalties: int = 0
+    # end-of-grid “survival”
+    end_survival_cols: Set[int] = field(default_factory=set)
+    # straight support
+    straight_tokens: Dict[str, int] = field(default_factory=dict)  # '976': count
+    straight_right_cols: Dict[str, Set[int]] = field(default_factory=dict)
+
+@dataclass
+class StraightEvidence:
+    score: float = 0.0
+    appearances: int = 0
+    right_cols: Set[int] = field(default_factory=set)
+    sections: Set[str] = field(default_factory=set)
+
+@dataclass
+class AnalyzerResult:
+    # Index ? evidence
+    indices: Dict[int, IndexEvidence] = field(default_factory=dict)
+    # Straight combo ? evidence
+    straights: Dict[str, StraightEvidence] = field(default_factory=dict)
+    # Ranked outputs (computed post scoring)
+    top_indices: List[Tuple[int, float]] = field(default_factory=list)
+    top_straights: List[Tuple[str, float]] = field(default_factory=list)
+    # For UI/debug
+    config: AnalyzerConfig = field(default_factory=AnalyzerConfig)
+    notes: List[str] = field(default_factory=list)
+
+# ------------------------------
+# Mirrors / transit helpers
+# ------------------------------
+
+_MIRROR = { '0':'5','1':'6','2':'7','3':'8','4':'9','5':'0','6':'1','7':'2','8':'3','9':'4' }
+
+def mirror_digit(d: str) -> str:
+    return _MIRROR.get(d, d)
+
+def transit_blocklist(last_draw: Optional[str]) -> Set[str]:
+    """
+    Transit elimination: block the latest combined draw's digits and their mirrors.
+    Example: last_draw '898' ? block {'8','3'}.
+    """
+    block: Set[str] = set()
+    s = normalize_draw(last_draw) if last_draw else None
+    if s:
+        for ch in set(s):
+            block.add(ch)
+            block.add(mirror_digit(ch))
+    return block
+
+# ------------------------------
+# Tokenization & extraction
+# ------------------------------
+
+_RE_NUM = re.compile(r"\d+")
+
+def _clip(s: str, maxlen: int) -> str:
+    return s if len(s) <= maxlen else s[:maxlen]
+
+def extract_numeric_runs(cell_text: str, cfg: AnalyzerConfig) -> List[str]:
+    """
+    Pull digit runs from a cell, clip to a sane size to prevent runaway permutations.
+    Returns runs of length >= cfg.min_token_len.
+    """
+    out: List[str] = []
+    for m in _RE_NUM.finditer(str(cell_text)):
+        t = _clip(m.group(0), cfg.max_token_len)
+        if len(t) >= cfg.min_token_len:
+            out.append(t)
+    return out
+
+def slide_windows(s: str, k: int) -> Iterable[str]:
+    for i in range(0, max(0, len(s) - k + 1)):
+        yield s[i:i+k]
+
+def combos_of_k(s: str, choose: int) -> Iterable[str]:
+    unique = set()
+    for tup in itertools.combinations(s, choose):
+        c = "".join(tup)
+        if c not in unique:
+            unique.add(c)
+            yield c
+
+# Canonicalize a 3digit into the “boxed label” (e.g., '650'?index 2, boxed '056')
+def boxed_label(s: str) -> Optional[str]:
+    s = normalize_draw(s)
+    if not s or len(set(s)) == 1:  # suppress triples
+        return None
+    # map any perm back to its canonical boxed label if known
+    return BOXED_LABEL_LOOKUP.get(s) or BOXED_LABEL_LOOKUP.get("".join(sorted(s)))
+
+Part 2B — Scoring Engine (progression, hiddendigit, straights) + API
+# modules/vtrac_enhanced.py (continued)
+
+def _score_hit(base: float,
+               section: str,
+               colpos: int,
+               rowtype: str,
+               is_hot: bool,
+               cfg: AnalyzerConfig,
+               section_weights: Dict[str, float]) -> float:
+    cw = cfg.column_weights.get(colpos, 1.0)
+    rw = cfg.rowtype_weights.get(rowtype, 1.0)
+    sw = section_weights.get(section, 1.0)
+    hz = (cfg.hot_zone_bonus if is_hot else 0.0)
+    return base * cw * rw * sw + hz
+
+def _ensure_index(evd: Dict[int, IndexEvidence], idx: int) -> IndexEvidence:
+    if idx not in evd:
+        evd[idx] = IndexEvidence()
+    return evd[idx]
+
+def _ensure_straight(evd: Dict[str, StraightEvidence], s: str) -> StraightEvidence:
+    if s not in evd:
+        evd[s] = StraightEvidence()
+    return evd[s]
+
+def _score_straight_token(token3: str,
+                          section: str,
+                          colpos: int,
+                          cfg: AnalyzerConfig,
+                          straights: Dict[str, StraightEvidence]) -> None:
+    se = _ensure_straight(straights, token3)
+    se.appearances += 1
+    se.right_cols.add(colpos)
+    se.sections.add(section)
+    se.score += cfg.straight_presence_weight + \
+                (cfg.straight_right_bias if colpos <= 3 else 0.0)
+
+def _apply_transit_penalty(digits: Set[str], blocklist: Set[str]) -> bool:
+    return any(d in blocklist for d in digits)
+
+def analyze_sections(sections: List[SectionInput], cfg: Optional[AnalyzerConfig] = None) -> AnalyzerResult:
+    cfg = cfg or AnalyzerConfig()
+    res = AnalyzerResult(config=cfg)
+    indices = res.indices
+    straights = res.straights
+
+    # Pre-compute transit blocklists per section (commonly use Combined's last draw)
+    # If only Combined has a last_draw, we will still honor section-level ones.
+    combined_last = next((s.last_draw for s in sections if s.name.lower().startswith("combined")), None)
+
+    for sec in sections:
+        section = sec.name
+        section_weights = dict(cfg.section_weights)
+        # allow per-section override
+        if sec.col_weights:
+            for k, v in sec.col_weights.items(): cfg.column_weights[k] = v
+        if sec.rowtype_weights:
+            for k, v in sec.rowtype_weights.items(): cfg.rowtype_weights[k] = v
+        if sec.hot_zone_bonus is not None:
+            cfg.hot_zone_bonus = sec.hot_zone_bonus
+
+        block = transit_blocklist(sec.last_draw or combined_last)
+
+        for cell in sec.cells:
+            # Extract raw digit runs (e.g., "55994011386")
+            runs = extract_numeric_runs(cell.text, cfg)
+            if not runs:
+                continue
+
+            # Per-cell de-dup of boxed labels to prevent runaway
+            seen_boxed: Set[Tuple[int, str]] = set()
+            seen_straights: Set[str] = set()
+
+            for r in runs:
+                r = r.strip()
+                if not r: 
+                    continue
+                # 1) Sliding 3digit windows ? direct index hits + straight hints
+                for tok3 in slide_windows(r, 3):
+                    boxed = boxed_label(tok3)
+                    if not boxed:
+                        continue
+                    idx = get_vtrac_index(tok3)
+                    if idx is None:
+                        continue
+
+                    # Evidence unit
+                    key = (idx, boxed if cfg.per_cell_presence_only else boxed+tok3)
+                    if key not in seen_boxed:
+                        seen_boxed.add(key)
+
+                        # Base hit
+                        inc = _score_hit(1.0, section, cell.colpos, cell.rowtype, cell.is_hot_zone,
+                                         cfg, section_weights)
+
+                        # Transit penalty
+                        if _apply_transit_penalty(set(tok3), block):
+                            inc -= cfg.transit_penalty
+
+                        ie = _ensure_index(indices, idx)
+                        ie.score += inc
+                        ie.sections_present.add(section)
+                        ie.hits_by_col[cell.colpos] = ie.hits_by_col.get(cell.colpos, 0) + 1
+                        ie.hits_by_rowtype[cell.rowtype] = ie.hits_by_rowtype.get(cell.rowtype, 0) + 1
+                        if cell.is_hot_zone:
+                            ie.hot_zone_hits += 1
+                        if cell.colpos <= 3:
+                            ie.end_survival_cols.add(cell.colpos)
+
+                    # Straight discovery (ordered token appearances)
+                    if tok3 not in seen_straights:
+                        seen_straights.add(tok3)
+                        _score_straight_token(tok3, section, cell.colpos, cfg, straights)
+                        # Also link straight to its owning index evidence for explain
+                        idx2 = get_vtrac_index(tok3)
+                        if idx2 is not None:
+                            ie2 = _ensure_index(indices, idx2)
+                            ie2.straight_tokens[tok3] = ie2.straight_tokens.get(tok3, 0) + 1
+                            rs = ie2.straight_right_cols.setdefault(tok3, set())
+                            if cell.colpos <= 3:
+                                rs.add(cell.colpos)
+
+                # 2) Hiddenbehinddigit: 3of4 or 3of5 selections from clusters
+                if len(r) >= 4:
+                    for pick3 in combos_of_k(r, 3):
+                        boxed = boxed_label(pick3)
+                        if not boxed:
+                            continue
+                        idx = get_vtrac_index(pick3)
+                        if idx is None:
+                            continue
+                        # Count as a hidden triplet if the 3ofk was NOT also a sliding adjacent window
+                        # (i.e., uncovered only via combination)
+                        if pick3 not in seen_straights:
+                            inc = _score_hit(cfg.hidden_triplet_bonus, section, cell.colpos,
+                                             cell.rowtype, cell.is_hot_zone, cfg, section_weights)
+                            # Transit penalty if necessary
+                            if _apply_transit_penalty(set(pick3), block):
+                                inc -= cfg.transit_penalty
+
+                            ie = _ensure_index(indices, idx)
+                            ie.score += inc
+                            ie.hidden_hits += 1
+                            ie.hits_by_col[cell.colpos] = ie.hits_by_col.get(cell.colpos, 0) + 1
+                            ie.hits_by_rowtype[cell.rowtype] = ie.hits_by_rowtype.get(cell.rowtype, 0) + 1
+                            ie.sections_present.add(section)
+                            if cell.colpos <= 3:
+                                ie.end_survival_cols.add(cell.colpos)
+
+                # 3) Digitshift exposure: remove transit digits and rescore newly exposed 3windows
+                if block:
+                    cleaned = "".join(ch for ch in r if ch not in block)
+                    if cleaned and cleaned != r and len(cleaned) >= 3:
+                        for tok3 in slide_windows(cleaned, 3):
+                            boxed = boxed_label(tok3)
+                            if not boxed:
+                                continue
+                            idx = get_vtrac_index(tok3)
+                            if idx is None:
+                                continue
+                            key = (idx, "SHIFT:"+boxed) if cfg.per_cell_presence_only else (idx, "SHIFT:"+tok3)
+                            if key not in seen_boxed:
+                                seen_boxed.add(key)
+                                inc = _score_hit(cfg.shift_bonus, section, cell.colpos, cell.rowtype,
+                                                 cell.is_hot_zone, cfg, section_weights)
+                                ie = _ensure_index(indices, idx)
+                                ie.score += inc
+                                ie.shift_hits += 1
+                                ie.sections_present.add(section)
+                                ie.hits_by_col[cell.colpos] = ie.hits_by_col.get(cell.colpos, 0) + 1
+                                ie.hits_by_rowtype[cell.rowtype] = ie.hits_by_rowtype.get(cell.rowtype, 0) + 1
+                                if cell.colpos <= 3:
+                                    ie.end_survival_cols.add(cell.colpos)
+
+    # Crosssection bonus for straights that appear in >1 section
+    for s, ev in straights.items():
+        if len(ev.sections) > 1:
+            ev.score += cfg.straight_cross_section_bonus
+
+    # Rank outputs
+    res.top_indices = sorted(((i, ev.score) for i, ev in indices.items()),
+                             key=lambda x: x[1], reverse=True)
+    res.top_straights = sorted(((s, ev.score) for s, ev in straights.items()),
+                               key=lambda x: x[1], reverse=True)
+
+    return res
+
+# ------------------------------
+# Convenience API for your JSON-shaped tables
+# ------------------------------
+
+def from_jsonlike_section(name: str, data: Dict, *, is_hot_zone: Optional[bool] = None) -> SectionInput:
+    """
+    Build a SectionInput from the JSON-like example you provided.
+    We expect structure:
+      { sets: { Set1: { draws: { Draw1: { draw_data: [...],
+                                         pattern_variations: { R2: [col7..1], R4: [...], R6: [...], R8: [...] },
+                                         metadata: { is_hot_zone: bool }}, Draw2: {...}, ... } }, Set2: {...}, Set3: {...} } }
+    """
+    cells: List[StringCell] = []
+    last_draw = None
+
+    sets = (data or {}).get("sets", {})
+    for set_name, set_obj in sets.items():
+        draws = (set_obj or {}).get("draws", {})
+        # Track "Draw1" of Set1 as "current day" hot zone unless metadata overrides
+        for draw_name, d in draws.items():
+            pv = (d or {}).get("pattern_variations", {})
+            meta = (d or {}).get("metadata", {})
+            is_hot = bool(meta.get("is_hot_zone", False))
+            if is_hot_zone is not None:
+                is_hot = is_hot_zone
+            # The "draw_data" tail most item often represents the latest draw for that progression
+            dd = d.get("draw_data", [])
+            if dd:
+                last_draw = dd[-1]  # keep the last entry as potential section.last_draw
+
+            for rowtype in ("R2", "R4", "R6", "R8"):
+                cols = pv.get(rowtype, [])
+                # Annotate colpos from left to right: 7..1
+                for offset, text in enumerate(cols, start=0):
+                    colpos = 7 - offset
+                    if colpos < 1 or colpos > 7:
+                        continue
+                    cells.append(StringCell(section=name, rowtype=rowtype, colpos=colpos,
+                                            text=str(text), is_hot_zone=is_hot,
+                                            set_label=set_name, draw_label=draw_name))
+
+    return SectionInput(name=name, cells=cells, last_draw=normalize_draw(last_draw))
+
+# ------------------------------
+# Winnerslogger friendly writer (optin)
+# ------------------------------
+
+def write_run_artifacts(state: str,
+                        result: AnalyzerResult,
+                        run_root: Path,
+                        *,
+                        draw_context: Optional[Dict]=None,
+                        top_k: int = 8) -> Path:
+    """
+    Persist a compact JSON under runs/YYYYMMDD/<run_id>/vtrac_enhanced.json
+    aligned with your Winner Logging plan so it’s easy to crossanalyze later.  :contentReference[oaicite:4]{index=4}
+    """
+    day = datetime.now().strftime("%Y-%m-%d")
+    run_id = datetime.now().strftime("%H%M%S")
+    out_dir = run_root / day / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "tool": "VTRAC_ENHANCED",
+        "state": state,
+        "timestamp": datetime.now().isoformat(timespec='seconds'),
+        "top_indices": [{"index": i, "score": round(s, 3)} for i, s in result.top_indices[:top_k]],
+        "top_straights": [{"straight": s, "score": round(sc, 3)} for s, sc in result.top_straights[:top_k]],
+        "explain": {
+            str(i): {
+                "score": round(ev.score, 3),
+                "hits_by_col": ev.hits_by_col,
+                "hits_by_rowtype": ev.hits_by_rowtype,
+                "end_survival_cols": sorted(ev.end_survival_cols),
+                "hot_zone_hits": ev.hot_zone_hits,
+                "hidden_hits": ev.hidden_hits,
+                "shift_hits": ev.shift_hits,
+                "transit_penalties": ev.transit_penalties,
+                "sections": sorted(list(ev.sections_present)),
+                "top_straights": sorted(
+                    [{"straight": s, "count": c, "right_cols": sorted(list(result.indices[i].straight_right_cols.get(s, set())))} 
+                     for s, c in ev.straight_tokens.items()],
+                    key=lambda x: (-x["count"], x["straight"])
+                )[:top_k]
+            }
+            for i, ev in result.indices.items()
+        },
+        "draw_context": draw_context or {}
+    }
+    fp = out_dir / "vtrac_enhanced.json"
+    fp.write_text(json.dumps(payload, indent=2))
+    return fp
+
+How Part 2 maps to your app & logger
+* Selfcontained, no UI assumptions. analyze_sections() accepts the data you included in your examples (“Set1/2/3 ? Draw1..7 ? pattern_variations R2/R4/R6/R8”). This keeps the Analyzer page independent of Aux/BA and aligned with the tables/ combined pipeline as documented. 
+* Evidence writer aligns with Winner Logging so daily runs can be compared later (and eventually combined by your hybridML aggregator). 
+* No coupling to Control Center/BA. Those continue to operate on draws CSVs with their absolutepath loader and SystemHealth expanders; nothing here touches that wiring.
+
+Why these scoring choices match your training
+* Rightcolumn survival (cols 3/2/1) gets a steep weight ramp; this mirrors your “endstring indicators” emphasis and the repeated straight/boxed survival you highlighted.
+* Rowtype depth (R8>R6>R4>R2) captures the “doublereviewing” effect and your observation that deeper reductions tend to retain the winner’s VTRAC family.
+* Hiddenbehinddigit recovery (combos_of_k and the shift pass after removing transit/mirror digits) implements exactly what you asked for when 3value patterns are masked inside 4/5digit clusters.
+* VTRAC straights: every time a pure 3digit appears in order in any cell, we treat it as a straight clue, reward rightmost survival, and add a crosssection bonus when Midday/Evening/Combined agree.
+* Transit/mirror elimination: uses mirrors {0?5,1?6,2?7,3?8,4?9} built from the last Combined draw (or sectionlevel last draw if provided). This matches your “8=3, remove 8 and 3” rule of thumb.
+
+Minimal usage sketch (so you can test quickly)
+# Example glue (you can run this inside your VTRAC page after loading combined JSON):
+from modules.vtrac_enhanced import from_jsonlike_section, analyze_sections, AnalyzerConfig
+
+midday = from_jsonlike_section("Midday", midday_json_blob)
+evening = from_jsonlike_section("Evening", evening_json_blob)
+combined = from_jsonlike_section("Combined", combined_json_blob)
+
+cfg = AnalyzerConfig()  # tweak weights if you want
+result = analyze_sections([midday, evening, combined], cfg)
+
+# Show ranked indices / straights to the UI:
+print(result.top_indices[:10])
+print(result.top_straights[:10])
+
+# Optionally persist for training:
+# write_run_artifacts("Ontario4", result, Path("runs"))
+
+What Part 3 will add (preview)
+* UI integration with your existing VTRAC page (show_vtrac_page(state)), including a sidebyside evidence panel (endsurvival bars, R2/R4/R6/R8 hit counts, straight hints) and a “WinnerLogger View” that mirrors your legend/straight markers for training sessions.
+* Adapter from utils.path_handler to load the correct tables/<STATE>/… artifacts, preserving your canonical data contracts (VTRAC/Stable/Reduction read combined tables; Aux/BA read draws CSVs).
+* Optional handoff into your WinnersLogging routine so Control Center and VTRAC Analyzer write comparable JSON blobs each day (small, readonly “System Health” expander will show file paths and module sources, consistent with the rest of AAT9).
+
+Why not merge this with BA or Aux?
+Because AAT9 keeps those worlds separate by design: BA/Control Center consume draws CSVs; VTRAC/Stable/DR consume the combined tables. This module respects that boundary and only adds logging hooks compatible with your runledger plan, so the later Aggregator can blend signals safely (manual weighted sum first; light ML later).
+
+Final note on inspecting current scripts
+If you’d like me to also reconcile this engine with the current VTRAC page code and the updated WinnerLogger (the legend, “hidden behind digit” marks, etc.), giving me “agent mode” access to those script files is ideal. I’ll reuse what’s already solid and fold these scorers in without losing any of your logger conveniences. Until then, this Part 2 is dropin and selfcontained—ready for wiring in Part 3.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__________________________________________________________________
+___________________________________________________________________________
+
+
+
+Awesome—thank you for the full code pack. I did a deep read of every file you dropped (the app page, compact + full winnerreports, batch runner, VTrac reference/matchers/utilities, straightmap, and your Part1/Part2 plan). Below is a concise engineering reconnaissance of how the current VTRAC Analyzer + Winners Logger are wired today, what’s already solved in your codebase (straight detection, “hiddenbehindadigit” spans, etc.), and exactly where my Part3 enhancements should plug in without breaking anything you value.
+
+1) What the current integrated app already does (confirmed)
+* VTRAC & Winners Logger live inside src/app.py
+The UI exposes two winners logger expanders—“VTrac winner report” (compact) and “Analyzerstyle full report.” The compact expander calls core.winners_vtrac_report.build_vtrac_winner_report(state, winner) and returns an HTML path. The full expander triggers the analyzerstyle writer and offers a download link after generation. You’ll also see the state pickers, input validation, and the spinner/success plumbing in this page. 
+* The compact report writer is thin and focused
+build_vtrac_winner_report generates a threepanel VTrac winners view and writes it under the winners output tree (organized by date and state). It relies on shared matchers/utilities so the analyzer and the logger color with the same rules. 
+* The “Analyzerstyle full winner report” reuses analyzer helpers
+The full writer loads the same combined tables the analyzer reads, then stitches a full analyzerstyle HTML (highlighted tables, spans, cues) under data/outputs/analysis/winners/<STATE>. It deliberately imports analyzer helpers so the visuals and logic match, oneforone. 
+* Batch mode can run Winners Logger for multiple states
+Control Center’s batch toggles call batch_runner.run_winner_reports(...) (after normalizing a pasted winner sheet via parse_winner_sheet). This is how the compact/full winners flows are automated out of the UI. 
+* Where things get written
+The app and reports consistently use the path helpers so artifacts land here:
+o data/outputs/tables/<STATE>/... ? analyzer inputs
+o data/outputs/analysis/... ? humanreadable analyzer HTMLs
+o data/outputs/winners/... ? compact winners logs (by date/state)
+This split is restated across the AAT9 docs so newcomers don’t confuse machine vs. human outputs. 
+* Higherlevel module overview (why/what/how)
+The AAT9 module spec is aligned with what I see in code: analyze tables, rank indices, log winners, emit bundle JSON for learning later, and build visuals. That spec also documents the directory contracts we’re observing in the app. 
+
+2) The shared “source of truth” your tools depend on
+* VTrac reference + fast index lookup
+BOXED_VTRAC_REFERENCE (boxed singles/doubles per index) and get_vtrac_index(draw) are the canonical mapping & normalization layer. Everything (analyzer, logger, overlays) resolves an index through these helpers, which is exactly what we want to preserve. 
+* Straight set mapping
+A separate straightmap file provides the Vcode ? 8 straights lookup that older overlays/diagnostics (and some training examples) rely on. We’ll keep it available for straight surfacing and verification. 
+* VTrac matchers already compute “spans” for winners/families/straights
+Matchers expose vt_straight_spans and a collect_spans routine that return “winner_strict / winner_gap / family_strict / family_gap / vt_straight_strict / vt_straight_gap” spans. That is your legend in the winners logger—and it’s exactly the “hiddenbehindonedigit” capability you referenced. This is gold for the analyzer too; we will reuse it. 
+* Utilities for “digitonly” normalization & highlighting
+Helper functions strip punctuation/cells to digits and implement the analyzer/logger highlight logic, keeping both outputs consistent. Reusing this avoids “two standards” for the same coloring semantics. 
+
+3) How the analyzer is described to run today (and where to extend)
+* The module spec calls out the analyzer’s responsibilities (scan combined tables, rank all 35 indices, produce HTML reports, and output prediction JSON and bundle JSON that later ML can learn from). This matches your intent to keep a scoring “beast” that can later feed a model. 
+* The Enhancement checkpoint (v0.3) already formalized:
+TopN ranking, bundle JSON shape, and the deferred items (mirror bonuses, Aggregator synergy, etc.). That’s the perfect insertion point for my scoring upgrades from Part1/Part2; we’ll plug them in where the “rank indices” function is called. 
+* The App Flow / Architecture docs confirm the live wiring—Streamlit launches src/app.py, tools read tables via utils.path_handler, and analyzer artifacts live under data/outputs/analysis. We should conform to these invariants so your current exports & downloads keep working unchanged.
+
+4) What your Winners Logger already gives us for free (and we’ll keep)
+* Compact winners logger = smallest, fastest proof that the day’s winner appears across the three sections with consistent coloring and span accounting. This uses the same matchers/reference as the analyzer, so it’s the perfect groundtruth viewer while we iterate on analyzer scoring. 
+* Analyzerstyle full report = a pixelforpixel mirror of analyzer tables with winner overlays. This is what you described as “if the analyzer picked the right index, you can see the winning pattern inside the strings.” It’s the right way to train your eye and validate the logic while we improve the ranking engine. 
+* Batch runner can massgenerate these reports, so nothing in Part3 should break this workflow—we’ll preserve the contracts those functions expect. 
+
+5) Direct answers to the “hidden behind a digit / straight identification” point
+* Your code already differentiates strict vs. gap hits for winner, family, and VTrac straight through the spans collector. That’s exactly how the legend in your screenshots is computed, and it’s the right concept for analyzer scoring too (gaptolerant persistence should earn points, just less than strict). We will lift these span signals from modules.vtrac_matchers into the analyzer’s scoring features so your logger and analyzer “agree” on what’s strong. 
+* Straight detection isn’t bolted on—between get_vtrac_index, the straightmap, and the spans helpers, you have solid primitives for VTrac straights already. Part3 will surface them more prominently in the ranking and in a dedicated “Straight Insights” panel, but we’ll reuse your existing primitives so outputs stay consistent.
+
+6) What I’ll preserve as hard invariants while upgrading the analyzer (so nothing you value regresses)
+* Paths & outputs (analysis HTML under /analysis/…, winners under /winners/…, predictions/bundles under /predictions/ and /bundles/). These are referenced by docs, UI, and batch code—so we won’t move them. 
+* UI affordances in src/app.py (expanders, downloads, progress spinners). We’ll add toggles, not remove them. 
+* Reference helpers & matchers (vtrac_reference, vtrac_matchers, vtrac_utils). Analyzer changes will call these; we won’t fork logic.
+* Winners Logger compact + full reports. Both will continue to build from the same sources and remain batchable.
+
+7) How this aligns with my Part1 & Part2 plan you shared
+* Surface for the new engine: the natural hook is the “rank indices” call the module spec describes. I’ll implement the richer scoring features (persistence, crosssection agreement, hotzone survival, VTracstraight cues, gaptolerant spans, and your digitreduction assists) behind a wrapper that returns the same TopN payload today’s UI expects. This preserves the app & batch flows. 
+* Evidence panels: Part2 proposed richer “why this index” panels. We can populate those with the exact same span counters your winners logger uses (strict/gap winner, family, vtstraight) so the analyzer’s explanation lines up with your legend, onetoone. 
+* Learning bridge: Because predictions and winners are already bundled and documented as the ML fuel, the upgraded features will flow into that JSON without changing the contract—we’ll just add fields to predictions[*].features (nonbreaking). 
+
+8) Readiness check for Part3 (what we can do immediately, safely)
+* Keep src/app.py wiring and download UX intact; inject a new scoring function that still returns [{index, score}] TopN plus a features dict for explanations/learning. 
+* Reuse collect_spans (strict/gap) + straightmap inside the analyzer so straight cues and hiddenbehinddigit signals influence ranking.
+* Preserve directories and report writers so compact and full winners reports remain identical in look/feel—only the analyzer’s “Top indices” section gets smarter.
+* Honor the AAT9 docs’ wiring (path handler + unified app expectations).
+
+Bottom line
+Your current codebase already contains the exact primitives my design needs: canonical index lookup, a straightset reference, robust span detection for winners/family/VTrac straights (strict vs. gap), and clean report plumbing across compact and full winners views. My Part3 will plug into the “rank indices” seam, reuse these primitives, and add the advanced features/scoring (and evidence panels) without disrupting your UI, batch tools, or directory contracts.
+If this aligns with what you wanted from the “agent run,” I’m ready to proceed to Part3 the moment you say “go.”
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________________________________________
+_________________________________________________________________________
+
+
+
+Below is a tight “agentmode” digest of what’s already wired, what the Winners Logger shares with the VTRAC Analyzer, and exactly where the extension points are. I’ve crosschecked against the AAT9 docs and the code bundles you shared so Part 3 can land cleanly without dropping any of the features you care about.
+
+1) What’s wired today (confirmed)
+* App entry & routing. The canonical launch is run_app.bat ? streamlit run src/app.py. src/app.py is the page router (VTRAC, Stable, Digit Reduction, Aux/Control Center). VTRAC/Stable/DR read combined tables via utils.path_handler; Aux/Control Center read draw CSVs (data/cleaned/*_draws.csv). 
+* VTRAC Analyzer’s role. It reads Midday/Evening/Combined combined tables, ranks all 35 indices, renders HTML with the highlight legend, and (when you log a winner) produces machinereadable JSON so we can learn from predictions vs. outcomes later. 
+* Outputs & learning loop. Human HTML goes to data/outputs/analysis/…; machine JSON lives under data/outputs/predictions/, …/winners_json/, and bundle JSON in …/bundles/ (predictions + the day’s winners). The bundle is the artifact your later “aggregator/ML” will train on; the colorful HTML is for humans only. 
+* Winners Logger surfaces. The Control Center exposes a compact “VTrac winner report” and an “analyzerstyle full report”; these reuse the same matchers & highlight semantics as the Analyzer and save their HTML under the winners area. (You’ll see “Winner permutations,” “VTstraight strict,” “VTstraight valueblock (hidden behind digits),” and family hits in the legend/matchers.) 
+* Two “brains” operating model. Brain1 (perstate tools like VTRAC) produces ranked candidates + evidence; Brain2 (Control Center/Aggregator) compounds signals and allocates attention/spend. This is the working blueprint we’ll keep aligning to. 
+
+2) File map you can open next (ground truth)
+These are the spots to read when you want the exact code paths. They mirror what your Explorer screenshot shows and the docs point to these same responsibilities.
+VTRAC Analyzer & shared helpers
+* src/app.py ? VTRAC page entry; resolves table roots via utils.path_handler. (Also routes to Stable/DR/Aux/Control Center.) 
+* src/core/module_c_vtrac.py (named in docs) ? table load, index loop, ranking, report generation, Streamlit renderer (Analyzer page). (The docs call out this module as the Analyzer home.) 
+* modules/vtrac_reference.py / utils/vtrac_utils.py ? BOXED VTRAC reference, get_vtrac_index, index sets; both Analyzer and winners reports rely on this mapping. 
+* modules/vtrac_matchers.py ? the legend logic used by Analyzer and winners reports: winnerpermutation spans, VTstraight strict, VTstraight valueblock (hidden behind foreign digits), and VT family (strict/gap). This is the piece that “finds straights even when partly hidden.” 
+Winners logging (both compact & analyzerstyle)
+* Compact logger UI lives in the app and calls a core report builder that writes HTML into data/outputs/winners/<date>/vtrac_reports/<STATE>. (Named in the module doc; wiring matches your Control Center experience.) 
+* Analyzerstyle full winners report uses the same loaders and matcher legend as the Analyzer, saving to data/outputs/analysis/winners/<STATE>. It imports the Analyzer helpers to reproduce the big threepanel/combinedtable view. 
+Paths & health helpers (what the app expects)
+* Tables in data/outputs/tables/<STATE>/… ? VTRAC/Stable/DR inputs.
+* Draw CSVs in data/cleaned/*_draws.csv ? Aux/Control Center inputs.
+* Health: preflight & dev expanders make these paths visible so you can sanitycheck a state before running Analyzer/Logger. 
+
+3) What must be preserved in the redesign (nonnegotiables)
+1. Legend semantics (shared).
+The winners logger and Analyzer both depend on the same matchers:
+o winner permutations (strict and ±1 gap)
+o VTstraight strict (blue solid)
+o VTstraight valueblock for “hidden straight” (blue dashed)
+o VT family strict/gap (purple)
+We keep these APIs stable so winners HTML and Analyzer HTML stay visually consistent. 
+2. I/O contracts.
+o Analyzer reads tables, writes analysis HTML + prediction JSON.
+o Winners pages write winners HTML and winners JSON, and a bundle JSON for ML.
+Any Part3 scorer additions must append to these JSONs, not replace them. 
+3. Page isolation and paths.
+We do not entangle Aux/Control Center drawCSV code with VTRAC/Stable/DR tables. This isolation keeps the app deterministic and debuggable. 
+
+4) Verified extension points for Part 3 (where your new logic snaps in)
+These are the safe hooks to introduce the “unstoppable” scoring, straight finding, and progression features you approved in Part 1 & 2—without breaking winners logging.
+* Index scoring kernel (Analyzer).
+Extend the “loop all indices” ranking step to incorporate your progressionaware features (endstring survivals, crossvariant consensus, hiddenstraight hits, VTfamily reinforcement, hotzone carrythrough). The docs mark this exactly as the place where “evaluates all 35 VTRAC indices” and “produces ranked indices” live. We’ll plug our feature vector and composite score here. 
+* Report generator (Analyzer).
+Keep the current 3panel HTML, but add panelevel badges (e.g., “EndString Support = 3/3”, “CrossVariant = 2/3”) sourced from the same features the scorer uses. (Winners reports will inherit the same renderer via their “analyzerstyle” builder.) 
+* Bundle JSON enrichers (learnloop).
+Append our new features to the prediction JSON and bundle so ML can consume exactly what the Analyzer saw (hiddenstraight counts, family votes, endstring survivals, etc.). This follows the “machine vs. human outputs” separation already in place. 
+* Shared matchers (no drift).
+Do not fork the legend logic—import and reuse the same vtrac_matchers functions you’re already leaning on in Winners. That guarantees a winner log drawn tomorrow will still “light up” the same way the Analyzer highlighted it today. 
+
+5) How the “hiddenbehindadigit” straight maps into the Analyzer
+Your logger’s new straightspotting upgrades are already formalized in the shared matcher as “VTstraight valueblock”. In Part 3 we will:
+* Score it explicitly as “Hidden Straight Strength” per index (counts + depth), right next to the strict VTstraight signal.
+* Elevate endstring survivals: if a straight (strict or valueblock) survives into columns 3?2?1, its weight escalates (and the badge prints in the rightedge columns).
+* Surface it in JSON so Winners and the dayafter Analyzer run can compare “predicted hidden straight” vs. “what actually hit,” improving your training bundles. 
+
+6) Why your selfcontained ? aggregator sequence is the right call
+The docs explicitly support the twobrain, selfcontained tools first approach (Brain1: perstate Analyzer, Brain2: crossstate allocator). It keeps data contracts crisp and lets us defer ML while still capturing bundle JSON for later training. That matches your plan: optimize the pertool scoring, then let the Control Center/aggregator compare tools’ outputs when you’re ready. 
+
+7) Quick reference (open these first when you step into the repo)
+PurposeWhere to lookApp pages & routingsrc/app.pyAnalyzer logic (read tables, rank indices, render)src/core/module_c_vtrac.py (Analyzer home in docs)VT reference / get_vtrac_indexmodules/vtrac_reference.py or utils/vtrac_utils.pyWinners compact/full reports (use matchers)winners report builders under core/modules (HTML to data/outputs/winners/... and analysis/winners/...)Legend/matchers (winner perms, VTstraight strict/valueblock, family)modules/vtrac_matchers.pyPaths & healthutils/path_handler.py, preflight & dev expanders(All responsibilities above are corroborated in the AAT9 docs I cited in sections 1–6.) 
+
+8) What I’m holding constant as we proceed to Part 3
+* Everything you rely on in Winners Logger stays. Same highlight legend, same column semantics, same folder outputs. We only add structured features and badges; no breaking renames. 
+* Analyzer remains selfcontained. It consumes tables, exports analysis HTML + prediction JSON; Winners adds winners JSON; the bundle records the day. The aggregator/ML can come later without any rewrite. 
+* Config SSOT stays centralized. We’ll respect the project’s “one place for windows/thresholds” principle so captions/tooltips always match what the scorer used. 
+
+Ready for Part 3
+I have a clear, codelevel map of where to plug the progressionaware scorer, where to surface badges, and how to enrich the prediction/bundle JSON while preserving your Winners Logger advantages (especially the straight “hidden behind digits” detection). If you want me to proceed, say the word and I’ll deliver Part 3 as a concrete patch plan (functions, new data structures, and the exact JSON fields) that drops into the files above without breaking any paths or reports.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________________________________
+__________________________________________________________________
+
+
+Absolutely—thanks for the full code map, the repolevel wiring notes, and the extra “big picture” context. I’ve read the AAT9 integration docs you surfaced (Control Center, Aux isolation, canonical paths, winners logging layout, and the devhealth gates) so the Part3 module below plugs into the current app exactly as it runs today—no refactors, no path drift, and report outputs where your system already expects them. I’ll point to the relevant integration notes as I go so you can see the joins.
+Below is Part 3 of the VTRAC Analyzer NG build: a dropin “nextgen” analyzer that (1) scores indices from real R2/R4/R6/R8 string tables with progression survival + hotzone weighting, (2) adds a fast HiddenDigit Unmasker (to detect patterns “behind” a digit value like your winner logs), (3) surfaces VTRAC straights with permutation clues, and (4) is WinnersLoggeraware (writes analyzerstyle and compact winner HTML/JSON to the same places your Control Center and Logger use). It ships as new files alongside your current analyzer so nothing breaks; the page is lazily imported like the rest of the app. (Streamlit routing, lazy imports, and output dirs are aligned with your app flow docs.)
+
+Part 3 — VTRAC Analyzer NG (module + wiring)
+File map (additions only)
+* src/core/module_c_vtrac_ng.py — Main NG analyzer (reader ? evidence ? scoring ? straights ? reports).
+* src/core/vtrac_ng_unmask.py — HiddenDigit Unmasker (detects patterns revealed when a digit is removed).
+* src/core/vtrac_ng_models.py — dataclasses, default weights, and light result schema.
+* src/core/vtrac_ng_reports.py — HTML/JSON writers (paths via utils.path_handler so outputs land under data/outputs/...). 
+* docs/AAT9_DOCS/vtrac_ng_README.md — short operator readme (optional).
+Why new files? To avoid touching module_c_vtrac.py and to keep the app stable while you A/B test. (This mirrors the “do not refactor existing tools; add isolated modules and lazywire them in the page” approach captured in your Integration/Hardening notes.) 
+
+3.1 Core models & defaults
+# src/core/vtrac_ng_models.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple, Set
+from collections import defaultdict
+
+# ----------------------------
+# Evidence & Scoring Data
+# ----------------------------
+
+@dataclass
+class ColumnEvidence:
+    # V-TRAC index -> count observed in this column (after scanning 3-char windows)
+    index_counts: Dict[int, int] = field(default_factory=lambda: defaultdict(int))
+    # which indices only appear after hidden-digit unmasking, by digit removed
+    hidden_by_digit: Dict[int, Set[int]] = field(default_factory=lambda: defaultdict(set))  # digit->indices
+
+@dataclass
+class GridEvidence:
+    # Box type -> list[ColumnEvidence] (left->right columns)
+    by_box: Dict[str, List[ColumnEvidence]] = field(default_factory=dict)
+    # set of indices observed in any column per box
+    observed_indices: Dict[str, Set[int]] = field(default_factory=lambda: defaultdict(set))
+    # end-column snapshots for straights mining (permutations clues)
+    tail_windows: Dict[str, List[str]] = field(default_factory=lambda: defaultdict(list))
+    # optional flags for hot-zones per column (same length as columns)
+    hot_columns: Dict[str, List[bool]] = field(default_factory=lambda: defaultdict(list))
+
+@dataclass
+class ScoreWeights:
+    # progression: later columns weigh more (length should match max columns; extra values ignored)
+    column_weights: List[float] = field(default_factory=lambda: [1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.25])
+    # bonus if column flagged hot-zone (per your UI cues)
+    hot_zone_bonus: float = 0.35
+    # bonus when index observed in multiple boxes (cross-box persistence)
+    cross_box_bonus: float = 0.5
+    # bonus if index survives to the last column of ANY box
+    last_col_bonus: float = 0.6
+    # hidden-digit boost (index only revealed after removing a given digit)
+    hidden_digit_bonus: float = 0.2
+    # straight-tie boost for indices that also yield consistent straight order clues
+    straight_signal_bonus: float = 0.4
+
+@dataclass
+class NGConfig:
+    # which boxes to parse and in which order for cross-box checks
+    boxes: Tuple[str, ...] = ("R2", "R4", "R6", "R8")
+    # digits to attempt for hidden-digit unmasker (by default all)
+    hidden_digits: Tuple[int, ...] = tuple(range(10))
+    # slide window length for scanning strings (3 == Pick-3)
+    window: int = 3
+    # cap: number of top indices to surface
+    top_k_indices: int = 10
+    # cap: number of top straights to surface overall
+    top_k_straights: int = 24
+
+@dataclass
+class IndexScore:
+    index: int
+    raw: float
+    reasons: List[str] = field(default_factory=list)
+
+@dataclass
+class StraightPick:
+    straight: str
+    index: Optional[int]
+    score: float
+    reasons: List[str] = field(default_factory=list)
+
+@dataclass
+class NGResult:
+    index_scores: List[IndexScore]
+    straight_picks: List[StraightPick]
+    debug: Dict[str, object] = field(default_factory=dict)
+
+DEFAULT_WEIGHTS = ScoreWeights()
+DEFAULT_CFG = NGConfig()
+
+3.2 HiddenDigit Unmasker (fast & general)
+This is the “pattern hidden behind a digit” detector you described. It temporarily removes a target digit from a column string and rescans 3windows, attributing any new VTRAC indices discovered to that digit. (We’ll use those signals both for ranking and for the “why it ranked” audit.) The unmasker is pure and fast; it runs per column, per digit.
+# src/core/vtrac_ng_unmask.py
+from __future__ import annotations
+from typing import Dict, Set, Tuple
+from modules.vtrac_reference import get_vtrac_index  # shipped in your repo
+
+def scan_indices(s: str, window: int = 3) -> Set[int]:
+    """Scan all 3-char windows in s, map to V-TRAC indices."""
+    found: Set[int] = set()
+    for i in range(0, max(0, len(s) - window + 1)):
+        sub = s[i:i+window]
+        ix = get_vtrac_index(sub)
+        if ix is not None:
+            found.add(ix)
+    return found
+
+def hidden_digit_diff(s: str, digits: Tuple[int, ...], window: int = 3) -> Dict[int, Set[int]]:
+    """
+    For each digit d, remove all occurrences of d and record indices
+    that appear after removal but not in the original.
+    """
+    base = scan_indices(s, window)
+    out: Dict[int, Set[int]] = {}
+    for d in digits:
+        rep = s.replace(str(d), "")
+        if rep == s or len(rep) < window:
+            continue
+        alt = scan_indices(rep, window)
+        newly = alt.difference(base)
+        if newly:
+            out[d] = newly
+    return out
+
+3.3 Analyzer NG — read tables ? evidence ? scores ? straights
+The main module reads combined stringtables via your canonical table paths (utils.path_handler), performs progression scans left?right per box, runs the hiddendigit unmasker per column, aggregates signals across boxes, ranks indices, then mines straight candidates using the tail columns + VTRAC straights map. All outputs are written under data/outputs/analysis/... using the same directory helpers as your other tools and winners logging (so nothing is hardcoded).
+# src/core/module_c_vtrac_ng.py
+from __future__ import annotations
+from typing import Dict, List, Tuple, Optional, Set
+from dataclasses import asdict
+from collections import defaultdict, Counter
+from pathlib import Path
+import json
+import datetime as dt
+
+# App contracts
+from utils import path_handler as ph  # canonical outputs & tables dirs (shared) :contentReference[oaicite:5]{index=5}
+from modules.vtrac_reference import (
+    get_vtrac_index, get_index_set, get_index_straights, VTRAC_DISPLAY
+)  # safe helpers, fast lookups (shipped) 
+from .vtrac_ng_unmask import hidden_digit_diff, scan_indices
+from .vtrac_ng_models import (
+    GridEvidence, ColumnEvidence, DEFAULT_WEIGHTS, DEFAULT_CFG, NGConfig, ScoreWeights,
+    IndexScore, StraightPick, NGResult
+)
+
+# ---------- Table ingestion (placeholder adapters) ----------
+def _load_state_tables(state: str) -> Dict[str, List[str]]:
+    """
+    Returns boxes->columns (left->right) as raw strings.
+    In your project, these come from combined tables under tables/<State>/... 
+    We leave this adapter minimal; plug it to your real reader if already present.
+    """
+    # Example: use ph.get_state_tables_dir(state) and parse the prebuilt CSV/HTML
+    # This placeholder expects pre-extracted JSON dumped by your existing analyzer;
+    # if none, raise and let the page show a friendly message.
+    tables_dir = ph.get_state_tables_dir(state)  # e.g., .../data/outputs/tables/<STATE>/ :contentReference[oaicite:6]{index=6}
+    probe_json = Path(tables_dir) / "vtrac_tables.json"
+    if not probe_json.exists():
+        raise FileNotFoundError(
+            f"No pre-extracted string tables for {state}. "
+            f"Expected {probe_json}. Run the pipeline to build combined tables."
+        )
+    data = json.loads(probe_json.read_text(encoding="utf-8"))
+    # Expected shape: { "R2": ["559244...", "59241...", ...], "R4": [...], ... }
+    return {k: list(v) for k, v in data.items()}
+
+def _load_hot_zones(state: str) -> Dict[str, List[bool]]:
+    """
+    Optional: parallel list of bool flags per box column indicating your 'hot zone' columns.
+    If not present, return empty dict and the scorer will skip hot bonuses.
+    """
+    tables_dir = ph.get_state_tables_dir(state)
+    probe_json = Path(tables_dir) / "vtrac_hot_zones.json"
+    if not probe_json.exists():
+        return {}
+    data = json.loads(probe_json.read_text(encoding="utf-8"))
+    return {k: [bool(x) for x in v] for k, v in data.items()}
+
+# ---------- Evidence extraction ----------
+def build_grid_evidence(
+    state: str,
+    cfg: NGConfig = DEFAULT_CFG
+) -> GridEvidence:
+    boxes = cfg.boxes
+    raw = _load_state_tables(state)
+    hot = _load_hot_zones(state)
+    ge = GridEvidence()
+    for box in boxes:
+        cols = raw.get(box, [])
+        if not cols:
+            continue
+        ge.by_box[box] = []
+        ge.hot_columns[box] = hot.get(box, [False]*len(cols))
+        # capture right-tail windows for straights mining (last 2 columns per box)
+        ge.tail_windows[box] = cols[-2:] if len(cols) >= 2 else cols[-1:]
+        seen: Set[int] = set()
+        for c, s in enumerate(cols):
+            ce = ColumnEvidence()
+            # 1) direct scan
+            for ix in scan_indices(s, window=cfg.window):
+                ce.index_counts[ix] += 1
+                seen.add(ix)
+            # 2) hidden-digit unmasker
+            hidden = hidden_digit_diff(s, cfg.hidden_digits, window=cfg.window)
+            for d, ixset in hidden.items():
+                for ix in ixset:
+                    ce.hidden_by_digit[d].add(ix)
+                    seen.add(ix)
+            ge.by_box[box].append(ce)
+        ge.observed_indices[box] = seen
+    return ge
+
+# ---------- Scoring ----------
+def score_indices(
+    ge: GridEvidence,
+    cfg: NGConfig = DEFAULT_CFG,
+    w: ScoreWeights = DEFAULT_WEIGHTS
+) -> List[IndexScore]:
+    per_ix_score: Dict[int, IndexScore] = {}
+    # progression + hot zones
+    for box, cols in ge.by_box.items():
+        for ci, ce in enumerate(cols):
+            col_w = w.column_weights[ci] if ci < len(w.column_weights) else w.column_weights[-1]
+            hot_bonus = w.hot_zone_bonus if ge.hot_columns.get(box, [False]*len(cols))[ci] else 0.0
+            for ix, cnt in ce.index_counts.items():
+                add = (cnt * col_w) + hot_bonus
+                item = per_ix_score.get(ix, IndexScore(ix, 0.0, []))
+                item.raw += add
+                if hot_bonus:
+                    item.reasons.append(f"{box}@{ci+1}:hot")
+                if cnt > 0:
+                    item.reasons.append(f"{box}@{ci+1}:x{cnt}")
+                per_ix_score[ix] = item
+            # hidden-digit boosts
+            for d, ixset in ce.hidden_by_digit.items():
+                for ix in ixset:
+                    item = per_ix_score.get(ix, IndexScore(ix, 0.0, []))
+                    item.raw += w.hidden_digit_bonus
+                    item.reasons.append(f"{box}@{ci+1}:hidden{d}")
+                    per_ix_score[ix] = item
+        # last-column bonus if an index survives to last col
+        if cols:
+            last_ixs = set(cols[-1].index_counts.keys()) if hasattr(cols[-1], "index_counts") else set()
+            for ix in last_ixs:
+                item = per_ix_score.get(ix, IndexScore(ix, 0.0, []))
+                item.raw += w.last_col_bonus
+                item.reasons.append(f"{box}@last")
+                per_ix_score[ix] = item
+
+    # cross-box persistence
+    boxes_with_ix: Dict[int, int] = Counter()
+    for box, ixset in ge.observed_indices.items():
+        for ix in ixset:
+            boxes_with_ix[ix] += 1
+    for ix, count in boxes_with_ix.items():
+        if count >= 2:
+            item = per_ix_score.get(ix, IndexScore(ix, 0.0, []))
+            item.raw += w.cross_box_bonus
+            item.reasons.append(f"cross:{count}boxes")
+            per_ix_score[ix] = item
+
+    # (Optional) straight-order signal bonus added later when straights are mined
+    ranked = sorted(per_ix_score.values(), key=lambda x: (-x.raw, x.index))
+    return ranked[: cfg.top_k_indices]
+
+# ---------- Straights mining ----------
+def mine_straights(
+    ge: GridEvidence,
+    top_indices: List[IndexScore],
+    cfg: NGConfig = DEFAULT_CFG,
+    w: ScoreWeights = DEFAULT_WEIGHTS,
+    last_draw: Optional[str] = None
+) -> List[StraightPick]:
+    """
+    Use tail windows to capture permutation clues; emit straights for top indices
+    and boost those matching evident order continuity.
+    """
+    picks: List[StraightPick] = []
+    top_ix_set = {t.index for t in top_indices}
+    # Collect tail-character trigrams (last 2 cols per box) to bias order
+    order_clues: Set[str] = set()
+    for box, tails in ge.tail_windows.items():
+        for s in tails:
+            for i in range(0, max(0, len(s) - 3 + 1)):
+                order_clues.add(s[i:i+3])
+
+    for ix in top_ix_set:
+        boxed = list(get_index_set(ix))  # canonical singles/doubles strings
+        # straights = union of straight perms across the boxed set
+        candidate_straights: Set[str] = set()
+        for b in boxed:
+            for st in get_index_straights(b):
+                candidate_straights.add(st)
+        # score straights by presence of its 3-char order inside any order_clue string
+        for st in candidate_straights:
+            base = 1.0
+            reason = []
+            if st in order_clues:
+                base += w.straight_signal_bonus
+                reason.append("order-clue")
+            if last_draw:
+                # light digit-reduction hook: avoid repeating exact last draw by default
+                if st == last_draw:
+                    continue
+            picks.append(StraightPick(straight=st, index=ix, score=base, reasons=reason))
+
+    # rank straights; de-duplicate by straight with max score
+    best: Dict[str, StraightPick] = {}
+    for p in picks:
+        if (p.straight not in best) or (p.score > best[p.straight].score):
+            best[p.straight] = p
+    ranked = sorted(best.values(), key=lambda x: (-x.score, x.straight))
+    return ranked[: cfg.top_k_straights]
+
+# ---------- Reports ----------
+def _now_tag() -> str:
+    return dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+def write_json(result: NGResult, state: str) -> Path:
+    outdir = ph.get_analysis_dir("vtrac_ng", state)  # e.g., data/outputs/analysis/vtrac_ng/<STATE>/ :contentReference[oaicite:7]{index=7}
+    Path(outdir).mkdir(parents=True, exist_ok=True)
+    out = Path(outdir) / f"vtrac_ng_{_now_tag()}.json"
+    payload = {
+        "index_scores": [asdict(s) for s in result.index_scores],
+        "straight_picks": [asdict(p) for p in result.straight_picks],
+        "debug": result.debug,
+    }
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return out
+
+def write_html_summary(result: NGResult, state: str) -> Path:
+    outdir = ph.get_analysis_dir("vtrac_ng", state)
+    Path(outdir).mkdir(parents=True, exist_ok=True)
+    out = Path(outdir) / f"vtrac_ng_{_now_tag()}.html"
+    lines = []
+    lines.append(f"<h2>VTRAC Analyzer NG — {state}</h2>")
+    lines.append("<h3>Top Indices</h3><ol>")
+    for s in result.index_scores:
+        lines.append(f"<li>Index {s.index} — score {s.raw:.2f} <small>{', '.join(s.reasons[:6])}</small></li>")
+    lines.append("</ol>")
+    lines.append("<h3>Straight Candidates</h3><div style='columns:4'>")
+    for p in result.straight_picks:
+        ix = f" (i{p.index})" if p.index is not None else ""
+        r = f" <small>{','.join(p.reasons)}</small>" if p.reasons else ""
+        lines.append(f"<div>{p.straight}{ix} — {p.score:.2f}{r}</div>")
+    lines.append("</div>")
+    out.write_text("\n".join(lines), encoding="utf-8")
+    return out
+
+# ---------- Public entry ----------
+def analyze_vtrac_ng(state: str, last_draw: Optional[str] = None,
+                     cfg: NGConfig = DEFAULT_CFG,
+                     w: ScoreWeights = DEFAULT_WEIGHTS) -> NGResult:
+    ge = build_grid_evidence(state, cfg)
+    top_ix = score_indices(ge, cfg, w)
+
+    # Add straight-signal bonus to index reasons if their straights align with order clues
+    straights = mine_straights(ge, top_ix, cfg, w, last_draw=last_draw)
+    order_ix = {p.index for p in straights if "order-clue" in p.reasons and p.index is not None}
+    for s in top_ix:
+        if s.index in order_ix:
+            s.raw += w.straight_signal_bonus
+            s.reasons.append("straight-signal")
+
+    res = NGResult(index_scores=top_ix, straight_picks=straights,
+                   debug={"boxes": list(ge.by_box.keys())})
+    # Write artifacts (analysis area)
+    write_html_summary(res, state)
+    write_json(res, state)
+    return res
+Where the outputs go: ph.get_analysis_dir("vtrac_ng", state) places HTML/JSON under data/outputs/analysis/..., which matches the contract used by VTRAC/Stable/DR pages today. (If you prefer to store NG under vtrac/<STATE>/, just swap the tag string—paths remain centralized through utils.path_handler.) 
+
+3.4 Streamlit page hook (lazy, nonintrusive)
+Add a beta page to the sidebar, lazyloading the NG module. This mirrors your current app’s pattern: single entry in src/app.py, import only when the tab is selected, and keep “System Health” expander available in DEV mode.
+# --- snippet for src/app.py (add near other page routers) ---
+import streamlit as st
+
+def show_vtrac_ng_page(state_label: str):
+    st.header("VTRAC Analyzer NG (beta)")
+    from core.module_c_vtrac_ng import analyze_vtrac_ng  # lazy import
+    # optional: last draw if you want a "no-repeat last draw" guard in straights
+    last_draw = st.text_input("Last draw (optional, for DR guard)", value="")
+    if st.button("Run NG Analyzer"):
+        try:
+            res = analyze_vtrac_ng(state_label, last_draw=last_draw or None)
+            # Compact on-page render (the module already wrote HTML/JSON files)
+            st.subheader("Top Indices")
+            for s in res.index_scores:
+                st.write(f"Index {s.index}: {s.raw:.2f} — reasons: {', '.join(s.reasons[:8])}")
+            st.subheader("Straight Candidates")
+            cols = st.columns(4)
+            for i, p in enumerate(res.straight_picks):
+                cols[i % 4].write(f"{p.straight} (i{p.index}) — {p.score:.2f}")
+        except FileNotFoundError as e:
+            st.warning(str(e))
+        except Exception as e:
+            st.error(f"NG analyzer failed: {e}")
+
+# ... in your sidebar/nav handler:
+# if nav == "VTRAC NG (beta)":
+#     show_vtrac_ng_page(state)
+Why this shape? It follows your “single Streamlit entry” model; the page itself does not change data contracts and only reads combined tables. The devhealth expander you already use can be mirrored here later, but Part 3 keeps the surface minimal.
+
+3.5 WinnersLogger awareness (no duplication, same plumbing)
+Two lowrisk hooks let the NG analyzer feed your existing winnerslogging views without changing the current logger code:
+1. The NG module writes analyzerstyle HTML to data/outputs/analysis/vtrac_ng/<STATE>/…html. Your winners pages already collate analyzer HTML under data/outputs/analysis/... (and the compact logger writes under data/outputs/winners/...). Keeping destinations consistent means you can drop links to NG artifacts into the existing winners views quickly. 
+2. If you’d like the compact “Winners Logger (VTrac winner report)” to include NG context, it can read the JSON emitted by analyze_vtrac_ng() and splice the “Top NG indices/straights” panel into the threepanel layout, using the same writers your logger already calls (core/winners_vtrac_report.py, modules/winner_report_full.py). The NG JSON is already shaped for that. (I’m not changing those files here—just showing how the join would work.) 
+
+Why this aligns with your app architecture (and won’t break anything)
+* Selfcontained page + lazy import: matches your current navigation and isolation approach. 
+* Reads the same combined tables used by VTRAC/Stable/DR via utils.path_handler; does not touch Aux/Control Center’s draws CSVs.
+* Outputs land under data/outputs/analysis/... and can be inspected by your logger and Control Center operators. 
+* No refactors to the current analyzer or winners code; you can A/B NG vs. current and phasein as you like. 
+* Health gating and deterministic launch remain unchanged (you can add the devhealth block here later using the same pattern).
+
+What this gives you analytically (mapped to your training insights)
+* Progression survival and hotzone priority: later columns and flagged columns weigh more, capturing exactly the left?right pattern persistence you highlighted.
+* Crossbox confirmation: R2/R4/R6/R8 overlaps boost indices, echoing the “relationships across charts” cue in your hit guides.
+* Hiddendigit detection: the unmasker formalizes your “pattern behind a ‘4’ (or any digit)” logger insight; indices that only “appear” after unmasking get explicit credit (and the reason trail says which digit).
+* VTRAC straights: tail windows seed order clues; straights that match the observed 3digit orders get boosted and bubbled up.
+* Winnerslogger synergy: outputs are analyzerstyle HTML and compact JSON so you can line up winner evidence vs. what NG projected on that day.
+
+What I suggest for Part 4 (when you’re ready)
+* Adapter to your real combined tables: plug _load_state_tables() into your existing table reader so this runs on live data (it’s a 20–30line adapter once you point me at the artifacts). 
+* Small backtest helper: scan a month of winners; measure precision@K for indices and straights; log deltas vs. the current analyzer. (Hooks are in place—NG already writes JSON.) 
+* Optional: NG panel inside Winners Logger: read the NG JSON during the logger run and add a rightrail “NG topK (indices/straights)” section in the full analyzerstyle report (pure UI stitch). 
+
+Recap
+* You asked for a full, coded Part 3 that keeps your deep training insights intact and extends the analyzer without risking today’s app.
+* The code above adds a nextgen VTRAC module with progressionaware scoring, hiddendigit discovery, and straight extraction, wired cleanly into your existing Streamlit/nav, paths, and report ecosystem.
+* It’s built to coexist with your current analyzer and your Winners Logger so you can trial, compare, and then merge when you’re confident.
+If you want, I can immediately ship a tiny _load_state_tables() adapter for your actual combined table artifacts (CSV/HTML you already generate). Once that’s in, you can click Run NG Analyzer in the app and start comparing outputs sidebyside the same day._
+
+
+
+
+
+
+
+
+
+____________________________________________________________________
+
+thanks for the full code bundle and the runway to ship a serious upgrade. I’ve gone through your repo map, the app wiring, and the winnerslogging flow so the plan below plugs in cleanly without breaking what’s already shipped. This is Part 3 of the redesign: a dropin Advanced Scoring + VTRAC Straights + WinnersLogger glue layer that sits on top of the existing Analyzer, reuses its loaders, and writes results alongside current analysis artifacts.
+Below you’ll find:
+1. What Part 3 delivers (at a glance)
+2. Dropin code (new modules + a small shim to the VTRAC page)
+3. Where the files live & how they wire into the current app
+4. Why this fits the current architecture (citations to your AAT9 docs)
+
+1) What Part 3 delivers
+* Advanced VTRAC scoring engine that stacks evidence you’ve trained on (rightcolumn survival, hotzones, crosssection coherence Midday/Evening/Combined, digitreduction overlays, mirror/float pressure, “369Stack” when due) into a transparent composite score per VTRAC index.
+* VTRAC Straights engine that turns each top index into ranked straight candidates (8 perms) using order clues (lastcolumn progression, sameorder echoes, mirror overlays).
+* WinnersLogger glue: one click from the Analyzer to “write analyzerstyle winner report for topN” so you can immediately inspect what the logger would show if the analyzer’s pick hits, without leaving the page. The glue calls the same report builders the Control Center uses, and saves outputs under data/outputs/analysis/ (keeping parity with current reports). 
+* Config-first design: all weights, thresholds, and toggles live in a YAML you can tune without editing code.
+* No regressions: we call into your existing Analyzer (load ? analyze ? base ranking) and then layer our advanced scoring & straights on top. The UI toggle lets you compare “Base” vs “Advanced” live.
+
+2) Dropin code
+How to read this section:
+* Each file is selfcontained. Paste into the specified path(s).
+* If a directory doesn’t exist, create it.
+* After adding files, launch via your canonical run_app.bat to test. 
+A) src/core/vtrac_adv_feature_bank.py
+Lightweight feature extractors that reuse your existing analyzer output (so we don’t guess the internals of combined tables) and optionally read recent draws for sums/mirror/float context. This avoids brittle parsing and keeps us aligned with module_c_vtrac.analyze_all_indexes(...). 
+# src/core/vtrac_adv_feature_bank.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+import math
+import statistics as stats
+
+try:
+    import pandas as pd  # used if present (Analyzer already uses pandas)
+except Exception:
+    pd = None  # degrade gracefully
+
+# Reuse shipped references/utilities
+from modules.vtrac_reference import get_index_set, get_index_straights  # boxed sets + perms
+from modules.vtrac_reference import VTRAC_LOOKUP  # sanity, if needed
+from modules.vtrac_reference import normalize_draw
+# Draws loader (CSV-only, robust to underscores/trailing '4') for context signals:
+try:
+    from modules.aux_loaders import load_state_draws
+except Exception:
+    load_state_draws = None
+
+# ----------------------------
+# Generic helpers
+# ----------------------------
+MIRROR_MAP = str.maketrans("01234", "56789")  # 0?5,1?6,2?7,3?8,4?9; we apply forward (mirror pair happens if any digit maps onto companion)
+REV_MIRROR_MAP = str.maketrans("56789", "01234")
+
+def digital_root(n: int) -> int:
+    if n == 0:
+        return 0
+    r = n % 9
+    return 9 if r == 0 else r
+
+def root_sum3(draw: str) -> Optional[int]:
+    s = normalize_draw(draw)
+    if s is None: return None
+    return digital_root(sum(int(c) for c in s))
+
+def sum3(draw: str) -> Optional[int]:
+    s = normalize_draw(draw)
+    if s is None: return None
+    return sum(int(c) for c in s)
+
+def has_mirror_pair(draw: str) -> bool:
+    s = normalize_draw(draw)
+    if s is None: return False
+    # mirror event if any pair (a,b) equals mirror of other: practical proxy—if any digit mirrors onto another present
+    t = s.translate(MIRROR_MAP)
+    return any(ch in s for ch in t)
+
+def floating_digits(draws: List[str], window: int = 5) -> set[int]:
+    recent = draws[:window] if len(draws) >= window else draws[:]
+    seen = set(int(d) for s in recent for d in normalize_draw(s) or "")
+    return set(range(10)) - seen
+
+# ----------------------------
+# Feature model
+# ----------------------------
+@dataclass
+class IndexFeatures:
+    index: int
+    # Base analyzer-derived
+    r2_hits: int = 0
+    r4_hits: int = 0
+    r6_hits: int = 0
+    r8_hits: int = 0
+    rightmost_survival: int = 0
+    hot_zone_hits: int = 0
+    cross_section_hits: int = 0  # e.g., Midday/Evening/Combined presence
+    # Context-derived
+    rs_due_match: int = 0
+    mirror_pressure: int = 0
+    float_pressure: int = 0
+    # Straights signal proxies
+    same_order_echo: int = 0      # hint that one perm aligns with column order
+    end_sequence_bias: int = 0    # boost if clues cluster at R8?R6?… right side
+    # Digit reduction overlays (simple proxies; your DR module can be plumbed later)
+    reduction_agreement: int = 0
+
+    # Derived
+    total_hits: int = 0
+
+    def as_row(self) -> dict:
+        return {
+            "index": self.index,
+            "r2_hits": self.r2_hits, "r4_hits": self.r4_hits,
+            "r6_hits": self.r6_hits, "r8_hits": self.r8_hits,
+            "rightmost_survival": self.rightmost_survival,
+            "hot_zone_hits": self.hot_zone_hits,
+            "cross_section_hits": self.cross_section_hits,
+            "rs_due_match": self.rs_due_match,
+            "mirror_pressure": self.mirror_pressure,
+            "float_pressure": self.float_pressure,
+            "same_order_echo": self.same_order_echo,
+            "end_sequence_bias": self.end_sequence_bias,
+            "reduction_agreement": self.reduction_agreement,
+            "total_hits": self.total_hits,
+        }
+
+# ----------------------------
+# Main extraction (inputs come from your existing Analyzer products)
+# ----------------------------
+def extract_index_features(
+    state: str,
+    base_index_stats: Dict[int, dict],
+    *,
+    recent_draws: Optional[List[str]] = None,
+    cross_section_presence: Optional[Dict[int, set]] = None,  # {index: {"Midday","Evening","Combined"}}
+    hot_zone_map: Optional[Dict[int, int]] = None,            # {index: count}
+    rightmost_survival_map: Optional[Dict[int, int]] = None,  # {index: score}
+    reduction_agreement_map: Optional[Dict[int, int]] = None  # {index: 0/1 or small int}
+) -> List[IndexFeatures]:
+    """
+    Build feature rows for each index present in base_index_stats.
+    - base_index_stats: the dict your module_c_vtrac.analyze_all_indexes(...) returns per index (counts per R2/R4/R6/R8, etc.)
+    - recent_draws: newest-first; if None, we try to load via modules.aux_loaders (CSV-only).
+    """
+    # Try loading draws if not provided (safe; Aux/BA use CSV-only)
+    if recent_draws is None and load_state_draws is not None:
+        try:
+            recent_draws, _ = load_state_draws(state)  # newest-first
+        except Exception:
+            recent_draws = None
+
+    # Root-due context
+    rs_due_set: set[int] = set()
+    mirror_flag = 0
+    float_set: set[int] = set()
+
+    if recent_draws:
+        # compute longest-out digital root(s)
+        gaps_by_rs: Dict[int, int] = {r: 10**9 for r in range(1,10)}
+        last_seen = {r: None for r in range(1,10)}
+        for i, d in enumerate(recent_draws):
+            rs = root_sum3(d)
+            if rs and last_seen[rs] is None:
+                last_seen[rs] = i
+        # distance since last seen = gap
+        for r in range(1,10):
+            if last_seen[r] is not None:
+                gaps_by_rs[r] = last_seen[r]
+        max_gap = max(gaps_by_rs.values())
+        rs_due_set = {r for r,g in gaps_by_rs.items() if g == max_gap}
+
+        mirror_flag = 1 if has_mirror_pair(recent_draws[0]) else 0
+        float_set = floating_digits(recent_draws, window=5)
+
+    rows: List[IndexFeatures] = []
+    for idx, payload in base_index_stats.items():
+        f = IndexFeatures(index=idx)
+
+        # Parse base counts safely
+        counts = payload.get("counts", {})  # convention: {"R2":int,"R4":int,"R6":int,"R8":int}
+        f.r2_hits = int(counts.get("R2", 0))
+        f.r4_hits = int(counts.get("R4", 0))
+        f.r6_hits = int(counts.get("R6", 0))
+        f.r8_hits = int(counts.get("R8", 0))
+        f.total_hits = f.r2_hits + f.r4_hits + f.r6_hits + f.r8_hits
+
+        if rightmost_survival_map:
+            f.rightmost_survival = int(rightmost_survival_map.get(idx, 0))
+        if hot_zone_map:
+            f.hot_zone_hits = int(hot_zone_map.get(idx, 0))
+        if cross_section_presence:
+            f.cross_section_hits = len(cross_section_presence.get(idx, set()))
+
+        # RS due match: if any straight of this index has RS in rs_due_set, count it once
+        if rs_due_set:
+            # proxy: if any boxed combo in index has RS due, give 1
+            rs_hit = 0
+            for combo in get_index_set(idx):
+                rs = root_sum3(combo)
+                if rs and rs in rs_due_set:
+                    rs_hit = 1
+                    break
+            f.rs_due_match = rs_hit
+
+        # Mirror & Float pressure (coarse but helpful)
+        if mirror_flag:
+            f.mirror_pressure = 1
+        if float_set:
+            # proxy: if any boxed combo in index uses at least one floating digit, boost
+            uses_float = 0
+            for combo in get_index_set(idx):
+                if any(int(ch) in float_set for ch in combo):
+                    uses_float = 1
+                    break
+            f.float_pressure = uses_float
+
+        # Straights order echoes (rightmost bias + same-order proxy)
+        # We use a heuristic: if rightmost survival is strong and f.r8_hits>0, give extra "end_sequence_bias".
+        if f.rightmost_survival > 0 and f.r8_hits > 0:
+            f.end_sequence_bias = 1
+
+        # "Same-order echo" proxy: if any straight equals the last draw (order-equal VTRAC), nudge
+        if recent_draws:
+            last = recent_draws[0]
+            straights = get_index_straights(last)
+            # If the last draw’s perm set belongs to this index, reflect a weak echo (do not overfit)
+            if straights:
+                # map any perm to V-index and compare
+                # We don’t import get_vtrac_index here to keep this module pure on references;
+                # a soft echo is okay: if the last draw’s digit *set* appears among this index’s boxed combos
+                last_set = set(normalize_draw(last))
+                f.same_order_echo = 1 if any(set(c) == last_set for c in get_index_set(idx)) else 0
+
+        if reduction_agreement_map:
+            f.reduction_agreement = int(reduction_agreement_map.get(idx, 0))
+
+        rows.append(f)
+
+    return rows
+
+B) src/core/vtrac_adv_score_engine.py
+Composite, configdriven scorer + an optional “369Stack” bonus that follows the BA spec you’re already using in Control Center (conservative, stack only when due & cosignals). 
+# src/core/vtrac_adv_score_engine.py
+from __future__ import annotations
+from typing import Dict, List, Optional, Tuple
+import json
+import os
+from dataclasses import dataclass
+
+try:
+    import pandas as pd
+except Exception:
+    pd = None
+
+from .vtrac_adv_feature_bank import IndexFeatures, digital_root, root_sum3
+
+DEFAULT_WEIGHTS = {
+    "r2_hits": 0.6, "r4_hits": 0.9, "r6_hits": 1.2, "r8_hits": 1.6,
+    "rightmost_survival": 1.2, "hot_zone_hits": 0.8, "cross_section_hits": 0.6,
+    "rs_due_match": 0.5, "mirror_pressure": 0.3, "float_pressure": 0.3,
+    "same_order_echo": 0.2, "end_sequence_bias": 0.4, "reduction_agreement": 0.4
+}
+DEFAULT_BONUS = {
+    "enable_369_stack": True,
+    "stack_score": 1.0,           # adds to state-level signal (we show label in UI)
+    "candidate_bonus": 0.2        # small boost to straights later
+}
+
+def load_weights(yaml_path: Optional[str]) -> Tuple[Dict[str, float], Dict[str, float]]:
+    if not yaml_path or not os.path.isfile(yaml_path):
+        return DEFAULT_WEIGHTS, DEFAULT_BONUS
+    # lazy, allow JSON too; YAML optional to avoid dependency
+    try:
+        import yaml
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    w = dict(DEFAULT_WEIGHTS); w.update(cfg.get("weights", {}))
+    b = dict(DEFAULT_BONUS);   b.update(cfg.get("bonuses", {}))
+    return w, b
+
+def score_indices(features: List[IndexFeatures], *, weights: Dict[str, float]) -> List[dict]:
+    rows = []
+    for f in features:
+        score = 0.0
+        for k, w in weights.items():
+            score += getattr(f, k, 0) * w
+        r = f.as_row()
+        r["adv_score"] = round(score, 6)
+        rows.append(r)
+    # stable sort by adv_score desc then index asc
+    rows.sort(key=lambda r: (-r["adv_score"], r["index"]))
+    return rows
+
+def compute_369_stack_label(recent_roots_longest_out: Optional[set], mirror_flag: bool, float_set: set[int]) -> Optional[str]:
+    if not recent_roots_longest_out:
+        return None
+    if not ({3,6,9} & recent_roots_longest_out):
+        return None
+    # co-signal: mirror OR any float includes 3/6/9
+    if mirror_flag or ({3,6,9} & float_set):
+        return "369-Stack"
+    return None
+
+C) src/core/vtrac_straights_engine.py
+Turn each top VTRAC index into a ranked list of straight candidates (8 permutations), lightly biased by the evidence we extracted. Uses your shipped reference functions; no external dependencies.
+# src/core/vtrac_straights_engine.py
+from __future__ import annotations
+from typing import Dict, List, Tuple, Optional
+
+try:
+    import pandas as pd
+except Exception:
+    pd = None
+
+from modules.vtrac_reference import get_index_set, get_index_straights, normalize_draw
+
+def rank_straights_for_index(
+    index: int,
+    *,
+    candidate_bonus: float = 0.2,
+    end_sequence_bias: int = 0,
+    same_order_echo: int = 0,
+    rs_due_set: Optional[set[int]] = None
+) -> List[Tuple[str, float, List[str]]]:
+    """
+    Return straight candidates (perm) with small, explainable boosts:
+    - bonus if perm's RS in rs_due_set
+    - bonus if same-order echo flagged
+    - bonus if end-sequence bias flagged
+    """
+    perms: set[str] = set()
+    # Build from representative boxed combos — any is fine (8 perms per VTRAC family)
+    for combo in get_index_set(index):
+        perms |= get_index_straights(combo)
+
+    out: List[Tuple[str, float, List[str]]] = []
+    for p in perms:
+        s = 0.0
+        tags: List[str] = []
+        if rs_due_set:
+            rs = sum(int(c) for c in p)
+            # digital root without importing helper (small duplication to keep module self-contained)
+            dr = 9 if rs % 9 == 0 and rs != 0 else (rs % 9)
+            if dr in rs_due_set:
+                s += candidate_bonus
+                tags.append(f"RS{dr}")
+        if same_order_echo:
+            s += 0.1; tags.append("ECHO")
+        if end_sequence_bias:
+            s += 0.1; tags.append("R8-BIAS")
+        out.append((p, round(s, 6), tags))
+
+    out.sort(key=lambda t: (-t[1], t[0]))
+    return out
+
+D) src/core/module_c_vtrac_part3_upgrade.py
+A nonintrusive wrapper that calls your current Analyzer functions, adds advanced scoring + straights, and optionally writes winnersstyle reports for the top picks. This wrapper respects your Analyzer’s load/analyze/report functions and paths. 
+# src/core/module_c_vtrac_part3_upgrade.py
+from __future__ import annotations
+from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+import json
+import os
+
+try:
+    import pandas as pd
+except Exception:
+    pd = None
+
+from utils import path_handler as ph  # canonical accessors for tables/analysis dirs
+# Base Analyzer (we call into it; do not modify its internals)
+from core import module_c_vtrac as base_vtrac  # load_state_data, analyze_all_indexes, generate_top_reports, etc.
+
+from .vtrac_adv_feature_bank import extract_index_features, floating_digits, has_mirror_pair, root_sum3
+from .vtrac_adv_score_engine import load_weights, score_indices, compute_369_stack_label
+from .vtrac_straights_engine import rank_straights_for_index
+
+# winners logger plumbing (reuse your light/full report writers)
+try:
+    from core import winners_vtrac_report as winners_light  # build_vtrac_winner_report
+except Exception:
+    winners_light = None
+try:
+    from modules import winner_report_full as winners_full  # analyzer-style full report
+except Exception:
+    winners_full = None
+
+try:
+    from modules.aux_loaders import load_state_draws  # CSV-only draws loader (Control Center/BA uses this)
+except Exception:
+    load_state_draws = None
+
+DEFAULT_CFG = "configs/vtrac/weights.v1.yaml"
+
+def run_advanced_vtrac(
+    state: str,
+    *,
+    weights_path: Optional[str] = None,
+    top_n: int = 5,
+    write_winner_reports: bool = False
+) -> Dict[str, object]:
+    """
+    High-level orchestration:
+      1) call existing Analyzer to get per-index evidence
+      2) compute advanced features, composite scores
+      3) produce straights for top indices
+      4) optional: write winners-style HTML for inspection
+    Returns a dict suitable for UI consumption.
+    """
+    # 1) Base load/analyze
+    state_data = base_vtrac.load_state_data(state)  # reads combined tables via utils.path_handler
+    base_stats: Dict[int, dict] = base_vtrac.analyze_all_indexes(state_data)  # do not break this contract
+
+    # Collect optional side maps from base_stats if present
+    hot_zone_map = {}
+    rightmost_map = {}
+    xsec_map = {}
+    for idx, row in base_stats.items():
+        hot_zone_map[idx] = int(row.get("hot_zone_count", 0))
+        rightmost_map[idx] = int(row.get("rightmost_survival", 0))
+        xset = set()
+        for sec in ("Midday", "Evening", "Combined"):
+            if row.get(f"present_in_{sec.lower()}", False):
+                xset.add(sec)
+        xsec_map[idx] = xset
+
+    # Recent draws for RS/Mirror/Float context
+    recent_draws, mirror_flag, floats, rs_due_set = None, 0, set(), set()
+    if load_state_draws is not None:
+        try:
+            recent_draws, _ = load_state_draws(state)
+        except Exception:
+            recent_draws = None
+    if recent_draws:
+        mirror_flag = 1 if has_mirror_pair(recent_draws[0]) else 0
+        floats = floating_digits(recent_draws, window=5)
+        # RS longest-out set
+        last_seen = {r: None for r in range(1,10)}
+        for i, d in enumerate(recent_draws):
+            rs = root_sum3(d)
+            if rs and last_seen[rs] is None:
+                last_seen[rs] = i
+        mx = max(i for i in [v for v in last_seen.values() if v is not None]) if any(v is not None for v in last_seen.values()) else 0
+        rs_due_set = {r for r,v in last_seen.items() if v == mx and v is not None}
+
+    # 2) Features + weights + scores
+    feats = extract_index_features(
+        state,
+        base_stats,
+        recent_draws=recent_draws,
+        cross_section_presence=xsec_map,
+        hot_zone_map=hot_zone_map,
+        rightmost_survival_map=rightmost_map,
+        reduction_agreement_map=None  # hook in later when DR exports a quick 0/1 agreement vector
+    )
+    w, bonus = load_weights(weights_path or DEFAULT_CFG)
+    scored = score_indices(feats, weights=w)
+
+    # Optional 369-Stack state label
+    stack_label = None
+    if bonus.get("enable_369_stack", True):
+        stack_label = compute_369_stack_label(rs_due_set or set(), bool(mirror_flag), floats or set())
+
+    # 3) Straights for top-N indices
+    top_rows = scored[:max(1, top_n)]
+    for r in top_rows:
+        r["straights"] = rank_straights_for_index(
+            r["index"],
+            candidate_bonus=bonus.get("candidate_bonus", 0.2),
+            end_sequence_bias=r.get("end_sequence_bias", 0),
+            same_order_echo=r.get("same_order_echo", 0),
+            rs_due_set=rs_due_set
+        )
+
+    # 4) Optional: write winners-style reports for the top pick (or top-N)
+    reports_written: List[str] = []
+    if write_winner_reports and winners_light:
+        out_root = Path(ph.get_analysis_dir("vtrac", state)) / "advanced"  # keep under analysis/vtrac/<STATE>/advanced
+        out_root.mkdir(parents=True, exist_ok=True)
+        for r in top_rows:
+            idx = r["index"]
+            try:
+                # Light report (3-panel) to winners/<date> or analysis/ per your helpers
+                # We do not know the specific winning draw here; we pass index context for learning.
+                html_path = out_root / f"winner_like_index_{idx}.html"
+                html = winners_light.build_vtrac_winner_report(state, assumed_index=idx)  # your builder can accept kwargs if you want
+                html_path.write_text(html, encoding="utf-8")
+                reports_written.append(str(html_path))
+            except Exception:
+                # best-effort; keep going
+                pass
+
+    return {
+        "state": state,
+        "adv_scored": scored,
+        "top_indices": [r["index"] for r in top_rows],
+        "stack_label": stack_label,
+        "reports_written": reports_written
+    }
+Notes:
+• This wrapper does not modify core/module_c_vtrac.py; it calls its public functions and writes additional artifacts under data/outputs/analysis/vtrac/<STATE>/advanced/, consistent with your doc’d directory contracts. 
+• build_vtrac_winner_report(...) is the same function your Control Center triggers for the compact logger; the analyzerstyle full report can be reached via modules/winner_report_full.py if you choose—both paths are documented in your Winners Logging map. 
+
+E) Config file (weights & bonuses)
+Create: configs/vtrac/weights.v1.yaml
+# configs/vtrac/weights.v1.yaml
+weights:
+  r2_hits: 0.6
+  r4_hits: 0.9
+  r6_hits: 1.2
+  r8_hits: 1.6
+  rightmost_survival: 1.2
+  hot_zone_hits: 0.8
+  cross_section_hits: 0.6
+  rs_due_match: 0.5
+  mirror_pressure: 0.3
+  float_pressure: 0.3
+  same_order_echo: 0.2
+  end_sequence_bias: 0.4
+  reduction_agreement: 0.4
+
+bonuses:
+  enable_369_stack: true
+  stack_score: 1.0     # reserved for future in-page state badge; not added to per-index score
+  candidate_bonus: 0.2
+
+F) Minimal UI hook (toggle + button) in the VTRAC page
+Where: in src/app.py, inside your VTRAC page renderer (the one that already calls the Analyzer). Add the “Advanced scoring” toggle with a button to run it, and then render the ranked indices + straights. The code below assumes there is a show_vtrac_page(state) function as documented in your App Flow. 
+# --- inside src/app.py, within show_vtrac_page(state) after the base analyzer UI ---
+import streamlit as st
+
+from core.module_c_vtrac_part3_upgrade import run_advanced_vtrac
+
+with st.expander("Advanced scoring & straights (Part 3)", expanded=False):
+    st.caption("Stacked evidence scoring, VTRAC straights, and optional winnerstyle reports.")
+    colA, colB = st.columns([2,1])
+    with colA:
+        weights_path = st.text_input("Weights config path", value="configs/vtrac/weights.v1.yaml")
+        top_n        = st.number_input("Top N indices", min_value=1, max_value=10, value=5, step=1)
+    with colB:
+        write_reports = st.checkbox("Also write winnerstyle report(s)", value=False)
+
+    if st.button("Run Advanced VTRAC"):
+        adv = run_advanced_vtrac(state, weights_path=weights_path, top_n=top_n, write_winner_reports=write_reports)
+        st.session_state["vtrac_adv_last"] = adv
+
+    adv = st.session_state.get("vtrac_adv_last")
+    if adv:
+        if adv.get("stack_label"):
+            st.success(f"State stack trigger: {adv['stack_label']}")
+
+        rows = adv["adv_scored"][:top_n]
+        for r in rows:
+            st.markdown(f"**Index {r['index']}** — score **{r['adv_score']:.3f}** "
+                        f"(R2/R4/R6/R8={r['r2_hits']}/{r['r4_hits']}/{r['r6_hits']}/{r['r8_hits']}, "
+                        f"R8-bias={r['end_sequence_bias']}, RS-due={r['rs_due_match']})")
+
+            # Straights list (ranked)
+            if r.get("straights"):
+                st.write("Straights (ranked):")
+                for p, s, tags in r["straights"]:
+                    tag_str = f"  [{' '.join(tags)}]" if tags else ""
+                    st.code(f"{p}  +{s:.1f}{tag_str}")
+            st.markdown("---")
+
+        if adv.get("reports_written"):
+            st.info("Winnersstyle HTML written:\n" + "\n".join(f"- {p}" for p in adv["reports_written"]))
+This hook preserves your base Analyzer UI and simply adds an optin advanced panel. It writes to analysis/vtrac/<STATE>/advanced/ in line with your documented analysis output layout. 
+
+3) Where files live & how they wire into your app
+* Entry/UI remains src/app.py (Streamlit). We add a small expander on the VTRAC page that calls our wrapper. Canonical launch stays run_app.bat ? streamlit run src\app.py. 
+* Data contracts are unchanged: the base VTRAC Analyzer reads combined tables via utils.path_handler; our advanced layer reuses the Analyzer output plus recent draws via the same CSVonly loader the Aux/Control Center use—no mixing of pipelines. 
+* Winnerslogger glue calls the same builder(s) already in use by Control Center (“compact” 3panel) and the analyzerstyle full report path as needed, writing HTML under data/outputs/analysis/ (or the Winners tree if you prefer). 
+
+4) Why this fits your current architecture (citations)
+* The Analyzer contract is preserved: we use load_state_data ? analyze_all_indexes ? generate_top_reports from core/module_c_vtrac.py, and only add a wrapper to score/emit straights and (optionally) write winnerstyle HTML next to existing artifacts. 
+* Data flows stay canonical: VTRAC/Stable/DigitReduction consume combined tables via utils.path_handler; Aux/Control Center (and BA) read data/cleaned/*_draws.csv. We respect that separation and read draws only for sums/mirror/float context. 
+* The Control Center & Blackapple remain isolated (absolutepath import + CSVonly). Our “369Stack” logic mirrors BA’s conservative, stacked trigger and is used only as a badge/bonus, not a hard filter. 
+* We continue to write analysis outputs under data/outputs/analysis/<tool>/<STATE>/..., matching your directory guardrails and launch invariants. 
+* If you enable the DEV System Health expander later on the VTRAC page (like you did for Control Center/Aux), you can surface the module/file paths and input dirs without touching analytics code. (Safe, DEVgated.) 
+* This approach aligns with your Integration & Hardening notes (absolutepath loaders, minimal diffs, archivefirst), and your Auxiliary Tools wiring (no sharedmodule collisions; CSVfirst reads for BA/Aux only).
+
+What you get immediately after Part 3
+* Sidebyside comparison of Base vs Advanced index rankings on the VTRAC page.
+* Ranked straight candidates for each top index (with tiny, explainable boosts: RSdue, R8 bias, echo).
+* Oneclick winnerstyle HTML for the top picks, saved under the same analysis tree for easy review and training.
+
+Suggested “quick test” steps (5–10 minutes)
+1. Launch via run_app.bat (ensures reporoot cwd & correct imports). 
+2. VTRAC page ? run your normal base analysis to make sure everything is green.
+3. Expand Advanced scoring & straights, click “Run Advanced VTRAC”.
+4. Inspect ranked indices & straights. Toggle weights in configs/vtrac/weights.v1.yaml and rerun.
+5. Check data/outputs/analysis/vtrac/<STATE>/advanced/ for written HTML if you enabled reports. 
+
+What I held for Part 4 (so we don’t blow up this message)
+* Backtest harness (rolling window; precision@k; hitwithinkdraws metrics—per state) with CSV logs under runs/YYYYMMDD/<run_id>/… to match your Winners Logging roadmap. 
+* DigitReduction and “hiddenbehinddigit” overlays as firstclass, pluggable signals (producing a small 0/1 agreement vector fed into the feature bank instead of a freetext note).
+* Small clustering pass (Jaccard on Rcolumn survivals) to group indices into progression families; that cluster label becomes a feature (not a filter).
+* A tiny config UI (weights sliders + presets) and a “Compare to Base Analyzer” delta panel.
+If you want, I can ship Part 4 the same way—full code, same alignment with your app’s data contracts and docs.
+
+Final check: we preserved your intent
+* Selfcontained tool, no reliance on big ML; just welldesigned scoring, straights, and report glue you can calibrate.
+* Keeps everything your Winners Logger is good at—our glue merely makes it a oneclick “show me the winner view if this index hits” directly from the Analyzer page. 
+If this matches your expectations, I’ll proceed to the backtest + overlays (Part 4) next.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__________________________________________________________________
+________________________________________________________________________
+
+
+
+Absolutely—let’s move into Part 3 and keep this tight, concrete, and codefirst while staying 100% compatible with your current app wiring and winnerslogging layout.
+Below you’ll get:
+* 3A. New core modules (full code): evidence extraction, scoring, straightclue logic, “hiddenbehindadigit” masking, and optional winnersaware priors.
+* 3B. Minimal, safe wireup snippet for src/core/module_c_vtrac.py to light this up behind a small toggle (no regressions).
+* 3C. Output writers (JSON) that drop reports where your app already expects artifacts.
+All code is additive (new files), readonly against the same canonical directories you’re using today (tables/ for VTRAC, and winners logs under data/outputs/winners/... when present). This stays aligned with the AAT9 app flow and logging plan you’ve documented. 
+
+Part 3 — Advanced Scoring Engine + Straights Clues (Code)
+What this delivers now
+1. A twopass analyzer that (A) scores indices from R2/R4/R6/R8 progressions with rightcolumn emphasis and crosssection stability, then (B) elevates VTRAC straights using ordersensitive clues and optional digitmask overlays (“hiddenbehindadigit”).
+2. Optional priors from your Winners Logger folders if present—purely a soft multiplier; safe to skip when no logs exist. 
+3. JSON reports written under data/outputs/analysis/vtrac/<STATE>/ to match your app’s pattern of saving analyzer artifacts. 
+3A1) modules/vtrac_evidence.py — evidence extraction + features
+# modules/vtrac_evidence.py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple, Set, Optional
+import re
+import json
+from pathlib import Path
+
+# We depend only on your canonical reference helpers.
+# These exist today and are imported by other tools in your app. (No refactor.)
+#   - modules.vtrac_reference: BOXED_VTRAC_REFERENCE, get_vtrac_index, get_index_set, get_index_straights
+from modules.vtrac_reference import get_vtrac_index, get_index_set, get_index_straights
+
+# --------------------------
+# Types the existing page can fill easily
+# --------------------------
+# We keep this adapter light so you can pass what you already compute today in module_c_vtrac.
+#
+# "columns" are left->right strings from each R2/R4/R6/R8 box. The more to the right, the closer to "now".
+# We accept pre-extracted column text blocks (any cleaned string). If you have richer structures,
+# adapt upstream and keep this signature stable.
+SectionName = str   # "Midday" | "Evening" | "Combined"
+RingName = str      # "R2" | "R4" | "R6" | "R8"
+
+@dataclass
+class GridInputs:
+    # For each section/ring, provide a list of columns as text. Index 0 = leftmost, last = rightmost.
+    columns_by_section_ring: Dict[SectionName, Dict[RingName, List[str]]]
+    # Optional "hot zones" hint per section/ring -> list of right-column indices considered hot
+    hot_zone_cols: Dict[SectionName, Dict[RingName, Set[int]]] = field(default_factory=dict)
+    # Optional latest draws digits to support masking / digit-reduction hints
+    latest_draw_digits: List[str] = field(default_factory=list)  # e.g., ["6","9","1"]
+
+# --------------------------
+# Weights / knobs (safe defaults)
+# --------------------------
+@dataclass
+class EvidenceWeights:
+    # column weights escalate to the right (latest columns carry more signal)
+    # You can pass per-ring custom arrays; if None we auto-build linear ramps.
+    col_weights: Dict[RingName, List[float]] = field(default_factory=dict)
+    # ring multipliers: R8 > R6 > R4 > R2 by default (more compressed strings, sharper evidence)
+    ring_gain: Dict[RingName, float] = field(default_factory=lambda: {"R2":1.0,"R4":1.15,"R6":1.3,"R8":1.45})
+    # section multipliers: allow small boost to Combined (often most stable)
+    section_gain: Dict[SectionName, float] = field(default_factory=lambda: {"Midday":1.0,"Evening":1.0,"Combined":1.1})
+    # stability / survival bonuses
+    survive_right_bonus: float = 0.6     # survives into last col of any ring
+    multi_section_bonus: float = 0.5     # appears in >=2 sections (same ring or across rings)
+    repetition_chain_bonus: float = 0.3  # consecutive rightward hits within a ring
+    hot_zone_bonus: float = 0.35         # ring/col marked as "hot" by the UI logic
+
+    # Straights layer (pass B)
+    straight_base: float = 1.0           # base value when a straight clue is detected
+    straight_same_order_bonus: float = 0.6  # “same-order” VTRAC straight clue
+    straight_cross_section_bonus: float = 0.35
+    straight_hot_zone_bonus: float = 0.35
+    # Optional digit masking (“hidden-behind-a-digit”) – if a clue appears only after masking a digit, small boost
+    mask_boost: float = 0.2
+
+def _auto_weights_for(cols: int) -> List[float]:
+    # simple linear ramp 1..(1+0.1*(cols-1)) -> e.g., 7 cols => [1.0,1.1,1.2,1.3,1.4,1.5,1.6]
+    return [1.0 + 0.1*i for i in range(max(cols,1))]
+
+# --------------------------
+# Core evidence scan helpers
+# --------------------------
+_digit_re = re.compile(r"[0-9]")
+
+def _contains_any_token(hay: str, token_set: Set[str]) -> bool:
+    # token_set are canonical 3-char combos for an index (e.g., {"056","015","..."}).
+    # We scan haystack text “as-is”; upstream should have done any normalization.
+    return any(tok in hay for tok in token_set)
+
+def _same_order_straight_seen(hay: str, winner_perm_set: Set[str]) -> bool:
+    # If ANY straight perm appears, we consider it “straight clue”.
+    return any(p in hay for p in winner_perm_set)
+
+def _masked(text: str, digits_to_remove: Set[str]) -> str:
+    if not digits_to_remove:
+        return text
+    return "".join(ch for ch in text if ch not in digits_to_remove)
+
+# --------------------------
+# Public API: compute index scores and straight clues
+# --------------------------
+@dataclass
+class IndexEvidence:
+    index: int
+    score: float
+    ring_hits: Dict[str, List[int]]              # e.g., "Midday.R4" -> [0,0,1,1,0,1,1] hit flags by column
+    features: Dict[str, float]                   # named feature contributions
+    notes: List[str]
+
+@dataclass
+class StraightCandidate:
+    index: int
+    straight: str
+    score: float
+    features: Dict[str, float]
+    notes: List[str]
+
+@dataclass
+class EvidenceBundle:
+    indices: List[IndexEvidence]
+    straights: List[StraightCandidate]
+
+def compute_evidence(
+    grid: GridInputs,
+    weights: Optional[EvidenceWeights] = None,
+    *,
+    digits_to_mask: Optional[Set[str]] = None,
+) -> EvidenceBundle:
+    """
+    Two-pass extractor:
+      Pass A: index evidence from R2/R4/R6/R8 progressions with right-column emphasis, hot-zones, stability.
+      Pass B: straight clues from order-sensitive hits across sections, with optional masking-support.
+    """
+    weights = weights or EvidenceWeights()
+    digits_to_mask = digits_to_mask or set()
+
+    # Build per-index column hit flags
+    index_hits: Dict[int, Dict[str, List[int]]] = {}   # index -> key -> [0/1,...]
+    feature_acc: Dict[int, Dict[str, float]] = {}
+    notes_acc: Dict[int, List[str]] = {}
+
+    # Prepare column weights per ring
+    colw: Dict[str, List[float]] = {}
+    for section, rings in grid.columns_by_section_ring.items():
+        for ring, cols in rings.items():
+            key = ring
+            if key not in colw:
+                colw[key] = weights.col_weights.get(ring) or _auto_weights_for(len(cols))
+
+    # PASS A — scan for index presence per column
+    for section, rings in grid.columns_by_section_ring.items():
+        for ring, columns in rings.items():
+            ring_key = f"{section}.{ring}"
+            wcols = colw[ring]
+            for idx in range(1, 36):  # VTRAC indexes 1..35
+                canon_set = get_index_set(idx)  # all boxed strings of this index
+                # column-wise hits
+                hits = []
+                for ci, col_text in enumerate(columns):
+                    # base check
+                    base_hit = 1 if _contains_any_token(col_text, canon_set) else 0
+                    # “hiddenbehindadigit” masked check (optional)
+                    masked_hit = 0
+                    if base_hit == 0 and digits_to_mask:
+                        if _contains_any_token(_masked(col_text, digits_to_mask), canon_set):
+                            masked_hit = 1
+                    hits.append(1 if (base_hit or masked_hit) else 0)
+
+                    # bootstrap notes/features
+                    if masked_hit:
+                        notes_acc.setdefault(idx, []).append(
+                            f"{ring_key} col {ci}: maskedhit via digits {sorted(digits_to_mask)}"
+                        )
+                        feature_acc.setdefault(idx, {}).setdefault("mask_hits", 0.0)
+                        feature_acc[idx]["mask_hits"] += weights.mask_boost
+
+                if any(hits):
+                    index_hits.setdefault(idx, {})[ring_key] = hits
+
+                    # feature: weighted column sum
+                    s = 0.0
+                    for ci, h in enumerate(hits):
+                        if h:
+                            s += wcols[ci] * weights.ring_gain[ring] * weights.section_gain.get(section, 1.0)
+                            # hot-zone bonus
+                            if ci in grid.hot_zone_cols.get(section, {}).get(ring, set()):
+                                s += weights.hot_zone_bonus
+                    feature_acc.setdefault(idx, {}).setdefault("col_weighted_hits", 0.0)
+                    feature_acc[idx]["col_weighted_hits"] += s
+
+                    # survival in the last col of this ring?
+                    if hits and hits[-1] == 1:
+                        feature_acc[idx]["survive_right"] = feature_acc[idx].get("survive_right", 0.0) + weights.survive_right_bonus
+
+                    # repetition chain bonus within this ring (rightward consecutive)
+                    chain = 0; max_chain = 0
+                    for h in hits:
+                        if h: chain += 1; max_chain = max(max_chain, chain)
+                        else: chain = 0
+                    if max_chain >= 2:
+                        feature_acc[idx]["repetition_chain"] = feature_acc[idx].get("repetition_chain", 0.0) + weights.repetition_chain_bonus
+
+    # multi-section stability bonus
+    for idx, rings in index_hits.items():
+        seen_sections = set(k.split(".")[0] for k in rings.keys())
+        if len(seen_sections) >= 2:
+            feature_acc.setdefault(idx, {}).setdefault("multi_section", 0.0)
+            feature_acc[idx]["multi_section"] += weights.multi_section_bonus
+
+    # accumulate index scores
+    index_ev: List[IndexEvidence] = []
+    for idx, rings in index_hits.items():
+        f = feature_acc.get(idx, {})
+        score = sum(f.values())
+        index_ev.append(IndexEvidence(index=idx, score=score, ring_hits=rings, features=f, notes=notes_acc.get(idx, [])))
+
+    index_ev.sort(key=lambda x: x.score, reverse=True)
+
+    # PASS B — VTRAC straights clues for top N indices
+    straight_ev: List[StraightCandidate] = []
+    top_for_straights = index_ev[:12]  # small cap
+    for ev in top_for_straights:
+        # union of columns by section for order-sensitive clues
+        union_by_section: Dict[str, str] = {}
+        for key, hits in ev.ring_hits.items():
+            section, ring = key.split(".")
+            # text blob for this section = concatenate all columns (right has more weight via features already)
+            cols = grid.columns_by_section_ring[section][ring]
+            union_by_section.setdefault(section, "")
+            union_by_section[section] += " || ".join(cols)
+
+        # each boxed combo in this index has 6 straight perms (fewer for doubles)
+        # We score straights when the exact order appears in any section blob, with bonuses.
+        # Winner perms proxy = perms of each boxed; we aggregate by perm so we don’t duplicate.
+        seen_perms: Set[str] = set()
+        for boxed in get_index_set(ev.index):
+            perms = get_index_straights(boxed)  # unique perms inc. leading zeros
+            for p in perms:
+                if p in seen_perms:
+                    continue
+                seen_perms.add(p)
+
+                base = 0.0
+                feat: Dict[str, float] = {}
+                notes: List[str] = []
+
+                # unmasked and masked checks per section
+                hit_any = False
+                hit_sections = 0
+                for section, blob in union_by_section.items():
+                    unmasked = _same_order_straight_seen(blob, {p})
+                    masked_ok = False
+                    if not unmasked and digits_to_mask:
+                        masked_ok = _same_order_straight_seen(_masked(blob, digits_to_mask), {p})
+
+                    if unmasked or masked_ok:
+                        hit_any = True
+                        hit_sections += 1
+                        val = weights.straight_base + (weights.straight_same_order_bonus)
+                        feat["hit_"+section] = val
+                        base += val
+                        if section in grid.hot_zone_cols:
+                            feat["hot_"+section] = feat.get("hot_"+section, 0.0) + weights.straight_hot_zone_bonus
+                            base += weights.straight_hot_zone_bonus
+                        if masked_ok:
+                            feat["mask_"+section] = feat.get("mask_"+section, 0.0) + weights.mask_boost
+                            base += weights.mask_boost
+
+                if hit_any:
+                    if hit_sections >= 2:
+                        feat["cross_section"] = weights.straight_cross_section_bonus
+                        base += weights.straight_cross_section_bonus
+                    straight_ev.append(StraightCandidate(index=ev.index, straight=p, score=base, features=feat, notes=notes))
+
+    straight_ev.sort(key=lambda x: x.score, reverse=True)
+    return EvidenceBundle(indices=index_ev, straights=straight_ev)
+
+3A2) modules/vtrac_priors.py — optional winnersaware priors (safe if missing)
+Reads your Winners Logger JSONs (if any) and returns soft multipliers per index/straight. It honors your documented winners paths (data/outputs/winners/<date>/... and analyzerstyle winners HTML/JSON under data/outputs/analysis/winners/<STATE>); if nothing is present, it returns 1.0 everywhere so scoring remains pure. 
+# modules/vtrac_priors.py
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, Optional
+from pathlib import Path
+import json
+import re
+
+INDEX = re.compile(r'"vtrac_index"\s*:\s*(\d+)')
+
+@dataclass
+class Priors:
+    index_mul: Dict[int, float]
+    straight_mul: Dict[str, float]  # straight string -> multiplier
+
+def load_priors(
+    repo_root: Path,
+    state: str,
+    lookback_days: int = 60,
+    base_boost: float = 0.05,
+    straight_boost: float = 0.03,
+) -> Priors:
+    """
+    Soft priors from winners logs: each recent hit nudges its index/straight slightly.
+    Missing logs => return neutral multipliers.
+    """
+    winners_dir = repo_root / "data" / "outputs" / "winners"
+    analysis_winners = repo_root / "data" / "outputs" / "analysis" / "winners" / state
+
+    counts_idx: Dict[int, int] = {}
+    counts_st: Dict[str, int] = {}
+
+    if winners_dir.exists():
+        # scan most recent subfolders first
+        days = sorted([p for p in winners_dir.iterdir() if p.is_dir()], reverse=True)[:lookback_days]
+        for day in days:
+            # vtrac_reports/<STATE>/*.json|.html fragments
+            rep_root = day / "vtrac_reports" / state
+            if rep_root.exists():
+                for f in rep_root.rglob("*"):
+                    try:
+                        text = f.read_text(encoding="utf-8", errors="ignore")
+                    except Exception:
+                        continue
+                    # try pick index
+                    m = INDEX.search(text)
+                    if m:
+                        idx = int(m.group(1))
+                        counts_idx[idx] = counts_idx.get(idx, 0) + 1
+                    # try pick straights listed in logs (simple 3-digit tokens)
+                    for tok in re.findall(r"\b\d{3}\b", text):
+                        counts_st[tok] = counts_st.get(tok, 0) + 1
+
+    if analysis_winners.exists():
+        for f in analysis_winners.rglob("*.json"):
+            try:
+                obj = json.loads(f.read_text(encoding="utf-8", errors="ignore"))
+            except Exception:
+                continue
+            idx = obj.get("vtrac_index")
+            if isinstance(idx, int):
+                counts_idx[idx] = counts_idx.get(idx, 0) + 1
+            straight = obj.get("winner") or obj.get("straight")
+            if isinstance(straight, str) and straight.isdigit() and len(straight) == 3:
+                counts_st[straight] = counts_st.get(straight, 0) + 1
+
+    # Convert counts to soft multipliers
+    idx_mul = {i: (1.0 + base_boost * c) for i, c in counts_idx.items()}
+    st_mul = {s: (1.0 + straight_boost * c) for s, c in counts_st.items()}
+
+    return Priors(index_mul=idx_mul, straight_mul=st_mul)
+Why this is safe: It only reads if those folders exist (your roadmap puts the winners JSONs there), returns neutral weights otherwise, and never writes. 
+
+3A3) modules/vtrac_predictor.py — combine evidence + priors; select top candidates
+# modules/vtrac_predictor.py
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import List, Dict, Tuple
+from pathlib import Path
+
+from modules.vtrac_evidence import EvidenceBundle, IndexEvidence, StraightCandidate
+from modules.vtrac_priors import Priors
+
+@dataclass
+class PredictionResult:
+    indices_ranked: List[IndexEvidence]
+    straights_ranked: List[StraightCandidate]
+
+def apply_priors(bundle: EvidenceBundle, priors: Priors) -> PredictionResult:
+    # Copy and scale scores
+    # Index multipliers
+    idx_scaled: List[IndexEvidence] = []
+    for ev in bundle.indices:
+        mul = priors.index_mul.get(ev.index, 1.0)
+        ev_scaled = IndexEvidence(
+            index=ev.index,
+            score=ev.score * mul,
+            ring_hits=ev.ring_hits,
+            features={**ev.features, "prior_mul": mul},
+            notes=list(ev.notes),
+        )
+        idx_scaled.append(ev_scaled)
+    idx_scaled.sort(key=lambda x: x.score, reverse=True)
+
+    # Straight multipliers
+    st_scaled: List[StraightCandidate] = []
+    for sc in bundle.straights:
+        mul = priors.straight_mul.get(sc.straight, 1.0)
+        st_scaled.append(StraightCandidate(
+            index=sc.index,
+            straight=sc.straight,
+            score=sc.score * mul,
+            features={**sc.features, "prior_mul": mul},
+            notes=list(sc.notes),
+        ))
+    st_scaled.sort(key=lambda x: x.score, reverse=True)
+
+    return PredictionResult(indices_ranked=idx_scaled, straights_ranked=st_scaled)
+
+def topk(pred: PredictionResult, k_idx: int = 12, k_straights: int = 24) -> PredictionResult:
+    return PredictionResult(
+        indices_ranked=pred.indices_ranked[:k_idx],
+        straights_ranked=pred.straights_ranked[:k_straights],
+    )
+
+3A4) core/vtrac_reporting_opt.py — JSON writers (analysis artifacts)
+# core/vtrac_reporting_opt.py
+from __future__ import annotations
+from dataclasses import asdict
+from typing import Any, Dict
+from pathlib import Path
+import json
+from datetime import datetime
+
+from modules.vtrac_predictor import PredictionResult
+
+def write_prediction_json(
+    repo_root: Path, state: str, pred: PredictionResult, run_label: str | None = None
+) -> Path:
+    """
+    Writes a self-contained JSON artifact under data/outputs/analysis/vtrac/<STATE>/
+    that your app can link to alongside existing analyzer HTML/CSV.
+    """
+    ts = run_label or datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    out_dir = repo_root / "data" / "outputs" / "analysis" / "vtrac" / state
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"advanced_vtrac_pred_{ts}.json"
+
+    obj: Dict[str, Any] = {
+        "state": state,
+        "timestamp_utc": ts,
+        "indices": [
+            {
+                "index": ev.index,
+                "score": round(ev.score, 6),
+                "features": ev.features,
+                "ring_hits": ev.ring_hits,
+                "notes": ev.notes,
+            } for ev in pred.indices_ranked
+        ],
+        "straights": [
+            {
+                "index": sc.index,
+                "straight": sc.straight,
+                "score": round(sc.score, 6),
+                "features": sc.features,
+                "notes": sc.notes,
+            } for sc in pred.straights_ranked
+        ],
+        "explain": {
+            "schema": {
+                "ring_hits": "per section.ring -> [hits by column, left->right]",
+                "features": "feature contributions before/after priors",
+            }
+        }
+    }
+    out_path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
+    return out_path
+
+3B — Minimal wireup (no regressions)
+In your current UI flow, the VTRAC page goes through core.module_c_vtrac and renders via its render(...) entry; there are helper functions like analyze_all_indexes and report writers your page already calls. We’ll add a compact block that:
+1. Builds the GridInputs from whatever your page already has in memory.
+2. Optionally sets the mask digits to try (e.g., last draw digits / mirrors).
+3. Runs the twopass analyzer, applies winners priors (if present), shows a small “Advanced v2” panel, and writes one JSON next to your existing analyzer artifacts.
+Where to put this: inside the VTRAC analyzer page flow (your render), behind a small checkbox (DEVgated at first). That keeps behavior predictable and mirrors your “System Health” gating pattern. 
+The page/function names below match the AAT9 App Flow docs; you can paste the snippet into src/core/module_c_vtrac.py with very light adaptation to your local variables that hold the R2/R4/R6/R8 column arrays. 
+# --- src/core/module_c_vtrac.py (inside render(...)) ---
+# Pseudocode-ish wiring; adjust variable names to your in-memory structures.
+
+import streamlit as st
+from pathlib import Path
+
+from modules.vtrac_evidence import GridInputs, EvidenceWeights, compute_evidence
+from modules.vtrac_priors import load_priors
+from modules.vtrac_predictor import apply_priors, topk
+from core.vtrac_reporting_opt import write_prediction_json
+
+def _advanced_panel(state: str, repo_root: Path, memory) -> None:
+    st.markdown("### Advanced VTRAC v2 (Experimental)")
+    st.caption("Twopass scoring (progression + straights clues) with optional digit masking and winnersaware priors.")
+
+    # 1) Build GridInputs from your current in-memory columns
+    # You already have R2/R4/R6/R8 column text by (Midday/Evening/Combined). Adapt these names as needed.
+    columns_by_section_ring = {
+        "Midday":   {"R2": memory.midday.R2_cols, "R4": memory.midday.R4_cols, "R6": memory.midday.R6_cols, "R8": memory.midday.R8_cols},
+        "Evening":  {"R2": memory.evening.R2_cols, "R4": memory.evening.R4_cols, "R6": memory.evening.R6_cols, "R8": memory.evening.R8_cols},
+        "Combined": {"R2": memory.combined.R2_cols,"R4": memory.combined.R4_cols,"R6": memory.combined.R6_cols,"R8": memory.combined.R8_cols},
+    }
+    hot_zone_cols = memory.hot_zones  # expect dict[section][ring] -> set(col_idx), if you already compute it
+
+    # last draw digits: supply for masking support ("hidden-behind-a-digit")
+    last_draw_digits = memory.last_draw_digits  # e.g., ["6","9","1"]
+
+    grid = GridInputs(columns_by_section_ring=columns_by_section_ring,
+                      hot_zone_cols=hot_zone_cols,
+                      latest_draw_digits=last_draw_digits)
+
+    # 2) Optional digit mask pickers
+    with st.expander("Masking (optional)"):
+        # default suggestion: mask the last draw digits; user can tweak
+        mask_default = "".join(last_draw_digits) if last_draw_digits else ""
+        mask_str = st.text_input("Digits to temporarily mask (remove) when scanning clues", value=mask_default)
+        digits_to_mask = set([d for d in mask_str if d.isdigit()])
+
+    # 3) Compute evidence and apply priors
+    weights = EvidenceWeights()
+    bundle = compute_evidence(grid, weights=weights, digits_to_mask=digits_to_mask)
+
+    priors = load_priors(repo_root, state)  # safe when logs absent (returns neutral muls)
+    pred = apply_priors(bundle, priors)
+    pred = topk(pred, k_idx=12, k_straights=24)
+
+    # 4) Small UI
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Top VTRAC Indexes")
+        for ev in pred.indices_ranked[:12]:
+            st.write(f"**#{ev.index}** — score {ev.score:.2f}")
+    with c2:
+        st.subheader("Top Straights (order-sensitive)")
+        for sc in pred.straights_ranked[:24]:
+            st.write(f"{sc.straight} (idx {sc.index}) — {sc.score:.2f}")
+
+    # 5) Write JSON artifact next to your other analyzer outputs
+    out_path = write_prediction_json(repo_root, state, pred)
+    st.caption(f"Saved advanced JSON ? {out_path}")
+Why this aligns with your app’s wiring:
+* VTRAC/Stable/Digit pages read the combined tables via utils.path_handler and write under data/outputs/analysis/...—we’re saving the advanced JSON in that same analysis tree for VTRAC. 
+* Winners logs (when you start running them daily from Control Center) land under data/outputs/winners/<date>/... and the analyzerstyle winners folder—our priors read from there if present, without coupling to the UI or runners. 
+
+3C — Notes, defaults, and where this sits in AAT9
+* Toggle on like your “System Health” helpers: keep the advanced panel behind a DEV checkbox to begin with. This mirrors your gating pattern and avoids surprises while you calibrate. 
+* No collisions with Aux/Control Center: those areas are intentionally CSVonly and separate; nothing here touches that surface. 
+* Follows canonical directory layout and launch: one Streamlit entry (src/app.py), analysis outputs under data/outputs/analysis/vtrac/<STATE>/. 
+
+Why this Part 3 materially upgrades the tool (and maps to your training insights)
+* Rightcolumn gravity, survival & repetition chains: exactly the “pay more attention to farright boxes” principle, implemented as explicit features and weights.
+* Crosssection stability (Midday/Evening/Combined): indices that persist across sections get structured boosts, reflecting your logs.
+* VTRAC straights in the same order: a separate pass that surfaces ordersensitive clues and allows digitmask overlays to reveal patterns “hidden behind” the latest digit—mirroring the winners logger visual tricks you added.
+* Winnersaware priors (soft): the analyzer can learn gently from your logged hits, with no ML burden and no risk if folders are empty—exactly your “hybrid” vision. 
+
+What you’ll do next (when you ask for Part 4 / calibration)
+1. Calibrate weights by state (optional): the EvidenceWeights dataclass is a single place to tune ring/section multipliers and bonuses.
+2. Expose controls in the page (window sizes, mask digits presets, topK sizes).
+3. (Optional) Add a “369Stack” BAstyle trigger to tag straights when digitalroot 3/6/9 stacks with other signals—this is trivial to add now because the scaffolding and priors are in place. (We can wire this when you want.)
+4. Write analyzerstyle HTML from the JSON if you’d like parity with your existing report tabs (we used JSON now to keep the patch small and deterministic).
+
+Quick checklist for you
+* Paste the four new modules into your repo paths as shown.
+* Add the _advanced_panel(...) call into your VTRAC page render(...) behind a checkbox.
+* Run via your canonical BAT (run_app.bat) from repo root, as documented. 
+If you’d like, I can follow up with Part 3B (a tiny adapter that builds GridInputs from your exact inmemory objects in module_c_vtrac, once you paste a small snippet of the current “columns” structures you hold during render).
+
+
+

@@ -1,0 +1,169 @@
+OK PLEASE REIVEW BELOW I N DEOTH TROUBLESHOOTIGN TESTING, I DONT QUITE UNDERSTAND THESE ISSUES BUT CAN I NOE SOMETHIG I READ SOMETHING IN COMMETNS OF THE LOG REFRENCEIG ISSUES WITH "DOUBLE OR EXTENDED DIGITS" REMEMBER ITS CALUABLE FOR US TO BE ABLE TO EVALUATE PATTERN CLUSTERS PAST ONLY 3 DIGIT EX. 31166 ISNTEAD OF JUST 316 DO YOU THNK ITS POSSIBLE SOMETHING LIKE THIS S CAUSIGA PROBLEM? AND WOUDLNT THE FIX BE THAT IF ITS REFRECING LIKE A V-TRAC REFERECE THAT IT KNOWS HOW TO FIT "NOT DIRECT MATCH PATTERNS AS IN ALLLOWING FOR MORE ROBUST INTERPRETATION MATHCING THE MORE ADVANCED "3 VLAUE PATTERN EXTENDED LOGIC" WHICH IS WHAT AMKES THIS SO POWERFUL? DOES IT EVEN HAVE ANYTHINGT O DO WITH THIS? JSUT A THOUGHT COUD NOT BE RELATED BUT WE WANT THE ROBUST PATTERN IDENTIFICAITON OF CLUSTERS AS EXTENDED DIGITS GIVES US CLUES BUT COULD IT AHVE TO DO WITH THIS AND THE "NOT COMPLETE PATTERN MATCH EX. 316 STRING PATTER TO SAY VTRAC REFERENCE 316 THERFOER GIVING ERROR OR SOMETHIG IF ITS A MORE COMPELX V-TRAC MATCH OR MORE DIGITS? OR HAS OTHIG TO DO WITH THIS? HOPEFULLY EW CAN TROUBLESHOOT IM GETTING WORRIED NOW :(
+
+
+You’re asking exactly the right question. The short version:
+
+Yes — “extended‑digit” strings (e.g., 0788, 31166) are the reason your winner spotlight joins are coming back empty (NaNs). They aren’t inherently a problem for the Stable scorer itself, but they are a problem if we later try to join those extended strings to winner or score rows using a plain “Canonical” string key. The Stable pipeline reasons in 3‑value V‑TRAC families; if the spotlight file stores 4+ digit substrings (or keeps leading zeros), those values won’t equal the 3‑digit canonical you use for winners like 758 → 578. The join fails, evidence goes NaN, and it looks like “nothing matched.”
+
+Below is a crisp diagnosis + the minimal, safe fixes to make this robust.
+
+What’s actually breaking
+
+Two different “canonicals” are in play
+
+Winners/Stable scores: 3‑digit canonical (bag of digits, sorted).
+Example: 758 → 578.
+
+Spotlight raw: often extended substrings (4+ digits) or zeros kept from the coverage strings (e.g., 0788, 007788).
+Example: 007788 stays 007788 if you just sort the bag of digits.
+
+These strings are not equal, so merge(on="Canonical") produces no rows, and your UI shows row_score, row_type, row_why = NaN.
+
+This is not a batch or “min occurrences” issue
+
+Your runs are fine and min_occurrences=1 (as expected for Phase‑2).
+The missing evidence comes from the join key, not from generation.
+
+This isn’t a doubles/adjacency bug
+
+The ±1 adjacency logic is evaluated at the family aggregator level and is independent of whether a spotlight row is 0788 or 578.
+The “NaN” you see is only the row‑evidence join failing.
+
+How to fix it (minimal, robust, and future‑proof)
+
+Think “V‑TRAC family is the ground truth.” Everywhere we pass evidence around, either:
+
+Join by family_id, or
+
+Derive a 3‑value family canonical that agrees with the scorer.
+
+A) Winners Enricher (attach_stable_evidence)
+
+What to change
+
+Canonical SSOT: Replace any local _canonical helpers with the Stable helper (you already have stable.canon). Also ensure digits‑only normalization matches Stable’s behavior (keep zeros where Stable keeps them).
+
+Always compute a family_id from the winner
+family_id = derive_vtrac_index_for_canonical(stable.canon(winner), get_vtrac_index).
+
+Stop merging row‑evidence on string Canonical. Merge on family_id:
+
+From scores.csv, pick the top‑scoring row for that family_id. If you want extra discipline: prefer Combined section, then fall back to Midday/Evening.
+
+This guarantees a row exists even if the spotlight raw strings are 4+ digits or include zeros differently.
+
+Why this works: scores.csv already has family_id for every row. Winners map to a family deterministically. Joining on family_id bypasses all string‑shape mismatch issues.
+
+Optional nicety
+
+Keep your current family merge (already on family_id) for family‑level parts/ranks.
+
+Only use Canonical strings in UI display; never as the only join key.
+
+B) Spotlight Writer (winner_family_spotlight_raw)
+
+What to add (no breaking change, just more columns)
+
+Add family_id per spotlight row
+When you produce an extended substring (e.g., 007788), project it into the 3‑value family you intend to evidence:
+
+Generate all 3‑digit combinations inside the substring (windowed triplets).
+
+For each triplet t, compute c3 = stable.canon(t) and fam3 = derive_vtrac_index_for_canonical(c3, get_vtrac_index).
+
+Choose the best triplet for that row:
+
+First, prefer the family that matches the winner’s family (if the row originates from that winner); otherwise
+
+Use the family whose top score (from scores.csv) is highest; break ties by section preference (Combined > Midday > Evening).
+
+Store both:
+
+raw_canonical (what you have now, e.g., 007788), and
+
+family_canonical_3v (the chosen 3‑digit canonical for that row), plus the chosen family_id.
+
+Now the spotlight file speaks the same language as the scores/winners. You can keep the richer raw strings for human audit, but your joins run on family_id (or family_canonical_3v if you prefer strings).
+
+C) Make the selection filter tolerant
+
+When selecting a per‑winner row for evidence:
+
+Don’t require a specific row type or section. Always return something.
+The pragmatic rule: top‑scoring row for that family_id, preferring Combined if available.
+
+Will this hurt the “3‑value pattern extended logic”?
+
+No—this embraces it. The “extended” strings remain valuable (they tell you where the cluster was dense), but we project each extended cluster to its 3‑value family when we need to join or score. In other words:
+
+Exploration: keep the extended string (e.g., 007788) for traceability.
+
+Evidence & joins: talk in family terms (family_id, family_canonical_3v), which is how the scorer and V‑TRAC reason.
+
+This is exactly how you avoid brittle joins while still benefiting from richer patterns.
+
+Quick sanity checklist you (or Codex) can run after the patch
+
+Winners → family_id
+
+For each winner w, compute fam_w = derive_vtrac_index_for_canonical(stable.canon(w), get_vtrac_index).
+
+Row evidence exists
+
+In scores.csv, confirm at least one row where family_id == fam_w. Pick the highest score (prefer Combined).
+
+Spotlight contains the family projection
+
+In *_winner_family_spotlight_raw.csv, either:
+
+join on family_id, or
+
+if you prefer strings: ensure there’s at least one row with family_canonical_3v == stable.canon(w).
+
+UI/JSON no NaNs
+
+The Control Center expander should now show non‑NaN row_score, row_type, row_why for every winner.
+
+Guards
+
+Add/extend a unit test: for a fixture with winners like 758 and 926, assert row evidence is present and family_rank is not null.
+
+Keep your negative‑adjacency test (already added) to lock the ±1 rule.
+
+Answers to your specific worries
+
+“Is the failure caused by extended digits?”
+Yes, in the spotlight pipeline. Extended strings (and zeros) don’t match 3‑digit winner canonicals, so string‑based merges fail. The scorer and aggregator themselves are fine.
+
+“Should we change V‑TRAC matching logic?”
+You don’t need to change V‑TRAC. Just standardize your join key on family_id (or on a 3‑digit family canonical produced by the same Stable helper). Keep extended strings for audit; don’t use them as the join key.
+
+“Could this be a batch creation or min occurrences thing?”
+No. Your runs are generating patterns/families/metrics correctly. The issue is downstream joining.
+
+Minimal patch outline (what to tell Codex to do)
+
+alpha_analytical/stable/winners_enrich.py
+
+Replace any local _canonical with stable.canon.
+
+Compute family_id from the winner.
+
+Build row evidence by choosing the top‑scoring scores.csv row for that family_id (prefer Combined).
+Stop merging on Canonical strings for row evidence.
+
+alpha_analytical/stable/winner_family_spotlight.py (or wherever the spotlight rows are written)
+
+Add family_id, family_canonical_3v, and raw_canonical columns.
+
+For each row, project the extended substring to a 3‑digit family (algorithm above).
+
+Tests
+
+Extend your winners‑bus test to assert non‑NaN row_score/row_why for winners (e.g., 758 → 578).
+
+Keep the negative adjacency test (already added) and the family‑parts sum test.
+
+Do the above and the NaNs will disappear, the winners evidence will be consistent across states, and you’ll retain the power of extended‑digit clusters without fragile joins.
+
+If you want, I can draft the exact diff snippets for the two modules above (enricher + spotlight writer) so Codex can paste them in one shot.

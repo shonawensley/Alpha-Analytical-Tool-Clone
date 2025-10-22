@@ -39,7 +39,13 @@ def load_draws(sample_csv):
 
 if __name__ == "__main__":
     module = load_module(MOD)
-    candidates = glob.glob(os.path.join(REPO, "data", "cleaned", "*_draws.csv"))
+    draw_dirs = [
+        os.path.join(REPO, "data", "cleaned", "draws"),
+        os.path.join(REPO, "data", "cleaned"),
+    ]
+    candidates = []
+    for directory in draw_dirs:
+        candidates.extend(glob.glob(os.path.join(directory, "*_draws.csv")))
     if not candidates:
         print("No draws CSV found under data/cleaned/")
         sys.exit(1)

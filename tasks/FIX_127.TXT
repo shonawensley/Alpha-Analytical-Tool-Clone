@@ -1,0 +1,225 @@
+You didn’t break the system. 🙂
+From what you showed, the code + artifacts are still coherent. The 15 “winners” files are simply the 5 artifacts × 3 variants (Midday/Evening/Combined). You paused Codex mid‑change in the right place—before anything irreversible—so we can recover cleanly and still give you the “lean” bundle you want.
+
+Below I’ll (1) triage the Codex change, (2) explain exactly what each output is and why it exists, (3) tell you which files are vital for training vs optional, and (4) give you a safe, incremental plan to reduce clutter without risking the overlay/Control‑Center wiring.
+
+0) Quick triage — what to do now
+
+Do not continue the in‑progress refactor that suppresses Combined outputs in winners_overlay.py. That change will ripple into tests and UI wiring and isn’t necessary to fix your clutter problem.
+
+Instead:
+
+Revert the partial edits (safe restore to last‑known‑good):
+
+git status
+git restore alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py
+git restore tests/acceptance/test_digit_reduction_delaware.py
+
+
+(If you touched other files, restore those too. If you don’t use git, back up the modified file and replace it with the last working copy.)
+
+Keep generating all 3 variants internally (Midday, Evening, Combined) as today.
+We will filter at packaging time so the training bundle only contains Midday & Evening artifacts. That gives you the lean 10 files (5×2) without touching the overlay engine.
+
+1) What you have on disk (your screenshots + the files you shared)
+
+Using the paths you posted for Connecticut4 on “June 17”:
+
+analysis_2/JUNE 17/digit_reduction/Connecticut4/analyzer_v2/
+
+*_per_item.csv — one row per cell in the grid with all features + (in your current build) the joinable keys to merge winner flags.
+
+*_top_candidates.csv — the ranked shortlist the scorer prefers.
+
+*_own_vs_combined_delta.csv — (optional) quick sanity on OWN vs COMBINED scoring.
+
+winners/20251011_* — the 5 artifacts per variant (see next section).
+
+analysis_2/JUNE 17/digit_reduction/Connecticut4/training/
+
+Connecticut4_digit_reduction_log.json — raw reducer log (the rich JSON “ladder” the analyzer reads).
+
+Connecticut4_digit_reduction_steps.csv — a flattened view of the steps (human‑friendly sanity sheet). Not necessary for ML; useful for eyeballing.
+
+analysis_2/JUNE 17/digit_reduction/Connecticut4/training_sets/20251011/
+
+A curated bundle for training: it copies the analyzer CSVs + the reducer JSON + a subset of the winners artifacts under winners/ and writes a small manifest.json.
+
+This layout is correct and matches the intent of the “training bundle” you wanted.
+
+2) Those 5 “winners” artifacts (per variant) — what each does
+
+For each variant (Midday, Evening, Combined) the overlay creates:
+
+<STAMP>_<VAR>_winner_map.json
+Machine‑readable per‑cell hits with earliest step counters and types.
+Example from your uploads (I loaded it): keys include
+area, section, set, draw, col, method, mode, match_types, earliest_{type}_step, final_*_match, final_drop_digit….
+This is the truth for merges into *_per_item.csv.
+
+<STAMP>_<VAR>_winner_flags.csv
+Join‑friendly version of (1). Small, fast to merge onto per_item to create dr.win_* columns.
+
+<STAMP>_<VAR>_winner_hits.csv
+Compact “where it hit” table. Human convenience. Optional for training.
+
+<STAMP>_<VAR>_winner_stamp.json
+Summary + recent draw legend (Set1/Set2/Set3) + tiny stat block.
+I opened your Combined stamp: it carries recent_draws and a clean {current, previous, two_prior} labeling so we can run recency‑aware analyses.
+
+<STAMP>_<VAR>_winner_overlay.html
+The big, human‑friendly overlay (what you pasted as screenshots). Optional for ML, great during hand review.
+
+Why you see 15 files: 5 artifacts × 3 variants.
+Why Combined exists at all: although Combined is not a draw, it is a dataset we use as a third, independent “sensor.” Many winners cluster more clearly in Combined, and you already use that convergence in your logic.
+
+3) Which files are vital vs optional
+
+VITAL for training & scoring checks (per state/stamp)
+
+*_per_item.csv ← main feature table
+
+*_top_candidates.csv ← what the scorer actually preferred
+
+*_meta.json ← config & thresholds reference
+
+digit_reduction_log.json ← original reducer ladders (JSON)
+
+winners/Midday_*_winner_map.json ← merge truth for Midday
+
+winners/Evening_*_winner_map.json ← merge truth for Evening
+
+winners/Midday_*_winner_stamp.json ← recency context for Midday
+
+winners/Evening_*_winner_stamp.json ← recency context for Evening
+
+Nice to have (human review)
+
+winners/*_winner_overlay.html (Midday + Evening)
+
+winners/*_winner_hits.csv (Midday + Evening)
+
+Usually skip in the training bundle
+
+All Combined artifacts (we will compute them, but do not package them by default).
+
+winner_flags.csv if you are already merging flags into per_item before packaging.
+If not, keep them—they make the merge trivial.
+
+About training/…_steps.csv
+Keep it outside the bundle for now. The JSON is what analyzers/ML consume; steps.csv is for quick eyeball checks and is redundant in the training set.
+
+4) The safest way to “lean out” to Midday+Evening without breaking anything
+
+Rather than changing how overlays are generated, change how the training bundle is collected. Concretely:
+
+A. Filter variants in the bundler (not in the overlay engine)
+
+In alpha_analytical/digit_reduction/analyzer_v2/training_bundle.py
+
+Add a small allow‑list near the file gather code:
+
+_PACKAGED_VARIANTS = {"Midday", "Evening"}  # default
+
+
+When collecting winners artifacts, skip files whose <VARIANT> is Combined.
+(You already have a compiled regex _MAP_STAMP_RE that extracts <variant>; use the same pattern for all artifact names.)
+
+Optional: expose a UI checkbox in the DEV panel
+“Include Combined winners artifacts in training bundle” (default off).
+Pass this boolean through to the bundler; when True, add Combined to _PACKAGED_VARIANTS.
+
+Effect:
+You keep generating all 15 files under analyzer_v2/winners/ for completeness and UI/test stability, but the bundle under training_sets/<STAMP>/winners/ only has the 10 Midday/Evening artifacts you want.
+
+No test rewrites, no overlay surgery, no Control Center breakage.
+
+B. (Optional) add a single “stacked” HTML for hand‑review
+
+Your code already references a _stacked_html_path(...). If enabled, have the overlay step also write one concise winner_overlay_stacked.html that shows Midday+Evening panels and references Combined as context within each panel. Then the human reviewer opens one HTML, not three. This is purely ergonomic; machine logic keeps using JSON/CSV.
+
+5) Your immediate confusion points — answers
+
+“training_set vs analyzer_v2 — why are they different?”
+analyzer_v2/ is the full run folder (everything produced) for the state/stamp.
+training_sets/<STAMP>/ is a curated subset intended for AI training. It copies the key analyzer files + reducer JSON and (by default after our tweak) only Midday/Evening winners artifacts.
+
+“Why is training/…_steps.csv not in the bundle?”
+Because the JSON is the authoritative, structured source. The steps CSV is a convenience for manual inspection; duplicated content would bloat the bundle.
+
+“Are Midday/Evening overlays still seeing Combined data?”
+Yes. We are not removing the Combined computations; we are only not packaging the Combined files. The Midday/Evening overlays and the analyzer’s cross‑variant checks keep benefiting from Combined’s signal.
+
+6) How I validated the artifacts you shared (so you know I actually looked)
+
+I loaded the JSONs you attached and checked their structure:
+
+20251011_*_winner_map.json has per‑cell keys like
+area, section, set, draw, col, method, mode, match_types, earliest_*_step, final_*_match, final_drop_digit… — exactly what we need to join onto *_per_item.csv by (area, section, set, draw, col, method, mode).
+
+20251011_*_winner_stamp.json contains a clean recent_draws block with {current, previous, two_prior} for each dataset, which supports the “recency‑aware” scoring guidance we’ve been using.
+
+This matches the detection classes / training guidance from your Basis docs and confirms the artifacts are correct and joinable.
+
+7) What to send me per state going forward (so review is clean)
+
+For each state/stamp you want reviewed, send one folder with:
+
+*_per_item.csv
+
+*_top_candidates.csv
+
+*_meta.json
+
+digit_reduction_log.json
+
+winners/ Midday: winner_map.json, winner_stamp.json (+ overlay HTML optional)
+
+winners/ Evening: winner_map.json, winner_stamp.json (+ overlay HTML optional)
+
+manifest.json (if present)
+
+That is sufficient for me to validate merges, scoring, earliest‑step behavior, and cross‑variant echoes.
+
+8) If you do want to change the engine later (not needed now)
+
+When you’re ready, we can add a parameter to run_winner_overlay_batch:
+
+def run_winner_overlay_batch(..., emit_variants=("Midday","Evening","Combined")):
+    # compute all three
+    # write files only for items in emit_variants
+
+
+…but only after we:
+
+update the acceptance tests to allow Combined to be excluded,
+
+update the Control Center so it doesn’t expect Combined files,
+
+keep the Combined data available to Midday/Evening panels.
+
+Again, this is not necessary to solve your present “15 files” pain.
+
+9) Next steps checklist (quick)
+
+Restore winners_overlay.py (and any touched tests) to last good commit.
+
+Implement the packaging filter in training_bundle.py (skip Combined).
+
+Re‑package Connecticut4 → confirm training_sets/<STAMP>/winners/ only contains Midday & Evening.
+
+Send me a couple of states using the “what to send” list above and I’ll do the scoring/flags validation and feed you targeted weight/feature tweaks.
+
+(Optional) add the single winner_overlay_stacked.html for ergonomics.
+
+Bottom line
+
+You didn’t make a mess; you just paused at an ambitious spot.
+
+The fastest, safest fix is filtering at packaging time, not changing the overlay engine.
+
+Keep Combined as a sensor (it makes the system stronger), but don’t ship its files in the training bundle by default.
+
+With the “what to send” list above, I can do the deep, state‑by‑state analyzer audit you want and turn it into concrete optimizations.
+
+If you’ll push one state’s lean training set after you apply the filter, I’ll do a full validation pass (merges, scoring, earliest‑step responsiveness, cross‑variant leverage) and propose specific score/feature changes off

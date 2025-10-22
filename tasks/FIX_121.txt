@@ -1,0 +1,356 @@
+I’m wearing the architect hat here. I read your Codex log carefully and compared it to our Phase‑1 plan. Below is a crisp acceptance + fix list and a Phase‑2 build spec you can hand straight to Codex. I’ve included exact files, insertion points, and why each change matters.
+
+1) Phase‑1 status — Accepted with 3 surgical fixes
+
+Shipped (matches plan):
+
+Row payload (alpha_analytical/stable/__init__.py)
+
+Adds family_id per row (via derive_vtrac_index_for_canonical(..., get_vtrac_index)).
+
+Renames span → horizontal_persistence_repeat in score + why (hp_repeatN).
+
+Family post‑pass (alpha_analytical/stable/post_pass_families.py)
+
+Robust rep‑3 mapping to family id.
+
+Adds section_count, progression_flag, explicit last_remaining_3v (+ bonus).
+
+Uses renamed YAML knob horizontal_persistence_repeat_bonus.
+
+V‑TRAC guardrail (modules/vtrac_reference.py)
+
+Fallback by V‑class so 277/227 always map (26). Tests added.
+
+Tooling/Docs
+
+Pre‑commit green (py_compile hook rename), workflow “optimization loop” documented.
+
+Batch & training bundles pick up new columns automatically.
+
+Three things to fix now (small, but important):
+
+A) Restore all family‑level score terms
+
+During the rename/second‑pass work, the family score dropped several terms (perm density, repeat extras, consensus, hot‑zone, straight2). Put them back so Phase‑1 behavior is preserved, then layer the new bonuses on top.
+
+File: alpha_analytical/stable/post_pass_families.py (inside the loop that builds out, where fam_score is computed)
+
+fam_score = (
+    rows_cov * cfg["vertical_coverage_per_row"]
+    + gg["horizontal_persistence_repeat"] * cfg["horizontal_persistence_repeat_bonus"]
+    + max(0, gg["perm_count_in_box"] - 1) * cfg.get("perm_density_per_extra", 0)
+    + gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
+    + (cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0)
+    + (cfg.get("hotzone_family_bonus", 0) if hot_density >= 0.5 else 0)
+    + (cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0)
+    + (cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0)
+)
+
+
+We keep your new section_count, progression_flag, and explicit last_remaining_3v additions that happen after this block.
+
+B) Make get_vtrac_index fast & deterministic; clear both lookups
+
+Two nits in the log:
+
+The direct hit idx = VTRAC_LOOKUP.get(s) lost its early return.
+
+initialize_vtrac_lookup() no longer calls BOXED_LABEL_LOOKUP.clear().
+
+File: modules/vtrac_reference.py
+
+def initialize_vtrac_lookup() -> None:
+    VTRAC_LOOKUP.clear()
+    BOXED_LABEL_LOOKUP.clear()   # ← restore this clear
+    INDEX_BY_VTRAC.clear()       # ← also clear the fallback map
+
+    for entry in BOXED_VTRAC_REFERENCE:
+        idx = int(entry["Index"])
+        sample_combo = None
+        for key in ("Singles", "Doubles"):
+            for combo in entry[key]:
+                if sample_combo is None and combo:
+                    sample_combo = combo
+                for perm in _permutations3(combo):
+                    VTRAC_LOOKUP[perm] = idx
+                    BOXED_LABEL_LOOKUP[perm] = combo
+        if sample_combo:
+            vcode = ''.join(sorted(str(DIGIT2V[d]) for d in sample_combo if d in DIGIT2V))
+            if len(vcode) == 3:
+                INDEX_BY_VTRAC.setdefault(vcode, idx)
+
+def get_vtrac_index(draw: str) -> Optional[int]:
+    s = normalize_draw(draw)
+    if s is None:
+        return None
+    # 1) direct hit
+    idx = VTRAC_LOOKUP.get(s)
+    if idx is not None:
+        return idx
+    # 2) pure triples are suppressed by design
+    if len(set(s)) == 1:
+        return None
+    # 3) permutation hit
+    for perm in _permutations3(s):
+        idx = VTRAC_LOOKUP.get(perm)
+        if idx is not None:
+            return idx
+    # 4) fallback by V‑class (e.g., "277" → "333" → 26)
+    vcode = ''.join(sorted(str(DIGIT2V.get(ch, 0)) for ch in s))
+    return INDEX_BY_VTRAC.get(vcode)
+
+
+This restores O(1) behavior for the common case and keeps our explicit “no pure triples” policy.
+
+C) Typing import (tiny runtime safety)
+
+You defined nested helpers with type annotations like -> Optional[int] in post_pass_families.py. Ensure from __future__ import annotations (or from typing import Optional) is present at the top of that file so annotations don’t raise a NameError at runtime.
+
+2) Training thresholds (confirm)
+
+Keep min_occ = 1 (you already set default to 1).
+
+Set min_score_to_highlight: 7 in alpha_analytical/stable/feature_config.yml.
+(We don’t need a UI toggle right now.)
+
+3) Phase‑2 build spec (Codex‑ready)
+
+Goal: add supportive family intelligence + small QA outputs. No UI work.
+
+3.1 Consensus ⇒ doubles trigger (family‑level)
+
+Why: On consensus boxes the consensus digit often spawns strong doubles in/near the same column. We want a small, explainable lift.
+
+File: alpha_analytical/stable/post_pass_families.py
+
+Add near top (config default):
+
+# in feature_config.yml
+doubles_trigger_bonus: 1
+
+
+Inside the main aggregation loop (where gg is built) keep as-is.
+
+After you build df = pd.DataFrame(out) and before the final sort, add:
+
+# consensus → doubles support
+def _doubles_for_digit(d: str) -> list[str]:
+    # 9 canonical doubles given a digit d (e.g., "5" -> ["055","155",...,"955"])
+    return [f"{a}{d}{d}" for a in "0123456789" if a != d]  # keep simple v1
+
+df["any_doubles_support"] = False
+
+# For each family box with consensus, check if any derived doubles appear in the same box or adjacent columns
+for (sec, Set, Draw, Col, fid), chunk in df.groupby(["section","Set","Draw","Column","family_id"]):
+    if not chunk["any_consensus"].any():
+        continue
+    # consensus digit is embedded in top_canonicals "d:count" — extract best guess
+    # fallback: use modal_orders if needed
+    cons_digit = None
+    parts = (chunk["top_canonicals"].iloc[0] or "").split(";")
+    for p in parts:
+        k = p.split(":")[0].strip()
+        if len(k) == 2 and k.isdigit():
+            cons_digit = k[-1]  # tail consensus; adjust if you store separately
+            break
+    if not cons_digit:
+        continue
+    candidates = set(_doubles_for_digit(cons_digit))
+    # same box or adjacent columns
+    col_int = pd.to_numeric(Col, errors="coerce")
+    cols_considered = [str(int(col_int))] if not pd.isna(col_int) else [Col]
+    if not pd.isna(col_int):
+        cols_considered += [str(int(col_int) - 1), str(int(col_int) + 1)]
+
+    mask_near = (
+        (df["section"] == sec) & (df["Set"] == Set) & (df["Draw"] == Draw)
+        & (df["Column"].isin(cols_considered)) & (df["family_id"] == fid)
+    )
+    # if any canonical appears that is one of the candidates, flag & bonus
+    hit = df.loc[mask_near, "top_canonicals"].astype(str).str.contains(
+        "|".join(candidates), regex=True, na=False
+    ).any()
+    if hit:
+        df.loc[(df["section"] == sec) & (df["Set"] == Set) & (df["Draw"] == Draw)
+               & (df["Column"] == Col) & (df["family_id"] == fid), "any_doubles_support"] = True
+
+df["family_score"] += df["any_doubles_support"].astype(int) * cfg.get("doubles_trigger_bonus", 1)
+
+
+(We can refine consensus digit extraction later; this gets the infrastructure in place.)
+
+3.2 Hidden‑by‑one (row‑level)
+
+Why: When a 4‑digit substring is still ≤3 V‑classes, one of its 3‑digit windows may be the “real” family core. Give a tiny support bump.
+
+File: alpha_analytical/stable/__init__.py
+
+Add config default in YAML:
+
+hidden3v_bonus: 0.5
+
+
+Inside analyse() just before base = (...):
+
+hidden3v = False
+raw = digits_only(str(row.get(col, '')))
+# Slide a 4-digit window across the cell
+for i in range(0, max(0, len(raw) - 3)):
+    w4 = raw[i:i+4]
+    if not w4.isdigit():
+        continue
+    # still ≤3 V‑classes?
+    vset = {digit2v.get(ch) for ch in w4 if ch in digit2v}
+    if not vset or len(vset) > 3:
+        continue
+    # if any 3‑digit subwindow maps to same family as current Canonical
+    fam_this = derive_vtrac_index_for_canonical(cpat, get_vtrac_index)
+    for j in range(0, 2):
+        w3 = w4[j:j+3]
+        fam_w3 = derive_vtrac_index_for_canonical(''.join(sorted(w3)), get_vtrac_index)
+        if fam_w3 is not None and fam_w3 == fam_this:
+            hidden3v = True
+            break
+    if hidden3v:
+        break
+
+
+Fold into score & output:
+
+base = (
+    rowcov * CFG['vertical_coverage_per_row']
+    + span * CFG['horizontal_persistence_repeat_bonus']
+    + ...  # existing row-level terms
+    + (CFG.get('hidden3v_bonus', 0) if hidden3v else 0)
+)
+
+if hidden3v:
+    why.append('hidden3v')
+
+
+(Row payload already exports the full why; no schema change needed.)
+
+3.3 Per‑feature score columns (row‑level; makes tuning faster)
+
+File: alpha_analytical/stable/__init__.py
+
+Right where you compute base, also compute each component into local vars, then export them:
+
+score_cov = rowcov * CFG['vertical_coverage_per_row']
+score_hpr = span * CFG['horizontal_persistence_repeat_bonus']
+score_perm = max(0, perm_count_in_box-1) * CFG.get('perm_density_per_extra', 0)
+score_repeat = repeat_extras_in_box * CFG.get('repeat_count_per_extra', 0)
+score_straight = (CFG['baseline_straight_bonus'] if straight else CFG['baseline_boxed_bonus']) \
+                 + (CFG.get('straight_2rows_bonus', 0) if straight2 else 0) \
+                 + (CFG.get('straight_3rows_bonus', 0) if straight3 else 0)
+score_cons = (CFG.get('consensus_full_bonus', 0) if cons_full else 0)
+score_hot = _hot_bonus(col, hot)  # you already have this helper
+score_dom = (CFG.get('dominant_last_bonus', 0) if dom_last else 0) \
+            + (CFG.get('dominant_pair_bonus', 0) if dom_pair else 0)
+
+base = score_cov + score_hpr + score_perm + score_repeat + score_straight + score_cons + score_hot + score_dom \
+       + (CFG.get('hidden3v_bonus', 0) if hidden3v else 0)
+
+# in results.append(...)
+"score_cov": score_cov,
+"score_hpr": score_hpr,
+"score_perm": score_perm,
+"score_repeat": score_repeat,
+"score_straight": score_straight,
+"score_cons": score_cons,
+"score_hot": score_hot,
+"score_dom": score_dom,
+
+
+Also add these headers to out_cols.
+
+3.4 Tiny run metrics (near artifacts)
+
+Why: lets us QA batches at a glance.
+
+Where: simplest is in src/core/stable_pattern_extractor.py after you write the CSVs.
+
+Pseudo:
+
+# after writing scores/families/spotlights
+import json, pandas as pd
+p = out_path  # where artifacts live
+scores = pd.read_csv(p / f"{state}_stable_patterns_scores.csv")
+families = pd.read_csv(p / f"{state}_stable_patterns_families.csv")
+metrics = {}
+
+# winner families by rank
+winner_fids = set(families_spotlight["family_id"].unique()) if have_spotlight else set()
+if winner_fids:
+    fam_ranks = []
+    for fid in winner_fids:
+        subset = families[families["family_id"] == fid]["family_score"]
+        best = subset.max() if not subset.empty else None
+        rank = (families["family_score"] > best).sum()+1 if best is not None else None
+        fam_ranks.append({"family_id": int(fid), "best_rank": int(rank) if rank else None})
+    metrics["winner_family_ranks"] = fam_ranks
+
+# spotlight rate, compression
+metrics["spotlight_rows"] = int(len(scores_spotlight)) if have_spotlight else 0
+metrics["spotlight_family_rows"] = int(len(families_spotlight)) if have_spotlight else 0
+metrics["family_compression_ratio"] = round(len(families)/max(1,len(scores)), 3)
+
+with open(p / f"{state}_metrics.json", "w", encoding="utf-8") as fh:
+    json.dump(metrics, fh, indent=2)
+
+3.5 Tests/guardrails to add with Phase‑2
+
+tests/test_stable_hidden3v.py — fixture cell with a 4‑digit ≤3‑class window; assert rows include hidden3v in why and score increases by hidden3v_bonus.
+
+tests/test_stable_consensus_doubles.py — small synthetic family rows with any_consensus=True; after post‑pass, any_doubles_support=True and family_score increases by doubles_trigger_bonus.
+
+Pre‑commit stays the same; they’ll run with the rest.
+
+4) Batch/training profile for the next validation
+
+Keep min_occ=1, min_score_to_highlight=7.
+
+Re‑run CT / DE / IN with winners to confirm:
+
+winner_family_spotlight_families.csv shows section_count, progression_flag, last_remaining_3v toggles where expected.
+
+Family score still reflects perm/repeat/consensus/hot/straight2/3 after fix (A).
+
+New columns (if you enable Phase‑2 items) appear and change scores modestly, not dramatically.
+
+If anything looks off, send just the top‑10 rows of each *_families.csv; I’ll call precise weight nudges.
+
+5) One‑pager you can paste to Codex (do these now)
+
+post_pass_families.py
+
+Restore missing family_score terms (perm/repeat/consensus/hot/straight2).
+
+Ensure from __future__ import annotations or from typing import Optional is present.
+
+vtrac_reference.py
+
+In initialize_vtrac_lookup(): clear BOXED_LABEL_LOOKUP and INDEX_BY_VTRAC.
+
+In get_vtrac_index(): add the direct‑hit early return, keep “no pure triples,” then permutations, then V‑class fallback.
+
+feature_config.yml
+
+Confirm min_score_to_highlight: 7.
+
+Confirm horizontal_persistence_repeat_bonus, perm_density_per_extra, repeat_count_per_extra, consensus_family_bonus, hotzone_family_bonus, straight_2rows_bonus, straight_3rows_bonus are present.
+
+(Optional, Phase‑2) Implement consensus→doubles, hidden‑by‑one, per‑feature exports, and metrics.json as specified above; add the two tests.
+
+6) Bottom line
+
+Phase‑1 is essentially done and wired correctly.
+
+Apply the three small fixes above to keep scores faithful to what we shipped.
+
+Then green‑light Phase‑2 (consensus→doubles, hidden3v, per‑feature exports, metrics) — all localized, low‑risk, high‑signal.
+
+Your batch flow, docs, and pre‑commit are in good shape, so we can move fast without tripping over safety.
+
+If you want, I can turn the Phase‑2 bits into ready‑to‑paste code stubs next, but the spec above should be enough for Codex to implement accurately.

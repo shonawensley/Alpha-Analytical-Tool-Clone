@@ -1,0 +1,121 @@
+Thanks for sending log2 and log_3—I skimmed both and compared them to what we’ve been building. Here’s a clear read on where we stand, what (if anything) still needs a “double‑touch,” and whether you should proceed with fresh runs.
+
+TL;DR (my call)
+
+Good news: The core Phase‑2 work looks solid and guardrailed. You’ve got the winners evidence bus implemented and tested, it’s wired into the Control Center UI, the regression shields are running, and acceptance for doubles is green. You’re not “off the rails.”
+Evidence: the new attach_stable_evidence() helper + unit test on the 227/277 fixture is in the tree, and it brings both family‑level and row‑level Stable signals into winners data. ✔️
+The UI expander labeled “Stable metrics & winners evidence” is also present. ✔️
+Doubles acceptance now reflects adjacency‑aware ranking and passes. ✔️
+
+One small yellow flag left: the winners enricher still uses its own canonicalizer instead of stable.canon, which is a classic source of drift (think leading zeros and odd spacing). I recommend swapping to the shared helper before you kick off wide runs. ⚠️
+
+Greenlight to run a small smoke batch (e.g., CT + FL) now. Then, if outputs look right, roll wider. I put a short “GO gate” and an upload checklist at the end so you can show me results quickly.
+
+What the logs show (quick skim)
+
+1) Winners evidence bus is real and comprehensive.
+alpha_analytical/stable/winners_enrich.py builds a winners DataFrame with:
+
+Family evidence (score, rank, doubles/progression/last‑remaining flags, hot density, and score‑part columns) and row evidence (row_score, row_type, row_why, plus score parts). ✔️
+
+Sorted joins so you get best‑scoring family/row evidence attached. ✔️
+
+A targeted test that constructs 227/277 patterns and verifies any_doubles_support and canonical "227" show up as expected. ✔️
+
+2) Control Center wiring + guardrails
+
+The UI exposes Stable metrics & winners evidence in an expander after a batch. ✔️
+
+Acceptance tests for doubles were updated to the adjacency‑aware ranks and now pass. ✔️
+
+Pre‑commit suite (py‑compile, smoke, aux guard, stable contract guard) was run and green. ✔️
+
+3) Quality of life and safety
+
+Metrics now sort rows by score (so “best straight” is truly best), and the Stable loader raises a FileNotFoundError instead of sys.exit, which makes failures friendlier to handle. ✔️
+
+A new pre‑commit hook check_winners_export.py asserts the enriched winners schema and verifies nullable boolean dtypes for key flags. ✔️
+
+The enricher now explicitly coerces boolean flags (progression_flag, last_remaining_3v, any_doubles_support, etc.) to pandas’ nullable boolean, eliminating object‑dtype drift. ✔️
+
+4) Housekeeping
+
+You clarified analysis_2/ is a human stash, not part of current runs. Good to ignore/remove so it doesn’t pollute checks. ✔️
+
+Roadmap/health notes: the “System Health” helpers and winners logging conventions are aligned with where we’re heading; nothing there blocks current runs. ✔️
+
+What still merits a “double‑touch”
+
+Canonicalization SSOT (single source of truth)
+
+Why: avoid edge drift (e.g., "0277" vs "277", whitespace, mixed types).
+
+What I see: winners_enrich.py still defines its own _canonical and maps with "stable_canonical" = map(_canonical). ✔️
+
+Action: replace with stable.canon (the shared helper) and add one tiny unit test with tricky inputs (" 0277 ", 277, "2-7-7") to assert equality to the Stable analyzer’s canonical. The punch‑list in your notes calls this out too. ✔️
+
+Manifest/version assertions
+
+The FIX‑126 notes asked to assert bundle manifests carry evidence/contract versions. I don’t see a specific log confirming a test was added for this (the schema guard for winners export is added and good).
+
+Action: add a quick test that reads the training bundle manifest and asserts presence of evidence_schema_version (from metrics JSON) and the Stable contract version fields. (If this already landed, great—just keep the test.)
+
+.gitignore for analysis_2/
+
+It’s harmless, but ignoring it keeps the working tree clean and protects the pre‑commit experience. ✔️ (context)
+
+Everything else looks locked down: winners export guard ✔️, boolean coercion ✔️, adjacency acceptance ✔️, UI wiring ✔️.
+
+GO / NO‑GO gate before you run broadly
+
+GO if all three are true:
+
+Pre‑commit passes locally (this includes the winners export guard). ✔️ You already had this green in the session.
+
+The doubles acceptance still passes (it did in the session). ✔️
+
+The Control Center batch shows the “Stable metrics & winners evidence” expander per state after a run. ✔️
+
+Prefer to “double‑touch” now (quick patch) if you can: swap the canonicalizer to stable.canon. If you choose to defer that, you can still run a limited smoke and watch for canonical edge cases in the evidence.
+
+Suggested smoke run (CT + FL) and what to upload after
+
+Run scope: one combined run through Control Center (midday + evening), with winners entered so the UI produces enriched evidence.
+
+Quick success criteria (what to eyeball in the UI):
+
+In the expander, each winner row shows: family_id, family_score, family_rank, any_doubles_support, section_count, and row_score/row_type/row_why. ✔️ (these are in the evidence order)
+
+For a canonical like 227, any_doubles_support is True (adjacency logic firing) and the canonical shown is "227" (no spacing/zero artifacts). ✔️
+
+The boolean columns appear as True/False/NA (not strings) because of the new coercion. ✔️
+
+If you want me to review the run, upload these four artifacts per state:
+
+<State>_stable_patterns_scores.csv (the scores CSV)
+
+families.csv (family summary if you write it separately; if not, the metrics JSON often points to where it lives)
+
+<State>_metrics.json (from Stable; confirms counts + versions)
+
+Winners evidence CSV (you can export from the Control Center expander; the guard lists its required columns) ✔️
+
+Why I’m comfortable saying this is sound
+
+The evidence bus glues Stable’s deeper signals to every winners surface; it’s covered by a unit test and backed by a schema guard in pre‑commit. ✔️
+
+The doubles logic (±1 column adjacency) is reflected in both the families computation and the updated acceptance fixtures, and tests pass. ✔️
+
+You added nullable boolean coercion for evidence columns to stop pandas dtype wobble—a common flake source. ✔️
+
+UI surfaces are hooked so you can see both metrics and evidence per state. ✔️
+
+Final recommendation
+
+Proceed with a CT + FL smoke batch now.
+
+Optional tiny patch next: switch winners_enrich to stable.canon (SSOT). ✔️
+
+After the smoke, send me the artifacts listed above and I’ll sanity‑check the evidence and metrics. If everything looks clean, we can open the throttle for broader runs.
+
+If you want, I can also draft that 10‑line unit test for the canonicalizer swap and a one‑liner .gitignore entry for analysis_2/—but as of the logs you shared, you’re in a good place to run.

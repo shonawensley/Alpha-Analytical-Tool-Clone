@@ -1,0 +1,324 @@
+Short answer: Yes—go for it. “Fix 138” is the right remedy for the NaN winner‑evidence problem, and it will also make us robust to extended‑digit strings (e.g., 31166, 007788). I’d ship it with two small refinements so we close every gap in one pass.
+
+Why the NaNs happen (and why Fix 138 works)
+
+Root cause: we were joining winner evidence on a string canonical that doesn’t always match. Winners use a 3‑digit canonical like 758 → 578, but the spotlight writer often emits extended substrings (0788, 007788, …). Those will never match a 3‑digit canonical join, hence row_score/row_type/row_why = NaN.
+
+Correct join key: the Stable extractor reasons in V‑TRAC families. If we anchor everything to family_id derived from the same canonical helper (stable.canon + digits_only), extended strings and leading zeros can’t break the join.
+
+Fix 138 does exactly that: reuse the SSOT canonical helper everywhere and join by family_id, not by raw string.
+
+Go/No‑Go with two refinements (✅ = in Codex plan, 🔧 = my small add)
+
+Winners enricher
+
+✅ Replace any local _canonical with stable.digits_only ➜ stable.canon.
+
+✅ Compute family_id = derive_vtrac_index_for_canonical(canon, get_vtrac_index).
+
+✅ Pull the top‑scoring row from scores.csv by family_id, preferring section == "Combined" when available; otherwise highest score across sections.
+
+🔧 Fallback if families file is missing/sparse: still attach row‑level evidence from scores.csv using the same family_id, so the UI doesn’t go blank if a families CSV is filtered or absent.
+
+🔧 Keep a tiny “why no match” note if even this fails (e.g., no rows for that family after aggressive global thresholds). This prevents silent NaNs.
+
+Spotlight writer
+
+✅ Add columns to *_winner_family_spotlight_raw.csv:
+
+raw_canonical (whatever extended substring you’re emitting today),
+
+family_canonical_3v = stable.canon(stable.digits_only(raw_canonical)),
+
+family_id (same derivation as above).
+
+✅ Use these new columns for any downstream join (but the enricher will no longer depend on spotlight to find the best row—that now comes straight from scores.csv).
+
+🔧 If you keep the old Canonical column for backward compatibility, write both; don’t delete it yet.
+
+Metrics
+
+✅ (Codex already improved sorting) Confirm winner‑detection in metrics.build_metrics also maps winners to family_id and checks presence/rank against families_df.family_id.
+This avoids a second source of false negatives (spotlight_rate undercounting) when extended substrings are present.
+
+🔧 If families_df is empty, fall back to “best row in scores.csv by family” for rank estimation.
+
+Tests & guardrails
+
+✅ Existing: test_winners_bus.py, negative adjacency test, contract hooks.
+
+🔧 Add one more: test_winners_enrich_family_join_handles_extended(): winner 758 + spotlight row with raw_canonical="007788" ➜ enriched has non‑null row_score/row_type/row_why via family_id.
+
+🔧 Add a tiny smoke in the pre‑commit “contract” hook that reads one enriched winners sample and asserts required columns exist (family_id, family_rank, row_score, row_type, row_why).
+
+UI
+
+✅ You’ve surfaced metrics + evidence expander and CSV download.
+
+🔧 Add one‑line status when a winner can’t find a family row even via the fallback (rare), to help QA spot state‑specific threshold issues.
+
+Minimal, concrete patch sketches
+
+These are “how” snippets; adapt paths/names to your tree. They don’t assume a broad refactor.
+
+A) winners_enrich.py — SSOT canonical + family join + fallback
+
+from alpha_analytical import stable
+from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
+
+def _canon3(value) -> str:
+    return stable.canon(stable.digits_only(value))
+
+def _family_id_for(value) -> int | None:
+    c3 = _canon3(value)
+    if not c3:
+        return None
+    return derive_vtrac_index_for_canonical(c3, get_vtrac_index)
+
+# inside attach_stable_evidence(...)
+winners_df["stable_winner"] = winners_df.apply(_winner_value, axis=1)
+winners_df["stable_canonical"] = winners_df["stable_winner"].map(_canon3)
+winners_df["family_id"] = winners_df["stable_winner"].map(_family_id_for)
+
+# family evidence: unchanged join on family_id when families_df exists
+
+# row evidence (robust by family_id with Combined preference)
+row_evidence = pd.DataFrame()
+if not scores.empty and {"family_id", "score"}.issubset(scores.columns):
+    sc = scores.copy()
+    sc["family_id"] = sc["family_id"].astype("Int64")
+    # pick best row per family_id with Combined preference
+    def pick_best(g):
+        g = g.sort_values(["section","score"], key=lambda s: (s != "Combined", -g["score"]), ascending=True)
+        return g.iloc[0]
+    per_fam = sc.groupby("family_id", dropna=True, as_index=False).apply(pick_best)
+    row_evidence = per_fam.loc[:, [
+        "family_id","score","type","rows","why","section",
+        "score_cov","score_hpr","score_perm","score_repeat","score_straight",
+        "score_single","score_cons","score_hot","score_mirror","score_dom","score_len","score_hidden",
+        "mirror","straight2","straight3","single_left","cons_full","cons_3v","dom_last","dom_pair","hidden3v",
+    ]].rename(columns={"score":"row_score","type":"row_type","rows":"row_rows","why":"row_why"})
+
+enriched = winners_df.merge(family_evidence, on="family_id", how="left")
+enriched = enriched.merge(row_evidence, on="family_id", how="left")
+
+# optional: explain missing row evidence for observability
+enriched["evidence_status"] = enriched.apply(
+    lambda r: "ok" if pd.notna(r.get("row_score")) else "no_row_for_family", axis=1
+)
+
+
+B) Spotlight writer — add family columns (non‑breaking)
+
+from alpha_analytical import stable
+from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
+from alpha_analytical.vtrac import get_vtrac_index
+
+def _canon3(s): return stable.canon(stable.digits_only(s))
+
+df_spot["raw_canonical"] = df_spot["Canonical"].astype(str)     # keep legacy column intact
+df_spot["family_canonical_3v"] = df_spot["raw_canonical"].map(_canon3)
+df_spot["family_id"] = df_spot["family_canonical_3v"].map(
+    lambda c: derive_vtrac_index_for_canonical(c, get_vtrac_index) if c else None
+)
+
+# write CSV with added columns; do not remove existing ones yet
+
+
+C) Metrics — detect winners by family (no more canonical mismatch)
+
+# inside build_metrics(...)
+winners_list = [str(w).strip() for w in (winners or []) if str(w).strip()]
+winner_family_ids, winner_rank_by_family = [], {}
+families_rank_map = {}
+if not families_df.empty and {"family_id","family_score"}.issubset(families_df.columns):
+    ranked = families_df.sort_values("family_score", ascending=False, ignore_index=True)
+    families_rank_map = {int(row.family_id): idx+1 for idx,row in ranked.iterrows() if pd.notna(row.family_id)}
+
+for w in winners_list:
+    fam = _to_int(derive_vtrac_index_for_canonical(_canonical(w), get_vtrac_index))
+    if fam is None:
+        winner_rank_by_family[w] = None
+        continue
+    winner_family_ids.append(fam)
+    winner_rank_by_family[w] = families_rank_map.get(fam)
+
+
+(If you prefer not to import the derive helper here, you can pass the mapping function into build_metrics—but the effect is the same.)
+
+Tests to add (very small, high‑leverage)
+
+Extended‑digits winner still gets row evidence
+
+def test_winners_enrich_family_join_handles_extended(tmp_path):
+    # build minimal scores with family_id for 758→family F
+    # craft spotlight row with raw_canonical="007788" (no 3‑digit match)
+    # attach_stable_evidence([... "Winner": "758"])
+    # assert row_score/row_type/row_why are not NaN
+
+
+Metrics winner detection by family succeeds
+
+def test_metrics_detects_winners_by_family_id():
+    # families_df contains family_id F
+    # winners=["758"]
+    # build_metrics(...)-> winner_family_ids contains F and best rank not None
+
+
+Contract hook extension (optional)
+
+When a sample enriched winners CSV is present, assert columns:
+family_id, family_rank, row_score, row_type, row_why exist.
+
+Edge cases & what to expect
+
+Leading zeros / extended strings: fine. We never join on raw substrings again; we always map the winner to a family and fetch the “best” row by that family.
+
+Multiple sections: the Combined‑first selection guarantees consistent evidence while still working when only Midday/Evening exist.
+
+No family row at all (rare): you’ll see evidence_status = "no_row_for_family" which tells us to look at thresholds (e.g., filters that removed all rows for that family).
+
+Spotlight_rate in metrics: after the change, it will reflect family presence, not brittle canonical matches.
+
+Run checklist (once the patch is applied)
+
+pytest -q — unit + acceptance + the 2 new tests above.
+
+pre-commit run --all-files — ensures the contract hook still passes.
+
+Run one state (e.g., New Jersey), then open:
+
+*_winner_family_spotlight_raw.csv (now with family_id),
+
+the Control Center expander: confirm row_score/row_type/row_why now populated and the CSV download contains these fields.
+
+If it looks good, run the other states.
+
+On your “extended digits / 3‑value pattern” question
+
+You’re right to flag it. Extended clusters like 31166 are valuable for analysis and should not break matching. The error wasn’t the concept—it was using the extended substring itself as a join key. By projecting everything onto the 3‑value family (family_id) for joins—while still keeping the extended forms around for explanations—we keep the power of extended patterns and regain reliable joins.
+
+One admin note
+
+Some previously uploaded files in earlier turns may have expired on my side. If you want me to re‑check a specific artifact and it fails to open, please re‑upload that file and I’ll include it in the next pass.
+
+Verdict
+
+Go with Fix 138, plus the two refinements above (fallback in the enricher and family‑based winner detection in metrics). This will eliminate the NaNs, handle extended‑digit spotlights correctly, and keep Phase‑3 on solid footing without a broad refactor.
+
+
+___________________
+
+
+• Plan to Eliminate the Winner Evidence NaNs (Fix 138)
+
+  Goal: Winners evidence should always have row-level details (row_score, row_type, row_why) even when the spotlight is built from extended digit strings.
+
+  ———
+
+  ### ✅ What’s happening now
+
+  - Stable scoring + family metrics run fine.
+  - Spotlight writer emits long substrings (e.g., 007788).
+  - Winners use 3-digit canonical (e.g., 758 → 578).
+  - Because we join on string canonical, nothing matches → NaN row evidence.
+
+  ———
+
+  ### 🛠️ What to change (no broader refactor needed)
+
+  1. Reuse Stable’s canonical helper everywhere
+      - In winners_enrich, drop any local _canonical; call stable.canon(stable.digits_only(...)) so winners map to the same canonical the scorer uses.
+  2. Join row evidence by family_id
+      - For each winner, compute family_id = derive_vtrac_index_for_canonical(stable.canon(winner), get_vtrac_index).
+      - Pull the top-scoring row from scores.csv where family_id matches (prefer Combined section, else Midday/Evening).
+      - Merge on family_id instead of the raw canonical string.
+  3. Teach spotlight to speak “family” too
+      - When writing *_winner_family_spotlight_raw.csv, add columns for:
+        • raw_canonical (the extended string you already have)
+        • family_canonical_3v (projected 3-digit canonical via Stable’s helper)
+        • family_id (same derive_vtrac… call)
+      - Optionally keep both forms; use the family version when joining later.
+  4. Make the row‑selection tolerant
+      - Don’t force a specific row type or section; always emit the best row (highest score) for that family, preferring Combined when available.
+  5. Add/extend one regression test
+      - Create a small fixture (e.g., winners 758, 926) and assert the enriched winners output has non-null row_score and row_type.
+  6. Optional: Winners export schema guard
+      - Add a pre-commit check ensuring the enriched CSV/JSON always contains the key fields (family_id, family_rank, row_score, row_type, row_why, etc.).
+
+  ———
+
+  ### 🧪 Spot-check after the patch
+
+  - Re-run the winners-enricher unit test and the negative adjacency acceptance to ensure no regressions.
+
+  ———
+
+  - Stable already reasons in V-TRAC families. If we anchor on family_id everywhere, extended digits and leading zeros can’t break the join.
+  - The extended pattern strings remain available for analysis; they’re just no longer used as the join key.
+
+  Implementing this plan will eliminate the NaNs, keep the analysis robust for extended clusters, and keep the evidence bus consistent across states.
+
+
+
+• Ran powershell.exe -NoLogo -NoProfile -Command "Get-Content -Raw 'tasks\\FIX_139.TXT'"
+  └ Short answer: Yes ?"go for it.  ?oFix ?_138 ?? is the right remedy for the NaN winner ?`evidence problem, and it will also make us robust to extended ?`digit strings (e.g., 31166, 007788). I ?Td ship it
+    with two small refinements so we close every gap in one pass.
+
+    Go with Fix ?_138, plus the two refinements above (fallback in the enricher and family ?`based winner detection in metrics). This will eliminate the NaNs, handle extended ?`digit spotlights correctly, and
+    keep Phase ?`3 on solid footing without a broad refactor.
+
+─ Worked for 17s ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Phase-2 Evidence Fix Plan (based on Fix 138 & 139)
+  (Analysis only; no code changes here—hand these steps to your dev agent for implementation.)
+
+  ———
+
+  ### 1. Winners Enricher (attach_stable_evidence)
+
+  Goals: canonical SSOT, family_id primary key, graceful fallback.
+
+  1. Reuse Stable helper everywhere
+      - stable_winner → stable.digits_only(...) → stable.canon(...).
+      - family_id = derive_vtrac_index_for_canonical(stable.canon(...), get_vtrac_index).
+  2. Join row evidence by family
+      - From scores.csv, group by family_id; pick the top score, preferring section == "Combined" then highest score otherwise.
+      - Merge winners on family_id.
+      - If no row exists, set row_score/row_type/row_why = "" and add an evidence_status column (e.g., “no_row_for_family”) so the UI never shows NaN.
+  3. Family evidence stays on family_id.
+  1. Add columns per row:
+      - raw_canonical (what you already write).
+      - family_canonical_3v = stable.canon(stable.digits_only(raw_canonical)).
+      - family_id (same derivation as above).
+      - Keep the old Canonical column temporarily for backward compatibility.
+  2. Stop relying on spotlight for row selection; treat it as diagnostic.
+
+  ———
+  Add two light tests:
+
+  1. test_winners_enrich_handles_extended() – build dummy scores with raw_canonical="007788"; assert row evidence comes back non-empty after enrichment.
+  2. test_metrics_winner_family_detection() – ensure metrics maps winners to family IDs correctly.
+
+  Optional pre-commit guard: read an enriched winners CSV and assert required columns (family_id, family_rank, row_score, row_type, row_why, etc.) exist.
+
+  ———
+
+  1. pytest -q – unit + acceptance (including new tests).
+  2. pre-commit run --all-files.
+  3. Run one state (e.g., New Jersey) through the pipeline:
+      - Confirm *_winner_family_spotlight_raw.csv now contains family_id.
+
+  If these pass, the NaNs disappear and winners remain robust even with extended patterns.
+
+  ———
+
+  ### Artifact summary for the other AI
+
+  - Stable bundles & metrics: data/outputs/analysis/patterns/<STATE>/training_sets/20251015/
+  - Winners logger HTML: data/outputs/analysis/winners/<STATE>/*20251015*.html
+  - JSON summary (stamp 20251015): tmp_phase2_summary.json
+  - Path for raw spotlights (after fix): data/outputs/analysis/patterns/<STATE>/<STATE>_winner_family_spotlight_raw.csv
+
+  This plan addresses the canonical mismatch thoroughly while keeping the extended-digit intelligence you rely on. When dev implements it, Phase 3 can proceed without brittle joins or NaNs.

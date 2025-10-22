@@ -1,104 +1,514 @@
 """
-Canonical V-TRAC reference API for non-Aux pages.
+V‑TRAC reference for working/modules (Aux tools).
 
-Exports:
-- get_vtrac_index(winner: str) -> int
-- get_index_set(index: int) -> set[str]
-- get_index_straights(winner: str) -> set[str]
-- VTRAC_DISPLAY, BOXED_VTRAC_REFERENCE, BOXED_LABEL_LOOKUP (legacy compat)
+Exports (required by Aux):
+    - BOXED_VTRAC_REFERENCE: list[dict]   # full boxed reference (singles/doubles)
+    - VTRAC_DISPLAY: list[dict]           # simplified rows for the boxed UI table
+    - VTRAC_LOOKUP: dict[str, int]        # permutation -> V‑TRAC index
+    - BOXED_LABEL_LOOKUP: dict[str, str]  # permutation -> canonical boxed label (e.g., '056')
+    - get_vtrac_index(draw: str) -> int | None
 
-Implementation notes:
-- Uses analyzer utilities already present in the project so this module
-  does not depend on the staged Aux package for helpers, but we lazily
-  re-export the legacy constants so existing tooling remains stable.
+Safe helpers (non‑breaking, useful for other tools):
+    - get_index_set(index: int) -> set[str]
+    - get_index_straights(winner: str) -> set[str]
+    - normalize_draw(s: str) -> str | None
 """
+
 from __future__ import annotations
 
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
-from typing import Set
+from typing import Dict, List, Set, Optional
 
+DIGIT2V: Dict[str, int] = {
+    '0': 1, '5': 1,
+    '1': 2, '6': 2,
+    '2': 3, '7': 3,
+    '3': 4, '8': 4,
+    '4': 5, '9': 5,
+}
+INDEX_BY_VTRAC: Dict[str, int] = {}
 
-def _load_staged_reference():
-    """Best-effort loader for the legacy staged V-TRAC reference."""
-    try:
-        staged_path = (
-            Path(__file__).resolve().parent.parent
-            / "scripts"
-            / "auxiliary"
-            / "working"
-            / "modules"
-            / "vtrac_reference.py"
-        )
-        if not staged_path.exists():
-            return None
-        spec = spec_from_file_location("_staged_vtrac_reference", str(staged_path))
-        if not spec or not spec.loader:
-            return None
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
-        return module
-    except Exception:
+# ======================================================================================
+# Full permutation V‑TRAC reference — each entry has the index and its singles/doubles.
+# These values mirror the legacy reference used by Aux and older tools.
+# ======================================================================================
+
+BOXED_VTRAC_REFERENCE: List[Dict[str, object]] = [
+    # 1) (111) => no singles, doubles => 005, 055
+    {"Index": 1, "Singles": [], "Doubles": ["005", "050", "500", "055", "505", "550"]},
+
+    # 2) (112) => singles: 015, 056; doubles: 001, 006, 155, 556
+    {"Index": 2,
+     "Singles": [
+         "015", "051", "105", "150", "501", "510",
+         "056", "065", "506", "560", "605", "650"
+     ],
+     "Doubles": [
+         "001", "010", "100",
+         "006", "060", "600",
+         "155", "515", "551",
+         "556", "565", "655"
+     ]},
+
+    # 3) (113) => singles: 025, 057; doubles: 002, 007, 255, 557
+    {"Index": 3,
+     "Singles": [
+         "025", "052", "205", "250", "502", "520",
+         "057", "075", "507", "570", "705", "750"
+     ],
+     "Doubles": [
+         "002", "020", "200",
+         "007", "070", "700",
+         "255", "525", "552",
+         "557", "575", "755"
+     ]},
+
+    # 4) (114) => singles: 035, 058; doubles: 003, 008, 355, 558
+    {"Index": 4,
+     "Singles": [
+         "035", "053", "305", "350", "503", "530",
+         "058", "085", "508", "580", "805", "850"
+     ],
+     "Doubles": [
+         "003", "030", "300",
+         "008", "080", "800",
+         "355", "535", "553",
+         "558", "585", "855"
+     ]},
+
+    # 5) (115) => singles: 045, 059; doubles: 004, 009, 455, 559
+    {"Index": 5,
+     "Singles": [
+         "045", "054", "405", "450", "504", "540",
+         "059", "095", "509", "590", "905", "950"
+     ],
+     "Doubles": [
+         "004", "040", "400",
+         "009", "090", "900",
+         "455", "545", "554",
+         "559", "595", "955"
+     ]},
+
+    # 6) (122) => singles: 016, 156; doubles: 011, 066, 115, 566
+    {"Index": 6,
+     "Singles": [
+         "016", "061", "106", "160", "601", "610",
+         "156", "165", "516", "561", "615", "651"
+     ],
+     "Doubles": [
+         "011", "101", "110",
+         "066", "606", "660",
+         "115", "151", "511",
+         "566", "656", "665"
+     ]},
+
+    # 7) (123) => singles: 012, 017, 026, 067, 125, 157, 256, 567; no doubles
+    {"Index": 7,
+     "Singles": [
+         "012", "021", "102", "120", "201", "210",
+         "017", "071", "107", "170", "701", "710",
+         "026", "062", "206", "260", "602", "620",
+         "067", "076", "607", "670", "706", "760",
+         "125", "152", "215", "251", "512", "521",
+         "157", "175", "517", "571", "715", "751",
+         "256", "265", "526", "562", "625", "652",
+         "567", "576", "657", "675", "756", "765"
+     ],
+     "Doubles": []},
+
+    # 8) (124) => singles: 013, 018, 036, 068, 135, 158, 356, 568; no doubles
+    {"Index": 8,
+     "Singles": [
+         "013", "031", "103", "130", "301", "310",
+         "018", "081", "108", "180", "801", "810",
+         "036", "063", "306", "360", "603", "630",
+         "068", "086", "608", "680", "806", "860",
+         "135", "153", "315", "351", "513", "531",
+         "158", "185", "518", "581", "815", "851",
+         "356", "365", "536", "563", "635", "653",
+         "568", "586", "658", "685", "856", "865"
+     ],
+     "Doubles": []},
+
+    # 9) (125) => singles: 014, 019, 046, 069, 145, 159, 456, 569; no doubles
+    {"Index": 9,
+     "Singles": [
+         "014", "041", "104", "140", "401", "410",
+         "019", "091", "109", "190", "901", "910",
+         "046", "064", "406", "460", "604", "640",
+         "069", "096", "609", "690", "906", "960",
+         "145", "154", "415", "451", "514", "541",
+         "159", "195", "519", "591", "915", "951",
+         "456", "465", "546", "564", "645", "654",
+         "569", "596", "659", "695", "956", "965"
+     ],
+     "Doubles": []},
+
+    # 10) (133) => singles: 027, 257; doubles: 022, 077, 225, 577
+    {"Index": 10,
+     "Singles": [
+         "027", "072", "207", "270", "702", "720",
+         "257", "275", "527", "572", "725", "752"
+     ],
+     "Doubles": [
+         "022", "202", "220",
+         "077", "707", "770",
+         "225", "252", "522",
+         "577", "757", "775"
+     ]},
+
+    # 11) (134) => singles: 023, 028, 037, 078, 235, 258, 357, 578; no doubles
+    {"Index": 11,
+     "Singles": [
+         "023", "032", "203", "230", "302", "320",
+         "028", "082", "208", "280", "802", "820",
+         "037", "073", "307", "370", "703", "730",
+         "078", "087", "708", "780", "807", "870",
+         "235", "253", "325", "352", "523", "532",
+         "258", "285", "528", "582", "825", "852",
+         "357", "375", "537", "573", "735", "753",
+         "578", "587", "758", "785", "857", "875"
+     ],
+     "Doubles": []},
+
+    # 12) (135) => singles: 024, 029, 047, 079, 245, 259, 457, 579; no doubles
+    {"Index": 12,
+     "Singles": [
+         "024", "042", "204", "240", "402", "420",
+         "029", "092", "209", "290", "902", "920",
+         "047", "074", "407", "470", "704", "740",
+         "079", "097", "709", "790", "907", "970",
+         "245", "254", "425", "452", "524", "542",
+         "259", "295", "529", "592", "925", "952",
+         "457", "475", "547", "574", "745", "754",
+         "579", "597", "759", "795", "957", "975"
+     ],
+     "Doubles": []},
+
+    # 13) (144) => singles: 038, 358; doubles: 033, 088, 335, 588
+    {"Index": 13,
+     "Singles": ["038", "083", "308", "380", "803", "830",
+                 "358", "385", "538", "583", "835", "853"],
+     "Doubles": ["033", "303", "330", "088", "808", "880",
+                 "335", "353", "533", "588", "858", "885"]},
+
+    # 14) (145) => singles: 034, 039, 048, 089, 345, 359, 458, 589; no doubles
+    {"Index": 14,
+     "Singles": [
+         "034", "043", "304", "340", "403", "430",
+         "039", "093", "309", "390", "903", "930",
+         "048", "084", "408", "480", "804", "840",
+         "089", "098", "809", "890", "908", "980",
+         "345", "354", "435", "453", "534", "543",
+         "359", "395", "539", "593", "935", "953",
+         "458", "485", "548", "584", "845", "854",
+         "589", "598", "859", "895", "958", "985"
+     ],
+     "Doubles": []},
+
+    # 15) (155) => singles: 049, 459; doubles: 044, 099, 445, 599
+    {"Index": 15,
+     "Singles": ["049", "094", "409", "490", "904", "940",
+                 "459", "495", "549", "594", "945", "954"],
+     "Doubles": ["044", "404", "440", "099", "909", "990",
+                 "445", "454", "544", "599", "959", "995"]},
+
+    # 16) (222) => doubles => 116, 166; triple expansions (111, 666) removed
+    {"Index": 16, "Singles": [], "Doubles": ["116", "161", "611", "166", "616", "661"]},
+
+    # 17) (223) => singles: 126, 167; doubles: 112, 117, 266, 667
+    {"Index": 17,
+     "Singles": ["126", "162", "216", "261", "612", "621",
+                 "167", "176", "617", "671", "716", "761"],
+     "Doubles": ["112", "121", "211", "117", "171", "711",
+                 "266", "626", "662", "667", "676", "766"]},
+
+    # 18) (224) => singles: 136, 168; doubles: 113, 118, 366, 668
+    {"Index": 18,
+     "Singles": ["136", "163", "316", "361", "613", "631",
+                 "168", "186", "618", "681", "816", "861"],
+     "Doubles": ["113", "131", "311", "118", "181", "811",
+                 "366", "636", "663", "668", "686", "866"]},
+
+    # 19) (225) => singles: 146, 169; doubles: 114, 119, 466, 669
+    {"Index": 19,
+     "Singles": ["146", "164", "416", "461", "614", "641",
+                 "169", "196", "619", "691", "916", "961"],
+     "Doubles": ["114", "141", "411", "119", "191", "911",
+                 "466", "646", "664", "669", "696", "966"]},
+
+    # 20) (233) => singles: 127, 267; doubles: 122, 177, 226, 677
+    {"Index": 20,
+     "Singles": ["127", "172", "217", "271", "712", "721",
+                 "267", "276", "627", "672", "726", "762"],
+     "Doubles": ["122", "212", "221", "177", "717", "771",
+                 "226", "262", "622", "677", "767", "776"]},
+
+    # 21) (234) => singles: 123, 128, 137, 178, 236, 268, 367, 678; no doubles
+    {"Index": 21,
+     "Singles": [
+         "123", "132", "213", "231", "312", "321",
+         "128", "182", "218", "281", "812", "821",
+         "137", "173", "317", "371", "713", "731",
+         "178", "187", "718", "781", "817", "871",
+         "236", "263", "326", "362", "623", "632",
+         "268", "286", "628", "682", "826", "862",
+         "367", "376", "637", "673", "736", "763",
+         "678", "687", "768", "786", "867", "876"
+     ],
+     "Doubles": []},
+
+    # 22) (235) => singles: 124, 129, 147, 179, 246, 269, 467, 679; no doubles
+    {"Index": 22,
+     "Singles": [
+         "124", "142", "214", "241", "412", "421",
+         "129", "192", "219", "291", "912", "921",
+         "147", "174", "417", "471", "714", "741",
+         "179", "197", "719", "791", "917", "971",
+         "246", "264", "426", "462", "624", "642",
+         "269", "296", "629", "692", "926", "962",
+         "467", "476", "647", "674", "746", "764",
+         "679", "697", "769", "796", "967", "976"
+     ],
+     "Doubles": []},
+
+    # 23) (244) => singles: 138, 368; doubles: 133, 188, 336, 688
+    {"Index": 23,
+     "Singles": ["138", "183", "318", "381", "813", "831",
+                 "368", "386", "638", "683", "836", "863"],
+     "Doubles": ["133", "313", "331", "188", "818", "881",
+                 "336", "363", "633", "688", "868", "886"]},
+
+    # 24) (245) => singles: 134, 139, 148, 189, 346, 369, 468, 689; no doubles
+    {"Index": 24,
+     "Singles": [
+         "134", "143", "314", "341", "413", "431",
+         "139", "193", "319", "391", "913", "931",
+         "148", "184", "418", "481", "814", "841",
+         "189", "198", "819", "891", "918", "981",
+         "346", "364", "436", "463", "634", "643",
+         "369", "396", "639", "693", "936", "963",
+         "468", "486", "648", "684", "846", "864",
+         "689", "698", "869", "896", "968", "986"
+     ],
+     "Doubles": []},
+
+    # 25) (255) => singles: 149, 469; doubles: 144, 199, 446, 699
+    {"Index": 25,
+     "Singles": ["149", "194", "419", "491", "914", "941",
+                 "469", "496", "649", "694", "946", "964"],
+     "Doubles": ["144", "414", "441", "199", "919", "991",
+                 "446", "464", "644", "699", "969", "996"]},
+
+    # 26) (333) => doubles => 227, 277; remove triple expansions (222, 777)
+    {"Index": 26, "Singles": [], "Doubles": ["227", "272", "722", "277", "727", "772"]},
+
+    # 27) (334) => singles: 237, 278; doubles: 223, 228, 377, 778
+    {"Index": 27,
+     "Singles": ["237", "273", "327", "372", "723", "732",
+                 "278", "287", "728", "782", "827", "872"],
+     "Doubles": ["223", "232", "322", "228", "282", "822",
+                 "377", "737", "773", "778", "787", "877"]},
+
+    # 28) (335) => singles: 247, 279; doubles: 224, 229, 477, 779
+    {"Index": 28,
+     "Singles": ["247", "274", "427", "472", "724", "742",
+                 "279", "297", "729", "792", "927", "972"],
+     "Doubles": ["224", "242", "422", "229", "292", "922",
+                 "477", "747", "774", "779", "797", "977"]},
+
+    # 29) (344) => singles: 238, 378; doubles: 233, 288, 337, 788
+    {"Index": 29,
+     "Singles": ["238", "283", "328", "382", "823", "832",
+                 "378", "387", "738", "783", "837", "873"],
+     "Doubles": ["233", "323", "332", "288", "828", "882",
+                 "337", "373", "733", "788", "878", "887"]},
+
+    # 30) (345) => singles: 234, 239, 248, 289, 347, 379, 478, 789; no doubles
+    {"Index": 30,
+     "Singles": [
+         "234", "243", "324", "342", "423", "432",
+         "239", "293", "329", "392", "923", "932",
+         "248", "284", "428", "482", "824", "842",
+         "289", "298", "829", "892", "928", "982",
+         "347", "374", "437", "473", "734", "743",
+         "379", "397", "739", "793", "937", "973",
+         "478", "487", "748", "784", "847", "874",
+         "789", "798", "879", "897", "978", "987"
+     ],
+     "Doubles": []},
+
+    # 31) (355) => singles: 249, 479; doubles: 244, 299, 447, 799
+    {"Index": 31,
+     "Singles": ["249", "294", "429", "492", "924", "942",
+                 "479", "497", "749", "794", "947", "974"],
+     "Doubles": ["244", "424", "442", "299", "929", "992",
+                 "447", "474", "744", "799", "979", "997"]},
+
+    # 32) (444) => doubles => 338, 388; remove triple expansions (333, 888)
+    {"Index": 32, "Singles": [], "Doubles": ["338", "383", "833", "388", "838", "883"]},
+
+    # 33) (445) => singles: 348, 389; doubles: 334, 339, 488, 889
+    {"Index": 33,
+     "Singles": ["348", "384", "438", "483", "834", "843",
+                 "389", "398", "839", "893", "938", "983"],
+     "Doubles": ["334", "343", "433", "339", "393", "933",
+                 "488", "848", "884", "889", "898", "988"]},
+
+    # 34) (455) => singles: 349, 489; doubles: 344, 399, 448, 899
+    {"Index": 34,
+     "Singles": ["349", "394", "439", "493", "934", "943",
+                 "489", "498", "849", "894", "948", "984"],
+     "Doubles": ["344", "434", "443", "399", "939", "993",
+                 "448", "484", "844", "899", "989", "998"]},
+
+    # 35) (555) => doubles => 449, 499; remove triple expansions (444, 999)
+    {"Index": 35, "Singles": [], "Doubles": ["449", "494", "944", "499", "949", "994"]},
+]
+
+# Simplified boxed display for the UI table
+VTRAC_DISPLAY: List[Dict[str, str]] = [
+    {"Index": 1, "Singles": "", "Doubles": "005 055"},
+    {"Index": 2, "Singles": "015 056", "Doubles": "001 006 155 556"},
+    {"Index": 3, "Singles": "025 057", "Doubles": "002 007 255 557"},
+    {"Index": 4, "Singles": "035 058", "Doubles": "003 008 355 558"},
+    {"Index": 5, "Singles": "045 059", "Doubles": "004 009 455 559"},
+    {"Index": 6, "Singles": "016 156", "Doubles": "011 066 115 566"},
+    {"Index": 7, "Singles": "012 017 026 067 125 157 256 567", "Doubles": ""},
+    {"Index": 8, "Singles": "013 018 036 068 135 158 356 568", "Doubles": ""},
+    {"Index": 9, "Singles": "014 019 046 069 145 159 456 569", "Doubles": ""},
+    {"Index": 10, "Singles": "027 257", "Doubles": "022 077 225 577"},
+    {"Index": 11, "Singles": "023 028 037 078 235 258 357 578", "Doubles": ""},
+    {"Index": 12, "Singles": "024 029 047 079 245 259 457 579", "Doubles": ""},
+    {"Index": 13, "Singles": "038 358", "Doubles": "033 088 335 588"},
+    {"Index": 14, "Singles": "034 039 048 089 345 359 458 589", "Doubles": ""},
+    {"Index": 15, "Singles": "049 459", "Doubles": "044 099 445 599"},
+    {"Index": 16, "Singles": "", "Doubles": "116 166"},
+    {"Index": 17, "Singles": "126 167", "Doubles": "112 117 266 667"},
+    {"Index": 18, "Singles": "136 168", "Doubles": "113 118 366 668"},
+    {"Index": 19, "Singles": "146 169", "Doubles": "114 119 466 669"},
+    {"Index": 20, "Singles": "127 267", "Doubles": "122 177 226 677"},
+    {"Index": 21, "Singles": "123 128 137 178 236 268 367 678", "Doubles": ""},
+    {"Index": 22, "Singles": "124 129 147 179 246 269 467 679", "Doubles": ""},
+    {"Index": 23, "Singles": "138 368", "Doubles": "133 188 336 688"},
+    {"Index": 24, "Singles": "134 139 148 189 346 369 468 689", "Doubles": ""},
+    {"Index": 25, "Singles": "149 469", "Doubles": "144 199 446 699"},
+    {"Index": 26, "Singles": "", "Doubles": "227 277"},
+    {"Index": 27, "Singles": "237 278", "Doubles": "223 228 377 778"},
+    {"Index": 28, "Singles": "247 279", "Doubles": "224 229 477 779"},
+    {"Index": 29, "Singles": "238 378", "Doubles": "233 288 337 788"},
+    {"Index": 30, "Singles": "234 239 248 289 347 379 478 789", "Doubles": ""},
+    {"Index": 31, "Singles": "249 479", "Doubles": "244 299 447 799"},
+    {"Index": 32, "Singles": "", "Doubles": "338 388"},
+    {"Index": 33, "Singles": "348 389", "Doubles": "334 339 488 889"},
+    {"Index": 34, "Singles": "349 489", "Doubles": "344 399 448 899"},
+    {"Index": 35, "Singles": "", "Doubles": "449 499"},
+]
+
+# Fast lookups (built at import)
+VTRAC_LOOKUP: Dict[str, int] = {}
+BOXED_LABEL_LOOKUP: Dict[str, str] = {}  # permutation -> canonical boxed label, e.g. '056'
+
+# -------------------------------------------------------------
+
+def _permutations3(s: str) -> Set[str]:
+    """All unique permutations of a 3‑char string."""
+    return {s, s[0] + s[2] + s[1], s[1] + s[0] + s[2],
+            s[1] + s[2] + s[0], s[2] + s[0] + s[1], s[2] + s[1] + s[0]}
+
+def normalize_draw(s: str) -> Optional[str]:
+    """
+    Normalize a raw input into a 3‑digit string (preserve leading zeros).
+    Returns None if invalid.
+    """
+    if s is None:
         return None
+    s = str(s).strip()
+    # Common copy/paste artifacts
+    s = s.replace(" ", "").replace("-", "").replace(",", "")
+    if not s.isdigit():
+        return None
+    if len(s) != 3:
+        # allow 1–2 digits (pad left) only if you want; comment out if not desired:
+        s = s.zfill(3)
+    return s if len(s) == 3 else None
 
+def initialize_vtrac_lookup() -> None:
+    """Build VTRAC_LOOKUP and BOXED_LABEL_LOOKUP from BOXED_VTRAC_REFERENCE."""
+    VTRAC_LOOKUP.clear()
+    BOXED_LABEL_LOOKUP.clear()
+    INDEX_BY_VTRAC.clear()
 
-_STAGED = _load_staged_reference()
-if _STAGED is not None:
-    VTRAC_DISPLAY = getattr(_STAGED, "VTRAC_DISPLAY", [])
-    BOXED_VTRAC_REFERENCE = getattr(_STAGED, "BOXED_VTRAC_REFERENCE", [])
-    BOXED_LABEL_LOOKUP = getattr(_STAGED, "BOXED_LABEL_LOOKUP", {})
-else:
-    VTRAC_DISPLAY = []
-    BOXED_VTRAC_REFERENCE = []
-    BOXED_LABEL_LOOKUP = {}
+    for entry in BOXED_VTRAC_REFERENCE:
+        idx = int(entry["Index"])
+        sample_combo: Optional[str] = None
+        for key in ("Singles", "Doubles"):
+            for combo in entry[key]:  # type: ignore[index]
+                if sample_combo is None and combo:
+                    sample_combo = combo
+                for perm in _permutations3(combo):
+                    VTRAC_LOOKUP[perm] = idx
+                    # Map each perm back to its canonical boxed label (the combo)
+                    BOXED_LABEL_LOOKUP[perm] = combo
+        if sample_combo:
+            vcode = ''.join(
+                sorted(str(DIGIT2V[d]) for d in sample_combo if d in DIGIT2V)
+            )
+            if len(vcode) == 3:
+                INDEX_BY_VTRAC.setdefault(vcode, idx)
 
+# Build lookups at import
+initialize_vtrac_lookup()
 
-def _norm_winner(w: str) -> str:
-    w = "".join(ch for ch in str(w or "") if ch.isdigit())
-    if len(w) != 3:
-        raise ValueError(f"winner must be 3 digits, got {w!r}")
-    return w
+# -------------------------------------------------------------
 
+def get_vtrac_index(draw: str) -> Optional[int]:
+    """
+    Return the V‑TRAC index for a 3‑digit draw (or None if not found).
 
-def get_vtrac_index(winner: str) -> int:
-    """Return the V-TRAC index for a 3-digit winner using analyzer utilities."""
-    from utils.vtrac_utils import find_vtrac_index_and_combos  # lazy import
-
-    w = _norm_winner(winner)
-    idx, _perms, _related = find_vtrac_index_and_combos(w)
-    return int(idx) if idx is not None else 0
-
+    Triples (e.g., '000', '111') intentionally return None to match legacy behavior.
+    """
+    s = normalize_draw(draw)
+    if s is None:
+        return None
+    idx = VTRAC_LOOKUP.get(s)
+    if idx is not None:
+        return idx
+    if len(set(s)) == 1:  # triples suppressed
+        return None
+    for perm in _permutations3(s):
+        idx = VTRAC_LOOKUP.get(perm)
+        if idx is not None:
+            return idx
+    vcode_parts: List[str] = []
+    for ch in s:
+        v = DIGIT2V.get(ch)
+        if v is None:
+            return None
+        vcode_parts.append(str(v))
+    vcode = ''.join(sorted(vcode_parts))
+    return INDEX_BY_VTRAC.get(vcode)
 
 def get_index_set(index: int) -> Set[str]:
-    """Return the full pattern set (singles + doubles) for the index.
-    Uses analyzer helper to gather combinations.
     """
-    from src.core.module_c_vtrac import get_all_combinations_for_index  # lazy
-
-    combos = set(get_all_combinations_for_index(int(index)) or [])
-    # Ensure all as strings of length 3
-    return {str(c) for c in combos}
-
+    All boxed combos (singles + doubles) for an index as canonical 3‑char strings.
+    """
+    for entry in BOXED_VTRAC_REFERENCE:
+        if int(entry["Index"]) == int(index):
+            return set(entry["Singles"]) | set(entry["Doubles"])  # type: ignore[return-value]
+    return set()
 
 def get_index_straights(winner: str) -> Set[str]:
-    """Return unique straights (permutations) for the winner (3-digit)."""
-    w = _norm_winner(winner)
-    a, b, c = w[0], w[1], w[2]
-    return {
-        a + b + c,
-        a + c + b,
-        b + a + c,
-        b + c + a,
-        c + a + b,
-        c + b + a,
-    }
-
+    """
+    The straight permutations of a winner (unique perms; leading zeros preserved).
+    """
+    s = normalize_draw(winner)
+    return _permutations3(s) if s is not None else set()
 
 __all__ = [
-    "get_vtrac_index",
-    "get_index_set",
-    "get_index_straights",
-    "VTRAC_DISPLAY",
-    "BOXED_VTRAC_REFERENCE",
-    "BOXED_LABEL_LOOKUP",
+    "BOXED_VTRAC_REFERENCE", "VTRAC_DISPLAY",
+    "VTRAC_LOOKUP", "BOXED_LABEL_LOOKUP",
+    "get_vtrac_index", "get_index_set", "get_index_straights",
+    "normalize_draw",
 ]
+
+

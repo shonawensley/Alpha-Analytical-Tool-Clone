@@ -1,0 +1,258 @@
+very close and your screenshots show the wiring is correct:
+
+The repo you’re working in is the WSL one:
+/home/ser/code/Alpha-Analytical-Tool-Clone ✅
+and the remote is https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git ✅
+
+VS Code shows WSL: Ubuntu in the bottom‑left when you open it with code -r . ✅
+
+GitHub Desktop is already pointed at the WSL path \\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone ✅
+
+Below I’ll fix the two remaining pain points and give you a clean, repeatable start‑of‑day sequence you can literally copy/paste.
+
+1) Why the GitHub Desktop command failed (and 2 working fixes)
+
+Your WSL command failed because GitHub Desktop isn’t installed at %LOCALAPPDATA%\GitHubDesktop\GitHubDesktop.exe on this machine. Some installs put it under Program Files. Use either of these:
+
+A. Easiest: just click the Desktop icon
+Totally fine. Desktop doesn’t need to be launched from WSL. If it shows your WSL repo (yours does), you’re good.
+
+B. If you want a command that works from WSL anyway:
+
+# From inside WSL
+powershell.exe -NoProfile -Command "$p1=$Env:LOCALAPPDATA+'\GitHubDesktop\GitHubDesktop.exe'; $p2='C:\Program Files\GitHub Desktop\GitHubDesktop.exe'; if (Test-Path $p1) {Start-Process $p1} elseif (Test-Path $p2) {Start-Process $p2} else {'GitHub Desktop not found'}"
+
+
+That tries both common locations and starts whichever exists.
+
+2) Why double‑clicking files in Explorer opens a second, non‑WSL VS Code (and how to stop it)
+
+When you double‑click a file under \\wsl$... in Windows Explorer, Windows launches the Windows VS Code (Code.exe) against a network path. That gives you a second, non‑WSL window.
+
+Three ways to keep everything in the WSL window
+
+Best habit – open Code from WSL and reuse the window:
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+code -r .
+
+
+Now drag any file from Explorer into that window, or use File → Open File… in Code. It stays in WSL.
+
+If you accidentally opened a non‑WSL window:
+Press Ctrl+Shift+P → type Reopen Folder in WSL → Enter.
+(Or click the green corner icon → Reopen in WSL.) It migrates that window into WSL.
+
+Pin a shortcut that always opens this repo in WSL (one‑time):
+
+Create (or edit) a Windows shortcut whose Target is:
+
+"C:\Users\User\AppData\Local\Programs\Microsoft VS Code\Code.exe" --folder-uri vscode-remote://wsl+Ubuntu/home/ser/code/Alpha-Analytical-Tool-Clone
+
+
+Pin it to the taskbar. Using that shortcut always opens your repo in a WSL Code window.
+(Adjust the Code.exe path if yours is different.)
+
+Tip: avoid double‑clicking *.md in Explorer. If you do, use Reopen Folder in WSL as above.
+
+3) Final start‑of‑day sequence (from a blank state)
+
+In Windows PowerShell:
+
+# 0) Kill any stray Code windows and stop WSL cleanly
+taskkill /F /IM Code.exe 2>$null
+wsl --shutdown
+
+
+Open Windows Terminal ➜ Ubuntu (WSL):
+
+# 1) Go to the WSL repo and sanity-check remote
+cd ~/code/Alpha-Analytical-Tool-Clone
+pwd
+git rev-parse --show-toplevel
+git remote -v
+
+# 2) Open VS Code in THIS folder (WSL-attached)
+code -r .
+
+# 3) (Optional) Open GitHub Desktop from WSL (or just click the icon)
+powershell.exe -NoProfile -Command "$p1=$Env:LOCALAPPDATA+'\GitHubDesktop\GitHubDesktop.exe'; $p2='C:\Program Files\GitHub Desktop\GitHubDesktop.exe'; if (Test-Path $p1) {Start-Process $p1} elseif (Test-Path $p2) {Start-Process $p2} else {'GitHub Desktop not found'}"
+
+# 4) Start Codex CLI in Ubuntu (if you use it from a *separate* Ubuntu terminal)
+codex
+# then paste:
+#   Read briefings/CODEX_READ_FIRST_AAT9_WSL.md and follow it exactly. Select model preset gpt‑5‑codex (High),
+#   run the WSL preflight command, then reply: READY (WSL).
+
+4) Your CODEX_READ_FIRST_AAT9_WSL.md – two small edits
+
+You’re 99% there. Make these tweaks so the preflight always works and so the “reopen in WSL” rescue is documented.
+
+Replace the preflight line with the ExecutionPolicy bypass (your Codex log showed the unsigned‑script error the first time):
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w .)\.codex\preflight.ps1" -State "Connecticut4"
+
+
+Add this tiny rescue note under Session setup:
+
+If a non‑WSL Code window opens by accident: press Ctrl+Shift+P → Reopen Folder in WSL.
+
+Everything else in your doc reads fine.
+
+5) Sanity checks you can do in 5 seconds
+
+Bottom‑left of Code says WSL: Ubuntu.
+
+Terminal in Code shows a Linux prompt like ser@…:~/code/Alpha-Analytical-Tool-Clone$.
+
+GitHub Desktop shows the path \\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone.
+
+git status in the WSL repo matches what Desktop shows.
+
+If all four are true, you’re in the right place and every tool is looking at the same repo.
+
+Quick answers to your last questions
+
+Can you just click the GitHub Desktop icon? Yes. That’s perfectly fine and simplest.
+
+Do you have to “start GitHub” from Codex? No. Git and Codex work whether Desktop is open or not. Desktop is only a GUI.
+
+Is it OK to edit files via Explorer? Yes—but if double‑click launches a non‑WSL Code, immediately Reopen in WSL (Ctrl+Shift+P).
+
+You’ve got the hard parts done. Use the start‑of‑day block above and the Reopen Folder in WSL muscle‑memory, and this flow will feel just like your old one—only faster.
+
+
+
+
+
+
+
+. This part is confusing until you know exactly what’s going on:
+
+You can use Windows Explorer to browse your repo and create/open files.
+
+The only trap is how VS Code gets launched when you double‑click a file from Explorer:
+
+Double‑click opens the Windows VS Code (“local” Code), which is a different process from VS Code (WSL).
+
+That’s why you sometimes end up with two Code windows (one WSL, one not).
+
+Nothing is “broken.” It’s just Windows choosing the wrong Code when you double‑click. Below are clear options so you can keep using Explorer and still get a single WSL Code window every time.
+
+What I meant by “dragging”
+
+If you already have your WSL Code window open (bottom‑left shows WSL: Ubuntu):
+
+In Windows Explorer, click a file (e.g. \\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone\briefings\...md).
+
+Click‑and‑hold the file, drag it onto the existing VS Code window, and release.
+
+That file opens in the same WSL Code window—no second Code instance.
+
+That’s a quick, no‑settings way to use Explorer but keep one WSL window.
+
+Three simple ways to use Explorer without spawning a non‑WSL Code
+A) “Send to → Open in Code (WSL)” (fast, reliable)
+
+Create a tiny helper so any file/folder you right‑click goes to the WSL Code window.
+
+Open Notepad and paste:
+
+@echo off
+setlocal
+if "%~1"=="" exit /b
+rem Convert the Windows or \\wsl$ path to Linux path
+for /f "usebackq delims=" %%L in (`wsl wslpath "%~1"`) do set "LIN=%%L"
+rem Reuse the existing WSL Code window and open the file/folder
+wsl -d Ubuntu bash -lc "code -r \"%LIN%\""
+
+
+Save as
+%APPDATA%\Microsoft\Windows\SendTo\Open in Code (WSL).bat
+
+Use it: in Explorer, right‑click any file or folder → Send to → Open in Code (WSL).
+It reuses your current WSL Code window (or opens one if needed).
+
+B) Right‑click context menu: Open in VS Code (WSL) (one‑time add)
+
+Optional: add a permanent right‑click item for all files/folders.
+
+Make sure you created the SendTo script above.
+
+Create a file OpenInCodeWSL.reg with:
+
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\*\shell\Open in VS Code (WSL)]
+@="Open in VS Code (WSL)"
+
+[HKEY_CLASSES_ROOT\*\shell\Open in VS Code (WSL)\command]
+@="\"%APPDATA%\\Microsoft\\Windows\\SendTo\\Open in Code (WSL).bat\" \"%1\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\Open in VS Code (WSL)]
+@="Open in VS Code (WSL)"
+
+[HKEY_CLASSES_ROOT\Directory\shell\Open in VS Code (WSL)\command]
+@="\"%APPDATA%\\Microsoft\\Windows\\SendTo\\Open in Code (WSL).bat\" \"%1\""
+
+
+Double‑click the .reg to import. Now right‑click → Open in VS Code (WSL) is always there.
+
+C) Pin a taskbar shortcut that ALWAYS opens your repo in WSL Code
+
+Create a Windows shortcut with target:
+
+"C:\Users\User\AppData\Local\Programs\Microsoft VS Code\Code.exe" --folder-uri "vscode-remote://wsl+Ubuntu/home/ser/code/Alpha-Analytical-Tool-Clone"
+
+
+Name it AAT (WSL) and pin it. Using this icon guarantees a WSL Code window in the right folder.
+
+You can still double‑click files in Explorer—if that spawns a local Code by accident, press Ctrl+Shift+P → Reopen Folder in WSL to migrate that window.
+
+Can you still “interact” with files from Explorer?
+
+Yes. You can browse, create text files, rename, move, script—everything. The files live in the WSL filesystem under \\wsl$…, and GitHub Desktop is already watching that path (your screenshot shows the WSL path in Desktop). The only thing we’re controlling is which VS Code process opens when you want to edit—so you keep one WSL Code window with your Linux terminal, Python, extensions, etc.
+
+Even if you accidentally edit a file with the non‑WSL Code, the file still changes in the same repo, and GitHub Desktop will see it. It’s just not the environment you want for Python/Streamlit/WSL tooling.
+
+Quick, repeatable day‑start (no guessing)
+
+Windows PowerShell (clean slate):
+
+taskkill /F /IM Code.exe 2>$null
+wsl --shutdown
+
+
+Windows Terminal → Ubuntu (WSL):
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+code -r .         # opens VS Code (WSL) in this folder
+
+
+Optional: click GitHub Desktop icon (it’s already pointed to \\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone).
+Optional: start Codex CLI in a separate Ubuntu tab with codex.
+
+From there: use any of the Explorer options above (Send‑to, context menu, drag), and you’ll stay in the same WSL Code window.
+
+Small clean‑ups to your CODEX_READ_FIRST_AAT9_WSL.md
+
+Use ExecutionPolicy bypass so preflight never stops on signature:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w .)\.codex\preflight.ps1" -State "Connecticut4"
+
+
+Add this rescue line near the top:
+
+If a non‑WSL Code window opens: Ctrl+Shift+P → “Reopen Folder in WSL”.
+
+Everything else in your doc looks good.
+
+Bottom line
+
+You can keep using Explorer exactly like before.
+
+The only new habit is: open/edit with the WSL Code window (use Send‑to, context menu, or the pinned shortcut), or drag files into the already‑open WSL window.
+
+If you ever end up in a local Code window, Reopen in WSL fixes it in 2 seconds.
+
+If you want, I can give you a 1‑click .bat that launches WSL Code + GitHub Desktop together, but the three options above already give you the same “just click and go” feel you had before
