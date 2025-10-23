@@ -1,0 +1,312 @@
+A) Where we left off (what I’m expecting from you)
+
+We paused right before handing me/Codex any real artifacts from the enhanced V‑TRAC run.
+
+The plan already in the repo is:
+
+run the enhanced analyzer CLI to produce the analysis bundles,
+
+run the validator to compare Analyzer↔Winners, and
+
+hand off a tiny summary plus links/ZIP of the raw reports.
+The validator/CLI stack and their locations are documented in your Testing Roadmap and Changelog (validator, batch helper, precision@K, per‑section summaries, etc.). 
+
+AAT9_Testing_Roadmap
+
+ 
+
+AAT9_Unified_Changelog
+
+What I’m expecting to receive per batch (for V‑TRAC):
+
+data/outputs/analysis/vtrac_validation/summary.csv
+
+data/outputs/analysis/vtrac_validation/summary.md
+
+(optional but great) a single ZIP that includes validation_report.json|md per state, matrix.csv, findings.md, and the “picked” analyzer bundle JSONs referenced in the summary.
+
+Once I have those, I can review/score/prioritise changes in minutes and brief Codex exactly what to implement.
+
+B) Yes—our goal is a universal, repeatable analysis‑sharing loop
+
+We’ll use a single “Pro Share” loop for any tool (V‑TRAC, Digit Reduction, Stable, Aux, etc.):
+
+Generate artifacts (tool CLI).
+
+Validate (tool‑specific validator).
+
+Summarize → write tiny summary.{csv,md} to one place.
+
+Package → (a) commit/push just the summaries, or (b) emit one ZIP that includes the raw reports needed for deep dives.
+
+Hand‑off → drop the two raw URLs or the ZIP to ChatGPT Pro; I review and send a precise implementation brief to Codex.
+
+This aligns with how the V‑TRAC validator + batch metrics are already wired and protected by tests. 
+
+AAT9_Testing_Roadmap
+
+ 
+
+AAT9_Unified_Changelog
+
+C) Tool‑specific variations are fine
+
+The loop stays the same, but each tool can add its own fields to the summary (e.g., V‑TRAC overlap tokens; Digit‑Reduction overlay hits; Stable doubles evidence). We’ll keep one README for the loop, and small “plugins” per tool.
+
+D) What you need now (scripts + exact commands)
+
+Below is a self‑contained packer you can drop into your repo today. It implements the universal loop for V‑TRAC first and is easy to extend for other tools.
+
+Path: tools/make_pro_payload.py
+What it does:
+• Scans data/outputs/analysis/vtrac_validation/*/validation_report.json
+• Builds summary.csv + summary.md (overlap/hot/superhot/consensus/stable_cols per section)
+• Optionally assembles vtrac_pro_payload.zip with summaries + per‑state reports + root matrix.csv/findings.md + any “picked” analyzer JSON referenced by the validator.
+
+#!/usr/bin/env python3
+# tools/make_pro_payload.py
+# Universal "Pro Share" packer – V-TRAC implementation.
+from __future__ import annotations
+import json, csv, zipfile
+from pathlib import Path
+from datetime import datetime
+
+VTRAC_VAL_BASE = Path("data/outputs/analysis/vtrac_validation")
+ZIP_NAME = "vtrac_pro_payload.zip"
+
+SECTIONS = ("Combined", "Midday", "Evening")
+
+def _load_json(p: Path) -> dict:
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _overlap_tokens(sec: dict) -> list[str]:
+    if not isinstance(sec, dict): return []
+    winners_top = set((sec.get("signals", {}) or {}).get("top_vtrac_box_signatures", []) or [])
+    analyzer    = set(sec.get("analyzer_signatures", []) or [])
+    return sorted(winners_top & analyzer)
+
+def _hot(sec: dict) -> tuple[int, int]:
+    s = (sec.get("signals", {}) if isinstance(sec, dict) else {}) or {}
+    return int(s.get("hot", 0)), int(s.get("superhot", 0))
+
+def _consensus(sec: dict) -> tuple[bool, bool]:
+    s = (sec.get("signals", {}) if isinstance(sec, dict) else {}) or {}
+    return bool(s.get("consensus_col1", False)), bool(s.get("consensus_col2", False))
+
+def _stable_cols(sec: dict) -> list[str]:
+    s = (sec.get("signals", {}) if isinstance(sec, dict) else {}) or {}
+    cols = s.get("stable_columns", []) or []
+    return [str(c) for c in cols]
+
+def _summarize_state(state_dir: Path) -> dict:
+    rep = state_dir / "validation_report.json"
+    data = _load_json(rep)
+    state = data.get("state", state_dir.name)
+    out = {
+        "state": state,
+        # combined fields will be filled in loop below
+        "picked_html": data.get("picked_html", ""),
+        "analyzer_json": data.get("analyzer_json", ""),
+    }
+    sections = data.get("sections", {}) if isinstance(data, dict) else {}
+    for label in SECTIONS:
+        sec = sections.get(label, {}) or {}
+        key = label.lower()
+        toks = _overlap_tokens(sec)
+        hot, sh = _hot(sec)
+        c1, c2 = _consensus(sec)
+        stab = _stable_cols(sec)
+        out[f"{key}_overlap_count"]  = len(toks)
+        out[f"{key}_overlap_tokens"] = ",".join(toks) if toks else ""
+        out[f"{key}_hot"]            = hot
+        out[f"{key}_superhot"]       = sh
+        out[f"{key}_consensus_c1"]   = c1
+        out[f"{key}_consensus_c2"]   = c2
+        out[f"{key}_stable_cols"]    = ",".join(stab) if stab else ""
+    return out
+
+def build_summaries(base: Path) -> tuple[Path, Path, list[dict]]:
+    if not base.exists():
+        raise SystemExit(f"Missing folder: {base}")
+    rows = []
+    for p in sorted(base.iterdir()):
+        if p.is_dir() and (p / "validation_report.json").exists():
+            rows.append(_summarize_state(p))
+
+    # CSV
+    csv_path = base / "summary.csv"
+    fieldnames = ["state"]
+    for s in SECTIONS:
+        k = s.lower()
+        fieldnames += [
+            f"{k}_overlap_count", f"{k}_overlap_tokens",
+            f"{k}_hot", f"{k}_superhot",
+            f"{k}_consensus_c1", f"{k}_consensus_c2",
+            f"{k}_stable_cols"
+        ]
+    fieldnames += ["picked_html","analyzer_json"]
+
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=fieldnames)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+
+    # Markdown
+    md_path = base / "summary.md"
+    lines = [ "# V-TRAC Validator Summary",
+              f"_Generated: {datetime.utcnow().isoformat()}Z_",
+              "" ]
+    for r in rows:
+        lines.append(f"## {r['state']}")
+        for s in SECTIONS:
+            k = s.lower()
+            lines.append(
+              f"- **{s}** overlap: {r[f'{k}_overlap_count']} "
+              f"({r[f'{k}_overlap_tokens'] or '—'}); "
+              f"hot/superhot: {r[f'{k}_hot']}/{r[f'{k}_superhot']}; "
+              f"consensus c1/c2: {r[f'{k}_consensus_c1']}/{r[f'{k}_consensus_c2']}; "
+              f"stable cols: {r[f'{k}_stable_cols'] or '—'}")
+        lines.append(f"- Picked HTML: {r['picked_html'] or '—'}")
+        lines.append(f"- Analyzer JSON: {r['analyzer_json'] or '—'}")
+        lines.append("")
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    return csv_path, md_path, rows
+
+def build_zip(base: Path, rows: list[dict]) -> Path:
+    zip_path = base / ZIP_NAME
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        # always include summaries
+        for p in (base/"summary.csv", base/"summary.md"):
+            if p.exists(): z.write(p, p.relative_to(base.parent))
+        # include root matrix/findings if present
+        for name in ("matrix.csv","findings.md"):
+            rp = base / name
+            if rp.exists():
+                z.write(rp, rp.relative_to(base.parent))
+        # include per-state reports + referenced analyzer bundles when present
+        for state_dir in sorted(base.iterdir()):
+            if not state_dir.is_dir(): continue
+            vrj = state_dir / "validation_report.json"
+            vrm = state_dir / "validation_report.md"
+            for p in (vrj, vrm):
+                if p.exists(): z.write(p, p.relative_to(base.parent))
+        # attempt to include analyzer_json files referenced in summary
+        for r in rows:
+            aj = r.get("analyzer_json")
+            if aj:
+                p = Path(aj)
+                if not p.is_absolute():
+                    p = base.parent / p  # allow relative paths
+                if p.exists():
+                    z.write(p, p.relative_to(base.parent))
+    return zip_path
+
+def main():
+    VTRAC_VAL_BASE.mkdir(parents=True, exist_ok=True)
+    csv_path, md_path, rows = build_summaries(VTRAC_VAL_BASE)
+    zip_path = build_zip(VTRAC_VAL_BASE, rows)
+    print(f"Wrote {csv_path}")
+    print(f"Wrote {md_path}")
+    print(f"Wrote {zip_path}")
+
+if __name__ == "__main__":
+    main()
+
+“Codex task card” (drop in tasks/PRO_SHARE_VTRAC.txt)
+
+Paste this to Codex when you want a fresh hand‑off:
+
+# A) Generate summary + payload
+python tools/make_pro_payload.py
+
+# B) Quick sanity (first lines)
+head -n 40 data/outputs/analysis/vtrac_validation/summary.md
+head -n 5  data/outputs/analysis/vtrac_validation/summary.csv
+
+# C1) Share by pushing summaries (preferred)
+git add data/outputs/analysis/vtrac_validation/summary.*
+git commit -m "Pro Share: V-TRAC validator summaries"
+git push
+
+# C2) OR share by ZIP (single upload)
+ls -lh data/outputs/analysis/vtrac_validation/vtrac_pro_payload.zip
+
+What you send me each cycle
+
+Option A (cleanest): raw URLs to the two summaries:
+
+.../data/outputs/analysis/vtrac_validation/summary.csv
+
+.../data/outputs/analysis/vtrac_validation/summary.md
+
+Option B: upload vtrac_pro_payload.zip.
+
+“Universal” playbook to add to the repo (for all tools)
+
+Create docs/AAT9_KIT/AAT9_Pro_Share.md with this content:
+
+Pro Share Loop (all analyzers)
+
+Generate artifacts with the tool’s CLI.
+
+Run the tool’s validator(s).
+
+Run tools/make_pro_payload.py (or the tool’s packer) → writes summary.{csv,md} and a single ZIP under data/outputs/analysis/<tool>_validation/.
+
+Share either two raw URLs (preferred) or the single ZIP.
+
+Pro reviews → sends a precise implementation brief to Codex → Codex executes.
+
+Per‑tool plugins: V‑TRAC fields (overlap, hot/superhot, consensus, stable_cols), Digit‑Reduction (overlay hits, step provenance), Stable (family ranks/evidence).
+Tests guard the CLIs and validators; the packers are output‑only and safe to run anytime. 
+
+AAT9_Testing_Roadmap
+
+What to do right now (concrete)
+
+In WSL, commit tools/make_pro_payload.py and the task card:
+
+git add tools/make_pro_payload.py tasks/PRO_SHARE_VTRAC.txt
+git commit -m "Pro Share: universal packer for V-TRAC"
+
+
+Produce a fresh run (pick a small state set), then:
+
+python tools/make_pro_payload.py
+
+
+Share the two raw links or upload the ZIP.
+
+I’ll immediately:
+
+rank states by Combined overlap,
+
+flag “hot is high, overlap low” cases (possible false‑positives),
+
+call out Midday/Evening outperformers for weighting tweaks, and
+
+draft exact code changes for Codex (guarded by the tests already listed). 
+
+AAT9_Testing_Roadmap
+
+Final confirmations (your questions A–D)
+
+A) We left off waiting on your first enhanced V‑TRAC run hand‑off; I’m expecting summary.{csv,md} and (optionally) the ZIP.
+
+B) Yes, we are standardizing a universal loop (generate → validate → summarize → package → share).
+
+C) Absolutely—we keep the loop identical, and add tool‑specific fields via small plugins or targeted packers.
+
+D) You now have a ready‑to‑run packer, a Codex task card, and the repo docs that define the CLI/validator stack and tests guarding it. 
+
+AAT9_Testing_Roadmap
+
+ 
+
+AAT9_Unified_Changelog
+
+If you want, I’ll also stub tools/make_pro_payload.py plugins for Digit‑Reduction and Stable so this becomes truly one‑command for all analyzers. For now, run the V‑TRAC path above and send me the two links (or the ZIP) and we’ll move immediately to the analysis/optimization step.

@@ -1,0 +1,33 @@
+# Pro Share – V-TRAC Payload Loop (Codex Task Card)
+
+This card summarizes the exact commands Codex should run after each enhanced V-TRAC sweep so we can hand the results to ChatGPT Pro quickly.
+
+## Commands
+
+```bash
+# 1) Build lightweight summaries and payload
+python TOOLS/make_pro_payload.py
+
+# 2) Quick sanity check (optional but recommended)
+head -n 40 data/outputs/analysis/vtrac_validation/summary.md
+head -n 5  data/outputs/analysis/vtrac_validation/summary.csv
+
+# 3a) Preferred sharing path – push summaries
+git add data/outputs/analysis/vtrac_validation/summary.*
+git commit -m "Pro Share: V-TRAC validator summaries"
+git push
+
+# 3b) Alternate – upload single ZIP
+ls -lh data/outputs/analysis/vtrac_validation/vtrac_pro_payload.zip
+```
+
+## What to hand to ChatGPT Pro
+
+- Option A (preferred): two raw URLs to `summary.csv` and `summary.md` on the target branch.
+- Option B: upload `vtrac_pro_payload.zip` which already includes the summaries, per-state validation reports, matrix/findings, and referenced analyzer bundles.
+
+## Notes
+
+- Run this packer only after the enhanced analyzer CLI and validator have produced fresh outputs under `data/outputs/analysis/vtrac_validation/`.
+- The summaries call out sections with hot/super-hot/consensus signals but zero overlap so Pro can triage quickly.
+- If multiple analyzer JSONs are present (A/B runs), the packer defaults to the `primary` label or the first entry alphabetically.

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -46,8 +47,8 @@ def _run_validator(
     label_b: str,
 ) -> Path:
     cmd: list[str] = [
-        "python",
-        "tools/vtrac_validate.py",
+        sys.executable,
+        "TOOLS/vtrac_validate.py",
         "--state",
         state,
     ]
