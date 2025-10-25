@@ -181,3 +181,168 @@ git commit -m "Add V-TRAC validator summaries and sharing helper"
 (I will push this commit in GitHub Desktop and give Pro the raw URLs.)
 
 Once you paste those two raw links here, I’ll proceed with the full analysis pass and return the concrete engineering deltas for Codex.
+Great—thanks for pushing this forward. I read the summary.md you attached and I can already see the “shape” of the run (strong overlaps for NJ4/CT4/VA Midday; zero-overlap flags for SC4-Combined, NC4-Midday, NJ4-Evening). 
+
+summary
+
+
+Below I’ll (1) explain exactly what went wrong with the frozen push so you can paste it to Codex, (2) confirm what I can/can’t analyze from what I have, and (3) give you the most hands-off, repeatable way to get me the full artifacts—with Codex doing everything except the final push.
+
+1) What went wrong (use this explanation for Codex)
+
+Symptoms you saw
+
+CMD.EXE was started with the above path as the current directory… UNC paths are not supported… (you were launching from a Windows UNC path like \\wsl$\Ubuntu\... rather than inside WSL)
+
+git push hung indefinitely.
+
+Root causes
+
+GitHub auth not configured in WSL — WSL Git didn’t have a cached Personal Access Token (PAT), so when Codex ran git push it waited for an invisible credential prompt.
+
+UNC working directory — the session started from \\wsl$\…; some Windows shells behave badly with stdin prompts in that mode.
+
+How Codex must run pushes
+
+Always cd ~/code/Alpha-Analytical-Tool-Clone inside WSL before any git commands.
+
+Ensure these once and reuse forever:
+
+git config --global user.name "shonawensley"
+git config --global user.email "shonawensley@gmail.com"
+git config --global credential.helper store
+git remote set-url origin https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git
+
+
+First push (one-time): Git will ask for username and PAT (not your password). After that, the token is cached in ~/.git-credentials, and pushes won’t hang.
+
+Safe pattern for Codex
+
+“Prepare commits but do not push. Print git status -sb and the exact git push command for me. I’ll push via GitHub Desktop if needed.”
+
+That avoids another stall while we finish the auth once.
+
+2) What I can/can’t analyze right now
+
+From summary.md + summary.csv I can already:
+
+Rank states/sections by overlap.
+
+Call out anomalies (e.g., SC4 Combined, NC4 Midday, NJ4 Evening zero-overlap despite strong signals).
+
+Suggest first-order tuning (e.g., section weighting, consensus gates).
+
+What I still need for deeper validation
+
+Per-state validator bundles (or a link to them):
+data/outputs/analysis/vtrac_validation/<STATE>/validation_report.json + validation_report.md
+
+Pointers to the analyzer JSONs used:
+data/outputs/analysis/vtrac/<STATE>/<STATE>_vtrac_enhanced_yyyymmdd_hhmmss.json
+
+(Optional) the Winners-Logger HTML used by the validator, so I can re-trace any mismatch the same way the validator did.
+
+You already showed that structure for OntarioCanada4 (good!). If you let me fetch these per-state files (via links) I’ll run the deep parity/diagnostics and produce the code-level action list.
+
+3) Easiest, hands-off sharing (Codex does everything; you only push)
+Option B (recommended) — “links”
+
+What Codex does (no pushes):
+
+From repo root, stage the summaries + helper:
+
+git add data/outputs/analysis/vtrac_validation/summary.md \
+        data/outputs/analysis/vtrac_validation/summary.csv \
+        TOOLS/make_pro_payload.py \
+        TOOLS/vtrac_validate_batch.py
+git commit -m "Add V-TRAC validator summaries and sharing helper"
+git status -sb
+echo "READY_FOR_DESKTOP_PUSH"
+
+
+Print the raw-link templates for you to copy after the push:
+
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.md
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.csv
+
+
+What you do: in GitHub Desktop press Push origin (one click). Then paste me those two raw URLs.
+(If branch ≠ main, swap the branch part in the URLs.)
+
+Option A — “single file”
+
+Codex builds vtrac_pro_payload.zip (summaries + light indices) and you upload the ZIP here.
+Note: Zip uploads work in chat, but in my tool-sandbox they don’t always mount as browsable folders. Links are more reliable for multi-file analysis.
+
+4) One-shot “Codex Task Card” you can paste now
+
+Run this from the repo root. Do not push; just stage, commit, and print status and raw-link stubs.
+
+# 0) Safety: ensure in repo root
+pwd
+git rev-parse --is-inside-work-tree
+
+# 1) Build the latest summaries if needed (Codex already has this)
+python TOOLS/make_pro_payload.py  # or: python tools/vtrac_pack_for_analysis.py
+
+# 2) Stage + commit summaries (no push)
+git add data/outputs/analysis/vtrac_validation/summary.md \
+        data/outputs/analysis/vtrac_validation/summary.csv
+git commit -m "Add V-TRAC validator summaries (shareable)"
+
+# 3) Show me what will be pushed
+git status -sb
+git remote -v
+
+# 4) Print the two raw-link templates I will use after Desktop push
+echo "RAW_MD:  https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.md"
+echo "RAW_CSV: https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.csv"
+
+echo "READY_FOR_DESKTOP_PUSH"
+
+
+If you ever want Codex to push on its own, add after we fix the PAT:
+
+git push --verbose
+
+
+…but let’s keep Desktop doing the push until PAT is confirmed.
+
+5) What I’ll do once I get the links
+
+Cross-state diagnosis: rank by overlap; find “signal-present but zero-overlap” sections; examine stable-column depth & consensus gates; correlate hot/super-hot to overlaps.
+
+Section weighting sketch: e.g., boost Midday where it consistently dominates Combined; dampen Combined where stable columns collapse.
+
+Action list for Codex (concrete edits):
+
+rules/threshold tweaks (consensus + stable-col gates),
+
+small validator reporting additions (e.g., carry more per-cell evidence to the JSON),
+
+optional legacy vs enhanced A/B driver so you can flip the feature flag with confidence.
+
+6) If you prefer pushing yourself right now
+
+From WSL (after you’ve fixed PAT once), run:
+
+git add data/outputs/analysis/vtrac_validation/summary.md \
+        data/outputs/analysis/vtrac_validation/summary.csv \
+        TOOLS/make_pro_payload.py
+git commit -m "Add V-TRAC validator summaries and sharing helper"
+git push
+
+
+Then give me the two raw URLs shown above. I’ll take it from there.
+
+Quick recap
+
+The freeze = no PAT + UNC working dir.
+
+We fixed the pattern; Codex should prepare commits, not push.
+
+Links are the most reliable way for me to read many files quickly.
+
+I’ve already consumed the summaries and I’m ready to run the deeper analysis the moment I can fetch the per-state artifacts by link.
+
+When you’ve got the two URLs (or we confirm PAT and a successful push), drop them here and I’ll begin the full review.
