@@ -346,3 +346,135 @@ Links are the most reliable way for me to read many files quickly.
 I’ve already consumed the summaries and I’m ready to run the deeper analysis the moment I can fetch the per-state artifacts by link.
 
 When you’ve got the two URLs (or we confirm PAT and a successful push), drop them here and I’ll begin the full review.
+
+
+
+
+____________
+__________
+
+
+
+
+
+
+
+
+
+EXPLAIN BETTER THE LINKS STUFF, DO I GET THESE LINKS CREATED AFTER EACH TIME A PUSH IS DONE LIEK THESE ARE NEW LINK STHAT GET GENERATED SOMEWHERE? AND I HAVE TO GO FIND THEM? OR ARE THEY JUST LINKS TO MY REPO THAT ARE UNVIERSALLY STAY THE SAME? TRYING TO UNDERSTAND HOW THIS ACTUALLY WORKS I TELL CODEX TO DO SOMETHIG GET TI ALL READY AND THEN I GO AND PUSH AND WHERE DO I GET MY LINKS FROM?
+
+
+
+
+
+
+
+Great question — this trips a lot of people up the first time.
+
+How GitHub “raw” links work (in plain English)
+
+They are not “generated” per push.
+A raw link is just a deterministic URL to a file in your repo:
+
+https://raw.githubusercontent.com/<user>/<repo>/<branch-or-commit>/<path/to/file>
+
+
+If the file path and branch stay the same, the link stays the same forever. When you push new commits, that same link now serves the latest bytes on that branch.
+
+Two flavors of raw links
+
+Branch tip (moves):
+Uses the branch name (e.g., main). The URL always serves the latest version you’ve pushed to that branch.
+
+https://raw.githubusercontent.com/<user>/<repo>/main/<path>
+
+
+Permalink to a specific commit (never moves):
+Replace the branch with a commit SHA. That link never changes or updates.
+
+https://raw.githubusercontent.com/<user>/<repo>/<COMMIT_SHA>/<path>
+
+
+Private vs public:
+Raw links are only fetchable by ChatGPT Pro if the repo (or the specific file) is public. If the repo is private, Pro can’t authenticate to fetch them.
+
+Your exact links (current setup)
+
+From your screenshots, your remote is:
+
+origin  https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git
+branch  main
+
+
+So your stable branch-tip links are:
+
+summary.md
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.md
+
+summary.csv
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/summary.csv
+
+After you push, you can paste those two URLs to Pro. If you push new summaries later, you can paste the same two URLs again — they’ll now serve the updated content.
+
+If you ever need a permalink for a specific run, replace main with the commit SHA:
+
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/<SHA>/data/outputs/analysis/vtrac_validation/summary.md
+
+Where to “get” the links each time
+
+You don’t have to “find” them. You can either:
+
+A) Let a tiny command print them for you (repeatable):
+
+# run at repo root in WSL
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REMOTE=$(git remote get-url origin)
+USER_REPO=$(printf "%s\n" "$REMOTE" | sed -E 's#^.*github.com[:/](.+)\.git$#\1#')
+
+echo "Raw links:"
+echo "https://raw.githubusercontent.com/$USER_REPO/$BRANCH/data/outputs/analysis/vtrac_validation/summary.md"
+echo "https://raw.githubusercontent.com/$USER_REPO/$BRANCH/data/outputs/analysis/vtrac_validation/summary.csv"
+
+
+B) Copy from the GitHub UI:
+
+Open the repo in the browser → click the file (e.g., summary.md).
+
+Click Raw → copy the address bar.
+
+If you want a commit‑pinned link, press Y on the file page first (GitHub changes the URL to a commit permalink), then click Raw and copy.
+
+What happens after each push?
+
+Links don’t change.
+If you keep using …/main/…, the same URL will serve the new content you just pushed.
+
+Small CDN delay is possible (a few seconds).
+If you ever see an old version, wait ~10–30 seconds or add a trivial cache-buster like ?t=1699999999 to the URL.
+
+Quick “push + share” routine (hands‑off)
+
+Codex: build + stage + commit (no push) and print the two links (use the snippet above).
+
+You: click Push in VS Code (WSL) or GitHub Desktop.
+
+Paste the two links to Pro. Done.
+
+If you ever push to a feature branch instead of main, just change the /<branch>/ segment in the URLs to that branch name.
+
+Bonus: per‑state files
+
+If you want Pro to inspect a specific state deeply, push its JSON and share the analogous raw link:
+
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/data/outputs/analysis/vtrac_validation/OntarioCanada4/validation_report.json
+
+TL;DR
+
+Raw links are stable patterns, not something “generated.”
+
+Use https://raw.githubusercontent.com/<user>/<repo>/<branch>/<path>; they keep working after each push.
+
+The branch‑based link updates to your latest content automatically; a commit‑based link never changes.
+
+Have Codex print the links; you just push, paste, done.
+
