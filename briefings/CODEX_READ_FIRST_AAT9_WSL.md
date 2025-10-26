@@ -15,6 +15,7 @@ All development happens in **WSL**. The only Windows touchpoint is **GitHub Desk
 ```bash
 cd ~/code/Alpha-Analytical-Tool-Clone
 git status -s && git branch -vv && git remote -v && pwd
+```
 1) Reading order (AAT9 KIT first)
 
 docs/AAT9_KIT/AAT9_KIT_README.md
@@ -50,18 +51,24 @@ Always treat the repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone
 
 To call a Windows PowerShell script from WSL (only when necessary):
 
+```bash
 powershell.exe -NoProfile -File "$(wslpath -w .)\path\to\script.ps1"
+```
 
 
 If pushing from Windows, use GitHub Desktop on:
 
+```bash
 \\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
+```
 
 3) Preflight (run when requested)
 
 From WSL:
 
+```bash
 powershell.exe -NoProfile -File "$(wslpath -w .)\.codex\preflight.ps1" -State "Connecticut4"
+```
 
 
 Fix a single root cause at a time (cwd/import/data), then re‑run.
@@ -75,9 +82,11 @@ Implement: follow utils.path_handler; respect the data‑contract rules.
 
 Verify: compile + optional smoke boot
 
+```bash
 python3 -m py_compile $(git ls-files '*.py') || true
 # optional: 120s headless boot
 # STREAMLIT_BROWSER=none streamlit run src/app.py & sleep 120; pkill -f streamlit
+```
 
 
 Document: always append to
@@ -92,9 +101,11 @@ Edit in WSL; commit/push in GitHub Desktop (same WSL path).
 
 Local checkpoint (only if asked; no editor popup):
 
+```bash
 git add -A
 git commit -m "checkpoint: WSL startup doc finalized"
 # prefer pushing in GitHub Desktop
+```
 
 
 Never edit Git remotes/config. Never write outside the repo.
@@ -128,12 +139,14 @@ Write outside the repository tree
 VS Code shows old changes but Desktop is clean? VS Code Git noise—Desktop is the source of truth.
 Push/commit feels “stuck”? Clear stale flows/locks then return to Desktop:
 
+```bash
 [ -f .git/index.lock ] && rm -f .git/index.lock
 git rebase --abort 2>/dev/null || true
 git merge  --abort 2>/dev/null || true
 git am     --abort 2>/dev/null || true
 git cherry-pick --abort 2>/dev/null || true
 git status -sb
+```
 
 8) Finish signal
 
