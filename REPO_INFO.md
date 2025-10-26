@@ -17,4 +17,3 @@
 - Preflight: powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
 
 Daily: Commit → Push origin → verify the latest commit appears at the top of the file list on GitHub.
-
