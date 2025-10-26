@@ -1,32 +1,22 @@
-# CODEX READ FIRST — AAT9 (WSL/Ubuntu Optimized)
+# CODEX READ THIS — AAT9 (WSL / Ubuntu Canonical)
 
-cd ~/code/Alpha-Analytical-Tool-Clone
-mkdir -p briefings
-
-cat > briefings/CODEX_READ_FIRST_AAT9_WSL.md <<'WSL_DOC'
-# CODEX READ FIRST — AAT9 (WSL/Ubuntu Optimized)
-
-**This WSL document *supersedes* the older `CODEX_READ_FIRST_AAT9.md` (Windows).**  
+**This document supersedes any Windows‑first startup docs.**  
 All development happens in **WSL**. The only Windows touchpoint is **GitHub Desktop** pushing from the WSL path.
 
 ---
 
-## 0) Operating assumptions (WSL/Ubuntu)
+## 0) Canonical paths & repo sanity
 
-- You are in **WSL2 Ubuntu** (prompt like `ser@…:~$`).
-- **Canonical repo root (CWD):** `/home/ser/code/Alpha-Analytical-Tool-Clone`
-- **Do not** work under `/mnt/c/...` (slow I/O; path quirks).
-- If you must call a Windows script, do it from WSL via `powershell.exe` using `wslpath`.
+- **Repo root (CWD, canonical):** `/home/ser/code/Alpha-Analytical-Tool-Clone`
+- **GitHub Desktop path (Windows view of the same tree):** `\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone`
+- **Remote (origin):** `https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git`
 
----
-
-## 1) Session setup
-
-**Force CWD & print sanity:**
+**Print‑only sanity (no writes):**
 ```bash
 cd ~/code/Alpha-Analytical-Tool-Clone
 git status -s && git branch -vv && git remote -v && pwd
-2) Reading order (AAT9 KIT first)
+1) Reading order (AAT9 KIT first)
+
 docs/AAT9_KIT/AAT9_KIT_README.md
 
 docs/AAT9_KIT/AAT9_Workflow_Standard.md
@@ -45,168 +35,108 @@ docs/AAT9_KIT/AAT9_Unified_Changelog.md
 
 AGENTS.md, .codex/AGENTS.universal.md
 
-3) WSL alignment
-Treat repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone
+Data contracts recap (enforced in code & docs):
 
-If pushing from Windows, use GitHub Desktop pointed at:
+Aux / Blackapple → data/cleaned/*_draws.csv (draws‑only).
 
-arduino
-Copy code
-\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
-Call a Windows PowerShell script from WSL like this:
+V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
+(e.g., data/outputs/tables/<STATE>/ or tables/<STATE>/).
 
-bash
-Copy code
+“Combined” is baseline; “Midday/Evening” are additive variants surfaced alongside.
+
+2) WSL alignment & PowerShell bridging
+
+Always treat the repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone
+
+To call a Windows PowerShell script from WSL (only when necessary):
+
 powershell.exe -NoProfile -File "$(wslpath -w .)\path\to\script.ps1"
-4) Preflight (run when requested)
+
+
+If pushing from Windows, use GitHub Desktop on:
+
+\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
+
+3) Preflight (run when requested)
+
 From WSL:
 
-bash
-Copy code
 powershell.exe -NoProfile -File "$(wslpath -w .)\.codex\preflight.ps1" -State "Connecticut4"
-Fix one root cause at a time (cwd/import/data); re-run until clean.
-When preflight is clean and the plan is printed, reply READY (WSL).
 
-5) Plan → Implement → Verify → Document
-Plan: list files to edit and keep diffs minimal.
 
-Implement: use utils.path_handler and respect data contracts
-(e.g., Aux/Blackapple → data/cleaned/*_draws.csv ordered newest‑first).
+Fix a single root cause at a time (cwd/import/data), then re‑run.
+When preflight is clean and the Plan is printed, reply READY (WSL).
 
-Verify (compile & optional short headless boot):
+4) Plan → Implement → Verify → Document (the loop)
 
-bash
-Copy code
+Plan (short, explicit): files to touch and why; keep diffs minimal.
+
+Implement: follow utils.path_handler; respect the data‑contract rules.
+
+Verify: compile + optional smoke boot
+
 python3 -m py_compile $(git ls-files '*.py') || true
-# optional: 120-second headless boot
+# optional: 120s headless boot
 # STREAMLIT_BROWSER=none streamlit run src/app.py & sleep 120; pkill -f streamlit
-Document: append changes to
-docs/AAT9_KIT/AAT9_Unified_Changelog.md and any affected docs.
 
-6) Linux app launch (manual)
-bash
-Copy code
-STREAMLIT_BROWSER=none python3 -m py_compile $(git ls-files '*.py') || true
-streamlit run src/app.py
-7) Git workflow (WSL + GitHub Desktop only)
-Editing: do everything in WSL.
 
-Committing / Pushing: use GitHub Desktop bound to:
+Document: always append to
 
-arduino
-Copy code
-\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
-If a CLI checkpoint is required (local only):
+docs/AAT9_KIT/AAT9_Unified_Changelog.md (one line, concise)
 
-bash
-Copy code
+and any affected KIT docs.
+
+5) Git workflow (Desktop only)
+
+Edit in WSL; commit/push in GitHub Desktop (same WSL path).
+
+Local checkpoint (only if asked; no editor popup):
+
 git add -A
-git commit -m "checkpoint: <short reason>"
-# prefer pushing via GitHub Desktop
-8) Tool hygiene (WSL)
-Use Linux tools (python3, pip3, node, npm, git).
-Check versions:
+git commit -m "checkpoint: WSL startup doc finalized"
+# prefer pushing in GitHub Desktop
 
-bash
-Copy code
-python3 --version && pip3 --version && node -v && npm -v
-Avoid /mnt/c/.... Convert paths when calling Windows scripts:
 
-bash
-Copy code
-powershell.exe -NoProfile -File "$(wslpath -w .)\path\to\script.ps1"
-9) Finish signal
-When preflight is clean and the plan is printed, reply:
+Never edit Git remotes/config. Never write outside the repo.
 
-scss
-Copy code
-READY (WSL)
-WSL_DOC
+6) Guardrails (for Codex)
 
-yaml
-Copy code
+Allowed without asking:
 
-> This exactly fixes the open code fence, removes the “Copy code” stubs, states WSL is canonical, and keeps the Windows mention only for Desktop + optional PowerShell bridging.
+Read/list anywhere inside the repo
 
----
+Edit under docs/**, .codex/** (docs, logs, images)
 
-## 3) Codex CLI + VS Code quick launches (WSL)
+python3 -m py_compile, the preflight command above
 
-- **Start Codex CLI** in the project:
-```bash
-cd ~/code/Alpha-Analytical-Tool-Clone
-codex
-Open VS Code attached to the same WSL repo (editor only, no Git):
+Ask first:
 
-bash
-Copy code
-cd ~/code/Alpha-Analytical-Tool-Clone
-code .
-4) Daily runbook (simple & optimal)
-Open WSL terminal → go to repo:
+Edits under src/**, modules/**, utils/**, alpha_analytical/**
 
-bash
-Copy code
-cd ~/code/Alpha-Analytical-Tool-Clone
-(Optional) Sanity print:
+Any Streamlit run beyond the optional 120s smoke boot
 
-bash
-Copy code
-git status -sb && git branch -vv && git remote -v && pwd
-Work in VS Code (code .) or your editor of choice.
+Any Git operation beyond read‑only status printouts
 
-Commit/Push in GitHub Desktop only
-Desktop repo path must be:
+Never:
 
-arduino
-Copy code
-\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
-If you need preflight:
+Change origin or any remotes
 
-bash
-Copy code
-powershell.exe -NoProfile -File "$(wslpath -w .)\.codex\preflight.ps1" -State "Connecticut4"
-5) If you ever see a Git lock/race (because VS Code and Desktop touched Git together)
-Run this once in WSL then go back to Desktop:
+Write outside the repository tree
 
-bash
-Copy code
-cd ~/code/Alpha-Analytical-Tool-Clone
+7) Troubleshooting quickies
+
+VS Code shows old changes but Desktop is clean? VS Code Git noise—Desktop is the source of truth.
+Push/commit feels “stuck”? Clear stale flows/locks then return to Desktop:
+
 [ -f .git/index.lock ] && rm -f .git/index.lock
 git rebase --abort 2>/dev/null || true
 git merge  --abort 2>/dev/null || true
 git am     --abort 2>/dev/null || true
 git cherry-pick --abort 2>/dev/null || true
 git status -sb
-Then Push from Desktop.
 
-6) Full clean restart (when in doubt)
-Windows PowerShell:
+8) Finish signal
 
-powershell
-Copy code
-taskkill /IM Code.exe /F
-taskkill /IM GitHubDesktop.exe /F
-wsl --shutdown
-Reopen cleanly:
+When the Plan is printed and Preflight is clean, reply:
 
-powershell
-Copy code
-wsl
-cd ~/code/Alpha-Analytical-Tool-Clone
-code .
-Then open GitHub Desktop and select the same WSL path.
-
-✅ Sanity Check (do these two now)
-In GitHub Desktop, repo path shows
-\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone, and Push origin is enabled only when you’ve made a commit.
-
-In WSL, run:
-
-bash
-Copy code
-cd ~/code/Alpha-Analytical-Tool-Clone
-git status -sb && git log --oneline -n 1
-You should see a clean tree and your latest Desktop commit on top.
-
-If anything still feels off, paste the exact terminal output (or the one‑line error) and I’ll give you the next command immediately.
+READY (WSL)
