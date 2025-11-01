@@ -1,0 +1,736 @@
+
+
+What I’m not asking you to do
+
+❌ No schema change. We keep your existing Enhanced Analyzer + Validator JSON exactly as‑is.
+
+❌ No re‑extraction or new documents. We will not regenerate the pipeline or rename fields.
+
+❌ No “C1/C2” jargon. I will use the actual field names in your JSON (e.g., consensus_col1, consensus_col2, stable_columns, top_vtrac_box_signatures, etc.).
+
+What we will do now (direct and actionable)
+
+Add a thin scoring & export layer on top of your current validator outputs. It:
+
+Computes an explicit per‑section confidence score using only fields you already emit.
+
+Applies the consensus “rescue” logic (strictly capped).
+
+Promotes token families that repeat across sections/states (ledger‑based).
+
+Produces a compact CSV + JSON per state × section with:
+
+overlap, stable_cols, consensus_col1/2, cross_section_echo, hot_count, superhot_count, mask_drop, mirror_supported, double_hits,
+
+confidence_score, tier, flags,
+
+top_tokens[], recommended_tokens[] (after boosts), top_straights[].
+
+This gives you the exact compact file you asked for (easy to post, easy to diff), without touching the analyzer.
+
+Field mapping (no ambiguity)
+
+I will never refer to “C1/C2” again. Here is the mapping I use from your JSON:
+
+Overlap
+overlap = | set(sections[S].signals.top_vtrac_box_signatures) ∩ set(sections[S].analyzer_signatures.primary) |
+
+Stability
+stable_columns = sections[S].signals.stable_columns (strings “7..1” → ints).
+Rightmost columns are weighted heavier: {7:0.5, 6:0.7, 5:0.9, 4:1.1, 3:1.6, 2:2.0, 1:2.4}.
+
+Consensus
+Use your actual booleans: consensus_col1, consensus_col2.
+
+Token lists (per section)
+
+Winners‑side tokens: signals.top_vtrac_box_signatures
+
+Analyzer‑side tokens: analyzer_signatures.primary
+
+Cross‑section echo: count of section tokens that also appear in other sections of the same state.
+
+Hot / Superhot
+Prefer section_summaries[section].hot_count and .superhot_count if available; otherwise fall back gently.
+Gate check: treat “present” if hot_count ≥ 8 and superhot_count ≥ 12.
+
+Mask / Mirror / Doubles
+From sections[section].analyzer_metrics.primary:
+
+mask_drop_count
+
+mirror_supported (bool or >0 ⇒ true)
+
+double_hits (or doubles_hit_count if that’s your field—code handles both)
+
+Section prior
+Keep your telemetry: Combined × 1.15, Midday/Evening × 1.00.
+
+Scoring rules (precise)
+
+Base score (per section):
+
+score = w_overlap   * overlap
+      + w_stable    * stable_weighted_sum(stable_columns)
+      + w_consensus * (consensus_col1 + consensus_col2)   # capped if no stability
+      + w_tokenEcho * cross_section_echo
+      + w_hot       * hot_norm
+      + w_super     * superhot_norm
+      + w_mask      * mask_drop_norm
+      + w_mirror    * mirror_norm
+      + w_doubles   * doubles_norm
+
+score *= (1.15 if section == "Combined" else 1.00)
+
+
+Consensus Rescue (strict):
+If overlap == 0 and consensus_col1 or consensus_col2 and len(stable_columns) ≥ 1 ⇒ multiply the base score by 0.35 and flag weak_positive_rescue. (This keeps “signal‑present” cases visible but never dominant.)
+
+Tiers (for quick reading):
+
+overlap ≥ 4 → Tier A
+
+overlap = 3 → Tier B+
+
+overlap = 2 → Tier B
+
+overlap = 1 → Tier C
+
+overlap = 0 → Tier Z (only surfaced via rescue rule)
+
+Token family promotion (ledger):
+
+Build a ledger across all input JSONs: for every token (e.g., V4x2_5x2) track the set of states seen and the number of sections it appears in per state.
+
+Apply a small bump when:
+
+token appears in ≥ 3 states, or
+
+token appears in ≥ 2 sections within the same state run.
+
+Use this only to order the recommended_tokens[] list (doesn’t swamp the section score).
+
+Straights blending (never primary):
+Use available top_straights in each section purely as a tie‑breaker and for display; don’t demote a section just because “straight overlap = 0” in a narrow validation window.
+
+Drop‑in script (ready for Codex / your repo)
+
+Save as vtrac_score_and_export.py and run it against any folder of your enhanced JSONs.
+It writes vtrac_compact_report.csv and vtrac_compact_report.json to the same folder.
+
+#!/usr/bin/env python3
+"""
+V-TRAC Enhanced Validator → Compact Scorer/Exporter
+- Reads *your existing* enhanced JSONs (no schema change)
+- Computes per-section confidence scores with strict consensus rescue
+- Builds a token-family ledger to lightly promote recurring families
+- Exports a compact CSV + JSON per state×section
+
+USAGE:
+  python vtrac_score_and_export.py /path/to/folder/with_jsons
+
+Outputs:
+  /path/to/folder/vtrac_compact_report.csv
+  /path/to/folder/vtrac_compact_report.json
+"""
+import sys, os, glob, json, re
+from collections import defaultdict, Counter
+
+WEIGHTS = {
+    "overlap": 3.0,
+    "stable": 1.6,
+    "consensus": 1.0,
+    "token_echo": 1.2,
+    "hot": 0.25,
+    "super": 0.35,
+    "mask": 0.8,
+    "mirror": 0.5,
+    "doubles": 0.3,
+    "combined_prior": 1.15,
+    "rescue_multiplier": 0.35,
+}
+
+COL_W = {7:0.5, 6:0.7, 5:0.9, 4:1.1, 3:1.6, 2:2.0, 1:2.4}
+
+def as_int_list(cols):
+    out = []
+    for c in cols or []:
+        try: out.append(int(str(c).strip()))
+        except: pass
+    return out
+
+def norm01(value, lo, hi):
+    if hi <= lo: return 0.0
+    x = (value - lo) / float(hi - lo)
+    return max(0.0, min(1.0, x))
+
+def parse_date_from_name(name):
+    # ..._20251023_020648.json → 2025-10-23
+    m = re.search(r'_(20\d{2})(\d{2})(\d{2})_', name)
+    if not m: return ""
+    y, mo, d = m.groups()
+    return f"{y}-{mo}-{d}"
+
+def load_jsons(root):
+    return sorted(glob.glob(os.path.join(root, "*_vtrac_enhanced_*.json")))
+
+def get_section_names(j):
+    # Be robust to keys; prefer canonical set
+    keys = list((j.get("sections") or {}).keys())
+    out = []
+    for k in ("Combined","Midday","Evening"):
+        if k in keys: out.append(k)
+    # append any others (if present)
+    for k in keys:
+        if k not in out: out.append(k)
+    return out
+
+def tokens_for_section(j, s):
+    sec = (j.get("sections") or {}).get(s, {})
+    sig = (sec.get("signals") or {})
+    anl = (sec.get("analyzer_signatures") or {})
+    winners_tokens = sig.get("top_vtrac_box_signatures") or []
+    analyzer_tokens = (anl.get("primary") or [])
+    return winners_tokens, analyzer_tokens
+
+def straight_list_for_section(j, s):
+    sec = (j.get("sections") or {}).get(s, {})
+    mets = (sec.get("analyzer_metrics") or {}).get("primary") or {}
+    # Supports either list of strings or list of dicts with score
+    ts = mets.get("top_straights") or []
+    if ts and isinstance(ts[0], dict):
+        ts = [d.get("straight") for d in sorted(ts, key=lambda d: d.get("score", 0), reverse=True)]
+    return ts[:3]
+
+def metrics_for_section(j, s):
+    sec = (j.get("sections") or {}).get(s, {})
+    sig = (sec.get("signals") or {})
+    mets = (sec.get("analyzer_metrics") or {}).get("primary") or {}
+    hot = sig.get("hot")
+    superhot = sig.get("superhot")
+    stable_cols = as_int_list(sig.get("stable_columns") or [])
+    c1 = bool(sig.get("consensus_col1"))
+    c2 = bool(sig.get("consensus_col2"))
+
+    mask_drop = mets.get("mask_drop_count")
+    mirror_supported = mets.get("mirror_supported")
+    if isinstance(mirror_supported, (int, float)):
+        mirror_supported = mirror_supported > 0
+
+    doubles = mets.get("double_hits")
+    if doubles is None: doubles = mets.get("doubles_hit_count", 0)
+
+    # Prefer section_summaries for counts if present
+    summ = (j.get("section_summaries") or {}).get(s, {})
+    hot_count = summ.get("hot_count")
+    superhot_count = summ.get("superhot_count")
+
+    return {
+        "hot": hot, "superhot": superhot,
+        "hot_count": hot_count, "superhot_count": superhot_count,
+        "stable_cols": stable_cols,
+        "consensus_col1": c1, "consensus_col2": c2,
+        "mask_drop": mask_drop if mask_drop is not None else 0,
+        "mirror": bool(mirror_supported),
+        "doubles": doubles if doubles is not None else 0,
+    }
+
+def stable_score(stable_cols):
+    return sum(COL_W.get(c, 0.0) for c in stable_cols)
+
+def section_prior(section_name):
+    return WEIGHTS["combined_prior"] if section_name == "Combined" else 1.0
+
+def compute_cross_section_echo(section_tokens_map):
+    # tokens_map: section -> set(tokens)
+    echo = {}
+    sections = list(section_tokens_map.keys())
+    for s in sections:
+        mine = section_tokens_map[s]
+        others = set().union(*[section_tokens_map[o] for o in sections if o != s]) if len(sections) > 1 else set()
+        echo[s] = len(mine & others)
+    return echo
+
+def tier_from_overlap(overlap):
+    if overlap >= 4: return "A"
+    if overlap == 3: return "B+"
+    if overlap == 2: return "B"
+    if overlap == 1: return "C"
+    return "Z"
+
+def build_global_token_ledger(all_docs):
+    # Count unique states and per-state section repetition
+    token_states = defaultdict(set)
+    token_sections_by_state = defaultdict(lambda: defaultdict(int))
+    for doc in all_docs:
+        state = doc["__state__"]
+        sections = doc["__sections__"]
+        for s, winners_tokens in sections["winners_tokens"].items():
+            for t in winners_tokens:
+                token_states[t].add(state)
+                token_sections_by_state[state][t] += 1
+    return token_states, token_sections_by_state
+
+def main(root):
+    paths = load_jsons(root)
+    if not paths:
+        print("No *_vtrac_enhanced_*.json files found.")
+        sys.exit(1)
+
+    # First pass: load and stage for ledger
+    staged = []
+    for p in paths:
+        with open(p, "r") as f:
+            j = json.load(f)
+        state = (j.get("state") or j.get("jurisdiction") or os.path.basename(p).split("_vtrac_enhanced_")[0])
+        date = parse_date_from_name(os.path.basename(p))
+        sect_names = get_section_names(j)
+
+        winners_tokens_by_s = {}
+        for s in sect_names:
+            wt, _ = tokens_for_section(j, s)
+            winners_tokens_by_s[s] = set(wt)
+
+        staged.append({
+            "__path__": p,
+            "__state__": state,
+            "__date__": date,
+            "__sect_names__": sect_names,
+            "__sections__": { "winners_tokens": winners_tokens_by_s },
+            "doc": j,
+        })
+
+    token_states, token_sections_by_state = build_global_token_ledger(staged)
+
+    rows = []
+    for item in staged:
+        p, j, state, date, sect_names = item["__path__"], item["doc"], item["__state__"], item["__date__"], item["__sect_names__"]
+
+        # For normalization within this state, gather metric ranges
+        raw_mask = []
+        raw_doubles = []
+        # prepare tokens per section for cross-section echo
+        tokens_map = {}
+
+        section_cache = {}
+        for s in sect_names:
+            wt, at = tokens_for_section(j, s)
+            tokens_map[s] = set(wt)
+            m = metrics_for_section(j, s)
+            section_cache[s] = {"wt": wt, "at": at, "m": m}
+            raw_mask.append(m["mask_drop"])
+            raw_doubles.append(m["doubles"])
+
+        mask_min, mask_max = (min(raw_mask), max(raw_mask)) if raw_mask else (0,0)
+        dbl_min,  dbl_max  = (min(raw_doubles), max(raw_doubles)) if raw_doubles else (0,0)
+        echo = compute_cross_section_echo(tokens_map)
+
+        for s in sect_names:
+            wt = section_cache[s]["wt"]
+            at = section_cache[s]["at"]
+            m  = section_cache[s]["m"]
+
+            overlap = len(set(wt) & set(at))
+            st_cols = m["stable_cols"]
+            st_score = stable_score(st_cols)
+            consensus_count = int(m["consensus_col1"]) + int(m["consensus_col2"])
+
+            # hot/superhot normalization
+            hot_count = m["hot_count"] if m["hot_count"] is not None else (m["hot"] if isinstance(m["hot"], (int,float)) else 0)
+            superhot_count = m["superhot_count"] if m["superhot_count"] is not None else (m["superhot"] if isinstance(m["superhot"], (int,float)) else 0)
+
+            # clamp to reasonable ranges for norming
+            hot_norm = min(1.0, (hot_count or 0) / 8.0)
+            super_norm = min(1.0, (superhot_count or 0) / 12.0)
+
+            mask_norm = norm01(m["mask_drop"], mask_min, mask_max)
+            mirror_norm = 1.0 if m["mirror"] else 0.0
+            doubles_norm = norm01(m["doubles"], dbl_min, dbl_max)
+
+            # Base score
+            score = (
+                WEIGHTS["overlap"]   * overlap
+              + WEIGHTS["stable"]    * st_score
+              + WEIGHTS["consensus"] * (consensus_count if st_cols else 0)  # cap if no stability
+              + WEIGHTS["token_echo"]* echo.get(s, 0)
+              + WEIGHTS["hot"]       * hot_norm
+              + WEIGHTS["super"]     * super_norm
+              + WEIGHTS["mask"]      * mask_norm
+              + WEIGHTS["mirror"]    * mirror_norm
+              + WEIGHTS["doubles"]   * doubles_norm
+            )
+            score *= section_prior(s)
+
+            flags = []
+            # Consensus Rescue
+            if overlap == 0 and consensus_count >= 1 and len(st_cols) >= 1:
+                score *= WEIGHTS["rescue_multiplier"]
+                flags.append("weak_positive_rescue")
+
+            # Tier (based on overlap)
+            tier = tier_from_overlap(overlap)
+            if overlap == 0: flags.append("zero_overlap")
+
+            # Token recommendations with family promotion
+            tok_scores = []
+            for t in wt:
+                base = 1.0
+                base += 0.5 if t in at else 0.0
+                # local echo (other sections in same state)
+                local_rep = token_sections_by_state[state].get(t, 0)
+                base += 0.2 * max(0, local_rep - 1)
+                # global: seen in ≥3 states
+                if len(token_states[t]) >= 3:
+                    base += 0.3
+                tok_scores.append((round(base,3), t))
+            tok_scores.sort(reverse=True)
+            recommended = [t for _, t in tok_scores][:3]
+
+            # Straights (as tie-break info only)
+            straights = straight_list_for_section(j, s)
+
+            rows.append({
+                "date": date,
+                "state": state,
+                "section": s,
+                "overlap": overlap,
+                "stable_cols_count": len(st_cols),
+                "stable_cols": st_cols,
+                "consensus_col1": m["consensus_col1"],
+                "consensus_col2": m["consensus_col2"],
+                "cross_section_echo": echo.get(s, 0),
+                "hot_count": hot_count,
+                "superhot_count": superhot_count,
+                "mask_drop": m["mask_drop"],
+                "mirror_supported": m["mirror"],
+                "double_hits": m["doubles"],
+                "confidence_score": round(score, 3),
+                "tier": tier,
+                "flags": flags,
+                "top_tokens": wt,
+                "recommended_tokens": recommended,
+                "top_straights": straights,
+                "source": os.path.basename(p),
+            })
+
+    # Write outputs
+    out_json = os.path.join(root, "vtrac_compact_report.json")
+    out_csv  = os.path.join(root, "vtrac_compact_report.csv")
+
+    with open(out_json, "w") as f:
+        json.dump(rows, f, indent=2)
+
+    # Minimal CSV writer (no pandas)
+    headers = ["date","state","section","overlap","stable_cols_count","stable_cols",
+               "consensus_col1","consensus_col2","cross_section_echo",
+               "hot_count","superhot_count","mask_drop","mirror_supported","double_hits",
+               "confidence_score","tier","flags","top_tokens","recommended_tokens","top_straights","source"]
+    def csv_escape(x):
+        s = x if isinstance(x, str) else json.dumps(x, separators=(",",":"))
+        if "," in s or '"' in s or "\n" in s:
+            s = '"' + s.replace('"', '""') + '"'
+        return s
+    with open(out_csv, "w") as f:
+        f.write(",".join(headers) + "\n")
+        for r in rows:
+            line = ",".join(csv_escape(r[h]) for h in headers)
+            f.write(line + "\n")
+
+    print(f"Wrote {len(rows)} rows")
+    print(f"- JSON: {out_json}")
+    print(f"- CSV : {out_csv}")
+
+if __name__ == "__main__":
+    root = sys.argv[1] if len(sys.argv) > 1 else "."
+    main(root)
+
+
+Purpose: This is the “scoring wrapper” that converts your validator JSON into the compact score table and JSON your aggregator can ingest. It’s completely backward‑compatible and config‑light.
+
+Implementation notes (wired 2025-10-26):
+- Script lives at `TOOLS/vtrac_score_and_export.py`.
+- `TOOLS/run_vtrac_share_bundle.py` now calls it automatically after `make_pro_payload.py`.
+- Outputs land in `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}` ready for GitHub raw links.
+
+Quick unit checks (embedded in the logic)
+
+Gates: a section only gets meaningful “consensus” credit if it has ≥1 stable column; “zero overlap” cases only surface as weak_positive_rescue.
+
+Stability bias: rightmost columns dominate (2→1 matter most).
+
+Cross‑section echo: same token in Combined + Midday/Evening gets a bump.
+
+Global token family: repeated families across ≥3 states get a small promotion (for ranking of recommended_tokens only).
+
+Straights: present purely as tie‑break info (top_straights[])—never used to demote sections.
+
+How to run this today
+
+Put vtrac_score_and_export.py in the same machine/folder where you’ve saved files like:
+
+/.../PuertoRico4_vtrac_enhanced_20251023_020648.json
+/.../SouthCarolina4_vtrac_enhanced_20251023_020648.json
+
+
+Run:
+
+python vtrac_score_and_export.py /path/to/that/folder
+
+
+You’ll get:
+
+/path/to/that/folder/vtrac_compact_report.json
+/path/to/that/folder/vtrac_compact_report.csv
+
+
+These files are exactly what you described wanting to “drop in chat or host on GitHub (raw)”.
+
+Addressing your specific questions
+
+“Are you changing the validation/optimization package?”
+No. We are adding a small, explicit scoring/export layer on top of it. Everything stays compatible and stable.
+
+“Stop saying C1/C2.”
+Done. The code uses your real fields: consensus_col1, consensus_col2, stable_columns, top_vtrac_box_signatures, analyzer_signatures.primary, etc.
+
+“Universal, analytically optimal improvements first?”
+Yes—what we’ve implemented here are the high‑leverage ones that work across states and days: overlap‑first, right‑column stability bias, strict consensus rescue, cross‑section echoes, small calibrated supports (mask/mirror/doubles), and Combined prior (1.15).
+
+“Validate features actually fire?”
+This wrapper only reads the fields you already produce; the CSV/JSON explicitly prints the values per section, so you can spot‑check any state (e.g., “does SC Evening really have doubles & mirror?”) without reopening the big HTML. If something is missing or looks off, we’ll see it in the row.
+
+If you want finer control
+
+You can tune the numbers in the WEIGHTS dict at the top of the script:
+
+WEIGHTS = {
+  "overlap": 3.0, "stable": 1.6, "consensus": 1.0, "token_echo": 1.2,
+  "hot": 0.25, "super": 0.35, "mask": 0.8, "mirror": 0.5, "doubles": 0.3,
+  "combined_prior": 1.15, "rescue_multiplier": 0.35,
+}
+
+
+If you want to make per‑state priors later (e.g., SC favors Evening), we can add a tiny weights_by_state.json without touching the main logic.
+
+What I need from you right now
+
+Nothing else to upload. Just run the script on the JSONs you already have (e.g., PuertoRico4 & SouthCarolina4). If you like the output shape, point me to one or two rows that look “off” and I’ll adjust weightings or normalizations in this same wrapper.
+
+Note: A few earlier uploads in prior threads may have expired from the workspace. That’s fine—we don’t need them now. Use any current day’s enhanced JSONs you already generate.
+
+Why this gets you unstuck
+
+It locks in the concrete optimizations you listed (confidence score, rescue logic, family bump, compact export) without re‑plumbing the analyzer.
+
+It verifies the features you built by forcing them into a visible per‑section scorecard.
+
+It creates a stable handoff to your aggregator/analyzer: one compact CSV/JSON you can rank, filter, and compare across tools.
+
+If you want me to add a second file next (e.g., a tiny YAML config or a per‑state section prior table), say so and I’ll include it fully coded the same way.
+
+
+
+
+______________________________________
+_________________________________________
+
+
+Thanks for the screenshot—this makes your naming crystal‑clear. I’m going to be very direct and map everything to what you actually have (“Set3 / Draw1”, columns 7→1, R2/R4/R6/R8 rows), and spell out exactly what to give Codex and where it sits in your pipeline.
+
+TL;DR (what to do right now)
+
+Keep your Enhanced Analyzer & Validator exactly as-is.
+We are not replacing them. We’re adding a thin scoring/export wrapper that reads your current validator JSON and emits a compact table + JSON the aggregator can consume.
+
+Give Codex the “scoring & export” script exactly as written in your message (vtrac_score_and_export.py).
+It uses your real fields (consensus_col1, consensus_col2, stable_columns, signals.top_vtrac_box_signatures, analyzer_signatures.primary, etc.) and never says “C1/C2”.
+
+Run it on the enhanced JSONs you already generate (e.g., PuertoRico4_vtrac_enhanced_*.json, SouthCarolina4_vtrac_enhanced_*.json).
+It will write:
+
+vtrac_compact_report.csv
+
+vtrac_compact_report.json
+
+Skim the rows for any section that looks “off” (scores or flags). If something’s off, tell me which row; we’ll change the top‑level weights only (no analyzer changes).
+
+That’s it. This is a permanent post‑processor you can keep in the final pipeline. It’s not a throwaway.
+
+Where this lives (so we don’t talk in circles)
+
+Pipeline (final form)
+
+Data  → Enhanced Analyzer → Enhanced Validator →  Scoring & Export (this script)  →  Aggregator
+                                     (unchanged)          (new CSV/JSON)             (your picks)
+
+
+We do not edit your analyzer.
+
+We do not edit your validator.
+
+We read the validator’s outputs and convert them into one lean, standardized artifact that the aggregator will ingest.
+
+When you’re happy with the weights, either keep this as a sidecar, or later fold the scoring math into the analyzer. There’s no urgency to fold it in.
+
+Naming & field mapping to your actual tables (from the screenshot)
+
+Sections: "Combined", "Midday", "Evening" (exact keys used in the script).
+
+Sets/Draws/Rows: your screenshot shows:
+
+Left block: Set{1|2|3}, Draw{1..n}, RowType of R2/R4/R6/R8.
+
+Top header: columns 7 6 5 4 3 2 1.
+
+Stable columns: the validator already emits signals.stable_columns as strings like "7".."1". The script maps those to integers and weights them heavier to the right (1 and 2 matter most). This directly matches your column headers.
+
+Consensus: use your booleans consensus_col1 and consensus_col2 (these correspond to consensus at column 1 and column 2—again, aligned with your 7→1 labels).
+
+Tokens:
+
+Winners‑side tokens: sections[S].signals.top_vtrac_box_signatures
+
+Analyzer‑side tokens: sections[S].analyzer_signatures.primary
+
+Overlap is the intersection of those two lists.
+
+Hot/Superhot: if you expose per‑section counts in section_summaries[section].hot_count/superhot_count, we use them; otherwise the script falls back safely. Gate = hot≥8 & superhot≥12 (as discussed).
+
+Mask/Mirror/Doubles: pulled from sections[section].analyzer_metrics.primary:
+
+mask_drop_count
+
+mirror_supported (bool or >0 ⇒ true)
+
+double_hits (or doubles_hit_count)
+
+You do not need to change your JSON schema. The wrapper is defensive to minor key variations you’ve used.
+
+Exactly what the scoring does (no ambiguity)
+
+Base score (per section)
+
+score = overlap*w_overlap
+      + stable_weighted_sum*w_stable   # col weights: {7:0.5, 6:0.7, 5:0.9, 4:1.1, 3:1.6, 2:2.0, 1:2.4}
+      + (consensus_col1+consensus_col2)*w_consensus   # only if ≥1 stable column
+      + cross_section_echo*w_tokenEcho
+      + hot_norm*w_hot + superhot_norm*w_super
+      + mask_drop_norm*w_mask + mirror_norm*w_mirror + doubles_norm*w_doubles
+if section == "Combined": score *= 1.15
+
+
+Consensus rescue (strict, capped):
+If overlap == 0 and (consensus_col1 or consensus_col2) and len(stable_columns) ≥ 1, then scale by rescue_multiplier = 0.35 and flag weak_positive_rescue.
+
+Makes “signal present but zero overlap” visible but never dominant.
+
+Tiers (for instant reading by humans):
+A (≥4), B+ (=3), B (=2), C (=1), Z (=0, rescue only).
+
+Token family promotion (very light):
+Build a ledger across input JSONs:
+
++0.3 if a token shows up in ≥3 states (global repeat)
+
++0.2*(k-1) if it appears in ≥2 sections within the same state run (local echo)
+This only affects recommended_tokens[] ordering; it doesn’t swamp section scores.
+
+Straights are tie‑break / display only via top_straights[].
+No demotion for “straight overlap=0” in a narrow window.
+
+All weights are at the top of the file (easy to tune).
+
+Why this wrapper is useful (and not wasted work)
+
+It standardizes all the evidence you already output into a compact, comparable per‑section line.
+
+It enforces the gates you asked for (overlap‑first, right‑column stability priority, conservative consensus rescue).
+
+It gives you a single artifact (vtrac_compact_report.*) your aggregator can use today to pick the best indices—without changing any upstream code.
+
+This means you don’t need 5–7 separate intermediate outputs long‑term. Keep generating your richer validator JSON for debugging, but the aggregator can work only off the compact file.
+
+What to tell Codex (copy/paste job card)
+
+Task: Add vtrac_score_and_export.py (exact code you pasted) to the repo.
+Inputs: Any number of files matching *_vtrac_enhanced_*.json in a folder.
+Outputs:
+
+vtrac_compact_report.json (array of rows)
+
+vtrac_compact_report.csv (same rows, compact)
+
+Row schema (per state × section):
+
+date, state, section, overlap,
+stable_cols_count, stable_cols, consensus_col1, consensus_col2,
+cross_section_echo, hot_count, superhot_count,
+mask_drop, mirror_supported, double_hits,
+confidence_score, tier, flags,
+top_tokens[], recommended_tokens[], top_straights[],
+source
+
+
+Validation gates built into the script:
+
+No consensus credit unless stable_cols ≥ 1.
+
+Zero‑overlap sections can surface only as weak_positive_rescue (capped).
+
+Rightmost columns (2→1) weighted highest.
+
+Combined gets a small prior (1.15), as in your telemetry.
+
+Token family promotion is light and local to recommended_tokens.
+
+Run example:
+
+python vtrac_score_and_export.py /path/to/folder/with/jsons
+
+“Which outputs are for training vs. final analyzer?”
+
+Training / debugging artifacts: your big per‑state enhanced JSON + any heavy HTML (keep them while you’re tuning).
+
+Final analyzer outputs (what the aggregator needs):
+
+The compact vtrac_compact_report.csv|json (this wrapper).
+
+Optionally, a small audit trail you already include (top_tokens, top_straights, flags)—which the wrapper carries forward.
+
+Once you’re satisfied, you can lean it down to just the compact file + a short audit log. Everything else remains available for QA but doesn’t have to be “in the loop”.
+
+Answering your specific concerns
+
+“Are we changing the validation/optimization package?”
+No. We’re adding a small scoring/export step after it. No analyzer/validator code changes required.
+
+“Stop saying C1/C2.”
+Done. We only use your booleans consensus_col1 and consensus_col2, which map directly to column 1 and column 2 in your 7→1 header.
+
+“Reference by Set/Draw labeling.”
+The wrapper doesn’t need to slice by Set{1..3}/Draw{1..n} because the validator already distilled that into stable_columns, tokens, overlap, etc. If you later want a drill‑down (e.g., “show me consensus specifically in Set2, Draw1”), we can add an optional --by set-draw mode that enumerates those; not required for the aggregator.
+
+“Am I creating too many outputs?”
+You’re fine. Use the heavy artifacts for QA now, and feed only the compact output to the aggregator. The wrapper is the “leaner”—that’s the point.
+
+Quick acceptance checklist (so you can move fast)
+
+ Script runs and writes vtrac_compact_report.csv|json.
+
+ For a state you know (e.g., SouthCarolina4 Evening), the row shows:
+
+sensible overlap and stable_cols,
+
+tier consistent with overlap (A/B+/B/C/Z),
+
+flags like weak_positive_rescue only when overlap=0 and stability≥1,
+
+confidence_score higher for sections with right‑column survival,
+
+recommended_tokens that look like the repeating families you see in the table.
+
+ Aggregator reads only the compact file for picks.
+
+If any row looks wrong, send me the row (not the whole file), and I’ll adjust the weight constants in the wrapper.
+
+If you want me to also add an optional flag to break the scoring down by Set{1..3} or Draw{1..n} (because of the red/blue areas you circled), I’ll draft that change right away—still without touching your analyzer.

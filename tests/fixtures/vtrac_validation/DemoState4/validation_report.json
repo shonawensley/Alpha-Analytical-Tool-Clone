@@ -1,0 +1,85 @@
+{
+  "state": "DemoState4",
+  "analyzer_jsons": {
+    "primary": "data/outputs/analysis/vtrac/DemoState4/DemoState4_vtrac_enhanced_20250101_000000.json"
+  },
+  "sections": {
+    "Combined": {
+      "signals": {
+        "top_vtrac_box_signatures": [
+          "V4x2_5x2",
+          "V1x2_3x1"
+        ],
+        "stable_columns": [
+          "5",
+          "3"
+        ],
+        "hot": 8,
+        "superhot": 13,
+        "consensus_col1": true,
+        "consensus_col2": false
+      },
+      "analyzer_signatures": {
+        "primary": [
+          "V4x2_5x2",
+          "V1x2_3x1",
+          "V9x9"
+        ]
+      },
+      "analyzer_metrics": {
+        "primary": {
+          "mask_drop_count": 10,
+          "mirror_supported": 1,
+          "double_hits": 4,
+          "top_straights": [
+            {
+              "straight": "123",
+              "score": 0.9
+            },
+            {
+              "straight": "456",
+              "score": 0.6
+            }
+          ]
+        }
+      }
+    },
+    "Midday": {
+      "signals": {
+        "top_vtrac_box_signatures": [
+          "V7x7"
+        ],
+        "stable_columns": [
+          "2"
+        ],
+        "hot": 8,
+        "superhot": 12,
+        "consensus_col1": true,
+        "consensus_col2": false
+      },
+      "analyzer_signatures": {
+        "primary": [
+          "V0x0"
+        ]
+      },
+      "analyzer_metrics": {
+        "primary": {
+          "mask_drop_count": 4,
+          "mirror_supported": 0,
+          "double_hits": 1,
+          "top_straights": []
+        }
+      }
+    }
+  },
+  "section_summaries": {
+    "Combined": {
+      "hot_count": 9,
+      "superhot_count": 14
+    },
+    "Midday": {
+      "hot_count": 8,
+      "superhot_count": 12
+    }
+  }
+}

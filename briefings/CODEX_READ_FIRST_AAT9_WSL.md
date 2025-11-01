@@ -95,6 +95,14 @@ docs/AAT9_KIT/AAT9_Unified_Changelog.md (one line, concise)
 
 and any affected KIT docs.
 
+**Shareable V-TRAC artifacts**
+```bash
+# Regenerate summaries, compact scores, and optional ZIP bundle
+python TOOLS/run_vtrac_share_bundle.py
+```
+- Publishes `summary.md`, `summary.csv`, `vtrac_compact_report.{csv,json}`, and (optionally) `vtrac_validation_full_payload.zip` under `data/outputs/analysis/vtrac_validation/`.
+- Commit locally; push via GitHub Desktop; share the `https://raw.githubusercontent.com/...` links (text files only) with reviewers.
+
 5) Git workflow (Desktop only)
 
 Edit in WSL; commit/push in GitHub Desktop (same WSL path).

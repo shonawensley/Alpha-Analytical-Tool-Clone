@@ -9,7 +9,7 @@ Sources:
     data/outputs/analysis/winners/**
 
 Destination:
-    share/vtrac_validation_full_payload.zip
+    data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip
 """
 
 from __future__ import annotations
