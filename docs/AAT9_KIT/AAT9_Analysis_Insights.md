@@ -8,7 +8,11 @@ _No entries yet — append new insights here._
 
 ## Long String / Digit Reduction
 
-_No entries yet — append new insights here._
+### 2025-11-02 — Analyzer V2 DIGIT06 rollout (Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4, Ohio4)
+- Harness checks confirm every state produces 396 analyzer rows; mean scores sit ~0.74–0.82 with max ~0.92–0.95. Locked candidates cluster around Set3/Set2 ladders where the June17 winners lived (e.g., CT Set3 col7 994, DE Set3 col6 016, FL Set2 col7 116, IN Set3 col7 338, MI Set3 col6 667, NJ Set3 col7 667, NY Set3 col7 441, OH Set3 col7 550/552).
+- Density and dup_bonus metrics behave as intended: all locked rows show dup_bonus=1.0 and density ≥0.6; variance across states still reflects different ladder tightness (e.g., Delaware′ density mean 0.64 vs. Michigan 0.70).
+- No overlay artifacts yet (config overlay.winners blank), but analyzer writes full per-item/top candidates/meta bundles for each state; future runs can populate overlay inputs once aggregated winners are ready.
+- Next: use the June17 winners list to feed Control Center bulk logger, generate winners overlays, then retune `config.yml` weights so the expected winners score >0.9 and non-winners fall below lock. Document final weight choices and capture Control Center workflow notes for repeatability.
 
 
 ## V-TRAC Analyzer
