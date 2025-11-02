@@ -1,0 +1,202 @@
+✅ Confirmation: I reviewed all eight optimization+background docs, including the two you said I hadn’t
+
+
+digit_training.txt and digit_training_notes.txt are now fully folded in. They add precise math for family density / residual purity, drop‑run length weighting, a step≤3 ceiling for variant credit, and box‑pair agreement motifs that we’ll persist and score.
+
+
+I also cross‑checked the run/launch guardrails (preflight, path contracts, Combined as baseline dataset) so Codex stays wired to the canonical app flow while implementing the analyzer changes.   
+
+
+
+Verdict on Codex’s updated plan (with Digit_05): GO—with 7 targeted additions
+Codex’s plan is strong and aligns with the 01–04 optimizations. It already calls out: extended clusters + V‑TRAC crosswalks, six detection classes, merged Part‑1/Part‑2 features, config‑driven scoring with clamping, overlay/flags parity, writers, bundler, and tests. The only risk is minor ambiguity (names/thresholds) that could cause drift. Add the seven items below (copy‑paste ready) and you can green‑light implementation.
+
+7 additions Codex must apply before coding (paste‑ready)
+1) Config.yml – Spec‑Lock inserts (no guessing)
+Add these exact keys/weights/caps/gates so scoring & tests are deterministic.
+features:
+  cluster_scan:
+    min_len: 3
+    max_len: 12
+  variants_step_ceiling: 3         # only count M/E/C when earliest_step ≤ 3
+  box_pair_agree_pairs: ["R2-R6"]  # pairs to check for within-box agreement
+
+weights:
+  # class hierarchy
+  w_exact: 1.0
+  w_vtrac: 0.8
+  w_drop_exact: 0.5
+  w_drop_vtrac: 0.45
+  w_family_exact: 0.25
+  w_family_vtrac: 0.2
+
+  # density & purity
+  w_box_family_density: 0.40       # up-weight dense families
+  w_dup_bonus:          0.20       # subject to caps.dup_bonus_max
+  w_residual_purity:   -0.30       # penalize late clutter (uniques_after high)
+
+  # echoes / consensus
+  w_cols_hit_2: 0.30
+  w_cols_hit_3: 0.60
+  w_variants_hit_2: 0.30           # only if earliest_step ≤ features.variants_step_ceiling
+  w_variants_hit_3: 0.60
+  w_method_consensus: 0.20         # A–E–T (must include T)
+
+  # drop quality
+  w_drop_run_len_2_3: 0.25
+  w_drop_run_len_ge4: -0.10
+  w_drop_vtrac_multi_col_early_bonus: 0.20   # apply when earliest_step ≤ 3 AND cols_hit ≥ 2
+
+  # stability & recency
+  w_drop_digit_mode_stable: 0.10
+  w_set2_carryover:        0.15
+
+caps:
+  dup_bonus_max: 0.40
+  density_max:   0.60
+
+gates:
+  early_lock:   0.85
+  early_unlock: 0.25
+
+policy:
+  combined_auto_run: true                 # Combined always evaluated
+  write_own_vs_combined_delta: diagnostic # "always" | "diagnostic" | "off"
+
+Why here: these are exactly the knobs derived from digit_training and notes and ensure Codex doesn’t invent names or move thresholds. (Combined as baseline & eval policy is consistent with the app flow docs.  )
+
+2) Persisted columns (schema lock)
+Ensure these fields exist in *_analyzer_v2_per_item.csv (names exact):
+state, area, section, set, draw, col, method, mode, variant, box_id,
+pattern, family_id, is_extended_cluster,
+earliest_exact_step, earliest_vtrac_step, earliest_drop_exact_step, earliest_drop_vtrac_step,
+earliest_3val_exact_step, earliest_3val_vtrac_step,
+persistence_exact, persistence_vtrac, final_presence_exact, final_presence_vtrac,
+box_family_density, dup_bonus, residual_purity,
+drop_digit, drop_run_len, drop_digit_mode, drop_digit_mode_stability,
+cols_hit, variants_hit, method_consensus, cluster_echo_count, variant_echo_count, set_echo_count,
+recency_carryover, box_pair_agree,
+score, rank, lock_decision, features_json
+
+And keep the overlay artifacts + join parity:
+
+
+winner_flags.csv (dr.win_exact, dr.win_vtrac, dr.win_drop_exact, dr.win_drop_vtrac, dr.win_3val_exact, dr.win_3val_vtrac …)
+
+
+winner_stamp.json must include permutations[], vtrac_family[], recent_draws{variant→[Set1,Set2,Set3]} with Set labels.
+Per design, these join on (area, section, set, draw, col, method, mode) and the canonical R2 box_id. 
+
+
+
+3) Scoring rules (enforced, zero‑safe, clamped)
+
+
+Enforce hierarchy Exact > VTRAC > DropExact > DropVTRAC > FamilyExact > FamilyVTRAC with additive shaping from earliness, density, echoes, and recency.
+
+
+Apply drop_run_len shaping (2–3 best, ≥4 de‑emphasize), and the early multi‑col Drop‑VTRAC bonus only when earliest_step ≤ 3 and cols_hit ≥ 2.
+
+
+Clamp density/dup contributions to caps.*; honor early_lock and early_unlock.
+(“Method T” must be included in method_consensus; it’s part of the Digit‑Reduction method set.  )
+
+
+
+4) Overlay & near‑miss QA
+
+
+Keep current overlay taxonomy and contiguous‑run rule for Drop (delete contiguous block only).
+
+
+Emit a non‑scoring near_miss_suspected=1 suggestion when overlay finds a canonical “4→3” collapse that matches the stamped permutations[]/vtrac_family[].
+
+
+Parity invariants (must be asserted in tests): overlay legend counts == sum of dr.win_* in winner_flags.csv == counts in the joined *_per_item.csv.
+This locks explainability and kills “silent drift.”
+
+
+
+5) Meta & reproducibility
+In *_analyzer_v2_meta.json write:
+{"config_hash": "<sha256 of config.yml>", "git_sha": "<HEAD>", "policy": {...}, "cluster_scan": {"min":3,"max":12}}
+This prevents CI regressions and makes runs reproducible.
+
+6) Performance guard for cluster scan
+In clustering.py, short‑circuit low‑variance spans and respect min_len/max_len to avoid over‑scanning. This keeps long runs like 661111888 correct and fast.
+
+7) Tests to add (on top of Codex’s list)
+Add these acceptance/unit cases so CI enforces the behavior:
+
+
+Density & purity math – small fixture with known box_family_density and residual_purity; assert score lifts when uniques_after ≤ 3 and drops when > 3.
+
+
+Drop‑quality shape – seed drop_run_len=2/3 vs =5; ensure 2–3 ranks higher unless density is extreme.
+
+
+Variants step ceiling – variants_hit only counts when earliest_step ≤ 3.
+
+
+Method‑T in consensus – consensus includes T (A–E–T). 
+
+
+Box‑pair agreement – DE/010‑style fixture with R2& R6 agreeing → score bump present.
+
+
+Contiguous‑run enforcement – seed …99220… (drop “22”) and prove we never do scattered deletions.
+
+
+No‑skipped‑boxes – assert every numeric run in every box is processed or labeled “none”.
+
+
+Combined auto‑run – when only M/E inputs exist and policy=true, Combined is produced; policy=false emits a clear warning.
+
+
+Parity invariant – overlay legend totals == flags == joined per‑item totals (CI fail if mismatch).
+
+
+
+Why I’m confident this is now complete
+
+
+The module boundaries & data contracts are pinned to the canonical app flow (Combined baseline; Aux vs. table‑consuming modules are cleanly separated).  
+
+
+The Digit‑Reduction method set (A–E, T), reduction areas, and quick‑run semantics are stable and referenced in your module docs/cheat‑sheet.  
+
+
+The upstream Stable Pattern role and downstream join keys are consistent with the AAT9 pipeline (so nothing fights the extractor/overlay). 
+
+
+
+“GO” runbook for Codex (exact next steps)
+
+
+Preflight once with a real state (e.g., Connecticut4):
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4" (confirms cwd, imports, draws, tables). 
+
+
+Implement Phases 1–6 per Codex’s plan, plus the 7 inserts above. Use utils.path_handler and keep Combined as baseline throughout. 
+
+
+Write outputs exactly as listed (per‑item, top_candidates, flags/map/stamp, meta, optional deltas and debug).
+
+
+Run tests: smoke + the added fixtures; enforce parity & policy gates.
+
+
+Bundle: enable “Package training bundle” and verify artifacts land under data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/. 
+
+
+
+Bottom line
+
+
+YES, you can let Codex begin with the updated plan, provided those 7 additions are applied up front.
+
+
+They eliminate ambiguity (no name drift), enforce policy (Combined auto‑run; contiguous‑run drop; no‑skipped‑boxes), and lock explainability (overlay parity, near‑miss hints, meta hashes).
+
+
+If you want, I can paste a single DR_OPT_SPEC_LOCK.md consolidating the 7 additions into one file for Codex to commit before coding—but what’s above is already copy‑paste ready and sufficient to start.

@@ -19,6 +19,16 @@ Purpose: capture the step-by-step loop for generating V-TRAC enhanced analyzer e
    ```
    This writes `data/outputs/analysis/vtrac_validation/matrix.csv` and `findings.md`.
 
+5. Generate share bundle (summaries + compact report + optional ZIP):
+   ```powershell
+   python TOOLS/run_vtrac_share_bundle.py
+   ```
+   This refreshes:
+   - `summary.md` / `summary.csv`
+   - `vtrac_compact_report.json` / `vtrac_compact_report.csv` (config-aware scorer)
+   - `vtrac_validation_full_payload.zip` (optional all-in-one archive)
+   - Uses `configs/vtrac_score_config.json` for weights/priors; tweak as needed per run.
+
 ## 2. Where Artifacts Live
 
 - Enhanced analyzer bundles:
@@ -28,6 +38,10 @@ Purpose: capture the step-by-step loop for generating V-TRAC enhanced analyzer e
 - Batch summary:
   `data/outputs/analysis/vtrac_validation/matrix.csv`
   `data/outputs/analysis/vtrac_validation/findings.md`
+- Compact scoring outputs:
+  `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{json,csv}`
+- Share bundle ZIP:
+  `data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip`
 
 These directories are safe to delete and regenerate, but keep the most recent run committed when sharing with downstream reviewers.
 
@@ -43,6 +57,7 @@ These directories are safe to delete and regenerate, but keep the most recent ru
 ```
 https://raw.githubusercontent.com/<user>/<repo>/<branch>/data/outputs/analysis/vtrac_validation/matrix.csv
 ```
+Repeat for `summary.md`, `summary.csv`, and `vtrac_compact_report.{csv,json}` to give reviewers immediate access.
 
 ## 4. What Reviewers Look For
 
@@ -67,6 +82,7 @@ Keep `AAT9_Testing_Roadmap.md` updated if new regression coverage is added (e.g.
 - [ ] `python tools/vtrac_enhanced_cli.py --state <STATE>`
 - [ ] `python tools/vtrac_validate.py --state <STATE>`
 - [ ] `python tools/vtrac_validate_batch.py --states <...>`
+- [ ] `python TOOLS/run_vtrac_share_bundle.py` (summary/compact/zip refresh)
 - [ ] Review `validation_report.md` overlap & anomalies
 - [ ] Update `matrix.csv` / `findings.md` (commit or zip)
 - [ ] Note insights in `AAT9_Analysis_Insights.md`

@@ -1,0 +1,186 @@
+✅ What I reviewed (and why it matters)
+
+Digit Reduction module v1.0 (methods A–E, T; mirror map; R2 string locations) — the “ground truth” for how reductions work today.
+
+Digit‑Reduction Cheat‑Sheet (operator‑level facts, method semantics, sanity checks).
+
+App wiring & data contracts — Combined is baseline; V‑TRAC / Stable / Digit Reduction read combined tables via utils.path_handler. This guards where the analyzer pulls inputs and how it writes outputs.
+
+Quickstart & Onboarding — preflight discipline, Streamlit launch, and Combined/Midday/Evening variant policy (Combined remains baseline). Useful to codify the “Combined auto‑run” policy and where artifacts land.
+
+V‑TRAC Analyzer (bundles & winners) — confirms how winners/overlays/bundles are supposed to line up across modules; helps us keep Digit Reduction overlay/flags consistent.
+
+(Aux docs used only to keep nomenclature/variant policy consistent across app pages.)
+
+Your two “last” files add the precise density/purity math, drop‑run shaping, variants step ceiling, Method‑T in consensus, and box‑pair agreement knobs. We’ve carried those into the config + features + tests below so Codex will implement them exactly (no hand‑waving).
+
+🟩 Final answers to Codex’s 4 questions (decisions + copy‑paste config)
+1) Training diagnostics retention
+
+Decision: Make diagnostics optional via config, default = ON in dev/UI; CI can flip off.
+Config (add to config.yml):
+
+diagnostics:
+  write_training_steps: true          # writes training/steps.csv
+  write_feature_distributions: true   # writes debug/feature_distributions.csv
+
+
+Acceptance: When write_training_steps=false, no training/steps.csv appears and _meta.json records diagnostics.write_training_steps=false. (Test will assert both.)
+(Rationale: keeps runs fast in CI, verbose for analysts.)
+
+2) Overlay output scope
+
+Decision: Always write the compact winner_flags.csv. Gate the detailed hits_detailed.csv and HTML under a flag; default = ON in dev/UI.
+Config:
+
+overlay:
+  write_flags_always: true            # winner_flags.csv is non-negotiable
+  write_detailed: true                # hits_detailed.csv (+ optional HTML) for human QA
+  write_html: true                    # if false, skip HTML but keep CSVs
+
+
+Acceptance: Parity test must pass regardless of HTML toggle: legend totals == flags == joined per‑item on (area, section, set, draw, col, method, mode) (+ R2 box id).
+
+3) Existing analyzer code (refactor permission)
+
+Decision: Proceed as if green‑field inside alpha_analytical/digit_reduction/analyzer_v2/ — refactor/replace freely so long as:
+
+You honor data contracts and paths (utils.path_handler; Combined tables for DR/Stable/V‑TRAC).
+
+You preserve app launch/preflight flow (run via run_app.bat; .codex/preflight.ps1).
+
+(If any previous provisional code exists in that folder, treat it as superseded by this plan.)
+
+4) Feature column naming (downstream expectations)
+
+Decision: Freeze the Spec‑Lock names below. If any legacy consumer expects an old alias, implement a writers‑level alias map (don’t rename the canonical columns).
+
+*_analyzer_v2_per_item.csv — required columns (subset shown here; these are the ones Codex must not rename):
+
+state, area, section, set, draw, col, method, mode, box_id, variant,
+pattern, family_id, is_extended_cluster,
+earliest_exact_step, earliest_vtrac_step, earliest_drop_exact_step, earliest_drop_vtrac_step,
+earliest_3val_exact_step, earliest_3val_vtrac_step,
+persistence_exact, persistence_vtrac, final_presence_exact, final_presence_vtrac,
+box_family_density, dup_bonus, residual_purity,
+cols_hit, variants_hit, method_consensus, cluster_echo_count, variant_echo_count, set_echo_count,
+drop_digit, drop_run_len, drop_digit_mode, drop_digit_mode_stability,
+recency_carryover, box_pair_agree,
+score, rank, lock_decision, features_json
+
+
+Methods A–E and T must be counted in method_consensus. (Method T is part of the Digit Reduction spec.)
+
+🔒 Config — Spec‑Lock block Codex must ship (adds the “last two files” knobs)
+
+Append to alpha_analytical/digit_reduction/analyzer_v2/config.yml:
+
+features:
+  cluster_scan:
+    min_len: 3
+    max_len: 12
+  variants_step_ceiling: 3        # only count M/E/C if earliest_step ≤ 3
+  box_pair_agree_pairs: ["R2-R6"] # enable R2↔R6 agreement check
+
+weights:
+  # class hierarchy (keep order)
+  w_exact: 1.0
+  w_vtrac: 0.8
+  w_drop_exact: 0.5
+  w_drop_vtrac: 0.45
+  w_family_exact: 0.25
+  w_family_vtrac: 0.2
+
+  # density & purity
+  w_box_family_density: 0.4
+  w_dup_bonus: 0.2
+  w_residual_purity: -0.3
+
+  # echoes / consensus
+  w_cols_hit_2: 0.3
+  w_cols_hit_3: 0.6
+  w_variants_hit_2: 0.3
+  w_variants_hit_3: 0.6
+  w_method_consensus: 0.2
+
+  # drop quality shaping
+  w_drop_run_len_2_3: 0.25
+  w_drop_run_len_ge4: -0.1
+  w_drop_vtrac_multi_col_early_bonus: 0.2   # step≤3 AND cols_hit≥2
+
+  # stability & recency
+  w_drop_digit_mode_stable: 0.1
+  w_set2_carryover: 0.15
+
+caps:
+  dup_bonus_max: 0.4
+  density_max: 0.6
+
+gates:
+  early_lock: 0.85
+  early_unlock: 0.25
+  tanh_scale: 0.75
+
+policy:
+  combined_auto_run: true
+  write_own_vs_combined_delta: "diagnostic"  # "always" | "diagnostic" | "off"
+
+overlay:
+  write_flags_always: true
+  write_detailed: true
+  write_html: true
+
+diagnostics:
+  write_training_steps: true
+  write_feature_distributions: true
+
+
+Combined is the baseline dataset (policy baked into App Flow/Quickstart), so leaving policy.combined_auto_run=true aligns analyzer behavior with the rest of the app.
+
+🧪 Acceptance tests Codex must add (beyond the ones already listed)
+
+Density/purity math: fixture where box_family_density↑ & residual_purity≤3 lifts score; clutter >3 penalizes.
+
+Drop‑quality shaping: drop runs 2–3 outrank ≥4 (unless density high).
+
+Variants step ceiling: variants_hit counts only if earliest_step ≤ 3.
+
+Method‑T consensus: method_consensus includes T. (Matches method list in DR spec/cheat‑sheet.)
+
+Box‑pair agree (R2/R6) bump present when enabled.
+
+No skipped boxes; contiguous‑run drop enforced (drop “22” in …99220…).
+
+Combined auto‑run: with only Midday/Evening winners supplied, Combined results still produced (policy=true).
+
+Overlay parity: legend == winner_flags.csv == joined per‑item; near_miss_suspected emitted for drop‑only matches.
+
+Meta reproducibility: _meta.json includes config_hash, git_sha, policy, cluster_scan.
+
+Performance guard: cluster scan respects min_len/max_len with short‑circuit on low‑variance windows.
+
+🧭 Operational guardrails Codex should follow (already documented in your KIT)
+
+Launch via run_app.bat; run preflight before development to confirm imports and data inventory (this catches 90% of “why did it fail” path issues).
+
+Data contracts: DR/Stable/V‑TRAC read combined tables under tables/<STATE>/ via utils.path_handler. Aux/Blackapple read draws‑only CSVs; don’t mingle the sources.
+
+When the analyzer writes overlays, keep the same winners/flags/stamp shape V‑TRAC uses for bundles/QA; parity checks become trivial across modules.
+
+🔐 “Definition of GO” (what Codex should do first)
+
+Phase 1–2: create/merge features.py, scoring.py, clustering.py, vtrac_index.py; wire pipeline.py with the config above.
+
+Writers/Overlay: always write *_analyzer_v2_per_item.csv, *_top_candidates.csv, _meta.json, and flags; gate detailed CSV/HTML per config.
+
+Tests: add the acceptance cases listed; keep overlay parity and Combined auto‑run as hard asserts.
+
+Paths: write under data/outputs/analysis/digit_reduction/<STATE>/..., consistent with existing pages. (That’s how Quickstart/Onboarding & App‑Flow expect to find outputs.)
+
+Final confirmation
+
+Yes, I reviewed the two outstanding documents you flagged (digit_training.txt & digit_training_notes.txt) and I’ve folded their additional analytical value (density/purity formulas, drop‑length shaping, variants step ceiling, method‑T inclusion, box‑pair agree) into the config, features, and tests above so Codex will implement them precisely.
+
+The plan Codex posted (Digit_01–06 + background) is acceptable with the exact toggles/spec‑lock here. Please proceed.
+
+If Codex prefers a one‑pager to drop into the repo for traceability, name it docs/DR_OPT_SPEC_LOCK.md and paste the config block + column list + acceptance bullets from this message. That becomes the SSOT for future edits.

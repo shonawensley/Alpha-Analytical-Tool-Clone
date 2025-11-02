@@ -1,0 +1,211 @@
+Absolutely—go for launch. I’ve reviewed all eight optimization/background files you gave me earlier plus the two you later re‑sent (digit_training.txt, digit_training_notes.txt) and cross‑checked the new Digit_01–06 plan you pasted. The updated plan cleanly covers the spec‑lock we developed (clusters, V‑TRAC crosswalks, density/purity, drop‑quality shaping, echoes, overlay parity, config‑driven scoring, packaging, and tests). Below I give you a GO with a short list of last‑mile tighten‑ups and a paste‑ready spec lock (config + schemas + tests) you can hand to Codex so nothing drifts.
+
+✅ GO / Last‑mile tighten‑ups (add these to the plan before coding)
+
+Re‑assert the canonical data contracts in code comments and meta:
+
+Digit Reduction & V‑TRAC/Stable read combined tables via utils.path_handler under tables/<STATE>/ (or data/outputs/tables/<STATE>/); Combined is the baseline dataset; Midday/Evening are additive and never replace Combined.
+
+Keep Aux/Blackapple isolated to draws CSVs only (do not point analyzers at draws).
+
+Lock Method T into consensus and tests. Your plan lists it; make sure method_consensus explicitly counts A–E + T and a unit test fails if T is omitted. (Method T is documented in the Digit‑Reduction spec/cheat‑sheet.)
+
+Schema names are SSOT (single source of truth). Paste the “Required Columns” lists (below) into writers.py docstrings and *_meta.json so Codex can’t rename them.
+
+Near‑miss hints: keep near_miss_suspected=1 when the overlay finds a drop‑only canonical match but no exact; it’s a QA hint (not scored). (You already included this—just confirm it’s gated by config and tested).
+
+Performance guardrails for cluster scan:
+
+cluster_scan.min_len=3, max_len=12, short‑circuit low‑variance windows and stop early once final_presence_ has stabilized for a box. (You list this—make sure a unit test enforces it.)
+
+Combined auto‑run policy must be true (unless explicitly turned off) and tested: when only Mid/Eve winners are provided, Combined still runs & writes artifacts. This aligns with the app’s baseline‑first policy and overlay plumbing.
+
+Repro meta: always persist config_hash, git_sha, and the exact cluster_scan and policy blocks in *_analyzer_v2_meta.json. (You included this—keep it as a CI gate.)
+
+Guard the wiring by preflight in your runbook (Codex should use the repo’s preflight before local runs).
+
+DR_OPT_SPEC_LOCK.md — paste‑ready (hand this block to Codex)
+
+Scope
+Digit Reduction Analyzer V2 augments the reducer’s training outputs by detecting extended clusters, mapping V‑TRAC families (exact + drop‑one abstractions), synthesizing features (earliness, density/purity, echoes, drop quality, recency), scoring via a config file, and writing overlay artifacts that join perfectly with per‑item rows.
+
+1) Data contracts & paths
+
+Inputs: combined tables via utils.path_handler (tables/<STATE>/ or data/outputs/tables/<STATE>/), reducer training artifacts for the same state/date. Do not read Aux/Blackapple draws here.
+
+Variant policy: Combined = baseline; Midday/Evening are additive. Keep this invariant in comments/tests.
+
+2) Join identity (overlay ↔ analyzer)
+
+(state, area, section, set, draw, col, method, mode) + box_id = R2 as the canonical box key. Enforce zero orphans in tests.
+
+3) Required outputs (writers)
+
+*_analyzer_v2_per_item.csv
+
+*_analyzer_v2_top_candidates.csv
+
+*_own_vs_combined_delta.csv (diagnostic; policy‑gated)
+
+*_analyzer_v2_meta.json (must include config_hash, git_sha, cluster_scan, policy)
+
+Optional overlay/: winner_flags.csv, winner_map.json, winner_stamp.json, and hits_detailed.csv/HTML (if enabled).
+
+4) Config (drop into alpha_analytical/digit_reduction/analyzer_v2/config.yml)
+features:
+  cluster_scan: { min_len: 3, max_len: 12 }
+  variants_step_ceiling: 3         # only count M/E/C if earliest_step ≤ 3
+  box_pair_agree_pairs: ["R2-R6"]  # box-level pair agreement to check (e.g., DE/010)
+
+weights:
+  # class hierarchy (preserve order)
+  w_exact: 1.00
+  w_vtrac: 0.80
+  w_drop_exact: 0.50
+  w_drop_vtrac: 0.45
+  w_family_exact: 0.25
+  w_family_vtrac: 0.20
+
+  # density & purity
+  w_box_family_density: 0.40
+  w_dup_bonus: 0.20
+  w_residual_purity: -0.30
+
+  # echoes / consensus
+  w_cols_hit_2: 0.30
+  w_cols_hit_3: 0.60
+  w_variants_hit_2: 0.30
+  w_variants_hit_3: 0.60
+  w_method_consensus: 0.20  # A–E–T required
+
+  # drop quality shaping
+  w_drop_run_len_2_3: 0.25
+  w_drop_run_len_ge4: -0.10
+  w_drop_vtrac_multi_col_early_bonus: 0.20  # if earliest_step ≤ 3 AND cols_hit ≥ 2
+
+  # stability & recency
+  w_drop_digit_mode_stable: 0.10
+  w_set2_carryover: 0.15
+
+caps:
+  dup_bonus_max: 0.40
+  density_max: 0.60
+
+gates:
+  early_lock: 0.85
+  early_unlock: 0.25
+  tanh_scale: 1.25   # clamp smoothener for large positives
+
+policy:
+  combined_auto_run: true
+  write_own_vs_combined_delta: "diagnostic"  # "always" | "diagnostic" | "off"
+
+5) Required columns (persist exactly)
+
+Per‑item CSV (*_analyzer_v2_per_item.csv)
+
+state, area, section, set, draw, col, method, mode, box_id, variant, pattern, family_id, is_extended_cluster,
+earliest_exact_step, earliest_vtrac_step, earliest_drop_exact_step, earliest_drop_vtrac_step,
+earliest_3val_exact_step, earliest_3val_vtrac_step,
+persistence_exact, persistence_vtrac, final_presence_exact, final_presence_vtrac,
+box_family_density, dup_bonus, residual_purity,
+drop_digit, drop_run_len, drop_digit_mode, drop_digit_mode_stability,
+cols_hit, variants_hit, method_consensus, cluster_echo_count, variant_echo_count, set_echo_count,
+recency_carryover, box_pair_agree,
+score, rank, lock_decision, features_json
+
+
+Top candidates (*_analyzer_v2_top_candidates.csv)
+
+state, variant, family_id, best_pattern, evidence_tags, score, rank, boxes_involved, steps_summary
+
+
+Overlay flags (winner_flags.csv)
+Must include: dr_win_exact, dr_win_vtrac, dr_win_drop_exact, dr_win_drop_vtrac, dr_win_3val_exact, dr_win_3val_vtrac plus earliest step per type; join on the identity keys above.
+
+Winner stamp (winner_stamp.json)
+Must include: permutations[], vtrac_family[], recent_draws{variant→[Set1,Set2,Set3]}, counts, earliest map, near_miss_suspected flag.
+
+6) Scoring rules (zero‑safe, clamped)
+
+Apply hierarchy Exact > VTRAC > DropExact > DropVTRAC > FamilyExact > FamilyVTRAC; modulate by earliness, density/purity, echoes, recency.
+
+Count variants_hit only if the earliest exposure for that variant is ≤ variants_step_ceiling.
+
+Shape drop quality: len 2–3 best; ≥4 down‑weight unless density is extreme.
+
+Early multi‑column Drop‑VTRAC bonus fires only when earliest_step ≤ 3 and cols_hit ≥ 2.
+
+Clamp density/dup contributions by caps.*; then apply tanh_scale on the subtotal to avoid runaway.
+
+7) Tests (acceptance + unit)
+
+Density & purity math — scores lift with high box_family_density and uniques_after ≤ 3; penalize high residual_purity.
+
+Drop shaping — drop_run_len=2/3 outranks =5 unless density is very high.
+
+Variants step ceiling — variants_hit counts only when earliest_step ≤ 3.
+
+Method consensus includes T — fail if T is missing from the method set.
+
+Box‑pair agree (R2–R6) — test fixture for the DE/010 motif yields a score bump.
+
+Contiguous‑run drop only — scattered deletions fail the rule.
+
+No skipped boxes — every numeric run scanned.
+
+Combined auto‑run — Combined artifacts exist when policy true.
+
+Overlay parity — overlay legend totals == winner_flags.csv sums == joined per‑item counts.
+
+Near‑miss hints — drop‑only canonical exposure sets near_miss_suspected=1.
+
+Meta reproducibility — *_meta.json contains config_hash, git_sha, and exact policy/cluster_scan.
+
+Performance guard — cluster scan respects min/max and short‑circuits on low variance.
+
+What Codex should do first (tiny runbook)
+
+Preflight (from repo root)
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+(Confirms cwd, python, path handlers, and table inventory.)
+
+Wire Analyzer V2 (additive diffs only)
+Create/confirm files under alpha_analytical/digit_reduction/analyzer_v2/:
+
+clustering.py, vtrac_index.py, features.py, scoring.py, winners_overlay.py, pipeline.py, writers.py, config.yml (above).
+Keep reducer methods A–E, T behavior per module spec/cheat‑sheet.
+
+Respect app flow contracts
+Analyzers read combined tables via utils.path_handler; leave Aux/Blackapple draws‑only engines untouched (they live on the Auxiliary layer).
+
+Run smoke tests
+python scripts/run_acceptance.py --marker smoke and the analyzer‑targeted tests; verify overlay ↔ per‑item parity and Combined auto‑run.
+
+Definition of Done (CI must fail if any item is false)
+
+All required columns present; no join orphans; overlay legend totals equal CSV sums.
+
+config.yml is the only tuning surface; scores clamped; early lock/unlock honored.
+
+*_meta.json includes config_hash, git_sha, cluster_scan, and policy.
+
+Combined auto‑run on by default; diagnostic deltas policy documented in meta.
+
+Method T covered in consensus & tests; contiguous‑run drop rule enforced.
+
+Why I’m confident this covers everything
+
+The contracts and launch path match the App Flow Addendum and Quickstart (Combined baseline; analyzers read tables/… via path_handler; preflight before coding).
+
+Method definitions and reducer behavior are pinned to the Digit‑Reduction v1.0 spec and Cheat‑Sheet (A–E, T).
+
+Overlay parity and writer artifacts are consistent with the integrated analyzer/overlay notes used elsewhere in the app.
+
+Aux/Blackapple remain draws‑only (no schema bleed into analyzers).
+
+Stable Pattern’s role in the pipeline is unchanged (we’re adding Analyzer V2 on top of reducer outputs, not altering Module A).
+
+Bottom line
+
+Yes—let Codex begin. Paste the Spec‑Lock block above into the repo (e.g., docs/AAT9_KIT/DR_OPT_SPEC_LOCK.md) and point Codex at it. If Codex implements exactly this, you’ll have a deterministic, test‑guarded Analyzer V2 that captures every analytically important optimization we identified, with zero room for hallucinated fields or drifting policies. After it builds, we’ll run a few states and tune the config.yml weights only (no code edits) to finish the pass.

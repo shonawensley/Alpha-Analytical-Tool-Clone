@@ -1,0 +1,349 @@
+You’re not alone—this is a lot of moving parts. I’ve read all eight docs you asked me to analyze (Digit_01–04 + the 4 background items) and the two you said I was missing (digit_training.txt and digit_training_notes.txt). Those last two add concrete formulas and thresholds (density/purity math, drop‑run weighting, step‑ceilings) that we should lock into config, outputs, and tests so Codex can’t “approximate.”
+
+Below is a single, paste‑ready handoff you can give Codex instead of forwarding multiple messages. It consolidates the plan, exact settings, file paths, schemas, acceptance tests, and code skeletons. It’s built on your 01–04 optimization set and cross‑checked against the KIT and module specs so the wiring and contracts are correct.
+
+What to give Codex (one package)
+
+Give Codex the three blocks below, exactly as written:
+
+docs/DR_OPT_SPEC_LOCK.md (canonical spec)
+
+alpha_analytical/digit_reduction/analyzer_v2/config.yml (weights & thresholds)
+
+Minimal code skeletons (drop-in files) + acceptance tests
+
+This is enough for Codex to implement the optimal integration on top of its current plan.
+
+1) docs/DR_OPT_SPEC_LOCK.md (paste-ready)
+# Digit Reduction — Analyzer V2 — Spec Lock (AAT9)
+
+**Purpose.** Produce a second, scored output from the Digit Reduction training logs: per-item features, ranked candidates, and winners overlay flags. Preserve existing reducer behavior and file layout; add analyzer scoring, overlay parity, and a one‑click training bundle. (Upstream & app-flow contracts per AAT9 KIT.)  [KIT README, Workflow, Keepers]  
+
+**Canonical routing & paths** (do not improvise)
+- Reducer training log (must pre-exist):  
+  `data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json`.  
+- Analyzer V2 outputs (this spec):  
+  `data/outputs/analysis/digit_reduction/<STATE>/<RUN>/analyzer_v2/{per_item.csv, top_candidates.csv, meta.json}`.  
+- Winners overlay (compact flags + detailed hits):  
+  `.../analyzer_v2/winners/<STAMP>_<VAR>_{winner_map.json,winner_flags.csv,winner_stamp.json, (optional) hits_detailed.csv, html}`.  
+- Training bundle (UI one-click):  
+  `.../digit_reduction/<STATE>/training_sets/<STAMP>/` (+manifest, optional ZIP).  [01, 04, Recap]  
+
+**Detection taxonomy (per cell/run)** — *no skipped boxes; drop = one contiguous run only.*
+- `exact` — any 3‑window equals a winner permutation (all 6).  
+- `vtrac` — any 3‑window is in the winner’s local V‑TRAC family.  
+- `drop_exact`, `drop_vtrac` — same after removing **one contiguous run** (e.g., delete “00” in …99200…).  
+- `family_exact`, `family_vtrac` — residual set equals the winner’s 3‑value set (or V‑TRAC set), len≥3 allowed (e.g., 599000 → family of 590).  
+Persist for each kind: `earliest_*_step`, `final_*_match`; for drops also `drop_run_len`, `drop_digit`.  [01, 02]  
+
+**Long-cluster + V‑TRAC crosswalk**
+- Capture 3–12 digit **family clusters** (2–3 uniques) like `6111188`, `54666`, keep per‑digit run‑lengths.  
+- Crosswalk clusters to **Exact & V‑TRAC** families (not just 3‑grams).  [04 §3–4 + code skeletons]  
+
+**Features to persist (minimum)**
+- `earliest_*_step` for all six detection classes; `persistence_*`, `final_presence_*` for long clusters.  
+- Density & purity: `box_family_density` (mean **family_mass** across R2/R4/R6/R8), `dup_bonus` (capped), `residual_purity` (unique_after).  
+- Agreement & echoes: `cols_hit` (7/6/5), `variants_hit` (M/E/C, **count only if earliest_step ≤ 3**), `method_consensus` (**A–E–T**), `cluster_echo_count`, `variant_echo_count`, `set_echo_count`, `column_span`.  
+- Drop quality: `drop_run_len`, `drop_digit`, `drop_digit_mode`, `drop_digit_mode_stability`.  
+- Stability cue: `box_pair_agree` (e.g., R2–R6 agree in DE/010 motif).  
+- Recency: `recency_carryover` (Set2→Set1).  [02, 03, training notes]  
+
+**Scoring (config-driven, clamped, zero‑safe)**
+- Class hierarchy: **Exact > VTRAC > Drop > Family** (weights below).  
+- Up‑weight: earliness, density/dups (capped), `cols_hit`, `variants_hit`, `method_consensus`, cluster/variant echoes, Set2 carryover, box-pair agree.  
+- Down‑weight: late‑only & high clutter (`residual_purity` high).  
+- Drop quality shape: reward `drop_run_len` in {2,3}; de‑emphasize ≥4 unless density extreme.  
+- Tunable micro-bonus: early multi‑column `drop_vtrac` (+0.2) when `earliest_step ≤ 3` **and** `cols_hit ≥ 2`.  
+- Gates: `early_lock`, `early_unlock`; clamp contributions; monotonic constraints.  [02, 03, training notes]  
+
+**Overlay & join (must pass)**
+- Overlay emits **winner_map.json**, **winner_flags.csv**, **winner_stamp.json**; stamp carries `permutations[]`, `vtrac_family[]`, explicit Set1/2/3 labels, and `recent_draws`.  
+- Join keys **must match** per-item rows: `(area, section, set, draw, col, method, mode)` (box = R2).  
+- CI invariant: overlay legend counts == flags sums == joined per-item counts (no orphans).  [01, 04, Basis]  
+
+**Output schemas (min-columns)**
+- `*_per_item.csv`  
+  `state, box, area, section, set, draw, col, method, mode, variant, pattern, family_id, is_extended_cluster,`  
+  `earliest_exact_step, earliest_vtrac_step, earliest_drop_exact_step, earliest_drop_vtrac_step, earliest_3val_exact_step, earliest_3val_vtrac_step,`  
+  `persistence_exact, persistence_vtrac, final_presence_exact, final_presence_vtrac,`  
+  `box_family_density, dup_bonus, residual_purity,`  
+  `cols_hit, variants_hit, method_consensus, column_span, set_echo_count, variant_echo_count, cluster_echo_count,`  
+  `drop_digit, drop_run_len, drop_digit_mode, drop_digit_mode_stability,`  
+  `recency_carryover, box_pair_agree,`  
+  `score, rank, lock_decision, features_json`  
+- `*_top_candidates.csv`  
+  `state, variant, family_id, best_pattern, evidence_tags, score, rank, boxes_involved, steps_summary`  
+[02–04; training notes]  
+
+**Policies**
+- `combined_auto_run: true` (always produce Combined even if only M/E inputs).  
+- `own_vs_combined_delta: "diagnostic"` (write the delta CSV only when diagnostics are enabled; always document policy in meta).  [01, 04]  
+
+**Acceptance tests (copy into tests/acceptance/)**
+1) **Parity** — legend == flags == per_item joins; zero orphan rows.  
+2) **Contiguous drop** — seed `…99220…` → requires contiguous “22” to reveal drop windows; records `drop_digit='2'`, `drop_run_len=2`.  
+3) **Extended clusters** — `6111188` & `54666` produce long‑cluster features; V‑TRAC mapping present; echoes counted.  
+4) **Variants step ceiling** — `variants_hit` counts only when `earliest_step ≤ 3`.  
+5) **Drop quality** — 2–3‑run > 5‑run unless density extreme.  
+6) **Box‑pair agree** — DE/010 motif: R2 & R6 agreement lifts score.  
+7) **Policy tests** — Combined auto‑run on; delta policy honored in meta.  
+8) **Locks/clamps** — early lock/unlock thresholds respected; scores clamped.  [01–04; training notes]  
+
+**Definition of Done**
+- All six detection classes + earliest/final metadata persisted; drop metadata recorded; **no skipped boxes**; Method **T** included in `method_consensus`.  
+- Writers emit per_item, top_candidates, meta; overlay artifacts present when enabled; diagnostic artifacts gated.  
+- Config = single tuning touchpoint; meta pins config hash + git SHA + training bundle id.  
+- Tests above pass; UI can package training bundle; Combined present by policy.  
+
+
+Citations for the spec
+Detection classes, join keys, bundle & overlay contracts, and QA guardrails are taken directly from your 01/02/04 docs; long‑cluster & V‑TRAC crosswalks from 04; density/purity/drop weighting and state motifs from the training notes; method set (A–E, T) from the cheat‑sheet; routing and file locations from the KIT and module docs.
+
+2) alpha_analytical/digit_reduction/analyzer_v2/config.yml (paste-ready)
+# Analyzer V2 — config (all weights/thresholds are here; code must be zero-safe)
+
+features:
+  cluster_scan:
+    min_len: 3
+    max_len: 12
+  variants_step_ceiling: 3        # only count M/E/C if earliest_step ≤ ceiling
+  box_pair_agree_pairs: ["R2-R6"] # pairs to check inside a box
+
+weights:
+  # class hierarchy (keep order)
+  w_exact: 1.00
+  w_vtrac: 0.80
+  w_drop_exact: 0.50
+  w_drop_vtrac: 0.45
+  w_family_exact: 0.25
+  w_family_vtrac: 0.20
+
+  # density & purity shaping
+  w_box_family_density: 0.40
+  w_dup_bonus: 0.20
+  w_residual_purity: -0.30
+
+  # echoes / consensus
+  w_cols_hit_2: 0.30
+  w_cols_hit_3: 0.60
+  w_variants_hit_2: 0.30
+  w_variants_hit_3: 0.60
+  w_method_consensus: 0.20
+  w_cluster_echo: 0.10
+  w_variant_echo: 0.10
+  w_set_echo: 0.10
+  w_box_pair_agree: 0.10
+
+  # drop quality
+  w_drop_run_len_2_3: 0.25
+  w_drop_run_len_ge4: -0.10
+  w_drop_vtrac_multi_col_early_bonus: 0.20  # apply only if earliest_step≤3 AND cols_hit≥2
+
+  # recency
+  w_set2_carryover: 0.15
+
+caps:
+  dup_bonus_max: 0.40
+  density_max: 0.60
+
+gates:
+  early_lock: 0.85
+  early_unlock: 0.25
+  tanh_scale: 4.0  # soft clamp (if tanh used)
+
+policy:
+  combined_auto_run: true
+  write_own_vs_combined_delta: "diagnostic"  # "always" | "diagnostic" | "off"
+
+
+Where these numbers come from: baseline weights/thresholds and policies are distilled from your 01–04 + training docs (density/purity math; drop‑run shaping; variants step ceiling; Combined policy). Codex should make them constants in this file only—no hard‑coding in code.
+
+3) Minimal code skeletons & tests (drop‑in)
+
+These guardrails match the routing you already documented (pipeline, writers, overlay, tests). Codex can fill in details without changing public contracts.
+
+Add: alpha_analytical/digit_reduction/analyzer_v2/clustering.py
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
+@dataclass(frozen=True)
+class Cluster:
+    s: str
+    unique: str                 # sorted uniques, e.g., "168"
+    span: Tuple[int, int]
+    run_lengths: Dict[str, int] # max run per digit
+
+def _longest_run(s: str, d: str) -> int:
+    mx = cur = 0
+    for ch in s:
+        if ch == d: cur += 1; mx = max(mx, cur)
+        else: cur = 0
+    return mx
+
+def extract_clusters(row_digits: str, min_len: int = 3, max_len: int = 12) -> List[Cluster]:
+    n = len(row_digits); out: List[Cluster] = []
+    for L in range(min_len, min(max_len, n) + 1):
+        for i in range(0, n - L + 1):
+            w = row_digits[i:i+L]
+            uniq = ''.join(sorted(set(w)))
+            if 1 < len(uniq) <= 3:
+                rl = {d: _longest_run(w, d) for d in uniq}
+                out.append(Cluster(s=w, unique=uniq, span=(i, i+L), run_lengths=rl))
+    return out
+
+
+(Exactly the long‑cluster capability requested.)
+
+Add/extend: alpha_analytical/digit_reduction/analyzer_v2/vtrac_index.py
+
+from typing import Dict, Iterable, Set
+from .clustering import Cluster
+
+class VtracIndex:
+    def __init__(self, exact: Set[str], family: Dict[str, Set[str]]):
+        self.exact = exact
+        self.family = family  # key: "abc" sorted family -> set of exact 3-grams
+
+    def is_exact(self, gram: str) -> bool:
+        return gram in self.exact
+
+    def family_key(self, s: str) -> str:
+        return ''.join(sorted(set(s)))
+
+    def in_family(self, gram: str, fam_key: str) -> bool:
+        return gram in self.family.get(fam_key, set())
+
+    def cluster_has_membership(self, cl: Cluster) -> Dict[str, bool]:
+        fk = cl.unique
+        grams = {cl.s[i:i+3] for i in range(max(0, len(cl.s) - 2))}
+        return {
+            "has_exact": any(self.is_exact(g) for g in grams),
+            "has_vtrac": any(self.in_family(g, fk) for g in grams),
+        }
+
+
+(Provides fast Exact/V‑TRAC membership checks for 3‑grams and long clusters.)
+
+Add: alpha_analytical/digit_reduction/analyzer_v2/features.py
+
+from dataclasses import dataclass
+from typing import Dict, Any
+
+@dataclass
+class FeatureRow:
+    # required fields (subset shown; fill out per config/spec)
+    box_family_density: float = 0.0
+    dup_bonus: float = 0.0
+    residual_purity: int = 0
+    cols_hit: int = 0
+    variants_hit: int = 0
+    method_consensus: int = 0
+    column_span: int = 0
+    set_echo_count: int = 0
+    variant_echo_count: int = 0
+    cluster_echo_count: int = 0
+    drop_digit: str = ""
+    drop_run_len: int = 0
+    drop_digit_mode: str = ""
+    drop_digit_mode_stability: int = 0
+    recency_carryover: int = 0
+    box_pair_agree: int = 0
+
+def compute_density_purity(box_r_stacks) -> Dict[str, Any]:
+    """Return box_family_density, residual_purity, dup_bonus (capped in scorer)."""
+    # implement per spec: family_mass across R2/R4/R6/R8 -> mean; purity from unique_after
+    ...
+
+def apply_variants_step_ceiling(earliest_step: int, ceiling: int) -> int:
+    return 1 if earliest_step is not None and earliest_step <= ceiling else 0
+
+
+(Exact field names and behaviors match spec; variants ceiling is explicit.)
+
+Add: alpha_analytical/digit_reduction/analyzer_v2/scoring.py
+
+from math import tanh
+
+def score_row(feats, w, caps, gates):
+    z = 0.0
+    # class hierarchy contributions are assumed pre-aggregated into feats
+    z += w["w_box_family_density"] * min(feats.box_family_density, caps["density_max"])
+    z += w["w_dup_bonus"] * min(feats.dup_bonus, caps["dup_bonus_max"])
+    # echoes / consensus
+    z += w["w_method_consensus"] * feats.method_consensus
+    z += w["w_cols_hit_3"] if feats.cols_hit >= 3 else (w["w_cols_hit_2"] if feats.cols_hit >= 2 else 0)
+    z += w["w_variants_hit_3"] if feats.variants_hit >= 3 else (w["w_variants_hit_2"] if feats.variants_hit >= 2 else 0)
+    z += w["w_cluster_echo"] * feats.cluster_echo_count
+    z += w["w_variant_echo"] * feats.variant_echo_count
+    z += w["w_set_echo"] * feats.set_echo_count
+    z += w["w_box_pair_agree"] * feats.box_pair_agree
+    # drop quality
+    z += (w["w_drop_run_len_2_3"] if feats.drop_run_len in (2,3) else
+          w["w_drop_run_len_ge4"] if feats.drop_run_len >= 4 else 0)
+    # recency
+    z += w["w_set2_carryover"] * feats.recency_carryover
+    # purity penalty
+    z += w["w_residual_purity"] * feats.residual_purity
+    # optional early multi-col drop_vtrac micro-bonus applied by caller when condition holds
+    s = tanh(z / max(1e-6, gates.get("tanh_scale", 4.0)))
+    lock = "lock" if s >= gates["early_lock"] else "unlock" if s <= gates["early_unlock"] else "undecided"
+    return float(s), lock
+
+
+(Clamping and lock thresholds as agreed.)
+
+Add/extend: alpha_analytical/digit_reduction/analyzer_v2/winners_overlay.py
+– emit compact flags and optionally detailed hits; columns mirror taxonomy.
+
+Pipeline & writers
+
+pipeline.py orchestrates: load config → build features → score → write per_item.csv, top_candidates.csv, meta.json → run overlay (if enabled).
+
+writers.py must not drift from the file list; write diagnostics only when enabled.
+
+Tests
+Add acceptance/unit tests exactly as listed in the spec lock (parity, contiguous‑run, cluster, variants ceiling, drop quality, box‑pair, policies, locks/clamps). Reuse/extend existing overlay & Delaware acceptance tests in alpha_analytical/tests/....
+
+Why this is sufficient (and safer than forwarding many notes)
+
+It captures every analytically important idea from your background materials (density/purity math, drop‑quality, variants step ceiling, recency, box‑pair agree, long‑clusters, V‑TRAC crosswalks) and pins them to config, outputs, and tests so Codex can’t improvise names or thresholds.
+
+It matches the repo wiring Codex already uses (pipeline, writers, overlay paths, bundle folder) per your 01/04 docs and AAT9 KIT, so nothing breaks.
+
+It locks Method T into method consensus per your module spec / cheat‑sheet.
+
+It respects the app‑flow and “single source of truth” guardrails in KIT/Keepers/Workflow (no path drift, reproducible meta).
+
+Quick answers to your concerns
+
+Did I review the two outstanding docs? Yes—digit_training.txt and digit_training_notes.txt were read end‑to‑end. They add explicit density/purity math, drop‑run length policy, variants step ceiling, and state motifs (CT/DE/FL/IN/MI/NJ/NY). Those are now codified in config.yml, persisted columns, and tests above.
+
+Is Codex’s original plan still useful? Yes—this spec layers on top of it and closes the ambiguity gaps. You don’t need to send Codex my previous long messages; send the three artifacts above.
+
+Do you need to send background docs too? Not required if Codex follows this spec, but you can include these for context if helpful: Digit_01/02/03/04 (source for taxonomy and wiring), KIT README/Workflow (routing), and the cheat‑sheet (method names).
+
+“Hand the keys” checklist (paste to the Codex prompt)
+
+Create docs/DR_OPT_SPEC_LOCK.md and implement exactly as written.
+
+Add alpha_analytical/digit_reduction/analyzer_v2/config.yml (above).
+
+Implement/extend clustering.py, vtrac_index.py, features.py, scoring.py, winners_overlay.py, wire in pipeline.py and writers.py to emit the three core outputs (+ overlay when enabled).
+
+Enforce policies and acceptance tests; update meta.json with config hash + git SHA + training bundle id.
+
+Keep file paths/names exactly per spec & KIT.
+
+If you want, I can also produce a tiny PR body and changelog entry per the Workflow Standard so the commit lands cleanly in your docs; but with the three blocks above, Codex has everything needed to implement the most powerful, safe version of the Digit Reduction analyzer today.
+
+References used while consolidating (for traceability):
+Digit_01/02/03/04 (taxonomy, writers, overlay, clusters, acceptance tests)
+BASIS & important DR paths (routing & identities)
+Training docs (density/purity, drop quality, variants ceiling, motifs)
+KIT/Keepers/Workflow (SSOT, app‑flow, doc hygiene)
+Cheat‑sheet / v1.0 module (methods A–E, T)
+
+TL;DR for you
+
+Send Codex just this package (spec lock + config + skeletons/tests). It encodes all the analytically important insights we’ve confirmed and removes guesswork. After Codex lands it, we’ll run a few states and tune weights via config.yml—no code edits needed.

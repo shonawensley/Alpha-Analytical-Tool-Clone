@@ -26,7 +26,8 @@ This document tracks the automated verification layers that protect AAT9. Treat 
 - tests/test_stable_doubles_adjacency_negative.py ensures Stable doubles support only fires when consensus digits share a column, protecting the Control Center evidence bus from false positives.
 - tests/test_vtrac_evidence.py + tests/test_vtrac_enhanced_basic.py cover the shared V-TRAC evidence layer and enhanced analyzer scoring (top index straight rationale). CLI smoke: `python tools/vtrac_enhanced_cli.py --state SampleState --tables-root tests/fixtures/vtrac --analysis-root tests/fixtures/tmp_out`.
 - tests/test_vtrac_validate_fixture.py ensures the validator keeps section metrics/straight exports populated for frozen HTML + analyzer bundles (Delaware4 & Florida4 snapshots).
-- Batch smoke (optional): use the helper script in `analysis_2` (“temp_run_vtrac.py”) to iterate all states and refresh `data/outputs/analysis/vtrac/analysis_summary.json` (top 5 indices/straights per state).
+- tests/test_vtrac_score_export.py locks the compact scoring/export pipeline (consensus rescue, analyzer-only echo boost, config overrides) using `tests/fixtures/vtrac_validation/DemoState4/validation_report.json`.
+- Batch smoke (optional): use the helper script in `analysis_2` (ï¿½temp_run_vtrac.pyï¿½) to iterate all states and refresh `data/outputs/analysis/vtrac/analysis_summary.json` (top 5 indices/straights per state).
 
 
 - Pending additions:

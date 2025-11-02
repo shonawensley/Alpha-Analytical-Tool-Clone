@@ -1,3 +1,18 @@
+## 2025-10-26 06:10 (UTC) - V-TRAC scoring/export config + bundle helper
+
+- Context: After the parity sweeps we needed a repeatable way to turn validator outputs into a compact, shareable scorecard with explainability so ChatGPT Pro / agents can analyze runs without unzipping bundles.
+- Change:
+  - Rebuilt `TOOLS/vtrac_score_and_export.py` with argparse/logging, hardened parsing, union-based token echoes/ledger, and config overrides (`configs/vtrac_score_config.json`).
+  - Updated `TOOLS/run_vtrac_share_bundle.py` to call the scorer (using the config) after `make_pro_payload.py`, keeping summaries, compact report, and optional ZIP in sync.
+  - Dropped breadcrumbs across docs/tasks (`Analysis_Insights`, `Data_Validation_Workflow`, `VALIDATE_C`, `VTRAC_ENHANCMENTS`) and added unit coverage (`tests/test_vtrac_score_export.py`).
+- Impact:
+  - One command (`python TOOLS/run_vtrac_share_bundle.py`) now refreshes `summary.*`, `vtrac_compact_report.*`, and the optional ZIP, ready for GitHub raw links.
+  - Compact report rows expose `section_prior`, `state_prior`, and a `why` string so reviewers can understand score contributions instantly.
+  - Config file lets us adjust weights/priors per sweep without touching code.
+- Next:
+  - Run broader validation batches, inspect the compact CSV versus Winners HTML, and log findings in `AAT9_Analysis_Insights.md`.
+  - Pull the compact report into the cross-tool aggregator once each analyzer has equivalent hand-offs.
+
 ## 2025-10-18 03:30 (UTC) - Validation workflow & data hand-off playbook
 
 - Context: After landing the validator/batch tooling we needed a single reference covering how to run the enhanced analyzer sweep, where artifacts live, and how to share them with ChatGPT Pro / human reviewers.

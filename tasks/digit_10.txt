@@ -1,0 +1,174 @@
+✅ Go: scope, guardrails, and the exact first steps
+0) Hard guardrails (do‑not‑touch list & contracts)
+
+
+Data contracts & app wiring stay exactly as is.
+• Aux/Blackapple read only data/cleaned/*_draws.csv; Combined is the baseline; Midday/Evening are additive.    
+• V‑TRAC / Stable Pattern / Digit Reduction consume combined tables via utils.path_handler (no new readers, no path drift). 
+• Do not move or rewrite the Aux legacy assets Blackapple/Positional rely on (staged imports require those exact paths). 
+• “Combined baseline” policy must not change in UI copy or loaders.  
+
+
+Directories / files that are out‑of‑scope for rewrites:
+modules/aux_loaders.py, modules/blackapple.py, modules/module_d_auxiliary_tools/**, alpha_analytical/stable/**, utils/path_handler.py, Streamlit entry src/app.py, V‑TRAC module D files and bundler paths.  
+
+
+Digit‑Reduction method canon is fixed (A–E, T). Names and semantics must remain exactly as in the module v1.0 + cheat‑sheet. (Analyzer V2 builds on top of reducer training outputs; it does not rename methods.)  
+
+
+
+1) Safe kickoff (10 minutes)
+
+
+Create a working branch: git checkout -b dr-analyzer-v2-speclock-DIGIT06 (Onboarding Compass recommends declaring target files & keeping diffs additive.) 
+
+
+Run preflight for a known state to verify imports & data roots before any edits:
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4" (also confirms variant contract). 
+
+
+Archive current analyzer_v2 (belt‑and‑suspenders): copy the folder to archived/2025-11-02_analyzer_v2_preDIGIT06/ and drop a tiny ARCHIVE_MANIFEST.md. (This mirrors how other legacy entrypoints were archived.) 
+
+
+
+Yes, “major rewrites” are appropriate inside analyzer_v2/. We expect restructuring of features.py, scoring.py, vtrac_index.py, winners_overlay.py, and adding clustering.py. Everything else is protected by the contracts above.
+
+
+2) Exact file scope Codex may modify (and only these)
+alpha_analytical/digit_reduction/analyzer_v2/
+  config.yml               # replace with the Spec‑Lock block
+  features.py              # merge Part‑1/Part‑2 + new signals (density, purity, etc.)
+  scoring.py               # unified, config‑driven, clamped; class hierarchy enforced
+  vtrac_index.py           # exact/family crosswalks, drop‑one variants
+  clustering.py            # 3–12 “family” cluster scan with run‑length metadata
+  winners_overlay.py       # flags/map/stamp; near_miss_suspected; parity assertions
+  writers.py               # per_item/top_candidates/meta (+ optional diagnostics)
+  pipeline.py              # orchestration, gates, Combined auto‑run policy
+tests/
+  acceptance/test_digit_analyzer_v2_*.py   # parity, density math, drop shaping, etc.
+  unit/test_digit_analyzer_v2_*.py
+docs/
+  DR_OPT_SPEC_LOCK.md      # paste the spec‑lock text (single source of truth)
+
+Everything else is read‑only.
+
+3) Config & defaults (what Codex should hard‑code in config.yml now)
+
+
+Policy switches
+policy.combined_auto_run: true • policy.write_own_vs_combined_delta: "diagnostic" • overlay.write_flags: true • overlay.write_hits_html: false (toggleable).
+
+
+Feature knobs
+cluster_scan.min_len: 3 • cluster_scan.max_len: 12 • variants_step_ceiling: 3 • box_pair_agree_pairs: ["R2-R6"].
+
+
+Weights / caps / gates (Spec‑Lock order)
+Class hierarchy Exact > VTRAC > DropExact > DropVTRAC > FamilyExact > FamilyVTRAC, density & dup caps, drop‑run shaping (2–3 best; ≥4 de‑emphasized unless dense), early multi‑col Drop‑VTRAC bonus gated by (step≤3 & cols≥2), clamped contributions, early‑lock/early‑unlock thresholds.
+
+
+
+These mirror the Digit_05/06 spec‑lock deltas we consolidated earlier, so Codex won’t guess names or ranges.
+
+
+4) Outputs & join parity (must remain stable)
+
+
+Writers must emit the same analyzer bundle you planned:
+*_analyzer_v2_per_item.csv, *_analyzer_v2_top_candidates.csv, *_analyzer_v2_meta.json, optional *_own_vs_combined_delta.csv, and overlay/{winner_map.json, winner_flags.csv, winner_stamp.json, hits_detailed.csv?/HTML? (flagged)}.
+
+
+Join keys are locked: (area, section, set, draw, col, method, mode) + R2 box id. The overlay legend counts must equal winner_flags sums and the joined per_item counts (acceptance will assert this).
+
+
+Training bundles continue writing under data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/ as wired by the Control Center—leave that UI flow intact. 
+
+
+
+5) Tests Codex must add before merge (acceptance + unit)
+
+
+Density & purity math (box_family_density, residual_purity influence scores).
+
+
+Drop quality shaping (run_len 2/3 > ≥4 unless density high).
+
+
+Variants step ceiling (count only if earliest_step ≤ 3).
+
+
+Method‑T in consensus (A–E–T). 
+
+
+Box‑pair agree (R2/R6) bump.
+
+
+Contiguous‑run drop enforced (no scattered deletions).
+
+
+No‑skipped‑boxes coverage.
+
+
+Combined auto‑run policy honored. 
+
+
+Overlay parity (legend == flags == per_item join).
+
+
+Near‑miss hints (near_miss_suspected set for drop‑only matches).
+
+
+Meta reproducibility (config_hash, git_sha, policy).
+
+
+Performance guard (cluster scan respects bounds; early short‑circuit).
+
+
+
+6) Operational discipline (so we don’t regress other pages)
+
+
+Onboarding workflow: Plan → Implement → Verify → Document loop; always run smoke tests + acceptance for the affected area before pushing. 
+
+
+Launch & Dev‑Health: If you want UI sanity after coding, use run_app.bat but keep the “System Health” and page‑level Dev Health expanders to verify bindings and data roots; Aux/Blackapple and positional tools should read only CSV draws and show Combined/Midday/Evening variants as designed.    
+
+
+Stable & V‑TRAC remain clean: The Stable pattern extractor and V‑TRAC Analyzer documents describe their positions in the pipeline; no edits to their inputs/outputs during this PR.   
+
+
+
+7) Rollback plan (fast)
+
+
+If any acceptance test fails outside analyzer_v2/, immediately git restore everything except the analyzer folder; re‑run preflight and Control Center smoke. (Quickstart + App Flow docs define canonical startup, imports, and variant policy—use them to localize issues.)  
+
+
+
+Are Digit_08 / Digit_09 covered?
+Yes—based on the guardrails you quoted from Digit_08 and Digit_09, this plan sets:
+
+
+Diagnostics optional (default off); overlay flags always on, detailed hits/HTML gated.
+
+
+Refactor allowed inside analyzer_v2/ (features/scoring/clustering/overlay/writers/pipeline), no changes to Aux/Stable/V‑TRAC/Combined baselines or loaders.
+
+
+Spec‑Lock config + column lists are final and drive both code and tests.
+
+
+These points are consistent with the repo’s broader contracts (variants & data paths, preflight discipline, and page isolation).  
+
+Final go‑ahead to Codex (paste this as your approval)
+
+Approval to proceed (DIGIT_06 Spec‑Lock):
+– Proceed to refactor only alpha_analytical/digit_reduction/analyzer_v2/ per the Spec‑Lock.
+– Replace config.yml with the Spec‑Lock block; implement clustering.py, update features.py, scoring.py, vtrac_index.py, winners_overlay.py, writers.py, pipeline.py; add acceptance/unit tests listed above.
+– Keep all upstream data contracts unchanged (Aux/Blackapple → draws CSVs; V‑TRAC/Stable/DR → combined tables) and preserve Combined as baseline.
+– Overlay: write winner_flags.csv every run; hits_detailed.csv/HTML behind a config flag (default off).
+– Write _meta.json with config_hash, git_sha, and policy; respect combined_auto_run=true.
+– Do not alter filenames/paths consumed by Control Center or other pages.
+– Archive current analyzer_v2/ before refactor; open a PR with tests passing.
+
+If you want, I can also hand you a one‑page DR_OPT_SPEC_LOCK.md (single source of truth) to drop under docs/ so Codex literally codes against it—just say the word. But as written here, you can safely let it begin.
