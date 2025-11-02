@@ -1,3 +1,9 @@
+## 2025-11-02 - Digit Reduction Analyzer V2 refactor + spec lock
+- Impact: Replaced the Analyzer V2 feature stack with cluster-aware detection (exact/V-TRAC/drop/family), per-item density + drop metadata, and config-driven scoring with lock gating.
+- Impact: Pipeline now aggregates cross-column/variant/method echoes, records config hash + git SHA, and coordinates optional winners overlay bundles; writers gained diagnostics toggles.
+- Impact: Added spec lock (`docs/DR_OPT_SPEC_LOCK.md`) plus regression tests covering feature extraction, aggregation metrics, and scoring behaviour.
+- Files: alpha_analytical/digit_reduction/analyzer_v2/{clustering.py,config.yml,features.py,pipeline.py,score.py,vtrac_index.py,winners_overlay.py,writers.py}, docs/DR_OPT_SPEC_LOCK.md, tests/{test_digit_reduction_overlay.py,test_digit_reduction_features_v2.py}
+
 ## 2025-10-26 - V-TRAC scoring config + explainability
 - Impact: `vtrac_score_and_export.py` now supports argparse, logging, explainability strings, union-based echoes, and config-driven weights/priors (including state overrides).
 - Impact: Bundle helper auto-applies `configs/vtrac_score_config.json`; the compact report exposes `section_prior`, `state_prior`, and `why` columns so reviewers can audit contributions quickly.
@@ -177,7 +183,6 @@
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
-
 
 
 

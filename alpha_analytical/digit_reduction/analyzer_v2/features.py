@@ -1,214 +1,316 @@
 from __future__ import annotations
 
-from collections import Counter
-from math import factorial
-from typing import Any, Dict, List, Tuple
+import json
+from dataclasses import dataclass, field
+from itertools import permutations
+from statistics import mean
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
+from .clustering import (
+    Cluster,
+    contiguous_runs,
+    drop_variants,
+    extract_clusters,
+    iter_trigrams,
+)
 from .types import Item, Step
+from .vtrac_index import VtracIndex, vtrac_set
 
-_MIRROR = {
-    "0": "5",
-    "1": "6",
-    "2": "7",
-    "3": "8",
-    "4": "9",
-    "5": "0",
-    "6": "1",
-    "7": "2",
-    "8": "3",
-    "9": "4",
-}
+
+DetectionKind = str
+
+DETECTION_KINDS: Tuple[DetectionKind, ...] = (
+    "exact",
+    "vtrac",
+    "drop_exact",
+    "drop_vtrac",
+    "family_exact",
+    "family_vtrac",
+)
 
 
 def _digits(value: str) -> List[str]:
     return [ch for ch in value if ch.isdigit()]
 
 
-def _canon_sort(value: str) -> str:
-    digits = _digits(value)
-    return "".join(sorted(digits)) if digits else ""
+def _sanitize(value: str) -> str:
+    return "".join(_digits(value))
 
 
-def _uniq_count(value: str) -> int:
-    return len(set(_digits(value)))
+def _first_step_with_len(steps: Sequence[Step], minimum: int) -> Optional[Step]:
+    for step in reversed(steps):
+        digits = _digits(step.value)
+        if len(digits) >= minimum:
+            return step
+    return None
 
 
-def _first_terminal_entry(item: Item) -> Tuple[int, Step | None]:
-    for index, step in enumerate(item.steps):
-        if step.is_3value or step.length <= 3 or step.unique_digits <= 2:
-            return index, step
-    return -1, None
-
-
-def _survival_fraction_at3(item: Item) -> float:
-    index, step = _first_terminal_entry(item)
-    if index < 0 or step is None:
-        return 0.0
-    core = set(_digits(step.value))
-    origin = set(_digits(item.orig.value))
-    return (len(core & origin) / max(1, len(origin))) if core else 0.0
-
-
-def _order_cue_strength(item: Item) -> float:
-    index, step = _first_terminal_entry(item)
-    if index < 0 or step is None:
-        return 0.0
-    tail_values = [node.value for node in item.steps[index:]]
-    return 1.0 / max(1, len(set(tail_values)))
-
-
-def _tail_wobble(item: Item) -> int:
-    index, step = _first_terminal_entry(item)
-    if index < 0 or step is None:
-        return 0
-    duplicates = 0
-    for node in item.steps[index + 1:]:
-        if node.value == step.value:
-            duplicates += 1
-        else:
-            break
-    return duplicates
-
-
-def _perm_density(value: str) -> float:
-    digits = _digits(value)[:3]
-    if not digits:
-        return 0.0
+def _distinct_triplet(step: Optional[Step]) -> Tuple[str, List[str]]:
+    if step is None:
+        return "", []
+    digits = _digits(step.value)
     if len(digits) < 3:
-        return 0.5
-    counts = Counter(digits)
-    denom = 1
-    for count in counts.values():
-        denom *= factorial(count)
-    return (factorial(3) / denom) / 6.0
+        return "", digits
+    triplet = "".join(digits[:3])
+    return triplet, digits
 
 
-def _permutation_count(value: str) -> float:
-    digits = _digits(value)
-    if not digits:
-        return 0.0
-    counts = Counter(digits)
-    denom = 1
-    for count in counts.values():
-        denom *= factorial(count)
-    return float(factorial(len(digits)) / denom)
+def _unique_sorted_with_dupes(digits: Sequence[str]) -> str:
+    return "".join(sorted(digits))
 
 
-def _has_mirror_pair(value: str) -> int:
-    bag = set(_digits(value))
-    return int(any(_MIRROR[d] in bag for d in bag)) if bag else 0
+def _permutation_set(triplet: str) -> Set[str]:
+    if len(triplet) != 3:
+        return set()
+    return {"".join(p) for p in permutations(triplet, 3)}
 
 
-def _part1_features(item: Item, early_k: int) -> Dict[str, Any]:
-    features: Dict[str, Any] = {}
-    index, step = _first_terminal_entry(item)
-    first_step_number = step.step if step else 99
-    diffs = [item.steps[i - 1].length - item.steps[i].length for i in range(1, len(item.steps))]
-    last_step = item.steps[-1] if item.steps else Step(0, "", 0, 0, False)
-
-    features["traj.first3"] = first_step_number
-    features["traj.early_terminal"] = int(0 <= first_step_number <= early_k)
-    features["traj.reduction_slope"] = sum(diffs) / len(diffs) if diffs else 0.0
-    features["tail.final_len"] = last_step.length
-    features["tail.final_unique"] = last_step.unique_digits
-    features["tail.exact_len3"] = int(any(node.length == 3 for node in item.steps))
-    features["tail.unique2"] = int(any(node.unique_digits == 2 for node in item.steps))
-    features["stability.survival_frac3"] = _survival_fraction_at3(item)
-    features["stability.order_cue"] = _order_cue_strength(item)
-    features["tail.wobble"] = _tail_wobble(item)
-    features["pre.mirror_pair"] = _has_mirror_pair(item.orig.value)
-    features["pre.core3_hint"] = int(_uniq_count(item.orig.value) <= 3 and len(_digits(item.orig.value)) >= 3)
-    features["perm.density"] = _perm_density(last_step.value)
-    features["final.value"] = last_step.value
-    features["final.canon3"] = _canon_sort(last_step.value)
-    features["final.len_is1"] = int(last_step.length == 1)
-    features["final.len_is2"] = int(last_step.length == 2)
-    features["final.len_is3"] = int(last_step.length == 3)
-
-    return features
+def _is_three_value_family(cluster: Cluster, family_digits: Sequence[str]) -> bool:
+    if not family_digits:
+        return False
+    family_set = set(family_digits)
+    return set(cluster.text) <= family_set
 
 
-def _part2_features(item: Item) -> Dict[str, Any]:
-    features: Dict[str, Any] = {}
-    seq = item.sequence_meta or {}
-    final = item.final or {}
-    steps = item.steps or []
+@dataclass
+class DetectionStats:
+    steps: List[int] = field(default_factory=list)
+    earliest: Optional[int] = None
+    final_match: bool = False
+    drop_records: List[Tuple[str, int]] = field(default_factory=list)
 
-    _, terminal_step = _first_terminal_entry(item)
-    time_to_3 = seq.get("first_3value_step")
-    if time_to_3 is None:
-        time_to_3 = terminal_step.step if terminal_step else 99
+    def register(self, step_number: int, is_final: bool, drop_digit: Optional[str] = None, drop_len: Optional[int] = None) -> None:
+        if self.earliest is None or step_number < self.earliest:
+            self.earliest = step_number
+        if step_number not in self.steps:
+            self.steps.append(step_number)
+        if is_final:
+            self.final_match = True
+        if drop_digit is not None:
+            self.drop_records.append((drop_digit, drop_len or 0))
 
-    last_change = seq.get("last_change_step")
-    if last_change is None and steps:
-        last_change = max(node.step for node in steps)
+    @property
+    def persistence(self) -> int:
+        return len(self.steps)
 
-    post3_span = 0
-    if isinstance(last_change, int) and isinstance(time_to_3, int) and time_to_3 != 99:
-        post3_span = max(0, last_change - time_to_3)
-
-    terminal_len = final.get("length")
-    if terminal_len is None and steps:
-        terminal_len = steps[-1].length
-    terminal_unique = final.get("unique_digits")
-    if terminal_unique is None and steps:
-        terminal_unique = steps[-1].unique_digits
-    is_terminal_three = final.get("is_3value")
-    if is_terminal_three is None and steps:
-        is_terminal_three = steps[-1].is_3value
-
-    features.update(
-        {
-            "time_to_3": int(time_to_3 if isinstance(time_to_3, int) else 99),
-            "post3_span": float(post3_span),
-            "terminal.len": int(terminal_len or 0),
-            "terminal.unique": int(terminal_unique or 0),
-            "terminal.is_3value": int(bool(is_terminal_three)),
-            "terminal.unique_1": int((terminal_unique or 0) == 1),
-            "terminal.unique_2": int((terminal_unique or 0) == 2),
-            "pre.orig_unique": int(item.orig.unique_digits if steps else 0),
-            "sequence.steps_total": int(seq.get("steps_total_before_compaction", len(steps))),
-            "sequence.steps_kept": int(seq.get("steps_kept_after_compaction", len(steps))),
-            "perm.count": _permutation_count(final.get("value", "")),
+    def serialize(self) -> Dict[str, Any]:
+        return {
+            "steps": self.steps,
+            "earliest": self.earliest if self.earliest is not None else -1,
+            "final_match": self.final_match,
+            "drop_records": self.drop_records,
         }
-    )
-    features["terminal.len_is1"] = int(features["terminal.len"] == 1)
-    features["terminal.len_is2"] = int(features["terminal.len"] == 2)
-    features["terminal.len_is3"] = int(features["terminal.len"] == 3)
-    return features
 
 
-def compute_features_union(item: Item, thresholds: Dict[str, Any]) -> Dict[str, Any]:
-    early_k = int(thresholds.get("early_step_k", 3))
-    features = _part1_features(item, early_k)
-    features.update(_part2_features(item))
+@dataclass
+class ItemFeature:
+    row: Dict[str, Any]
+    detail: Dict[str, Any]
 
-    # harmonise trajectory timings
-    candidate_times = [features.get("traj.first3"), features.get("time_to_3")]
-    candidate_times = [value for value in candidate_times if isinstance(value, int)]
-    traj_time = min(candidate_times) if candidate_times else 99
-    features["traj.time_to_3"] = traj_time
-    features["time_to_3_fast"] = int(traj_time <= int(thresholds.get("time_to_3_fast", 3)))
 
-    # harmonise terminal/final values
-    features["terminal.len"] = int(features.get("terminal.len", features.get("tail.final_len", 0)))
-    features["terminal.unique"] = int(features.get("terminal.unique", features.get("tail.final_unique", 0)))
-    features["terminal.unique_1"] = int(features["terminal.unique"] == 1)
-    features["terminal.unique_2"] = int(features["terminal.unique"] == 2)
-    features["terminal.len_is1"] = int(features["terminal.len"] == 1)
-    features["terminal.len_is2"] = int(features["terminal.len"] == 2)
-    features["terminal.len_is3"] = int(features["terminal.len"] == 3)
+class ItemFeatureBuilder:
+    def __init__(self, item: Item, config: Dict[str, Any]):
+        self.item = item
+        self.config = config or {}
+        cluster_cfg = self.config.get("features", {}).get("cluster_scan", {})
+        self.cluster_min = int(cluster_cfg.get("min_len", 3))
+        self.cluster_max = int(cluster_cfg.get("max_len", 12))
+        self.steps = item.steps or []
+        self.final_step = self.steps[-1] if self.steps else None
+        self.triplet_step = _first_step_with_len(self.steps, 3)
+        triplet, final_digits = _distinct_triplet(self.triplet_step)
+        self.triplet = triplet
+        self.final_digits = final_digits
+        self.permutations = _permutation_set(self.triplet)
+        self.family_sorted = _unique_sorted_with_dupes(list(self.triplet))
+        self.family_unique = "".join(sorted(set(self.triplet)))
+        self.vtrac_key = vtrac_set(self.triplet)
+        self.v_index = VtracIndex.from_winner_permutations(self.permutations, self.permutations)
+        self.final_step_digits = _digits(self.final_step.value) if self.final_step else []
 
-    final_value = features.get("final.value", "")
-    digits_only = "".join(_digits(final_value))
-    features["degenerate.empty"] = int(len(digits_only) == 0)
-    if not features.get("final.canon3"):
-        features["final.canon3"] = _canon_sort(final_value)
-    features["final_3canon"] = features["final.canon3"]
+        self.detections: Dict[DetectionKind, DetectionStats] = {
+            kind: DetectionStats() for kind in DETECTION_KINDS
+        }
+        self.family_mass_values: List[float] = []
+        self.family_run_lengths: List[int] = []
+        self.drop_records_all: List[Tuple[str, int, int]] = []
+        self.cluster_lengths: List[int] = []
+        self.extended_cluster = False
 
-    features.setdefault("perm.density", _perm_density(final_value))
-    features.setdefault("tail.wobble", 0)
-    features.setdefault("pre.orig_unique", _uniq_count(item.orig.value))
-    features.setdefault("post3_span", 0.0)
+    def build(self) -> ItemFeature:
+        row = self._base_row()
+        if not self.steps or not self.triplet:
+            row["features_json"] = json.dumps({}, sort_keys=True)
+            return ItemFeature(row=row, detail={})
 
-    return features
+        self._scan_steps()
+        self._populate_row(row)
+        detail = {
+            "detections": {kind: stats.serialize() for kind, stats in self.detections.items()},
+            "family_mass": self.family_mass_values,
+            "family_runs": self.family_run_lengths,
+            "drop_records": self.drop_records_all,
+            "cluster_lengths": self.cluster_lengths,
+        }
+        row["features_json"] = json.dumps(detail, sort_keys=True)
+        return ItemFeature(row=row, detail=detail)
+
+    def _base_row(self) -> Dict[str, Any]:
+        key = self.item.key
+        grid = self.item.grid_position or {}
+        box_id = _sanitize(self.steps[0].value) if self.steps else ""
+        row = {
+            "state": key.state,
+            "area": key.area,
+            "section": key.section,
+            "set": key.set,
+            "draw": key.draw,
+            "col": key.col,
+            "method": key.method,
+            "mode": key.mode,
+            "variant": key.section,
+            "box_id": box_id,
+            "area_rank": grid.get("area_rank"),
+            "section_rank": grid.get("section_rank"),
+            "set_rank": grid.get("set_rank"),
+            "draw_rank": grid.get("draw_rank"),
+            "col_rank": grid.get("col_rank"),
+            "pattern": self.triplet,
+            "family_id": self.family_sorted,
+            "family_unique": self.family_unique,
+            "vtrac_key": self.vtrac_key,
+            "final_value": _sanitize(self.final_step.value) if self.final_step else "",
+            "is_extended_cluster": False,
+        }
+        return row
+
+    def _scan_steps(self) -> None:
+        family_set = set(self.triplet)
+        for step in self.steps:
+            digits = _sanitize(step.value)
+            if not digits:
+                continue
+            clusters = extract_clusters(digits, self.cluster_min, self.cluster_max)
+            self.cluster_lengths.extend(cluster.length for cluster in clusters)
+            self._record_family_mass(digits, family_set)
+            self._record_family_runs(digits, family_set)
+            self._register_detection(step, digits, clusters)
+        if self.final_step:
+            final_clusters = extract_clusters(_sanitize(self.final_step.value), self.cluster_min, self.cluster_max)
+            if any(cluster.length > 3 for cluster in final_clusters):
+                self.extended_cluster = True
+        if len(self.final_step_digits) > 3:
+            self.extended_cluster = True
+
+    def _record_family_mass(self, digits: str, family_set: Set[str]) -> None:
+        if not digits:
+            return
+        total = len(digits)
+        inside = sum(1 for ch in digits if ch in family_set)
+        self.family_mass_values.append(inside / total if total else 0.0)
+
+    def _record_family_runs(self, digits: str, family_set: Set[str]) -> None:
+        runs = [
+            run_len for _, run_len, digit in ((start, end - start, d) for start, end, d in contiguous_runs(digits))
+            if digit in family_set
+        ]
+        if runs:
+            self.family_run_lengths.append(max(runs))
+
+    def _register_detection(self, step: Step, digits: str, clusters: List[Cluster]) -> None:
+        step_number = step.step
+        is_final = self.final_step is not None and step_number == self.final_step.step
+        trigram_hits = list(iter_trigrams(digits))
+
+        if self.permutations and any(tri in self.permutations for tri in trigram_hits):
+            self.detections["exact"].register(step_number, is_final)
+        if any(self.v_index.is_vtrac(tri) for tri in trigram_hits):
+            self.detections["vtrac"].register(step_number, is_final)
+
+        for collapsed, digit, run_len in drop_variants(digits):
+            if not collapsed:
+                continue
+            collapsed_trigrams = list(iter_trigrams(collapsed))
+            drop_registered = False
+            if self.permutations and any(tri in self.permutations for tri in collapsed_trigrams):
+                self.detections["drop_exact"].register(step_number, is_final, digit, run_len)
+                drop_registered = True
+            if any(self.v_index.is_vtrac(tri) for tri in collapsed_trigrams):
+                self.detections["drop_vtrac"].register(step_number, is_final, digit, run_len)
+                drop_registered = True
+            if drop_registered:
+                self.drop_records_all.append((digit, run_len, step_number))
+
+        family_digits = list(self.triplet)
+        family_vkey = self.vtrac_key
+        for cluster in clusters:
+            if not cluster.text:
+                continue
+            if _is_three_value_family(cluster, family_digits):
+                self.detections["family_exact"].register(step_number, is_final)
+            if family_vkey and vtrac_set(cluster.text) == family_vkey:
+                self.detections["family_vtrac"].register(step_number, is_final)
+
+    def _populate_row(self, row: Dict[str, Any]) -> None:
+        def get_stat(name: DetectionKind) -> DetectionStats:
+            return self.detections.get(name, DetectionStats())
+
+        for kind in DETECTION_KINDS:
+            stats = get_stat(kind)
+            row[f"earliest_{kind}_step"] = stats.earliest if stats.earliest is not None else -1
+            row[f"persistence_{kind}"] = stats.persistence
+            row[f"final_{kind}_match"] = int(stats.final_match)
+
+        density = mean(self.family_mass_values) if self.family_mass_values else 0.0
+        row["box_family_density"] = float(density)
+        max_run = max(self.family_run_lengths) if self.family_run_lengths else 0
+        row["dup_bonus_raw"] = max_run
+        row["dup_bonus"] = float(max(0, max_run - 1))
+        row["residual_purity"] = self._residual_purity()
+
+        drop_digit, drop_len, drop_mode, drop_mode_strength = self._drop_metadata()
+        row["drop_digit"] = drop_digit or ""
+        row["drop_run_len"] = drop_len
+        row["drop_digit_mode"] = drop_mode or ""
+        row["drop_digit_mode_stability"] = drop_mode_strength
+
+        row.setdefault("cols_hit", 0)
+        row.setdefault("variants_hit", 0)
+        row.setdefault("method_consensus", 0)
+        row.setdefault("cluster_echo_count", 0)
+        row.setdefault("variant_echo_count", 0)
+        row.setdefault("set_echo_count", 0)
+        row.setdefault("recency_carryover", 0)
+        row.setdefault("box_pair_agree", 0)
+        row["is_extended_cluster"] = bool(self.extended_cluster)
+
+    def _residual_purity(self) -> int:
+        if not self.final_step:
+            return 0
+        digits = set(_digits(self.final_step.value))
+        family_set = set(self.triplet)
+        residual = digits - family_set
+        return len(residual)
+
+    def _drop_metadata(self) -> Tuple[Optional[str], int, Optional[str], int]:
+        drop_stats = (
+            self.detections["drop_exact"].drop_records
+            + self.detections["drop_vtrac"].drop_records
+        )
+        first_digit = drop_stats[0][0] if drop_stats else None
+        first_len = drop_stats[0][1] if drop_stats else 0
+        if not drop_stats:
+            return None, 0, None, 0
+        counter: Dict[str, int] = {}
+        for digit, _ in drop_stats:
+            counter[digit] = counter.get(digit, 0) + 1
+        digit_mode, strength = max(counter.items(), key=lambda kv: kv[1])
+        return first_digit, first_len, digit_mode, strength
+
+def build_item_feature(item: Item, config: Dict[str, Any]) -> ItemFeature:
+    builder = ItemFeatureBuilder(item, config)
+    return builder.build()
+
+
+def build_features(items: Iterable[Item], config: Dict[str, Any]) -> List[ItemFeature]:
+    return [build_item_feature(item, config) for item in items]

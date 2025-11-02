@@ -1,3 +1,18 @@
+## 2025-11-02 04:55 (UTC) - Digit Reduction Analyzer V2 consolidation
+
+- Context: Digit Reduction still used the pre-DIGIT06 scaffolding (Part-1/Part-2 split, winner overlays bolted on) and couldn't capture extended cluster/density logic documented in the optimization packets.
+- Change:
+  - Rebuilt `analyzer_v2` around cluster-aware feature extraction (`clustering.py`, new `features.py`), config-driven scoring, and an additive pipeline with overlay hooks.
+  - Added `config.yml` spec lock + doc (`docs/DR_OPT_SPEC_LOCK.md`), new writers, and overlay helper that can batch winner flags when requested.
+  - Landed regression tests for drop metadata, aggregation metrics, and scoring shape; refreshed `test_digit_reduction_overlay.py` to the new score interface.
+- Impact:
+  - Per-item CSV now includes earliest/persistence for the six detection classes, family density, drop metadata, cross-column/variant/method echoes, and reproducibility metadata (config hash + git SHA).
+  - Scoring is fully determined by `config.yml`; weights/gates can be tuned without editing code. Overlay generation is optional and no longer coupled to stale artifacts.
+  - Future work (weight tuning, UI surfacing) can iterate on config/tests without touching reducers.
+- Next:
+  - Run the analyzer on a few real states, tune weights via config, and log findings / follow-ups in `AAT9_Analysis_Insights.md`.
+  - Wire the Control Center panel to surface the new columns once we validate scores IRL.
+
 ## 2025-10-26 06:10 (UTC) - V-TRAC scoring/export config + bundle helper
 
 - Context: After the parity sweeps we needed a repeatable way to turn validator outputs into a compact, shareable scorecard with explainability so ChatGPT Pro / agents can analyze runs without unzipping bundles.
@@ -532,5 +547,4 @@ Template
   - Flag, scaffolding, and documentation exist, but the analyzer continues to use the legacy engine. Enhanced logic, tooling, and validation are being rebuilt to match the redesign briefs.
 - Verification:
   - Pending (enhanced analyzer work continues).
-
 

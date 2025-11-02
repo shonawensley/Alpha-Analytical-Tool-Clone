@@ -1,127 +1,132 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+import math
+from typing import Any, Dict, Iterable, Tuple
 
 
-def _as_float(value: Any) -> float:
+_PRIMARY_KINDS: Tuple[str, ...] = (
+    "exact",
+    "vtrac",
+    "drop_exact",
+    "drop_vtrac",
+    "family_exact",
+    "family_vtrac",
+)
+
+
+def _as_float(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
-        return 0.0
+        return default
 
 
-def _as_int(value: Any) -> int:
+def _as_int(value: Any, default: int = -1) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
-        return 0
+        return default
 
 
-def score_row(
-    row: Dict[str, Any],
-    weights: Dict[str, float],
-    penalties: Dict[str, float],
-    caps: Dict[str, float],
-    thresholds: Dict[str, Any],
-) -> float:
-    s = 0.0
+def _earliest_step(row: Dict[str, Any], kind: str) -> int:
+    return _as_int(row.get(f"earliest_{kind}_step"), -1)
 
-    def w(name: str) -> float:
-        return float(weights.get(name, 0.0))
 
-    # Tail / terminal qualities
-    s += w("tail.exact_len3") * _as_float(row.get("tail.exact_len3"))
-    s += w("tail.unique2") * _as_float(row.get("tail.unique2"))
-    s += w("final.len_is1") * _as_float(row.get("final.len_is1"))
-    s += w("final.len_is2") * _as_float(row.get("final.len_is2"))
-    s += w("final.len_is3") * _as_float(row.get("final.len_is3"))
-    s += w("terminal.is_3value") * _as_float(row.get("terminal.is_3value"))
-    s += w("terminal.unique_1") * _as_float(row.get("terminal.unique_1"))
-    s += w("terminal.unique_2") * _as_float(row.get("terminal.unique_2"))
+def _persistence(row: Dict[str, Any], kind: str) -> int:
+    return _as_int(row.get(f"persistence_{kind}"), 0)
 
-    # Trajectory
-    s += w("traj.early_terminal") * _as_float(row.get("traj.early_terminal"))
-    s += w("traj.reduction_slope") * _as_float(row.get("traj.reduction_slope"))
-    s += w("time_to_3_fast") * _as_float(row.get("time_to_3_fast"))
-    span = _as_float(row.get("post3_span"))
-    if span > 0:
-        s += w("post3_span")
 
-    # Pre-reduction
-    s += w("pre.mirror_pair") * _as_float(row.get("pre.mirror_pair"))
-    s += w("pre.core3_hint") * _as_float(row.get("pre.core3_hint"))
-    s += w("pre.orig_unique") * _as_float(row.get("pre.orig_unique"))
+def _early_score(step: int, ceiling: int) -> float:
+    if step < 0:
+        return 0.0
+    window = max(1, ceiling + 1)
+    return max(0.0, (window - min(step, window)) / window)
 
-    # Consensus
-    s += w("sec.consensus_any") * _as_float(row.get("sec.consensus_any"))
-    s += w("sec.consensus_strong") * _as_float(row.get("sec.consensus_strong"))
-    s += w("sec.pairwise_jaccard") * _as_float(row.get("sec.pairwise_jaccard"))
 
-    # Own vs combined
-    s += w("mode.agree_core") * _as_float(row.get("mode.agree_core"))
-    s += w("mode.time_to3_delta_abs") * _as_float(row.get("mode.time_to3_delta_abs"))
-    s += w("mode.len_delta_abs") * _as_float(row.get("mode.len_delta_abs"))
+def _detection_component(row: Dict[str, Any], kind: str, ceiling: int) -> float:
+    return _early_score(_earliest_step(row, kind), ceiling)
 
-    # Methods / sets / columns
-    s += w("methods.core_agreement") * _as_float(row.get("methods.core_agreement"))
-    s += w("methods.early_fraction") * _as_float(row.get("methods.early_fraction"))
-    s += w("method.agree_count") * _as_float(row.get("method.agree_count"))
-    s += w("set.memory_strength") * _as_float(row.get("set.memory_strength"))
-    s += w("set.repeat_new_box") * _as_float(row.get("set.repeat_new_box"))
-    s += w("set.linger") * _as_float(row.get("set.linger"))
-    s += w("xcol.agree_count") * _as_float(row.get("xcol.agree_count"))
 
-    # Stability / permutation
-    s += w("stability.order_cue") * _as_float(row.get("stability.order_cue"))
-    s += w("stability.horiz_persist") * _as_float(row.get("stability.horiz_persist"))
-    s += w("stability.survival_frac3") * _as_float(row.get("stability.survival_frac3"))
-    s += w("perm.density") * _as_float(row.get("perm.density"))
+def _capped(value: float, cap: float) -> float:
+    if cap <= 0:
+        return value
+    return max(-cap, min(cap, value))
 
-    # Optional V-TRAC synergy
-    s += w("vtrac.v_hot") * _as_float(row.get("vtrac.v_hot"))
 
-    # Winner overlay signals
-    max_step = _as_int(thresholds.get('dr_max_step', 10))
-    if max_step <= 0:
-        max_step = 10
-    s += w('dr.win_exact') * _as_float(row.get('dr.win_exact'))
-    s += w('dr.win_vtrac') * _as_float(row.get('dr.win_vtrac'))
-    s += w('dr.win_drop_exact') * _as_float(row.get('dr.win_drop_exact'))
-    s += w('dr.win_drop_vtrac') * _as_float(row.get('dr.win_drop_vtrac'))
-    s += w('dr.win_3val_exact') * _as_float(row.get('dr.win_three_value_exact', row.get('dr.win_3val_exact', 0)))
-    s += w('dr.win_3val_vtrac') * _as_float(row.get('dr.win_three_value_vtrac', row.get('dr.win_3val_vtrac', 0)))
-    step_exact = _as_int(row.get('dr.win_step_exact', -1))
-    if step_exact >= 0:
-        normalized = (max_step + 1 - min(step_exact, max_step)) / (max_step + 1)
-        s += w('dr.win_early_exact') * normalized
-    step_vtrac = _as_int(row.get('dr.win_step_vtrac', -1))
-    if step_vtrac >= 0:
-        normalized = (max_step + 1 - min(step_vtrac, max_step)) / (max_step + 1)
-        s += w('dr.win_early_vtrac') * normalized
+def score_row(row: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+    weights = config.get("weights", {})
+    caps = config.get("caps", {})
+    gates = config.get("gates", {})
+    feature_cfg = config.get("features", {})
 
-    step_drop_exact = _as_int(row.get('dr.win_step_drop_exact', -1))
-    if step_drop_exact >= 0:
-        normalized = (max_step + 1 - min(step_drop_exact, max_step)) / (max_step + 1)
-        s += w('dr.win_early_drop_exact') * normalized
-    step_drop_vtrac = _as_int(row.get('dr.win_step_drop_vtrac', -1))
-    if step_drop_vtrac >= 0:
-        normalized = (max_step + 1 - min(step_drop_vtrac, max_step)) / (max_step + 1)
-        s += w('dr.win_early_drop_vtrac') * normalized
-    step_family_exact = _as_int(row.get('dr.win_step_family_exact', -1))
-    if step_family_exact >= 0:
-        normalized = (max_step + 1 - min(step_family_exact, max_step)) / (max_step + 1)
-        s += w('dr.win_early_3val_exact') * normalized
-    step_family_vtrac = _as_int(row.get('dr.win_step_family_vtrac', -1))
-    if step_family_vtrac >= 0:
-        normalized = (max_step + 1 - min(step_family_vtrac, max_step)) / (max_step + 1)
-        s += w('dr.win_early_3val_vtrac') * normalized
+    ceiling = int(feature_cfg.get("variants_step_ceiling", 3))
+    score = 0.0
 
-    # Penalties
-    s += float(penalties.get("pen.degenerate_empty", 0.0)) * (1.0 if _as_int(row.get("degenerate.empty")) else 0.0)
-    s += float(penalties.get("pen.tail_wobble", 0.0)) * _as_float(row.get("tail.wobble"))
-    s += float(penalties.get("pen.mode_only_one", 0.0)) * _as_float(row.get("mode.only_one"))
+    score += weights.get("w_exact", 0.0) * _detection_component(row, "exact", ceiling)
+    score += weights.get("w_vtrac", 0.0) * _detection_component(row, "vtrac", ceiling)
+    score += weights.get("w_drop_exact", 0.0) * _detection_component(row, "drop_exact", ceiling)
+    score += weights.get("w_drop_vtrac", 0.0) * _detection_component(row, "drop_vtrac", ceiling)
+    score += weights.get("w_family_exact", 0.0) * _detection_component(row, "family_exact", ceiling)
+    score += weights.get("w_family_vtrac", 0.0) * _detection_component(row, "family_vtrac", ceiling)
 
-    # Clamp to configured caps
-    lo = float(caps.get("score_min", 0.0))
-    hi = float(caps.get("score_max", 100.0))
-    return float(max(lo, min(hi, s * 10.0)))
+    density = _capped(_as_float(row.get("box_family_density")), _as_float(caps.get("density_max", 1.0)))
+    score += weights.get("w_box_family_density", 0.0) * density
+
+    dup_bonus = _capped(_as_float(row.get("dup_bonus")), _as_float(caps.get("dup_bonus_max", 1.0)))
+    score += weights.get("w_dup_bonus", 0.0) * dup_bonus
+
+    score += weights.get("w_residual_purity", 0.0) * _as_float(row.get("residual_purity"))
+
+    cols_hit = _as_int(row.get("cols_hit"), 0)
+    if cols_hit >= 3:
+        score += weights.get("w_cols_hit_3", 0.0)
+    elif cols_hit >= 2:
+        score += weights.get("w_cols_hit_2", 0.0)
+
+    variants_hit = _as_int(row.get("variants_hit"), 0)
+    if variants_hit >= 3:
+        score += weights.get("w_variants_hit_3", 0.0)
+    elif variants_hit >= 2:
+        score += weights.get("w_variants_hit_2", 0.0)
+
+    score += weights.get("w_method_consensus", 0.0) * _as_float(row.get("method_consensus"))
+    score += weights.get("w_cluster_echo", 0.0) * _as_float(row.get("cluster_echo_count"))
+    score += weights.get("w_variant_echo", 0.0) * _as_float(row.get("variant_echo_count"))
+    score += weights.get("w_set_echo", 0.0) * _as_float(row.get("set_echo_count"))
+    score += weights.get("w_box_pair_agree", 0.0) * _as_float(row.get("box_pair_agree"))
+
+    run_len = _as_int(row.get("drop_run_len"), 0)
+    if run_len in (2, 3):
+        score += weights.get("w_drop_run_len_2_3", 0.0)
+    elif run_len >= 4:
+        score += weights.get("w_drop_run_len_ge4", 0.0)
+
+    if _as_int(row.get("drop_digit_mode_stability"), 0) >= 2:
+        score += weights.get("w_drop_digit_mode_stable", 0.0)
+
+    if _earliest_step(row, "drop_vtrac") >= 0 and cols_hit >= 2 and _earliest_step(row, "drop_vtrac") <= ceiling:
+        score += weights.get("w_drop_vtrac_multi_col_early_bonus", 0.0)
+
+    score += weights.get("w_set2_carryover", 0.0) * _as_float(row.get("recency_carryover"))
+
+    tanh_scale = max(1e-6, _as_float(gates.get("tanh_scale", 4.0)))
+    normalized = math.tanh(score / tanh_scale)
+
+    lock_threshold = _as_float(gates.get("early_lock"), 0.85)
+    unlock_threshold = _as_float(gates.get("early_unlock"), 0.25)
+
+    decision = "hold"
+    reason = ""
+    if normalized >= lock_threshold:
+        decision = "lock"
+        reason = "score>=lock"
+    elif normalized <= unlock_threshold:
+        decision = "unlock"
+        reason = "score<=unlock"
+
+    return {
+        "score_raw": score,
+        "score": normalized,
+        "lock_decision": decision,
+        "lock_reason": reason,
+    }

@@ -11,7 +11,7 @@ src_path = ROOT / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from alpha_analytical.digit_reduction.analyzer_v2.pipeline import _load_winner_flags
+from alpha_analytical.digit_reduction.analyzer_v2.pipeline import _load_config, _load_winner_flags
 from alpha_analytical.digit_reduction.analyzer_v2.score import score_row
 from alpha_analytical.digit_reduction.analyzer_v2.winners_overlay import WinnerSpec, _highlight_text_segment, _render_banner, _collect_recent_draws
 import alpha_analytical.digit_reduction.analyzer_v2.winners_overlay as overlay
@@ -95,24 +95,32 @@ def test_load_winner_flags_reads_latest_csv(tmp_path: Path, monkeypatch: pytest.
     assert entry["dr.win_final_value"] == "590"
 
 
-def test_score_row_includes_winner_signals():
+def test_score_row_weights_early_detection():
+    config = _load_config()
     row = {
-        "dr.win_exact": 1,
-        "dr.win_vtrac": 0,
-        "dr.win_step_exact": 2,
-        "dr.win_step_vtrac": 4,
+        "earliest_exact_step": 1,
+        "earliest_vtrac_step": 2,
+        "earliest_drop_exact_step": -1,
+        "earliest_drop_vtrac_step": -1,
+        "earliest_family_exact_step": 2,
+        "earliest_family_vtrac_step": -1,
+        "box_family_density": 0.8,
+        "dup_bonus": 2.0,
+        "residual_purity": 0,
+        "cols_hit": 3,
+        "variants_hit": 2,
+        "method_consensus": 2,
+        "cluster_echo_count": 2,
+        "variant_echo_count": 2,
+        "set_echo_count": 2,
+        "box_pair_agree": 1,
+        "drop_run_len": 2,
+        "drop_digit_mode_stability": 3,
+        "recency_carryover": 1,
     }
-    weights = {
-        "dr.win_exact": 3.0,
-        "dr.win_vtrac": 1.5,
-        "dr.win_early_exact": 1.0,
-        "dr.win_early_vtrac": 0.5,
-    }
-    penalties = {}
-    caps = {"score_min": 0.0, "score_max": 100.0}
-    thresholds = {"dr_max_step": 10}
-    score = score_row(row, weights, penalties, caps, thresholds)
-    assert score == pytest.approx(41.3636, rel=1e-3)
+    result = score_row(row, config)
+    assert result["score"] > 0
+    assert result["lock_decision"] in {"lock", "hold"}
 
 
 

@@ -1,38 +1,92 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
 import csv
+import hashlib
 import re
+import subprocess
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+
 import yaml
 
-from .features import compute_features_union
-from .io import analyzer_out_dir, load_training_json, training_dir_for_state
-from .pivot import cross_section_pivot, cross_col_agree, methods_consensus, own_vs_combined, set_memory
+from .features import ItemFeature, build_features
+from .io import analyzer_out_dir, load_training_json
 from .score import score_row
-from .types import Item
 from .vtrac_index import VHotSpec, derive_hot_families_from_dr, try_load_hot_families_from_predictions, vtrac_set
 from .writers import write_artifacts
+from .winners_overlay import build_winner_overlay
 
 SectionKey = Tuple[str, str, str, str, str, int, str, str]
-MethodKey = Tuple[str, str, str, str, str, int, str]
+
+FLAG_KIND_ORDER = ("exact", "vtrac", "drop_exact", "drop_vtrac", "family_exact", "family_vtrac")
+FLAG_PATH_PATTERN = r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_winner_flags$"
 
 
-FLAG_KIND_ORDER = ['exact', 'vtrac', 'drop_exact', 'drop_vtrac', 'family_exact', 'family_vtrac']
+def _load_config(path: Optional[Path] = None) -> Dict[str, Any]:
+    cfg_path = path or (Path(__file__).parent / "config.yml")
+    return yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
 
-FLAG_PATH_PATTERN = re.compile(r"^(?P<stamp>\d{8})_(?P<variant>Combined|Midday|Evening)_winner_flags$")
+
+def _config_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
-def _load_winner_flags(state: str, analysis_root: Optional[Path | str]) -> Dict[SectionKey, Dict[str, Any]]:
+def _git_sha() -> str:
+    try:
+        output = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+        return output.decode("utf-8").strip()
+    except Exception:
+        return "unknown"
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    try:
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return default
+        return int(value)
+    except (TypeError, ValueError):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return default
+
+
+def _earliest_any(row: Dict[str, Any]) -> Optional[int]:
+    candidates = [
+        _as_int(row.get(f"earliest_{kind}_step"), -1) for kind in FLAG_KIND_ORDER
+    ]
+    positives = [step for step in candidates if step >= 0]
+    return min(positives) if positives else None
+
+
+def _section_key(row: Dict[str, Any]) -> SectionKey:
+    return (
+        str(row.get("state", "")),
+        str(row.get("area", "")),
+        str(row.get("section", "")),
+        str(row.get("set", "")),
+        str(row.get("draw", "")),
+        _as_int(row.get("col", 0)),
+        str(row.get("method", "")),
+        str(row.get("mode", "")),
+    )
+
+
+def _load_winner_flags(state: str, analysis_root: Optional[Path]) -> Dict[SectionKey, Dict[str, Any]]:
     base_dir = analyzer_out_dir(state, analysis_root)
     winners_dir = Path(base_dir) / "winners"
     if not winners_dir.exists():
         return {}
 
     latest: Dict[str, Path] = {}
+    pattern = re.compile(FLAG_PATH_PATTERN)  # type: ignore[name-defined]
     for candidate in winners_dir.glob("*_winner_flags.csv"):
-        match = FLAG_PATH_PATTERN.match(candidate.stem)
+        match = pattern.match(candidate.stem)
         if not match:
             continue
         variant = match.group("variant")
@@ -55,237 +109,217 @@ def _load_winner_flags(state: str, analysis_root: Optional[Path | str]) -> Dict[
                     str(row.get("method", "")),
                     str(row.get("mode", "")),
                 )
-                data = {
+                payload = {
                     "dr.win_variant": variant,
                     "dr.win_final_value": str(row.get("dr_win_final_value", "")),
                     "dr.win_drop_digit": str(row.get("dr_win_drop_digit", "")),
                     "dr.win_vtrac_local_index": _as_int(row.get("dr_win_vtrac_local_index", -1)),
                 }
                 for kind in FLAG_KIND_ORDER:
-                    data[f"dr.win_{kind}"] = _as_int(row.get(f"dr_win_{kind}", 0))
-                    data[f"dr.win_step_{kind}"] = _as_int(row.get(f"dr_win_step_{kind}", -1))
-                flags[key] = data
-
+                    payload[f"dr.win_{kind}"] = _as_int(row.get(f"dr_win_{kind}", 0))
+                    payload[f"dr.win_step_{kind}"] = _as_int(row.get(f"dr_win_step_{kind}", -1))
+                flags[key] = payload
     return flags
 
 
-def _as_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            value = value.strip()
-            if not value:
-                return 0
-        return int(value)
-    except (TypeError, ValueError):
-        try:
-            return int(float(value))
-        except (TypeError, ValueError):
-            return 0
+def _aggregate_metrics(entries: List[ItemFeature], config: Dict[str, Any]) -> None:
+    ceiling = int(config.get("features", {}).get("variants_step_ceiling", 3))
 
+    cols_map: DefaultDict[Tuple[str, str, str, str, str, str, str, str], Set[int]] = defaultdict(set)
+    variant_map: DefaultDict[Tuple[str, str, str, str, int, str, str, str], Set[str]] = defaultdict(set)
+    variant_echo_map: DefaultDict[Tuple[str, str, str, str, str, str], Set[str]] = defaultdict(set)
+    set_map: DefaultDict[Tuple[str, str, str, str, int, str, str], Set[str]] = defaultdict(set)
+    method_map: DefaultDict[Tuple[str, str, str, str, str, int, str], Set[str]] = defaultdict(set)
+    cluster_map: DefaultDict[Tuple[str, str, str, str, str], Set[Tuple[str, str, int]]] = defaultdict(set)
+    carry_map: DefaultDict[Tuple[str, str, str, str, str], Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
 
-def _section_key_from_item(item: Item) -> SectionKey:
-    return (
-        item.key.state,
-        item.key.area,
-        item.key.section,
-        item.key.set,
-        item.key.draw,
-        item.key.col,
-        item.key.method,
-        item.key.mode,
-    )
-
-
-def _section_key_from_row(row: Dict[str, Any]) -> SectionKey:
-    return (
-        str(row.get("state", "")),
-        str(row.get("area", "")),
-        str(row.get("section", "")),
-        str(row.get("set", "")),
-        str(row.get("draw", "")),
-        _as_int(row.get("col", 0)),
-        str(row.get("method", "")),
-        str(row.get("mode", "")),
-    )
-
-
-def _cross_section_key(row: Dict[str, Any]) -> Tuple[str, str, str, str, int, str, str]:
-    return (
-        str(row.get("state", "")),
-        str(row.get("area", "")),
-        str(row.get("set", "")),
-        str(row.get("draw", "")),
-        _as_int(row.get("col", 0)),
-        str(row.get("method", "")),
-        str(row.get("mode", "")),
-    )
-
-
-def _method_key(row: Dict[str, Any]) -> MethodKey:
-    return (
-        str(row.get("state", "")),
-        str(row.get("area", "")),
-        str(row.get("section", "")),
-        str(row.get("set", "")),
-        str(row.get("draw", "")),
-        _as_int(row.get("col", 0)),
-        str(row.get("mode", "")),
-    )
-
-
-def _top_candidates(per_item_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    aggregator: Dict[str, Dict[str, Any]] = {}
-    for row in per_item_rows:
-        canon = str(row.get("final.canon3", ""))
-        if not canon:
+    for entry in entries:
+        row = entry.row
+        earliest = _earliest_any(row)
+        row["_earliest_any"] = earliest
+        if earliest is None:
             continue
-        entry = aggregator.setdefault(
-            canon,
-            {
-                "final.canon3": canon,
-                "score_sum": 0.0,
-                "hits": 0,
-                "sections": set(),
-                "methods": set(),
-            },
-        )
-        entry["score_sum"] += float(row.get("score", 0.0))
-        entry["hits"] += 1
-        entry["sections"].add(row.get("section"))
-        entry["methods"].add(row.get("method"))
+        if earliest <= ceiling:
+            cols_key = (row["state"], row["area"], row["section"], row["set"], row["draw"], row["method"], row["mode"], row["family_id"])
+            cols_map[cols_key].add(row["col"])
+
+            variant_key = (row["state"], row["area"], row["set"], row["draw"], row["col"], row["method"], row["mode"], row["family_id"])
+            variant_map[variant_key].add(row["section"])
+
+            variant_echo_key = (row["state"], row["area"], row["set"], row["draw"], row["family_id"], row["mode"])
+            variant_echo_map[variant_echo_key].add(row["section"])
+
+            set_key = (row["state"], row["area"], row["section"], row["draw"], row["col"], row["method"], row["mode"], row["family_id"])
+            set_map[set_key].add(row["set"])
+
+            method_key = (row["state"], row["area"], row["section"], row["set"], row["draw"], row["mode"], row["family_id"])
+            method_map[method_key].add(row["method"])
+
+            cluster_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+            cluster_map[cluster_key].add((row["set"], row["draw"], row["col"]))
+
+            carry_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+            carry_map[carry_key][row["set"]].append(earliest)
+
+    for entry in entries:
+        row = entry.row
+        cols_key = (row["state"], row["area"], row["section"], row["set"], row["draw"], row["method"], row["mode"], row["family_id"])
+        variant_key = (row["state"], row["area"], row["set"], row["draw"], row["col"], row["method"], row["mode"], row["family_id"])
+        variant_echo_key = (row["state"], row["area"], row["set"], row["draw"], row["family_id"], row["mode"])
+        set_key = (row["state"], row["area"], row["section"], row["draw"], row["col"], row["method"], row["mode"], row["family_id"])
+        method_key = (row["state"], row["area"], row["section"], row["set"], row["draw"], row["mode"], row["family_id"])
+        cluster_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+        carry_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+
+        row["cols_hit"] = len(cols_map.get(cols_key, set()))
+        row["variants_hit"] = len(variant_map.get(variant_key, set()))
+        row["variant_echo_count"] = len(variant_echo_map.get(variant_echo_key, set()))
+        row["set_echo_count"] = len(set_map.get(set_key, set()))
+        row["method_consensus"] = len(method_map.get(method_key, set()))
+        row["cluster_echo_count"] = len(cluster_map.get(cluster_key, set()))
+
+        carry_sets = carry_map.get(carry_key, {})
+        if row["set"] == "Set1" and "Set2" in carry_sets and carry_sets["Set2"]:
+            row["recency_carryover"] = int(min(carry_sets["Set2"]) <= ceiling)
+        else:
+            row["recency_carryover"] = row.get("recency_carryover", 0)
+
+        persistence_exact = _as_int(row.get("persistence_exact"), 0)
+        persistence_vtrac = _as_int(row.get("persistence_vtrac"), 0)
+        row["box_pair_agree"] = int(max(persistence_exact, persistence_vtrac) >= 2)
+
+        row.pop("_earliest_any", None)
+
+
+def _top_candidates(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    groups: DefaultDict[Tuple[str, str, str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        key = (row["state"], row["section"], row["family_id"], row["mode"])
+        groups[key].append(row)
+
     board: List[Dict[str, Any]] = []
-    for entry in aggregator.values():
+    for key, members in groups.items():
+        best = max(members, key=lambda r: r.get("score", 0.0))
+        evidence = [kind for kind in FLAG_KIND_ORDER if _as_int(best.get(f"earliest_{kind}_step"), -1) >= 0]
+        steps_summary = ";".join(
+            f"{kind}:{_as_int(best.get(f'earliest_{kind}_step'), -1)}" for kind in FLAG_KIND_ORDER
+        )
         board.append(
             {
-                "final.canon3": entry["final.canon3"],
-                "score_sum": round(entry["score_sum"], 2),
-                "hits": entry["hits"],
-                "sections": len(entry["sections"]),
-                "methods": len(entry["methods"]),
+                "state": key[0],
+                "variant": key[1],
+                "mode": key[3],
+                "family_id": key[2],
+                "best_pattern": best.get("pattern", ""),
+                "score": best.get("score", 0.0),
+                "boxes_involved": len(members),
+                "evidence_tags": ",".join(evidence),
+                "steps_summary": steps_summary,
             }
         )
-    board.sort(key=lambda r: (-float(r["score_sum"]), -r["hits"]))
+    board.sort(key=lambda row: (-row["score"], -row["boxes_involved"]))
+    for idx, row in enumerate(board, start=1):
+        row["rank"] = idx
     return board[:200]
 
 
-def _prepare_vhot(state: str, cfg_paths: Dict[str, Any], per_item_rows: List[Dict[str, Any]]) -> VHotSpec:
-    predictions_dir = Path(cfg_paths.get("vtrac_predictions_dir", "data/outputs/predictions"))
+def _prepare_vhot(state: str, config: Dict[str, Any], per_item_rows: List[Dict[str, Any]]) -> VHotSpec:
+    predictions_dir = Path(config.get("paths", {}).get("vtrac_predictions_dir", "data/outputs/predictions"))
     spec = try_load_hot_families_from_predictions(state, predictions_dir)
     if spec is not None:
         return spec
     return derive_hot_families_from_dr(per_item_rows, min_methods=2, prefer_section="Combined", top_k=5)
 
 
-def run(state: str, analysis_root: Optional[Path | str] = None) -> Dict[str, Any]:
-    cfg_path = Path(__file__).parent / "config.yml"
-    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
-    thresholds = cfg.get("thresholds", {})
-    weights = cfg.get("weights", {})
-    penalties = cfg.get("penalties", {})
-    caps = cfg.get("caps", {})
-    paths_cfg = cfg.get("paths", {})
+def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Optional[Path] = None) -> Dict[str, Any]:
+    cfg_path = config_path or (Path(__file__).parent / "config.yml")
+    cfg = _load_config(cfg_path)
 
-    root_path: Optional[Path] = Path(analysis_root) if analysis_root is not None else None
-    training_dir_for_state(state, root_path)  # raises if missing
+    root_path = Path(analysis_root) if analysis_root is not None else None
     items, source_path = load_training_json(state, root_path)
     if not items:
         raise ValueError(f"No training items available for state {state}")
 
-    per_item_rows: List[Dict[str, Any]] = []
-    for item in items:
-        row: Dict[str, Any] = {
-            "state": item.key.state,
-            "area": item.key.area,
-            "section": item.key.section,
-            "set": item.key.set,
-            "draw": item.key.draw,
-            "col": item.key.col,
-            "method": item.key.method,
-            "mode": item.key.mode,
-        }
-        row.update(compute_features_union(item, thresholds))
-        per_item_rows.append(row)
+    feature_entries = build_features(items, cfg)
+    _aggregate_metrics(feature_entries, cfg)
+
+    rows: List[Dict[str, Any]] = []
+    for entry in feature_entries:
+        rows.append(entry.row)
 
     flags_map = _load_winner_flags(state, root_path)
-
-    cross_section = cross_section_pivot(items)
-    own_features, delta_rows = own_vs_combined(items)
-    set_features = set_memory(items)
-    xcol_features = cross_col_agree(items)
-    method_features = methods_consensus(items, int(thresholds.get("early_step_k", 3)))
-
-    for row in per_item_rows:
-        key = _section_key_from_row(row)
-        row.update(cross_section.get(_cross_section_key(row), {}))
-        row.update(own_features.get(key, {}))
-        row.update(set_features.get(key, {}))
-        row.update(xcol_features.get(key, {}))
-        row.update(method_features.get(_method_key(row), {}))
-
-        flag = flags_map.get(key)
+    for row in rows:
+        key = _section_key(row)
+        row.setdefault("dr.win_variant", "")
+        row.setdefault("dr.win_final_value", "")
+        row.setdefault("dr.win_drop_digit", "")
+        row.setdefault("dr.win_vtrac_local_index", -1)
         for kind in FLAG_KIND_ORDER:
-            row[f"dr.win_{kind}"] = 0
-            row[f"dr.win_step_{kind}"] = -1
-        row["dr.win_final_value"] = ""
-        row["dr.win_drop_digit"] = ""
-        row["dr.win_vtrac_local_index"] = -1
-        row["dr.win_variant"] = str(row.get("section", ""))
-        if flag:
-            row.update(flag)
-        row.setdefault("mode.only_one", 0)
-        row.setdefault("mode.agree_core", 0)
-        row.setdefault("mode.time_to3_delta_abs", 0)
-        row.setdefault("mode.len_delta_abs", 0)
-        row.setdefault("set.memory_strength", 0)
-        row.setdefault("set.repeat_new_box", 0)
-        row.setdefault("set.linger", 0)
-        row.setdefault("xcol.agree_count", 0)
-        row.setdefault("methods.core_agreement", 0)
-        row.setdefault("methods.early_fraction", 0.0)
-        row.setdefault("method.agree_count", 0)
+            row.setdefault(f"dr.win_{kind}", 0)
+            row.setdefault(f"dr.win_step_{kind}", -1)
+        if key in flags_map:
+            row.update(flags_map[key])
 
-    hot_spec = _prepare_vhot(state, paths_cfg, per_item_rows)
-    fam_strength = hot_spec.detail or {}
-    for row in per_item_rows:
-        canon = str(row.get("final.canon3", ""))
-        vset = vtrac_set(canon) if canon else ""
-        row["vtrac.set"] = vset
-        row["vtrac.v_hot"] = float(fam_strength.get(vset, 0.0))
+    for row in rows:
+        score_data = score_row(row, cfg)
+        row["score_raw"] = score_data["score_raw"]
+        row["score"] = score_data["score"]
+        row["lock_decision"] = score_data["lock_decision"]
+        row["lock_reason"] = score_data["lock_reason"]
+
+    hot_spec = _prepare_vhot(state, cfg, rows)
+    strength = hot_spec.detail or {}
+    for row in rows:
+        canon = str(row.get("pattern", ""))
+        row["vtrac.set"] = vtrac_set(canon) if canon else ""
+        row["vtrac.v_hot"] = float(strength.get(row["vtrac.set"], 0.0))
         row["vtrac.hot_source"] = hot_spec.source
 
-    for row in per_item_rows:
-        row["score"] = score_row(row, weights, penalties, caps, thresholds)
+    overlay_cfg = cfg.get("overlay", {})
+    overlay_artifacts = build_winner_overlay(state, rows, feature_entries, cfg, root_path, overlay_cfg)
+    if overlay_artifacts.flag_map:
+        for row in rows:
+            row.update(overlay_artifacts.flag_map.get(_section_key(row), {}))
 
-    top_rows = _top_candidates(per_item_rows)
+    top_rows = _top_candidates(rows)
     out_dir = analyzer_out_dir(state, root_path)
     meta = {
         "state": state,
-        "config_version": cfg.get("version", 0),
-        "items": len(per_item_rows),
+        "items": len(rows),
         "source": str(source_path),
-        "thresholds": thresholds,
-        "weights": weights,
-        "penalties": penalties,
+        "config_path": str(cfg_path),
+        "config_hash": _config_hash(cfg_path),
+        "git_sha": _git_sha(),
+        "policy": cfg.get("policy", {}),
+        "cluster_scan": cfg.get("features", {}).get("cluster_scan", {}),
+        "diagnostics": cfg.get("diagnostics", {}),
+        "overlay": overlay_cfg,
         "vtrac_hot_source": hot_spec.source,
         "vtrac_hot_families": sorted(hot_spec.families),
     }
 
-    write_artifacts(out_dir, state, per_item_rows, delta_rows, top_rows, meta)
+    diagnostics_cfg = cfg.get("diagnostics", {})
+    write_artifacts(
+        out_dir=out_dir,
+        state=state,
+        per_item=rows,
+        top_rows=top_rows,
+        meta=meta,
+        overlay_info=overlay_artifacts.files,
+        diagnostics_config=diagnostics_cfg,
+        feature_entries=feature_entries,
+    )
+
+    artifacts = [
+        f"{state}_analyzer_v2_per_item.csv",
+        f"{state}_analyzer_v2_top_candidates.csv",
+        f"{state}_analyzer_v2_meta.json",
+    ]
+    artifacts.extend(overlay_artifacts.files)
 
     return {
         "state": state,
-        "rows": len(per_item_rows),
+        "rows": len(rows),
         "out_dir": str(out_dir),
-        "artifacts": [
-            f"{state}_analyzer_v2_per_item.csv",
-            f"{state}_analyzer_v2_own_vs_combined_delta.csv",
-            f"{state}_analyzer_v2_top_candidates.csv",
-            f"{state}_analyzer_v2_meta.json",
-        ],
-        "config_version": cfg.get("version", 0),
+        "artifacts": artifacts,
     }
-
-
-
-
-

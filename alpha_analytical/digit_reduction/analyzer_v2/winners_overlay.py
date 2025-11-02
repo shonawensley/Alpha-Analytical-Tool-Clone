@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Literal
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Literal, Set
 
 from . import io
 from modules.aux_loaders import load_state_draws
@@ -924,9 +924,85 @@ def run_winner_overlay_batch(
     }
 
 
+@dataclass
+class OverlayArtifacts:
+    flag_map: Dict[Tuple[str, str, str, str, str, int, str, str], Dict[str, Any]]
+    files: List[str]
 
 
+def _parse_winner_flags_csv(path: Path, state: str) -> Dict[Tuple[str, str, str, str, str, int, str, str], Dict[str, Any]]:
+    result: Dict[Tuple[str, str, str, str, str, int, str, str], Dict[str, Any]] = {}
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            key = (
+                state,
+                str(row.get("area", "")),
+                str(row.get("section", "")),
+                str(row.get("set", "")),
+                str(row.get("draw", "")),
+                int(row.get("col", 0)),
+                str(row.get("method", "")),
+                str(row.get("mode", "")),
+            )
+            payload: Dict[str, Any] = {}
+            for kind in MATCH_ORDER:
+                payload[f"dr.win_{kind}"] = int(row.get(f"dr_win_{kind}", 0))
+            for kind in MATCH_ORDER:
+                payload[f"dr.win_step_{kind}"] = int(row.get(f"dr_win_step_{kind}", -1))
+            payload["dr.win_final_value"] = row.get("dr_win_final_value", "")
+            payload["dr.win_drop_digit"] = row.get("dr_win_drop_digit", "")
+            payload["dr.win_vtrac_local_index"] = int(row.get("dr_win_vtrac_local_index", -1))
+            result[key] = payload
+    return result
 
 
+def build_winner_overlay(
+    state: str,
+    rows: List[Dict[str, Any]],
+    _feature_entries: Iterable[Any],
+    config: Dict[str, Any],
+    analysis_root: Optional[Path],
+    overlay_cfg: Dict[str, Any],
+) -> OverlayArtifacts:
+    winners_cfg = overlay_cfg.get("winners") or {}
+    winners: Dict[Variant, str] = {}
+    for variant in ("Combined", "Midday", "Evening"):
+        value = winners_cfg.get(variant)
+        if value:
+            winners[variant] = str(value)
+
+    if not winners:
+        return OverlayArtifacts(flag_map={}, files=[])
+
+    batch = run_winner_overlay_batch(
+        state,
+        winners,
+        analysis_root=analysis_root,
+        mirror_to_winners=overlay_cfg.get("mirror_to_winners", True),
+    )
+
+    files: List[str] = []
+    flag_map: Dict[Tuple[str, str, str, str, str, int, str, str], Dict[str, Any]] = {}
+    for variant, details in batch.get("results", {}).items():
+        flags_csv = details.get("flags_csv")
+        if not flags_csv:
+            continue
+        path = Path(flags_csv)
+        files.append(str(Path("winners") / path.name))
+        flag_map.update(_parse_winner_flags_csv(path, state))
+        for extra in ("map_json", "hits_csv", "overlay_html", "stamp_json_analyzer", "stamp_json_winners"):
+            extra_path = details.get(extra)
+            if not extra_path:
+                continue
+            files.append(str(Path("winners") / Path(extra_path).name))
+    unique_files = []
+    seen: Set[str] = set()
+    for entry in files:
+        if entry in seen:
+            continue
+        seen.add(entry)
+        unique_files.append(entry)
+    return OverlayArtifacts(flag_map=flag_map, files=unique_files)
 
 
