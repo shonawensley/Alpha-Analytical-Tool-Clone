@@ -19,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VALIDATION_DIR = ROOT / "data/outputs/analysis/vtrac_validation"
+SCORE_CONFIG = ROOT / "configs" / "vtrac_score_config.json"
 
 
 def run_step(description: str, argv: list[str]) -> None:
@@ -44,17 +45,17 @@ def main() -> int:
         "Building summary.md / summary.csv",
         [sys.executable, "TOOLS/make_pro_payload.py"],
     )
-    run_step(
-        "Scoring sections → vtrac_compact_report.*",
-        [
-            sys.executable,
-            "TOOLS/vtrac_score_and_export.py",
-            "data/outputs/analysis/vtrac",
-            str(VALIDATION_DIR),
-            "--output",
-            str(VALIDATION_DIR),
-        ],
-    )
+    score_cmd = [
+        sys.executable,
+        "TOOLS/vtrac_score_and_export.py",
+        "data/outputs/analysis/vtrac",
+        str(VALIDATION_DIR),
+        "--out-dir",
+        str(VALIDATION_DIR),
+    ]
+    if SCORE_CONFIG.exists():
+        score_cmd.extend(["--config", str(SCORE_CONFIG)])
+    run_step("Scoring sections → vtrac_compact_report.*", score_cmd)
     run_step(
         "Packaging optional full payload ZIP",
         [sys.executable, "TOOLS/make_vtrac_full_payload.py"],

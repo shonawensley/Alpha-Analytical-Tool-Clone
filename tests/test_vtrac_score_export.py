@@ -4,15 +4,17 @@ import sys
 from pathlib import Path
 
 
-def run_script(target_dir: Path) -> subprocess.CompletedProcess:
+def run_script(target_dir: Path, config: Path) -> None:
     cmd = [
         sys.executable,
         "TOOLS/vtrac_score_and_export.py",
         str(target_dir),
-        "--output",
+        "--out-dir",
         str(target_dir),
+        "--config",
+        str(config),
     ]
-    return subprocess.run(cmd, check=True, cwd=Path(__file__).resolve().parents[1])
+    subprocess.run(cmd, check=True, cwd=Path(__file__).resolve().parents[1])
 
 
 def read_outputs(target_dir: Path):
@@ -20,9 +22,7 @@ def read_outputs(target_dir: Path):
     csv_path = target_dir / "vtrac_compact_report.csv"
     assert json_path.exists(), "JSON output missing"
     assert csv_path.exists(), "CSV output missing"
-
-    rows = json.loads(json_path.read_text())
-    return rows
+    return json.loads(json_path.read_text())
 
 
 def test_vtrac_score_and_export(tmp_path: Path):
@@ -36,27 +36,50 @@ def test_vtrac_score_and_export(tmp_path: Path):
         target_file.parent.mkdir(parents=True, exist_ok=True)
         target_file.write_text(rel_path.read_text())
 
-    run_script(tmp_path)
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "weights": {"overlap": 4.0},
+                "section_priors": {"Midday": 1.25},
+                "state_priors": {"DemoState4": 0.95},
+            }
+        )
+    )
+
+    run_script(tmp_path, config_path)
     rows = read_outputs(tmp_path)
 
     assert len(rows) == 2
 
-    combined = next(r for r in rows if r["section"] == "Combined")
-    midday = next(r for r in rows if r["section"] == "Midday")
+    rows_by_section = {row["section"]: row for row in rows}
+    combined = rows_by_section["Combined"]
+    midday = rows_by_section["Midday"]
 
-    # Combined has overlap > 0, should not be flagged as rescue and should rank higher.
-    assert combined["overlap"] == 2
-    assert combined["tier"] == "B"
+    # Combined keeps strong overlap score and no rescue.
+    assert combined["overlap"] == 3
+    assert combined["tier"] == "B+"
     assert "weak_positive_rescue" not in combined["flags"]
+    assert combined["mirror_supported"] is True
+    assert "overlap" in combined["why"]
 
-    # Midday overlap=0 but consensus/stability should trigger rescue flag.
+    # Midday overlap=0 but consensus/stability triggers rescue and section prior override.
     assert midday["overlap"] == 0
     assert "weak_positive_rescue" in midday["flags"]
     assert midday["tier"] == "Z"
+    assert abs(midday["section_prior"] - 1.25) < 1e-6
+    assert "rescue_multiplier" in midday["why"]
 
-    # Recommended tokens capped and present.
-    assert len(combined["recommended_tokens"]) <= 3
-    assert len(midday["recommended_tokens"]) <= 3
+    # Cross-section echo should count analyzer-only shared token (VAnalyzerShared).
+    assert combined["cross_section_echo"] >= 1
+
+    # Recommended tokens are capped and include analyzer/winners union.
+    assert 0 < len(combined["recommended_tokens"]) <= 3
+    assert "VAnalyzerShared" in combined["recommended_tokens"]
+
+    # State prior from config applied.
+    assert abs(combined["state_prior"] - 0.95) < 1e-6
+    assert abs(midday["state_prior"] - 0.95) < 1e-6
 
     # Combined score should exceed rescue section score.
     assert combined["confidence_score"] > midday["confidence_score"]

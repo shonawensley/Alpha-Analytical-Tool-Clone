@@ -447,10 +447,13 @@ if __name__ == "__main__":
 
 Purpose: This is the “scoring wrapper” that converts your validator JSON into the compact score table and JSON your aggregator can ingest. It’s completely backward‑compatible and config‑light.
 
-Implementation notes (wired 2025-10-26):
-- Script lives at `TOOLS/vtrac_score_and_export.py`.
-- `TOOLS/run_vtrac_share_bundle.py` now calls it automatically after `make_pro_payload.py`.
-- Outputs land in `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}` ready for GitHub raw links.
+Implementation notes (wired 2025-10-26, refreshed):
+- Script lives at `TOOLS/vtrac_score_and_export.py` (now argparse + logging + explainability).
+- `configs/vtrac_score_config.json` holds tunable weights (overlap, stability, consensus, priors, state overrides).
+- The scorer consumes `validation_report.json` directly (no analyzer schema changes) and writes `vtrac_compact_report.{csv,json}`.
+- Cross-section echo & ledger now consider union(winners, analyzer tokens) so pure analyzer families still promote.
+- Each row includes `section_prior`, `state_prior`, and a compact `why` explanation for audits.
+- `TOOLS/run_vtrac_share_bundle.py` passes the config automatically after running `make_pro_payload.py`.
 
 Quick unit checks (embedded in the logic)
 
@@ -472,15 +475,23 @@ Put vtrac_score_and_export.py in the same machine/folder where you’ve saved fi
 /.../SouthCarolina4_vtrac_enhanced_20251023_020648.json
 
 
-Run:
+Run (one-command bundle):
+```bash
+python TOOLS/run_vtrac_share_bundle.py
+```
 
-python vtrac_score_and_export.py /path/to/that/folder
+Run manually (custom folders / configs):
+```bash
+python TOOLS/vtrac_score_and_export.py <validation-folder> \
+    --config configs/vtrac_score_config.json \
+    --out-dir data/outputs/analysis/vtrac_validation --verbose
+```
 
-
-You’ll get:
-
-/path/to/that/folder/vtrac_compact_report.json
-/path/to/that/folder/vtrac_compact_report.csv
+Outputs:
+```
+data/outputs/analysis/vtrac_validation/vtrac_compact_report.json
+data/outputs/analysis/vtrac_validation/vtrac_compact_report.csv
+```
 
 
 These files are exactly what you described wanting to “drop in chat or host on GitHub (raw)”.
@@ -501,16 +512,16 @@ This wrapper only reads the fields you already produce; the CSV/JSON explicitly 
 
 If you want finer control
 
-You can tune the numbers in the WEIGHTS dict at the top of the script:
-
-WEIGHTS = {
-  "overlap": 3.0, "stable": 1.6, "consensus": 1.0, "token_echo": 1.2,
-  "hot": 0.25, "super": 0.35, "mask": 0.8, "mirror": 0.5, "doubles": 0.3,
-  "combined_prior": 1.15, "rescue_multiplier": 0.35,
+You can tune the weights via `configs/vtrac_score_config.json` (no code edits required):
+```json
+{
+  "weights": {"overlap": 3.2, "stable": 1.8, "...": "..."},
+  "col_weights": {"1": 2.5, "2": 2.1},
+  "section_priors": {"Combined": 1.20, "Midday": 1.05},
+  "state_priors": {"SouthCarolina4": 1.10}
 }
-
-
-If you want to make per‑state priors later (e.g., SC favors Evening), we can add a tiny weights_by_state.json without touching the main logic.
+```
+Run the scorer with `--config configs/vtrac_score_config.json` (or point to another JSON) to A/B different tuning sets.
 
 What I need from you right now
 

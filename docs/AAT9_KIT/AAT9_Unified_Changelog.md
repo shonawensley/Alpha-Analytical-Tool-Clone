@@ -1,3 +1,9 @@
+## 2025-10-26 - V-TRAC scoring config + explainability
+- Impact: `vtrac_score_and_export.py` now supports argparse, logging, explainability strings, union-based echoes, and config-driven weights/priors (including state overrides).
+- Impact: Bundle helper auto-applies `configs/vtrac_score_config.json`; the compact report exposes `section_prior`, `state_prior`, and `why` columns so reviewers can audit contributions quickly.
+- Impact: Added pytest-backed fixture ensuring consensus rescue, analyzer-only echo boosts, and config overrides stay stable.
+- Files: TOOLS/vtrac_score_and_export.py, TOOLS/run_vtrac_share_bundle.py, configs/vtrac_score_config.json, tests/test_vtrac_score_export.py, tests/fixtures/vtrac_validation/DemoState4/validation_report.json, tasks/VTRAC_ENHANCMENTS.txt, tasks/VALIDATE_C.TXT, briefings/CODEX_READ_FIRST_AAT9_WSL.md.
+
 ## 2025-10-18 - Data validation workflow + insights refresh
 - Impact: Added a dedicated workflow guide (`AAT9_Data_Validation_Workflow.md`) capturing the full loop for generating enhanced bundles, running the validator, producing `matrix.csv`/`findings.md`, and handing artifacts to reviewers (commit/push, zip, or targeted upload).
 - Impact: Logged data-sharing best practices and aggregator outlook in `AAT9_Analysis_Insights.md`, emphasising continued rule-based tuning with optional ML later.

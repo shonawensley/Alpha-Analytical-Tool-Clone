@@ -72,13 +72,21 @@ python TOOLS/run_vtrac_share_bundle.py
 It automates:
 
 1. `make_pro_payload.py` → `summary.md` + `summary.csv`
-2. `vtrac_score_and_export.py data/outputs/analysis/vtrac_validation` → `vtrac_compact_report.json` + `.csv`
+2. `vtrac_score_and_export.py data/outputs/analysis/vtrac_validation` (with `configs/vtrac_score_config.json`) → `vtrac_compact_report.json` + `.csv`
 3. `make_vtrac_full_payload.py` → `vtrac_validation_full_payload.zip` (optional backup only)
 
 After it finishes:
 - Stage the four text artifacts and commit.
 - Push via GitHub Desktop.
 - Share the raw links for the text files (CSV/MD/JSON); upload the ZIP only if someone explicitly needs the bulk archive.
+
+Manual scorer (ad-hoc folders):
+```
+python TOOLS/vtrac_score_and_export.py <validation-path> \
+    --config configs/vtrac_score_config.json \
+    --out-dir data/outputs/analysis/vtrac_validation --verbose
+```
+The compact CSV/JSON now include a `why` string (overlap, stability, consensus, echo, priors) for quick triage.
 
 
 ✅ What I can access and verify right now

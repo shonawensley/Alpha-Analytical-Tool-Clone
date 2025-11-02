@@ -101,6 +101,13 @@ and any affected KIT docs.
 python TOOLS/run_vtrac_share_bundle.py
 ```
 - Publishes `summary.md`, `summary.csv`, `vtrac_compact_report.{csv,json}`, and (optionally) `vtrac_validation_full_payload.zip` under `data/outputs/analysis/vtrac_validation/`.
+- The scorer honours `configs/vtrac_score_config.json` (weights, column priors, state priors). Tweak that file or pass `--config` directly if you need a tuning sandbox.
+- Manual invocation (for ad-hoc folders):
+  ```bash
+  python TOOLS/vtrac_score_and_export.py data/outputs/analysis/vtrac_validation \
+      --config configs/vtrac_score_config.json \
+      --out-dir data/outputs/analysis/vtrac_validation --verbose
+  ```
 - Commit locally; push via GitHub Desktop; share the `https://raw.githubusercontent.com/...` links (text files only) with reviewers.
 
 5) Git workflow (Desktop only)

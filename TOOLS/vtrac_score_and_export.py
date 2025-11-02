@@ -1,28 +1,38 @@
 #!/usr/bin/env python3
 """
-V-TRAC Validator → Compact Scorer/Exporter
+V-TRAC validator → compact scorer/exporter.
 
-Consumes `validation_report.json` files emitted by the enhanced validator,
-computes per-section confidence scores (overlap-first, strict consensus rescue),
-lightly promotes recurring token families, and writes a compact CSV/JSON for
-sharing or downstream ranking.
+Reads one or more folders of `validation_report.json` files (emitted by the
+enhanced validator), computes per-section confidence scores using overlap,
+right-column stability, consensus rescue, section/state priors, and light
+token-ledger promotion, then exports a compact CSV/JSON suitable for sharing
+or downstream aggregation.
 
-Examples:
-    python TOOLS/vtrac_score_and_export.py data/outputs/analysis/vtrac_validation
-    python TOOLS/vtrac_score_and_export.py data/outputs/analysis/vtrac_validation --output data/outputs/analysis/vtrac_validation
+Examples
+--------
+    python TOOLS/vtrac_score_and_export.py
+    python TOOLS/vtrac_score_and_export.py data/outputs/analysis/vtrac_validation \
+        --config configs/vtrac_score_config.json \
+        --out-dir data/outputs/analysis/vtrac_validation \
+        --verbose
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
+import logging
+import math
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Set, Tuple
 
-WEIGHTS = {
+DEFAULT_INPUTS = [
+    "data/outputs/analysis/vtrac_validation",
+    "data/outputs/analysis/vtrac",
+]
+
+DEFAULT_WEIGHTS: Dict[str, float] = {
     "overlap": 3.0,
     "stable": 1.6,
     "consensus": 1.0,
@@ -36,17 +46,49 @@ WEIGHTS = {
     "rescue_multiplier": 0.35,
 }
 
-COL_W = {7: 0.5, 6: 0.7, 5: 0.9, 4: 1.1, 3: 1.6, 2: 2.0, 1: 2.4}
+DEFAULT_COL_WEIGHTS: Dict[int, float] = {
+    7: 0.5,
+    6: 0.7,
+    5: 0.9,
+    4: 1.1,
+    3: 1.6,
+    2: 2.0,
+    1: 2.4,
+}
+
+DEFAULT_SECTION_PRIORS: Dict[str, float] = {
+    "Combined": DEFAULT_WEIGHTS["combined_prior"],
+    "Midday": 1.0,
+    "Evening": 1.0,
+}
 
 
-def as_int_list(cols: Iterable) -> List[int]:
-    out: List[int] = []
-    for col in cols or []:
-        try:
-            out.append(int(str(col).strip()))
-        except Exception:
-            continue
-    return out
+def parse_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value > 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "t", "yes", "y"}
+    return False
+
+
+def to_int(value) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
+def to_float(value) -> float:
+    if isinstance(value, bool):
+        return float(int(value))
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
 
 
 def norm01(value: float, lo: float, hi: float) -> float:
@@ -68,16 +110,50 @@ def discover_reports(paths: Sequence[str]) -> List[Path]:
     return sorted(reports)
 
 
-def get_section_names(payload: dict) -> List[str]:
-    sections = payload.get("sections") or {}
-    ordered: List[str] = []
-    for canonical in ("Combined", "Midday", "Evening"):
-        if canonical in sections:
-            ordered.append(canonical)
-    for name in sections.keys():
-        if name not in ordered:
-            ordered.append(name)
-    return ordered
+def load_config(path: str | None) -> Dict[str, Dict]:
+    if not path:
+        return {
+            "weights": {},
+            "col_weights": {},
+            "section_priors": {},
+            "state_priors": {},
+        }
+    config_path = Path(path)
+    try:
+        data = json.loads(config_path.read_text())
+        return {
+            "weights": data.get("weights", {}),
+            "col_weights": data.get("col_weights", {}),
+            "section_priors": data.get("section_priors", {}),
+            "state_priors": data.get("state_priors", {}),
+        }
+    except Exception as exc:  # pragma: no cover - defensive
+        logging.warning("Could not load config %s (%s)", config_path, exc)
+        return {
+            "weights": {},
+            "col_weights": {},
+            "section_priors": {},
+            "state_priors": {},
+        }
+
+
+def stable_score(stable_cols: Iterable[int], col_weights: Dict[int, float]) -> float:
+    return sum(col_weights.get(int(col), 0.0) for col in stable_cols)
+
+
+def build_global_token_ledger(staged_docs: List[dict]) -> Tuple[Dict[str, Set[str]], Dict[str, Dict[str, int]]]:
+    token_states: Dict[str, Set[str]] = defaultdict(set)
+    token_sections_by_state: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for entry in staged_docs:
+        state = entry["__state__"]
+        winners_map = entry["__sections__"]["winners_tokens"]
+        analyzer_map = entry["__sections__"]["analyzer_tokens"]
+        for section in winners_map:
+            union_tokens = winners_map[section] | analyzer_map.get(section, set())
+            for token in union_tokens:
+                token_states[token].add(state)
+                token_sections_by_state[state][token] += 1
+    return token_states, token_sections_by_state
 
 
 def tokens_for_section(payload: dict, section: str) -> Tuple[List[str], List[str]]:
@@ -106,38 +182,25 @@ def metrics_for_section(payload: dict, section: str) -> Dict[str, object]:
     section_payload = (payload.get("sections") or {}).get(section, {})
     signals = section_payload.get("signals") or {}
     metrics = (section_payload.get("analyzer_metrics") or {}).get("primary") or {}
+    summaries = (payload.get("section_summaries") or {}).get(section, {})
 
     mask_drop = metrics.get("mask_drop_count")
-    mirror_supported = metrics.get("mirror_supported")
-    if isinstance(mirror_supported, (int, float)):
-        mirror_supported = mirror_supported > 0
-
     doubles = metrics.get("double_hits")
     if doubles is None:
         doubles = metrics.get("doubles_hit_count", 0)
-
-    summaries = (payload.get("section_summaries") or {}).get(section, {})
 
     return {
         "hot": signals.get("hot"),
         "superhot": signals.get("superhot"),
         "hot_count": summaries.get("hot_count"),
         "superhot_count": summaries.get("superhot_count"),
-        "stable_cols": as_int_list(signals.get("stable_columns") or []),
-        "consensus_col1": bool(signals.get("consensus_col1")),
-        "consensus_col2": bool(signals.get("consensus_col2")),
+        "stable_cols": [to_int(c) for c in signals.get("stable_columns") or []],
+        "consensus_col1": parse_bool(signals.get("consensus_col1")),
+        "consensus_col2": parse_bool(signals.get("consensus_col2")),
         "mask_drop": mask_drop if mask_drop is not None else 0,
-        "mirror": bool(mirror_supported),
+        "mirror": parse_bool(metrics.get("mirror_supported")),
         "doubles": doubles if doubles is not None else 0,
     }
-
-
-def stable_score(stable_cols: List[int]) -> float:
-    return sum(COL_W.get(col, 0.0) for col in stable_cols)
-
-
-def section_prior(section_name: str) -> float:
-    return WEIGHTS["combined_prior"] if section_name == "Combined" else 1.0
 
 
 def compute_cross_section_echo(tokens_map: Dict[str, Set[str]]) -> Dict[str, int]:
@@ -145,9 +208,7 @@ def compute_cross_section_echo(tokens_map: Dict[str, Set[str]]) -> Dict[str, int
     sections = list(tokens_map.keys())
     for name in sections:
         mine = tokens_map[name]
-        others = set().union(
-            *[tokens_map[other] for other in sections if other != name]
-        ) if len(sections) > 1 else set()
+        others = set().union(*(tokens_map[other] for other in sections if other != name)) if len(sections) > 1 else set()
         echo[name] = len(mine & others)
     return echo
 
@@ -164,68 +225,70 @@ def tier_from_overlap(overlap: int) -> str:
     return "Z"
 
 
-def build_global_token_ledger(staged_docs: List[dict]):
-    token_states = defaultdict(set)
-    token_sections_by_state = defaultdict(lambda: defaultdict(int))
-    for entry in staged_docs:
-        state = entry["__state__"]
-        sections = entry["__sections__"]["winners_tokens"]
-        for section, winners_tokens in sections.items():
-            for token in winners_tokens:
-                token_states[token].add(state)
-                token_sections_by_state[state][token] += 1
-    return token_states, token_sections_by_state
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+def main() -> int:
+    parser = argparse.ArgumentParser(description="V-TRAC validator → compact scorer/exporter")
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["data/outputs/analysis/vtrac_validation"],
-        help="Directories/files containing validation_report.json (searched recursively).",
+        default=DEFAULT_INPUTS,
+        help="Files/directories containing validation_report.json (searches recursively).",
     )
     parser.add_argument(
-        "--output",
-        "-o",
-        help="Directory for vtrac_compact_report.{json,csv}. Defaults to the first report's parent directory.",
+        "--config",
+        help="Optional JSON overriding weights/priors (see configs/vtrac_score_config.json).",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--out-dir",
+        help="Directory for vtrac_compact_report.{json,csv}. Defaults to first resolved input directory.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose (DEBUG) logging output.",
+    )
+    args = parser.parse_args()
 
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s")
 
-def main(args: argparse.Namespace) -> int:
     reports = discover_reports(args.paths)
     if not reports:
-        print("No validation_report.json files found.", file=sys.stderr)
+        logging.error("No validation_report.json files found under %s", ", ".join(args.paths))
         return 1
 
-    if args.output:
-        output_dir = Path(args.output).resolve()
-    else:
-        output_dir = reports[0].parent
+    config = load_config(args.config)
+
+    weights = {**DEFAULT_WEIGHTS, **{k: float(v) for k, v in config["weights"].items()}}
+    col_weights = {**DEFAULT_COL_WEIGHTS, **{int(k): float(v) for k, v in config["col_weights"].items()}}
+    section_priors = {**DEFAULT_SECTION_PRIORS, **{str(k): float(v) for k, v in config["section_priors"].items()}}
+    state_priors = {str(k): float(v) for k, v in config["state_priors"].items()}
+
+    output_dir = Path(args.out_dir) if args.out_dir else reports[0].parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
     staged: List[dict] = []
     for report_path in reports:
-        with report_path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-
+        payload = json.loads(report_path.read_text())
         state = payload.get("state") or report_path.parent.name
-        date = payload.get("generated_at") or ""
-        section_names = get_section_names(payload)
+        date = payload.get("generated_at", "")
+        section_names = list((payload.get("sections") or {}).keys())
 
-        winners_tokens_by_section = {}
-        for section_name in section_names:
-            winners, _ = tokens_for_section(payload, section_name)
-            winners_tokens_by_section[section_name] = set(winners)
+        winners_tokens_by_section: Dict[str, Set[str]] = {}
+        analyzer_tokens_by_section: Dict[str, Set[str]] = {}
+
+        for section in section_names:
+            winners_tokens, analyzer_tokens = tokens_for_section(payload, section)
+            winners_tokens_by_section[section] = set(winners_tokens)
+            analyzer_tokens_by_section[section] = set(analyzer_tokens)
 
         staged.append(
             {
                 "__path__": report_path,
                 "__state__": state,
                 "__date__": date,
-                "__sect_names__": section_names,
-                "__sections__": {"winners_tokens": winners_tokens_by_section},
+                "__sections__": {
+                    "winners_tokens": winners_tokens_by_section,
+                    "analyzer_tokens": analyzer_tokens_by_section,
+                },
                 "doc": payload,
             }
         )
@@ -238,87 +301,84 @@ def main(args: argparse.Namespace) -> int:
         payload = entry["doc"]
         state = entry["__state__"]
         date = entry["__date__"]
-        section_names = entry["__sect_names__"]
+        section_names = list((payload.get("sections") or {}).keys())
 
-        raw_mask: List[float] = []
-        raw_doubles: List[float] = []
+        raw_mask_values: List[float] = []
+        raw_doubles_values: List[float] = []
         tokens_map: Dict[str, Set[str]] = {}
         section_cache: Dict[str, dict] = {}
 
-        for section_name in section_names:
-            winners_tokens, analyzer_tokens = tokens_for_section(payload, section_name)
-            tokens_map[section_name] = set(winners_tokens)
-            metrics = metrics_for_section(payload, section_name)
-            section_cache[section_name] = {
+        for section in section_names:
+            winners_tokens, analyzer_tokens = tokens_for_section(payload, section)
+            metrics = metrics_for_section(payload, section)
+            tokens_map[section] = set(winners_tokens) | set(analyzer_tokens)
+            section_cache[section] = {
                 "winners_tokens": winners_tokens,
                 "analyzer_tokens": analyzer_tokens,
                 "metrics": metrics,
             }
-            raw_mask.append(metrics["mask_drop"])
-            raw_doubles.append(metrics["doubles"])
+            raw_mask_values.append(to_float(metrics["mask_drop"]))
+            raw_doubles_values.append(to_float(metrics["doubles"]))
 
-        mask_min, mask_max = (min(raw_mask), max(raw_mask)) if raw_mask else (0, 0)
-        dbl_min, dbl_max = (min(raw_doubles), max(raw_doubles)) if raw_doubles else (0, 0)
-        echo = compute_cross_section_echo(tokens_map)
+        mask_min, mask_max = (min(raw_mask_values), max(raw_mask_values)) if raw_mask_values else (0.0, 0.0)
+        doubles_min, doubles_max = (min(raw_doubles_values), max(raw_doubles_values)) if raw_doubles_values else (0.0, 0.0)
+        echo_by_section = compute_cross_section_echo(tokens_map)
 
-        for section_name in section_names:
-            cache_entry = section_cache[section_name]
+        state_prior = state_priors.get(state, 1.0)
+
+        for section in section_names:
+            cache_entry = section_cache[section]
             winners_tokens = cache_entry["winners_tokens"]
             analyzer_tokens = cache_entry["analyzer_tokens"]
             metrics = cache_entry["metrics"]
 
             overlap = len(set(winners_tokens) & set(analyzer_tokens))
             stable_cols = metrics["stable_cols"]
-            stable = stable_score(stable_cols)
-            consensus_count = int(metrics["consensus_col1"]) + int(
-                metrics["consensus_col2"]
-            )
+            stability_value = stable_score(stable_cols, col_weights)
+            consensus_count = int(metrics["consensus_col1"]) + int(metrics["consensus_col2"])
 
-            hot_count = (
-                metrics["hot_count"]
-                if metrics["hot_count"] is not None
-                else (metrics["hot"] if isinstance(metrics["hot"], (int, float)) else 0)
-            )
-            superhot_count = (
-                metrics["superhot_count"]
-                if metrics["superhot_count"] is not None
-                else (
-                    metrics["superhot"]
-                    if isinstance(metrics["superhot"], (int, float))
-                    else 0
-                )
-            )
+            hot_count = metrics["hot_count"]
+            superhot_count = metrics["superhot_count"]
+            hot_value = to_int(hot_count) if hot_count is not None else to_int(metrics["hot"])
+            superhot_value = to_int(superhot_count) if superhot_count is not None else to_int(metrics["superhot"])
+            hot_norm = min(hot_value / 8.0, 1.0) if hot_value else 0.0
+            super_norm = min(superhot_value / 12.0, 1.0) if superhot_value else 0.0
 
-            hot_norm = min(1.0, (hot_count or 0) / 8.0)
-            super_norm = min(1.0, (superhot_count or 0) / 12.0)
-            mask_norm = norm01(metrics["mask_drop"], mask_min, mask_max)
-            mirror_norm = 1.0 if metrics["mirror"] else 0.0
-            doubles_norm = norm01(metrics["doubles"], dbl_min, dbl_max)
+            mask_norm = norm01(to_float(metrics["mask_drop"]), mask_min, mask_max)
+            mirror_value = 1.0 if metrics["mirror"] else 0.0
+            doubles_norm = norm01(to_float(metrics["doubles"]), doubles_min, doubles_max)
+            echo_value = echo_by_section.get(section, 0)
 
-            score = (
-                WEIGHTS["overlap"] * overlap
-                + WEIGHTS["stable"] * stable
-                + WEIGHTS["consensus"] * (consensus_count if stable_cols else 0)
-                + WEIGHTS["token_echo"] * echo.get(section_name, 0)
-                + WEIGHTS["hot"] * hot_norm
-                + WEIGHTS["super"] * super_norm
-                + WEIGHTS["mask"] * mask_norm
-                + WEIGHTS["mirror"] * mirror_norm
-                + WEIGHTS["doubles"] * doubles_norm
-            )
-            score *= section_prior(section_name)
+            components: List[Tuple[str, float, float]] = [
+                ("overlap", weights["overlap"], float(overlap)),
+                ("stable", weights["stable"], stability_value),
+                ("consensus", weights["consensus"], float(consensus_count) if stable_cols else 0.0),
+                ("echo", weights["token_echo"], float(echo_value)),
+                ("hot", weights["hot"], hot_norm),
+                ("superhot", weights["super"], super_norm),
+                ("mask_drop", weights["mask"], mask_norm),
+                ("mirror", weights["mirror"], mirror_value),
+                ("doubles", weights["doubles"], doubles_norm),
+            ]
+
+            base_score = sum(weight * value for _, weight, value in components)
+            section_prior = section_priors.get(section, 1.0)
+            score = base_score * section_prior * state_prior
 
             flags: List[str] = []
+            rescue_multiplier = 1.0
             if overlap == 0 and consensus_count >= 1 and stable_cols:
-                score *= WEIGHTS["rescue_multiplier"]
+                rescue_multiplier = weights["rescue_multiplier"]
+                score *= rescue_multiplier
                 flags.append("weak_positive_rescue")
-
-            tier = tier_from_overlap(overlap)
             if overlap == 0:
                 flags.append("zero_overlap")
 
+            tier = tier_from_overlap(overlap)
+
+            union_tokens = set(winners_tokens) | set(analyzer_tokens)
             token_scores: List[Tuple[float, str]] = []
-            for token in winners_tokens:
+            for token in union_tokens:
                 base = 1.0
                 if token in analyzer_tokens:
                     base += 0.5
@@ -331,21 +391,32 @@ def main(args: argparse.Namespace) -> int:
             token_scores.sort(reverse=True)
             recommended_tokens = [token for _, token in token_scores][:3]
 
-            straights = straight_list_for_section(payload, section_name)
+            straights = straight_list_for_section(payload, section)
+
+            why_parts: List[str] = [
+                f"{label}={value:.3f}*{weight:.2f}->{weight * value:.2f}"
+                for (label, weight, value) in components
+                if value > 0.0
+            ]
+            why_parts.append(f"section_prior={section_prior:.2f}")
+            if not math.isclose(state_prior, 1.0):
+                why_parts.append(f"state_prior={state_prior:.2f}")
+            if not math.isclose(rescue_multiplier, 1.0):
+                why_parts.append(f"rescue_multiplier={rescue_multiplier:.2f}")
 
             rows.append(
                 {
                     "date": date,
                     "state": state,
-                    "section": section_name,
+                    "section": section,
                     "overlap": overlap,
                     "stable_cols_count": len(stable_cols),
                     "stable_cols": stable_cols,
                     "consensus_col1": metrics["consensus_col1"],
                     "consensus_col2": metrics["consensus_col2"],
-                    "cross_section_echo": echo.get(section_name, 0),
-                    "hot_count": hot_count,
-                    "superhot_count": superhot_count,
+                    "cross_section_echo": echo_value,
+                    "hot_count": hot_value,
+                    "superhot_count": superhot_value,
                     "mask_drop": metrics["mask_drop"],
                     "mirror_supported": metrics["mirror"],
                     "double_hits": metrics["doubles"],
@@ -355,6 +426,9 @@ def main(args: argparse.Namespace) -> int:
                     "top_tokens": winners_tokens,
                     "recommended_tokens": recommended_tokens,
                     "top_straights": straights,
+                    "section_prior": section_prior,
+                    "state_prior": state_prior,
+                    "why": "; ".join(why_parts),
                     "source": report_path.name,
                 }
             )
@@ -362,8 +436,7 @@ def main(args: argparse.Namespace) -> int:
     out_json = output_dir / "vtrac_compact_report.json"
     out_csv = output_dir / "vtrac_compact_report.csv"
 
-    with out_json.open("w", encoding="utf-8") as handle:
-        json.dump(rows, handle, indent=2)
+    out_json.write_text(json.dumps(rows, indent=2))
 
     headers = [
         "date",
@@ -386,30 +459,28 @@ def main(args: argparse.Namespace) -> int:
         "top_tokens",
         "recommended_tokens",
         "top_straights",
+        "section_prior",
+        "state_prior",
+        "why",
         "source",
     ]
 
     def csv_escape(value) -> str:
-        text = (
-            value
-            if isinstance(value, str)
-            else json.dumps(value, separators=(",", ":"))
-        )
-        if any(ch in text for ch in [",", '"', "\n"]):
+        text = value if isinstance(value, str) else json.dumps(value, separators=(",", ":"))
+        if any(ch in text for ch in {",", '"', "\n"}):
             text = '"' + text.replace('"', '""') + '"'
         return text
 
     with out_csv.open("w", encoding="utf-8", newline="") as handle:
         handle.write(",".join(headers) + "\n")
         for row in rows:
-            line = ",".join(csv_escape(row[column]) for column in headers)
-            handle.write(line + "\n")
+            handle.write(",".join(csv_escape(row[column]) for column in headers) + "\n")
 
-    print(f"Wrote {len(rows)} rows")
-    print(f"- JSON: {out_json}")
-    print(f"- CSV : {out_csv}")
+    logging.info("Wrote %d rows", len(rows))
+    logging.info(" - JSON: %s", out_json)
+    logging.info(" - CSV : %s", out_csv)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(parse_args()))
+    raise SystemExit(main())
