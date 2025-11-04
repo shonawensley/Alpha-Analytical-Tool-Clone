@@ -1155,3 +1155,7 @@ _________________________
 
 
 • All set—nothing else pending on my side. Feel free to shut down whenever you’re ready.
+2025-11-02 — Digit Reduction Analyzer V2 validation sweep
+- Ran long-string reducer + Analyzer V2 for CT/DE/FL/IN/MI/NJ/NY/OH using existing tables under data/outputs/tables/.
+- Harness (`scripts/checks/dr_analyzer_v2_harness.py`) shows 396 rows per state; locked candidates cluster around Set3/Set2 families but actual June17 winners (e.g. CT 894/059) remain mid-pack (~rank 29, score ~0.80) because they only hit 1 column/variant.
+- Need follow-up: tune config weights (e.g. reduce density/dup emphasis, add Set1 bias) and run Control Center winners overlay so Combined/flags are generated. Training bundles already landed under data/outputs/analysis/digit_reduction/<STATE>/.
