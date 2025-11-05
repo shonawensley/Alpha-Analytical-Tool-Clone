@@ -33,6 +33,7 @@ docs/AAT9_KIT/AAT9_Preflight_Reference.md
 docs/AAT9_KIT/AAT9_Diagrams_Guide.md
 
 docs/AAT9_KIT/AAT9_Unified_Changelog.md
+- Lean bundles + analyzer outputs: docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md and USER_GUIDE_AAT9/DigitReduction_UserGuide.txt
 
 AGENTS.md, .codex/AGENTS.universal.md
 
