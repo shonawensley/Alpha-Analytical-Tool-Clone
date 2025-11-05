@@ -52,45 +52,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Digit Reduction Analyzer V2 harness")
     parser.add_argument("--state", required=True, help="State key, e.g. Connecticut4")
     parser.add_argument(
-        "--training-json",
+        "--training-steps",
         type=Path,
-        help="Optional explicit path to digit_reduction_log.json",
+        help="Optional explicit path to digit_reduction_steps.csv",
     )
     args = parser.parse_args()
 
     state = args.state
     cfg = _load_config()
 
-    if args.training_json:
-        data = args.training_json.read_text(encoding="utf-8")
-        import json
-        payload = json.loads(data)
-        items = []
-        from alpha_analytical.digit_reduction.analyzer_v2.types import Item, Step, Key
-
-        for entry in payload.get("items", []):
-            key = Key(
-                state=entry["state"],
-                area=entry["area"],
-                section=entry["section"],
-                set=entry["set"],
-                draw=entry["draw"],
-                col=int(entry.get("col", 0)),
-                method=entry["method"],
-                mode=entry["mode"],
-            )
-            steps = [Step(**step) for step in entry.get("steps", [])]
-            items.append(
-                Item(
-                    key=key,
-                    grid_position=entry.get("grid_position", {}),
-                    sequence_meta=entry.get("sequence_meta", {}),
-                    steps=steps,
-                    final=entry.get("final", {}),
-                )
-            )
-    else:
-        items, _ = load_training_json(state)
+    items, _ = load_training_json(state)
 
     features = build_features(items, cfg)
     _aggregate_metrics(features, cfg)

@@ -51,10 +51,14 @@ overlay:
   near_miss_hint: true
 
 diagnostics:
-  write_training_steps: false
+  write_training_steps: true
   write_feature_distributions: false
   write_debug_deltas: false
+  write_overlay: false
 
 io:
   out_root_template: "data/outputs/analysis/digit_reduction/{STATE}/analyzer_v2"
   safe_mode: true
+
+outputs:
+  write_stacked_html: true

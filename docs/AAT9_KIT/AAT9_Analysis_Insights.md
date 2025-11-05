@@ -64,3 +64,4 @@ _No entries yet — append new insights here._
 ## General Notes
 
 _No entries yet — append new insights here._
+- 2025-11-03 update: Analyzer bundles are now lean (per_item, top_candidates, meta, stacked HTML) with winners JSON/flags produced only by the Control Center module; reducer steps optional.

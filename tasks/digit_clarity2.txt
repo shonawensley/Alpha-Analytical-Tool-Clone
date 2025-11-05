@@ -1,0 +1,195 @@
+You’re on the right track. Let me answer your three questions directly first, then I’ll give you a concrete “do this next” list for Codex so we lock the lean shape for Digit‑Reduction and replicate it across the other tools.
+
+1) Is *_digit_reduction_steps.csv part of the predictive “brain,” or just diagnostics?
+
+Short answer: it’s diagnostics.
+Why: the analyzer’s brain is the feature pipeline that consumes the reducer’s in‑memory reductions and emits the per‑item features and the top‑candidates. The steps.csv is a trace of how each R2 string was reduced step‑by‑step—great for debugging and validating, but not required for inference or scoring.
+
+Think of it like this:
+
+R2 strings  →  reducer (does the reductions)  →  analyzer_v2 features/score (the brain)
+                │
+                └── steps.csv (optional trace for humans / tuning)
+
+
+So we should:
+
+Keep *_analyzer_v2_per_item.csv, *_analyzer_v2_top_candidates.csv, *_analyzer_v2_meta.json (these are the predictive brain outputs).
+
+Gate *_digit_reduction_steps.csv behind a diagnostics.write_steps_csv flag (off by default).
+
+Drop the 30k‑line *_digit_reduction_log.json entirely unless explicitly requested. It duplicates information the code already “sees” and only adds noise/size.
+
+2) Why keep any “winners” outputs once we have the 3‑variant pattern view?
+
+You’re right that most per‑tool winners artifacts are post‑result forensics and should be centralized. But keeping a very small, central set helps with:
+
+Human review: one overlay HTML that paints the winning pattern across the three tables (the view you like).
+
+Machine audit/repro: a tiny stamp/meta JSON so we (and future runs) know which draws, configs, git SHA, and variants were stamped.
+
+(Optional) coordinates: if you ever want automatic QA metrics or to compute hit rates without re‑parsing HTML, keep a compact map.json (grid coordinates + labels). This is machine‑readable and ~tiny.
+
+Everything else (hits.csv, flags.csv, per‑tool overlays, etc.) is redundant once you centralize. So the central Winners Module should produce at most:
+
+/winners_central/
+  YYYYMMDD_overlay.html        (human)
+  YYYYMMDD_stamp.json          (repro metadata)
+  YYYYMMDD_map.json            (optional; machine coordinates for QA)
+
+
+…and no analyzer should write its own winner_* files by default.
+
+3) Why archive/guard extra clustering outputs instead of deleting them?
+
+Three reasons:
+
+Risk control: the clustering and detector code often feeds feature columns you do keep (e.g., density, earliest/persistence, drop/v‑trac detection). Hard‑deleting assets can break paths you’ll need when you revisit scoring.
+
+Cheap compute, high reuse: these calculations are light and already happen inside the brain pipeline. What we’re cutting is surface area of files, not the internal computations that produce your useful columns.
+
+Repro/debug: archiving (or gating behind diagnostics) lets you re‑enable traces quickly when you’re tuning against a new week of pick3statC4, without re‑adding code.
+
+Net: turn off the writes, keep the internal features that matter, and park any heavy/debug artifacts behind diagnostics flags.
+
+What we keep vs. what we gate (Digit‑Reduction)
+
+Analyzer V2 (the brain) — KEEP always
+
+Connecticut4_analyzer_v2_per_item.csv
+
+Connecticut4_analyzer_v2_top_candidates.csv
+
+Connecticut4_analyzer_v2_meta.json
+
+Human pre‑draw view — KEEP (one file)
+
+Connecticut4_digit_reduction_stacked.html (your stacked page; predictive, human‑friendly)
+
+Diagnostics — GATE (off by default)
+
+Connecticut4_digit_reduction_steps.csv → diagnostics.write_steps_csv: false
+
+Connecticut4_digit_reduction_log.json → remove or diagnostics.write_json_log: false (default)
+
+Winners — CENTRALIZE (off in analyzers)
+
+Per‑tool winner_* artifacts → disabled by default.
+
+Central winners module writes:
+
+YYYYMMDD_overlay.html (human)
+
+YYYYMMDD_stamp.json (repro)
+
+YYYYMMDD_map.json (optional, machine QA)
+
+Directory shape (lean)
+.../analysis/digit_reduction/Connecticut4/analyzer_v2/
+  Connecticut4_analyzer_v2_meta.json
+  Connecticut4_analyzer_v2_per_item.csv
+  Connecticut4_analyzer_v2_top_candidates.csv
+  Connecticut4_digit_reduction_stacked.html         ← pre‑draw human view
+
+# diagnostics/ (only when flags on)
+  diagnostics/Connecticut4_digit_reduction_steps.csv
+
+# centralized winners (not under the tool)
+.../analysis/winners_central/Connecticut4/20251103/
+  20251103_overlay.html
+  20251103_stamp.json
+  20251103_map.json   (optional)
+
+
+In training_sets/<STAMP>/ mirror the same lean files (so you can zip/share the “brain” bundle for your master guide experiments).
+
+Minimal schema expectations (so the aggregator can ingest all tools consistently)
+
+per_item.csv (Digit‑Reduction):
+
+Keys: state, area, section, set, draw, col, method, mode, variant
+
+Core features (examples):
+earliest_exact_step, earliest_vtrac_step, earliest_drop_exact_step, earliest_drop_vtrac_step, earliest_family_exact_step, earliest_family_vtrac_step, box_density, drop_run_len, vtrac_local_index, match_types, final_value, final_exact_match, final_vtrac_match, final_drop_exact_match, final_drop_vtrac_match, final_family_exact_match, final_family_vtrac_match, score
+
+Repro columns: config_hash, git_sha, stamp
+
+top_candidates.csv:
+
+Keys: state, variant, family_or_perm_id, mode
+
+Aggregates: score, support, rationale_json (e.g., which features contributed)
+
+meta.json: state, stamp, config_hash, git_sha, policy flags, diagnostics flags
+
+These three files are the “brain.” The stacked HTML is the one pre‑draw page for humans.
+
+Concrete instructions to Codex (apply to Digit‑Reduction now)
+
+Config flags (defaults shown):
+
+outputs:
+  write_evidence: true                    # per_item, top_candidates, meta
+  write_stacked_html: true                # keep the stacked page
+  write_training_bundle: true
+
+diagnostics:
+  write_steps_csv: false                  # off by default
+  write_json_log: false                   # off; prefer to delete support
+  write_feature_distributions: false
+  write_debug_deltas: false
+
+winners:
+  centralized: true                       # analyzers must not emit winner_* files
+  write_overlay_here: false               # analyzers always false; only central module writes
+
+
+Writers:
+
+Ensure Analyzer V2 writes only:
+
+*_analyzer_v2_per_item.csv
+
+*_analyzer_v2_top_candidates.csv
+
+*_analyzer_v2_meta.json
+
+*_digit_reduction_stacked.html (rename if needed)
+
+Guard the call sites that create steps.csv and remove the JSON log path entirely (or respect diagnostics.write_json_log).
+
+Remove per‑tool winners calls:
+
+Delete/guard imports/usages of winners_overlay.* in the analyzer.
+
+The Control Center (central module) will be the only place that writes overlay.html, map.json, stamp.json.
+
+Training bundle:
+
+When packaging under training_sets/<STAMP>/, include only the 3 evidence files + stacked HTML.
+
+If diagnostics.write_steps_csv is true, put the CSV under training_sets/<STAMP>/diagnostics/.
+
+Docs:
+
+Add a short “Evidence Contract” section listing the exact per‑item/top‑candidates columns and meanings (so your master guide can reference them without guessing).
+
+Definition of Done (Digit‑Reduction):
+
+A fresh run produces exactly 4 files under analyzer_v2/ (+ diagnostics only if enabled).
+
+winners subfolder under the tool no longer appears.
+
+Central winners module can produce its 2–3 files on demand for the same run.
+
+training_sets/<STAMP>/ mirrors the lean bundle.
+
+Once Digit‑Reduction is in this shape, we repeat exactly the same pattern for V‑TRAC, Stable Extractor, and Hot Swans. By the time you gather all tools, your cross‑tool “brain pack” per state/day will be ~10–12 files total, which is small enough to zip and feed into your master guide workflow.
+
+Quick answers again (for clarity)
+
+steps.csv ≠ brain — it’s a trace; useful for tuning, not required for scoring. Gate it off by default.
+
+Keep only a central, tiny winners set — overlay.html (human), stamp.json (repro), and optionally map.json (machine QA). Everything else can go.
+
+Don’t delete internal clustering/detectors — they’re cheap and power your feature columns. Just stop writing extra artifacts; guard any heavy traces behind diagnostics. Archive instead of hard‑delete to avoid breaking useful feature paths and to keep reproducibility.

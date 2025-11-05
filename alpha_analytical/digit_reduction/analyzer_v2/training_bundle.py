@@ -32,23 +32,12 @@ def _state_root(state: str, analysis_root: Path) -> Path:
     return analysis_root / "digit_reduction" / state
 
 
-def _training_log_path(state: str, analysis_root: Path) -> Optional[Path]:
+def _training_steps_path(state: str, analysis_root: Path) -> Optional[Path]:
     training_dir = _state_root(state, analysis_root) / "training"
     if not training_dir.exists():
         return None
-    patterns = [
-        f"{state}_digit_reduction_log.json",
-        f"{state}_digit_reduction_logs.json",
-        "*_digit_reduction_log.json",
-        "*_digit_reduction_logs.json",
-    ]
-    candidates: List[Path] = []
-    for pattern in patterns:
-        candidates.extend(training_dir.glob(pattern))
-    if not candidates:
-        return None
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return candidates[0]
+    target = training_dir / f"{state}_digit_reduction_steps.csv"
+    return target if target.exists() else None
 
 
 def _collect_available_stamps(winners_dir: Path) -> Dict[str, List[str]]:
@@ -120,12 +109,9 @@ def package_training_bundle(
 
     copied: List[Path] = []
 
-    training_log = _training_log_path(state, root)
-    if training_log is None:
-        raise TrainingBundleError(
-            f"Training log not found for state {state} under {root}."
-        )
-    copied.append(_copy_file(training_log, bundle_root))
+    training_steps = _training_steps_path(state, root)
+    if training_steps is not None:
+        copied.append(_copy_file(training_steps, bundle_root))
 
     per_item = analyzer_dir / f"{state}_analyzer_v2_per_item.csv"
     top_candidates = analyzer_dir / f"{state}_analyzer_v2_top_candidates.csv"
@@ -145,7 +131,7 @@ def package_training_bundle(
 
     for variant in packaged_variants:
         stem = f"{stamp}_{variant}"
-        for artifact in ("winner_map.json", "winner_flags.csv", "winner_stamp.json"):
+        for artifact in ("winner_map.json", "winner_flags.csv"):
             path_obj = winners_dir / f"{stem}_{artifact}"
             if not path_obj.exists():
                 raise TrainingBundleError(f"Missing winner artifact: {path_obj.name}")

@@ -276,11 +276,7 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         row["vtrac.hot_source"] = hot_spec.source
 
     overlay_cfg = cfg.get("overlay", {})
-    overlay_artifacts = build_winner_overlay(state, rows, feature_entries, cfg, root_path, overlay_cfg)
-    if overlay_artifacts.flag_map:
-        for row in rows:
-            row.update(overlay_artifacts.flag_map.get(_section_key(row), {}))
-
+    overlay_artifacts = None
     top_rows = _top_candidates(rows)
     out_dir = analyzer_out_dir(state, root_path)
     meta = {
@@ -305,9 +301,9 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         per_item=rows,
         top_rows=top_rows,
         meta=meta,
-        overlay_info=overlay_artifacts.files,
         diagnostics_config=diagnostics_cfg,
         feature_entries=feature_entries,
+        cfg=cfg,
     )
 
     artifacts = [
@@ -315,7 +311,8 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         f"{state}_analyzer_v2_top_candidates.csv",
         f"{state}_analyzer_v2_meta.json",
     ]
-    artifacts.extend(overlay_artifacts.files)
+    if overlay_artifacts:
+        artifacts.extend(overlay_artifacts.files)
 
     return {
         "state": state,

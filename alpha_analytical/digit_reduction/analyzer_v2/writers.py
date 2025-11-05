@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List
 
 from .features import ItemFeature
 from .io import write_csv, write_json
+from .stacked import write_stacked_html
 
 
 def write_artifacts(
@@ -13,9 +14,9 @@ def write_artifacts(
     per_item: List[Dict[str, Any]],
     top_rows: List[Dict[str, Any]],
     meta: Dict[str, Any],
-    overlay_info: Iterable[str],
     diagnostics_config: Dict[str, Any],
     feature_entries: Iterable[ItemFeature],
+    cfg: Dict[str, Any],
 ) -> None:
     per_item_path = out_dir / f"{state}_analyzer_v2_per_item.csv"
     top_path = out_dir / f"{state}_analyzer_v2_top_candidates.csv"
@@ -29,6 +30,7 @@ def write_artifacts(
         dist_path = out_dir / f"{state}_analyzer_v2_feature_detail.json"
         write_json(dist_path, [entry.detail for entry in feature_entries])
 
-    if diagnostics_config.get("write_overlay_manifest"):
-        manifest_path = out_dir / f"{state}_analyzer_v2_overlay_manifest.json"
-        write_json(manifest_path, {"files": list(overlay_info)})
+    if cfg.get("outputs", {}).get("write_stacked_html", True):
+        variants = sorted({row.get("section") for row in per_item if row.get("section")})
+        for variant in variants:
+            write_stacked_html(out_dir, state, per_item, variant, top_rows)

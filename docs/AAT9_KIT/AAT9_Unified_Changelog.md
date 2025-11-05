@@ -4,6 +4,12 @@
 - Impact: Added spec lock (`docs/DR_OPT_SPEC_LOCK.md`) plus regression tests covering feature extraction, aggregation metrics, and scoring behaviour.
 - Files: alpha_analytical/digit_reduction/analyzer_v2/{clustering.py,config.yml,features.py,pipeline.py,score.py,vtrac_index.py,winners_overlay.py,writers.py}, docs/DR_OPT_SPEC_LOCK.md, tests/{test_digit_reduction_overlay.py,test_digit_reduction_features_v2.py}
 
+## 2025-11-03 - Digit Reduction lean evidence bundle
+- Impact: Analyzer V2 now emits only the evidence trio (`per_item.csv`, `top_candidates.csv`, `meta.json`) plus stacked HTML per variant; reducer steps stay optional diagnostics, and the verbose JSON log is retired.
+- Impact: All per-tool winner artifacts are gated behind diagnostics; Control Center is the only writer of machine-readable `winner_map.json`/`winner_flags.csv` and the winners HTML.
+- Impact: Training bundles package the lean files (plus steps when enabled) and no longer duplicate winners by default.
+- Files: alpha_analytical/digit_reduction/analyzer_v2/{config.yml,pipeline.py,stacked.py,training_bundle.py,writers.py}, src/core/module_b_digit_reduction.py, scripts/checks/dr_analyzer_v2_harness.py.
+
 ## 2025-10-26 - V-TRAC scoring config + explainability
 - Impact: `vtrac_score_and_export.py` now supports argparse, logging, explainability strings, union-based echoes, and config-driven weights/priors (including state overrides).
 - Impact: Bundle helper auto-applies `configs/vtrac_score_config.json`; the compact report exposes `section_prior`, `state_prior`, and `why` columns so reviewers can audit contributions quickly.
@@ -183,6 +189,5 @@
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
-
 
 

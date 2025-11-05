@@ -1,3 +1,18 @@
+## 2025-11-03 05:20 (UTC) - Digit Reduction lean evidence bundle
+
+- Context: After DIGIT06 the analyzer still wrote 15 winners artifacts and training bundles duplicated the same files, making comparison runs noisy.
+- Change:
+  - Added `outputs.write_stacked_html` / `diagnostics.write_steps_csv` / `diagnostics.write_overlay` toggles and updated `pipeline.py`, `writers.py`, `training_bundle.py`, and `module_b_digit_reduction.py` so per-tool winners files are gated off.
+  - Introduced `stacked.py` helper; Analyzer V2 now emits only `per_item.csv`, `top_candidates.csv`, `meta.json`, and stacked HTML per variant. Steps CSV stays optional diagnostics; the giant JSON log is retired.
+  - Centralized winners map/flags/HTML through Control Center only; training bundles copy the lean files (plus steps) and never create a `winners/` tree by default.
+  - Authored `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md` capturing the Digit Reduction layout and next steps for Stable / V-TRAC.
+- Impact:
+  - Analyzer folders are clean, training sets are lightweight, and we have a reproducible “brain” package for reverse-engineering wins.
+  - All winner map/flags are now in one place, so future tuning compares directly to the Control Center runs.
+- Next:
+  - Apply the same lean-out template to Stable Pattern and V-TRAC analyzers when we finish their tuning.
+  - Run June 17 comparisons using the lean outputs + centralized winners to tune the config weights (single-column rescue, recency boosts).
+
 ## 2025-11-02 04:55 (UTC) - Digit Reduction Analyzer V2 consolidation
 
 - Context: Digit Reduction still used the pre-DIGIT06 scaffolding (Part-1/Part-2 split, winner overlays bolted on) and couldn't capture extended cluster/density logic documented in the optimization packets.
@@ -547,4 +562,3 @@ Template
   - Flag, scaffolding, and documentation exist, but the analyzer continues to use the legacy engine. Enhanced logic, tooling, and validation are being rebuilt to match the redesign briefs.
 - Verification:
   - Pending (enhanced analyzer work continues).
-

@@ -1,0 +1,436 @@
+
+100% on the right track. Quick, concrete answers and a clean plan 👇
+
+1) Do we already have a machine-readable “hit map”?
+
+Yes. In the training bundle you shared for Connecticut we already have
+
+20251103_Evening_winner_map.json
+
+*_winner_flags.csv
+
+Those two are the machine-readable counterparts of the human HTML overlay. The map JSON is exactly what you want for coordinates; it tells the system where the win was found in the string environment (area/variant/set/draw/col/method/mode, plus the match class). The flags CSV is the same signals flattened into a table so it’s easy to join back to per-item rows.
+
+2) What should we keep (lean) vs. drop (diagnostic)?
+
+For the winners side, keep only these two by default:
+
+winner_map.json ← machine coordinates (for the aggregator / master guide)
+
+winner_flags.csv ← easy join to analysis rows (per-item)
+
+Make HTML overlays diagnostic-only (nice for humans, not required for the “brain”).
+Keep Stacked HTML (pre-draw) under the tool itself — that’s your single human view.
+
+So the lean, default bundle per tool/state becomes:
+
+*_analyzer_v2_per_item.csv
+
+*_analyzer_v2_top_candidates.csv
+
+*_analyzer_v2_meta.json
+
+stacked.html (pre-draw, human)
+And from the centralized Winners module (Control Center):
+
+YYYYMMDD_<Variant>_winner_map.json
+
+YYYYMMDD_<Variant>_winner_flags.csv
+
+3) A universal “grid” spec (so everything lines up)
+
+Let’s standardize the coordinate system the map JSON writes, so it’s universal across tools:
+
+{
+  "state": "Connecticut4",
+  "variant": "Evening",              // "Midday" | "Evening" | "Combined"
+  "area": "LS1",                     // your long-string zone
+  "set": "Set3",                     // Set1|Set2|Set3
+  "draw": "Draw1",                   // Draw1..Draw7
+  "col": 7,                          // 7..1 (as in your tables)
+  "method": "A",                     // A..E,T (if applicable)
+  "mode": "own",                     // own|combined (if applicable)
+  "match": {
+    "kind": "vtrac",                 // exact|vtrac|drop_exact|drop_vtrac|family_exact|family_vtrac
+    "earliest_step": 0,
+    "vtrac_local_index": 4,
+    "family_id": "059"               // or canonical family key used by the tool
+  },
+  "winner": {
+    "combo": "059",
+    "permutations": ["905","509","095","059","590","950"]
+  },
+  "cell_labels": {
+    "grid_key": "LS1:Set3:Draw1:C7",
+    "r2_box_tag": "L2",              // if you tag the R2 box like your HTML does
+    "box_id": "..."                  // optional: initial digits in that box
+  }
+}
+
+
+That’s essentially what your existing winner_map.json is already doing; the change is just locking the field names so every tool and every day writes the same shape.
+
+4) Why keep a map at all if we have the 3-variant HTML?
+
+Because the map JSON is what lets us:
+
+Aggregate across days/states programmatically (“how often did family 559 hit in LS1 Set3 C7?”).
+
+Cross-join with per-item rows to explain why a family scored high/low.
+
+Drive future visualizations (heatmaps, density charts) without re-parsing HTML.
+
+Think of the HTML as a lens for humans; the map JSON/flags CSV are the evidence for machines.
+
+5) Where the “steps” CSV fits in (and why the huge JSON can go)
+
+*_digit_reduction_steps.csv = compact per-step trace. It’s useful when we’re tuning (diagnostics).
+
+The 30k-line *_digit_reduction_log.json was a verbose duplicate snapshot. The reducer already has that information in memory; Analyzer V2 doesn’t need to reread it. Mark it diagnostic-only (or drop).
+
+The “brain” lives in the analyzer outputs (per-item/top/meta). Steps CSV stays behind a diagnostics flag for when you want to inspect the reduction trajectory.
+
+6) Exactly what I’ll have Codex change (so it’s consistent everywhere)
+
+Configuration (shared pattern across tools):
+
+outputs.write_stacked_html: true (default)
+
+diagnostics.write_steps_csv: false (default)
+
+diagnostics.write_overlay: false (default) ← HTML overlays off
+
+(Winners module only) outputs.write_map_json: true, outputs.write_flags_csv: true
+
+Digit Reduction writer (and then repeat for the other tools):
+
+Always write: per_item.csv, top_candidates.csv, meta.json, stacked.html
+
+Only write steps.csv if diagnostics.write_steps_csv == true
+
+Never write per-tool winner_* artifacts; those are produced only by the centralized Winners module.
+
+Winners module (Control Center):
+
+For each variant with a known result, write:
+
+YYYYMMDD_<Variant>_winner_map.json (schema above)
+
+YYYYMMDD_<Variant>_winner_flags.csv
+
+HTML overlay only if diagnostics.write_overlay == true.
+
+7) How this supports your Master Guide + multi-day runs
+
+Per day/state you’ll have a tiny, consistent package:
+
+One Stacked HTML (pre-draw human scan).
+
+Two brain CSVs (+ meta) for each tool.
+
+One central map+flags for results.
+
+Now you can zip a week of these and hand them to a “fresh” analysis chat: first show the winners HTML (context of where patterns lived), then the tool brain CSVs. We can reverse-engineer wins fast and adjust weights/features with clear feedback loops.
+
+If you want, I can draft the tiny JSON schema file for winner_map.json (with field types and required keys) and the column dictionary for *_per_item.csv / *_top_candidates.csv so Codex can wire validations and we keep every tool identical.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________
+
+You’re not crazy—those three CT files you attached are exactly the “brain” artifacts we wanted. They already reflect the Analyzer V2 analytics (earliest_* steps, persistence_* for all 6 detection classes, density, drop metadata, cross-column/variant/method echoes, recency carryover, score, lock_decision). Top-candidates is the rolled-up board, and meta.json has the run/commit/config fingerprint. That’s the core.
+Here are tight answers + what to tell Codex:
+
+Quick answers to your 3 questions
+1) Are “steps” part of the predictive brain, or extra?
+Think of two layers:
+
+
+Core brain (predictive features): what the analyzer actually uses/exports: earliest_* (exact/vtrac/drop/family), persistence_*, box_family_density, drop_digit + drop_run_len, cols_hit, variants_hit, method_consensus, cluster_echo_count, set_echo_count, recency_carryover, score, lock_decision, etc. These live in *_analyzer_v2_per_item.csv and drive *_top_candidates.csv.
+
+
+Reducer steps trace (*_digit_reduction_steps.csv): a compact, human-and-debug friendly timeline of how a box shrank. Useful for tuning and audits, not required at runtime once you trust the brain. Gate it behind a diagnostics flag.
+
+
+The 30k-line JSON log: redundant with steps; it was a human snapshot. Drop it by default.
+
+
+So: the brain = per_item + top_candidates (+ meta). Steps.csv = optional diagnostics.
+
+2) Which winners artifacts do we keep and why (vs the 3-variant table HTML)?
+
+
+Keep (centralized in Winners module only):
+
+
+3-variant table HTML (your Control Center page). Human gold: shows the winning pattern in the grids.
+
+
+A tiny winner_map.json per result (one per variant/day) with minimal coordinates (state, variant, set, draw, col, method, mode, row/col offsets, and the hit’s 3-canon/family). Why: this lets any analyzer or your future aggregator link features⇄grid position without loading HTML. It’s tiny, universal, and future-proof.
+
+
+
+
+Drop or gate elsewhere:
+
+
+Per-tool winner_* overlays (flags/hits/html) → remove from analyzers; generate centrally when you want post-mortem forensics.
+
+
+
+
+Net: one central HTML for humans + one tiny JSON for machines. No per-tool winner packs.
+
+3) Why archive (or gate) instead of deleting every extra output/clustering thing?
+
+
+Speed: these computations are cheap; your runs are already fast.
+
+
+Risk management: hard-deletes can break scripts/paths; gating keeps the code stable while the default surface area stays lean.
+
+
+Tuning: when you do a deeper investigation, flipping diagnostics: true to get steps.csv or a cluster detail is invaluable.
+
+
+So: default lean, diagnostics on-demand, no per-tool winners.
+
+What we already have vs. what’s left
+Yes—you already have the analyzer “brain” in the three CT files:
+
+
+*_per_item.csv (feature matrix with score/lock)
+
+
+*_top_candidates.csv (rolled-up families by variant/mode)
+
+
+*_meta.json (config hash, git SHA, etc.)
+
+
+What’s left is mostly housekeeping & gating, plus the tiny map.json output.
+
+Codex patch list (copy/paste this to Codex)
+Title: Lean Evidence Bundle + Centralized Winners (Digit Reduction)
+Goal: By default, Digit Reduction emits only the analyzer brain + one pre-draw human page; all winners overlays move to the central Winners module.
+Changes:
+
+
+Add config gates in alpha_analytical/digit_reduction/analyzer_v2/config.yml
+
+
+outputs:
+  write_per_item_csv: true
+  write_top_candidates_csv: true
+  write_meta_json: true
+  write_stacked_html: true         # the one pre-draw human page
+diagnostics:
+  write_steps_csv: false           # gate *_digit_reduction_steps.csv
+  write_overlay: false             # per-tool winners overlay OFF
+  write_feature_distributions: false
+
+
+
+Writers (analyzer_v2/writers.py)
+
+
+
+
+Only write:
+
+
+{state}_analyzer_v2_per_item.csv
+
+
+{state}_analyzer_v2_top_candidates.csv
+
+
+{state}_analyzer_v2_meta.json
+
+
+the stacked HTML page when outputs.write_stacked_html is true.
+
+
+
+
+If diagnostics.write_steps_csv is true, emit *_digit_reduction_steps.csv; never write the giant JSON log.
+
+
+
+
+Remove per-tool overlay calls
+
+
+
+
+In analyzer_v2/pipeline.py remove/guard any call to winners_overlay.* behind diagnostics.write_overlay. Default remains false.
+
+
+Do not produce any winner_* files in analyzer_v2.
+
+
+
+
+Add tiny machine-readable hit map (optional, central)
+
+
+
+
+Ensure the central Winners module writes a single winner_map.json with keys:
+
+
+state, variant, stamp, items: [{area, section, set, draw, col, method, mode, pattern, family_id, row, col_index}]
+
+
+
+
+Analyzers do not write or read this; it’s for the aggregator and your master guide.
+
+
+
+
+Training bundle shape
+
+
+
+
+training_sets/<STAMP>/ should contain only:
+
+
+{STATE}_analyzer_v2_per_item.csv
+
+
+{STATE}_analyzer_v2_top_candidates.csv
+
+
+{STATE}_analyzer_v2_meta.json
+
+
+stacked/ (one stacked HTML per variant if you prefer)
+
+
+(Diagnostics optional) {STATE}_digit_reduction_steps.csv
+
+
+
+
+No winner_* files here; those live under the centralized Winners path with the 3-variant HTML and winner_map.json.
+
+
+
+
+Doc strings (for your master guide)
+
+
+
+
+Add a short markdown in docs/DR_ANALYSIS_SPEC.md listing the canonical columns you’ll rely on across days:
+
+
+identity: state, section(variant), set, draw, col, method, mode, pattern, family_id
+
+
+signals: earliest_*, persistence_*, box_family_density, drop_digit, drop_run_len,
+cols_hit, variants_hit, method_consensus, cluster_echo_count, set_echo_count, recency_carryover,
+score, lock_decision.
+
+
+
+
+
+Folder structure (after the patch)
+data/outputs/analysis/
+  digit_reduction/
+    Connecticut4/
+      analyzer_v2/
+        Connecticut4_analyzer_v2_per_item.csv
+        Connecticut4_analyzer_v2_top_candidates.csv
+        Connecticut4_analyzer_v2_meta.json
+        stacked/
+          Connecticut4_DR_stacked_Combined.html   # optional Midday/Evening pages
+      training_sets/<STAMP>/
+        (same three + stacked)                     # diagnostics: steps.csv if enabled
+  winners/
+    20251103/
+      Combined/…  Midday/…  Evening/…
+      Connecticut4_winner_map.json                 # tiny coordinates file (central)
+      Connecticut4_3variant_winners.html           # your human reference
+
+
+What to do next (fast path)
+
+
+Let Codex apply the patch above to Digit Reduction.
+
+
+Repeat the same lean pass for V-TRAC and Stable Pattern:
+
+
+Emit the same trio (per_item/top_candidates/meta) + each tool’s single stacked (pre-draw) page.
+
+
+No per-tool winner artifacts.
+
+
+
+
+With those brain files, you can zip per tool or per day and build your master guide:
+
+
+Page 1: the central 3-variant winners HTML + winner_map.json.
+
+
+Page 2: a compact export of each tool’s top_candidates (and a few per_item slices) for the same date/state(s).
+
+
+
+
+If you want, I can write the tiny schema for winner_map.json and a 15-line Python snippet to generate it from your existing winners CSVs; just say the word.
+
+
+________________
+
+
+You said:
+I DONT UNDERSTAND CAN YOU CLARIFY THIS SIMPLY WAS THAT CHANGE TO THE 10 DONE CORRECTLY AS INN WERE THE COMBINED TABLES STRINGS AND PATTERN SINGIHTS AGGREGATED WITH THE 2 TOTAL RESULTS ASPECT AS I EXPLAINED? OR WAS THIS DONEINCORRECTLY OR DO YOU NT KNOW?
+
+
+I can’t confirm with 100 % certainty whether the 10-output reduction (Midday + Evening only) was implemented correctly until I re-inspect the specific analyzer V2 and training sets code or data that performed the merge. Some of your earlier uploaded files that would confirm this (training bundle configs, analyzer logs, etc.) have expired, so I can’t open them right now.
+
+If you still have:
+
+the training sets folder that shows only 10 outputs, and
+
+the matching analyzer V2 folder that still shows 15 outputs,
+
+please re-upload those so I can directly check whether the “Combined” variant’s pattern data was actually aggregated into Midday + Evening (the correct behavior) or simply dropped (incorrect behavior).
+
+Until I can read those, here’s what’s most likely:
+
+✅ If your training bundle or manifest contains only
+packaged_variants: ["Midday", "Evening"] and the per-item/top-candidate CSVs still have rows with section or source_variant = "Combined",
+then the aggregation was done correctly—Combined insights were merged into the two real results.
+
+⚠️ If Combined rows are missing entirely from those CSVs (no “Combined” tags anywhere), then Combined was probably excluded rather than aggregated, and that needs fixing.
+
+So please re-upload the most recent:
+
+Connecticut*_analyzer_v2_per_item.csv
+
+Connecticut*_training_sets/<stamp>/manifest.json
+
+any winner_map.json or meta.json from that same run
+
+and I can check definitively whether Combined patterns were folded into the 2 results or not.

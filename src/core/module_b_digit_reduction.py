@@ -647,60 +647,6 @@ def run_digit_reduction(
             pass
 
         # JSON (logs) with guidance (JSON has no native comments, so we embed guidance fields)
-        training_json_path = train_dir / f"{state}_digit_reduction_log.json"
-        legacy_json_path = train_dir / f"{state}_digit_reduction_logs.json"
-        guidance = {
-            "purpose": "Training guidance for interpreting Digit-Reduction outputs.",
-            "notes": [
-                "Use fields area (LS1/LS2), section (Midday/Evening/Combined), set (Set1/2/3), draw (Draw1..7), col (numeric + label) to align panels.",
-                "Own-table analysis: filter section to the same value (e.g., Midday) and compare across col_rank 7/6/5 (LS1) or 3/1 (LS2).",
-                "Cross-chart analysis: group by [area, set_rank, draw_rank, col_rank, method, mode] and pivot over section_rank (1=Midday,2=Evening,3=Combined).",
-                "Compaction: steps are trimmed after terminal start (length<=3 or unique_digits<=2); after terminal we allow at most one identical duplicate per distinct value.",
-                "Meaning: steps preserve all distinct states up to stabilization, with minimal end-tail noise for readability.",
-                "Ordering: sort by [area_rank, section_rank, set_rank desc, draw_rank, col_rank, method, mode] to reproduce the grid order seen in the UI.",
-                "Final state is provided at item.final; step-level features include length, unique_digits, is_3value.",
-                "Keys grid_position and sequence_meta are provided to speed up grouping and diagnostics.",
-            ],
-            "sort_suggestion": [
-                "area_rank", "section_rank", {"set_rank": "desc"}, "draw_rank", "col_rank", "method", "mode"
-            ],
-            "schema": {
-                "item": {
-                    "state": "State identifier (e.g., Connecticut4)",
-                    "area": "LS1|LS2 (Long-String 1 vs Long-String 2)",
-                    "section": "Midday|Evening|Combined",
-                    "set": "Set1|Set2|Set3",
-                    "draw": "Draw1..Draw7",
-                    "col": "numeric column index (7/6/5 for LS1; 3/1 for LS2)",
-                    "col_label": "e.g., col7",
-                    "location": "'<Section>|<Set>|<Draw>|col<Num>'",
-                    "method": "A..T",
-                    "mode": "own|combined",
-                    "grid_position": {
-                        "area_rank": "1 for LS1, 2 for LS2",
-                        "section_rank": "1 Midday, 2 Evening, 3 Combined",
-                        "set_rank": "1 Set1, 2 Set2, 3 Set3",
-                        "draw_rank": "1..7",
-                        "col_rank": "column number as integer"
-                    },
-                    "sequence_meta": {
-                        "first_3value_step": "first step with unique_digits<=3 (-1 if none)",
-                        "last_change_step": "largest index i where value[i]!=value[i-1]",
-                        "steps_total_before_compaction": "raw step count",
-                        "steps_kept_after_compaction": "after trimming terminal tail and allowing at most one identical duplicate per distinct value"
-                    },
-                    "steps": "array of step objects: {step, value, length, unique_digits, is_3value}",
-                    "final": "summary of last kept step"
-                }
-            }
-        }
-        payload = {"state": state, "guidance": guidance, "items": items}
-        training_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        if legacy_json_path.exists() and legacy_json_path != training_json_path:
-            try:
-                legacy_json_path.unlink()
-            except Exception:
-                pass
     except Exception:
         # Training exports are optional; failures must not block the main report
         pass

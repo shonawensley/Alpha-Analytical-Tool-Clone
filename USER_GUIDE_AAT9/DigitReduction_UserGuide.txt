@@ -1,0 +1,69 @@
+# Digit Reduction User Guide (AAT9)
+
+## 1. Purpose
+Digit Reduction processes combined tables (Midday/Evening/Combined) to highlight 3-value clusters and surface the best winning-pattern candidates. The reducer builds the interactive HTML; Analyzer V2 computes machine-friendly evidence (per-item/top-candidates/meta). Control Center batch ties the evidence to actual draws (winners).
+
+## 2. Required Inputs
+- Combined tables under `data/outputs/tables/<STATE>/` (files: `Midday_combined.csv`, `Evening_combined.csv`, `Combined_combined.csv`)
+- Winners list (e.g., from `tasks/JUNE17_DRAWS.txt`) when running the Control Center batch.
+
+## 3. Workflow Summary
+1. **Reducer** – `run_digit_reduction(state, tables_path)`
+   - Writes tabbed and stacked HTML plus summary CSV and steps trace.
+2. **Analyzer V2** – `python -m alpha_analytical.digit_reduction.analyzer_v2.pipeline <STATE>`
+   - Emits per-item/top-candidates/meta CSV/JSON and stacked HTML per variant.
+3. **Control Center batch** (optional)
+   - Paste winners; generates centralized `winner_map.json`, `winner_flags.csv`, and winners HTML for Midday/Evening.
+4. **Training bundle** (optional)
+   - Control Center “Package training bundle” copies the analyzer files (plus steps) into `training_sets/<STAMP>/`.
+
+## 4. Output Layouts
+### Reducer (`data/outputs/analysis/digit_reduction/<STATE>/`)
+- `<STATE>_digit_reduction_report.html` (tabbed)
+- `<STATE>_digit_reduction_report_stacked.html` (stacked)
+- `<STATE>_digit_reduction_scores.csv`
+- `training/<STATE>_digit_reduction_steps.csv` (diagnostics)
+
+### Analyzer (`data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`)
+- `<STATE>_analyzer_v2_per_item.csv`
+- `<STATE>_analyzer_v2_top_candidates.csv`
+- `<STATE>_analyzer_v2_meta.json`
+- `<STATE>_stacked_{midday,evening,combined}.html`
+
+### Training bundle (`.../training_sets/<STAMP>/`)
+- Copy of per_item/top/meta
+- Stacked files (if enabled)
+- Steps CSV (if enabled)
+- `manifest.json`
+
+### Winners (centralized via Control Center)
+- `winner_map.json` (machine coordinates)
+- `winner_flags.csv` (join-friendly table)
+- Winners HTML portfolio (per variant) when diagnostics enabled
+
+## 5. Diagnostics Flags
+- `outputs.write_stacked_html` (default true)
+- `diagnostics.write_steps_csv` (default true)
+- `diagnostics.write_overlay` (default false; only Control Center generates overlays when true)
+
+## 6. Control Center Batch Options
+- “Include overlay/zip/hits/Combined” checkboxes map to `package_training_bundle()` parameters; leave unchecked for lean bundles.
+
+## 7. Running in Batches (suggested loop)
+```
+states = { ... }
+for state in states:
+    run_digit_reduction(state, tables_path)
+    pipeline.run(state)
+run_winner_overlay_batch(...)
+package_training_bundle(...)
+```
+
+## 8. Validation Tips
+- Compare per-item rows to winners map/flags using `state`, `section`, `set`, `draw`, `col`, `method`, `mode`.
+- Use `digit_reduction_winner_summary.csv` (see repo root) to check actual winners vs top scores and adjust `config.yml` weights.
+- Extended clusters: the analyzer already records `is_extended_cluster`, `box_family_density`, `dup_bonus` – treat sequences like 6661118 the same as 618.
+
+## 9. Where to Document Changes
+- Unified Changelog, Checkpoint Log, Analysis Insights, and the new `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md`.
+

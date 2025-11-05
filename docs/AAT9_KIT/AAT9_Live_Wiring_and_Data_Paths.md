@@ -23,7 +23,11 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
 - Digit Reduction
   - Engine: `src/core/module_b_digit_reduction.py`
   - Inputs: combined tables under `data/outputs/tables/<STATE>/`
-  - Outputs: `data/outputs/analysis/digit_reduction/<STATE>/`
+  - Outputs:
+    - Reducer: `data/outputs/analysis/digit_reduction/<STATE>/` (tabbed + stacked HTML, summary CSV, training steps CSV).
+    - Analyzer V2: `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/` (lean bundle — `per_item.csv`, `top_candidates.csv`, `meta.json`, stacked HTML per variant; diagnostics: `_steps.csv` when enabled).
+    - Training bundles: `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/` (copies the lean bundle + steps when enabled; no winners by default).
+    - Winners map/flags/HTML are generated centrally via the Control Center batch and stored under the shared winners directory (see Control Center section).
 
 - Auxiliary Tools (working parity logic)
     - Engines: staged/working `modules.analyze_pairs`, `modules.vtrac_reference`; positional pressure via `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; sums optional under `modules/module_d_auxiliary_tools/refactored`
