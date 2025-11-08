@@ -1,0 +1,257 @@
+TL;DR: I can’t open your ZIPs directly in this chat environment (so I can’t quote lines yet). Insufficient evidence. Below I give you a drop‑in audit script and a manual checklist to run on your Connecticut bundle(s) right now. It verifies (1) multi‑variant coverage (Midday/Evening/Combined), (2) row/family CSV schema and flags (consensus, hot‑zones, mirrors, straight/boxed, survivors), (3) winners/spotlight/metrics health, and (4) HTML sectioning. Once you run it, send me the two small outputs it generates (audit_report.json and audit_summary.txt), and I’ll do the deep assessment and next‑step plan without you re‑explaining anything.
+
+What to do now (no guesses; precise steps)
+1) Run this audit on each CT bundle (both ZIPs or their extracted folders)
+
+Save the script below as stable_packet_audit.py on your machine and run it once per bundle:
+
+# Example 1 — pointing to a ZIP
+python stable_packet_audit.py --path "C:\Users\<you>\Documents\20250623_CT.zip"
+
+# Example 2 — pointing to an extracted folder
+python stable_packet_audit.py --path "C:\path\to\extracted\Connecticut4"
+
+
+It will write two files next to your input:
+
+audit_report.json — machine‑readable PASS/FAIL per check (with details)
+
+audit_summary.txt — human‑readable summary (one line per check)
+
+Send me those two files (or paste the text of audit_summary.txt). I’ll produce the full diagnosis and a targeted Packet‑2 brief based on the actual outputs.
+
+2) The audit script (complete; no placeholders)
+
+What it checks
+
+Multi‑variant coverage: section ∈ {Midday, Evening, Combined} appears in the row CSV; HTML contains Midday/Evening/Combined headings.
+
+Row schema & features: required columns present; booleans are True/False; hot‑zone star levels are 0/1/2.
+
+Family roll‑up: required family columns present; ranks are dense; any_doubles_support is boolean.
+
+Winners path: winners/spotlight columns present; no NaNs in critical fields; metrics exposes winner_family_ids and spotlight_rate.
+
+Discovery: confirms it found *_stable_patterns_scores.csv, *_stable_patterns_families.csv, *_metrics.json, winners CSV, and the HTML report.
+
+# stable_packet_audit.py
+import os, sys, argparse, json, zipfile
+from pathlib import Path
+from typing import Dict, Any, List
+import pandas as pd
+
+REQUIRED_ROW_COLS = [
+    "section","Set","Draw","Column","Canonical","type","family_id","score","why",
+    "score_cov","score_hpr","score_perm","score_repeat","score_straight","score_single",
+    "score_cons","score_hot","score_mirror","score_dom","score_len","score_hidden",
+    "mirror","straight2","straight3","single_left","cons_full","cons_3v","dom_last",
+    "dom_pair","hidden3v"
+]
+REQUIRED_FAM_COLS = [
+    "family_id","family_score","family_rank","section_count","progression_flag",
+    "last_remaining_3v","any_doubles_support","hot_density","fam_cov","fam_hpr",
+    "fam_perm","fam_repeat","fam_cons","fam_hot","fam_straight2","fam_straight3",
+    "fam_doubles","fam_section_bonus","fam_progression_bonus","fam_last_remaining_bonus"
+]
+BOOL_ROW_COLS = ["single_left","cons_full","cons_3v","dom_last","dom_pair","hidden3v"]
+STAR_COL = "hot"
+SECTION_EXPECTED = {"Midday","Evening","Combined"}
+
+def find_targets(root: Path) -> Dict[str, List[Path]]:
+    hits = {"scores":[], "families":[], "metrics":[], "winners":[], "report":[]}
+    for p in root.rglob("*"):
+        name = p.name.lower()
+        if name.endswith("_stable_patterns_scores.csv"):
+            hits["scores"].append(p)
+        elif name.endswith("_stable_patterns_families.csv"):
+            hits["families"].append(p)
+        elif name.endswith("_metrics.json"):
+            hits["metrics"].append(p)
+        elif "winners" in name and name.endswith(".csv"):
+            hits["winners"].append(p)  # winner_family_spotlight_raw.csv / winners_evidence.csv
+        elif name.endswith("_stable_patterns_report.html"):
+            hits["report"].append(p)
+    return hits
+
+def extract_zip(zpath: Path) -> Path:
+    out = zpath.parent / (zpath.stem + "_unzipped")
+    out.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zpath, "r") as z:
+        z.extractall(out)
+    return out
+
+def load_csv(p: Path) -> pd.DataFrame:
+    return pd.read_csv(p, low_memory=False)
+
+def audit(root: Path) -> Dict[str, Any]:
+    rep = {"input_root": str(root), "checks": []}
+    targets = find_targets(root)
+    for key in targets:
+        rep["checks"].append({"name": f"discover::{key}", "pass": len(targets[key])>0,
+                              "detail": [str(p) for p in targets[key][:5]]})
+
+    if not targets["scores"]:
+        return rep  # nothing else to check
+
+    scores_p = targets["scores"][0]
+    fam_p    = targets["families"][0] if targets["families"] else None
+    met_p    = targets["metrics"][0]  if targets["metrics"] else None
+    win_p    = targets["winners"][0]  if targets["winners"] else None
+    rep_p    = targets["report"][0]   if targets["report"] else None
+
+    # Row schema & sections
+    df = load_csv(scores_p)
+    have_cols = set(df.columns)
+    missing = [c for c in REQUIRED_ROW_COLS if c not in have_cols]
+    rep["checks"].append({"name":"row_schema_complete","pass": len(missing)==0,
+                          "detail":{"missing":missing,"scores_path":str(scores_p)}})
+    sections = set(df["section"].dropna().unique()) if "section" in df.columns else set()
+    rep["checks"].append({"name":"multi_variant_sections",
+                          "pass": SECTION_EXPECTED.issubset(sections),
+                          "detail":{"observed":sorted(map(str,sections)),"required":sorted(SECTION_EXPECTED)}})
+
+    # Booleans & hot stars
+    bool_ok = True; bool_detail = {}
+    for col in BOOL_ROW_COLS:
+        if col in df.columns:
+            vals = set(df[col].dropna().unique())
+            if not vals.issubset({True, False, 0, 1}):
+                bool_ok = False; bool_detail[col] = list(map(str, list(vals)[:10]))
+    rep["checks"].append({"name":"boolean_flags_ok","pass":bool_ok,"detail":bool_detail})
+
+    star_ok=False; star_vals=[]
+    if STAR_COL in df.columns:
+        try:
+            vals = pd.to_numeric(df[STAR_COL], errors="coerce").dropna().unique()
+            star_vals = sorted(set(int(v) for v in vals))
+            star_ok = set([0,1,2]).issuperset(star_vals)
+        except Exception:
+            star_ok = False
+    rep["checks"].append({"name":"hot_star_levels","pass":star_ok,
+                          "detail":{"observed":star_vals,"expected_subset":[0,1,2]}})
+
+    # Families
+    if fam_p and fam_p.exists():
+        fam = load_csv(fam_p)
+        miss_fam = [c for c in REQUIRED_FAM_COLS if c not in fam.columns]
+        rep["checks"].append({"name":"family_schema_complete","pass":len(miss_fam)==0,
+                              "detail":{"missing":miss_fam,"families_path":str(fam_p)}})
+        # Rank density
+        if "family_rank" in fam.columns and fam["family_rank"].notna().any():
+            try:
+                ranks = sorted(set(int(x) for x in fam["family_rank"].dropna().values))
+                dense_ok = ranks == list(range(1, len(ranks)+1))
+            except Exception:
+                dense_ok = False
+        else:
+            dense_ok = False
+        rep["checks"].append({"name":"family_rank_dense","pass":dense_ok,
+                              "detail":{"unique_ranks": int(fam["family_rank"].nunique()) if "family_rank" in fam.columns else 0}})
+        # any_doubles_support boolean‑ness
+        if "any_doubles_support" in fam.columns:
+            vals = set(fam["any_doubles_support"].dropna().unique())
+            fam_dbl_ok = vals.issubset({True, False, 0, 1})
+        else:
+            fam_dbl_ok = False
+        rep["checks"].append({"name":"family_any_doubles_support_boolean","pass":fam_dbl_ok,
+                              "detail":{"present": "any_doubles_support" in fam.columns}})
+    else:
+        rep["checks"].append({"name":"family_files_present","pass":False,"detail":"families CSV not found"})
+
+    # Metrics (winner keys)
+    if met_p and met_p.exists():
+        try:
+            metrics = json.loads(Path(met_p).read_text(encoding="utf-8"))
+            ok_keys = {"winner_family_ids","spotlight_rate"}
+            met_ok = ok_keys.issubset(set(metrics.keys()))
+            rep["checks"].append({"name":"metrics_winner_keys","pass":met_ok,
+                                  "detail":{k:metrics.get(k) for k in sorted(ok_keys)}})
+        except Exception as e:
+            rep["checks"].append({"name":"metrics_parse","pass":False,"detail":str(e)})
+    else:
+        rep["checks"].append({"name":"metrics_present","pass":False,"detail":"metrics JSON not found"})
+
+    # Winners CSV health (if present)
+    if win_p and win_p.exists():
+        try:
+            w = load_csv(win_p)
+            need = {"family_id","row_score","row_type","row_why"}
+            rep["checks"].append({"name":"winners_columns_present","pass": need.issubset(set(w.columns)),
+                                  "detail":{"missing": list(need - set(w.columns)), "winners_path": str(win_p)}})
+            # quick NaN audit
+            nan_cols = {c:int(w[c].isna().sum()) for c in need if c in w.columns}
+            rep["checks"].append({"name":"winners_no_nans","pass": all(n==0 for n in nan_cols.values()),
+                                  "detail": nan_cols})
+        except Exception as e:
+            rep["checks"].append({"name":"winners_parse","pass":False,"detail":str(e)})
+    else:
+        rep["checks"].append({"name":"winners_present","pass":False,"detail":"winners CSV not found"})
+
+    # HTML contains section headings
+    if rep_p and rep_p.exists():
+        try:
+            txt = Path(rep_p).read_text(encoding="utf-8", errors="ignore")
+            flags = {sec: (sec in txt) for sec in ["Midday","Evening","Combined"]}
+            rep["checks"].append({"name":"html_sections_present","pass": all(flags.values()),"detail":flags})
+        except Exception as e:
+            rep["checks"].append({"name":"html_parse","pass":False,"detail":str(e)})
+    else:
+        rep["checks"].append({"name":"report_present","pass":False,"detail":"report HTML not found"})
+
+    return rep
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--path", required=True, help="ZIP file or extracted folder")
+    args = ap.parse_args()
+    inp = Path(args.path).expanduser()
+
+    if not inp.exists():
+        print(f"Input not found: {inp}", file=sys.stderr); sys.exit(2)
+
+    root = inp
+    if inp.is_file() and inp.suffix.lower()==".zip":
+        root = extract_zip(inp)
+
+    rep = audit(root)
+    out_dir = root if root.is_dir() else root.parent
+    (out_dir / "audit_report.json").write_text(json.dumps(rep, indent=2), encoding="utf-8")
+
+    # Human summary
+    lines = [f"Audit root: {root}"]
+    for chk in rep["checks"]:
+        status = "PASS" if chk.get("pass") else "FAIL"
+        lines.append(f"[{status}] {chk['name']}")
+        detail = chk.get("detail")
+        if isinstance(detail, dict):
+            for k,v in detail.items():
+                lines.append(f"  - {k}: {v}")
+        elif isinstance(detail, list):
+            for v in detail[:5]:
+                lines.append(f"  - {v}")
+        elif detail:
+            lines.append(f"  - {detail}")
+    (out_dir / "audit_summary.txt").write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote: {(out_dir / 'audit_report.json')}")
+    print(f"Wrote: {(out_dir / 'audit_summary.txt')}")
+
+if __name__ == "__main__":
+    main()
+
+How I’ll use your CT outputs after the audit
+
+If the audit passes the 5 core checks (multi‑variant sections; row schema intact; family roll‑up intact; winners/metrics healthy; hot‑zones/consensus visible), I’ll produce a targeted diagnosis of what’s already correct and then hand Codex Packet‑2 (compounding & hidden‑core) tuned to your exact CSVs (no guessing).
+
+If anything fails, I’ll point precisely to the missing columns/flags or broken join, and give Codex a surgical fix with an acceptance test that mirrors your data.
+
+Why the two‑bundle upload (project vs. Documents) is fine
+
+Different locations (project/WSL vs. Documents) shouldn’t affect content; the audit reads whichever you pass via --path and writes its outputs alongside. If a browser pop‑up interfered with the UI earlier, it won’t affect this offline check.
+
+Sanity Check (do these two quick things)
+
+Run the script on the ZIP you just uploaded (and optionally on the second one).
+
+Send me audit_summary.txt (or paste its text). I’ll convert it into a clear PASS/FAIL matrix and, if green, deliver the Packet‑2 implementation brief immediately.
+
+Until I can open and quote your files here, Insufficient evidence for any specific numeric/structural claim. The audit above bridges that gap in one pass and keeps us moving fast.

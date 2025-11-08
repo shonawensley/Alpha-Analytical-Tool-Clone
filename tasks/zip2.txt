@@ -1,0 +1,226 @@
+What’s happening (and why the DR zip worked but this Stable zip didn’t)
+
+
+Your workflow doc already captures the approach that worked:
+
+“Zip the entire output folder (example: reports_20250617_V_bundle.zip for Digit Reduction) and upload that single archive to ChatGPT Pro. … dragging that single file into ChatGPT Pro worked reliably compared to serving a large zip via raw links.” (user: docs/AAT9_KIT/AAT9_Data_Validation_Workflow.md, “Hand‑Off Options/Tip,” lines around 29–68)
+
+
+
+Today’s Stable zip differs in three ways (these are the usual break points for GPT previewers):
+
+
+Top‑level nesting. Everything lives under StablePacket1_CT_20250623-20250624/… instead of the run files sitting at the archive root.
+⇒ Some GPT unzip flows expose only the root and don’t auto‑drill into the first directory. (user: your description of the Stable packet build and its nested structure)
+
+
+Duplicate payload. You bundled both the primary output and training_sets/…, doubling file count/size. The DR bundle contained just the main run outputs. (user)
+
+
+Zip tooling/working dir. The DR bundle was created by zipping the run folder itself, so paths inside the archive begin directly with per_item.csv, top_misses.csv, config.yml. The Stable archive was zipped from a parent path, which introduced that extra wrapper folder. (user)
+
+
+
+
+
+Bottom line: follow your KIT’s DR example—zip the run folder as the root of the archive, keep it lean, and it will open reliably. (user: docs/AAT9_KIT/AAT9_Data_Validation_Workflow.md, lines ~29–68)
+
+
+“SharePack v1” — a simple, dependable packaging spec
+Name
+<tool>_<state>_<workbookdate>_pack1.zip
+Example: stable_CT_2025-06-23_pack1.zip. (Dates tie to your history/results pairing.)
+
+Daily workbook dates pair to the next day’s results file under data/results/YYYY-MM-DD.txt. (user: Data Validation Workflow, “Pick3 workbook history & results mapping,” bullets 1–3)
+
+Layout (at the archive root; no wrapper folder):
+README.txt
+manifest.json
+stable/           # tool outputs (CSV, compact JSON; minimal HTML if needed)
+winners/          # any winners overlays/flags used for the review
+config/           # the YAML/JSON weights used for the run (if applicable)
+
+Do not include: any training_sets/… duplicates or large diagnostics unless explicitly requested.
+Manifest (example) — helps reviewers and future automation:
+{
+  "tool": "stable",
+  "state": "Connecticut4",
+  "workbook_date": "2025-06-23",
+  "results_date": "2025-06-24",
+  "created_utc": "2025-11-08T10:03:00Z",
+  "files": [
+    {"path": "stable/CT_stable_patterns_scores.csv", "sha256": "<hash>"},
+    {"path": "winners/Connecticut4_vtrac5_winner_059.html", "sha256": "<hash>"}
+  ]
+}
+
+
+You already added a history/results scheme and auto‑loader so modules resolve Pick3StatsC4_YYYY-MM-DD.xlsm without hard‑coding paths. (user: Checkpoint Log 2025‑11‑07, “Pick3 workbook history + Stable Pattern baseline”: added utils.path_handler.get_pick3_workbook_path() and scripts/tools/select_pick3_history.py)
+
+
+Exact commands Codex can run to build SharePacks (no placeholders)
+
+Rule of thumb: run the archive command from inside the run folder you want to share, so the archive root contains the files directly.
+
+Windows PowerShell
+# Example: package a Stable run folder
+Set-Location "C:\path\to\Alpha-Analytical-Tool-Clone\reports\stable\2025-06-23_CT_packet1"
+Remove-Item -Force -ErrorAction SilentlyContinue .\training_sets -Recurse  # exclude duplicates if present
+Compress-Archive -Path .\* -DestinationPath "C:\path\to\artifacts\stable_CT_2025-06-23_pack1.zip" -Force
+
+macOS/Linux (bash)
+cd /path/to/Alpha-Analytical-Tool-Clone/reports/stable/2025-06-23_CT_packet1
+rm -rf training_sets  # exclude duplicates if present
+zip -r /path/to/artifacts/stable_CT_2025-06-23_pack1.zip .
+tar -czf /path/to/artifacts/stable_CT_2025-06-23_pack1.tar.gz .
+
+
+Providing both .zip and .tar.gz tracks your earlier observation that some GPT unzip paths prefer one or the other. (user: your note about offering both formats as a hedge)
+
+Repository script (drop‑in) — builds both archives + manifest
+Save as scripts/tools/build_sharepack.py and run as shown below.
+#!/usr/bin/env python3
+import argparse, hashlib, json, os, tarfile, zipfile, time
+from pathlib import Path
+
+def sha256_file(p: Path) -> str:
+    h = hashlib.sha256()
+    with p.open('rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+def build_zip(src_dir: Path, out_zip: Path):
+    with zipfile.ZipFile(out_zip, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+        for p in src_dir.rglob('*'):
+            if p.is_file():
+                z.write(p, p.relative_to(src_dir))
+
+def build_targz(src_dir: Path, out_tgz: Path):
+    with tarfile.open(out_tgz, 'w:gz') as t:
+        t.add(src_dir, arcname='.')
+
+def write_manifest(src_dir: Path, dest: Path, meta: dict):
+    files = []
+    for p in sorted(src_dir.rglob('*')):
+        if p.is_file():
+            files.append({"path": str(p.relative_to(src_dir)).replace("\\","/"),
+                          "sha256": sha256_file(p)})
+    meta = {**meta,
+            "created_utc": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            "files": files}
+    dest.write_text(json.dumps(meta, indent=2))
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--run-dir', required=True, help='Folder to package (cd into this in the archives)')
+    ap.add_argument('--out-stem', required=True, help='Output stem, e.g., artifacts/stable_CT_2025-06-23_pack1')
+    ap.add_argument('--tool', required=True)
+    ap.add_argument('--state', required=True)
+    ap.add_argument('--workbook-date', required=True)
+    ap.add_argument('--results-date', required=True)
+    args = ap.parse_args()
+
+    run_dir = Path(args.run_dir).resolve()
+    run_dir_exists = run_dir.exists()
+    if not run_dir_exists:
+        raise SystemExit(f"Run dir not found: {run_dir}")
+
+    # optional: prune duplicates
+    dup = run_dir / 'training_sets'
+    if dup.exists():
+        for root, dirs, files in os.walk(dup, topdown=False):
+            for name in files: Path(root, name).unlink()
+            for name in dirs: Path(root, name).rmdir()
+        dup.rmdir()
+
+    out_zip = Path(args.out_stem + '.zip').resolve()
+    out_tgz = Path(args.out_stem + '.tar.gz').resolve()
+    build_zip(run_dir, out_zip)
+    build_targz(run_dir, out_tgz)
+
+    manifest = {
+      "tool": args.tool,
+      "state": args.state,
+      "workbook_date": args.workbook_date,
+      "results_date": args.results_date
+    }
+    write_manifest(run_dir, Path(args.out_stem + '.manifest.json'), manifest)
+    print(f"wrote: {out_zip}\n      {out_tgz}\n      {args.out_stem+'.manifest.json'}")
+
+if __name__ == '__main__':
+    main()
+
+Example call
+python scripts/tools/build_sharepack.py \
+  --run-dir "reports/stable/2025-06-23_CT_packet1" \
+  --out-stem "artifacts/stable_CT_2025-06-23_pack1" \
+  --tool stable --state Connecticut4 \
+  --workbook-date 2025-06-23 --results-date 2025-06-24
+
+
+Guidance for Codex (so it keeps working while you curate files)
+
+
+Adopt SharePack v1 for every tool. Teach Control Center a button: “Export SharePack”. Under the hood, call the script above with the active run folder and the paired results date.
+
+You already documented the history/results pairing rule, so Codex can compute the results date automatically. (user: Data Validation Workflow, “Pick3 workbook history & results mapping”)
+
+
+
+Use the auto‑loader you added — no hard‑coded Excel names:
+
+
+utils.path_handler.get_pick3_workbook_path() resolves Pick3StatsC4_YYYY-MM-DD.xlsm.
+
+
+scripts/tools/select_pick3_history.py can set/copy the active workbook.
+(user: Checkpoint Log 2025‑11‑07, “Pick3 workbook history + Stable Pattern baseline”)
+
+
+
+
+Split on size if needed (core vs HTML):
+
+
+stable_CT_2025-06-23_core.zip (CSV/JSON + manifest)
+
+
+stable_CT_2025-06-23_html.zip (overlays only)
+This mirrors the “keep it lean” guidance in your KIT that made DR bundles reliable. (user: Data Validation Workflow, lines ~29–68)
+
+
+
+
+
+About “Code Interpreter” vs “just upload a zip”
+
+
+Unverified: In many ChatGPT Pro contexts the notebook/sandbox unpacks archives automatically—there’s no separate toggle for “Code Interpreter.” Verification route: re‑upload a flat DR‑style SharePack and ask “List the files at the archive root.” If the assistant echoes the file list, the sandbox is active.
+
+
+
+Quick troubleshooting checklist
+
+
+If GPT shows a “10‑item” uploader cap: you’re dropping multiple files. Use a single SharePack zip instead. (user)
+
+
+If a zip won’t open: re‑create with files at the root (run the zip command from inside the run folder) and try a .tar.gz variant as a fallback. (user observation about offering both formats)
+
+
+If results don’t align: remember: workbook date D ⇒ results date D+1. (user: Data Validation Workflow, “Pick3 workbook history & results mapping”)
+
+
+
+Sanity check – do these two actions to confirm
+
+
+Rebuild the Stable packet exactly as shown (zip … . from inside the run folder), then drag stable_CT_2025-06-23_pack1.zip into the target chat and ask: “Show the file list at the root of the archive.” You should see README.txt, manifest.json, and your stable/ & winners/ files immediately. (user: Data Validation Workflow, lines ~29–68)
+
+
+If the zip still doesn’t open, upload the .tar.gz built by the script and repeat the same prompt. If one works and the other doesn’t, standardize on that format in your “Export SharePack” button. (user: your note about trying both formats)
+
+
+
+If you want, I can also draft a tiny README.txt template Codex can fill during export (state, workbook date, results date, tool version/commit, and a sentence on how to read the CSVs).

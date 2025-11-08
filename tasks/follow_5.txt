@@ -1,0 +1,195 @@
+TL;DR: Yes—feed Codex the Packet 1 work order below verbatim. Before/while it works, run a baseline so we can diff behavior. I’ve written you a copy‑paste brief for Codex with: exact objectives, files to touch, acceptance tests, and artifacts to return. It locks down multi‑variant coverage (Midday/Evening/Combined), preserves existing scoring axes, and adds guardrails so no feature silently disappears again. Baseline/runbook + tests are included.
+
+Packet 1 — copy/paste brief for Codex (start here)
+
+Context discipline (don’t skip): Operate from repo root and keep diffs surgical (per AGENTS.md). Launch Streamlit via the provided scripts. Do not refactor outside scope. Cite each touched file in the plan before editing. Run smoke/tests after. 【AGENTS.md L1‑30, L31‑76】
+
+AGENTS
+
+ 
+
+AGENTS
+
+ • UI launcher: run_app.bat pushes to repo root and sets headless mode before streamlit run src\app.py.【run_app.bat L1‑29】
+
+run_app
+
+A) Objectives (must all hold)
+
+Re‑enable multi‑variant ingest: run the Stable extractor over Midday, Evening, Combined concurrently, tagging rows by section, with outputs unchanged in layout/paths. (This recovers the intended chain while keeping the schema/HTML stable as today.) (Scope and intent previously logged in your extract packets and log review notes.) (user)
+
+Preserve all current scoring axes already implemented: hot‑zone/star weighting, mirror/mirror‑elimination, straight scoring, V‑TRAC‑straight cues, “survivors / last‑remaining” handling, and existing consensus detection. (These are the axes Codex surfaced in your Packet‑1 notes; we’re not dropping any.) (user)
+
+Schema contract is additive only: row CSV and family CSV keep all existing columns; any new columns are appended; no column deletions or renames. Add a guard that fails CI if columns disappear. (Codex plan: add a check_contract hook; see also regression‑shield themes.)【tasks/log2.txt (themes & contract guard) L1‑32】
+
+log2
+
+B) Files/paths to work within (wiring that the app uses today)
+
+Streamlit page: src/app.py (Stable page entry; keep only minimal wiring). (user)
+
+Wrapper: src/core/stable_pattern_extractor.py (loads tables, calls engine, writes HTML/CSV). (user)
+
+Engine package: alpha_analytical/stable/ — canonical brain; keep config via feature_config loader; don’t scatter YAML reads. (“CFG” loader pattern captured in Codex notes.)【tasks/log2.txt (CFG loader) L1‑18】
+
+log2
+
+(Those paths and roles were listed in your earlier handoff/map; we’re following that chain.) (user)
+
+C) Concrete edits (what to change)
+
+Multi‑variant ingest & tagging
+
+Ensure the wrapper reads all three variant combined tables and tags each row with section ∈ {Midday, Evening, Combined} before scoring, then concatenates for one report/CSV per state (unchanged filenames/locations). (user)
+
+Keep output paths and filenames identical to current (only content grows to include all sections). (user)
+
+Preserve & verify scoring axes
+
+Confirm the following score parts are still computed and populated in row/HTML outputs:
+hot_zone_* / star_weight, mirror_*, straight_score, vtrac_straight_flag/family, survivor_* (end‑string / last_remaining), consensus_*. (user)
+
+No removal of any existing column. Additive columns must default neutral on older rows.
+
+Centralized configuration
+
+Use a single config loader (alpha_analytical.stable.feature_config.CFG) for weights/thresholds. Do not inline or piecemeal reload YAML in other modules. (Theme from stable_1/stable_2.)【tasks/log2.txt (CFG & YAML hygiene) L1‑9】
+
+log2
+
+Guardrails against feature loss
+
+Add/enable a contract check that asserts the full CSV column set (row and family) before write, and wire a pre‑commit/local hook to fail if any column is missing. (Look for or add scripts/hooks/check_contract.py, then insert after py-compile in pre‑commit.)【tasks/log2.txt (contract hook) L10‑17】
+
+log2
+
+Note on the known breakage you hit previously: A stray literal \n in alpha_analytical/stable/post_pass_families.py caused import failures across py-compile, pytest, and aux guard (stack traces show the exact line). If that reappears, remove the spurious \n and ensure consensus/doubles adjacency logic imports and runs. 【tasks/log2.txt (SyntaxError & file/line) L29‑63】【tasks/log2.txt (same failure reproduced in hooks/tests) L1‑39】
+
+log2
+
+ 
+
+log2
+
+D) Acceptance tests (must pass)
+
+Compile & contracts
+
+python -m py_compile alpha_analytical/stable/__init__.py alpha_analytical/stable/post_pass_families.py alpha_analytical/stable/feature_config.py【tasks/log2.txt (explicit compile calls) L13‑27】
+
+log2
+
+pytest -q tests/test_stable_contracts.py (row schema identity, hidden3v boolean truthiness, presence of score parts).【tasks/log2.txt (contracts mention) L13‑27】
+
+log2
+
+pre-commit run --all-files to exercise py-compile, pytest-smoke, aux guard, and contract hook.【tasks/log2.txt (smoke + guard + contract mentions) L10‑22】
+
+log2
+
+Functional spot checks (representative state)
+
+Run Stable for one state (e.g., CT/DE/IN) and confirm outputs exist for all three sections with the expected columns populated (no missing axes). Save HTML and CSV. (This mirrors the “bundle & workbook” workflow described.)【tasks/log2.txt (bundle/run guidance) L18‑32】
+
+log2
+
+No column regressions
+
+The contract script fails the job if any existing Stable column is absent (row or family CSV).【tasks/log2.txt (contract guard) L10‑17】
+
+log2
+
+E) Artifacts to attach back for review
+
+The three‑section Stable HTML report and scores CSV for a representative state (e.g., data/outputs/analysis/patterns/<STATE>/…). (user)
+
+Test/validation transcript: the exact command lines + pass/fail summary (compile, pytest, pre‑commit).【AGENTS.md run/validate discipline L62‑76】
+
+AGENTS
+
+A one‑page “diff summary” describing columns added (if any) and confirming none were removed.
+
+End Packet 1.
+
+Do we want baseline runs now? (yes)
+
+Please run a baseline before Codex edits so we can diff behavior after Packet 1 lands:
+
+Baseline runbook
+
+From repo root (per AGENTS.md), launch the UI or headless script to produce current Stable outputs.【AGENTS.md L1‑30】
+
+AGENTS
+
+ 【run_app.bat L1‑29】
+
+run_app
+
+Grab the current Stable HTML + CSV for one state (your usual go‑to). (user)
+
+Zip + send me the bundle. We’ll A/B compare with the Packet 1 outputs.
+
+Why this is the right starting slice (quick reassurance)
+
+It restores full coverage (M/E/C) while protecting every existing feature and output column, matching your “don’t lose features” constraint. (user)
+
+It adds guardrails so we never silently drop consensus/straight/hot‑zone columns again (contract hook + tests).【tasks/log2.txt (contract & tests) L10‑27】
+
+log2
+
+It stays within the app’s live wiring (page → wrapper → engine), per your own handoff map, so we’re working where the integrated app actually calls. (user)
+
+Answers to your direct questions
+
+“Am I giving the last message to Codex?”
+Give Codex the Packet 1 brief above. That is the approved, minimal, high‑impact starting packet. Then we validate with a baseline diff.
+
+“Do you want to see runs before changes?”
+Yes, please attach one baseline run (Stable HTML+CSV for a state) now so I can diff after Packet 1. See the baseline runbook and the launcher script. 【run_app.bat L1‑29】
+
+run_app
+
+“Is Packet 1 from your last message enough?”
+I’ve tightened Packet 1 above into executable instructions + tests + artifacts. This is ready to paste to Codex.
+
+What I’ll do once you send the baseline + Packet 1 artifacts
+
+Schema/feature audit (column‑by‑column) to confirm all axes are present and correctly populated across Midday/Evening/Combined.
+
+Prepare Packet 2 (compound persistence across Set3→Set1, hidden 3‑value cores, consensus‑of‑consensus, etc.), using the same additive/guarded approach already outlined in your extract notes.【tasks/log2.txt (Packet‑2 scope: compound & hidden‑core) L1‑18】
+
+log2
+
+Sanity Check (2 quick actions for you)
+
+Copy‑paste Packet 1 to Codex now and let it run; then send me the post‑Packet‑1 Stable HTML+CSV for one state.
+
+Also send one baseline bundle (pre‑Packet‑1) for the same state so I can A/B diff immediately.
+
+Notes & supporting citations
+
+Operate from repo root, keep diffs small, validate after change — the agent discipline we’re enforcing. 【AGENTS.md L1‑30, L62‑76】
+
+AGENTS
+
+ 
+
+AGENTS
+
+Headless/UI launch script exists and is safe to use. 【run_app.bat L1‑29】
+
+run_app
+
+Prior import break in post_pass_families.py (\n literal) that knocked out py-compile/pytest is a known failure mode; our compile + contract checks will catch any recurrence. 【tasks/log2.txt L29‑63】【tasks/log2.txt L1‑39】
+
+log2
+
+ 
+
+log2
+
+Contract/guardrail & CFG hygiene are already captured in your stable_1/stable_2 consolidation notes; we’re executing those. 【tasks/log2.txt L1‑32】
+
+log2
+
+If anything above seems ambiguous, point me to the exact state you want as the “representative” run—otherwise I’ll assume your usual CT/DE/IN choices are fine (user).
