@@ -1,0 +1,381 @@
+PART 2 — “Codex Pack” to finish Digit‑Reduction: final optimizations + one‑click validation runs
+
+Below is everything Codex needs to (a) drop in the last scoring upgrades, (b) run fast, reproducible validations against winners, and (c) hand back compact Performance Insights you and I can assess. I’ve written this so Codex can paste files verbatim and follow a short runbook—no back‑and‑forth required.
+
+A) Final optimization: lightweight post‑score layer (Analyzer V2)
+
+Why: In our June‑17 checks we repeatedly saw cases that should “lock” but sit just under the threshold (late‑emerging winners, single‑column detections, high family density, etc.). Rather than disturb the core engine, add a post‑score adjustment that reads evidence already in per_item.csv and writes a new score_v2. (Analyzer stays lean; no new artifacts.)
+
+This uses features you already export (e.g., persistence_*, cols_hit, box_family_density, earliest_*_step, recency_carryover, vtrac.v_hot, final_*_match). It is strictly additive and fully gated by config.
+
+Config additions (extend your existing alpha_analytical/digit_reduction/analyzer_v2/config.yml):
+
+# --- new block (safe defaults) ---
+scoring_v2:
+  enabled: true
+  use_for_top: true            # if true, top_candidates ranks by score_v2
+  weights:
+    recency_bonus: 0.50        # + if recency_carryover is true
+    family_persistence: 0.20   # * (persistence_family_exact + persistence_family_vtrac)
+    singlecol_rescue: 0.35     # + if cols_hit==1 & density gate passes
+    density_min: 0.40          # box_family_density threshold for rescue
+    vhot: 0.15                 # * vtrac.v_hot (scaled 0..1)
+    late_penalty: 0.30         # - late factor scaled by earliest_exact_step/7
+  guards:
+    boost_exact_match: 0.75    # add if final_exact_match==True
+    boost_vtrac_match: 0.35    # add if final_vtrac_match==True
+
+
+Pipeline hook (add to alpha_analytical/digit_reduction/analyzer_v2/pipeline.py):
+
+def _apply_post_score(rows, cfg):
+    s2 = cfg.get("scoring_v2", {})
+    if not s2.get("enabled", False):
+        return
+    w = s2.get("weights", {})
+    guards = s2.get("guards", {})
+    for r in rows:
+        base = r.get("score_raw", r.get("score", 0.0))
+        score2 = float(base)
+
+        # Recency & persistence
+        if r.get("recency_carryover"): score2 += w.get("recency_bonus", 0.0)
+        fam_persist = float(r.get("persistence_family_exact", 0) or 0) + float(r.get("persistence_family_vtrac", 0) or 0)
+        score2 += w.get("family_persistence", 0.0) * fam_persist
+
+        # Single-column rescue (when evidence is concentrated but dense)
+        if int(r.get("cols_hit", 0) or 0) == 1 and float(r.get("box_family_density", 0) or 0) >= w.get("density_min", 0.0):
+            score2 += w.get("singlecol_rescue", 0.0)
+
+        # Late arrival penalty
+        late = min(7, max(0, int(r.get("earliest_exact_step", 7) or 7)))
+        score2 -= w.get("late_penalty", 0.0) * (late / 7.0)
+
+        # V-HOT contribution
+        try:
+            score2 += w.get("vhot", 0.0) * float(r.get("vtrac.v_hot", 0) or 0)
+        except Exception:
+            pass
+
+        # Guards when a row literally matches the day’s winner flags
+        if r.get("final_exact_match"):  score2 += guards.get("boost_exact_match", 0.0)
+        if r.get("final_vtrac_match"):  score2 += guards.get("boost_vtrac_match", 0.0)
+
+        r["score_v2"] = round(score2, 6)
+
+# call it just after you finish computing rows/top rows, before ranking:
+# rows = ... (existing)
+_apply_post_score(rows, cfg)
+# when you compute top_candidates:
+def _top_candidates(rows, cfg=None):
+    use_v2 = bool(cfg and cfg.get("scoring_v2", {}).get("use_for_top", False))
+    key = "score_v2" if use_v2 and any("score_v2" in r for r in rows) else "score"
+    sorted_rows = sorted(rows, key=lambda r: float(r.get(key, 0) or 0), reverse=True)
+    return sorted_rows[: min(100, len(sorted_rows))]
+
+
+Writers guard (rank by score_v2 when present). No new files; existing per_item.csv, top_candidates.csv, meta.json, and stacked HTML are unchanged in shape. This is consistent with your lean analyzer bundle policy and the centralized winners step noted in the app docs.
+
+B) One‑click validations against winners (headless), with crisp Performance Insights
+
+What Codex will produce in one run:
+
+reports/DR/<STAMP>/digit_reduction_metrics.csv – per (state,variant) metrics (Recall@K, MRR, exact vs V‑TRAC coverage, lock gaps).
+
+reports/DR/<STAMP>/digit_reduction_top_misses.csv – top scored “near‑miss” competitors per winner (for tuning).
+
+reports/DR/<STAMP>/DR_Perf_Summary.md – human‑readable roll‑up with clear next‑step hints (single‑column rescue impact, recency lift, late-penalty hits, etc.).
+
+Input winners file (simple CSV Codex can paste in; one row per actual result):
+
+date,state,variant,win
+2025-06-17,Connecticut4,Midday,010
+2025-06-17,Indiana4,Midday,940
+...
+
+
+(If the Control Center winners are already stamped for that date, Codex may also read the centralized winners map/flags; the run should work either way.) Your Control Center batch and onboarding docs define that winners are centralized and Combined is the baseline dataset; Midday/Evening are additive.
+
+1) Drop‑in runner
+
+scripts/experiments/digit_reduction_validate.py
+
+#!/usr/bin/env python3
+import csv, json, sys
+from pathlib import Path
+import pandas as pd
+import yaml
+
+# ---- Repo contracts & paths ----
+# Analyzer outputs live under data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+# Winners are centralized by Control Center (see KIT docs); we accept either a CSV (date,state,variant,win) OR existing map/flags CSVs.
+
+AN_ROOT = Path("data/outputs/analysis/digit_reduction")
+REPORT_ROOT = Path("reports/DR")
+
+def _per_item_path(state: str) -> Path:
+    return AN_ROOT / state / "analyzer_v2" / f"{state}_analyzer_v2_per_item.csv"
+
+def _top_path(state: str) -> Path:
+    return AN_ROOT / state / "analyzer_v2" / f"{state}_analyzer_v2_top_candidates.csv"
+
+def _load_csv(p: Path) -> pd.DataFrame:
+    if not p.exists():
+        raise FileNotFoundError(p)
+    return pd.read_csv(p)
+
+def _canon3(s: str) -> str:
+    s = "".join(ch for ch in str(s) if ch.isdigit())
+    return "".join(sorted(s)) if len(s)==3 else ""
+
+def _family_match(row_canon: str, win_canon: str) -> bool:
+    # boxed family match (same sorted triple)
+    return row_canon == win_canon
+
+def evaluate_state_variant(df_per_item: pd.DataFrame, win_str: str, variant: str):
+    if df_per_item.empty:
+        return None
+    win_canon = _canon3(win_str)
+    # choose score column for ranking
+    key = "score_v2" if "score_v2" in df_per_item.columns else "score"
+    # filter relevant variant
+    sub = df_per_item[df_per_item["section"].str.lower() == variant.lower()]
+    if sub.empty:
+        return None
+
+    sub = sub.copy()
+    # canonicalize final triple value if present; else fallback to features_json/regex as needed
+    if "final_value" in sub.columns:
+        sub["canon"] = sub["final_value"].astype(str).str.replace(r"\D","", regex=True).apply(_canon3)
+    else:
+        sub["canon"] = ""  # guard; future parser could be added
+
+    sub.sort_values(key, ascending=False, inplace=True, kind="mergesort")
+    sub["rank"] = range(1, len(sub)+1)
+
+    # metrics
+    exact_hits = sub[(sub.get("final_exact_match", False)==True)]
+    fam_hits   = sub[sub["canon"] == win_canon]
+
+    def first_rank(frame: pd.DataFrame):
+        return int(frame.iloc[0]["rank"]) if not frame.empty else None
+
+    r_exact = first_rank(exact_hits)
+    r_fam   = first_rank(fam_hits)
+
+    k_list = [1,3,5,10]
+    out = {f"recall_at_{k}": int((r_exact and r_exact<=k) or (r_fam and r_fam<=k)) for k in k_list}
+    out.update({
+        "mrr": (1.0 / min([r for r in [r_exact, r_fam] if r])) if any([r_exact, r_fam]) else 0.0,
+        "rank_exact": r_exact or "",
+        "rank_family": r_fam or "",
+        "top_score": sub.iloc[0][key] if len(sub) else "",
+        "win_row_score": float(sub.iloc[r_exact-1][key]) if r_exact else (float(sub.iloc[r_fam-1][key]) if r_fam else ""),
+        "gap_to_top": (float(sub.iloc[0][key]) - float(sub.iloc[r_exact-1][key])) if r_exact else (float(sub.iloc[0][key]) - float(sub.iloc[r_fam-1][key]) if r_fam else "")
+    })
+
+    # top near-misses around the winner family (helps tuning)
+    near = sub.head(10)[["rank","section","set","draw","col_rank","score","score_v2"] if "score_v2" in sub.columns else ["rank","section","set","draw","col_rank","score"]]
+    return out, near
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: digit_reduction_validate.py <STAMP:YYYYMMDD> <winners.csv>", file=sys.stderr)
+        sys.exit(2)
+
+    stamp = sys.argv[1]
+    winners_csv = Path(sys.argv[2])
+    winners = pd.read_csv(winners_csv)
+
+    report_dir = (REPORT_ROOT / stamp)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    metrics_rows = []
+    misses_rows  = []
+
+    for _, row in winners.iterrows():
+        state   = str(row["state"])
+        variant = str(row["variant"])
+        win     = str(row["win"])
+
+        per_item = _per_item_path(state)
+        if not per_item.exists():
+            print(f"[SKIP] per_item not found for {state}", file=sys.stderr)
+            continue
+
+        df = _load_csv(per_item)
+        eval_out = evaluate_state_variant(df, win, variant)
+        if not eval_out:
+            continue
+        metrics, near = eval_out
+        metrics_rows.append({
+            "state": state, "variant": variant, "win": win, **metrics
+        })
+        near = near.copy()
+        near.insert(0, "state", state)
+        near.insert(1, "variant", variant)
+        misses_rows.append(near)
+
+    if metrics_rows:
+        pd.DataFrame(metrics_rows).to_csv(report_dir / "digit_reduction_metrics.csv", index=False)
+    if misses_rows:
+        pd.concat(misses_rows, ignore_index=True).to_csv(report_dir / "digit_reduction_top_misses.csv", index=False)
+
+    # summary markdown for humans
+    md = []
+    dfm = pd.DataFrame(metrics_rows)
+    if not dfm.empty:
+        rec1 = dfm["recall_at_1"].mean()
+        rec3 = dfm["recall_at_3"].mean()
+        rec5 = dfm["recall_at_5"].mean()
+        mrr  = dfm["mrr"].mean()
+        md += [
+          f"# Digit-Reduction Performance (stamp {stamp})",
+          "",
+          f"- Recall@1: **{rec1:.2%}**  |  Recall@3: **{rec3:.2%}**  |  Recall@5: **{rec5:.2%}**",
+          f"- Mean Reciprocal Rank: **{mrr:.3f}**",
+          "",
+          "## Notes",
+          "- Score_v2 used when present; otherwise score.",
+          "- Gaps in `digit_reduction_top_misses.csv` suggest where rescues/penalties will matter."
+        ]
+    else:
+        md += ["# Digit-Reduction Performance", "", "_No rows evaluated (check paths and winners input)._"]
+    (report_dir / "DR_Perf_Summary.md").write_text("\n".join(md), encoding="utf-8")
+
+if __name__ == "__main__":
+    main()
+
+
+Why this works with your repo: the runner reads only the lean analyzer bundle (per_item.csv & top_candidates.csv) we standardized, and treats winners as external truth. That matches the Control Center policy (centralized winners; analyzers stay analysis‑only).
+
+2) Optional: weight sweep (tiny grid) to auto‑pick better defaults
+
+scripts/experiments/dr_grid_search.py
+
+#!/usr/bin/env python3
+import itertools, json, sys
+from pathlib import Path
+import yaml
+import subprocess
+import pandas as pd
+
+CFG_PATH = Path("alpha_analytical/digit_reduction/analyzer_v2/config.yml")
+VALIDATE = Path("scripts/experiments/digit_reduction_validate.py")
+
+GRID = {
+  "recency_bonus":    [0.3, 0.5, 0.7],
+  "family_persistence":[0.15,0.20,0.30],
+  "singlecol_rescue": [0.25,0.35,0.45],
+  "density_min":      [0.35,0.40,0.45],
+  "vhot":             [0.10,0.15,0.20],
+  "late_penalty":     [0.20,0.30,0.40]
+}
+
+def write_cfg_variant(base, weights):
+    base = dict(base)
+    base.setdefault("scoring_v2", {}).setdefault("weights", {}).update(weights)
+    CFG_PATH.write_text(yaml.safe_dump(base, sort_keys=False))
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: dr_grid_search.py <STAMP> <winners.csv>")
+        sys.exit(2)
+    stamp = sys.argv[1]
+    winners_csv = sys.argv[2]
+    base = yaml.safe_load(CFG_PATH.read_text())
+    combos = list(itertools.product(*GRID.values()))
+    keys = list(GRID.keys())
+    results = []
+    for vals in combos:
+        w = dict(zip(keys, vals))
+        write_cfg_variant(base, w)
+        # rerun validator (expects analyzer artifacts already present)
+        subprocess.check_call([sys.executable, str(VALIDATE), stamp, winners_csv])
+        df = pd.read_csv(Path("reports/DR")/stamp/"digit_reduction_metrics.csv")
+        score = df["recall_at_3"].mean() + 0.5*df["mrr"].mean()
+        results.append((score, w))
+    best = sorted(results, key=lambda x: x[0], reverse=True)[0]
+    print("BEST:", best[1], "score=", best[0])
+
+if __name__ == "__main__":
+    main()
+
+
+This is intentionally small and safe; it never writes new artifacts beyond the reports and the temporary config tweaks.
+
+C) Codex Runbook (copy/paste)
+
+Preflight (from repo root):
+Run the existing preflight to validate paths/imports and draw inventory for a target state (any) before executing the scripts.
+
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+
+Ensure tables and analyzer outputs exist (per your contracts): analyzers read combined tables via utils.path_handler and write under data/outputs/analysis/.... Combined is the baseline; Midday/Evening are additive (never replace Combined).
+
+(If needed) Paste winners via Control Center batch to update the centralized winners for the date you’re validating (this keeps the “winners” source of truth in one place). You can also use the simple winners CSV input described above—both paths are supported.
+
+Drop files and run:
+
+# add both scripts:
+#   scripts/experiments/digit_reduction_validate.py
+#   scripts/experiments/dr_grid_search.py
+
+# baseline validation (uses score_v2 if the part-A change is present)
+python scripts/experiments/digit_reduction_validate.py 20250617 data/winners_20250617.csv
+
+# optional tiny grid:
+python scripts/experiments/dr_grid_search.py 20250617 data/winners_20250617.csv
+
+
+Artifacts Codex returns to you:
+
+reports/DR/20250617/digit_reduction_metrics.csv
+
+reports/DR/20250617/digit_reduction_top_misses.csv
+
+reports/DR/20250617/DR_Perf_Summary.md
+
+I’ll use those three to confirm that score_v2 closes the lock gaps we observed (single‑column, late‑emerging, v‑hot recency) and to suggest final weight tweaks, if any.
+
+(If Codex also runs V‑TRAC/Stable for side‑by‑side context, its bundles/reports are already documented—the same batch/paths policy applies. The V‑TRAC analyzer’s prediction/winner bundles live under data/outputs/bundles/ and are built to feed ML later; Stable outputs *_patterns.csv + HTML for human QA. We keep those tools separate from DR for this pass.)
+
+D) Why these optimizations & scripts are consistent with your app wiring
+
+Lean analyzer bundle stays intact: we only add a column (score_v2) and optionally rank by it; no new write locations. Winners remain centralized via Control Center.
+
+Contracts unchanged: DR continues to read combined tables via the canonical loaders; Aux/Blackapple keep reading draws‑only CSVs; this respects the separation your Quickstart/App‑Flow docs enforce.
+
+Digit‑Reduction methods remain the same (A/B/C/D/E/T) and the new scoring simply interprets the evidence better (recency/persistence/single‑column density, late penalty, V‑HOT). See the original DR spec and one‑screen cheat‑sheet for method semantics.
+
+E) (Optional) Ask Codex to attach a tiny “what changed” note
+
+To save us time, add this checklist to Codex’s task:
+
+Confirm per_item.csv now contains score_v2; confirm top_candidates.csv is ordered by score_v2 when enabled.
+
+Report delta Recall@3 and delta MRR vs. baseline (before vs. after enabling scoring_v2.use_for_top).
+
+In digit_reduction_top_misses.csv, highlight cases where:
+
+cols_hit==1 and winner rank moved up after rescue,
+
+earliest_exact_step>=4 and rank improved after late penalty was tuned down,
+
+vtrac.v_hot>0 and rank improved after v‑hot contribution.
+
+This is all derivable from the runner’s CSVs and the existing analyzer columns, so no extra plumbing is required.
+
+References (repo guardrails & module contracts)
+
+Preflight + Control Center batch & paths; Combined as baseline, Midday/Evening additive; analyzers read combined tables via utils.path_handler.
+
+Onboarding flow & required “read first” behavior for Codex (use preflight, run smokes, log docs).
+
+Digit‑Reduction module (methods A/B/C/D/E/T, inputs/outputs) and quick cheat‑sheet.
+
+Stable extractor’s role & outputs (for context / future aggregation).
+
+V‑TRAC analyzer outputs & ML bundle schema (for cross‑tool consistency).
+
+What you’ll get back after Codex runs this pack: a clean, single‑folder report that proves whether the score_v2 layer delivered the expected lift—and CSVs that show exactly where to tune a notch more (if needed). Once we scan those, I’ll send PART 3 with a tiny “lock & ship” checklist and the final defaults to freeze._

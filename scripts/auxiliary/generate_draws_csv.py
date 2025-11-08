@@ -31,6 +31,8 @@ PROJECT_ROOT = _ensure_project_root()
 DEFAULT_DRAWS_DIR = PROJECT_ROOT / "data" / "cleaned" / "draws"
 
 
+from utils import path_handler as ph  # noqa: E402
+
 from modules.module_d_auxiliary_tools.refactored import (  # noqa: E402
     draws_extractor_p3_columns as column_map,
     extractor as aux_extractor,
@@ -41,8 +43,8 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Aux draw CSVs")
     parser.add_argument(
         "--excel",
-        default=str(PROJECT_ROOT / "data" / "original" / "Pick3StatsC4.xlsm"),
-        help="Path to Pick3StatsC4.xlsm (default: data/original/Pick3StatsC4.xlsm)",
+        default=str(ph.get_pick3_workbook_path()),
+        help="Path to Pick3StatsC4 workbook (default: auto-detected)",
     )
     parser.add_argument(
         "--outdir",

@@ -97,20 +97,28 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     # pre-compute front-line/rightmost stable column per (section, Set, Draw)
     # using df_scores[dom_last==True] or recompute if needed.
 
-    g = defaultdict(lambda: {
-        "rows_covered": set(),
-        "perm_count_in_box": 0,
-        "repeat_extras_in_box": 0,
-        "horizontal_persistence_repeat": 0,
-        "hot_hits": 0,
-        "hot_total": 0,
-        "any_straight2": False,
-        "any_straight3": False,
-        "any_consensus": False,
-        "any_dom_last": False,
-        "canonicals": Counter(),
-        "modal_orders": Counter()
-    })
+    def _zero_struct():
+        return {
+            "rows_covered": set(),
+            "perm_count_in_box": 0,
+            "repeat_extras_in_box": 0,
+            "horizontal_persistence_repeat": 0,
+            "hot_hits": 0,
+            "hot_total": 0,
+            "any_straight2": False,
+            "any_straight3": False,
+            "any_consensus": False,
+            "any_dom_last": False,
+            "canonicals": Counter(),
+            "modal_orders": Counter(),
+            "max_persistence_set": 1,
+            "max_persistence_draw": 1,
+            "any_vtrac_straight": False,
+            "any_double_mirror": False,
+            "any_hidden3v": False,
+        }
+
+    g = defaultdict(_zero_struct)
 
     for _, r in df_scores.iterrows():
         canon = str(r["Canonical"])
@@ -136,6 +144,14 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         mv = str(r.get("orders_modal_value", "")).strip()
         if mv:
             gg["modal_orders"][mv] += int(r.get("orders_modal_rows", 0))
+        gg["max_persistence_set"] = max(gg["max_persistence_set"], int(r.get("persistence_set_count", 1)))
+        gg["max_persistence_draw"] = max(gg["max_persistence_draw"], int(r.get("persistence_draw_run", 1)))
+        if r.get("score_vtrac_straight", 0):
+            gg["any_vtrac_straight"] = True
+        if r.get("double_mirror"):
+            gg["any_double_mirror"] = True
+        if r.get("hidden3v"):
+            gg["any_hidden3v"] = True
 
 
     # score per family box
@@ -160,6 +176,11 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         fam_repeat = gg["repeat_extras_in_box"] * cfg.get("repeat_count_per_extra", 0)
         fam_cons = cfg.get("consensus_family_bonus", 0) if gg["any_consensus"] else 0
         fam_hot = cfg.get("hotzone_family_bonus", 0) if hot_density >= 0.5 else 0
+        fam_vtrac = cfg.get("vtrac_family_presence", 0) if gg["any_vtrac_straight"] else 0
+        fam_hidden = cfg.get("hidden3v_bonus", 0) if gg["any_hidden3v"] else 0
+        fam_double = cfg.get("doubles_trigger_bonus", 0) if gg["any_double_mirror"] else 0
+        fam_persist = max(0, gg["max_persistence_set"] - 1) * cfg.get("persistence_family_set_bonus", 0)
+        fam_persist += max(0, gg["max_persistence_draw"] - 1) * cfg.get("persistence_family_draw_bonus", 0)
         fam_straight2 = cfg.get("straight_2rows_bonus", 0) if gg["any_straight2"] else 0
         fam_straight3 = cfg.get("straight_3rows_bonus", 0) if gg["any_straight3"] else 0
         fam_doubles = cfg.get("doubles_trigger_bonus", 0) if any_doubles_support else 0
@@ -173,6 +194,10 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             + fam_straight2
             + fam_straight3
             + fam_doubles
+            + fam_vtrac
+            + fam_hidden
+            + fam_double
+            + fam_persist
         )
         # === AAT9-SCORE-CONTRACT: END (FAMILY) ===
         out.append({
@@ -188,6 +213,10 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             "any_consensus": gg["any_consensus"],
             "any_dom_last": gg["any_dom_last"],
             "any_doubles_support": any_doubles_support,
+            "any_vtrac_straight": gg["any_vtrac_straight"],
+            "any_hidden3v": gg["any_hidden3v"],
+            "max_persistence_set": gg["max_persistence_set"],
+            "max_persistence_draw": gg["max_persistence_draw"],
             "top_canonicals": ";".join([f"{k}:{v}" for k, v in gg["canonicals"].most_common(3)]),
             "top_modal_orders": ";".join([f"{k}:{v}" for k, v in gg["modal_orders"].most_common(3)]),
             "fam_cov": fam_cov,
@@ -199,6 +228,10 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             "fam_straight2": fam_straight2,
             "fam_straight3": fam_straight3,
             "fam_doubles": fam_doubles,
+            "fam_vtrac": fam_vtrac,
+            "fam_hidden": fam_hidden,
+            "fam_double_mirror": fam_double,
+            "fam_persistence": fam_persist,
             "fam_section_bonus": 0.0,
             "fam_progression_bonus": 0.0,
             "fam_last_remaining_bonus": 0.0,
@@ -279,10 +312,6 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     df = df.sort_values(["section", "Set", "Draw", "Column", "family_score"], ascending=[True, True, True, True, False]).reset_index(drop=True)
 
     return df
-
-
-
-
 
 
 

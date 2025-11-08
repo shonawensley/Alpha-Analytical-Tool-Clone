@@ -13,6 +13,7 @@ import yaml
 from .features import ItemFeature, build_features
 from .io import analyzer_out_dir, load_training_json
 from .score import score_row
+from .scoring import apply_linear_scoring, apply_post_score, attach_lockscore, top_score_key
 from .vtrac_index import VHotSpec, derive_hot_families_from_dr, try_load_hot_families_from_predictions, vtrac_set
 from .writers import write_artifacts
 from .winners_overlay import build_winner_overlay
@@ -191,19 +192,22 @@ def _aggregate_metrics(entries: List[ItemFeature], config: Dict[str, Any]) -> No
         row.pop("_earliest_any", None)
 
 
-def _top_candidates(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _top_candidates(rows: List[Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
     groups: DefaultDict[Tuple[str, str, str, str], List[Dict[str, Any]]] = defaultdict(list)
     for row in rows:
         key = (row["state"], row["section"], row["family_id"], row["mode"])
         groups[key].append(row)
 
+    score_field = top_score_key(cfg, rows)
+
     board: List[Dict[str, Any]] = []
     for key, members in groups.items():
-        best = max(members, key=lambda r: r.get("score", 0.0))
+        best = max(members, key=lambda r: r.get(score_field, r.get("score", 0.0)))
         evidence = [kind for kind in FLAG_KIND_ORDER if _as_int(best.get(f"earliest_{kind}_step"), -1) >= 0]
         steps_summary = ";".join(
             f"{kind}:{_as_int(best.get(f'earliest_{kind}_step'), -1)}" for kind in FLAG_KIND_ORDER
         )
+        board_score = float(best.get(score_field, best.get("score", 0.0)) or 0.0)
         board.append(
             {
                 "state": key[0],
@@ -211,7 +215,11 @@ def _top_candidates(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "mode": key[3],
                 "family_id": key[2],
                 "best_pattern": best.get("pattern", ""),
-                "score": best.get("score", 0.0),
+                "score": board_score,
+                "score_baseline": best.get("score", 0.0),
+                "score_v2": best.get("score_v2"),
+                "final_prob": best.get("final_prob"),
+                "lockscore_prob": best.get("lockscore_prob"),
                 "boxes_involved": len(members),
                 "evidence_tags": ",".join(evidence),
                 "steps_summary": steps_summary,
@@ -275,9 +283,13 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         row["vtrac.v_hot"] = float(strength.get(row["vtrac.set"], 0.0))
         row["vtrac.hot_source"] = hot_spec.source
 
+    apply_linear_scoring(rows, cfg)
+    apply_post_score(rows, cfg)
+    attach_lockscore(rows, cfg)
+
     overlay_cfg = cfg.get("overlay", {})
     overlay_artifacts = None
-    top_rows = _top_candidates(rows)
+    top_rows = _top_candidates(rows, cfg)
     out_dir = analyzer_out_dir(state, root_path)
     meta = {
         "state": state,
@@ -290,6 +302,9 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         "cluster_scan": cfg.get("features", {}).get("cluster_scan", {}),
         "diagnostics": cfg.get("diagnostics", {}),
         "overlay": overlay_cfg,
+        "scoring_linear": cfg.get("scoring_linear", {}),
+        "scoring_v2": cfg.get("scoring_v2", {}),
+        "lockscore": cfg.get("lockscore", {}),
         "vtrac_hot_source": hot_spec.source,
         "vtrac_hot_families": sorted(hot_spec.families),
     }

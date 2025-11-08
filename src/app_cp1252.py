@@ -631,7 +631,7 @@ def show_control_center_page() -> None:
                 value=False,
             )
 
-            excel_default = Path("data/original/Pick3StatsC4.xlsm")
+            excel_default = Path(ph.get_pick3_workbook_path())
             excel_path = st.text_input(
                 "Excel source",
                 value=str(excel_default),
@@ -1241,7 +1241,7 @@ def show_aux_page(state: str) -> None:
 
             if not draws and variant == "combined":
                 try:
-                    local_excel_path = os.path.normpath("data/original/Pick3StatsC4.xlsm")
+                    local_excel_path = os.path.normpath(ph.get_pick3_workbook_path())
                     if os.path.exists(local_excel_path):
                         from modules.run_process import run_process
 

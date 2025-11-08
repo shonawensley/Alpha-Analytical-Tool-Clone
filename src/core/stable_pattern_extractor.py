@@ -65,8 +65,11 @@ def run_stable_pattern_extraction(
     out_path = Path(out_path)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    # Glob for *_Combined*.csv files inside the tables folder
-    csv_files = sorted(tables_path.glob("*Combined*.csv"))
+    def _is_combined_file(path: Path) -> bool:
+        name = path.name.lower()
+        return name.endswith("_combined.csv") and "_r2" not in name
+
+    csv_files = sorted(p for p in tables_path.glob(f"{state}_*_combined.csv") if _is_combined_file(p))
     if not csv_files:
         # Nothing to process
         return pd.DataFrame(), "", ""

@@ -1,0 +1,84 @@
+Yes — you’re absolutely right to pause before letting Codex “hunt” through folders.
+Here’s how to direct it safely and efficiently.
+
+✅ What’s actually changing
+
+
+The app currently hard-codes or defaults to reading
+data/original/Pick3StatsC4.xlsm (or sometimes Pick3StatsC4.xlsx).
+
+
+You’ve now introduced dated files like
+data/original/history/Pick3StatsC4_2025-06-21.xlsx
+and paired results in
+data/original/results/2025-06-22.txt.
+
+
+So all Codex needs to do is let the user (or a script) choose which dated file to load instead of the fixed one.
+
+💡 Optimal instruction to give Codex
+Paste this exactly—Codex will know what to do and won’t touch unrelated modules:
+
+Task:
+Update file-loading logic in Control Center (and any helper such as generate_tables_pipeline.py) so that the app reads from the new data/original/history/ folder rather than a single fixed Excel.
+Steps:
+
+
+Locate every pd.read_excel or load_pick3statsc4 call that points to a constant path like
+ data/original/Pick3StatsC4.xlsm.
+
+
+Replace it with a variable path, e.g.
+
+
+from pathlib import Path
+HISTORY = Path("data/original/history")
+EXCEL_FILES = sorted(HISTORY.glob("Pick3StatsC4_*.xls*"))
+latest = EXCEL_FILES[-1]  # or pick via user input
+df = pd.read_excel(latest)
+
+
+
+Add one optional control in the UI (or a CLI arg) called “Choose Historical File” that lists these filenames.
+
+
+Do not alter any analysis logic—only the input path.
+
+
+Write a short comment block:
+
+
+# NOTE: expects dated files in data/original/history/
+# Example: Pick3StatsC4_2025-06-21.xlsx  → predicts June 22 draws.
+
+
+
+When the user loads a file, propagate its date to all output folders (tables/2025-06-21/, analysis/2025-06-21/, etc.) so results stay organized.
+
+
+
+
+⚙️ Why this is safe
+
+
+It changes one variable (input path), not the processing pipeline.
+
+
+No need for Codex to scan or rewrite unrelated modules.
+
+
+Keeps backward compatibility—if no dated file is found, it still falls back to the old path.
+
+
+
+🗂 Optional doc update
+Tell Codex also to append a small section to the README_AAT9.md:
+## Historical Data Workflow
+Place dated Pick3StatsC4 files under data/original/history/.
+Name format: Pick3StatsC4_YYYY-MM-DD.xlsx
+Corresponding results: data/original/results/YYYY-MM-DD.txt
+Control Center automatically detects these for analysis or back-testing.
+
+
+That’s all you need to say.
+Codex will now only modify the file-loading path logic—nothing else—and your new History / Results folders will work perfectly with both the Stable Pattern Extractor and the other tools.

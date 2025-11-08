@@ -1,0 +1,260 @@
+Reasoned for 4m 24s
+
+Message 1 of 3 — “Final Optimizations” patch kit for Digit‑Reduction · Analyzer V2
+(You said you want to lock this down, run against examples, and move on. Below is a copy‑pasteable, self‑contained patch kit: config additions, a new scoring module, small pipeline/writer hooks, and a tiny harness helper. Message 2 will be the runbook + batch commands; Message 3 will be the reporting spec I want Codex to return so I can evaluate performance.)
+
+A) What these optimizations do (in plain language)
+
+They make the analyzer’s ranking & locking smarter without changing your data contracts or lean bundle:
+
+Recency & echo rescue – a small lift when a candidate is fresh or echoes across sets/columns.
+
+Single‑column survivor rescue – compensate when the winner lives in one column but everything else was right.
+
+V‑TRAC awareness (lightweight) – nudge rows aligned with hot V‑TRAC context already exposed in per_item.csv.
+
+Own vs Combined balance – prefer own evidence slightly over combined so Midday/Evening aren’t drowned by the Combined pane.
+
+Logistic lock score – convert the linear evidence sum into a calibrated 0–1 “lock” probability with clear thresholds.
+
+Consistent outputs – still only write per_item.csv, top_candidates.csv, meta.json, and stacked HTML per variant (diagnostic steps optional). Winners artifacts stay centralized in Control Center; that wiring does not change.
+
+All of this stays inside Analyzer V2 and uses the existing lean bundle layout you already adopted.
+
+B) Config: add explicit, tunable weights (drop‑in YAML)
+
+File: alpha_analytical/digit_reduction/analyzer_v2/config.yml (extend the existing weights: block)
+
+weights:
+  # existing (examples)
+  w_exact: 1.00
+  w_vtrac: 0.80
+  w_drop_exact: 0.50
+
+  # --- NEW: final-scoring, low-risk nudges ---
+  # Recency & echoes
+  w_recency_carryover: 0.20          # + if row['recency_carryover'] is truthy
+  w_set_echo: 0.05                    # * row['set_echo_count']
+  w_variant_echo: 0.05                # * row['variant_echo_count']
+
+  # Single-column survivor rescue (when cols_hit==1)
+  w_single_column_rescue: 0.25        # mild rescue for bona fide single-column winners
+
+  # VTRAC context nudges already present in per_item.csv
+  w_vtrac_hot: 0.10                   # + if row.get('vtrac.v_hot',0)>0
+  w_vtrac_local_set: 0.05             # + scaled by row.get('vtrac.set',0)/15
+
+  # Mode & section shaping
+  w_mode_own_bonus: 0.10              # + if mode=='own'
+  w_section_combined_penalty: -0.05   # soft penalty so C doesn't swamp M/E
+
+  # Small stabilization / density signals
+  w_box_family_density: 0.05          # * row.get('box_family_density',0.0)
+  w_dup_bonus: 0.03                   # * row.get('dup_bonus',0.0)
+
+  # Logistic calibration
+  final_logit_bias: -0.25             # intercept shift for sigmoid
+  final_logit_scale: 1.00             # scale before sigmoid
+
+thresholds:
+  lock: 0.92          # lock_decision='lock' when prob >= lock
+  hold: 0.85          # 'hold' when prob in [hold, lock)
+
+
+Why these are safe: every term is bounded and derives only from columns already present in your lean per_item.csv (e.g., recency_carryover, set_echo_count, variant_echo_count, cols_hit, box_family_density, dup_bonus, vtrac.*, mode, section). No new I/O or winners dependency is introduced. Analyzer output contract remains lean.
+
+C) New module: final scoring (copy‑paste file)
+
+File (NEW): alpha_analytical/digit_reduction/analyzer_v2/scoring.py
+
+from __future__ import annotations
+from math import exp
+from typing import Dict, Any
+
+SAFE_ZERO = 0.0
+
+def _b(x: Any, default: float = 0.0) -> float:
+    """Best-effort float conversion with safe default."""
+    try:
+        if x is None: return default
+        if isinstance(x, bool): return 1.0 if x else 0.0
+        return float(x)
+    except Exception:
+        return default
+
+def _sigmoid(z: float) -> float:
+    # numerically stable logistic
+    if z >= 0:
+        ez = exp(-z)
+        return 1.0 / (1.0 + ez)
+    ez = exp(z)
+    return ez / (1.0 + ez)
+
+def compute_final_score(row: Dict[str, Any], w: Dict[str, float]) -> Dict[str, float]:
+    """
+    Build a calibrated final score and probability from per-item evidence.
+    Only uses columns already emitted by Analyzer V2 (lean bundle).
+    """
+    # Base evidence (existing columns)
+    recency   = _b(row.get("recency_carryover"))
+    set_echo  = _b(row.get("set_echo_count"))
+    var_echo  = _b(row.get("variant_echo_count"))
+    cols_hit  = _b(row.get("cols_hit"))
+    density   = _b(row.get("box_family_density"))
+    dup_bonus = _b(row.get("dup_bonus"))
+    v_hot     = _b(row.get("vtrac.v_hot"))
+    v_set     = _b(row.get("vtrac.set"))  # 0..15 typical
+    mode      = (row.get("mode") or "").lower()
+    section   = (row.get("section") or "").lower()
+
+    # Linear blend (small, safe nudges)
+    linear = 0.0
+    linear += w.get("w_recency_carryover", 0.0) * recency
+    linear += w.get("w_set_echo", 0.0) * set_echo
+    linear += w.get("w_variant_echo", 0.0) * var_echo
+    linear += w.get("w_box_family_density", 0.0) * density
+    linear += w.get("w_dup_bonus", 0.0) * dup_bonus
+
+    if cols_hit == 1.0:
+        linear += w.get("w_single_column_rescue", 0.0)
+
+    if v_hot > 0.0:
+        linear += w.get("w_vtrac_hot", 0.0)
+
+    if v_set > 0.0:
+        linear += w.get("w_vtrac_local_set", 0.0) * (v_set / 15.0)
+
+    if mode == "own":
+        linear += w.get("w_mode_own_bonus", 0.0)
+
+    if section == "combined":
+        linear += w.get("w_section_combined_penalty", 0.0)
+
+    # Logistic map -> probability in [0,1]
+    z = w.get("final_logit_bias", 0.0) + w.get("final_logit_scale", 1.0) * linear
+    prob = _sigmoid(z)
+
+    return {
+        "final_linear": linear,
+        "final_prob": prob
+    }
+
+D) Pipeline hook (3 small edits)
+
+File: alpha_analytical/digit_reduction/analyzer_v2/pipeline.py
+(around where rows are assembled and top‑candidates are selected)
+
+Import & load weights
+
+# new import
+from .scoring import compute_final_score
+
+# ... inside run(state) after cfg is loaded:
+weights_cfg = cfg.get("weights", {})
+thr_cfg     = cfg.get("thresholds", {"lock": 0.92, "hold": 0.85})
+
+
+Score each row and add lock fields
+
+# after you've built 'rows' (per-item evidence list):
+for r in rows:
+    fs = compute_final_score(r, weights_cfg)
+    r["final_linear"] = fs["final_linear"]
+    r["final_prob"]   = fs["final_prob"]
+    if r["final_prob"] >= thr_cfg.get("lock", 0.92):
+        r["lock_decision"] = "lock"
+    elif r["final_prob"] >= thr_cfg.get("hold", 0.85):
+        r["lock_decision"] = "hold"
+    else:
+        r["lock_decision"] = ""
+
+
+Sort by final_prob when writing top candidates
+
+Replace the sorter used by _top_candidates(rows) (or post‑process its result) so top list=prob‑first:
+
+top_rows = _top_candidates(rows)
+top_rows.sort(key=lambda r: (r.get("final_prob", 0.0), r.get("score", 0.0)), reverse=True)
+
+
+This keeps backward compatibility (falls back to any existing score), but prefers the calibrated probability.
+
+E) Writers: ensure these new columns go out
+
+File: alpha_analytical/digit_reduction/analyzer_v2/writers.py
+
+Where you assemble the per_item.csv and top_candidates.csv, make sure to include final_linear, final_prob, and lock_decision. No other changes required; your lean outputs remain the same four core files + optional steps and stacked HTML.
+
+F) Tiny harness helper (for Codex’s quick local spot‑checks)
+
+File (NEW): scripts/harness/dr_quickcheck.py
+
+#!/usr/bin/env python3
+"""
+Quick local smoke to ensure final_prob & lock_decision exist
+and that top list is prob-sorted.
+"""
+import sys, json
+from pathlib import Path
+import pandas as pd
+
+def main(state: str):
+    root = Path(f"data/outputs/analysis/digit_reduction/{state}/analyzer_v2")
+    per_item = pd.read_csv(root / f"{state}_analyzer_v2_per_item.csv")
+    top = pd.read_csv(root / f"{state}_analyzer_v2_top_candidates.csv")
+
+    for col in ["final_linear", "final_prob", "lock_decision"]:
+        assert col in per_item.columns, f"missing {col} in per_item"
+
+    assert top["final_prob"].is_monotonic_decreasing, "top not sorted by final_prob desc"
+
+    print(json.dumps({
+        "state": state,
+        "rows": len(per_item),
+        "top": len(top),
+        "locks": int((per_item["lock_decision"]=="lock").sum())
+    }, indent=2))
+
+if __name__ == "__main__":
+    if len(sys.argv)!=2:
+        print("Usage: dr_quickcheck.py <StateLabel>")
+        sys.exit(2)
+    main(sys.argv[1])
+
+G) Why this is consistent with the rest of AAT9
+
+Lean analyzer contract & paths stay put: Analyzer V2 continues to emit only the “brain” bundle (per_item, top, meta, stacked), while winners map/flags/HTML are still produced only by Control Center. This matches the Quickstart/Control‑Center batch notes and the app’s canonical data contracts (Aux reads draws CSVs; V‑TRAC/Stable/Digit‑Reduction read combined tables via utils.path_handler).
+
+Digit Reduction method semantics are untouched (A/B/C/D/E/T) — you’re only improving ranking & locking, not changing how reductions are computed.
+
+V‑TRAC context is used minimally and locally (signals already exposed to Analyzer V2 rows). Full V‑TRAC prediction/bundle flows (and where bundles live) remain in the V‑TRAC module and its winners/bundle JSON architecture.
+
+H) What I want Codex to implement now (checklist)
+
+Add scoring.py file as provided.
+
+Extend config.yml with the weights & thresholds block shown.
+
+Patch pipeline.py to call compute_final_score(...) and set lock_decision.
+
+Ensure writers include final_linear, final_prob, lock_decision in both per_item.csv and top_candidates.csv.
+
+Drop in scripts/harness/dr_quickcheck.py and run it after a state run.
+
+Do not change analyzer outputs beyond adding the three new columns; do not re‑enable per‑tool winners writes (those remain centralized).
+
+I) Why these optimizations should help on June‑17 style validations
+
+In your earlier comparisons, several winners under‑scored when they were (a) single‑column or (b) fresh/echoing. The rescue terms above target exactly those cases without inflating everything else; the gentle own‑mode and anti‑Combined shaping protects Midday/Evening signal. When we run the June‑17 batch through Control Center to regenerate centralized map/flags/HTML and then join those to per_item.csv, we’ll see smaller gaps and more locks for those borderline cases. (The runbook + commands come next in Message 2.)
+
+J) Guardrails Codex should observe while applying this patch
+
+Always launch & preflight from repo root; keep the “Combined is baseline; Midday/Evening additive” rule in mind (used by both Aux and your analysis modules).
+
+Don’t re‑introduce legacy, module‑local winners writers; the Control Center batch is the single place that writes winner_map.json / winner_flags.csv + overlay HTML.
+
+If Codex edits docs, follow the onboarding/workflow order and update Unified Changelog + Checkpoint Log, per your Compass/Workflow files.
+
+That’s it for Message 1/3.
+
+Message 2 will contain a precise runbook (commands & toggles for preflight → analyzer → Control Center → quickcheck → winner‑join validation), so you can run examples fast with minimal back‑and‑forth. Message 3 will define the reporting spec & files I want Codex to produce after each run (CSV/JSON + one‑page Markdown) so I can review results and, if needed, suggest one last micro‑tune.

@@ -43,6 +43,12 @@ Purpose: capture the step-by-step loop for generating V-TRAC enhanced analyzer e
 - Share bundle ZIP:
   `data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip`
 
+### Pick3 workbook history & results mapping
+
+- Daily workbooks are archived under `data/history/` as `Pick3StatsC4_YYYY-MM-DD.xlsm`. Each file reflects the tables built on that date (predicting the next day’s draws). Copy the desired file into `data/original/` or set `PICK3_WORKBOOK=/abs/path/to/that/file` before running pipelines/aux tools/Streamlit.
+- Matching draw outcomes live in `data/results/YYYY-MM-DD.txt`. Use the results file whose date is one day **after** the workbook when reverse-engineering (e.g., tables from `2025-06-24` compare against `results/2025-06-25.txt`).
+- Helper: `python scripts/tools/select_pick3_history.py --list` shows available files; `--file Pick3StatsC4_2025-06-24.xlsm` copies it into `data/original/` so the rest of the app sees it as the active workbook.
+
 These directories are safe to delete and regenerate, but keep the most recent run committed when sharing with downstream reviewers.
 
 ## 3. Hand-Off Options
@@ -58,6 +64,8 @@ These directories are safe to delete and regenerate, but keep the most recent ru
 https://raw.githubusercontent.com/<user>/<repo>/<branch>/data/outputs/analysis/vtrac_validation/matrix.csv
 ```
 Repeat for `summary.md`, `summary.csv`, and `vtrac_compact_report.{csv,json}` to give reviewers immediate access.
+
+**2025-11-07 note:** For the Digit-Reduction validator runs we zipped just the individual report folders plus the live `config.yml` (e.g., `reports_20250617_V_bundle.zip`) and dragged that single file into ChatGPT Pro—this worked reliably compared to trying to fetch a large ZIP via raw GitHub links. Use raw links for plain-text files (CSV/MD/JSON/HTML) and direct uploads for bundles/binaries.
 
 ## 4. What Reviewers Look For
 

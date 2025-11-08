@@ -62,3 +62,63 @@ io:
 
 outputs:
   write_stacked_html: true
+
+scoring_linear:
+  enabled: true
+  use_for_top: false
+  final_logit_bias: -0.25
+  final_logit_scale: 1.0
+  thresholds:
+    lock: 0.92
+    hold: 0.85
+  weights:
+    w_recency_carryover: 0.20
+    w_set_echo: 0.05
+    w_variant_echo: 0.05
+    w_single_column_rescue: 0.25
+    w_vtrac_hot: 0.10
+    w_vtrac_local_set: 0.05
+    w_mode_own_bonus: 0.10
+    w_section_combined_penalty: -0.05
+    w_box_family_density: 0.05
+    w_dup_bonus: 0.03
+
+scoring_v2:
+  enabled: true
+  use_for_top: true
+  weights:
+    recency_bonus: 0.50
+    family_persistence: 0.20
+    singlecol_rescue: 0.35
+    density_min: 0.40
+    vhot: 0.15
+    late_penalty: 0.30
+    extended_cluster_bonus: 0.20
+    vtrac_family_rescue: 0.30
+  guards:
+    boost_exact_match: 0.75
+    boost_vtrac_match: 0.35
+    min_drop_run_len: 5
+
+lockscore:
+  enabled: true
+  use_for_top: false
+  min_lockscore_to_lock: 0.85
+  weights:
+    w_score_raw: 1.00
+    w_earliest_exact: 0.40
+    w_earliest_vtrac: 0.30
+    w_persistence: 0.35
+    w_box_density: 0.25
+    w_set_echo: 0.20
+    w_variant_echo: 0.10
+    w_recency: 0.25
+    w_vtrac_hot: 0.20
+    w_single_col_rescue: 0.60
+    w_double_guard: 0.10
+    w_extended_cluster: 0.30
+  guards:
+    t_early: 3
+    t_cols_hit_rescue: 1
+    penalty_combined_bias: 0.10
+    min_drop_run_len: 5

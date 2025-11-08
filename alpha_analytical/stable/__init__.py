@@ -91,6 +91,36 @@ def _has_hidden_three_value(raw_digits: str, family_id: int | None) -> bool:
     return False
 
 
+def _draw_to_index(label: str) -> int | None:
+    if not label:
+        return None
+    match = re.match(r'Draw(\d+)', str(label), re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def _longest_consecutive(sorted_vals: list[int]) -> int:
+    if not sorted_vals:
+        return 0
+    best = cur = 1
+    prev = sorted_vals[0]
+    for val in sorted_vals[1:]:
+        if val == prev:
+            pass
+        elif val == prev + 1:
+            cur += 1
+        else:
+            if cur > best:
+                best = cur
+            cur = 1
+        prev = val
+    return max(best, cur)
+
+
 # --- Main Analysis Function ---
 
 
@@ -146,6 +176,7 @@ def analyse(df: pd.DataFrame, section: str):
                 if count > 1:
                     info['repeat_extras'] += count - 1
 
+    consensus_tails = []
     for box_key, box in tail_box.items():
         rows_present = {r for r in box['rows'] if r != 'CONS_STUB'}
         if len(rows_present) == 4:
@@ -153,6 +184,7 @@ def analyse(df: pd.DataFrame, section: str):
             if len(tails) == 1:
                 box['is_cons'] = True
                 box['tail'] = next(iter(tails))
+                consensus_tails.append(box_key)
 
     front_cache = {}
     for (sec, setv, draw, col, cpat), info in grouping.items():
@@ -178,6 +210,21 @@ def analyse(df: pd.DataFrame, section: str):
             col_int = 0
         horiz_map[(sec_g, setv_g, draw_g, cpat_g)].append(col_int)
 
+    pattern_sets_map = defaultdict(set)
+    pattern_draws_map = defaultdict(lambda: defaultdict(set))
+    for (sec, setv, draw, _col, cpat) in grouping.keys():
+        pattern_sets_map[(sec, cpat)].add(setv)
+        draw_idx = _draw_to_index(draw)
+        if draw_idx is not None:
+            pattern_draws_map[(sec, cpat)][setv].add(draw_idx)
+
+    pattern_draw_chain = {}
+    for (sec, cpat), set_map in pattern_draws_map.items():
+        for setv, draw_vals in set_map.items():
+            longest = _longest_consecutive(sorted(draw_vals))
+            if longest:
+                pattern_draw_chain[(sec, setv, cpat)] = longest
+
     results = []
     for (sec, setv, draw, col, cpat), info in grouping.items():
         rowset = {r for r in info['rows'] if r != 'CONS_STUB'}
@@ -201,6 +248,12 @@ def analyse(df: pd.DataFrame, section: str):
         straight3 = orders_modal_rows >= 3
 
         mirror = any(mirror_pairs.get(d) in cpat for d in cpat if d in mirror_pairs)
+        double_mirror_flag = False
+        if len(cpat) == 3 and len(set(cpat)) == 2:
+            counts = Counter(cpat)
+            double_digit = max(counts, key=lambda d: counts[d])
+            if mirror_pairs.get(double_digit):
+                double_mirror_flag = True
 
         acols = sorted(horiz_map[(sec, setv, draw, cpat)])
         span = 1
@@ -260,6 +313,13 @@ def analyse(df: pd.DataFrame, section: str):
                     score_dom=0,
                     score_len=0,
                     score_hidden=0,
+                    score_double_mirror=0,
+                    score_vtrac_straight=0,
+                    score_persistence_set=0,
+                    score_persistence_draw=0,
+                    persistence_set_count=1,
+                    persistence_draw_run=1,
+                    double_mirror=False,
                     why='consensus_stub'
                 ))
                 box_info['stub_done'] = True
@@ -292,6 +352,11 @@ def analyse(df: pd.DataFrame, section: str):
 
         family_id = derive_vtrac_index_for_canonical(cpat, get_vtrac_index)
         hidden3v_flag = _has_hidden_three_value(raw_digits, family_id)
+        pattern_sets = pattern_sets_map.get((sec, cpat)) or {setv}
+        set_chain = len(pattern_sets)
+        draw_run_len = pattern_draw_chain.get((sec, setv, cpat), 1)
+        score_persistence_set = max(0, set_chain - 1) * CFG.get('persistence_set_bonus', 0)
+        score_persistence_draw = max(0, draw_run_len - 1) * CFG.get('persistence_draw_bonus', 0)
 
         col_factor = 2 if col == '1' else 1
         extra_len_bonus = ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char']) if info['patterns'] else 0
@@ -306,10 +371,19 @@ def analyse(df: pd.DataFrame, section: str):
             + (CFG['straight_3rows_bonus'] if straight3 else 0)
         score_single = CFG['single_left_bonus'] if single_left else 0
         score_cons = CFG['consensus_full_bonus'] if cons_full else 0
+        tail = box_info.get('tail')
+        consensus_tail_bonus = CFG.get('consensus_tail_bonus', 0)
+        tail_canon = canon(tail) if tail else ''
+        if tail and tail_canon == cpat and consensus_tail_bonus:
+            score_cons += consensus_tail_bonus
         score_hot = _hot_bonus(col, hot)
         score_mirror = CFG['mirror_bonus'] if mirror else 0
         score_len = extra_len_bonus
         score_hidden = CFG.get('hidden3v_bonus', 0) if hidden3v_flag else 0
+        score_vtrac_straight = 0
+        if straight and col in {'1', '2', '3'}:
+            score_vtrac_straight = CFG.get('vtrac_straight_bonus', 0)
+        score_double_mirror = CFG.get('double_mirror_bonus', 0) if double_mirror_flag else 0
         score_dom = 0.0
         if dom_last:
             score_dom += CFG.get('dominant_last_bonus', 0)
@@ -319,6 +393,7 @@ def analyse(df: pd.DataFrame, section: str):
                 score_dom += 0.5
         if dom_pair:
             score_dom += CFG.get('dominant_pair_bonus', 0)
+        score_persistence = score_persistence_set + score_persistence_draw
 
         base = (
             score_cov
@@ -333,6 +408,9 @@ def analyse(df: pd.DataFrame, section: str):
             + score_dom
             + score_len
             + score_hidden
+            + score_double_mirror
+            + score_vtrac_straight
+            + score_persistence
         )
         # === AAT9-SCORE-CONTRACT: END (ROW) ===
 
@@ -349,6 +427,8 @@ def analyse(df: pd.DataFrame, section: str):
             why.append('single_left')
         if cons_full:
             why.append('cons_full')
+            if tail and tail_canon == cpat and consensus_tail_bonus:
+                why.append('consensus_tail')
         if hot > 0:
             why.append(f'hot{hot}')
         if dom_last:
@@ -363,6 +443,14 @@ def analyse(df: pd.DataFrame, section: str):
             why.append('repeat_extra')
         if hidden3v_flag:
             why.append('hidden3v')
+        if double_mirror_flag:
+            why.append('double_mirror')
+        if score_vtrac_straight:
+            why.append('vtrac_straight')
+        if set_chain > 1:
+            why.append(f'set_chain{set_chain}')
+        if draw_run_len > 1:
+            why.append(f'draw_chain{draw_run_len}')
 
         results.append(dict(
             section=sec,
@@ -402,6 +490,13 @@ def analyse(df: pd.DataFrame, section: str):
             score_dom=score_dom,
             score_len=score_len,
             score_hidden=score_hidden,
+            score_vtrac_straight=score_vtrac_straight,
+            score_persistence_set=score_persistence_set,
+            score_persistence_draw=score_persistence_draw,
+            persistence_set_count=set_chain,
+            persistence_draw_run=draw_run_len,
+            score_double_mirror=score_double_mirror,
+            double_mirror=double_mirror_flag,
             why='|'.join(why)
         ))
 
@@ -507,14 +602,16 @@ def main_cli():
 
     out_cols = [
       "section","Set","Draw","Column","Canonical","type","score","rows",
-      "mirror","straight2","straight3","single_left",
+      "mirror","straight2","straight3","single_left","double_mirror",
       "cons_full","cons_3v","cons_stub",
       "dom_last","dom_pair","family_id","hidden3v",
       "perm_count_in_box","repeat_extras_in_box",
       "horizontal_persistence_repeat","orders_modal_value","orders_modal_rows","hot",
       "score_cov","score_hpr","score_perm","score_repeat","score_straight",
       "score_single","score_cons","score_hot","score_mirror","score_dom",
-      "score_len","score_hidden",
+      "score_len","score_hidden","score_double_mirror","score_vtrac_straight",
+      "score_persistence_set","score_persistence_draw",
+      "persistence_set_count","persistence_draw_run",
       "why"
     ]
     with open(args.csv,'w',newline='',encoding='utf-8') as fc:

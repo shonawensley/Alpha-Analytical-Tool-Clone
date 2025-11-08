@@ -1,3 +1,25 @@
+## 2025-11-05 - Digit Reduction lockscore + validation suite
+- Impact: Analyzer V2 now emits config-gated `final_linear`, `final_prob`, `score_v2`, and `lockscore_v2/lockscore_prob` columns so single-column survivors, fresh echoes, and V-TRAC heat get surfaced without touching reducers or winners writers.
+- Impact: Dropped in `scripts/harness/dr_quickcheck.py` plus a winners-aware validation runner (`scripts/experiments/digit_reduction_validate.py`) and grid helper (`scripts/experiments/dr_grid_search.py`) that produce `reports/DR/<STAMP>/digit_reduction_{metrics,top_misses}.csv` and `DR_Perf_Summary.md` for rapid June-17-style regressions.
+- Files: alpha_analytical/digit_reduction/analyzer_v2/{config.yml,pipeline.py,scoring.py}, scripts/{harness/dr_quickcheck.py,experiments/digit_reduction_validate.py,experiments/dr_grid_search.py}, data/winners_20250617.csv, reports/DR/20250617/**
+
+## 2025-11-07 - Pick3 workbook history + Stable Pattern multi-variant ingest
+- Impact: Added `utils.path_handler.get_pick3_workbook_path()` plus an optional helper (`scripts/tools/select_pick3_history.py`) so every module (cleaners, aux draws, pipelines, Streamlit) automatically loads dated `Pick3StatsC4_YYYY-MM-DD.xlsm` files without path edits; environment override supported via `PICK3_WORKBOOK`.
+- Impact: Documented the new `data/history/` (dated workbooks) and `data/results/` (per-day outcomes) workflow in the KIT so backtests/examples can target any day; zipped reports can be dragged straight into review chats.
+- Impact: Stable Pattern extractor now ingests Midday, Evening, and Combined tables in one run (instead of Combined-only) and tags each row’s `section`, giving us immediate coverage across variants before we add the new scoring features.
+- Files: utils/path_handler.py, scripts/tools/select_pick3_history.py, scripts/auxiliary/generate_draws_csv.py, modules/module_d_auxiliary_tools/refactored/extractor.py, src/app.py, src/app_fixed.py, src/app_cp1252.py, docs/AAT9_KIT/{AAT9_Data_Validation_Workflow.md,AAT9_Analysis_Insights.md,AAT9_Checkpoint_Log.md}
+
+## 2025-11-08 - Stable Pattern persistence + VTRAC straight cues
+- Impact: Stable extractor now tracks Set3→Set2→Set1 carryover and Draw1→Draw7 chains per pattern, exporting `persistence_set_count`, `persistence_draw_run`, and their scored bonuses (`score_persistence_set/draw`) so lingering 3-value clusters rank higher and surface in the CSV/why ledger.
+- Impact: Added `score_vtrac_straight` (config-driven) for straight candidates in late columns plus `set_chainX` / `draw_chainY` tags; `feature_config.yml` gained the corresponding weights. CSV schema updated accordingly.
+- Impact: `tests/test_stable_multi_variant.py` now covers both multi-section ingestion and the persistence scoring path; `python -m py_compile` used for quick verification.
+- Files: alpha_analytical/stable/{__init__.py,feature_config.yml}, tests/test_stable_multi_variant.py, docs/AAT9_KIT/{AAT9_Analysis_Insights.md,AAT9_Checkpoint_Log.md}
+
+## 2025-11-05 - Digit Reduction VTRAC validator + extended-cluster tuning
+- Impact: Validator now supports literal/box/VTRAC-family matching (`--match-mode`) and reports VTRAC-specific Hit@K so family-level wins count during June-17 reverse engineering.
+- Impact: Added extended cluster + VTRAC-family rescues to `scoring_v2`/`lockscore`, enabling YAML-only tuning of long-run evidence; reran analyzers/validators to produce `reports/DR/20250617_V_*` bundles that show Hit@3 rising to ~6% when VTRAC families are credited.
+- Files: scripts/experiments/{digit_reduction_validate.py,dr_grid_search.py}, alpha_analytical/digit_reduction/analyzer_v2/{config.yml,scoring.py}, reports/DR/20250617_V_*, docs/AAT9_KIT/AAT9_Checkpoint_Log.md
+
 ## 2025-11-02 - Digit Reduction Analyzer V2 refactor + spec lock
 - Impact: Replaced the Analyzer V2 feature stack with cluster-aware detection (exact/V-TRAC/drop/family), per-item density + drop metadata, and config-driven scoring with lock gating.
 - Impact: Pipeline now aggregates cross-column/variant/method echoes, records config hash + git SHA, and coordinates optional winners overlay bundles; writers gained diagnostics toggles.
@@ -189,5 +211,3 @@
 - Impact: Family post-pass exports fam_* score parts and placeholders for section/progression bonuses.
 - Status: consensus?doubles scoring, section/progression bonus plumbing, last_remaining 3v bonus, metrics writer, regression-guard tests/hooks still pending (see tasks/FIX_122.txt for checklist).
 - Files: alpha_analytical/stable/__init__.py, alpha_analytical/stable/post_pass_families.py, alpha_analytical/stable/feature_config.yml, tests/test_stable_contracts.py.
-
-

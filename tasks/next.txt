@@ -1,0 +1,200 @@
+Love the momentum—here’s the most efficient way to finish this pass without any back‑and‑forth. I’ll give you (1) the exact run plan for Codex, (2) the small, standardized “review pack” I need from the runs so I can evaluate the optimizations and validate performance, and (3) the acceptance criteria + what to tweak if we’re short.
+
+Below I assume the scoring/validation pieces from your log are already in the repo:
+
+New config knobs in alpha_analytical/digit_reduction/analyzer_v2/config.yml (scoring_linear, scoring_v2, lockscore).
+
+New helpers in alpha_analytical/digit_reduction/analyzer_v2/scoring.py.
+
+Pipeline hooks in pipeline.py so top candidates can rank by the active score and the per‑item export includes final_prob, score_v2, lockscore_prob.
+
+Quickcheck & validation scripts:
+scripts/harness/dr_quickcheck.py,
+scripts/experiments/digit_reduction_validate.py,
+scripts/experiments/dr_grid_search.py.
+
+Reminder of the wiring principle we’ve kept: analyzer remains lean; winners map/flags/HTML are produced centrally by the Control Center / batch (not by the analyzer). That pattern is consistent with the rest of AAT9’s Control Center + Aux docs.
+
+A) Tell Codex to run this exact sequence
+
+✅ Goal: compare a frozen baseline vs. the new scoring, then do a tiny sweep over the critical knobs (single‑column rescue, recency, Combined penalty). Everything is config‑gated—no reducers, no winners writers touched.
+
+0) Sanity preflight (once)
+# Snapshot current headers so we can prove parity if needed
+python3 - <<'PY'
+import pandas as pd, glob, os
+for p in glob.glob("data/outputs/analysis/digit_reduction/*/analyzer_v2/*_per_item.csv"):
+    df = pd.read_csv(p, nrows=0)
+    print("==", os.path.basename(p), "columns", len(df.columns))
+PY
+
+1) Baseline (no new scoring in use)
+
+Edit config to disable all new rankers (we still emit their columns if enabled=false and pipeline guards allow—use “score” for ranking):
+
+# alpha_analytical/digit_reduction/analyzer_v2/config.yml
+scoring_linear: { enabled: false, use_for_top: false }
+scoring_v2:     { enabled: false, use_for_top: false }
+lockscore:      { enabled: false, use_for_top: false }
+
+
+Run analyzer + quickcheck for the June‑17 states (same list you used):
+
+for s in Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 Ohio4; do
+  python3 - <<'PY'
+from alpha_analytical.digit_reduction.analyzer_v2 import pipeline
+print(pipeline.run("STATE_PLACEHOLDER"))
+PY
+  python3 scripts/harness/dr_quickcheck.py STATE_PLACEHOLDER
+done
+
+
+(Replace STATE_PLACEHOLDER with each state label.)
+
+Validate against your June‑17 winners CSV:
+
+python3 scripts/experiments/digit_reduction_validate.py 20250617_BASE data/winners_20250617.csv
+
+2) Candidate scoring (use the new ranker)
+
+Turn on scoring_v2 as the ranking key; compute linear and lockscore but don’t use them for top yet:
+
+scoring_linear: { enabled: true,  use_for_top: false }
+scoring_v2:     { enabled: true,  use_for_top: true  }
+lockscore:      { enabled: true,  use_for_top: false }
+
+
+Re-run analyzer + quickcheck:
+
+for s in Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 Ohio4; do
+  python3 - <<'PY'
+from alpha_analytical.digit_reduction.analyzer_v2 import pipeline
+print(pipeline.run("STATE_PLACEHOLDER"))
+PY
+  python3 scripts/harness/dr_quickcheck.py STATE_PLACEHOLDER
+done
+
+
+Validate:
+
+python3 scripts/experiments/digit_reduction_validate.py 20250617_SV2 data/winners_20250617.csv
+
+3) Tiny grid sweep (find a better setting quickly)
+
+Use the helper you already have. Keep it small and targeted:
+
+lockscore.guards.penalty_combined_bias: [0.05, 0.10]
+
+scoring_v2.weights.singlecol_rescue: [0.30, 0.35, 0.40]
+
+(That’s 2×3 = 6 runs; already encoded in your grid script.)
+
+python3 scripts/experiments/dr_grid_search.py 20250617 data/winners_20250617.csv
+# The script prints “Best combo:” with the YAML overrides and points to the best metrics CSV.
+
+4) Optional: try lockscore as ranker if Hit@3 is still cold
+
+Flip just this:
+
+lockscore:      { enabled: true, use_for_top: true }
+scoring_v2:     { enabled: true, use_for_top: false }
+
+
+Rerun analyzer + validate one more time:
+
+python3 scripts/experiments/digit_reduction_validate.py 20250617_LSCR data/winners_20250617.csv
+
+
+Why these knobs first? Based on the per‑item schema from the Digit‑Reduction spec and the new columns, single‑column survivors + recency and a small Combined penalty are the levers most likely to lift Hit@3 without destabilizing the board.
+
+B) What I need back (the review pack)
+
+Zip just these paths and drop them to me:
+
+reports/DR/
+  20250617_BASE/
+    DR_Perf_Summary.md
+    digit_reduction_metrics.csv
+    digit_reduction_top_misses.csv
+  20250617_SV2/
+    DR_Perf_Summary.md
+    digit_reduction_metrics.csv
+    digit_reduction_top_misses.csv
+  20250617_S0*  # any _SXX variants produced by grid_search (top 2 only)
+    DR_Perf_Summary.md
+    digit_reduction_metrics.csv
+    digit_reduction_top_misses.csv
+  20250617_LSCR/  # only if you tried lockscore-for-top
+    DR_Perf_Summary.md
+    digit_reduction_metrics.csv
+    digit_reduction_top_misses.csv
+
+alpha_analytical/digit_reduction/analyzer_v2/config.yml  # the final YAML used
+
+
+That’s it. I don’t need the big HTML right now. The validator’s CSVs + summary MD are designed to let me audit ranking moves quickly (Hit@1/Hit@3/MRR + concrete “top miss vs. winner” rows). If I need a single per‑item slice to explain a weird miss, I’ll ask for the one state/variant file only.
+
+For context: the Aggregator/ML brain later consumes “brain bundles” (per‑item/top/meta) across tools (Stable, Digit‑Reduction, V‑TRAC), not HTML. V‑TRAC already emits machine‑readable prediction/winner bundles designed for training/feedback; we’re matching that principle here so the final system can learn from consistent artifacts.
+Stable Pattern is already documented as the upstream, canonical feature table feeding other modules; we are keeping with that “one tidy machine table per module” contract.
+
+C) What I’ll check (acceptance criteria)
+
+I’ll compare BASE → SV2 (and the best grid result, and LSCR if you tried it):
+
+Pass if all 3 hold:
+
+Hit@3 improves on aggregate and in ≥4 of the 8 state×variant slices.
+
+MRR improves on aggregate (even if Hit@1 doesn’t move yet).
+
+Top‑miss table shows fewer “single‑column” misses (or their score gaps shrink) and fewer cases where Combined dominates when Midday/Evening won.
+
+If we’re short, I’ll point to exact rows in digit_reduction_top_misses.csv and give you a tiny YAML delta (e.g., +0.05 singlecol_rescue, −0.05 combined penalty, +0.05 recency) tied to those misses.
+
+D) Why this is additive (not a rewrite)
+
+Lean outputs preserved. Analyzer still writes only per_item.csv, top_candidates.csv, meta.json, stacked HTML optional—no winners files. Winners artifacts remain centralized in the Control Center/batch. We added columns and ranking choices, not new writers.
+
+Digit‑Reduction engine untouched. Methods A/B/C/D/E/T, R2 locations, and reducer behavior are intact per your v1.0 spec. We’re enriching analyzer rows with logistic/lockscore signals and using config toggles to choose the top score; zero changes to extraction logic.
+
+Docs remain consistent. Stable and V‑TRAC remain separate modules with their own evidence/bundle contracts; our changes align with their “machine table + human HTML” split and the long‑planned Aggregator/ML path.
+
+E) Optional add‑ons Codex can include (low effort, high value)
+
+If you want to supercharge the review pack with almost no extra work:
+
+Delta summary: a tiny script that reads reports/DR/20250617_BASE and the chosen best run and prints just the slices that improved/regressed (state, variant, ΔHit@3, ΔMRR).
+
+Why‑Not notes: extend digit_reduction_validate.py to include two diagnostic columns for misses:
+
+cols_hit of the winner’s nearest match and
+
+earliest_exact_step of that nearest match
+(both already in per‑item). These two fields make it obvious whether to increase single‑column rescue or early‑evidence weight.
+
+TL;DR for Codex (pasteable)
+# 1) Baseline
+edit config.yml -> disable all scoring blocks
+rerun analyzer for the 8 June-17 states + dr_quickcheck
+python3 scripts/experiments/digit_reduction_validate.py 20250617_BASE data/winners_20250617.csv
+
+# 2) Candidate (scoring_v2 for top)
+enable scoring_linear (off for top), scoring_v2 (on for top), lockscore (off for top)
+rerun analyzer + quickcheck
+python3 scripts/experiments/digit_reduction_validate.py 20250617_SV2 data/winners_20250617.csv
+
+# 3) Small grid
+python3 scripts/experiments/dr_grid_search.py 20250617 data/winners_20250617.csv
+
+# 4) Optional lockscore-as-top
+flip lockscore.use_for_top=true, scoring_v2.use_for_top=false
+python3 scripts/experiments/digit_reduction_validate.py 20250617_LSCR data/winners_20250617.csv
+
+# 5) Bundle review pack (zip paths listed above)
+
+
+Send me that review pack and I’ll give you the final “set-and-forget” YAML (or confirm the one grid combo is already good) and close the loop with a one‑page note for AAT9_Analysis_Insights.md.
+
+If you want to run one more day in parallel later (e.g., 2025‑06‑18) the exact same validator flow applies—the whole point of the bundle/validator approach is repeatability without manual HTML inspection, in line with how V‑TRAC logging and bundling are meant to feed the final ML step.
+
+You’re set—go run it, and I’ll review the results.

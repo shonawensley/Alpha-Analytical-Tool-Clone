@@ -14,6 +14,29 @@ _No entries yet — append new insights here._
 - No overlay artifacts yet (config overlay.winners blank), but analyzer writes full per-item/top candidates/meta bundles for each state; future runs can populate overlay inputs once aggregated winners are ready.
 - Next: use the June17 winners list to feed Control Center bulk logger, generate winners overlays, then retune `config.yml` weights so the expected winners score >0.9 and non-winners fall below lock. Document final weight choices and capture Control Center workflow notes for repeatability.
 
+### 2025-11-07 — VTRAC-aware validator + extended-cluster boosts (June17 states)
+- What changed:
+  - Validator now accepts `--match-mode {exact,box,vtrac,any}` and normalizes each winner/candidate into exact, sorted box, and VTRAC-family codes. Reports now include `hit_at_1_vtrac`, `hit_at_3_vtrac`, `match_channel`, and `top_vtrac_family`, so family-only wins aren’t lost when the literal triple isn’t rank 1.
+  - Added `extended_cluster_bonus`, `vtrac_family_rescue`, and `min_drop_run_len` guards to `scoring_v2`/`lockscore`, allowing long-run evidence (e.g., 661111188) and confirmed family hits to influence ranking without touching reducers or winners writers.
+  - Ran the full loop for Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4, Ohio4: `20250617_V_BASE` (literal), `_V_SV2` (scoring_v2 on), `_V_S01…S09` (sweep), `_V_LSCR` (lockscore as ranker). All artifacts plus the current config live in `reports_20250617_V_bundle.zip` (repo root).
+- Results:
+  - Literal-only baseline still shows Hit@3=0.0, MRR≈0.016; when VTRAC families are credited (`--match-mode any`) and the new bonuses are enabled, Hit@3 rises to ~6.2% with MRR≈0.056, and the top-miss CSVs clearly indicate which states hit via `match_channel=vtrac`.
+  - Grid sweep across `extended_cluster_bonus ∈ {0.15,0.25,0.35}` and `min_drop_run_len ∈ {4,5,6}` ties around the same aggregate metrics, but provides ready-made YAML overrides for future tuning; `_V_S01` currently serves as the “best” config snapshot.
+  - Lockscore-as-top did not yet outperform score_v2; we left `lockscore.use_for_top=false` after capturing `_V_LSCR` for reference.
+- Next:
+  - Share the bundle + summaries with ChatGPT Pro to decide which YAML combo to ship (likely `_V_S01`) and gather guidance on literal coverage gaps.
+  - Once a final config is chosen, update `config.yml` and add a short postmortem here describing the winning weights; then resume weight work or collect a fresh stamp using the same validator workflow.
+
+### 2025-11-07 — Pick3 workbook history + Stable Pattern baseline
+- Added `data/history/` (dated `Pick3StatsC4_YYYY-MM-DD.xlsm`) and `data/results/<date>.txt` so we can replay any day’s tables/results without renaming files; `utils.path_handler.get_pick3_workbook_path()` (plus optional `scripts/tools/select_pick3_history.py`) auto-detects the active workbook and supports `PICK3_WORKBOOK=/abs/path`.
+- Stable Pattern extractor now reads Midday, Evening, and Combined tables in a single run (per-state), tags each row’s `section`, and writes the usual HTML/CSV outputs—so future scoring work starts with full-variant coverage instead of Combined-only.
+- Process reminder: each dated workbook represents the tables as of that day (predicting the next day’s results). Pick a file from `data/history/`, point the Control Center or CLI at it, run the tools, and compare against the paired `data/results/<date>.txt` file when reverse-engineering.
+
+### 2025-11-08 — Stable Pattern persistence & VTRAC straight cues
+- Added set/draw persistence tracking to the row scorer (`persistence_set_count`, `persistence_draw_run`, and corresponding score columns). Patterns that survive from Set3→Set2→Set1 or span multiple Draws now pick up explicit bonuses and `why` tags (`set_chainX`, `draw_chainY`).
+- Introduced `score_vtrac_straight` (config weight) for straight candidates showing up in late columns; reasons ledger now calls out `vtrac_straight` when the bonus fires.
+- CSV schema updated and covered by `tests/test_stable_multi_variant.py`; next steps: exploit these persistence signals in the upcoming family/post-pass aggregation and hot-zone module.
+
 
 ## V-TRAC Analyzer
 

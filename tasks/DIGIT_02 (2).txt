@@ -1,0 +1,289 @@
+heres anothert thing i want to mention and im not sure how relevant it is to this specific tool remember the important of extended digits pattern so not just 618 but 661111188 beig interpretted i think i calrified that extended digits is handled evenw ithin this tool? but it brings up a point im not sure if this tool is relyig on the vtrac systems or v-trac reference coded within but im hopig there is not some issue with mapping extended digit pattern ack to v-trac reference cant remember if this came up with aanother tool it might not be relevant here? but what im bascially trying to point out is we dont wantto limit to only 3 digit patterns we want to be able to capture deep insights from extended digit patterns if this amkes sense? just thought id mention this or im just adding re-enforcing things to consider
+
+
+Reasoned for 2m 46s
+
+You’re absolutely right to re‑emphasize extended‑digit clusters and V‑TRAC family wins. The good news is:
+
+Your Stable Pattern extractor already scans all contiguous digit substrings of length ≥ 3 (ignoring * hot‑zone markers), groups them, and scores vertical/horizontal persistence—so long runs like 661111188 are mined for every qualifying 3‑value (≤ 3 unique digits) or ≤ 3‑value V‑TRAC family substring. That module also maps digits to the 0/5→1 … 4/9→5 scheme when deciding V‑TRAC family membership.
+
+The stable helpers include a canonical convert_to_vtrac(pattern) utility, which we can reuse to normalize any 3‑digit or extended‑digit substring to its family code.
+
+The Digit‑Reduction cheat‑sheet documents the mirror pairs (0↔5, 1↔6, …), which is the same pairing used by V‑TRAC families; this aligns the tools conceptually.
+
+Below I’ll (1) clarify how extended‑digit & V‑TRAC signals flow today, (2) call out the likely reason your June‑17 validation showed “no winners,” and (3) give you drop‑in patches so Codex can (A) treat V‑TRAC family hits as legitimate “wins” during validation, and (B) boost candidates that have strong extended‑digit evidence—without breaking anything we’ve leaned out.
+
+1) What’s already covered (and where)
+
+Stable Pattern extractor (SP):
+
+Scans each R2/R4/R6/R8 cell for every substring ≥ 3 digits. A substring “qualifies” if it has ≤ 3 unique digits or its V‑TRAC projection has ≤ 3 unique values, which is how a long run like 661111188 still contributes 3‑digit families. It also ignores * when slicing, and records vertical/horizontal runs, hot‑zones, and lingering across sets.
+
+Uses a simple digit→V map (0/5→1, 1/6→2, …) to convert any string to a V‑TRAC family form.
+
+Digit‑Reduction analyzer (DR):
+
+Your per‑item rows already carry extended‑cluster cues (e.g., is_extended_cluster, drop_run_len, dup_bonus) and V‑TRAC cues (vtrac.v_hot, vtrac.set, vtrac_key). The scoring additions we just shipped (linear/logit, score_v2, lockscore v2) read those columns; we simply hadn’t told the validator to count V‑TRAC family hits as successes yet.
+
+Why the June‑17 “no hits”?
+Two technicalities in the first validator pass:
+
+We initially matched winners to the pattern column (which is a canonical sorted box form in some flows) instead of a normalized 3‑digit final_value; and
+
+We didn’t count V‑TRAC family matches as “hits”. If a literal triple was absent but its family was strong (your typical case), the run still reported a “miss” even though the tool did surface the family.
+
+2) Make V‑TRAC family a first‑class “hit” (validator patch)
+
+Tell Codex to apply this add‑only patch to scripts/experiments/digit_reduction_validate.py. It adds a --match-mode switch and uses a small V‑TRAC mapper so we can treat exact, box, and family matches as success:
+
+@@
+-import argparse
++import argparse, re
+@@
+ def _standardize(value: str) -> str:
+     return str(value).strip().upper()
+
++# V-TRAC digit -> family code
++_VMAP = {'0':'1','5':'1','1':'2','6':'2','2':'3','7':'3','3':'4','8':'4','4':'5','9':'5'}
++def _norm3(s: str) -> str:
++    d = re.sub(r'\D','', str(s or ''))
++    if len(d) >= 3:
++        d = d[-3:]  # keep last 3 digits if longer
++    return d.zfill(3)
++def _box(s: str) -> str:
++    return ''.join(sorted(_norm3(s)))
++def _vtrac(s: str) -> str:
++    d = _norm3(s)
++    return ''.join(sorted(_VMAP.get(ch,'') for ch in d))
+@@
+-    parser.add_argument("--config", default="alpha_analytical/digit_reduction/analyzer_v2/config.yml")
++    parser.add_argument("--config", default="alpha_analytical/digit_reduction/analyzer_v2/config.yml")
++    parser.add_argument("--match-mode", choices=["exact","box","vtrac","any"],
++                        default="any",
++                        help="How to score a 'hit': literal triple, box (sorted), vtrac family, or any-of.")
+@@
+-    df = pd.read_csv(per_item_path)
++    df = pd.read_csv(per_item_path, dtype=str)  # preserve 3-digit strings (avoid 7.0, NaN)
+     df["section"] = df["section"].astype(str).str.upper()
+     df["final_value"] = df["final_value"].astype(str).str.upper()
+@@
+-        ranked = _rank_variant(variant_df, score_field)
+-        match = ranked[ranked["final_value"] == record.win]
++        ranked = _rank_variant(variant_df, score_field).copy()
++        # Precompute normalized keys for each row
++        ranked["final_norm"] = ranked["final_value"].apply(_norm3)
++        ranked["final_box"]  = ranked["final_norm"].apply(lambda s: ''.join(sorted(s)))
++        ranked["final_v"]    = ranked["final_norm"].apply(_vtrac)
++        # Normalize winner keys
++        win_norm = _norm3(record.win)
++        win_box  = ''.join(sorted(win_norm))
++        win_v    = _vtrac(record.win)
++        # Choose the predicate
++        mode = cfg.get("validator", {}).get("match_mode", None) or args.match_mode
++        def _row_hits(row) -> bool:
++            if mode == "exact": return row["final_norm"] == win_norm
++            if mode == "box":   return row["final_box"]  == win_box
++            if mode == "vtrac": return row["final_v"]    == win_v
++            # any-of
++            return (row["final_norm"] == win_norm) or (row["final_box"] == win_box) or (row["final_v"] == win_v)
++        match = ranked[[ _row_hits(r) for _, r in ranked.iterrows() ]]
+@@
+-            slices.append(
++            kind = ("exact" if row["final_norm"] == win_norm
++                    else "box" if row["final_box"] == win_box
++                    else "vtrac")
++            slices.append(
+                 {
+@@
+-                    "status": "hit",
++                    "status": "hit",
++                    "match_kind": kind,
+                     "rank": int(row["rank"]),
+@@
+-            slices.append(
++            slices.append(
+                 {
+@@
+-                    "status": "miss",
++                    "status": "miss",
+                     "rank": -1,
+-                    "top_final_value": leader.get("final_value"),
++                    "top_final_value": leader.get("final_value"),
++                    "top_final_box": leader.get("final_box"),
++                    "top_final_v": leader.get("final_v"),
+                     "top_score": float(leader.get(score_field, 0.0) or 0.0),
+                     "top_lock": leader.get("lock_decision", ""),
+                 }
+             )
+@@
+ def summarize(slices: List[Dict[str, any]]) -> pd.DataFrame:
+     df = pd.DataFrame(slices)
+     grouped = []
+     for (state, variant), block in df.groupby(["state", "variant"]):
+         total = len(block)
+         hits = block[block["rank"] > 0]
++        hits_exact = hits[hits["match_kind"] == "exact"] if "match_kind" in hits.columns else pd.DataFrame()
++        hits_vtrac = hits[hits["match_kind"] == "vtrac"] if "match_kind" in hits.columns else pd.DataFrame()
+         hit1 = (hits["rank"] == 1).sum()
+         hit3 = (hits["rank"] <= 3).sum()
+         mrr = (1 / hits["rank"]).sum()
+         lock_hits = hits[hits["lock_decision"] == "lock"]
+         grouped.append(
+             {
+                 "state": state,
+                 "variant": variant,
+                 "samples": total,
+                 "hit_at_1": hit1 / total if total else 0.0,
+                 "hit_at_3": hit3 / total if total else 0.0,
+                 "mrr": mrr / total if total else 0.0,
++                "hit_at_1_exact": ((hits_exact["rank"] == 1).sum() / total) if total and not hits_exact.empty else 0.0,
++                "hit_at_1_vtrac": ((hits_vtrac["rank"] == 1).sum() / total) if total and not hits_vtrac.empty else 0.0,
+                 "lock_hit_rate": len(lock_hits) / total if total else 0.0,
+                 "misses": int((block["rank"] <= 0).sum()),
+             }
+         )
+
+
+What this gives you immediately
+
+You can call the validator with --match-mode vtrac (or leave the default any) and see Hit@1_vtrac / Hit@3 rise when the literal triple is absent but the family is surfaced.
+
+The miss table now annotates top_final_box and top_final_v so you can see “closest” family even on misses.
+
+This lines up exactly with your goal: “We can often isolate the winning V‑TRAC pattern—even when the exact triple isn’t present—so treat those as wins.”
+
+3) Reward extended‑digit & family evidence in scoring (config‑gated)
+
+Two small, additive boosts (all gates OFF by default unless you enable them):
+
+3a) Config additions
+# alpha_analytical/digit_reduction/analyzer_v2/config.yml
+
+scoring_v2:
+  enabled: false
+  use_for_top: false
+  weights:
+    recency_bonus: 0.50
+    family_persistence: 0.20
+    singlecol_rescue: 0.35
+    density_min: 0.40
+    vhot: 0.15
+    late_penalty: 0.30
+    # NEW:
+    extended_cluster_bonus: 0.20
+    vtrac_family_rescue: 0.30
+  guards:
+    boost_exact_match: 0.75
+    boost_vtrac_match: 0.35
+    # NEW:
+    min_drop_run_len: 5
+
+lockscore:
+  enabled: false
+  use_for_top: false
+  min_lockscore_to_lock: 0.85
+  weights:
+    w_score_raw: 1.00
+    w_earliest_exact: 0.40
+    w_earliest_vtrac: 0.30
+    w_persistence: 0.35
+    w_box_density: 0.25
+    w_set_echo: 0.20
+    w_variant_echo: 0.10
+    w_recency: 0.25
+    w_vtrac_hot: 0.20
+    w_single_col_rescue: 0.60
+    w_double_guard: 0.10
+    # NEW:
+    w_extended_cluster: 0.30
+  guards:
+    t_early: 3
+    t_cols_hit_rescue: 1
+    penalty_combined_bias: 0.10
+    # NEW:
+    min_drop_run_len: 5
+
+3b) Scoring helpers (drop‑in lines)
+
+In alpha_analytical/digit_reduction/analyzer_v2/scoring.py:
+
+@@ def apply_post_score(rows, config):
+-        if _is_truthy(row.get("recency_carryover")):
++        if _is_truthy(row.get("recency_carryover")):
+             score2 += weights.get("recency_bonus", 0.0)
+@@
+-        score2 += weights.get("vhot", 0.0) * _as_float(row.get("vtrac.v_hot"))
++        score2 += weights.get("vhot", 0.0) * _as_float(row.get("vtrac.v_hot"))
++        # NEW: favor strong extended-run evidence
++        if _is_truthy(row.get("is_extended_cluster")) and \
++           _as_int(row.get("drop_run_len"), 0) >= _as_int(guards.get("min_drop_run_len", 5)):
++            score2 += weights.get("extended_cluster_bonus", 0.0)
++        # NEW: if the final value/family already aligns by V-TRAC, give a small lift
++        if _is_truthy(row.get("final_vtrac_match")) or _is_truthy(row.get("final_family_vtrac_match")):
++            score2 += weights.get("vtrac_family_rescue", 0.0)
+@@ def attach_lockscore(rows, config):
+-        lockscore = (
++        lockscore = (
+             weights.get("w_score_raw", 0.0) * score_raw
+@@
+             + weights.get("w_vtrac_hot", 0.0) * v_hot
++            + (weights.get("w_extended_cluster", 0.0)
++               if (_is_truthy(row.get("is_extended_cluster"))
++                   and _as_int(row.get("drop_run_len"), 0) >= _as_int(guards.get("min_drop_run_len", 5)))
++               else 0.0)
+
+
+These taps into signals you already compute (extended cluster flags, run‑length, final_*vtrac*_match, VHOT), but keep the lean outputs and writers intact. Nothing in reducers or winners writers is touched.
+
+4) Guardrails (so nothing breaks)
+
+Purely additive: All new logic is under YAML flags and appends columns only; no existing column/field is removed or renamed.
+
+Lean outputs intact: analyzers still emit the same per‑item/top/meta (+our extra scoring columns); winners artifacts remain centralized in Control Center.
+
+Reproducible validation: the validator keeps your reports/DR/<STAMP> layout; we’re just adding match modes and richer summary columns.
+
+5) What to ask Codex to run (fast loop)
+
+Patch & build
+
+Apply the validator and scoring diffs above.
+
+Leave all scoring flags OFF and run the validator baseline with V‑TRAC matching enabled:
+
+python3 scripts/experiments/digit_reduction_validate.py 20250617_V \
+  data/winners_20250617.csv --match-mode vtrac
+
+
+You should now see non‑zero Hit@1_vtrac / Hit@3.
+
+Enable gentle boosts
+
+Flip on scoring_v2.enabled=true (keep use_for_top: true), set:
+
+scoring_v2.weights.extended_cluster_bonus: 0.20
+scoring_v2.weights.vtrac_family_rescue: 0.30
+scoring_v2.guards.min_drop_run_len: 5
+
+
+Re‑run analyzers for the June‑17 states, then:
+
+python3 scripts/experiments/digit_reduction_validate.py 20250617_V_SV2 \
+  data/winners_20250617.csv --match-mode any
+
+
+(Optional) tiny sweep
+
+One or two combos (no more than S01–S04) nudging extended_cluster_bonus (0.15–0.30) and min_drop_run_len (4–6).
+
+Compare Hit@3, Hit@1_vtrac, and MRR; pick the best weights and record them in AAT9_Analysis_Insights.md.
+
+6) Why this answers your concern
+
+You don’t lose exact hits—those remain the gold standard—but you now credit the engine when it isolates the V‑TRAC winning family, which you “often consider actual wins” because it narrows the playing set.
+
+Extended‑digit clusters (e.g., 661111188) are already mined by your SP extractor; the DR scoring boost simply recognizes that evidence when ranking 3‑digit candidates.
+
+Mirror/V‑TRAC parity stays consistent with your cheat‑sheet (mirror pairs == V‑TRAC pairs), so there’s no mapping drift between tools.
+
+If you’d like, I can also add a one‑liner consistency check (CLI) that loads your TOOLS/VTRAC_REFERENCE_STRAIGHT.txt, converts a few long cell strings to V‑TRAC forms, and asserts they agree with the reference—purely as a sanity test before validation runs.

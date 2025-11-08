@@ -1,0 +1,134 @@
+Short answer: Codex’s plan is additive, not a rewrite. It layers a small, configurable scoring module + a validation/reporting CLI on top of your already‑lean Digit‑Reduction analyzer, without touching the reducer, the Control Center winners flow, or the lean output contract. The plan keeps to your project guardrails (plan → implement → verify → document) and data contracts (Combined as baseline; Midday/Evening additive) that are already spelled out in your KIT.
+
+Below is the one‑pass review you asked for—what the 3 parts change, what they don’t, and the safeguards Codex must observe so we don’t lose existing analytical value.
+
+1) What remains untouched (and why)
+
+Reducer & methods (A, B, C, D, E, T). No edits. Your reducer continues to generate the same HTML training artifact and step trace; the analyzer still consumes the same inputs. (Spec & cheat‑sheet stay the source of truth.)
+
+Lean analyzer bundle. Analyzer V2 continues to emit only per_item.csv, top_candidates.csv, meta.json, plus stacked HTML; no per‑tool winners writers are reintroduced. Winners map/flags/HTML remain centralized in Control Center, consistent with your current wiring.
+
+Winners semantics & overlays. When you do run the Control Center batch, winners artifacts (map/flags/overlay) still exist for validation; the analyzer’s CSVs already carry the dr.win_* fields for scoring/QA, and that contract is preserved. (We read, we don’t write.)
+
+In other words: the new scorer reads the same analyzer features and optional dr.win_* columns; it does not change how those features are produced or where winners artifacts live.
+
+2) What the 3 parts add (and how they fit)
+Part 1 — scoring.py + minimal pipeline hooks
+
+Add‑only module: alpha_analytical/digit_reduction/analyzer_v2/scoring.py computes:
+
+final_linear (small linear nudge on existing per‑item features),
+
+final_prob (logistic transform of that linear sum),
+
+lock_decision (Y/N per threshold).
+
+Config‑gated: New keys under analyzer_v2/config.yml (defaults keep current behavior):
+
+scoring:
+  enabled: false        # default keeps today’s ordering
+  use_linear: true
+  use_logit: true
+  lock_threshold: 0.90
+  weights: { w_recency: 0.10, w_persistence: 0.10, w_single_col_rescue: 0.12, w_vhot: 0.08, w_combined_penalty: -0.06 }
+
+
+Pipeline hook (non‑destructive): If scoring.enabled=false, nothing changes (we still sort by the current score). If true, we compute the extra columns and only change sorting when scoring.enabled=true. Writers append three columns; existing schema stays intact.
+
+Why this is safe: additive columns + feature‑flag default off means zero regression risk to existing reports and downstream tools. This matches your KIT’s “prefer additive diffs, guard behind config, verify, then document” loop.
+
+Part 2 — Validation CLI + reports (no pipeline edits)
+
+New scripts only under scripts/experiments/:
+
+digit_reduction_validate.py joins analyzer rows with centralized winners and emits:
+
+reports/DR/<stamp>/digit_reduction_metrics.csv (Hit@K, MRR, lock‑lift),
+
+reports/DR/<stamp>/digit_reduction_top_misses.csv (near‑miss diagnostics),
+
+reports/DR/<stamp>/DR_Perf_Summary.md (human summary).
+
+Why this is safe: reads the analyzer CSVs + winners artifacts; does not modify analyzers, reducers, or UI. It’s aligned with your “verify” step and makes it trivial for you to hand me a single folder to review performance after Codex runs.
+
+Part 3 — Polished reporting spec + toggles
+
+Adds a short YAML block for “lockscore v2” (same math, clearer knobs) and a refined CLI output naming (e.g., DR_PERF_SUMMARY_<stamp>.csv), still behind scoring.enabled.
+
+Combined‑vs‑variant policy preserved: Combined is the baseline dataset; Midday/Evening are additive. If we include a small “Combined penalty” nudge, it’s config‑only and off by default.
+
+3) Guardrails Codex must follow (so nothing gets lost)
+
+Additive‑only diff policy
+
+Touch only these files (no deletes/renames):
+
+alpha_analytical/digit_reduction/analyzer_v2/{config.yml,pipeline.py,writers.py} (small, guarded edits),
+
+alpha_analytical/digit_reduction/analyzer_v2/scoring.py (new),
+
+scripts/experiments/{digit_reduction_validate.py,dr_grid_search.py} (new, optional second),
+
+scripts/harness/dr_quickcheck.py (new, smoke only).
+
+Feature‑flag defaults
+
+scoring.enabled: false by default → baseline ordering unchanged.
+
+Writers only append: final_linear, final_prob, lock_decision; never drop or rename columns.
+
+Acceptance before/after
+
+Preflight & smokes before coding (and after) per KIT:
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"; then run the smoke/acceptance suite as documented.
+
+No‑regression snapshot (automated):
+
+Diff headers of per_item.csv and top_candidates.csv (should be identical +3 columns after patch).
+
+If scoring.enabled=false, row ordering must match bit‑for‑bit pre‑patch outputs (CT sample).
+
+Lean‑bundle checks: Confirm analyzer bundle contents and training set packaging are unchanged (no winners/overlay writers reintroduced). (You already leaned this; we’re not touching it.)
+
+Control Center invariants: We do not write winner artifacts from the analyzer; validation scripts read the centralized map/flags/HTML when available (as your current overlays/winner plumbing expects).
+
+Back‑out is instant
+
+If any smoke fails: set scoring.enabled=false (zero code revert), or revert the single commit that added scoring.py + tiny hooks. The reducer, Aux, Stable, and V‑TRAC modules are unaffected by design.
+
+4) How this relates to the rest of the stack (and avoids conflicts)
+
+App wiring & data paths: We respect the canonical launch/data contracts—Aux/BA consume draws CSVs; Digit‑Reduction/Stable/V‑TRAC consume combined tables via utils.path_handler. No new paths; no mixed contracts.
+
+Existing analysis insights: We are not discarding any value—the scorer uses your existing analyzer features (e.g., persistence/recency columns, dr.win_* joins), then provides a clearer “lock” probability and an auditable decision column. This complements, not replaces, your current evidence outputs.
+
+V‑TRAC & Stable coexistence: V‑TRAC keeps its own bundles and HTML reports (human vs. machine outputs), and Stable remains the foundation that other modules build on; nothing in this patch moves or renames those outputs.
+
+5) One‑screen checklist for Codex (paste this atop its task)
+
+Do not remove or rename anything. Only add.
+Default must preserve today’s results and file layout.
+
+Read the Onboarding Compass → follow the Plan/Implement/Verify/Document loop and update the Unified Changelog + Checkpoint Log at the end.
+
+Add scoring.py; add guarded hooks in pipeline.py/writers.py; extend config.yml with scoring.* (default disabled).
+
+Append (don’t replace) final_linear, final_prob, lock_decision to per_item.csv and top_candidates.csv only when scoring.enabled=true.
+
+Add scripts/experiments/digit_reduction_validate.py to read analyzer outputs + centralized winners and write the reports/DR/<stamp>/ bundle. (No UI changes.)
+
+Run preflight + smokes; then run the validation CLI on the June‑17 stamp.
+
+Confirm no winners writers exist in analyzer; Control Center remains the sole winners producer.
+
+Document the change: short bullets + impact + files touched (as the Compass requires).
+
+Bottom line
+
+Are we ripping anything out? No—this plan is strictly additive and flag‑gated.
+
+Will prior analytical value be preserved? Yes—same reducer/analyzer features, same lean bundle, same winners centralization. We’re simply adding a modern, explainable “lockscore” and a clean validation/reporting loop to speed up your reverse‑engineering runs.
+
+Are we safeguarded against accidental deletions/rewrites? Yes—tight file scope, add‑only changes, default‑off toggles, smokes, and a trivial back‑out.
+
+Green‑light from me. If you want one extra belt‑and‑suspenders step, have Codex print the header diff and top‑5 rows of per_item.csv before and after with scoring.enabled=false to prove the baseline is unchanged, then re‑run with enabled=true to preview the new columns and ordering. That will keep us fast and fearless.

@@ -12,6 +12,10 @@ This module:
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
+
+DEFAULT_PICK3_FILENAME = "Pick3StatsC4.xlsm"
+PICK3_PATTERN = "Pick3StatsC4*.xlsm"
 
 def get_project_root():
     """Get the absolute path to the project root directory"""
@@ -68,9 +72,54 @@ def get_winners_output_dir():
     date_str = get_current_date_str()
     return os.path.join(get_outputs_dir(), "winners", date_str)
 
+def get_pick3_workbook_path(preferred_filename: str | None = None) -> str:
+    """
+    Resolve the active Pick3StatsC4 workbook path.
+
+    Order of precedence:
+      1. Environment variable PICK3_WORKBOOK (absolute path)
+      2. Preferred filename within data/original/ (if provided and exists)
+      3. data/original/Pick3StatsC4.xlsm (legacy name)
+      4. Latest matching Pick3StatsC4_*.xlsm under data/original/
+
+    Raises FileNotFoundError with guidance if no candidate exists.
+    """
+    env_path = os.getenv("PICK3_WORKBOOK")
+    if env_path:
+        resolved = Path(env_path).expanduser()
+        if resolved.exists():
+            return str(resolved)
+        raise FileNotFoundError(f"PICK3_WORKBOOK={env_path} was not found.")
+
+    original_dir = Path(get_original_data_dir())
+
+    if preferred_filename:
+        candidate = original_dir / preferred_filename
+        if candidate.exists():
+            return str(candidate)
+
+    legacy = original_dir / DEFAULT_PICK3_FILENAME
+    if legacy.exists():
+        return str(legacy)
+
+    matches = sorted(original_dir.glob(PICK3_PATTERN))
+    if matches:
+        return str(matches[-1])
+
+    history_dir = Path(get_data_dir()) / "history"
+    message = [
+        "No Pick3StatsC4 workbook found.",
+        f"Checked {original_dir / DEFAULT_PICK3_FILENAME} and pattern {PICK3_PATTERN}.",
+    ]
+    if history_dir.exists():
+        message.append(
+            f"History files exist under {history_dir}; copy the desired file into {original_dir}."
+        )
+    raise FileNotFoundError(" ".join(message))
+
 def get_excel_path():
-    """Get the path to the original Excel file"""
-    return os.path.join(get_original_data_dir(), "Pick3StatsC4.xlsm")
+    """Backward-compatible alias for get_pick3_workbook_path."""
+    return get_pick3_workbook_path()
 
 def get_cleaned_state_path(state_name):
     """

@@ -1,0 +1,394 @@
+PART 3 OF 3 — Turn‑Key Handoff for Codex: final optimizations, run scripts, and the validation report spec
+
+Below is everything Codex needs to (a) wire in the last set of high‑leverage optimizations for Digit‑Reduction Analyzer V2, (b) run repeatable validations against known winners, and (c) return a compact report bundle you and I can use to grade performance and decide if a tiny follow‑up tweak is warranted.
+
+I’ve split this into 4 deliverables for Codex:
+
+Config & scoring patches (drop‑in code + YAML knobs)
+
+Validation runner (CLI script)
+
+Report spec (CSV/MD files Codex must return)
+
+Exact runbook & guardrails (so it’s quick and deterministic)
+
+1) Config & scoring patches (drop‑in)
+
+Goal: keep your analyzer bundle lean, but add a stronger LockScore v2 that (a) rescues true single‑column winners, (b) rewards earliest step evidence, (c) taps V‑TRAC heat, and (d) penalizes over‑reliance on “Combined” when Midday/Evening are strong solo. We expose all weights in YAML so we can sweep during validation without code edits.
+(Digit‑Reduction methods, data contracts, and the existing analyzer outputs are unchanged. )
+
+1.1 Add scoring knobs to the analyzer config
+
+File: alpha_analytical/digit_reduction/analyzer_v2/config.yml
+Patch (add block):
+
+scoring:
+  # LockScore v2 weights (all >=0 unless noted)
+  w_score_raw:        1.00   # baseline analyzer score already computed
+  w_earliest_exact:   0.40   # earlier is better (applied as 1/(1+step))
+  w_earliest_vtrac:   0.30   # "
+  w_persistence:      0.35   # aggregates persistence_* fields
+  w_box_density:      0.25   # box_family_density
+  w_set_echo:         0.20   # set_echo_count
+  w_variant_echo:     0.10   # variant_echo_count
+  w_recency:          0.25   # recency_carryover True
+  w_vtrac_hot:        0.20   # vtrac.v_hot (0..1)
+  w_single_col_rescue:0.60   # boost when cols_hit==1 and evidence is early
+  w_double_guard:     0.10   # small lift if len(set(final_value))==2
+  penalty_combined_bias: 0.10 # subtract when section=='Combined' (see guard)
+  # guards / thresholds
+  t_early:            3      # earliest step <= t_early considered "early"
+  t_cols_hit_rescue:  1      # rescue triggers when cols_hit <= this
+  min_lockscore_to_lock: 0.85
+
+
+Why YAML? Codex can launch quick sweeps over these values during the validation run without touching code. (Preflight + runbook later.)
+
+1.2 Compute LockScore v2 alongside existing outputs
+
+File: alpha_analytical/digit_reduction/analyzer_v2/pipeline.py (or a new scoring.py imported by pipeline)
+Patch (new helper + injection point):
+
+def _lockscore_v2(row: dict, cfg: dict) -> float:
+    s = cfg.get("scoring", {})
+    # Helper fetchers
+    get = lambda k, d=0.0: float(row.get(k, d) or 0.0)
+    w  = lambda k: float(s.get(k, 0.0))
+    # Evidence features present in per_item.csv
+    score_raw = get("score")  # analyzer's baseline
+    earliest_exact = get("earliest_exact_step", 99.0)
+    earliest_vtrac = get("earliest_vtrac_step", 99.0)
+    persistence = max(get("persistence_exact"),
+                      get("persistence_family_exact"),
+                      get("persistence_vtrac"))
+    box_density = get("box_family_density")
+    set_echo    = get("set_echo_count")
+    variant_echo= get("variant_echo_count")
+    recency     = 1.0 if str(row.get("recency_carryover","")).lower()=="true" else 0.0
+    v_hot       = get("vtrac.v_hot")  # assumed 0..1
+    cols_hit    = int(row.get("cols_hit", 0) or 0)
+    section     = (row.get("section") or "").strip()  # Midday/Evening/Combined
+    final_val   = str(row.get("final_value",""))
+    is_double   = (len(set(final_val))==2)
+
+    # Early-step transforms (earlier step => larger addend)
+    early_exact = 1.0/(1.0+earliest_exact) if earliest_exact < 99 else 0.0
+    early_vtrac = 1.0/(1.0+earliest_vtrac) if earliest_vtrac < 99 else 0.0
+
+    # Single-column rescue (strict + early)
+    rescue = 0.0
+    if cols_hit <= int(s.get("t_cols_hit_rescue",1)):
+        if min(earliest_exact,earliest_vtrac) <= float(s.get("t_early",3)):
+            rescue = w("w_single_col_rescue")
+
+    # Optional mild bias against 'Combined' over-dominance when exclusive
+    penalty = 0.0
+    if section.lower()=="combined":
+        penalty = float(s.get("penalty_combined_bias",0.0))
+
+    lock = (
+        w("w_score_raw")        * score_raw
+      + w("w_earliest_exact")   * early_exact
+      + w("w_earliest_vtrac")   * early_vtrac
+      + w("w_persistence")      * persistence
+      + w("w_box_density")      * box_density
+      + w("w_set_echo")         * set_echo
+      + w("w_variant_echo")     * variant_echo
+      + w("w_recency")          * recency
+      + w("w_vtrac_hot")        * v_hot
+      + rescue
+      + w("w_double_guard")     * (1.0 if is_double else 0.0)
+      - penalty
+    )
+
+    # Normalize to [0,1] by a soft cap (keeps YAML linear)
+    return max(0.0, min(1.0, lock/ max(1.0, 1.0 + penalty)))
+
+def _attach_lockscore(rows: list[dict], cfg: dict) -> None:
+    for r in rows:
+        r["lock_score_v2"] = round(_lockscore_v2(r, cfg), 6)
+        # Optional 'lock' decision for dev viewing (not changing the bundle contract)
+        r["lock_decision_v2"] = ("lock" if r["lock_score_v2"] >= float(
+            cfg.get("scoring",{}).get("min_lockscore_to_lock",0.85)) else "hold")
+
+# Call this right after per_item rows are finalized, before write_artifacts(...)
+_attach_lockscore(rows, cfg)
+
+
+Why these features? They come straight from the analyzer’s per‑item fields we already validated on June‑17 runs (earliest_* steps, persistence_*, box_family_density, echoes, recency_carryover, vtrac.v_hot, cols_hit, etc.). The function is purely additive and lives beside your current score, so we don’t break anything downstream. (This sits cleanly with the current lean bundle.)
+
+2) Validation runner (CLI)
+
+Goal: Given a winners map for a date (e.g., June 17), join each state’s analyzer bundle to winners, compute hit@k, calibration, and relative lift of lock_score_v2 vs the old score. Codex runs this once, then (optionally) sweeps a few YAML weight sets.
+
+New file: scripts/validation/dr_validate_against_winners.py
+
+#!/usr/bin/env python3
+"""
+Join Digit-Reduction per_item/top files with winners, compute metrics, and emit
+summary CSV + slices CSV + a tiny Markdown dashboard.
+"""
+
+from __future__ import annotations
+import json, csv, sys
+from pathlib import Path
+import pandas as pd
+
+def _load_per_item(an_dir: Path, state: str) -> pd.DataFrame:
+    pat = f"{state}_analyzer_v2_per_item.csv"
+    df  = pd.read_csv(an_dir / pat)
+    # Minimal sanity
+    needed = ["section","set","draw","col","final_value","score","lock_score_v2"]
+    for k in needed:
+        if k not in df.columns:
+            df[k] = None
+    return df
+
+def _load_top(an_dir: Path, state: str) -> pd.DataFrame:
+    pat = f"{state}_analyzer_v2_top_candidates.csv"
+    return pd.read_csv(an_dir / pat) if (an_dir/pat).exists() else pd.DataFrame()
+
+def _load_winners_map(win_dir: Path, stamp: str, state: str) -> pd.DataFrame:
+    # Expect centralized Control Center artifacts: *_winner_flags.csv (Midday/Evening)
+    frames = []
+    for variant in ("Midday","Evening"):
+        p = win_dir / f"{stamp}_{variant}_winner_flags.csv"
+        if p.exists():
+            df = pd.read_csv(p)
+            df["variant"] = variant
+            df["state"] = state  # for join stability across states in one folder
+            frames.append(df)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+def _normalize_cand(s: str)->str:
+    s = "".join(ch for ch in str(s) if ch.isdigit())
+    return "".join(sorted(s)) if s else s
+
+def evaluate_state(state: str, root: Path, stamp: str, winners_root: Path) -> dict:
+    an_dir = root / state / "analyzer_v2"
+    per_df = _load_per_item(an_dir, state)
+    top_df = _load_top(an_dir, state)
+    win_df = _load_winners_map(winners_root, stamp, state)
+
+    if win_df.empty:
+        return {"state": state, "rows": 0}
+
+    # Canonicalize candidates and winners for robust matching
+    per_df["cand_canon"] = per_df["final_value"].apply(_normalize_cand)
+    # winners file assumed to have a 'winner' column; add canon
+    if "winner" not in win_df.columns:
+        # fallback: if columns exist like 'value' or 'winning_number'
+        for c in ("value","winning_number","win"):
+            if c in win_df.columns:
+                win_df["winner"] = win_df[c]; break
+    win_df["win_canon"] = win_df["winner"].apply(_normalize_cand)
+
+    # For each winner row, rank candidates by score and lock_score_v2 within same variant/section
+    out_rows = []
+    for _, w in win_df.iterrows():
+        section = str(w.get("variant","")).strip()  # Midday/Evening
+        w_canon = w["win_canon"]
+        scope = per_df[ per_df["section"].str.lower()==section.lower() ]
+        if scope.empty:
+            continue
+
+        # rankings
+        scope = scope.copy()
+        scope["rank_score"]      = (-scope["score"]).rank(method="min")
+        scope["rank_lock_v2"]    = (-scope["lock_score_v2"]).rank(method="min")
+
+        # winner rows
+        win_hits = scope[ scope["cand_canon"]==w_canon ]
+        if win_hits.empty:
+            out_rows.append({
+                "state":state,"variant":section,"winner":w.get("winner",""),
+                "present":False,"rank_score":None,"rank_lock_v2":None,
+                "lock_score_v2":None,"score":None
+            })
+        else:
+            best = win_hits.sort_values("rank_lock_v2").iloc[0]
+            out_rows.append({
+                "state":state,"variant":section,"winner":w.get("winner",""),
+                "present":True,
+                "rank_score": int(best["rank_score"]),
+                "rank_lock_v2": int(best["rank_lock_v2"]),
+                "lock_score_v2": float(best["lock_score_v2"]),
+                "score": float(best["score"])
+            })
+
+    # Summaries
+    rows = pd.DataFrame(out_rows)
+    return {
+        "state":state,
+        "rows":len(rows),
+        "hit_at_1_score": int((rows["rank_score"]==1).sum()),
+        "hit_at_3_score": int((rows["rank_score"]<=3).sum()),
+        "hit_at_1_lock":  int((rows["rank_lock_v2"]==1).sum()),
+        "hit_at_3_lock":  int((rows["rank_lock_v2"]<=3).sum()),
+        "detail": rows
+    }
+
+def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--states", nargs="+", required=True)
+    ap.add_argument("--analysis-root", default="data/outputs/analysis/digit_reduction")
+    ap.add_argument("--winners-root",  default="data/outputs/analysis/digit_reduction/Connecticut4/training_sets") # overridden per state if needed
+    ap.add_argument("--stamp", required=True, help="e.g., 20251103")
+    ap.add_argument("--out", default="dr_validation_out")
+    args = ap.parse_args()
+    root = Path(args.analysis_root)
+    winr = Path(args.winners_root)
+    Path(args.out).mkdir(parents=True, exist_ok=True)
+
+    summaries = []
+    slices = []
+    for st in args.states:
+        res = evaluate_state(st, root, args.stamp, winr)
+        summaries.append({k:v for k,v in res.items() if k!="detail"})
+        if "detail" in res and isinstance(res["detail"], pd.DataFrame):
+            df = res["detail"].copy()
+            df["state"]=st
+            slices.append(df)
+
+    sum_df = pd.DataFrame(summaries)
+    sum_df.to_csv(Path(args.out)/f"DR_PERF_SUMMARY_{args.stamp}.csv", index=False)
+
+    if slices:
+        sl_df = pd.concat(slices, ignore_index=True)
+        sl_df.to_csv(Path(args.out)/f"DR_PERF_SLICES_{args.stamp}.csv", index=False)
+
+    # Tiny Markdown dashboard for ChatGPT review
+    with open(Path(args.out)/f"DR_VALIDATION_SUMMARY_{args.stamp}.md","w") as f:
+        f.write("|State|Rows|Hit@1 score|Hit@3 score|Hit@1 lock|Hit@3 lock|\n|---|---:|---:|---:|---:|---:|\n")
+        for _,r in sum_df.iterrows():
+            f.write(f"|{r['state']}|{int(r.get('rows',0))}|{int(r.get('hit_at_1_score',0))}|{int(r.get('hit_at_3_score',0))}|{int(r.get('hit_at_1_lock',0))}|{int(r.get('hit_at_3_lock',0))}|\n")
+    print("Done.")
+
+if __name__=="__main__":
+    main()
+
+
+Notes
+
+This expects winners artifacts written by the Control Center batch (centralized), not by the analyzer. That’s exactly our lean‑out contract.
+
+If your winners files live per‑state, Codex can point --winners-root to each state’s training set folder as needed.
+
+It uses canonical (sorted) forms so “479 vs 947” are matched correctly (consistent with the Stable/DR canon rules).
+
+3) The report Codex must return (to you & me)
+
+Goal: single folder with 3 files so we can decide in minutes whether the optimizations stay.
+
+Artifacts (under dr_validation_out/)
+
+DR_VALIDATION_SUMMARY_<STAMP>.md
+A tiny Markdown table: per‑state winners count, Hit@1/3 for baseline score vs lock_score_v2. I’ll read this first.
+
+DR_PERF_SUMMARY_<STAMP>.csv
+Same per‑state aggregates in CSV (machine‑readable).
+
+DR_PERF_SLICES_<STAMP>.csv
+Row‑level detail: columns
+
+state, variant, winner, present, rank_score, rank_lock_v2,
+lock_score_v2, score
+
+
+(If Codex includes optional columns like method, area, cols_hit, earliest_* I can slice deeper.)
+
+This is the single package I need from Codex to verify the improvements and, if needed, suggest one last YAML nudge (no code changes).
+
+4) Exact runbook & guardrails for Codex
+
+Why this order? Keeps environment sane, respects your app’s contracts, and ensures artifacts land in the right, centralized places (tables → analyzer, winners via Control Center).
+
+4.1 Preflight & app wiring
+
+Run preflight for a representative state (adjust as needed):
+
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+
+Confirms cwd, python, imports, and tables inventory.
+
+Remember the data contracts:
+
+DR & V‑TRAC read combined tables via utils.path_handler; Aux/BA read draws CSV. We’re only using DR + Control Center winners for this pass.
+
+4.2 Patch & rebuild analyzer
+
+Add the YAML scoring: block and _attach_lockscore(...) patch.
+
+Re‑run Digit‑Reduction Analyzer V2 for your June‑17 states (the lean bundle should contain the same per_item/top/meta + stacked). (Digit‑Reduction module scope & methods stay as documented. )
+
+4.3 Winners artifacts (centralized)
+
+Open the app → Control Center → paste June‑17 winners → run the batch so it writes winner_map.json / winner_flags.csv in the centralized folder (per variant). (Bundle/batch flow and “predictions vs winners” concept mirrors the V‑TRAC bundle pattern we documented earlier.)
+
+4.4 Run the validation CLI
+
+Example:
+
+python scripts/validation/dr_validate_against_winners.py \
+  --states Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 Ohio4 \
+  --analysis-root data/outputs/analysis/digit_reduction \
+  --winners-root  data/outputs/analysis/digit_reduction/Connecticut4/training_sets \
+  --stamp 20250617 \
+  --out dr_validation_out
+
+
+(Optional) YAML sweep: run 3‑5 variants (e.g., w_single_col_rescue={0.50,0.60,0.70}, penalty_combined_bias={0.05,0.10}) and append -S01…S05 to the output folder per run so we can compare summaries side‑by‑side quickly.
+
+4.5 Acceptance checklist (Codex must confirm)
+
+Analyzer bundles remain lean: per_item.csv, top_candidates.csv, meta.json, stacked HTML per variant, optional steps CSV only if diagnostics enabled. (No per‑tool winner files under analyzer folders.)
+
+Control Center created the only winners map/flags. (Centralized by design.)
+
+DR_VALIDATION_SUMMARY_<STAMP>.md shows Hit@1/Hit@3 LockScore v2 ≥ baseline score on majority of states.
+
+DR_PERF_SLICES_<STAMP>.csv includes the columns listed above.
+
+Why these are “final, unstoppable” optimizations
+
+Single‑column rescue directly targets the failure mode we saw (true winners emerging only in one column). We gate it by earliest step to avoid noisy late “finds.”
+
+Earliest‑step premium and persistence/echo tap signals your analyzer already computes; this only reweights them cleanly.
+
+V‑TRAC heat gradient lets DR inherit some family pressure without needing the V‑TRAC page to run first (the features exist in per‑item).
+
+Mild Combined bias penalty prevents Combined from swamping Midday/Evening when those variants carry the sharper signal on their own.
+
+All choices are YAML‑tunable and validated via a single pass runner so we can make a data‑driven keep/adjust call in minutes.
+
+Where this sits in the bigger AAT9 picture
+
+You’re still honoring the Combined‑is‑baseline / Midday+Evening are additive contract across pages and batches. The runbook above follows the same app flow you’ve standardized.
+
+The validation habit (predictions/evidence vs. winners) is exactly what your V‑TRAC bundle established (predictions JSON + winners JSON → bundle). We’re reusing that discipline: evidence in CSV; winners in a single, known place; validation script joins them.
+
+If we later want to compare or co‑score Stable + DR (Module A + B), the canon rules and feature surfaces already align (canonical/3‑value logic, mirror, coverage/consensus, etc.).
+
+Hand‑off to Codex (what to do, exactly)
+
+Apply the config and pipeline scoring patches above.
+
+Re‑run analyzer outputs for the June‑17 state list.
+
+Use Control Center to write winners artifacts for the same date.
+
+Run the validation CLI once (and optionally with 2–4 YAML tweaks).
+
+Return the three files:
+
+dr_validation_out/DR_VALIDATION_SUMMARY_<STAMP>.md
+
+dr_validation_out/DR_PERF_SUMMARY_<STAMP>.csv
+
+dr_validation_out/DR_PERF_SLICES_<STAMP>.csv
+
+I’ll read the MD summary first; if LockScore v2 wins clearly (Hit@1/3 up), we’ll lock the weights, note it in the Unified Changelog, and declare Digit‑Reduction “done” so you can move on. (Quickstart + Onboarding Compass already spell out the preflight and launch moves Codex should follow, so this stays repeatable.)
+
+If you’d like, I can also supply a 1‑page “operator view” that explains what LockScore v2 is doing in plain language (for your docs), but you don’t need that to run the plan above.

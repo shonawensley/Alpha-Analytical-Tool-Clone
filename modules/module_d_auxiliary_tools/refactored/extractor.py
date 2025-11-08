@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from utils import path_handler as ph
+
 from .draws_extractor_p3_columns import (
     canonical_state,
     get_columns_for,
@@ -192,7 +194,7 @@ def _extract_from_master_excel(state: str) -> List[str]:
     if not combined_cols:
         raise ValueError(f"No combined mapping available for {state}")
 
-    master_file = Path("data/original/Pick3StatsC4.xlsm")
+    master_file = Path(ph.get_pick3_workbook_path())
     if not master_file.exists():
         raise FileNotFoundError(f"Master data file not found at {master_file}")
 

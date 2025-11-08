@@ -1,3 +1,44 @@
+## 2025-11-07 12:30 (UTC) - Pick3 workbook history + Stable Pattern baseline
+
+- Context: We now have multiple dated Pick3StatsC4 workbooks + aligned results so examples/backtests can run across more than one day; Stable Pattern tweaks need Midday/Evening/Combined coverage again before adding new scoring.
+- Change:
+  - Added `utils.path_handler.get_pick3_workbook_path()` (env override + auto-discovery) and a small helper (`scripts/tools/select_pick3_history.py`) so every pipeline/aux tool/Streamlit input automatically accepts files named `Pick3StatsC4_YYYY-MM-DD.xlsm`; docs updated to describe the new `data/history/` + `data/results/` workflow.
+  - Updated Streamlit aux pipelines, CLI generators, and the refactored draw extractor to use the helper instead of hard-coded paths.
+  - Re-enabled full Midday/Evening/Combined ingestion inside `src/core/stable_pattern_extractor.py` (the wrapper now reads every `<STATE>_<Section>_combined.csv`, tags `section`, and writes the usual HTML/CSV), capturing a Combined-only baseline beforehand for diffing.
+- Impact:
+  - We can choose any historical workbook (or set `PICK3_WORKBOOK`) without editing paths, making multi-day validation runs trivial; operators can still drag/drop files manually when needed.
+  - Stable Pattern runs now immediately expose section-specific rows again, so the upcoming scoring packets (persistence, hot-zone bonuses, VTRAC straights) build on a correct multi-variant dataset.
+- Next:
+  - Use the dated workbooks/results to validate Stable Pattern scoring improvements as they ship (one day at a time or across a week).
+  - Continue with Packet 2 (compound persistence scoring) once the current multi-variant outputs are archived.
+
+## 2025-11-08 09:10 (UTC) - Stable persistence + VTRAC straight bonuses
+
+- Context: Packet 2 kicked off—need the extractor to reward lingering 3-value clusters and late-column straights before layering the remaining scoring work.
+- Change:
+  - Added set/draw persistence tracking to `alpha_analytical/stable/__init__.py` (Set3→Set2→Set1 chains, longest Draw run per set). Rows now expose `persistence_set_count`, `persistence_draw_run`, and their scored bonuses/why tags; weights live in `feature_config.yml`.
+  - Introduced `score_vtrac_straight` (config weight) for straight candidates appearing in the late columns and surfaced the reason in the CSV ledger.
+  - Extended `tests/test_stable_multi_variant.py` to cover the new persistence scoring path while still ensuring multi-section runs produce Combined/Midday/Evening rows.
+- Impact: Stable Pattern CSVs now show exactly why lingering candidates rise (chain counts + scores). Future work (family aggregation, hot-zones) can consume these fields instead of inferring persistence externally.
+- Next:
+  - Wire the same persistence/vtrac cues into the family/post-pass metrics and continue with hidden-core/double-mirror bonuses before handing the new bundles to ChatGPT Pro for review.
+
+## 2025-11-05 04:10 (UTC) - Digit Reduction lockscore + validation run
+
+- Context: Final optimization pass needed a config-gated scoring surface (recency/single-column/V-TRAC nudges) plus a fast validation/reporting loop so June-17 reverse-engineering runs aren’t manual.
+- Change:
+  - Added `scoring_linear`, `scoring_v2`, and `lockscore` blocks to `alpha_analytical/digit_reduction/analyzer_v2/config.yml` and implemented `scoring.py` helpers that emit `final_linear`, `final_prob`, `score_v2`, and `lockscore_v2/lockscore_prob` columns without touching reducers or writer contracts.
+  - Updated `pipeline.py` to call the new scoring helpers, export the columns (and smarter top-candidate ordering), and persist the config knobs in meta; `scripts/harness/dr_quickcheck.py` now sanity-checks analyzer folders for the new fields.
+  - Created `scripts/experiments/digit_reduction_validate.py` (plus `dr_grid_search.py`) to join analyzer rows with centralized winners and emit `reports/DR/<STAMP>/digit_reduction_metrics.csv`, `digit_reduction_top_misses.csv`, and `DR_Perf_Summary.md`; seeded `data/winners_20250617.csv` for the June-17 batch.
+  - Re-ran analyzer outputs and the new validation for {Connecticut4,Delaware4,Florida4,Indiana4,Michigan4,NewJersey4,NewYork4,Ohio4}; quickcheck confirmed the new columns, and the validation summary shows current gaps (Hit@1=0%, Hit@3=0%, MRR=0.008) highlight where tuning should focus.
+- Impact:
+  - Analyzer bundles remain lean but now include calibrated lockscore signals and traceable ranking keys (score vs. score_v2 vs. lockscore), ready for downstream aggregators.
+  - Teams can regenerate and share a single report folder per stamp to review misses/near-misses instead of hand-auditing HTML; the grid helper enables safe YAML sweeps without code edits.
+  - Early validation confirms we still need to tune the new weights for June-17 winners (notably single-column CT/DE/FL scenarios); the report pinpoints which variants missed and their top competing pattern/score.
+- Next:
+  - Iterate on the YAML knobs (single-column rescue, Combined penalty, recency bonus) using `dr_grid_search.py` until Hit@3 improves, then log the before/after metrics.
+  - Wire the validation summary into `AAT9_Analysis_Insights.md` once we have improved recall so future sessions know which weights shipped.
+
 ## 2025-11-03 05:20 (UTC) - Digit Reduction lean evidence bundle
 
 - Context: After DIGIT06 the analyzer still wrote 15 winners artifacts and training bundles duplicated the same files, making comparison runs noisy.
@@ -562,3 +603,17 @@ Template
   - Flag, scaffolding, and documentation exist, but the analyzer continues to use the legacy engine. Enhanced logic, tooling, and validation are being rebuilt to match the redesign briefs.
 - Verification:
   - Pending (enhanced analyzer work continues).
+## 2025-11-05 08:20 (UTC) - VTRAC-aware validation + extended-cluster boosts
+
+- Context: First scoring pass still showed Hit@3=0 because the validator only matched literal triples; June-17 families like 6111188 registered as “miss” even when the analyzer surfaced their VTRAC relatives, and extended clusters didn’t influence the new lockscore knobs.
+- Change:
+  - Patched `scripts/experiments/digit_reduction_validate.py` to normalize each winner/row into exact, box, and VTRAC-family codes, expose a `--match-mode` flag (default `any`), and add VTRAC-specific Hit@K + `match_channel` metadata to both metrics and top-miss CSVs.
+  - Extended `alpha_analytical/digit_reduction/analyzer_v2/{config.yml,scoring.py}` with `extended_cluster_bonus`, `vtrac_family_rescue`, and `min_drop_run_len` guards so long runs (e.g., 661111188) and confirmed VTRAC-family hits can be rewarded without modifying reducers or winners writers.
+  - Updated the grid helper to sweep the new weights, re-ran analyzer + validator loops for the June-17 states (`20250617_V_BASE`, `..._V_SV2`, `_V_S01`–`_V_S09`, `_V_LSCR`), and captured the new reports under `reports/DR/20250617_V_*`.
+- Impact:
+  - `--match-mode vtrac` baseline immediately surfaced the known family hits; enabling the new boosts lifted Hit@3 (and Hit@3_VTRAC) to ~6% with a +4x MRR versus the literal-only baseline, giving us concrete evidence the analyzer already spots the right families.
+  - Reviewers now get richer diagnostics (match channel, VTRAC family of the leader, per-variant Hit@3_VTRAC) so they can point directly to states/variants that still need literal coverage vs. stronger family scoring.
+  - All changes remain config-gated and additive; Control Center is still the sole writer of winner artifacts, and the lean analyzer bundle stays intact.
+- Next:
+  - Share the refreshed report bundle + config with ChatGPT Pro to decide whether to ship the best YAML combo (currently `_V_S01`) or tweak penalties further.
+  - Propagate the validator upgrades into `AAT9_Analysis_Insights.md` once we lock the final weights so future sessions rerun the exact same match logic.
