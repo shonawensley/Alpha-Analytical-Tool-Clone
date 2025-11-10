@@ -54,6 +54,7 @@ def build_metrics(
     state: str,
     df_scores: pd.DataFrame,
     families_df: Optional[pd.DataFrame],
+    compound_df: Optional[pd.DataFrame] = None,
     winners: Iterable[str] | None = None,
     top_n_hot: int = 10,
 ) -> dict:
@@ -79,6 +80,7 @@ def build_metrics(
     detected_winners: list[str] = []
     winner_family_ids: list[int] = []
     winner_rank_by_family: dict[str, Optional[int]] = {}
+    winner_rank_by_compound: dict[str, Optional[int]] = {}
 
     families_rank_map: dict[int, int] = {}
     if not families_df.empty and {"family_id", "family_score"}.issubset(families_df.columns):
@@ -109,6 +111,18 @@ def build_metrics(
             if fid is not None
         }
 
+    compound_rank_map: dict[str, int] = {}
+    if compound_df is not None and not compound_df.empty:
+        sorted_compound = compound_df.sort_values(
+            ["compound_score", "base_max_score"],
+            ascending=[False, False],
+            ignore_index=True,
+        )
+        for idx, row in sorted_compound.iterrows():
+            canonical = _canonical(row.get("Canonical"))
+            if canonical and canonical not in compound_rank_map:
+                compound_rank_map[canonical] = idx + 1
+
     for winner in winners_list:
         fam_id_raw = _winner_family_id(winner)
         fam_id = _to_int(fam_id_raw)
@@ -119,6 +133,8 @@ def build_metrics(
         if fam_id in families_rank_map or fam_id in score_family_set:
             detected_winners.append(winner)
         winner_rank_by_family[winner] = families_rank_map.get(fam_id)
+        canonical = _canonical(winner)
+        winner_rank_by_compound[winner] = compound_rank_map.get(canonical)
 
     best_straight_rank = None
     if not df_scores.empty and "type" in df_scores.columns:
@@ -140,10 +156,16 @@ def build_metrics(
         "winners": winners_list,
         "winner_family_ids": sorted(set(winner_family_ids)),
         "winner_family_best_rank": {winner: rank for winner, rank in winner_rank_by_family.items()},
+        "best_compound_rank": {winner: winner_rank_by_compound.get(winner) for winner in winners_list},
         "best_straight_rank": best_straight_rank,
         "spotlight_rate": spotlight_rate,
         "evidence_schema_version": 1,
         "stable_contract_version": 1,
+        "compound_schema_version": 1 if compound_df is not None else None,
+        "signals": {
+            "hot2_bias": True,
+            "consensus_of_consensus": True,
+        },
     }
 
     return metrics

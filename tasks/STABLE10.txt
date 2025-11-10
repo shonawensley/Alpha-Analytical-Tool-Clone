@@ -1,0 +1,151 @@
+I’ll answer as a world-class pattern-extraction systems architect and give you Part 1 of a concrete, “no-surprises” plan to reach optimal final outputs from the Stable Pattern Extractor (SPE) — the bundle that the Analyzer/Aggregator will consume.
+
+TL;DR (Part 1 focus): lock the final output contract (what files/columns the Analyzer gets), finish Packet-2 (compound scoring + hot-zone-2 + consensus-of-consensus + hidden-core), wire families/metrics to expose those signals, and add guarded calibration + verifiable QA so we can declare “Stable is done.” Everything below is additive; nothing removes existing features like boxed/straight, hot, consensus, mirror, dominance, or persistence already visible in your report’s “Why” column【】 and in metrics【】.
+
+Part 1 — The Final Output Contract + What’s Left To Add
+A) Final output bundle (exact files the Analyzer will ingest)
+
+Goal: One state, one date → a lean, standardized brain bundle the Analyzer can trust.
+
+Row-level patterns
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_scores.csv
+Columns (superset, additive only):
+
+Identity: section, Set, Draw, Column, Canonical, family_id, type, score, rows
+
+Legacy flags/parts: mirror, straight2, straight3, single_left, cons_full, cons_3v, cons_stub, dom_last, dom_pair, hot (0/1/2), why【】
+
+Legacy parts (numerics): score_cov, score_hpr, score_perm, score_repeat, score_straight, score_single, score_cons, score_hot, score_mirror, score_dom, score_len, score_hidden【】
+
+Packet-1 parts: score_vtrac_straight, score_persistence_set, score_persistence_draw, persistence_set_count, persistence_draw_run, score_double_mirror, double_mirror【】
+
+No deletions. We are only adding (see Packet-2 below).
+
+Compound (canonical roll-up across mini-tables) (NEW)
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_compound.csv
+Columns: section, Canonical, family_id, compound_score, base_max_score, set_chain_depth, draw_chain_depth, col1_hits, hot1_count, hot2_count, consensus_hits, hidden3v_hits, vtrac_straight_hits, double_mirror_hits, rows_covered, examples, compound_why
+Purpose: turns Set3→Set1 + Draw7→Draw1 + hot(*/**) + tail-consensus into one canonical score per section so the Analyzer doesn’t have to “relearn” SPE’s ladder rules.
+
+Family roll-up
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_families.csv
+Add (Packet-2): persistence_set_count, persistence_draw_run, hidden3v_hits, hot1_count, hot2_count, consensus_hits, best_compound_score (all additive).
+
+Metrics JSON
+data/outputs/analysis/patterns/<STATE>/<STATE>_metrics.json
+Keep existing winners and KPIs (they’re present now【】) and add:
+compound_schema_version: 1 and
+"signals":{"hot2_bias":true,"consensus_of_consensus":true}, plus best_compound_rank (lowest rank of any winner canonical by compound score).
+
+Report HTML (for human QA; Analyzer won’t parse this)
+top-30 tables (already present) + Score Breakdown (Top 30) (already present) + Compound Leaderboard (Top 30) (NEW) per section. This mirrors the CSVs and lets you screen-cap evidence in seconds【】.
+
+Why this matters: it gives the Analyzer exactly what it needs: raw rows (for detailed feature learning) and rolled-up canonicals (for decision-time ranking), with families and metrics exposing the same signals at higher levels.
+
+B) Packet-2 (what to add to finish Stable)
+
+Everything here is additive and guarded. It completes the logic you keep asking for — “who truly survives to the right edge and across days?” — and makes those signals visible to downstream modules.
+
+1) Compound scoring (roll-up across mini-tables) — ENGINE + CSV + HTML
+
+Code: add alpha_analytical/stable/compound.py (as provided previously) and call it at the end of the engine to create <STATE>_stable_patterns_compound.csv.
+
+Scoring inputs: count Set-chain, Draw-chain (Set1 Draw7→Draw1), Col-1 hits, hot vs hot*** split, consensus hits, hidden3v hits, v-TRAC straight hits, double-mirror.
+
+Weights: add compound.* keys in feature_config.yml (set_chain, draw_chain, col1_bonus, hot1_bonus, hot2_bonus, consensus_bonus, hidden_core_bonus, vtrac_straight_bonus, double_mirror_bonus).
+
+HTML: add Compound Leaderboard (Top 30) per section.
+
+Value: you no longer need to eyeball a dozen fragments of 244 — one canonical score says how far and how hot it ran (e.g., set_chain3|draw_chain6|hot2x2|col1x2), perfectly aligned with what your combined tables show in Set1 tail columns【】.
+
+2) Hot-zone split — CSV + scoring
+
+Keep the existing score_hot and hot (0/1/2).
+
+Distinguish * vs ** in compound: use hot1_count and hot2_count and give hot2 a stronger bonus (e.g., +2 vs +1).
+
+Guarantee those counts appear in the compound CSV (and families) so the Analyzer can simulate different hot-bias settings later without rescoring.
+
+Value: your tables explicitly mark Col-1/Col-2 with **/* (end-of-structure). This lets you prefer super-hot survivors without touching row scoring.
+
+3) Consensus-of-consensus — CSV + families + metrics
+
+Extend the row engine: whenever cons_full or score_cons>0, mark it; in compound, record consensus_hits (count of consensus events across the roll-up).
+
+Add fam_consensus_chain notion in families (>= 2 consensus events for a family inside the same section).
+
+Add signals.consensus_of_consensus to metrics.
+
+Value: doubles & end-string agreement are already strong in your method; chaining consensus makes “finishing” families more explicit (and reproducible).
+
+4) Hidden-core surfacing — families + metrics
+
+You already tag hidden3v and show it in the “Why.” In compound/families, roll it to hidden3v_hits.
+
+Add signals.hidden3v: count to metrics.
+
+Value: straight extraction often hinges on collapsing 4-digit clusters to a 3-value; logging these hits tells the Analyzer which families are “ready to collapse.”
+
+C) Guarded calibration (so we don’t wobble outputs)
+1) Schema guard (you already added)
+
+Update scripts/checks/validate_stable_schema.py to assert the presence of:
+*_stable_patterns_compound.csv, new families columns (best_compound_score, hot2_count, …), metrics keys (compound_schema_version).
+
+Fail fast if missing; this stops “feature loss.”
+
+2) Human header printer (one-liner)
+
+Add scripts/checks/print_stable_header.py (given earlier) so you can paste the column list in PRs. Combining this with the guard lets us ship features without regressions.
+
+3) Quick Top-5 printer (per section)
+
+Add scripts/tools/compound_top5.py (given earlier) — prints the Top-5 canonical survivors per section with the exact roll-up counts. Great for sharepacks and per-state notes.
+
+D) Minimal changes to families & metrics
+Families (*_stable_patterns_families.csv) — add:
+
+persistence_set_count, persistence_draw_run, hidden3v_hits, hot1_count, hot2_count, consensus_hits, best_compound_score.
+
+Continue to keep family_score == sum(parts) invariant (your tests already check this; extend the test to include new parts).
+
+Metrics (*_metrics.json) — add:
+
+"compound_schema_version": 1,
+
+"best_compound_rank": <int> (rank of the best winner when sorted by compound_score),
+
+"signals": {"hot2_bias": true, "consensus_of_consensus": true, "hidden3v": <count>} — additive only; keep winners: ["494","858"], etc.【】
+
+E) “Done” criteria (so we can declare SPE finished)
+
+We can call Stable “final” (for Analyzer intake) when all are true:
+
+Contract: the four artifacts exist for each run (Row CSV, Compound CSV, Families CSV, Metrics JSON) and the HTML contains both Score Breakdown and Compound Leaderboard (Top-30) for each section.
+
+Guarded: schema guard + header printer pass for 4 states (CT/DE/IN/ON) with no missing columns (legacy + Packet-1 + Packet-2).
+
+Evidence: metrics list the correct winners & family IDs and include the Packet-2 fields; the winner spotlight CSVs are non-empty when winners are passed.
+
+Quality bar: in at least 2 dated workbooks, the winner family appears in the Compound Top-5 for ≥ 1 section or has a best_compound_rank better than the row-level best rank captured today (we log both in metrics).
+
+Docs: you’ve updated AAT9_Analyzer_Lean_Outputs.md with the final column set and the one-page “How to read Compound CSV” section; the “Workflow Standard” notes reference the guard & header tools.
+
+F) Why this is the optimal finishing move
+
+Analyzer-ready: the Analyzer gets both raw feature vectors and rolled-up canonical scores — it can build meta-rules or ML without re-walking Set/Draw ladders.
+
+Tail emphasis encoded: hot-zone split (* vs **), Col-1 hits, and consensus chaining are baked into compound — which matches how your Set1 tail boxes work in the tables【】.
+
+Explainability preserved: every number comes with a why ledger (row why + compound_why) so you can justify picks (e.g., set_chain3|draw_chain6|hot2x2|col1x2).
+
+Guarded evolution: schema guard + header printer prevent future “silent deletions” and keep your Master Guide contract intact【】.
+
+What I need from you before Part 2
+
+Thumb-up to hand Packet-2 to Codex exactly as above.
+
+Which 2–4 states you want for the “done” validation runs (I suggest CT, DE, IN, ON — the same ones you shared).
+
+(Optional) Your preference for default compound weights (we’ll start with the YAML defaults I listed and tune only after the first two dated validations).
+
+When you’re ready, I’ll deliver Part 2: the precise coding task list (file/line), unit tests, acceptance runs per state, and a tuning playbook to calibrate the weights with minimal reruns.

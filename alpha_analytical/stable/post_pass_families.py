@@ -64,7 +64,11 @@ def derive_vtrac_index_for_canonical(canon: str, get_vtrac_index) -> int | None:
             if vti is not None:
                 return vti
     return None
-def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+def build_family_summary(
+    df_scores: pd.DataFrame,
+    cfg: dict,
+    compound_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """
     Aggregates row-level stable patterns into family rows.
     family_id = vtrac_index (broad)  # fine to start broad
@@ -105,6 +109,10 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             "horizontal_persistence_repeat": 0,
             "hot_hits": 0,
             "hot_total": 0,
+            "hot1_count": 0,
+            "hot2_count": 0,
+            "consensus_hits": 0,
+            "hidden3v_hits": 0,
             "any_straight2": False,
             "any_straight3": False,
             "any_consensus": False,
@@ -135,10 +143,19 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             gg["horizontal_persistence_repeat"],
             int(r.get("horizontal_persistence_repeat", 1))
         )
-        hot = int(r.get("hot", 0)); gg["hot_total"] += 1; gg["hot_hits"] += (1 if hot>0 else 0)
+        hot = int(r.get("hot", 0))
+        gg["hot_total"] += 1
+        if hot > 0:
+            gg["hot_hits"] += 1
+        if hot == 1:
+            gg["hot1_count"] += 1
+        elif hot == 2:
+            gg["hot2_count"] += 1
         gg["any_straight2"] = gg["any_straight2"] or bool(r.get("straight2", False))
         gg["any_straight3"] = gg["any_straight3"] or bool(r.get("straight3", False))
-        gg["any_consensus"] = gg["any_consensus"] or bool(r.get("cons_full", False))
+        if r.get("cons_full", False) or r.get("cons_3v", False):
+            gg["any_consensus"] = True
+            gg["consensus_hits"] += 1
         gg["any_dom_last"] = gg["any_dom_last"] or bool(r.get("dom_last", False))
         gg["canonicals"][canon] += 1
         mv = str(r.get("orders_modal_value", "")).strip()
@@ -152,6 +169,7 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             gg["any_double_mirror"] = True
         if r.get("hidden3v"):
             gg["any_hidden3v"] = True
+            gg["hidden3v_hits"] += 1
 
 
     # score per family box
@@ -217,6 +235,12 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             "any_hidden3v": gg["any_hidden3v"],
             "max_persistence_set": gg["max_persistence_set"],
             "max_persistence_draw": gg["max_persistence_draw"],
+            "persistence_set_count": gg["max_persistence_set"],
+            "persistence_draw_run": gg["max_persistence_draw"],
+            "hidden3v_hits": gg["hidden3v_hits"],
+            "hot1_count": gg["hot1_count"],
+            "hot2_count": gg["hot2_count"],
+            "consensus_hits": gg["consensus_hits"],
             "top_canonicals": ";".join([f"{k}:{v}" for k, v in gg["canonicals"].most_common(3)]),
             "top_modal_orders": ";".join([f"{k}:{v}" for k, v in gg["modal_orders"].most_common(3)]),
             "fam_cov": fam_cov,
@@ -241,6 +265,25 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     df = pd.DataFrame(out)
     if df.empty:
         return df
+
+    if compound_df is not None and not compound_df.empty:
+        compound_scores = (
+            compound_df.dropna(subset=["family_id"])
+            .copy()
+        )
+        if not compound_scores.empty:
+            compound_scores["family_id"] = compound_scores["family_id"].astype(int)
+            best_compound = (
+                compound_scores.groupby("family_id")["compound_score"]
+                .max()
+                .reset_index()
+                .rename(columns={"compound_score": "best_compound_score"})
+            )
+            df = df.merge(best_compound, on="family_id", how="left")
+        else:
+            df["best_compound_score"] = None
+    else:
+        df["best_compound_score"] = None
 
     keys = ["Set", "Draw", "Column", "family_id"]
     df["section_count"] = df.groupby(keys)["section"].transform("nunique")
@@ -312,7 +355,6 @@ def build_family_summary(df_scores: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     df = df.sort_values(["section", "Set", "Draw", "Column", "family_score"], ascending=[True, True, True, True, False]).reset_index(drop=True)
 
     return df
-
 
 
 

@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
+from alpha_analytical.stable.compound import compute_compound_scores
 from alpha_analytical.stable.metrics import build_metrics, write_metrics
 from alpha_analytical.stable.post_pass_families import build_family_summary
 from alpha_analytical.stable.winner_family_spotlight import build_winner_spotlight
@@ -112,6 +113,20 @@ def run_stable_pattern_extraction(
 
     html_path = out_path / f"{state}_stable_patterns_report.html"
     csv_path = out_path / f"{state}_stable_patterns_scores.csv"
+    compound_path = ""
+    compound_df = pd.DataFrame()
+
+    if not df_scores.empty:
+        compound_df = compute_compound_scores(df_scores, _ex.CFG)
+        if not compound_df.empty:
+            compound_path_obj = out_path / f"{state}_stable_patterns_compound.csv"
+            compound_df.to_csv(compound_path_obj, index=False)
+            compound_path = str(compound_path_obj)
+
+    if not compound_df.empty:
+        leaderboard_html = _ex.build_compound_leaderboard_html(compound_df)
+        if leaderboard_html:
+            html_sections.append(leaderboard_html)
 
     # Write outputs
     with open(html_path, "w", encoding="utf-8") as fh:
@@ -128,7 +143,7 @@ def run_stable_pattern_extraction(
 
     cfg = getattr(_ex, "CFG", {})
     if not df_scores.empty:
-        families_df = build_family_summary(df_scores, cfg)
+        families_df = build_family_summary(df_scores, cfg, compound_df=compound_df)
         if not families_df.empty:
             families_path_obj = out_path / f"{state}_stable_patterns_families.csv"
             families_df.to_csv(families_path_obj, index=False)
@@ -150,11 +165,14 @@ def run_stable_pattern_extraction(
     df_scores.attrs["families_df"] = families_df.head(20) if isinstance(families_df, pd.DataFrame) else None
     df_scores.attrs["spotlight_raw_path"] = spotlight_raw_path
     df_scores.attrs["spotlight_family_path"] = spotlight_family_path
+    df_scores.attrs["compound_path"] = compound_path
+    df_scores.attrs["compound_df"] = compound_df.head(20) if isinstance(compound_df, pd.DataFrame) else None
 
     metrics_data = build_metrics(
         state=state,
         df_scores=df_scores,
         families_df=families_df,
+        compound_df=compound_df,
         winners=winners,
     )
     metrics_path_obj = write_metrics(out_path, state, metrics_data)
@@ -185,6 +203,7 @@ def run_stable_pattern_extraction(
             spotlight_raw_path=spotlight_raw_path or None,
             spotlight_family_path=spotlight_family_path or None,
             metrics_path=metrics_path or None,
+            compound_path=compound_path or None,
             winners=winners,
         )
 

@@ -1,0 +1,93 @@
+I’ll answer as a world‑class data‑systems architect for pattern‑extraction engines (ACM SIGKDD‑level award winner).
+
+TL;DR:
+From the artifacts you shared, Packet‑1 added persistence + V‑TRAC‑straight + double‑mirror signals and re‑enabled multi‑variant ingest. I do not see evidence that the extractor’s core feature family was intentionally removed. The dev log explicitly says “no feature deletions” and lists the new columns it added. The current run’s Metrics + Manifest confirm three sections (Midday/Evening/Combined) and show the scores/families/evidence bundle is being produced. What I cannot yet confirm (because the CSVs aren’t readable in this workspace) is whether every legacy score component (e.g., vertical_coverage_per_row, horizontal_span_per_col, straight2/3, etc.) is still exported in the Scores CSV. I’ll give you concrete tests and exact Codex tasks below to lock this down.
+
+What I could open (and what each proves)
+
+Worklog (Packet‑1 scope and landed changes).
+The log states Packet‑1 delivered multi‑variant ingest and added persistence and V‑TRAC straight cues, with schema updates and tests. It also captures the acceptance goal: “no feature deletions”.【turn13file3†log_review5.txt†L8-L22】【turn13file17†log_review5.txt†L9-L22】
+
+New scoring signals and config weights were introduced (not removed).
+The log records the added fields and their purpose:
+
+score_persistence_set, persistence_set_count and score_persistence_draw, persistence_draw_run were added to rows and to the “why” ledger (set_chainX, draw_chainY).【turn13file0†log_review5.txt†L35-L38】
+
+score_vtrac_straight was added (config‑driven) and shows up in the reasons ledger when it fires.【turn13file0†log_review5.txt†L36-L38】
+
+A “double mirror” / hidden‑core cue was added; column and config hooks are noted (the follow‑through to families/metrics is planned in Packet‑2).【turn12file4†log_review5.txt†L42-L47】
+
+Rich feature catalogue still documented as contract.
+The Master Guide enumerates the full feature set (coverage, span, baseline straight/boxed, straight2/3, mirror, hot levels, tail‑consensus, dominant‑last/pair, etc.) and states the extractor “detect[s] every substring that meets the ≤ 3‑value rule, score[s] with domain heuristics … and output[s] CSV+HTML” with per‑feature numeric columns ready for ML.【turn13file9†STABLE PATTERN MASTER GUIDE ATT9.docx†L1-L20】【turn13file10†STABLE PATTERN MASTER GUIDE ATT9.docx†L31-L60】
+
+Current run emitted the full bundle.
+Your Manifest and Metrics files exist for the Connecticut run (the exact Sizes/entries are in the manifest file you uploaded). Metrics report section coverage and spotlight/winner stats for the run, which indicates the pipeline wrote Scores, Families, Spotlight/Evidence, and Metrics under data/outputs/analysis/patterns/Connecticut4/... as designed.【turn12file10†manifest.json†L1-L8】【turn12file12†Connecticut4_metrics.json†L1-L9】
+
+Winner/V‑TRAC HTMLs (auxiliary context).
+The V‑TRAC winners pages open (e.g., vtrac13 / vtrac35); they help visually confirm family mapping and straight cues across sections for the training‑style review you want.【turn10file3†Connecticut4_vtrac13_winner_858_20251108_053157.html†L1-L6】【turn10file4†Connecticut4_vtrac35_winner_494_20251108_053157.html†L1-L6】
+
+Where the worry comes from (and how to resolve it fast)
+
+Your screenshot of feature_config.yml looks shorter than older versions, so it’s fair to worry that core weights were dropped. The Packet‑1 log, however, says the change added weights for the new signals and stresses schema/feature continuity (“no feature deletions”).【turn13file17†log_review5.txt†L15-L22】
+
+The Master Guide still defines the canonical score parts (coverage, span, straight2/3, mirror, hot, dominant‑last/pair, tail‑consensus, etc.) as the publicly documented contract to downstream modules.【turn13file10†STABLE PATTERN MASTER GUIDE ATT9.docx†L43-L60】
+
+What I can’t verify yet (because your CSVs inside the zips aren’t readable here): whether every legacy score component column is present in the current Scores CSV. The Packet‑1 log shows explicit additions (score_persistence_*, score_vtrac_straight, double_mirror) but doesn’t list every legacy column name in that excerpt. So we’ll lock this down with a one‑minute schema check (see “Immediate guardrails” below).
+
+Immediate guardrails (use these now to protect your work)
+
+Schema Gate (pre‑commit/test): assert the Scores CSV still exports the legacy columns from the Master Guide (e.g., rowcov, span, baseline_straight_bonus, baseline_boxed_bonus, straight_2rows_bonus, straight_3rows_bonus, mirror, hot, cons_full, dom_last, dom_pair, etc.) plus the new Packet‑1 columns (score_persistence_set, persistence_set_count, score_persistence_draw, persistence_draw_run, score_vtrac_straight, double_mirror). This gate is already recommended in your optimization hand‑off: “Schema guard … assert column sets/dtypes …”【turn13file7†stable optimize.docx†L31-L40】
+
+Why‑ledger integrity check: assert each row’s why string includes human‑explainable tags for any score component that fired (e.g., set_chainX, draw_chainY, vtrac_straight, double_mirror, hot=2, straight3, etc.). The Packet‑1 log explicitly says the ledger call‑outs were added for persistence + V‑TRAC straight.【turn13file0†log_review5.txt†L35-L38】
+
+Metrics contract stays versioned: keep evidence_schema_version / stable_contract_version in Metrics and bump only when columns change, per your “versioning” rules in the optimize doc.【turn13file8†stable optimize.docx†L41-L48】
+
+These three checks prevent silent feature loss going forward.
+
+What to feed Codex right now (Packet‑1 verification + Packet‑2 kickoff)
+
+A. One quick verification run (Codex task list)
+Run Stable for one state and then run these asserts:
+
+Dump header list from Connecticut4_stable_patterns_scores.csv and confirm it contains:
+
+Legacy columns from the Master Guide (coverage/span/baseline/straight2/3/mirror/hot/cons/dominant).【turn13file10†STABLE PATTERN MASTER GUIDE ATT9.docx†L43-L60】
+
+New Packet‑1 columns: score_persistence_set, persistence_set_count, score_persistence_draw, persistence_draw_run, score_vtrac_straight, double_mirror.【turn13file0†log_review5.txt†L35-L38】【turn12file4†log_review5.txt†L42-L47】
+
+Check “why” strings include set_chainX, draw_chainY, and vtrac_straight when those scores > 0.【turn13file0†log_review5.txt†L35-L38】
+
+Confirm sections present: row counts by section ∈ {Midday, Evening, Combined} after Packet‑1 multi‑variant ingest.【turn13file17†log_review5.txt†L9-L14】
+
+B. Packet‑2 implementation (start with compounding + hidden‑core):
+Your takeover brief already outlines the exact compounding you want across sets/draws/columns; have Codex implement the row‑level metrics and surface them in families + metrics as instructed: fam_persist, fam_prog_chain, fam_seq_chain, with score caps and anti‑double‑counting. (It even suggests the precise “why” tags and tests.)【turn13file18†stable takeover.docx†L1-L20】【turn13file18†stable takeover.docx†L21-L44】
+
+Answering your two biggest worries directly
+
+“Did we lose our rich scoring features?”
+
+The plan + logs say “no deletions” and show added signals (persistence, v‑trac‑straight, double‑mirror) and tests that still cover multi‑variant ingest.【turn13file17†log_review5.txt†L15-L22】【turn13file0†log_review5.txt†L35-L38】
+
+The guide still specifies the full feature catalogue and the rule that all those flags/scores feed the CSV/HTML for downstream ML. That’s our contract.【turn13file10†STABLE PATTERN MASTER GUIDE ATT9.docx†L43-L60】
+
+Next step: run the schema gate above to prove every legacy column is present in today’s Scores CSV. If anything is missing, we re‑add it immediately and bump stable_contract_version per your rules.【turn13file8†stable optimize.docx†L41-L48】
+
+“Is the tool still aligned with the training methodology (hot zones, tail columns, straight cues)?”
+
+The guide’s definitions for tail‑boxes (Cols 1–2), consensus behavior, hot flags, and dominant‑last/pair remain the spec we’re enforcing in code and tests.【turn13file11†STABLE PATTERN MASTER GUIDE ATT9.docx†L15-L36】【turn13file9†STABLE PATTERN MASTER GUIDE ATT9.docx†L21-L34】
+
+Packet‑2 will take those row‑level evidences and add the compounding logic you wanted across Sets/Draws/Columns (e.g., Set3→Set2→Set1 persistence, cross‑draw chains), exactly as laid out in the takeover brief (with unit and acceptance tests).【turn13file18†stable takeover.docx†L1-L20】【turn13file18†stable takeover.docx†L21-L44】
+
+What I still need from you (two tiny items to finish the audit)
+
+Paste just the first header line of Connecticut4_stable_patterns_scores.csv (or upload the CSV un‑zipped). That lets me confirm—without ambiguity—that every legacy column is still exported.
+
+Paste the current alpha_analytical/stable/feature_config.yml. I’ll diff it against the Master Guide defaults and the Packet‑1 adds, then propose exact weight tweaks.
+
+Sanity‑check (so you can verify me quickly)
+
+Open log_review5.txt and read the Packet‑1 “Stable Enhancements” bullets—note the added persistence fields and score_vtrac_straight and that schema/tests were updated.【turn13file0†log_review5.txt†L35-L38】
+
+Open STABLE PATTERN MASTER GUIDE ATT9.docx and look at Part 3.8 and Part 4 intros—this is the canonical list of feature columns we must keep in the CSV. Compare with the CSV header once you paste it.【turn13file10†STABLE PATTERN MASTER GUIDE ATT9.docx†L49-L60】
+
+If you paste those two snippets (CSV header + current YAML), I’ll give you an immediate, line‑by‑line confirmation and, if needed, exact restoration diffs.

@@ -25,6 +25,7 @@ except ImportError:
     st = None
 
 from alpha_analytical.stable.feature_config import CFG, CONFIG_PATH as _CONFIG_PATH
+from alpha_analytical.stable.compound import compute_compound_scores
 from alpha_analytical.stable.post_pass_families import derive_vtrac_index_for_canonical
 from alpha_analytical.vtrac import get_vtrac_index
 
@@ -571,7 +572,94 @@ def build_html(df, mask_map, section, results_chunk):
             f"<td>{'Y' if r.get('dom_pair',False) else ''}</td>"
             f"<td>{r.get('why','')}</td></tr>"
         )
+    lines.append("</tbody></table>")
+
+    feature_cols = [
+        ("score_cov", "cov"),
+        ("score_hpr", "hpr"),
+        ("score_perm", "perm"),
+        ("score_repeat", "repeat"),
+        ("score_straight", "straight"),
+        ("score_single", "single"),
+        ("score_cons", "consensus"),
+        ("score_hot", "hot_score"),
+        ("score_mirror", "mirror"),
+        ("score_dom", "dominance"),
+        ("score_len", "length"),
+        ("score_hidden", "hidden"),
+        ("score_double_mirror", "dbl_mirror"),
+        ("score_vtrac_straight", "vtrac"),
+        ("score_persistence_set", "set_persist"),
+        ("score_persistence_draw", "draw_persist"),
+        ("persistence_set_count", "set_count"),
+        ("persistence_draw_run", "draw_run"),
+    ]
+    lines.append("<h3>Score Breakdown (Top 30)</h3>")
+    lines.append("<table border='1' cellpadding='3' cellspacing='0'><thead><tr>"
+                 "<th>#</th><th>Set</th><th>Draw</th><th>Col</th><th>Canonical</th><th>Total</th>")
+    for _, label in feature_cols:
+        lines.append(f"<th>{label}</th>")
+    lines.append("<th>hot_lvl</th><th>hot*</th><th>hot**</th></tr></thead><tbody>")
+    for idx, r in enumerate(results_chunk[:30], start=1):
+        hot_value = r.get("hot", "")
+        hot_lvl = hot_value if hot_value not in (None, "") else ""
+        hot1 = "Y" if hot_value == 1 else ""
+        hot2 = "Y" if hot_value == 2 else ""
+        row_cells = [
+            f"<td>{idx}</td>",
+            f"<td>{r.get('Set','')}</td>",
+            f"<td>{r.get('Draw','')}</td>",
+            f"<td>{r.get('Column','')}</td>",
+            f"<td>{r.get('Canonical','')}</td>",
+            f"<td>{r.get('score','')}</td>",
+        ]
+        for col_name, _ in feature_cols:
+            row_cells.append(f"<td>{r.get(col_name,'')}</td>")
+        row_cells.append(f"<td>{hot_lvl}</td>")
+        row_cells.append(f"<td>{hot1}</td>")
+        row_cells.append(f"<td>{hot2}</td>")
+        lines.append("<tr>" + "".join(row_cells) + "</tr>")
     lines.append("</tbody></table><hr/>")
+    return "\n".join(lines)
+
+
+def build_compound_leaderboard_html(compound_df: pd.DataFrame) -> str:
+    """Render a compact leaderboard (Top 30 per section) for compound scores."""
+    if compound_df is None or compound_df.empty:
+        return ""
+    sections = ["Midday", "Evening", "Combined"]
+    lines = ["<h2>Compound Leaderboard (Top 30 per section)</h2>"]
+    for section in sections:
+        sec_df = compound_df[compound_df["section"] == section].head(30)
+        if sec_df.empty:
+            continue
+        lines.append(f"<h3>{section}</h3>")
+        lines.append(
+            "<table border='1' cellpadding='3' cellspacing='0'><thead><tr>"
+            "<th>#</th><th>Canonical</th><th>Compound</th><th>Base</th>"
+            "<th>SetChain</th><th>DrawChain</th><th>Col1</th>"
+            "<th>Hot*</th><th>Hot**</th><th>Cons</th><th>Hidden</th>"
+            "<th>VTRAC</th><th>Double</th><th>Why</th></tr></thead><tbody>"
+        )
+        for idx, row in sec_df.reset_index(drop=True).iterrows():
+            cells = [
+                f"<td>{idx + 1}</td>",
+                f"<td>{row.get('Canonical', '')}</td>",
+                f"<td>{row.get('compound_score', '')}</td>",
+                f"<td>{row.get('base_max_score', '')}</td>",
+                f"<td>{row.get('set_chain_depth', '')}</td>",
+                f"<td>{row.get('draw_chain_depth', '')}</td>",
+                f"<td>{row.get('col1_hits', '')}</td>",
+                f"<td>{row.get('hot1_count', '')}</td>",
+                f"<td>{row.get('hot2_count', '')}</td>",
+                f"<td>{row.get('consensus_hits', '')}</td>",
+                f"<td>{row.get('hidden3v_hits', '')}</td>",
+                f"<td>{row.get('vtrac_straight_hits', '')}</td>",
+                f"<td>{row.get('double_mirror_hits', '')}</td>",
+                f"<td>{row.get('compound_why', '')}</td>",
+            ]
+            lines.append("<tr>" + "".join(cells) + "</tr>")
+        lines.append("</tbody></table><hr/>")
     return "\n".join(lines)
 
 def main_cli():

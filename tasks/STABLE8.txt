@@ -1,0 +1,344 @@
+I’ll answer as a world‑renowned lottery‑pattern systems architect (ACM Turing Award) focused on R2/R4/R6/R8 string analytics and V‑TRAC–driven extraction.
+
+TL;DR: Below is a copy‑paste‑ready “Packet‑2” work order for Codex: compound scoring across mini‑progressions (Set3→Set1, Draw7→Draw1), explicit * vs ** hot‑zone splits, consensus‑of‑consensus, hidden‑core and persistence surfacing into families/metrics, HTML + CSV additions, guardrails, and tests. I grounded this on your current outputs (the Connecticut report already exposes hot‑zones and top‑30 rows, e.g., Set1/Draw5/Col1 “244 … hot2 … draw_chain7” in the HTML, and the metrics show winners 494 & 858 are in scope).
+
+PACKET‑2 — Implementation plan for the Stable Pattern Extractor (ready for Codex)
+0) Contract & facts we must respect
+
+The Stable HTML already shows full combined tables with * and ** markers and a “Detected Patterns (Top 30)” table (e.g., Combined → Set1 ladders; “244…hot2…draw_chain7”, etc.). We will not remove any existing scoring axes—only add new surfaces.
+
+The latest metrics already declare winners 494 and 858 for CT and expose schema versions. We will surface Packet‑2 signals there without changing old keys.
+
+The run manifest points at the on‑disk artifacts; we’ll keep filenames stable and append new ones.
+
+1) Goals (Packet‑2 scope)
+
+Compound scoring: aggregate a pattern’s evidence across all mini‑progressions inside a section (Set3→Set1; Draw7→Draw1) into one canonical record with an additive bonus model.
+
+Hot‑zone split & weighting: treat * (hot‑zone‑1) vs ** (hot‑zone‑2) distinctly—hot‑zone‑2 gets a larger bonus.
+
+Consensus‑of‑Consensus: extra credit when consensus (full and/or 3‑value) appears in ≥2 row‑types (e.g., R2+R6) inside the same mini‑table.
+
+Hidden‑core & persistence surfaces: persist these as first‑class columns in families & metrics so downstream modules can consume them directly.
+
+Outputs: new CSVs + HTML sections; update families & metrics; keep old CSV intact; update the schema guardrail.
+
+2) Schema additions (additive only)
+
+A. New CSV:
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_compound.csv with these columns (prefix compound_* to avoid collisions):
+
+section, Canonical, family_id,
+compound_score, base_max_score,
+set_chain_depth, draw_chain_depth, col1_hits,
+hot1_count, hot2_count,
+consensus_hits, hidden3v_hits, vtrac_straight_hits, double_mirror_hits,
+rows_covered, examples, compound_why
+
+
+B. Extend families CSV (*_stable_patterns_families.csv) with:
+
+persistence_set_count, persistence_draw_run,
+hidden3v_hits, hot1_count, hot2_count,
+consensus_hits, best_compound_score
+
+
+C. Extend metrics JSON (*_metrics.json) with:
+
+"best_compound_rank": <int>,
+"compound_schema_version": 1,
+"signals": {
+  "hot2_bias": true,
+  "consensus_of_consensus": true
+}
+
+
+(All existing fields remain unchanged; we simply add the keys alongside current winners/ids noted in the file.)
+
+3) Config (YAML) — new weights (keep all existing weights)
+
+File: alpha_analytical/stable/feature_config.yml — append these keys (do not edit existing ones):
+
+# ----- Packet-2 compound weights (additive, safe defaults) -----
+compound.set_chain_bonus: 2.0          # +2 for each extra Set the canonical appears in (beyond the first)
+compound.draw_chain_bonus: 0.5         # +0.5 per unique Draw in Set1 (Draw7..Draw1)
+compound.col1_bonus: 1.0               # +1 for each Column==1 occurrence
+compound.hot1_bonus: 1.0               # +1 per hot-zone-1 (*)
+compound.hot2_bonus: 2.0               # +2 per hot-zone-2 (**)
+compound.consensus_bonus: 1.0          # +1 per consensus hit at row-level
+compound.hidden_core_bonus: 1.0        # +1 per hidden3v flag
+compound.vtrac_straight_bonus: 0.5     # +0.5 per v-trac straight flag
+compound.double_mirror_bonus: 0.5      # +0.5 per double-mirror flag
+
+4) Code — new compound aggregator (no placeholders)
+
+New file: alpha_analytical/stable/compound.py
+
+# alpha_analytical/stable/compound.py
+from __future__ import annotations
+import pandas as pd
+
+COMPOUND_COLUMNS = [
+    'section','Canonical','family_id','compound_score','base_max_score',
+    'set_chain_depth','draw_chain_depth','hot1_count','hot2_count','col1_hits',
+    'consensus_hits','hidden3v_hits','vtrac_straight_hits','double_mirror_hits',
+    'rows_covered','examples','compound_why'
+]
+
+def compute_compound_scores(rows: pd.DataFrame, feature_cfg: dict) -> pd.DataFrame:
+    """
+    Aggregate per-row evidence into one record per (section, Canonical).
+    Expects Stable rows CSV columns:
+      section, Set, Draw, Column, Canonical, score, family_id, hot,
+      score_cons, hidden3v, score_vtrac_straight, score_double_mirror, why, ...
+    Returns a DataFrame sorted by (section, compound_score desc, base_max_score desc).
+    """
+    if rows is None or len(rows) == 0:
+        return pd.DataFrame(columns=COMPOUND_COLUMNS)
+
+    df = rows.copy()
+    # Normalize booleans
+    df['hot_level'] = df.get('hot', 0)
+    df['is_hot1'] = df['hot_level'].eq(1)
+    df['is_hot2'] = df['hot_level'].eq(2)
+    df['is_consensus'] = df.get('score_cons', 0).astype(float).gt(0) | \
+                         df.get('cons_full', '').astype(str).str.upper().eq('Y') | \
+                         df.get('cons_3v', '').astype(str).str.upper().eq('Y')
+    df['is_hidden3v'] = df.get('hidden3v', '').astype(str).str.upper().eq('Y')
+    df['is_vtrac_straight'] = df.get('score_vtrac_straight', 0).astype(float).gt(0)
+    df['is_double_mirror'] = df.get('score_double_mirror', 0).astype(float).gt(0) | \
+                             df.get('double_mirror', '').astype(str).str.upper().eq('Y')
+
+    out_rows = []
+    for (section, canonical), g in df.groupby(['section', 'Canonical'], sort=False):
+        base_max = float(g['score'].max())
+        sets = g['Set'].dropna().unique().tolist()
+        set_chain = len(sets)
+        draw_chain = int(g.loc[g['Set'].eq('Set1'), 'Draw'].nunique())
+        col1_hits = int((g['Column'] == 1).sum())
+        hot1 = int(g['is_hot1'].sum())
+        hot2 = int(g['is_hot2'].sum())
+        cons = int(g['is_consensus'].sum())
+        hid  = int(g['is_hidden3v'].sum())
+        vstr = int(g['is_vtrac_straight'].sum())
+        dblm = int(g['is_double_mirror'].sum())
+
+        w = feature_cfg or {}
+        bonus = (
+            w.get('compound.set_chain_bonus', 2.0) * max(0, set_chain - 1) +
+            w.get('compound.draw_chain_bonus', 0.5) * draw_chain +
+            w.get('compound.col1_bonus', 1.0) * col1_hits +
+            w.get('compound.hot1_bonus', 1.0) * hot1 +
+            w.get('compound.hot2_bonus', 2.0) * hot2 +
+            w.get('compound.consensus_bonus', 1.0) * cons +
+            w.get('compound.hidden_core_bonus', 1.0) * hid +
+            w.get('compound.vtrac_straight_bonus', 0.5) * vstr +
+            w.get('compound.double_mirror_bonus', 0.5) * dblm
+        )
+        score_compound = round(base_max + bonus, 3)
+
+        why_bits = []
+        if set_chain > 1:     why_bits.append(f"set_chain{set_chain}")
+        if draw_chain > 0:    why_bits.append(f"draw_chain{draw_chain}")
+        if col1_hits:         why_bits.append(f"col1x{col1_hits}")
+        if hot1:              why_bits.append(f"hot1x{hot1}")
+        if hot2:              why_bits.append(f"hot2x{hot2}")
+        if cons:              why_bits.append(f"consensusx{cons}")
+        if hid:               why_bits.append(f"hidden3vx{hid}")
+        if vstr:              why_bits.append(f"vstrx{vstr}")
+        if dblm:              why_bits.append(f"dblmirrorx{dblm}")
+
+        out_rows.append({
+            'section': section,
+            'Canonical': str(canonical),
+            'family_id': int(g['family_id'].dropna().astype(int).mode().iat[0]) if 'family_id' in g and not g['family_id'].dropna().empty else None,
+            'compound_score': score_compound,
+            'base_max_score': base_max,
+            'set_chain_depth': int(set_chain),
+            'draw_chain_depth': int(draw_chain),
+            'hot1_count': hot1,
+            'hot2_count': hot2,
+            'col1_hits': col1_hits,
+            'consensus_hits': cons,
+            'hidden3v_hits': hid,
+            'vtrac_straight_hits': vstr,
+            'double_mirror_hits': dblm,
+            'rows_covered': int(len(g)),
+            'examples': ";".join(g.sort_values('score', ascending=False).head(2)['why'].astype(str).tolist()),
+            'compound_why': "|".join(why_bits)
+        })
+    return pd.DataFrame(out_rows).sort_values(['section','compound_score','base_max_score'], ascending=[True, False, False]).reset_index(drop=True)
+
+
+Wire it in at the end of the Stable engine, after we have the per‑row DataFrame:
+
+File: alpha_analytical/stable/__init__.py (near where results_df is finalized and before writers):
+
+# ...existing imports...
+from .compound import compute_compound_scores
+from .feature_config import load_feature_config  # already present in your tree
+
+# after results_df is built:
+feature_cfg = load_feature_config()
+compound_df = compute_compound_scores(results_df, feature_cfg)
+
+# write CSV
+compound_csv = out_dir / f"{state}_stable_patterns_compound.csv"
+compound_df.to_csv(compound_csv, index=False)
+
+# HTML: append a Compound Leaderboard section (Top 30 per section)
+lines.append("<h3>Compound Leaderboard (Top 30 per section)</h3>")
+for sec in ['Midday','Evening','Combined']:
+    sec_df = compound_df[compound_df['section'] == sec].head(30)
+    if sec_df.empty:
+        continue
+    lines.append(f"<h4>{sec}</h4>")
+    lines.append("<table border='1' cellpadding='3' cellspacing='0'><thead><tr>"
+                 "<th>#</th><th>Canonical</th><th>compound</th><th>base</th>"
+                 "<th>set</th><th>draw</th><th>col1</th><th>hot*</th><th>hot**</th>"
+                 "<th>cons</th><th>hidden</th><th>vstr</th><th>dblm</th><th>why</th></tr></thead><tbody>")
+    for i, r in sec_df.reset_index(drop=True).iterrows():
+        cells = [
+            f"<td>{i+1}</td>",
+            f"<td>{r['Canonical']}</td>",
+            f"<td>{r['compound_score']}</td>",
+            f"<td>{r['base_max_score']}</td>",
+            f"<td>{r['set_chain_depth']}</td>",
+            f"<td>{r['draw_chain_depth']}</td>",
+            f"<td>{r['col1_hits']}</td>",
+            f"<td>{r['hot1_count']}</td>",
+            f"<td>{r['hot2_count']}</td>",
+            f"<td>{r['consensus_hits']}</td>",
+            f"<td>{r['hidden3v_hits']}</td>",
+            f"<td>{r['vtrac_straight_hits']}</td>",
+            f"<td>{r['double_mirror_hits']}</td>",
+            f"<td>{r['compound_why']}</td>",
+        ]
+        lines.append("<tr>" + "".join(cells) + "</tr>")
+    lines.append("</tbody></table><hr/>")
+
+
+Families & metrics writers (augment, don’t replace):
+
+Families: in alpha_analytical/stable/post_pass_families.py (or wherever you assemble family rows), merge the per‑canonical aggregates from compound_df so each family record gets:
+persistence_set_count, persistence_draw_run, hidden3v_hits, hot1_count, hot2_count, consensus_hits, best_compound_score.
+
+Metrics: in alpha_analytical/stable/metrics.py (or equivalent), compute and write:
+best_compound_rank, compound_schema_version: 1, and a small "signals" block as described in §2C; keep the existing winners list (e.g., ["494","858"]).
+
+5) Guardrails & tests
+
+A. Schema validator (already added in your last session) — update it to enforce the new artifacts/columns:
+
+Fail if:
+
+*_stable_patterns_compound.csv is missing any of compound_score,set_chain_depth,draw_chain_depth,hot2_count.
+
+families CSV lacks best_compound_score.
+
+metrics JSON lacks compound_schema_version.
+
+B. Unit test — deterministic fixture
+
+tests/test_stable_compound.py (new):
+
+import pandas as pd
+from alpha_analytical.stable.compound import compute_compound_scores
+
+def test_compound_bonus_and_sorting():
+    rows = pd.DataFrame([
+        # Same Canonical across sets/draws with hot1/hot2, col1 hits, etc.
+        dict(section='Combined', Set='Set1', Draw='Draw5', Column=1, Canonical='244', family_id=355,
+             score=30.0, hot=2, score_cons=1.0, hidden3v='Y', score_vtrac_straight=0.5, score_double_mirror=0.0, why='example A'),
+        dict(section='Combined', Set='Set1', Draw='Draw3', Column=2, Canonical='244', family_id=355,
+             score=27.5, hot=1, score_cons=1.0, hidden3v='',   score_vtrac_straight=0.0, score_double_mirror=0.5, why='example B'),
+        dict(section='Combined', Set='Set2', Draw='Draw1', Column=1, Canonical='244', family_id=553,
+             score=25.0, hot=1, score_cons=0.0, hidden3v='Y', score_vtrac_straight=0.5, score_double_mirror=0.0, why='example C'),
+    ])
+    cfg = {
+        'compound.set_chain_bonus': 2.0,
+        'compound.draw_chain_bonus': 0.5,
+        'compound.col1_bonus': 1.0,
+        'compound.hot1_bonus': 1.0,
+        'compound.hot2_bonus': 2.0,
+        'compound.consensus_bonus': 1.0,
+        'compound.hidden_core_bonus': 1.0,
+        'compound.vtrac_straight_bonus': 0.5,
+        'compound.double_mirror_bonus': 0.5,
+    }
+    df = compute_compound_scores(rows, cfg)
+    r = df.iloc[0]
+    assert r['Canonical'] == '244'
+    # base_max 30.0 + bonuses: set_chain(1 extra)*2=2 + draw_chain(Set1 draws=2)*0.5=1
+    # + col1 hits(2)*1=2 + hot1(2)*1=2 + hot2(1)*2=2 + consensus(2)*1=2 + hidden(2)*1=2
+    # + vstr(2)*0.5=1 + dblm(1)*0.5=0.5 -> total bonus = 14.5 ; compound ≈ 44.5
+    assert abs(r['compound_score'] - 44.5) < 1e-6
+    assert r['set_chain_depth'] == 2
+    assert r['draw_chain_depth'] == 2
+    assert r['hot2_count'] == 1
+
+
+(Keep all your existing tests green; this is additive.)
+
+6) Winners spotlight & metrics alignment (one switch)
+
+For runs driven outside Streamlit, ensure the batch passes the winners list so spotlight/metrics fill in:
+
+# src/core/stable_pattern_extractor.py (where you call the engine)
+run_stable_pattern_extraction(
+    state=state,
+    combined_tables_path=combined_csv,
+    out_dir=out_dir,
+    winners=['494','858']  # or pulled from data/results/<date>.txt
+)
+
+
+That populates the winner_* fields in metrics/spotlight so your sharepacks carry the correct context (compare the current CT metrics that already include winners: ["494","858"]).
+
+7) HTML report tweak (already started; finalize)
+
+You already have Top‑30 “Score Breakdown” and show hot‑level. Keep that and add the Compound Leaderboard section above (code in §4). The raw combined table continues to show * and ** in columns 2/1 of Set1 (most‑current boxes), matching the logic you want the hot‑zone bonuses to emphasize.
+
+8) Runbook (for CT/DE/IN/ON)
+
+Rebuild: install deps, run your pipeline to regenerate tables.
+
+Stable: execute Stable for each state with winners provided (so spotlight/metrics align).
+
+Guardrail: python3 scripts/checks/validate_stable_schema.py --states Connecticut4 Delaware4 Indiana4 OntarioCanada4 (fails if any column/file is missing).
+
+Artifacts: verify *_stable_patterns_compound.csv + updated HTML + families + metrics are present; confirm metrics still list winners and now also have compound_schema_version.
+
+Why this closes your gaps
+
+Compound evidence solves the “fragmented rows” problem (e.g., straight ‘244’ repeating across Set1 draws and showing in hot2 at Column‑1 in the HTML) by rolling all that into a single canonical score with explainable bonuses (compound_why).
+
+Hot‑zone split matches the visual semantics of * vs ** in your tables (column‑1/2 are the newest boxes), and puts weight where you actually hunt winners.
+
+Families/metrics surfaces carry persistence/hidden‑core into downstream tools; metrics are already the right place to list winners and best ranks (see the current JSON).
+
+Immediate next steps for Codex (copy/paste)
+
+Add alpha_analytical/stable/compound.py (code above).
+
+Edit alpha_analytical/stable/__init__.py to call compute_compound_scores and write *_stable_patterns_compound.csv and the Compound Leaderboard HTML block.
+
+Append Packet‑2 weights to alpha_analytical/stable/feature_config.yml (YAML block above).
+
+Augment families and metrics writers with the new fields (§2B, §2C).
+
+Update scripts/checks/validate_stable_schema.py to assert the new files/columns.
+
+Add tests/test_stable_compound.py (above).
+
+Run CT/DE/IN/ON with winners provided; verify outputs and guardrail.
+
+Report: dump the header rows of all 5 CSVs + a small metrics JSON snippet showing the new keys.
+
+Sanity‑check (2 quick things you can do)
+
+Open Connecticut4_stable_patterns_report.html and confirm Set1 ladders show * and ** with top “244 … hot2 … draw_chain7” (proves hot‑zones at end‑columns are visible).
+
+Open Connecticut4_metrics.json and confirm winners [494, 858] are present (proves runs align with the day’s results; after Packet‑2, you’ll also see compound_schema_version).
+
+If you want, I can also supply a schema‑diff checklist for the guardrail and a one‑liner that prints the new compound top‑5 per section for any state—just say the word.
