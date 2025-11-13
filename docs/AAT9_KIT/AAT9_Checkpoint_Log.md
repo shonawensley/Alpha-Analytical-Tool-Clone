@@ -617,3 +617,13 @@ Template
 - Next:
   - Share the refreshed report bundle + config with ChatGPT Pro to decide whether to ship the best YAML combo (currently `_V_S01`) or tweak penalties further.
   - Propagate the validator upgrades into `AAT9_Analysis_Insights.md` once we lock the final weights so future sessions rerun the exact same match logic.
+## 2025-11-12 17:30 (UTC) - Stable Packet-2 tooling + dated control-center bundles
+
+- Context: Needed a reproducible loop to regenerate Stable runs (with winners spotlight) across dated workbooks, bundle analyzer-style winners HTML, and capture Control Center aggregates (Blackapple + Due Doubles) for review away from the app. Packet-2 features (compound scoring, schema guard) also needed docs/guard hooks.
+- Change:
+  - Added Stable helper scripts: `scripts/tools/run_stable_from_results.py` (rerun Stable + winners spotlight per results file) and `scripts/tools/generate_winners_from_results.py` (state-wide winners HTML into `reports/stable/winners_by_date/<DATE>/`).
+  - Implemented compound scorer/export (`alpha_analytical/stable/compound.py`) + HTML leaderboard, extended families/metrics with persistence/hot/consensus fields, and recorded `best_compound_rank`/`compound_schema_version` in metrics; added guard/inspection scripts (`scripts/checks/validate_stable_schema.py`, `scripts/checks/print_stable_header.py`, `scripts/tools/compound_top5.py`).
+  - Created Control Center automation (`scripts/tools/generate_control_center_report.py`) to render Blackapple + Due Doubles tables against `data/results/<DATE>.txt`, including hit annotations (straight/boxed/VTRAC) and stored them in `reports/control_center/<DATE>.md`.
+  - Documented the Stable run toolkit in `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md` (how to rotate workbooks, regenerate draws, run Stable, produce winners/control-center bundles) for future sessions.
+- Impact: Three dated sharepacks now exist under `reports/stable/winners_by_date/2025-06-22/…/24/` alongside control-center reports, enabling offline analysis. Stable Packet-2 schema is guarded and discoverable via CLI helpers, and future agents have a clear runbook for rotating workbooks/results without touching the UI.
+- Next: Create the Stable run log (`docs/AAT9_KIT/stable_run_log.md`) to record per-state winner analyses, then update the Unified Changelog/Workflow docs after logging the first few examples.

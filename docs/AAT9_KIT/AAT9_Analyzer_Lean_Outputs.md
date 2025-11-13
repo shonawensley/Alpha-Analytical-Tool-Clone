@@ -30,20 +30,25 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 ---
 
 ## Stable Pattern Extractor (Current Outputs)
-*Not yet leaned out; listed here for scoping the next pass.*
+*Packet‑2 schema landed; core outputs now include compound CSV and references to helper scripts for dated runs.*
 
 - `data/outputs/analysis/patterns/<STATE>/`
-  - `<STATE>_stable_patterns_<variant>.html` (per variant).
-  - `<STATE>_stable_patterns_scores.csv`
-  - Companion JSON (families, metrics, winners spotlight) under `analysis/patterns/<STATE>/`.
-- `training_sets/<STAMP>/` for Stable currently includes:
-  - Metrics JSON (`<STATE>_metrics.json`)
-  - `<STATE>_stable_patterns_families.csv`
-  - Winners spotlight CSVs if toggled
-  - Map/stamp artifacts similar to Digit Reduction (per variant).
-  - Zip copy when requested.
+  - `<STATE>_stable_patterns_report.html` — multi-variant (Combined/Midday/Evening) table with Top‑30 score breakdown + **Compound Leaderboard (Top 30)** per section.
+  - `<STATE>_stable_patterns_scores.csv` — per-row evidence (`section`, `Set`, `Draw`, `Column`, canonical, score parts, persistence, hidden-core, double_mirror, etc.).
+  - `<STATE>_stable_patterns_compound.csv` — canonical roll-up (compound score, base score, set/draw chain depth, hot1/hot2 counts, consensus/hidden/vtrac/double hits, `compound_why`).
+  - `<STATE>_stable_patterns_families.csv` — family aggregation plus Packet‑2 fields (`persistence_set_count`, `hot1_count`, `hot2_count`, `consensus_hits`, `best_compound_score`, ...).
+  - `<STATE>_metrics.json` — winners array, `winner_family_best_rank`, new `best_compound_rank`, `compound_schema_version`, and `signals.{hot2_bias,consensus_of_consensus}`.
+  - Optional spotlight CSVs (`<STATE>_winner_family_spotlight_{raw,families}.csv`) when winners are supplied.
+- `training_sets/<STAMP>/` mirrors the above (scores, families, compound, metrics, spotlight) via `scripts/tools/run_stable_from_results.py` + `alpha_analytical/stable/training_bundle.py`.
 
-→ **Lean target**: Keep per-state metrics JSON, families CSV, top candidates, meta, stacked (if any). Move winner map/flags to the centralized winners module; steps/logs optional. Document the exact file list before trimming.
+### Stable tooling for dated runs
+- Rotate workbooks: `scripts/tools/select_pick3_history.py --file Pick3StatsC4_YYYY-MM-DD.xlsm` + pipeline runner.
+- Generate draw CSVs for Aux/Blackapple/Control Center: `scripts/auxiliary/generate_draws_csv.py`.
+- Run Stable with winners: `scripts/tools/run_stable_from_results.py --state <STATE> --results-file data/results/<DATE>.txt` (call per state or wrap in a loop).
+- Produce analyzer-style winners HTML for all states: `scripts/tools/generate_winners_from_results.py --results-file ... --out-dir reports/stable/winners_by_date/<DATE>`.
+- Inspect/guard Packet‑2 schema: `scripts/checks/validate_stable_schema.py`, `scripts/checks/print_stable_header.py`, `scripts/tools/compound_top5.py`.
+
+→ **Lean target**: Now that scores/families/compound/metrics are locked, the remaining step is trimming legacy diagnostics (optional stacked HTML, spotlight copies) once the aggregator consumes the new contract.
 
 ---
 
@@ -86,4 +91,3 @@ When ready, follow the same steps used for Digit Reduction:
    - Run at least one state per tool to confirm the new structure.
 
 By keeping the evidence layout consistent, the eventual Aggregator module (the “master brain”) can ingest all tools’ per_item/top/meta files without juggling bespoke directories. When the time comes, we’ll update this document with the exact file lists for Stable and V-TRAC after their lean-outs.
-

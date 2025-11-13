@@ -35,31 +35,7 @@ docs/AAT9_KIT/AAT9_Diagrams_Guide.md
 docs/AAT9_KIT/AAT9_Unified_Changelog.md
 - Lean bundles + analyzer outputs: docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md and USER_GUIDE_AAT9/DigitReduction_UserGuide.txt
 
-  docs/AAT9_KIT/AAT9_Analysis_Insights.md 
-
-   docs/AAT9_KIT/AAT9_Data_Validation_Workflow.md 
-
-   docs/AAT9_DOCS/AAT9_Blackapple_Module.md 
-
-   docs/AAT9_KIT/AAT9_Aux_Roadmap.md 
-
-   docs/AAT9_KIT/AAT9_Testing_Roadmap.md 
-
- docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md 
-
- docs/AAT9_KIT/ pitfalls.txt
-
- docs/AAT9_KIT/AAT9_Task_Template.md
-
-docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md 
-
 AGENTS.md, .codex/AGENTS.universal.md
-
-docs/AAT9_DOCS/Aux_Variants_Addendum.md 
-
-docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md  
-
-docs/AAT9_DOCS/AAT9_Blackapple_Module.md 
 
 Data contracts recap (enforced in code & docs):
 

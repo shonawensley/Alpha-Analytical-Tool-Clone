@@ -1,0 +1,113 @@
+TL;DR: We’re close. The core Stable extractor is integrated and multi‑variant (Midday/Evening/Combined) is back on, with the HTML now exposing a “Score Breakdown (Top 30)” panel per section and the schema/guardrails explicitly called out in your working docs. The program of record shows Packet‑2 work (compound persistence + hidden signals) slated/defined, winners logging as a first‑class artifact, and a disciplined validation loop using dated workbooks and paired results. From here, “last‑mile” is mostly: (1) lock the remaining Packet‑2/compound details and weight tuning, (2) verify winners spotlight + metrics are populated for the recent dates, (3) add a tiny acceptance checklist around hot‑zone splits and VT‑straight evidence, and (4) document the analysis‑run template so reverse‑engineering on wins is repeatable. Overall readiness: High for example runs and spotlight analysis; Medium for “final contract” until compound/weights and winner‑metrics alignment are confirmed.
+
+Where we are (grounded in your repo/docs)
+
+Stable extractor is integrated and meant to run across C/M/E variants (the Combined‑only detour has been reversed in the plan), with explicit acceptance items for consensus flags, star wiring, straight/boxed, and “no column deletions” guardrails.
+
+Packet‑2 scope (compound persistence + hidden patterns) is defined in the same plan: implement Set3→Set1 and Draw1→Draw7 persistence metrics and log them as new additive columns/scores.
+
+HTML surface shows richer analysis now. Your Stable HTML explicitly contains “Score Breakdown (Top 30)” sections, which is the right substrate for spot‑checking per‑feature contributions on top patterns before we tune weights.
+
+Program/roadmap recognizes winners logging and training bundles as first‑class (and flags Stable as integrated but still wanting “enhanced analysis outputs & three‑value handling”). That matches your goal to finish the contract and move into the Analyzer.
+
+Workflow discipline is written down (preflight, verify, doc updates), which is important while we tighten the final bits.
+
+V‑TRAC module is positioned as a peer “lens” that ranks top indices and writes a bundle JSON—useful for cross‑checking VT‑straight cues against Stable’s straight/boxed scoring.
+
+My general view on your 1–9 (what’s in, what to measure, and why it’s valuable)
+
+Feature intent → working as designed (live code review via runs).
+Treat this as a mini acceptance suite per run: confirm consensus flags, star wiring (hot 1/* vs **), straight/boxed, mirror cues, extended length, and schema lock. Your plan already lists these as acceptance bullets; use them as the “check‑off” you asked for. Value: eliminates silent regressions and proves the score ledger is trustworthy.
+
+V‑TRAC relations (boxed & straight) as first‑class evidence.
+Stable should continue tagging VT‑equivalents while V‑TRAC ranks indices/VT‑straights separately; log, per winner: (a) VT index/family relation, (b) whether any top Stable canonical appeared as a VT‑straight track. Value: 8‑way reduction for boxed and precise straight paths. Your V‑TRAC module spec gives the guardrails to compare. and Stable HTML design emphasizes multi‑feature contributions including straight bonus.
+
+Compound scoring optimality (Packet‑2).
+The Packet‑2 write‑up is exactly the mechanism you described: aggregate Set‑chain depth (Set3→Set1), Draw‑chain depth (Draw7→Draw1), hot1/hot2 counts, Column‑1 touches, and additive bonuses on top of the base max score for the canonical. Confirm these land as additive columns with clear *_chain and hot* fields so they’re tunable. Value: collapses the per‑row mini‑progressions into a single canonical “survival” score, which is the signal you want to forward to the Analyzer.
+
+Reverse‑engineering wins across VT‑boxed / VT‑straight / exact.
+For each run, capture the winner’s (i) VT index/family, (ii) where it sat in the tables (Set/Draw/Column), (iii) whether Stable’s top‑N canonicals contained its permutations, and (iv) whether a VT‑straight path existed. Value: creates a closed loop between visual evidence (winners HTML) and the score ledger, so we can adjust weights based on actual hit pathways.
+
+Hot‑zones: split & recency emphasis.
+Keep hot vs hot* separate (they denote recency proximity); confirm the star wiring influences score and appears in score breakdowns. For deeper “Hot Boxes” logic later, Stable should still surface hot1/hot2 counts into compound so the dedicated module can layer more context without changing Stable internals. Value: pattern survival near column‑1 is predictive. and Macro Roadmap flags Hot Zones as a planned, complementary module (so Stable exports the inputs; the module does the deeper logic).
+
+Module boundaries (what Stable vs Analyzer should do).
+Your roadmap says “optimise self‑contained tools first, then combine” (Analyzer aggregates). That means Stable owns: per‑row features, compound survival, and hot splits; the Analyzer owns cross‑tool fusion (e.g., Stable+V‑TRAC+Digit‑Reduction). Value: keeps each tool’s brain lean and tunable; avoids duplicated logic.
+
+V‑TRAC compounding inside Stable (representation), fusion in Analyzer (decision).
+Inside Stable: unify representation so canonicals capture the padded/paired appearances of the same 3‑value core and then let compound scoring credit the Set/Draw/hot evidence. In Analyzer: fuse that with V‑TRAC’s top‑index and VT‑straight lanes. Value: prevents “winner was only present as 16788 so the 167 canonical never ranked” type misses (representation unification), while letting the Analyzer do the “is this also top VT‑index?” step.
+
+Cross‑variant relationships (C/M/E).
+Stable should count section‑presence in compound (e.g., how many of C/M/E does a canonical appear in) and keep per‑section leaders; Analyzer then does the C+M+E consensus join. This mirrors how Aux/Control Center label cross‑variant consensus as “All‑Variant (C+M+E)”. Value: promotes patterns that survive across variants.
+
+Hot‑zones ↔ wins.
+In the analysis log, explicitly note whether the winner’s signatures included hot2 near Column‑1, draw‑chain depth in Set1, and whether Set3→Set1 persistence existed. These are the recency‑proximal signals that your training material emphasizes, and your acceptance bullets already require star wiring to affect score. Value: these are your strongest “about‑to‑hit” cues.
+
+Readiness & what I’d tighten before we declare “final”
+
+Status: Example‑run ready; near‑final contract once the following are verified:
+
+Packet‑2: explicitly land & weight the compound fields.
+Make sure the compound ledger includes: set_chain_depth, draw_chain_depth, hot1_count, hot2_count, col1_hits, and a clear compound_why. That aligns 1:1 with your Packet‑2 design. Why it’s valuable: converts “evidence scattered across mini‑tables” into a single per‑canonical score we can sort and tune.
+
+Winner spotlight & metrics populated from the paired results.
+Your validation process explicitly pairs dated workbooks → next‑day results; ensure Stable’s metrics/spotlight ingest those winners so we can compute winner_family_best_rank (and the analogous rank under compound). Why: this is the backbone for reverse‑engineering and for your Analyzer’s training bundles.
+
+HTML surfaces: verify the new breakdown shows top‑30 and hot splits.
+Your current report includes “Score Breakdown (Top 30)” per section; verify that the hot‑zone split (hot* vs hot**) renders distinctly so we can sanity‑check the star wiring on the same page we rank patterns. Why: keeps analysis visual and fast.
+
+Feature lock guardrails.
+Keep the schema validation/acceptance bullets as the gating step. Why: guarantees “no silent deletions” of boxed/straight/consensus/hot etc., which your plan already calls out.
+
+Representation unification for 3‑value cores.
+Where winners appear as extended strings (e.g., 16788 vs 167), ensure the canonical maps the core so compound scoring isn’t diluted. Why: prevents misses that are purely representational (your macro says Stable still needs “three‑value handling”).
+
+Document the analysis‑run template and bake it into the workflow.
+Your Workflow Standard lays out how to preflight/verify/log; add the run‑log template there so every example produces the same artifacts and notes. Why: makes the reverse‑engineering loop repeatable across states/dates.
+
+What I recommend we measure/log during the last example runs (to inform any final tinkers)
+
+A. Winner overlay (raw tables, no scores yet):
+
+Set/Draw/Column trail; star level per column (hot*, hot**).
+
+VT index/family for the winner (from V‑TRAC).
+
+Short note on the mini‑progression behavior (e.g., Set3→Set1 tail, Draw1 proximity).
+(Use V‑TRAC analyzer’s bundle JSON to corroborate VT index presence.)
+
+B. Stable spotlight + compound evidence:
+
+Whether winner’s canonical appears in top‑N by compound; record set_chain_depth, draw_chain_depth, hot2_count, col1_hits, and the compound_why.
+
+Winner ranks in the family view vs compound view (if both exist).
+
+Any representational gaps (winner only present as extended string vs 3‑value core).
+
+C. Brain output cross‑check (Top‑30 table):
+
+Count how many top‑30 rows include winner permutations and whether they carry hot2 and Set1 Draw proximity.
+
+Note any dominant non‑winner patterns and why they outrank (to guide weight tuning).
+
+D. Takeaways / weight tweaks:
+
+If winners consistently carry hot2 + Set1 draw‑chain, increase the compound bonus for those fields; if VT‑straight correlation is strong, increase the straight/VTRAC bonuses modestly.
+
+If extended forms (e.g., 684 inside 4411886) are common carriers, strengthen the mapping from extended → core in the canonicalization step.
+
+Record any cross‑variant consensus (C+M+E) to hand off cleanly to the Analyzer. (Your Aux/Control‑Center docs already standardize the “All‑Variant (C+M+E)” label.)
+
+Bottom line
+
+Yes—close to final. We have the right surfaces (multi‑variant outputs + Top‑30 breakdowns), the right guardrails (schema lock + acceptance bullets), and a clear Packet‑2 spec for compound scoring that matches your intent.
+
+The final mile is (a) confirming winners spotlight + metrics are populated using the paired results workflow, (b) locking the compound fields/weights (Set/Draw chain, hot splits, Column‑1), and (c) writing/example‑filling the analysis‑run template so reverse‑engineering on wins becomes your standard operating procedure.
+
+Sanity‑check actions you can take now
+
+Open any fresh Stable report and verify the presence of “Score Breakdown (Top 30)” under each section (Midday/Evening/Combined). If it’s there, schema/HTML wiring is live.
+
+Re‑read the Packet‑2 bullets and confirm your run artifacts include chain/hot split fields; if not, that’s the single change to land before we freeze the contract.
+
+If you want, I can turn these items into a one‑page analysis‑run checklist (ready to paste under docs/AAT9_KIT/) so every future run captures the same evidence and we converge on the final weights methodically.
