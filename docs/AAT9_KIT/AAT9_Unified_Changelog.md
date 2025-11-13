@@ -1,3 +1,8 @@
+## 2025-11-13 - Stable reverse-engineering log + June 24 runs
+- Impact: Reran Stable + V-TRAC for Connecticut4/Indiana4/Florida4/OntarioCanada4 (results 2025-06-24) with min_occ=1, refreshed winners HTML, and captured per-state analysis entries (winner overlay, Stable evidence, compound context, follow-ups) under `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md`.
+- Impact: Documented cross-run gaps (literal winner logging, column2→column1 funnels, Combined coverage regressions, VT-lane weighting) and added the log to the KIT README / Workflow Standard so future sessions know where to append findings.
+- Files: docs/AAT9_KIT/{AAT9_Stable_Analysis_Log.md,AAT9_KIT_README.md,AAT9_Workflow_Standard.md}
+
 ## 2025-11-05 - Digit Reduction lockscore + validation suite
 - Impact: Analyzer V2 now emits config-gated `final_linear`, `final_prob`, `score_v2`, and `lockscore_v2/lockscore_prob` columns so single-column survivors, fresh echoes, and V-TRAC heat get surfaced without touching reducers or winners writers.
 - Impact: Dropped in `scripts/harness/dr_quickcheck.py` plus a winners-aware validation runner (`scripts/experiments/digit_reduction_validate.py`) and grid helper (`scripts/experiments/dr_grid_search.py`) that produce `reports/DR/<STAMP>/digit_reduction_{metrics,top_misses}.csv` and `DR_Perf_Summary.md` for rapid June-17-style regressions.

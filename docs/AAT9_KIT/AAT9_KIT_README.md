@@ -13,6 +13,7 @@ Purpose: A single, current source for AAT9 usage, structure, workflow, and updat
 - AAT9_Diagrams_Guide.md - Mermaid usage and update workflow
 - AAT9_Digit_Reduction_Training_Exports.md - stacked view plus training CSV/JSON
 - AAT9_Winners_VTrac_Report.md - per-winner V-Trac index panels (training export)
+- AAT9_Stable_Analysis_Log.md - reverse-engineered Stable runs + insights/follow-ups
 - Canonical architecture and flow (referenced)
   - docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md
   - docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md

@@ -38,6 +38,7 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
   - Entry format: `YYYY‑MM‑DD — Category — Summary — Impact — Files/Refs`
 - Checkpoint Log (detailed notes): `docs/AAT9_KIT/AAT9_Checkpoint_Log.md`
   - One short section per change with context, rationale, links
+- Stable reverse-engineering: append each analysis run (winner overlay + insights) to `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md` so future sessions can resume from the same evidence.
 - Affected docs by change type:
   - Structure/paths: update Architecture & Dir Layout; add/adjust Mermaid diagram.
   - Page wiring/data contracts: update App Flow Addendum; note page names and inputs/outputs.
@@ -82,4 +83,3 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 - Winners Full tile: shows actual modules binding, modules.vtrac_reference path, builder presence, and per-state combined tables existence.
 - V-TRAC Analyzer + Stable pages: show module bindings and tables roots for their flows.
 - Control Center batch winners expander now runs winners logging, Stable bundles, and the Digit Reduction pipeline (reducer/analyzer/overlay with optional bundle) from the same pasted sheet; set the bundle stamp before enabling either bundle toggle.
-
