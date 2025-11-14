@@ -12,6 +12,8 @@ COMPOUND_COLUMNS = [
     "base_max_score",
     "set_chain_depth",
     "draw_chain_depth",
+    "funnel_precol1",
+    "vt_only_lane",
     "hot1_count",
     "hot2_count",
     "col1_hits",
@@ -64,6 +66,9 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
         df.get("score_double_mirror", 0).fillna(0).astype(float).gt(0)
         | df.get("double_mirror", "").astype(str).str.upper().eq("Y")
     )
+    df["_draw_idx"] = (
+        df.get("Draw", "").astype(str).str.extract(r"(\d+)").fillna(-1).astype(int)
+    )
 
     compound_rows = []
     grouped = df.groupby(["section", "Canonical"], sort=False)
@@ -71,8 +76,19 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
         base_max = float(group["score"].max())
         sets = group["Set"].dropna().unique().tolist()
         set_chain = len(sets)
-        draw_chain = int(group.loc[group["Set"].eq("Set1"), "Draw"].nunique())
-        col1_hits = int((group["Column"].astype(str) == "1").sum())
+        set1_group = group[group["Set"].astype(str) == "Set1"]
+        draw_chain = int(set1_group["Draw"].nunique()) if not set1_group.empty else 0
+        col1_mask = group["Column"].astype(str) == "1"
+        col1_hits = int(col1_mask.sum())
+        funnel_precol1 = 0
+        if col1_hits > 0 and not set1_group.empty:
+            col2_hot2 = set1_group[
+                (set1_group["Column"].astype(str) == "2") & set1_group["hot_level"].eq(2)
+            ]
+            col1_rows = set1_group[set1_group["Column"].astype(str) == "1"]
+            if not col2_hot2.empty and not col1_rows.empty:
+                if col2_hot2["_draw_idx"].max() < col1_rows["_draw_idx"].min():
+                    funnel_precol1 = 1
         hot1 = int(group["is_hot1"].sum())
         hot2 = int(group["is_hot2"].sum())
         consensus_hits = int(group["is_consensus"].sum())
@@ -80,17 +96,27 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
         vtrac_hits = int(group["is_vtrac_straight"].sum())
         double_hits = int(group["is_double_mirror"].sum())
 
+        hot2_cap = cfg.get("compound.hot2_cap")
+        double_cap = cfg.get("compound.double_mirror_cap")
+        hot2_effective = min(hot2, int(hot2_cap)) if hot2_cap is not None else hot2
+        double_effective = min(double_hits, int(double_cap)) if double_cap is not None else double_hits
+        vt_only_threshold = cfg.get("compound.vt_only_threshold", 2)
+        vt_only = vtrac_hits >= int(vt_only_threshold or 0) and hot2 == 0 and col1_hits == 0
+
         bonus = (
             cfg.get("compound.set_chain_bonus", 2.0) * max(0, set_chain - 1)
             + cfg.get("compound.draw_chain_bonus", 0.5) * draw_chain
             + cfg.get("compound.col1_bonus", 1.0) * col1_hits
             + cfg.get("compound.hot1_bonus", 1.0) * hot1
-            + cfg.get("compound.hot2_bonus", 2.0) * hot2
+            + cfg.get("compound.hot2_bonus", 2.0) * hot2_effective
             + cfg.get("compound.consensus_bonus", 1.0) * consensus_hits
             + cfg.get("compound.hidden_core_bonus", 1.0) * hidden_hits
             + cfg.get("compound.vtrac_straight_bonus", 0.5) * vtrac_hits
-            + cfg.get("compound.double_mirror_bonus", 0.5) * double_hits
+            + cfg.get("compound.double_mirror_bonus", 0.5) * double_effective
+            + cfg.get("compound.col2_funnel_bonus", 1.0) * funnel_precol1
         )
+        if vt_only:
+            bonus += cfg.get("compound.vt_only_bonus", 1.0)
         compound_score = round(base_max + bonus, 3)
 
         why_bits = []
@@ -125,6 +151,8 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
                 "base_max_score": base_max,
                 "set_chain_depth": int(set_chain),
                 "draw_chain_depth": int(draw_chain),
+                "funnel_precol1": int(funnel_precol1),
+                "vt_only_lane": bool(vt_only),
                 "hot1_count": hot1,
                 "hot2_count": hot2,
                 "col1_hits": col1_hits,

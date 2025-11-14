@@ -1,0 +1,348 @@
+
+Perfect, I’ll write this as a copy-paste Codex brief you can drop straight into a new session.
+It’s structured as:
+
+Context & invariants
+
+Concrete tasks (with file paths)
+
+Acceptance tests & runbook
+
+Stable Optimization Packet – FINAL (for Codex)
+
+Context
+
+You’re taking over the Stable Pattern Extractor in the Alpha-Analytical-Tool-Clone repo to land the last round of tuning before the Analyzer/Hot-Zones module is built.
+
+The following are all already implemented and must stay intact:
+
+Multi-variant ingest (Midday/Evening/Combined)
+
+Rich row features in Scores CSV (coverage, span, straight2/3, mirror, hot, consensus flags, dominance, hidden3v, VT-straight, persistence, double-mirror, etc.)
+
+Families CSV and Metrics JSON contracts + schema guardrail (scripts/checks/validate_stable_schema.py)
+
+Packet-2 compound scoring (alpha_analytical/stable/compound.py) and Compound Leaderboard HTML section
+
+Per-state sharepacks under sharepacks/2025-06-24/<STATE>/… (CT/IN/FL/ON) with:
+
+stable/ (scores, families, compound, metrics, report, winner spotlights)
+
+winners/ (analyzer-style V-TRAC winners HTML)
+
+compound_top5.txt, headers.txt, README.md
+
+Do not delete any existing Stable score parts or CSV columns. All changes must be additive and guided via feature_config.yml where possible.
+
+Invariants (must hold after all changes)
+
+Schema & features
+
+*_stable_patterns_scores.csv continues to export all 45 columns currently in headers.txt (row-level features and score_ parts).
+
+*_stable_patterns_families.csv continues to export all 48 columns, plus any new additive ones.
+
+*_stable_patterns_compound.csv continues to export all 17 columns, plus any new additive ones.
+
+*_metrics.json continues to expose winners, winner_family_ids, winner_family_best_rank, best_compound_rank, best_straight_rank, spotlight_rate, evidence_schema_version, stable_contract_version, compound_schema_version, and signals.
+
+No feature deletions
+
+Existing score parts (score_cov, score_hpr, score_perm, score_repeat, score_straight, score_single, score_cons, score_hot, score_mirror, score_dom, score_len, score_hidden, score_vtrac_straight, score_persistence_set, score_persistence_draw, score_double_mirror, etc.) remain present and computed.
+
+Existing flags (mirror, straight2, straight3, single_left, cons_full, cons_3v, cons_stub, dom_last, dom_pair, hidden3v, hot) remain present.
+
+Guardrails
+
+python3 scripts/checks/validate_stable_schema.py --states Connecticut4 Indiana4 Florida4 OntarioCanada4 must stay green.
+
+Any new constraints (coverage, metrics keys) should be integrated into this script.
+
+Task 1 – Winner Spotlight & Metrics: Literal Logging
+
+Goal: Make it trivial to see, for each run, whether Stable directly hit the exact winners (straight/boxed/V-TRAC boxed), without mentally mapping canonicals.
+
+1.1 Extend winner spotlight CSV
+
+Relevant code:
+
+alpha_analytical/stable/winner_family_spotlight.py
+
+alpha_analytical/stable/winners_enrich.py (or equivalent enrichment helper – use rg to confirm filenames).
+
+Changes:
+
+In the spotlight writer(s), add the following columns to both *_winner_family_spotlight_raw.csv and *_winner_family_spotlight_families.csv:
+
+winner_literal_midday – raw 3-digit midday winner (string)
+
+winner_literal_evening – raw 3-digit evening winner
+
+Per row flags:
+
+is_exact_straight (bool: this row’s canonical equals winner and row type Straight)
+
+is_exact_boxed (bool: same digits any order as winner)
+
+is_vtrac_boxed (bool: in same V-TRAC family as winner, even if digits differ)
+
+Ensure these columns are always present in the CSV, with False/empty defaults for non-hits.
+
+1.2 Extend metrics JSON
+
+Relevant code:
+
+alpha_analytical/stable/metrics.py – build_metrics(...) function.
+
+Changes:
+
+Compute a winner_hits map:
+
+# Pseudocode inside build_metrics
+winner_hits = {}
+for winner in winners_list:
+    winner_hits[winner] = {
+        "exact_straight": <bool>,
+        "exact_boxed": <bool>,
+        "vtrac_boxed": <list of canonical strings>
+    }
+
+
+Use the same canonicalisation and V-TRAC mapping logic as spotlight enrichment. If any row in spotlight has is_exact_straight=True for that winner, set exact_straight=True, etc.
+
+Add this to the metrics JSON:
+
+metrics_dict = {
+    ...
+    "winner_hits": winner_hits,
+    ...
+}
+
+
+Update scripts/checks/validate_stable_schema.py to assert the presence of "winner_hits" in metrics and basic structure (key per winner).
+
+Task 2 – Combined Coverage Gate
+
+Goal: Prevent a Florida-style scenario where a Midday winner family has no Combined rows, making it impossible for an otherwise strong pattern to rank.
+
+Relevant code:
+
+scripts/checks/validate_stable_schema.py
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_scores.csv
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_metrics.json
+
+Changes:
+
+In validate_stable_schema.py, after loading metrics and scores:
+
+# Pseudocode
+scores = pd.read_csv(scores_path)
+combined_rows = scores[scores["section"] == "Combined"]
+
+for winner in metrics["winners"]:
+    canonical = _canonical(winner)  # use the same helper from stable/__init__.py or metrics
+    if not (combined_rows["Canonical"].astype(str) == canonical).any():
+        errors.append(f"{state}: Combined coverage missing for winner {winner} (canonical {canonical})")
+
+
+If any such error occurs, mark the state as FAIL.
+
+Acceptance: Running the check on CT/IN/FL/ON for 2025-06-24 must pass (Codex already fixed the Florida Combined ingest in the last session).
+
+Task 3 – Column-2 → Column-1 Funnel Bonus (Compound)
+
+Goal: Reward the “** in Column 2, then hit Column 1” funnel pattern that you observed in CT and IN training examples.
+
+Relevant code:
+
+alpha_analytical/stable/compound.py – compute_compound_scores(...)
+
+Changes:
+
+After computing set_chain, draw_chain, col1_hits, hot1, hot2, etc., add logic for a late-ladder funnel:
+
+# Only consider Set1 ladders (current day)
+set1 = group[group["Set"] == "Set1"].copy()
+if not set1.empty:
+    col2_hot2 = set1[(set1["Column"].astype(str) == "2") & (set1["hot"].astype(int) == 2)]
+    col1_any  = set1[set1["Column"].astype(str) == "1"]
+    pre_col1_funnel = 0
+    if not col2_hot2.empty and not col1_any.empty:
+        # If the last hot2 in col2 occurs before the first col1 hit in draw order
+        if col2_hot2["Draw"].max() < col1_any["Draw"].min():
+            pre_col1_funnel = 1
+else:
+    pre_col1_funnel = 0
+
+
+Include pre_col1_funnel in the bonus:
+
+bonus += cfg.get("compound.col2_funnel_bonus", 1.0) * pre_col1_funnel
+
+
+Add pre_col1_funnel to COMPOUND_COLUMNS (e.g., as funnel_precol1), and append a funnel_precol1 tag into compound_why when it’s 1 ("funnel_precol1").
+
+Add to feature_config.yml:
+
+compound.col2_funnel_bonus: 1.0
+
+Task 4 – VT-Only Lane Bonus & VT-Straight Weighting
+
+Goal: Give pure VT-lane winners (e.g., FL 271, ON 771, IN 167) a small score bump so they’re not at the absolute bottom, without overpowering hot col-1 monsters.
+
+Relevant code:
+
+alpha_analytical/stable/compound.py – same function.
+
+Changes:
+
+After computing vtrac_straight_hits, hot2, col1_hits, define:
+
+vt_only_threshold = cfg.get("compound.vt_only_threshold", 2)
+vt_only = (vtrac_hits >= vt_only_threshold) and (hot2 == 0) and (col1_hits == 0)
+if vt_only:
+    bonus += cfg.get("compound.vt_only_bonus", 1.0)
+
+
+Add a flag to compound_why:
+
+if vt_only:
+    why_bits.append("vt_only")
+
+
+In feature_config.yml, add:
+
+compound.vt_only_threshold: 2
+compound.vt_only_bonus: 1.0
+compound.vtrac_straight_bonus: 0.75  # was 0.5
+
+
+(Confirm the previous value; adjust to a modest increase.)
+
+Acceptance: After this, VT-lane winners should:
+
+Move from “buried bottom” to mid-pack in compound rank, without breaking good cases like Ontario’s 290 (which already has strong col1/hot2 and will still dominate).
+
+Task 5 – Cap Extreme hot2 & Double-Mirror Influence
+
+Goal: Prevent families like 788/688/009/559 from overwhelming everything solely by having huge hot2/double_mirror counts.
+
+Relevant code:
+
+alpha_analytical/stable/compound.py (for compound scoring)
+
+Optionally, alpha_analytical/stable/post_pass_families.py (if you also want family-level caps).
+
+Changes (compound-level is enough to start):
+
+Before computing bonus, replace:
+
+hot1 = int(group["is_hot1"].sum())
+hot2 = int(group["is_hot2"].sum())
+...
+double_hits = int(group["is_double_mirror"].sum())
+
+
+with a capped version:
+
+hot1 = int(group["is_hot1"].sum())
+hot2_raw = int(group["is_hot2"].sum())
+double_raw = int(group["is_double_mirror"].sum())
+
+hot2_cap = cfg.get("compound.hot2_cap", 10)
+double_cap = cfg.get("compound.double_mirror_cap", 20)
+
+hot2 = min(hot2_raw, hot2_cap)
+double_hits = min(double_raw, double_cap)
+
+
+The numerical columns in the CSV should still reflect the raw counts (for interpretability); only the score contribution should use the capped values. You can keep two variables (raw vs effective) to achieve that.
+
+Add to feature_config.yml:
+
+compound.hot2_cap: 10
+compound.double_mirror_cap: 20
+
+Task 6 – Update Schema Guard & Tests
+
+Goal: Keep the new features safe.
+
+Relevant code:
+
+scripts/checks/validate_stable_schema.py
+
+tests/test_stable_compound.py (already present)
+
+Changes:
+
+Schema guard: Add checks for:
+
+New compound columns: funnel_precol1, vt_only (if you decide to expose flags as columns), and ensure metrics JSON has "winner_hits" and updated "signals" fields (hot2_bias, consensus_of_consensus already there, may add "vt_only_lane" if desired).
+
+New spotlight columns: these can be optionally covered by a separate validate_stable_winners.py or augmented into the existing script if it already inspects spotlight CSVs.
+
+Tests:
+
+Extend tests/test_stable_compound.py to assert the cap and funnel logic:
+
+A synthetic group where hot2=100/double=100 must not produce a score larger than using cap values.
+
+A group with col2-hot2 then col1 hit must have funnel_precol1=1 and a non-zero funnel bonus.
+
+A VT-only group (vtrac_straight_hits≥threshold, hot2=0, col1=0) must show the vt_only bonus.
+
+If there’s a tests module for metrics (e.g., tests/test_stable_metrics.py), add assertions for winner_hits structure and compound_schema_version.
+
+Task 7 – Run & Compare (CT/IN/FL/ON on 2 dates)
+
+Runbook:
+
+Rebuild tables:
+
+python3 scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-23.xlsm
+python3 scripts/tools/run_stable_from_results.py --state Connecticut4 --results-file data/results/2025-06-24.txt --min-occ 1
+# Repeat for Indiana4, Florida4, OntarioCanada4
+
+
+Generate winners HTML:
+
+python3 scripts/tools/generate_winners_from_results.py \
+  --results-file data/results/2025-06-24.txt \
+  --out-dir reports/stable/winners_by_date/2025-06-24
+
+
+Validate:
+
+python3 scripts/checks/validate_stable_schema.py --states Connecticut4 Indiana4 Florida4 OntarioCanada4
+
+
+Inspect quick views:
+
+python3 scripts/checks/print_stable_header.py data/outputs/analysis/patterns/Connecticut4
+python3 scripts/tools/compound_top5.py data/outputs/analysis/patterns/Connecticut4/Connecticut4_stable_patterns_compound.csv
+# repeat for IN/FL/ON
+
+
+Compare before/after:
+
+For each run, note:
+
+winner_family_best_rank vs best_compound_rank (did winners move up?).
+
+Whether winner_hits now shows exact_straight/exact_boxed/vtrac_boxed.
+
+Whether any Combined coverage failures are now caught by the schema guard.
+
+Once these checks look good on two dates (you already have 2025-06-24; you can pick another), Stable’s brain is in a very strong place to feed the Analyzer and Hot Zones modules.
+
+If you paste this packet into Codex and let it work through Tasks 1–7 (with your usual validation discipline), we’ll have a Stable extractor that:
+
+Preserves all your rich features,
+
+Adds small, theory-consistent boosts where 4-state analysis showed blind spots,
+
+Clearly logs whether/where each winner was hit,
+
+And is fully ready to be treated as a finished “brain” for the next stage of AAT9.

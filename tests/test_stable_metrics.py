@@ -42,6 +42,9 @@ def test_build_metrics_basic():
         assert metrics["compression_ratio"] == pytest.approx(expected_ratio)
     assert metrics["spotlight_rate"] == pytest.approx(1.0)
     assert metrics["winner_family_ids"], "expected at least one winner family id"
+    hits = metrics.get("winner_hits") or {}
+    assert "227" in hits
+    assert hits["227"]["exact_boxed"] is True
 
 
 def test_build_metrics_detects_winner_by_family():
@@ -54,7 +57,7 @@ def test_build_metrics_detects_winner_by_family():
                 "family_id": family_id,
                 "score": 14.2,
                 "type": "straight",
-                "Canonical": "007926",
+                "Canonical": canonical,
             }
         ]
     )
@@ -75,3 +78,7 @@ def test_build_metrics_detects_winner_by_family():
     assert metrics["spotlight_rate"] == pytest.approx(1.0)
     assert metrics["winner_family_ids"] == [family_id]
     assert metrics["winner_family_best_rank"][winner] == 1
+    hits = metrics["winner_hits"][winner]
+    assert hits["exact_boxed"] is True
+    assert hits["exact_straight"] is True
+    assert canonical in hits["vtrac_boxed"]

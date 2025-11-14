@@ -25,6 +25,23 @@
 1) `generate_tables_pipeline.bat`
 2) Verify: `tables/<STATE>/` exists (or `data/outputs/tables/<STATE>/`)
 
+### Swapping Pick3StatsC4 workbooks (critical when running historical dates)
+Whenever you copy a dated workbook (e.g., `Pick3StatsC4_2025-06-24.xlsm`) into `data/original/`, you **must** regenerate the tables before running Stable/V-TRAC:
+
+1. Select the workbook  
+   `python3 scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm`
+2. Rebuild draws + tables for all states (mirrors the Control Center batch)  
+   ```bash
+   python3 - <<'PY'
+   from src.core.pipeline_runner import run_pipeline_from_original_path
+   from utils import path_handler as ph
+   run_pipeline_from_original_path(ph.get_excel_path())
+   PY
+   ```
+3. Sanity-check the tables: open `data/outputs/tables/Connecticut4/Combined_Combined.csv`, grab `Set1/Draw1/RowType=draw_data`, and confirm the last two columns match the previous day’s Midday/Evening draws recorded in `data/results/results_checkCT.txt`. This confirms the tables truly came from the intended workbook.
+
+Skipping these steps leaves the old tables in place, so every analysis would unknowingly point at the wrong date.
+
 ## Common Checks
 - If a page shows "missing data": ensure the expected directory exists (per above contracts).
 - If BA shows import issues: verify `modules/blackapple.py` path in System Health.
@@ -61,6 +78,5 @@
 ## Default model preset (Pro)
 - Select gpt-5-codex (High) after launch; switch to Medium only when you need lower latency.
 - If Aux shows legacy import errors, run `python scripts/checks/smoke_aux_vtrac.py` and confirm the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` are present.
-
 
 

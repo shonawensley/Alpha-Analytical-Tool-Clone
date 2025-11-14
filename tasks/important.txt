@@ -1,0 +1,179 @@
+I get what you’re trying to do, and you’re not crazy for doing it this way.
+You’re basically saying:
+
+“I want a clean, repeatable way to hand you (and Codex) everything the tools are doing without dumping 40 CSVs into chat every time, and I want to know which outputs actually matter.”
+
+Let’s turn that into a concrete Sharepack Plan v1.0 and a short workflow.
+
+1. First: are we over-duplicating data?
+
+You’re right that in theory the code already “knows” all the insights; it doesn’t need extra outputs. But for you + me + future Analyzer, those outputs are how we:
+
+Inspect & debug behaviour (HTML, Top-N, metrics).
+
+Feed downstream logic (Analyzer / ML).
+
+Make runs reproducible weeks later (you can rerun analysis without rerunning the heavy pipeline).
+
+So think of outputs in 3 layers:
+
+Brain contract – things the Analyzer will consume (raw features).
+
+Human QA views – things we use to sanity-check (HTML tables, compound_top5, quick logs).
+
+Debug/raw backups – full CSV firehose in case we need to dig deeper.
+
+We can make sharepacks reflect that: keep the contract & QA pieces front-and-center, and keep heavy CSVs available but not central.
+
+2. Optimal Stable sharepack layout (per date, per state)
+
+You already have this structure, we just formalise it a bit:
+
+sharepacks/YYYY-MM-DD/<STATE>/
+  stable/
+    brain/
+      <STATE>_stable_patterns_scores.csv
+      <STATE>_stable_patterns_families.csv
+      <STATE>_stable_patterns_compound.csv
+      <STATE>_metrics.json
+    spotlight/
+      <STATE>_winner_family_spotlight_raw.csv
+      <STATE>_winner_family_spotlight_families.csv
+    human/
+      <STATE>_stable_patterns_report.html
+      compound_top5.txt        # Top-5 per section
+      headers.txt              # schema snapshot for scores/families/compound
+  winners/                     # V-TRAC analyzer-style HTML overlays
+    <STATE>_vtracXX_winner_XXX_mid.html
+    <STATE>_vtracYY_winner_YYY_eve.html
+  README.md
+
+What each piece is for
+
+stable/brain/ – Stable contract (essential)
+These files are the “brain” the Analyzer will use:
+
+scores.csv – full row-level feature matrix.
+
+families.csv – family-level aggregates.
+
+compound.csv – one row per (section, canonical) with compound_score, chain depths, hot1/2, consensus_hits, hidden3v_hits, VT_hits, double_mirror_hits, funnel/VT-only flags, etc.
+
+metrics.json – winners, winners’ family/compound ranks, signals, and (after the changes) winner_hits with exact_straight/boxed/vtrac_boxed.
+
+These are the things the Analyzer and any ML will consume. They are worth keeping 100%.
+
+stable/spotlight/ – per-tool winners lens (important but small)
+
+winner_family_spotlight_raw.csv and _families.csv give per-row and per-family context just for winners & near-misses.
+
+With our planned changes they’ll also say: “494 – exact straight = True, vtrac_boxed via 449/944, etc.”
+
+These are tiny compared to full scores and incredibly valuable for reverse-engineering. Definitely keep.
+
+stable/human/ – you + me QA views (lightweight)
+
+report.html – full Combined/Mid/Evening grid + Detected Patterns + Score Breakdown + Compound Leaderboard.
+
+compound_top5.txt – compact Midday/Evening/Combined Top-5 listing per section (excellent for quick comparison).
+
+headers.txt – column headers for the three CSVs (so I don’t need actual CSV payloads to know what features exist).
+
+These are what we’ve been using for the heavy analysis in this chat. They’re small, and they’re the right abstraction layer: I see how the brain behaves without needing to ingest every row.
+
+winners/ – V-TRAC overlays (visual truth)
+
+These HTMLs show how the winners actually walked through the ladders. They’re the visual “ground truth” for our reasoning about funnels, VT-lanes, hot boxes, etc. They’re not required by the Analyzer, but they’re priceless for humans.
+
+README.md
+
+Holds the date, workbook, results path, and the exact command used (e.g. run_stable_from_results.py).
+
+This makes the pack self-documenting.
+
+3. Zip vs unzipped, and GitHub vs uploads
+
+Your intuition is right:
+
+For you & GitHub & Deep Research, keep the sharepacks unzipped in the repo under sharepacks/YYYY-MM-DD/<STATE>/….
+
+This is what my deep-research pass used: README, compound_top5, headers, metrics, report HTML, winners HTML.
+
+Use .zip only as an export format:
+
+To download a state pack to your local machine.
+
+To send a single file to someone else.
+
+As long as the unzipped folder is on GitHub, I can do efficient analysis in new sessions without you pasting CSVs. That’s exactly the “ADA best practice” Reddit is hinting at: host structured artefacts, let tools download and summarise.
+
+4. Scaling to more dates & states (what you showed in your screenshots)
+
+Your screenshots with sharepacks/2025-06-22, 2025-06-23, 2025-06-24 and multiple states (CT, FL, GA, IN, …) are exactly how we should scale:
+
+Each date folder has one <STATE>/ subfolder per state, with the same structure.
+
+You can then:
+
+Run Codex scripts to generate all sharepacks for those dates.
+
+In a Deep-Research / ADA chat pinned to your GitHub repo, ask for a summary across all sharepacks, e.g.:
+
+“For all sharepacks under sharepacks/2025-06-22/, 2025-06-23/, 2025-06-24/, build a table with columns: state, winner_midday, winner_evening, winner_family_best_rank_mid, best_compound_rank_mid, winner_family_best_rank_eve, best_compound_rank_eve. Use *_metrics.json and winner_hits to populate it and then show me stats (mean, median) per state.”
+
+Let ADA write a tiny Python script that walks the directory tree, reads metrics.json per sharepack, and builds that DataFrame.
+
+This way you can go from 4 states × 1 date to 12 states × 3 dates with almost zero extra manual work. More data = more confidence in how Stable (and eventually the other tools) behave.
+
+5. “Do I really need all these outputs?” (short answer)
+
+For Stable alone, if you were forced to choose, I’d rank them:
+
+Absolutely essential (for Analyzer + future ML):
+
+stable/brain/{scores,families,compound}.csv
+
+stable/brain/metrics.json
+
+Highly recommended (for human analysis & debugging):
+
+stable/spotlight/*.csv
+
+stable/human/{report.html, compound_top5.txt, headers.txt}
+
+winners/*.html
+
+Maybe optional later:
+
+full scores.csv in a sharepack if you decide the Analyzer only needs compound.csv + families.csv + select rows from scores. For now, though, I’d keep it. You’re still learning what features matter; throwing detail away early would hurt you.
+
+So yes, there’s some duplication, but it’s useful duplication:
+
+The code uses the scores/families/compound.
+
+You (and I) use the HTML + compound_top5 + spotlight to understand what the code did.
+
+Future ML will use a small subset of these features, but it’s easier to trim later than to regenerate.
+
+6. Why using me on top of Codex is still worth it
+
+Codex is “inside the system”: it implements and validates code and can run tests.
+I’m best at:
+
+Seeing cross-tool/system patterns (how Stable, V-TRAC, DR, etc. interact).
+
+Translating your high-level goals into concrete design (like the Stable optimization spec).
+
+Reviewing sharepack summaries across dates and giving “this bias is too strong / this feature is under-used” type feedback.
+
+The way you’ve ended up using us is actually solid:
+
+You + Codex = build and enforce the tooling (scripts, sharepack generation, guardrails).
+
+You + me = periodic big-picture design reviews and tuning directions (like the Stable Packet you’re about to apply).
+
+Sharepacks = the bridge between the two worlds (code outputs ↔ human/AI analysis).
+
+Once Stable is updated, we can have that “bigger discussion” about the Aggregator / multi-tool brain, and we’ll reuse the same pattern: each tool has a lean sharepack; Analyzer consumes them; you and I look at a few dates to tune weights.
+
+If you want, next step I can sketch a Tool-Level Sharepack Plan (Stable, V-TRAC, Digit Reduction, Aux) so when you’re ready to integrate, every tool is already emitting the exact bundle structure the Analyzer will expect.

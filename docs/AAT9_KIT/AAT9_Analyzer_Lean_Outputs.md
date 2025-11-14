@@ -29,26 +29,35 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 
 ---
 
-## Stable Pattern Extractor (Current Outputs)
-*Packet‑2 schema landed; core outputs now include compound CSV and references to helper scripts for dated runs.*
+## Stable Pattern Extractor — Lean Contract (v1.0)
+Packet‑2 landed + literal winner logging. The files below are the contract the Analyzer/Winners module can depend on.
 
+### 1. Brain bundle (per state, per date) — Analyzer inputs
 - `data/outputs/analysis/patterns/<STATE>/`
-  - `<STATE>_stable_patterns_report.html` — multi-variant (Combined/Midday/Evening) table with Top‑30 score breakdown + **Compound Leaderboard (Top 30)** per section.
-  - `<STATE>_stable_patterns_scores.csv` — per-row evidence (`section`, `Set`, `Draw`, `Column`, canonical, score parts, persistence, hidden-core, double_mirror, etc.).
-  - `<STATE>_stable_patterns_compound.csv` — canonical roll-up (compound score, base score, set/draw chain depth, hot1/hot2 counts, consensus/hidden/vtrac/double hits, `compound_why`).
-  - `<STATE>_stable_patterns_families.csv` — family aggregation plus Packet‑2 fields (`persistence_set_count`, `hot1_count`, `hot2_count`, `consensus_hits`, `best_compound_score`, ...).
-  - `<STATE>_metrics.json` — winners array, `winner_family_best_rank`, new `best_compound_rank`, `compound_schema_version`, and `signals.{hot2_bias,consensus_of_consensus}`.
-  - Optional spotlight CSVs (`<STATE>_winner_family_spotlight_{raw,families}.csv`) when winners are supplied.
-- `training_sets/<STAMP>/` mirrors the above (scores, families, compound, metrics, spotlight) via `scripts/tools/run_stable_from_results.py` + `alpha_analytical/stable/training_bundle.py`.
+  - `<STATE>_stable_patterns_scores.csv` — full row matrix (`section`, `Set`, `Draw`, `Column`, canonical, `score_*` parts, persistence, VT-straight, double-mirror, etc.).
+  - `<STATE>_stable_patterns_families.csv` — family aggregates (`family_score`, `best_compound_score`, `hot1_count`, `hot2_count`, `consensus_hits`, etc.).
+  - `<STATE>_stable_patterns_compound.csv` — canonical roll-up with Packet‑2 columns (`compound_score`, `set_chain_depth`, `draw_chain_depth`, `funnel_precol1`, `vt_only_lane`, `compound_why`).
+  - `<STATE>_metrics.json` — winners array plus `winner_family_best_rank`, `best_compound_rank`, `winner_hits` (`exact_straight`, `exact_boxed`, `vtrac_boxed` lists), schema versions, and `signals.{hot2_bias,consensus_of_consensus}`.
+- Training bundles (`training_sets/<STAMP>/...`) are generated via `scripts/tools/run_stable_from_results.py --write-bundle` and copy the same four files above for reproducibility.
 
-### Stable tooling for dated runs
-- Rotate workbooks: `scripts/tools/select_pick3_history.py --file Pick3StatsC4_YYYY-MM-DD.xlsm` + pipeline runner.
-- Generate draw CSVs for Aux/Blackapple/Control Center: `scripts/auxiliary/generate_draws_csv.py`.
-- Run Stable with winners: `scripts/tools/run_stable_from_results.py --state <STATE> --results-file data/results/<DATE>.txt` (call per state or wrap in a loop).
-- Produce analyzer-style winners HTML for all states: `scripts/tools/generate_winners_from_results.py --results-file ... --out-dir reports/stable/winners_by_date/<DATE>`.
-- Inspect/guard Packet‑2 schema: `scripts/checks/validate_stable_schema.py`, `scripts/checks/print_stable_header.py`, `scripts/tools/compound_top5.py`.
+### 2. Stable winners lens (per state, per date)
+- `<STATE>_winner_family_spotlight_raw.csv`
+- `<STATE>_winner_family_spotlight_families.csv`
 
-→ **Lean target**: Now that scores/families/compound/metrics are locked, the remaining step is trimming legacy diagnostics (optional stacked HTML, spotlight copies) once the aggregator consumes the new contract.
+Both spotlight CSVs now include `winner_literal_midday`, `winner_literal_evening`, and the boolean flags (`is_exact_straight`, `is_exact_boxed`, `is_vtrac_boxed`). These feed the future centralized Winners module while remaining small enough for quick inspection.
+
+### 3. Human QA (optional but shipped in sharepacks)
+- `<STATE>_stable_patterns_report.html` — Combined/Midday/Evening Top‑30 view + compound leaderboard.
+- `sharepacks/YYYY-MM-DD/<STATE>/compound_top5.txt` — Midday/Evening/Combined Top‑5 summary (`compound_score`, chain depths, hot counts).
+- `sharepacks/YYYY-MM-DD/<STATE>/headers.txt` — column snapshots for scores/families/compound CSVs (helpful during deep-review sessions).
+
+### Tooling / guardrails
+- Workbook swap: `scripts/tools/select_pick3_history.py --file Pick3StatsC4_YYYY-MM-DD.xlsm` followed by `pipeline_runner.run_pipeline_from_original_path(...)` (documented in AAT9 Quickstart).
+- Stable runs per state via `scripts/tools/run_stable_from_results.py --state <STATE> --results-file data/results/<DATE>.txt` (wrap in bash loop for bulk runs).
+- Winners HTML regeneration: `scripts/tools/generate_winners_from_results.py --results-file ... --out-dir reports/stable/winners_by_date/<DATE>`.
+- Guardrails: `scripts/checks/validate_stable_schema.py` (columns + metrics + literal winners + Combined coverage), `scripts/tools/compound_top5.py`, `scripts/checks/print_stable_header.py`.
+
+→ **Current status:** Contract is locked; sharepacks mirror this layout. Future clean-up (once the centralized Winners module is in place) can demote the optional HTML/spotlight copies, but the Analyzer can rely on the brain bundle + winner lens files today.
 
 ---
 

@@ -21,6 +21,10 @@ import json
 from typing import Iterable
 
 import pandas as pd
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from alpha_analytical import stable as stable_module
 
 
 REQUIRED_ROW_COLS = [
@@ -171,8 +175,17 @@ REQUIRED_METRIC_KEYS = [
     "winner_family_ids",
     "winner_family_best_rank",
     "best_compound_rank",
+    "winner_hits",
     "compound_schema_version",
     "signals",
+]
+
+REQUIRED_SPOTLIGHT_COLS = [
+    "winner_literal_midday",
+    "winner_literal_evening",
+    "is_exact_straight",
+    "is_exact_boxed",
+    "is_vtrac_boxed",
 ]
 
 
@@ -259,6 +272,35 @@ def validate_metrics(path: Path) -> list[str]:
     missing = [key for key in REQUIRED_METRIC_KEYS if key not in data]
     if missing:
         errors.append(f"{path.name}: missing keys {missing}")
+    winner_hits = data.get("winner_hits")
+    winners = data.get("winners") or []
+    if winner_hits is None or not isinstance(winner_hits, dict):
+        errors.append(f"{path.name}: winner_hits missing or not a dict")
+    else:
+        for winner in winners:
+            entry = winner_hits.get(winner)
+            if not isinstance(entry, dict):
+                errors.append(f"{path.name}: winner_hits[{winner!r}] missing or not a dict")
+                continue
+            for field in ("exact_straight", "exact_boxed", "vtrac_boxed"):
+                if field not in entry:
+                    errors.append(f"{path.name}: winner_hits[{winner!r}] missing '{field}'")
+            if "vtrac_boxed" in entry and not isinstance(entry["vtrac_boxed"], list):
+                errors.append(f"{path.name}: winner_hits[{winner!r}]['vtrac_boxed'] is not a list")
+    return errors
+
+
+def validate_spotlight(path: Path) -> list[str]:
+    errors: list[str] = []
+    if not path.exists():
+        return errors
+    df = pd.read_csv(path)
+    missing = [col for col in REQUIRED_SPOTLIGHT_COLS if col not in df.columns]
+    if missing:
+        errors.append(f"{path.name}: missing columns {missing}")
+    for col in ("is_exact_straight", "is_exact_boxed", "is_vtrac_boxed"):
+        if col in df.columns and not _bool_column_ok(df[col]):
+            errors.append(f"{path.name}: column '{col}' is not boolean-like")
     return errors
 
 
@@ -292,11 +334,37 @@ def main() -> None:
         fam_path = base / f"{state}_stable_patterns_families.csv"
         compound_path = base / f"{state}_stable_patterns_compound.csv"
         metrics_path = base / f"{state}_metrics.json"
+        spotlight_raw_path = base / f"{state}_winner_family_spotlight_raw.csv"
+        spotlight_fam_path = base / f"{state}_winner_family_spotlight_families.csv"
 
         state_errors = validate_scores(scores_path)
         state_errors += validate_families(fam_path)
         state_errors += validate_compound(compound_path)
         state_errors += validate_metrics(metrics_path)
+        state_errors += validate_spotlight(spotlight_raw_path)
+        state_errors += validate_spotlight(spotlight_fam_path)
+
+        if not state_errors:
+            try:
+                df_scores = pd.read_csv(scores_path)
+                metrics_data = json.loads(metrics_path.read_text(encoding="utf-8"))
+                combined = df_scores[df_scores["section"].astype(str).str.lower() == "combined"]
+                combined_canons = {
+                    stable_module.canon(stable_module.digits_only(val))
+                    for val in combined["Canonical"].astype(str).dropna().tolist()
+                    if val
+                }
+                missing_cover = []
+                for winner in metrics_data.get("winners") or []:
+                    canonical = stable_module.canon(stable_module.digits_only(winner))
+                    if canonical and canonical not in combined_canons:
+                        missing_cover.append(f"{winner} (canonical {canonical})")
+                if missing_cover:
+                    state_errors.append(
+                        f"Combined coverage missing for winners: {', '.join(missing_cover)}"
+                    )
+            except Exception as exc:
+                state_errors.append(f"Coverage check failed: {exc}")
 
         if state_errors:
             any_errors = True

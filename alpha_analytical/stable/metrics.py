@@ -76,6 +76,37 @@ def build_metrics(
 
     winners_list = [str(w).strip() for w in (winners or []) if str(w).strip()]
 
+    canonical_set: set[str] = set()
+    straight_canons: set[str] = set()
+    family_canon_map: dict[int, set[str]] = {}
+    family_series = None
+    if not df_scores.empty:
+        if "Canonical" in df_scores.columns:
+            canonical_set = {
+                _canonical(val)
+                for val in df_scores["Canonical"].dropna().tolist()
+                if _canonical(val)
+            }
+        if "type" in df_scores.columns and "Canonical" in df_scores.columns:
+            type_series = df_scores["type"].astype(str).str.lower()
+            straight_canons = {
+                _canonical(val)
+                for val in df_scores.loc[type_series.eq("straight"), "Canonical"]
+                .dropna()
+                .tolist()
+                if _canonical(val)
+            }
+        if {"family_id", "Canonical"}.issubset(df_scores.columns):
+            family_series = pd.to_numeric(df_scores["family_id"], errors="coerce")
+            for fam_id, canon in zip(family_series, df_scores["Canonical"]):
+                if pd.isna(fam_id):
+                    continue
+                canon_val = _canonical(canon)
+                if not canon_val:
+                    continue
+                fam_int = int(fam_id)
+                family_canon_map.setdefault(fam_int, set()).add(canon_val)
+
     # Map winner canonicals to family IDs using the highest-scoring matching row.
     detected_winners: list[str] = []
     winner_family_ids: list[int] = []
@@ -136,6 +167,17 @@ def build_metrics(
         canonical = _canonical(winner)
         winner_rank_by_compound[winner] = compound_rank_map.get(canonical)
 
+    winner_hits: dict[str, dict[str, object]] = {}
+    for winner in winners_list:
+        canonical = _canonical(winner)
+        fam_id = _to_int(_winner_family_id(winner))
+        vt_canons = sorted(family_canon_map.get(fam_id, [])) if fam_id is not None else []
+        winner_hits[winner] = {
+            "exact_straight": canonical in straight_canons,
+            "exact_boxed": canonical in canonical_set,
+            "vtrac_boxed": vt_canons,
+        }
+
     best_straight_rank = None
     if not df_scores.empty and "type" in df_scores.columns:
         sorted_rows = df_scores.sort_values("score", ascending=False, ignore_index=True)
@@ -159,6 +201,7 @@ def build_metrics(
         "best_compound_rank": {winner: winner_rank_by_compound.get(winner) for winner in winners_list},
         "best_straight_rank": best_straight_rank,
         "spotlight_rate": spotlight_rate,
+        "winner_hits": winner_hits,
         "evidence_schema_version": 1,
         "stable_contract_version": 1,
         "compound_schema_version": 1 if compound_df is not None else None,

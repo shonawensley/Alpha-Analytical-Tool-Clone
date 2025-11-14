@@ -112,3 +112,35 @@ Purpose: capture reverse-engineering notes for each (state, date) run so we can 
 - **Documentation/workflow:** Analysis runs now live here (`docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md`). Every new batch should append entries plus an updated “Insights & Follow-ups” list so future sessions restart from a single source.
 
 ---
+
+## 2025-06-24 — Extended State Sweep (Delaware → Virginia)
+
+After landing the literal-logging and compound upgrades, we reran the full roster of tracked states (sharepacks under `sharepacks/2025-06-24/<STATE>/`). The table below captures the new best-compound ranks; dashes indicate the winner still failed to surface in Combined.
+
+| State | Midday Winner (Best Compound Rank) | Evening Winner (Best Compound Rank) |
+| --- | --- | --- |
+| Connecticut4 | 494 (#305) | 858 (#590) |
+| Delaware4 | 999 (-) | 271 (-) |
+| Florida4 | 733 (#60) | 271 (-) |
+| Indiana4 | 273 (#31) | 167 (#1684) |
+| Michigan4 | 106 (-) | 213 (-) |
+| NewJersey4 | 229 (#96) | 431 (#1616) |
+| NewYork4 | 885 (-) | 587 (-) |
+| NorthCarolina4 | 562 (#1296) | 682 (#722) |
+| Ohio4 | 697 (-) | 403 (#432) |
+| OntarioCanada4 | 290 (#86) | 771 (#564) |
+| Pennsylvania4 | 893 (#13) | 222 (-) |
+| PuertoRico4 | 138 (#293) | 070 (#3) |
+| SouthCarolina4 | 005 (#457) | 584 (#911) |
+| Virginia4 | 188 (#847) | 775 (#197, vt_only_lane=True) |
+
+### Highlights & Notes
+- **VT-only bonus firing:** Virginia’s evening 775 straight hit arrived purely through the VT lane; after the new vt-only boost it climbs to rank #197 (vs previously buried in the thousands). No other winner triggered the vt-only flag yet, confirming the guardrails keep the boost narrow.
+- **Funnel metric ready:** None of the new winners exhibited the full “col2 ** then col1 hit” funnel in Set1, but the `funnel_precol1` column is now present in every sharepack so future examples can prove out the bonus.
+- **High performers:** Pennsylvania’s midday 893 now sits at #13, Puerto Rico’s evening 070 at #3, and Florida’s midday 733 at #60—these are the reference runs we’ll use when tuning cross-tool weights.
+- **Still outstanding:** VT-heavy winners with little column‑1 presence (Delaware 271, Florida 271, Michigan 213, New York 587, etc.) remain off the board despite the vt-only hook because they still retain hot2/col1 traces. These should be the first candidates when we resume tuning after the Analyzer integration.
+- **Sharepacks:** Each state subfolder includes the updated metrics JSON (with `winner_hits`), the new compound CSV columns (`funnel_precol1`, `vt_only_lane`), fresh winners HTML, and `README.md` documenting the exact commands/labels.
+
+Next action is to fold these results back into the cross-tool Analyzer work: now that every state/date run is packaged, we can script summaries (e.g., winner rank histograms) and feed them into the weight calibration discussions described in `stable_plan.txt`.
+
+---

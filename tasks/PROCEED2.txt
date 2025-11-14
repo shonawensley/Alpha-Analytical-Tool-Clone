@@ -1,0 +1,370 @@
+1) Finish Stable v1.0 + formal output list + central winners concept
+1.1 Formal Stable section in the Lean Outputs doc
+Yes – we should treat Stable exactly like Digit Reduction and give it a formal, frozen contract. You already have most of this written; we just need to crystallise it as the “brain + winners lens + QA” view.
+For Stable, I’d summarise in AAT9_Analyzer_Lean_Output_Spec.md like this (you don’t have to type this now, but this is what we want in there):
+Stable Pattern Extractor – Lean Contract (v1.0)
+Brain bundle (per state, per date) – feeds the Aggregator:
+
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_scores.csv
+
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_families.csv
+
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_compound.csv
+
+
+data/outputs/analysis/patterns/<STATE>/<STATE>_metrics.json
+
+
+Must expose: winners, winner_family_ids, winner_family_best_rank, best_compound_rank, winner_hits, compound_schema_version, signals.*.
+
+
+
+
+Stable winners lens (per tool, per date) – for central Winners module + debugging:
+
+
+.../<STATE>_winner_family_spotlight_raw.csv
+
+
+.../<STATE>_winner_family_spotlight_families.csv
+
+
+Must expose: winner_literal_midday, winner_literal_evening, is_exact_straight, is_exact_boxed, is_vtrac_boxed, etc.
+
+
+
+
+Human QA (optional):
+
+
+.../<STATE>_stable_patterns_report.html
+
+
+sharepacks/YYYY-MM-DD/<STATE>/compound_top5.txt
+
+
+sharepacks/YYYY-MM-DD/<STATE>/headers.txt
+
+
+That mirrors exactly what your sharepacks already contain. Once you paste something like that into the lean spec, Stable’s contract is “official”.
+1.2 Central winners logging
+Your mental model is spot-on:
+
+
+Each tool knows how to see winners through its own lens.
+
+
+A central winners module (part of Control Center / Aggregator) will be responsible for turning all those tool-wise hits into:
+
+
+“exact straight hit”
+
+
+“exact boxed hit”
+
+
+“VT 8-way hit”
+
+
+“VT straight-lane hit” (more on this below)
+
+
+
+
+Stable’s job is now:
+
+
+Produce winner_hits + rich spotlight CSVs.
+
+
+Use VT hints (is_vtrac_boxed, vtrac_straight_hits) but not be the final decider.
+
+
+Digit Reduction has its own view (when overlay is enabled).
+V-TRAC analyzer will have its own simple per-index winners map.
+The winners module will later do: “given all this, how strong is today’s VT8 evidence / straight evidence / DR evidence / Aux evidence for each winner?”
+So yes – your idea of “push all tool-specific winners logs into one place and analyse them together” is the right design. Stable is now prepared for that.
+
+2) Four winner types (add V-TRAC straight as a fourth)
+Totally agree. The natural hierarchy is:
+
+
+Exact straight (digits + order)
+
+
+Exact boxed (digits any order)
+
+
+VT-boxed (“winner is in this VT index; 8 combos”)
+
+
+VT-straight (“winner follows a specific VT straight lane – order clue”)
+
+
+We now have the pieces to support all four in a central winners module:
+
+
+Exact straight / boxed – Stable’s winner_hits flags + spotlight is_exact_*.
+
+
+VT-boxed – Stable is_vtrac_boxed + winner_hits[w]["vtrac_boxed"], and the V-TRAC analyzer’s index log.
+
+
+VT-straight – we can capture this two ways:
+
+
+In Stable:
+
+
+row-level score_vtrac_straight and vtrac_straight_hits in compound tell us which canonicals are part of VT-straight sequences;
+
+
+
+
+In V-TRAC analyzer:
+
+
+that big “VT straight reference chart” you mentioned (or index-level straight lanes) can be encoded in vtrac_compact_report.{csv,json} as “this index’s straight lane includes combinations: …”
+
+
+
+
+
+
+When we build the central winners module, we can explicitly log e.g.:
+"winner_classes": {
+  "733": {
+    "exact_straight": true,
+    "exact_boxed": true,
+    "vt_boxed": true,
+    "vt_straight": true
+  }
+}
+
+based on:
+
+
+Did any tool mark exact?
+
+
+Did V-TRAC index map align?
+
+
+Did Stable / V-TRAC confirm a straight-lane pattern for that winner?
+
+
+So: we don’t need to jam more VT logic into Stable now; instead we’ll make sure the winners module reads:
+
+
+Stable’s winner_hits + vtrac_straight_hits,
+
+
+V-TRAC analyzer’s per-index winners log + straight-lane definitions,
+
+
+and uses that to label each winner with those 4 categories.
+
+3) Sharepacks vs lean outputs – using this chat as the “master brain”
+You’re absolutely right that doing this in one chat helps:
+
+
+I’m tracking Stable, Digit Reduction, V-TRAC, Aux, and the lean spec and how they intersect.
+
+
+We can coordinate decisions like “this winners output moves to central module later” across all tools, not just one at a time.
+
+
+As you guessed: sharepacks ≈ “lean output + a bit extra for QA/winners”:
+
+
+For Stable: sharepacks now perfectly match what we’d call the lean contract plus a bit of QA.
+
+
+For Digit Reduction: its analyzer_v2 brain files are already lean; sharepacks for DR can be a mirror of that (per_item, top_candidates, meta, stacked HTML).
+
+
+For V-TRAC: we’ll want to define its lean brain (likely vtrac_compact_report.{csv,json} and a small meta.json).
+
+
+Once we finish Stable & update the lean spec, we’ll very quickly:
+
+
+re-document DR’s final outputs (brain/winners/QA),
+
+
+document V-TRAC’s outputs similarly,
+
+
+and do a fast pass on Aux/positional/BA.
+
+
+That’s the “tools ready for aggregator” milestone you’re aiming for.
+
+4) What to tell Codex now + running one more full day of Stable
+You’re thinking clearly: finish the current Stable plan, then recap, then sprint through the other tools.
+4.1 What Codex is waiting for
+Last Codex status:
+
+
+Winner logging ✅
+
+
+Combined coverage gate ✅
+
+
+Compound upgrades (funnel, VT-only, caps) ✅
+
+
+14-state sweep for 2025-06-24 ✅
+
+
+Extended Stable Analysis Log entry ✅
+
+
+Guardrails/tests ✅
+
+
+And it said:
+
+“For the remaining Phase 4 work (future dates/states, Analyzer prep), let me know when you want to expand to another workbook or dive into the cross-tool integration.”
+
+So the next answer you give Codex should be:
+
+“Use the current Stable code as frozen v1.0. Please:
+
+
+Run Stable again for the full state roster on one additional workbook (e.g., Pick3StatsC4_2025-06-22.xlsm with 2025-06-23 results),
+
+
+Rebuild unzipped sharepacks under sharepacks/2025-06-23/<STATE>/… for the same 14 states,
+
+
+Update AAT9_Stable_Analysis_Log.md with a new summary table and notes (similar to the Extended State Sweep section),
+
+
+Run validate_stable_schema.py on those states to confirm guardrails pass,
+
+
+Then STOP modifying Stable internals and be ready to help with Aggregator design / winners module later.”
+
+
+
+That gives us:
+
+
+two days × 14 states,
+
+
+all under the new Stable logic,
+
+
+without touching code again.
+
+
+We can review one of those new sharepacks later if you want, but the main point is: more evidence, same Stable brain.
+
+5) Big-picture path from here (for Stable and beyond)
+Let me restate the high-level steps to make sure we’re in sync:
+Step A – Finish Stable v1.0
+
+
+Codex runs the extra date and builds sharepacks.
+
+
+You and I add a Stable section to the lean output spec using the contract we now understand.
+
+
+Optional: add the small “health” bits (mini regression fixture, extra health metrics in metrics.json).
+
+
+At this point, Stable is “Aggregator-ready”.
+Step B – Your recap / vision doc
+You write that recap/vision you mentioned:
+
+
+High-level theory of how patterns, VT relations, DR reductions, Hot Zones, etc. should work together.
+
+
+What you expect each tool’s role to be in the final predictive system.
+
+
+Any non-obvious rules (like “V-TRAC straight lanes give permutation clues and should be weighted heavily”, “combined variant is the structural view, Midday/Evening are variant views”, etc.).
+
+
+We can help tidy that into a doc like docs/AAT9_KIT/AAT9_Aggregator_Vision.md. That becomes the “north star” for the Aggregator work.
+Step C – Quick passes over the other tools
+For each of:
+
+
+Digit Reduction,
+
+
+V-TRAC Analyzer,
+
+
+Aux/Blackapple/Positional,
+
+
+we do a short, focused review (much faster than Stable):
+
+
+Confirm the brain outputs (per_item/top/meta) and document them in the Lean Output spec.
+
+
+Confirm existing tests/guardrails and add any small ones if missing.
+
+
+Decide what winners outputs they produce and how those should be forwarded to the central winners module.
+
+
+We don’t need the same level of surgery we just did on Stable; we just need:
+
+
+“What files are the Aggregator going to read?”
+
+
+“What winners signals will the central winners module see from this tool?”
+
+
+Step D – Aggregator shell design
+Once all tools have a documented brain + winners lens, we design the Aggregator:
+
+
+Decide the feature schema (per canonical/VT index/family): which columns from Stable/DR/VTRAC/Aux.
+
+
+Start with a simple combined score (e.g. weighted sum or rule-based voting).
+
+
+For the first evaluation, use existing sharepacks (2025-06-24 + new date) to see how winners rank by the combined score.
+
+
+From there, the fun part begins: we can tune a few cross-tool weights and see instant changes in global behaviour, instead of diving back into each module’s guts.
+
+TL;DR answer to your last paragraph
+Yes, your plan is sound:
+
+
+Finish current Stable work (including another full day of runs).
+
+
+Finalise Stable’s lean outputs and winners logging.
+
+
+Do your recap/vision doc with everything in one chat so I keep all the context.
+
+
+Then, tool-by-tool quick passes to put DR, VTRAC, Aux into “Aggregator-ready” shape.
+
+
+Then shift to Aggregator + central winners module, where the real integrated optimisations will happen.
+
+
+If you’d like, the very next thing you do with Codex can be:
+
+“Please treat Stable as frozen v1.0 now. Run the full state roster for 2025-06-23 → 2025-06-24 style sharepacks as described in your plan, update Stable Analysis Log, and tell me when it’s done.”
+
+And when that’s finished, you and I can start drafting your recap / Aggregator vision doc.

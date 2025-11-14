@@ -22,6 +22,9 @@ def test_compound_bonus_and_sorting():
                 score_vtrac_straight=0.5,
                 score_double_mirror=0.0,
                 why="example A",
+                cons_full="Y",
+                cons_3v="N",
+                double_mirror="N",
             ),
             dict(
                 section="Combined",
@@ -37,6 +40,9 @@ def test_compound_bonus_and_sorting():
                 score_vtrac_straight=0.0,
                 score_double_mirror=0.5,
                 why="example B",
+                cons_full="N",
+                cons_3v="Y",
+                double_mirror="Y",
             ),
             dict(
                 section="Combined",
@@ -52,6 +58,9 @@ def test_compound_bonus_and_sorting():
                 score_vtrac_straight=0.5,
                 score_double_mirror=0.0,
                 why="example C",
+                cons_full="N",
+                cons_3v="N",
+                double_mirror="N",
             ),
         ]
     )

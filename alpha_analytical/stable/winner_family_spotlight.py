@@ -53,6 +53,24 @@ def build_winner_spotlight(
                 return canonical
         return ""
 
+    slot_literals = {
+        "midday": winners[0] if len(winners) >= 1 else "",
+        "evening": winners[1] if len(winners) >= 2 else "",
+    }
+
+    def _canon(value: str) -> str:
+        digits = stable_module.digits_only(value)
+        return stable_module.canon(digits) if digits else ""
+
+    slot_canons = {slot: _canon(value) for slot, value in slot_literals.items() if value}
+    slot_family_ids = {
+        slot: derive_vtrac_index_for_canonical(canon, get_vtrac_index)
+        for slot, canon in slot_canons.items()
+        if canon
+    }
+    target_canons = {c for c in slot_canons.values() if c}
+    target_families = {fid for fid in slot_family_ids.values() if fid is not None}
+
     scores = df_scores.copy()
     if "family_id" not in scores.columns or scores["family_id"].isna().all():
         scores["family_id"] = scores["Canonical"].map(_map_family)
@@ -65,14 +83,41 @@ def build_winner_spotlight(
     if not raw.empty:
         raw["raw_canonical"] = raw["Canonical"].astype(str)
         raw["family_canonical_3v"] = raw["family_id"].map(_family_canonical)
-        if "orders_modal_value" in raw.columns:
-            raw["is_exact_straight"] = raw["orders_modal_value"].astype(str).isin(winners)
-        else:
-            raw["is_exact_straight"] = False
+        raw["winner_literal_midday"] = slot_literals["midday"]
+        raw["winner_literal_evening"] = slot_literals["evening"]
+        raw["is_exact_boxed"] = raw["Canonical"].astype(str).isin(target_canons)
+        row_types = raw.get("type", pd.Series(dtype=str)).astype(str).str.lower()
+        raw["is_exact_straight"] = raw["is_exact_boxed"] & row_types.eq("straight")
+        raw["is_vtrac_boxed"] = raw["family_id"].isin(target_families)
+    else:
+        raw["winner_literal_midday"] = slot_literals["midday"]
+        raw["winner_literal_evening"] = slot_literals["evening"]
+        raw["is_exact_boxed"] = False
+        raw["is_exact_straight"] = False
+        raw["is_vtrac_boxed"] = False
 
     fam = pd.DataFrame()
     if df_families is not None and not df_families.empty:
         fam = df_families[df_families["family_id"].isin(fam_ids)].copy()
+        fam["winner_literal_midday"] = slot_literals["midday"]
+        fam["winner_literal_evening"] = slot_literals["evening"]
+        fam["is_exact_boxed"] = fam["family_id"].isin(target_families)
+        fam["is_vtrac_boxed"] = fam["is_exact_boxed"]
+        family_exact = {}
+        if not raw.empty and "family_id" in raw.columns:
+            family_exact = (
+                raw.dropna(subset=["family_id"])
+                .groupby("family_id")["is_exact_straight"]
+                .any()
+                .to_dict()
+            )
+        fam["is_exact_straight"] = fam["family_id"].map(family_exact).fillna(False)
+    else:
+        fam["winner_literal_midday"] = slot_literals["midday"]
+        fam["winner_literal_evening"] = slot_literals["evening"]
+        fam["is_exact_boxed"] = False
+        fam["is_vtrac_boxed"] = False
+        fam["is_exact_straight"] = False
 
     raw_sorted = raw.sort_values("score", ascending=False, ignore_index=True)
     fam_sorted = fam.sort_values("family_score", ascending=False, ignore_index=True) if not fam.empty else fam
