@@ -1,0 +1,77 @@
+
+
+1. Can I actually see the sharepacks on GitHub?
+
+I tried to use the GitHub connector to read:
+
+sharepacks/2025-06-23/Connecticut4/README.md
+
+and similar paths for Stable sharepacks.
+
+Internally, the GitHub tool wrapper currently has a mismatch between the declared interface and what the underlying op expects (it’s expecting a dict-like args and is instead getting a string), which is why I got errors like:
+
+'str' object has no attribute 'get'
+
+and then, when I tried the other way, a validation error from the wrapper.
+
+So:
+
+I cannot reliably fetch the actual files from GitHub with the current connector wiring, even though your repo is correctly set up.
+
+That’s a limitation of the environment, not your repo or sharepack layout. The good news is that:
+
+Codex’s log plus your prior uploads (Stable log, lean spec, etc.) describe the sharepack structure and contents in detail.
+
+The sharepack paths and winners map locations are exactly where we expect them to be.
+
+So I can’t directly “open” those GitHub files here, but I can trust and work from:
+
+docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md (which you uploaded earlier)
+
+the code for build_stable_sharepacks.py and build_winners_log.py
+
+and the Codex log you just pasted.
+
+From those, we can still reason confidently about what’s in sharepacks/2025-06-23/<STATE>/… and winners/2025-06-23/2025-06-23_winners_map.{json,csv} and how the Analyzer will use them.
+
+
+
+_________________________________________________________________________________________________________________
+
+
+3. How can you point future ChatGPT / ADA sessions at the sharepacks?
+
+Codex’s last message actually gave the right pattern:
+
+“Once ChatGPT has read access to GitHub it can pull any sharepack file directly—no extra bundling required. A sample link looks like:
+
+https://raw.githubusercontent.com/<org>/Alpha-Analytical-Tool-Clone/main/sharepacks/2025-06-23/Connecticut4/README.md”
+
+So, for another ADA session (or if this connector bug gets fixed), the recipes are:
+
+Per-state sharepack root:
+
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/sharepacks/2025-06-23/Connecticut4/README.md
+
+
+Stable brain files:
+
+.../sharepacks/2025-06-23/Connecticut4/stable/Connecticut4_stable_patterns_scores.csv
+.../sharepacks/2025-06-23/Connecticut4/stable/Connecticut4_stable_patterns_compound.csv
+.../sharepacks/2025-06-23/Connecticut4/stable/Connecticut4_metrics.json
+
+
+Winners map (all states, all variants) for the date:
+
+https://raw.githubusercontent.com/shonawensley/Alpha-Analytical-Tool-Clone/main/winners/2025-06-23/2025-06-23_winners_map.csv
+
+
+That’s all you need to tell another ChatGPT/ADA instance:
+
+“I’ve connected the repo; please read winners/2025-06-23/2025-06-23_winners_map.csv and summarise how many exact straight / VT-boxed / VT-straight hits we got for each state,”
+
+or:
+
+“Download sharepacks/2025-06-23/Florida4/stable/Florida4_stable_patterns_compound.csv and show me the top 10 compound patterns.”
+
+Because you’ve pushed the folders (not zips) to GitHub and Codex has written consistent READMEs, these raw URLs are enough; ADA can use pandas to read them and we’re off to the races.
