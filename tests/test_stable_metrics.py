@@ -45,6 +45,9 @@ def test_build_metrics_basic():
     hits = metrics.get("winner_hits") or {}
     assert "227" in hits
     assert hits["227"]["exact_boxed"] is True
+    health = metrics.get("health")
+    assert health is not None
+    assert health["compound_rows"] == 0
 
 
 def test_build_metrics_detects_winner_by_family():
@@ -82,3 +85,4 @@ def test_build_metrics_detects_winner_by_family():
     assert hits["exact_boxed"] is True
     assert hits["exact_straight"] is True
     assert canonical in hits["vtrac_boxed"]
+    assert metrics["health"]["compound_rows"] == 0

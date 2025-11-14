@@ -188,6 +188,23 @@ def build_metrics(
 
     spotlight_rate = round(len(detected_winners) / len(winners_list), 4) if winners_list else None
 
+    health = {
+        "compound_rows": 0,
+        "vt_only_lane": 0,
+        "funnel_precol1": 0,
+    }
+    if compound_df is not None and isinstance(compound_df, pd.DataFrame) and not compound_df.empty:
+        health["compound_rows"] = int(compound_df.shape[0])
+        if "vt_only_lane" in compound_df.columns:
+            health["vt_only_lane"] = int(
+                compound_df["vt_only_lane"].fillna(False).astype(bool).sum()
+            )
+        if "funnel_precol1" in compound_df.columns:
+            funnel_series = pd.to_numeric(
+                compound_df["funnel_precol1"], errors="coerce"
+            ).fillna(0)
+            health["funnel_precol1"] = int((funnel_series > 0).sum())
+
     metrics = {
         "state": state,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -202,6 +219,7 @@ def build_metrics(
         "best_straight_rank": best_straight_rank,
         "spotlight_rate": spotlight_rate,
         "winner_hits": winner_hits,
+        "health": health,
         "evidence_schema_version": 1,
         "stable_contract_version": 1,
         "compound_schema_version": 1 if compound_df is not None else None,

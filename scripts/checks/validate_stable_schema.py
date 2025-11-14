@@ -159,6 +159,8 @@ REQUIRED_COMPOUND_COLS = [
     "base_max_score",
     "set_chain_depth",
     "draw_chain_depth",
+    "funnel_precol1",
+    "vt_only_lane",
     "hot1_count",
     "hot2_count",
     "col1_hits",
@@ -176,6 +178,7 @@ REQUIRED_METRIC_KEYS = [
     "winner_family_best_rank",
     "best_compound_rank",
     "winner_hits",
+    "health",
     "compound_schema_version",
     "signals",
 ]
@@ -287,6 +290,16 @@ def validate_metrics(path: Path) -> list[str]:
                     errors.append(f"{path.name}: winner_hits[{winner!r}] missing '{field}'")
             if "vtrac_boxed" in entry and not isinstance(entry["vtrac_boxed"], list):
                 errors.append(f"{path.name}: winner_hits[{winner!r}]['vtrac_boxed'] is not a list")
+    health = data.get("health")
+    if health is None or not isinstance(health, dict):
+        errors.append(f"{path.name}: health missing or not a dict")
+    else:
+        for key in ("compound_rows", "vt_only_lane", "funnel_precol1"):
+            if key not in health:
+                errors.append(f"{path.name}: health missing '{key}'")
+                continue
+            if not isinstance(health[key], int):
+                errors.append(f"{path.name}: health['{key}'] must be int")
     return errors
 
 

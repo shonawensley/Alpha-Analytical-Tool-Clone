@@ -66,3 +66,9 @@ Each winner record should include:
 3. **Analyzer consumption** — the Analyzer’s scoring engine will read the winner map to evaluate precision/recall across tools.
 
 This document will evolve as we bring V-TRAC and Digit Reduction up to the same lean standard, but the overall goal stays the same: one canonical winners log per day, four hit categories, sourced entirely from the lean artefacts.
+
+### Prototype status (2025-06-24)
+
+- `scripts/tools/build_winners_log.py --date 2025-06-24` walks the Stable sharepacks plus the packaged V-TRAC winners HTML (per state) and exports `winners/2025-06-24/2025-06-24_winners_map.{json,csv}`.
+- Each record captures the four hit classes and Stable evidence (`best_compound_rank`, `vt_only_lane`, `funnel_precol1`) plus the detected V-TRAC index/file reference.
+- This serves as the Control Center prototype: once validated, wire it up so every sharepack batch automatically emits the same winners summary under `winners/<DATE>/`.
