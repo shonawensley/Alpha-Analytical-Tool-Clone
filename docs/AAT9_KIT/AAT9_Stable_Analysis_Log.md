@@ -144,3 +144,33 @@ After landing the literal-logging and compound upgrades, we reran the full roste
 Next action is to fold these results back into the cross-tool Analyzer work: now that every state/date run is packaged, we can script summaries (e.g., winner rank histograms) and feed them into the weight calibration discussions described in `stable_plan.txt`.
 
 ---
+
+## 2025-06-23 — Extended State Sweep (Connecticut4 → Virginia4)
+
+Using the prior workbook (Pick3StatsC4_2025-06-22.xlsm) we regenerated tables, reran Stable for the full roster, and published unzipped sharepacks under `sharepacks/2025-06-23/<STATE>/` plus a consolidated winners map (`winners/2025-06-23/2025-06-23_winners_map.{json,csv}`). The table below shows the new winner ranks with the updated contract (`funnel_precol1`, `vt_only_lane`, literal hits, health metrics).
+
+| State | Midday Winner (Best Compound Rank) | Evening Winner (Best Compound Rank) |
+| --- | --- | --- |
+| Connecticut4 | 130 (#988) | 938 (#510) |
+| Delaware4 | 669 (#1020) | 919 (#57) |
+| Florida4 | 665 (#115) | 465 (#362) |
+| Indiana4 | 110 (#46) | 032 (#510) |
+| Michigan4 | 392 (#349) | 964 (#184) |
+| NewJersey4 | 106 (#81) | 152 (#976) |
+| NewYork4 | 638 (#322) | 767 (#421) |
+| NorthCarolina4 | 920 (#521) | 145 (#23) |
+| Ohio4 | 734 (#92) | 368 (#298) |
+| OntarioCanada4 | 325 (-) | 438 (#1314) |
+| Pennsylvania4 | 164 (-) | 040 (#177) |
+| PuertoRico4 | 858 (-) | 454 (#116) |
+| SouthCarolina4 | 958 (#141) | 314 (#81) |
+| Virginia4 | 579 (-) | 385 (#317) |
+
+### Highlights & Notes
+- **First vt-only confirmation outside Virginia:** Ohio’s midday 734 fired the `vt_only_lane=True` flag (`best_compound_rank` #92) with zero column‑1 hits, validating the bonus logic on a new state/date.
+- **Funnel metric exercised:** Florida’s evening 465 posted `funnel_precol1=1`, showing how column‑2 star surges preceding a column‑1 landing are now recorded in the sharepacks for downstream weighting.
+- **Top-rank standouts:** Indiana’s midday 110 (#46) and North Carolina’s evening 145 (#23) both climbed into the Combined Top‑50; these will anchor the Analyzer regression set for mid-tier performers.
+- **Coverage gaps documented:** Ontario (325), Pennsylvania (164), Puerto Rico (858), and Virginia (579) still lack Combined rows for the midday winners; the new `validate_stable_schema.py` check will catch these regressions automatically when the tables issue is addressed.
+- **Artifacts ready for Analyzer:** Every state/date folder now includes the Lean bundle + README + headers snapshot, and the winners module prototype can ingest both the 2025-06-24 and 2025-06-23 maps without additional wiring.
+
+---
