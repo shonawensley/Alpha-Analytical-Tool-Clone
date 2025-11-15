@@ -161,6 +161,12 @@
 - Files: src/app.py, src/core/aux_config.py, scripts/auxiliary/working/modules/analyze_pairs.py, ests/test_analyze_pairs_semantics.py.
 
 
+# 2025-11-15 - Digit Reduction vt-only funnel + aggregator notes
+- Impact: Digit analyzer now records vt-only lanes, Set1 col-4/2 funnels (`funnel_precol1`, `ls_col_42`, `ls2_lane`), and the new per-item winner flags (`dr.win_vt_boxed`, `dr.win_vt_straight`); Control Center's batch runner surfaces `vt_only_hits`/`ls_col_42_hits` per state so QA can spot near-column ladders immediately.
+- Impact: Winners overlays/flags/hits JSON now emit `final_vt_boxed`/`final_vt_straight`, aligning Digit's taxonomy with Stable; fixtures + regression test (`fixtures/digit_mini`, `tests/test_digit_reduction_regression.py`) guard the vt/funnel contract.
+- Impact: Docs updated with the Digit Integrator Brief (`docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md`) and the lean outputs contract now references the vt/funnel columns and winner flag extensions (`docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md`).
+- Files: alpha_analytical/control_center/batch_runner.py, alpha_analytical/digit_reduction/analyzer_v2/{pipeline.py,winners_overlay.py,config.yml,score.py}, tests/test_digit_reduction_regression.py, fixtures/digit_mini/**, docs/AAT9_KIT/{AAT9_Digit_Analysis_Log.md,AAT9_Analyzer_Lean_Outputs.md}.
+
 ## 2025-10-02 - Aux SSOT follow-up (UI + smoke)
 - Impact: Replaced the overdue-threshold info panel with a safe join using the SSOT constants and added a fallback in the staged analyze_pairs module so Aux smokes import core/aux_config even when launched from scripts/.
 - Files: src/app.py, scripts/auxiliary/working/modules/analyze_pairs.py.

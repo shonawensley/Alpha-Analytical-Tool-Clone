@@ -115,6 +115,8 @@ def _load_winner_flags(state: str, analysis_root: Optional[Path]) -> Dict[Sectio
                     "dr.win_final_value": str(row.get("dr_win_final_value", "")),
                     "dr.win_drop_digit": str(row.get("dr_win_drop_digit", "")),
                     "dr.win_vtrac_local_index": _as_int(row.get("dr_win_vtrac_local_index", -1)),
+                    "dr.win_vt_boxed": _as_int(row.get("dr_win_vt_boxed", 0)),
+                    "dr.win_vt_straight": _as_int(row.get("dr_win_vt_straight", 0)),
                 }
                 for kind in FLAG_KIND_ORDER:
                     payload[f"dr.win_{kind}"] = _as_int(row.get(f"dr_win_{kind}", 0))
@@ -325,6 +327,8 @@ def run(state: str, analysis_root: Optional[Path | str] = None, config_path: Opt
         row.setdefault("dr.win_final_value", "")
         row.setdefault("dr.win_drop_digit", "")
         row.setdefault("dr.win_vtrac_local_index", -1)
+        row.setdefault("dr.win_vt_boxed", 0)
+        row.setdefault("dr.win_vt_straight", 0)
         for kind in FLAG_KIND_ORDER:
             row.setdefault(f"dr.win_{kind}", 0)
             row.setdefault(f"dr.win_step_{kind}", -1)

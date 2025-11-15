@@ -381,6 +381,8 @@ def _write_flags_csv(outdir: Path, stamp: str, variant: Variant, wmap: Dict[str,
         "dr_win_final_value",
         "dr_win_drop_digit",
         "dr_win_vtrac_local_index",
+        "dr_win_vt_boxed",
+        "dr_win_vt_straight",
     ])
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
@@ -408,6 +410,8 @@ def _write_flags_csv(outdir: Path, stamp: str, variant: Variant, wmap: Dict[str,
                 row.get("final_value", ""),
                 row.get("final_drop_digit", ""),
                 int(row.get("final_vtrac_local_index", -1)),
+                int(row.get("final_vt_boxed", 0)),
+                int(row.get("final_vt_straight", 0)),
             ])
             writer.writerow(record)
     return path
@@ -478,6 +482,13 @@ def _winner_item(view: Dict[str, Any], spec: WinnerSpec, ctx: WinnerContext) -> 
     if not final_kinds and all(v is None for v in earliest.values()):
         return None
 
+    vt_boxed = int(
+        any(k in final_kinds for k in (MATCH_VTRAC, MATCH_DROP_VTRAC, MATCH_FAMILY_VTRAC))
+        or any((earliest.get(k) or -1) >= 0 for k in (MATCH_VTRAC, MATCH_DROP_VTRAC, MATCH_FAMILY_VTRAC))
+    )
+    final_vtrac_local_index = _vtrac_local_index(final_value)
+    vt_straight = int(final_vtrac_local_index >= 0 and final_vtrac_local_index == ctx.vtrac_index)
+
     row: Dict[str, Any] = {
         "state": view.get("state"),
         "area": view.get("area"),
@@ -495,7 +506,9 @@ def _winner_item(view: Dict[str, Any], spec: WinnerSpec, ctx: WinnerContext) -> 
         "final_family_exact_match": MATCH_FAMILY_EXACT in final_kinds,
         "final_family_vtrac_match": MATCH_FAMILY_VTRAC in final_kinds,
         "final_drop_digit": final_analysis.get("drop_digit") or "",
-        "final_vtrac_local_index": _vtrac_local_index(final_value),
+        "final_vtrac_local_index": final_vtrac_local_index,
+        "final_vt_boxed": vt_boxed,
+        "final_vt_straight": vt_straight,
         "match_types": ",".join(sorted(final_kinds | {kind for kind, val in earliest.items() if val is not None})),
     }
 
@@ -679,6 +692,8 @@ def _write_hits_csv(path: Path, wmap: Dict[str, Any]) -> None:
     header.extend(
         [
             "final_value",
+            "final_vt_boxed",
+            "final_vt_straight",
         ]
     )
     for kind in MATCH_ORDER:
@@ -706,6 +721,8 @@ def _write_hits_csv(path: Path, wmap: Dict[str, Any]) -> None:
             for kind in MATCH_ORDER:
                 record.append(int(row.get(EARLIEST_FIELD_BY_KIND[kind], -1)))
             record.append(row.get("final_value", ""))
+            record.append(int(row.get("final_vt_boxed", 0)))
+            record.append(int(row.get("final_vt_straight", 0)))
             for kind in MATCH_ORDER:
                 record.append(1 if row.get(FINAL_FIELD_BY_KIND[kind]) else 0)
             record.extend([
@@ -1004,5 +1021,3 @@ def build_winner_overlay(
         seen.add(entry)
         unique_files.append(entry)
     return OverlayArtifacts(flag_map=flag_map, files=unique_files)
-
-

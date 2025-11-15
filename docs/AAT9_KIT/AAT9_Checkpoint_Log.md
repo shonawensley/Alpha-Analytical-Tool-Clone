@@ -627,3 +627,12 @@ Template
   - Documented the Stable run toolkit in `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md` (how to rotate workbooks, regenerate draws, run Stable, produce winners/control-center bundles) for future sessions.
 - Impact: Three dated sharepacks now exist under `reports/stable/winners_by_date/2025-06-22/…/24/` alongside control-center reports, enabling offline analysis. Stable Packet-2 schema is guarded and discoverable via CLI helpers, and future agents have a clear runbook for rotating workbooks/results without touching the UI.
 - Next: Create the Stable run log (`docs/AAT9_KIT/stable_run_log.md`) to record per-state winner analyses, then update the Unified Changelog/Workflow docs after logging the first few examples.
+
+## 2025-11-15 02:45 (UTC) - Digit Reduction vt-only funnel contract
+
+- Context: Recent example sweeps showed vt-only ladders and Set1 column-4/2 funnels were decisive but invisible to downstream tooling; winners overlays also lacked the VT boxed/straight taxonomy the future aggregator needs.
+- Change:
+  - Analyzer now persists `vt_only_lane`, `funnel_precol1`, `ls_col_42`, and `ls2_lane` in `per_item.csv`, and the scorer gives them explicit weight. Winners overlays/flags/hits gained `final_vt_boxed`/`final_vt_straight`, matching Stable's four hit classes.
+  - Control Center's batch workflow counts `vt_only_hits` and `ls_col_42_hits` per state after each run so QA can verify the new telemetry without diffing CSVs.
+  - Added a golden fixture (`fixtures/digit_mini`) and regression test (`tests/test_digit_reduction_regression.py`) to lock the contract, plus appended integrator notes in `docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md` and updated the lean outputs spec.
+- Impact: Digit's lean bundle now advertises the same VT taxonomy the winners module expects, vt-only ladders stay visible in QA, and future agents have a clear hand-off doc explaining which columns drive the scorer and aggregator.

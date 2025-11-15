@@ -320,6 +320,8 @@ def run_digit_reduction_workflow(
         state_dir = Path(ph.get_analysis_dir("digit_reduction", state))
         record: Dict[str, object] = {"state": state, "winners": _collect_digit_reduction_winners(entry)}
         reducer_ok = True
+        ls_col_42_hits: Optional[int] = None
+        vt_only_hits: Optional[int] = None
 
         if run_reducer:
             if reducer_fn is None:
@@ -382,9 +384,22 @@ def run_digit_reduction_workflow(
                 try:
                     info = analyzer_fn(state, analysis_root=analysis_root)
                     analyzer_dir = state_dir / "analyzer_v2"
+                    per_item_path = analyzer_dir / f"{state}_analyzer_v2_per_item.csv"
+                    vt_only_hits = None
+                    ls_col_42_hits = None
+                    try:
+                        import pandas as pd
+
+                        df = pd.read_csv(per_item_path, usecols=["vt_only_lane", "ls_col_42"])
+                        vt_only_hits = int(df.get("vt_only_lane", 0).fillna(0).astype(int).sum())
+                        ls_col_42_hits = int((df.get("ls_col_42", 0).fillna(0).astype(int) > 0).sum())
+                    except Exception:
+                        pass
                     record["analyzer"] = {
                         "rows": int(info.get("rows", 0) or 0),
-                        "per_item": str(analyzer_dir / f"{state}_analyzer_v2_per_item.csv"),
+                        "per_item": str(per_item_path),
+                        "vt_only_hits": vt_only_hits,
+                        "ls_col_42_hits": ls_col_42_hits,
                         "top_candidates": str(analyzer_dir / f"{state}_analyzer_v2_top_candidates.csv"),
                     }
                 except Exception as exc:  # pragma: no cover - integration tested via acceptance suite

@@ -9,7 +9,7 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 
 ### 1. Brain Bundle (per state, per run)
 - `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`
-  - `<STATE>_analyzer_v2_per_item.csv` — core features (earliest/persistence per detection class, box density, drop metadata, cross-column/variant/method echoes, recency flag, normalized score, lock_decision, reasons_json).
+  - `<STATE>_analyzer_v2_per_item.csv` — core features (earliest/persistence per detection class, box density, drop metadata, cross-column/variant/method echoes, recency flag, `vt_only_lane`, `funnel_precol1`, `ls_col_42`, `ls2_lane`, normalized score, `lock_decision`, `reasons_json`).
   - `<STATE>_analyzer_v2_top_candidates.csv` — aggregated families with score, support counts, `evidence_tags`, `steps_summary`.
   - `<STATE>_analyzer_v2_meta.json` — config hash, git SHA, diagnostics flags, file list.
   - `stacked_<variant>.html` for Midday/Evening/Combined — pre-draw human preview.
@@ -26,6 +26,8 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
   - `YYYYMMDD_<Variant>_winner_flags.csv`
   - Winners HTML (3-table view) when diagnostics enabled.
 - Combined variant still available here; analyzer bundles only carry Midday/Evening results.
+
+  Each `winner_flags.csv` now includes `dr_win_vt_boxed` and `dr_win_vt_straight` columns, and the companion `winner_hits.csv` mirrors them so downstream scripts can classify exact straight/boxed vs VT boxed/straight winners using the same taxonomy as Stable.
 
 ---
 

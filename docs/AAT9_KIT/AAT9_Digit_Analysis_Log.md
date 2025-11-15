@@ -343,3 +343,34 @@ This log captures per-state insights for each training run. Use the criteria bel
 - Georgia4/Texas4/WestVirginia4 again lacked tables; the remaining 14 states yielded 25 variant hits (11 ranks ≤5, 13 ranks ≤10). Exact hits such as Florida (695 Eve), NewYork Mid (885), and Puerto Rico Mid (074) land in the top five once they terminate in LS1 column1.
 - Connecticut Eve (864) and NorthCarolina Eve (682) both climbed to rank #1 thanks to the scoring fixes, but CT Mid (919) and Michigan Mid (106) are still buried at ranks 124 and 103 because their ladders never enter the current LS1 coverage. Similar gaps remain for NewJersey Mid (#40), NewYork Mid (#100), Ohio Mid (#29), Ontario Mid (#25), and SouthCarolina Mid (#5 but still LS2).
 - `vt_only_lane` remains zero across all winner rows, confirming the feature is computed but never emitted/weighted. Fixing that plus adding explicit LS column coverage is the next gating task before rerunning additional dates. (Latest rerun shows vt_only totals appearing for CT, IN, NY, PR, etc., yet no Set1 column-4/2 winner has landed in those boxes—evidence we still need to finish the Set2/Set1 box expansion and keep analysing future days.)
+
+### Quick QA counts after VT/LS rerun (2025-06-24 + 2025-06-25)
+- vt_only_hits surfaced broadly (CT 10, DE 3, IN 2, NY 11, ON 35, PR 17, VA 6 per date), proving the vt_only flag now flows into per_item/top outputs and Control Center QA.
+- ls_col_42_hits is still 0 across states; we’ve wired the feature and scoring, but no winner has landed in the new Set1 col-4/2 ladders yet—keep watching future runs once more dates are processed.
+
+## Integrator Notes — Ready for Aggregator
+
+**What’s powerful now**
+- VT-only awareness is first-class: `vt_only_lane`, `dr.win_vt_boxed`, and `dr.win_vt_straight` travel from per_item → top_candidates → winners overlays so the aggregator can treat VT hits as partial wins (8-combo funnels) even when exact redundancy is missing.
+- Funnel & Set1 column-4/2 metrics (`funnel_precol1`, `ls_col_42`) track the “almost there” ladders we kept seeing in the HTML, while `ls2_lane` captures Method-T/LS2 chains. Scoring weights already reward these so the aggregator can trust the rankings when those columns light up.
+- Drop-digit stability (`drop_digit`, `drop_digit_mode_stability`) + persistence/earliest telemetry remain the backbone for ranking; they’re still present in per_item rows and the `steps.csv` diagnostics so deeper reviews can replay the reductions.
+
+**Outputs the aggregator can depend on**
+- Brain bundle (per state/run): `.../analyzer_v2/{per_item,top_candidates,meta}.` Per-item rows carry every detection feature (`vt_only_lane`, funnel, LS flags, persistence, cross-variant echoes); top_candidates summarize them; meta logs config hash/git SHA.
+- Steps CSV: `.../digit_reduction_steps.csv` mirrors the reduction chain for any human/AI audit.
+- Winners lens: `.../analyzer_v2/winners/{stamp}_{Variant}_{winner_map,flags,hits,overlay}.` Flags now include `dr_win_vt_boxed` and `dr_win_vt_straight`; hits CSV mirrors the same columns for quick scripts; overlays stay the human lens.
+- Training log JSON: still the canonical input for rebuilds or golden-fixture tests.
+
+**How to interpret key scoring features**
+- `vt_only_lane=1` → winner had VT evidence but no exact hit; pair with `dr.win_vt_boxed`/`dr.win_vt_straight` to know if the VT lane is boxed only or straight-aligned.
+- `funnel_precol1=1` → the family spent time in Set1 columns 4/3 before column 1; combine with `ls_col_42` to prioritize near-column ladders.
+- `ls2_lane=1` → ladder terminates on LS2/Method T; expect combination with `vt_only_lane` for many LS2 wins.
+- `drop_digit_mode_stability` ≥2 → persistent one-digit drop exposures, typically the best signal for exact lifts.
+- `persistence_*` + `recency_carryover` let you gauge how long the family survived across columns/sets.
+
+**Sharepack alignment**
+- The per_state per_run bundles already contain the above files; no layout change from the earlier plan, just new columns in per_item/top/winner artifacts. Any aggregator script can point at `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/` and `.../training_sets/<STAMP>/` to ingest the contract.
+
+**Watcher items**
+- Keep running new dates until `ls_col_42_hits` flips >0; once we capture a real winner in those ladders we can finalize weight tuning.
+- GA/TX/WV still lack table generation; pipeline runner guards against stale data, but those states will need fresh tables before aggregator work.
