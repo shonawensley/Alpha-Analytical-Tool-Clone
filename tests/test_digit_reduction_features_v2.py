@@ -5,8 +5,12 @@ from typing import Dict, List
 
 import pytest
 
-from alpha_analytical.digit_reduction.analyzer_v2.features import build_item_feature
-from alpha_analytical.digit_reduction.analyzer_v2.pipeline import _aggregate_metrics, _load_config
+from alpha_analytical.digit_reduction.analyzer_v2.features import ItemFeature, build_item_feature
+from alpha_analytical.digit_reduction.analyzer_v2.pipeline import (
+    FLAG_KIND_ORDER,
+    _aggregate_metrics,
+    _load_config,
+)
 from alpha_analytical.digit_reduction.analyzer_v2.score import score_row
 from alpha_analytical.digit_reduction.analyzer_v2.types import Item, Key, Step
 
@@ -125,3 +129,55 @@ def test_score_row_rewards_drop_quality_and_density():
     weaker_row["box_family_density"] = 0.2
     weaker = score_row(weaker_row, config)["score"]
     assert good > weaker
+
+    baseline_row = base_row.copy()
+    baseline_row["funnel_precol1"] = 0
+    baseline_row["ls_col_42"] = 0
+    baseline = score_row(baseline_row, config)["score_raw"]
+
+    boosted_row = baseline_row.copy()
+    boosted_row["funnel_precol1"] = 1
+    boosted_row["ls_col_42"] = 1
+    boosted = score_row(boosted_row, config)["score_raw"]
+    assert boosted > baseline
+
+
+def test_aggregate_metrics_sets_vt_only_and_funnel_flags():
+    config = _load_config()
+
+    def _base_row(col: int) -> Dict[str, any]:
+        row: Dict[str, any] = {
+            "state": "TestState",
+            "area": "LS1",
+            "section": "Combined",
+            "set": "Set1",
+            "draw": "Draw1",
+            "col": col,
+            "method": "A",
+            "mode": "own",
+            "family_id": "555",
+        }
+        for kind in FLAG_KIND_ORDER:
+            row[f"earliest_{kind}_step"] = -1
+            row[f"persistence_{kind}"] = 0
+            row[f"final_{kind}_match"] = 0
+        return row
+
+    vt_row = _base_row(col=1)
+    vt_row["earliest_vtrac_step"] = 1
+    vt_row["final_vtrac_match"] = 1
+
+    col4_row = _base_row(col=4)
+    col4_row["earliest_vtrac_step"] = 2
+
+    entries = [
+        ItemFeature(row=vt_row, detail={}),
+        ItemFeature(row=col4_row, detail={}),
+    ]
+
+    _aggregate_metrics(entries, config)
+
+    assert entries[0].row["vt_only_lane"] == 1
+    assert entries[0].row["funnel_precol1"] == 1
+    assert entries[1].row["funnel_precol1"] == 1
+    assert entries[1].row["ls_col_42"] == 1

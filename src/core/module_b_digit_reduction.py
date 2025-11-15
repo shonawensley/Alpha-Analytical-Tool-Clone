@@ -54,6 +54,10 @@ COLUMNS_ORDER: List[Tuple[str, str]] = [
 
 STEP_LABEL = {0: "Orig"}  # row-header text; 0 = original string
 
+AREA1_DISPLAY_COLS = ("col7", "col6", "col5", "col4", "col2")
+AREA1_DISPLAY_LABEL = " / ".join(col.replace("col", "") for col in AREA1_DISPLAY_COLS)
+AREA1_DISPLAY_COLS_NUM = tuple(int(col.replace("col", "")) for col in AREA1_DISPLAY_COLS)
+
 # ---------------------------------------------------------------------------
 # HTML helpers
 # ---------------------------------------------------------------------------
@@ -99,7 +103,7 @@ def side_by_side(cells, sec_id):
     # Render three tables (Midday, Evening, Combined) for the given method/mode
     out = []
     for sec in ("Midday","Evening","Combined"):
-        for col in (7,6,5):
+        for col in AREA1_DISPLAY_COLS_NUM:
             for cell in cells:
                 if cell["location_id"].startswith(f"{sec}") and f"col{col}" in cell["location_id"]:
                     # Only show the table for the current method/mode
@@ -135,7 +139,7 @@ def build_html_for_cell_single(location_id: str, variation_logs: Dict, sec_id: s
 
 def render_longstring_tables(area1_cells, area2_cells, sec_id):
     out = []
-    out.append('<h3>Long-String 1 (columns 7/6/5)</h3>')
+    out.append(f'<h3>Long-String 1 (columns {AREA1_DISPLAY_LABEL})</h3>')
     out.extend(side_by_side(area1_cells, sec_id))
     out.append('<h3>Long-String 2 (Set1 Draw4 col3 & Draw6 col1)</h3>')
     out.extend(side_by_side_area2(area2_cells, sec_id))
@@ -246,10 +250,14 @@ def build_full_html(
         sec_id = f"{meth}-{md}"
         parts.append(f'<section class="method" id="{sec_id}">')
         parts.append(f'<h2>Method {meth} - {md}</h2>')
-        # LONG-STRING 1  (cols 7/6/5)
-        ls1 = [c for c in results_area1 if any(c["location_id"].endswith(f"col{x}") for x in (7,6,5))]
-        parts.append('<h3>Long-String 1  (columns 7 / 6 / 5)</h3>')
-        parts.append(grid_block(ls1, ['col7','col6','col5'], sec_id))
+        # LONG-STRING 1  (col7/6/5/4/2)
+        ls1 = [
+            c
+            for c in results_area1
+            if any(c["location_id"].endswith(col) for col in AREA1_DISPLAY_COLS)
+        ]
+        parts.append(f'<h3>Long-String 1  (columns {AREA1_DISPLAY_LABEL})</h3>')
+        parts.append(grid_block(ls1, list(AREA1_DISPLAY_COLS), sec_id))
         # LONG-STRING 2  (Set1 Draw-4 col3  + Draw-6 col1)
         ls2 = [c for c in results_area2]  # already just those two columns
         parts.append('<h3>Long-String 2  (Set1 Draw-4 col-3  & Draw-6 col-1)</h3>')

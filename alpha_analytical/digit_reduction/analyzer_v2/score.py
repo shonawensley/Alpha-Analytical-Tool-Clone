@@ -109,6 +109,23 @@ def score_row(row: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
 
     score += weights.get("w_set2_carryover", 0.0) * _as_float(row.get("recency_carryover"))
 
+    score += weights.get("w_persistence_exact", 0.0) * _as_float(row.get("persistence_exact_score"))
+    score += weights.get("w_persistence_vtrac", 0.0) * _as_float(row.get("persistence_vtrac_score"))
+    if _as_int(row.get("vt_only_lane"), 0):
+        score += weights.get("w_vt_only_lane", 0.0)
+    if _as_int(row.get("ls2_lane"), 0):
+        score += weights.get("w_ls2_lane", 0.0)
+    if _as_int(row.get("ls_col_42"), 0):
+        score += weights.get("w_ls_col_42", 0.0)
+
+    score += weights.get("w_funnel_precol1", 0.0) * _as_float(row.get("funnel_precol1"))
+
+    score += weights.get("w_col_proximity", 0.0) * _as_float(row.get("col_proximity_score"))
+    score += weights.get("w_set_progress", 0.0) * _as_float(row.get("set_progress"))
+    score += weights.get("w_set_proximity", 0.0) * _as_float(row.get("set_proximity_score"))
+    if _as_int(row.get("set1_terminal"), 0):
+        score += weights.get("w_set1_terminal", 0.0)
+
     tanh_scale = max(1e-6, _as_float(gates.get("tanh_scale", 4.0)))
     normalized = math.tanh(score / tanh_scale)
 

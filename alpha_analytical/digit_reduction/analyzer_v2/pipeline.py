@@ -133,6 +133,8 @@ def _aggregate_metrics(entries: List[ItemFeature], config: Dict[str, Any]) -> No
     method_map: DefaultDict[Tuple[str, str, str, str, str, int, str], Set[str]] = defaultdict(set)
     cluster_map: DefaultDict[Tuple[str, str, str, str, str], Set[Tuple[str, str, int]]] = defaultdict(set)
     carry_map: DefaultDict[Tuple[str, str, str, str, str], Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
+    family_cols_map: DefaultDict[Tuple[str, str, str, str, str], Set[int]] = defaultdict(set)
+    family_set_map: DefaultDict[Tuple[str, str, str, str], Set[int]] = defaultdict(set)
 
     for entry in entries:
         row = entry.row
@@ -162,6 +164,12 @@ def _aggregate_metrics(entries: List[ItemFeature], config: Dict[str, Any]) -> No
             carry_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
             carry_map[carry_key][row["set"]].append(earliest)
 
+            family_cols_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+            family_cols_map[family_cols_key].add(row["col"])
+            set_rank = {"Set1": 1, "Set2": 2, "Set3": 3}.get(row["set"], 99)
+            family_set_key = (row["state"], row["area"], row["family_id"], row["mode"])
+            family_set_map[family_set_key].add(set_rank)
+
     for entry in entries:
         row = entry.row
         cols_key = (row["state"], row["area"], row["section"], row["set"], row["draw"], row["method"], row["mode"], row["family_id"])
@@ -187,7 +195,60 @@ def _aggregate_metrics(entries: List[ItemFeature], config: Dict[str, Any]) -> No
 
         persistence_exact = _as_int(row.get("persistence_exact"), 0)
         persistence_vtrac = _as_int(row.get("persistence_vtrac"), 0)
-        row["box_pair_agree"] = int(max(persistence_exact, persistence_vtrac) >= 2)
+        row["box_pair_agree"] = int(max(persistence_exact, persistence_vtrac) >= 1)
+        row["persistence_exact_score"] = float(persistence_exact)
+        row["persistence_vtrac_score"] = float(persistence_vtrac)
+
+        family_cols_key = (row["state"], row["area"], row["section"], row["family_id"], row["mode"])
+        cols_path = sorted(family_cols_map.get(family_cols_key, {row["col"]}))
+        funnel_precol1 = 0
+        if cols_path:
+            col_min = min(cols_path)
+            col_max = max(cols_path)
+            row["col_path_span"] = col_max - col_min
+            row["col_path_min"] = col_min
+            row["col_proximity_score"] = max(0.0, (8 - col_min) / 7.0)
+            col_ints = [_as_int(col, 0) for col in cols_path if _as_int(col, 0) > 0]
+            if col_ints and str(row.get("set")) == "Set1":
+                has_col1 = any(val == 1 for val in col_ints)
+                has_pre = any(1 < val <= 4 for val in col_ints)
+                if has_col1 and has_pre:
+                    funnel_precol1 = 1
+        else:
+            row["col_path_span"] = 0
+            row["col_path_min"] = _as_int(row.get("col"), 0)
+            row["col_proximity_score"] = max(0.0, (8 - _as_int(row.get("col"), 0)) / 7.0)
+        row["funnel_precol1"] = funnel_precol1
+        col_value = _as_int(row.get("col"), 0)
+        row["ls_col_42"] = int(str(row.get("set")) == "Set1" and col_value in (4, 2))
+
+        family_set_key = (row["state"], row["area"], row["family_id"], row["mode"])
+        set_progress_vals = set(family_set_map.get(family_set_key, set()))
+        default_rank = {"Set1": 1, "Set2": 2, "Set3": 3}.get(row.get("set"), 99)
+        if not set_progress_vals and default_rank < 99:
+            set_progress_vals = {default_rank}
+        set_progress_vals = {val for val in set_progress_vals if val < 99}
+        if set_progress_vals:
+            row["set_progress"] = len(set_progress_vals)
+            min_set = min(set_progress_vals)
+            row["set_min_rank"] = min_set
+            row["set_proximity_score"] = max(0.0, (4 - min_set) / 3.0)
+        else:
+            row["set_progress"] = 0
+            row["set_min_rank"] = 99
+            row["set_proximity_score"] = 0.0
+
+        vt_final = any(
+            _as_int(row.get(f"final_{kind}_match"), 0) > 0
+            for kind in ("vtrac", "drop_vtrac", "family_vtrac")
+        )
+        exact_final = any(
+            _as_int(row.get(f"final_{kind}_match"), 0) > 0
+            for kind in ("exact", "drop_exact", "family_exact")
+        )
+        row["vt_only_lane"] = int(vt_final and not exact_final)
+        row["ls2_lane"] = int(str(row.get("area")) == "LS2" and str(row.get("set")) == "Set1")
+        row["set1_terminal"] = int(str(row.get("set")) == "Set1")
 
         row.pop("_earliest_any", None)
 
@@ -223,6 +284,8 @@ def _top_candidates(rows: List[Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dic
                 "boxes_involved": len(members),
                 "evidence_tags": ",".join(evidence),
                 "steps_summary": steps_summary,
+                "vt_only_lane": int(best.get("vt_only_lane", 0)),
+                "funnel_precol1": int(best.get("funnel_precol1", 0)),
             }
         )
     board.sort(key=lambda row: (-row["score"], -row["boxes_involved"]))

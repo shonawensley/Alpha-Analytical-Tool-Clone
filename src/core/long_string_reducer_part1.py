@@ -167,30 +167,47 @@ def load_data_from_state_dir(state_dir: Path) -> Dict[str, pd.DataFrame]:
 
     return dataframes
 
-def extract_r2_strings_area1(big_data: dict, section: str) -> Dict[str, str]:
-    """Return the nine Area‑1 R2 strings for this section from big_data.
+AREA1_COLUMN_TARGETS = {
+    "Set3": [7, 6, 5, 4],
+    "Set2": [7, 6, 5, 4, 2],
+    "Set1": [7, 6, 5, 4, 2],
+}
 
-    Keys follow pattern  <section>|<set>|Draw1|col<7/6/5>"""
+
+def extract_r2_strings_area1(big_data: dict, section: str) -> Dict[str, str]:
+    """Return the Area‑1 R2 strings for this section from big_data.
+
+    Keys follow pattern  <section>|<set>|Draw1|col<...> and now include Set1
+    column‑4/2 ladders (plus their Set2 companions) so we can analyse the
+    frequently winning “near column-1” boxes."""
     out: Dict[str, str] = {}
     if "sections" not in big_data or section not in big_data["sections"]:
         return {}
 
     section_data = big_data["sections"][section]
     if "sets" not in section_data:
-         return {}
+        return {}
 
-    # filter just R2 rows in Set3/Set2/Set1 + Draw1 structure within big_data
     for set_name in ["Set3", "Set2", "Set1"]:
-        if set_name in section_data["sets"] and "draws" in section_data["sets"][set_name] and "Draw1" in section_data["sets"][set_name]["draws"]:
-             draw_data = section_data["sets"][set_name]["draws"]["Draw1"]
-             if "pattern_variations" in draw_data and "R2" in draw_data["pattern_variations"]:
-                  column_values = draw_data["pattern_variations"]["R2"]
-                  for col_num, col_label in zip([7, 6, 5], ["7", "6", "5"]):
-                      if col_label in column_values:
-                          r2_string = str(column_values[col_label]).strip()
-                          loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
-                          if r2_string:
-                              out[loc_id] = r2_string
+        if (
+            set_name in section_data["sets"]
+            and "draws" in section_data["sets"][set_name]
+            and "Draw1" in section_data["sets"][set_name]["draws"]
+        ):
+            draw_data = section_data["sets"][set_name]["draws"]["Draw1"]
+            if "pattern_variations" not in draw_data or "R2" not in draw_data["pattern_variations"]:
+                continue
+            column_values = draw_data["pattern_variations"]["R2"]
+            targets = AREA1_COLUMN_TARGETS.get(set_name, [7, 6, 5])
+            for col_num in targets:
+                col_label = str(col_num)
+                if col_label not in column_values:
+                    continue
+                r2_string = str(column_values[col_label]).strip()
+                if not r2_string:
+                    continue
+                loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
+                out[loc_id] = r2_string
     return out
 
 

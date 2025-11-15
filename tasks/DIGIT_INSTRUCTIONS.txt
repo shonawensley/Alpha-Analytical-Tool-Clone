@@ -1,0 +1,55 @@
+OK IM GOING TO REFER TO THE BRAIN BUNDLE AND EXPLAIN HOW I WANTED IT EXPANDED "ONLY FOR TRAINING RUNS" SO DONT ADJUST THE LEAN OUT SPEC...FOR THE TRAINING RUNS THESE ARE THE KEY BRAIN OUTPUTS FOR YOU THAT
+  FROM WAHT I UNDERSTAND DEEPLY SCORE WHATS GOING ON WITHIN THE TOOL ANALYZER ETC. ### 1. Brain Bundle (per state, per run)
+  - `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`
+    - `<STATE>_analyzer_v2_per_item.csv` — core features (earliest/persistence per detection class, box density, drop metadata, cross-column/variant/method echoes, recency flag, normalized score,
+  lock_decision, reasons_json).
+    - `<STATE>_analyzer_v2_top_candidates.csv` — aggregated families with score, support counts, `evidence_tags`, `steps_summary`.
+    - `<STATE>_analyzer_v2_meta.json` — config hash, git SHA, diagnostics flags, file list.
+
+
+THE ONLY OTHER ITEM IS THE STACKED.HTML WHICH YOU CAN IGNORE
+
+
+IN TERM OF DIAGNOSTICS
+
+-ADD: DIGIT_REDUCTION_STEPS.CSV
+
+-AND BOTH winners overlay are important for midday and evening
+
+DO NOT ADD THE MASSIVE  digit_reduction_log.json which we basically retired and remains off
+
+
+
+then also we include the winners artifacts:
+
+### 3. Central Winner Artifacts
+- Control Center batch is the only writer of:
+  - `YYYYMMDD_<Variant>_winner_map.json`
+  - `YYYYMMDD_<Variant>_winner_flags.csv`
+  - Winners HTML (3-table view) when diagnostics enabled.
+
+________________________________
+
+VERY IMPORTANT - ANALYSIS INSTRUCTIONS
+
+here's how i want you to complete training AND ANALYSIS: FOR EACH STATE YOU REVIEW DO THE FOLLOWING
+
+TASK 1
+- i want you to first review the winners HTML (3-table view) winners logger output (the one that shows us the winning pattern within the string data progressions)
+-notice that the boxes that are assigned for digit reduction are highlighted in yellow so easy to follow
+-then i want you to review the winners overlay for midday and evening: by doing this you will be able to connect the boxes you see in the first output with the detailed reduction in the winner overlay, it also allows you to deeply analyze all the exact winners and vtrc winners which form within the reduction, all the different conenctions you can make across vriatns and the different steps
+
+BY VIEWING BOTH OF THESE WINNERS ARTIFACTS YOU CAN DEEPLY UNDERSTAND HOW THE WINNERS FORM IN BOTH THE ENTIRE DATASETS AND THE DEFINED R2 STRINGS + THEIR BOXES (BACK IN THE TABLE)
+
+-I WANT YOU TO NOTE IMPORTANT ANALYTICAL INSIGHTS AFTER REVIEWING THOSE ITEMS FIRST (R2/R4/R6/R8 STABILITY (3 TABLE VIEW) + REDUCTION LEVEL (DIRECT AND VTRAC PATTERN INSIGHTS) VTRAC RELATIONS , ALSO NOTE BOXES THAT REGULARLY HAVE THE WINNING PATTERNS THAT ARENT ASSIGNED TO THE DIGIT REDUCTION THAT ARE NEARBY. WE ARE LIKELY GOING TO EXTEND THE DIGIT REDUCTION TOOL TO ADD THESE ADDITONAL "LONG STRING BOXES" THAT OFTEN CONTAIN THE WINNING PATTERN CLUSTERS SO I WANT YOU TO BE NOTING THIS AND WE SHOULD SEE A PATTERN OF MOST VALUABLE R2 STRINGS/BOXES TO ADD + ANY OTHER MOST OPTIMAL INSIGHTS FOR EXTRACTING WINNING PATTERNS
+
+YOU MAY ALSO WANT TO VIEW THE REST OF THE WINNERS OUTPUTS WITHIN THE PACKAGE IF IT GIVES YOU A DEEPER INSIGHT BUT YOU MUST FIRST DO THE FIRST TASK WITH THOSE SPECIFIC WINNERS OUTPUTS
+
+ TASK 2
+
+EVALUATE ALL THE OTHER BRAIN + OUTSTANDING OUTPUTS TO GATHER INSIGHTS ABOUT SCORING OUTPUTS AND HOW THEY RELATE TO YOUR INITIAL DEEP WINNERS OUTPUT ANALYSIS AND OPTIMAL SCORING EVALUATION IN GENERAL
+
+
+TASK 3
+
+REMEMBER YOUR ADDITIONAL TRAINING AND THE "ANALYTICAL CONCLUSIONS" YOU MADE OR ANY OF THE NEW/ADDITIONAL/OR NOTED FEATURES OR ITEMS YOU ARE LOOKING FOR THAT ARE IMPORTANT--REVIEW IF THEY ARE REPRESENTING ACTUALLY OR LOGICALLY, IF NOT HOW THEY MIGHT STRENGETHN ANALYSIS FOR EXTRACTING WINNERS

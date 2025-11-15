@@ -8,9 +8,9 @@ features:
 
 weights:
   w_exact: 1.0
-  w_vtrac: 0.8
-  w_drop_exact: 0.5
-  w_drop_vtrac: 0.45
+  w_vtrac: 1.0
+  w_drop_exact: 0.55
+  w_drop_vtrac: 0.6
   w_family_exact: 0.25
   w_family_vtrac: 0.2
   w_box_family_density: 0.4
@@ -30,6 +30,16 @@ weights:
   w_drop_vtrac_multi_col_early_bonus: 0.2
   w_drop_digit_mode_stable: 0.1
   w_set2_carryover: 0.15
+  w_persistence_exact: 0.15
+  w_persistence_vtrac: 0.25
+  w_vt_only_lane: 0.4
+  w_ls2_lane: 0.2
+  w_ls_col_42: 0.25
+  w_funnel_precol1: 0.2
+  w_col_proximity: 0.35
+  w_set_progress: 0.2
+  w_set_proximity: 0.25
+  w_set1_terminal: 0.15
 
 caps:
   dup_bonus_max: 0.4

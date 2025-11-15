@@ -1,0 +1,345 @@
+# AAT9 — Digit Reduction Example Analysis Log
+
+This log captures per-state insights for each training run. Use the criteria below for every state/date.
+
+## Analysis Criteria (run per state/date)
+1. **Winners HTML (3-table view)**
+   - Trace highlighted Digit Reduction boxes (R2/R4/R6/R8) across Set3→Set2→Set1 and columns 7→6→5→3/1.
+   - Note how the R2 string progresses (stability, boxed vs straight, permutation cues).
+   - Identify nearby long strings (not currently assigned) that repeatedly host winner clusters.
+
+2. **Winners Overlays (Midday + Evening)**
+   - Cross-check the boxes from the HTML with overlay entries (R2 identity, VT families, drop scenarios).
+   - Record exact/V-TRAC hits, one-run drop exposures, and vt-family relationships.
+
+3. **Brain Bundle Scoring Review**
+   - Compare `winner_flags` with `analyzer_v2_per_item.csv` to confirm `dr.win_*` alignment.
+   - Inspect `_top_candidates.csv` to see whether early exact/V-TRAC winners rank high and whether false tops exist.
+   - Use `steps.csv` to verify the progression seen in the HTML/overlay is encoded correctly.
+
+4. **Analytical Conclusions Cross-check**
+   - Goal-aware triads present? If missing, how would capturing them improve the analyzer?
+   - Intra-box stability metrics (earliest/persistence/final) populated? If not, what signal do we lose?
+   - Cross-column/variant/set echoes observed? Record whether they’re captured and how they affect scoring.
+   - Recency and one-run drop behaviors: did they appear, and are they recognized?
+
+5. **Summary Notes (per state)**
+   - Winners HTML insights (Set/Column path, repeats, stability, near-box candidates).
+   - Overlay findings (exact/V-TRAC hits, VT relationships, drop scenarios).
+   - Scoring observations (alignment, top ranks, missing signals).
+   - Candidate extensions: list any nearby long-string boxes/R2 strings we should add (both exact and VT-family hits).
+   - Exact vs VT hits: quantify how many exact wins vs VT wins occurred in the reviewed boxes to keep emphasis on both channels.
+   - Action items or hypotheses for future runs (e.g., new boxes to add, features to implement).
+
+---
+
+## Entries
+
+> Add logs below in chronological order (state/date as headers).
+
+### 2025-06-23 — Connecticut4
+
+- **Midday winner 130:** overlay path Set3 col7 → Set3 col6 → Set2 col7 → Set1 col7 → Set1 col3; exact=36, vt=50, drop=0. score rank=#19, top rank=n/a, earliest exact=0, earliest vt=0. HTML hits: Set3: cols [5, 6, 7], Set2: cols [1, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: R2 survival is strong from Set3 down to Set1 column3/1, but analyzer rank (#19) shows the goal-aware triad isn’t fully rewarded; persistence/earliest-step metrics need more weight. Columns 4 and 2 repeatedly glow in HTML (Set1 draws), so we should plan to expand DR coverage to those near boxes. Exact vs VT counts (36/50) underline the need to keep both channels visible when we tune weights.
+
+- **Evening winner 938:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Analyzer/overlay missed this winner entirely even though the three-table view shows a clean march from Set3 column7 to Set1 column1. Need to verify detection logic for VT index 33 and ensure the box stability features (earliest/persistence) are computed before scoring. Again, Set1 columns 4/2 keep lighting up, so they’re prime candidates for the upcoming DR expansion.
+
+### 2025-06-23 — Delaware4
+
+- **Midday winner 669:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col5; exact=0, vt=18, drop=6. score rank=#52, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Pure VT/drops kept this candidate afloat, but rank #52 confirms VT-only boxes need more lift (per Analytical Conclusions). Path stays in Set3/Set2 columns 7→5 before hopping toward Set1, so we should check whether column-span bonuses are triggering. Columns 4/2 continue to carry VT echoes; logging them gives us evidence for expanding LS coverage.
+
+- **Evening winner 919:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col5; exact=26, vt=38, drop=29. score rank=#15, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Exact+drop evidence was plentiful but score rank (#15) still lagged—stability bonuses on split-by-one drops need to promote these boxes automatically. Winners HTML shows the pattern already in Set3 column5 then migrating to Set1 columns 5→1, so recency/column-span features should be checked. Column4 hits suggest another long-string box worth adding.
+
+### 2025-06-23 — Florida4
+
+- **Midday winner 665:** overlay path Set3 col7 → Set2 col7 → Set2 col6 → Set2 col5 → Set1 col7 → Set1 col6 → Set1 col1; exact=5, vt=77, drop=40. score rank=#1, top rank=#52, earliest exact=2, earliest vt=0. HTML hits: Set3: cols [5, 6, 7], Set2: cols [1, 2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: This is the reference run—VT-only triad stayed hot all the way into Set1 column1 and the analyzer finally put it at rank #1 (good validation of the VT-only lane bonus). Still, top_candidates didn’t surface it (#52), so we need to wire the latest scoring knobs into the aggregator view. HTML shows Set2 column4 repeatedly lit, reinforcing the need to add that box formally.
+
+- **Evening winner 465:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Similar to Connecticut’s evening miss—the VT lane is obvious in the HTML (Set3 col4, Set2 col4, Set1 col4→1) but the overlay never fired. We need to confirm the winners overlay is pointing at the correct VT index and that analyzer_v2 generates features even when the overlay is empty, otherwise we’ll keep missing these runs entirely.
+
+### 2025-06-23 — Indiana4
+
+- **Midday winner 110:** overlay path Set1 col3; exact=12, vt=12, drop=0. score rank=#228, top rank=n/a, earliest exact=0, earliest vt=0. HTML hits: Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Everything happened in Set1, but per_item rows still sat at rank #228—evidence that Set1-only boxes with zero column span are penalised too harshly. We should verify whether the recency bonus (Set2/Set3 echoes) is available; HTML shows column2 and column4 neighbours that the current tool ignores.
+
+- **Evening winner 032:** overlay path Set2 col7; exact=1, vt=1, drop=1. score rank=#386, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: This VT lane should have marched straight into Set1 but analyzer never lifted it (rank #386). We need to re-check VT-only scoring and ensure earliest_vtrac is recorded (it’s None here). Again, columns 4/2 keep echoing the family, so they’re top candidates for extension.
+
+### 2025-06-23 — Michigan4
+
+- **Midday winner 392:** overlay path Set1 col1; exact=0, vt=2, drop=2. score rank=#383, top rank=n/a, earliest exact=None, earliest vt=1. HTML hits: Set3: cols [2, 3, 4, 5, 6, 7], Set2: cols [1, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Winner sat entirely inside LS2 but analyzer barely noticed (score rank #383). This is another reminder that LS2 persistence (column3/1) needs explicit stability weighting; otherwise Midday recency signals get ignored. HTML again shows columns 4/2 acting as “lead-in” triads we aren’t tracking.
+
+- **Evening winner 964:** overlay path Set2 col7 → Set1 col1; exact=8, vt=10, drop=7. score rank=#152, top rank=#77, earliest exact=2, earliest vt=2. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [5, 6, 7], Set1: cols [1, 2, 3, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: At least this winner pierced Set2 then Set1, but ranking remains weak (#152). Cross-variant echo is missing—Combined and Midday both had hints in column6 but analyzer_v2 doesn’t expose that flag yet. Additional LS1 column4 hits should be logged for future box expansion.
+
+### 2025-06-23 — NewJersey4
+
+- **Midday winner 106:** overlay path Set1 col1; exact=0, vt=1, drop=1. score rank=#515, top rank=n/a, earliest exact=None, earliest vt=3. HTML hits: Set3: cols [5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another LS2-only win with essentially no analyzer lift (#515). We need to expose goal-aware triad scoring for Set1 columns 3/1 even when Set3 wasn’t involved, otherwise these straightforward hits get buried. Column4 repeats reinforce the “add adjacent box” theme.
+
+- **Evening winner 152:** overlay path Set3 col7 → Set2 col7 → Set1 col1; exact=1, vt=1, drop=1. score rank=#725, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Despite moving through Set3→Set1, analyzer ranks plunged (#725). Need to confirm whether the VT lane used here is in the config and whether persistence counts are flowing into the features. More evidence that columns 4/2 are active, so they should be on the candidate list.
+
+### 2025-06-23 — NewYork4
+
+- **Midday winner 638:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set1 col3; exact=27, vt=45, drop=12. score rank=#54, top rank=#89, earliest exact=1, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Good example of cross-column evidence (Set3 columns 7→5) yet the analyzer only landed at rank #54. We should verify that column-span bonuses (7→5→3) are applied and that VT hits aren’t diluted. HTML shows columns 4/2 again, signaling extra box demand.
+
+- **Evening winner 767:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7; exact=4, vt=36, drop=18. score rank=#22, top rank=#44, earliest exact=2, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: The VT lane was strong but still only rank #22; we should examine whether dup_density/residual_purity values are flowing. Keep logging the Set2 column4 hits—they’re consistent across states and justify future box expansion.
+
+### 2025-06-23 — NorthCarolina4
+
+- **Midday winner 920:** overlay path Set3 col7 → Set2 col6 → Set2 col5 → Set2 col3 → Set1 col7 → Set1 col6 → Set1 col5; exact=0, vt=61, drop=42. score rank=#30, top rank=#68, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Great recency example—Set3→Set2→Set1 cascade is clean. Analyzer ranks improved (#30) but we still need to capture the Set2 column3 persistence explicitly. HTML shows columns 4/2 repeating; add them to the candidate list.
+
+- **Evening winner 145:** overlay path Set3 col7 → Set2 col7 → Set1 col3; exact=0, vt=12, drop=0. score rank=#156, top rank=n/a, earliest exact=None, earliest vt=1. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another Set1-only finish with weak ranking (#156). Need to ensure LS2 stability metrics and variant echoes (Midday vs Evening) are recorded so these do not get buried. Nearby column4 hits remain a pattern.
+
+### 2025-06-23 — Ohio4
+
+- **Midday winner 734:** overlay path Set3 col7 → Set2 col7 → Set1 col7; exact=32, vt=32, drop=24. score rank=#92, top rank=n/a, earliest exact=0, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: VT-only lane plus Set1 dominance should be near the top, yet rank is #92. Need to confirm vt_only_lane flag is set and that column-span features are boosting these boxes. HTML again shows column4 survivors.
+
+- **Evening winner 368:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5; exact=11, vt=31, drop=16. score rank=#141, top rank=n/a, earliest exact=2, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Exposure is similar to Midday but ranking is worse (#141); cross-variant echo might help if we expose it. Column4/2 hits persist so they’re good add-on targets.
+
+### 2025-06-23 — OntarioCanada4
+
+- **Midday winner 325:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col3; exact=0, vt=19, drop=10. score rank=#215, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: This mirrors the Stable example—strong Set3 path but analyzer rank (#215) is poor. We need to bring over the stability metrics that helped Packet-2 so these Set3-heavy ladders float. Nearby column4 hits continue to justify box expansion.
+
+- **Evening winner 438:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col5; exact=6, vt=17, drop=10. score rank=#157, top rank=n/a, earliest exact=2, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Same story—VT-only, Set3-driven box isn’t rewarded. Need to verify persistence/residual_purity flows. Column4/2 hits logged for expansion.
+
+### 2025-06-23 — Pennsylvania4
+
+- **Midday winner 164:** overlay path Set3 col7 → Set2 col7 → Set1 col3; exact=0, vt=20, drop=17. score rank=#144, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: This VT-only lane still lands mid-pack (#144). Need to ensure vt_only_lane and column-span features are in place. HTML column4 repeats → note for expansion.
+
+- **Evening winner 040:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col5 → Set1 col5; exact=0, vt=88, drop=13. score rank=#55, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Strong VT coverage got this to rank #55 but still no top-candidate visibility. Cross-variant echo should help, and column4 needs attention.
+
+### 2025-06-23 — PuertoRico4
+
+- **Midday winner 858:** overlay path Set2 col6 → Set2 col5 → Set1 col6 → Set1 col3 → Set1 col1; exact=0, vt=30, drop=6. score rank=#58, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another LS2 finish with moderate rank—need to lift LS2 stability signals (Set1 col3/1). Column4/2 hits logged.
+
+- **Evening winner 454:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set2 col5 → Set1 col7 → Set1 col6 → Set1 col5 → Set1 col3 → Set1 col1; exact=0, vt=132, drop=24. score rank=#1, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Excellent reference for VT-heavy runs—the analyzer rewarded it with rank #1. We should capture its feature profile (vt_only_lane, column span, variant echo) to emulate on other states. Column4/2 hits confirm the extension pattern.
+
+### 2025-06-23 — SouthCarolina4
+
+- **Midday winner 958:** overlay path Set3 col7 → Set1 col3; exact=0, vt=7, drop=7. score rank=#84, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Column3-only wins still lack ranking; LS2 stability metrics need reinforcement. Column4/2 observations logged.
+
+- **Evening winner 314:** overlay path Set3 col7 → Set3 col6 → Set2 col7 → Set1 col1; exact=5, vt=14, drop=6. score rank=#204, top rank=#83, earliest exact=1, earliest vt=1. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Analyzer ranks are still weak (#204). Need to check if variant echoes (Midday vs Evening) and drop signals are recorded. Column4/2 remain hot.
+
+### 2025-06-23 — Virginia4
+
+- **Midday winner 579:** overlay path Set2 col5 → Set1 col7 → Set1 col6 → Set1 col5 → Set1 col1; exact=0, vt=40, drop=24. score rank=#149, top rank=#35, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Recency was clear (Set2 col5 feeding Set1), yet rank sits at #149—need to verify recency bonus implementation. Column4/2 hits recorded for expansion.
+
+- **Evening winner 385:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: One more overlay gap—the HTML shows the VT lane but analyzer didn’t capture it. Need to inspect overlay inputs for this state/date. Column4/2 hits remain consistent.
+
+### 2025-06-24 — Connecticut4
+
+- **Midday winner 494:** overlay path Set3 col7 → Set3 col6 → Set2 col7 → Set2 col6 → Set1 col7; exact=11, vt=55, drop=17. score rank=#19, top rank=#1, earliest exact=1, earliest vt=0. HTML hits: Set3: cols [5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 7], Set2: cols [6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Goal-aware triad flows cleanly from Set3 through Set1 column7, but we still need Set1 column2/4 coverage (HTML shows them). Analyzer rank is acceptable, yet top_candidates only spots it when column7 survives—so persistence metrics should explicitly track the Set1 column1 landing.
+
+- **Evening winner 858:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set2 col5; exact=0, vt=72, drop=0. score rank=#97, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [1, 4, 5, 6, 7], Set1: cols [2, 3, 4, 5, 6, 7], Set2: cols [1, 2, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another VT-heavy case that never reached Set1 column1 inside the overlay; HTML shows lots of Set1 column4 repeats, so we should expand coverage there and add a variant-echo flag when the same family lights Midday/Eve.
+
+### 2025-06-24 — Delaware4
+
+- **Midday winner 999:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: (no HTML hits). Extra columns beyond LS set: none.
+
+  * Notes: No hits at all—need to confirm winners overlay received the input (999) and whether the VT index returned anything. Without HTML evidence we may have a data mismatch, so rerun later once we confirm the state’s tables.
+
+- **Evening winner 271:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [4, 5], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Evening overlay also empty even though HTML shows Set2→Set1 progression. Need to diagnose why map generation failed for both variants; once fixed, column4/2 should be logged like other states.
+
+### 2025-06-24 — Florida4
+
+- **Midday winner 733:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=#77, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [1, 2, 3, 4, 5, 6, 7], Set2: cols [1, 2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: We expected this winner to mirror the earlier 733 case, but overlay never fired. Check the winners map entry to confirm the digits were parsed correctly. HTML again shows Set1 columns 4/2 staying hot.
+
+- **Evening winner 271:** overlay path Set3 col7 → Set1 col1; exact=0, vt=24, drop=2. score rank=#21, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set1: cols [1, 2, 3, 4, 5, 6, 7], Set3: cols [2, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Nice LS2 finish (Set1 col1) but analyzer rank is still mid-pack. Need to wire the vt_only_lane bonus for col1-only wins. HTML proves column4 repeats again.
+
+### 2025-06-24 — Indiana4
+
+- **Midday winner 273:** overlay path (no overlay hits); exact=0, vt=0, drop=0. score rank=n/a, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [1, 2, 3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another detection gap—we need to verify the winners overlay for VT index 11 and confirm the analyzer still wrote per-item rows for this winner.
+
+- **Evening winner 167:** overlay path Set1 col3; exact=17, vt=17, drop=0. score rank=#43, top rank=n/a, earliest exact=0, earliest vt=0. HTML hits: Set1: cols [1, 2, 3, 4, 5, 6, 7], Set3: cols [4, 5], Set2: cols [4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Set1-only run finally got a decent rank (#43) because exact hits dominated. Good test case for any stability metric adjustments; still, column4 repeats should be targeted for expansion.
+
+### 2025-06-24 — Michigan4
+
+- **Midday winner 106:** overlay path Set3 col7 → Set3 col6 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col1; exact=0, vt=12, drop=6. score rank=#352, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [1, 2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Even with Set3 involvement the analyzer ranked this at #352. Need to push the persistence metrics harder when the winner ends in LS2. Column4/2 hits again underline the expansion plan.
+
+- **Evening winner 213:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5; exact=0, vt=51, drop=12. score rank=#57, top rank=#50, earliest exact=None, earliest vt=1. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: This looks like the ideal VT lane (Set3→Set1), yet score rank is still mid-pack. Need to confirm vt_only_lane and column-span features are populating. Extra column hits logged.
+
+### 2025-06-24 — NewJersey4
+
+- **Midday winner 229:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col5; exact=0, vt=15, drop=8. score rank=#210, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Yet another VT run stuck mid-rank. Need to ensure vt_only_lane and Recency features respect Set3→Set1 behaviour. Column4 evidence noted.
+
+- **Evening winner 431:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col5 → Set1 col3; exact=0, vt=74, drop=18. score rank=#59, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Stability is good, but top_candidates still lack the winner. Need to surface vt-family weights and log the repeated Set1 column3/1 hits explicitly.
+
+### 2025-06-24 — NewYork4
+
+- **Midday winner 885:** overlay path Set3 col7 → Set2 col7 → Set1 col7 → Set1 col6 → Set1 col5; exact=0, vt=45, drop=9. score rank=#68, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another clean Set3→Set1 lane; need to confirm vt-only scoring emphasises the column7→5 cascade. Column4/2 hits recorded.
+
+- **Evening winner 587:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5; exact=0, vt=35, drop=11. score rank=#78, top rank=n/a, earliest exact=None, earliest vt=1. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Similar to Midday; we should see if the Combined variant flagged the same family to confirm variant-echo telemetry.
+
+### 2025-06-24 — NorthCarolina4
+
+- **Midday winner 562:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set2 col5 → Set1 col5 → Set1 col3; exact=0, vt=52, drop=7. score rank=#184, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [2, 3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Column-span is excellent but ranks still low; need to expose the recency bonus for Set2 columns properly. Column4/2 hits logged.
+
+- **Evening winner 682:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5; exact=0, vt=18, drop=3. score rank=#171, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Same as Midday—VT persistence exists but analyzer suppresses it; capture vt_only_lane plus Set2 echoes.
+
+### 2025-06-24 — Ohio4
+
+- **Midday winner 697:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5; exact=7, vt=15, drop=5. score rank=#146, top rank=n/a, earliest exact=1, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Moderate coverage but still not ranking. Need to confirm duplicate density/residual purity metrics are wired; column4 repeats remain.
+
+- **Evening winner 403:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5. exact=0, vt=48, drop=9. score rank=#81, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Same as Midday; push vt-only scoring and capture Set2 echo.
+
+### 2025-06-24 — OntarioCanada4
+
+- **Midday winner 290:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5; exact=0, vt=88, drop=22. score rank=#85, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Mirrors the prior Ontario case—VT-only lanes with Set3 involvement still aren’t ranked as high as they should be. Column4/2 hits logged.
+
+- **Evening winner 771:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5; exact=0, vt=56, drop=17. score rank=#71, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Same conclusion—need to boost vt_only_lane scoring.
+
+### 2025-06-24 — Pennsylvania4
+
+- **Midday winner 893:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set1 col5 → Set1 col3; exact=49, vt=71, drop=16. score rank=#13, top rank=#8, earliest exact=0, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Excellent run—ranked near the top. Capture its metrics (Set3 persistence + exact) as a template.
+
+- **Evening winner 222:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set2 col5 → Set1 col5 → Set1 col3; exact=0, vt=62, drop=9. score rank=#70, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Good VT evidence but still mid-rank; need to see if duplication density and vt-family flags are being logged.
+
+### 2025-06-24 — PuertoRico4
+
+- **Midday winner 138:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col5 → Set1 col3; exact=0, vt=27, drop=7. score rank=#293, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another Set3→Set1 run buried in scoring; same actions as above.
+
+- **Evening winner 070:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5 → Set1 col3; exact=18, vt=84, drop=15. score rank=#3, top rank=n/a, earliest exact=0, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Great reference case for vt-only scoring—rank #3 proves the knobs can push a winner when the lane is obvious.
+
+### 2025-06-24 — SouthCarolina4
+
+- **Midday winner 005:** overlay path Set3 col7 → Set1 col3; exact=0, vt=8, drop=8. score rank=#457, top rank=n/a, earliest exact=None, earliest vt=None. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: LS2-only winners remain buried (#457). Need explicit LS2 stability weighting and candidate box expansion.
+
+- **Evening winner 584:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5; exact=0, vt=39, drop=9. score rank=#911, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Rank #911 shows how underweighted VT-only lanes still are. Need to ensure vt_only_lane/persistence features are toggled.
+
+### 2025-06-24 — Virginia4
+
+- **Midday winner 188:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5. exact=0, vt=35, drop=9. score rank=#847, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Another low-ranking VT lane—same action items as above (vt_only scoring + column4 coverage).
+
+- **Evening winner 775:** overlay path Set3 col7 → Set3 col6 → Set3 col5 → Set2 col7 → Set2 col6 → Set1 col7 → Set1 col6 → Set1 col5. exact=0, vt=41, drop=18. score rank=#197, top rank=n/a, earliest exact=None, earliest vt=0. HTML hits: Set3: cols [3, 4, 5, 6, 7], Set2: cols [3, 4, 5, 6, 7], Set1: cols [1, 2, 3, 4, 5, 6, 7]. Extra columns beyond LS set: [2, 4].
+
+  * Notes: Similar path; need the same vt-only scoring upgrade plus LS1 column4 coverage.
+
+#### Day 1 summary (2025-06-23 runs)
+- All 14 tracked states (CT → VA) produced winners overlays; three non-tracked states (GA, TX, WV) still lack table directories, so they remain out of scope until tables exist.
+- Winners HTML repeatedly showed Set1 columns 4/2 glowing even when they aren’t DR boxes; this happened in every state, confirming we should extend LS coverage to those columns.
+- Analyzer ranks were generally poor for LS2-only or VT-only lanes (score ranks >100 in most Midday/Evening variants), so the stability metrics from the Analytical Conclusions (earliest_step, persistence, vt_only_lane, cross-variant echoes) are mandatory before the next scoring pass.
+- Exact vs VT evidence was logged, but the top_candidates feed rarely captured the winners—need to pipe the new metrics straight into that view and ensure overlay/flag joins are part of every QA run.
+
+#### Day 2 summary (2025-06-24 runs)
+- Running the next workbook/date confirmed the same themes: VT-only lanes dominate, LS2 finishes stay under-ranked, and columns 4/2 keep repeating across Set1 draws. We now have HTML proof for both days.
+- Several overlays (Delaware, Florida Midday, Indiana Midday, etc.) failed to produce hits even though the HTML shows clear patterns. Need to debug the overlay batch (ensure the winner digits are fed correctly and that vt indexes exist) before the next training run.
+- When the overlay did succeed, earliest exact/vtrac steps were still low (0–1) but ranks ranged from #20 to #900, reinforcing the need for persistence-based scoring.
+- Combined, the two days give us 28 Midday/Evening evaluations with consistent notes on candidate boxes, scoring gaps, and detection failures. These will drive the next implementation sprint (overlay fixes + feature wiring + LS expansion).
+
+### 2025-06-24 — Post drop-digit fix sweep (workbook 2025-06-23 → results 2025-06-24)
+
+- Workbook swap verified via `scripts/tools/select_pick3_history.py` + pipeline runner; Connecticut’s Combined table (Set1 col1=938, col2=130) matched the 2025‑06‑23 winners before any analyzer run.
+- 17 tracked states were requested; 14 produced analyzer bundles (Georgia4, Texas4, and WestVirginia4 still lack regenerated tables). Across those 14 states we logged 22 variant hits (13 ranks ≤5, 14 ranks ≤10). VT-only lanes climbed back into the top slots for Delaware Eve (271), Indiana Eve (167), Michigan Eve (213), NewJersey Eve (431), NewYork Eve (587), Ohio Eve (403), Ontario Mid/Eve, Puerto Rico Mid/Eve, etc.
+- Connecticut’s winners (494 Mid, 858 Eve) now sit at ranks 7 and 3 respectively—both pure VT detections—showing the drop-digit + density fixes restored leaderboard presence. Florida’s 271 Eve is still exact+VT but stuck at rank 35 because the lane never funnels into Set1 column1; log for LS2 coverage.
+- Lagging variants that still hug Set1 columns 4/2 or LS2: Michigan Mid (#17), NewYork Mid (#27), Ohio Mid (#23), SouthCarolina Mid (#57), Virginia Mid (#52), and NorthCarolina Eve (#69). These reinforce the need for the LS-column extension.
+- `vt_only_lane` never surfaced (>0) even on pure VT winners (Delaware 999, Ontario 771), so we still need to persist/score that flag before the Analyzer can treat VT-only ladders as first-class signals. (After the vt-only/funnel patch, reruns on this date now report vt_only counts for CT, DE, ON, PR, VA, but LS column-4/2 flags are still zero—confirming the code change worked and we still need Set1 column-4/2 content to host actual winners.)
+
+### 2025-06-25 — Post drop-digit fix sweep (workbook 2025-06-24 → results 2025-06-25)
+
+- Repeated the workflow (Set1 col1=864, col2=494) and ran the analyzer bundle stamped 20250625.
+- Georgia4/Texas4/WestVirginia4 again lacked tables; the remaining 14 states yielded 25 variant hits (11 ranks ≤5, 13 ranks ≤10). Exact hits such as Florida (695 Eve), NewYork Mid (885), and Puerto Rico Mid (074) land in the top five once they terminate in LS1 column1.
+- Connecticut Eve (864) and NorthCarolina Eve (682) both climbed to rank #1 thanks to the scoring fixes, but CT Mid (919) and Michigan Mid (106) are still buried at ranks 124 and 103 because their ladders never enter the current LS1 coverage. Similar gaps remain for NewJersey Mid (#40), NewYork Mid (#100), Ohio Mid (#29), Ontario Mid (#25), and SouthCarolina Mid (#5 but still LS2).
+- `vt_only_lane` remains zero across all winner rows, confirming the feature is computed but never emitted/weighted. Fixing that plus adding explicit LS column coverage is the next gating task before rerunning additional dates. (Latest rerun shows vt_only totals appearing for CT, IN, NY, PR, etc., yet no Set1 column-4/2 winner has landed in those boxes—evidence we still need to finish the Set2/Set1 box expansion and keep analysing future days.)

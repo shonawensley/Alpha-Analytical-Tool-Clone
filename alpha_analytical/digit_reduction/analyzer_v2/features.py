@@ -38,7 +38,7 @@ def _sanitize(value: str) -> str:
 
 
 def _first_step_with_len(steps: Sequence[Step], minimum: int) -> Optional[Step]:
-    for step in reversed(steps):
+    for step in steps:
         digits = _digits(step.value)
         if len(digits) >= minimum:
             return step
@@ -218,7 +218,7 @@ class ItemFeatureBuilder:
             self.family_run_lengths.append(max(runs))
 
     def _register_detection(self, step: Step, digits: str, clusters: List[Cluster]) -> None:
-        step_number = step.step
+        step_number = step.step + 1
         is_final = self.final_step is not None and step_number == self.final_step.step
         trigram_hits = list(iter_trigrams(digits))
 
@@ -226,6 +226,14 @@ class ItemFeatureBuilder:
             self.detections["exact"].register(step_number, is_final)
         if any(self.v_index.is_vtrac(tri) for tri in trigram_hits):
             self.detections["vtrac"].register(step_number, is_final)
+
+        unique_trip = "".join(dict.fromkeys(digits))
+        if len(unique_trip) >= 3:
+            unique_tris = [unique_trip[idx : idx + 3] for idx in range(len(unique_trip) - 2)]
+            if self.permutations and any(tri in self.permutations for tri in unique_tris):
+                self.detections["exact"].register(step_number, is_final)
+            if any(self.v_index.is_vtrac(tri) for tri in unique_tris):
+                self.detections["vtrac"].register(step_number, is_final)
 
         for collapsed, digit, run_len in drop_variants(digits):
             if not collapsed:
@@ -238,8 +246,9 @@ class ItemFeatureBuilder:
             if any(self.v_index.is_vtrac(tri) for tri in collapsed_trigrams):
                 self.detections["drop_vtrac"].register(step_number, is_final, digit, run_len)
                 drop_registered = True
+            self.drop_records_all.append((digit, run_len, step_number))
             if drop_registered:
-                self.drop_records_all.append((digit, run_len, step_number))
+                self.drop_records_all[-1] = (digit, run_len, step_number)
 
         family_digits = list(self.triplet)
         family_vkey = self.vtrac_key
@@ -261,7 +270,7 @@ class ItemFeatureBuilder:
             row[f"persistence_{kind}"] = stats.persistence
             row[f"final_{kind}_match"] = int(stats.final_match)
 
-        density = mean(self.family_mass_values) if self.family_mass_values else 0.0
+        density = max(self.family_mass_values) if self.family_mass_values else 0.0
         row["box_family_density"] = float(density)
         max_run = max(self.family_run_lengths) if self.family_run_lengths else 0
         row["dup_bonus_raw"] = max_run
@@ -293,19 +302,69 @@ class ItemFeatureBuilder:
         return len(residual)
 
     def _drop_metadata(self) -> Tuple[Optional[str], int, Optional[str], int]:
+        def _mode_with_len(records: Sequence[Tuple[str, int]]) -> Tuple[Optional[str], int, int]:
+            if not records:
+                return None, 0, 0
+            stats: Dict[str, Tuple[int, int]] = {}
+            for digit, run_len in records:
+                freq, best_len = stats.get(digit, (0, 0))
+                freq += 1
+                best_len = max(best_len, run_len or 0)
+                stats[digit] = (freq, best_len)
+
+            def _priority(item: Tuple[str, Tuple[int, int]]) -> Tuple[int, int, int]:
+                digit, (freq, best_len) = item
+                # Prefer higher freq, longer runs, and deterministic digit ordering.
+                return (freq, best_len, -ord(digit[0]) if digit else 0)
+
+            digit_mode, (freq, best_len) = max(stats.items(), key=_priority)
+            return digit_mode, best_len, freq
+
+        def _scarce_digit(records: Sequence[Tuple[str, int, int]]) -> Tuple[Optional[str], int]:
+            if not records:
+                return None, 0
+            stats: Dict[str, Tuple[int, int, int]] = {}
+            for digit, run_len, step_number in records:
+                freq, best_len, earliest = stats.get(digit, (0, 0, step_number))
+                freq += 1
+                best_len = max(best_len, run_len or 0)
+                earliest = min(earliest, step_number)
+                stats[digit] = (freq, best_len, earliest)
+
+            def _priority(item: Tuple[str, Tuple[int, int, int]]) -> Tuple[int, int, int, int]:
+                digit, (freq, best_len, earliest) = item
+                # Prefer digits that disappear quickly (lower freq), surfaced earlier, then longer runs.
+                return (freq, earliest, -best_len, ord(digit[0]) if digit else 0)
+
+            digit_choice, (_, best_len, _) = min(stats.items(), key=_priority)
+            return digit_choice, best_len
+
         drop_stats = (
             self.detections["drop_exact"].drop_records
             + self.detections["drop_vtrac"].drop_records
         )
-        first_digit = drop_stats[0][0] if drop_stats else None
-        first_len = drop_stats[0][1] if drop_stats else 0
-        if not drop_stats:
+        collapsed_all = [(digit, run_len) for digit, run_len, _ in self.drop_records_all]
+
+        preferred_digit: Optional[str]
+        preferred_len: int
+        if self.drop_records_all:
+            preferred_digit, preferred_len = _scarce_digit(self.drop_records_all)
+        elif collapsed_all:
+            preferred_digit, preferred_len, _ = _mode_with_len(collapsed_all)
+        elif drop_stats:
+            preferred_digit, preferred_len, _ = _mode_with_len(drop_stats)
+        else:
             return None, 0, None, 0
-        counter: Dict[str, int] = {}
-        for digit, _ in drop_stats:
-            counter[digit] = counter.get(digit, 0) + 1
-        digit_mode, strength = max(counter.items(), key=lambda kv: kv[1])
-        return first_digit, first_len, digit_mode, strength
+
+        if preferred_digit is None:
+            return None, 0, None, 0
+
+        if drop_stats:
+            mode_digit, _, mode_strength = _mode_with_len(drop_stats)
+        else:
+            mode_digit = preferred_digit
+            mode_strength = 1
+        return preferred_digit, preferred_len, mode_digit, mode_strength
 
 def build_item_feature(item: Item, config: Dict[str, Any]) -> ItemFeature:
     builder = ItemFeatureBuilder(item, config)
