@@ -1,0 +1,106 @@
+it’s Codex bumping into a plumbing gap, not corrupting anything.
+
+Let me translate what’s going on and what you should say back.
+
+What that snippet really means
+
+Codex has:
+
+Added new scoring components:
+
+straight_lane_score
+
+winner_lane_floor
+
+strengthened recency / echo weights
+
+Wired those into TOOLS/vtrac_score_and_export.py and updated configs/vtrac_score_config.json.
+
+Kept all tests passing (pytest for vtrac_score_export, validation script, etc.).
+
+Regenerated the validation bundle (summary.csv/md, zip).
+
+So the scoring pipeline still runs and is safe.
+
+The problem it’s describing now is only this:
+
+“I can’t reliably map ‘this good lane’ back to a specific VT index, so my lane promotion ends up picking the same overlap/recency ties as before.”
+
+Why? Because:
+
+The analyzer JSON (…_vtrac_enhanced_*.json) has:
+
+indices_ranked: list of {index, evidence: {raw: {sections: […]}, …}}
+
+Per-section rows with scores, hot counts, recency, etc.
+
+But the section-level rows that the scorer uses don’t currently carry the index.
+(They just know “this is Combined” or “Evening”, not “this is index 23 in Combined”.)
+
+Codex’ current lane promotion code does:
+
+section_best_index[section_name] = idx  # from indices_ranked
+...
+forced["index"] = lane_row.get("index_hint") \
+                  or lane_row.get("source_index") \
+                  or section_best_index.get(lane_row["section"], -1)
+
+
+Tests pass, but when it prints top_indices_by_state it still sees the old layer of overlap-heavy picks, because the promotion isn’t actually selecting the true winner lane index (it doesn’t have enough information yet).
+
+That’s annoying, but it’s not dangerous: all it means is “the new boosts haven’t taken effect yet”.
+
+Is anything worrying here?
+
+Things that are fine:
+
+No synthetic / fake indices are being created.
+
+All changes are confined to the V-TRAC scorer and config, tests are passing.
+
+The worst-case behaviour right now is: top_indices_by_state looks basically the same as before, i.e. you haven’t accidentally wrecked the scorer.
+
+Things that are still missing (and Codex is correctly flagging):
+
+A real per-section index hint coming from the analyzer → scorer.
+
+Without that, lane promotion can’t truly say “this lane is index 17, shove it into the top-3”.
+
+So it’s more “there’s one more wire to hook up” than “we did something scary”.
+
+What to tell Codex now
+
+You can give it a green light, with this clarification:
+
+Yes, please add the missing index hint by parsing the analyzer JSON, but keep it minimal.
+
+For each entry in indices_ranked, propagate the index onto the section rows used for scoring (e.g. when building section_cache / section_map):
+
+attach source_index and/or index_hint on those section rows.
+
+Lane promotion should then use only those real hints:
+
+forced_index = lane_row.get("index_hint") \
+               or lane_row.get("source_index") \
+               or section_best_index.get(lane_row["section"], -1)
+
+
+No synthetic IDs; index in top_indices_by_state must remain the real VT index.
+
+After wiring this:
+
+Re-run the tests.
+
+Re-run V-TRAC validation for the 3 workbook dates.
+
+Check that for your reference winners (e.g., CT 919/864, FL 695, ON 669/641, etc.), their VT index now appears in the top-3 of top_indices_by_state with an explain mentioning lane promotion / recency.
+
+Log the before/after ranks in AAT9_VTRAC_Analyzer_Analysis_Log.md, and then stop further scoring tweaks (we’ll calibrate globally in the Aggregator).
+
+If you want to literally paste guidance, something like:
+
+“Please plumb the real VT index from indices_ranked into the section rows (via section_cache / section_map) as index_hint / source_index, and have lane promotion use only those real hints. Don’t invent synthetic indices. Once done, rerun tests + validation for the 3 dates and confirm the winner VT indices appear in the top-3 of top_indices_by_state. Then update the VTRAC Analyzer log with a short before/after summary.”
+
+That keeps Codex on a narrow, safe path: one more structural link, then validate, then we lock it.
+
+If you’d like, once Codex finishes that step and gives you a new summary, you can paste a small snippet of top_indices_by_state for one or two states and I’ll sanity-check that the right V-TRAC index is actually being promoted.

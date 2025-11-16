@@ -275,3 +275,7 @@ Checklist per entry:
   - Recency: col1 with repeats and lane dominance.
   - Compact report: top_indices (6/7/1) miss; overlap low gate.
 - Action items: lane bump for repeats into col1; echo/hot weighting.
+
+### Lane lift / scorer freeze (post-2025-11-16)
+- Added scoring components: recency_lane, VT-only/VT-only lane, straight_lane, winner_lane_floor/rescue (no further engine/JSON changes). Overlap lowered/capped and lane promotion logic present, but analyzer JSON lacks per-section index mapping, so top_indices_by_state stays overlap/recency-driven.
+- Current stance: freeze scorer as-is for Aggregator v1; treat top_indices_by_state as one signal alongside the richer per-section features (recency/hot/echo/straights, etc.). Further lane-aware ranking will happen in the Aggregator using the full feature set.

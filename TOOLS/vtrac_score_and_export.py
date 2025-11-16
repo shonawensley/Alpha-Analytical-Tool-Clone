@@ -51,8 +51,9 @@ DEFAULT_WEIGHTS: Dict[str, float] = {
     "recency_lane": 1.5,
     "vt_only": 1.0,
     "vt_only_lane": 1.2,
+    "straight_lane": 0.8,
     "winner_lane_rescue": 2.5,
-    "winner_lane_floor": 5.0,
+    "winner_lane_floor": 6.0,
 }
 
 DEFAULT_COL_WEIGHTS: Dict[int, float] = {
@@ -272,8 +273,37 @@ def compute_top_indices(analyzer_path: Optional[Path], section_map: Dict[str, di
         payload = json.loads(analyzer_path.read_text())
     except Exception:
         return []
+
+    # Map each section to the highest-scoring index from analyzer evidence
+    section_best_index: Dict[str, int] = {}
+    for entry in payload.get("indices_ranked", []):
+        idx = entry.get("index")
+        sections = entry.get("evidence", {}).get("raw", {}).get("sections", [])
+        for section_name in sections:
+            if section_name not in section_best_index:
+                section_best_index[section_name] = idx
+            # attach index to section cache if present
+            if section_name in section_map:
+                section_map[section_name]["index_hint"] = idx
+
+    def lane_strength(row: dict) -> float:
+        # Combine recency/echo/hot + straight signals to identify a strong lane
+        rec = float(row.get("recency_lane_score") or 0.0)
+        echo = float(row.get("cross_section_echo") or 0.0)
+        hot_val = 0.0
+        hot_count = row.get("hot_count")
+        superhot_count = row.get("superhot_count")
+        if hot_count is not None:
+            hot_val += max(0.0, min(float(hot_count) / 8.0, 1.0))
+        if superhot_count is not None:
+            hot_val += max(0.0, min(float(superhot_count) / 12.0, 1.0))
+        straight = 1.0 if row.get("straight_lane_score") else 0.0
+        return rec + 0.5 * echo + 0.3 * hot_val + 0.5 * straight
+
     picks: List[dict] = []
     seen_indices: Set[int] = set()
+    lane_candidates: List[tuple[float, dict]] = []
+
     for entry in payload.get("indices_ranked", []):
         idx = entry.get("index")
         if idx is None or idx in seen_indices:
@@ -289,6 +319,8 @@ def compute_top_indices(analyzer_path: Optional[Path], section_map: Dict[str, di
         if not best_row:
             continue
         seen_indices.add(idx)
+        # attach index hint for promotion
+        best_row["index_hint"] = idx
         picks.append(
             {
                 "index": idx,
@@ -297,6 +329,23 @@ def compute_top_indices(analyzer_path: Optional[Path], section_map: Dict[str, di
                 "explain": describe_section(best_row),
             }
         )
+        if best_row.get("overlap", 0) <= 1:
+            lane_candidates.append((lane_strength(best_row), best_row))
+
+    # Promote the strongest low-overlap lane if present
+    lane_candidates.sort(key=lambda item: (-item[0], item[1].get("section", "")))
+    if lane_candidates:
+        _, lane_row = lane_candidates[0]
+        forced = {
+            "index": lane_row.get("index_hint") or lane_row.get("source_index") or section_best_index.get(lane_row.get("section", ""), -1),
+            "score": lane_row["confidence_score"],
+            "source_section": lane_row["section"],
+            "explain": "lane_promotion: " + describe_section(lane_row),
+        }
+        # Only add if index is known and not already in picks
+        if forced["index"] != -1 and all(p["index"] != forced["index"] for p in picks):
+            picks.append(forced)
+
     picks.sort(key=lambda item: (-item["score"], item["index"]))
     return picks[:3]
 
@@ -374,6 +423,7 @@ def main() -> int:
                     "analyzer_tokens": analyzer_tokens_by_section,
                 },
                 "__analyzer_json__": analyzer_path,
+                "__source_index__": None,
                 "doc": payload,
             }
         )
@@ -403,6 +453,7 @@ def main() -> int:
                 "winners_tokens": winners_tokens,
                 "analyzer_tokens": analyzer_tokens,
                 "metrics": metrics,
+                "index_hint": None,  # filled later when we map analyzer indices to sections
             }
             raw_mask_values.append(to_float(metrics["mask_drop"]))
             raw_doubles_values.append(to_float(metrics["doubles"]))
@@ -473,6 +524,17 @@ def main() -> int:
                     * (1.0 + 0.2 * recency_lane_score + 0.1 * echo_value)
                 )
 
+            straights = straight_list_for_section(payload, section)
+            straight_lane_score = 0.0
+            if straights:
+                straight_lane_score = 1.0 + 0.1 * len(straights)
+                if recency_lane_score > 0:
+                    straight_lane_score += 0.3
+                if echo_value > 0:
+                    straight_lane_score += 0.2
+                if hot_norm or super_norm:
+                    straight_lane_score += 0.2
+
             components: List[Tuple[str, float, float]] = [
                 ("overlap", weights["overlap"], overlap_score),
                 ("stable", weights["stable"], stability_value),
@@ -488,6 +550,7 @@ def main() -> int:
                 ("vt_only_lane", weights.get("vt_only_lane", 0.0), vt_lane_bonus),
                 ("vt_lane_rescue", weights.get("vt_only_lane", 0.0), vt_lane_rescue),
                 ("winner_lane_rescue", weights.get("winner_lane_rescue", 0.0), winner_lane_rescue),
+                ("straight_lane", weights.get("straight_lane", 0.0), straight_lane_score),
             ]
 
             base_score = sum(weight * value for _, weight, value in components)
@@ -538,6 +601,7 @@ def main() -> int:
                 "date": date,
                 "state": state,
                 "section": section,
+                "index_hint": payload.get("state_index") or None,
                 "overlap": overlap,
                 "stable_cols_count": len(stable_cols),
                 "stable_cols": stable_cols,
