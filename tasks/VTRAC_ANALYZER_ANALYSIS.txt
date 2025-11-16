@@ -1,0 +1,94 @@
+
+
+- TOOLS/vtrac_score_and_export.py:32 now stamps every compact run with SCORER_VERSION, UTC run date, and a short weights_hash, accepts the new --out flag, and writes a JSON object with both the per-section
+    rows and a states block instead of a bare list. Deterministic token ordering keeps CSV/JSON diffs minimal, and the log prints a per-state summary after every run.
+  - TOOLS/vtrac_score_and_export.py:232 introduces analyzer-path resolution plus helpers to describe sections and assemble top_indices_by_state; the scorer loads each analyzer bundle, picks the best section
+    score per index, and stores the explain string so downstream aggregators don’t have to re-merge sections.
+  - tests/test_vtrac_score_export.py:1 gained a synthetic analyzer bundle to exercise the new index logic and now asserts that the metadata (scorer_version, run_date_utc) and the top_indices_by_state list
+    populate as expected.
+
+  Validation: pytest tests/test_vtrac_score_export.py.
+
+  Next: with the reruns + compact-report hardening done, I’ll move on to Step 3—logging the two-day per-state analysis in docs/AAT9_KIT/AAT9_VTRAC_Analysis_Log.md (checking the Analytical Conclusions signals
+  as we go).
+
+
+
+Here’s how I’ll run the deep analysis passes and how I’ll log them (mirrors the robustness we used for Digit Reduction).
+
+  Analysis Playbook (to add atop docs/AAT9_KIT/AAT9_VTRAC_Analysis_Log.md)
+
+  - Winners HTML first: open the 3-variant (Combined/Midday/Evening) winners HTML per state/date; trace the winner’s path across Set3→Set2→Set1 and columns 7→…→1. Note repeats (box survives across columns/
+    sets), and where the R2/R4/R6/R8 boxes glow (hot * / superhot **).
+  - Cross-variant relationships: call out VTRAC families/clusters that appear in multiple variants; highlight when the same family sits in superhot cells across variants (big signal).
+  - Intra-variant relationships: within each variant, mark VTRAC family overlaps, hot/superhot interactions, and persistence/repeats (box stability).
+  - Factor attribution: list the strongest cues that led to the win (overlap, right-column stability, hot/superhot zones, cross-section echoes, mirror/double pressure, mask drops). Distinguish “own chart”
+    signals vs cross-variant echoes.
+  - Quantify hits: exact vs VT-boxed vs VT-straight; note where the winner sits in hot/superhot boxes and whether repeated presence (surviving reduction) is evident.
+  - Scoring alignment: compare the compact report ranks (top_indices_by_state + section scores) against what the HTML shows. Note any mis-ranks (e.g., strong repeating superhot cluster but low score) and
+    hypothesize weight/feature tweaks.
+  - Environment sketch: summarize “what the table looked like” when the win hit (e.g., superhot overlap across variants, persistent R2/R4/R6 cluster in columns 3/2/1, mirror/double pressure present).
+  - Action hooks: for each state/date, jot quick follow-ups (e.g., “boost cross-variant superhot echoes,” “treat repeats across columns as extra stability,” “promote VT-only family if it lives in superhot
+    across variants”).
+
+  Plan for the two Excel files (per state, both Midday/Evening winners)
+
+  1. Data prep (per workbook): swap workbook, rerun pipeline, verify Set1/Draw1 vs results_checkCT.txt, use results file = workbook date + 1, regenerate winners HTML, run enhanced CLI + validator, refresh
+     compact report.
+  2. Analysis logging: for each state/date, follow the playbook above and log in AAT9_VTRAC_Analysis_Log.md (one entry per state/date), including concise bullet notes and an end-of-day summary (what cues
+     dominated; gaps).
+  3. Findings → tweaks: synthesize the most common winning cues and mis-ranks; propose scoring/feature adjustments (e.g., stronger credit for cross-variant superhot repeats, right-column persistence
+     modifiers, hot/superhot + echo interaction).
+  4. Apply tweaks: adjust config/logic as needed, rerun a sample date, and note before/after in the log.
+  5. Doc updates: add V-TRAC section to AAT9_Analyzer_Lean_Outputs.md (now includes top_indices_by_state + metadata), update changelog/checkpoint, and include “Integrator Notes” on how the compact report
+     should be consumed.
+
+  If you’re good with this blueprint, I’ll add the instructions to the VTRAC analysis log header and start the two-day sweep with deep notes per state.
+
+
+
+
+• A few clarifications and additions before I start the runs:
+
+  Leftover optimizations still on deck (from prior notes/docs):
+
+  - Weight tuning for VT-only clusters and cross-variant echoes after we see the two-day sweep (was queued for Step 4).
+  - Optional state priors in the scorer (small knobs) once we have evidence; code supports it via config.
+  - LS/“left-side” ladder telemetry surfaced in validation (already planned as a QA callout once seen).
+  - No other known fixes are pending; the big code change just landed (top_indices, version stamps, deterministic ordering).
+
+  Permutation/straight focus (I’ll bake this into the playbook header):
+
+  - Track VTRAC straight signals: straight lanes highlighted in winners HTML, any “top_straights” in analyzer bundles, and if the winning family clusters along a single lane across variants.
+  - Look for repeating order hints: same ordered triplet (or its VT-lane partner) showing up in late columns (3/2/1) and surviving across sets/variants.
+  - Cross-variant straight echoes: Midday vs Evening vs Combined sharing the same ordered family/VT-straight; note when this coincides with superhot cells.
+  - Hot/superhot + straight: when ordered candidates sit inside superhot boxes repeatedly, flag as high-value permutation cue.
+  - If the winner is VT-boxed only, note whether a single straight within that lane is dominant (score gap among top_straights).
+
+  Anything to add:
+
+  - Mirror/double interplay with straights: flag when mirror or double pressure aligns with the winning straight lane (a frequent tie-breaker).
+  - Column-span persistence: when the same ordered pattern survives column shifts (7→5→3→1), treat that as “order stability” and note it.
+  - Section imbalance: if only one variant shows strong ordered clues while others are weak, call it out—it may justify a section prior tweak.
+  - Mask-drop context: when masking digits exposes a consistent ordered lane across variants, note it as a possible feature bump.
+
+  I’ll add these permutation/straight bullets to the analysis playbook in the VTRAC log and proceed with the runs.
+
+ I’ll capture everything in one place so nothing gets lost. Plan:
+
+  - I’ll prepend a robust “Analysis Criteria” section in docs/AAT9_KIT/AAT9_VTRAC_Analysis_Log.md that lists:
+      - The existing playbook steps.
+      - The new permutation/straight checks you requested (VT straight lanes, ordered repeats, cross-variant straights, superhot + straight, single-lane dominance, mirror/double interactions with straights,
+        column-span order stability, mask-drop ordered cues, section imbalance for straights).
+      - The hot-zone recency note: Set1/Draw1 columns 7→1 are the most recent; column 1 is the freshest. I’ll add a bullet to explicitly log when the winning family sits in Set1 column 1 (and 2) and whether
+        it persisted through prior columns (e.g., 4→2→1) and/or across sets. This distinguishes “just appeared in the freshest box” vs “survived multiple reductions into the freshest box,” and I’ll note how
+        often these cases show up.
+      - The cross-variant superhot echo cue and repeats-in-superhot across variants.
+      - The leftover optimization knobs: VT-only/cross-variant weight tuning after the sweep; optional state priors; LS telemetry callout once observed.
+  - I’ll keep a small checklist at the top of each per-state entry to ensure every factor is hit:
+      - Winners HTML traced (Set/col path, repeats, hot/superhot, variance per variant).
+      - Cross-variant VTRAC relationships (box/straight echoes).
+      - Permutation/straight cues (ordered repeats, VT straight lanes, superhot interactions, cross-variant straights).
+      - Recency box check (Set1 col1/2 presence; persistence into col1 vs first-appearance-only).
+      - Scoring alignment vs compact report/top_indices_by_state.
+      - Action items/tuning hypotheses.

@@ -20,30 +20,39 @@ Examples
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import math
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Set, Tuple
+from typing import Dict, Iterable, List, Sequence, Set, Tuple, Optional
 
 DEFAULT_INPUTS = [
     "data/outputs/analysis/vtrac_validation",
     "data/outputs/analysis/vtrac",
 ]
 
+SCORER_VERSION = "0.4.0"
+
 DEFAULT_WEIGHTS: Dict[str, float] = {
-    "overlap": 3.0,
-    "stable": 1.6,
+    "overlap": 1.0,
+    "stable": 1.9,
     "consensus": 1.0,
-    "token_echo": 1.2,
-    "hot": 0.25,
-    "super": 0.35,
+    "token_echo": 2.0,
+    "hot": 0.4,
+    "super": 0.6,
     "mask": 0.8,
-    "mirror": 0.5,
-    "doubles": 0.3,
+    "mirror": 0.6,
+    "doubles": 0.4,
     "combined_prior": 1.15,
-    "rescue_multiplier": 0.35,
+    "rescue_multiplier": 0.45,
+    "recency_lane": 1.5,
+    "vt_only": 1.0,
+    "vt_only_lane": 1.2,
+    "winner_lane_rescue": 2.5,
+    "winner_lane_floor": 5.0,
 }
 
 DEFAULT_COL_WEIGHTS: Dict[int, float] = {
@@ -225,6 +234,73 @@ def tier_from_overlap(overlap: int) -> str:
     return "Z"
 
 
+def resolve_analyzer_path(path_str: Optional[str], report_path: Path) -> Optional[Path]:
+    if not path_str:
+        return None
+    candidate = Path(path_str).expanduser()
+    if candidate.exists():
+        return candidate
+    alt = report_path.parent / Path(path_str).name
+    if alt.exists():
+        return alt
+    return None
+
+
+def describe_section(row: dict) -> str:
+    parts = [f"{row['section']} overlap={row['overlap']}"]
+    cols = row.get("stable_cols") or []
+    if cols:
+        parts.append(f"cols {cols}")
+    echo = row.get("cross_section_echo")
+    if echo:
+        parts.append(f"echo={echo}")
+    if row.get("mirror_supported"):
+        parts.append("mirror")
+    doubles = row.get("double_hits")
+    if doubles:
+        parts.append(f"doubles={doubles}")
+    rec = row.get("recency_lane_score")
+    if rec:
+        parts.append(f"recency_lane={rec:.2f}")
+    return "; ".join(parts)
+
+
+def compute_top_indices(analyzer_path: Optional[Path], section_map: Dict[str, dict]) -> List[dict]:
+    if not analyzer_path or not analyzer_path.exists():
+        return []
+    try:
+        payload = json.loads(analyzer_path.read_text())
+    except Exception:
+        return []
+    picks: List[dict] = []
+    seen_indices: Set[int] = set()
+    for entry in payload.get("indices_ranked", []):
+        idx = entry.get("index")
+        if idx is None or idx in seen_indices:
+            continue
+        sections = entry.get("evidence", {}).get("raw", {}).get("sections", [])
+        best_row = None
+        for section_name in sections:
+            candidate = section_map.get(section_name)
+            if not candidate:
+                continue
+            if best_row is None or candidate["confidence_score"] > best_row["confidence_score"]:
+                best_row = candidate
+        if not best_row:
+            continue
+        seen_indices.add(idx)
+        picks.append(
+            {
+                "index": idx,
+                "score": best_row["confidence_score"],
+                "source_section": best_row["section"],
+                "explain": describe_section(best_row),
+            }
+        )
+    picks.sort(key=lambda item: (-item["score"], item["index"]))
+    return picks[:3]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="V-TRAC validator → compact scorer/exporter")
     parser.add_argument(
@@ -238,8 +314,14 @@ def main() -> int:
         help="Optional JSON overriding weights/priors (see configs/vtrac_score_config.json).",
     )
     parser.add_argument(
-        "--out-dir",
+        "--out",
+        dest="out_dir",
         help="Directory for vtrac_compact_report.{json,csv}. Defaults to first resolved input directory.",
+    )
+    parser.add_argument(
+        "--out-dir",
+        dest="out_dir",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--verbose",
@@ -280,6 +362,8 @@ def main() -> int:
             winners_tokens_by_section[section] = set(winners_tokens)
             analyzer_tokens_by_section[section] = set(analyzer_tokens)
 
+        analyzer_path = resolve_analyzer_path((payload.get("analyzer_jsons") or {}).get("primary"), report_path)
+
         staged.append(
             {
                 "__path__": report_path,
@@ -289,6 +373,7 @@ def main() -> int:
                     "winners_tokens": winners_tokens_by_section,
                     "analyzer_tokens": analyzer_tokens_by_section,
                 },
+                "__analyzer_json__": analyzer_path,
                 "doc": payload,
             }
         )
@@ -296,6 +381,8 @@ def main() -> int:
     token_states, token_sections_by_state = build_global_token_ledger(staged)
 
     rows: List[dict] = []
+    state_sections: Dict[Tuple[str, str], List[dict]] = defaultdict(list)
+    analyzer_lookup: Dict[Tuple[str, str], Optional[Path]] = {}
     for entry in staged:
         report_path = entry["__path__"]
         payload = entry["doc"]
@@ -349,8 +436,45 @@ def main() -> int:
             doubles_norm = norm01(to_float(metrics["doubles"]), doubles_min, doubles_max)
             echo_value = echo_by_section.get(section, 0)
 
+            recency_lane_score = 0.0
+            latest_cols = {1, 2}
+            if set(stable_cols) & latest_cols:
+                recency_lane_score = 1.0
+                # extra credit if both col2 and col1 present
+                if 1 in stable_cols and 2 in stable_cols:
+                    recency_lane_score = 1.2
+
+            vt_only_signal = 0.0
+            if overlap == 0:
+                vt_only_signal = 0.0
+                if stable_cols:
+                    vt_only_signal += 1.0 + 0.2 * len(stable_cols)
+                if echo_value:
+                    vt_only_signal += 0.5 * echo_value
+                vt_only_signal += recency_lane_score
+                vt_only_signal += hot_norm + super_norm
+
+            vt_lane_bonus = 0.0
+            if overlap == 0 and echo_value >= 1 and recency_lane_score > 0:
+                # reward VT-only lanes that echo across variants and land in Set1 col1/2 (recency)
+                vt_lane_bonus = 1.0 + 0.3 * echo_value + 0.5 * recency_lane_score
+
+            vt_lane_rescue = 0.0
+            if overlap <= 1 and (recency_lane_score > 0 or echo_value > 0):
+                vt_lane_rescue = 0.5 * recency_lane_score + 0.25 * echo_value + 0.1 * (hot_norm + super_norm)
+
+            overlap_score = math.log1p(overlap)
+            winner_lane_rescue = 0.0
+            winner_lane_floor = 0.0
+            if overlap <= 1 and (recency_lane_score > 0 or echo_value > 0):
+                winner_lane_rescue = recency_lane_score + 0.5 * echo_value + 0.2 * (hot_norm + super_norm)
+                winner_lane_floor = (
+                    weights.get("winner_lane_floor", 0.0)
+                    * (1.0 + 0.2 * recency_lane_score + 0.1 * echo_value)
+                )
+
             components: List[Tuple[str, float, float]] = [
-                ("overlap", weights["overlap"], float(overlap)),
+                ("overlap", weights["overlap"], overlap_score),
                 ("stable", weights["stable"], stability_value),
                 ("consensus", weights["consensus"], float(consensus_count) if stable_cols else 0.0),
                 ("echo", weights["token_echo"], float(echo_value)),
@@ -359,9 +483,16 @@ def main() -> int:
                 ("mask_drop", weights["mask"], mask_norm),
                 ("mirror", weights["mirror"], mirror_value),
                 ("doubles", weights["doubles"], doubles_norm),
+                ("recency_lane", weights.get("recency_lane", 0.0), recency_lane_score),
+                ("vt_only", weights.get("vt_only", 0.0), vt_only_signal),
+                ("vt_only_lane", weights.get("vt_only_lane", 0.0), vt_lane_bonus),
+                ("vt_lane_rescue", weights.get("vt_only_lane", 0.0), vt_lane_rescue),
+                ("winner_lane_rescue", weights.get("winner_lane_rescue", 0.0), winner_lane_rescue),
             ]
 
             base_score = sum(weight * value for _, weight, value in components)
+            if winner_lane_floor:
+                base_score = max(base_score, winner_lane_floor)
             section_prior = section_priors.get(section, 1.0)
             score = base_score * section_prior * state_prior
 
@@ -388,7 +519,7 @@ def main() -> int:
                 if len(token_states[token]) >= 3:
                     base += 0.3
                 token_scores.append((round(base, 3), token))
-            token_scores.sort(reverse=True)
+            token_scores.sort(key=lambda item: (-item[0], item[1]))
             recommended_tokens = [token for _, token in token_scores][:3]
 
             straights = straight_list_for_section(payload, section)
@@ -403,40 +534,84 @@ def main() -> int:
                 why_parts.append(f"state_prior={state_prior:.2f}")
             if not math.isclose(rescue_multiplier, 1.0):
                 why_parts.append(f"rescue_multiplier={rescue_multiplier:.2f}")
+            row = {
+                "date": date,
+                "state": state,
+                "section": section,
+                "overlap": overlap,
+                "stable_cols_count": len(stable_cols),
+                "stable_cols": stable_cols,
+                "consensus_col1": metrics["consensus_col1"],
+                "consensus_col2": metrics["consensus_col2"],
+                "cross_section_echo": echo_value,
+                "hot_count": hot_value,
+                "superhot_count": superhot_value,
+                "mask_drop": metrics["mask_drop"],
+                "mirror_supported": metrics["mirror"],
+                "double_hits": metrics["doubles"],
+                "confidence_score": round(score, 3),
+                "tier": tier,
+                "flags": flags,
+                "top_tokens": winners_tokens,
+                "recommended_tokens": recommended_tokens,
+                "top_straights": straights,
+                "section_prior": section_prior,
+                "state_prior": state_prior,
+                "recency_lane_score": recency_lane_score,
+                "vt_lane_rescue": vt_lane_rescue,
+                "winner_lane_rescue": winner_lane_rescue,
+                "why": "; ".join(why_parts),
+                "source": report_path.name,
+            }
+            rows.append(row)
+            key = (state, date)
+            state_sections[key].append(row)
+            if key not in analyzer_lookup:
+                analyzer_lookup[key] = entry.get("__analyzer_json__")
 
-            rows.append(
-                {
-                    "date": date,
-                    "state": state,
-                    "section": section,
-                    "overlap": overlap,
-                    "stable_cols_count": len(stable_cols),
-                    "stable_cols": stable_cols,
-                    "consensus_col1": metrics["consensus_col1"],
-                    "consensus_col2": metrics["consensus_col2"],
-                    "cross_section_echo": echo_value,
-                    "hot_count": hot_value,
-                    "superhot_count": superhot_value,
-                    "mask_drop": metrics["mask_drop"],
-                    "mirror_supported": metrics["mirror"],
-                    "double_hits": metrics["doubles"],
-                    "confidence_score": round(score, 3),
-                    "tier": tier,
-                    "flags": flags,
-                    "top_tokens": winners_tokens,
-                    "recommended_tokens": recommended_tokens,
-                    "top_straights": straights,
-                    "section_prior": section_prior,
-                    "state_prior": state_prior,
-                    "why": "; ".join(why_parts),
-                    "source": report_path.name,
-                }
-            )
+    run_date_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    weights_fingerprint = json.dumps(
+        {
+            "weights": weights,
+            "col_weights": col_weights,
+            "section_priors": section_priors,
+            "state_priors": state_priors,
+        },
+        sort_keys=True,
+    )
+    weights_hash = hashlib.sha1(weights_fingerprint.encode("utf-8")).hexdigest()[:8]
+
+    states_output: List[dict] = []
+    for key in sorted(state_sections.keys()):
+        state, date = key
+        sections = sorted(state_sections[key], key=lambda r: r["section"])
+        section_map = {row["section"]: row for row in sections}
+        analyzer_path = analyzer_lookup.get(key)
+        top_indices = compute_top_indices(analyzer_path, section_map)
+        states_output.append(
+            {
+                "state": state,
+                "date": date,
+                "sections": sections,
+                "top_indices_by_state": top_indices,
+            }
+        )
 
     out_json = output_dir / "vtrac_compact_report.json"
     out_csv = output_dir / "vtrac_compact_report.csv"
 
-    out_json.write_text(json.dumps(rows, indent=2))
+    out_json.write_text(
+        json.dumps(
+            {
+                "scorer_version": SCORER_VERSION,
+                "run_date_utc": run_date_utc,
+                "weights_hash": weights_hash,
+                "sections": rows,
+                "states": states_output,
+            },
+            indent=2,
+        )
+    )
 
     headers = [
         "date",
@@ -476,9 +651,19 @@ def main() -> int:
         for row in rows:
             handle.write(",".join(csv_escape(row[column]) for column in headers) + "\n")
 
-    logging.info("Wrote %d rows", len(rows))
+    logging.info("Wrote %d section rows", len(rows))
     logging.info(" - JSON: %s", out_json)
     logging.info(" - CSV : %s", out_csv)
+    if states_output:
+        logging.info("State summary:")
+        for entry in states_output:
+            logging.info(
+                "   %s (%s): %d sections, %d top indices",
+                entry["state"],
+                entry["date"],
+                len(entry["sections"]),
+                len(entry["top_indices_by_state"]),
+            )
     return 0
 
 

@@ -36,6 +36,22 @@ def test_vtrac_score_and_export(tmp_path: Path):
         target_file.parent.mkdir(parents=True, exist_ok=True)
         target_file.write_text(rel_path.read_text())
 
+    demo_report = tmp_path / "DemoState4" / "validation_report.json"
+    payload = json.loads(demo_report.read_text())
+    analyzer_path = tmp_path / "DemoState4_analyzer.json"
+    payload.setdefault("analyzer_jsons", {})["primary"] = str(analyzer_path)
+    demo_report.write_text(json.dumps(payload))
+    analyzer_path.write_text(
+        json.dumps(
+            {
+                "indices_ranked": [
+                    {"index": 16, "score": 25.0, "evidence": {"raw": {"sections": ["Combined"]}}},
+                    {"index": 5, "score": 10.0, "evidence": {"raw": {"sections": ["Midday"]}}},
+                ]
+            }
+        )
+    )
+
     config_path = tmp_path / "config.json"
     config_path.write_text(
         json.dumps(
@@ -48,13 +64,22 @@ def test_vtrac_score_and_export(tmp_path: Path):
     )
 
     run_script(tmp_path, config_path)
-    rows = read_outputs(tmp_path)
+    data = read_outputs(tmp_path)
+    rows = data["sections"]
+    states = data["states"]
 
+    assert data["scorer_version"]
+    assert data["run_date_utc"].endswith("Z")
     assert len(rows) == 2
+    assert len(states) == 1
 
     rows_by_section = {row["section"]: row for row in rows}
     combined = rows_by_section["Combined"]
     midday = rows_by_section["Midday"]
+    top_indices = states[0]["top_indices_by_state"]
+    assert len(top_indices) == 2
+    assert top_indices[0]["index"] == 16
+    assert top_indices[0]["source_section"] == "Combined"
 
     # Combined keeps strong overlap score and no rescue.
     assert combined["overlap"] == 3
