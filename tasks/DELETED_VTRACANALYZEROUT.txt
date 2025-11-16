@@ -1,0 +1,4008 @@
+ OK THIS IS ALL AMAZING PLEASE PROCEED WITH OPTIMAL NEXT STEPS
+
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +4 lines
+  └ {
+      "weights": {
+    … +26 lines
+      "state_priors": {}
+    }
+
+• Edited configs/vtrac_score_config.json (+8 -7)
+     3      "overlap": 3.0,
+     4 -    "stable": 1.6,
+     4 +    "stable": 1.9,
+     5      "consensus": 1.0,
+     6 -    "token_echo": 1.2,
+     7 -    "hot": 0.25,
+     8 -    "super": 0.35,
+     6 +    "token_echo": 1.5,
+     7 +    "hot": 0.35,
+     8 +    "super": 0.55,
+     9      "mask": 0.8,
+    10 -    "mirror": 0.5,
+    11 -    "doubles": 0.3,
+    10 +    "mirror": 0.6,
+    11 +    "doubles": 0.4,
+    12      "combined_prior": 1.15,
+    13 -    "rescue_multiplier": 0.35
+    13 +    "rescue_multiplier": 0.45,
+    14 +    "recency_lane": 0.8
+    15    },
+
+• Edited TOOLS/vtrac_score_and_export.py (+8 -7)
+    40      "overlap": 3.0,
+    41 -    "stable": 1.6,
+    41 +    "stable": 1.9,
+    42      "consensus": 1.0,
+    43 -    "token_echo": 1.2,
+    44 -    "hot": 0.25,
+    45 -    "super": 0.35,
+    43 +    "token_echo": 1.5,
+    44 +    "hot": 0.35,
+    45 +    "super": 0.55,
+    46      "mask": 0.8,
+    47 -    "mirror": 0.5,
+    48 -    "doubles": 0.3,
+    47 +    "mirror": 0.6,
+    48 +    "doubles": 0.4,
+    49      "combined_prior": 1.15,
+    50 -    "rescue_multiplier": 0.35,
+    50 +    "rescue_multiplier": 0.45,
+    51 +    "recency_lane": 0.8,
+    52  }
+
+• Edited TOOLS/vtrac_score_and_export.py (+3 -0)
+    257          parts.append(f"doubles={doubles}")
+    258 +    rec = row.get("recency_lane_score")
+    259 +    if rec:
+    260 +        parts.append(f"recency_lane={rec:.2f}")
+    261      return "; ".join(parts)
+
+• Edited TOOLS/vtrac_score_and_export.py (+9 -0)
+    434
+    435 +            recency_lane_score = 0.0
+    436 +            latest_cols = {1, 2}
+    437 +            if set(stable_cols) & latest_cols:
+    438 +                recency_lane_score = 1.0
+    439 +                # extra credit if both col2 and col1 present
+    440 +                if 1 in stable_cols and 2 in stable_cols:
+    441 +                    recency_lane_score = 1.2
+    442 +
+    443              components: List[Tuple[str, float, float]] = [
+        ⋮
+    452                  ("doubles", weights["doubles"], doubles_norm),
+    453 +                ("recency_lane", weights.get("recency_lane", 0.0), recency_lane_score),
+    454              ]
+
+• Edited TOOLS/vtrac_score_and_export.py (+1 -0)
+    520                  "state_prior": state_prior,
+    521 +                "recency_lane_score": recency_lane_score,
+    522                  "why": "; ".join(why_parts),
+
+• Ran pytest tests/test_vtrac_score_export.py
+  └ ============================= test session starts ==============================
+    platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+    … +5 lines
+
+    ============================== 1 passed in 0.07s ===============================
+
+• Ran python3 TOOLS/run_vtrac_share_bundle.py
+  └ Wrote data/outputs/analysis/vtrac_validation/summary.csv
+    Wrote data/outputs/analysis/vtrac_validation/summary.md
+    … +35 lines
+      - data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip (optional)
+
+
+• Deleted data/outputs/analysis/vtrac_validation/vtrac_compact_report.json (+0 -3707)
+       1 -{
+       2 -  "scorer_version": "0.4.0",
+       3 -  "run_date_utc": "2025-11-16T07:35:25.582364Z",
+       4 -  "weights_hash": "620afc09",
+       5 -  "sections": [
+       6 -    {
+       7 -      "date": "",
+       8 -      "state": "Connecticut4",
+       9 -      "section": "Midday",
+      10 -      "overlap": 2,
+      11 -      "stable_cols_count": 4,
+      12 -      "stable_cols": [
+      13 -        4,
+      14 -        3,
+      15 -        2,
+      16 -        1
+      17 -      ],
+      18 -      "consensus_col1": false,
+      19 -      "consensus_col2": false,
+      20 -      "cross_section_echo": 0,
+      21 -      "hot_count": 8,
+      22 -      "superhot_count": 12,
+      23 -      "mask_drop": 15,
+      24 -      "mirror_supported": true,
+      25 -      "double_hits": 424,
+      26 -      "confidence_score": 22.75,
+      27 -      "tier": "B",
+      28 -      "flags": [],
+      29 -      "top_tokens": [
+      30 -        "V3x2_1x1",
+      31 -        "V1x3_3x2"
+      32 -      ],
+      33 -      "recommended_tokens": [
+      34 -        "V1x3_3x2",
+      35 -        "V3x2_1x1"
+      36 -      ],
+      37 -      "top_straights": [
+      38 -        "683",
+      39 -        "386",
+      40 -        "836"
+      41 -      ],
+      42 -      "section_prior": 1.0,
+      43 -      "state_prior": 1.0,
+      44 -      "recency_lane_score": 1.2,
+      45 -      "why": "overlap=2.000*3.00->6.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96;
+           section_prior=1.00",
+      46 -      "source": "validation_report.json"
+      47 -    },
+      48 -    {
+      49 -      "date": "",
+      50 -      "state": "Connecticut4",
+      51 -      "section": "Evening",
+      52 -      "overlap": 2,
+      53 -      "stable_cols_count": 3,
+      54 -      "stable_cols": [
+      55 -        3,
+      56 -        2,
+      57 -        1
+      58 -      ],
+      59 -      "consensus_col1": false,
+      60 -      "consensus_col2": false,
+      61 -      "cross_section_echo": 0,
+      62 -      "hot_count": 8,
+      63 -      "superhot_count": 12,
+      64 -      "mask_drop": 14,
+      65 -      "mirror_supported": true,
+      66 -      "double_hits": 525,
+      67 -      "confidence_score": 20.66,
+      68 -      "tier": "B",
+      69 -      "flags": [],
+      70 -      "top_tokens": [
+      71 -        "V5x2_2x1",
+      72 -        "V4x2_5x2_2x1"
+      73 -      ],
+      74 -      "recommended_tokens": [
+      75 -        "V4x2_5x2_2x1",
+      76 -        "V5x2_2x1"
+      77 -      ],
+      78 -      "top_straights": [
+      79 -        "683",
+      80 -        "386",
+      81 -        "836"
+      82 -      ],
+      83 -      "section_prior": 1.0,
+      84 -      "state_prior": 1.0,
+      85 -      "recency_lane_score": 1.2,
+      86 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.00",
+      87 -      "source": "validation_report.json"
+      88 -    },
+      89 -    {
+      90 -      "date": "",
+      91 -      "state": "Connecticut4",
+      92 -      "section": "Combined",
+      93 -      "overlap": 1,
+      94 -      "stable_cols_count": 3,
+      95 -      "stable_cols": [
+      96 -        3,
+      97 -        2,
+      98 -        1
+      99 -      ],
+     100 -      "consensus_col1": false,
+     101 -      "consensus_col2": false,
+     102 -      "cross_section_echo": 0,
+     103 -      "hot_count": 8,
+     104 -      "superhot_count": 12,
+     105 -      "mask_drop": 13,
+     106 -      "mirror_supported": true,
+     107 -      "double_hits": 428,
+     108 -      "confidence_score": 19.407,
+     109 -      "tier": "C",
+     110 -      "flags": [],
+     111 -      "top_tokens": [
+     112 -        "V5x2_2x1_3x1"
+     113 -      ],
+     114 -      "recommended_tokens": [
+     115 -        "V5x2_2x1_3x1"
+     116 -      ],
+     117 -      "top_straights": [
+     118 -        "683",
+     119 -        "386",
+     120 -        "836"
+     121 -      ],
+     122 -      "section_prior": 1.15,
+     123 -      "state_prior": 1.0,
+     124 -      "recency_lane_score": 1.2,
+     125 -      "why": "overlap=1.000*3.00->3.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.040*0.40->0.02; recency_lane=1.200*0.80->0.96; s
+          ection_prior=1.15",
+     126 -      "source": "validation_report.json"
+     127 -    },
+     128 -    {
+     129 -      "date": "",
+     130 -      "state": "Delaware4",
+     131 -      "section": "Midday",
+     132 -      "overlap": 1,
+     133 -      "stable_cols_count": 2,
+     134 -      "stable_cols": [
+     135 -        2,
+     136 -        1
+     137 -      ],
+     138 -      "consensus_col1": false,
+     139 -      "consensus_col2": false,
+     140 -      "cross_section_echo": 0,
+     141 -      "hot_count": 8,
+     142 -      "superhot_count": 12,
+     143 -      "mask_drop": 14,
+     144 -      "mirror_supported": true,
+     145 -      "double_hits": 518,
+     146 -      "confidence_score": 14.353,
+     147 -      "tier": "C",
+     148 -      "flags": [],
+     149 -      "top_tokens": [
+     150 -        "V2x1_3x1_5x1"
+     151 -      ],
+     152 -      "recommended_tokens": [
+     153 -        "V2x1_3x1_5x1"
+     154 -      ],
+     155 -      "top_straights": [
+     156 -        "013",
+     157 -        "386",
+     158 -        "138"
+     159 -      ],
+     160 -      "section_prior": 1.0,
+     161 -      "state_prior": 1.0,
+     162 -      "recency_lane_score": 1.2,
+     163 -      "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96;
+          section_prior=1.00",
+     164 -      "source": "validation_report.json"
+     165 -    },
+     166 -    {
+     167 -      "date": "",
+     168 -      "state": "Delaware4",
+     169 -      "section": "Evening",
+     170 -      "overlap": 3,
+     171 -      "stable_cols_count": 5,
+     172 -      "stable_cols": [
+     173 -        5,
+     174 -        4,
+     175 -        3,
+     176 -        2,
+     177 -        1
+     178 -      ],
+     179 -      "consensus_col1": false,
+     180 -      "consensus_col2": false,
+     181 -      "cross_section_echo": 0,
+     182 -      "hot_count": 8,
+     183 -      "superhot_count": 12,
+     184 -      "mask_drop": 12,
+     185 -      "mirror_supported": true,
+     186 -      "double_hits": 570,
+     187 -      "confidence_score": 26.874,
+     188 -      "tier": "B+",
+     189 -      "flags": [],
+     190 -      "top_tokens": [
+     191 -        "V4x4_5x2",
+     192 -        "V4x3",
+     193 -        "V4x4_5x3_2x1"
+     194 -      ],
+     195 -      "recommended_tokens": [
+     196 -        "V4x3",
+     197 -        "V4x4_5x2",
+     198 -        "V4x4_5x3_2x1"
+     199 -      ],
+     200 -      "top_straights": [
+     201 -        "013",
+     202 -        "386",
+     203 -        "138"
+     204 -      ],
+     205 -      "section_prior": 1.0,
+     206 -      "state_prior": 1.0,
+     207 -      "recency_lane_score": 1.2,
+     208 -      "why": "overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.536*0.40->0.21; recency_lane=1.200*0.80->0.96; s
+          ection_prior=1.00",
+     209 -      "source": "validation_report.json"
+     210 -    },
+     211 -    {
+     212 -      "date": "",
+     213 -      "state": "Delaware4",
+     214 -      "section": "Combined",
+     215 -      "overlap": 2,
+     216 -      "stable_cols_count": 3,
+     217 -      "stable_cols": [
+     218 -        3,
+     219 -        2,
+     220 -        1
+     221 -      ],
+     222 -      "consensus_col1": false,
+     223 -      "consensus_col2": false,
+     224 -      "cross_section_echo": 0,
+     225 -      "hot_count": 8,
+     226 -      "superhot_count": 12,
+     227 -      "mask_drop": 15,
+     228 -      "mirror_supported": true,
+     229 -      "double_hits": 615,
+     230 -      "confidence_score": 24.219,
+     231 -      "tier": "B",
+     232 -      "flags": [],
+     233 -      "top_tokens": [
+     234 -        "V2x2_4x2_1x1",
+     235 -        "V4x2_1x1_2x1"
+     236 -      ],
+     237 -      "recommended_tokens": [
+     238 -        "V2x2_4x2_1x1",
+     239 -        "V4x2_1x1_2x1"
+     240 -      ],
+     241 -      "top_straights": [
+     242 -        "013",
+     243 -        "386",
+     244 -        "138"
+     245 -      ],
+     246 -      "section_prior": 1.15,
+     247 -      "state_prior": 1.0,
+     248 -      "recency_lane_score": 1.2,
+     249 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.15",
+     250 -      "source": "validation_report.json"
+     251 -    },
+     252 -    {
+     253 -      "date": "",
+     254 -      "state": "Florida4",
+     255 -      "section": "Midday",
+     256 -      "overlap": 2,
+     257 -      "stable_cols_count": 2,
+     258 -      "stable_cols": [
+     259 -        3,
+     260 -        2
+     261 -      ],
+     262 -      "consensus_col1": true,
+     263 -      "consensus_col2": false,
+     264 -      "cross_section_echo": 0,
+     265 -      "hot_count": 8,
+     266 -      "superhot_count": 12,
+     267 -      "mask_drop": 16,
+     268 -      "mirror_supported": true,
+     269 -      "double_hits": 334,
+     270 -      "confidence_score": 16.62,
+     271 -      "tier": "B",
+     272 -      "flags": [],
+     273 -      "top_tokens": [
+     274 -        "V2x2_1x1_5x1",
+     275 -        "V2x2_1x1"
+     276 -      ],
+     277 -      "recommended_tokens": [
+     278 -        "V2x2_1x1",
+     279 -        "V2x2_1x1_5x1"
+     280 -      ],
+     281 -      "top_straights": [
+     282 -        "016",
+     283 -        "520",
+     284 -        "250"
+     285 -      ],
+     286 -      "section_prior": 1.0,
+     287 -      "state_prior": 1.0,
+     288 -      "recency_lane_score": 1.0,
+     289 -      "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.600*0.80->0.48; mirror=1.000*0.60->0.60; rec
+          ency_lane=1.000*0.80->0.80; section_prior=1.00",
+     290 -      "source": "validation_report.json"
+     291 -    },
+     292 -    {
+     293 -      "date": "",
+     294 -      "state": "Florida4",
+     295 -      "section": "Evening",
+     296 -      "overlap": 2,
+     297 -      "stable_cols_count": 3,
+     298 -      "stable_cols": [
+     299 -        3,
+     300 -        2,
+     301 -        1
+     302 -      ],
+     303 -      "consensus_col1": false,
+     304 -      "consensus_col2": false,
+     305 -      "cross_section_echo": 0,
+     306 -      "hot_count": 8,
+     307 -      "superhot_count": 12,
+     308 -      "mask_drop": 13,
+     309 -      "mirror_supported": true,
+     310 -      "double_hits": 419,
+     311 -      "confidence_score": 20.022,
+     312 -      "tier": "B",
+     313 -      "flags": [],
+     314 -      "top_tokens": [
+     315 -        "V1x1_3x1_4x1",
+     316 -        "V1x2_3x1_4x1"
+     317 -      ],
+     318 -      "recommended_tokens": [
+     319 -        "V1x1_3x1_4x1",
+     320 -        "V1x2_3x1_4x1"
+     321 -      ],
+     322 -      "top_straights": [
+     323 -        "016",
+     324 -        "520",
+     325 -        "250"
+     326 -      ],
+     327 -      "section_prior": 1.0,
+     328 -      "state_prior": 1.0,
+     329 -      "recency_lane_score": 1.2,
+     330 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.405*0.40->0.16; recency_lane=1.200*0.80->0.96; s
+          ection_prior=1.00",
+     331 -      "source": "validation_report.json"
+     332 -    },
+     333 -    {
+     334 -      "date": "",
+     335 -      "state": "Florida4",
+     336 -      "section": "Combined",
+     337 -      "overlap": 1,
+     338 -      "stable_cols_count": 2,
+     339 -      "stable_cols": [
+     340 -        2,
+     341 -        1
+     342 -      ],
+     343 -      "consensus_col1": false,
+     344 -      "consensus_col2": false,
+     345 -      "cross_section_echo": 0,
+     346 -      "hot_count": 8,
+     347 -      "superhot_count": 12,
+     348 -      "mask_drop": 18,
+     349 -      "mirror_supported": true,
+     350 -      "double_hits": 544,
+     351 -      "confidence_score": 17.273,
+     352 -      "tier": "C",
+     353 -      "flags": [],
+     354 -      "top_tokens": [
+     355 -        "V4x2_2x1_3x1"
+     356 -      ],
+     357 -      "recommended_tokens": [
+     358 -        "V4x2_2x1_3x1"
+     359 -      ],
+     360 -      "top_straights": [
+     361 -        "016",
+     362 -        "520",
+     363 -        "250"
+     364 -      ],
+     365 -      "section_prior": 1.15,
+     366 -      "state_prior": 1.0,
+     367 -      "recency_lane_score": 1.2,
+     368 -      "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.15",
+     369 -      "source": "validation_report.json"
+     370 -    },
+     371 -    {
+     372 -      "date": "",
+     373 -      "state": "Indiana4",
+     374 -      "section": "Midday",
+     375 -      "overlap": 1,
+     376 -      "stable_cols_count": 1,
+     377 -      "stable_cols": [
+     378 -        2
+     379 -      ],
+     380 -      "consensus_col1": true,
+     381 -      "consensus_col2": false,
+     382 -      "cross_section_echo": 0,
+     383 -      "hot_count": 8,
+     384 -      "superhot_count": 12,
+     385 -      "mask_drop": 16,
+     386 -      "mirror_supported": true,
+     387 -      "double_hits": 344,
+     388 -      "confidence_score": 10.9,
+     389 -      "tier": "C",
+     390 -      "flags": [],
+     391 -      "top_tokens": [
+     392 -        "V2x1_4x1_5x1"
+     393 -      ],
+     394 -      "recommended_tokens": [
+     395 -        "V2x1_4x1_5x1"
+     396 -      ],
+     397 -      "top_straights": [
+     398 -        "540",
+     399 -        "054",
+     400 -        "045"
+     401 -      ],
+     402 -      "section_prior": 1.0,
+     403 -      "state_prior": 1.0,
+     404 -      "recency_lane_score": 1.0,
+     405 -      "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60; dou
+          bles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+     406 -      "source": "validation_report.json"
+     407 -    },
+     408 -    {
+     409 -      "date": "",
+     410 -      "state": "Indiana4",
+     411 -      "section": "Evening",
+     412 -      "overlap": 2,
+     413 -      "stable_cols_count": 2,
+     414 -      "stable_cols": [
+     415 -        3,
+     416 -        2
+     417 -      ],
+     418 -      "consensus_col1": true,
+     419 -      "consensus_col2": false,
+     420 -      "cross_section_echo": 0,
+     421 -      "hot_count": 8,
+     422 -      "superhot_count": 12,
+     423 -      "mask_drop": 19,
+     424 -      "mirror_supported": true,
+     425 -      "double_hits": 328,
+     426 -      "confidence_score": 17.275,
+     427 -      "tier": "B",
+     428 -      "flags": [],
+     429 -      "top_tokens": [
+     430 -        "V3x3_4x1_5x1",
+     431 -        "V3x3_5x1"
+     432 -      ],
+     433 -      "recommended_tokens": [
+     434 -        "V3x3_4x1_5x1",
+     435 -        "V3x3_5x1"
+     436 -      ],
+     437 -      "top_straights": [
+     438 -        "540",
+     439 -        "054",
+     440 -        "045"
+     441 -      ],
+     442 -      "section_prior": 1.0,
+     443 -      "state_prior": 1.0,
+     444 -      "recency_lane_score": 1.0,
+     445 -      "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; dou
+          bles=0.837*0.40->0.33; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+     446 -      "source": "validation_report.json"
+     447 -    },
+     448 -    {
+     449 -      "date": "",
+     450 -      "state": "Indiana4",
+     451 -      "section": "Combined",
+     452 -      "overlap": 1,
+     453 -      "stable_cols_count": 1,
+     454 -      "stable_cols": [
+     455 -        2
+     456 -      ],
+     457 -      "consensus_col1": true,
+     458 -      "consensus_col2": false,
+     459 -      "cross_section_echo": 0,
+     460 -      "hot_count": 8,
+     461 -      "superhot_count": 12,
+     462 -      "mask_drop": 13,
+     463 -      "mirror_supported": true,
+     464 -      "double_hits": 246,
+     465 -      "confidence_score": 11.615,
+     466 -      "tier": "C",
+     467 -      "flags": [],
+     468 -      "top_tokens": [
+     469 -        "V1x1_3x1_4x1"
+     470 -      ],
+     471 -      "recommended_tokens": [
+     472 -        "V1x1_3x1_4x1"
+     473 -      ],
+     474 -      "top_straights": [
+     475 -        "540",
+     476 -        "054",
+     477 -        "045"
+     478 -      ],
+     479 -      "section_prior": 1.15,
+     480 -      "state_prior": 1.0,
+     481 -      "recency_lane_score": 1.0,
+     482 -      "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.000*0.80->0.80;
+          section_prior=1.15",
+     483 -      "source": "validation_report.json"
+     484 -    },
+     485 -    {
+     486 -      "date": "",
+     487 -      "state": "Michigan4",
+     488 -      "section": "Midday",
+     489 -      "overlap": 3,
+     490 -      "stable_cols_count": 4,
+     491 -      "stable_cols": [
+     492 -        4,
+     493 -        3,
+     494 -        2,
+     495 -        1
+     496 -      ],
+     497 -      "consensus_col1": false,
+     498 -      "consensus_col2": false,
+     499 -      "cross_section_echo": 0,
+     500 -      "hot_count": 8,
+     501 -      "superhot_count": 12,
+     502 -      "mask_drop": 19,
+     503 -      "mirror_supported": true,
+     504 -      "double_hits": 390,
+     505 -      "confidence_score": 25.35,
+     506 -      "tier": "B+",
+     507 -      "flags": [],
+     508 -      "top_tokens": [
+     509 -        "V3x2_1x1",
+     510 -        "V3x3_1x1_5x1",
+     511 -        "V3x3_1x1"
+     512 -      ],
+     513 -      "recommended_tokens": [
+     514 -        "V3x2_1x1",
+     515 -        "V3x3_1x1",
+     516 -        "V3x3_1x1_5x1"
+     517 -      ],
+     518 -      "top_straights": [
+     519 -        "547",
+     520 -        "847",
+     521 -        "752"
+     522 -      ],
+     523 -      "section_prior": 1.0,
+     524 -      "state_prior": 1.0,
+     525 -      "recency_lane_score": 1.2,
+     526 -      "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; s
+          ection_prior=1.00",
+     527 -      "source": "validation_report.json"
+     528 -    },
+     529 -    {
+     530 -      "date": "",
+     531 -      "state": "Michigan4",
+     532 -      "section": "Evening",
+     533 -      "overlap": 1,
+     534 -      "stable_cols_count": 1,
+     535 -      "stable_cols": [
+     536 -        2
+     537 -      ],
+     538 -      "consensus_col1": true,
+     539 -      "consensus_col2": false,
+     540 -      "cross_section_echo": 0,
+     541 -      "hot_count": 8,
+     542 -      "superhot_count": 12,
+     543 -      "mask_drop": 22,
+     544 -      "mirror_supported": true,
+     545 -      "double_hits": 390,
+     546 -      "confidence_score": 11.3,
+     547 -      "tier": "C",
+     548 -      "flags": [],
+     549 -      "top_tokens": [
+     550 -        "V1x1_3x1_5x1"
+     551 -      ],
+     552 -      "recommended_tokens": [
+     553 -        "V1x1_3x1_5x1"
+     554 -      ],
+     555 -      "top_straights": [
+     556 -        "087",
+     557 -        "708",
+     558 -        "547"
+     559 -      ],
+     560 -      "section_prior": 1.0,
+     561 -      "state_prior": 1.0,
+     562 -      "recency_lane_score": 1.0,
+     563 -      "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; dou
+          bles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+     564 -      "source": "validation_report.json"
+     565 -    },
+     566 -    {
+     567 -      "date": "",
+     568 -      "state": "Michigan4",
+     569 -      "section": "Combined",
+     570 -      "overlap": 1,
+     571 -      "stable_cols_count": 1,
+     572 -      "stable_cols": [
+     573 -        2
+     574 -      ],
+     575 -      "consensus_col1": true,
+     576 -      "consensus_col2": false,
+     577 -      "cross_section_echo": 0,
+     578 -      "hot_count": 8,
+     579 -      "superhot_count": 12,
+     580 -      "mask_drop": 20,
+     581 -      "mirror_supported": true,
+     582 -      "double_hits": 331,
+     583 -      "confidence_score": 11.922,
+     584 -      "tier": "C",
+     585 -      "flags": [],
+     586 -      "top_tokens": [
+     587 -        "V3x1_4x1_5x1"
+     588 -      ],
+     589 -      "recommended_tokens": [
+     590 -        "V3x1_4x1_5x1"
+     591 -      ],
+     592 -      "top_straights": [
+     593 -        "087",
+     594 -        "708",
+     595 -        "547"
+     596 -      ],
+     597 -      "section_prior": 1.15,
+     598 -      "state_prior": 1.0,
+     599 -      "recency_lane_score": 1.0,
+     600 -      "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60; rec
+          ency_lane=1.000*0.80->0.80; section_prior=1.15",
+     601 -      "source": "validation_report.json"
+     602 -    },
+     603 -    {
+     604 -      "date": "",
+     605 -      "state": "NewJersey4",
+     606 -      "section": "Midday",
+     607 -      "overlap": 2,
+     608 -      "stable_cols_count": 2,
+     609 -      "stable_cols": [
+     610 -        3,
+     611 -        2
+     612 -      ],
+     613 -      "consensus_col1": true,
+     614 -      "consensus_col2": false,
+     615 -      "cross_section_echo": 0,
+     616 -      "hot_count": 8,
+     617 -      "superhot_count": 12,
+     618 -      "mask_drop": 20,
+     619 -      "mirror_supported": true,
+     620 -      "double_hits": 744,
+     621 -      "confidence_score": 17.226,
+     622 -      "tier": "B",
+     623 -      "flags": [],
+     624 -      "top_tokens": [
+     625 -        "V2x2_1x1_4x1",
+     626 -        "V2x2_1x1"
+     627 -      ],
+     628 -      "recommended_tokens": [
+     629 -        "V2x2_1x1",
+     630 -        "V2x2_1x1_4x1"
+     631 -      ],
+     632 -      "top_straights": [
+     633 -        "867",
+     634 -        "687",
+     635 -        "786"
+     636 -      ],
+     637 -      "section_prior": 1.0,
+     638 -      "state_prior": 1.0,
+     639 -      "recency_lane_score": 1.0,
+     640 -      "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; dou
+          bles=0.714*0.40->0.29; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+     641 -      "source": "validation_report.json"
+     642 -    },
+     643 -    {
+     644 -      "date": "",
+     645 -      "state": "NewJersey4",
+     646 -      "section": "Evening",
+     647 -      "overlap": 0,
+     648 -      "stable_cols_count": 0,
+     649 -      "stable_cols": [],
+     650 -      "consensus_col1": true,
+     651 -      "consensus_col2": false,
+     652 -      "cross_section_echo": 0,
+     653 -      "hot_count": 8,
+     654 -      "superhot_count": 12,
+     655 -      "mask_drop": 19,
+     656 -      "mirror_supported": true,
+     657 -      "double_hits": 762,
+     658 -      "confidence_score": 2.5,
+     659 -      "tier": "Z",
+     660 -      "flags": [
+     661 -        "zero_overlap"
+     662 -      ],
+     663 -      "top_tokens": [],
+     664 -      "recommended_tokens": [],
+     665 -      "top_straights": [
+     666 -        "867",
+     667 -        "687",
+     668 -        "786"
+     669 -      ],
+     670 -      "section_prior": 1.0,
+     671 -      "state_prior": 1.0,
+     672 -      "recency_lane_score": 0.0,
+     673 -      "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.60; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; section_prior=1.00",
+     674 -      "source": "validation_report.json"
+     675 -    },
+     676 -    {
+     677 -      "date": "",
+     678 -      "state": "NewJersey4",
+     679 -      "section": "Combined",
+     680 -      "overlap": 4,
+     681 -      "stable_cols_count": 5,
+     682 -      "stable_cols": [
+     683 -        5,
+     684 -        4,
+     685 -        3,
+     686 -        2,
+     687 -        1
+     688 -      ],
+     689 -      "consensus_col1": false,
+     690 -      "consensus_col2": false,
+     691 -      "cross_section_echo": 0,
+     692 -      "hot_count": 8,
+     693 -      "superhot_count": 12,
+     694 -      "mask_drop": 16,
+     695 -      "mirror_supported": true,
+     696 -      "double_hits": 699,
+     697 -      "confidence_score": 34.109,
+     698 -      "tier": "A",
+     699 -      "flags": [],
+     700 -      "top_tokens": [
+     701 -        "V2x2_3x2_4x1",
+     702 -        "V2x3_3x3_4x2",
+     703 -        "V2x2_3x2",
+     704 -        "V2x2_3x1"
+     705 -      ],
+     706 -      "recommended_tokens": [
+     707 -        "V2x2_3x1",
+     708 -        "V2x2_3x2",
+     709 -        "V2x2_3x2_4x1"
+     710 -      ],
+     711 -      "top_straights": [
+     712 -        "867",
+     713 -        "687",
+     714 -        "786"
+     715 -      ],
+     716 -      "section_prior": 1.15,
+     717 -      "state_prior": 1.0,
+     718 -      "recency_lane_score": 1.2,
+     719 -      "why": "overlap=4.000*3.00->12.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.15",
+     720 -      "source": "validation_report.json"
+     721 -    },
+     722 -    {
+     723 -      "date": "",
+     724 -      "state": "NewYork4",
+     725 -      "section": "Midday",
+     726 -      "overlap": 1,
+     727 -      "stable_cols_count": 2,
+     728 -      "stable_cols": [
+     729 -        2,
+     730 -        1
+     731 -      ],
+     732 -      "consensus_col1": false,
+     733 -      "consensus_col2": false,
+     734 -      "cross_section_echo": 0,
+     735 -      "hot_count": 8,
+     736 -      "superhot_count": 12,
+     737 -      "mask_drop": 14,
+     738 -      "mirror_supported": true,
+     739 -      "double_hits": 354,
+     740 -      "confidence_score": 14.943,
+     741 -      "tier": "C",
+     742 -      "flags": [],
+     743 -      "top_tokens": [
+     744 -        "V2x2_4x1_5x1"
+     745 -      ],
+     746 -      "recommended_tokens": [
+     747 -        "V2x2_4x1_5x1"
+     748 -      ],
+     749 -      "top_straights": [
+     750 -        "964",
+     751 -        "194",
+     752 -        "416"
+     753 -      ],
+     754 -      "section_prior": 1.0,
+     755 -      "state_prior": 1.0,
+     756 -      "recency_lane_score": 1.2,
+     757 -      "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.807*0.40->0.32; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.00",
+     758 -      "source": "validation_report.json"
+     759 -    },
+     760 -    {
+     761 -      "date": "",
+     762 -      "state": "NewYork4",
+     763 -      "section": "Evening",
+     764 -      "overlap": 2,
+     765 -      "stable_cols_count": 3,
+     766 -      "stable_cols": [
+     767 -        3,
+     768 -        2,
+     769 -        1
+     770 -      ],
+     771 -      "consensus_col1": false,
+     772 -      "consensus_col2": false,
+     773 -      "cross_section_echo": 0,
+     774 -      "hot_count": 8,
+     775 -      "superhot_count": 12,
+     776 -      "mask_drop": 11,
+     777 -      "mirror_supported": true,
+     778 -      "double_hits": 266,
+     779 -      "confidence_score": 19.86,
+     780 -      "tier": "B",
+     781 -      "flags": [],
+     782 -      "top_tokens": [
+     783 -        "V3x2_5x2_1x1",
+     784 -        "V3x2_1x1_5x1"
+     785 -      ],
+     786 -      "recommended_tokens": [
+     787 -        "V3x2_1x1_5x1",
+     788 -        "V3x2_5x2_1x1"
+     789 -      ],
+     790 -      "top_straights": [
+     791 -        "964",
+     792 -        "194",
+     793 -        "406"
+     794 -      ],
+     795 -      "section_prior": 1.0,
+     796 -      "state_prior": 1.0,
+     797 -      "recency_lane_score": 1.2,
+     798 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+     799 -      "source": "validation_report.json"
+     800 -    },
+     801 -    {
+     802 -      "date": "",
+     803 -      "state": "NewYork4",
+     804 -      "section": "Combined",
+     805 -      "overlap": 3,
+     806 -      "stable_cols_count": 4,
+     807 -      "stable_cols": [
+     808 -        4,
+     809 -        3,
+     810 -        2,
+     811 -        1
+     812 -      ],
+     813 -      "consensus_col1": false,
+     814 -      "consensus_col2": false,
+     815 -      "cross_section_echo": 0,
+     816 -      "hot_count": 8,
+     817 -      "superhot_count": 12,
+     818 -      "mask_drop": 14,
+     819 -      "mirror_supported": true,
+     820 -      "double_hits": 375,
+     821 -      "confidence_score": 30.072,
+     822 -      "tier": "B+",
+     823 -      "flags": [],
+     824 -      "top_tokens": [
+     825 -        "V5x4_2x1_3x1",
+     826 -        "V5x4_2x2_3x1",
+     827 -        "V5x3_2x1_3x1"
+     828 -      ],
+     829 -      "recommended_tokens": [
+     830 -        "V5x3_2x1_3x1",
+     831 -        "V5x4_2x1_3x1",
+     832 -        "V5x4_2x2_3x1"
+     833 -      ],
+     834 -      "top_straights": [
+     835 -        "964",
+     836 -        "194",
+     837 -        "416"
+     838 -      ],
+     839 -      "section_prior": 1.15,
+     840 -      "state_prior": 1.0,
+     841 -      "recency_lane_score": 1.2,
+     842 -      "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.15",
+     843 -      "source": "validation_report.json"
+     844 -    },
+     845 -    {
+     846 -      "date": "",
+     847 -      "state": "NorthCarolina4",
+     848 -      "section": "Midday",
+     849 -      "overlap": 0,
+     850 -      "stable_cols_count": 0,
+     851 -      "stable_cols": [],
+     852 -      "consensus_col1": true,
+     853 -      "consensus_col2": true,
+     854 -      "cross_section_echo": 0,
+     855 -      "hot_count": 8,
+     856 -      "superhot_count": 12,
+     857 -      "mask_drop": 9,
+     858 -      "mirror_supported": true,
+     859 -      "double_hits": 470,
+     860 -      "confidence_score": 1.5,
+     861 -      "tier": "Z",
+     862 -      "flags": [
+     863 -        "zero_overlap"
+     864 -      ],
+     865 -      "top_tokens": [],
+     866 -      "recommended_tokens": [],
+     867 -      "top_straights": [
+     868 -        "138",
+     869 -        "813",
+     870 -        "386"
+     871 -      ],
+     872 -      "section_prior": 1.0,
+     873 -      "state_prior": 1.0,
+     874 -      "recency_lane_score": 0.0,
+     875 -      "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.00",
+     876 -      "source": "validation_report.json"
+     877 -    },
+     878 -    {
+     879 -      "date": "",
+     880 -      "state": "NorthCarolina4",
+     881 -      "section": "Evening",
+     882 -      "overlap": 2,
+     883 -      "stable_cols_count": 3,
+     884 -      "stable_cols": [
+     885 -        3,
+     886 -        2,
+     887 -        1
+     888 -      ],
+     889 -      "consensus_col1": false,
+     890 -      "consensus_col2": false,
+     891 -      "cross_section_echo": 0,
+     892 -      "hot_count": 8,
+     893 -      "superhot_count": 12,
+     894 -      "mask_drop": 13,
+     895 -      "mirror_supported": true,
+     896 -      "double_hits": 689,
+     897 -      "confidence_score": 21.06,
+     898 -      "tier": "B",
+     899 -      "flags": [],
+     900 -      "top_tokens": [
+     901 -        "V1x2_2x2_5x1",
+     902 -        "V1x1_2x1_5x1"
+     903 -      ],
+     904 -      "recommended_tokens": [
+     905 -        "V1x1_2x1_5x1",
+     906 -        "V1x2_2x2_5x1"
+     907 -      ],
+     908 -      "top_straights": [
+     909 -        "138",
+     910 -        "813",
+     911 -        "386"
+     912 -      ],
+     913 -      "section_prior": 1.0,
+     914 -      "state_prior": 1.0,
+     915 -      "recency_lane_score": 1.2,
+     916 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.00",
+     917 -      "source": "validation_report.json"
+     918 -    },
+     919 -    {
+     920 -      "date": "",
+     921 -      "state": "NorthCarolina4",
+     922 -      "section": "Combined",
+     923 -      "overlap": 2,
+     924 -      "stable_cols_count": 2,
+     925 -      "stable_cols": [
+     926 -        2,
+     927 -        1
+     928 -      ],
+     929 -      "consensus_col1": false,
+     930 -      "consensus_col2": false,
+     931 -      "cross_section_echo": 0,
+     932 -      "hot_count": 8,
+     933 -      "superhot_count": 12,
+     934 -      "mask_drop": 12,
+     935 -      "mirror_supported": true,
+     936 -      "double_hits": 597,
+     937 -      "confidence_score": 20.3,
+     938 -      "tier": "B",
+     939 -      "flags": [],
+     940 -      "top_tokens": [
+     941 -        "V4x3_2x1_5x1",
+     942 -        "V4x2_5x1"
+     943 -      ],
+     944 -      "recommended_tokens": [
+     945 -        "V4x2_5x1",
+     946 -        "V4x3_2x1_5x1"
+     947 -      ],
+     948 -      "top_straights": [
+     949 -        "138",
+     950 -        "813",
+     951 -        "386"
+     952 -      ],
+     953 -      "section_prior": 1.15,
+     954 -      "state_prior": 1.0,
+     955 -      "recency_lane_score": 1.2,
+     956 -      "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.60; mirror=1.000*0.60->0.60; doubles=0.580*0.40->0.23; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.15",
+     957 -      "source": "validation_report.json"
+     958 -    },
+     959 -    {
+     960 -      "date": "",
+     961 -      "state": "Ohio4",
+     962 -      "section": "Midday",
+     963 -      "overlap": 1,
+     964 -      "stable_cols_count": 1,
+     965 -      "stable_cols": [
+     966 -        3
+     967 -      ],
+     968 -      "consensus_col1": true,
+     969 -      "consensus_col2": true,
+     970 -      "cross_section_echo": 0,
+     971 -      "hot_count": 8,
+     972 -      "superhot_count": 12,
+     973 -      "mask_drop": 15,
+     974 -      "mirror_supported": true,
+     975 -      "double_hits": 501,
+     976 -      "confidence_score": 10.307,
+     977 -      "tier": "C",
+     978 -      "flags": [],
+     979 -      "top_tokens": [
+     980 -        "V5x2_1x1_4x1"
+     981 -      ],
+     982 -      "recommended_tokens": [
+     983 -        "V5x2_1x1_4x1"
+     984 -      ],
+     985 -      "top_straights": [
+     986 -        "683",
+     987 -        "386",
+     988 -        "948"
+     989 -      ],
+     990 -      "section_prior": 1.0,
+     991 -      "state_prior": 1.0,
+     992 -      "recency_lane_score": 0.0,
+     993 -      "why": "overlap=1.000*3.00->3.00; stable=1.600*1.90->3.04; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60; dou
+          bles=0.585*0.40->0.23; section_prior=1.00",
+     994 -      "source": "validation_report.json"
+     995 -    },
+     996 -    {
+     997 -      "date": "",
+     998 -      "state": "Ohio4",
+     999 -      "section": "Evening",
+    1000 -      "overlap": 2,
+    1001 -      "stable_cols_count": 2,
+    1002 -      "stable_cols": [
+    1003 -        4,
+    1004 -        3
+    1005 -      ],
+    1006 -      "consensus_col1": true,
+    1007 -      "consensus_col2": true,
+    1008 -      "cross_section_echo": 0,
+    1009 -      "hot_count": 8,
+    1010 -      "superhot_count": 12,
+    1011 -      "mask_drop": 16,
+    1012 -      "mirror_supported": true,
+    1013 -      "double_hits": 523,
+    1014 -      "confidence_score": 15.83,
+    1015 -      "tier": "B",
+    1016 -      "flags": [],
+    1017 -      "top_tokens": [
+    1018 -        "V1x2_4x2_5x2",
+    1019 -        "V1x2_4x1"
+    1020 -      ],
+    1021 -      "recommended_tokens": [
+    1022 -        "V1x2_4x1",
+    1023 -        "V1x2_4x2_5x2"
+    1024 -      ],
+    1025 -      "top_straights": [
+    1026 -        "683",
+    1027 -        "386",
+    1028 -        "948"
+    1029 -      ],
+    1030 -      "section_prior": 1.0,
+    1031 -      "state_prior": 1.0,
+    1032 -      "recency_lane_score": 0.0,
+    1033 -      "why": "overlap=2.000*3.00->6.00; stable=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; dou
+          bles=1.000*0.40->0.40; section_prior=1.00",
+    1034 -      "source": "validation_report.json"
+    1035 -    },
+    1036 -    {
+    1037 -      "date": "",
+    1038 -      "state": "Ohio4",
+    1039 -      "section": "Combined",
+    1040 -      "overlap": 3,
+    1041 -      "stable_cols_count": 5,
+    1042 -      "stable_cols": [
+    1043 -        5,
+    1044 -        4,
+    1045 -        3,
+    1046 -        2,
+    1047 -        1
+    1048 -      ],
+    1049 -      "consensus_col1": false,
+    1050 -      "consensus_col2": false,
+    1051 -      "cross_section_echo": 0,
+    1052 -      "hot_count": 8,
+    1053 -      "superhot_count": 12,
+    1054 -      "mask_drop": 13,
+    1055 -      "mirror_supported": true,
+    1056 -      "double_hits": 470,
+    1057 -      "confidence_score": 30.659,
+    1058 -      "tier": "B+",
+    1059 -      "flags": [],
+    1060 -      "top_tokens": [
+    1061 -        "V4x2_1x1",
+    1062 -        "V4x3_1x2_2x2",
+    1063 -        "V4x3_1x1_2x1"
+    1064 -      ],
+    1065 -      "recommended_tokens": [
+    1066 -        "V4x2_1x1",
+    1067 -        "V4x3_1x1_2x1",
+    1068 -        "V4x3_1x2_2x2"
+    1069 -      ],
+    1070 -      "top_straights": [
+    1071 -        "683",
+    1072 -        "386",
+    1073 -        "948"
+    1074 -      ],
+    1075 -      "section_prior": 1.15,
+    1076 -      "state_prior": 1.0,
+    1077 -      "recency_lane_score": 1.2,
+    1078 -      "why": "overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    1079 -      "source": "validation_report.json"
+    1080 -    },
+    1081 -    {
+    1082 -      "date": "",
+    1083 -      "state": "OntarioCanada4",
+    1084 -      "section": "Midday",
+    1085 -      "overlap": 2,
+    1086 -      "stable_cols_count": 2,
+    1087 -      "stable_cols": [
+    1088 -        2,
+    1089 -        1
+    1090 -      ],
+    1091 -      "consensus_col1": false,
+    1092 -      "consensus_col2": false,
+    1093 -      "cross_section_echo": 0,
+    1094 -      "hot_count": 8,
+    1095 -      "superhot_count": 12,
+    1096 -      "mask_drop": 17,
+    1097 -      "mirror_supported": true,
+    1098 -      "double_hits": 463,
+    1099 -      "confidence_score": 18.02,
+    1100 -      "tier": "B",
+    1101 -      "flags": [],
+    1102 -      "top_tokens": [
+    1103 -        "V5x2_1x1_2x1",
+    1104 -        "V1x1_2x1_5x1"
+    1105 -      ],
+    1106 -      "recommended_tokens": [
+    1107 -        "V1x1_2x1_5x1",
+    1108 -        "V5x2_1x1_2x1"
+    1109 -      ],
+    1110 -      "top_straights": [
+    1111 -        "594",
+    1112 -        "940",
+    1113 -        "059"
+    1114 -      ],
+    1115 -      "section_prior": 1.0,
+    1116 -      "state_prior": 1.0,
+    1117 -      "recency_lane_score": 1.2,
+    1118 -      "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.00",
+    1119 -      "source": "validation_report.json"
+    1120 -    },
+    1121 -    {
+    1122 -      "date": "",
+    1123 -      "state": "OntarioCanada4",
+    1124 -      "section": "Evening",
+    1125 -      "overlap": 2,
+    1126 -      "stable_cols_count": 3,
+    1127 -      "stable_cols": [
+    1128 -        3,
+    1129 -        2,
+    1130 -        1
+    1131 -      ],
+    1132 -      "consensus_col1": false,
+    1133 -      "consensus_col2": false,
+    1134 -      "cross_section_echo": 0,
+    1135 -      "hot_count": 8,
+    1136 -      "superhot_count": 12,
+    1137 -      "mask_drop": 14,
+    1138 -      "mirror_supported": true,
+    1139 -      "double_hits": 425,
+    1140 -      "confidence_score": 19.86,
+    1141 -      "tier": "B",
+    1142 -      "flags": [],
+    1143 -      "top_tokens": [
+    1144 -        "V3x2_5x1",
+    1145 -        "V3x2_1x1_5x1"
+    1146 -      ],
+    1147 -      "recommended_tokens": [
+    1148 -        "V3x2_1x1_5x1",
+    1149 -        "V3x2_5x1"
+    1150 -      ],
+    1151 -      "top_straights": [
+    1152 -        "594",
+    1153 -        "940",
+    1154 -        "059"
+    1155 -      ],
+    1156 -      "section_prior": 1.0,
+    1157 -      "state_prior": 1.0,
+    1158 -      "recency_lane_score": 1.2,
+    1159 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    1160 -      "source": "validation_report.json"
+    1161 -    },
+    1162 -    {
+    1163 -      "date": "",
+    1164 -      "state": "OntarioCanada4",
+    1165 -      "section": "Combined",
+    1166 -      "overlap": 3,
+    1167 -      "stable_cols_count": 4,
+    1168 -      "stable_cols": [
+    1169 -        4,
+    1170 -        3,
+    1171 -        2,
+    1172 -        1
+    1173 -      ],
+    1174 -      "consensus_col1": false,
+    1175 -      "consensus_col2": false,
+    1176 -      "cross_section_echo": 0,
+    1177 -      "hot_count": 8,
+    1178 -      "superhot_count": 12,
+    1179 -      "mask_drop": 15,
+    1180 -      "mirror_supported": true,
+    1181 -      "double_hits": 453,
+    1182 -      "confidence_score": 29.338,
+    1183 -      "tier": "B+",
+    1184 -      "flags": [],
+    1185 -      "top_tokens": [
+    1186 -        "V1x2_5x2",
+    1187 -        "V1x3_5x3",
+    1188 -        "V5x3_1x2"
+    1189 -      ],
+    1190 -      "recommended_tokens": [
+    1191 -        "V1x2_5x2",
+    1192 -        "V1x3_5x3",
+    1193 -        "V5x3_1x2"
+    1194 -      ],
+    1195 -      "top_straights": [
+    1196 -        "594",
+    1197 -        "940",
+    1198 -        "059"
+    1199 -      ],
+    1200 -      "section_prior": 1.15,
+    1201 -      "state_prior": 1.0,
+    1202 -      "recency_lane_score": 1.2,
+    1203 -      "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60; doubles=0.737*0.40->0.29; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.15",
+    1204 -      "source": "validation_report.json"
+    1205 -    },
+    1206 -    {
+    1207 -      "date": "",
+    1208 -      "state": "Pennsylvania4",
+    1209 -      "section": "Midday",
+    1210 -      "overlap": 1,
+    1211 -      "stable_cols_count": 1,
+    1212 -      "stable_cols": [
+    1213 -        2
+    1214 -      ],
+    1215 -      "consensus_col1": true,
+    1216 -      "consensus_col2": false,
+    1217 -      "cross_section_echo": 0,
+    1218 -      "hot_count": 8,
+    1219 -      "superhot_count": 12,
+    1220 -      "mask_drop": 19,
+    1221 -      "mirror_supported": true,
+    1222 -      "double_hits": 397,
+    1223 -      "confidence_score": 11.3,
+    1224 -      "tier": "C",
+    1225 -      "flags": [],
+    1226 -      "top_tokens": [
+    1227 -        "V3x2_4x1_5x1"
+    1228 -      ],
+    1229 -      "recommended_tokens": [
+    1230 -        "V3x2_4x1_5x1"
+    1231 -      ],
+    1232 -      "top_straights": [
+    1233 -        "018",
+    1234 -        "208",
+    1235 -        "201"
+    1236 -      ],
+    1237 -      "section_prior": 1.0,
+    1238 -      "state_prior": 1.0,
+    1239 -      "recency_lane_score": 1.0,
+    1240 -      "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; dou
+          bles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    1241 -      "source": "validation_report.json"
+    1242 -    },
+    1243 -    {
+    1244 -      "date": "",
+    1245 -      "state": "Pennsylvania4",
+    1246 -      "section": "Evening",
+    1247 -      "overlap": 2,
+    1248 -      "stable_cols_count": 3,
+    1249 -      "stable_cols": [
+    1250 -        3,
+    1251 -        2,
+    1252 -        1
+    1253 -      ],
+    1254 -      "consensus_col1": false,
+    1255 -      "consensus_col2": false,
+    1256 -      "cross_section_echo": 0,
+    1257 -      "hot_count": 8,
+    1258 -      "superhot_count": 12,
+    1259 -      "mask_drop": 17,
+    1260 -      "mirror_supported": true,
+    1261 -      "double_hits": 334,
+    1262 -      "confidence_score": 19.86,
+    1263 -      "tier": "B",
+    1264 -      "flags": [],
+    1265 -      "top_tokens": [
+    1266 -        "V4x2_2x1",
+    1267 -        "V4x3_1x1_2x1"
+    1268 -      ],
+    1269 -      "recommended_tokens": [
+    1270 -        "V4x2_2x1",
+    1271 -        "V4x3_1x1_2x1"
+    1272 -      ],
+    1273 -      "top_straights": [
+    1274 -        "018",
+    1275 -        "208",
+    1276 -        "201"
+    1277 -      ],
+    1278 -      "section_prior": 1.0,
+    1279 -      "state_prior": 1.0,
+    1280 -      "recency_lane_score": 1.2,
+    1281 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    1282 -      "source": "validation_report.json"
+    1283 -    },
+    1284 -    {
+    1285 -      "date": "",
+    1286 -      "state": "Pennsylvania4",
+    1287 -      "section": "Combined",
+    1288 -      "overlap": 1,
+    1289 -      "stable_cols_count": 1,
+    1290 -      "stable_cols": [
+    1291 -        3
+    1292 -      ],
+    1293 -      "consensus_col1": true,
+    1294 -      "consensus_col2": true,
+    1295 -      "cross_section_echo": 0,
+    1296 -      "hot_count": 8,
+    1297 -      "superhot_count": 12,
+    1298 -      "mask_drop": 17,
+    1299 -      "mirror_supported": true,
+    1300 -      "double_hits": 393,
+    1301 -      "confidence_score": 11.402,
+    1302 -      "tier": "C",
+    1303 -      "flags": [],
+    1304 -      "top_tokens": [
+    1305 -        "V5x2_2x1_4x1"
+    1306 -      ],
+    1307 -      "recommended_tokens": [
+    1308 -        "V5x2_2x1_4x1"
+    1309 -      ],
+    1310 -      "top_straights": [
+    1311 -        "018",
+    1312 -        "208",
+    1313 -        "201"
+    1314 -      ],
+    1315 -      "section_prior": 1.15,
+    1316 -      "state_prior": 1.0,
+    1317 -      "recency_lane_score": 0.0,
+    1318 -      "why": "overlap=1.000*3.00->3.00; stable=1.600*1.90->3.04; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.937*0.40->0.37; secti
+          on_prior=1.15",
+    1319 -      "source": "validation_report.json"
+    1320 -    },
+    1321 -    {
+    1322 -      "date": "",
+    1323 -      "state": "PuertoRico4",
+    1324 -      "section": "Midday",
+    1325 -      "overlap": 1,
+    1326 -      "stable_cols_count": 1,
+    1327 -      "stable_cols": [
+    1328 -        4
+    1329 -      ],
+    1330 -      "consensus_col1": true,
+    1331 -      "consensus_col2": true,
+    1332 -      "cross_section_echo": 0,
+    1333 -      "hot_count": 8,
+    1334 -      "superhot_count": 12,
+    1335 -      "mask_drop": 10,
+    1336 -      "mirror_supported": true,
+    1337 -      "double_hits": 414,
+    1338 -      "confidence_score": 8.59,
+    1339 -      "tier": "C",
+    1340 -      "flags": [],
+    1341 -      "top_tokens": [
+    1342 -        "V1x1_2x1_4x1"
+    1343 -      ],
+    1344 -      "recommended_tokens": [
+    1345 -        "V1x1_2x1_4x1"
+    1346 -      ],
+    1347 -      "top_straights": [
+    1348 -        "024",
+    1349 -        "240",
+    1350 -        "092"
+    1351 -      ],
+    1352 -      "section_prior": 1.0,
+    1353 -      "state_prior": 1.0,
+    1354 -      "recency_lane_score": 0.0,
+    1355 -      "why": "overlap=1.000*3.00->3.00; stable=1.100*1.90->2.09; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.00",
+    1356 -      "source": "validation_report.json"
+    1357 -    },
+    1358 -    {
+    1359 -      "date": "",
+    1360 -      "state": "PuertoRico4",
+    1361 -      "section": "Evening",
+    1362 -      "overlap": 1,
+    1363 -      "stable_cols_count": 2,
+    1364 -      "stable_cols": [
+    1365 -        2,
+    1366 -        1
+    1367 -      ],
+    1368 -      "consensus_col1": false,
+    1369 -      "consensus_col2": false,
+    1370 -      "cross_section_echo": 0,
+    1371 -      "hot_count": 8,
+    1372 -      "superhot_count": 12,
+    1373 -      "mask_drop": 13,
+    1374 -      "mirror_supported": true,
+    1375 -      "double_hits": 562,
+    1376 -      "confidence_score": 15.02,
+    1377 -      "tier": "C",
+    1378 -      "flags": [],
+    1379 -      "top_tokens": [
+    1380 -        "V5x3_1x2_3x2"
+    1381 -      ],
+    1382 -      "recommended_tokens": [
+    1383 -        "V5x3_1x2_3x2"
+    1384 -      ],
+    1385 -      "top_straights": [
+    1386 -        "024",
+    1387 -        "240",
+    1388 -        "092"
+    1389 -      ],
+    1390 -      "section_prior": 1.0,
+    1391 -      "state_prior": 1.0,
+    1392 -      "recency_lane_score": 1.2,
+    1393 -      "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.00",
+    1394 -      "source": "validation_report.json"
+    1395 -    },
+    1396 -    {
+    1397 -      "date": "",
+    1398 -      "state": "PuertoRico4",
+    1399 -      "section": "Combined",
+    1400 -      "overlap": 2,
+    1401 -      "stable_cols_count": 3,
+    1402 -      "stable_cols": [
+    1403 -        3,
+    1404 -        2,
+    1405 -        1
+    1406 -      ],
+    1407 -      "consensus_col1": false,
+    1408 -      "consensus_col2": false,
+    1409 -      "cross_section_echo": 0,
+    1410 -      "hot_count": 8,
+    1411 -      "superhot_count": 12,
+    1412 -      "mask_drop": 13,
+    1413 -      "mirror_supported": true,
+    1414 -      "double_hits": 562,
+    1415 -      "confidence_score": 24.219,
+    1416 -      "tier": "B",
+    1417 -      "flags": [],
+    1418 -      "top_tokens": [
+    1419 -        "V3x2_1x1_5x1",
+    1420 -        "V1x2_3x2_5x1"
+    1421 -      ],
+    1422 -      "recommended_tokens": [
+    1423 -        "V3x2_1x1_5x1",
+    1424 -        "V1x2_3x2_5x1"
+    1425 -      ],
+    1426 -      "top_straights": [
+    1427 -        "024",
+    1428 -        "240",
+    1429 -        "092"
+    1430 -      ],
+    1431 -      "section_prior": 1.15,
+    1432 -      "state_prior": 1.0,
+    1433 -      "recency_lane_score": 1.2,
+    1434 -      "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.15",
+    1435 -      "source": "validation_report.json"
+    1436 -    },
+    1437 -    {
+    1438 -      "date": "",
+    1439 -      "state": "SouthCarolina4",
+    1440 -      "section": "Midday",
+    1441 -      "overlap": 1,
+    1442 -      "stable_cols_count": 2,
+    1443 -      "stable_cols": [
+    1444 -        2,
+    1445 -        1
+    1446 -      ],
+    1447 -      "consensus_col1": false,
+    1448 -      "consensus_col2": false,
+    1449 -      "cross_section_echo": 0,
+    1450 -      "hot_count": 8,
+    1451 -      "superhot_count": 12,
+    1452 -      "mask_drop": 23,
+    1453 -      "mirror_supported": true,
+    1454 -      "double_hits": 440,
+    1455 -      "confidence_score": 15.02,
+    1456 -      "tier": "C",
+    1457 -      "flags": [],
+    1458 -      "top_tokens": [
+    1459 -        "V2x2_4x2_1x1"
+    1460 -      ],
+    1461 -      "recommended_tokens": [
+    1462 -        "V2x2_4x2_1x1"
+    1463 -      ],
+    1464 -      "top_straights": [
+    1465 -        "534",
+    1466 -        "153",
+    1467 -        "541"
+    1468 -      ],
+    1469 -      "section_prior": 1.0,
+    1470 -      "state_prior": 1.0,
+    1471 -      "recency_lane_score": 1.2,
+    1472 -      "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recen
+          cy_lane=1.200*0.80->0.96; section_prior=1.00",
+    1473 -      "source": "validation_report.json"
+    1474 -    },
+    1475 -    {
+    1476 -      "date": "",
+    1477 -      "state": "SouthCarolina4",
+    1478 -      "section": "Evening",
+    1479 -      "overlap": 2,
+    1480 -      "stable_cols_count": 2,
+    1481 -      "stable_cols": [
+    1482 -        4,
+    1483 -        3
+    1484 -      ],
+    1485 -      "consensus_col1": true,
+    1486 -      "consensus_col2": true,
+    1487 -      "cross_section_echo": 0,
+    1488 -      "hot_count": 8,
+    1489 -      "superhot_count": 12,
+    1490 -      "mask_drop": 20,
+    1491 -      "mirror_supported": true,
+    1492 -      "double_hits": 336,
+    1493 -      "confidence_score": 15.006,
+    1494 -      "tier": "B",
+    1495 -      "flags": [],
+    1496 -      "top_tokens": [
+    1497 -        "V5x3_4x2_3x1",
+    1498 -        "V4x2_5x2"
+    1499 -      ],
+    1500 -      "recommended_tokens": [
+    1501 -        "V4x2_5x2",
+    1502 -        "V5x3_4x2_3x1"
+    1503 -      ],
+    1504 -      "top_straights": [
+    1505 -        "534",
+    1506 -        "153",
+    1507 -        "345"
+    1508 -      ],
+    1509 -      "section_prior": 1.0,
+    1510 -      "state_prior": 1.0,
+    1511 -      "recency_lane_score": 0.0,
+    1512 -      "why": "overlap=2.000*3.00->6.00; stable=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.400*0.80->0.32; mirror=1.000*0.60->0.60; dou
+          bles=0.140*0.40->0.06; section_prior=1.00",
+    1513 -      "source": "validation_report.json"
+    1514 -    },
+    1515 -    {
+    1516 -      "date": "",
+    1517 -      "state": "SouthCarolina4",
+    1518 -      "section": "Combined",
+    1519 -      "overlap": 0,
+    1520 -      "stable_cols_count": 0,
+    1521 -      "stable_cols": [],
+    1522 -      "consensus_col1": true,
+    1523 -      "consensus_col2": true,
+    1524 -      "cross_section_echo": 0,
+    1525 -      "hot_count": 8,
+    1526 -      "superhot_count": 12,
+    1527 -      "mask_drop": 18,
+    1528 -      "mirror_supported": true,
+    1529 -      "double_hits": 319,
+    1530 -      "confidence_score": 1.725,
+    1531 -      "tier": "Z",
+    1532 -      "flags": [
+    1533 -        "zero_overlap"
+    1534 -      ],
+    1535 -      "top_tokens": [],
+    1536 -      "recommended_tokens": [],
+    1537 -      "top_straights": [
+    1538 -        "534",
+    1539 -        "345",
+    1540 -        "341"
+    1541 -      ],
+    1542 -      "section_prior": 1.15,
+    1543 -      "state_prior": 1.0,
+    1544 -      "recency_lane_score": 0.0,
+    1545 -      "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.15",
+    1546 -      "source": "validation_report.json"
+    1547 -    },
+    1548 -    {
+    1549 -      "date": "",
+    1550 -      "state": "Virginia4",
+    1551 -      "section": "Midday",
+    1552 -      "overlap": 4,
+    1553 -      "stable_cols_count": 4,
+    1554 -      "stable_cols": [
+    1555 -        4,
+    1556 -        3,
+    1557 -        2,
+    1558 -        1
+    1559 -      ],
+    1560 -      "consensus_col1": false,
+    1561 -      "consensus_col2": false,
+    1562 -      "cross_section_echo": 0,
+    1563 -      "hot_count": 8,
+    1564 -      "superhot_count": 12,
+    1565 -      "mask_drop": 11,
+    1566 -      "mirror_supported": true,
+    1567 -      "double_hits": 538,
+    1568 -      "confidence_score": 28.35,
+    1569 -      "tier": "A",
+    1570 -      "flags": [],
+    1571 -      "top_tokens": [
+    1572 -        "V1x3_3x2_5x2",
+    1573 -        "V1x3_3x2_5x1",
+    1574 -        "V1x3_3x1",
+    1575 -        "V1x3"
+    1576 -      ],
+    1577 -      "recommended_tokens": [
+    1578 -        "V1x3",
+    1579 -        "V1x3_3x1",
+    1580 -        "V1x3_3x2_5x1"
+    1581 -      ],
+    1582 -      "top_straights": [
+    1583 -        "540",
+    1584 -        "504",
+    1585 -        "045"
+    1586 -      ],
+    1587 -      "section_prior": 1.0,
+    1588 -      "state_prior": 1.0,
+    1589 -      "recency_lane_score": 1.2,
+    1590 -      "why": "overlap=4.000*3.00->12.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96;
+          section_prior=1.00",
+    1591 -      "source": "validation_report.json"
+    1592 -    },
+    1593 -    {
+    1594 -      "date": "",
+    1595 -      "state": "Virginia4",
+    1596 -      "section": "Evening",
+    1597 -      "overlap": 2,
+    1598 -      "stable_cols_count": 2,
+    1599 -      "stable_cols": [
+    1600 -        2,
+    1601 -        1
+    1602 -      ],
+    1603 -      "consensus_col1": false,
+    1604 -      "consensus_col2": false,
+    1605 -      "cross_section_echo": 0,
+    1606 -      "hot_count": 8,
+    1607 -      "superhot_count": 12,
+    1608 -      "mask_drop": 13,
+    1609 -      "mirror_supported": true,
+    1610 -      "double_hits": 478,
+    1611 -      "confidence_score": 17.62,
+    1612 -      "tier": "B",
+    1613 -      "flags": [],
+    1614 -      "top_tokens": [
+    1615 -        "V1x2_4x1_5x1",
+    1616 -        "V1x2_5x1"
+    1617 -      ],
+    1618 -      "recommended_tokens": [
+    1619 -        "V1x2_4x1_5x1",
+    1620 -        "V1x2_5x1"
+    1621 -      ],
+    1622 -      "top_straights": [
+    1623 -        "540",
+    1624 -        "504",
+    1625 -        "045"
+    1626 -      ],
+    1627 -      "section_prior": 1.0,
+    1628 -      "state_prior": 1.0,
+    1629 -      "recency_lane_score": 1.2,
+    1630 -      "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96;
+          section_prior=1.00",
+    1631 -      "source": "validation_report.json"
+    1632 -    },
+    1633 -    {
+    1634 -      "date": "",
+    1635 -      "state": "Virginia4",
+    1636 -      "section": "Combined",
+    1637 -      "overlap": 1,
+    1638 -      "stable_cols_count": 4,
+    1639 -      "stable_cols": [
+    1640 -        4,
+    1641 -        3,
+    1642 -        2,
+    1643 -        1
+    1644 -      ],
+    1645 -      "consensus_col1": false,
+    1646 -      "consensus_col2": false,
+    1647 -      "cross_section_echo": 0,
+    1648 -      "hot_count": 8,
+    1649 -      "superhot_count": 12,
+    1650 -      "mask_drop": 13,
+    1651 -      "mirror_supported": true,
+    1652 -      "double_hits": 523,
+    1653 -      "confidence_score": 23.057,
+    1654 -      "tier": "C",
+    1655 -      "flags": [],
+    1656 -      "top_tokens": [
+    1657 -        "V1x2_3x1_5x1"
+    1658 -      ],
+    1659 -      "recommended_tokens": [
+    1660 -        "V1x2_3x1_5x1"
+    1661 -      ],
+    1662 -      "top_straights": [
+    1663 -        "540",
+    1664 -        "504",
+    1665 -        "045"
+    1666 -      ],
+    1667 -      "section_prior": 1.15,
+    1668 -      "state_prior": 1.0,
+    1669 -      "recency_lane_score": 1.2,
+    1670 -      "why": "overlap=1.000*3.00->3.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.750*0.40->0.30; rece
+          ncy_lane=1.200*0.80->0.96; section_prior=1.15",
+    1671 -      "source": "validation_report.json"
+    1672 -    }
+    1673 -  ],
+    1674 -  "states": [
+    1675 -    {
+    1676 -      "state": "Connecticut4",
+    1677 -      "date": "",
+    1678 -      "sections": [
+    1679 -        {
+    1680 -          "date": "",
+    1681 -          "state": "Connecticut4",
+    1682 -          "section": "Combined",
+    1683 -          "overlap": 1,
+    1684 -          "stable_cols_count": 3,
+    1685 -          "stable_cols": [
+    1686 -            3,
+    1687 -            2,
+    1688 -            1
+    1689 -          ],
+    1690 -          "consensus_col1": false,
+    1691 -          "consensus_col2": false,
+    1692 -          "cross_section_echo": 0,
+    1693 -          "hot_count": 8,
+    1694 -          "superhot_count": 12,
+    1695 -          "mask_drop": 13,
+    1696 -          "mirror_supported": true,
+    1697 -          "double_hits": 428,
+    1698 -          "confidence_score": 19.407,
+    1699 -          "tier": "C",
+    1700 -          "flags": [],
+    1701 -          "top_tokens": [
+    1702 -            "V5x2_2x1_3x1"
+    1703 -          ],
+    1704 -          "recommended_tokens": [
+    1705 -            "V5x2_2x1_3x1"
+    1706 -          ],
+    1707 -          "top_straights": [
+    1708 -            "683",
+    1709 -            "386",
+    1710 -            "836"
+    1711 -          ],
+    1712 -          "section_prior": 1.15,
+    1713 -          "state_prior": 1.0,
+    1714 -          "recency_lane_score": 1.2,
+    1715 -          "why": "overlap=1.000*3.00->3.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.040*0.40->0.02; recency_lane=1.200*0.80->0.9
+          6; section_prior=1.15",
+    1716 -          "source": "validation_report.json"
+    1717 -        },
+    1718 -        {
+    1719 -          "date": "",
+    1720 -          "state": "Connecticut4",
+    1721 -          "section": "Evening",
+    1722 -          "overlap": 2,
+    1723 -          "stable_cols_count": 3,
+    1724 -          "stable_cols": [
+    1725 -            3,
+    1726 -            2,
+    1727 -            1
+    1728 -          ],
+    1729 -          "consensus_col1": false,
+    1730 -          "consensus_col2": false,
+    1731 -          "cross_section_echo": 0,
+    1732 -          "hot_count": 8,
+    1733 -          "superhot_count": 12,
+    1734 -          "mask_drop": 14,
+    1735 -          "mirror_supported": true,
+    1736 -          "double_hits": 525,
+    1737 -          "confidence_score": 20.66,
+    1738 -          "tier": "B",
+    1739 -          "flags": [],
+    1740 -          "top_tokens": [
+    1741 -            "V5x2_2x1",
+    1742 -            "V4x2_5x2_2x1"
+    1743 -          ],
+    1744 -          "recommended_tokens": [
+    1745 -            "V4x2_5x2_2x1",
+    1746 -            "V5x2_2x1"
+    1747 -          ],
+    1748 -          "top_straights": [
+    1749 -            "683",
+    1750 -            "386",
+    1751 -            "836"
+    1752 -          ],
+    1753 -          "section_prior": 1.0,
+    1754 -          "state_prior": 1.0,
+    1755 -          "recency_lane_score": 1.2,
+    1756 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40;
+          recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    1757 -          "source": "validation_report.json"
+    1758 -        },
+    1759 -        {
+    1760 -          "date": "",
+    1761 -          "state": "Connecticut4",
+    1762 -          "section": "Midday",
+    1763 -          "overlap": 2,
+    1764 -          "stable_cols_count": 4,
+    1765 -          "stable_cols": [
+    1766 -            4,
+    1767 -            3,
+    1768 -            2,
+    1769 -            1
+    1770 -          ],
+    1771 -          "consensus_col1": false,
+    1772 -          "consensus_col2": false,
+    1773 -          "cross_section_echo": 0,
+    1774 -          "hot_count": 8,
+    1775 -          "superhot_count": 12,
+    1776 -          "mask_drop": 15,
+    1777 -          "mirror_supported": true,
+    1778 -          "double_hits": 424,
+    1779 -          "confidence_score": 22.75,
+    1780 -          "tier": "B",
+    1781 -          "flags": [],
+    1782 -          "top_tokens": [
+    1783 -            "V3x2_1x1",
+    1784 -            "V1x3_3x2"
+    1785 -          ],
+    1786 -          "recommended_tokens": [
+    1787 -            "V1x3_3x2",
+    1788 -            "V3x2_1x1"
+    1789 -          ],
+    1790 -          "top_straights": [
+    1791 -            "683",
+    1792 -            "386",
+    1793 -            "836"
+    1794 -          ],
+    1795 -          "section_prior": 1.0,
+    1796 -          "state_prior": 1.0,
+    1797 -          "recency_lane_score": 1.2,
+    1798 -          "why": "overlap=2.000*3.00->6.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0
+          .96; section_prior=1.00",
+    1799 -          "source": "validation_report.json"
+    1800 -        }
+    1801 -      ],
+    1802 -      "top_indices_by_state": [
+    1803 -        {
+    1804 -          "index": 17,
+    1805 -          "score": 22.75,
+    1806 -          "source_section": "Midday",
+    1807 -          "explain": "Midday overlap=2; cols [4, 3, 2, 1]; mirror; doubles=424; recency_lane=1.20"
+    1808 -        },
+    1809 -        {
+    1810 -          "index": 20,
+    1811 -          "score": 22.75,
+    1812 -          "source_section": "Midday",
+    1813 -          "explain": "Midday overlap=2; cols [4, 3, 2, 1]; mirror; doubles=424; recency_lane=1.20"
+    1814 -        },
+    1815 -        {
+    1816 -          "index": 21,
+    1817 -          "score": 22.75,
+    1818 -          "source_section": "Midday",
+    1819 -          "explain": "Midday overlap=2; cols [4, 3, 2, 1]; mirror; doubles=424; recency_lane=1.20"
+    1820 -        }
+    1821 -      ]
+    1822 -    },
+    1823 -    {
+    1824 -      "state": "Delaware4",
+    1825 -      "date": "",
+    1826 -      "sections": [
+    1827 -        {
+    1828 -          "date": "",
+    1829 -          "state": "Delaware4",
+    1830 -          "section": "Combined",
+    1831 -          "overlap": 2,
+    1832 -          "stable_cols_count": 3,
+    1833 -          "stable_cols": [
+    1834 -            3,
+    1835 -            2,
+    1836 -            1
+    1837 -          ],
+    1838 -          "consensus_col1": false,
+    1839 -          "consensus_col2": false,
+    1840 -          "cross_section_echo": 0,
+    1841 -          "hot_count": 8,
+    1842 -          "superhot_count": 12,
+    1843 -          "mask_drop": 15,
+    1844 -          "mirror_supported": true,
+    1845 -          "double_hits": 615,
+    1846 -          "confidence_score": 24.219,
+    1847 -          "tier": "B",
+    1848 -          "flags": [],
+    1849 -          "top_tokens": [
+    1850 -            "V2x2_4x2_1x1",
+    1851 -            "V4x2_1x1_2x1"
+    1852 -          ],
+    1853 -          "recommended_tokens": [
+    1854 -            "V2x2_4x2_1x1",
+    1855 -            "V4x2_1x1_2x1"
+    1856 -          ],
+    1857 -          "top_straights": [
+    1858 -            "013",
+    1859 -            "386",
+    1860 -            "138"
+    1861 -          ],
+    1862 -          "section_prior": 1.15,
+    1863 -          "state_prior": 1.0,
+    1864 -          "recency_lane_score": 1.2,
+    1865 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40;
+          recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    1866 -          "source": "validation_report.json"
+    1867 -        },
+    1868 -        {
+    1869 -          "date": "",
+    1870 -          "state": "Delaware4",
+    1871 -          "section": "Evening",
+    1872 -          "overlap": 3,
+    1873 -          "stable_cols_count": 5,
+    1874 -          "stable_cols": [
+    1875 -            5,
+    1876 -            4,
+    1877 -            3,
+    1878 -            2,
+    1879 -            1
+    1880 -          ],
+    1881 -          "consensus_col1": false,
+    1882 -          "consensus_col2": false,
+    1883 -          "cross_section_echo": 0,
+    1884 -          "hot_count": 8,
+    1885 -          "superhot_count": 12,
+    1886 -          "mask_drop": 12,
+    1887 -          "mirror_supported": true,
+    1888 -          "double_hits": 570,
+    1889 -          "confidence_score": 26.874,
+    1890 -          "tier": "B+",
+    1891 -          "flags": [],
+    1892 -          "top_tokens": [
+    1893 -            "V4x4_5x2",
+    1894 -            "V4x3",
+    1895 -            "V4x4_5x3_2x1"
+    1896 -          ],
+    1897 -          "recommended_tokens": [
+    1898 -            "V4x3",
+    1899 -            "V4x4_5x2",
+    1900 -            "V4x4_5x3_2x1"
+    1901 -          ],
+    1902 -          "top_straights": [
+    1903 -            "013",
+    1904 -            "386",
+    1905 -            "138"
+    1906 -          ],
+    1907 -          "section_prior": 1.0,
+    1908 -          "state_prior": 1.0,
+    1909 -          "recency_lane_score": 1.2,
+    1910 -          "why": "overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.536*0.40->0.21; recency_lane=1.200*0.80->0.9
+          6; section_prior=1.00",
+    1911 -          "source": "validation_report.json"
+    1912 -        },
+    1913 -        {
+    1914 -          "date": "",
+    1915 -          "state": "Delaware4",
+    1916 -          "section": "Midday",
+    1917 -          "overlap": 1,
+    1918 -          "stable_cols_count": 2,
+    1919 -          "stable_cols": [
+    1920 -            2,
+    1921 -            1
+    1922 -          ],
+    1923 -          "consensus_col1": false,
+    1924 -          "consensus_col2": false,
+    1925 -          "cross_section_echo": 0,
+    1926 -          "hot_count": 8,
+    1927 -          "superhot_count": 12,
+    1928 -          "mask_drop": 14,
+    1929 -          "mirror_supported": true,
+    1930 -          "double_hits": 518,
+    1931 -          "confidence_score": 14.353,
+    1932 -          "tier": "C",
+    1933 -          "flags": [],
+    1934 -          "top_tokens": [
+    1935 -            "V2x1_3x1_5x1"
+    1936 -          ],
+    1937 -          "recommended_tokens": [
+    1938 -            "V2x1_3x1_5x1"
+    1939 -          ],
+    1940 -          "top_straights": [
+    1941 -            "013",
+    1942 -            "386",
+    1943 -            "138"
+    1944 -          ],
+    1945 -          "section_prior": 1.0,
+    1946 -          "state_prior": 1.0,
+    1947 -          "recency_lane_score": 1.2,
+    1948 -          "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.
+          96; section_prior=1.00",
+    1949 -          "source": "validation_report.json"
+    1950 -        }
+    1951 -      ],
+    1952 -      "top_indices_by_state": [
+    1953 -        {
+    1954 -          "index": 6,
+    1955 -          "score": 26.874,
+    1956 -          "source_section": "Evening",
+    1957 -          "explain": "Evening overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=570; recency_lane=1.20"
+    1958 -        },
+    1959 -        {
+    1960 -          "index": 8,
+    1961 -          "score": 26.874,
+    1962 -          "source_section": "Evening",
+    1963 -          "explain": "Evening overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=570; recency_lane=1.20"
+    1964 -        },
+    1965 -        {
+    1966 -          "index": 9,
+    1967 -          "score": 26.874,
+    1968 -          "source_section": "Evening",
+    1969 -          "explain": "Evening overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=570; recency_lane=1.20"
+    1970 -        }
+    1971 -      ]
+    1972 -    },
+    1973 -    {
+    1974 -      "state": "Florida4",
+    1975 -      "date": "",
+    1976 -      "sections": [
+    1977 -        {
+    1978 -          "date": "",
+    1979 -          "state": "Florida4",
+    1980 -          "section": "Combined",
+    1981 -          "overlap": 1,
+    1982 -          "stable_cols_count": 2,
+    1983 -          "stable_cols": [
+    1984 -            2,
+    1985 -            1
+    1986 -          ],
+    1987 -          "consensus_col1": false,
+    1988 -          "consensus_col2": false,
+    1989 -          "cross_section_echo": 0,
+    1990 -          "hot_count": 8,
+    1991 -          "superhot_count": 12,
+    1992 -          "mask_drop": 18,
+    1993 -          "mirror_supported": true,
+    1994 -          "double_hits": 544,
+    1995 -          "confidence_score": 17.273,
+    1996 -          "tier": "C",
+    1997 -          "flags": [],
+    1998 -          "top_tokens": [
+    1999 -            "V4x2_2x1_3x1"
+    2000 -          ],
+    2001 -          "recommended_tokens": [
+    2002 -            "V4x2_2x1_3x1"
+    2003 -          ],
+    2004 -          "top_straights": [
+    2005 -            "016",
+    2006 -            "520",
+    2007 -            "250"
+    2008 -          ],
+    2009 -          "section_prior": 1.15,
+    2010 -          "state_prior": 1.0,
+    2011 -          "recency_lane_score": 1.2,
+    2012 -          "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.15",
+    2013 -          "source": "validation_report.json"
+    2014 -        },
+    2015 -        {
+    2016 -          "date": "",
+    2017 -          "state": "Florida4",
+    2018 -          "section": "Evening",
+    2019 -          "overlap": 2,
+    2020 -          "stable_cols_count": 3,
+    2021 -          "stable_cols": [
+    2022 -            3,
+    2023 -            2,
+    2024 -            1
+    2025 -          ],
+    2026 -          "consensus_col1": false,
+    2027 -          "consensus_col2": false,
+    2028 -          "cross_section_echo": 0,
+    2029 -          "hot_count": 8,
+    2030 -          "superhot_count": 12,
+    2031 -          "mask_drop": 13,
+    2032 -          "mirror_supported": true,
+    2033 -          "double_hits": 419,
+    2034 -          "confidence_score": 20.022,
+    2035 -          "tier": "B",
+    2036 -          "flags": [],
+    2037 -          "top_tokens": [
+    2038 -            "V1x1_3x1_4x1",
+    2039 -            "V1x2_3x1_4x1"
+    2040 -          ],
+    2041 -          "recommended_tokens": [
+    2042 -            "V1x1_3x1_4x1",
+    2043 -            "V1x2_3x1_4x1"
+    2044 -          ],
+    2045 -          "top_straights": [
+    2046 -            "016",
+    2047 -            "520",
+    2048 -            "250"
+    2049 -          ],
+    2050 -          "section_prior": 1.0,
+    2051 -          "state_prior": 1.0,
+    2052 -          "recency_lane_score": 1.2,
+    2053 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.405*0.40->0.16; recency_lane=1.200*0.80->0.9
+          6; section_prior=1.00",
+    2054 -          "source": "validation_report.json"
+    2055 -        },
+    2056 -        {
+    2057 -          "date": "",
+    2058 -          "state": "Florida4",
+    2059 -          "section": "Midday",
+    2060 -          "overlap": 2,
+    2061 -          "stable_cols_count": 2,
+    2062 -          "stable_cols": [
+    2063 -            3,
+    2064 -            2
+    2065 -          ],
+    2066 -          "consensus_col1": true,
+    2067 -          "consensus_col2": false,
+    2068 -          "cross_section_echo": 0,
+    2069 -          "hot_count": 8,
+    2070 -          "superhot_count": 12,
+    2071 -          "mask_drop": 16,
+    2072 -          "mirror_supported": true,
+    2073 -          "double_hits": 334,
+    2074 -          "confidence_score": 16.62,
+    2075 -          "tier": "B",
+    2076 -          "flags": [],
+    2077 -          "top_tokens": [
+    2078 -            "V2x2_1x1_5x1",
+    2079 -            "V2x2_1x1"
+    2080 -          ],
+    2081 -          "recommended_tokens": [
+    2082 -            "V2x2_1x1",
+    2083 -            "V2x2_1x1_5x1"
+    2084 -          ],
+    2085 -          "top_straights": [
+    2086 -            "016",
+    2087 -            "520",
+    2088 -            "250"
+    2089 -          ],
+    2090 -          "section_prior": 1.0,
+    2091 -          "state_prior": 1.0,
+    2092 -          "recency_lane_score": 1.0,
+    2093 -          "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.600*0.80->0.48; mirror=1.000*0.60->0.60;
+           recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    2094 -          "source": "validation_report.json"
+    2095 -        }
+    2096 -      ],
+    2097 -      "top_indices_by_state": [
+    2098 -        {
+    2099 -          "index": 1,
+    2100 -          "score": 20.022,
+    2101 -          "source_section": "Evening",
+    2102 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=419; recency_lane=1.20"
+    2103 -        },
+    2104 -        {
+    2105 -          "index": 2,
+    2106 -          "score": 20.022,
+    2107 -          "source_section": "Evening",
+    2108 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=419; recency_lane=1.20"
+    2109 -        },
+    2110 -        {
+    2111 -          "index": 3,
+    2112 -          "score": 20.022,
+    2113 -          "source_section": "Evening",
+    2114 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=419; recency_lane=1.20"
+    2115 -        }
+    2116 -      ]
+    2117 -    },
+    2118 -    {
+    2119 -      "state": "Indiana4",
+    2120 -      "date": "",
+    2121 -      "sections": [
+    2122 -        {
+    2123 -          "date": "",
+    2124 -          "state": "Indiana4",
+    2125 -          "section": "Combined",
+    2126 -          "overlap": 1,
+    2127 -          "stable_cols_count": 1,
+    2128 -          "stable_cols": [
+    2129 -            2
+    2130 -          ],
+    2131 -          "consensus_col1": true,
+    2132 -          "consensus_col2": false,
+    2133 -          "cross_section_echo": 0,
+    2134 -          "hot_count": 8,
+    2135 -          "superhot_count": 12,
+    2136 -          "mask_drop": 13,
+    2137 -          "mirror_supported": true,
+    2138 -          "double_hits": 246,
+    2139 -          "confidence_score": 11.615,
+    2140 -          "tier": "C",
+    2141 -          "flags": [],
+    2142 -          "top_tokens": [
+    2143 -            "V1x1_3x1_4x1"
+    2144 -          ],
+    2145 -          "recommended_tokens": [
+    2146 -            "V1x1_3x1_4x1"
+    2147 -          ],
+    2148 -          "top_straights": [
+    2149 -            "540",
+    2150 -            "054",
+    2151 -            "045"
+    2152 -          ],
+    2153 -          "section_prior": 1.15,
+    2154 -          "state_prior": 1.0,
+    2155 -          "recency_lane_score": 1.0,
+    2156 -          "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.000*0.80->0.
+          80; section_prior=1.15",
+    2157 -          "source": "validation_report.json"
+    2158 -        },
+    2159 -        {
+    2160 -          "date": "",
+    2161 -          "state": "Indiana4",
+    2162 -          "section": "Evening",
+    2163 -          "overlap": 2,
+    2164 -          "stable_cols_count": 2,
+    2165 -          "stable_cols": [
+    2166 -            3,
+    2167 -            2
+    2168 -          ],
+    2169 -          "consensus_col1": true,
+    2170 -          "consensus_col2": false,
+    2171 -          "cross_section_echo": 0,
+    2172 -          "hot_count": 8,
+    2173 -          "superhot_count": 12,
+    2174 -          "mask_drop": 19,
+    2175 -          "mirror_supported": true,
+    2176 -          "double_hits": 328,
+    2177 -          "confidence_score": 17.275,
+    2178 -          "tier": "B",
+    2179 -          "flags": [],
+    2180 -          "top_tokens": [
+    2181 -            "V3x3_4x1_5x1",
+    2182 -            "V3x3_5x1"
+    2183 -          ],
+    2184 -          "recommended_tokens": [
+    2185 -            "V3x3_4x1_5x1",
+    2186 -            "V3x3_5x1"
+    2187 -          ],
+    2188 -          "top_straights": [
+    2189 -            "540",
+    2190 -            "054",
+    2191 -            "045"
+    2192 -          ],
+    2193 -          "section_prior": 1.0,
+    2194 -          "state_prior": 1.0,
+    2195 -          "recency_lane_score": 1.0,
+    2196 -          "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60;
+           doubles=0.837*0.40->0.33; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    2197 -          "source": "validation_report.json"
+    2198 -        },
+    2199 -        {
+    2200 -          "date": "",
+    2201 -          "state": "Indiana4",
+    2202 -          "section": "Midday",
+    2203 -          "overlap": 1,
+    2204 -          "stable_cols_count": 1,
+    2205 -          "stable_cols": [
+    2206 -            2
+    2207 -          ],
+    2208 -          "consensus_col1": true,
+    2209 -          "consensus_col2": false,
+    2210 -          "cross_section_echo": 0,
+    2211 -          "hot_count": 8,
+    2212 -          "superhot_count": 12,
+    2213 -          "mask_drop": 16,
+    2214 -          "mirror_supported": true,
+    2215 -          "double_hits": 344,
+    2216 -          "confidence_score": 10.9,
+    2217 -          "tier": "C",
+    2218 -          "flags": [],
+    2219 -          "top_tokens": [
+    2220 -            "V2x1_4x1_5x1"
+    2221 -          ],
+    2222 -          "recommended_tokens": [
+    2223 -            "V2x1_4x1_5x1"
+    2224 -          ],
+    2225 -          "top_straights": [
+    2226 -            "540",
+    2227 -            "054",
+    2228 -            "045"
+    2229 -          ],
+    2230 -          "section_prior": 1.0,
+    2231 -          "state_prior": 1.0,
+    2232 -          "recency_lane_score": 1.0,
+    2233 -          "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60;
+           doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    2234 -          "source": "validation_report.json"
+    2235 -        }
+    2236 -      ],
+    2237 -      "top_indices_by_state": [
+    2238 -        {
+    2239 -          "index": 1,
+    2240 -          "score": 17.275,
+    2241 -          "source_section": "Evening",
+    2242 -          "explain": "Evening overlap=2; cols [3, 2]; mirror; doubles=328; recency_lane=1.00"
+    2243 -        },
+    2244 -        {
+    2245 -          "index": 3,
+    2246 -          "score": 17.275,
+    2247 -          "source_section": "Evening",
+    2248 -          "explain": "Evening overlap=2; cols [3, 2]; mirror; doubles=328; recency_lane=1.00"
+    2249 -        },
+    2250 -        {
+    2251 -          "index": 4,
+    2252 -          "score": 17.275,
+    2253 -          "source_section": "Evening",
+    2254 -          "explain": "Evening overlap=2; cols [3, 2]; mirror; doubles=328; recency_lane=1.00"
+    2255 -        }
+    2256 -      ]
+    2257 -    },
+    2258 -    {
+    2259 -      "state": "Michigan4",
+    2260 -      "date": "",
+    2261 -      "sections": [
+    2262 -        {
+    2263 -          "date": "",
+    2264 -          "state": "Michigan4",
+    2265 -          "section": "Combined",
+    2266 -          "overlap": 1,
+    2267 -          "stable_cols_count": 1,
+    2268 -          "stable_cols": [
+    2269 -            2
+    2270 -          ],
+    2271 -          "consensus_col1": true,
+    2272 -          "consensus_col2": false,
+    2273 -          "cross_section_echo": 0,
+    2274 -          "hot_count": 8,
+    2275 -          "superhot_count": 12,
+    2276 -          "mask_drop": 20,
+    2277 -          "mirror_supported": true,
+    2278 -          "double_hits": 331,
+    2279 -          "confidence_score": 11.922,
+    2280 -          "tier": "C",
+    2281 -          "flags": [],
+    2282 -          "top_tokens": [
+    2283 -            "V3x1_4x1_5x1"
+    2284 -          ],
+    2285 -          "recommended_tokens": [
+    2286 -            "V3x1_4x1_5x1"
+    2287 -          ],
+    2288 -          "top_straights": [
+    2289 -            "087",
+    2290 -            "708",
+    2291 -            "547"
+    2292 -          ],
+    2293 -          "section_prior": 1.15,
+    2294 -          "state_prior": 1.0,
+    2295 -          "recency_lane_score": 1.0,
+    2296 -          "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60;
+           recency_lane=1.000*0.80->0.80; section_prior=1.15",
+    2297 -          "source": "validation_report.json"
+    2298 -        },
+    2299 -        {
+    2300 -          "date": "",
+    2301 -          "state": "Michigan4",
+    2302 -          "section": "Evening",
+    2303 -          "overlap": 1,
+    2304 -          "stable_cols_count": 1,
+    2305 -          "stable_cols": [
+    2306 -            2
+    2307 -          ],
+    2308 -          "consensus_col1": true,
+    2309 -          "consensus_col2": false,
+    2310 -          "cross_section_echo": 0,
+    2311 -          "hot_count": 8,
+    2312 -          "superhot_count": 12,
+    2313 -          "mask_drop": 22,
+    2314 -          "mirror_supported": true,
+    2315 -          "double_hits": 390,
+    2316 -          "confidence_score": 11.3,
+    2317 -          "tier": "C",
+    2318 -          "flags": [],
+    2319 -          "top_tokens": [
+    2320 -            "V1x1_3x1_5x1"
+    2321 -          ],
+    2322 -          "recommended_tokens": [
+    2323 -            "V1x1_3x1_5x1"
+    2324 -          ],
+    2325 -          "top_straights": [
+    2326 -            "087",
+    2327 -            "708",
+    2328 -            "547"
+    2329 -          ],
+    2330 -          "section_prior": 1.0,
+    2331 -          "state_prior": 1.0,
+    2332 -          "recency_lane_score": 1.0,
+    2333 -          "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60;
+           doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    2334 -          "source": "validation_report.json"
+    2335 -        },
+    2336 -        {
+    2337 -          "date": "",
+    2338 -          "state": "Michigan4",
+    2339 -          "section": "Midday",
+    2340 -          "overlap": 3,
+    2341 -          "stable_cols_count": 4,
+    2342 -          "stable_cols": [
+    2343 -            4,
+    2344 -            3,
+    2345 -            2,
+    2346 -            1
+    2347 -          ],
+    2348 -          "consensus_col1": false,
+    2349 -          "consensus_col2": false,
+    2350 -          "cross_section_echo": 0,
+    2351 -          "hot_count": 8,
+    2352 -          "superhot_count": 12,
+    2353 -          "mask_drop": 19,
+    2354 -          "mirror_supported": true,
+    2355 -          "double_hits": 390,
+    2356 -          "confidence_score": 25.35,
+    2357 -          "tier": "B+",
+    2358 -          "flags": [],
+    2359 -          "top_tokens": [
+    2360 -            "V3x2_1x1",
+    2361 -            "V3x3_1x1_5x1",
+    2362 -            "V3x3_1x1"
+    2363 -          ],
+    2364 -          "recommended_tokens": [
+    2365 -            "V3x2_1x1",
+    2366 -            "V3x3_1x1",
+    2367 -            "V3x3_1x1_5x1"
+    2368 -          ],
+    2369 -          "top_straights": [
+    2370 -            "547",
+    2371 -            "847",
+    2372 -            "752"
+    2373 -          ],
+    2374 -          "section_prior": 1.0,
+    2375 -          "state_prior": 1.0,
+    2376 -          "recency_lane_score": 1.2,
+    2377 -          "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.9
+          6; section_prior=1.00",
+    2378 -          "source": "validation_report.json"
+    2379 -        }
+    2380 -      ],
+    2381 -      "top_indices_by_state": [
+    2382 -        {
+    2383 -          "index": 1,
+    2384 -          "score": 25.35,
+    2385 -          "source_section": "Midday",
+    2386 -          "explain": "Midday overlap=3; cols [4, 3, 2, 1]; mirror; doubles=390; recency_lane=1.20"
+    2387 -        },
+    2388 -        {
+    2389 -          "index": 2,
+    2390 -          "score": 25.35,
+    2391 -          "source_section": "Midday",
+    2392 -          "explain": "Midday overlap=3; cols [4, 3, 2, 1]; mirror; doubles=390; recency_lane=1.20"
+    2393 -        },
+    2394 -        {
+    2395 -          "index": 3,
+    2396 -          "score": 25.35,
+    2397 -          "source_section": "Midday",
+    2398 -          "explain": "Midday overlap=3; cols [4, 3, 2, 1]; mirror; doubles=390; recency_lane=1.20"
+    2399 -        }
+    2400 -      ]
+    2401 -    },
+    2402 -    {
+    2403 -      "state": "NewJersey4",
+    2404 -      "date": "",
+    2405 -      "sections": [
+    2406 -        {
+    2407 -          "date": "",
+    2408 -          "state": "NewJersey4",
+    2409 -          "section": "Combined",
+    2410 -          "overlap": 4,
+    2411 -          "stable_cols_count": 5,
+    2412 -          "stable_cols": [
+    2413 -            5,
+    2414 -            4,
+    2415 -            3,
+    2416 -            2,
+    2417 -            1
+    2418 -          ],
+    2419 -          "consensus_col1": false,
+    2420 -          "consensus_col2": false,
+    2421 -          "cross_section_echo": 0,
+    2422 -          "hot_count": 8,
+    2423 -          "superhot_count": 12,
+    2424 -          "mask_drop": 16,
+    2425 -          "mirror_supported": true,
+    2426 -          "double_hits": 699,
+    2427 -          "confidence_score": 34.109,
+    2428 -          "tier": "A",
+    2429 -          "flags": [],
+    2430 -          "top_tokens": [
+    2431 -            "V2x2_3x2_4x1",
+    2432 -            "V2x3_3x3_4x2",
+    2433 -            "V2x2_3x2",
+    2434 -            "V2x2_3x1"
+    2435 -          ],
+    2436 -          "recommended_tokens": [
+    2437 -            "V2x2_3x1",
+    2438 -            "V2x2_3x2",
+    2439 -            "V2x2_3x2_4x1"
+    2440 -          ],
+    2441 -          "top_straights": [
+    2442 -            "867",
+    2443 -            "687",
+    2444 -            "786"
+    2445 -          ],
+    2446 -          "section_prior": 1.15,
+    2447 -          "state_prior": 1.0,
+    2448 -          "recency_lane_score": 1.2,
+    2449 -          "why": "overlap=4.000*3.00->12.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    2450 -          "source": "validation_report.json"
+    2451 -        },
+    2452 -        {
+    2453 -          "date": "",
+    2454 -          "state": "NewJersey4",
+    2455 -          "section": "Evening",
+    2456 -          "overlap": 0,
+    2457 -          "stable_cols_count": 0,
+    2458 -          "stable_cols": [],
+    2459 -          "consensus_col1": true,
+    2460 -          "consensus_col2": false,
+    2461 -          "cross_section_echo": 0,
+    2462 -          "hot_count": 8,
+    2463 -          "superhot_count": 12,
+    2464 -          "mask_drop": 19,
+    2465 -          "mirror_supported": true,
+    2466 -          "double_hits": 762,
+    2467 -          "confidence_score": 2.5,
+    2468 -          "tier": "Z",
+    2469 -          "flags": [
+    2470 -            "zero_overlap"
+    2471 -          ],
+    2472 -          "top_tokens": [],
+    2473 -          "recommended_tokens": [],
+    2474 -          "top_straights": [
+    2475 -            "867",
+    2476 -            "687",
+    2477 -            "786"
+    2478 -          ],
+    2479 -          "section_prior": 1.0,
+    2480 -          "state_prior": 1.0,
+    2481 -          "recency_lane_score": 0.0,
+    2482 -          "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.60; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; section_prior=1.00",
+    2483 -          "source": "validation_report.json"
+    2484 -        },
+    2485 -        {
+    2486 -          "date": "",
+    2487 -          "state": "NewJersey4",
+    2488 -          "section": "Midday",
+    2489 -          "overlap": 2,
+    2490 -          "stable_cols_count": 2,
+    2491 -          "stable_cols": [
+    2492 -            3,
+    2493 -            2
+    2494 -          ],
+    2495 -          "consensus_col1": true,
+    2496 -          "consensus_col2": false,
+    2497 -          "cross_section_echo": 0,
+    2498 -          "hot_count": 8,
+    2499 -          "superhot_count": 12,
+    2500 -          "mask_drop": 20,
+    2501 -          "mirror_supported": true,
+    2502 -          "double_hits": 744,
+    2503 -          "confidence_score": 17.226,
+    2504 -          "tier": "B",
+    2505 -          "flags": [],
+    2506 -          "top_tokens": [
+    2507 -            "V2x2_1x1_4x1",
+    2508 -            "V2x2_1x1"
+    2509 -          ],
+    2510 -          "recommended_tokens": [
+    2511 -            "V2x2_1x1",
+    2512 -            "V2x2_1x1_4x1"
+    2513 -          ],
+    2514 -          "top_straights": [
+    2515 -            "867",
+    2516 -            "687",
+    2517 -            "786"
+    2518 -          ],
+    2519 -          "section_prior": 1.0,
+    2520 -          "state_prior": 1.0,
+    2521 -          "recency_lane_score": 1.0,
+    2522 -          "why": "overlap=2.000*3.00->6.00; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60;
+           doubles=0.714*0.40->0.29; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    2523 -          "source": "validation_report.json"
+    2524 -        }
+    2525 -      ],
+    2526 -      "top_indices_by_state": [
+    2527 -        {
+    2528 -          "index": 1,
+    2529 -          "score": 34.109,
+    2530 -          "source_section": "Combined",
+    2531 -          "explain": "Combined overlap=4; cols [5, 4, 3, 2, 1]; mirror; doubles=699; recency_lane=1.20"
+    2532 -        },
+    2533 -        {
+    2534 -          "index": 2,
+    2535 -          "score": 34.109,
+    2536 -          "source_section": "Combined",
+    2537 -          "explain": "Combined overlap=4; cols [5, 4, 3, 2, 1]; mirror; doubles=699; recency_lane=1.20"
+    2538 -        },
+    2539 -        {
+    2540 -          "index": 3,
+    2541 -          "score": 34.109,
+    2542 -          "source_section": "Combined",
+    2543 -          "explain": "Combined overlap=4; cols [5, 4, 3, 2, 1]; mirror; doubles=699; recency_lane=1.20"
+    2544 -        }
+    2545 -      ]
+    2546 -    },
+    2547 -    {
+    2548 -      "state": "NewYork4",
+    2549 -      "date": "",
+    2550 -      "sections": [
+    2551 -        {
+    2552 -          "date": "",
+    2553 -          "state": "NewYork4",
+    2554 -          "section": "Combined",
+    2555 -          "overlap": 3,
+    2556 -          "stable_cols_count": 4,
+    2557 -          "stable_cols": [
+    2558 -            4,
+    2559 -            3,
+    2560 -            2,
+    2561 -            1
+    2562 -          ],
+    2563 -          "consensus_col1": false,
+    2564 -          "consensus_col2": false,
+    2565 -          "cross_section_echo": 0,
+    2566 -          "hot_count": 8,
+    2567 -          "superhot_count": 12,
+    2568 -          "mask_drop": 14,
+    2569 -          "mirror_supported": true,
+    2570 -          "double_hits": 375,
+    2571 -          "confidence_score": 30.072,
+    2572 -          "tier": "B+",
+    2573 -          "flags": [],
+    2574 -          "top_tokens": [
+    2575 -            "V5x4_2x1_3x1",
+    2576 -            "V5x4_2x2_3x1",
+    2577 -            "V5x3_2x1_3x1"
+    2578 -          ],
+    2579 -          "recommended_tokens": [
+    2580 -            "V5x3_2x1_3x1",
+    2581 -            "V5x4_2x1_3x1",
+    2582 -            "V5x4_2x2_3x1"
+    2583 -          ],
+    2584 -          "top_straights": [
+    2585 -            "964",
+    2586 -            "194",
+    2587 -            "416"
+    2588 -          ],
+    2589 -          "section_prior": 1.15,
+    2590 -          "state_prior": 1.0,
+    2591 -          "recency_lane_score": 1.2,
+    2592 -          "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40;
+          recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    2593 -          "source": "validation_report.json"
+    2594 -        },
+    2595 -        {
+    2596 -          "date": "",
+    2597 -          "state": "NewYork4",
+    2598 -          "section": "Evening",
+    2599 -          "overlap": 2,
+    2600 -          "stable_cols_count": 3,
+    2601 -          "stable_cols": [
+    2602 -            3,
+    2603 -            2,
+    2604 -            1
+    2605 -          ],
+    2606 -          "consensus_col1": false,
+    2607 -          "consensus_col2": false,
+    2608 -          "cross_section_echo": 0,
+    2609 -          "hot_count": 8,
+    2610 -          "superhot_count": 12,
+    2611 -          "mask_drop": 11,
+    2612 -          "mirror_supported": true,
+    2613 -          "double_hits": 266,
+    2614 -          "confidence_score": 19.86,
+    2615 -          "tier": "B",
+    2616 -          "flags": [],
+    2617 -          "top_tokens": [
+    2618 -            "V3x2_5x2_1x1",
+    2619 -            "V3x2_1x1_5x1"
+    2620 -          ],
+    2621 -          "recommended_tokens": [
+    2622 -            "V3x2_1x1_5x1",
+    2623 -            "V3x2_5x2_1x1"
+    2624 -          ],
+    2625 -          "top_straights": [
+    2626 -            "964",
+    2627 -            "194",
+    2628 -            "406"
+    2629 -          ],
+    2630 -          "section_prior": 1.0,
+    2631 -          "state_prior": 1.0,
+    2632 -          "recency_lane_score": 1.2,
+    2633 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    2634 -          "source": "validation_report.json"
+    2635 -        },
+    2636 -        {
+    2637 -          "date": "",
+    2638 -          "state": "NewYork4",
+    2639 -          "section": "Midday",
+    2640 -          "overlap": 1,
+    2641 -          "stable_cols_count": 2,
+    2642 -          "stable_cols": [
+    2643 -            2,
+    2644 -            1
+    2645 -          ],
+    2646 -          "consensus_col1": false,
+    2647 -          "consensus_col2": false,
+    2648 -          "cross_section_echo": 0,
+    2649 -          "hot_count": 8,
+    2650 -          "superhot_count": 12,
+    2651 -          "mask_drop": 14,
+    2652 -          "mirror_supported": true,
+    2653 -          "double_hits": 354,
+    2654 -          "confidence_score": 14.943,
+    2655 -          "tier": "C",
+    2656 -          "flags": [],
+    2657 -          "top_tokens": [
+    2658 -            "V2x2_4x1_5x1"
+    2659 -          ],
+    2660 -          "recommended_tokens": [
+    2661 -            "V2x2_4x1_5x1"
+    2662 -          ],
+    2663 -          "top_straights": [
+    2664 -            "964",
+    2665 -            "194",
+    2666 -            "416"
+    2667 -          ],
+    2668 -          "section_prior": 1.0,
+    2669 -          "state_prior": 1.0,
+    2670 -          "recency_lane_score": 1.2,
+    2671 -          "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.807*0.40->0.32; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.00",
+    2672 -          "source": "validation_report.json"
+    2673 -        }
+    2674 -      ],
+    2675 -      "top_indices_by_state": [
+    2676 -        {
+    2677 -          "index": 6,
+    2678 -          "score": 30.072,
+    2679 -          "source_section": "Combined",
+    2680 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=375; recency_lane=1.20"
+    2681 -        },
+    2682 -        {
+    2683 -          "index": 9,
+    2684 -          "score": 30.072,
+    2685 -          "source_section": "Combined",
+    2686 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=375; recency_lane=1.20"
+    2687 -        },
+    2688 -        {
+    2689 -          "index": 15,
+    2690 -          "score": 30.072,
+    2691 -          "source_section": "Combined",
+    2692 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=375; recency_lane=1.20"
+    2693 -        }
+    2694 -      ]
+    2695 -    },
+    2696 -    {
+    2697 -      "state": "NorthCarolina4",
+    2698 -      "date": "",
+    2699 -      "sections": [
+    2700 -        {
+    2701 -          "date": "",
+    2702 -          "state": "NorthCarolina4",
+    2703 -          "section": "Combined",
+    2704 -          "overlap": 2,
+    2705 -          "stable_cols_count": 2,
+    2706 -          "stable_cols": [
+    2707 -            2,
+    2708 -            1
+    2709 -          ],
+    2710 -          "consensus_col1": false,
+    2711 -          "consensus_col2": false,
+    2712 -          "cross_section_echo": 0,
+    2713 -          "hot_count": 8,
+    2714 -          "superhot_count": 12,
+    2715 -          "mask_drop": 12,
+    2716 -          "mirror_supported": true,
+    2717 -          "double_hits": 597,
+    2718 -          "confidence_score": 20.3,
+    2719 -          "tier": "B",
+    2720 -          "flags": [],
+    2721 -          "top_tokens": [
+    2722 -            "V4x3_2x1_5x1",
+    2723 -            "V4x2_5x1"
+    2724 -          ],
+    2725 -          "recommended_tokens": [
+    2726 -            "V4x2_5x1",
+    2727 -            "V4x3_2x1_5x1"
+    2728 -          ],
+    2729 -          "top_straights": [
+    2730 -            "138",
+    2731 -            "813",
+    2732 -            "386"
+    2733 -          ],
+    2734 -          "section_prior": 1.15,
+    2735 -          "state_prior": 1.0,
+    2736 -          "recency_lane_score": 1.2,
+    2737 -          "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.60; mirror=1.000*0.60->0.60; doubles=0.580*0.40->0.23; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.15",
+    2738 -          "source": "validation_report.json"
+    2739 -        },
+    2740 -        {
+    2741 -          "date": "",
+    2742 -          "state": "NorthCarolina4",
+    2743 -          "section": "Evening",
+    2744 -          "overlap": 2,
+    2745 -          "stable_cols_count": 3,
+    2746 -          "stable_cols": [
+    2747 -            3,
+    2748 -            2,
+    2749 -            1
+    2750 -          ],
+    2751 -          "consensus_col1": false,
+    2752 -          "consensus_col2": false,
+    2753 -          "cross_section_echo": 0,
+    2754 -          "hot_count": 8,
+    2755 -          "superhot_count": 12,
+    2756 -          "mask_drop": 13,
+    2757 -          "mirror_supported": true,
+    2758 -          "double_hits": 689,
+    2759 -          "confidence_score": 21.06,
+    2760 -          "tier": "B",
+    2761 -          "flags": [],
+    2762 -          "top_tokens": [
+    2763 -            "V1x2_2x2_5x1",
+    2764 -            "V1x1_2x1_5x1"
+    2765 -          ],
+    2766 -          "recommended_tokens": [
+    2767 -            "V1x1_2x1_5x1",
+    2768 -            "V1x2_2x2_5x1"
+    2769 -          ],
+    2770 -          "top_straights": [
+    2771 -            "138",
+    2772 -            "813",
+    2773 -            "386"
+    2774 -          ],
+    2775 -          "section_prior": 1.0,
+    2776 -          "state_prior": 1.0,
+    2777 -          "recency_lane_score": 1.2,
+    2778 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40;
+          recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    2779 -          "source": "validation_report.json"
+    2780 -        },
+    2781 -        {
+    2782 -          "date": "",
+    2783 -          "state": "NorthCarolina4",
+    2784 -          "section": "Midday",
+    2785 -          "overlap": 0,
+    2786 -          "stable_cols_count": 0,
+    2787 -          "stable_cols": [],
+    2788 -          "consensus_col1": true,
+    2789 -          "consensus_col2": true,
+    2790 -          "cross_section_echo": 0,
+    2791 -          "hot_count": 8,
+    2792 -          "superhot_count": 12,
+    2793 -          "mask_drop": 9,
+    2794 -          "mirror_supported": true,
+    2795 -          "double_hits": 470,
+    2796 -          "confidence_score": 1.5,
+    2797 -          "tier": "Z",
+    2798 -          "flags": [
+    2799 -            "zero_overlap"
+    2800 -          ],
+    2801 -          "top_tokens": [],
+    2802 -          "recommended_tokens": [],
+    2803 -          "top_straights": [
+    2804 -            "138",
+    2805 -            "813",
+    2806 -            "386"
+    2807 -          ],
+    2808 -          "section_prior": 1.0,
+    2809 -          "state_prior": 1.0,
+    2810 -          "recency_lane_score": 0.0,
+    2811 -          "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.00",
+    2812 -          "source": "validation_report.json"
+    2813 -        }
+    2814 -      ],
+    2815 -      "top_indices_by_state": [
+    2816 -        {
+    2817 -          "index": 2,
+    2818 -          "score": 21.06,
+    2819 -          "source_section": "Evening",
+    2820 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=689; recency_lane=1.20"
+    2821 -        },
+    2822 -        {
+    2823 -          "index": 3,
+    2824 -          "score": 21.06,
+    2825 -          "source_section": "Evening",
+    2826 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=689; recency_lane=1.20"
+    2827 -        },
+    2828 -        {
+    2829 -          "index": 5,
+    2830 -          "score": 21.06,
+    2831 -          "source_section": "Evening",
+    2832 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=689; recency_lane=1.20"
+    2833 -        }
+    2834 -      ]
+    2835 -    },
+    2836 -    {
+    2837 -      "state": "Ohio4",
+    2838 -      "date": "",
+    2839 -      "sections": [
+    2840 -        {
+    2841 -          "date": "",
+    2842 -          "state": "Ohio4",
+    2843 -          "section": "Combined",
+    2844 -          "overlap": 3,
+    2845 -          "stable_cols_count": 5,
+    2846 -          "stable_cols": [
+    2847 -            5,
+    2848 -            4,
+    2849 -            3,
+    2850 -            2,
+    2851 -            1
+    2852 -          ],
+    2853 -          "consensus_col1": false,
+    2854 -          "consensus_col2": false,
+    2855 -          "cross_section_echo": 0,
+    2856 -          "hot_count": 8,
+    2857 -          "superhot_count": 12,
+    2858 -          "mask_drop": 13,
+    2859 -          "mirror_supported": true,
+    2860 -          "double_hits": 470,
+    2861 -          "confidence_score": 30.659,
+    2862 -          "tier": "B+",
+    2863 -          "flags": [],
+    2864 -          "top_tokens": [
+    2865 -            "V4x2_1x1",
+    2866 -            "V4x3_1x2_2x2",
+    2867 -            "V4x3_1x1_2x1"
+    2868 -          ],
+    2869 -          "recommended_tokens": [
+    2870 -            "V4x2_1x1",
+    2871 -            "V4x3_1x1_2x1",
+    2872 -            "V4x3_1x2_2x2"
+    2873 -          ],
+    2874 -          "top_straights": [
+    2875 -            "683",
+    2876 -            "386",
+    2877 -            "948"
+    2878 -          ],
+    2879 -          "section_prior": 1.15,
+    2880 -          "state_prior": 1.0,
+    2881 -          "recency_lane_score": 1.2,
+    2882 -          "why": "overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    2883 -          "source": "validation_report.json"
+    2884 -        },
+    2885 -        {
+    2886 -          "date": "",
+    2887 -          "state": "Ohio4",
+    2888 -          "section": "Evening",
+    2889 -          "overlap": 2,
+    2890 -          "stable_cols_count": 2,
+    2891 -          "stable_cols": [
+    2892 -            4,
+    2893 -            3
+    2894 -          ],
+    2895 -          "consensus_col1": true,
+    2896 -          "consensus_col2": true,
+    2897 -          "cross_section_echo": 0,
+    2898 -          "hot_count": 8,
+    2899 -          "superhot_count": 12,
+    2900 -          "mask_drop": 16,
+    2901 -          "mirror_supported": true,
+    2902 -          "double_hits": 523,
+    2903 -          "confidence_score": 15.83,
+    2904 -          "tier": "B",
+    2905 -          "flags": [],
+    2906 -          "top_tokens": [
+    2907 -            "V1x2_4x2_5x2",
+    2908 -            "V1x2_4x1"
+    2909 -          ],
+    2910 -          "recommended_tokens": [
+    2911 -            "V1x2_4x1",
+    2912 -            "V1x2_4x2_5x2"
+    2913 -          ],
+    2914 -          "top_straights": [
+    2915 -            "683",
+    2916 -            "386",
+    2917 -            "948"
+    2918 -          ],
+    2919 -          "section_prior": 1.0,
+    2920 -          "state_prior": 1.0,
+    2921 -          "recency_lane_score": 0.0,
+    2922 -          "why": "overlap=2.000*3.00->6.00; stable=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60;
+           doubles=1.000*0.40->0.40; section_prior=1.00",
+    2923 -          "source": "validation_report.json"
+    2924 -        },
+    2925 -        {
+    2926 -          "date": "",
+    2927 -          "state": "Ohio4",
+    2928 -          "section": "Midday",
+    2929 -          "overlap": 1,
+    2930 -          "stable_cols_count": 1,
+    2931 -          "stable_cols": [
+    2932 -            3
+    2933 -          ],
+    2934 -          "consensus_col1": true,
+    2935 -          "consensus_col2": true,
+    2936 -          "cross_section_echo": 0,
+    2937 -          "hot_count": 8,
+    2938 -          "superhot_count": 12,
+    2939 -          "mask_drop": 15,
+    2940 -          "mirror_supported": true,
+    2941 -          "double_hits": 501,
+    2942 -          "confidence_score": 10.307,
+    2943 -          "tier": "C",
+    2944 -          "flags": [],
+    2945 -          "top_tokens": [
+    2946 -            "V5x2_1x1_4x1"
+    2947 -          ],
+    2948 -          "recommended_tokens": [
+    2949 -            "V5x2_1x1_4x1"
+    2950 -          ],
+    2951 -          "top_straights": [
+    2952 -            "683",
+    2953 -            "386",
+    2954 -            "948"
+    2955 -          ],
+    2956 -          "section_prior": 1.0,
+    2957 -          "state_prior": 1.0,
+    2958 -          "recency_lane_score": 0.0,
+    2959 -          "why": "overlap=1.000*3.00->3.00; stable=1.600*1.90->3.04; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60;
+           doubles=0.585*0.40->0.23; section_prior=1.00",
+    2960 -          "source": "validation_report.json"
+    2961 -        }
+    2962 -      ],
+    2963 -      "top_indices_by_state": [
+    2964 -        {
+    2965 -          "index": 6,
+    2966 -          "score": 30.659,
+    2967 -          "source_section": "Combined",
+    2968 -          "explain": "Combined overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=470; recency_lane=1.20"
+    2969 -        },
+    2970 -        {
+    2971 -          "index": 8,
+    2972 -          "score": 30.659,
+    2973 -          "source_section": "Combined",
+    2974 -          "explain": "Combined overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=470; recency_lane=1.20"
+    2975 -        },
+    2976 -        {
+    2977 -          "index": 13,
+    2978 -          "score": 30.659,
+    2979 -          "source_section": "Combined",
+    2980 -          "explain": "Combined overlap=3; cols [5, 4, 3, 2, 1]; mirror; doubles=470; recency_lane=1.20"
+    2981 -        }
+    2982 -      ]
+    2983 -    },
+    2984 -    {
+    2985 -      "state": "OntarioCanada4",
+    2986 -      "date": "",
+    2987 -      "sections": [
+    2988 -        {
+    2989 -          "date": "",
+    2990 -          "state": "OntarioCanada4",
+    2991 -          "section": "Combined",
+    2992 -          "overlap": 3,
+    2993 -          "stable_cols_count": 4,
+    2994 -          "stable_cols": [
+    2995 -            4,
+    2996 -            3,
+    2997 -            2,
+    2998 -            1
+    2999 -          ],
+    3000 -          "consensus_col1": false,
+    3001 -          "consensus_col2": false,
+    3002 -          "cross_section_echo": 0,
+    3003 -          "hot_count": 8,
+    3004 -          "superhot_count": 12,
+    3005 -          "mask_drop": 15,
+    3006 -          "mirror_supported": true,
+    3007 -          "double_hits": 453,
+    3008 -          "confidence_score": 29.338,
+    3009 -          "tier": "B+",
+    3010 -          "flags": [],
+    3011 -          "top_tokens": [
+    3012 -            "V1x2_5x2",
+    3013 -            "V1x3_5x3",
+    3014 -            "V5x3_1x2"
+    3015 -          ],
+    3016 -          "recommended_tokens": [
+    3017 -            "V1x2_5x2",
+    3018 -            "V1x3_5x3",
+    3019 -            "V5x3_1x2"
+    3020 -          ],
+    3021 -          "top_straights": [
+    3022 -            "594",
+    3023 -            "940",
+    3024 -            "059"
+    3025 -          ],
+    3026 -          "section_prior": 1.15,
+    3027 -          "state_prior": 1.0,
+    3028 -          "recency_lane_score": 1.2,
+    3029 -          "why": "overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60; doubles=0.737*0.40->0.29;
+          recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    3030 -          "source": "validation_report.json"
+    3031 -        },
+    3032 -        {
+    3033 -          "date": "",
+    3034 -          "state": "OntarioCanada4",
+    3035 -          "section": "Evening",
+    3036 -          "overlap": 2,
+    3037 -          "stable_cols_count": 3,
+    3038 -          "stable_cols": [
+    3039 -            3,
+    3040 -            2,
+    3041 -            1
+    3042 -          ],
+    3043 -          "consensus_col1": false,
+    3044 -          "consensus_col2": false,
+    3045 -          "cross_section_echo": 0,
+    3046 -          "hot_count": 8,
+    3047 -          "superhot_count": 12,
+    3048 -          "mask_drop": 14,
+    3049 -          "mirror_supported": true,
+    3050 -          "double_hits": 425,
+    3051 -          "confidence_score": 19.86,
+    3052 -          "tier": "B",
+    3053 -          "flags": [],
+    3054 -          "top_tokens": [
+    3055 -            "V3x2_5x1",
+    3056 -            "V3x2_1x1_5x1"
+    3057 -          ],
+    3058 -          "recommended_tokens": [
+    3059 -            "V3x2_1x1_5x1",
+    3060 -            "V3x2_5x1"
+    3061 -          ],
+    3062 -          "top_straights": [
+    3063 -            "594",
+    3064 -            "940",
+    3065 -            "059"
+    3066 -          ],
+    3067 -          "section_prior": 1.0,
+    3068 -          "state_prior": 1.0,
+    3069 -          "recency_lane_score": 1.2,
+    3070 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    3071 -          "source": "validation_report.json"
+    3072 -        },
+    3073 -        {
+    3074 -          "date": "",
+    3075 -          "state": "OntarioCanada4",
+    3076 -          "section": "Midday",
+    3077 -          "overlap": 2,
+    3078 -          "stable_cols_count": 2,
+    3079 -          "stable_cols": [
+    3080 -            2,
+    3081 -            1
+    3082 -          ],
+    3083 -          "consensus_col1": false,
+    3084 -          "consensus_col2": false,
+    3085 -          "cross_section_echo": 0,
+    3086 -          "hot_count": 8,
+    3087 -          "superhot_count": 12,
+    3088 -          "mask_drop": 17,
+    3089 -          "mirror_supported": true,
+    3090 -          "double_hits": 463,
+    3091 -          "confidence_score": 18.02,
+    3092 -          "tier": "B",
+    3093 -          "flags": [],
+    3094 -          "top_tokens": [
+    3095 -            "V5x2_1x1_2x1",
+    3096 -            "V1x1_2x1_5x1"
+    3097 -          ],
+    3098 -          "recommended_tokens": [
+    3099 -            "V1x1_2x1_5x1",
+    3100 -            "V5x2_1x1_2x1"
+    3101 -          ],
+    3102 -          "top_straights": [
+    3103 -            "594",
+    3104 -            "940",
+    3105 -            "059"
+    3106 -          ],
+    3107 -          "section_prior": 1.0,
+    3108 -          "state_prior": 1.0,
+    3109 -          "recency_lane_score": 1.2,
+    3110 -          "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.00",
+    3111 -          "source": "validation_report.json"
+    3112 -        }
+    3113 -      ],
+    3114 -      "top_indices_by_state": [
+    3115 -        {
+    3116 -          "index": 1,
+    3117 -          "score": 29.338,
+    3118 -          "source_section": "Combined",
+    3119 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=453; recency_lane=1.20"
+    3120 -        },
+    3121 -        {
+    3122 -          "index": 2,
+    3123 -          "score": 29.338,
+    3124 -          "source_section": "Combined",
+    3125 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=453; recency_lane=1.20"
+    3126 -        },
+    3127 -        {
+    3128 -          "index": 4,
+    3129 -          "score": 29.338,
+    3130 -          "source_section": "Combined",
+    3131 -          "explain": "Combined overlap=3; cols [4, 3, 2, 1]; mirror; doubles=453; recency_lane=1.20"
+    3132 -        }
+    3133 -      ]
+    3134 -    },
+    3135 -    {
+    3136 -      "state": "Pennsylvania4",
+    3137 -      "date": "",
+    3138 -      "sections": [
+    3139 -        {
+    3140 -          "date": "",
+    3141 -          "state": "Pennsylvania4",
+    3142 -          "section": "Combined",
+    3143 -          "overlap": 1,
+    3144 -          "stable_cols_count": 1,
+    3145 -          "stable_cols": [
+    3146 -            3
+    3147 -          ],
+    3148 -          "consensus_col1": true,
+    3149 -          "consensus_col2": true,
+    3150 -          "cross_section_echo": 0,
+    3151 -          "hot_count": 8,
+    3152 -          "superhot_count": 12,
+    3153 -          "mask_drop": 17,
+    3154 -          "mirror_supported": true,
+    3155 -          "double_hits": 393,
+    3156 -          "confidence_score": 11.402,
+    3157 -          "tier": "C",
+    3158 -          "flags": [],
+    3159 -          "top_tokens": [
+    3160 -            "V5x2_2x1_4x1"
+    3161 -          ],
+    3162 -          "recommended_tokens": [
+    3163 -            "V5x2_2x1_4x1"
+    3164 -          ],
+    3165 -          "top_straights": [
+    3166 -            "018",
+    3167 -            "208",
+    3168 -            "201"
+    3169 -          ],
+    3170 -          "section_prior": 1.15,
+    3171 -          "state_prior": 1.0,
+    3172 -          "recency_lane_score": 0.0,
+    3173 -          "why": "overlap=1.000*3.00->3.00; stable=1.600*1.90->3.04; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.937*0.40->0.37; s
+          ection_prior=1.15",
+    3174 -          "source": "validation_report.json"
+    3175 -        },
+    3176 -        {
+    3177 -          "date": "",
+    3178 -          "state": "Pennsylvania4",
+    3179 -          "section": "Evening",
+    3180 -          "overlap": 2,
+    3181 -          "stable_cols_count": 3,
+    3182 -          "stable_cols": [
+    3183 -            3,
+    3184 -            2,
+    3185 -            1
+    3186 -          ],
+    3187 -          "consensus_col1": false,
+    3188 -          "consensus_col2": false,
+    3189 -          "cross_section_echo": 0,
+    3190 -          "hot_count": 8,
+    3191 -          "superhot_count": 12,
+    3192 -          "mask_drop": 17,
+    3193 -          "mirror_supported": true,
+    3194 -          "double_hits": 334,
+    3195 -          "confidence_score": 19.86,
+    3196 -          "tier": "B",
+    3197 -          "flags": [],
+    3198 -          "top_tokens": [
+    3199 -            "V4x2_2x1",
+    3200 -            "V4x3_1x1_2x1"
+    3201 -          ],
+    3202 -          "recommended_tokens": [
+    3203 -            "V4x2_2x1",
+    3204 -            "V4x3_1x1_2x1"
+    3205 -          ],
+    3206 -          "top_straights": [
+    3207 -            "018",
+    3208 -            "208",
+    3209 -            "201"
+    3210 -          ],
+    3211 -          "section_prior": 1.0,
+    3212 -          "state_prior": 1.0,
+    3213 -          "recency_lane_score": 1.2,
+    3214 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00",
+    3215 -          "source": "validation_report.json"
+    3216 -        },
+    3217 -        {
+    3218 -          "date": "",
+    3219 -          "state": "Pennsylvania4",
+    3220 -          "section": "Midday",
+    3221 -          "overlap": 1,
+    3222 -          "stable_cols_count": 1,
+    3223 -          "stable_cols": [
+    3224 -            2
+    3225 -          ],
+    3226 -          "consensus_col1": true,
+    3227 -          "consensus_col2": false,
+    3228 -          "cross_section_echo": 0,
+    3229 -          "hot_count": 8,
+    3230 -          "superhot_count": 12,
+    3231 -          "mask_drop": 19,
+    3232 -          "mirror_supported": true,
+    3233 -          "double_hits": 397,
+    3234 -          "confidence_score": 11.3,
+    3235 -          "tier": "C",
+    3236 -          "flags": [],
+    3237 -          "top_tokens": [
+    3238 -            "V3x2_4x1_5x1"
+    3239 -          ],
+    3240 -          "recommended_tokens": [
+    3241 -            "V3x2_4x1_5x1"
+    3242 -          ],
+    3243 -          "top_straights": [
+    3244 -            "018",
+    3245 -            "208",
+    3246 -            "201"
+    3247 -          ],
+    3248 -          "section_prior": 1.0,
+    3249 -          "state_prior": 1.0,
+    3250 -          "recency_lane_score": 1.0,
+    3251 -          "why": "overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60;
+           doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00",
+    3252 -          "source": "validation_report.json"
+    3253 -        }
+    3254 -      ],
+    3255 -      "top_indices_by_state": [
+    3256 -        {
+    3257 -          "index": 2,
+    3258 -          "score": 19.86,
+    3259 -          "source_section": "Evening",
+    3260 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=334; recency_lane=1.20"
+    3261 -        },
+    3262 -        {
+    3263 -          "index": 3,
+    3264 -          "score": 19.86,
+    3265 -          "source_section": "Evening",
+    3266 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=334; recency_lane=1.20"
+    3267 -        },
+    3268 -        {
+    3269 -          "index": 4,
+    3270 -          "score": 19.86,
+    3271 -          "source_section": "Evening",
+    3272 -          "explain": "Evening overlap=2; cols [3, 2, 1]; mirror; doubles=334; recency_lane=1.20"
+    3273 -        }
+    3274 -      ]
+    3275 -    },
+    3276 -    {
+    3277 -      "state": "PuertoRico4",
+    3278 -      "date": "",
+    3279 -      "sections": [
+    3280 -        {
+    3281 -          "date": "",
+    3282 -          "state": "PuertoRico4",
+    3283 -          "section": "Combined",
+    3284 -          "overlap": 2,
+    3285 -          "stable_cols_count": 3,
+    3286 -          "stable_cols": [
+    3287 -            3,
+    3288 -            2,
+    3289 -            1
+    3290 -          ],
+    3291 -          "consensus_col1": false,
+    3292 -          "consensus_col2": false,
+    3293 -          "cross_section_echo": 0,
+    3294 -          "hot_count": 8,
+    3295 -          "superhot_count": 12,
+    3296 -          "mask_drop": 13,
+    3297 -          "mirror_supported": true,
+    3298 -          "double_hits": 562,
+    3299 -          "confidence_score": 24.219,
+    3300 -          "tier": "B",
+    3301 -          "flags": [],
+    3302 -          "top_tokens": [
+    3303 -            "V3x2_1x1_5x1",
+    3304 -            "V1x2_3x2_5x1"
+    3305 -          ],
+    3306 -          "recommended_tokens": [
+    3307 -            "V3x2_1x1_5x1",
+    3308 -            "V1x2_3x2_5x1"
+    3309 -          ],
+    3310 -          "top_straights": [
+    3311 -            "024",
+    3312 -            "240",
+    3313 -            "092"
+    3314 -          ],
+    3315 -          "section_prior": 1.15,
+    3316 -          "state_prior": 1.0,
+    3317 -          "recency_lane_score": 1.2,
+    3318 -          "why": "overlap=2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40;
+          recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    3319 -          "source": "validation_report.json"
+    3320 -        },
+    3321 -        {
+    3322 -          "date": "",
+    3323 -          "state": "PuertoRico4",
+    3324 -          "section": "Evening",
+    3325 -          "overlap": 1,
+    3326 -          "stable_cols_count": 2,
+    3327 -          "stable_cols": [
+    3328 -            2,
+    3329 -            1
+    3330 -          ],
+    3331 -          "consensus_col1": false,
+    3332 -          "consensus_col2": false,
+    3333 -          "cross_section_echo": 0,
+    3334 -          "hot_count": 8,
+    3335 -          "superhot_count": 12,
+    3336 -          "mask_drop": 13,
+    3337 -          "mirror_supported": true,
+    3338 -          "double_hits": 562,
+    3339 -          "confidence_score": 15.02,
+    3340 -          "tier": "C",
+    3341 -          "flags": [],
+    3342 -          "top_tokens": [
+    3343 -            "V5x3_1x2_3x2"
+    3344 -          ],
+    3345 -          "recommended_tokens": [
+    3346 -            "V5x3_1x2_3x2"
+    3347 -          ],
+    3348 -          "top_straights": [
+    3349 -            "024",
+    3350 -            "240",
+    3351 -            "092"
+    3352 -          ],
+    3353 -          "section_prior": 1.0,
+    3354 -          "state_prior": 1.0,
+    3355 -          "recency_lane_score": 1.2,
+    3356 -          "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.00",
+    3357 -          "source": "validation_report.json"
+    3358 -        },
+    3359 -        {
+    3360 -          "date": "",
+    3361 -          "state": "PuertoRico4",
+    3362 -          "section": "Midday",
+    3363 -          "overlap": 1,
+    3364 -          "stable_cols_count": 1,
+    3365 -          "stable_cols": [
+    3366 -            4
+    3367 -          ],
+    3368 -          "consensus_col1": true,
+    3369 -          "consensus_col2": true,
+    3370 -          "cross_section_echo": 0,
+    3371 -          "hot_count": 8,
+    3372 -          "superhot_count": 12,
+    3373 -          "mask_drop": 10,
+    3374 -          "mirror_supported": true,
+    3375 -          "double_hits": 414,
+    3376 -          "confidence_score": 8.59,
+    3377 -          "tier": "C",
+    3378 -          "flags": [],
+    3379 -          "top_tokens": [
+    3380 -            "V1x1_2x1_4x1"
+    3381 -          ],
+    3382 -          "recommended_tokens": [
+    3383 -            "V1x1_2x1_4x1"
+    3384 -          ],
+    3385 -          "top_straights": [
+    3386 -            "024",
+    3387 -            "240",
+    3388 -            "092"
+    3389 -          ],
+    3390 -          "section_prior": 1.0,
+    3391 -          "state_prior": 1.0,
+    3392 -          "recency_lane_score": 0.0,
+    3393 -          "why": "overlap=1.000*3.00->3.00; stable=1.100*1.90->2.09; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.00",
+    3394 -          "source": "validation_report.json"
+    3395 -        }
+    3396 -      ],
+    3397 -      "top_indices_by_state": [
+    3398 -        {
+    3399 -          "index": 1,
+    3400 -          "score": 24.219,
+    3401 -          "source_section": "Combined",
+    3402 -          "explain": "Combined overlap=2; cols [3, 2, 1]; mirror; doubles=562; recency_lane=1.20"
+    3403 -        },
+    3404 -        {
+    3405 -          "index": 3,
+    3406 -          "score": 24.219,
+    3407 -          "source_section": "Combined",
+    3408 -          "explain": "Combined overlap=2; cols [3, 2, 1]; mirror; doubles=562; recency_lane=1.20"
+    3409 -        },
+    3410 -        {
+    3411 -          "index": 4,
+    3412 -          "score": 24.219,
+    3413 -          "source_section": "Combined",
+    3414 -          "explain": "Combined overlap=2; cols [3, 2, 1]; mirror; doubles=562; recency_lane=1.20"
+    3415 -        }
+    3416 -      ]
+    3417 -    },
+    3418 -    {
+    3419 -      "state": "SouthCarolina4",
+    3420 -      "date": "",
+    3421 -      "sections": [
+    3422 -        {
+    3423 -          "date": "",
+    3424 -          "state": "SouthCarolina4",
+    3425 -          "section": "Combined",
+    3426 -          "overlap": 0,
+    3427 -          "stable_cols_count": 0,
+    3428 -          "stable_cols": [],
+    3429 -          "consensus_col1": true,
+    3430 -          "consensus_col2": true,
+    3431 -          "cross_section_echo": 0,
+    3432 -          "hot_count": 8,
+    3433 -          "superhot_count": 12,
+    3434 -          "mask_drop": 18,
+    3435 -          "mirror_supported": true,
+    3436 -          "double_hits": 319,
+    3437 -          "confidence_score": 1.725,
+    3438 -          "tier": "Z",
+    3439 -          "flags": [
+    3440 -            "zero_overlap"
+    3441 -          ],
+    3442 -          "top_tokens": [],
+    3443 -          "recommended_tokens": [],
+    3444 -          "top_straights": [
+    3445 -            "534",
+    3446 -            "345",
+    3447 -            "341"
+    3448 -          ],
+    3449 -          "section_prior": 1.15,
+    3450 -          "state_prior": 1.0,
+    3451 -          "recency_lane_score": 0.0,
+    3452 -          "why": "hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.15",
+    3453 -          "source": "validation_report.json"
+    3454 -        },
+    3455 -        {
+    3456 -          "date": "",
+    3457 -          "state": "SouthCarolina4",
+    3458 -          "section": "Evening",
+    3459 -          "overlap": 2,
+    3460 -          "stable_cols_count": 2,
+    3461 -          "stable_cols": [
+    3462 -            4,
+    3463 -            3
+    3464 -          ],
+    3465 -          "consensus_col1": true,
+    3466 -          "consensus_col2": true,
+    3467 -          "cross_section_echo": 0,
+    3468 -          "hot_count": 8,
+    3469 -          "superhot_count": 12,
+    3470 -          "mask_drop": 20,
+    3471 -          "mirror_supported": true,
+    3472 -          "double_hits": 336,
+    3473 -          "confidence_score": 15.006,
+    3474 -          "tier": "B",
+    3475 -          "flags": [],
+    3476 -          "top_tokens": [
+    3477 -            "V5x3_4x2_3x1",
+    3478 -            "V4x2_5x2"
+    3479 -          ],
+    3480 -          "recommended_tokens": [
+    3481 -            "V4x2_5x2",
+    3482 -            "V5x3_4x2_3x1"
+    3483 -          ],
+    3484 -          "top_straights": [
+    3485 -            "534",
+    3486 -            "153",
+    3487 -            "345"
+    3488 -          ],
+    3489 -          "section_prior": 1.0,
+    3490 -          "state_prior": 1.0,
+    3491 -          "recency_lane_score": 0.0,
+    3492 -          "why": "overlap=2.000*3.00->6.00; stable=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.400*0.80->0.32; mirror=1.000*0.60->0.60;
+           doubles=0.140*0.40->0.06; section_prior=1.00",
+    3493 -          "source": "validation_report.json"
+    3494 -        },
+    3495 -        {
+    3496 -          "date": "",
+    3497 -          "state": "SouthCarolina4",
+    3498 -          "section": "Midday",
+    3499 -          "overlap": 1,
+    3500 -          "stable_cols_count": 2,
+    3501 -          "stable_cols": [
+    3502 -            2,
+    3503 -            1
+    3504 -          ],
+    3505 -          "consensus_col1": false,
+    3506 -          "consensus_col2": false,
+    3507 -          "cross_section_echo": 0,
+    3508 -          "hot_count": 8,
+    3509 -          "superhot_count": 12,
+    3510 -          "mask_drop": 23,
+    3511 -          "mirror_supported": true,
+    3512 -          "double_hits": 440,
+    3513 -          "confidence_score": 15.02,
+    3514 -          "tier": "C",
+    3515 -          "flags": [],
+    3516 -          "top_tokens": [
+    3517 -            "V2x2_4x2_1x1"
+    3518 -          ],
+    3519 -          "recommended_tokens": [
+    3520 -            "V2x2_4x2_1x1"
+    3521 -          ],
+    3522 -          "top_straights": [
+    3523 -            "534",
+    3524 -            "153",
+    3525 -            "541"
+    3526 -          ],
+    3527 -          "section_prior": 1.0,
+    3528 -          "state_prior": 1.0,
+    3529 -          "recency_lane_score": 1.2,
+    3530 -          "why": "overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; r
+          ecency_lane=1.200*0.80->0.96; section_prior=1.00",
+    3531 -          "source": "validation_report.json"
+    3532 -        }
+    3533 -      ],
+    3534 -      "top_indices_by_state": [
+    3535 -        {
+    3536 -          "index": 1,
+    3537 -          "score": 15.02,
+    3538 -          "source_section": "Midday",
+    3539 -          "explain": "Midday overlap=1; cols [2, 1]; mirror; doubles=440; recency_lane=1.20"
+    3540 -        },
+    3541 -        {
+    3542 -          "index": 2,
+    3543 -          "score": 15.02,
+    3544 -          "source_section": "Midday",
+    3545 -          "explain": "Midday overlap=1; cols [2, 1]; mirror; doubles=440; recency_lane=1.20"
+    3546 -        },
+    3547 -        {
+    3548 -          "index": 4,
+    3549 -          "score": 15.02,
+    3550 -          "source_section": "Midday",
+    3551 -          "explain": "Midday overlap=1; cols [2, 1]; mirror; doubles=440; recency_lane=1.20"
+    3552 -        }
+    3553 -      ]
+    3554 -    },
+    3555 -    {
+    3556 -      "state": "Virginia4",
+    3557 -      "date": "",
+    3558 -      "sections": [
+    3559 -        {
+    3560 -          "date": "",
+    3561 -          "state": "Virginia4",
+    3562 -          "section": "Combined",
+    3563 -          "overlap": 1,
+    3564 -          "stable_cols_count": 4,
+    3565 -          "stable_cols": [
+    3566 -            4,
+    3567 -            3,
+    3568 -            2,
+    3569 -            1
+    3570 -          ],
+    3571 -          "consensus_col1": false,
+    3572 -          "consensus_col2": false,
+    3573 -          "cross_section_echo": 0,
+    3574 -          "hot_count": 8,
+    3575 -          "superhot_count": 12,
+    3576 -          "mask_drop": 13,
+    3577 -          "mirror_supported": true,
+    3578 -          "double_hits": 523,
+    3579 -          "confidence_score": 23.057,
+    3580 -          "tier": "C",
+    3581 -          "flags": [],
+    3582 -          "top_tokens": [
+    3583 -            "V1x2_3x1_5x1"
+    3584 -          ],
+    3585 -          "recommended_tokens": [
+    3586 -            "V1x2_3x1_5x1"
+    3587 -          ],
+    3588 -          "top_straights": [
+    3589 -            "540",
+    3590 -            "504",
+    3591 -            "045"
+    3592 -          ],
+    3593 -          "section_prior": 1.15,
+    3594 -          "state_prior": 1.0,
+    3595 -          "recency_lane_score": 1.2,
+    3596 -          "why": "overlap=1.000*3.00->3.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.750*0.40->0.30;
+          recency_lane=1.200*0.80->0.96; section_prior=1.15",
+    3597 -          "source": "validation_report.json"
+    3598 -        },
+    3599 -        {
+    3600 -          "date": "",
+    3601 -          "state": "Virginia4",
+    3602 -          "section": "Evening",
+    3603 -          "overlap": 2,
+    3604 -          "stable_cols_count": 2,
+    3605 -          "stable_cols": [
+    3606 -            2,
+    3607 -            1
+    3608 -          ],
+    3609 -          "consensus_col1": false,
+    3610 -          "consensus_col2": false,
+    3611 -          "cross_section_echo": 0,
+    3612 -          "hot_count": 8,
+    3613 -          "superhot_count": 12,
+    3614 -          "mask_drop": 13,
+    3615 -          "mirror_supported": true,
+    3616 -          "double_hits": 478,
+    3617 -          "confidence_score": 17.62,
+    3618 -          "tier": "B",
+    3619 -          "flags": [],
+    3620 -          "top_tokens": [
+    3621 -            "V1x2_4x1_5x1",
+    3622 -            "V1x2_5x1"
+    3623 -          ],
+    3624 -          "recommended_tokens": [
+    3625 -            "V1x2_4x1_5x1",
+    3626 -            "V1x2_5x1"
+    3627 -          ],
+    3628 -          "top_straights": [
+    3629 -            "540",
+    3630 -            "504",
+    3631 -            "045"
+    3632 -          ],
+    3633 -          "section_prior": 1.0,
+    3634 -          "state_prior": 1.0,
+    3635 -          "recency_lane_score": 1.2,
+    3636 -          "why": "overlap=2.000*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.
+          96; section_prior=1.00",
+    3637 -          "source": "validation_report.json"
+    3638 -        },
+    3639 -        {
+    3640 -          "date": "",
+    3641 -          "state": "Virginia4",
+    3642 -          "section": "Midday",
+    3643 -          "overlap": 4,
+    3644 -          "stable_cols_count": 4,
+    3645 -          "stable_cols": [
+    3646 -            4,
+    3647 -            3,
+    3648 -            2,
+    3649 -            1
+    3650 -          ],
+    3651 -          "consensus_col1": false,
+    3652 -          "consensus_col2": false,
+    3653 -          "cross_section_echo": 0,
+    3654 -          "hot_count": 8,
+    3655 -          "superhot_count": 12,
+    3656 -          "mask_drop": 11,
+    3657 -          "mirror_supported": true,
+    3658 -          "double_hits": 538,
+    3659 -          "confidence_score": 28.35,
+    3660 -          "tier": "A",
+    3661 -          "flags": [],
+    3662 -          "top_tokens": [
+    3663 -            "V1x3_3x2_5x2",
+    3664 -            "V1x3_3x2_5x1",
+    3665 -            "V1x3_3x1",
+    3666 -            "V1x3"
+    3667 -          ],
+    3668 -          "recommended_tokens": [
+    3669 -            "V1x3",
+    3670 -            "V1x3_3x1",
+    3671 -            "V1x3_3x2_5x1"
+    3672 -          ],
+    3673 -          "top_straights": [
+    3674 -            "540",
+    3675 -            "504",
+    3676 -            "045"
+    3677 -          ],
+    3678 -          "section_prior": 1.0,
+    3679 -          "state_prior": 1.0,
+    3680 -          "recency_lane_score": 1.2,
+    3681 -          "why": "overlap=4.000*3.00->12.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.
+          96; section_prior=1.00",
+    3682 -          "source": "validation_report.json"
+    3683 -        }
+    3684 -      ],
+    3685 -      "top_indices_by_state": [
+    3686 -        {
+    3687 -          "index": 1,
+    3688 -          "score": 28.35,
+    3689 -          "source_section": "Midday",
+    3690 -          "explain": "Midday overlap=4; cols [4, 3, 2, 1]; mirror; doubles=538; recency_lane=1.20"
+    3691 -        },
+    3692 -        {
+    3693 -          "index": 2,
+    3694 -          "score": 28.35,
+    3695 -          "source_section": "Midday",
+    3696 -          "explain": "Midday overlap=4; cols [4, 3, 2, 1]; mirror; doubles=538; recency_lane=1.20"
+    3697 -        },
+    3698 -        {
+    3699 -          "index": 3,
+    3700 -          "score": 28.35,
+    3701 -          "source_section": "Midday",
+    3702 -          "explain": "Midday overlap=4; cols [4, 3, 2, 1]; mirror; doubles=538; recency_lane=1.20"
+    3703 -        }
+    3704 -      ]
+    3705 -    }
+    3706 -  ]
+    3707 -}
+
+• Deleted data/outputs/analysis/vtrac_validation/vtrac_compact_report.csv (+0 -43)
+     1 -date,state,section,overlap,stable_cols_count,stable_cols,consensus_col1,consensus_col2,cross_section_echo,hot_count,superhot_count,mask_drop,mirror_supported,double_hits,confidence_score,tier,flags,to
+        p_tokens,recommended_tokens,top_straights,section_prior,state_prior,why,source
+     2 -,Connecticut4,Midday,2,4,"[4,3,2,1]",false,false,0,8,12,15,true,424,22.75,B,[],"[""V3x2_1x1"",""V1x3_3x2""]","[""V1x3_3x2"",""V3x2_1x1""]","[""683"",""386"",""836""]",1.0,1.0,overlap=2.000*3.00->6.00;
+         stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.jso
+        n
+     3 -,Connecticut4,Evening,2,3,"[3,2,1]",false,false,0,8,12,14,true,525,20.66,B,[],"[""V5x2_2x1"",""V4x2_5x2_2x1""]","[""V4x2_5x2_2x1"",""V5x2_2x1""]","[""683"",""386"",""836""]",1.0,1.0,overlap=2.000*3.00
+        ->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; section
+        _prior=1.00,validation_report.json
+     4 -,Connecticut4,Combined,1,3,"[3,2,1]",false,false,0,8,12,13,true,428,19.407,C,[],"[""V5x2_2x1_3x1""]","[""V5x2_2x1_3x1""]","[""683"",""386"",""836""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=6.000*1.
+        90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.040*0.40->0.02; recency_lane=1.200*0.80->0.96; section_prior=1.15,validation_report.json
+     5 -,Delaware4,Midday,1,2,"[2,1]",false,false,0,8,12,14,true,518,14.353,C,[],"[""V2x1_3x1_5x1""]","[""V2x1_3x1_5x1""]","[""013"",""386"",""138""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36
+        ; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.json
+     6 -,Delaware4,Evening,3,5,"[5,4,3,2,1]",false,false,0,8,12,12,true,570,26.874,B+,[],"[""V4x4_5x2"",""V4x3"",""V4x4_5x3_2x1""]","[""V4x3"",""V4x4_5x2"",""V4x4_5x3_2x1""]","[""013"",""386"",""138""]",1.0,1
+        .0,overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.536*0.40->0.21; recency_lane=1.200*0.80->0.96; section_prior=
+        1.00,validation_report.json
+     7 -,Delaware4,Combined,2,3,"[3,2,1]",false,false,0,8,12,15,true,615,24.219,B,[],"[""V2x2_4x2_1x1"",""V4x2_1x1_2x1""]","[""V2x2_4x2_1x1"",""V4x2_1x1_2x1""]","[""013"",""386"",""138""]",1.15,1.0,overlap=2.
+     8 -,Florida4,Midday,2,2,"[3,2]",true,false,0,8,12,16,true,334,16.62,B,[],"[""V2x2_1x1_5x1"",""V2x2_1x1""]","[""V2x2_1x1"",""V2x2_1x1_5x1""]","[""016"",""520"",""250""]",1.0,1.0,overlap=2.000*3.00->6.00;
+        stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.600*0.80->0.48; mirror=1.000*0.60->0.60; recency_lane=1.000*0.80->0.80; section_prior=
+        1.00,validation_report.json
+     9 -,Florida4,Evening,2,3,"[3,2,1]",false,false,0,8,12,13,true,419,20.022,B,[],"[""V1x1_3x1_4x1"",""V1x2_3x1_4x1""]","[""V1x1_3x1_4x1"",""V1x2_3x1_4x1""]","[""016"",""520"",""250""]",1.0,1.0,overlap=2.000
+        *3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.405*0.40->0.16; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_
+        report.json
+    10 -,Florida4,Combined,1,2,"[2,1]",false,false,0,8,12,18,true,544,17.273,C,[],"[""V4x2_2x1_3x1""]","[""V4x2_2x1_3x1""]","[""016"",""520"",""250""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=4.400*1.90->8.
+        36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; section_prior=1.15,validation_report.
+        json
+    11 -,Indiana4,Midday,1,1,[2],true,false,0,8,12,16,true,344,10.9,C,[],"[""V2x1_4x1_5x1""]","[""V2x1_4x1_5x1""]","[""540"",""054"",""045""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; consen
+        sus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.500*0.80->0.40; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.00,
+        validation_report.json
+    12 -,Indiana4,Evening,2,2,"[3,2]",true,false,0,8,12,19,true,328,17.275,B,[],"[""V3x3_4x1_5x1"",""V3x3_5x1""]","[""V3x3_4x1_5x1"",""V3x3_5x1""]","[""540"",""054"",""045""]",1.0,1.0,overlap=2.000*3.00->6.00
+        ; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.837*0.40->0.33; recency_lane=1.00
+        0*0.80->0.80; section_prior=1.00,validation_report.json
+    13 -,Indiana4,Combined,1,1,[2],true,false,0,8,12,13,true,246,11.615,C,[],"[""V1x1_3x1_4x1""]","[""V1x1_3x1_4x1""]","[""540"",""054"",""045""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; c
+        onsensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.000*0.80->0.80; section_prior=1.15,validation_report.json
+    14 -,Michigan4,Midday,3,4,"[4,3,2,1]",false,false,0,8,12,19,true,390,25.35,B+,[],"[""V3x2_1x1"",""V3x3_1x1_5x1"",""V3x3_1x1""]","[""V3x2_1x1"",""V3x3_1x1"",""V3x3_1x1_5x1""]","[""547"",""847"",""752""]",1
+        .0,1.0,overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; section_pr
+        ior=1.00,validation_report.json
+    15 -,Michigan4,Evening,1,1,[2],true,false,0,8,12,22,true,390,11.3,C,[],"[""V1x1_3x1_5x1""]","[""V1x1_3x1_5x1""]","[""087"",""708"",""547""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; cons
+        ensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=1.0
+        0,validation_report.json
+    16 -,Michigan4,Combined,1,1,[2],true,false,0,8,12,20,true,331,11.922,C,[],"[""V3x1_4x1_5x1""]","[""V3x1_4x1_5x1""]","[""087"",""708"",""547""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80;
+        consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60; recency_lane=1.000*0.80->0.80; section_prior=1.15,validation_report.js
+        on
+    17 -,NewJersey4,Midday,2,2,"[3,2]",true,false,0,8,12,20,true,744,17.226,B,[],"[""V2x2_1x1_4x1"",""V2x2_1x1""]","[""V2x2_1x1"",""V2x2_1x1_4x1""]","[""867"",""687"",""786""]",1.0,1.0,overlap=2.000*3.00->6.0
+        0; stable=3.600*1.90->6.84; consensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.714*0.40->0.29; recency_lane=1.0
+        00*0.80->0.80; section_prior=1.00,validation_report.json
+    18 -,NewJersey4,Evening,0,0,[],true,false,0,8,12,19,true,762,2.5,Z,"[""zero_overlap""]",[],[],"[""867"",""687"",""786""]",1.0,1.0,hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.6
+        0; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; section_prior=1.00,validation_report.json
+    19 -,NewJersey4,Combined,4,5,"[5,4,3,2,1]",false,false,0,8,12,16,true,699,34.109,A,[],"[""V2x2_3x2_4x1"",""V2x3_3x3_4x2"",""V2x2_3x2"",""V2x2_3x1""]","[""V2x2_3x1"",""V2x2_3x2"",""V2x2_3x2_4x1""]","[""867
+        "",""687"",""786""]",1.15,1.0,overlap=4.000*3.00->12.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prio
+        r=1.15,validation_report.json
+    20 -,NewYork4,Midday,1,2,"[2,1]",false,false,0,8,12,14,true,354,14.943,C,[],"[""V2x2_4x1_5x1""]","[""V2x2_4x1_5x1""]","[""964"",""194"",""416""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=4.400*1.90->8.36;
+         hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.807*0.40->0.32; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.jso
+        n
+    21 -,NewYork4,Evening,2,3,"[3,2,1]",false,false,0,8,12,11,true,266,19.86,B,[],"[""V3x2_5x2_1x1"",""V3x2_1x1_5x1""]","[""V3x2_1x1_5x1"",""V3x2_5x2_1x1""]","[""964"",""194"",""406""]",1.0,1.0,overlap=2.000*
+        3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.json
+    22 -,NewYork4,Combined,3,4,"[4,3,2,1]",false,false,0,8,12,14,true,375,30.072,B+,[],"[""V5x4_2x1_3x1"",""V5x4_2x2_3x1"",""V5x3_2x1_3x1""]","[""V5x3_2x1_3x1"",""V5x4_2x1_3x1"",""V5x4_2x2_3x1""]","[""964"","
+        "194"",""416""]",1.15,1.0,overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->
+        0.40; recency_lane=1.200*0.80->0.96; section_prior=1.15,validation_report.json
+    23 -,NorthCarolina4,Midday,0,0,[],true,true,0,8,12,9,true,470,1.5,Z,"[""zero_overlap""]",[],[],"[""138"",""813"",""386""]",1.0,1.0,hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60;
+         section_prior=1.00,validation_report.json
+    24 -,NorthCarolina4,Evening,2,3,"[3,2,1]",false,false,0,8,12,13,true,689,21.06,B,[],"[""V1x2_2x2_5x1"",""V1x1_2x1_5x1""]","[""V1x1_2x1_5x1"",""V1x2_2x2_5x1""]","[""138"",""813"",""386""]",1.0,1.0,overlap=
+        2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.9
+        6; section_prior=1.00,validation_report.json
+    25 -,NorthCarolina4,Combined,2,2,"[2,1]",false,false,0,8,12,12,true,597,20.3,B,[],"[""V4x3_2x1_5x1"",""V4x2_5x1""]","[""V4x2_5x1"",""V4x3_2x1_5x1""]","[""138"",""813"",""386""]",1.15,1.0,overlap=2.000*3.0
+        0->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.750*0.80->0.60; mirror=1.000*0.60->0.60; doubles=0.580*0.40->0.23; recency_lane=1.200*0.80->0.96; section
+        _prior=1.15,validation_report.json
+    26 -,Ohio4,Midday,1,1,[3],true,true,0,8,12,15,true,501,10.307,C,[],"[""V5x2_1x1_4x1""]","[""V5x2_1x1_4x1""]","[""683"",""386"",""948""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=1.600*1.90->3.04; consensu
+        s=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.667*0.80->0.53; mirror=1.000*0.60->0.60; doubles=0.585*0.40->0.23; section_prior=1.00,validation_report.json
+    27 -,Ohio4,Evening,2,2,"[4,3]",true,true,0,8,12,16,true,523,15.83,B,[],"[""V1x2_4x2_5x2"",""V1x2_4x1""]","[""V1x2_4x1"",""V1x2_4x2_5x2""]","[""683"",""386"",""948""]",1.0,1.0,overlap=2.000*3.00->6.00; sta
+        ble=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; section_prior=1.00,val
+        idation_report.json
+    28 -,Ohio4,Combined,3,5,"[5,4,3,2,1]",false,false,0,8,12,13,true,470,30.659,B+,[],"[""V4x2_1x1"",""V4x3_1x2_2x2"",""V4x3_1x1_2x1""]","[""V4x2_1x1"",""V4x3_1x1_2x1"",""V4x3_1x2_2x2""]","[""683"",""386"",""
+        948""]",1.15,1.0,overlap=3.000*3.00->9.00; stable=8.000*1.90->15.20; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.15,validat
+        ion_report.json
+    29 -,OntarioCanada4,Midday,2,2,"[2,1]",false,false,0,8,12,17,true,463,18.02,B,[],"[""V5x2_1x1_2x1"",""V1x1_2x1_5x1""]","[""V1x1_2x1_5x1"",""V5x2_1x1_2x1""]","[""594"",""940"",""059""]",1.0,1.0,overlap=2.0
+        00*3.00->6.00; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; s
+        ection_prior=1.00,validation_report.json
+    30 -,OntarioCanada4,Evening,2,3,"[3,2,1]",false,false,0,8,12,14,true,425,19.86,B,[],"[""V3x2_5x1"",""V3x2_1x1_5x1""]","[""V3x2_1x1_5x1"",""V3x2_5x1""]","[""594"",""940"",""059""]",1.0,1.0,overlap=2.000*3.
+        00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.json
+    31 -,OntarioCanada4,Combined,3,4,"[4,3,2,1]",false,false,0,8,12,15,true,453,29.338,B+,[],"[""V1x2_5x2"",""V1x3_5x3"",""V5x3_1x2""]","[""V1x2_5x2"",""V1x3_5x3"",""V5x3_1x2""]","[""594"",""940"",""059""]",1
+        .15,1.0,overlap=3.000*3.00->9.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.333*0.80->0.27; mirror=1.000*0.60->0.60; doubles=0.737*0.40->0.29; recency_lane
+        =1.200*0.80->0.96; section_prior=1.15,validation_report.json
+    32 -,Pennsylvania4,Midday,1,1,[2],true,false,0,8,12,19,true,397,11.3,C,[],"[""V3x2_4x1_5x1""]","[""V3x2_4x1_5x1""]","[""018"",""208"",""201""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=2.000*1.90->3.80; c
+        onsensus=1.000*1.00->1.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.000*0.80->0.80; section_prior=
+        1.00,validation_report.json
+    33 -,Pennsylvania4,Evening,2,3,"[3,2,1]",false,false,0,8,12,17,true,334,19.86,B,[],"[""V4x2_2x1"",""V4x3_1x1_2x1""]","[""V4x2_2x1"",""V4x3_1x1_2x1""]","[""018"",""208"",""201""]",1.0,1.0,overlap=2.000*3.0
+        0->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.json
+    34 -,Pennsylvania4,Combined,1,1,[3],true,true,0,8,12,17,true,393,11.402,C,[],"[""V5x2_2x1_4x1""]","[""V5x2_2x1_4x1""]","[""018"",""208"",""201""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=1.600*1.90->3.0
+        4; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=0.937*0.40->0.37; section_prior=1.15,validation_report.json
+    35 -,PuertoRico4,Midday,1,1,[4],true,true,0,8,12,10,true,414,8.59,C,[],"[""V1x1_2x1_4x1""]","[""V1x1_2x1_4x1""]","[""024"",""240"",""092""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=1.100*1.90->2.09; cons
+        ensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; section_prior=1.00,validation_report.json
+    36 -,PuertoRico4,Evening,1,2,"[2,1]",false,false,0,8,12,13,true,562,15.02,C,[],"[""V5x3_1x2_3x2""]","[""V5x3_1x2_3x2""]","[""024"",""240"",""092""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=4.400*1.90->8.
+        36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.
+        json
+    37 -,PuertoRico4,Combined,2,3,"[3,2,1]",false,false,0,8,12,13,true,562,24.219,B,[],"[""V3x2_1x1_5x1"",""V1x2_3x2_5x1""]","[""V3x2_1x1_5x1"",""V1x2_3x2_5x1""]","[""024"",""240"",""092""]",1.15,1.0,overlap=
+        2.000*3.00->6.00; stable=6.000*1.90->11.40; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.9
+        6; section_prior=1.15,validation_report.json
+    38 -,SouthCarolina4,Midday,1,2,"[2,1]",false,false,0,8,12,23,true,440,15.02,C,[],"[""V2x2_4x2_1x1""]","[""V2x2_4x2_1x1""]","[""534"",""153"",""541""]",1.0,1.0,overlap=1.000*3.00->3.00; stable=4.400*1.90->
+        8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_repor
+        t.json
+    39 -,SouthCarolina4,Evening,2,2,"[4,3]",true,true,0,8,12,20,true,336,15.006,B,[],"[""V5x3_4x2_3x1"",""V4x2_5x2""]","[""V4x2_5x2"",""V5x3_4x2_3x1""]","[""534"",""153"",""345""]",1.0,1.0,overlap=2.000*3.00-
+        >6.00; stable=2.700*1.90->5.13; consensus=2.000*1.00->2.00; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=0.400*0.80->0.32; mirror=1.000*0.60->0.60; doubles=0.140*0.40->0.06; section_prio
+        r=1.00,validation_report.json
+    40 -,SouthCarolina4,Combined,0,0,[],true,true,0,8,12,18,true,319,1.725,Z,"[""zero_overlap""]",[],[],"[""534"",""345"",""341""]",1.15,1.0,hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60-
+        >0.60; section_prior=1.15,validation_report.json
+    41 -,Virginia4,Midday,4,4,"[4,3,2,1]",false,false,0,8,12,11,true,538,28.35,A,[],"[""V1x3_3x2_5x2"",""V1x3_3x2_5x1"",""V1x3_3x1"",""V1x3""]","[""V1x3"",""V1x3_3x1"",""V1x3_3x2_5x1""]","[""540"",""504"",""0
+        45""]",1.0,1.0,overlap=4.000*3.00->12.00; stable=7.100*1.90->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mirror=1.000*0.60->0.60; doubles=1.000*0.40->0.40; recency_lane=1.200*0.80->0.96; s
+        ection_prior=1.00,validation_report.json
+    42 -,Virginia4,Evening,2,2,"[2,1]",false,false,0,8,12,13,true,478,17.62,B,[],"[""V1x2_4x1_5x1"",""V1x2_5x1""]","[""V1x2_4x1_5x1"",""V1x2_5x1""]","[""540"",""504"",""045""]",1.0,1.0,overlap=2.000*3.00->6.0
+        0; stable=4.400*1.90->8.36; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; recency_lane=1.200*0.80->0.96; section_prior=1.00,validation_report.js
+        on
+    43 -,Virginia4,Combined,1,4,"[4,3,2,1]",false,false,0,8,12,13,true,523,23.057,C,[],"[""V1x2_3x1_5x1""]","[""V1x2_3x1_5x1""]","[""540"",""504"",""045""]",1.15,1.0,overlap=1.000*3.00->3.00; stable=7.100*1.9
+        0->13.49; hot=1.000*0.35->0.35; superhot=1.000*0.55->0.55; mask_drop=1.000*0.80->0.80; mirror=1.000*0.60->0.60; doubles=0.750*0.40->0.30; recency_lane=1.200*0.80->0.96; section_prior=1.15,validation_r
+        eport.json
+
+• Ran python3 TOOLS/run_vtrac_share_bundle.py
+  └ Wrote data/outputs/analysis/vtrac_validation/summary.csv
+    Wrote data/outputs/analysis/vtrac_validation/summary.md
+    … +35 lines
+      - data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip (optional)
+
+
+─ Worked for 1m 13s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Implemented the scoring tweaks and reran everything cleanly:
+
+  - Boosted stability/echo/hot weights and added a recency-lane component (Set1 col1/2 persistence) in configs/vtrac_score_config.json and TOOLS/vtrac_score_and_export.py. Mirror/doubles got a small tie-break
+    bump; rescue multiplier slightly higher; token ordering stays deterministic.
+  - Regenerated the compact report and summaries with the new weights: data/outputs/analysis/vtrac_validation/{vtrac_compact_report.{json,csv},summary.{md,csv}} (logs show 42 section rows and per-state
+    top_indices).
+  - Validation test still passes: pytest tests/test_vtrac_score_export.py.
+
+  Next: review the before/after ranks on a sample date to confirm winners lanes are lifted, then update lean outputs/changelog/checkpoint with the tuning note if the gains hold.
