@@ -226,3 +226,17 @@
 - Impact: Added Stable Packet-2 tooling: compound scorer/export (`alpha_analytical/stable/compound.py`), extended families/metrics fields, HTML Top-30 breakdown/leaderboard, guard scripts (`scripts/checks/validate_stable_schema.py`, `scripts/tools/compound_top5.py`, `scripts/checks/print_stable_header.py`), and helper runner `scripts/tools/run_stable_from_results.py` for dated workbooks.
 - Impact: Generated three-day winners bundles (`reports/stable/winners_by_date/2025-06-22/../24/`) and paired Control Center reports (`reports/control_center/*.md`) plus automation scripts (`scripts/tools/generate_winners_from_results.py`, `scripts/tools/generate_control_center_report.py`). Updated docs with Stable run toolkit references.
 - Files: alpha_analytical/stable/{__init__.py,feature_config.yml,post_pass_families.py,metrics.py,compound.py}, src/core/stable_pattern_extractor.py, scripts/tools/{run_stable_from_results.py,generate_winners_from_results.py,generate_control_center_report.py,compound_top5.py}, scripts/checks/{validate_stable_schema.py,print_stable_header.py}, docs/AAT9_KIT/{AAT9_Analyzer_Lean_Outputs.md,AAT9_Checkpoint_Log.md}
+
+## 2025-11-16 — V‑TRAC lane‑lift scoring + scorer freeze
+
+- Added scoring components: recency_lane, VT‑only lane, straight_lane, and winner_lane_floor/rescue; preserved compact JSON/CSV contract.
+- top_indices_by_state remains overlap/recency‑driven; lane‑aware ranking deferred to Aggregator v1.
+- Tests: tests/test_vtrac_score_export.py covers scorer_version/run_date_utc metadata and top_indices_by_state presence.
+- Files/Refs: TOOLS/vtrac_score_and_export.py, configs/vtrac_score_config.json, tests/test_vtrac_score_export.py.
+- Rationale/Impact: Stabilizes compact report for downstream consumers while enabling lane‑aware signals for the Aggregator.
+(Justification taken from your analysis log: “Lane lift / scorer freeze (post‑2025‑11‑16) … recency_lane/VT‑only/straight_lane … freeze scorer; top_indices_by_state stays overlap/recency.” (user))
+
+## 2025-11-16 — V‑TRAC v1 ship note (freeze + artifacts)
+
+- Impact: Scorer frozen for Aggregator v1; no further engine/schema changes planned. Consumers should use `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}` + summary.{md,csv} and winners HTML under `data/outputs/analysis/winners/<STATE>/` and `data/outputs/winners/<DATE>/vtrac_reports/<STATE>/`.
+- Files: docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md (shipping note); TOOLS/vtrac_score_and_export.py; configs/vtrac_score_config.json.

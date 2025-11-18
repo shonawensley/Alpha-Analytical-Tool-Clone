@@ -1,0 +1,294 @@
+ Edited docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md (+243 -0)
+     34  - Action items: Increase weight for cross-variant superhot repeats and right-column persistence; consider lane bump when repeats land in Set1 col1; check overlap gate to avoid suppressing strong stab
+         ility runs.
+     35 +
+     36 +### 2025-06-24 workbook → results 2025-06-25 (Delaware4)
+     37 +- Checklist: ✓ HTML traces; ✓ cross-variant echoes; ✓ permutation cues; ✓ recency; ✓ scoring alignment; ✓ actions.
+     38 +- Observations:
+     39 +  - Midday 524: lives in Set3→Set2 superhot boxes (cols 7→5), reaches Set1 col3/2 superhot; VT box V2x2_4x2_1x1 repeated across variants. No strong straight lane in top_straights; order remains diffu
+         se.
+     40 +  - Evening 534: Set3/Set2 col5/4 superhot cluster; Set1 col4 (superhot) hit with V4x4_5x2 family; VT-straight lane weak but VT-box strong. Cross-variant family echo in Combined/Evening.
+     41 +  - Recency: both winners occupy Set1 col2/col4 hot zones; persistence through earlier columns evident (7→5→4→2).
+     42 +  - Compact report: `top_indices_by_state` (23/32/8) didn’t surface the winning families; tiers B/C with low overlap despite stability/hot repeats.
+     43 +- Action items: Boost cross-variant superhot repeats and persistence; add VT-only lane credit when families recur across variants; consider mild consensus credit beyond overlap when repeats are dense
+          in Set1 hot zones.
+     44 +
+     45 +### 2025-06-24 workbook → results 2025-06-25 (Florida4)
+     46 +- Checklist: ✓
+     47 +- Observations:
+     48 +  - Midday 310: Set3→Set2 col7→5 hot march; Set1 col3/2 hot; VT box V2x2_1x1_5x1 shows in Combined/Evening; no sharp straight lane dominance.
+     49 +  - Evening 695: Strong VT box V1x1_3x1_4x1 spanning variants; sits in Set1 col1 superhot; repeats from Set3 col7 → Set1 col1. Cross-variant echo solid.
+     50 +  - Recency: Evening winner lands in freshest col1 with prior-column persistence; Midday lands in col3/2 hot.
+     51 +  - Compact report: `top_indices_by_state` (5/3/14) misses winner lane; sections tiered B/C with low overlap.
+     52 +- Action items: Lane bump for families repeating into Set1 col1; increase weight for cross-variant echoes in superhot cells; review hot/superhot interaction weight.
+     53 +
+     54 +### 2025-06-24 workbook → results 2025-06-25 (Indiana4)
+     55 +- Checklist: ✓
+     56 +- Observations:
+     57 +  - Midday 147: VT box V2x1_4x1_5x1 appears in Combined/Midday; sits in Set1 col3 hot, with repeats from Set3 col6→5→3. Straight lane weak but ordered hints (147/741) present in top_straights.
+     58 +  - Evening 138: Strong VT straight lane (V1x3_3x2) in Evening/Combined; winner lands Set1 col1 superhot after appearing Set3 col6→4→1; order stability clear.
+     59 +  - Recency: Evening winner persists into col1; Midday into col3.
+     60 +  - Compact report: top_indices (23/32/8) tilted to other families; overlap low, stability high; mis-rank for Evening winner lane.
+     61 +- Action items: Increase lane credit when straight lane appears in multiple variants and ends in Set1 col1; modest boost for ordered repeats across columns.
+     62 +
+     63 +### 2025-06-24 workbook → results 2025-06-25 (Michigan4)
+     64 +- Checklist: ✓
+     65 +- Observations:
+     66 +  - Midday 783: VT box V3x2_1x1 repeats across variants; winner in Set1 col2 hot (not col1); path Set3 col6→5→2. Straight lane weak; order diffuse.
+     67 +  - Evening 199: VT box V1x1_3x1_5x1 with mirror/double pressure; winner in Set1 col1 superhot, repeated from Set3 col7→5→1; strong persistence and hot interaction.
+     68 +  - Recency: Evening winner best (col1 + persistence); Midday moderate (col2).
+     69 +  - Compact report: top_indices (23/3/6) miss winner lane; tiers B/C; overlap absent.
+     70 +- Action items: Boost persistence+hot in Set1 col1/2; consider mirror/double tie-break when aligned with straights.
+     71 +
+     72 +### 2025-06-24 workbook → results 2025-06-25 (NewJersey4)
+     73 +- Checklist: ✓
+     74 +- Observations:
+     75 +  - Midday 590: VT box V2x2_1x1_4x1 shows in Combined/Midday; winner in Set1 col3 hot; repeats from Set3 col6→4→3; straights lane weak.
+     76 +  - Evening 756: VT box V1x1_3x1_4x1 appears across variants; winner in Set1 col4 superhot; repeats Set3 col6→4; some straight lane hints (567).
+     77 +  - Recency: winners in col3/4, both with prior-column persistence.
+     78 +  - Compact report: top_indices (5/6/9) do not surface winner families; low overlap; echo muted.
+     79 +- Action items: Increase cross-variant echo + persistence weight even when overlap=0; lane credit for repeats in Set1 hot columns beyond col1.
+     80 +
+     81 +### 2025-06-24 workbook → results 2025-06-25 (NewYork4)
+     82 +- Checklist: ✓
+     83 +- Observations:
+     84 +  - Midday 662: VT box V1x2_2x1 appears Combined/Midday; winner in Set1 col2 superhot; repeats from Set3 col5→3→2; straight lane modest.
+     85 +  - Evening 381: VT box V1x3_3x1 appears across variants; winner in Set1 col1 hot; repeats from Set3 col6→4→1; order stability visible.
+     86 +  - Recency: Evening strongest (col1 + persistence); Midday good (col2 + persistence).
+     87 +  - Compact report: top_indices (23/20/34) miss; low overlap coded; stability present.
+     88 +- Action items: Similar: boost persistence into col1/2 + cross-variant repeats; lane bump on ordered repeats.
+     89 +
+     90 +### 2025-06-24 workbook → results 2025-06-25 (NorthCarolina4)
+     91 +- Checklist: ✓
+     92 +- Observations:
+     93 +  - Midday 262: VT box V1x2_2x1 strong; Set1 col2 hot; repeats from Set3 col6→3→2; order lane (2-6-2) weakly present.
+     94 +  - Evening 410: VT box V1x1_2x1_4x1 shows across variants; winner in Set1 col3 hot; repeats Set3 col7→4→3.
+     95 +  - Recency: Midday best (col2 with strong persistence); Evening moderate (col3).
+     96 +  - Compact report: top_indices (8/14/23) off target; overlap low.
+     97 +- Action items: persistence-in-hot weighting; VT-only lane bump for cross-variant repeats.
+     98 +
+     99 +### 2025-06-24 workbook → results 2025-06-25 (Ohio4)
+    100 +- Checklist: ✓
+    101 +- Observations:
+    102 +  - Midday 227: VT box V1x3_2x1 repeats; Set1 col2 hot; path Set3 col6→4→2; straight lane weak.
+    103 +  - Evening 990: VT box V1x1_5x1 with mirror/double pressure; Set1 col1 superhot; strong repeats across variants and columns.
+    104 +  - Recency: Evening strong (col1 + repeats + mirror/doubles); Midday good (col2).
+    105 +  - Compact report: top_indices (23/20/31) miss; low overlap gate suppresses; stability present.
+    106 +- Action items: mirror/double tie-break bump; persistence/hot weighting into col1/2.
+    107 +
+    108 +### 2025-06-24 workbook → results 2025-06-25 (OntarioCanada4)
+    109 +- Checklist: ✓
+    110 +- Observations:
+    111 +  - Midday 669: VT box V4x2_5x2 appears; Set1 col2 superhot; repeats Set3 col6→4→2; straight lane modest.
+    112 +  - Evening 641: VT box V1x2_4x1_5x1; Set1 col3 hot; repeats; some straight lane presence.
+    113 +  - Recency: Midday better (col2); Evening moderate (col3).
+    114 +  - Compact report: top_indices (5/4/3) miss families; overlap low.
+    115 +- Action items: persistence + hot weighting; VT-only lane bump when repeats across variants.
+    116 +
+    117 +### 2025-06-24 workbook → results 2025-06-25 (Pennsylvania4)
+    118 +- Checklist: ✓
+    119 +- Observations:
+    120 +  - Midday 065: VT box V3x2_4x1_5x1; Set1 col2 hot; repeats Set3 col6→3→2; straight lane weak.
+    121 +  - Evening 073: VT box V4x2_2x1; Set1 col3 hot; repeats across variants; order hints weak.
+    122 +  - Recency: Midday (col2) better; Evening (col3) moderate.
+    123 +  - Compact report: top_indices (2/5/3) misaligned; overlap low; stability present.
+    124 +- Action items: reinforce repeats/hot in col2/3; cross-variant echo bump.
+    125 +
+    126 +### 2025-06-24 workbook → results 2025-06-25 (PuertoRico4)
+    127 +- Checklist: ✓
+    128 +- Observations:
+    129 +  - Midday 828: VT box V1x1_2x1_4x1; Set1 col2 superhot; repeats across variants; mirror present.
+    130 +  - Evening 449: VT box V5x3_1x2_3x2; Set1 col3 hot; repeats; straights diffuse.
+    131 +  - Recency: Midday stronger (col2 + repeats); Evening moderate (col3).
+    132 +  - Compact report: top_indices (29/22/14) off; overlap low.
+    133 +- Action items: mirror bump; persistence/hot weighting; lane credit when cross-variant repeats.
+    134 +
+    135 +### 2025-06-24 workbook → results 2025-06-25 (SouthCarolina4)
+    136 +- Checklist: ✓
+    137 +- Observations:
+    138 +  - Midday 374: VT box V2x2_4x2_1x1; Set1 col2 superhot; repeats Set3→Set1; straights modest.
+    139 +  - Evening 933: VT box V5x3_4x2_3x1; Set1 col1 superhot; cross-variant repeats into col1; mirror/double pressure present.
+    140 +  - Recency: Evening strongest (col1 + repeats + mirror/doubles); Midday good (col2).
+    141 +  - Compact report: top_indices (30/29/22) miss; overlap low; stability present.
+    142 +- Action items: mirror/double tie-break; persistence into col1/2; VT-only lane bump.
+    143 +
+    144 +### 2025-06-24 workbook → results 2025-06-25 (Virginia4)
+    145 +- Checklist: ✓
+    146 +- Observations:
+    147 +  - Midday 175: VT box V1x3_3x2_5x2; Set1 col1 superhot; strong repeats Set3 col6→4→1; straight lane decent (571).
+    148 +  - Evening 165: VT box V1x2_5x1; Set1 col2 hot; repeats; straights modest.
+    149 +  - Recency: Midday strongest (col1 + repeats); Evening moderate (col2).
+    150 +  - Compact report: top_indices (7/6/1) miss winner lane; overlap low.
+    151 +- Action items: lane bump for repeats into col1; cross-variant echo weighting.
+    152 +
+    153 +### 2025-06-25 workbook → results 2025-06-26 (Connecticut4)
+    154 +- Checklist: ✓
+    155 +- Observations:
+    156 +  - Midday 928: VT box V3x2_1x1; Set1 col2 superhot; path Set3 col6→4→2; straight lane weak.
+    157 +  - Evening 612: VT box V5x2_2x1; Set1 col1 superhot; repeats Set3 col7→4→1; strong lane presence.
+    158 +  - Recency: Evening strongest (col1 + repeats); Midday good (col2).
+    159 +  - Compact report: top_indices (25/34/23) miss winner; low overlap gate; stability high.
+    160 +- Action items: same as prior (persistence/hot into col1/2; lane bump for repeats).
+    161 +
+    162 +### 2025-06-25 workbook → results 2025-06-26 (Delaware4)
+    163 +- Checklist: ✓
+    164 +- Observations:
+    165 +  - Midday 424: VT box V2x1_3x1_5x1; Set1 col3 hot; repeats Set3 col7→4→3.
+    166 +  - Evening 771: VT box V4x4_5x2/3; Set1 col2 superhot; repeats across variants; straights diffuse.
+    167 +  - Recency: Evening better (col2).
+    168 +  - Compact report: top_indices (20/23/8) off; overlap low.
+    169 +- Action items: persistence/hot weighting; cross-variant repeats bump.
+    170 +
+    171 +### 2025-06-25 workbook → results 2025-06-26 (Florida4)
+    172 +- Checklist: ✓
+    173 +- Observations:
+    174 +  - Midday 337: VT box V2x2_1x1_5x1; Set1 col3 hot; repeats Set3→Set1.
+    175 +  - Evening 949: VT box V1x1_3x1_4x1; Set1 col1 superhot; strong repeats; lane modest.
+    176 +  - Recency: Evening strong (col1); Midday moderate (col3).
+    177 +  - Compact report: top_indices (5/24/14) off; overlap low.
+    178 +- Action items: lane bump for col1 repeats; cross-variant echo boost.
+    179 +
+    180 +### 2025-06-25 workbook → results 2025-06-26 (Indiana4)
+    181 +- Checklist: ✓
+    182 +- Observations:
+    183 +  - Midday 913: VT box V2x1_4x1_5x1; Set1 col2 hot; repeats Set3 col6→3→2.
+    184 +  - Evening 138: VT box V3x3_4x1_5x1; Set1 col1 superhot; strong repeats across variants; lane strong (138).
+    185 +  - Recency: Evening strong (col1 + lane); Midday good (col2).
+    186 +  - Compact report: top_indices (24/23/6) miss winner lane; overlap low.
+    187 +- Action items: lane credit for repeats into col1; persistence/hot boost.
+    188 +
+    189 +### 2025-06-25 workbook → results 2025-06-26 (Michigan4)
+    190 +- Checklist: ✓
+    191 +- Observations:
+    192 +  - Midday 693: VT box V3x2_1x1; Set1 col2 superhot; repeats Set3 col6→4→2; straights modest.
+    193 +  - Evening 693 (repeat): same cues; strong persistence; Set1 col2.
+    194 +  - Recency: both in col2 with repeats.
+    195 +  - Compact report: top_indices (24/23/3) miss; low overlap.
+    196 +- Action items: persistence/hot weighting into col2; lane bump when repeats across variants.
+    197 +
+    198 +### 2025-06-25 workbook → results 2025-06-26 (NewJersey4)
+    199 +- Checklist: ✓
+    206 +
+    207 +### 2025-06-25 workbook → results 2025-06-26 (NewYork4)
+    208 +- Checklist: ✓
+    209 +- Observations:
+    212 +  - Recency: Evening strong (col1 + repeats); Midday moderate (col3).
+    213 +  - Compact report: top_indices (33/22/19) miss; overlap low.
+    214 +- Action items: persistence/hot into col1/2; lane bump for repeats; cross-variant echoes boost.
+    215 +
+    216 +### 2025-06-25 workbook → results 2025-06-26 (NorthCarolina4)
+    217 +- Checklist: ✓
+    218 +- Observations:
+    219 +  - Midday 883: VT box V1x3_3x1_4x1; Set1 col2 hot; repeats Set3→Set1; straights modest.
+    220 +  - Evening 482: VT box V1x1_2x1_4x1; Set1 col3 hot; repeats.
+    221 +  - Recency: Midday better (col2); Evening moderate (col3).
+    222 +  - Compact report: top_indices (25/24/23) miss; overlap low.
+    223 +- Action items: persistence/hot weighting; echo/lane credit even when overlap=0.
+    224 +
+    225 +### 2025-06-25 workbook → results 2025-06-26 (Ohio4)
+    226 +- Checklist: ✓
+    227 +- Observations:
+    228 +  - Midday 694: VT box V1x2_4x1_5x1; Set1 col2 hot; repeats.
+    229 +  - Evening 718: VT box V1x3_3x2; Set1 col1 superhot; strong repeats; lane decent.
+    230 +  - Recency: Evening strong (col1); Midday good (col2).
+    231 +  - Compact report: top_indices (22/21/20) off; overlap low.
+    232 +- Action items: persistence/hot col1/2 bump; lane credit; echo weight.
+    233 +
+    234 +### 2025-06-25 workbook → results 2025-06-26 (OntarioCanada4)
+    235 +- Checklist: ✓
+    236 +- Observations:
+    237 +  - Midday 196: VT box V1x1_2x1_4x1; Set1 col2 hot; repeats.
+    238 +  - Evening 653: VT box V5x2_2x1_3x1; Set1 col3 hot; repeats; straight lane modest.
+    239 +  - Recency: Midday better (col2).
+    240 +  - Compact report: top_indices (22/12/9) miss; overlap low.
+    241 +- Action items: persistence/hot weighting; echo bump.
+    242 +
+    243 +### 2025-06-25 workbook → results 2025-06-26 (Pennsylvania4)
+    244 +- Checklist: ✓
+    252 +### 2025-06-25 workbook → results 2025-06-26 (PuertoRico4)
+    253 +- Checklist: ✓
+    254 +- Observations:
+    255 +  - Midday 467: VT box V1x1_2x1_4x1; Set1 col2 hot; repeats; mirror present.
+    256 +  - Evening 828: VT box V5x3_1x2_3x2; Set1 col3 hot; repeats.
+    257 +  - Recency: Midday better (col2).
+    258 +  - Compact report: top_indices (22/19/17) miss; overlap low.
+    259 +- Action items: mirror bump; persistence/hot weighting.
+    260 +
+    261 +### 2025-06-25 workbook → results 2025-06-26 (SouthCarolina4)
+    262 +- Checklist: ✓
+    263 +- Observations:
+    264 +  - Midday 774: VT box V2x2_4x2_1x1; Set1 col2 hot; repeats.
+    265 +  - Evening 933: VT box V5x3_4x2_3x1; Set1 col1 superhot; strong repeats; mirror/double pressure.
+    266 +  - Recency: Evening strong (col1); Midday good (col2).
+    267 +  - Compact report: top_indices (33/30/22) miss; overlap low.
+    268 +- Action items: mirror/double tie-break; persistence/hot into col1/2; echo bump.
+    269 +
+    270 +### 2025-06-25 workbook → results 2025-06-26 (Virginia4)
+    271 +- Checklist: ✓
+    272 +- Observations:
+    273 +  - Midday 165: VT box V1x3_3x2_5x2; Set1 col1 superhot; strong repeats; straight lane present.
+    274 +  - Evening 165 (same): identical cues; strong lane.
+    275 +  - Recency: col1 with repeats and lane dominance.
+    276 +  - Compact report: top_indices (6/7/1) miss; overlap low gate.
+    277 +- Action items: lane bump for repeats into col1; echo/hot weighting.
+
+─ Worked for 1m 08s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Deep analysis entries added for all available states across both dates:
+
+  - docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md now has detailed per-state notes for 2025‑06‑24→06‑25 and 2025‑06‑25→06‑26 (TriState4 skipped due to missing winners). Each entry follows the checklist
+    (HTML traces, cross-variant echoes, permutation/straight cues, recency, scoring alignment, action items).
+
+  Findings pattern (common across states):
+
+  - Winners often repeat through superhot/hot columns into Set1 col1/col2 but get down-ranked when overlap=0.
+  - Cross-variant family echoes and VT-only lanes aren’t sufficiently credited; many winners sit in superhot cells across variants yet top_indices miss them.
+  - Strong lane signals when repeats land in Set1 col1 (especially Evening) are not reflected in scores.
+  - Mirror/double pressure occasionally aligns with the winning lane but isn’t a decisive tie-break.
+
+  Next steps:
+
+  - Tune weights to lift cross-variant superhot repeats, right-column persistence into Set1 col1/2, and VT-only lane presence (even at overlap=0); add a small mirror/double tie-break when aligned with
+    straights.
+  - Rerun a sample date to confirm ranking improvements and update lean outputs/changelog/checkpoint accordingly.
+
+  Artifacts refreshed:
+
+  - Both runs (06‑24→25 and 06‑25→26) have updated winners HTML, analyzer/validator outputs, and compact report with version stamps/top_indices.
+
+
+› AMAZING I ONT YOU TO NOTE ALL THE OPTIMIZATIONS YOU GATHERED AND SHOULD BE ADDED TO THE TOOL OR ANALZYER WITHIN ROR HOWEVER OPTIMALLY TO MAKE MOST ANALYTICALLY POWERFUL, ARE YOU ABLE TO LIST THEM ALL NOW
+  AND OUTLINE HOW YOU PLAN TO ADD THEM IN THEN YOU CAN PROCEED WITH YOUR NEXT STEPS IN THE PLAN..IF ITS POSSIBLE TO ARE YOU ABLE TO CLARIFY MY UNDERSTNADING SOMEWHAT IN TERMS OF HOW EXACTLY THIS TOOL WORKS
+  AGAIN CONSDIERING THE NEW ANALZYER VERSUS HOWIT USE TO WORK, IS IT PROVIDING LIEK BOTH BETTER MORE ENHANCED ANALYSIS FACTORS BASED ON USING THEINDEX'S TO SCAN THROUGH THE STRING PATTERNS? DOES IT STILL
+  ALSO SELECT LIKE FINAL INDEX RECXOMMENDATIONS? LIEK DO BOTH POTENTIALLY WHEN OPTIMIZED FORWARD KEY INDOCATORS TO THE ANALYSIS/AGGREGATOR MODULE AND SELECT ITS BEST INDEX OR NO ? I GUESS IM TRYING TO
+  UNDERSTAND ESSENTIALLY WHAT THE TOOL IS EVEN DOING TGHESE DAYS BUT I DONT WAN TO GET OFF TRACK WITH THAT WAS JSUT HOPING YOU COULD PROVIDE SOME OVERALL ISNIGIHTS AND CLARIFYING INSIGHTS ON THOSE QUICK
+  QUESITONS AND MAYBE MORE DEEPLY DISCUSS THE OPTMIZATIONS YOU ARE PLANNING TO ADD BEFORE PROGRESSING THROUGH THE PLAN, I DONT WANT TO LOSS THE OVERALL PLAN AND WHAT YOU HAD PLANNED OT DO NEXT AND YES RE RUN
+  AFTER OPTIMIZATIONS IS AN AMAZINFG IDEA HOPE THIS MAKES SENSE AND YOU CAN SHARE SOME COMREHISVE FEEDBACK BASED ON WAHT IVE ASKED QUICKLY BEFORE RETURNING TO THE OVERALL PLAN
+
+
+• I'll outline concise bullet points covering tuning weight changes, clarifying the interplay of analyzer, scorer, and aggregator, and propose next steps like implementing changes, rerunning tests, and
+  updating documentation—all while keeping the explanation compact and focused on the user's original request.
+
+─ Worked for 7s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Key optimizations to add (all driven by the sweep):
+
+  - Loosen the “overlap=0 => low score” gap: add weight for cross-variant superhot repeats and right-column persistence (7→…→Set1 col1/2) so VT-only lanes surface even when overlap is zero.
+  - Lane bump for repeats landing in Set1 col1/2, especially when the same VT family appears across variants.
+  - Small mirror/double tie-break when aligned with the winning lane; modest boost for ordered repeats (straight lane) that persist across columns.
+  - Keep state priors optional; use only if validation suggests a bias.
+  - Maintain deterministic top_indices_by_state; just lift the scoring components above.
+
+  How I’ll add them:
+
+  1. Adjust scorer weights/config (combined in configs/vtrac_score_config.json and, if needed, small code bump in vtrac_score_and_export.py for the new components).
+
+  Tool clarification (legacy vs now):
+
+  - Core analyzer: still the enhanced engine that scores all 35 indices using table features (hot/superhot, stability, mirror/doubles, order cues, etc.) and emits ranked indices + top straights
+    (*_vtrac_enhanced_*.json).
+  - Recommendations: analyzer produces ranked indices; the compact report refines them and is what the aggregator should read.
+
+  Next steps:
+
+  - Implement the weight/feature bumps above, rerun a sample date, validate the ranking improves, then document the changes. Let me know if you want a specific date for the before/after run.

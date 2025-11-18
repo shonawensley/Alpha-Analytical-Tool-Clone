@@ -279,3 +279,77 @@ Checklist per entry:
 ### Lane lift / scorer freeze (post-2025-11-16)
 - Added scoring components: recency_lane, VT-only/VT-only lane, straight_lane, winner_lane_floor/rescue (no further engine/JSON changes). Overlap lowered/capped and lane promotion logic present, but analyzer JSON lacks per-section index mapping, so top_indices_by_state stays overlap/recency-driven.
 - Current stance: freeze scorer as-is for Aggregator v1; treat top_indices_by_state as one signal alongside the richer per-section features (recency/hot/echo/straights, etc.). Further lane-aware ranking will happen in the Aggregator using the full feature set.
+
+IMPORTANT THOUGHTS
+The “Part‑2” scoring review is present in your materials—each VTRAC entry explicitly compares winners vs. the compact scorer and logs mis‑ranks / tuning hypotheses. (also (user): “Scoring alignment: compare the compact report ranks … note any mis‑ranks … and hypothesize weight/feature tweaks.”)
+
+The scorer/export hardening you listed (SCORER_VERSION/UTC/weights_hash, states block, top_indices_by_state, unit test) is documented in your notes and validated by a test pointer. (user: “stamps … SCORER_VERSION, run_date_utc … writes a JSON object … + top_indices_by_state … pytest tests/test_vtrac_score_export.py”).
+Your Lean Outputs doc does not yet contain a finalized V‑TRAC “brain + winners” contract; the V‑TRAC section is marked as “slated for the lean pass / Lean target,” i.e., pending. (user: “Also slated for the lean pass. → Lean target: Standardize on per_item/top/meta … move map/flags to the centralized winners module.”)
+“Lane lift / scorer freeze (post‑2025‑11‑16) … added recency_lane, VT‑only lane, straight_lane … top_indices_by_state stays overlap/recency‑driven … freeze scorer as‑is.”) Earlier V‑TRAC entries (engine and export config) do appear in your change logs. (user: “2025‑10‑16 – Enhanced V‑TRAC analyzer (engine + tooling delivered)”; “2025‑10‑26 – V‑TRAC scoring/export config + bundle helper”).
+
+Net: Nothing critical is “missing” from the analysis/testing intent; what is missing is administrative plumbing (copying the latest optimization session into the Changelog/Checkpoint and finishing the V‑TRAC section of the Lean Outputs spec). After those quick doc updates, you can safely move on.
+
+Reviewed:
+VTRAC deep‑dive/analysis playbook & entries. These include the “Scoring alignment” criterion and many per‑state notes showing compact‑score vs. HTML comparisons and mis‑ranks.
+
+Your session notes summarizing the scorer/export changes, testing pointer, and the two‑day sweep logging plan. (user)
+
+Lean Outputs spec excerpt showing Digit Reduction (final), Stable (contract v1.0), and V‑TRAC (pending lean). (user)
+
+Findings:
+1) “Part‑2” (score‑vs‑winner) was not deleted
+
+The analysis criteria explicitly instruct to compare HTML evidence to compact scores and log mis‑ranks/tweaks: “Scoring alignment: compare the compact report ranks (top_indices_by_state + section scores) … note any mis‑ranks … and hypothesize weight/feature tweaks.”
+
+The entries do perform this (“top_indices_by_state favors #25/#34/#23; winner families not top‑ranked → false‑negative risk.”)
+Conclusion: Part‑2 is present inside the VTRAC Analysis Log; nothing to restore. Confidence: High (based on explicit text in the attached analysis).
+
+2) Scorer/export hardening landed and is test‑guarded (per your notes)
+
+You recorded: “stamps every compact run with SCORER_VERSION, UTC run date, and a short weights_hash … writes a JSON object with … a states block …” and introduced analyzer‑path resolution, explain strings, and unit coverage: “tests/test_vtrac_score_export.py … asserts that the metadata (scorer_version, run_date_utc) and top_indices_by_state populate as expected.” (user)
+Conclusion: The changes and tests exist per your session log. I have no counter‑evidence in your attachments.
+
+3) The two‑day sweep (per‑state) covers both winners and score alignment
+
+Every state/day entry shows the winners’ HTML trace and a “Compact report” sub‑bullet describing how top_indices_by_state ranked vs the winner. Example: “top_indices_by_state favors #25/#34/#23; winner families not top‑ranked.”
+Conclusion: Your requested second half (how the tool scores toward the winner) is embedded in each entry.
+
+4) Lean Outputs doc—V‑TRAC isn’t finalized yet (not an error)
+
+The V‑TRAC section is explicitly marked as pending: “Also slated for the lean pass. → Lean target: Standardize on per_item/top/meta … keep the compact report … move map/flags to the centralized winners module.” (user)
+Conclusion: You’re not “missing” the V‑TRAC brain/winners section—it hasn’t been written yet in the spec. The Digit Reduction and Stable sections are documented; V‑TRAC is queued.
+The lane‑aware scoring note is present only in the VTRAC Analysis Log excerpt: “Lane lift / scorer freeze (post‑2025‑11‑16) … added recency_lane, VT‑only/straight_lane, winner_lane_floor/rescue … freeze scorer as‑is; top_indices_by_state stays overlap/recency‑driven; defer lane‑aware ranking to the Aggregator.” (user)
+
+Your Unified Changelog excerpts do already contain earlier V‑TRAC milestones (engine; compact scorer/export config). (user)
+Conclusion: The optimization session’s administrative entries are pending in AAT9_Unified_Changelog.md and AAT9_Checkpoint_Log.md. Recommend adding them (see “Ready‑to‑paste patches” below).
+
+6) “I don’t see the final outputs in Lean Outputs or in Lean Outputs (brain and winners)”
+
+Correct for V‑TRAC (pending). (user)
+
+Your analysis log also states the plan to add a V‑TRAC section to AAT9_Analyzer_Lean_Outputs.md once the sweep/tweaks land. (user)
+Conclusion: Nothing is missing from the repo view; this doc work simply hasn’t been executed yet.
+
+## Shipping note — v1 freeze (2025-11-16)
+- Scorer frozen with recency_lane, VT-only lane, straight_lane, and lane_floor/rescue weights; lane-aware promotion deferred to the Aggregator. No further tuning planned for v1.
+- Canonical artifacts for consumers:
+  - Compact report + summaries: `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}`, `summary.{md,csv}`, optional ZIP.
+  - Winners overlays: per-state `data/outputs/analysis/winners/<STATE>/**/*.html` and dated bucket `data/outputs/winners/<DATE>/vtrac_reports/<STATE>/**/*.html`.
+- Contract: compact report is the Aggregator feed; winners HTML/JSON remain for visual validation only.
+
+KEY FINAL THOUGHTS*****
+
+ Added the v1 freeze note to both docs/AAT9_KIT/AAT9_Unified_Changelog.md and docs/AAT9_KIT/AAT9_Checkpoint_Log.md, pointing to the canonical artifacts and confirming the scorer is locked for Aggregator v1.
+
+  Clarification on the finalized V-TRAC outputs and why they matter:
+
+  - Canonical artifacts (for consumers): data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json} plus summary.{md,csv}; winners HTML in data/outputs/analysis/winners/<STATE>/ and dated buckets
+    under data/outputs/winners/<DATE>/vtrac_reports/<STATE>/.
+  - What’s frozen in the scorer: recency_lane (fresh Set1 col1/2 presence), VT-only lane credit, straight_lane credit, and lane_floor/rescue to avoid zeroing promising lanes; overlap/recency still drive
+    top_indices_by_state, with deeper lane promotion deferred to the Aggregator.
+  - Why it’s powerful: the compact report distills hot/superhot, stability, echo, recency, and straight-lane signals per index into a deterministic, version-stamped CSV/JSON—ready for aggregation with Stable/
+    Digit signals without parsing heavy HTML. Winners overlays remain for visual validation.
+  - Old vs. enhanced analyzer: Module C (Streamlit “with_analyzer”) remains canonical. The enhanced engine drives the evidence bundles; the scorer/export layer reads those enhanced JSONs to produce the
+    compact report. No synthetic indices or alternate schema were introduced—just the tuned weights/features on top of the enhanced evidence.
+
+  Everything is now documented and code-checked; no further runs or code changes pending for v1.

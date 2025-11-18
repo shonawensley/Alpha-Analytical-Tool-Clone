@@ -617,6 +617,13 @@ Template
 - Next:
   - Share the refreshed report bundle + config with ChatGPT Pro to decide whether to ship the best YAML combo (currently `_V_S01`) or tweak penalties further.
   - Propagate the validator upgrades into `AAT9_Analysis_Insights.md` once we lock the final weights so future sessions rerun the exact same match logic.
+
+## 2025-11-16 05:25 (UTC) - V‑TRAC v1 freeze and artifacts
+
+- Context: Lane-aware scoring components (recency_lane, VT-only lane, straight_lane, lane_floor/rescue) are in place, but top_indices_by_state still trends overlap/recency. Decision: freeze scorer for Aggregator v1 and defer deeper lane promotion to the Aggregator.
+- Change: Documented the freeze and canonical outputs in `docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md`; no new code beyond prior lane-lift. Compact reports and summaries under `data/outputs/analysis/vtrac_validation/` remain the contract.
+- Impact: Aggregator consumes `vtrac_compact_report.{csv,json}` + `summary.{md,csv}`; winners HTML lives in `data/outputs/analysis/winners/<STATE>/` and `data/outputs/winners/<DATE>/vtrac_reports/<STATE>/`. Lane-aware ranking will be handled centrally.
+- Verification: `tests/test_vtrac_score_export.py` still passes; no additional runs required for the freeze note.
 ## 2025-11-12 17:30 (UTC) - Stable Packet-2 tooling + dated control-center bundles
 
 - Context: Needed a reproducible loop to regenerate Stable runs (with winners spotlight) across dated workbooks, bundle analyzer-style winners HTML, and capture Control Center aggregates (Blackapple + Due Doubles) for review away from the app. Packet-2 features (compound scoring, schema guard) also needed docs/guard hooks.
