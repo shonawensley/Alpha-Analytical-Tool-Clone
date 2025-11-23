@@ -227,6 +227,12 @@
 - Impact: Generated three-day winners bundles (`reports/stable/winners_by_date/2025-06-22/../24/`) and paired Control Center reports (`reports/control_center/*.md`) plus automation scripts (`scripts/tools/generate_winners_from_results.py`, `scripts/tools/generate_control_center_report.py`). Updated docs with Stable run toolkit references.
 - Files: alpha_analytical/stable/{__init__.py,feature_config.yml,post_pass_families.py,metrics.py,compound.py}, src/core/stable_pattern_extractor.py, scripts/tools/{run_stable_from_results.py,generate_winners_from_results.py,generate_control_center_report.py,compound_top5.py}, scripts/checks/{validate_stable_schema.py,print_stable_header.py}, docs/AAT9_KIT/{AAT9_Analyzer_Lean_Outputs.md,AAT9_Checkpoint_Log.md}
 
+### 2025-11-20 — Hot Zones literal triad support + validation rerun
+- Impact: Hot Zones scanner now adds Set1 `draw_data` triads per column (literal “EB” candidates) with dedicated scoring weight, ensuring actual winner families enter the ranking.
+- Impact: JSON loader updated to accept the flattened `sets -> SetX -> DrawY` layout emitted by `build_json_tables_from_csv`.
+- Impact: Re-ran the guard + winners + Hot Zones CLI for the June 23/24/25 workbooks; EB coverage is now 28/28 winners on the first two days and 10/28 on June 26 (all stats logged in `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md`).
+- Files: alpha_analytical/hot_zones/{models.py,scanner.py}, tests/test_hot_zones_scanner.py, docs/AAT9_KIT/{AAT9_Hot_Zones_Validation_Log.md,AAT9_Unified_Changelog.md}
+
 ## 2025-11-16 — V‑TRAC lane‑lift scoring + scorer freeze
 
 - Added scoring components: recency_lane, VT‑only lane, straight_lane, and winner_lane_floor/rescue; preserved compact JSON/CSV contract.

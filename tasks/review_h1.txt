@@ -1,0 +1,657 @@
+I’ll answer as a world-famous lottery-analytics / VT-triad systems architect, winner of the INFORMS Daniel H. Wagner Prize for real-world analytics.
+TL;DR:
+Codex has not gone totally off the rails, but it has done a lot in this Hot Zones loop:
+
+
+It followed the plan: baseline runs → discovered 0 hits → fixed extraction/loader → re-ran → added hit summaries → tried weight tuning → documented everything in the Hot Zones validation log. 
+
+
+The core AAT9 pipeline (guarded tables + JSON mirror) still looks coherent; all the heavy edits are localized to the Hot Zones engine + docs.
+
+
+The big remaining issue is not weights – it’s still extraction on the Set1 lanes / duplicate-heavy winners. Codex has already half-patched this (literal triads + vt_code) but hasn’t implemented the full Set1 guard it’s hinting at.
+
+
+Right now you actually have a pretty strong validation setup (env JSON, hit JSON, EB/ES/VB/VS summaries, and a very detailed log), but the Hot Zones engine is in an active tuning state, not a “frozen v1”.
+
+
+Below is a deep pass through what’s happened and what I’d recommend before you let Codex do more surgery.
+
+1. What Codex has actually done (in phases)
+Phase 0 – Guard + JSON + first Hot Zones integration
+From earlier work (which is consistent with the current log + docs):
+
+
+Guarded pipeline (run_tables_with_guard.py) is in place and working: tables are purged/rebuilt and a manifest is maintained.
+
+
+JSON mirror (utils/json_tables) builds data/outputs/json_tables/<STATE>_tables.json in the layout your spec expects (state_name → sections → sets → draws → draw_data + pattern_variations + metadata).
+
+
+Hot Zones package (alpha_analytical/hot_zones/) was created with:
+
+
+vtrac.py (DIGIT_TO_V, MIRROR_MAP, VT helpers)
+
+
+models.py (TableEnv, HotScanConfig, loader)
+
+
+scanner.py (BoxData, Evidence, PerItemRow, TopCandidateRow, HotZoneWeights, HotZoneScanner)
+
+
+writer.py (per_lane / top_lanes / meta / winner_map)
+
+
+CLI: scripts/hot_zones/run_hot_zones_cli.py
+
+
+
+
+This is still the basic architecture you wanted.
+Phase 1 – Baseline validation: 3 workbooks, zero hits
+Codex ran the plan:
+
+
+For June 23/24/25 workbooks:
+
+
+Rebuilt tables via guard.
+
+
+Ran winners HTML generator.
+
+
+Ran Hot Zones CLI for all 14 states for each result date.
+
+
+
+
+Compared Hot Zones top candidates vs real winners and tried to tag EB/ES/VB/VS.
+
+
+The result of the first pass was:
+
+
+Essentially 0 EB / 0 VB hits across the three days – the winning triads / VT families simply didn’t show up in _top_lanes.csv.
+
+
+That’s recorded in early parts of the validation log as “no EB/VB hits,” and later summarized as “fundamental extraction failure” before fixes. 
+
+
+This is why Codex started modifying extraction.
+Phase 2 – Fix extraction + JSON loader, then rerun
+Seeing “0 hits,” Codex made two structural fixes:
+
+
+JSON loader fix
+
+
+models._set_from_obj was changed to support two JSON shapes:
+
+
+The original one with a "draws" dict under each Set.
+
+
+A flattened layout where SetX directly contains "Draw1": {...}, "Draw2": {...} (what build_json_tables_from_csv actually emits).
+
+
+
+
+This was necessary: earlier errors (KeyError: 'draws') showed the loader and builder were out of sync, leading to empty envs and no candidates.
+
+
+
+
+Literal triad injection
+
+
+Scanner was updated to:
+
+
+Carry vt_code instead of the misnamed s_vt.
+
+
+Use the canonical VT mirror map (MIRROR_MAP) for mirrored strings.
+
+
+Pull Set1 draw_data values per column and inject them as literal triad candidates in mine_evidence, marking them specially (literal_draw / literal_hits) and scoring them via w_literal_hit.
+
+
+
+
+This is the big change that’s supposed to guarantee EB candidates exist for true winners.
+
+
+
+
+After these changes, Codex:
+
+
+Reran guard + winners + Hot Zones CLI for all 3 workbooks.
+
+
+Built machine-readable summaries:
+
+
+reports/stable/hot_zones_env_YYYY-MM-DD.json (environment snapshots).
+
+
+reports/stable/hot_zones_winner_hits.json (per winner EB/ES/VB/VS + ranks).
+
+
+reports/stable/hot_zones_hit_summary.json (EB/VB counts per date).
+
+
+
+
+Updated AAT9_Hot_Zones_Validation_Log.md with post-fix numbers:
+
+
+For the 3 result days (24/25/26 June): EB 5/6/3, VB 10/13/12. 
+
+
+
+
+So extraction is no longer “zero”; Hot Zones now gets some EB and quite a few VB hits.
+Phase 3 – Documentation explosion
+Codex then:
+
+
+Filled AAT9_Hot_Zones_Validation_Log.md with per-workbook/per-state sections:
+
+
+Guard manifest + Set1/Draw1 tails.
+
+
+Environment snapshots (R2/R4 tails, hot_zone_count, etc.).
+
+
+For each winner, notes like “EB rank 1 / VB rank N / or no EB/VB in top20.”
+
+
+
+
+Added sections:
+
+
+“Post-Fix Reruns (Nov 20)” – with the EB/VB hit table and commentary. 
+
+
+“VB-only Coverage Focus (2025-06-26)” – listing specific VB-only winners, their ranks, and evidence tags. 
+
+
+“Literal Priority Tuning (Nov 20)” – describing weight tweaks and their limited impact. 
+
+
+
+
+This is all auto-generated from env JSON + winner_hits JSON. It’s quite dense, but structurally consistent.
+Phase 4 – Weight tuning and second reruns
+Because EB/VB coverage was still low, Codex:
+
+
+Adjusted HotZoneWeights:
+
+
+Up: w_literal_hit, w_col1_arrival, w_precol1_funnel
+
+
+Down: w_vt_only_lane_bonus
+
+
+Added literal_hits to TopCandidateRow and changed the sort to prefer higher literal_hits at tie.
+
+
+
+
+Reran:
+
+
+Guard + tables for all three workbooks.
+
+
+Winners HTML.
+
+
+Hot Zones CLI for all states/dates.
+
+
+Hit summarizer script.
+
+
+
+
+Result (post-tuning) – as recorded in the log:
+
+
+EB coverage still limited: 5/28, 6/28, 3/28 across the three days; VB around 10–13–12. 
+
+
+Codex correctly concludes: weights alone are not enough; for many winners, the “literal_draw” flag never fires, so the literal-first logic can’t help.
+
+
+And that’s where the log ends: with a clear statement that the next big step should be a stronger Set1 column guard in candidate generation, not more blind weight fiddling.
+
+2. Did Codex “go off the rails”?
+In my view: no, but it definitely went deep and is now at the edge of where further incremental fiddling is useful.
+What Codex did well:
+
+
+Followed your high-level plan:
+
+
+Set up a validation log + SOP.
+
+
+Ran all 3 history workbooks across all 14 states.
+
+
+Measured EB/ES/VB/VS, not just “did we win Y/N.”
+
+
+Identified a fundamental extraction/gating issue.
+
+
+Implemented a logical fix (literal triads + JSON loader sync).
+
+
+Re-ran everything, built machine-readable summaries, and wrote diarized findings into AAT9_Hot_Zones_Validation_Log.md. 
+
+
+
+
+Kept changes localized:
+
+
+Only Hot Zones (alpha_analytical/hot_zones/*.py), JSON loader, and docs.
+
+
+No signs of it touching Stable, Digit Reduction, VTRAC code, or the core table pipeline.
+
+
+
+
+Where it’s at risk of “going too far”:
+
+
+It’s now in active tuning mode:
+
+
+weights have already been tweaked once,
+
+
+more guard logic is being proposed (Set1 injection, reserved winner_map slots, etc.).
+
+
+
+
+The validation log is very auto-generated – it’s detailed, but it may not fully reflect the kind of “hand-crafted” Part A narrative you originally imagined (though the structure is right).
+
+
+But I don’t see anything “dangerous” like:
+
+
+Breaking your table layouts,
+
+
+Introducing contradictory state,
+
+
+Or editing unrelated modules.
+
+
+The core architecture you planned is intact; what’s evolving is how aggressive the Hot Zones engine is in forcing literal winners into the candidate set.
+
+3. Current state of the Hot Zones engine (important to be clear)
+From the doc + log, the engine now:
+
+
+Reads the JSON mirror via load_table_env_from_json.
+
+
+Builds boxes:
+
+
+R2/R4/R6/R8 digits by column (using correct VT mirror),
+
+
+plus Set1 draw_data triads injected as literal candidates.
+
+
+
+
+Applies star gating:
+
+
+Only processes columns whose draw has metadata.is_hot_zone == True.
+
+
+
+
+Generates triads from:
+
+
+pattern strings (s_raw, s_mirror) and now literal draw_data.
+
+
+
+
+Scores evidence using a rich feature set:
+
+
+vertical_support, horizontal_span, set_span, variant_echo
+
+
+vt_only_lane, col1_arrival, funnel_precol1, ls_col_42, ls2_lane
+
+
+hot/superhot, set1 bias, straight_lane, vt_straight, literal_hit, etc.
+
+
+
+
+Aggregates into:
+
+
+PerItemRow (one row per triad per section/set/draw/col)
+
+
+TopCandidateRow with counts/hit features and evidence_tags.
+
+
+
+
+Writes:
+
+
+<STATE>_hot_zones_per_lane.csv
+
+
+<STATE>_hot_zones_top_lanes.csv
+
+
+<STATE>_hot_zones_meta.json
+
+
+YYYY-MM-DD_hot_zones_winner_map.{json,csv} (per date).
+
+
+
+
+Summarizes hits:
+
+
+hot_zones_winner_hits.json (per winner: EB rank, VB rank, tags)
+
+
+hot_zones_hit_summary.json (EB/VB totals per date). 
+
+
+
+
+So you do now have:
+
+
+EB/ES/VB/VS tagging in a machine-readable way (via winner_hits.json).
+
+
+A log that reflects those stats and environment per state/date. 
+
+
+The main limitation is: the EB counts are still low (5/6/3), and many winners are VB-only or complete misses.
+
+4. Real issues / risks I see
+4.1 EB coverage is still poor
+Even after literal triad injection + weight tuning:
+
+
+Many winners never become literal_draw or don’t climb into the top-20.
+
+
+Marching weights further will likely create more distortion than gain.
+
+
+Codex’s latest summary acknowledges this and correctly suggests the next step must be a structural change in triad extraction (Set1 guard), not more weight tinkering. 
+4.2 Validation log is now “post-fix truth,” not a full narrative of the journey
+AAT9_Hot_Zones_Validation_Log.md currently describes:
+
+
+For each workbook:
+
+
+Current guard manifest and Set1/Draw1 tails.
+
+
+Per-state environment snapshots and EB/VB ranks.
+
+
+Consolidated EB/VB count per date. 
+
+
+
+
+The earlier “zero hits” phase is mostly summarized in text (not as raw data). That’s okay for a working log, but you should just know the doc now reflects the post-fix reality, not the first baseline failure.
+4.3 There’s a risk of endless micro-tuning inside Hot Zones
+The pattern I see:
+
+
+Zero hits → structural fix → moderate hits → weight tweak → still unhappy → propose more structural changes (Set1 injection guard, winner_map reservations, etc.).
+
+
+This is logical, but you’re right to be wary: if we keep the engine “in flux,” the aggregator module will never get a stable contract to lean on.
+
+5. What I would recommend right now
+A. Don’t undo what Codex has done
+Based on the log + current validation doc, I would not roll back:
+
+
+The JSON loader adaptation,
+
+
+The literal triad injection,
+
+
+The existing HotZoneWeights as currently set,
+
+
+Or the EB/ES/VB/VS summarization pipeline and winner_hits JSON.
+
+
+These are all valuable; they give you visibility and a decent starting point.
+B. Freeze big structural changes for a moment
+You’re at an inflection point:
+
+
+You have EB/ES/VB/VS numbers,
+
+
+You have environment snapshots,
+
+
+The engine is coherent, just not perfect.
+
+
+I would pause further extractor surgery (like the Set1 guard, winner_map slot reservation, etc.) until you decide:
+
+“Do I want Hot Zones to be a perfect solo predictor, or a strong feature-generator feeding the aggregator?”
+
+Because:
+
+
+If your aggregator will combine Stable, Digit, VTRAC, and Hot Zones, you may not need perfect EB coverage from Hot Zones alone.
+
+
+It may be enough that Hot Zones provides:
+
+
+VB/VS hits for many winners,
+
+
+strong lane features (col1/funnel/vt_only_lane, etc.),
+
+
+and occasional EB hits where the patterns are clean.
+
+
+
+
+C. Use the current EB/ES/VB/VS data to prioritize
+Given the current log:
+
+
+You know which states/dates are EB hits, VB-only, and misses. 
+
+
+You can pick a small subset of nasty cases (e.g., June 26 VB-only states) and manually examine:
+
+
+Are we at least seeing clear VB/VS plus strong tags (col1, funnel_precol1)?
+
+
+Are the literal triads present in per_lane CSV but just low-ranked, or missing entirely?
+
+
+
+
+You don’t have to change code yet; just confirm Codex’s diagnosis with your own eyeballs on 1–2 states.
+D. If you want one more structural change, do it with a very tight spec
+If you do want Codex to implement that Set1 guard, I’d suggest:
+
+
+We write a very clear mini-spec:
+
+
+Only for Set1, columns 1–2.
+
+
+Only when metadata.hot_zone_count == 20 (or some high threshold).
+
+
+Explicitly inject the canonical Set1 Draw1 digits as a triad candidate with a “guard flag”.
+
+
+Make this a separate candidate type, so we can see it in the output (e.g., guard_injected = 1).
+
+
+
+
+And explicitly limit the blast radius:
+
+
+No additional gating changes.
+
+
+No change to JSON builder.
+
+
+No new weight tuning until after you inspect the effect on EB coverage.
+
+
+
+
+We can do that later, in a small, controlled patch.
+
+6. Answering your two main points explicitly
+1) “Run & observe but also optimize when signature patterns appear”
+Yes, and Codex essentially did that loop already:
+
+
+Ran → saw 0 → fixed extraction → reran → got partial EB/VB → tried weights → saw limited change → concluded weights aren’t enough.
+
+
+The key now is not to keep layering ad-hoc tweaks; it’s to decide if one more structural Set1 guard is worth it before you move to aggregator.
+Your high-level validation loop is still exactly what you described:
+
+
+Part A — HTML environment first (now approximated by env JSON in the log).
+
+
+Part B — Tool outputs, EB/ES/VB/VS, reasons, ranks.
+
+
+Part C — Hypotheses + tweaks + rerun on same examples.
+
+
+The log’s current structure matches that pattern. 
+2) “Four criteria (exact box / straight, VT box / straight) as universal lens”
+Codex didn’t lose this – in fact, it used EB/VB as primary metrics and partly implicitly ES/VS through evidence tags (straight_lane, vt_straight). The current winner_hits JSON captures EB and VB explicitly and logs evidence tags that indicate ES/VS when present.
+For future steps, I’d keep thinking exactly in those 4 axes:
+
+
+EB – did we get exact digits?
+
+
+ES – did we see the exact straight lane?
+
+
+VB – did we get the VT family?
+
+
+VS – did we see the VT straight lane?
+
+
+Hot Zones now exposes enough meta to reconstruct all four per candidate; you can keep using that as the core lens when comparing tools.
+
+7. What I’d do next, concretely
+If you’re okay with this reading, I’d suggest:
+
+
+Do not let Codex change scanner/weights again just yet.
+Freeze the engine where it is now.
+
+
+Pick 1 or 2 ugly June 26 VB-only cases (e.g., Delaware4-Mid 487, Indiana4-Mid 340) and manually:
+
+
+Open:
+
+
+the winners HTML for that date/state,
+
+
+the Hot Zones top_lanes & per_lane CSVs,
+
+
+and the corresponding winner_map / winner_hits entry.
+
+
+
+
+Confirm with your own eyes what Codex says:
+
+
+Are the VT lanes obvious?
+
+
+Are we at least getting VB/VS hits with strong tags (col1, funnel, vt_straight)?
+
+
+Is the literal triad present but low-ranked, or missing entirely?
+
+
+
+
+
+
+Based on that, decide:
+
+
+Option A – “This is good enough for Hot Zones as a feature-generator; let’s move on to aggregator design using EB/ES/VB/VS across tools.”
+
+
+Option B – “I definitely want one more Set1 guard patch to punch EB coverage higher before aggregator.”
+
+
+
+
+If you tell me which way you’re leaning, I can help you draft either:
+
+
+A small Set1 guard spec for Codex, or
+
+
+An aggregator-oriented summary of how to use the current Hot Zones outputs (per-lane, top, winner_hits) as features.
+
+
+For now: nothing in the log suggests Codex trashed your project; it just went very deep into Hot Zones tuning. The smart move now is to stabilize, verify a couple of cases manually, and then decide on one clear, well-scoped next step.

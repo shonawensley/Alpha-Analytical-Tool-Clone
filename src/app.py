@@ -1097,6 +1097,27 @@ def show_control_center_page() -> None:
                     st.caption(f"tables_root: {_tables_root} (exists={_tables_root.exists()})")
                 except Exception:
                     pass
+        if st.button("Regenerate tables from active workbook", key="regen_tables_button"):
+            try:
+                from core.pipeline_runner import run_tables_with_guard
+                from utils import path_handler as _ph
+
+                excel_path = _ph.get_pick3_workbook_path()
+                summary = run_tables_with_guard(excel_path)
+                if summary.get("skipped"):
+                    st.info("Tables already up to date for the current workbook.")
+                else:
+                    st.success("Tables regenerated from the active workbook.")
+                manifest = (summary.get("manifest") or {})
+                if manifest:
+                    st.caption(
+                        "Workbook: "
+                        + manifest.get("workbook", {}).get("path", "?")
+                        + " @ "
+                        + manifest.get("workbook", {}).get("mtime", "unknown")
+                    )
+            except Exception as e:
+                st.error("Guarded pipeline failed: " + str(e))
         upl = st.file_uploader("Upload Pick3StatsC4 workbook", type=["xlsm"], accept_multiple_files=False)
         if upl is not None and st.button("Generate Tables"):
             try:

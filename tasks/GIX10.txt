@@ -1,0 +1,377 @@
+Codex has wired a real Hot Zones engine on top of the new table/JSON pipeline. The implementation is broadly aligned with your original spec, writes the right lean outputs, and passes tests. Before you burn a ton of validation time, I’d make 2–3 small code tweaks (mirror mapping + a tiny clean-up) and then go ahead with the 3-day, state-by-state “example + reverse-engineer vs wins” validation you described.
+
+Below I’ll break it down into:
+
+What Codex actually built (in plain language).
+
+Where it matches your original HOT_ZONES design, and where it diverges.
+
+Concrete “fix/clean-up” suggestions before your big validation.
+
+A focused validation plan for Codex to follow so you get maximum signal from the 3 Excel days.
+
+1. What Codex has actually implemented
+
+From the log you pasted, the new Hot Zones stack is:
+
+Package: alpha_analytical/hot_zones/
+
+vtrac.py – V-TRAC mapping and helpers.
+
+models.py – JSON → TableEnv (Sections→Sets→Draws, PatternBox, HotScanConfig).
+
+scanner.py – the core engine: box extraction, triad mining, VT-lane detection, scoring, and aggregation into:
+
+PerItemRow (per starred box / column).
+
+TopCandidateRow (per triad).
+
+writer.py – writes lean bundle:
+
+<STATE>_hot_zones_per_lane.csv
+
+<STATE>_hot_zones_top_lanes.csv
+
+<STATE>_hot_zones_meta.json
+
+__init__.py – re-exports the above so you can just from alpha_analytical.hot_zones import HotZoneScanner, HotScanConfig, HotZoneWeights, write_hotzones_artifacts.
+
+CLI: scripts/hot_zones/run_hot_zones_cli.py
+
+--state, --date, optional --json, optional --out-dir.
+
+Default JSON path: data/outputs/json_tables/<STATE>_tables.json (from utils.json_tables).
+
+Default output: data/outputs/analysis/hot_zones/<STATE>/…
+
+It:
+
+env = load_table_env_from_json(json_path)
+
+scanner = HotZoneScanner(env, HotScanConfig(), HotZoneWeights())
+
+per_items, tops = scanner.scan()
+
+Writes per_item / top / meta, plus a YYYYMMDD_hot_zones_winner_map.{json,csv} via write_winner_map.
+
+Tests:
+
+tests/fixtures/hot_zones/Sample_tables.json: minimal JSON with R2/R4/R6/R8 data.
+
+tests/test_hot_zones_scanner.py: loads the fixture, runs HotZoneScanner, asserts per_items and tops are non-empty and that tops[0].triad exists.
+
+All tests pass along with the new table-manifest + JSON-builder tests.
+
+So: you do have a self-contained, test-covered Hot Zones engine that:
+
+consumes exactly the JSON table format from your utils.json_tables.build_json_tables_from_csv;
+
+mines triads from R2/R4/R6/R8 late columns in starred draws;
+
+computes features like vertical_support, horizontal_span, set_span, variant_echo, vt_only_lane, funnel_precol1, ls_col_42, ls2_lane, col1_arrival, etc.;
+
+emits a classic “brain bundle”: per_item CSV, top CSV, meta JSON, plus a dated winner_map.
+
+That’s a solid base.
+
+2. Match vs the original HOT_ZONES design
+
+Your original HOT_ZONES spec (Part 1 etc.) said, in essence:
+
+Data model & loader
+
+JSON: sections → sets → draws → { draw_data, pattern_variations{R2,R4,R6,R8}, metadata{is_hot_zone, hot_zone_count} }.
+
+Python: PatternBox, DrawEntry, SetEntry, SectionEntry, TableEnv, with a load_table_env_from_json().
+
+V-TRAC core
+
+Mapping 0/5→1, 1/6→2, 2/7→3, 3/8→4, 4/9→5.
+
+Helpers: v_of_digit, map_digits_to_v, canonical_vtriad_from_string, vt_family_id, has_vt_straight_lane.
+
+Scanner
+
+Mine late-column boxes in Set1 (col1/2 as super-hot, col3..5 as hot).
+
+Only consider boxes in draws flagged as hot (metadata.is_hot_zone) or with star markers (via hot_zone_count).
+
+Build evidence for each 3-value family: vertical support across R2/R4/R6/R8, horizontal survival across columns, cross-variant reinforcement (Midday/Evening/Combined), VT-straight/boxed, VT-only lanes, pre-col1 funnels, ls_col_42, ls2_lane.
+
+Aggregate into a candidate object (HotCandidate / top rows) with a transparent score.
+
+The Codex implementation does almost all of that, but with slightly different structuring:
+
+2.1 JSON → model
+
+utils.json_tables.build_json_tables_from_csv produces:
+
+{
+  "state_name": "Connecticut4",
+  "sections": {
+    "Combined": {
+      "sets": {
+        "Set1": {
+          "draws": {
+            "Draw1": {
+              "draw_data": [...7...],
+              "pattern_variations": { "R2":[...7..], "R4":[...], "R6":[...], "R8":[...] },
+              "metadata": { "is_hot_zone": true/false, "hot_zone_count": N }
+            },
+            ...
+          }
+        },
+        ...
+      }
+    },
+    "Midday": {...},
+    "Evening": {...}
+  }
+}
+
+
+models.load_table_env_from_json() builds exactly the TableEnv/SectionEntry/SetEntry/DrawEntry/PatternBox structure described in your design. ✔️
+
+2.2 Triad & VT logic
+
+hot_zones/vtrac.py matches your mapping and helpers:
+
+DIGIT_TO_V, v_of_digit, map_digits_to_v, canonical_vtriad_from_string, vt_family_id, vt_permutations_for_digits, has_vt_straight_lane.
+
+scanner._extract_boxes:
+
+Walks all section.name ∈ cfg.consider_sections (default Midday/Evening/Combined).
+
+For each SetEntry and DrawEntry:
+
+For each row in (R2,R4,R6,R8):
+
+Uses _list_columns to map row values into (column_index, digits) where column_index=1 is the most recent column (col1).
+
+Marks is_set1 if set_id == "Set1".
+
+Marks is_superhot_slot if set_id == "Set1" and column_index in (1,2) → that’s your “superhot” Set1 col1/2.
+
+So the engine does embody “late-column, Set1-biased, star-gated” scanning.
+
+2.3 Star gating & hotness
+
+mine_evidence() groups boxes by (section, set_name, draw_name, column_index) (the vertical stack at a given column), then skips that column unless:
+
+if cfg.use_metadata_hot_flags and not any(b.ref.is_starred for b in row_boxes):
+    continue
+
+
+“Starred” means draw.is_hot_zone from JSON metadata; star_count is draw.hot_zone_count. Because your JSON builder sets is_hot_zone=True when any of the four rows has a '*', and hot_zone_count is the total '*' count, this is exactly the intended gating at “has any hot boxes in this draw”.
+
+So we’re not scanning random cold boxes – only draws where the R-rows have starred cells.
+
+2.4 Features & scoring
+
+For each triad and each (section,set,draw,column) where it appears, Codex builds an Evidence with:
+
+row_hits: which of R2/R4/R6/R8 had this triad/VT lane in that column.
+
+has_straight: any literal perm of the triad appears in the pattern string (contiguous or near-contiguous).
+
+has_vt_straight: has_vt_straight_lane on the pattern string’s VT sequence.
+
+Booleans:
+
+vt_only_lane
+
+col1_arrival (col_idx == 1 with any straight/VT hit)
+
+precol1_funnel (col_idx in 2 or 3 with a hit)
+
+ls_col_42 (col_idx in 4 or 2 with a hit)
+
+ls2_lane (Set1 & col in {3,1} with a hit)
+
+is_starred, star_count, is_superhot_slot, is_set1.
+
+_score_evidence() then weights those with HotZoneWeights:
+
+w_hot_star, w_superhot_set1
+
+w_vertical_support, w_horizontal_span, w_set_span, w_variant_echo
+
+w_vt_straight, w_exact_straight_lane, w_vt_only_lane_bonus
+
+w_precol1_funnel, w_col1_arrival, w_ls_col_42, w_ls2_lane
+
+w_set1_bias.
+
+Then aggregate():
+
+Builds PerItemRow with:
+
+vertical_support, horizontal_span (per section/set), set_span, variant_echo.
+
+The boolean flags as 0/1.
+
+score and pipe-joined reasons string.
+
+Builds TopCandidateRow per triad:
+
+support_count, hot_hits, superhot_hits, vertical_hits, set1_hits, col1_hits, precol1_hits, vt_straight_hits, vt_only_lane_hits.
+
+variant_span, set_span, column_span.
+
+score_mean, score_max.
+
+evidence_tags summarizing the per-item reasons.
+
+👉 This is very close to what your later Parts 2–4 described: per-item rows with vt_only_lane / funnel_precol1 / ls_col_42 / ls2_lane, top-rows aggregated by triad with variant/set/col spans and max/mean scores.
+
+So conceptually, Codex has implemented the Part-2 engine, not just Part-1. It’s just structured differently than the “hotzones/part1..7” file names.
+
+3. Where Codex diverged from the original spec (and what I’d fix)
+
+Most of the divergence is about style and fidelity, not fundamental mistakes. I see four things worth flagging:
+
+3.1 “Mirror” mapping in scanner is not your VT mirror
+
+In scanner._mirror_digit we see:
+
+mapping = {"0": "9", "1": "8", "2": "7", "3": "6", "4": "5",
+           "5": "4", "6": "3", "7": "2", "8": "1", "9": "0"}
+
+
+This is a 9’s-complement mirror (0↔9, 1↔8, …, 4↔5), not your standard Pick-3 / VT mirror pairing (0↔5, 1↔6, 2↔7, 3↔8, 4↔9).
+
+They then use s_mirror = _mirror_string(digits) and mine triads from both s_raw and s_mirror in _extract_candidate_triads. That means:
+
+Some “mirror triads” will be derived from a mapping that doesn’t match your existing DR/Stable/VTRAC notion of “mirror”.
+
+📌 Suggestion:
+Change _mirror_digit in scanner.py to use the same 0↔5,1↔6,2↔7,3↔8,4↔9 mapping as in vtrac.DIGIT_TO_V (or better: define one shared MIRROR_MAP alongside DIGIT_TO_V and import it). That keeps all mirror/VT reasoning consistent across tools.
+
+3.2 s_vt is mis-named (and unused)
+
+In _extract_boxes:
+
+s_raw = digits
+s_vt = _mirror_string(digits)   # <- actually “mirror”, not VT
+s_mirror = _mirror_string(digits)
+
+
+Then later they don’t use s_vt at all. VT detection is done via:
+
+vt, _ = canonical_vtriad_from_string(box.s_raw)
+vt_hit = has_vt_straight_lane(box.s_raw, vt) if vt else False
+
+
+That’s fine, but:
+
+The s_vt field is confusing (it’s a mirror, not a VT code).
+
+It may mislead you later when you or Codex revisit the module.
+
+📌 Suggestion:
+
+Either drop s_vt entirely, or repurpose it as a real VT encoding (e.g., s_vt = ''.join(str(DIGIT_TO_V[ch]) for ch in digits if ch.isdigit()) via map_digits_to_v).
+
+Keep s_mirror but with the corrected VT-mirror map from 3.1.
+
+Functionally nothing breaks today, but this clean-up will prevent future mis-wiring.
+
+3.3 VT family vs triad-key aggregation
+
+Your original Part-1 API exposed HotCandidate keyed by VT family (vt_family_id, like "v124") with a raw_digits tuple for the contributing digits.
+
+Codex instead:
+
+Uses triad (literal, sorted) as the primary key in aggregate().
+
+Computes vt_triad strings (e.g., "234") for display and stats, but doesn’t group triads by VT family; each literal triad is its own “top candidate”.
+
+This isn’t wrong, but it has consequences:
+
+You’ll see more rows in _top_lanes.csv (one per literal triad) instead of one row per VT family, which may make family-level analysis a bit noisier.
+
+VT-only family behavior is still partially captured via vt_only_lane and vt_straight_hits, but not aggregated across siblings.
+
+📌 Suggestion: (optional, can be deferred until after first validation)
+
+Add a second aggregation layer that groups TopCandidateRows by vt_triad (or a vt_family_id) to get a VT-family-level view. That’s a pretty small adapter on top of the existing tops list and doesn’t require changing the core engine.
+
+For now, I’d leave this and see how your 3-day validation looks; if you see that VT families are too “split across rows”, then we add the family roll-up.
+
+3.4 It doesn’t include TableValidator / scan-json CLI from Part-1
+
+Your original Part-1 hotzones.cli had:
+
+validate --json --source (check JSON presence + freshness vs Excel).
+
+scan-json --json --out (write hotzones_candidates.jsonl/.csv for families).
+
+Codex instead:
+
+Relies on your new global table manifest + guard + utils.json_tables tests to ensure freshness. That is arguably better than per-tool validators, and you already tested that across three workbooks.
+
+Provides run_hot_zones_cli.py that combines JSON load + scan + artifact writing into one step.
+
+So this is a divergence, but not a bug – it’s just a different layering choice. Since the manifest/guard is now your canonical freshness mechanism, not re-implementing TableValidator is fine.
+
+4. What I’d do before you start the 3-day validation
+
+These are small, safe, “surgical” changes you (or Codex) can make quickly:
+
+4.1 Fix the mirror mapping (high priority, easy)
+
+In alpha_analytical/hot_zones/scanner.py:
+
+def _mirror_digit(ch: str) -> str:
+    mapping = {"0": "9", "1": "8", "2": "7", "3": "6", "4": "5",
+               "5": "4", "6": "3", "7": "2", "8": "1", "9": "0"}
+    return mapping.get(ch, ch)
+
+
+Change mapping to your VT mirror pairs, e.g.:
+
+from .vtrac import DIGIT_TO_V
+
+# build a mirror map from DIGIT_TO_V automatically
+VT_MIRROR = {}
+for d, v in DIGIT_TO_V.items():
+    a, b = [k for k, vv in DIGIT_TO_V.items() if vv == v]
+    VT_MIRROR[a], VT_MIRROR[b] = b, a
+
+def _mirror_digit(ch: str) -> str:
+    return VT_MIRROR.get(ch, ch)
+
+
+(or just hard-code {"0":"5","5":"0","1":"6","6":"1","2":"7","7":"2","3":"8","8":"3","4":"9","9":"4"}).
+
+Leave _extract_candidate_triads using both s_raw and s_mirror; now the extra triads it sees are the ones you actually care about.
+
+4.2 Either remove or repurpose s_vt (medium, mostly hygiene)
+
+Option A (simplest):
+
+Remove s_vt from BoxData and from _extract_boxes since it’s unused. This avoids confusion.
+
+Option B (if you want a VT string handy):
+
+Set s_vt = ''.join(str(DIGIT_TO_V[d]) for d in digits) and optionally use it in _detect_triad or future diagnostics.
+
+Either way, keep s_mirror with the corrected VT mirror mapping.
+
+4.3 Add one more test that uses a realistic JSON stub
+
+You already have tests/fixtures/hot_zones/Sample_tables.json. To make sure the mirror fix doesn’t break anything and triad scoring behaves, add another fixture that looks like:
+
+Set1, Combined section.
+
+R2/R4/R6/R8 with clear * in late columns for a known triad family.
+
+Then a test asserting:
+
+That family appears in tops[0].triad.
+
+It has col1_hits ≥ 1, precol1_hits ≥ 1, and vt_straight_hits or vt_only_lane_hits > 0.
+
+This gives you a quick “unit” for something that resembles a real hot funnel pattern.
+
+These three things are all tiny diffs; they don’t invalidate the rest of Codex’s work.

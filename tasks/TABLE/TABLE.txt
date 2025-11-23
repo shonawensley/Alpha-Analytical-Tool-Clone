@@ -1,0 +1,136 @@
+TL;DR:
+You can treat Combined as the baseline dataset, and regenerate tables only when the workbook changes; Midday/Evening are additive variants, not replacements. Internal analysis should read CSV tables, while JSON remains the export/mirror format for AI bundles. Winners logging and lean outputs are centralized and batchable in Control Center, with guardrails (preflight, purge‑on‑refresh, acceptance tests). The Hot Zones module (Part 7) should carry explicit hot_level, recency, cross‑variant flags, 3‑digit repeat/mirror/V‑TRAC echoes, and write a brain‑bundle + minimal winners lens that the Aggregator can join with Digit Reduction, Stable, and V‑TRAC. A short checklist at the end gives concrete next moves.
+
+1) Tables & regeneration (what to (re)compute, when)
+
+Combined is the canonical baseline; Midday/Evening are additive variants that never replace Combined. Your App Flow Addendum states this explicitly and defines the reader contract (Aux/Blackapple read data/cleaned/*_draws.csv; V‑TRAC/Stable/Digit Reduction read combined tables under tables/<STATE>/ or data/outputs/tables/<STATE>/). 【】【】
+
+When to regenerate tables: The Quickstart & Workflow docs frame a “prep once, analyze many” pattern: regenerate tables when you swap/refresh the workbook or inputs; otherwise reuse tables across modules (and verify with preflight/acceptance). 【】【】
+
+Preflight before runs: A dedicated preflight command is recommended: powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4". 【】【】
+
+Resulting guidance (High confidence): Keep the existing tables across modules until inputs change; Combined is your ground truth for analysis; use variants additively.
+
+2) CSV vs JSON (internal sources vs export mirrors)
+
+Internal modules use CSV tables; JSON is the mirror/export for AI bundles. The “Understanding Project Checkpoint” notes a two‑step workflow where tables drive analysis and JSON packages mirror/bundle results for external/AI use. 【】
+
+JSON bundle coverage: JSON mirrors should include Midday/Evening/Combined sections and metadata to keep feature lineage intact (workbook/results date, config hash). This is consistent with your “Quick Start for AI Analysis” docs that organize by section/set/draw/column and emphasize hot‑zone indicators in metadata. 【】【】
+
+Resulting guidance (High): Keep JSON mirrors for packaging and cross‑tool interop; keep all modules reading CSV tables via utils.path_handler.
+
+3) Control Center, winners logging, and lean outputs
+
+Batchable winners workflow: Control Center exposes a batch expander to parse the winners sheet, run the winners logger across all tracked states, and optionally kick off Stable training bundles “in one pass.” 【】【】
+
+Where & what gets written: The lean outputs spec defines centralized artifacts such as winners_map and winners_flags so analysis UIs and audits can stay in sync. 【】
+
+Guardrails for clean inputs: A draw refresh purge toggle prevents stale CSVs lingering between runs; unit tests cover the purge path. 【】【】
+
+Acceptance/health baselines: You have acceptance harnesses (e.g., positional Delaware), doubles audits wired to preflight, and regression tests for V‑TRAC rankers and overlays to catch UI/CLI drift. 【】【】
+
+Resulting guidance (High): Drive winners logging from Control Center; rely on the lean outputs schema; use the purge toggle when regenerating draws; run preflight + acceptance before and after batch actions.
+
+4) Canonical entrypoints & directory contracts (so the app “just works”)
+
+Launch path: Use run_app.bat → streamlit run src\app.py (repo root); legacy single‑file entries are deprecated. 【】【】
+
+Data contracts:
+
+Aux/Blackapple → data/cleaned/*_draws.csv (newest‑first strings).
+
+V‑TRAC / Stable / Digit Reduction → tables/<STATE>/ (or data/outputs/tables/<STATE>/) via utils.path_handler. 【】【】
+
+Resulting guidance (High): Stick to the unified launcher and paths above; this aligns every module without per‑tool shims.
+
+5) Hot Zones design (Part 7): what to compute and how it feeds other tools
+
+What is a “hot zone” in your tables? Boxes flagged * (hot) or ** (super‑hot) near the right side of strings (but not limited to the final two columns). 【】【】【】
+
+Signals to capture (directly from your docs):
+
+hot_level: encode *→1 and **→2 for each cell extracted. 【】【】
+
+Recency: flag if a hot‑zone pattern survives into Set1 col1/col2 (freshest). 【】
+
+Cross‑variant echoes: booleans seen_midday/seen_evening/seen_combined. 【】
+
+3‑digit (3‑value) repeats & mirrors: detect pending triads across boxes/sets and mirrored siblings; track lineage (Set3→Set2→Set1; Col7→…→Col1). 【】
+
+V‑TRAC family/lanes + double pressure: simple flags vtrac_match, has_double (e.g., 441, 166, 900). 【】
+
+Consensus context: mark when Column 1 or Column 2 of an R2/R4/R6/R8 structure has <3 total digits; this is a strong setup for any stable pattern inside. 【】【】【】
+
+Computation approach (lightweight, per docs):
+
+Extract hot‑zone cells from metadata and run single transit‑digit reduction (Method D) over short strings; check for 3‑digit clusters after each reduction; optionally incorporate mirrors. 【】
+
+Track the column/set provenance so the Aggregator can reason about recency and persistence. 【】
+
+How Hot Zones feeds the rest (explicit join points):
+
+Digit Reduction: attach hz_score, hz_hot_density, hz_variants_seen to DR rows with lanes (vt_only_lane, ls_col_42, etc.) so the Aggregator can distinguish genuine hot lanes vs isolated ones. 【】【】
+
+Stable Pattern Extractor: for each canonical, aggregate over hot‑zone lanes that contain the canonical (or mirror triads) and emit hz_support_count, hz_max_score, hz_best_variant. 【】
+
+V‑TRAC Analyzer: expose hz_index_score, hz_index_variants_seen, hz_index_recency_best_col to let the Aggregator up‑weight VT indexes that are demonstrably “live” in hot boxes. 【】
+
+Artifacts to write (to stay aligned with lean outputs):
+
+Brain bundle (per state/date):
+data/outputs/analysis/hot_zones/<STATE>/ with
+…_hot_zones_per_lane.csv, …_hot_zones_top_lanes.csv, and …_hot_zones_meta.json. 【】【】
+
+Winners lens (minimal): YYYYMMDD_hot_zones_winner_map.(json|csv) with fields like hz_lanes_hit, hz_score_max, hz_recency_best_col, hz_variants_seen. 【】
+
+Bottom line for Part 7 (High): Implement the above signals + artifacts; do not port the full V‑TRAC scorer—just carry the right flags and let the Aggregator do the blending. 【】
+
+6) System health, reproducibility, and tests (what to rely on)
+
+Preflight & hooks: doubles audits wired to preflight prevent silent badge regressions; smoke/acceptance harness is in place. 【】
+
+Draw refresh guardrail: purge‑on‑refresh with tests ensures reproducible inputs. 【】
+
+Overlay/heatboard validation: CLIs + tests snapshot V‑TRAC overlays/heatboards (e.g., CT) to keep UI and CLI aligned. 【】
+
+Batch runner tests: state‑order parsing and batch logging have unit coverage. 【】
+
+Resulting guidance (High): Keep running preflight and acceptance on every meaningful change; lean on the CLIs to validate overlays/aux metrics headlessly.
+
+7) Are we “fine overall,” or what still needs adjustment?
+
+What looks solid (High):
+
+Canonical launch path + data contracts are clearly set and de‑duplicated. 【】
+
+The batch winners workflow and purge guardrail are defined and covered by tests. 【】
+
+A concrete Hot Zones integration spec exists (signals, joins, artifacts). 【】
+
+What to fix/tighten now (Medium → High impact):
+
+Enforce Combined‑only readers for Stable/V‑TRAC/Digit Reduction via utils.path_handler and assert on unexpected Midday/Evening table inputs. 【】
+
+Make JSON mirror strictly optional in runtime; use it only for packaging/export; keep analysis source as CSV. 【】
+
+Implement Hot Zones brain‑bundle + winners lens in the specified paths to align with Analyzer lean outputs. 【】
+
+Require preflight + purge toggle before any draw refresh, and run the acceptance harness after batch winners logging. 【】【】
+
+If you follow these, you can confidently move back to design/implementation without chasing avoidable edge cases.
+
+8) Short, concrete action list (to unblock you now)
+
+Lock the entrypoints & readers: keep run_app.bat → src/app.py; enforce module readers exactly as specified (CSV from tables/<STATE>/ for Stable/V‑TRAC/Digit Reduction; draws CSV for Aux/Blackapple). 【】
+
+Ship Hot Zones Part 7 (MVP): extract hot boxes; compute hot_level, recency (Set1 col1/2), cross‑variant flags, 3‑digit/mirror/V‑TRAC echoes; write …_per_lane.csv, …_top_lanes.csv, …_meta.json; add minimal winner_map.(json|csv). 【】【】
+
+Operational guardrails: run .codex/preflight.ps1; when refreshing draws, enable purge; after batch winners logging, run acceptance tests (positional/V‑TRAC overlay). 【】【】
+
+Sanity check (2 quick things you can do now)
+
+Run preflight on one state (e.g., CT4) and confirm it reports clean loaders/doubles badges before a batch run. Expected command: .codex/preflight.ps1 -State "Connecticut4". 【】
+
+Do a dry batch winners run in Control Center and confirm the winners artifacts land under the expected outputs and pass acceptance (overlay/heatboard snapshot for CT). 【】
+
+If anything above is unclear or you want me to convert this into a ready‑to‑run Hot Zones Part 7 task list (with exact file paths and function signatures), say the word and I’ll deliver it in-line.

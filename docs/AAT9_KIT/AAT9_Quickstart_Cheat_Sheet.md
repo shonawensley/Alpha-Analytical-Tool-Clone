@@ -29,15 +29,9 @@
 Whenever you copy a dated workbook (e.g., `Pick3StatsC4_2025-06-24.xlsm`) into `data/original/`, you **must** regenerate the tables before running Stable/V-TRAC:
 
 1. Select the workbook  
-   `python3 scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm`
-2. Rebuild draws + tables for all states (mirrors the Control Center batch)  
-   ```bash
-   python3 - <<'PY'
-   from src.core.pipeline_runner import run_pipeline_from_original_path
-   from utils import path_handler as ph
-   run_pipeline_from_original_path(ph.get_excel_path())
-   PY
-   ```
+   `python scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm`
+2. Rebuild tables with the guard (skips if the workbook is unchanged)  
+   `python scripts/tools/run_tables_with_guard.py`
 3. Sanity-check the tables: open `data/outputs/tables/Connecticut4/Combined_Combined.csv`, grab `Set1/Draw1/RowType=draw_data`, and confirm the last two columns match the previous day’s Midday/Evening draws recorded in `data/results/results_checkCT.txt`. This confirms the tables truly came from the intended workbook.
 
 Skipping these steps leaves the old tables in place, so every analysis would unknowingly point at the wrong date.
@@ -53,8 +47,9 @@ Skipping these steps leaves the old tables in place, so every analysis would unk
 - `utils.path_handler` - canonical path helpers for outputs/analysis/tables
 - `modules.aux_loaders.load_state_draws(state)` - robust draws CSV resolver
 - `alpha_analytical/stable` - YAML-weighted stable extractor (`feature_config.yml`)
+- Hot Zones validation / reverse-engineering loop: see `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` for the “Part A HTML → Part B tool outputs” process across history workbooks.
 
-\n\n## Control Center Batch Workflow\n- Paste the Pick3StatsC4 winners list into the Control Center batch expander.\n- Use the toggles to run the winners logger, Stable Pattern extractor (with optional bundle), and the Digit Reduction pipeline (reducer refresh, Analyzer V2 overlays, optional Digit Reduction bundle).\n- Set the bundle stamp before enabling Stable or Digit Reduction bundle options so artifacts land under the desired `data/outputs/analysis/.../<STAMP>/` folder.\n- Ensure combined tables exist for every tracked state you refresh; the expander writes Digit Reduction outputs under `data/outputs/analysis/digit_reduction/<STATE>/`.
+\n\n## Control Center Batch Workflow\n- Paste the Pick3StatsC4 winners list into the Control Center batch expander.\n- Use the toggles to run the winners logger, Stable Pattern extractor (with optional bundle), and the Digit Reduction pipeline (reducer refresh, Analyzer V2 overlays, optional Digit Reduction bundle).\n- Set the bundle stamp before enabling Stable or Digit Reduction bundle options so artifacts land under the desired `data/outputs/analysis/.../<STAMP>/` folder.\n- Ensure combined tables exist for every tracked state you refresh; the expander writes Digit Reduction outputs under `data/outputs/analysis/digit_reduction/<STATE>/`.\n- For the full SOP (swap workbook → guarded tables → batch → artifacts), follow `docs/AAT9_KIT/AAT9_Batch_Workflow_SOP.md`.
 - Digit Reduction training bundles copy Midday + Evening winner artifacts by default (10 files). Use the `include_combined` flag/checkbox when you need the Combined artifacts as well.\n\n## Auxiliary Tools Highlights
 - Positional Pressure (Aux page) renders Combined/Midday/Evening side-by-side (P1/P2/P3 columns, top-3 digits) with a fixed 360-draw window and Top-3 ranks; hard-due cells are highlighted in red.
 - Consensus, mirror, and double-pressure tags appear beside each position along with a ranked positional shortlist.
@@ -78,5 +73,3 @@ Skipping these steps leaves the old tables in place, so every analysis would unk
 ## Default model preset (Pro)
 - Select gpt-5-codex (High) after launch; switch to Medium only when you need lower latency.
 - If Aux shows legacy import errors, run `python scripts/checks/smoke_aux_vtrac.py` and confirm the files listed in `docs/AAT9_DOCS/AAT9_Aux_Staging_Manifest.md` are present.
-
-

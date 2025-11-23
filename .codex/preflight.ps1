@@ -115,6 +115,27 @@ if ($CheckTables) {
     Write-Warning 'Could not resolve tables root via utils.path_handler.'
   }
   Write-Host "\nTables root: $TablesRoot"
+  try {
+    $manifestInfo = python - <<'PY'
+import json, os
+from utils import path_handler as ph
+path = ph.get_tables_manifest_path()
+if not os.path.exists(path):
+    print("tables manifest: missing")
+else:
+    data = json.load(open(path, "r"))
+    workbook = data.get("workbook", {})
+    print(f"tables manifest: {path}")
+    print(f" workbook: {workbook.get('path')}")
+    print(f" workbook_mtime: {workbook.get('mtime')}")
+    print(f" generated_at: {data.get('generated_at')}")
+    states = data.get("states") or {}
+    print(f" states tracked: {len(states)}")
+PY
+    Write-Host $manifestInfo
+  } catch {
+    Write-Warning 'Failed to read tables manifest.'
+  }
   if ($TablesRoot -and (Test-Path $TablesRoot)) {
     $stateDirs = Get-ChildItem $TablesRoot -Directory -ErrorAction SilentlyContinue
     Write-Host ("tables state dirs: " + (($stateDirs | Measure-Object).Count))

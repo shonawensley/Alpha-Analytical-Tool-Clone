@@ -28,6 +28,10 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
     - Analyzer V2: `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/` (lean bundle — `per_item.csv`, `top_candidates.csv`, `meta.json`, stacked HTML per variant; diagnostics: `_steps.csv` when enabled).
     - Training bundles: `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/` (copies the lean bundle + steps when enabled; no winners by default).
     - Winners map/flags/HTML are generated centrally via the Control Center batch and stored under the shared winners directory (see Control Center section).
+- Hot Zones (upcoming)
+  - Engine scaffold: `alpha_analytical/hot_zones/` (consumes the JSON mirrors produced under `data/outputs/json_tables/`).
+  - Inputs: `data/outputs/json_tables/<STATE>_tables.json` (Midday/Evening/Combined sections).
+  - Outputs: `data/outputs/analysis/hot_zones/<STATE>/` (`<STATE>_hot_zones_per_lane.csv`, `<STATE>_hot_zones_top_lanes.csv`, `<STATE>_hot_zones_meta.json`, plus `YYYYMMDD_hot_zones_winner_map.{json,csv}`).
 
 - Auxiliary Tools (working parity logic)
     - Engines: staged/working `modules.analyze_pairs`, `modules.vtrac_reference`; positional pressure via `modules/module_d_auxiliary_tools/refactored/positional_tool.py`; sums optional under `modules/module_d_auxiliary_tools/refactored`

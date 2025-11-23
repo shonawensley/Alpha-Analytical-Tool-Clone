@@ -76,6 +76,24 @@ Both spotlight CSVs now include `winner_literal_midday`, `winner_literal_evening
 
 → **Lean target**: Standardize on per_item/top/meta (matching the enhanced evidence grid), keep the compact report as the aggregator feed, move map/flags to the centralized winners module.
 
+## Hot Zones (Current Outputs)
+
+- Brain bundle lives under `data/outputs/analysis/hot_zones/<STATE>/` and mirrors the Digit Reduction / Stable structure:
+  - `<STATE>_hot_zones_per_lane.csv` — per-item evidence with late-column flags (vt_only_lane, funnel_precol1, col1_arrival, ls2_lane, etc.).
+  - `<STATE>_hot_zones_top_lanes.csv` — aggregated triads with support counts, variant/set spans, and score mean/max.
+  - `<STATE>_hot_zones_meta.json` — run metadata (state, date stamp, JSON source, row counts, weights).
+- Winners lens:
+  - `YYYYMMDD_hot_zones_winner_map.{json,csv}` under the same folder (or a shared winners directory). Captures the top triads for that date, ready for the Aggregator to join with other tools.
+- Run via CLI today:
+  ```bash
+  python scripts/hot_zones/run_hot_zones_cli.py \
+      --state Connecticut4 \
+      --date 2025-06-24 \
+      --json data/outputs/json_tables/Connecticut4_tables.json \
+      --out-dir data/outputs/analysis/hot_zones/Connecticut4
+  ```
+  (The default paths resolve via `utils.path_handler`, so only `--state` and `--date` are required in most runs.)
+
 ---
 
 ## Applying the Lean Template to Stable / V-TRAC

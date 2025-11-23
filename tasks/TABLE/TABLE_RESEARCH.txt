@@ -1,0 +1,120 @@
+AAT9 Table Pipeline and Hot Zones Module Analysis
+Table Generation & Validation – Potential Regression
+
+The unified tables pipeline in AAT9 is designed to extract the Excel “Pick3StatsC4” workbook once per run and output three CSV files per state (Midday, Evening, Combined) under data/outputs/tables/<State4>/. All analysis modules then reuse these CSV tables without recomputation
+GitHub
+GitHub
+. This “build once, reuse everywhere” design improves efficiency but can introduce problems when running multiple examples or back-to-back imports in one session. In particular, if a second Excel workbook is processed without resetting state, the app may still serve cached tables from the first run instead of regenerating fresh ones. The documentation confirms that “the app caches table loads, so V‑TRAC and other tabs don’t rebuild them; all readers use the same on‑disk CSVs”
+GitHub
+. Thus, a flaw is likely if the system doesn’t detect a new input and refresh the CSVs.
+
+Symptoms of the issue: The user’s observation – tables not being regenerated correctly across examples when Excel imports are reused – aligns with a known risk. Previously, a legacy in-page pipeline caused “analysis completed” messages but left missing or stale tables for certain states
+GitHub
+. The fix was to remove on-page generation controls and rely solely on the global pipeline, adding a manual “cache reset” trigger for safety
+GitHub
+. This suggests that in the current design, running the pipeline should overwrite the CSVs for the active state/date, but a regression might prevent this in some multi-run scenarios. For example, if the Control Center or pipeline doesn’t purge old outputs, the second run might skip generation because files already exist or because of an in-memory cache. Indeed, there is a test to ensure old draw files are purged: “test_draws_refresh.py ensures the Control Center draw purge removes the expected CSVs before regeneration”. A similar guard may be needed for table CSVs – e.g. deleting or versioning prior *_combined.csv files when a new Excel is loaded – to avoid reuse of stale data.
+
+Likely cause: The Control Center logic might be missing a check on whether a new workbook (or different date/state) has been loaded. If the state code remains the same (e.g. Florida4) and the output path is unchanged, the app could assume tables are up-to-date. Given the pipeline’s contract that tables are written once and cached
+GitHub
+, a second run in the same session could be erroneously skipped (“already built”). This is precisely the kind of flaw the team anticipated: the integration notes emphasize running the pipeline once per upload and suggest using a unique run identifier to isolate outputs. By “minting a run_id and writing all outputs to runs/<run_id>/…”, each import would populate a fresh directory, eliminating cross-run contamination. In the current setup, since outputs go to a fixed state folder, implementing a smarter invalidation or explicit “Recompute” button is critical. The docs even recommend a quick link to run the Process Data step if any table file is missing
+GitHub
+, implying the UI should guide regeneration when needed.
+
+Recommendation: Double-check the Control Center’s workflow (and the “Process Data” tab) to ensure that loading a new Excel triggers the table-building pipeline each time. If not, this is a regression to fix. Solutions include adding a timestamp/checksum check on the Excel file or using the run-ledger approach noted above. In short, each time the source workbook changes, the app should either purge the previous tables/<State4> folder or write to a new run-specific path. This guarantees correct CSV tables per Excel import and prevents stale data usage. The existence of an automated test for draw purging is encouraging – extending similar guardrails to the tables pipeline (or using the new data/runs/ output scheme) will address the suspected flaw. With these checks and a “fresh run” concept in place, the table generation and validation process will be robust across multiple sequential imports.
+
+Reintroducing a JSON Mirror of the String Tables
+
+Earlier versions of the tool maintained a JSON “mirror” of each combined string table grid, which is essentially a hierarchical representation of the Excel tables. Reintroducing this JSON is feasible and likely advantageous for the new Hot Zones module. The Stable Pattern Extractor documentation explicitly mentions that no JSON input is required for its own processing – it reads the CSV grids – but a parallel JSON representation can be kept for modules that prefer hierarchical data access
+GitHub
+. In fact, it notes: “If you also maintain a JSON mirror of each grid, that is only for other modules that prefer hierarchical lookup; the extractor works solely from the CSV.”
+GitHub
+. This indicates the design already anticipated using JSON for convenient querying. Notably, “Long String and Hot Zone can query a JSON tree more naturally ('give me Set1/Draw3/RowType R2 col 7 as a raw string') without reopening the big CSV each time”
+GitHub
+. In other words, the Hot Zones logic could traverse a nested JSON of the table (organized by section → set → draw → row-type) to find patterns/flags, rather than doing repetitive CSV parsing.
+
+JSON structure: The JSON mirror would mirror the workbook’s logical layout. At the top level it splits by section (Midday, Evening, Combined), then by Set (Set3, Set2, Set1), then each Draw (Draw1…Draw7), and finally the four elimination rows (RowType R2, R4, R6, R8) which contain arrays of strings for columns 7 down to 1. An example snippet from the docs shows this clearly. For instance, for OntarioCanada4 Midday, Set3, Draw1, we’d have: "pattern_variations": { "R2": ["59244033877", "5924403377", "592443377", ...], "R4": ["25908334477", ...], ... } along with a "draw_data" entry
+GitHub
+. Here each string in the list corresponds exactly to a cell in the CSV table (with any empty cells as "" after fillna). The CSV’s columns 7–1 become list elements in JSON, preserving order
+GitHub
+GitHub
+. Crucially, the trailing * markers denoting hot zones are part of these strings. The stable pattern doc explains that each cell may contain raw digits plus a trailing * (or **) as hot flags
+GitHub
+. For example, in CSV: 9243377* or 23* in a cell means those numbers were “hot” (often meaning they appeared consistently, with * as a highlight). In the JSON, those would appear as "9243377*" and "23*" in the arrays. The four RowType keys R2/R4/R6/R8 represent the progressive elimination “strings” the workbook generates (each row is one elimination path)
+GitHub
+. The JSON thus cleanly encapsulates which patterns (strings of digits) were in each set/draw and which had hot flags. Additional metadata can also be included at this level – the design allows for extra nodes like hot-zone counts or canonical forms per cell if needed for dashboards
+GitHub
+, though the extractor itself doesn’t use those.
+
+Can we generate JSON from the current CSVs? Yes. The CSV combined tables contain all necessary information (Section, Set, Draw, RowType, and the 7 columns of strings)
+GitHub
+. The AAT9 extractor was built to be reversible: given the JSON, it can normalize back to the same DataFrame
+GitHub
+. In fact, the doc suggests an optional --json-out flag for the extractor to emit the JSON mirror alongside the CSV
+GitHub
+. If that flag or functionality isn’t already implemented in code, it can be added by iterating over the DataFrame and building the nested dict structure (or using pd.DataFrame.to_dict() with grouping by section/set/draw). There is no need to resurrect any pre-CSV legacy format – the current pipeline data is sufficient. We can trust the CSV as the single source of truth for table content and create a JSON on the fly after table generation. This ensures the JSON exactly matches the CSV cells (the doc emphasizes the JSON strings are identical to the CSV cells after fillna
+GitHub
+).
+
+Benefits for Hot Zones: Having this JSON representation will make it much easier to implement Module C (Hot Zones). The Hot Zones analysis can navigate the structured data to find patterns like “all-hot” columns or cross-draw sequences without manual index arithmetic. For example, it could quickly answer “which Set1 draws have an R2 string with two * stars in column 1?” by traversing json["Combined"]["sets"]["Set1"]["draws"][draw]["R2"][0] etc., rather than slicing DataFrame rows. The stable pattern guide explicitly calls out that Module C uses certain flags from the tables: “Module C uses cons_full && hot==2 as its first pass to seed hidden pattern search.”
+GitHub
+. That implies Hot Zones looks for fully hot columns (hot level 2) and consensus patterns across sets. The JSON can easily include a pre-computed hot count per cell or row if needed
+GitHub
+, or the Hot Zones code can infer it by scanning for *. In summary, reintroducing the JSON mirror is both possible and prudent – it can be generated directly from the CSV output each time the pipeline runs (or on demand via a conversion utility). This avoids relying on any deprecated “string-table on disk” format; instead we leverage the current pipeline’s output and simply serialize it in the hierarchical form the new module expects
+GitHub
+.
+
+Integrating the Hot Zones Module into AAT9
+
+The Hot Zones module (Module C) is currently in design and will complement the Stable Pattern Extractor. According to the roadmap, Hot Zones is intended to provide “complementary pressure indicators” and work alongside Stable’s output
+GitHub
+. Integration should therefore follow the established AAT9 patterns for new modules, ensuring it is self-contained and feeds its results into the higher-level analysis (Control Center and ultimately the Winners aggregator) cleanly. Here are key considerations and next steps for integration:
+
+Module independence and data inputs: Hot Zones should be a self-contained analysis that reads the necessary inputs from the repository data, not from internal UI state. Likely inputs include the freshly generated combined tables (CSV or JSON mirror) and perhaps Stable’s results (if it needs to know which patterns Stable already flagged or scored). We know from design that Module C will utilize output of Module A – e.g. the consensus flags and hot markers from Stable
+GitHub
+. Fortunately, the stable Patterns CSV (and JSON) carry these flags for each pattern and column
+GitHub
+.  Hot Zones module can thus load the JSON mirror of the string table (as discussed above) and/or stable’s score outputs to identify “hidden” patterns that weren’t surfaced by Stable’s normal scoring. Importantly, it should not depend on any interactive UI element – it must be callable like the other modules (perhaps via a function or CLI script) so it can run in batch mode. Keeping it isolated in src/core/hot_zones.py (for example) with clear input/output paths will make testing and automation easier.
+
+Outputs and directory structure: Per AAT9 conventions, the module should write its outputs under data/outputs/analysis/hot_zones/<STATE>/… (similar to patterns/, digit_reduction/, etc. for other modules)
+GitHub
+. This keeps results organized. Likely outputs could include a Hot Zones analysis CSV (e.g. listing any “hidden” pattern candidates found, with features or scores) and possibly a JSON or meta info. For instance, Stable’s “brain bundle” includes a scores CSV and a metrics JSON
+GitHub
+; Digit Reduction has per-item and top-candidates CSVs plus a meta JSON
+GitHub
+. Hot Zones might produce something analogous: perhaps a <STATE>_hot_zones.csv with any discovered patterns/indicators and a <STATE>_hot_zones_meta.json summarizing counts or thresholds used. If the Hot Zones analysis produces any kind of rank or score for patterns, that CSV would be the place to store it. This separation also lets the Central Aggregator (Module D) ingest Hot Zone findings alongside others.
+
+No duplicate winner logs inside Module C: One of the “lean output” principles in the recent refactoring is that individual tools no longer produce their own comprehensive winners reports; instead, the Control Center’s centralized Winners module does it using each tool’s outputs
+GitHub
+GitHub
+. We should apply the same philosophy to Hot Zones. That means Hot Zones should not attempt to generate files like winner_flags.csv or winner_map.json on its own. Those are global, cross-tool summary artifacts that the central winners script will handle
+GitHub
+GitHub
+. In practice, this means Module C focuses on its core analysis and writes only its direct results. For example, if Hot Zones identifies that “Pattern X was present in all three Set1 elimination strings and is a strong hidden candidate,” it would record that in its output CSV/JSON. It would not mark whether that pattern hit the actual winning number – that’s the job of the Winners Module which merges Stable/VTRAC/DigitReduction/Aux evidence and checks against actual draws
+GitHub
+GitHub
+. By not duplicating winner-checking logic, Hot Zones stays self-contained and avoids bloat. The central Winners Module can later pull in Hot Zone indicators if we extend it (for instance, it might add a field like "hot_zone_flag": true/false if a winner came from a hot-zone pattern, using the Hot Zones output).
+
+Lean reporting and UI integration: Even though Hot Zones won’t generate its own winners CSV, it can still present results for the user. Integration into the Control Center UI should be done in a streamlined way. Likely, we will add a Hot Zones panel or incorporate it into an existing page (perhaps as part of the Stable Pattern page or as a new page in Streamlit). Since the Control Center (Brain 2) “aggregates state insights”
+GitHub
+GitHub
+, one approach is to display Hot Zones findings per state there. For example, the Control Center could have a section showing any critical hot-zone patterns or counts for each state, as an additional factor in deciding favorable states (just as it shows due doubles, Blackapple alerts, etc. currently). Alternatively, a dedicated Hot Zones page (Module C page) in the app can allow drilling down into one state’s hidden pattern details. In either case, the HTML panel or visualization should be generated from the module’s outputs. We might provide an HTML summary similar to Stable’s top-30 report or Digit Reduction’s stacked HTML
+GitHub
+GitHub
+, but scaled down. Perhaps just an expander listing any “hot” hidden combos or a highlight of the elimination grid with hidden patterns marked. This is optional; the module’s CSV/JSON outputs are the primary artifacts, and any UI should be a read-only view of those.
+
+Feeding the Central Winners Analyzer: Once integrated, the Hot Zones module will join Stable, V-TRAC, Digit Reduction, and Aux as part of the daily run. The Daily Run Lifecycle in the roadmap would include running Module C after Modules A and B
+GitHub
+. To ensure its outputs are used in the broader analysis, we should plan for the Winners Module and/or future aggregator to consider Hot Zones. For example, if Hot Zones produces a ranked list of “hidden patterns” per state, the aggregator (Module D or Brain 2 logic) could use that as a feature – maybe a state with many hot-zone signals gets a higher priority. In the winners log context, if a winning number matches a Hot Zones pattern that Stable missed, we might want to log that. This would likely be a future extension of the Winners Module (e.g., adding a "hot_zone_hit": true field in the winner_flags.csv). The current Winners Module draft mentions potential Aux and other inputs in future phases
+GitHub
+, so adding Hot Zones evidence fits that mold. The key is that Hot Zones must output its data in a “lean” manner so that it’s easy for the central module to read. A simple CSV or JSON of results is ideal – then the winners summarizer can load it alongside stable_patterns, vtrac_compact, digit_top_candidates, etc. and incorporate any overlaps or hits.
+
+Next actions: The development of Hot Zones should start with confirming the exact method of analysis (likely using the JSON of elimination grids to find patterns that meet certain criteria: fully “hot” across draws, etc.). With that settled, implement the module to produce a results CSV/JSON in the expected directory. Update documentation for Module C (the repository already has a placeholder for module_C_hot_zones.md) to define its input/output contract, similar to Modules A and B
+GitHub
+. Finally, integrate a hook in the Streamlit app: add a call in src/app.py so that when the pipeline runs or when a user toggles Hot Zones, it executes the module and then displays its outcomes. Because AAT9 has strong guardrails, we should also add tests for Hot Zones: e.g., a regression test that when given a known input grid (perhaps a fixture where we know a hidden pattern), the module finds it, and that its output files conform to the schema (no missing fields, correct naming).
+
+In summary, the plan for Hot Zones is on the right track: treat it as a self-standing module that reads the combined tables (preferably via the JSON mirror for ease), writes its own analysis outputs, and contributes to the overall system without breaking the existing flows. We should enforce the same best practices used for other modules: absolute paths, no side-effects, no reliance on global states, and usage of the utils.path_handler or similar for file locations
+GitHub
+. By doing so, the Hot Zones module will plug into the Control Center smoothly. Its outputs can then be consumed by the centralized winners log or aggregator as needed, while its presence in the UI will give operators another valuable panel of insights. Importantly, sticking to lean outputs and centralized logging means we won’t duplicate data – the only new artifacts will be the Hot Zones findings themselves, and the existing winners summary framework will absorb those findings in due course
+GitHub
+GitHub
+. This modular approach ensures the toolchain remains coherent and maintainable as we add Hot Zones into the mix.

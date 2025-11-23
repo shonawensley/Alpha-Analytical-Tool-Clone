@@ -1,0 +1,181 @@
+I’ll answer as a world-famous lottery-analytics architect in VT/triad systems, winner of the INFORMS Daniel H. Wagner Prize for real-world analytics.
+
+TL;DR:
+Below is a ready-to-paste section you can add into docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md. It defines the 4 hit criteria (EB/ES/VB/VS), explains how to use them during the example runs, and gives a concrete per-workbook/per-state template.
+
+Hot Zones Validation Log – Extended Instructions (with 4 Hit Criteria)
+
+You can paste this under the existing intro of AAT9_Hot_Zones_Validation_Log.md, or replace that file entirely if you like.
+
+## How to Use This Log
+
+This log is used to validate and optimize the Hot Zones engine across multiple historical workbooks.
+
+For each workbook/date:
+
+1. **Activate & rebuild**
+   - Use the guarded pipeline:
+     - `PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_YYYY-MM-DD.xlsm`
+   - Confirm Set1/Draw1 vs results once (see Quickstart/Backtesting docs).
+
+2. **Run analyzers on the same dataset**
+   - Stable Pattern
+   - Digit Reduction
+   - V-TRAC analyzer + Winners HTML
+   - Hot Zones:
+     - `PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py --state <STATE> --date YYYY-MM-DD`
+
+3. **Per state/date**, do a two-part review:
+   - **Part A – Winners HTML inspection (environment-first).**
+   - **Part B – Hot Zones output comparison (scores/features vs environment).**
+
+4. **After 3+ workbooks**, consolidate themes and propose specific tweaks (weights/features) to apply and re-test.
+
+---
+
+## 4 Hit Criteria (EB / ES / VB / VS)
+
+Across all tools we track 4 hit criteria per winner. These apply especially well to Hot Zones `TopCandidateRow`, but can be reused for Stable/V-TRAC/Digit outputs later.
+
+Assume the winning number for the date is `W` (e.g. `694`):
+
+- Let `digits_w = sorted(W)` (e.g. `"469"`).
+- Let `vt_w` be the VT family of the winner (e.g. `"234"` or `"v234"`, depending on format).
+
+For any **candidate triad row** in Hot Zones (from `_top_lanes`), we treat:
+
+- `triad` = sorted 3 digits of the candidate (Hot Zones field `triad`).
+- `vt_triad` = VT triad string (Hot Zones field `vt_triad`).
+- `has_straight` = whether a straight lane of those digits appears in any R2/R4/R6/R8 cell (from per-item rows).
+- `has_vt_straight` = whether a VT straight lane appears (per-item rows).
+
+Then define:
+
+1. **Exact Boxed (EB)**  
+   Candidate has the exact same digits as the winner in any order.
+   - `EB = (triad == digits_w)`
+
+2. **Exact Straight (ES)**  
+   Candidate is EB **and** we actually see the straight lane in the data.
+   - `ES = EB AND (has_straight == 1 for at least one per-item row of this triad)`
+
+3. **VT Boxed (VB)**  
+   Candidate belongs to the same VT-TRAC family as the winner (ignoring digit identity).
+   - `VB = (vt_triad == vt_w)`
+
+4. **VT Straight (VS)**  
+   Candidate is VB **and** we see a VT straight lane.
+   - `VS = VB AND (has_vt_straight == 1 for at least one per-item row of this triad)`
+
+> **Important:** all 4 hit types are useful signals. EB/ES are “exact digit” hits; VB/VS are “family” hits. During validation we don’t only care about ES – we also care whether the engine at least captured the family (VB/VS) and where those ranked.
+
+---
+
+## Per-Workbook Template (with 4 Criteria)
+
+Use one section per workbook you validate:
+
+```markdown
+## Workbook: Pick3StatsC4_2025-06-24.xlsm (results 2025-06-25)
+
+- Guard manifest: [path, mtime, states tracked…]
+- Set1/Draw1 check: Combined_Combined.csv row ... matched results (Midday=494, Evening=858)
+- Notes: [anything notable about this workbook/setup]
+
+
+Then, for each state you review on this workbook, follow the same structure:
+
+### Connecticut4
+
+#### Part A – Winners HTML Environment (V-TRAC Winners Tool)
+
+- Winner: 494 (Midday), 858 (Evening)  ← adjust per state/date
+- Environment notes (from V-TRAC winners HTML):
+  - Opening pattern: [describe R2/R4/R6/R8 in Set3/Set2/Set1]
+  - Migration path: [e.g., “family 469 migrates Set3 col4 → Set2 col3 → Set1 col2 → col1”]
+  - Hot/superhot behavior:
+    - C1/C2 funnels: [describe any funnels or repeated pressure]
+    - Starred boxes: [where * and ** appear in the R rows]
+  - VT lanes:
+    - Exact VT lanes: [describe any obvious VT patterns]
+    - Mirrors/double pressure: [where mirror pairs drive extra pressure]
+  - Cross-variant echoes:
+    - Midday vs Evening vs Combined relationships
+
+#### Part B – Hot Zones Outputs vs Winner
+
+**1. Winner’s 4 Criteria (ground truth)**
+
+- Winner digits: `W = 494`  → `digits_w = {4,4,9}` (example)
+- Winner VT family: `vt_w = v??`  (from V-TRAC mapping)
+- We will use these to tag EB/ES/VB/VS for candidate triads.
+
+**2. Hot Zones Top Candidates (summary)**
+
+Look at `data/outputs/analysis/hot_zones/Connecticut4/Connecticut4_hot_zones_top_lanes.csv`
+and `2025-06-24_hot_zones_winner_map.{json,csv}`.
+
+For the key triads / families related to the winner, log something like:
+
+| Rank | Triad | VT Triad | EB | ES | VB | VS | Score Max | Score Mean | Evidence Tags | Notes |
+|------|-------|----------|----|----|----|----|-----------|------------|---------------|-------|
+| 1    | 469   | 234      | Y  | Y  | Y  | Y  | 7.85      | 6.90       | col1|vt_straight| Classic Set1 col2→1 funnel path; mirrors HTML view. |
+| 5    | 149   | 234      | N  | N  | Y  | N  | 5.10      | 4.80       | vt_only_lane  | Same VT family, no exact digits; still strong lane.   |
+| 12   | 379   | 145      | N  | N  | N  | N  | 4.20      | 3.90       | ls_col_42     | Competing pattern; maybe overweighted.                |
+
+- EB/ES/VB/VS columns capture the four hit criteria.
+- `Evidence Tags` column is the union of `reasons` from per-item rows.
+
+**3. Per-Item Check for the Winner’s Triad**
+
+Look at `Connecticut4_hot_zones_per_lane.csv` for rows where `triad` or `vt_triad`
+matches the winner or its VT family. Note:
+
+- Which sections/sets/draws/columns are involved:
+  - Are we correctly flagging `col1_arrival`, `precol1_funnel`, `ls2_lane`, etc.?
+- Do the per-lane features match what you saw in the HTML environment?
+- Any obvious missing flags (e.g., you see a classic funnel in HTML but `funnel_precol1` == 0).
+
+#### Part C – Findings & Hypotheses
+
+**What worked:**
+- [e.g., “Winner’s family 469 is rank #1, EB/ES/VB/VS all true; funnels and Set1 bias are captured perfectly.”]
+
+**What missed / needs tuning:**
+- [e.g., “In 3 other states, winners had VB/VS hits only at rank > 30; vt_straight and vt_only_lane may be under-weighted.”]
+
+**Initial hypotheses (no code changes yet):**
+- [e.g., “Consider increasing w_vt_straight by +0.3 and w_vt_only_lane_bonus by +0.2”]
+- [e.g., “Maybe slightly reduce w_ls_col_42; too many noisy candidates with ls_col_42 tag.”]
+
+
+Repeat this per state you analyze for that workbook. After you’ve done this for 3 workbooks (e.g., June 23–25), add a final summary section such as:
+
+## Consolidated Hot Zones Themes (after 3 workbooks)
+
+- EB/ES performance:
+  - EB hits: X / N winners, often within top K candidates.
+  - ES hits: Y / N winners; in some cases straight lanes not fully credited.
+
+- VB/VS performance:
+  - VB hits: A / N winners (engine routinely finds the correct VT family).
+  - VS hits: B / N winners; VT straight lanes appear but may need stronger weighting.
+
+- Feature behavior:
+  - [Examples: funnel_precol1 strongly predictive; ls2_lane underused; ls_col_42 sometimes noisy, etc.]
+
+- Proposed next adjustments:
+  - Weight changes:
+    - [e.g., w_vt_straight, w_vt_only_lane_bonus, w_vertical_support, w_set1_bias]
+  - Logic tweaks (if any):
+    - [e.g., refine which columns count as ls_col_42, or adjust gating parameters.]
+
+- Plan:
+  - Apply 1–3 targeted changes.
+  - Re-run Hot Zones on a smaller subset of states/dates from these same workbooks.
+  - Update this log with “before/after” rank changes for the 4 hit criteria (EB/ES/VB/VS).
+
+
+---
+
+If you want, next we can write a **tiny helper snippet** (for Codex or a future script) that, given a wi

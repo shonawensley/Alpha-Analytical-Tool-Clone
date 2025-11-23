@@ -49,6 +49,10 @@ def get_tables_output_dir():
     """Get the tables output directory path"""
     return os.path.join(get_outputs_dir(), "tables")
 
+def get_tables_manifest_path() -> str:
+    """Path to the tables manifest file."""
+    return os.path.join(get_tables_output_dir(), "tables_manifest.json")
+
 def get_analysis_output_dir() -> str:
     """
     Folder where HTML/CSV/JSON analysis files are written.
@@ -71,6 +75,10 @@ def get_winners_output_dir():
     """Get the winners output directory path"""
     date_str = get_current_date_str()
     return os.path.join(get_outputs_dir(), "winners", date_str)
+
+def get_json_tables_dir() -> str:
+    """Directory housing JSON mirrors of the per-state tables."""
+    return os.path.join(get_outputs_dir(), "json_tables")
 
 def get_pick3_workbook_path(preferred_filename: str | None = None) -> str:
     """
@@ -166,7 +174,8 @@ def create_output_directories():
         get_outputs_dir(),
         get_tables_output_dir(),
         get_winners_output_dir(),
-        get_analysis_output_dir()
+        get_analysis_output_dir(),
+        get_json_tables_dir(),
     ]
     
     for directory in dirs:

@@ -1,0 +1,171 @@
+Your “same‑tables across days” symptom is explained by the documented requirement to (a) swap the workbook to data/original/Pick3StatsC4.xlsm, (b) rebuild the per‑state tables, and (c) sanity‑check Set1/Draw1 against the prior day’s winners; skipping this leaves stale tables in place. The fix is to make Codex run the exact workbook‑swap → pipeline → check steps and to standardize paths (data/outputs/tables/<STATE>/…). For Hot Zones, place the seven parts under src/core/hot_zones/, read tables from the same canonical directory, and write lean outputs under data/outputs/analysis/hotzones/<STATE>/ so the Aggregator can join them with Stable, Digit Reduction, and V‑TRAC. Hot Zones is a local signaler; the cross‑tool “super‑logic” belongs in the Aggregator later.
+
+1) Table regeneration: what your Codex log implies, what to tell it to do
+
+What the standard process requires (verbatim from your docs):
+
+Generate per‑state tables into data/outputs/tables/[STATE_NAME]/… from the Excel workbook whenever you swap/refresh the workbook. “Run this once whenever you have new raw data in the Excel file.”
+
+Historical swap + rebuild (critical):
+
+python3 scripts/tools/select_pick3_history.py --file Pick3StatsC4_YYYY‑MM‑DD.xlsm
+
+Rebuild all tables:
+
+python3 - <<'PY'
+from src.core.pipeline_runner import run_pipeline_from_original_path
+from utils import path_handler as ph
+run_pipeline_from_original_path(ph.get_excel_path())
+PY
+
+
+Sanity‑check data/outputs/tables/Connecticut4/Combined_Combined.csv → Set1/Draw1 (RowType=draw_data) matches the previous day’s Midday/Evening in data/results/results_checkCT.txt. Skipping these steps leaves the old tables in place.
+
+All analysis tools read from the same canonical path via utils.path_handler → data/outputs/tables/<STATE>/. V‑TRAC/Stable/Digit Reduction do not regenerate tables themselves.
+
+Why your results looked “stuck”: if a session swapped the Excel but didn’t run the pipeline (or didn’t perform the Set1/Draw1 check), every “new day” run reused the old CSVs—exactly the failure your docs warn about.
+
+What to instruct Codex (copy/paste):
+
+Select workbook & rebuild tables (no substitutions):
+
+python scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm
+python - <<'PY'
+from src.core.pipeline_runner import run_pipeline_from_original_path
+from utils import path_handler as ph
+run_pipeline_from_original_path(ph.get_excel_path())
+PY
+
+
+This is the canonical swap → pipeline sequence.
+
+Verify freshness (guardrail): open
+data/outputs/tables/Connecticut4/Combined_Combined.csv, read the Set1/Draw1 row (RowType draw_data), and confirm the last two columns match “previous day” winners in data/results/results_checkCT.txt. If not, stop.
+
+Run analyzers only after tables exist: tools should load CSVs from data/outputs/tables/<STATE>/…—they don’t build them.
+
+Optional wiring guardrails already documented: “Combined Tables Pipeline (if needed)” checklist, “Common Checks,” and Control Center batch notes (winners logging, DR bundle writes). Use them to keep sessions consistent.
+
+Open items
+
+If you’re using a dated subfolder layout under outputs/tables/… for some experiments, confirm which path is active in your repo before runs (your V‑TRAC checkpoint shows an optional dated layout). Prefer the Quickstart’s per‑state path unless you’ve switched fully to the dated scheme. (Unverified—repo variant dependent; reconcile once in code.)
+
+2) Getting work done in this Codex session: stabilize tables and install Hot Zones
+
+A. Stabilize the table workflow first (same session): follow §1 exactly (swap → rebuild → check). This is the prerequisite your docs call out repeatedly.
+
+B. Place the Hot Zones module parts where the rest of the system expects engines to live:
+
+Engines live under src/core/…; pages read CSVs from data/outputs/tables/<STATE>/. (Live Wiring map.) Put your seven Hot Zones parts here, e.g.:
+
+src/core/hot_zones/
+  part1_ingest.py
+  part2_scoring.py
+  part3_json_mirror.py
+  part4_cross_variant.py
+  part5_join_points.py
+  part6_cli.py
+  part7_winners_lens.py
+
+
+Read via the same path helpers; do not invent a new tables location.
+
+Outputs (Hot Zones brain bundle): write to
+data/outputs/analysis/hotzones/<STATE>/ →
+<STATE>_hotzones_per_item.csv, <STATE>_hotzones_top_candidates.csv, <STATE>_hotzones_meta.json. (This is how the lean bundles are described in your Hot Zones spec.)
+
+Control Center / batch context: you already have batch wiring that centralizes winners logging and bundle placement; keep Hot Zones’ outputs aligned so the Aggregator can join everything later.
+
+C. Exactly what to ask Codex to do (now):
+
+Confirm tables exist for your target states at data/outputs/tables/<STATE>/…. If missing, run the Quickstart pipeline block.
+
+Create src/core/hot_zones/ and drop in the provided scripts unchanged. (Use the same path loader as other engines via utils.path_handler.)
+
+Wire a CLI (e.g., scripts/core/hot_zones_run.py) that:
+
+Loads Combined tables for a state (same loader pattern as V‑TRAC/DR).
+
+Runs the Hot Zones scorer.
+
+Writes the three lean artifacts into data/outputs/analysis/hotzones/<STATE>/.
+
+(Optional) JSON mirror: if you want a JSON export alongside CSV, Part 3 of your Hot Zones notes explicitly offered a CSV→JSON builder—green‑light it now if helpful.
+
+D. Is feeding Codex your deep research + scripts enough context?
+Yes—your Quickstart/Live‑Wiring/Checkpoint docs already spell out the contracts (where to read tables, where to write analysis). Provide Codex the Hot Zones folder path + those docs and instruct it to conform to the existing contracts (no new directories).
+
+3) “Are you aware of the full 7‑part Hot Zones design?” and whether my prior guidance aligns
+
+Yes. The Hot Zones notes you attached show Part 2 as a complete scoring & candidate engine that ingests your string‑tables, computes vertical/horizontal evidence, maps to V‑TRAC families, and writes a lean bundle (per_item.csv, top_candidates.csv, meta.json). That is exactly what I referenced and what the Aggregator can join later.
+They also mention Part 3 to add an automatic CSV→JSON mirror, which I kept optional above.
+
+All of that stays consistent with your existing app contracts for inputs/outputs and Analyzer‑style lean artifacts.
+
+4) Does Part 7 “become an Aggregator”? What about combination‑forming and profitability?
+
+Your recap explicitly recommends keeping Hot Zones simple/local and doing multi‑module synergy in the Aggregator (not inside Hot Zones). It even sketches the local score (+1/+3 hot/super‑hot, +2 across R‑boxes, +3 across sets, +2 V‑TRAC match, +1 post‑transit stability) and says anything more global belongs to the Aggregator. That’s the clean separation I’m following.
+
+So: Hot Zones ≠ Aggregator. Hot Zones outputs are designed to feed an Aggregator (just like DR/Stable/V‑TRAC). You also have a tiny Aggregator stub showing how predictions and winners get aligned into supervised rows—use that approach later to blend Hot Zones with the others.
+
+On profitability/wagering strategy: I didn’t find a prescriptive, documented method in the attached materials; treat it as Unverified for now. A safe path is to first produce the unified training/validation rows (Aggregator inputs) and only then test bankroll heuristics on held‑out dates. (Verification route: extend the existing aggregate_predictions_vs_winners.py stub to include Hot Zones features and evaluate hit‑rate by rank buckets.)
+
+Concrete checklists you can hand to Codex (no ambiguity)
+A) Fix the table regeneration loop now
+
+Swap workbook:
+python scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm
+
+Rebuild tables for all states (exact block from docs).
+
+Sanity‑check Set1/Draw1 vs data/results/results_checkCT.txt. Abort if mismatch.
+
+Run analyzers only after step 3 passes; they must read from data/outputs/tables/<STATE>/.
+
+B) Install Hot Zones (7‑part) cleanly
+
+Create src/core/hot_zones/ and add the seven scripts. (Engines belong under src/core per Live Wiring.)
+
+Implement a small CLI scripts/core/hot_zones_run.py to:
+
+load tables via utils.path_handler (same as V‑TRAC/DR),
+
+run scoring,
+
+write exactly:
+
+<STATE>_hotzones_per_item.csv,
+
+<STATE>_hotzones_top_candidates.csv,
+
+<STATE>_hotzones_meta.json
+under data/outputs/analysis/hotzones/<STATE>/.
+
+(Optional) add Part 3 JSON mirror if you want a parallel .json beside the CSVs.
+
+C) Keep batch & control flows aligned
+
+Use the Control Center batch only after tables exist; it writes winners/DR artifacts under the documented data/outputs/analysis/... roots.
+
+Answers to your specific concerns (succinct)
+
+“Did a Codex session tamper with the dataset‑creation process?”
+The documented process is intact: swap workbook → generate per‑state CSVs → analyzers read them from data/outputs/tables/<STATE>/. The most likely issue is runs performed without the rebuild + Set1/Draw1 check your Quickstart requires; your doc explicitly warns that skipping leaves old tables in place. (Root‑cause statement grounded in your Quickstart.)
+
+“Where do the seven Hot Zones scripts go, and where do they write?”
+Put them under src/core/hot_zones/…. Read tables from data/outputs/tables/<STATE>/… (via utils.path_handler). Write lean outputs under data/outputs/analysis/hotzones/<STATE>/ as per_item.csv, top_candidates.csv, meta.json.
+
+“Does Part 7 bypass the Aggregator?”
+No—your own recap says keep Hot Zones simple/local; do the cross‑tool synergy in the Aggregator later.
+
+Sanity Check (2 quick actions you can do now)
+
+Run the documented swap → rebuild → check for a single date (e.g., 2025‑06‑24) and confirm Set1/Draw1 in Combined_Combined.csv matches the expected “previous day” winners text. This directly tests the freshness contract your Quickstart defines.
+
+Dry‑run Hot Zones Part 2 on one state: place scripts under src/core/hot_zones/, run the CLI, and verify that the three artifacts land in data/outputs/analysis/hotzones/<STATE>/ as specified in your Hot Zones notes.
+
+Notes on uncertainty:
+
+Any Streamlit cache interaction (e.g., needing a UI cache clear between table rebuilds) wasn’t specified in the attached docs → Unverified; if you see stale UI after a successful rebuild and Set1/Draw1 check, restart the app as a quick test. (Verification route: add a small “tables mtime” footer to the UI to confirm the CSVs in memory match disk.)
+
+If you want, I can convert the above into a ready‑to‑run Codex instruction block (exact file paths + commands) for both the table pipeline and the Hot Zones runner.

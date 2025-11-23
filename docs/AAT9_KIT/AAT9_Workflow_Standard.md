@@ -10,8 +10,10 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 
 ## 1) Preflight & Sanity
 - Run: `powershell -NoProfile -File .codex/preflight.ps1 -State "<State>"`
-- Confirm in‑repo imports and draws CSV inventory.
+- Confirm in-repo imports and draws CSV inventory.
 - If anything looks off, fix environment/paths before coding.
+- Hot Zones / historical validations: follow `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` (guarded tables → Part A winners HTML → Part B tool outputs) for each workbook run.
+- Historical/backtest loop: follow `docs/AAT9_KIT/AAT9_Backtesting_Checklist.md` (swap workbook → guarded tables run → Set1/Draw1 spot-check) before running any analyzers.
 
 ## 2) Plan (small, explicit)
 - State the exact files to change and why.

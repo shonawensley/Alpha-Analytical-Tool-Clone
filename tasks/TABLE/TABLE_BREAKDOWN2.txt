@@ -1,0 +1,168 @@
+TL;DR: Below is a paste‑ready, Part 7 Hot‑Zones Combination & Wagering Engine task list with exact file paths, function signatures, CLI commands, Codex integration steps, and guardrails so you can wire it into AAT9 quickly and safely. It follows AAT9’s contracts—Combined is the baseline; Midday/Evening are additive variants—and writes lean artifacts under data/outputs/analysis/hot_zones/<STATE>/ so the Aggregator can ingest them exactly like DR/Stable/V‑TRAC.
+
+1) Where to place the seven Hot‑Zones parts (files & folders)
+
+Create these folders (if missing):
+
+src/alpha_analytical/hot_zones/
+scripts/hot_zones/
+data/outputs/analysis/hot_zones/
+
+
+Why this path? New tools must read via canonical loaders and write under data/outputs/analysis/<tool>/<STATE>/; we’ll use <tool>=hot_zones to match your DR/Stable lean outputs and keep the Aggregator’s loader uniform.
+
+Drop these seven parts:
+
+src/alpha_analytical/hot_zones/part1_extract.py – read Combined tables; extract starred boxes & triad cores. (Reads via utils.path_handler.get_state_tables_dir(state).)
+
+src/alpha_analytical/hot_zones/part2_features.py – compute hot_level (*→1, **→2), recency (Set1 col1/col2), cross‑variant echoes, 3‑digit repeats/mirrors. (Signals mirror the plan already captured for DR/Stable/V‑TRAC joins.)
+
+src/alpha_analytical/hot_zones/part3_indexing.py – map triads to VT indexes/lanes for later joins.
+
+src/alpha_analytical/hot_zones/part4_scoring.py – compute hz_score, hz_hot_density, hz_variants_seen, hz_index_*.
+
+src/alpha_analytical/hot_zones/part5_writer.py – write lean brain‑bundle:
+
+<STATE>_hot_zones_per_lane.csv
+
+<STATE>_hot_zones_top_lanes.csv
+
+<STATE>_hot_zones_meta.json
+under data/outputs/analysis/hot_zones/<STATE>/.
+
+scripts/hot_zones/part6_io_cli.py – CLI to run Parts 1–5 from either JSON or CSV tables; your sample dry‑run command is preserved (see §4).
+
+src/alpha_analytical/hot_zones/part7_combination_engine.py – Combination & Wagering Engine: generate literal perms / VT straight 8 / VT boxed / pair+mirror‑12 sets, compute cost/payout/ROI envelopes; emit YYYYMMDD_hot_zones_winner_map.{json,csv} alongside the brain‑bundle.
+
+Note on output root naming: One prior snippet shows --out-root data/outputs/analysis/hotzones (no underscore). Standardize on data/outputs/analysis/hot_zones for consistency with AAT9’s <tool>/<STATE> convention; if you already have hotzones/, keep a thin compatibility shim or symlink.
+
+2) Exact function signatures (for Codex to wire unambiguously)
+File	Function signature	Purpose	Inputs → Outputs
+part1_extract.py	def extract_starred_triads(state: str, tables_dir: Path) -> list[dict]:	Pull starred (*, **) cells; infer triad cores with provenance (set, draw, col).	In: state, data/outputs/tables/<STATE>/ → Out: list of triad dicts ({'triad':'691','set':3,'draw':1,'col':2,'hot_level':2,...})
+part2_features.py	def compute_hot_features(triads: list[dict], variant_presence: dict) -> list[dict]:	Add hot_level, recency_best_col, seen_midday/evening/combined, mirror/3‑digit repeats.	In: triads + variant map → Out: enriched triads
+part3_indexing.py	def attach_vt_index_and_lane(triads: list[dict]) -> list[dict]:	Attach VT family/index and lane keys for joins.	In: enriched triads → Out: triads + vt_index, lane_key
+part4_scoring.py	def score_hot_zones(triads: list[dict]) -> list[dict]:	Compute hz_score, hz_hot_density, hz_variants_seen, and hz_index_*.	In: triads → Out: triads with scores (transparent weights)
+part5_writer.py	def write_brain_bundle(state: str, date_tag: str, rows: list[dict], out_root: Path) -> dict:	Write per_lane.csv, top_lanes.csv, meta.json.	In: rows → Out: paths (dict) under data/outputs/analysis/hot_zones/<STATE>/
+part6_io_cli.py	def run_hot_zones_from_json(state: str, json_path: Path, out_root: Path) -> None:	JSON → Parts 1–5 → CSV/JSON artifacts (dry‑run friendly).	Mirrors your documented CLI sample.
+part7_combination_engine.py	def build_combination_sets(state: str, date_tag: str, per_lane_csv: Path, out_root: Path) -> Path:	Read per_lane.csv; emit YYYYMMDD_hot_zones_winner_map.{json,csv} with cost/payout/ROI.	In: per‑lane CSV → Out: winner_map files, joinable by Aggregator.
+
+These signatures line up with your brain‑bundle + winners lens convention (per_item/top/meta + minimal winner_map), so your Aggregator can reuse the same loader path used for DR/Stable/V‑TRAC.
+
+3) Contracts this plan relies on (so it “just works”)
+
+Readers:
+
+Aux/Blackapple read draws CSVs only at data/cleaned/draws/*_draws.csv.
+
+V‑TRAC / Stable / Digit Reduction / Hot‑Zones read Combined tables under data/outputs/tables/<STATE>/ via utils.path_handler. Combined is the baseline; Midday/Evening are additive—never replacements.
+
+Writers:
+
+New tool/module outputs must live under data/outputs/analysis/<tool>/<STATE>/ (here <tool>=hot_zones).
+
+Control Center & batch context:
+
+Batch winners flow and lean outputs are already centralized; Hot‑Zones artifacts follow the same pattern so your batch and Aggregator integrations stay consistent.
+
+4) CLI usage (ready to run)
+
+Part 6 dry‑run (from your note):
+
+python scripts/hot_zones/part6_io_cli.py \
+  --state OntarioCanada4 \
+  --json /path/to/ontario.json \
+  --out-root data/outputs/analysis/hot_zones
+
+
+This is the exact shape you documented (“dry‑run on your Ontario JSON … confirm per_item.csv populated …”).
+
+Part 7 (wagering engine) on yesterday’s per‑lane:
+
+python - <<'PY'
+from pathlib import Path
+from datetime import date, timedelta
+from alpha_analytical.hot_zones.part7_combination_engine import build_combination_sets
+state    = "OntarioCanada4"
+dtag     = (date.today()-timedelta(days=1)).strftime("%Y%m%d")
+per_lane = Path(f"data/outputs/analysis/hot_zones/{state}/{state}_hot_zones_per_lane.csv")
+out_root = Path(f"data/outputs/analysis/hot_zones/{state}")
+print(build_combination_sets(state, dtag, per_lane, out_root))
+PY
+
+
+Outputs YYYYMMDD_hot_zones_winner_map.json/.csv next to the brain‑bundle so the Aggregator can join it with DR/Stable/V‑TRAC.
+
+5) Codex integration script (paste‑once runbook)
+# 0) Preflight & path sanity (repo root)
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4"
+
+# 1) Place files exactly:
+#   src/alpha_analytical/hot_zones/{part1_extract.py,part2_features.py,part3_indexing.py,part4_scoring.py,part5_writer.py,part7_combination_engine.py}
+#   scripts/hot_zones/part6_io_cli.py
+# and create data/outputs/analysis/hot_zones/
+
+# 2) Swap workbook for a historical run (if needed) and REGENERATE TABLES
+python scripts/tools/select_pick3_history.py --file Pick3StatsC4_2025-06-24.xlsm
+python - <<'PY'
+from src.core.pipeline_runner import run_pipeline_from_original_path
+from utils import path_handler as ph
+run_pipeline_from_original_path(ph.get_excel_path())
+PY
+
+# 3) Sanity‑check tables vs results (CT example)
+#   Open data/outputs/tables/Connecticut4/Combined_Combined.csv,
+#   confirm Set1/Draw1 (draw_data row) last two columns match the prior day’s Midday/Evening in data/results/results_checkCT.txt.
+
+# 4) Run Part 6 (JSON → brain‑bundle) and Part 7 (winner_map)
+python scripts/hot_zones/part6_io_cli.py --state Connecticut4 --json data/…/ct.json --out-root data/outputs/analysis/hot_zones
+python - <<'PY'
+from pathlib import Path
+from alpha_analytical.hot_zones.part7_combination_engine import build_combination_sets
+print(build_combination_sets("Connecticut4","20250625",
+      Path("data/outputs/analysis/hot_zones/Connecticut4/Connecticut4_hot_zones_per_lane.csv"),
+      Path("data/outputs/analysis/hot_zones/Connecticut4")))
+PY
+
+
+Why the strict steps? Skipping the pipeline after swapping workbooks leaves old tables in place; the Quickstart calls this out explicitly.
+Historical pairing rule: When reverse‑engineering, use the results file that is one day after the workbook date.
+
+6) Minimal acceptance & guardrails (to avoid stale data and UI cache traps)
+
+Always rerun the tables pipeline after a workbook swap (CLI above) and sanity‑check Set1/Draw1 vs the matched results file before any analysis; this is your fastest stale‑tables tripwire.
+
+Use the existing preflight/verify loop (compile/import/smokes) after dropping the Hot‑Zones files, so path bindings and loaders are confirmed before running UI or batch.
+
+If you operate via the Streamlit UI, remember cached loaders can hide fresh CSVs; running the CLIs (Parts 6–7) from repo root ensures you’re reading the latest tables directly from disk. (Control Center “Batch Workflow” already aligns modules to the canonical paths.)
+
+7) How Part 7 feeds the Aggregator (what values to join on)
+
+Digit Reduction: join by lane_key / DR location, carry hz_score, hz_hot_density, hz_variants_seen to answer “is this DR box inside a genuine hot zone?”.
+
+Stable Pattern: join by canonical/mirror‑triads; add hz_support_count, hz_max_score, hz_best_variant to distinguish “old/over‑extended” from “about to strike”.
+
+V‑TRAC: join by VT index; use hz_index_score, hz_index_variants_seen, hz_index_recency_best_col to up‑weight “live” indexes even when the base scorer is conservative.
+
+The winners lens (YYYYMMDD_hot_zones_winner_map.{json,csv}) sits beside the brain‑bundle and provides the minimal per‑date evidence the Aggregator needs (lanes hit, max hz score, best recency col, variant coverage).
+
+8) What to hand Codex (verbatim instructions)
+
+“Read AAT9 Quickstart for data contracts and pipeline, then AI Contributor Guide for path rules. Place the seven Hot‑Zones files exactly as listed; never change the app launcher or loaders. After any workbook swap, run the tables pipeline and verify Set1/Draw1 vs the correct results file before running Part 6 or Part 7. Write outputs only under data/outputs/analysis/hot_zones/<STATE>/ (per‑lane, top‑lanes, meta, winner_map). Finally, execute the two CLIs with the concrete commands above and paste the absolute paths of the emitted artifacts.”
+
+9) Reference snippet you provided (kept intact)
+
+You documented a dry‑run for Part 6 and the quick spot‑audits—those are preserved in this plan and should be used as your first smoke on any state/date.
+
+Sanity check (do these two quick actions)
+
+Run preflight and confirm loaders + draws inventory before any Hot‑Zones run:
+powershell -NoProfile -File .codex/preflight.ps1 -State "Connecticut4" (expect non‑zero draws inventory and in‑repo module bindings).
+
+After a workbook swap, validate tables vs results exactly once before analysis: open data/outputs/tables/Connecticut4/Combined_Combined.csv, read Set1/Draw1 (draw_data row), and confirm the last two columns match the previous day Midday/Evening draws recorded under data/results/…. This guards against stale tables across historical runs.
+
+Attachment you shared
+
+Your Hot‑Zones note (includes the Part 6 CLI dry‑run): HOT_ZONES.txt
+.
+
+If you want, I can follow up with ready‑to‑paste code for part7_combination_engine.py (literal perms, VT 8s, boxed, pair+mirror‑12, and ROI envelopes) using the exact signatures above and zero placeholders.

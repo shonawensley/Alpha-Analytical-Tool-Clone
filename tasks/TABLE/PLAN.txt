@@ -1,0 +1,895 @@
+I’ll answer as a world-famous analytics-pipeline architect in table/JSON tooling, winner of the ACM Software System Award.
+
+TL;DR:
+We’ll treat this as three clean phases:
+
+Lock the table pipeline (no more stale CSVs when you swap Excel).
+
+Re-introduce the JSON mirror of the 3-variant environment, built from those CSVs.
+
+Pick one canonical Hot Zones implementation and wire it to that JSON, archiving all the duplicate “Part 2” attempts.
+
+Below I’ll (1) summarize what each attachment is really saying, and (2) turn it into a concrete, ordered task list you can paste into Codex.
+
+1. What the new docs are actually telling us
+Tables: current failure mode
+
+TABLE_RESEARCH and TABLE_INSIGHTS agree on the root problem:
+
+Tables are “build once, reuse everywhere.” If you swap the workbook but don’t rerun the pipeline and/or clear caches, the tools will happily read stale _combined.csv files.
+
+The legacy “in-page” mini-pipeline was removed; there is now one canonical pipeline (pipeline_runner) plus caching (@st.cache_data) in the app.
+
+Both docs propose the same kind of fix:
+
+Either purge existing *_combined.csv before generating tables for a new workbook, or
+
+Use a run_id + separate output directory per run to avoid cross-run contamination.
+
+They also recommend a small metadata/manifest file next to the tables that records: workbook filename, mtime, pipeline run timestamp, maybe a quick hash.
+
+So: the docs don’t contradict anything—your plan (“fix tables first, then JSON, then Hot Zones”) is exactly what they suggest.
+
+JSON mirror: what it should look like
+
+TABLE_RESEARCH + JSON_HOTZONES say:
+
+We do not need any legacy “string-table on disk” format; the CSVs under data/outputs/tables/<STATE>/ are the single source of truth. JSON is just a mirror.
+
+JSON shape:
+
+{
+  "state_name": "OntarioCanada4",
+  "sections": {
+    "Midday": {
+      "sets": {
+        "Set1": {
+          "draws": {
+            "Draw1": {
+              "draw_data": [...],
+              "pattern_variations": {
+                "R2": [...],
+                "R4": [...],
+                "R6": [...],
+                "R8": [...]
+              },
+              "metadata": {
+                "is_hot_zone": true,
+                "hot_zone_count": 5
+              }
+            },
+            ...
+
+
+JSON is generated after the CSV/HTML tables pass manifest + schema checks (“build_json_tables_from_csv()”).
+
+Minimal tests: for a known state/date, ensure Midday/Evening/Combined JSON match the CSV column counts, R2/R4/R6/R8 exist, and is_hot_zone lines up with star markers in the CSV.
+
+Hot Zones: which design to trust
+
+TABLE_RESEARCH + JSON_HOTZONES + HOT_ZONES all agree on the big picture:
+
+Hot Zones is Module C, consuming JSON mirrors (and optionally Stable/DR/V-TRAC lean bundles), writing its own brain bundle under data/outputs/analysis/hot_zones/<STATE>/.
+
+It should emit lean artifacts: per-item CSV, top-candidates CSV, meta JSON—matching the Digit Reduction / Stable “per_item/top/meta” pattern.
+
+Your HOT_ZONES doc already contains a complete Part-2 engine (HotZonesEngine + CLI) that:
+
+Reads a JSON table env (sections→sets→draws→R2/R4/R6/R8).
+
+Mines late-column triads from starred boxes, tracking recency, vertical support, VT lanes, vt_only_lane, funnel_precol1, ls2_lane, etc.
+
+Writes:
+
+<STATE>_hotzones_per_item.csv
+
+<STATE>_hotzones_top_candidates.csv
+
+<STATE>_hotzones_meta.json (features list and config hash).
+
+So the real problem is not lack of design—it’s choice and ordering: we need to pick one Hot Zones implementation and slot it after the JSON mirror.
+
+2. Phase A — Fix the table generation (A in your message)
+
+Goal: Every time you swap Excel or run a backtest, either the tables are rebuilt from that workbook, or the system clearly tells you “these CSVs are stale.”
+
+A1. Don’t change the contracts (just lock them)
+
+Confirm with Codex (no code change, just mindset) that:
+
+Combined/Midday/Evening tables live under data/outputs/tables/<STATE>/.
+
+Combined is the baseline; Midday/Evening are additive, never replacements.
+
+All analyzers read via utils.path_handler.get_state_tables_dir(state).
+
+What to tell Codex:
+“Do not move any table paths. All internal tools must continue reading tables from data/outputs/tables/<STATE>/… using utils.path_handler.”
+
+A2. Add a tables manifest (provenance marker)
+
+Implement a tiny JSON file alongside the tables, e.g. data/outputs/tables/tables_manifest.json, containing for each state:
+
+workbook_path (or name like Pick3StatsC4_2025-06-24.xlsm)
+
+workbook_mtime
+
+pipeline_run_timestamp
+
+Optional: a small hash (e.g., hash of the first/last N rows) per state.
+
+What to tell Codex:
+“Inside src/core/pipeline_runner.py, after tables are written, update a tables_manifest.json under data/outputs/tables/ with workbook filename, mtime, run timestamp, and a simple per-state checksum. Keep it small and human-readable.”
+
+A3. Add a simple “needs rebuild” guard
+
+In pipeline_runner (or a tiny helper module), add:
+
+def get_workbook_fingerprint(path) -> dict: (filename + mtime).
+
+def needs_table_rebuild(excel_path, manifest) -> bool: compare fingerprint in manifest vs current. If manifest missing or mismatched → must rebuild.
+
+Then:
+
+Add run_tables_with_guard(excel_path) that:
+
+Loads manifest (if any).
+
+If needs_table_rebuild → runs run_pipeline_from_original_path(excel_path) and rewrites manifest.
+
+Else prints “tables up-to-date” and returns without touching CSVs.
+
+This implements exactly what TABLE_RESEARCH describes: only skip work when input hasn’t changed, never when a new workbook is loaded.
+
+A4. Purge old tables before a rebuild (minimal versioning)
+
+Instead of a big runs/ directory, do the small version the docs suggest:
+
+Before writing new CSVs for a state, delete old *_Combined.csv / *_combined.csv (and R2-only if you want it clean).
+
+Use the same pattern as the draw purge test you already have: it removes old draw CSVs before regeneration; we’re just copying that idea for tables.
+
+What to tell Codex:
+“Before run_pipeline_from_original_path writes tables for a state, remove any existing <STATE>_*Combined*.csv in get_state_tables_dir(state). Don’t touch unrelated files. Mirror the pattern used in the draws purge test.”
+
+A5. Wire it into Control Center and preflight
+
+In the Control Center “Tables Pipeline (optional)” expander, replace any direct pipeline call with run_tables_with_guard(get_excel_path()).
+
+In .codex/preflight.ps1, after listing tables, print the manifest line for the selected state (filename + run timestamp) so you can visually confirm you’re on the expected workbook before analyzing.
+
+This makes your “swap workbook → regenerate tables → analyze” loop deterministic.
+
+A6. Backtesting checklist (doc, not code)
+
+TABLE_INSIGHTS literally asks for a single “Backtesting Checklist” so every Codex session stops re-negotiating the process.
+
+Have Codex create docs/AAT9_KIT/AAT9_Backtesting_Checklist.md with:
+
+For each (workbook, results date) pair:
+
+select_pick3_history.py --file Pick3StatsC4_YYYY-MM-DD.xlsm
+
+run_tables_with_guard(get_excel_path())
+
+Run Stable / Digit / V-TRAC / Aux for that date with a chosen bundle stamp.
+
+Build sharepacks / winners map.
+
+Log workbook + results pair.
+
+This doesn’t change behavior; it just keeps humans and AIs aligned.
+
+3. Phase B — Build the JSON mirror properly (B in your message)
+
+Goal: After A is solid, every table run can also produce a JSON view of the three sections that Hot Zones and future tools can read without re-parsing CSVs.
+
+B1. Implement build_json_tables_from_csv(...)
+
+Use the structure described in TABLE_RESEARCH and JSON_HOTZONES:
+
+Function sketch (for Codex):
+
+Inputs: state: str, tables_dir: Path, out_dir: Path.
+
+Read these CSVs (dtype=str, fillna=""):
+
+Midday_Combined.csv
+
+Evening_Combined.csv
+
+Combined_Combined.csv
+
+For each section:
+
+Group by (Set, Draw).
+
+Build a nested dict:
+
+draw_data: from the DRAW_DATA rows, columns 7→1 as a list.
+
+pattern_variations: for R2/R4/R6/R8, each a list of 7 strings (columns 7→1).
+
+metadata.is_hot_zone, metadata.hot_zone_count:
+
+Simple version: is_hot_zone = any('*' in cell for all four R-rows in that Draw).
+
+hot_zone_count = total '*' in those four R-rows. (Hot Zones scorer will refine this later.)
+
+Wrap everything as:
+
+{
+  "state_name": "<STATE>",
+  "sections": { "Midday": {...}, "Evening": {...}, "Combined": {...} }
+}
+
+
+Write one file, e.g. data/outputs/json_tables/<STATE>_tables.json.
+
+B2. Call it from the pipeline
+
+Once the CSV tables and manifest are written and validated, add:
+
+build_json_tables_from_csv(state, get_state_tables_dir(state), get_json_tables_dir())
+
+
+for each state. JSON_HOTZONES explicitly says to call this after the manifest + schema checks.
+
+B3. Add a small CLI for ad-hoc runs
+
+A simple script like:
+
+python scripts/tools/build_json_tables.py \
+  --state OntarioCanada4 \
+  --tables-root data/outputs/tables \
+  --out-root data/outputs/json_tables
+
+
+just wraps build_json_tables_from_csv. That way you can regenerate JSON for a single state without re-running the whole pipeline.
+
+B4. Minimal validation
+
+Implement the tests JSON_HOTZONES proposes:
+
+For one known state/date:
+
+Midday.json, Evening.json, Combined.json (or the single <STATE>_tables.json with 3 sections) exist.
+
+For Set1.Draw1:
+
+draw_data length is 7 (Draw1→Draw7).
+
+pattern_variations has keys R2/R4/R6/R8; each list length is 7.
+
+metadata.is_hot_zone and hot_zone_count match what you see by counting * in the CSV.
+
+4. Phase C — Clean up the Hot Zones design (C in your message)
+
+Goal: Pick one design, wire it to the new JSON, and stop juggling multiple “Part 2” versions.
+
+C1. Choose the canonical implementation
+
+Use the Hot Zones engine already captured in HOT_ZONES (the one that:
+
+Uses HotZonesEngine with HotZoneWeights, EngineSettings.
+
+Extracts triads from starred boxes, with vt_only_lane, funnel_precol1, ls2_lane features.
+
+Writes <STATE>_hotzones_per_item.csv, <STATE>_hotzones_top_candidates.csv, <STATE>_hotzones_meta.json.
+
+Mark older ad-hoc “Part 2” drafts as archived in docs and ignore them going forward.
+
+C2. Decide on package + paths
+
+Follow the same pattern all your analyzer docs use:
+
+Code lives under something like:
+
+src/alpha_analytical/hot_zones/ (or hotzones/ if you prefer a standalone package).
+
+Outputs live under:
+
+data/outputs/analysis/hot_zones/<STATE>/ (per brain-bundle conventions).
+
+C3. Wire JSON input → Hot Zones engine
+
+Two options (pick one and keep it consistent):
+
+Direct JSON env (Part 1 + Part 2):
+
+Use the Part-1 loader (load_table_env_from_json, HotZoneScanner) plus the Part-2 engine.
+
+Input: data/outputs/json_tables/<STATE>_tables.json (from Phase B).
+
+Simpler Part-2 only (if you want less code):
+
+Let HotZonesEngine consume the JSON directly (it already expects the section→set→draw structure).
+
+Either way, the contract is: consume the JSON mirror from phase B; do not touch the CSVs directly.
+
+C4. CLI + run pattern
+
+Standardize one main CLI entry point, e.g.:
+
+python -m alpha_analytical.hot_zones.cli \
+  scan-json \
+  --json data/outputs/json_tables/OntarioCanada4_tables.json \
+  --out data/outputs/analysis/hot_zones/OntarioCanada4
+
+
+or, if you go with the Part-2 standalone script from HOT_ZONES:
+
+python hotzones_part2.py \
+  --in data/outputs/json_tables/OntarioCanada4_tables.json \
+  --out data/outputs/analysis/hot_zones
+
+
+This should generate:
+
+data/outputs/analysis/hot_zones/OntarioCanada4/OntarioCanada4_hotzones_per_item.csv
+
+..._top_candidates.csv
+
+..._meta.json
+
+C5. Keep winners / combination logic as “later”
+
+Your other Hot Zones docs talk about Part 7 (combination & wagering engine) that would build literal playsets + ROI envelopes from the Hot Zones output. That can wait until:
+
+Tables are stable (Phase A),
+
+JSON mirror exists (Phase B),
+
+Hot Zones brain-bundle is produced (Phase C1–C4).
+
+For now, just make sure the brain bundle (per_item/top/meta) is correct and lives in data/outputs/analysis/hot_zones/<STATE>/ so the future Aggregator can join it with DR/Stable/V-TRAC.
+
+5. What to actually send to Codex next (practical script)
+
+Since Codex is sitting at the end of TABLE_INSIGHTS, here’s a paste-ready instruction you can give it for the next chunk of work (Phase A only):
+
+Message to Codex (suggested):
+“Using TABLE_INSIGHTS.txt, TABLE_RESEARCH.txt, AAT9_Live_Wiring_and_Data_Paths.md, and the existing pipeline code (utils.path_handler, src/core/pipeline_runner.py), please implement the following with minimal diff:
+
+Keep table paths unchanged: all tools must continue using data/outputs/tables/<STATE>/ via utils.path_handler.get_state_tables_dir(state). Do not move or rename these directories.
+
+Add a small provenance manifest under data/outputs/tables/ (e.g. tables_manifest.json). After run_pipeline_from_original_path() finishes, update this file with:
+
+the active workbook filename and mtime,
+
+the pipeline run timestamp,
+
+an entry per state with a small checksum for that state’s tables.
+
+Add a helper needs_table_rebuild(excel_path, manifest) that compares the manifest fingerprint to the current workbook. If manifest is missing or mismatched, we must rebuild tables; otherwise we can skip.
+
+Add a wrapper run_tables_with_guard(excel_path) that:
+
+loads the manifest (if any),
+
+if needs_table_rebuild is true, deletes existing <STATE>_*Combined*.csv files in get_state_tables_dir(state), then calls run_pipeline_from_original_path(excel_path) and rewrites the manifest,
+
+else prints that tables are up-to-date and returns.
+
+Update the Control Center ‘Tables Pipeline (optional)’ expander to call run_tables_with_guard(get_excel_path()) instead of calling the pipeline directly.
+
+Do not change any analysis code (Stable, Digit Reduction, V-TRAC); they should continue to read tables exactly as before.
+Please keep the manifest JSON human-readable and add small comments where helpful. After coding, run python -m py_compile on the touched files and briefly describe where the new helper lives and how to call it from a CLI for backtesting.”
+
+Once Codex finishes that and you’re happy, we can craft a similar “next message” for Phase B (JSON) and Phase C (Hot Zones) so you’re moving in a straight line instead of circles.
+
+If you’d like, next step I can do is: write the Phase B message for Codex in the same style, focused purely on build_json_tables_from_csv() + wiring it into the pipeline.
+
+
+________________________________________
+
+I’ll answer as a world-famous analytics-pipeline architect in table/JSON tooling, winner of the ACM Software System Award.
+TL;DR:
+Below is a paste-ready Phase B message for Codex that:
+
+
+Adds a JSON-mirror builder that reads Midday_Combined.csv, Evening_Combined.csv, Combined_Combined.csv.
+
+
+Writes Midday.json, Evening.json, Combined.json and an AllVariants.json “big 3-variant” file under data/outputs/json_tables/<STATE>/<RUN_ID>/.
+
+
+Wires this step into the existing tables pipeline, after manifest/schema checks, plus a tiny CLI and basic sanity tests.
+
+
+You can give this to Codex after Phase A (manifest + freshness guard) is in place.
+
+1. Quick context check (you don’t need to send this to Codex)
+From the docs you gave:
+
+
+Tables live here, with these filenames:
+
+
+data/outputs/tables/<STATE>/Midday_Combined.csv
+
+
+data/outputs/tables/<STATE>/Evening_Combined.csv
+
+
+data/outputs/tables/<STATE>/Combined_Combined.csv
+
+
+
+
+JSON_HOTZONES says for every state/date run we want:
+
+
+data/outputs/json_tables/<STATE>/<DATE or RUN_ID>/Midday.json
+
+
+…/Evening.json
+
+
+…/Combined.json
+
+
+…/AllVariants.json (one big JSON with all three).
+
+
+
+
+Schema per JSON_HOTZONES: each variant JSON is:
+
+
+state_name, variant, meta (run_id, workbook hash/fingerprint), then
+
+
+sets → draws → { draw_data, pattern_variations{R2,R4,R6,R8}, metadata{is_hot_zone, hot_zone_count} }.
+
+
+
+
+is_hot_zone and hot_zone_count are computed directly from the star/asterisk markers in the CSV R2/R4/R6/R8 rows.
+
+
+Phase B’s job is purely: build these JSONs from the existing CSVs and tables manifest, nothing else.
+
+2. Paste-ready Phase B message for Codex
+You can copy–paste everything in this grey region into Codex:
+
+“Using TABLE_RESEARCH.txt, JSON_HOTZONES.txt, TABLE_INSIGHTS.txt, and AAT9_Live_Wiring_and_Data_Paths.md as guidance, please implement Phase B: the JSON mirror of the three table variants.
+Do not change any existing CSV table contracts or analysis engines (Stable, Digit Reduction, V-TRAC, Aux). All analyzers must continue reading CSV tables via utils.path_handler. This phase only adds a JSON-mirror layer on top.
+Please implement the following:
+
+
+Create a dedicated JSON-mirror module
+
+
+
+
+Add a new module under src/alpha_analytical/tables/, for example:
+
+
+src/alpha_analytical/tables/json_mirror.py
+
+
+
+
+In that module, implement:
+
+
+a public function:
+build_json_tables_from_csv(
+state: str,
+tables_dir: str,
+json_root: str,
+run_id: str,
+workbook_meta: dict,
+) -> None
+where:
+
+
+state: the state key, e.g. "OntarioCanada4".
+
+
+tables_dir: directory returned by utils.path_handler.get_state_tables_dir(state).
+
+
+json_root: root dir for JSON tables, e.g. data/outputs/json_tables.
+
+
+run_id: a unique identifier for this tables build (you can reuse the run_id or timestamp stored in the tables manifest from Phase A; if there is no dedicated run_id yet, derive one from the timestamp).
+
+
+workbook_meta: dictionary from the tables manifest for this state (workbook filename, mtime, sha256, etc.).
+
+
+
+
+Inside build_json_tables_from_csv, you should:
+
+
+Read these three CSVs (dtype=str, no type coercion):
+
+
+Midday:   tables_dir / "Midday_Combined.csv"
+
+
+Evening:  tables_dir / "Evening_Combined.csv"
+
+
+Combined: tables_dir / "Combined_Combined.csv"
+
+
+Use pandas.read_csv with keep_default_na=False and na_filter=False so we don’t get NaN; treat everything as strings.
+
+
+For each variant ("Midday", "Evening", "Combined"), construct an in-memory structure with this shape:
+{
+"state_name": state,
+"variant": "<VARIANT_NAME>",
+"meta": {
+"run_id": run_id,
+"workbook_filename": workbook_meta.get("workbook_filename", ""),
+"workbook_mtime": workbook_meta.get("workbook_mtime", ""),
+"workbook_sha256": workbook_meta.get("workbook_sha256", ""),
+"source_tables": [
+str(tables_dir / "Midday_Combined.csv"),
+str(tables_dir / "Evening_Combined.csv"),
+str(tables_dir / "Combined_Combined.csv"),
+]
+},
+"sets": {
+"Set1": {
+"draws": {
+"Draw1": {
+"draw_data": [... 7 columns Draw1→Draw7 ...],
+"pattern_variations": {
+"R2": [... 7 columns ...],
+"R4": [... 7 columns ...],
+"R6": [... 7 columns ...],
+"R8": [... 7 columns ...]
+},
+"metadata": {
+"is_hot_zone": <bool>,
+"hot_zone_count": <int>
+}
+},
+"Draw2": { ... }
+}
+},
+"Set2": { "draws": { ... } },
+"Set3": { "draws": { ... } }
+}
+}
+The exact mapping from CSV rows/columns to Set/Draw/R2/R4/R6/R8 should follow the existing string-table conventions:
+
+
+Use the same row labels / row-type flags that stable/digit reduction/V-TRAC currently rely on to locate:
+
+
+the draw_data row for SetN / DrawM, and
+
+
+the R2, R4, R6, R8 rows for that same SetN / DrawM.
+
+
+
+
+For each SetN, DrawM pair:
+
+
+draw_data must be a list of 7 strings (columns 7→1, i.e. Draw1→Draw7 order).
+
+
+pattern_variations["R2"]/["R4"]/["R6"]/["R8"] must each be a list of 7 strings.
+
+
+
+
+
+
+Compute metadata.is_hot_zone and metadata.hot_zone_count directly from the R-rows for that Set/Draw/variant:
+
+
+For that SetN/DrawM:
+
+
+Consider all 4 pattern rows (R2, R4, R6, R8) in that variant’s CSV.
+
+
+is_hot_zone = True if at least one cell in these rows contains an asterisk/star marker (e.g., a value containing "" or ending with "").
+
+
+hot_zone_count = the total number of cells among those 4 rows that contain a star marker.
+
+
+
+
+This must faithfully reflect the star markers in the CSV; do not apply any additional scoring logic here. The Hot Zones engine will later interpret these flags.
+
+
+
+
+
+
+
+
+Write per-variant JSON files
+
+
+
+
+Under the JSON root, create this directory layout:
+
+
+json_root / state / run_id /
+
+
+
+
+Write three files, one per variant:
+
+
+Midday.json
+
+
+Evening.json
+
+
+Combined.json
+
+
+
+
+Each file should contain the exact variant-specific JSON structure described above (single variant per file, with "variant": "Midday" etc).
+
+
+Use UTF-8 encoding and indent the JSON (indent=2) for readability.
+
+
+
+
+Write the “all-variants” big JSON
+
+
+
+
+In the same directory (json_root / state / run_id /), also write:
+
+
+AllVariants.json
+
+
+
+
+Its structure should be:
+{
+"state_name": state,
+"meta": {
+"run_id": run_id,
+"workbook_filename": ...,
+"workbook_mtime": ...,
+"workbook_sha256": ...,
+"source_tables": [... three CSV paths ...]
+},
+"variants": {
+"Midday":   <the exact object you wrote into Midday.json, minus top-level state_name/meta if you prefer>,
+"Evening":  <same>,
+"Combined": <same>
+}
+}
+
+
+It’s acceptable either to:
+
+
+Build this directly from the in-memory structures you used for Midday/Evening/Combined, or
+
+
+Re-load the three variant JSON files you just wrote and assemble them into one AllVariants.json.
+
+
+
+
+The important part is: AllVariants.json gives the Hot Zones tool a single “three-variant environment” it can load in one call, matching JSON_HOTZONES design.
+
+
+
+
+Integrate build_json_tables_from_csv into the pipeline runner
+
+
+
+
+In src/core/pipeline_runner.py (or whichever module is the single source of truth for table generation):
+
+
+After CSV/HTML tables are successfully written and after any manifest/schema checks from Phase A succeed, call:
+
+
+from alpha_analytical.tables.json_mirror import build_json_tables_from_csv
+
+
+For each state being processed, do:
+build_json_tables_from_csv(
+state=state_name,
+tables_dir=str(utils.path_handler.get_state_tables_dir(state_name)),
+json_root=str(utils.path_handler.get_json_tables_root()),
+run_id=current_run_id_or_timestamp,
+workbook_meta=manifest_entry_for_this_state,
+)
+
+
+
+
+utils.path_handler.get_json_tables_root() should return data/outputs/json_tables by default. If it doesn’t exist yet, create a new helper that returns that path and ensure the directory exists before writing.
+
+
+
+
+The run_id parameter should be the same identifier you store in the tables manifest from Phase A. If the manifest only stores a timestamp, you can treat that timestamp string as run_id.
+
+
+
+
+Add a small CLI wrapper for ad-hoc JSON builds
+
+
+
+
+Under scripts/tools/, add a small script (e.g. build_json_tables.py) that:
+
+
+Accepts:
+
+
+--state <STATE>
+
+
+--tables-root (defaults to data/outputs/tables)
+
+
+--json-root (defaults to data/outputs/json_tables)
+
+
+--run-id (optional; if omitted, derive from current timestamp)
+
+
+
+
+Locates tables_dir via utils.path_handler.get_state_tables_dir(state).
+
+
+Loads the tables manifest (if present) to get workbook_meta for that state; if not present, use empty dict.
+
+
+Calls build_json_tables_from_csv with appropriate arguments.
+
+
+
+
+This is for maintenance/backfills; main pipeline integration is still controlled by pipeline_runner.
+
+
+
+
+Basic tests / sanity checks
+
+
+
+
+Add a lightweight test (or dev helper) that:
+
+
+For a known state (you can use an existing test state):
+
+
+Ensures that after running the tables pipeline and JSON mirror:
+
+
+data/outputs/json_tables/<STATE>/<RUN_ID>/Midday.json exists.
+
+
+Evening.json exists.
+
+
+Combined.json exists.
+
+
+AllVariants.json exists.
+
+
+
+
+Loads Midday.json and asserts:
+
+
+"state_name" == state.
+
+
+"variant" == "Midday".
+
+
+There is a "sets" mapping with keys "Set1", "Set2", "Set3".
+
+
+For "Set1" / "Draw1":
+
+
+draw_data is a list with length 7.
+
+
+pattern_variations has keys "R2", "R4", "R6", "R8".
+
+
+Each of those lists has length 7.
+
+
+metadata has is_hot_zone (bool) and hot_zone_count (int).
+
+
+
+
+Optionally, pick one Set/Draw where you know from the CSV that certain cells have "*" and verify that is_hot_zone is True and hot_zone_count matches the number of starred cells in the corresponding R2/R4/R6/R8 rows.
+
+
+
+
+
+
+
+
+You don’t need a full pytest suite; a small, directly runnable test or dev script that asserts these properties is enough for now.
+
+
+
+
+Non-goals / things not to change
+
+
+
+
+Do not change:
+
+
+utils.path_handler.get_state_tables_dir behavior.
+
+
+The filenames or structure of Midday_Combined.csv, Evening_Combined.csv, Combined_Combined.csv.
+
+
+Any Stable Pattern, Digit Reduction, V-TRAC, or Aux code paths that currently consume CSVs.
+
+
+
+
+The JSON mirror is strictly additive and will be consumed later by the Hot Zones module and Aggregator.
+
+
+After implementing this, please:
+
+
+Run python -m py_compile on the new/modified modules to catch syntax errors.
+
+
+Provide a short summary of:
+
+
+The new functions and their locations.
+
+
+The exact directory layout under data/outputs/json_tables/.
+
+
+How to call the CLI script to regenerate JSON for a single state.
+
+
+
+
+”
+
+3. Next step after this
+Once Codex completes Phase B using the above:
+
+
+We’ll do Phase C instructions: plug the Hot Zones Part 1–5 engine into these JSON mirrors (most likely reading AllVariants.json), and ensure it writes its brain bundle under data/outputs/analysis/hot_zones/<STATE>/ in the same “per_item / top / meta” pattern as DR/Stable/V-TRAC.
+
+
+If you want, after Codex finishes Phase B you can paste me its summary, and I’ll help you write the Phase C message in the same style, so you’re walking Codex straight down the path instead of looping.
