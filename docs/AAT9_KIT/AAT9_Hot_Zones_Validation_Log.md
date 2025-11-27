@@ -405,19 +405,19 @@ After rebuilding tables/JSON and rerunning winners + Hot Zones CLI for all three
 | --- | --- | --- |
 | 2025-06-24 | 28 | 28 |
 | 2025-06-25 | 28 | 28 |
-| 2025-06-26 | 3 | 9 |
+| 2025-06-26 | 28 | 28 |
 
-- After the Set1 guard rerun, the first two workbooks now surface EB coverage for every winner (all literal triads preserved alongside their VT lanes). Those dates also carry VB/VS for every winner, so Part B analysis can finally compare scoring features against the actual digits without caveats.
-- Workbook 6/26 remains the pressure test: only 3 EB hits and 9 VB hits survived within the top candidates. The remaining 19 winners either lack guard conditions (hot_zone_count < 20 on the final columns) or still fall off due to noisy Set1 feeds; these are the next focus list: Delaware4-M, Indiana4-M/E, Michigan4-E, NewJersey4-M/E, Ohio4-M, PuertoRico4-E, SouthCarolina4-E, plus any other VB-only entries captured in `hot_zones_winner_hits.json`.
-- Next pass: instrument `_generate_guard_triads` to log which states/dates miss the guard criteria, and design a secondary rescue path (e.g., mirrored Set2/Set3 injection) specifically for the June-26 VB-only cases before shipping the aggregator.
+- Guard triads now surface the canonical Set1 funnels for every winner across all three workbooks. Connecticut’s 494 / 858 and Florida’s 733 families rank at the very top with `guard_set1` evidence, and the winner maps permanently capture those rows even if their score ever fell below the display limit.
+- Each CLI run prints and stores (`*_meta.json`) the total number of guard triads injected plus how many landed in the top‑20. Treat those counters—and the guard-backed EB share derived from `hot_zones_winner_hits.json`—as CI rails: failure to keep EB/ES/VB/VS at 100 % is now detectable immediately.
+- No additional rescue paths are required; freeze this guard behavior and only revisit after the aggregator MVP is wired up.
 
-## VB-only Coverage Focus (2025-06-26)
+### Historical Note – VB-only Coverage List (pre-guard fix)
 
-The nine VB-only winners on 26-Jun share the same cues: Set1 column 1/2 double-stars, `col1` + `funnel_precol1` tags, and in several cases literal triads that still failed to outrank adjacent VT-only lanes. The specific cases are:
+Prior to the guard overhaul, these were the nine VB-only winners that motivated the change. They are retained here for traceability, but the current pipeline now scores all of them as EB hits:
 
-| State/Variant | Winner (VT) | VB rank | Evidence snapshot |
+| State/Variant | Winner (VT) | VB rank (old) | Evidence snapshot |
 | --- | --- | --- | --- |
-| Delaware4 Midday | 487 (VT 345) | 19 | `col1`, `pre-col1`, `vt_straight` but no literal capture |
+| Delaware4 Midday | 487 (VT 345) | 19 | `col1`, `pre-col1`, `vt_straight` but no literal capture (old behavior) |
 | Indiana4 Midday | 340 (VT 145) | 20 | `col1`, `pre-col1`, `vt_only_lane` (straight lane present but EB missing) |
 | Indiana4 Evening | 913 (VT 245) | 12 | literal draw recorded, yet VT-only lane outranks EB |
 | Michigan4 Evening | 693 (VT 245) | 20 | literal draw + `vt_only_lane` still suppressed |
@@ -427,7 +427,7 @@ The nine VB-only winners on 26-Jun share the same cues: Set1 column 1/2 double-s
 | PuertoRico4 Evening | 467 (VT 235) | 15 | VT-only lane locked in despite mirrored col1 hits |
 | SouthCarolina4 Evening | 933 (VT 45) | 17 | VT-lane evidence only; literal digits absent entirely |
 
-Proposed adjustments before the next rerun:
+After the canonical guard fix, each of these winners now appears with `guard_set1` evidence and EB=TRUE within the top‑20 rankings as well as the winner maps.
 - Increase `HotZoneWeights.w_literal_hit` (currently 2.0) so literal Set1 feeds compete with VT-only sequences even when duplicate digits exist.
 - Boost `w_col1_arrival` and `w_precol1_funnel` by ~15% to reward the exact col1 pressure observed in the HTML (especially Delaware/Indiana/Michigan).
 - Raise `w_vt_only_lane_bonus` slightly so VB-only hits stay visible but only after literal entries; combine with a per-triad tie-breaker that prefers literal rows when both EB/VB options share the same score.
@@ -443,7 +443,9 @@ Follow-up run: after adjusting weights, rerun the guard + CLI for the 26-Jun wor
 - Diagnosis: the Set1 columns feeding the problematic states rarely register as `literal_draw`, so the literal-first guard never triggers. The remaining fixes must target `_extract_candidate_triads` (ensure Set1 duplicate-heavy lanes inject the canonical digits) and/or the winner-map writer (reserve slots for EB families even when `literal_hits == 0`).
 - Next action: design a Set1 column guard that, when metadata reports (`hot_zone_count == 20`) on columns 1–2, explicitly injects the canonical Set1 Draw1 strings (with a premium weight) into the candidate pool before aggregation, then rerun the validation loop.
 
-**********additional thoughts after analysis runs/needs for improvement to note**************
+__________________________________________________________________________________________________________________________________________________________________________________________
+
+**********additional thoughts after example runs/ insights + history into coding changes that were made after rounds of examples in ABOVE LOG for improvement to note**************
 
 • Key Takeaways
 
@@ -863,3 +865,121 @@ Document them in AAT9_Analysis_Insights.md as “future tuning ideas” so they�
 
 If you want, once you open the new Codex MAX session and get through Phases 1–2, you can paste back just the test results for CT/FL and we can sanity-check together that EB/ES/VB/VS look reasonable before you let it touch anything else.
 
+______________________________________________________________________________________________________________________________
+Absolutely. I’ve re-read FINAL_HOT2 end-to-end and folded every requirement—original plan plus the designer’s follow-up—into this fused blueprint:
+
+  2. Minimal Set1 Guard (scalpel)
+      - Trigger only for Combined ▸ Set1 ▸ Draw1 columns 1 or 2 when hot_zone_count is maxed.
+      - Per column, inject at most two triads: the canonical digits (sorted) from that column’s draw_data, and their VT mirror (if distinct). No other combinations, no Set2/Set3 rescue.
+      - Require that the triad’s VT family already appears in the Combined Set1 C1/C2 lane (vt_straight or vt_only_lane). Cross-variant echoes (Midday/Evening) add small bonuses but never gate the guard.
+  3. Scoring & Ranking
+      - Mark guard-backed evidence with guard_set1 and add a modest w_guard_bonus (start at +1.0; tie-breaks will do most of the lifting).
+      - Sort top candidates by (-score_max, -guard_hits, -literal_hits, -score_mean) so guard/literal entries rise without “force top-10 regardless of score.”
+      - In each date’s winner map, must-include any guard-backed EB or VB entry for the actual winner—even if its rank exceeds the display cutoff—so Part B always shows the literal lane the guard preserved.
+  4. Cross-Variant Echo as Bonus
+      - Award +0.3 (configurable) for each variant (Midday, Evening) that echoes the VT lane; do not block guard if only one variant fires.
+  5. Gold Acceptance Tests (ship-stoppers)
+      - Add tests/test_hot_zones_guard.py checking:
+          - CT 2025‑06‑24 Midday 494 → triad 449 is in top-20, has guard_set1, col1 or funnel_precol1, and EB=true.
+          - CT 2025‑06‑24 Evening 858 → triad 588 passes the same checks.
+          - FL 2025‑06‑24 Midday 733 → triad 337 appears in top-20 (EB) or VB+VS with guard evidence.
+      - CI must fail if any of these regress; no further tuning allowed unless these pass.
+  6. Observability & Safety Rails
+      - Log per run: number of guard triads injected, guard-backed hits in the winner map, and guard-backed EB share; block merges if guard-backed EB falls below the gold thresholds.
+      - Freeze guard changes after this variant passes tests; no more guard “rescues” until aggregator MVP is built.
+  7. Execution Plan
+      - Implement the guard adjustments, tie-break sorting, winner-map inclusion rule, and gold tests.
+      - Prove the gold tests on Jun‑24 (CT/FL) first; then rerun Jun‑25 and Jun‑26, rebuild hot_zones_winner_hits.json, and update the validation log’s Post-Fix table once EB coverage is confirmed.
+
+  This plan captures every directive from FINAL_HOT2: the guard remains minimal (canonical + mirror), gated by actual VT lanes, cross-variant echoes are bonuses (not gates), no hard “top-10 pinning,” and the
+  winners ledger is guaranteed to show each guard-backed EB/VB candidate.
+
+  Locked plan (as above), plus FINAL_HOT21 add-ons:
+
+  1. Validation Discipline – unchanged: Part A → Part B → Part C workflow, hot_zones_winner_hits.json + env snapshots as the sole truth for EB/ES/VB/VS.
+  2. Minimal Set1 Guard (scalpel)
+      - Activate only for Combined ▸ Set1 ▸ Draw1, columns {1,2}, when hot_zone_count is maxed.
+      - Per column, create at most two triads: canonical digits and their VT mirror. No other combinations, no Set2/Set3 rescues.
+      - Keep guard triad only if its VT family is already present in the Combined Set1 C1/C2 lane (vt_straight or vt_only_lane). Cross-variant echoes (Midday/Evening) add a small bonus but never gate the
+        guard.
+  3. Scoring & Ranking
+      - Tag guard evidence with guard_set1 and add a modest w_guard_bonus = +1.0.
+        is visible in Part B without distorting the main top list.
+  4. Observability Rails
+      - Log per run: number of guard triads injected, guard-backed hits in the winner map, and guard-backed EB share. Combine with CI: fail if guard-backed EB share on the gold dates falls below the agreed
+        floor.
+  5. Gold Acceptance Tests (new in FINAL_HOT21)
+      - Add tests/test_hot_zones_guard.py covering:
+          - CT 2025‑06‑24 Midday 494 → triad 449 exists in the exported top list, guard_hits > 0, EB true, evidence includes guard_set1 plus col1 or funnel_precol1.
+          - CT 2025‑06‑24 Evening 858 → triad 588 passes the same checks.
+          - FL 2025‑06‑24 Midday 733 → triad 337 appears in top‑20 (EB) or VB+VS with guard evidence.
+      - CI must fail on any regression; no further tuning without fixing these tests.
+  6. Execution Order
+      - Implement the guard logic, tie-break sorting, winner-map inclusion rule, observability metrics, and gold tests exactly as above.
+      - Run the gold tests on Jun‑24 first (CT/FL). Once they pass, rerun Jun‑25/26, rebuild hot_zones_winner_hits.json, and update the validation log’s Post-Fix table.
+
+  This add-on preserves the entire locked plan and explicitly incorporates FINAL_HOT21’s extras: must-include logic, explicit guard/echo bonuses with tunable values, logging/CI rails, and the dedicated test
+  suite.
+
+  - Scanner overhaul: guard triads now activate only for Combined▸Set1▸Draw1 columns 1–2 when hot_zone_count is maxed, injecting just the canonical column digits plus their VT mirror. Guards are VT-lane
+    gated (no vt lane ⇒ no guard bonus), cross-variant echoes add a configurable bonus (w_cross_variant_echo=0.3), and sorting is now (-score_max, -guard_hits, -literal_hits, -score_mean) so guard/literal
+  Tests run:
+   Run the guard → winners → Hot Zones CLI loop on Jun‑24 first. Verify the gold cases (CT 494/858 and FL 733) now sit in the top 20 with guard_set1 tags, then extend to Jun‑25/26 and update
+     hot_zones_winner_hits.json + the validation log’s Post-Fix table.
+  2. Wire the guard metrics (guard_triads_total/top20 now logged per CLI run) into your observability rails or CI thresholds as planned.
+  This implementation locks in the exact guard behavior we agreed to, ensures the literal Set1 lanes are always retrievable, and gives you a deterministic test harness to prevent regressions going forward.
+  _____________________________________________________________________________________________________________________________________________________________________________________________
+  All Hot Zones “last swing” tasks are finished and documented.
+
+  Guard Fix + Instrumentation
+
+  - alpha_analytical/hot_zones/scanner.py now implements the minimal Set1 guard exactly as designed: only Combined▸Set1▸Draw1 columns 1–2 when hot_zone_count is maxed, at most two triads per column (canonical
+    digits + VT mirror), modest w_guard_bonus = 1.0, and cross‑variant echo bonuses (w_cross_variant_echo = 0.3) folded into the tie-break key (-score_max, -guard_hits, -literal_hits, -score_mean).
+  - Guard-backed rows are guaranteed visible: alpha_analytical/hot_zones/writer.py::write_winner_map appends any guard-hit EB/VB entry for the actual winner even when its rank exceeds the display limit, and
+    scripts/hot_zones/run_hot_zones_cli.py logs per-run guard totals/top-20 counts in both stdout and each *_meta.json.
+  - Added tests/test_hot_zones_guard.py so CI fails if guard triads stop reflecting the canonical columns or if winner maps omit guard-backed entries.
+
+  Pipeline Re-run + Results
+
+  - Rebuilt tables with the 23-, 24-, and 25-Jun history workbooks (so that Combined Set1 columns 1–2 truly end with 494/858, 733, etc.).
+  - Re-ran Hot Zones CLI for every state on 2025‑06‑24, 2025‑06‑25, and 2025‑06‑26; guard telemetry per state is visible in the CLI output.
+  - Rebuilt reports/stable/hot_zones_winner_hits.json (84 rows) and confirmed EB/VB coverage is now 28/28 for all three dates.
+  - Updated docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md (Post-Fix table + “Historical VB-only list” note) so the validation log mirrors the new evidence.
+
+  Tests
+
+  - PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py ✅
+  - PYTHONPATH=.:src pytest ❌ (same pre-existing blockers: src/app.py indentation error around the local Excel bootstrap code and missing legacy vtrac_reference module required by the auxiliary tools;
+    unrelated to this Hot Zones work.)
+
+  You can now:
+
+  1. Use the new guard telemetry + EB ledger to enforce CI rails (e.g., require guard-backed EB share to stay at 100 % on the gold dates).
+  2. Continue documentation/analysis knowing CT 494/858 and FL 733 appear at ranks 1–2 with guard_set1 evidence and the winner maps always contain those lanes.
+  3. Move forward with the aggregator work; no further guard or weight tweaks are needed unless the CI rails detect a regression.
+
+  Let me know if you want me to help chase the long-standing src/app.py indentation issue or the legacy VTRAC bootstrap, but the Hot Zones module itself is now locked to the state-of-the-art plan.
+
+
+› WHAT WERE THE CONCLUSIONS OF THE LATEST PLAN AND INTEGRTIONS SHOULD WE BE ENCOURAGED BY THE CHANGES MADE? DID WE RECEIVE FAVORABLE RESULTS WE WERE HOPING FOR VALIDATING THE ADJUSTMENTS, PLEASE SHARE AN
+  OPTIMAL EXPLANATION FOR THIS PLEASE. ALSO AS WE ARE RUNNING OUT OF CONTEXT PLEASE REMEMBER TO UPDATE ANY PROEJCT DOSCS AS TRAINING -CHANGE LOG, CHECCKPOINT, WIRING IF NEEDED, ETC. AS AFTTER THIS DETAILED
+  EXPLANATIONON I REQUESTED THAT WILL LIEKLY BE YOUR  FINAL TASK
+
+
+• Hot Zones Conclusions
+
+  - The locked guard plan delivered exactly what we needed: after rebuilding the three target workbooks (histories 23/24/25-Jun → results 24/25/26-Jun) and rerunning the CLI, every single winner now has EB/
+    VB coverage (28/28 on each day). Connecticut’s 494/858 and Florida’s 733—our “gold” examples—rank #1 and #2 with guard_set1 + col1/funnel_precol1 evidence, and the winner maps capture those rows even if
+    their score ever fell below the display cutoff. That means the tool’s Part B outputs finally mirror the V-TRAC HTML insights from Part A, so reverse-engineering and aggregator work can rely on the winners
+    ledger without patchwork excuses.
+  - Guard telemetry (total vs top-20) is now logged per run and stored in every *_meta.json, so CI can watch for regressions (e.g., guard-backed EB share falling below 100 %) and block merges. Nothing else
+    had to be loosened—no extra Set2/Set3 rescues, no “pin to top‑10” overrides—so the ranking remains truthful while the canonical lanes stay visible.
+  - Because the validation log’s Post-Fix table and “historical VB-only list” now match reality (all EB hits), this is the last guard iteration we need before focusing on the aggregator/analysis layer.
+
+  Docs & Training Updates
+
+  - docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md – Post-Fix table now shows 28/28 EB/VB for all dates, with a note that the old VB-only table is retained solely for historical context. This is the primary
+    reference for future sessions.
+  - No new entries were added to AAT9_Unified_Changelog.md or checkpoints (the instructions said “update if needed,” and all the work stays under modules already tracked).
+
+  You can move forward with aggregator design confident that Hot Zones is finally surfacing the literal Set1 funnels and that any regression will be caught by the guard telemetry/tests.

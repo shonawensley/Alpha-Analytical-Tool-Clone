@@ -133,7 +133,8 @@ class HotZoneWeights:
     w_ls2_lane: float = 0.7
     w_set1_bias: float = 1.25
     w_literal_hit: float = 4.0
-    w_guard_bonus: float = 3.0
+    w_guard_bonus: float = 1.0
+    w_cross_variant_echo: float = 0.3
 
 # --- utilities ---
 
@@ -232,33 +233,22 @@ def _generate_guard_triads(row_boxes: List[BoxData]) -> Set[str]:
     if not row_boxes:
         return set()
     sample = row_boxes[0]
-    if sample.ref.section != "Combined" or sample.ref.set_name != "Set1":
+    if sample.ref.section != "Combined" or sample.ref.set_name != "Set1" or sample.ref.draw_name != "Draw1":
         return set()
     if sample.ref.column_index not in (1, 2):
         return set()
-    if max((b.hot_zone_count for b in row_boxes), default=0) < 20:
+    if sample.hot_zone_count < 20:
         return set()
-    digits: List[str] = []
-    for b in row_boxes:
-        digits.extend(ch for ch in b.s_raw if ch.isdigit())
-    if len(digits) < 3:
+    column_value = sample.col_value or ""
+    digits = [ch for ch in column_value if ch.isdigit()]
+    if len(digits) != 3:
         return set()
-    guard: Set[str] = set()
-    from itertools import combinations, product
-    n = len(digits)
-    indices = range(n)
-    for idx_combo in combinations(indices, 3):
-        substitution_choices = []
-        for idx in idx_combo:
-            d = digits[idx]
-            mirrored = _mirror_digit(d)
-            if mirrored == d:
-                substitution_choices.append([d])
-            else:
-                substitution_choices.append([d, mirrored])
-        for picks in product(*substitution_choices):
-            guard.add("".join(sorted(picks)))
-    return guard
+    primary = "".join(sorted(digits))
+    mirrored = "".join(sorted(_mirror_digit(ch) for ch in digits))
+    triads: Set[str] = {primary}
+    if mirrored and mirrored != primary:
+        triads.add(mirrored)
+    return triads
 
 def mine_evidence(boxes: List[BoxData], cfg: HotScanConfig) -> Dict[str, List[Evidence]]:
     grid: Dict[Tuple[str, str, str, int], List[BoxData]] = defaultdict(list)
@@ -434,6 +424,14 @@ def aggregate(triad_to_evs: Dict[str, List[Evidence]], weights: HotZoneWeights) 
         set_span = len(sets)
         column_span = len(columns)
         scores = [row.score for row in triad_rows]
+        mid_echo = any(row.section == "Midday" and (row.has_vt_straight or row.vt_only_lane) for row in triad_rows)
+        eve_echo = any(row.section == "Evening" and (row.has_vt_straight or row.vt_only_lane) for row in triad_rows)
+        echo_bonus = weights.w_cross_variant_echo * (int(mid_echo) + int(eve_echo))
+        score_mean = round(sum(scores) / len(scores), 3) if scores else 0.0
+        score_max = round(max(scores), 3) if scores else 0.0
+        if echo_bonus:
+            score_mean = round(score_mean + echo_bonus, 3)
+            score_max = round(score_max + echo_bonus, 3)
         evidence_tags = ",".join(sorted({tag for row in triad_rows for tag in row.reasons.split("|") if tag}))
         tops.append(
             TopCandidateRow(
@@ -453,13 +451,13 @@ def aggregate(triad_to_evs: Dict[str, List[Evidence]], weights: HotZoneWeights) 
                 variant_span=variant_span,
                 set_span=set_span,
                 column_span=column_span,
-                score_mean=round(sum(scores) / len(scores), 3) if scores else 0.0,
-                score_max=round(max(scores), 3) if scores else 0.0,
+                score_mean=score_mean,
+                score_max=score_max,
                 evidence_tags=evidence_tags,
             )
         )
     per_items.sort(key=lambda r: (-r.score, -r.vertical_support, r.column_index))
-    tops.sort(key=lambda r: (-r.score_max, -r.literal_hits, -r.guard_hits, -r.score_mean))
+    tops.sort(key=lambda r: (-r.score_max, -r.guard_hits, -r.literal_hits, -r.score_mean))
     return per_items, tops
 
 class HotZoneScanner:

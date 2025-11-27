@@ -43,12 +43,16 @@ def main() -> None:
     scanner = HotZoneScanner(env, HotScanConfig(), HotZoneWeights())
     per_items, tops = scanner.scan()
 
+    guard_total = sum(1 for row in tops if row.guard_hits > 0)
+    guard_top = sum(1 for row in tops[:20] if row.guard_hits > 0)
     meta = {
         "state": state,
         "date": args.date,
         "json_source": str(json_path),
         "per_item_rows": len(per_items),
         "top_rows": len(tops),
+        "guard_triads_total": guard_total,
+        "guard_triads_top20": guard_top,
     }
     artifacts = write_hotzones_artifacts(state, out_dir, per_items, tops, meta)
     winner_map = write_winner_map(state, args.date, winners_dir, tops)
@@ -57,6 +61,7 @@ def main() -> None:
     print("Top candidates CSV:", artifacts.top_csv)
     print("Meta JSON:", artifacts.meta_json)
     print("Winner map:", winner_map)
+    print(f"Guard triads (total/top20): {guard_total}/{guard_top}")
 
 if __name__ == "__main__":
     main()

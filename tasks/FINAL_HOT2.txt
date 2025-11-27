@@ -1,0 +1,389 @@
+
+TL;DR: Codex’s “last‑swing” plan is 90% aligned with the design intent: narrow the Set1 guard to the canonical triad (+ VT‑mirror), keep validation disciplined (Part A→B→C), and re‑run with EB/ES/VB/VS accounting. Two tweaks make it safer and more effective: (1) don’t hard‑pin guard rows into top‑10; instead use deterministic tie‑breaks + must‑include in the winner map, and (2) treat cross‑variant echo (Midday/Evening) as a bonus, not a hard gate. Below is a precise, ready‑to‑paste blueprint (scoring rules + tests + a compact implementation snippet) that addresses the failure modes you observed (e.g., literal winners buried at rank ~40–50 after “guard flooding” and cross‑variant gating) while preserving your validation ground rules (EB/ES/VB/VS, env snapshots). (user)
+
+Assessment of Codex plan vs. your spec
+
+What Codex got right
+
+Discipline the workflow. Keep Part A (winners HTML/env) → Part B (Hot Zones outputs) → Part C (findings) strict, and rely on the machine‑readable ledger (hot_zones_winner_hits.json) for EB/ES/VB/VS tallies before any tuning. This is exactly how you’ve been operating. (user)
+
+Minimal Set1 guard. Guard only on Combined ▸ Set1 ▸ Draw1, columns 1–2, and only when hot_zone_count is maxed; inject just the canonical triad and its VT‑mirror, not bulk combos. That matches your “scalpel, not a net” requirement after the rank‑40/50 guard‑flooding regression. (user)
+
+Reserved visibility. Ensure guard‑backed literal triads are visible in outputs so EB/ES/VB/VS can be logged and audited (the core gap you saw when CT 494/858 and FL 733 didn’t surface). (user)
+
+Where I’d tune it (to avoid relapsing)
+
+Don’t force top‑10 unconditionally. If the guard misfires once, a “regardless of score” rule can distort rankings and confuse the aggregator. Prefer deterministic tie‑breaks + “must‑include” in the winner map while leaving top_lanes.csv primarily score‑sorted. (user)
+
+Don’t hard‑require Midday and Evening echo. Cross‑variant echo is a powerful bonus, but making it a hard gate drops legitimate cases where one variant is clean and the other is noisy. Use it to up‑weight; don’t block the guard. (user)
+
+Final blueprint (what to give Codex)
+1) Guard activation (strict, minimal)
+
+Activate only when all are true (as you specified):
+
+section == "Combined"; set == "Set1"; draw == "Draw1"; column in {1,2}; hot_zone_count at the “max stars” threshold. (user)
+
+Construct at most two triads per column:
+
+triad_main = canonical(sorted three digits from Set1/Draw1 column value)
+
+triad_mirror = canonical(mirror(d1), mirror(d2), mirror(d3)) using your VT mirror map (0↔5, 1↔6, 2↔7, 3↔8, 4↔9). (user)
+Keep both if distinct; otherwise just triad_main. No permutations, no full‑row expansions, no Set2/Set3 rescue here (you saw how guard‑pool explosion buried winners at ranks ~40–50). (user)
+
+2) Guard validity (evidence‑gated, not cross‑variant‑blocked)
+
+A guard triad is eligible only if:
+
+Its VT family is present in the Combined Set1 C1/C2 lanes (use your existing vt_straight/vt_only_lane checks). (user)
+
+Optional bonuses (not gates):
+
+Seen as a straight lane or pre‑straight in Combined (vt_straight tag). (user)
+
+Cross‑variant echo: at least one of Midday or Evening shows the same VT lane; if both show it, add an extra bonus. (user)
+
+3) Scoring, ranking, and inclusion rules
+
+Evidence scoring: if guard_injected, add w_guard_bonus and tag guard_set1. If col1 or funnel_precol1 present, apply the usual bonuses. (user)
+
+Sorting for top list (top_lanes.csv):
+
+key = (-score_max, -guard_hits, -literal_hits, -score_mean)
+
+
+This lifts guard‑backed and literal rows without overriding the scoring order outright. (user)
+
+Winner‑map inclusion rule (must‑include): For each winner, if any EB or VB candidate has guard_hits>0, include it in the per‑date winner_map even if its global rank > K. This preserves auditability (Part B) while leaving the general top list clean. (user)
+
+4) Gold acceptance tests (ship‑stoppers)
+
+Encode exactly these tests; CI must fail if any of them fail. (All data points are from your validation notes):
+
+CT — 2025‑06‑24
+
+Mid: 494 ⇒ triad 449 exists in top_lanes.csv, has guard_hits>0, EB true, rank ≤ 20, and tags include guard_set1 + (col1 or funnel_precol1). (user)
+
+Eve: 858 ⇒ triad 588 passes the same checks. (user)
+
+FL — 2025‑06‑24
+
+Mid: 733 ⇒ triad 337 appears with EB or VB+VS in top 20 and guard_set1 evidence. (user)
+
+5) Re‑run scope and freeze points
+
+Re‑run Jun‑24 first to prove the gold tests. Then Jun‑25/26 and refresh EB/ES/VB/VS in the validation log once. Avoid another guard/weights loop; lock when EB coverage recovers for the documented misses. (You previously saw EB drop to 2/28→4/28→1/28 after guard flooding; this blueprint prevents that.) (user)
+
+Compact reference implementation (drop‑in guard + ranking core)
+
+This snippet is self‑contained and shows the exact extraction, gating, scoring hooks, and tie‑break sort. Integrate where you build candidates and write winners.
+
+# hot_zones_guard.py
+from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Iterable
+
+VT_MIRROR = {"0":"5","1":"6","2":"7","3":"8","4":"9","5":"0","6":"1","7":"2","8":"3","9":"4"}
+
+def canonical_triad(s: str) -> str:
+    """Return canonical sorted triad string, e.g. '494' -> '449'."""
+    assert len(s) == 3 and s.isdigit()
+    return ''.join(sorted(s))
+
+def vt_mirror_triad(s: str) -> str:
+    """Mirror each digit via VT map then canonicalize."""
+    return canonical_triad(''.join(VT_MIRROR[d] for d in s))
+
+def guard_triads_from_set1_col(draw_data_value: str) -> List[str]:
+    """
+    Input: the literal 3-digit value observed in Combined ▸ Set1 ▸ Draw1 at col1/col2.
+    Output: [canonical, optional canonical(VT-mirror)] distinct triads.
+    """
+    base = canonical_triad(draw_data_value)
+    mirr = vt_mirror_triad(draw_data_value)
+    return [base] if mirr == base else [base, mirr]
+
+def vt_lane_present(vt_triad: str, lane_evidence: Dict[str, bool]) -> bool:
+    """
+    lane_evidence is precomputed from your analyzer (e.g., vt_straight, vt_only_lane).
+    This keeps guard tied to real VT presence in Combined Set1 C1/C2.
+    """
+    return bool(lane_evidence.get(vt_triad, False))
+
+@dataclass
+class EvidenceRow:
+    triad: str
+    vt_triad: str
+    score: float
+    reasons: List[str] = field(default_factory=list)
+    guard_injected: bool = False
+    literal_hit: bool = False  # true if the literal Set1 digits appear
+    col1: bool = False
+    funnel_precol1: bool = False
+
+@dataclass
+class TopAggregate:
+    triad: str
+    vt_triad: str
+    score_max: float
+    score_mean: float
+    guard_hits: int
+    literal_hits: int
+    tags: List[str]
+
+def aggregate_and_rank(rows: Iterable[EvidenceRow]) -> List[TopAggregate]:
+    """
+    Group by (triad, vt_triad), compute score_max/mean and guard/literal counts,
+    then apply deterministic tie-break sorting.
+    """
+    from collections import defaultdict
+    acc = defaultdict(list)
+    for r in rows:
+        acc[(r.triad, r.vt_triad)].append(r)
+
+    tops: List[TopAggregate] = []
+    for (tri, vt), grp in acc.items():
+        score_max = max(g.score for g in grp)
+        score_mean = sum(g.score for g in grp) / len(grp)
+        guard_hits = sum(1 for g in grp if g.guard_injected)
+        literal_hits = sum(1 for g in grp if g.literal_hit)
+        tags = sorted({t for g in grp for t in g.reasons})
+        tops.append(TopAggregate(tri, vt, score_max, score_mean, guard_hits, literal_hits, tags))
+
+    tops.sort(key=lambda t: (-t.score_max, -t.guard_hits, -t.literal_hits, -t.score_mean))
+    return tops
+
+def apply_guard_and_score(
+    combined_set1_cols: Dict[int, str],  # {1: '494', 2: '858'} for example
+    hot_zone_count: int,
+    max_star_threshold: int,
+    vt_lane_flags: Dict[str, bool],  # vt_triad -> bool (Combined Set1 C1/C2 presence)
+    base_rows: List[EvidenceRow],
+    w_guard_bonus: float = 1.5,
+) -> List[EvidenceRow]:
+    """
+    Build minimal guard triads from col1/col2 under strict activation, gate by VT lane presence,
+    add bonus + reason tags, and return augmented evidence rows (still score-driven).
+    """
+    rows = list(base_rows)
+    if hot_zone_count >= max_star_threshold:
+        for col_idx in (1, 2):
+            if col_idx not in combined_set1_cols:
+                continue
+            val = combined_set1_cols[col_idx]
+            if not (val and len(val) == 3 and val.isdigit()):
+                continue
+            for tri in guard_triads_from_set1_col(val):
+                vt = canonical_triad(''.join(VT_MIRROR[d] for d in tri))  # vt family key
+                if not vt_lane_present(vt, vt_lane_flags):
+                    continue  # respect VT-lane gating in Combined
+                # Guard evidence row with modest, deterministic bonus
+                rows.append(EvidenceRow(
+                    triad=tri,
+                    vt_triad=vt,
+                    score=w_guard_bonus,
+                    reasons=["guard_set1"] + (["col1"] if col_idx == 1 else ["funnel_precol1"]),
+                    guard_injected=True,
+                    literal_hit=True,  # literal Set1 digits by construction
+                    col1=(col_idx == 1),
+                    funnel_precol1=(col_idx == 2),
+                ))
+    return rows
+
+
+How to use it in your pipeline
+
+Build base_rows exactly as you do today from mined evidence.
+
+Call apply_guard_and_score(...) with combined_set1_cols={1: '494', 2:'858'}, your hot_zone_count, max_star_threshold=20 (per your logs), and vt_lane_flags derived from Combined C1/C2 analyzer tags. (user)
+
+Feed the returned rows into aggregate_and_rank(rows) to produce top_lanes.csv.
+
+When writing the winner map, if a candidate for that date’s winner has guard_hits>0 and EB or VB, must‑include it even if rank > K; this is the audit guarantee you need for Part B/Part C. (user)
+
+Minimal tests to drop into tests/test_hot_zones_guard.py
+
+These are logic‑level tests (no file I/O) that enforce your ship‑stoppers.
+
+# tests/test_hot_zones_guard.py
+from hot_zones_guard import apply_guard_and_score, aggregate_and_rank, EvidenceRow
+
+def test_ct_2025_06_24_midday_494_surfaces():
+    # Combined Set1 col1=494, col2=858; hot_zone_count maxed
+    combined_cols = {1: "494", 2: "858"}
+    vt_lane_flags = { "155": True, "14": True, "55": True }  # example VT lanes present
+    rows = apply_guard_and_score(
+        combined_set1_cols=combined_cols,
+        hot_zone_count=20,
+        max_star_threshold=20,
+        vt_lane_flags=vt_lane_flags,
+        base_rows=[],  # simulate worst-case: no prior rows
+        w_guard_bonus=1.5,
+    )
+    tops = aggregate_and_rank(rows)
+    triads = [t.triad for t in tops[:20]]
+    assert "449" in triads  # EB candidate for 494
+    t449 = next(t for t in tops if t.triad == "449")
+    assert t449.guard_hits > 0
+    assert ("guard_set1" in t449.tags) and (("col1" in t449.tags) or ("funnel_precol1" in t449.tags))
+
+def test_fl_2025_06_24_midday_733_surfaces():
+    combined_cols = {1: "733"}  # only one column needed for this check
+    vt_lane_flags = { "34": True }  # VT lane present for 733 family
+    rows = apply_guard_and_score(
+        combined_set1_cols=combined_cols,
+        hot_zone_count=20,
+        max_star_threshold=20,
+        vt_lane_flags=vt_lane_flags,
+        base_rows=[],
+        w_guard_bonus=1.5,
+    )
+    tops = aggregate_and_rank(rows)
+    triads = [t.triad for t in tops[:20]]
+    assert "337" in triads  # EB candidate for 733
+    t337 = next(t for t in tops if t.triad == "337")
+    assert t337.guard_hits > 0
+
+What I would add (beyond Codex)
+
+Observability knobs (lightweight): log per run: n_guard_triads, n_guard_hits, top‑20 share with guard support, and the number of must‑include winners injected into the winner map. This tells you, at a glance, if the guard started drifting noisy again. (user)
+
+Safety rails in CI: block merges if any gold tests fail or if the share of guard‑backed EB in the three gold dates drops below a threshold you set now. (user)
+
+No more guard variants until after aggregation MVP: your own logs show how quickly EB fell to 2/28 → 4/28 → 1/28 when the guard pool broadened; freeze this variant and move on once gold passes. (user)
+
+Why this is optimal for your system now
+
+It stops the oscillation that produced rank‑40/50 literal winners after the “mirrored rescue” expansion, because the guard injects only the canonical triad and its VT‑mirror and remains VT‑lane gated. (user)
+
+It preserves the audit trail you care about: EB/ES/VB/VS in the winners ledger plus visible, tagged candidates in top_lanes.csv—so Part A (HTML/env) and Part B (tool outputs) finally “say the same thing.” (user)
+
+It’s deterministic: simple bonus, explicit tie‑breaks, and a must‑include rule in the winner map. No “top‑10 regardless” hacks needed. (user)
+
+Sanity check — 2 quick actions you can take now
+
+Paste the blueprint (activation, triad construction, gating, ranking key, must‑include rule) into your new Codex session and require it to implement the tests above before touching weights. (user)
+
+Re‑run only Jun‑24 and confirm CT 494/858 and FL 733 now appear with guard_set1 in the top‑20 and in the winner map; then extend to Jun‑25/26 and snapshot EB/ES/VB/VS again. (user)
+
+Note: A few of your previously uploaded files appear to have expired in the tooling; I relied on the content you pasted inline. If you want me to line‑cite specific files/lines from the repo artifacts in this thread, please re‑upload those documents. (user)
+
+
+
+
+
+
+
+
+
+
+
+
+
+_____________________________________________________________________________________
+
+FOLLOW-UP********************
+
+
+
+
+
+
+
+
+
+
+
+
+
+I’ll answer as a world‑renowned applied analytics systems architect (INFORMS Franz Edelman Award, decision analytics).
+
+TL;DR: Your document captures ~80% of my recommendations. To make it fully optimal: (1) don’t “force top‑10 regardless of score”—use tie‑breaks + winner‑map reservation instead; (2) don’t require both Midday and Evening echoes—treat cross‑variant echo as a bonus, not a gate; (3) allow up to two guard triads per column (canonical + VT‑mirror), not “at most one”; (4) keep VT evidence required in Combined; use per‑variant echoes as weights. Below is a precise, Codex‑ready redline you can paste, plus acceptance tests to lock correctness.
+
+Quick assessment of your plan (line‑by‑line)
+Plan clause	Status	How to fix (exactly)
+Validation Ground Rules (Part A → Part B → Part C; keep hot_zones_winner_hits.json + env snapshots)	✅ Aligned	No change.
+Narrow guard scope to Combined ▸ Set1 ▸ Draw1, C1/C2, hot_zone_count == 20	✅ Aligned	No change.
+“Inject at most one triad per column”	⚠️ Tweak	Change to “inject up to two triads per column: canonical triad and its VT‑mirror (if different)”. Reason: duplicate‑heavy winners (e.g., 494→449) need both canonical and mirror.
+“Pin to the top‑10 regardless of score”	❌ Replace	Replace with “use guard‑aware sorting + winner‑map reservation”: never hard‑override rank; instead (a) sort with guard and literal tie‑breaks; (b) in the winner map, always include any EB/VB guard triad even if global rank >K.
+“Require guard triad to appear in straight/mirrored VT lanes for Combined and the active variant; otherwise drop it.”	⚠️ Tweak	Keep Combined VT lane as a hard requirement; treat Midday/Evening echo as a scoring bonus, not a gate.
+“Extend guard only when both Midday and Evening echo the lane.”	❌ Replace	Replace with “award cross‑variant echo bonuses when one or both variants echo; do not require both.”
+Rebuild & Revalidate; codify winners ledger as authoritative	✅ Aligned	No change.
+Codex‑ready “fusion plan” (paste this into the session)
+
+1) Validation discipline (unchanged)
+Follow guard → Set1/Draw1 check → analyzers → Part A (HTML/env) → Part B (winners ledger) → Part C (findings). Use reports/stable/hot_zones_winner_hits.json and env snapshots as the sole ground truth for EB/ES/VB/VS deltas.
+
+2) Minimal Set1 Guard (scalpel, not a net)
+
+Activate only if: section=="Combined", set=="Set1", draw=="Draw1", column_index ∈ {1,2}, and hot_zone_count ≥ 20.
+
+Derive triads per eligible column:
+
+triad_main = sorted(d1,d2,d3) from the actual Set1 C1/C2 draw_data digits.
+
+triad_mirror = sorted(mirror(d1),mirror(d2),mirror(d3)) (VT mirror map 0↔5,1↔6,2↔7,3↔8,4↔9).
+
+Guard set per column = {triad_main, triad_mirror (if different)}. No other triads, no Set2/Set3 rescues.
+
+VT evidence gate: Keep guard triads only if their VT family aligns with a Combined Set1 lane (your existing vt_straight/vt_only_lane checks).
+
+Cross‑variant echo (Mid/ Eve): bonus weights, not a hard requirement.
+
+Tag & score: Mark evidence rows for these triads with guard_set1=1 and add a modest w_guard_bonus in scoring (see weights below).
+
+3) Ranking & inclusion policy (no hard pins)
+
+Aggregate sorting:
+
+sort by: (-score_max, -guard_hits, -literal_hits, -score_mean)
+
+
+where
+guard_hits = count(evidence.guard_set1==1) and
+literal_hits = count(evidence.literal_draw==1).
+
+Winner‑map reservation: In each date/state winner view, always include any guard‑backed EB or VB entry for the actual winner even if its global rank > K. This preserves ranking fidelity and guarantees visibility for validation and the aggregator.
+
+4) Weights (safe defaults)
+
+w_guard_bonus = +1.0 (start small; guard bias via tie‑breaks does the heavy lifting).
+
+w_col1_arrival = +2.4, w_precol1_funnel = +2.1 (your prior good defaults).
+
+w_vt_only_lane_bonus = +0.8 (keeps VT‑only visible but behind literal/guard).
+
+Cross‑variant echo bonuses: +0.3 per variant that echoes the lane (Midday, Evening), applied additively.
+
+5) Gold acceptance tests (ship‑stoppers)
+
+Create tests/test_hot_zones_guard.py:
+
+CT 2025‑06‑24 Mid (494 → 449): triad 449 exists in *_top_lanes.csv, guard_hits>0, EB=true, rank ≤20; evidence includes guard_set1 and col1 or funnel_precol1.
+
+CT 2025‑06‑24 Eve (858 → 588): same as above for triad 588.
+
+FL 2025‑06‑24 Mid (733 → 337): triad 337 appears with EB in top‑20 or VB+VS in top‑20 with guard_set1.
+
+Any failure blocks further tuning. Only after these pass: rerun June‑24/25/26, update the EB/ES/VB/VS table in the validation log, and move on.
+
+Why this fully addresses my original guidance
+
+Guard minimalism: only canonical + mirror triads; no candidate floods.
+
+Evidence‑first: Combined VT lane is required; cross‑variant echoes strengthen but don’t gate.
+
+Ranking integrity: we don’t “force top‑10”; we prioritize via tie‑breaks and reserve in the winner map, preserving honest scores while guaranteeing traceability for EB/ES/VB/VS.
+
+Determinism: Gold tests on CT(494/858) and FL(733) prevent regressions and prove the Set1 funnels surface correctly.
+
+Two small implementation clarifications (to avoid past pitfalls)
+
+Per‑column limit: Never inject more than two guard triads per column (canonical + mirror), so max four per state/date across C1/C2.
+
+Noise guardrail: If multiple guard rows exist for the same triad, dedupe by triad before aggregation; use the highest‑scoring evidence row for score_max and count guard/literal flags across rows for guard_hits/literal_hits.
+
+Sanity check — do these two quick things
+
+Redline your doc: Replace the two clauses “pin to top‑10 regardless of score” and “require both Midday and Evening echoes” with the fusion language above (tie‑breaks + winner‑map reservation; echoes as bonuses).
+
+Lock gold tests first: Run just the CT‑June‑24 and FL‑June‑24 tests before any broad rerun; if those pass, the broader EB/ES/VB/VS lift will follow.

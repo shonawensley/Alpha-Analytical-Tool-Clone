@@ -48,6 +48,16 @@ def write_winner_map(state: str, date_stamp: str, out_dir: str, tops: List[TopCa
         }
         for row in tops[:limit]
     ]
+    seen = {entry["triad"] for entry in entries}
+    for row in tops:
+        if row.guard_hits > 0 and row.triad not in seen:
+            entry = {
+                "state": state,
+                "date": date_stamp,
+                **asdict(row),
+            }
+            entries.append(entry)
+            seen.add(row.triad)
     json_path.write_text(json.dumps(entries, indent=2))
     if entries:
         _write_csv(csv_path, entries, entries[0].keys())

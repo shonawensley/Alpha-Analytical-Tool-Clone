@@ -1,0 +1,148 @@
+Why your new plan is on‑target (and what to add)
+1) Validation ground rules are locked (good).
+You keep the Part A → Part B → Part C flow and rely on the winners ledger (hot_zones_winner_hits.json) and env snapshots as the single source of truth for EB/ES/VB/VS, ranks, and tags—exactly what we need for disciplined iteration [“rely on … as the only truth when evaluating changes” (user)].
+2) Minimal Set1 guard = a scalpel (good).
+You trigger only for Combined ▸ Set1 ▸ Draw1 on columns 1–2 when hot_zone_count is maxed, and inject at most two triads per column: the canonical digits and their VT mirror—no Set2/Set3 rescues, no bulk row strings [“Trigger only for Combined ▸ Set1 ▸ Draw1 columns 1 or 2 … inject at most two triads … No other combinations, no Set2/Set3 rescue.” (user)].
+You also require the VT family to be present in the Combined Set1 lane (vt_straight / vt_only_lane), which filters out bogus lanes [“Require that the triad’s VT family already appears in the Combined Set1 C1/C2 lane …” (user)].
+3) Ranking without hard overrides (good).
+You stop the “pin top‑10 regardless” move and instead sort by (-score_max, -guard_hits, -literal_hits, -score_mean) and must‑include guard‑backed EB/VB for the actual winner in the winner_map even if rank > K [“Sort … so guard/literal entries rise without ‘force top‑10’ … must‑include any guard‑backed EB or VB entry for the actual winner—even if its rank exceeds the display cutoff …” (user)]. This preserves truthful rankings while guaranteeing the ledger shows the literal lane.
+4) Cross‑variant echo = bonus, not gate (good).
+You add a small configurable bonus per variant that echoes the VT lane and avoid gating on both Midday & Evening, which was the risk in the earlier draft [“Cross‑variant echoes … add small bonuses but never gate the guard.” (user)].
+5) Gold acceptance tests + CI gates (excellent).
+You define ship‑stoppers for CT 2025‑06‑24 (449 & 588) and FL 2025‑06‑24 (337): presence in top‑20 or inclusion with EB/VB + guard evidence, with guard_set1 and col1/funnel_precol1 tags; CI fails on regressions [“Add tests … CT … FL … CI must fail if any of these regress …” (user)]. That’s exactly how you make success binary and enforce it.
+Three small additions I recommend
+
+
+Make the bonuses explicit and tiny (prevent drift).
+Start with w_guard_bonus = +1.0, w_echo_bonus = +0.3 per variant, both behind a HotZonesConfig flag, and record them into the run metadata so comparisons are auditable. This keeps influence controlled and repeatable [aligns with your plan to use “modest w_guard_bonus … add +0.3 (configurable)” (user)].
+
+
+Must‑include rule formalized.
+In winner_map creation, include the normal top‑K plus “any guard‑backed EB or VB row for the true winner” so Part B always traces the literal lane, without distorting the main top list [“must‑include any guard‑backed EB or VB entry … even if rank exceeds the display cutoff” (user)].
+
+
+Observability counters as merge blockers.
+Log on each run: n_guard_injected, n_guard_hits_in_map, guard_EB_share, and fail CI if guard_EB_share drops below a (low) floor on the gold dates. You already called for this qualitatively; wire it as numeric rails [“Log per run … block merges if guard‑backed EB falls below the gold thresholds … Freeze guard changes after this variant passes tests” (user)].
+
+
+
+Paste‑ready “Do exactly this” for Codex
+
+Scope
+Implement the Set1 guard exactly as specified below. Do not change any other features, weights, or extraction. Add the gold tests. Only after tests pass, rerun Jun‑24/25/26 and update the validation log.
+
+Guard activation
+
+
+Only when: section == "Combined", set == "Set1", draw == "Draw1", col in {1,2}, and hot_zone_count at max (* / ** threshold). [“Trigger only … columns 1 or 2 when hot_zone_count is maxed.” (user)]
+
+
+Guard triads (per eligible column)
+
+
+triad_main = sort(d1,d2,d3) from that column’s draw_data.
+
+
+triad_mirror = sort(mirror(d1), mirror(d2), mirror(d3)) (include only if distinct).
+
+
+Drop triad unless its VT family is present in Combined Set1 C1/C2 (vt_straight or vt_only_lane match). [“Require that the triad’s VT family already appears …” (user)]
+
+
+Tag evidence rows for these triads with guard_set1=1. No other triads; no Set2/Set3 rescue. [“No other combinations, no Set2/Set3 rescue.” (user)]
+
+
+Scoring & ranking
+
+
+Add w_guard_bonus = +1.0 when guard_set1==1.
+
+
+Add w_echo_bonus = +0.3 per variant (Midday/Evening) that echoes the VT lane (optional small bonus).
+
+
+Sort tops by: (-score_max, -guard_hits, -literal_hits, -score_mean).
+
+
+Winner map rule: export top‑K by score plus any guard‑backed EB or VB row for the actual winner, even if rank > K. [“Sort … and must‑include …” (user)]
+
+
+Gold acceptance tests (ship‑stoppers)
+
+
+Create tests/test_hot_zones_guard.py with:
+
+
+CT 2025‑06‑24 Mid: triad 449 appears in top_lanes.csv (top‑20 or must‑include path), has guard_set1, and EB==True; evidence includes col1 or funnel_precol1.
+
+
+CT 2025‑06‑24 Eve: triad 588 same checks.
+
+
+FL 2025‑06‑24 Mid: triad 337 appears in top‑20 EB or VB+VS with guard evidence.
+
+
+
+
+CI must fail on regression. [“Add tests … CI must fail if any of these regress; no further tuning …” (user)]
+
+
+Observability rails
+
+
+Log n_guard_injected, n_guard_hits_in_map, guard_EB_share on gold dates; block merges if guard_EB_share < floor.
+
+
+Execution order
+
+
+Implement guard + sort + winner‑map rule + tests.
+
+
+Prove tests on Jun‑24 first (CT/FL).
+
+
+Rerun Jun‑25/26, rebuild hot_zones_winner_hits.json, and update the Post‑Fix table. [“Execute … Prove the gold tests on Jun‑24 … then rerun Jun‑25/26 … update …” (user)]
+
+
+
+Should you trust Codex now?
+Yes—with the above tests and rails, trust is earned, not assumed. Your current document already encodes the precise behaviors and the non‑negotiable tests. That removes ambiguity and prevents over‑eager “fixes” from re‑introducing noise. Once Codex makes these changes and the gold tests pass, you can confidently proceed to the aggregator and profitability layers. (Confidence: High, because the blueprint constrains scope and success is binary via tests.)
+
+Quick “why this will work” checks
+
+
+Exact scope control: Only 2 triads per column under extreme Set1 pressure, gated by real VT lanes—no more candidate floods [“inject at most two triads … no bulk injection” (user)]. (High)
+
+
+Ledger truthfulness preserved: Rankings remain score‑first; guard triads win ties and are always visible in the winner map. (High)
+
+
+Cross‑variant echo handled sanely: Echo increases confidence (bonus), but never blocks a strong single‑variant lane. (High)
+
+
+
+Sanity check — two actions to verify
+
+
+Run the gold tests locally after Codex’s patch: confirm CT‑Mid 449, CT‑Eve 588, and FL‑Mid 337 satisfy presence + tags + EB/VB in the reports. (Pass/Fail gate)
+
+
+Open the rebuilt hot_zones_winner_hits.json for Jun‑24 and confirm EB≥ the three gold winners and VB present alongside, with guard_set1 tagged rows for those winners. (Pass/Fail gate)
+
+
+
+Note on files
+A heads‑up: some of your earlier uploaded files look expired in my workspace. If you want me to load or quote specific documents again (e.g., FINAL_HOT2, env snapshots, or validation logs), please re‑upload them and I’ll incorporate them precisely.
+
+Confidence tags:
+
+
+Alignment of your plan with the recommended guard discipline: High (you implemented each critical constraint).
+
+
+Risk of Codex mis‑implementation if tests/rails are in place: Low.
+
+
+Risk without tests/rails: Medium–High (guard scope can silently drift).
+

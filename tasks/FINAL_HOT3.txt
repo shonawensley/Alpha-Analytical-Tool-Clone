@@ -1,0 +1,185 @@
+TL;DR: Your Codex changes move in the right direction. The Set1 guard is now minimal, canonical, VT‑gated, and the ranking/tie‑breaks are sensible. The “gold” cases (CT 494/858, FL 733) appear to be surfacing with guard_set1 and top ranks in at least one rerun (good sign), but the blanket claim of “28/28 EB/VB for all dates” is Unverified until we read the rebuilt winners ledger JSON. Strengthen two tests (assert exact mirrored triads), add one tiny fix (count guard if any row in the triad has a VT lane), and run two quick sanity queries. If those pass, you can lock the guard and proceed to the aggregator.
+
+What looks solid (with evidence)
+
+
+Guard narrowed to canonical Set1 C1/C2 + VT mirror, only when Hot‑20, Combined/Set1/Draw1.
+Codex replaced the row‑string combinatorics with: take the column value, digits must be exactly 3, then return {sorted(digits), sorted(mirror(digits))}; also restricted to Combined/Set1/Draw1 and col 1–2 with Hot‑20. You can see the exact diffs and conditions:
+
+
+
+“if sample.ref.section != 'Combined' or sample.ref.set_name != 'Set1' or sample.ref.draw_name != 'Draw1' … if sample.hot_zone_count < 20 … column_value = sample.col_value … digits = [ch for ch in column_value if ch.isdigit()] if len(digits) != 3: return set() … primary=''.join(sorted(digits)) … mirrored=''.join(sorted(_mirror_digit(ch) for ch in digits)) … return {primary, mirrored if distinct}.” (user)
+
+
+
+VT‑lane gating + echo bonus integrated in scoring, with ranking tie‑breaks that prefer guard over literal.
+
+
+
+“if guard_flag and not vt_lane: guard_flag = False … mid_echo/eve_echo computed; echo_bonus added to score_mean/score_max; tops.sort(key=lambda r: (-r.score_max, -r.guard_hits, -r.literal_hits, -r.score_mean)).” (user)
+
+
+
+Writer guarantees guard‑backed winners are persisted even if beyond the display limit.
+
+
+
+“seen = {entry['triad'] for entry in entries} … for row in tops: if row.guard_hits > 0 and row.triad not in seen: entries.append(asdict(row)).” (user)
+
+
+
+Telemetry & tests exist.
+CLI now prints per‑run guard totals and Top‑20 counts; targeted tests cover guard triad generation and map‑inclusion:
+
+
+
+“Guard triads (total/top20): 4/2” and “tests/test_hot_zones_guard.py … _generate_guard_triads … writer includes guard rows even when limit=1.” (user)
+
+
+
+Gold‑case spot checks show improvement after the correct workbook activation.
+CT: early run found 588 at rank 38 with guard 0; after re‑activating the June‑24 history workbook, 588 and 449 appeared at ranks 1–2 with guard_set1 and the expected hot/funnel tags:
+
+
+
+“1 588 1 col1, guard_set1, … vt_straight; 2 449 1 col1, funnel_precol1, guard_set1, … vt_only_lane, vt_straight.” (user)
+
+Conclusion: These are exactly the behaviors we wanted from the “scalpel” guard—lean injection, VT‑aware, deterministic tie‑breaks, and persisted winners.
+
+What needs verification (and why)
+
+
+“28/28 EB/VB for each date” remains Unverified. I don’t see the summarized EB/ES/VB/VS counts from reports/stable/hot_zones_winner_hits.json in your log; there’s only a claim in the narrative and a JSON load that didn’t print totals. Until we read the ledger, treat this as Unverified. Verification route below.
+
+
+Guard‑VT gating appears per row, not per triad. The code sets guard_flag=False if that row lacks a VT lane:
+
+“if guard_flag and not vt_lane: guard_flag = False.” (user)
+If some rows in the triad have the VT lane and others don’t, you want guard_hits to reflect any VT‑supported evidence, not require all rows to have VT. Right now it might undercount guard_hits. Remedy below.
+
+
+
+Tests weakened on mirrored triads. Codex changed the assertion from an exact mirrored value to “length==2”, noting mirrors like '499' from '494':
+
+“update tests … like '499' and '288'; … assert len(triads) == 2.” (user)
+That passes, but doesn’t prove the mirror is correct. We should assert the exact set: for 494 expect {'449','499'}; for 733 expect {'337','288'} per your VT mirror map.
+
+
+
+
+Answering your specific questions
+1) “Does the evidence look promising? Additional outputs to review?”
+Promising: Yes—the gold cases (CT 494/858; FL 733) surfaced as intended after the guard change and correct workbook activation (ranks 1–2 with guard_set1). That’s the hardest part. (user)
+Review next:
+
+
+reports/stable/hot_zones_winner_hits.json — compute EB/ES/VB/VS counts per date; confirm the 28/28 claims. This is the decisive proof. (user)
+
+
+data/outputs/analysis/hot_zones/*/*_meta.json — check guard_triads_total and guard_triads_top20 to ensure the guard is behaving sparsely (1–4 per state) and landing in Top‑20 at a healthy rate. (user)
+
+
+*_hot_zones_winner_map.json — ensure that for each state winner, an EB or VB entry with guard_set1 exists. (user)
+
+
+2) “Literal hits” vs “Exact hits” and the 4 criteria
+
+
+Literal hit here refers to rows tagged as derived from the literal Set1 column value (literal_draw), and aggregated as literal_hits. This is not exactly the same as a winner match; it’s a provenance tag for the source lane. (user)
+
+
+The 4 criteria are explicitly defined and should be logged:
+EB (Exact Boxed): triad digits match winner digits, order‑agnostic.
+ES (Exact Straight): EB plus at least one per‑item row has has_straight==1.
+VB (VT Boxed): VT family matches winner’s family.
+VS (VT Straight): VB plus at least one per‑item row has has_vt_straight==1.
+Your own validation guide states exactly this. “Define four booleans … EB … ES … VB … VS … Track EB/ES/VB/VS for each winner.” (user)
+
+
+Best way to see it: open hot_zones_winner_hits.json and verify that each winner row carries EB/ES/VB/VS booleans or ranks and that our guard‑backed EB/VB entries appear for the gold cases. (user)
+3) “Are we moving in a better direction?” — Integration & tests assessment
+Yes. Changes match the agreed spec:
+
+
+Guard is minimal (no full‑row combinations), column‑gated, and VT‑aware. (user)
+
+
+Ranking is deterministic and favors guard in ties without brute‑forcing into top‑10. (user)
+
+
+Winners map appends guard‑backed rows so investigation never loses the lane. (user)
+
+
+Telemetry is now visible in both stdout and meta JSON. (user)
+
+
+Tighten these items for robustness:
+
+
+Guard VT gating aggregation. Instead of dropping guard on any row lacking VT, set triad‑level guard_hits if any row in triad_rows has (has_vt_straight or vt_only_lane). This matches the “triad family lane” idea and avoids undercounting. (user)
+
+
+Strengthen mirror tests. Replace the len==2 assertion with exact set expectations using your mirror map:
+
+
+494 → {'449','499'} (mirror(4)=9, mirror(9)=4 → ‘949’ → sorted ‘499’)
+
+
+733 → {'337','288'} (mirror(7)=2, mirror(3)=8 → ‘288’)
+Codify this so CI blocks future regressions. (user)
+
+
+
+
+Verify writer scope. The winner‑map writer appends guard rows “beyond the limit”; ensure it appends only for the actual winner’s triad(s), not for any guard triad. From the snippet it uses tops—confirm tops is already filtered to winner‑related entries before writing, or add a winner‑filter guard in the writer. (user)
+
+
+Keep the gold acceptance tests strict. The CT/FL cases should assert rank ≤ 20 and tags include guard_set1 plus col1/funnel_precol1. (user)
+
+
+
+Do we have “final outputs”? (brain & winners)
+
+
+Brain: Yes—the scanner is producing *_per_lane.csv and *_top_lanes.csv with updated scoring and sorting, and prints guard telemetry via the CLI. (user)
+
+
+Winners logger for Hot Zones: Yes—*_hot_zones_winner_map.json is written with appended guard‑backed rows; the consolidated ledger is reports/stable/hot_zones_winner_hits.json. The doc edits claim full coverage (“28/28 EB/VB”), but that’s Unverified without reading the ledger itself. (user)
+
+
+
+“Rebuilt … winner_hits.json (84 rows) and confirmed EB/VB coverage is now 28/28 for all three dates … updated validation log table to 28/28.” Unverified; needs ledger check. (user)
+
+
+Two quick Sanity Checks you (or Codex) can run now
+
+
+Gold case audit (CT 2025‑06‑24):
+Print top_lanes.csv rows for triads 588 and 449; confirm rank ≤ 20, guard_hits > 0, and tags include guard_set1 + col1/funnel_precol1. Also open the corresponding *_winner_map.json and confirm an EB entry exists for the true winners. (user)
+
+
+Ledger totals:
+Load reports/stable/hot_zones_winner_hits.json and count EB/ES/VB/VS by date. Confirm the “28/28” claim for 2025‑06‑24, ‑25, ‑26. If any date isn’t 28/28 EB, inspect its *_meta.json to see guard totals/top20 and which states missed. (user)
+
+
+
+Final recommendations (small but important)
+
+
+Change one line of logic: compute triad‑level guard_hits using OR across triad_rows’ VT flags (any VT lane ⇒ guard counts). This aligns with “family lane” semantics. (user)
+
+
+Harden the mirror tests to assert exact sets ({'449','499'}, {'337','288'}) rather than len==2. (user)
+
+
+Keep guard sparse (1–4 triads per state) and lock weights; do not re‑open Set2/3 “rescue” unless a ledger regression proves it’s needed. (user)
+
+
+Document “literal” vs “exact” explicitly in the README so future contributors don’t confuse literal_hits (provenance) with EB/ES (winner alignment). (user)
+
+
+
+Notes on files
+Our tooling reports some earlier uploaded files have expired. If you want me to re‑load or cite any of those artifacts directly, please re‑upload them and point me to the exact paths.
+
+If you share (a) the latest hot_zones_winner_hits.json and (b) the *_meta.json for the three dates, I’ll compute the totals and call pass/fail on the “28/28 EB/VB” claim immediately.
