@@ -445,7 +445,7 @@ Follow-up run: after adjusting weights, rerun the guard + CLI for the 26-Jun wor
 
 __________________________________________________________________________________________________________________________________________________________________________________________
 
-**********additional thoughts after example runs/ insights + history into coding changes that were made after rounds of examples in ABOVE LOG for improvement to note**************
+**********additional thoughts after example runs/ insights + history into coding changes that were made after rounds of examples (ABOVE LOG) for improvement to note**************
 
 • Key Takeaways
 
@@ -981,5 +981,316 @@ Absolutely. I’ve re-read FINAL_HOT2 end-to-end and folded every requirement—
   - docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md – Post-Fix table now shows 28/28 EB/VB for all dates, with a note that the old VB-only table is retained solely for historical context. This is the primary
     reference for future sessions.
   - No new entries were added to AAT9_Unified_Changelog.md or checkpoints (the instructions said “update if needed,” and all the work stays under modules already tracked).
+  _____________________________________________________________________________________________________________________________________________________________________________________
+
+  2025-06-24  EB=28  ES=28  VB=28  VS=28
+  2025-06-25  EB=28  ES=28  VB=28  VS=28
+  2025-06-26  EB=28  ES=28  VB=28  VS=28
+
+  - Guard VT-gating now operates at the triad level: after evidence is mined, any guard candidate keeps guard_set1 if any evidence row for that triad carried VT support, so VT-backed lanes never drop out just because a particular
+    column lacked straight coverage (alpha_analytical/hot_zones/scanner.py:300). I reactivated the June 24 and June 26 history workbooks via scripts/tools/run_tables_with_guard.py --history-file ..., reran the CLI with date-
+    scoped output folders, and captured the telemetry you asked for:
+      - CT 2025‑06‑24: guard totals 4/3 (data/outputs/analysis/hot_zones/Connecticut4/2025-06-24/Connecticut4_hot_zones_meta.json:1); 588 and 449 now sit at ranks #1–2 with guard_set1 and VT tags (data/outputs/analysis/hot_zones/
+        Connecticut4/2025-06-24/Connecticut4_hot_zones_top_lanes.csv:2–3).
+      - FL 2025‑06‑24: guard totals 3/2 (data/outputs/analysis/hot_zones/Florida4/2025-06-24/Florida4_hot_zones_meta.json:1); triads 337, 288, and 127 retain guard hits inside the winner map (Florida4_top_lanes.csv:2–3 & 39).
+      - CT 2025‑06‑26: guard totals 4/2 (data/outputs/analysis/hot_zones/Connecticut4/2025-06-26/Connecticut4_hot_zones_meta.json:1); the 928/612 winners (triads 289 and 126) remain #2/#1 with guard_set1 + VT coverage
+        (Connecticut4_top_lanes.csv:2–3).
+        Fresh per-state artifacts and winner maps live under data/outputs/analysis/hot_zones/<STATE>/<DATE>/ for handoff/sharing.
+  - Tightened the regression rails in tests/test_hot_zones_guard.py:31-92: the CT 494 and FL 733 fixtures now require the exact {canonical, VT-mirror} guard sets, and the winner-map test still ensures guard-backed rows are
+    appended even when they fall outside the default limit. Guard-specific pytest run:
+
+  PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py
+  ============================= test session starts ==============================
+  collected 3 items
+  tests/test_hot_zones_guard.py ...                                        [100%]
+  ============================== 3 passed in 0.60s ===============================
+
+  Everything requested by FINAL_HOT3 is now locked: the ledger proof is scriptable, guard VT-gating can’t silently regress, and the CT/FL “gold” winners have concrete evidence in the stored CSV/JSON outputs. The active Excel in
+  data/original/ is currently the 2025‑06‑26 history workbook, so re-run scripts/tools/run_tables_with_guard.py with the desired history file before the next batch. Natural next step is to fold the summary script/telemetry into
+  your validation log and then proceed to the master validation / aggregator work once you’re ready.
+
 
   You can move forward with aggregator design confident that Hot Zones is finally surfacing the literal Set1 funnels and that any regression will be caught by the guard telemetry/tests.
+  2. How the 4 hit criteria are actually represented
+
+You asked (again, totally fair):
+
+“IN TERMS OF THE 4 HITS CRITERIA… ES, EXACT BOXED, VTRAC STRAIGHT OR BTRAC BOXED… how exactly is this dealt with or registered? Is it in the winners outputs?”
+
+Let’s map your four conceptual hits to what actually exists in the code / ledger:
+
+EB – Exact Boxed
+
+ES – Exact Straight
+
+VB – VTRAC Boxed
+
+VS – VTRAC Straight
+
+From the changes Codex made:
+
+Each ledger row in reports/stable/hot_zones_winner_hits.json has:
+
+eb_entry – the triad Hot Zones chose as EB representative. (user)
+
+vb_entry – the triad it chose as VB representative (vt‑lane triad). (user)
+
+Inside each *_entry you have fields like vt_straight_hits, vt_only_lane_hits, etc. (user)
+
+The new script scripts/hot_zones/summarize_winner_hits.py computes per‑row flags like this: (user)
+
+eb = bool(eb_entry)
+
+es = eb and eb_entry["vt_straight_hits"] > 0
+
+vb = bool(vb_entry)
+
+vs = vb and vb_entry["vt_straight_hits"] > 0
+
+So, in your language:
+
+EB is “did Hot Zones produce an EB record for this winner?”
+
+ES is “that EB record has at least one straight VT lane supporting it.”
+
+VB is “did Hot Zones produce a VB record for this winner?”
+
+VS is “that VB record has at least one straight VT lane supporting it.”
+
+➡️ Yes, the winners outputs do register all four conditions. They live in the winners ledger as:
+
+the presence of eb_entry / vb_entry, plus
+
+the vt_straight_hits counts inside those entries. (user)
+
+The script then aggregates those per date.
+
+____________
+3. What the “28/28” actually proves (and why it matters)
+
+You keep hearing “28/28 EB/VB/ES/VS” and want the exact meaning.
+
+From earlier notes:
+
+The global winners ledger hot_zones_winner_hits.json had 84 rows after the rerun. (user)
+
+Codex confirmed this is 3 days × 28 winners/day → 84. (user)
+
+Then summarize_winner_hits.py printed: (user)
+
+2025‑06‑24 EB=28 ES=28 VB=28 VS=28
+
+2025‑06‑25 EB=28 ES=28 VB=28 VS=28
+
+2025‑06‑26 EB=28 ES=28 VB=28 VS=28
+
+Putting that together:
+
+There are 28 winners per date in the ledger. (user)
+
+For each of those 28 winners on each day:
+
+There is an eb_entry → EB = 28/28. (user)
+
+That eb_entry has vt_straight_hits > 0 → ES = 28/28. (user)
+
+There is a vb_entry → VB = 28/28. (user)
+
+That vb_entry has vt_straight_hits > 0 → VS = 28/28. (user)
+
+So the “28/28 per day” result is:
+
+For all winners on that day, Hot Zones produced a fully supported EB and VB triad, and both have straight VT lanes backing them. No winner is missing any of the four criteria.
+
+That’s huge, because:
+
+It proves the guard + scoring + winner map are no longer dropping any real winners (on those gold dates).
+
+It gives you a clean CI rail:
+
+If future code changes ever produce EB < 28 or VB < 28 for one of those dates, CI can fail immediately. (user)
+
+For master validation and aggregator work, it means:
+
+You can trust that every winner in that test window has:
+
+EB representation,
+
+ES representation,
+
+VB representation,
+
+VS representation
+recorded in the ledger for Hot Zones.
+
+In other words: the four‑hit criteria aren’t just “theory” anymore; they’re fully realized and mechanically checked for those benchmark days.
+
+4. How this ties into your two big goals
+
+You listed core goals:
+
+Have Hot Zones V1 locked with strong outputs and a winners ledger ready for the aggregator.
+
+You’re there for the June 24–26 window:
+
+Guard logic is now triad‑level VT‑gated and tested. (user)
+
+CT and FL gold cases (449/588/289/126/337/288/127) are at the top with guard_set1 and VT tags. (user)
+
+The ledger is validated by summarize_winner_hits.py with 28/28 EB/ES/VB/VS. (user)
+
+Move to master validation without drowning in file juggling.
+
+The way forward is:
+
+Keep using Codex to:
+
+run the state/date batches,
+
+call the validator scripts (like summarize_winner_hits.py),
+
+and produce digest/ledger CSVs inside the repo.
+
+Use me as:
+
+reviewer of those digest/ledger outputs,
+
+designer of the master validation template,
+
+and “second brain” to sanity check Codex’s conclusions.
+
+Use CSV GPT as a one‑off prototype, not a permanent crutch.
+
+The four CSVs it created (summary digest, unified ledger, mapping manifest, analytical summary) are a good shape for what Hot Zones’ validator should output.
+
+But in the long run, you want those generated by your own scripts (Codex), not by an external GPT each time.
+
+__________________________
+***MASTER Validation tips to consider***
+
+1. How the CSV custom GPT fits into the future “master validation”
+1.1 What the CSV GPT actually did
+
+From your description, the CSV‑focused GPT took the Hot Zones outputs (CT + FL top_lanes, meta, etc.) and produced four artifacts:
+
+A summary digest – one row per state/date with things like average/max scores, guard triad counts, superhot density, etc. (user)
+
+A unified ledger – one row per triad instance with all the important metrics (hot_hits, superhot_hits, guard_hits, score_mean, score_max, spans, evidence tags). (user)
+
+A JSON→CSV mapping manifest – a schema contract showing how every JSON field maps into the CSV columns. (user)
+
+A high‑level analytical summary – comparison of CT vs FL, stability trends, guard integrity, etc. (user)
+
+That is exactly the shape of a good “validator” for one tool: it doesn’t re‑run the algorithm, it just reads the outputs and summarizes/QA’s them.
+
+1.2 How to reuse this idea in master validation (without killing yourself)
+
+For the master validation, think in layers:
+
+Layer A – The tool itself (Hot Zones):
+
+It already knows how to produce its outputs: per‑lane CSVs, top‑lanes CSV, meta JSON, and the global hot_zones_winner_hits.json. (user)
+
+Layer B – A validator script per tool (this is what CSV GPT basically prototyped):
+
+For Hot Zones, you already have one important validator:
+
+scripts/hot_zones/summarize_winner_hits.py – it reads reports/stable/hot_zones_winner_hits.json and prints EB/ES/VB/VS counts per date. (user)
+
+Output right now:
+
+2025‑06‑24 EB=28 ES=28 VB=28 VS=28
+
+2025‑06‑25 EB=28 ES=28 VB=28 VS=28
+
+2025‑06‑26 EB=28 ES=28 VB=28 VS=28 (user)
+
+You can add one more validator script later (in the master validation phase) that does essentially what the CSV GPT did:
+
+Reads top_lanes + meta for each state/date.
+
+Emits a digest CSV (one row per state/date) and a ledger CSV (one row per triad).
+
+That’s your “master‑validation view” of Hot Zones.
+
+Layer C – Codex vs me
+
+Codex: runs the pipelines, writes these validator scripts, and executes them inside the repo. It already has access to all the code and raw outputs.
+
+Me (GPT‑5.1 Pro): you give me the summaries (like the digest CSV, ledger CSV, or even just the printed tables), and I tell you:
+
+whether the metrics make sense,
+
+where the weird edge cases are,
+
+and whether a change looks like a real improvement or a regression.
+
+That way:
+
+You are not manually dragging 20 files per state into chats just to sanity‑check one number.
+
+Codex does 90–95% of the heavy lifting.
+
+I act as “review board” over the validator outputs, not over every raw table.
+
+1.3 Should you ask the CSV GPT for its code?
+
+That’s a good idea, but not strictly required:
+
+If you can get it to show the Python it used to:
+
+load *_top_lanes.csv and *_meta.json,
+
+join them,
+
+compute those metrics,
+
+and write the consolidated ledger/digest,
+
+then you can paste that into Codex and say:
+
+“Rebuild this logic as scripts/master_validation/hot_zones_validator.py and integrate it with our repo’s paths and schemas.”
+
+Even if you don’t get that code, Codex already knows enough:
+
+We’ve described the exact schema of hot_zones_winner_hits.json, *_top_lanes.csv, and meta JSON in earlier work. (user)
+
+Codex has already written one validator (summarize_winner_hits.py). (user)
+
+So: yes, pulling code from the CSV GPT could save time, but it’s optional. The important pattern is: every tool gets its own validator script that reads its outputs and summarizes them; master validation just orchestrates calling those validators
+
+____________________________________________
+ ***Outputs for architect/ check with chat gpt/ or share outputs ideas***
+
+ 
+  The freshest Hot Zones artifacts are under data/outputs/analysis/hot_zones/<STATE>/<DATE>/. For this pass I ran CT (2025‑06‑24 & 26) and FL (2025‑06‑24), so you can hand off the per-lane CSV, top-lane
+    CSV, meta JSON, and winner-map JSON/CSV from those folders, plus the existing sharepack at sharepacks/HotZones_2025-06-24/ if they want the earlier bundled set. Every file already includes the guard telemetry and tags they
+    were asking about.
+  - Regression guardrails – Two layers are now in place and ready for CI:
+      1. scripts/hot_zones/summarize_winner_hits.py gives a mechanical EB/ES/VB/VS table; CI can fail if any date ever drops below 28/28.
+      2. tests/test_hot_zones_guard.py enforces the canonical+mirror guards for CT 494 / FL 733 and the winner-map append behavior. Running PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py catches guard scope regressions
+         before they reach production.
+  - Running examples / guard checks – Yes, I’m following the documented workflow: activate the correct history workbook via scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_YYYY-MM-DD.xlsm, which automatically
+    regenerates cleaned files, CSV tables, and the JSON mirrors and updates the guard manifest (Set1/Draw1 columns 1–2 with Set1/Draw1 “Set1/Draw1” guard count ≥ 20). After that I run the Headless winners generator (scripts/
+    tools/generate_winners_from_results.py) and the Hot Zones CLI targets (scripts/hot_zones/run_hot_zones_cli.py --state … --date …) while checking:
+      - Guard manifest logs (PIPE output) to ensure Set1/Draw1 columns 1–2 end with the expected Set1 draw.
+      - reports/stable/winners_by_date/<DATE>/<STATE>/…html to confirm the V-TRAC winners HTML matches the day-after results file.
+      - data/outputs/analysis/hot_zones/<STATE>/<DATE>/…meta.json for guard_triads_total/top20.
+
+    This pattern, plus the ledger summary script, is enough to ensure every time we swap an Excel history file we get fresh tables, fresh winners, and reproducible Hot Zones outputs tied to the correct results.
+
+    ____________________________
+
+    • - No additional “regression guard” tasks remain beyond what we just locked in: tests/test_hot_zones_guard.py now pins the canonical/mirror triads plus winner-map behavior, and scripts/
+    hot_zones/summarize_winner_hits.py gives a date-by-date EB/ES/VB/VS proof. Both are lightweight enough to run in every session/CI run so even a beginner can re-validate guard
+    integrity without touching the heavier pipelines.
+  - The JSON table environment is already part of the standard pipeline. src/core/pipeline_runner.py:107-150 calls build_json_tables_from_csv for every state, and the CLI resolves paths
+    with utils/path_handler.get_json_tables_dir() (see scripts/hot_zones/run_hot_zones_cli.py:24-31). Each run regenerates data/outputs/json_tables/<STATE>_tables.json, so Hot Zones
+    consumes the same tables the CSV-based tools use, just in a format that’s easier for scripting. That means any future master-validation work can target either the CSVs or the JSON
+    mirrors without extra setup.
+  - Every pipeline invocation still goes through the guard manifest/Set1-Draw1 check (core/pipeline_runner.py:179-215), so swapping history workbooks remains deterministic: activate the
+    desired file via scripts/tools/run_tables_with_guard.py --history-file …, regenerate tables/JSON, run results + winners, then launch the Hot Zones CLI. Those steps are documented in
+    docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md, and they’re the same ones I’m following whenever I produce new artifacts.
+
+  Given that, Hot Zones V1 is self-contained: no pending extra “helper” scripts are needed, and the JSON environment is baked into the table pipeline for future master-validation or
+  tooling enhancements.

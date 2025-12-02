@@ -2114,7 +2114,7 @@ def show_aux_page(state: str) -> None:
 
         if not draws and variant == "combined":
             try:
-                    local_excel_path = os.path.normpath(_ph.get_pick3_workbook_path())
+                local_excel_path = os.path.normpath(_ph.get_pick3_workbook_path())
                 if os.path.exists(local_excel_path):
                     from modules.run_process import run_process
 

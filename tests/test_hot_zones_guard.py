@@ -28,16 +28,15 @@ def make_box(section: str, column: int, col_value: str, hot_count: int) -> BoxDa
         hot_zone_count=hot_count,
     )
 
-def test_guard_triads_derive_from_canonical_column():
+def test_guard_triads_include_canonical_and_mirror_for_ct_494():
     row_boxes = [make_box("Combined", 1, "494", 20)]
     triads = _generate_guard_triads(row_boxes)
-    assert "449" in triads
+    assert triads == {"449", "499"}
 
-def test_guard_triads_include_vt_mirror_when_distinct():
+def test_guard_triads_include_canonical_and_mirror_for_fl_733():
     row_boxes = [make_box("Combined", 1, "733", 20)]
     triads = _generate_guard_triads(row_boxes)
-    assert "337" in triads
-    assert len(triads) == 2
+    assert triads == {"288", "337"}
 
 def test_winner_map_includes_guard_rows(tmp_path):
     non_guard = TopCandidateRow(

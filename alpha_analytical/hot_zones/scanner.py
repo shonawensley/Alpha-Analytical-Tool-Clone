@@ -317,9 +317,20 @@ def mine_evidence(boxes: List[BoxData], cfg: HotScanConfig) -> Dict[str, List[Ev
                 is_superhot_slot=is_superhot_slot,
                 is_set1=is_set1,
                 is_literal_draw=literal_flag,
-                 guard_injected=guard_flag,
+                guard_injected=guard_flag,
             )
             triad_to_evidence[triad].append(evidence)
+    for evs in triad_to_evidence.values():
+        guard_candidates = [e for e in evs if e.guard_injected]
+        if not guard_candidates:
+            continue
+        vt_supported = any(e.has_vt_straight or e.vt_only_lane for e in evs)
+        if not vt_supported:
+            for candidate in guard_candidates:
+                candidate.guard_injected = False
+            continue
+        for candidate in guard_candidates:
+            candidate.guard_injected = True
     return triad_to_evidence
 
 def _score_evidence(e: Evidence, weights: HotZoneWeights) -> Tuple[float, List[str]]:

@@ -1,0 +1,238 @@
+TL;DR:
+Yes – Codex’s “Updated Plan” (ledger summary script + VT‑gating tweak + stricter guard tests) is exactly the three FINAL_HOT3 items we’ve been saying are still open, and it doesn’t introduce any new feature churn. You can let it proceed, as long as you give it 2–3 clear guardrails: no new weights, no new features, and show concrete validation output (EB/ES/VB/VS table + CT/FL guard telemetry) at the end. That will close Hot Zones V1 and free you to move on to the master‑validation design later.
+
+ 
+
+Below I’ll:
+
+Compare Codex’s “Updated Plan” line‑by‑line to what we said remained.
+
+Call out any missing nuance.
+
+Give you a copy‑paste prompt you can hand to Codex to lock V1 safely.
+
+1. Does Codex’s plan match what we said was left for Hot Zones V1?
+
+What Codex wrote:
+
+Updated Plan
+□ Step 1: add ledger summary script for EB/ES/VB/VS counts and confirm output.
+□ Step 2: strengthen guard VT-gating, rerun targeted CT/FL dates, capture telemetry.
+□ Step 3: tighten guard unit tests (mirror expectations + winner-map assertion) and rerun pytest. (user)
+
+This lines up almost 1:1 with the “FINAL_HOT3 Add‑on Plan” you pasted earlier:
+
+Recheck EB/ES/VB/VS in the ledger – write a script over hot_zones_winner_hits.json.
+
+Strengthen guard VT gating – keep guard triad flagged if any row is VT‑supported.
+
+Tighten unit tests – mirror expectations & winner‑map inclusion. (user)
+
+So in terms of scope and intent, Codex has correctly re‑captured:
+
+Step 1 – Ledger proof: A simple script over reports/stable/hot_zones_winner_hits.json to produce a date‑by‑date EB/ES/VB/VS table, instead of trusting “28/28” as a verbal claim. (user)
+
+Step 2 – VT gating: Adjust the guard logic so any VT‑supported row for a triad keeps the guard flag, not just the row currently being scored. (user)
+
+Step 3 – Test hardening: Explicit expectations for mirror triads (e.g. 494 → {449, 499}; 733 → {337, 288}) and a guarantee that winner maps always include guard‑backed EB/VB triads. (user)
+
+That is exactly what we’d marked as “still open” to close out FINAL_HOT / FINAL_HOT21 / FINAL_HOT3. (user)
+
+ 
+
+So from a direction point of view: ✅ it matches what we were going for to close V1.
+
+2. Are there any risks or missing guardrails?
+
+The two things we absolutely don’t want right now:
+
+New scoring experiments or weight changes.
+
+Random “bonus features” sneaking in because the context reset made Codex think it’s time to “improve” Hot Zones again.
+
+The good news: Codex’s written plan explicitly says:
+
+“…with no new features, no weight thrash, and no aggregator churn. Once these three items are completed and validated, Hot Zones V1 is provably locked…” (user)
+
+That’s already the right attitude. To be safe, you can reinforce these constraints explicitly in your prompt:
+
+No touching weights or ranking except the VT‑gating detail.
+
+Keep w_guard_bonus = 1.0, w_cross_variant_echo = 0.3, and the current sort key (-score_max, -guard_hits, -literal_hits, -score_mean) exactly as they are. (user)
+
+No new features.
+
+No additional rescue mechanisms (no Set2/Set3 guards, no “pin to top‑10”). We’re only doing:
+
+one script,
+
+one gating tweak,
+
+and stronger tests. (user)
+
+Also, we want Codex to show its work in a very specific way after each step, so you don’t have to push tons of CSVs through to me:
+
+For Step 1 – Ledger summary
+
+Ask it to:
+
+Implement a script, e.g. scripts/hot_zones/summarize_winner_hits.py, that:
+
+Reads reports/stable/hot_zones_winner_hits.json. (user)
+
+Groups by date.
+
+Counts how many rows per date have each of eb, es, vb, vs set to true. (user)
+
+Prints a table like:
+
+2025-06-24 EB=28 ES=28 VB=28 VS=28
+
+2025-06-25 EB=28 ES=28 VB=28 VS=28
+
+2025-06-26 EB=28 ES=28 VB=28 VS=28
+
+Run the script and paste that table in its final reply to you.
+
+That gives you a mechanical proof of the “28/28 EB/VB” claim for each day, without you having to open the JSON yourself. (user)
+
+For Step 2 – VT‑gating tweak
+
+The core rule we care about:
+
+A triad should be considered guard‑backed if any evidence row for that triad is VT‑supported, not just the single row being scored at that moment. (user)
+
+So in your instructions, make it explicit that after changing this logic, Codex must:
+
+Re‑run the CLI for:
+
+Connecticut4: 2025‑06‑24 and 2025‑06‑26, and
+
+Florida4: 2025‑06‑24. (user)
+
+Then show:
+
+*_hot_zones_meta.json snippets for those runs with guard_triads_total and guard_triads_top20. (user)
+
+Confirmation that the “gold” winners:
+
+CT 494 → triad 449
+
+CT 858 → triad 588
+
+CT 928 → triad 289
+
+CT 612 → triad 126
+
+FL 733 → triad 337 (VT mirror) or the canonical as appropriate (user)
+all still:
+
+appear in *_top_lanes in the top ranks, and
+
+have guard_set1 in evidence_tags. (user)
+
+We don’t need full tables – just a snippet of those JSON rows and meta telemetry is enough to confirm that VT‑gating didn’t break the good behavior.
+
+For Step 3 – Tests
+
+Ask it to make tests/test_hot_zones_guard.py assert at least:
+
+For CT 2025‑06‑24 Set1 columns 1–2 (with history rebuilt), guard triads are exactly {449, 499} (for 494). (user)
+
+For FL 2025‑06‑24 Set1 columns 1–2, guard triads are exactly {337, 288} (for 733, using your documented mirrors). (user)
+
+Winner map tests:
+
+The per‑state winner map includes the guard‑backed EB/VB entry for the winners even if its rank is below the normal display limit. (this is already how writer.py is described to work). (user)
+
+And then run:
+
+PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py and paste the result (we only care that this specific file passes). (user)
+
+If those assertions are in place and passing, you’ve got solid “rails” that will catch regressions.
+
+3. So can you trust it to proceed?
+
+Given what you’ve shown:
+
+Codex correctly re‑stated the last three FINAL_HOT3 items. (user)
+
+It explicitly stated no new features, no weight churn, no aggregator changes. (user)
+
+The plan is fully local to Hot Zones; it doesn’t reopen all the other modules. (user)
+
+From an architect perspective, yes, you can trust it to:
+
+Implement these three steps;
+
+Re‑run CT/FL on the key dates;
+
+Show the ledger summary and telemetry;
+
+And then call Hot Zones V1 locked.
+
+The main thing is: be explicit in your prompt that it must not touch anything else and must show you concrete outputs.
+
+4. Suggested prompt you can paste to Codex
+
+Here’s a ready‑to‑use instruction block you can give Codex in the other chat (no placeholders, no vagueness). You can tweak wording, but keep the constraints:
+
+We are finishing Hot Zones V1 under the FINAL_HOT / FINAL_HOT21 / FINAL_HOT3 spec. Do not add new features, change weights, or alter the ranking logic except where explicitly stated below. Keep:
+– w_guard_bonus = 1.0
+– w_cross_variant_echo = 0.3
+– The sort key (-score_max, -guard_hits, -literal_hits, -score_mean)
+
+ 
+
+Your job is to implement the FINAL_HOT3 add‑on plan only:
+
+Ledger EB/ES/VB/VS summary
+– Add a script under scripts/hot_zones/, e.g. scripts/hot_zones/summarize_winner_hits.py.
+– It must:
+– Read reports/stable/hot_zones_winner_hits.json.
+– Group rows by date.
+– For each date, count how many winners have eb, es, vb, vs set to true.
+– Print a simple table like:
+– 2025-06-24 EB=28 ES=28 VB=28 VS=28
+– 2025-06-25 EB=28 ES=28 VB=28 VS=28
+– 2025-06-26 EB=28 ES=28 VB=28 VS=28
+– Run this script and show the printed output so we have a mechanical proof of the “28/28 EB/VB” claim for each date.
+
+Guard VT‑gating tightening (no other scoring changes)
+– In alpha_analytical/hot_zones/scanner.py, adjust the guard VT logic so:
+– A guard triad remains flagged as guard‑backed if any evidence row for that triad has VT lane support, not just the specific row being processed.
+– Do not change any other scoring weights or sort keys.
+– After this change, re‑run the Hot Zones CLI for:
+– Connecticut4 on 2025-06-24 and 2025-06-26
+– Florida4 on 2025-06-24
+– For each of these runs, show:
+– The *_hot_zones_meta.json snippet (state, date, guard_triads_total, guard_triads_top20).
+– The JSON or CSV rows from *_top_lanes or the winner map for the gold winners, confirming:
+– CT 494 → canonical triad 449 has guard_set1, literal_draw, VT tags.
+– CT 858 → canonical triad 588 has guard_set1, literal_draw, VT tags.
+– CT 928 → canonical triad 289 has guard_set1, literal_draw, VT tags.
+– CT 612 → canonical triad 126 has guard_set1, literal_draw, VT tags.
+– FL 733 → the canonical or VT‑mirror triad (per our spec) has guard_set1, literal_draw, VT tags.
+– Confirm in your reply that these winners still sit near the top of *_top_lanes after the VT‑gating change.
+
+Guard unit‑test hardening
+– In tests/test_hot_zones_guard.py, add strict tests that:
+– For the rebuilt 23/24/25‑Jun histories, the Set1 columns 1–2 guard triads include the expected canonical + mirrors, e.g.:
+– CT 494 → {449, 499}
+– FL 733 → {337, 288}
+– The winner map always includes guard‑backed EB/VB entries for the actual winners, even if their rank would normally fall below the display limit.
+– Run PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py and show the test output.
+
+Do not modify any other scoring weights, any other modules, or the aggregator. When you are finished, summarize:
+– The EB/ES/VB/VS table from summarize_winner_hits.py.
+– The guard telemetry (guard_triads_total and guard_triads_top20) for CT4 and FL4 on the specified dates.
+– The key winner rows for CT 494/858/928/612 and FL 733 showing guard_set1 + VT tags.
+This will mark Hot Zones V1 as locked.
+
+If you feed Codex those instructions and it shows you the three outputs (ledger table, CT/FL meta snippets, pytest passing), you can confidently declare:
+
+“Hot Zones V1 is done; we move on to the master validation design next.”
+
+No need to drag more sharepacks into this chat unless you want a second pair of eyes on the final summaries.
+
+If you’d like, once Codex finishes and shows you that ledger table + telemetry, you can paste just those final summary snippets here and we’ll do a quick sanity pass together, then park Hot Zones and move fully to the master‑validation template.

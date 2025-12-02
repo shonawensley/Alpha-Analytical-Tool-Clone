@@ -1,0 +1,157 @@
+I’ll answer as a world-famous systems debugger and data-pipeline architect (ACM Software System Award).
+
+Short answer on the app issue:
+What you’re seeing in the screenshot is just a small URL typo / address mismatch between what Streamlit is actually serving and what your browser is trying to open. The good news is: your app is running; the browser is just pointed at the wrong address string.
+
+Let me walk through both pieces you raised:
+
+1. Why http://0.0.0.0:8501 “can’t be reached”
+
+From your screenshots:
+
+The command window shows:
+
+Starting Streamlit on http://localhost:8501 ...
+URL: http://0.0.0.0:8501
+
+
+Chrome is trying to open http://0.0.0.0:8501/ and gives ERR_ADDRESS_INVALID.
+
+This is expected: 0.0.0.0 is a bind address, not a real host you browse to on Windows. On WSL/Streamlit side it means “listen on all interfaces”.
+
+On your Windows browser you should always use:
+
+http://localhost:8501
+
+or
+
+http://127.0.0.1:8501
+
+So, with your current setup:
+
+Run the app (from Windows CMD or PowerShell in the repo root):
+
+run_streamlit.bat
+
+
+In Chrome, manually type (or update the existing tab URL to):
+
+http://localhost:8501
+
+
+If you see the purple 0.0.0.0:8501 in the URL bar again, just overwrite it with localhost.
+
+That’s all — nothing special about Chrome vs Edge; any browser is fine as long as the host is localhost, not 0.0.0.0.
+
+2. That run_streamlit.bat file and how to use it
+
+Codex created this BAT in the repo root:
+
+@echo off
+REM Launch the Streamlit app from the repo root.
+REM Uses explicit pushd to avoid CWD mistakes.
+
+pushd "%~dp0"
+
+set PORT=8501
+set STREAMLIT_BROWSER=none
+
+echo Starting Streamlit on http://localhost:%PORT% ...
+streamlit run src\app.py --server.address 0.0.0.0 --server.port %PORT%
+
+popd
+
+How to run it
+
+From Windows Explorer
+
+Double-click run_streamlit.bat in the repo root.
+
+A CMD window will open and show something like:
+
+Starting Streamlit on http://localhost:8501 ...
+You can now view your Streamlit app in your browser.
+
+
+Then open http://localhost:8501 in your browser.
+
+From CMD / PowerShell
+
+cd \\wsl.localhost\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone
+run_streamlit.bat
+
+How to stop it
+
+If you started it via the BAT: just close that CMD window.
+
+If you started it in WSL directly: run in WSL:
+
+pkill -f "streamlit run src/app.py"
+
+3. Quick sanity check that everything’s wired right
+
+Given the pipeline/batch validation you just ran (June 20–22 workbooks → June 21–23 results) and the screenshots of:
+
+data/results/2025-06-21.txt, ...22.txt, ...23.txt
+
+reports/stable/winners_by_date/2025-06-21/Connecticut4/…
+
+CT Pick-3 page showing:
+
+Jun 20 → 913/763
+
+Jun 21 → 950/155
+
+Jun 22 → 281/835
+
+Jun 23 → 130/938
+
+and the SOP entries:
+
+Run A: tables from 6/20, results 6/21, CT 950/155, FL 927/120
+
+Run B: tables from 6/21, results 6/22, CT 281/835, FL 330/924
+
+Run C: tables from 6/22, results 6/23, CT 130/938, FL 665/465
+
+we’re in a good place:
+
+Stage 1 (pipeline): confirmed — new CSV + JSON tables correspond to each active workbook.
+
+Stage 2 (batch/winners): confirmed — each winners_by_date folder matches the day-ahead results and ties back to the correct Combined_Combined Set1 sequence.
+
+So for launching the app, we’re just dealing with UI plumbing now, not data correctness.
+
+4. What I suggest you do next
+
+Test the launcher cleanly:
+
+Close any existing Streamlit / WSL terminals.
+
+Double-click run_streamlit.bat.
+
+In Chrome, go to http://localhost:8501.
+
+If it still fails:
+
+Open a new Chrome tab.
+
+Manually type http://127.0.0.1:8501 and hit Enter.
+
+If that still doesn’t connect, check that the CMD window running Streamlit hasn’t crashed and is still showing “running on port 8501”.
+
+Once you confirm you can see the UI again, we can safely move on to the next things (auxiliary/batch/master validation) without fighting the launcher every time.
+
+One last note about files
+
+Some of the files you uploaded earlier into this chat have expired from my side (the temporary copies used inside the chat environment), so if there’s any specific CSV/JSON you want me to re-inspect directly, you’ll need to upload those again. The copies in your repo are fine — I just can’t read the old uploads anymore from here.
+
+If you want, you can next upload:
+
+AAT9_String_Table_Testing.md
+
+One of the CT Combined_Combined.csv files (e.g., from the 6/22 run)
+
+One of the CT winners HTML files for 2025-06-23
+
+and I can do a tight cross-check of those in one go.

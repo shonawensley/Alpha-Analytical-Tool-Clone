@@ -1,0 +1,361 @@
+I’ll answer as a world‑famous lottery‑data pipeline engineer with a Fields‑medal‑level reputation for OCD regression guarding in predictive systems.
+
+ 
+
+TL;DR:
+Stage 1 (dataset / string‑table regeneration from Pick3StatsC4_2025_06_20.xlsm) worked correctly. The Connecticut4 CSVs and the JSON mirror all line up with the Excel workbook. The remaining problems are entirely in Stage 2 (results + winners/batch): choosing the right results date (always workbook‑date + 1) and proving the winners outputs are built from the fresh tables. Below I ① confirm Stage 1 from your artifacts and ② give a concrete, step‑by‑step Stage 2 plan you can hand directly to Codex.
+
+1. Stage 1 – did the June 20 datasets build correctly?
+1.1 What the pipeline did
+
+From the Codex log and your screenshots, Stage 1 did exactly this for Pick3StatsC4_2025_06_20.xlsm:
+
+Environment was cleared
+
+data/outputs/tables/ emptied. [(user)]
+
+data/outputs/json_tables/ emptied. [(user)]
+
+data/outputs/analysis/ and reports/stable/winners_by_date/ emptied. [(user)]
+
+History workbook was activated
+
+Command:
+PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_2025_06_20.xlsm [(user)]
+
+Script copied that file to
+data/original/Pick3StatsC4.xlsm (undated name – this is expected). [(user)]
+
+Tables & JSON were regenerated
+
+New CSV tables for Connecticut4 at
+data/outputs/tables/Connecticut4/Combined_Combined.csv,
+.../Midday_Combined.csv, .../Evening_Combined.csv. (your screenshots)
+
+JSON mirror at
+data/outputs/json_tables/Connecticut4_tables.json. [(user)]
+
+1.2 Connecticut4: Excel ↔ CSV ↔ JSON all match
+
+Let’s focus on Combined, Set1, Draw1 – the critical guard row.
+
+ 
+
+From the Excel workbook (history file, Combined sheet)
+You circled the last two Combined Set1 columns:
+
+Combined Set1 row, last 7 columns (from left→right labeled 7..1) show:
+059 | 221 | 070 | 620 | 201 | 913 | 763. (your screenshot + red circles)
+
+From the regenerated Combined_Combined.csv
+
+ 
+
+Codex read the row:
+
+Set1  Draw1  draw_data  59.0  221.0  070  620  201  913  763
+
+
+for Connecticut4. [(user)]
+
+ 
+
+So the CSV has the same seven triads; only Excel’s display is turning some into 59.0 etc when you reopen the CSV.
+
+ 
+
+From the JSON mirror (Connecticut4_tables.json, Combined → Set1 → Draw1)
+
+ 
+
+You pasted:
+
+"Combined": {
+  "sets": {
+    "Set1": {
+      "Draw1": {
+        "draw_data": [
+          "059",
+          "221",
+          "070",
+          "620",
+          "201",
+          "913",
+          "763"
+        ],
+        ...
+      }
+    }
+  }
+}
+
+
+So the JSON carries the exact same seven strings.
+
+ 
+
+Putting those together:
+
+Excel history file (Combined sheet)
+
+Regenerated CSV (Combined_Combined.csv)
+
+JSON (Connecticut4_tables.json)
+
+all agree on 059,221,070,620,201,913,763 for Combined → Set1 → Draw1.
+The same is true structurally for Midday and Evening sets in the JSON and the CSVs you showed – the shapes and draw_data sequences match. [(user)]
+
+ 
+
+That means Stage 1 is doing its job:
+
+The right workbook (June 20) is active.
+
+The per‑state string tables were rebuilt from it.
+
+The JSON mirrors are in sync with the CSVs.
+
+The “scientific notation” you see (e.g. 5.994E+11 in Excel) is just how Excel is displaying those long pattern‑variation numbers when it re‑opens the CSV. In the JSON you pasted, those same values appear as full strings like "5599441338867", so the pipeline is not losing digits; it’s only Excel’s view. [(user)]
+
+2. Clarifying the date logic once, so we stop tripping over it
+
+You’re absolutely right about how the dates should work. Let’s lock it in clearly so Codex can’t “forget” it:
+
+Workbook date = “data up to and including this day”.
+Pick3StatsC4_2025_06_20.xlsm means the tables include draws up through June 20. (You showed this via P3Draws + P3Dates sheets.) [(user)]
+
+Results date = the next day’s outcomes (what we’re predicting).
+So for the June 20 workbook, the winners (targets) we validate against are from
+data/results/2025-06-21.txt (your results screenshot shows 21–27). [(user)]
+
+So for any history workbook with date D:
+
+Stage 1 check (pipeline) compares the last Set1/Draw1 col‑1/2 digits against the D‑day draws (or directly against the Excel as you did).
+
+Stage 2 batch / winners must always use results from D+1 (data/results/<D+1>.txt).
+
+Earlier Codex tried to look for data/results/2025-06-20.txt while history was 2025‑06‑20; that’s wrong for this predictive setup, and your results folder screenshot (no 20th, starts at 21st) is exactly what we’d expect. [(user)]
+
+3. Stage 2 – robust plan for batch + winners for Codex
+
+Now that Stage 1 is good, Stage 2’s job is:
+
+When a workbook for date D is active, prove that the batch / winners outputs:
+
+use data/results/D+1
+
+are generated from the fresh tables for that workbook
+
+and the winners logger / V‑TRAC HTML is consistent with both the tables and the results.
+
+Here’s a concrete, low‑drama plan you can hand to Codex.
+
+3.1 Choose a concrete test pair
+
+Use the run you just did:
+
+History workbook: Pick3StatsC4_2025_06_20.xlsm (already activated). [(user)]
+
+Results file (targets): data/results/2025-06-21.txt. (visible in your results screenshot.) [(user)]
+
+We’ll do everything for this pair first, then generalize.
+
+3.2 Step‑by‑step instructions for Codex – Stage 2 for June 20 → 21
+
+You can paste something like this as your next Codex instruction block:
+
+Goal:
+For Pick3StatsC4_2025_06_20.xlsm, generate winners using data/results/2025-06-21.txt and prove that the winners outputs are based on the fresh June‑20 tables.
+
+ 
+
+Precondition:
+Stage 1 for June 20 has run; the active workbook is data/original/Pick3StatsC4.xlsm copied from data/history/Pick3StatsC4_2025_06_20.xlsm, and tables/JSON have been rebuilt. [(user)]
+
+ 
+
+Steps:
+
+Lock in the history + results pair
+
+Confirm the active workbook:
+
+Read data/outputs/tables_manifest.json (or the manifest snippet you were using) and print the workbook path, mtime, and size. It should show the June 20 file you just activated. [(user)]
+
+Hard‑code for this run:
+
+history_date = 2025-06-20
+
+results_date = 2025-06-21
+
+Confirm data/results/2025-06-21.txt exists and print the CT + FL winners from that file so we see them in the log.
+
+Clear any old winners for 2025‑06‑21
+
+Run:
+
+rm -rf reports/stable/winners_by_date/2025-06-21
+
+
+Then:
+
+ls reports/stable/winners_by_date
+
+
+to show that 2025-06-21/ does not exist yet.
+
+Generate winners for 2025‑06‑21
+
+Command:
+
+PYTHONPATH=.:src python3 scripts/tools/generate_winners_from_results.py \
+    --results-file data/results/2025-06-21.txt \
+    --out-dir reports/stable/winners_by_date/2025-06-21/
+
+
+After it runs, list:
+
+ls reports/stable/winners_by_date/2025-06-21
+ls reports/stable/winners_by_date/2025-06-21/Connecticut4
+ls reports/stable/winners_by_date/2025-06-21/Florida4
+
+
+so we see the per‑state V‑TRAC HTML files that were created.
+
+Check winners ↔ results match
+
+Write a tiny Python snippet that:
+
+Parses data/results/2025-06-21.txt.
+For each of Connecticut4 and Florida4, capture the Midday and Evening winners (e.g. triads like XXX). [(user)]
+
+For each triad, check that at least one file in the state’s winners directory contains _winner_<triad>_ in its filename.
+Example pattern:
+Connecticut4_vtrac13_winner_<TRIAD>_*.html
+
+Print a small table like:
+
+State   Variant   ResultTriad   FoundHTML?
+CT4     Midday    620           YES (Connecticut4_vtrac13_winner_620_...)
+CT4     Evening   763           YES (...)
+FL4     Midday    ...           YES/NO
+...
+
+
+If any FoundHTML? is NO, treat that as a failure for this run.
+
+Check winners ↔ fresh tables match (no stale tables)
+
+ 
+
+Focus on Connecticut4 as the canary.
+
+Use Python to read:
+
+import pandas as pd
+df = pd.read_csv("data/outputs/tables/Connecticut4/Combined_Combined.csv")
+row = df[(df["Set"]=="Set1") & (df["Draw"]=="Draw1") & (df["RowType"]=="draw_data")]
+print(row[["7","6","5","4","3","2","1"]])
+
+
+You should see 059,221,070,620,201,913,763 as before. [(user)]
+
+Open one of the CT winners HTML files for 2025‑06‑21 (for example the Midday winner) as plain text and search for that exact sequence in the Combined Set1 table section.
+Codex can do this using a simple in substring check instead of full HTML parsing.
+
+If the sequence is present, that’s strong evidence that the winners report was built from the fresh June‑20 tables (because those digits came from Combined_Combined.csv for this workbook). If it’s missing, that suggests we’re still accidentally reading an old tables environment.
+
+Log everything in the SOP doc
+
+Append a Stage 2 – June 20 → 21 section to docs/AAT9_KIT/AAT9_String_Table_Testing.md with:
+
+history file name
+
+active workbook path + mtime + size
+
+results file used (2025-06-21)
+
+CT/FL winners from the results file
+
+For each CT/FL winner: whether a matching _winner_<triad>_ HTML was found
+
+Whether the Combined Set1 Draw1 sequence from the CSV was found in the CT HTML.
+
+If Codex follows that literally, you and I gain:
+
+A clean proof that winners are being generated from:
+
+the correct history workbook, and
+
+the correct next‑day results file.
+
+A direct linkage from Excel → CSV → JSON → winners HTML for at least CT/FL.
+
+Once that works for June 20 → 21, you can repeat exactly the same procedure for:
+
+Pick3StatsC4_2025_06_21.xlsm + data/results/2025-06-22.txt
+
+Pick3StatsC4_2025_06_22.xlsm + data/results/2025-06-23.txt
+
+and add each run as another row in the SOP doc.
+
+4. How to stop Codex ever picking the wrong results date again
+
+Right now the “day‑ahead” rule is in your head and docs; it’s not baked into code, which is why it keeps drifting. A small helper script would fix that:
+
+scripts/tools/run_pipeline_and_winners.py
+--history-file Pick3StatsC4_YYYY-MM-DD.xlsm
+
+High‑level behaviour Codex can implement:
+
+Parse YYYY-MM-DD out of the history filename → history_date.
+
+Compute results_date = history_date + 1 day.
+
+Assert data/results/<results_date>.txt exists; if not, exit with a loud error.
+
+Run:
+
+run_tables_with_guard.py --history-file ...
+
+generate_winners_from_results.py --results-file data/results/<results_date>.txt --out-dir reports/stable/winners_by_date/<results_date>/
+
+Optionally call the verification snippet from §3.2 Step 4/5 to assert the CT/FL checks before returning success.
+
+This way even if a future Codex session “forgets” the convention, the code won’t let it accidentally mix a June 20 workbook with June 20 results—it will always compute and require June 21.
+
+ 
+
+Your sub‑folder idea (Excel + results in a shared folder) is compatible with this, but not strictly necessary if we do the date math in code.
+
+5. What you should verify right now (Stage 2 checklist)
+
+Given where we are, the next concrete actions for you:
+
+Visually confirm Stage 1 (already mostly done)
+
+Open data/outputs/tables/Connecticut4/Combined_Combined.csv and check Set1/Draw1 row matches the history workbook’s Combined sheet (which it does).
+
+Spot‑check one or two other states if you want extra confidence.
+
+Tell Codex to run Stage 2 exactly as in §3.2 for June 20 → 21
+
+Use the explicit commands and logging requirements.
+
+Ask it to paste back:
+
+The mini table State/Variant/ResultTriad/FoundHTML?
+
+The snippet printing CT Combined Set1 Draw1 from the CSV
+
+The confirmation that the same sequence appears in the CT winners HTML.
+
+If that passes, repeat for June 21 → 22 and June 22 → 23.
+
+Once those three passes are solid and logged in AAT9_String_Table_Testing.md, you can be reasonably confident that:
+
+dataset regeneration is correct per workbook, and
+
+the batch/winners pipeline is using the right data and the right day‑ahead results.
+
+At that point, you’re in a good position to let Codex drive more ambitious validation runs (reverse‑engineering wins, tool comparisons, etc.) while you and I act as the second‑layer auditors.

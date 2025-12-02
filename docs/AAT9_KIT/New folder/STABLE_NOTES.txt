@@ -1,0 +1,118 @@
+I’ll answer as a world-famous pattern-extraction systems architect (ACM Software System Award) and give you two drop-in items you can hand to Codex now:
+
+a tiny compound Top-5 printer (per section) and
+
+a schema-diff guard you can run in one line.
+
+I’ll also explain why each matters and how it pushes you toward the “most powerful final outputs.”
+
+Why the “compound Top-5” is valuable (the logic in one paragraph)
+
+Your combined tables concentrate the most current evidence in Set1 and especially the tail boxes (Col-2 / Col-1), where cells carry explicit * and ** hot flags; those flags are visible right in the grids you sent (e.g., Set1 tail cells marked **) and in the Top-30 rows that already list hot and chain tags such as draw_chain7, hot2, dom_last (the “why” strings). That is literally the “finishing” zone we care about for near-term hits, so a single compounded score that rolls Set-chains, Draw-chains, Col-1 touches, hot vs hot* and consensus into one number per canonical lets you see the true survivor for each section (Midday / Evening / Combined) at a glance. You can see those tail hot flags and tails in your CT report (e.g., 4467, 6744, 7644 carrying ** at Col-1/2), and the Top-30 table shows the matching hot2|draw_chain7|dom_last explanations—this is exactly the evidence we’re summing in Packet-2’s compound score.
+
+TL;DR: compounding = “all the right flags, at the right edge, across the right days” collapsed to one go/no-go score per pattern, so you don’t miss winners that appear as fragments across mini-tables.
+
+It also aligns with your own Stable charter: Stable is the foundation that turns grids into a feature-matrix for every later tool; compounding simply rolls Stable’s local evidence into a more actionable per-canonical record without changing the base features you expose to the aggregator/ML layer.
+
+The two QA helpers (copy-paste for Codex)
+A) scripts/tools/compound_top5.py — print the Top-5 compound patterns per section
+
+What it does:
+Reads your new Packet-2 file <STATE>_stable_patterns_compound.csv and prints Top-5 for Midday / Evening / Combined, with the core evidence fields so you can screen-cap or paste into notes.
+
+Why it’s valuable:
+
+Instant triage after a run—no scrolling or manual filtering.
+
+Locks the habit of looking at Set-chain / Draw-chain / hot splits on each survivor.
+
+Great for sharepacks and quick validations before you ever open the big HTML.
+
+# scripts/tools/compound_top5.py
+import sys, pandas as pd
+from pathlib import Path
+
+def show_top5(compound_csv: Path):
+    df = pd.read_csv(compound_csv)
+    for sec in ["Midday","Evening","Combined"]:
+        sdf = df[df["section"] == sec].copy()
+        if sdf.empty:
+            continue
+        sdf = sdf.sort_values(["compound_score","base_max_score"], ascending=[False, False]).head(5)
+        print(f"\n== {sec} Top-5 ==")
+        cols = ["Canonical","compound_score","base_max_score",
+                "set_chain_depth","draw_chain_depth","col1_hits",
+                "hot1_count","hot2_count","consensus_hits",
+                "hidden3v_hits","vtrac_straight_hits","double_mirror_hits",
+                "compound_why"]
+        print(sdf[cols].to_string(index=False))
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("Usage: python scripts/tools/compound_top5.py data/outputs/analysis/patterns/<STATE>/<STATE>_stable_patterns_compound.csv")
+    show_top5(Path(sys.argv[1]))
+
+
+You’ll see hot2_count separate from hot1_count (so ** gets distinct weight), together with compound_why like set_chain3|draw_chain6|hot2x2. This mirrors the tail-box emphasis your tables show (Col-2/Col-1 with * / **).
+
+B) scripts/checks/print_stable_header.py — one-liner schema-diff guard (readable)
+
+What it does:
+Prints the full header of the three Stable CSVs (Scores, Families, Compound) so you can eyeball additions and catch misses even before running the stricter validator.
+
+Why it’s valuable:
+
+Human-readable sanity: “are all legacy columns still here?”
+
+Complements your stricter validate_stable_schema.py (which you already added) by giving a quick list to paste into PRs.
+
+# scripts/checks/print_stable_header.py
+import sys, pandas as pd
+from pathlib import Path
+
+def header(p): 
+    df = pd.read_csv(p, nrows=0)
+    print(f"\n{p.name} :: {len(df.columns)} columns")
+    print(", ".join(df.columns))
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("Usage: python scripts/checks/print_stable_header.py data/outputs/analysis/patterns/<STATE>")
+    root = Path(sys.argv[1])
+    for stem in ["_stable_patterns_scores.csv","_stable_patterns_families.csv","_stable_patterns_compound.csv"]:
+        for p in root.glob(f"*{stem}"):
+            header(p)
+
+
+Run it beside the stronger guard and you’ll never accidentally “lose” boxed/straight, consensus, hot-zone, or persistence columns that the Master Guide says must remain in Stable’s CSV contract.
+
+How this ties into your current outputs (so you can trust the direction)
+
+The CT HTML you shared already proves the hot-zone/tail mechanics: Set1 tail cells show * and ** in Col-2/Col-1 and the Top-30 “why” column lists hot2, draw_chain7, dom_last for the same canonical (244 family), which is exactly what the compound scorer sums.
+
+Your metrics JSON for CT shows the winners array and spotlight fields; Packet-2 just adds compound_schema_version and rank summaries so downstream tools and sharepacks reflect the new signals while keeping your winners intact.
+
+The workflow and validation docs you maintain already endorse producing lean sharepacks plus quick validators; a concise Top-5 and a header printer fit perfectly into that cadence (generate → validate → share).
+
+Why this gets you closer to “most powerful final outputs”
+
+Signal clarity: Compounding makes the end-of-structure evidence legible—who survived, how far, how hot, how aligned. The aggregator doesn’t have to “rediscover” Stable’s ladder rules; it just consumes the numbers.
+
+Cross-tool synergy: With compound_score and compound_why in place, Control Center and Aux (BA, positional, doubles) can weight Stable survivors directly. You already run these modules on separate data contracts; the compound surface keeps Stable self-contained and immediately useful.
+
+Guarded evolution: The header printer complements your schema validator so Packet-2 can ship additive fields without risking regressions—exactly the SDLC your Workflow Standard lays out.
+
+Suggested one-minute demo (when Codex finishes)
+# 1) Print Top-5 compound per section
+python scripts/tools/compound_top5.py data/outputs/analysis/patterns/Connecticut4/Connecticut4_stable_patterns_compound.csv
+
+# 2) Show headers (readable) for all three CSVs in the state folder
+python scripts/checks/print_stable_header.py data/outputs/analysis/patterns/Connecticut4
+
+# 3) (Optional) Open the HTML and confirm the same canons appear with hot2 & draw_chain tags
+#    e.g., data/outputs/analysis/patterns/Connecticut4/Connecticut4_stable_patterns_report.html
+
+
+You’ll see the same tail-hot survivors (e.g., 244) you already see in the report tables, now rolled up with clear chain counts and hot splits that match the raw grid’s * / ** marks.
+
+If you want, I’ll add a tiny “compound-top-5 to Markdown” export next, so your sharepacks include a ready-to-paste block per state—handy for quick reviews and cross-state comparisons.

@@ -1,0 +1,354 @@
+TL;DR:
+From what you’ve shown (winners folders, CT results screenshot, JSON + CSV snippets, and the AAT9_String_Table_Testing doc), Stage 1 (pipeline) and Stage 2 (batch / winners) for the June 20–22 workbooks are now behaving correctly and consistently. The day‑ahead rule is being respected, the winners HTML really is tied to the fresh tables from the active workbook, and the SOP doc you pasted is basically the “lock‑in” you wanted. There are still a couple of nice‑to‑have hardening steps we can add later, but nothing blocking master validation on this part of the system.
+
+Also: a quick side note before we dig in — some older files you’d uploaded to me earlier (like the hot_zones CSVs) have expired on my side. If you want me to look at those again in future, you’ll need to re‑upload them.
+
+1. Did Stage 1 (tables / JSON) actually work?
+
+What Stage 1 guarantees now
+
+From the logs + your screenshots + the JSON you pasted, Stage 1 is doing what it should:
+
+History workbook activation is explicit.
+For each run A/B/C, Codex calls:
+
+PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py \
+    --history-file Pick3StatsC4_YYYY-MM-DD.xlsm
+
+
+and the script copies that history file into:
+
+data/original/Pick3StatsC4.xlsm
+
+
+You confirmed this visually in data/original/ (single undated Pick3StatsC4.xlsm), which is exactly how the original pipeline was designed.
+
+Tables + JSON exist for each state.
+The SOP table you pasted shows, for runs A/B/C:
+
+data/outputs/tables/Connecticut4/Combined_Combined.csv
+
+data/outputs/tables/Florida4/Combined_Combined.csv
+
+data/outputs/json_tables/Connecticut4_tables.json
+
+data/outputs/json_tables/Florida4_tables.json
+
+all marked ✅ for each run.
+
+Connecticut JSON matches what we expect from the tables.
+The JSON sample you pasted for Connecticut4_tables.json is perfectly aligned with the way the Combined CSVs are structured:
+
+sections → Midday / Evening / Combined
+
+sets → Set1 / Set2 / Set3
+
+Each DrawN has:
+
+draw_data array of 7 triads
+
+pattern_variations with R2/R4/R6/R8 lists
+
+metadata with hot_zone_count and is_hot_zone
+
+Example (Combined, Set1, Draw1):
+
+"draw_data": [
+  "059",
+  "221",
+  "070",
+  "620",
+  "201",
+  "913",
+  "763"
+]
+
+
+That exactly matches what Codex logged from Combined_Combined.csv for CT Set1/Draw1 in Run A.
+
+Scientific‑notation “garbage” is only an Excel display problem.
+In your screenshots of the CSV opened in Excel, some R‑patterns are shown as 5.6E+11 etc. That is Excel auto‑formatting big numbers as floats.
+
+The JSON you pasted shows those stored as strings, e.g.:
+
+"55994013387"
+
+
+so the internal representation that Hot Zones and other tools see is fine. If you ever want to double‑check a CSV, open it in a text editor or set the Excel column format to “Text” before opening — you’ll see the full digits are actually there.
+
+Conclusion on Stage 1:
+Yes — for the June 20/21/22 workbooks, the string‑table datasets (CSV + JSON) are being rebuilt correctly from the active Pick3StatsC4 file. That part looks solid.
+
+2. Did Stage 2 (batch / winners) actually line up with reality?
+
+You gave me three key things to cross‑reason:
+
+The winners_by_date directory structure + filenames.
+
+Codex’s Stage 2 SOP entries.
+
+The official CT June 2025 results screenshot.
+
+Let’s go run by run.
+
+Run A – Workbook 2025‑06‑20 → Results 2025‑06‑21
+
+Active workbook: Pick3StatsC4_2025_06_20.xlsm
+
+Results file used: data/results/2025-06-21.txt
+
+Winners folder: reports/stable/winners_by_date/2025-06-21/Connecticut4/
+
+Your screenshot shows:
+
+Connecticut4_vtrac2_winner_155_...html
+
+Connecticut4_vtrac5_winner_950_...html
+
+The CT results screenshot shows for Sat Jun 21, 2025:
+
+Midday: 950
+
+Evening: 155
+
+So:
+
+The winners filenames match the real CT triads for June 21.
+
+Codex logged that the Set1 Draw1 sequence from Combined_Combined.csv for CT on Run A:
+
+059,221,070,620,201,913,763
+
+
+is found inside the ...winner_155...html file.
+That proves the HTML is based on the fresh tables from the 2025‑06‑20 workbook, not on some older environment.
+
+Run B – Workbook 2025‑06‑21 → Results 2025‑06‑22
+
+Active workbook: Pick3StatsC4_2025-06-21.xlsm
+
+Results file used: data/results/2025-06-22.txt
+
+Winners folder: reports/stable/winners_by_date/2025-06-22/Connecticut4/
+
+Your screenshot shows:
+
+Connecticut4_vtrac13_winner_835_...html
+
+Connecticut4_vtrac21_winner_281_...html
+
+CT results screenshot for Sun Jun 22, 2025:
+
+Midday: 281
+
+Evening: 835
+
+Again:
+
+Filenames 281 / 835 match the real draws for June 22.
+
+Codex logged that after swapping in the 21st workbook, CT Set1/Draw1 sequence became:
+
+070,620,201,913,763,950,155
+
+
+and this exact sequence appears inside ...winner_281...html.
+
+So we know:
+
+The 2025‑06‑22 winners HTML was generated from tables built from the 2025‑06‑21 history workbook.
+
+The triads in the HTML match the real CT results for June 22.
+
+Run C – Workbook 2025‑06‑22 → Results 2025‑06‑23
+
+Active workbook: Pick3StatsC4_2025-06-22.xlsm
+
+Results file used: data/results/2025-06-23.txt
+
+Winners folder: reports/stable/winners_by_date/2025-06-23/Connecticut4/
+
+Your screenshot shows:
+
+Connecticut4_vtrac8_winner_130_...html
+
+Connecticut4_vtrac33_winner_938_...html
+
+CT results screenshot for Mon Jun 23, 2025:
+
+Midday: 130
+
+Evening: 938
+
+Codex also recorded:
+
+CT Set1/Draw1 sequence from the 22nd workbook:
+
+201,913,763,950,155,281,835
+
+
+and found that sequence embedded in ...winner_130...html.
+
+So again:
+
+Triads 130 / 938 in the filenames match the real CT results.
+
+The sequence of prior draws in the HTML matches the Combined table from that workbook.
+
+Florida cross‑check
+
+Codex also did the same “sequence appears in HTML” test for Florida:
+
+For 2025‑06‑23 winners, FL sequence:
+
+262,433,241,927,120,330,924
+
+
+was found inside Florida4_vtrac6_winner_665_...html, matching FL results 665 (midday) / 465 (evening) for June 23.
+
+So both CT and FL show the same pattern:
+
+History date H → tables rebuilt.
+
+Results date R = H + 1 → winners_by_date/R/ contains HTML for the real triads.
+
+Those HTML files contain the Set1 draw history sequence from the freshly rebuilt Combined tables.
+
+Conclusion on Stage 2:
+For June 20–22 workbooks, the batch/winners layer is now correctly:
+
+Using the day‑ahead results file (H → H+1).
+
+Generating winners HTML that matches the real results.
+
+Proving that it’s reading from the new Combined tables, not something stale, by embedding the current Set1 sequence.
+
+That’s exactly the behavior you wanted.
+
+3. Is the “pipeline + batch” story now safe enough for master validation?
+
+Given all this:
+
+Stage 1: we’ve proven “history workbook → tables + JSON” is wired correctly and reproducibly.
+
+Stage 2: we’ve proven “tables + results (day‑ahead) → winners HTML” is wired correctly and tied to the current tables.
+
+For your purposes (using many history dates in master validation, trusting that outputs reflect the right string‑table environment), yes — this is now in a good state.
+
+To make it really “locked in”, I’d think in terms of three layers:
+
+A. Mechanical checklist (what you already have)
+
+Your AAT9_String_Table_Testing.md is basically the SOP:
+
+Activate workbook with run_tables_with_guard.
+
+Check manifest points to the right history file.
+
+Confirm tables + JSON exist for each state.
+
+Record Set1 col1/col2 for CT / FL.
+
+Generate winners with results_date = history_date + 1.
+
+Check winners HTML exists for those triads.
+
+Check Set1 sequence appears inside HTML (proves no stale tables).
+
+That’s already excellent.
+
+B. Tiny automation to prevent human error
+
+Later (no rush), you can let Codex encapsulate this as one wrapper script, e.g.:
+
+PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py \
+    --history-date 2025-06-22
+
+
+Internally:
+
+Builds the history filename: Pick3StatsC4_2025-06-22.xlsm.
+
+Computes results_date = history_date + 1.
+
+Verifies data/results/<results_date>.txt exists.
+
+Runs run_tables_with_guard.py for the history file.
+
+Runs generate_winners_from_results.py for the results file.
+
+Runs the verification checks (Set1 col1/col2 & sequence in HTML) and logs to a simple JSON/markdown log.
+
+That way the “day‑ahead” rule is encoded in code, not just in our heads or docs.
+
+C. Quick manual sanity check you can always do
+
+Whenever you’re nervous about a run, you can manually:
+
+Open official CT results page for that month (like your screenshot).
+
+Look at reports/stable/winners_by_date/<R>/Connecticut4/:
+
+The two triads in the filenames should match the CT midday/evening draws for date R.
+
+Open data/outputs/tables/Connecticut4/Combined_Combined.csv:
+
+Check the Set1/Draw1 draw_data row. It should end with the two draws from history date H, and prepend 5 older draws that match the official page.
+
+That takes 30–60 seconds and is enough to spot any obvious mis‑alignment.
+
+4. On “cache” / Streamlit warnings
+
+Those “No runtime found, using MemoryCacheStorageManager” warnings from Streamlit during CLI runs are per‑process memory caches. You’re invoking the scripts via python3 ... each time, so:
+
+Each run is a fresh Python process.
+
+Any in‑memory cache is discarded at process exit.
+
+There is no persistent cache to “clear” between dates.
+
+So as long as you:
+
+Activate the correct workbook, and
+
+Run the CLI scripts in that order,
+
+you’re not carrying stale data across runs.
+
+5. Where this leaves us for master validation
+
+Given all this, here’s how I’d summarize your current position:
+
+✅ Stage 1 (pipeline) is working: new history workbook → new tables + JSON for all states.
+
+✅ Stage 2 (batch/winners) is working: day‑ahead results → winners HTML that:
+
+matches official CT/FL triads,
+
+and is provably tied to the active Combined tables.
+
+That’s enough to:
+
+Confidently use multiple history dates in your upcoming master validation.
+
+Let Codex freely spin up runs on different dates, knowing that when it changes the history workbook and reruns the pipeline, the batch outputs are actually reflecting that environment.
+
+If you want, next step we can:
+
+Define a small “preflight” checklist that master validation should always run (basically a lightweight version of your SOP), and
+
+Then move on to how we wire Hot Zones + other tools on top of this so that all the final analytics can be trusted across dates.
+
+And again: if we need any of the old Hot Zones CSVs or summary files you’d previously uploaded here, you’ll have to re‑upload them because I no longer have access to those exact files on my side.
+
+Sanity checks you can do yourself right now
+
+Pick one run (say Run B, history 2025‑06‑21 → results 2025‑06‑22):
+
+Open reports/stable/winners_by_date/2025-06-22/Connecticut4/ and confirm the two triads (281, 835) match your CT screenshot for June 22.
+
+Open data/outputs/tables/Connecticut4/Combined_Combined.csv:
+
+Confirm the Set1/Draw1 row for Run B has ... 070,620,201,913,763,950,155 — same sequence Codex logged and that you see reflected in the JSON + HTML.
+
+If both of those line up, that’s strong evidence the pipeline+batch story we just walked through is behaving exactly as intended.
