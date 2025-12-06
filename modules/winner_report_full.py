@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
+import json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -86,10 +87,12 @@ def write_winner_full_report(state: str, winner: str, out_dir: str | None = None
 
     # Generate analyzer-style HTML
     gen = getattr(vtrac, "generate_index_html_report", None)
+    gen_json = getattr(vtrac, "generate_index_json_report", None)
     if not callable(gen):
         raise RuntimeError("Analyzer HTML generator not available")
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     html = gen(state_name, idx, patterns, tables, score=0, rank=0, timestamp=ts, winner_combo=win)
+    json_payload = gen_json(state_name, idx, patterns, tables, score=0, rank=0, timestamp=ts, winner_combo=win) if callable(gen_json) else None
 
     # Resolve output path under analysis/winners/<STATE>
     target = out_dir or ph.get_analysis_dir("winners", state_name)
@@ -97,4 +100,8 @@ def write_winner_full_report(state: str, winner: str, out_dir: str | None = None
     out_path = os.path.join(target, f"{state_name}_vtrac{idx}_winner_{win}_{ts}.html")
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
+    if json_payload is not None:
+        json_path = os.path.join(target, f"{state_name}_vtrac{idx}_winner_{win}_{ts}.json")
+        with open(json_path, "w", encoding="utf-8") as jh:
+            json.dump(json_payload, jh, indent=2)
     return out_path

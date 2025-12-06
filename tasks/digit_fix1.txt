@@ -1,0 +1,251 @@
+You’re not crazy and you’re right to be suspicious.
+
+In the current design of AAT9, the compact training JSON is part of the core Digit Reduction pipeline, not just some useless monster dump.
+
+The big optimization runs you pasted (vt‑only lanes, LS col 4/2, etc.) were absolutely using that JSON under the hood.
+
+The break you’re seeing now is because we later “leaned it out” on the reducer side without updating the analyzer, so Codex is correctly complaining.
+
+I’ll walk through this as simply and concretely as I can.
+
+1. What the JSON actually is now
+
+From the doc you pasted:
+
+training/<STATE>digit_reduction_steps.csv (long/tidy steps)
+training/<STATE>digit_reduction_logs.json (compacted logs + guidance)
+
+This is the “Stacked Report & Training Exports” design. That means:
+
+*_digit_reduction_steps.csv
+
+Long, tidy table of every step.
+
+Mostly for human/AI audit and diagnostics.
+
+*_digit_reduction_logs.json
+
+Compacted training log with:
+
+state / area / section / set / draw / col / method / mode
+
+grid_position, sequence_meta, final
+
+compacted steps list (key ladder steps)
+
+This is what Analyzer V2 expects as its canonical training input now.
+
+So in the current AAT9 spec, the JSON is not optional. It’s part of the contract between:
+
+The reducer (run_digit_reduction), and
+
+Analyzer V2 (alpha_analytical/digit_reduction/analyzer_v2/*).
+
+That’s why your later doc says:
+
+Training log JSON: still the canonical input for rebuilds or golden-fixture tests.
+
+2. How your optimization runs actually worked
+
+All the stuff in the long Digit Analysis Log (vt‑only lanes, LS col‑4/2, funnel flags, score ranks, etc.) implies a specific pipeline was working at that time:
+
+Tables pipeline produced
+data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv.
+
+Digit reducer ran and wrote (per state):
+
+<STATE>_digit_reduction_report.html (tabbed)
+
+<STATE>_digit_reduction_report_stacked.html (stacked)
+
+<STATE>_digit_reduction_scores.csv
+
+training/<STATE>_digit_reduction_steps.csv
+
+training/<STATE>_digit_reduction_logs.json ✅
+
+Analyzer V2 then:
+
+Read the training JSON from training/<STATE>_digit_reduction_logs.json.
+
+Computed all the rich features you see in your logs:
+
+vt_only_lane, funnel_precol1, ls_col_42, ls2_lane,
+
+persistence / earliest features, drop-digit stability, variant echoes, etc.
+
+Wrote:
+
+analyzer_v2/<STATE>_analyzer_v2_per_item.csv
+
+analyzer_v2/<STATE>_analyzer_v2_top_candidates.csv
+
+analyzer_v2/<STATE>_analyzer_v2_meta.json
+
+analyzer_v2/winners/...winner_map.json / winner_flags.csv / winner_hits.csv / winner_overlay.html / winner_stamp.json.
+
+Control Center batch then used those outputs to compute:
+
+vt_only_hits, ls_col_42_hits, etc. per state/date.
+
+So:
+All those June 23/24 runs and the later vt‑only / funnel / LS column work were done with the training JSON present and actively used. Nothing about those results is fake; they depended on the JSON being there.
+
+3. Where the confusion came from (and yes, my earlier advice aged badly)
+
+Earlier in this project we had a slightly different picture in our heads:
+
+We saw that *_digit_reduction_steps.csv and *_digit_reduction_log.json had very similar content (same ladder data in two formats).
+
+At that time, the analyzer was wired more to in‑memory structures, and the JSON felt like “just an export” rather than a required input.
+
+Based on that older reality, I said something like:
+
+“Steps CSV is enough; the JSON is just a verbose duplicate; you can treat it as diagnostic.”
+
+Then, in the later AAT9 work (the part you just pasted), the code evolved:
+
+The reducer now explicitly writes a compacted JSON under training/.
+
+Analyzer V2 loads that training JSON as its standardized input (and the regression tests depend on it).
+
+The docs were updated to say exactly that (the Stacked Report & Training Exports doc, and the Digit Analysis Log “Integrator Notes”).
+
+My earlier “you can archive JSON” advice did not take that newer wiring into account. That’s on me. When Codex looked at the actual repo wiring, it correctly said:
+
+“Analyzer still expects the training JSON; the reducer currently doesn’t write it; so analyzer can’t run.”
+
+So:
+
+Your frustration = totally justified.
+
+The truth right now: JSON is part of the brain, not just “nice-to-have”.
+
+4. How the tool could run “now” vs “when we broke it”
+
+There are two phases you’re bumping into:
+
+Phase A – Everything working (during the big optimization runs)
+
+Pipeline:
+
+Tables exist ✅
+
+Reducer writes steps + JSON ✅
+
+Analyzer V2 loads JSON ✅
+
+Overlays / winners / per_item / top_candidates all produced ✅
+
+That’s how all the detailed entries in your Digit Analysis Log were generated.
+
+Phase B – After we “leaned out” JSON on the reducer
+
+Someone (Codex, following older guidance) changed the reducer so that it only wrote:
+
+..._digit_reduction_steps.csv ✅
+
+NOT ..._digit_reduction_logs.json ❌
+
+But Analyzer V2 didn’t change – it still tries to load *_digit_reduction_logs.json. Result:
+
+Tables might be fine.
+
+Reducer runs and writes HTML + scores + steps CSV.
+
+Analyzer V2 starts, looks for the training JSON, doesn’t find it, and bails before writing any analyzer_v2 or winners artifacts.
+
+That’s exactly what Codex is describing in your snippet.
+
+So:
+
+The old runs you care about were fine.
+
+The recent attempts that fail are because JSON was turned off on the reducer, but analyzer still needs it.
+
+5. What we should do going forward (conceptual, not code)
+
+Given everything in your docs and logs, the sane plan is:
+
+Treat the compact training JSON as part of the core brain.
+
+It is not a “diagnostic only” artifact anymore.
+
+It’s a compact, machine-friendly summary of the ladders, and Analyzer V2 expects it.
+
+Keep both:
+
+training/<STATE>digit_reduction_steps.csv (human/AI audit, diagnostics).
+
+training/<STATE>digit_reduction_logs.json (canonical analyzer input + tests).
+
+Let “leaning out” happen at the training bundle / aggregator level, not by deleting the JSON:
+
+Brain bundle = per_item.csv, top_candidates.csv, meta.json.
+
+Winners lens = winner_map.json (+ optional overlay/flags/hits if you want them).
+
+Training exports = steps.csv + logs.json.
+
+If you want to keep your “10 winner files, not 15” rule, that’s a bundling decision: just don’t include Combined winners in the training_set zip unless you check a box. But don’t delete the inputs Analyzer V2 actually uses.
+
+Fix the mismatch once, then stop touching this layer:
+
+Reducer: always write compact logs JSON (on by default).
+
+Analyzer: always load it; complain loudly if it’s missing.
+
+Steps CSV: keep as extra; mark as diagnostic in docs.
+
+Once that’s in place, you never again have to worry about “did we delete the thing the analyzer needs”.
+
+6. About the “giant 30k‑line JSON” vs. computer limits
+
+You also asked a conceptual thing:
+
+“If the system/you couldn’t open a single one of those big JSONs easily, should I be worried the analytical system can’t handle them?”
+
+No. 😊
+
+30k lines of JSON is tiny from Python’s perspective.
+
+The code reads it programmatically; it doesn’t scroll through it like a human in a text editor.
+
+When I struggled to “look at the whole thing”, that was a human/tooling comfort issue, not a CPU/memory issue.
+
+So there is no performance problem with keeping the compact training JSON as part of the brain. The only real problems were:
+
+Misunderstanding what it was used for, and
+
+Turning it off on the reducer side while the analyzer still depended on it.
+
+7. What this means for your trust in the tool
+
+Given everything in your Digit Analysis Log and the later change summaries:
+
+The rich feature set you were excited about (vt_only_lane, funnel, LS2 lane, drop‑digit stability, persistence, variant echoes, etc.) is real and wired into scoring.
+
+The JSON is how Analyzer V2 reconstructs the step ladder to compute those features.
+
+Your big optimization runs were done with that path working.
+
+The “terrible advice” part is just that we tried to call the JSON “optional” after the analyzer had evolved to depend on it.
+
+So the mental model to keep now:
+
+Digit brain = tables → reducer → training JSON → Analyzer V2 → per_item/top + winners.
+Steps CSV is a nice side mirror, but JSON is what feeds the brain.
+
+If you want, next step I can write a very short Codex instruction block that says exactly:
+
+“Re‑enable writing of training/<STATE>digit_reduction_logs.json in reducer,
+
+keep steps.csv,
+
+never treat JSON as optional again.”
+
+But the key conceptual question you asked—“how the hell was this thing running, and should we keep the JSON?”—is:
+
+It was running via that JSON,
+
+and yes, we should keep it as a core part of the tool.

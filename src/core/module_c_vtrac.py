@@ -40,7 +40,11 @@ from utils.path_handler import (
 )
 from utils.state_utils import STATES, get_state_file_name
 from modules.vtrac_matchers import WinnerTargets, build_winner_targets
-from modules.vtrac_enhanced.evidence import BoxKey as EvidenceBoxKey, build_grid as build_evidence_grid
+from modules.vtrac_enhanced.evidence import (
+    BoxKey as EvidenceBoxKey,
+    build_grid as build_evidence_grid,
+    HIGHLIGHT_CLASS,
+)
 from alpha_analytical.digit_reduction.long_string_windows import get_long_string_boxes
 from utils.clean_data import clean_all_states
 from utils.extract_data import extract_all_states
@@ -800,6 +804,123 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     html += '</body></html>'
     
     return html
+
+
+def generate_index_json_report(state_name, index, patterns, tables, score, rank, timestamp=None, winner_combo: str | None = None):
+    """
+    Produce a structured JSON representation of the winners report (tables + legend tags + stats),
+    mirroring the HTML highlights without scraping.
+    """
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    targets = build_winner_targets(winner_combo or "", patterns)
+    evidence_grid = build_evidence_grid(tables).evaluate(targets)
+
+    header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
+    legend = {
+        "hit-winner": "Winner",
+        "hit-winner-gap": "Winner (gap)",
+        "hit-vt-straight": "V-TRAC straight",
+        "hit-vt-straight-gap": "V-TRAC straight (value)",
+        "hit-family": "Index family",
+        "hit-family-gap": "Family (gap)",
+        "ls-box": "Long-string (DR) box",
+        "ls-box-edge": "Long-string (DR) box edge",
+    }
+
+    def serialize_table(df, table_key, variant_label):
+        if df is None or df.empty:
+            return []
+        rows_out = []
+        table_key = str(table_key or "").lower()
+        for _, row in df.iterrows():
+            row_out = {
+                "Set": str(row.get("Set", "")),
+                "Draw": str(row.get("Draw", "")),
+                "RowType": str(row.get("RowType", "")),
+                "cells": {},
+            }
+            set_name = row_out["Set"]
+            draw_name = row_out["Draw"]
+            row_type = row_out["RowType"]
+            for col in header_cols:
+                if col not in df.columns:
+                    continue
+                raw_value = str(row[col])
+                tags: list[str] = []
+                if col.isdigit() and any(ch.isdigit() for ch in raw_value):
+                    col_idx = int(col)
+                    box_key = EvidenceBoxKey(
+                        variant=variant_label,
+                        set_name=set_name,
+                        draw=draw_name,
+                        column=col_idx,
+                    )
+                    box = evidence_grid.boxes.get(box_key)
+                    if box:
+                        cell = box.cells.get(row_type)
+                        if cell and cell.spans:
+                            for cat, spans in cell.spans.items():
+                                if spans:
+                                    cls = HIGHLIGHT_CLASS.get(cat)
+                                    if cls:
+                                        tags.append(cls)
+                    if _is_long_string_cell(table_key, set_name, draw_name, row_type, col_idx):
+                        tags.extend(["ls-box", "ls-box-edge"])
+                row_out["cells"][col] = {
+                    "text": raw_value,
+                    "tags": sorted(set(tags)),
+                }
+            rows_out.append(row_out)
+        return rows_out
+
+    def pattern_occurrence():
+        if "Combined_combined" not in tables:
+            return {}
+        counts, _ = count_patterns_in_table(tables["Combined_combined"], patterns)
+        return counts
+
+    def pattern_persistence():
+        if "Combined_combined" not in tables:
+            return {}
+        return analyze_pattern_persistence(tables["Combined_combined"], patterns)
+
+    def pattern_stability():
+        if "Combined_combined" not in tables:
+            return {}
+        return analyze_pattern_stability(tables["Combined_combined"], patterns)
+
+    def straight_counts():
+        if "Combined_combined" not in tables:
+            return {}
+        return {
+            pattern: detect_straight_combinations(tables["Combined_combined"], pattern)
+            for pattern in patterns
+        }
+
+    data = {
+        "state": state_name,
+        "index": index,
+        "winner_combo": winner_combo,
+        "score": score,
+        "rank": rank,
+        "timestamp": timestamp,
+        "patterns": list(patterns),
+        "legend": legend,
+        "tables": {
+            "Midday": serialize_table(tables.get("Midday_combined"), "midday", "Midday"),
+            "Evening": serialize_table(tables.get("Evening_combined"), "evening", "Evening"),
+            "Combined": serialize_table(tables.get("Combined_combined"), "combined", "Combined"),
+        },
+        "stats": {
+            "pattern_occurrence": pattern_occurrence(),
+            "pattern_persistence": pattern_persistence(),
+            "pattern_stability": pattern_stability(),
+            "straight_counts": straight_counts(),
+        },
+    }
+    return data
 
 def generate_top_reports(state_name, results, top_n=3):
     """Generate HTML reports for top N ranked indexes"""
@@ -1925,8 +2046,6 @@ def render(state: str) -> None:
 
 if __name__ == "__main__":
     main()
-
-
 
 
 

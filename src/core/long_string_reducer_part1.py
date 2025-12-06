@@ -173,13 +173,33 @@ AREA1_COLUMN_TARGETS = {
     "Set1": [7, 6, 5, 4, 2],
 }
 
+# Optional extended Set1 ladder (evidence-led). Enabled when
+# AAT9_DR_EXTENDED_SET1 is truthy (default: on).
+EXTENDED_SET1_TARGETS = {
+    "Draw2": [6, 5, 4],
+    "Draw3": [6, 5, 4, 3, 2],
+    "Draw4": [4, 2],
+    "Draw5": [3, 2, 1],
+    "Draw6": [2],
+    "Draw7": [1],
+}
+
+# Optional Set2 add-on (evidence-led). Piggybacks on the same env flag.
+EXTENDED_SET2_TARGETS = {
+    "Draw1": [3],
+}
+
+def _extended_set1_enabled() -> bool:
+    return str(os.getenv("AAT9_DR_EXTENDED_SET1", "1")).lower() in {"1", "true", "yes", "on"}
+
 
 def extract_r2_strings_area1(big_data: dict, section: str) -> Dict[str, str]:
     """Return the Area‑1 R2 strings for this section from big_data.
 
     Keys follow pattern  <section>|<set>|Draw1|col<...> and now include Set1
     column‑4/2 ladders (plus their Set2 companions) so we can analyse the
-    frequently winning “near column-1” boxes."""
+    frequently winning “near column-1” boxes. Extended Set1 ladder (Draw2‑7)
+    is optional and gated via AAT9_DR_EXTENDED_SET1."""
     out: Dict[str, str] = {}
     if "sections" not in big_data or section not in big_data["sections"]:
         return {}
@@ -189,25 +209,63 @@ def extract_r2_strings_area1(big_data: dict, section: str) -> Dict[str, str]:
         return {}
 
     for set_name in ["Set3", "Set2", "Set1"]:
-        if (
-            set_name in section_data["sets"]
-            and "draws" in section_data["sets"][set_name]
-            and "Draw1" in section_data["sets"][set_name]["draws"]
-        ):
-            draw_data = section_data["sets"][set_name]["draws"]["Draw1"]
-            if "pattern_variations" not in draw_data or "R2" not in draw_data["pattern_variations"]:
-                continue
-            column_values = draw_data["pattern_variations"]["R2"]
-            targets = AREA1_COLUMN_TARGETS.get(set_name, [7, 6, 5])
-            for col_num in targets:
-                col_label = str(col_num)
-                if col_label not in column_values:
+        if set_name not in section_data["sets"] or "draws" not in section_data["sets"][set_name]:
+            continue
+
+        draws = section_data["sets"][set_name]["draws"]
+
+        # Core ladder (Draw1)
+        if "Draw1" in draws:
+            draw_data = draws["Draw1"]
+            if "pattern_variations" in draw_data and "R2" in draw_data["pattern_variations"]:
+                column_values = draw_data["pattern_variations"]["R2"]
+                targets = AREA1_COLUMN_TARGETS.get(set_name, [7, 6, 5])
+                for col_num in targets:
+                    col_label = str(col_num)
+                    if col_label not in column_values:
+                        continue
+                    r2_string = str(column_values[col_label]).strip()
+                    if not r2_string:
+                        continue
+                    loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
+                    out[loc_id] = r2_string
+
+        # Extended Set1 ladder (Draw2..Draw7), gated
+        if set_name == "Set1" and _extended_set1_enabled():
+            for draw, cols in EXTENDED_SET1_TARGETS.items():
+                if draw not in draws:
                     continue
-                r2_string = str(column_values[col_label]).strip()
-                if not r2_string:
+                draw_data = draws[draw]
+                if "pattern_variations" not in draw_data or "R2" not in draw_data["pattern_variations"]:
                     continue
-                loc_id = f"{section}|{set_name}|Draw1|col{col_num}"
-                out[loc_id] = r2_string
+                column_values = draw_data["pattern_variations"]["R2"]
+                for col_num in cols:
+                    col_label = str(col_num)
+                    if col_label not in column_values:
+                        continue
+                    r2_string = str(column_values[col_label]).strip()
+                    if not r2_string:
+                        continue
+                    loc_id = f"{section}|{set_name}|{draw}|col{col_num}"
+                    out[loc_id] = r2_string
+        # Optional Set2 extension (Draw1 col3)
+        if set_name == "Set2" and _extended_set1_enabled():
+            for draw, cols in EXTENDED_SET2_TARGETS.items():
+                if draw not in draws:
+                    continue
+                draw_data = draws[draw]
+                if "pattern_variations" not in draw_data or "R2" not in draw_data["pattern_variations"]:
+                    continue
+                column_values = draw_data["pattern_variations"]["R2"]
+                for col_num in cols:
+                    col_label = str(col_num)
+                    if col_label not in column_values:
+                        continue
+                    r2_string = str(column_values[col_label]).strip()
+                    if not r2_string:
+                        continue
+                    loc_id = f"{section}|{set_name}|{draw}|col{col_num}"
+                    out[loc_id] = r2_string
     return out
 
 

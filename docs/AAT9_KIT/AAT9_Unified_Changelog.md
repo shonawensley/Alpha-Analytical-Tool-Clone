@@ -1,3 +1,17 @@
+## 2025-12-05 - Digit Reduction training JSON restored + extended ladder enabled + dual-day reruns
+- Impact: Restored the reducer’s compact training log writer (`*_digit_reduction_logs.json`) so Analyzer V2 and winners overlays can run; kept steps CSV as diagnostics. Added a config-gated Set1 ladder extension (Draw2–Draw7 cols 6→1, on by default) to surface high-signal near-core boxes without touching LS2. Ran the guarded tables pipeline and DR batch for two day-ahead pairs (2025-06-21→22, 2025-06-22→23), regenerating reducer/analyzer/overlay artifacts for ~17 states per day.
+- Files: src/core/module_b_digit_reduction.py, src/core/long_string_reducer_part1.py, alpha_analytical/digit_reduction/long_string_windows.py, data/outputs/analysis/digit_reduction/**, reports/stable/winners_by_date/{2025-06-22,2025-06-23}/
+- Notes: Analyzer outputs (per_item/top/meta) and winners overlays now populate again; the extended ladder is add-only and gated via `AAT9_DR_EXTENDED_SET1`.
+
+## 2025-12-06 - Digit Reduction residual hotspots + progression weights + docs
+- Impact: Added adjacent evidence-led boxes (Set1 Draw3 col3/2, Draw4 col2, Draw5 col2/1, Set2 Draw1 col3) under the same ladder flag; set light progression weights (near=0.02, far=0.01). Reran two days across all tracked states: mapped hits 2 391, unmapped 255; remaining residuals are small (e.g., Set1 Draw2 col3/2, Set1 Draw1 col3/1, Set3/Set2 Draw1 col3/1/2).
+- Docs: Updated `AAT9_Digit_Analysis_Log.md` (residual sweep + spot checks), `AAT9_Analyzer_Lean_Outputs.md` (DR config highlights), and `AAT9_Final_Validation_Help.md` (DR tool index).
+- Files: src/core/long_string_reducer_part1.py, alpha_analytical/digit_reduction/long_string_windows.py, alpha_analytical/digit_reduction/analyzer_v2/config.yml, docs/AAT9_KIT/{AAT9_Unified_Changelog.md,AAT9_Digit_Analysis_Log.md,AAT9_Final_Validation_Help.md,AAT9_Analyzer_Lean_Outputs.md}
+## 2025-12-05 - Digit Reduction progression feature (gated) + rerun
+- Impact: Added an add-only ladder proximity feature (`ls2_progress`) to Analyzer V2; weights remain 0 by default. Reran 2025-06-22 batch after fixing Georgia4 (no tables for GA/TX tracked). Progression is gated via config and ready for A/B weighting tests.
+- Files: alpha_analytical/digit_reduction/analyzer_v2/{config.yml,features.py}, data/outputs/analysis/digit_reduction/** (20251205 stamp for rerun)
+- Notes: CT per_item shows `ls2_progress` populated; future weight bumps will be tested on a small subset to ensure LS2/VT-only signals remain visible.
+
 ## 2025-11-13 - Stable reverse-engineering log + June 24 runs
 - Impact: Reran Stable + V-TRAC for Connecticut4/Indiana4/Florida4/OntarioCanada4 (results 2025-06-24) with min_occ=1, refreshed winners HTML, and captured per-state analysis entries (winner overlay, Stable evidence, compound context, follow-ups) under `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md`.
 - Impact: Documented cross-run gaps (literal winner logging, column2→column1 funnels, Combined coverage regressions, VT-lane weighting) and added the log to the KIT README / Workflow Standard so future sessions know where to append findings.

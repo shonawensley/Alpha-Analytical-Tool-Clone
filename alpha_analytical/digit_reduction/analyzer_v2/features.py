@@ -13,7 +13,7 @@ from .clustering import (
     extract_clusters,
     iter_trigrams,
 )
-from .types import Item, Step
+from .types import Item, Step, Key
 from .vtrac_index import VtracIndex, vtrac_set
 
 
@@ -136,6 +136,8 @@ class ItemFeatureBuilder:
         self.drop_records_all: List[Tuple[str, int, int]] = []
         self.cluster_lengths: List[int] = []
         self.extended_cluster = False
+        # Progression (extended Set1 ladder proximity)
+        self.progress_score = self._ladder_proximity(self.item.key)
 
     def build(self) -> ItemFeature:
         row = self._base_row()
@@ -181,8 +183,29 @@ class ItemFeatureBuilder:
             "vtrac_key": self.vtrac_key,
             "final_value": _sanitize(self.final_step.value) if self.final_step else "",
             "is_extended_cluster": False,
+            # Extended ladder proximity (add-only, weight-gated)
+            "ls2_progress": self.progress_score,
         }
         return row
+
+    def _ladder_proximity(self, key: Key) -> float:
+        """
+        Heuristic proximity score for extended Set1 ladder boxes (Draw2–Draw7 cols 6→1).
+        Nearer to current (lower draw index / lower col) gets a slightly higher value.
+        Returns 0.0 for non-Set1 or non-extended ladder boxes.
+        """
+        if key.set != "Set1":
+            return 0.0
+        try:
+            draw_num = int(str(key.draw).replace("Draw", ""))
+            col_num = int(key.col)
+        except Exception:
+            return 0.0
+        if draw_num < 2 or draw_num > 7 or col_num < 1 or col_num > 6:
+            return 0.0
+        draw_term = max(0, 7 - draw_num) / 5.0   # Draw2→1.0, Draw7→0
+        col_term = max(0, 6 - col_num) / 5.0     # col1→1.0, col6→0
+        return round(0.5 * draw_term + 0.5 * col_term, 4)
 
     def _scan_steps(self) -> None:
         family_set = set(self.triplet)

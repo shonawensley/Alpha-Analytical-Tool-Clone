@@ -23,6 +23,16 @@
 - Next:
   - Wire the same persistence/vtrac cues into the family/post-pass metrics and continue with hidden-core/double-mirror bonuses before handing the new bundles to ChatGPT Pro for review.
 
+## 2025-12-06 06:50 (UTC) - Digit Reduction residual sweep + progression weights + doc touchpoints
+
+- Context: After the extended ladder rollout, remaining unmapped hits clustered in a few adjacent boxes. Added them behind the existing ladder flag and set light progression weights to keep LS2/VT-only signals visible.
+- Change:
+  - Extended Set1 ladder windows to include Draw3 col3/2, Draw4 col2, Draw5 col2/1, and added Set2 Draw1 col3; kept gating via `AAT9_DR_EXTENDED_SET1`.
+  - Set progression weights to near=0.02, far=0.01 (config-gated) in `analyzer_v2/config.yml`; reran two day-ahead pairs across all tracked states (no errors).
+  - Updated docs with the DR tool index and residual findings.
+- Impact: Mapped hits rose to 2 391, unmapped fell to 255; remaining residuals are small (e.g., Set1 Draw2 col3/2, Set1 Draw1 col3/1, Set3/Set2 Draw1 col3/1/2). Winners highlighting uses the same window map, so the yellow tint covers the new boxes; analyzer/overlays remain in sync.
+- Files/Refs: src/core/long_string_reducer_part1.py; alpha_analytical/digit_reduction/long_string_windows.py; alpha_analytical/digit_reduction/analyzer_v2/config.yml; docs/AAT9_KIT/{AAT9_Unified_Changelog.md,AAT9_Digit_Analysis_Log.md,AAT9_Analyzer_Lean_Outputs.md,AAT9_Final_Validation_Help.md}
+
 ## 2025-11-05 04:10 (UTC) - Digit Reduction lockscore + validation run
 
 - Context: Final optimization pass needed a config-gated scoring surface (recency/single-column/V-TRAC nudges) plus a fast validation/reporting loop so June-17 reverse-engineering runs aren’t manual.

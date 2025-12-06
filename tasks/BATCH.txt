@@ -1,0 +1,294 @@
+TL;DR:
+Yes, the Digit Reduction lean‑outputs doc is the canonical “what comes out” contract; the Digit Analysis Log + Batch Workflow SOP + Live Wiring docs are the canonical “how to run it” and “where it lands”. From everything you pasted, the R2 / extra‑box mapping work is planned but not yet implemented—we only logged candidates (especially Set1 columns 4 & 2) and added telemetry (ls_col_42, ls2_lane, vt_only_lane), but we did not add new boxes or R2 strings into the extractor yet.
+
+Below I’ll do two things:
+
+Give you a clean, copy‑paste task spec for Codex so it can run the “Phase 1 + Phase 2” plan without guessing.
+
+Untangle which docs are “truth” vs background, and how to think about “final brain bundle outputs” for DR.
+
+1. What the current plan actually is (in plain language)
+
+From the Codex log + your pasted docs, the agreed plan for Digit Reduction was: (user)
+
+Phase 1 – regenerate fresh DR artifacts
+
+For one workbook + result date (e.g. tables from 2025‑06‑23 → winners 2025‑06‑24):
+
+Rebuild tables with the guarded pipeline
+
+python scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_2025-06-23.xlsm (user)
+
+This refreshes data/outputs/tables/<STATE>/....
+
+Run the Control Center batch with:
+
+Winners list for that date (data/results/2025-06-24.txt). (user)
+
+Digit Reduction batch toggle ON (so reducer + Analyzer V2 + winners overlays run). (user)
+
+Stable / V‑TRAC toggles as you like.
+
+After the batch, you expect for each state: (user)
+
+Reducer & training
+
+data/outputs/analysis/digit_reduction/<STATE>/<STATE>_digit_reduction_report.html
+
+data/outputs/analysis/digit_reduction/<STATE>/<STATE>_digit_reduction_scores.csv
+
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_steps.csv
+
+Analyzer V2 “brain bundle”
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/<STATE>_analyzer_v2_per_item.csv
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/<STATE>_analyzer_v2_top_candidates.csv
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/<STATE>_analyzer_v2_meta.json
+
+Winners lens (written centrally by the batch)
+
+.../winners/...winner_map.json / winner_flags.csv / overlays for Midday+Evening.
+
+That’s the “regenerate everything cleanly” part.
+
+Phase 2 – do the R2/box mapping review
+
+With those outputs in place, the plan was to: (user)
+
+Use winners HTML/JSON overlays + analyzer per_item CSV to see where winners landed.
+
+Log R2 locations / boxes that repeatedly hold winners but are not yet mapped into DR.
+
+Pay special attention to:
+
+Set1 columns 4 and 2 (these keep lighting up).
+
+LS2 / Method‑T lanes (ls2_lane, LS2‑only finishes).
+
+VT‑only winners (vt_only_lane) and LS2 bias (LS2 winners often under‑ranked). (user)
+
+Crucially: we only wrote the analysis log (the big Day‑1 / Day‑2 log you pasted). We did not actually extend the extractor’s mapping yet. That’s why you don’t see “new boxes added” in the code or docs.
+
+2. What to actually tell Codex (copy‑paste task)
+
+Here’s a task spec you can paste into a Codex task file or direct prompt. I’ll keep it very explicit so it doesn’t have to guess.
+
+Task: Make Digit Reduction’s “refresh + analysis” workflow one-button and reproducible
+
+Goal
+
+I want a simple, documented way to:
+
+Regenerate Digit Reduction reducer + Analyzer V2 outputs for a given workbook/results pair.
+
+Confirm the “brain bundle” outputs landed where the AAT9 docs expect.
+
+(Optional) Re‑run the R2/box mapping analysis over those outputs.
+
+Use only what’s already in the repo; do not redesign the tool.
+
+Part A – Add a small CLI wrapper for the existing batch workflow
+
+Create scripts/digit/run_digit_batch_cli.py that:
+
+Parses arguments:
+
+--history-file (Excel workbook name in data/original/, e.g. Pick3StatsC4_2025-06-23.xlsm)
+
+--results-file (results txt path, e.g. data/results/2025-06-24.txt)
+
+Optional: --states (comma‑sep list; default = all states that have tables).
+
+Steps:
+
+Calls the guarded tables pipeline exactly like the SOP:
+
+scripts/tools/run_tables_with_guard.py --history-file <history-file>
+(You can either subprocess.run(...) or import the function if it’s exposed.)
+
+Invokes the same batch logic the Control Center uses for Digit Reduction:
+
+Import alpha_analytical.control_center.batch_runner.run_digit_reduction_workflow (or whatever the current function is called) and call it with:
+
+results_file path
+
+state list
+
+options that run:
+
+reducer (HTML + scores CSV + steps CSV)
+
+Analyzer V2 (per_item, top_candidates, meta)
+
+winners overlays/flags JSON/CSV for Midday+Evening
+
+Print, at the end, for each state:
+
+The directory: data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+
+A short “OK” if the three brain‑bundle files exist:
+
+<STATE>_analyzer_v2_per_item.csv
+
+<STATE>_analyzer_v2_top_candidates.csv
+
+<STATE>_analyzer_v2_meta.json
+
+Requirements
+
+Do not change any scoring logic, configs, or analyzers.
+
+Reuse the same functions the Streamlit app uses (per the docs) so the flow is identical to running via UI.
+
+If the repo already has a CLI for DR batch, just wrap it and document it instead of duplicating logic.
+
+Docs update
+
+Append a short “How to re‑run Digit Reduction by CLI” section to:
+
+docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md
+
+docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md under the Digit Reduction section
+
+Each should show a concrete example:
+
+python scripts/digit/run_digit_batch_cli.py \
+  --history-file Pick3StatsC4_2025-06-23.xlsm \
+  --results-file data/results/2025-06-24.txt
+
+Part B – Optional helper to re‑run the R2/box mapping review
+
+You do not need to add new boxes yet; just make it easy to re‑run the analysis that feeds that decision.
+
+Add scripts/digit/summarize_r2_mapping.py that:
+
+Loops over all states that have:
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/<STATE>_analyzer_v2_per_item.csv
+
+The corresponding winners overlays / flags JSON/CSV for that date.
+
+For each state, compute:
+
+Count of winners that land in existing long‑string boxes (current LS1/LS2 mapping).
+
+Count of winners whose primary evidence sits in columns 4 or 2 in Set1 (use col_rank/col_label from per_item).
+
+Count of LS2‑only winners (ls2_lane == 1).
+
+For each (Set, Column) combo that frequently hosts winners but is not in the current mapping, log it as a “candidate extension”.
+
+Write a summary CSV like:
+data/outputs/analysis/digit_reduction/R2_extension_summary_YYYYMMDD.csv with columns:
+
+state
+
+candidate_location (e.g. Set1 col4, Set1 col2)
+
+winner_count
+
+vt_only_count
+
+ls2_lane_count
+
+Guardrails
+
+This script is read‑only; it must not modify any config or mapping files.
+
+The goal is to give us evidence for which R2 strings/boxes to add later.
+
+Docs
+
+Add a short note to docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md under a new heading “R2 Extension Helper (CLI)” explaining what the script does and where it writes the summary file.
+
+That’s the whole task. Please follow existing data paths and naming from the AAT9 docs; don’t invent new directories or change the brain bundle layout.
+
+3. Which docs are “truth” vs background?
+
+Based on everything you pasted, here’s the simplest way to think about it (using only your text as source):
+
+Canonical what comes out for Digit Reduction
+
+AAT9_Analyzer_Lean_Outputs.md – this is the contract for the DR brain bundle: paths and filenames like:
+
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/<STATE>_analyzer_v2_per_item.csv
+
+..._top_candidates.csv, ..._meta.json
+plus the winners flags dr_win_vt_boxed, dr_win_vt_straight, and telemetry fields (vt_only_lane, funnel_precol1, ls_col_42, ls2_lane). (user)
+
+AAT9_Digit_Analysis_Log.md – this is the analysis + integrator brief. It contains:
+
+The long Day‑by‑Day example review you pasted.
+
+“Integrator Notes — Ready for Aggregator” explaining which features/columns matter most and why. (user)
+
+Treat these two as the main reference for final outputs + which columns matter.
+
+Canonical how to run it / where it lands
+
+AAT9_Control Center Batch Workflow SOP – describes the workbook → tables → batch → artifacts loop, and explicitly lists DR analyzer_v2 outputs under data/outputs/analysis/digit_reduction/<STATE>/.... (user)
+
+AAT9_Live_Wiring_and_Data_Paths.md – maps each app page to engines & directories; its Digit Reduction section confirms:
+
+Engine module (src/core/module_b_digit_reduction.py).
+
+Inputs (data/outputs/tables/<STATE>/).
+
+Outputs for reducer, analyzer_v2, training_sets and winners (central). (user)
+
+AAT9_Quickstart_Cheat_Sheet.md – shows preflight and “Combined tables pipeline”, plus a short summary of Control Center batch behavior. (user)
+
+Those three are your “operational” docs.
+
+Historical / context‑only
+
+Everything else (older logs, early design notes, partial plans) is valuable context but not the contract. When in doubt:
+
+If you want to know what files the Aggregator can depend on, look at Lean Outputs + Digit Analysis Log.
+
+If you want to know how to actually run a batch, use Batch Workflow SOP + Live Wiring + Quickstart.
+
+If something in an old doc contradicts Lean Outputs or the Digit Analysis Log, trust the Lean Outputs + Digit Log combo—they were explicitly updated after the vt‑only / funnel features were wired. (user)
+
+4. Why the R2 / “extra column” extensions aren’t in the code yet
+
+Your big Day‑1 / Day‑2 log is doing exactly what you remember asking for: (user)
+
+It tracks where winners show up relative to current boxes, and it repeatedly flags:
+
+Set1 columns 4 and 2 as “extra columns beyond LS set” that glow in the HTML.
+
+LS2 finishes getting under‑ranked.
+
+VT‑only lanes not getting enough weight.
+
+We then added telemetry + scoring knobs:
+
+vt_only_lane, ls2_lane, funnel_precol1, ls_col_42, and VT boxed/straight flags. (user)
+
+But we deliberately stopped one step short of changing the LS1/LS2 box mapping:
+
+The docs say things like “columns 4/2 should be candidates for extension” and “keep watching LS column‑4/2 hits until we have real winners there,” not “we now map R2 strings for Set1 col‑4/2 into the extractor.” (user)
+
+So: you were right to feel something was missing—we never actually did the box‑extension coding pass. The plan for that pass is exactly what Part B of the Codex task is meant to support: get solid statistics from multiple dates, then we can safely change mapping.
+
+5. What you actually do next (practical steps)
+
+If you just want progress without more yak‑shaving:
+
+Give Codex the task spec above (Part A only, if you don’t want the R2 helper yet).
+
+Once Codex adds run_digit_batch_cli.py and updates the docs, try a real run:
+
+python scripts/digit/run_digit_batch_cli.py \
+  --history-file Pick3StatsC4_2025-06-23.xlsm \
+  --results-file data/results/2025-06-24.txt
+
+
+Check that analyzer_v2 brain bundle files exist for a couple states.
+
+When that feels solid, then consider asking Codex to implement the R2 extension helper in Part B so we can finally decide on the extra boxes (Set1 col‑4/2, maybe a couple more LS2 locations).
+
+If you’d like, next message we can zoom out again and I can sketch how the Aggregator should read DR’s brain bundle (only 3–4 columns really matter), so you’re not feeling lost in the big CSV anymore.

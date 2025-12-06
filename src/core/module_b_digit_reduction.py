@@ -306,7 +306,16 @@ def _load_big_data_from_tables(csv_dir: Path) -> dict:
 
     big: dict = {"sections": {}}
 
-    for fp in csv_dir.glob("*_combined.csv"):
+    # Table writer currently emits `Midday_Combined.csv`, `Evening_Combined.csv`, etc.
+    # Accept both the historical lowercase `*_combined.csv` and the current title-case
+    # `*_Combined.csv` to avoid empty loads.
+    table_files = list(csv_dir.glob("*_combined.csv")) + list(csv_dir.glob("*_Combined.csv"))
+    seen: set[Path] = set()
+
+    for fp in table_files:
+        if fp in seen:
+            continue
+        seen.add(fp)
         try:
             df = pd.read_csv(fp, dtype=str).fillna("")
         except Exception:
@@ -651,6 +660,11 @@ def run_digit_reduction(
             df_steps = pd.DataFrame(rows)
             if not df_steps.empty:
                 df_steps.to_csv(steps_csv_path, index=False)
+
+            # Compact training log consumed by Analyzer V2 (SSOT for steps/finals)
+            training_json_path = train_dir / f"{state}_digit_reduction_logs.json"
+            training_payload = {"items": items}
+            training_json_path.write_text(json.dumps(training_payload, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
 

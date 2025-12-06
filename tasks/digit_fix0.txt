@@ -1,0 +1,134 @@
+Short answer: you are not crazy – you did ask for this – but we never locked in a new “extra R2 boxes” mapping. We captured the idea as features (box‑stability, set‑lag, etc.), not as “add more R2 strings to the Digit‑Reduction feed.”
+Let me break it down in human terms and then give you a concrete recommendation.
+
+1. What the current mapping actually is
+From the Digit‑Reduction docs, the tool still pulls strings from the same “long‑string areas” you originally defined:
+
+
+Area #1 – long columns 7, 6, 5 from Set3 → Set2 → Set1 (your main ladders).
+
+
+Area #2 – the special Set1 tail columns/boxes (Draw4 col‑3 and Draw6 col‑1 etc.), your “secondary window.”
+
+
+Those are the only places where Digit‑Reduction actually feeds in R2 strings for the module today.
+So: no extra R2 strings/boxes were added beyond Area #1 + Area #2.
+
+2. What you asked for and how it did get reflected
+The thing you asked to “track” – where are the winner clusters living in the ladders? – shows up in the training feature plan, not as new mapping:
+
+
+We treat R2 as the box ID, but scan R2/R4/R6/R8 inside the same box to compute stability metrics like box_stability_r2r4, box_span, earliest step, persistence, etc.
+
+
+We add set‑lag / recency (set_earliest, set_lag) so Set2→Set1 tightening gets a boost.
+
+
+We add cross‑variant consensus (variant_support) so Combined+Midday / Combined+Evening paths are recognized as stronger.
+
+
+Those features are exactly “where in the ladders is the family stable?” but expressed as scores, not “add more R2 feeds.”
+So your “track which boxes really matter” idea is there – just folded into features like:
+
+
+box_span, local_family_density, set_lag, variant_support, etc.
+
+
+
+3. Did we ever pick a new list of R2 boxes to map?
+No. There is no doc where we say “add R2 from Set1 Draw2 col‑7” or similar as a permanent extension.
+All the official specs still say:
+
+“We gather columns 7/6/5 from sets 3/2/1 (long string area #1) or use the special columns in area #2. Then we do digit reduction per row (R2/R4/R6/R8) and let the aggregator handle vertical / horizontal coverage.”
+
+So:
+
+
+Mapping stayed lean → Area #1 + Area #2 only.
+
+
+The new training work went into how we score patterns inside those boxes (stability, set progression, cross‑variant support), not into pulling extra boxes.
+
+
+You’re not missing a hidden “R2‑box extension” doc. It just never got formalized because we agreed not to explode the feature space.
+
+4. Given everything we’ve learned, what would I recommend now?
+If you want to strengthen the tool without wrecking the lean design, here’s the simplest high‑value stance:
+Keep as‑is (and finish the features)
+
+
+Keep the current mapping exactly as it is:
+
+
+Area #1: Set3/2/1 × columns 7/6/5 R2/R4/R6/R8.
+
+
+Area #2: Set1 tail boxes (Draw4 col‑3, Draw6 col‑1) you already mapped.
+
+
+
+
+Make sure the features from the training notes are actually wired into scoring:
+
+
+box_stability_r2r4, box_span
+
+
+set_lag / set_earliest
+
+
+variant_support
+
+
+local_family_density, pair_density, double_flag, drop_run_length
+
+
+
+
+That alone already encodes “which boxes are strong” without touching mapping.
+If you really want one small mapping extension
+If you ever decide you want one extra feed (not urgent), the most defensible would be:
+
+
+Add R2 from the “yesterday ladder” for the hottest column only, e.g.:
+
+
+Set2 Draw2 col‑7 R2 (for each variant),
+
+
+maybe Set1 Draw2 col‑7 R2.
+
+
+
+
+Reason: across states you repeatedly saw the winner’s 3‑value family echo in Set2/older rows before tightening in Set1 – that’s exactly what set_lag is capturing already. If you wanted an extra physical string feed, I’d start there and treat it as experimental.
+But honestly: given how much we’ve already leaned out and how much of that recency pattern is in the features, I’d keep the current mapping and just:
+
+Finish wiring all the box‑stability / set‑lag / variant‑support features into the Digit score.
+
+That gives you the “strong boxes” behavior you wanted, without another round of plumbing.
+
+5. Direct answers to your questions
+
+
+“Did we decide which R2 strings/boxes to extend to?”
+→ No, we never locked in a new list. Mapping is still Area #1 + Area #2.
+
+
+“Did I ask to track where the winner clusters live?”
+→ Yes, and that became the box‑stability, set‑lag, variant_support, local_family_density, etc. feature set in digit_training.txt.
+
+
+“Do you have recommendations?”
+→ Yes:
+
+
+Don’t add new boxes yet; instead, make sure those stability / recency / density features are fully implemented in Analyzer V2 scoring.
+
+
+If you ever want a tiny mapping extension, the only one I’d consider is “yesterday’s col‑7 ladder” (Set2/Set1 Draw2 R2) as an experiment, documented as such.
+
+
+
+
+If you want, next step I can write a tiny design blurb you can paste into your docs: “Current Digit‑Reduction mapping + how box‑stability features implicitly capture hot R2/R4/R6/R8 boxes.”

@@ -17,6 +17,7 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 ### 2. Diagnostics (default ON for steps; OFF for overlays)
 - `data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_steps.csv`
   - Tidy step trace (Set/Draw/Col/Method/Mode; value/length/unique/is_3value + sequence_meta).
+- `training/<STATE>_digit_reduction_logs.json` — compact training log (canonical analyzer input; required).
 - `_digit_reduction_log.json` (verbose) — retired by default.
 - Per-tool winners output (all `winner_*.json/csv/html`) — gated off; only generated when `diagnostics.write_overlay: true`.
 
@@ -28,6 +29,11 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 - Combined variant still available here; analyzer bundles only carry Midday/Evening results.
 
   Each `winner_flags.csv` now includes `dr_win_vt_boxed` and `dr_win_vt_straight` columns, and the companion `winner_hits.csv` mirrors them so downstream scripts can classify exact straight/boxed vs VT boxed/straight winners using the same taxonomy as Stable.
+
+### 4. Extended ladder + progression (current defaults)
+- Extended Set1 ladder (Draw2–Draw7 cols 6→1) is ON by default (`AAT9_DR_EXTENDED_SET1` kill-switch only).
+- LS2/VT-only telemetry is preserved; keep weights to avoid burying near-core evidence.
+- Progression feature (`ls2_progress`) is emitted in per_item/top; weights are gated in config (default 0 unless explicitly raised for tests).
 
 ---
 

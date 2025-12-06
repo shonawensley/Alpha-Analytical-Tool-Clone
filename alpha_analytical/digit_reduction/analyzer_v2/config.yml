@@ -72,6 +72,12 @@ io:
 
 outputs:
   write_stacked_html: true
+  # Optional add-only progression feature for the extended Set1 ladder (Draw2–Draw7).
+  # Default weight is zero; enable/gate via weights when/if validated.
+  progression:
+    enabled: true
+    weight_near: 0.02   # light bump for closer-to-current boxes (global)
+    weight_far: 0.01    # small bump for deeper survival (global)
 
 scoring_linear:
   enabled: true

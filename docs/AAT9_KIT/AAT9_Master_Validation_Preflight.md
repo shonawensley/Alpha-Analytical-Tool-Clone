@@ -19,7 +19,7 @@ This will:
 - Activate `data/history/Pick3StatsC4_YYYY-MM-DD.xlsm` into `data/original/Pick3StatsC4.xlsm`.
 - Rebuild tables + JSON (via `run_tables_with_guard.py`).
 - Generate winners using `data/results/(YYYY-MM-DD + 1).txt` into `reports/stable/winners_by_date/<RESULTS_DATE>/`.
-- Validate that CT/FL winners HTML exists for the expected triads and that the Set1/Draw1 sequence from Combined tables appears inside the HTML (guards against stale tables).
+- Validate that CT/FL winners HTML exists for the expected triads and that the Set1/Draw1 sequence from the Combined tables appears inside the HTML (guards against stale tables).
 - Write a summary JSON to `reports/stable/validation_logs/validation_<RESULTS_DATE>.json`.
 
 ## Manual checklist (if you need to do it step-by-step)

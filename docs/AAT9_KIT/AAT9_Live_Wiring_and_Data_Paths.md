@@ -4,6 +4,48 @@ Purpose: Map each page to its engines/modules and the exact input/output directo
 
 **Dataset interpretation:** Combined is the baseline dataset; Midday/Evening are additive variants surfaced alongside Combined. Aux/Blackapple read `data/cleaned/*_draws.csv` (draws-only). V-TRAC / Stable / Digit Reduction read combined tables under `tables/<STATE>/` (or `data/outputs/tables/<STATE>/`) via `utils.path_handler`.
 
+## Tool Index (wired tools, tracked states only)
+- **Tracked states**: CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. GA/TX are out of scope (no tables).
+- **Digit Reduction**
+  - Entry: `src/core/module_b_digit_reduction.py`; batch runner: `alpha_analytical/control_center/batch_runner.py`; analyzer: `alpha_analytical/digit_reduction/analyzer_v2/*`
+  - Inputs: combined tables via `utils.path_handler` (`data/outputs/tables/<STATE>/...`), winners HTML/JSON from `reports/stable/winners_by_date/<DATE>/`
+  - Outputs (brain): `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/{per_item.csv,top_candidates.csv,meta.json,stacked_*.html}`
+  - Diagnostics/training: `.../training/<STATE>_digit_reduction_logs.json` (required), steps CSV optional; winners map/flags/HTML emitted centrally by batch
+  - Config highlights: extended Set1 ladder + adjacent boxes ON by default (`AAT9_DR_EXTENDED_SET1` kill-switch only); light progression weights (`ls2_progress`) on; LS2/VT-only boosts intact
+- **Stable Pattern**
+  - Entry: `src/core/stable_pattern_extractor.py` → `alpha_analytical/stable/*`
+  - Inputs: combined tables (`data/outputs/tables/<STATE>/`)
+  - Outputs: `data/outputs/analysis/patterns/<STATE>/` scores/families/compound/metrics; spotlight CSVs when winners provided
+- **V-TRAC Analyzer**
+  - Entry: `src/core/module_c_vtrac.py` (enhanced engine under `modules/vtrac_enhanced/*`)
+  - Inputs: combined tables (`data/outputs/tables/<STATE>/`)
+  - Outputs: `data/outputs/analysis/vtrac/<STATE>/` (analyzer CSV/JSON, evidence grid, overlays)
+- **Hot Zones**
+  - Entry: `alpha_analytical/hot_zones/*`; CLI: `scripts/hot_zones/run_hot_zones_cli.py`
+  - Inputs: JSON tables `data/outputs/json_tables/<STATE>_tables.json`
+  - Outputs: `data/outputs/analysis/hot_zones/<STATE>/` per-lane/top/meta + `YYYYMMDD_hot_zones_winner_map.{json,csv}`
+- **Aux / Blackapple**
+  - Entry: Aux loaders `modules/aux_loaders.py`, positional under `modules/module_d_auxiliary_tools/refactored/`
+  - Inputs: draws-only CSV `data/cleaned/*_draws.csv`
+  - Outputs: in-page renders; validation guards only (no combined tables)
+
+### One-line flow (all tools)
+Control Center (batch) → run_tables_with_guard (CSV+JSON tables) → winners logger (reports/stable/winners_by_date/<DATE>/) → tool analyzers (DR/Stable/VTRAC/Hot Zones) → `data/outputs/analysis/<tool>/<STATE>/` (brain bundles; winners maps centralized via batch).
+
+```mermaid
+flowchart LR
+  A[Pick3StatsC4 workbook] -->|run_tables_with_guard| T[data/outputs/tables<br/>+ json_tables]
+  T --> W[Winners logger<br/>reports/stable/winners_by_date/<DATE>/]
+  W --> D[Digit Reduction]
+  W --> S[Stable Pattern]
+  W --> V[V-TRAC Analyzer]
+  T --> H[Hot Zones (JSON)]
+  D --> O1[data/outputs/analysis/digit_reduction/<STATE>/...]
+  S --> O2[data/outputs/analysis/patterns/<STATE>/...]
+  V --> O3[data/outputs/analysis/vtrac/<STATE>/...]
+  H --> O4[data/outputs/analysis/hot_zones/<STATE>/...]
+```
+
 
 ## Pages → Engines → Inputs/Outputs
 - V‑TRAC Analyzer

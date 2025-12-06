@@ -1,0 +1,190 @@
+TL;DR:
+Yes, we did ask the system to track “which extra R2 boxes keep lighting up around winners,” and the docs do capture that. The takeaway from the validation runs is:
+
+Core R2 long‑string coverage is still the classic 7‑6‑5 boxes in Sets 3‑2‑1 plus the two LS2 boxes.
+
+Observed winner clusters repeatedly hit Set1 columns 4 and 2 right next to LS1, across many states/dates. These were explicitly logged as “extra columns beyond LS set: [2,4]” and flagged as candidates for expansion.
+
+The follow‑up work wired metric flags (funnel_precol1, ls_col_42, ls2_lane, vt_only_lane) so the analyzer and aggregator can see these near‑LS columns, but the docs still describe LS‑column expansion as an outstanding task, not finished.
+
+So: we identified which extra R2 neighborhoods are promising (especially Set1 col‑4/2 around LS1 and LS2 lanes), we started wiring metrics for them, but we have not fully re‑defined the official R2 mapping spec yet.
+
+Below is a concrete breakdown.
+
+1. What the current R2 mapping actually is
+
+The cheat‑sheet and vision docs both lock in the baseline long‑string sources:
+
+Area‑1 (classic LS1)
+
+Set3/2/1 Draw1 col 7, 6, 5 – these are the R2/R4/R6/R8 progressions you’ve always treated as the “big tower” long strings.
+
+Area‑2 (LS2 / Method‑T lane)
+
+Set1 Draw4 col3 and Set1 Draw6 col1 are the second long‑string area.
+
+Nothing in the spec docs you gave me changes that baseline. Those are still the only explicitly documented long‑string R2 sources.
+
+2. Did we track “which R2 boxes winners cluster in” and ask for expansion?
+
+Yes.
+
+The Digit Analysis Log was written exactly for this: every winner example logs which columns light up, and explicitly calls out “extra columns beyond LS set” as candidates for expansion.
+
+Example patterns:
+
+Multiple states on 2025‑06‑24 (NJ, NY, OH, ON, etc.) record:
+
+HTML hits: Set3 cols [3–7], Set2 [3–7], Set1 [1–7]. Extra columns beyond LS set: [2,4].
+
+Notes repeatedly say things like:
+
+“Column4 evidence noted.”
+
+“Column4/2 hits recorded.”
+
+“Nearby column4 hits continue to justify box expansion.”
+
+“HTML column4 repeats → note for expansion.”
+
+The summary section later backs this up:
+
+It explicitly calls out that lagging winners “still hug Set1 columns 4/2 or LS2” and says this “reinforces the need for the LS‑column extension.”
+
+So yes: you did ask for this kind of tracking, and the log does contain the answer – it just lives in that analysis doc, not in the original v1.0 module spec.
+
+3. What we already wired in code / metrics
+
+On the implementation side, the changelog and integrator notes show what was actually delivered after those reviews:
+
+New per‑item metrics:
+
+vt_only_lane
+
+funnel_precol1 (captures ladders moving through Set1 col‑4/3 before col‑1)
+
+ls_col_42 (directly tracking Set1 column‑4/2 ladders)
+
+ls2_lane (captures LS2 / Method‑T chains)
+
+QA counters: batch runner now surfaces vt_only_hits and ls_col_42_hits so you can see, per state/date, whether winners are touching those “near” boxes.
+
+The Digit Analysis Log calls out that in the first reruns, vt‑only hits show up, but ls_col_42_hits is still zero, meaning the column‑4/2 ladder feature is wired and scored but hasn’t yet seen a winner land in those exact new boxes.
+
+So the system currently:
+
+Still extracts long strings from the original LS boxes, but
+
+Tracks extra telemetry around Set1 column‑4/2 funnels and LS2 lanes, so the analyzer/aggregator can give weight to “almost there” ladders even if they don’t end in the strict LS1 columns.
+
+That’s why you’re seeing VT‑only lanes and “near column‑1” funnels in the docs even though the core R2 mapping spec hasn’t changed yet.
+
+4. Did we finalize a list of new R2 boxes to officially add?
+
+Short answer: no, not fully locked.
+
+What we did do:
+
+Established a clear candidate set:
+
+The logs keep highlighting Set1 column‑4 and column‑2 as “extra columns beyond LS set” where winner ladders repeatedly flash.
+
+LS2‑only winners are called out as “still buried” with a note to add explicit LS2 weighting and box expansion.
+
+Implemented metric flags so those regions can influence scores (funnel_precol1, ls_col_42, ls2_lane).
+
+What we did not do (per the docs you gave me):
+
+There is no updated spec that says “the Digit Reduction module now officially extracts R2 streams from Set1 col‑4 and col‑2 as long‑string sources alongside 7‑6‑5 and LS2.”
+
+The integrator notes explicitly call the LS column‑4/2 coverage “the next gating task” and say the LS column extension is still needed.
+
+So the current state is:
+
+We know column‑4/2 and LS2 lanes are important and we’re tracking them via metadata, but the official “where do we take R2 strings from?” rule has not yet been rewritten to include them.
+
+5. Practical recommendations: which R2 boxes are worth adding
+
+Grounded on the documents (not guesses), here’s what I’d recommend if you’re handing this off or planning the next DR pass:
+
+5.1. Keep the core LS mapping exactly as-is
+
+Area‑1: Set3/2/1 Draw1 col 7,6,5
+
+Area‑2: Set1 Draw4 col3, Set1 Draw6 col1
+
+These remain the backbone of long‑string reduction and are heavily validated.
+
+5.2. Promote “near‑LS” lanes to official R2 coverage candidates
+
+Based on the repeated notes in the Digit Analysis Log, the strongest candidates to add as R2/long‑string sources are:
+
+Set1 column‑4 (Draw1)
+
+Set1 column‑2 (Draw1)
+
+Because:
+
+Many winners across multiple states show extra hits in columns 4 and 2 beyond the strict LS1 set, and the notes repeatedly say column‑4/2 hits “justify box expansion” and “reinforce the need for LS column extension.”
+
+I would treat those two as:
+
+“LS1‑near” long strings – conceptually a softer ring around the current LS1 lane, feeding the same reduction methods and then tagged via ls_col_42 so the aggregator can distinguish them from the primary LS1 towers.
+
+5.3. Make sure LS2 lanes are not forgotten
+
+The log also flags LS2‑only winners (paths that terminate on LS2/Method‑T instead of classic LS1) as currently under‑weighted and buried in the rankings.
+
+You already have:
+
+ls2_lane metric to mark those lanes.
+
+So, a reasonable extension (still design recommendation, not yet codified in the spec) is:
+
+Ensure LS2 boxes (Set1 Draw4 col3 / Draw6 col1) are getting the same level of reduction + pattern extraction as LS1, with scoring tuned via ls2_lane so LS2 wins don’t get buried.
+
+6. Answering your core questions explicitly
+
+Did we decide on which R2 strings/boxes to extend mapping to?
+
+We decided on the candidates, not a finished spec:
+
+Candidates: Set1 col‑4 and col‑2 as extra long‑string neighborhoods, plus stronger LS2 lanes.
+
+Evidence: repeated “extra column [2,4]” hits in the logs and explicit notes calling for LS column extension and LS2 expansion.
+
+Didn’t I ask to track this / gather insights?
+
+Yes. The Digit Analysis Log is exactly that tracking mechanism: it logs the HTML column hits for each winner, notes extra [2,4] hits, and summarises the need for LS column extension and LS2 coverage.
+
+Do you have any opinion / insight / recommendation from everything we learned?
+
+Grounded on the docs:
+
+Short‑term (“v1.5”):
+
+Keep extraction on LS1 (7‑6‑5) and LS2 as is.
+
+Ensure vt_only_lane, funnel_precol1, ls_col_42, ls2_lane are all flowing through per_item → top → winners overlays so the aggregator can actually use those signals.
+
+Next upgrade (“v2”) – what I’d tell Codex:
+
+Extend long‑string extraction to include R2 strings for Set1 Draw1 column‑4 and column‑2, but tag them as a distinct family in the schema (e.g., ls1_near_col4, ls1_near_col2) so we can keep their scores slightly below the core LS1 boxes unless validation proves otherwise.
+
+Confirm LS2 boxes are fully wired into the same reduction pipeline and checked in the Digit Analysis Log with ls2_lane overlays.
+
+Re‑run a multi‑state validation pass and update the Digit Analysis Log with before/after rank shifts for winners that previously “hugged Set1 4/2 or LS2.”
+
+None of that contradicts the docs; it just makes explicit what the log already suggests as “next gating tasks.”
+
+7. Two concrete next steps you can take
+
+Mark these candidate boxes in your own notes for the next DR coding pass:
+
+“Extend R2 long‑string coverage to Set1 Draw1 col‑4 & col‑2; ensure LS2 lanes are first‑class; keep tracking via ls_col_42 and ls2_lane.”
+
+When you brief Codex, you can literally paste something like:
+
+“Per AAT9_Digit_Analysis_Log, winners consistently show extra hits in Set1 columns 4 and 2 (‘extra columns beyond LS set: [2,4]’, notes call for ‘LS‑column extension’). Please extend the digit‑reduction long‑string extractor so it also pulls R2 strings from Set1 Draw1 col-4 and col-2 as secondary LS1 lanes, tagged distinctly (ls1_near), and ensure ls_col_42 and ls2_lane are persisted through per_item/top/winners for aggregator use.”
+
+That keeps everything aligned with the evidence already written in your docs and answers exactly the “which R2 boxes should we add?” question.

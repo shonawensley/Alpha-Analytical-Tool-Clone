@@ -1294,3 +1294,418 @@ ____________________________________________
 
   Given that, Hot Zones V1 is self-contained: no pending extra “helper” scripts are needed, and the JSON environment is baked into the table pipeline for future master-validation or
   tooling enhancements.
+
+  _________________________________________________________________________________________________
+  FINAL ASSESSMENT -SELF CONTAINED OPTIMIZED ********
+
+  TL;DR:
+Yes—what Codex just implemented does match the FINAL_HOT3 / HOT_FINAL intent and is enough to treat Hot Zones V1 as “closed” from a module perspective: the ledger script proves 28/28 EB/ES/VB/VS per day, VT‑gating is now triad‑level, and strict guard tests are in place with CT 494/858 and FL 733 behaving correctly in fresh CT/FL runs. (user) The four CSV reports you attached (summary digest, unified ledger, ledger_all, mapping manifest) are essentially a clean “export pack” around that: they confirm stability across CT/FL, show sane score and hit distributions, and prove the JSON→CSV mapping is lossless. (user) You can safely hand these outputs (plus the per‑state folders) to the architect and move your focus to master validation/aggregator design when you’re ready.
+
+1. Can we trust Codex’s FINAL_HOT3 implementation as Hot Zones V1 close‑out?
+1.1 What Codex actually did
+
+From your Codex log, three concrete things happened:
+
+Ledger summary script added and run
+
+Codex added scripts/hot_zones/summarize_winner_hits.py which reads reports/stable/hot_zones_winner_hits.json, computes EB/ES/VB/VS flags per row, and prints counts per date. (user)
+
+The actual output you showed is:
+
+2025‑06‑24 EB=28 ES=28 VB=28 VS=28
+2025‑06‑25 EB=28 ES=28 VB=28 VS=28
+2025‑06‑26 EB=28 ES=28 VB=28 VS=28 (user)
+
+That’s exactly the mechanical check FINAL_HOT3 asked for: we’re no longer claiming 28/28, we have a script that recomputes it from the ledger.
+
+VT‑gating hardened at the triad level
+
+In alpha_analytical/hot_zones/scanner.py, Codex kept the existing per‑row scoring but added a post‑pass over triad_to_evidence that:
+
+Finds any evidence rows where guard_injected is true (guard candidates). (user)
+
+Checks all evidence rows for that triad to see if any row has VT support (has_vt_straight or vt_only_lane). (user)
+
+If no VT support exists for the triad, it strips guard flags; otherwise, guard stays on the whole triad. (user)
+
+This is exactly the “triad‑level VT gating” we wanted: as long as some evidence row shows VT lane/straight, the guard cannot silently drop away just because you happened to be scoring a non‑VT row. (user)
+
+Guard unit tests tightened
+
+Codex rewrote the guard tests to assert exact canonical+mirror sets:
+
+CT 494 → {"449", "499"}. (user)
+
+FL 733 → {"288", "337"}. (user)
+
+And then ran:
+
+PYTHONPATH=.:src pytest tests/test_hot_zones_guard.py
+3 tests, all passed in 0.60s. (user)
+
+So any future attempt to expand/shrink the guard set, or to change the mirrors for these gold cases, will immediately fail CI.
+
+1.2 Sanity check on fresh CT/FL runs
+
+Codex then re‑ran the pipeline with the correct history workbooks and date‑scoped output dirs:
+
+Re‑activated history files with scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_2025-06-24.xlsm and the 2025‑06‑26 workbook. (user)
+
+Re‑ran Hot Zones CLI for the gold cases with explicit --out-dir per date:
+
+CT4 2025‑06‑24
+
+CT4 2025‑06‑26
+
+FL4 2025‑06‑24 (user)
+
+The resulting telemetry:
+
+CT 2025‑06‑24
+
+guard_triads_total/top20 = 4/3 in Connecticut4_hot_zones_meta.json. (user)
+
+Connecticut4_hot_zones_top_lanes.csv shows:
+
+588 at rank 1 with guard_hits=1 and tags including
+col1,guard_set1,hot12,...,literal_draw,...,vt_straight. (user)
+
+449 at rank 2 with guard_hits=1 and tags including
+col1,funnel_precol1,guard_set1,...,literal_draw,...,vt_only_lane,vt_straight. (user)
+
+These are your canonical winners for 858 and 494 at the very top, with guard+VT+literal evidence as intended.
+
+FL 2025‑06‑24
+
+Meta: guard_triads_total/top20 = 3/2. (user)
+
+Top lanes: 337, 288, and 127 have guard_hits=1 and guard_set1 tags, matching the 733 mirror set and 271 canonical triad. (user)
+
+CT 2025‑06‑26
+
+Meta: guard_triads_total/top20 = 4/2. (user)
+
+Top lanes:
+
+126 and 289 ranked near the top, both with guard_hits=1 and full VT/guard/col1 evidence. (user)
+
+Together, that shows:
+
+Guard stays surgical (3–4 total triads, 2–3 in top‑20). (user)
+
+All your gold winners (CT 494/858, CT 928/612, FL 733/271) are high‑ranked and guard‑backed. (user)
+
+The new VT‑gating did not “blow up” the guard; it just made it more robust.
+
+1.3 Conclusion on V1
+
+Given:
+
+Ledger script proves EB/ES/VB/VS = 28/28/28/28 for 24–26 June. (user)
+
+VT‑gating now works at triad level. (user)
+
+Guard tests enforce canonical+mirror sets and winner‑map inclusion. (user)
+
+Fresh CT/FL outputs still show the winners exactly where we want them with correct tags. (user)
+
+Yes: this matches the intent to close out Hot Zones V1 as a self‑contained module. Any further tweaks should be driven by master validation and aggregator‑level performance—not more guard iterations.
+3. Detailed analysis of the four reports
+3.1 hot_zones_summary_digest.csv – run‑level summary
+
+What it is
+
+CSV Export describes this as a per‑state, per‑date summary of the runs, aggregating scores, superhot concentration, and guard coverage. (user)
+
+Key metrics you reported:
+
+2 entries: Connecticut4 and Florida4. (user)
+
+Dates: 2025‑06‑24 and 2025‑06‑26. (user)
+
+Mean of maximum scores across runs: 31.67. (user)
+
+Mean superhot hits: 13.81. (user)
+
+Average guard triads: 3 total, with 2 in top‑20. (user)
+
+What this tells us
+
+Guard behaviour is stable and “surgical”
+
+Around 3 guard triads per run, with ~2 in the top‑20, matches exactly what we saw in the CT/FL meta JSON: CT 4/3, CT 4/2, FL 3/2. (user) This is the intended design: a tiny number of canonical lanes, not a flood.
+
+Heat + score calibration look sane
+
+A mean max score around 31.67 with superhot ~13.8 hits suggests:
+
+We’re not getting absurd outliers: scores are clustered in a healthy band. (user)
+
+Superhot support is present but not trivially maxed out; there’s room for the scoring to discriminate.
+
+CT vs FL character
+
+CSV Export notes:
+
+Florida runs have higher superhot density but slightly lower max scores than Connecticut. (user)
+
+CT shows more stable guard behaviour between the two dates. (user)
+
+That matches the story from your CT vs FL telemetry: CT’s canonical triads (449/588, 126/289) and FL’s (733 mirrors + 127) all align, but FL’s lane landscape is “hotter” and less uniform.
+
+How the architect can use this
+
+Think of hot_zones_summary_digest.csv as the “run sheet”:
+
+Quick check: guard still sparse but present?
+
+Are max scores in the right band?
+
+Do CT/FL runs show coherent behaviour over time?
+
+If any future run starts showing, say, guard triads = 12 with 10 in top‑20, or mean max score = 45, this digest is where the architect will notice a regression first.
+
+3.2 Unified_Hot_Zones_Ledger.csv – triad‑level ledger (subset)
+
+What it is
+
+CSV Export describes this as a triad‑level ledger covering all included states/dates, with per‑triad metrics. (user)
+
+Reported stats: (user)
+
+Total triad records: 20.
+
+States: Florida4 (CT summarized separately in the digest).
+
+Date coverage: 2025‑06‑24.
+
+Averages across those records:
+
+score_mean: 19.31
+
+score_max: 32.15
+
+hot_hits: 48.2
+
+superhot_hits: 15.3
+
+vertical_hits: 4.0
+
+Guard‑hit ratio: 10 %
+
+What this tells us
+
+Score band and hit counts are tight
+
+The averages:
+
+score_mean around 19–21. (user)
+
+score_max around 30–34. (user)
+
+hot_hits around ~48. (user)
+
+These mirror the patterns you showed for specific triads:
+
+FL triads like 337 had hot_hits ~42 and score_max ~34.85. (user)
+
+So the unified ledger is consistent with the top‑lane slices we already saw.
+
+Guard ratio ~10 % is exactly the “few but meaningful” pattern
+
+A 10% guard‑hit ratio over this sample means only a minority of triads carry guard, which is what we want; guard is there to ensure canonical lanes surface, not to dominate everything. (user)
+
+FL volatility vs CT stability
+
+CSV Export extrapolates:
+
+CT runs show more consistent guard‑tag alignment, while FL triads show greater variance and score spread. (user)
+
+That is consistent with:
+
+CT winners being at ranks 1–2 with strong guard evidence. (user)
+
+FL having e.g. 337/288/127 all strong but with a wider score range and hot‑hit variability. (user)
+
+Architect view
+
+This ledger is where you can:
+
+See individual triads’ metrics (not just the winners).
+
+Study the distribution of scores and hits—are we over‑fitting to a few extreme lanes, or is the distribution healthy?
+
+Confirm guard is a small fraction of the population.
+
+For master validation, this kind of ledger (extended beyond FL and beyond one date) is what you’d use for more serious calibration and ROC‑style analysis.
+
+3.3 hot_zones_ledger_all.csv – full merged ledger (purpose)
+
+Here’s where I need to be careful:
+
+The name hot_zones_ledger_all.csv clearly indicates “full merged ledger”, and earlier you discussed it as:
+
+“full data merge for tooling” (user)
+
+But in the detailed text you pasted for CSV Export’s analysis, the explicit stats are attached to Unified_Hot_Zones_Ledger.csv, not hot_zones_ledger_all.csv. (user)
+
+So:
+
+Fact: I don’t have concrete numerical stats for hot_zones_ledger_all.csv beyond its naming and your intent. Insufficient evidence to quote any numbers for it directly.
+
+Likely design (inferred, Unverified):
+It’s probably the superset ledger that includes both CT and FL triads (and maybe multiple dates), whereas Unified_Hot_Zones_Ledger.csv is a filtered/Florida‑focused slice used in the analysis you pasted.
+
+Use it as:
+
+The canonical machine‑readable ledger for all Hot Zones triad rows across states and dates.
+
+The input your master validator / aggregator will ingest when it wants the full surface, not just winners.
+
+If you’d like concrete stats for hot_zones_ledger_all.csv, we’d need either:
+
+A pasted snippet of the file, or
+
+CSV Export’s written summary specifically for that file.
+
+3.4 json_to_csv_mapping_manifest.csv – the schema contract
+
+What it is
+
+CSV Export says this manifest: (user)
+
+Documents 21 fields.
+
+Achieves 100 % integration coverage with no missing or unmapped fields.
+
+Maps every JSON metric (hot_hits, superhot_hits, guard_hits, score_mean, score_max, evidence_tags, etc.) into corresponding CSV columns. (user)
+
+What this tells us
+
+JSON→CSV is lossless
+
+Since every key field in the Hot Zones JSON (winner ledger, top_lanes, etc.) has a mapped CSV column, you’re not losing information during export. (user)
+
+You now have a data contract
+
+This manifest is the schema:
+
+It tells future tools exactly which columns exist and what they came from.
+
+You can validate new exports against it in CI (e.g., checks that “guard_hits” exists and is numeric, “evidence_tags” is present, etc.).
+
+That’s critical for your “project‑wide” work: the master validation and aggregator will depend on having stable column names and semantics.
+
+3.5 The “overall analytical summary” (report #4)
+
+CSV Export’s overall summary integrates the above into system‑level conclusions: (user)
+
+Integrity: 100% schema alignment between JSON and CSV.
+
+Performance: Guard thresholds (≥28/28 EB/VB per date) maintained; validations passed.
+
+Comparative insight: CT = higher lane consistency and guard adherence; FL = hotter but less stable lane distribution.
+
+Trend metrics: Mean ≈ 19.3, Max ≈ 32.1, Superhot ≈ 15.3, trending upward.
+
+System readiness: Pipeline is reproducible and ready for CI/regression tracking.
+
+Given what we already see from:
+
+Codex’s ledger script output (28/28 EB/ES/VB/VS per day). (user)
+
+Per‑state meta and top‑lanes (guard behaviour and winners). (user)
+
+This “overall” summary is consistent and reasonable; it’s basically a polished narrative for the architect.
+
+4. Are these outputs enough for the architect, and what should you send?
+
+Based on everything above, here’s what I’d recommend you actually hand off:
+
+4.1 Per‑state, per‑date artifacts (for concrete examples)
+
+From Codex’s last run, for each of:
+
+CT4 – 2025‑06‑24
+
+CT4 – 2025‑06‑26
+
+FL4 – 2025‑06‑24
+
+you have in:
+
+data/outputs/analysis/hot_zones/<STATE>/<DATE>/ (user)
+
+<STATE>_hot_zones_per_lane.csv
+
+<STATE>_hot_zones_top_lanes.csv
+
+<STATE>_hot_zones_meta.json
+
+<DATE>_hot_zones_winner_map.json (and/or CSV) (user)
+
+These show:
+
+The raw triads and evidence (per_lane).
+
+Aggregated ranking with guard/VT stats (top_lanes).
+
+Guard telemetry (meta.json).
+
+Winner‑map details (winner_map).
+
+These are ideal for hand checking a couple of gold examples.
+
+4.2 Global and analytic exports (for system view)
+
+reports/stable/hot_zones_winner_hits.json – canonical winners ledger (84 rows). (user)
+
+scripts/hot_zones/summarize_winner_hits.py – run this once and include the 3‑line EB/ES/VB/VS output in your note. (user)
+
+The four CSVs you just generated:
+
+hot_zones_summary_digest.csv – run‑level summary. (user)
+
+Unified_Hot_Zones_Ledger.csv – triad‑level sample ledger. (user)
+
+hot_zones_ledger_all.csv – full ledger (design‑intended; see caveat above).
+
+json_to_csv_mapping_manifest.csv – schema contract. (user)
+
+Together, this is more than enough for the architect to:
+
+Verify that Hot Zones V1 is consistent and sane.
+
+Understand the difference between CT and FL behaviour.
+
+Plug these into any higher‑level dashboards or validation tools.
+
+5. Quick answers to your meta‑questions
+
+did you get enough insights from the custom data GPT / exports?
+
+Yes. The combination of:
+
+Codex’s logs,
+
+The EB/ES/VB/VS summary, and
+
+CSV Export’s analysis of the four CSVs
+
+is enough to reason confidently about Hot Zones V1 performance and structure. (user)
+
+are there additional “no regression” safeguards you should care about?
+
+Two key ones are already in place and align with what you wanted: (user)
+
+Ledger script as CI rail
+You can wire summarize_winner_hits.py into CI and fail if any date’s EB or VB count drops below 28, or if VS/ES fall below thresholds you choose.
+
+Guard tests
+tests/test_hot_zones_guard.py now locks in the exact canonical+mirror sets and winner‑map behaviour.
+
+If you want one more safety net later, master validation can add higher‑level checks like:
+
+% of winners in top‑N ranking by score_mean.
+
+Distribution consistency of scores and hits across longer time spans.
