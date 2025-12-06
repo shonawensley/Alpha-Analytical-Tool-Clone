@@ -530,3 +530,72 @@ perfect im still paranoid because im not sure ive been checking your "clean runs
 
   - Digit Analysis Log shows current state/status and hotspots.
   - Live Wiring maps where code and outputs live.
+
+
+
+_____________________________________
+
+
+Here’s what I’ve updated and where everything now lives.
+
+  1) Lean outputs / final DR outputs
+
+  - docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md
+      - Digit Reduction section now reflects the final brain bundle:
+          - .../analyzer_v2/<STATE>_analyzer_v2_per_item.csv with:
+              - Core features (earliest/persistence, box density, drop metadata, cross‑column/variant echoes, vt_only_lane, funnel_precol1, ls_col_42, ls2_lane).
+              - All scoring surfaces: score, score_raw, score_v2, lockscore_v2, final_linear, final_prob, lockscore_prob, lock_decision.
+              - Match taxonomy + DR winner flags: match_types (exact, vtrac, family_vtrac, drop_vtrac combos) and dr.win_* fields.
+          - .../analyzer_v2/<STATE>_analyzer_v2_top_candidates.csv with:
+              - Aggregated families, score_v2, evidence_tags, steps_summary, same match-type taxonomy.
+      - Config highlights are updated:
+          - Extended Set1 ladder ON by default.
+          - Progression feature ls2_progress with light weights (near=0.02, far=0.01).
+          - New drop_only_multiplier guard documented (pure drop‑vtrac only, default 1.0, currently 0.9).
+
+  These are the final DR outputs the aggregator should depend on: per_item + top_candidates (+ the winner maps/flags/hits for alignment).
+
+  2) Final validation / how to run DR
+
+  - docs/AAT9_KIT/AAT9_Final_Validation_Help.md
+      - Digit Reduction “Tool quick index” now includes:
+          - Entrypoints and inputs (tables + JSON, tracked states).
+          - Outputs list explicitly mentions score_v2, lockscore_v2, final_prob, lockscore_prob in the analyzer bundle.
+          - Config highlights now call out:
+              - Extended ladder,
+              - Progression weights,
+              - LS2/VT-only/funnel telemetry,
+              - Optional drop_only_multiplier guard (default 1.0; currently 0.9).
+
+  So a future Codex session can see exactly how to run tables → winners → DR, and what the analyzer outputs look like in the final configuration.
+
+  3) Changelog and checkpoints
+
+  - docs/AAT9_KIT/AAT9_Unified_Changelog.md
+      - New entry: 2025‑12‑07 – Digit Reduction drop‑only guard + full‑history environment scans:
+          - Describes the new drop_only_multiplier guard, the small focused reruns, and the 6‑workbook environment scan.
+          - References updated docs: Analyzer_Lean_Outputs, Final_Validation_Help, Digit_Analysis_Log_Part2.
+  - docs/AAT9_KIT/AAT9_Checkpoint_Log.md
+      - New checkpoint: 2025‑12‑07 05:30 (UTC) – Digit Reduction drop‑only guard + full‑workbook scans:
+          - Captures context, the exact code/config changes, impact, and file references.
+          - Notes that environment classifications (primary/support/skip) are stable across all six workbooks and that DR now has a documented, reversible guard for pure drop‑VT noise.
+
+  4) Analysis logs / performance picture
+
+  - docs/AAT9_KIT/AAT9_Digit_Analysis_Log_Part2.md
+      - Already contains:
+          - Deep per‑state analysis for 2025‑06‑21, 22, 23.
+          - Post‑optimization checks for the drop‑only guard.
+          - Quick performance scans for 2025‑06‑25, 26, 27.
+      - I added a small “Global VTRAC feature summary” and the “Post‑Optimization Checks” + “Quick performance scans” sections so the final DR behaviour is fully documented.
+
+  Nothing else in AAT9_KIT needed changes for this pass; training exports and wiring docs remain accurate because the reducer outputs weren’t altered.
+
+  Net outcome:
+
+  - DR’s final outputs (what the aggregator should consume) are clearly documented in AAT9_Analyzer_Lean_Outputs.md and referenced from the Final Validation help.
+  - The new drop‑only guard + full‑history analysis are logged in both the Unified Changelog and Checkpoint Log.
+  - The analysis logs (Part 2) capture the state‑of‑the‑art understanding of DR’s behaviour across all available example workbooks.
+
+  If you want, the last thing we could optionally do is add a one‑line note to AAT9_Analysis_Insights.md pointing to DR’s Part‑2 log as the canonical analysis reference, but from a “training + wiring” perspective the critical
+  docs are now up to date.
