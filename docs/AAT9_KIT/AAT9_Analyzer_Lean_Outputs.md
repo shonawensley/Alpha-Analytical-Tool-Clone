@@ -9,8 +9,8 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 
 ### 1. Brain Bundle (per state, per run)
 - `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`
-  - `<STATE>_analyzer_v2_per_item.csv` — core features (earliest/persistence per detection class, box density, drop metadata, cross-column/variant/method echoes, recency flag, `vt_only_lane`, `funnel_precol1`, `ls_col_42`, `ls2_lane`, normalized score, `lock_decision`, `reasons_json`).
-  - `<STATE>_analyzer_v2_top_candidates.csv` — aggregated families with score, support counts, `evidence_tags`, `steps_summary`.
+  - `<STATE>_analyzer_v2_per_item.csv` — core features (earliest/persistence per detection class, box density, drop metadata, cross-column/variant/method echoes, recency flag, `vt_only_lane`, `funnel_precol1`, `ls_col_42`, `ls2_lane`, `score`, `score_raw`, `score_v2`, `lockscore_v2`, `final_linear`, `final_prob`, `lockscore_prob`, `lock_decision`, `match_types`, `dr.win_*` flags, `reasons_json`).
+  - `<STATE>_analyzer_v2_top_candidates.csv` — aggregated families with `score_v2`, support counts, `evidence_tags`, `steps_summary`, and the same match-type taxonomy (`exact`, `vtrac`, `family_vtrac`, `drop_vtrac`).
   - `<STATE>_analyzer_v2_meta.json` — config hash, git SHA, diagnostics flags, file list.
   - `stacked_<variant>.html` for Midday/Evening/Combined — pre-draw human preview.
 
@@ -33,7 +33,8 @@ Document the lean (analysis-only) artifacts for each analyzer so we can run hero
 ### 4. Extended ladder + progression (current defaults)
 - Extended Set1 ladder (Draw2–Draw7 cols 6→1) is ON by default (`AAT9_DR_EXTENDED_SET1` kill-switch only).
 - LS2/VT-only telemetry is preserved; keep weights to avoid burying near-core evidence.
-- Progression feature (`ls2_progress`) is emitted in per_item/top; weights are gated in config (default 0 unless explicitly raised for tests).
+- Progression feature (`ls2_progress`) is emitted in per_item/top; light global weights are set in config (`weight_near=0.02`, `weight_far=0.01`) and can be tuned if needed.
+- `scoring_v2` includes a small, config-gated guard (`drop_only_multiplier`, default 1.0, currently 0.9) that gently down-weights **pure** drop-vtrac hits (no exact/VT/family VT) without changing how VT/family VT/exact evidence is scored.
 
 ---
 

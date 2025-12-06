@@ -33,6 +33,19 @@
 - Impact: Mapped hits rose to 2 391, unmapped fell to 255; remaining residuals are small (e.g., Set1 Draw2 col3/2, Set1 Draw1 col3/1, Set3/Set2 Draw1 col3/1/2). Winners highlighting uses the same window map, so the yellow tint covers the new boxes; analyzer/overlays remain in sync.
 - Files/Refs: src/core/long_string_reducer_part1.py; alpha_analytical/digit_reduction/long_string_windows.py; alpha_analytical/digit_reduction/analyzer_v2/config.yml; docs/AAT9_KIT/{AAT9_Unified_Changelog.md,AAT9_Digit_Analysis_Log.md,AAT9_Analyzer_Lean_Outputs.md,AAT9_Final_Validation_Help.md}
 
+## 2025-12-07 05:30 (UTC) - Digit Reduction drop-only guard + full-workbook scans
+
+- Context: After extending ladders and adding progression, some states/dates still showed very noisy environments driven by drop-vtrac-only boxes, while VT/family VT/exact corridors behaved well. Needed a small, reversible guard to de-emphasise pure drop-only evidence without touching the main VT/exact logic.
+- Change:
+  - Added `scoring_v2.guards.drop_only_multiplier` to `alpha_analytical/digit_reduction/analyzer_v2/config.yml` (default 1.0, currently 0.9) and wired a post-score adjustment in `scoring.py` that multiplies `score_v2` only for rows where `final_drop_vtrac_match==1` and all other final_* matches are false.
+  - Reran analyzer/overlay for a focused subset of states (CT/FL/PA/IN/NJ + NC/VA) across 2025‑06‑21/22/23 to confirm that strong VT/family VT/exact winners remain in the top candidates and that noisy VT/drop environments see only a slight denoising of pure drop-only boxes.
+  - Used the DR sharepacks for 2025‑06‑25/26/27 to perform quick environment scans (LS1/LS2 vs exact/VT/family/drop) and confirmed that the same states consistently present strong vs weak environments across all six workbooks.
+- Impact:
+  - DR now has a documented, config-gated knob for pure drop-vtrac noise; turning it off (multiplier 1.0) restores previous behaviour without code edits.
+  - Environment classification (primary/support/skip states) is stable across 21/22/23/25/26/27; CT/FL/IN/PA/NJ/MI repeatedly show rich, structured long-string + VT evidence, while OH/NY remain weak/noisy.
+  - `AAT9_Digit_Analysis_Log_Part2.md` captures the three-deep workbook analysis, post-optimization checks, and quick scans for the remaining dates so future sessions can see the DR baseline before aggregator work.
+- Files/Refs: alpha_analytical/digit_reduction/analyzer_v2/{scoring.py,config.yml}; docs/AAT9_KIT/{AAT9_Unified_Changelog.md,AAT9_Analyzer_Lean_Outputs.md,AAT9_Final_Validation_Help.md,AAT9_Digit_Analysis_Log_Part2.md}
+
 ## 2025-11-05 04:10 (UTC) - Digit Reduction lockscore + validation run
 
 - Context: Final optimization pass needed a config-gated scoring surface (recency/single-column/V-TRAC nudges) plus a fast validation/reporting loop so June-17 reverse-engineering runs aren’t manual.

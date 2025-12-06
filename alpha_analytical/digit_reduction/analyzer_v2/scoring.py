@@ -99,6 +99,7 @@ def apply_post_score(rows: List[Dict[str, Any]], config: Dict[str, Any]) -> None
 
     weights = cfg.get("weights", {})
     guards = cfg.get("guards", {})
+    drop_only_multiplier = _as_float(guards.get("drop_only_multiplier", 1.0), 1.0)
     for row in rows:
         base = _as_float(row.get("score_raw"), row.get("score", 0.0))
         score2 = base
@@ -128,6 +129,17 @@ def apply_post_score(rows: List[Dict[str, Any]], config: Dict[str, Any]) -> None
             score2 += guards.get("boost_exact_match", 0.0)
         if _is_truthy(row.get("final_vtrac_match")):
             score2 += guards.get("boost_vtrac_match", 0.0)
+
+        # Optional: down-weight pure drop-vtrac boxes (no exact/VT/family VT evidence).
+        # This is config-gated via scoring_v2.guards.drop_only_multiplier.
+        if drop_only_multiplier < 1.0:
+            if _is_truthy(row.get("final_drop_vtrac_match")) and not (
+                _is_truthy(row.get("final_exact_match"))
+                or _is_truthy(row.get("final_vtrac_match"))
+                or _is_truthy(row.get("final_family_vtrac_match"))
+                or _is_truthy(row.get("final_family_exact_match"))
+            ):
+                score2 *= drop_only_multiplier
 
         row["score_v2"] = round(score2, 6)
 

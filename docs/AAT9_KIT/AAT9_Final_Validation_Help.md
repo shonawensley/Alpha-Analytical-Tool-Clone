@@ -14,8 +14,8 @@ Related SOPs/refs:
 Tool quick index — Digit Reduction
 - Entrypoints: reducer `src/core/module_b_digit_reduction.py`; analyzer V2 `alpha_analytical/digit_reduction/analyzer_v2/*`; batch runner `alpha_analytical/control_center/batch_runner.py` (`run_digit_reduction_workflow`).
 - Inputs: combined tables under `data/outputs/tables/<STATE>/`; JSON mirrors under `data/outputs/json_tables/<STATE>_tables.json` (tables remain the SSOT for DR). Tracked states only (CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA).
-- Outputs: reducer HTML/CSV + training (`.../training/<STATE>_digit_reduction_logs.json` required, steps CSV optional); analyzer bundle (`.../analyzer_v2/per_item.csv`, `top_candidates.csv`, `meta.json`, stacked HTML); overlays under `.../analyzer_v2/winners/`.
-- Config highlights: extended ladder ON by default (kill-switch flag); progression feature (`ls2_progress`) emitted with light weights (near=0.02, far=0.01) and adjustable; LS2/VT-only boosts, funnel/ls_col_42 telemetry intact.
+- Outputs: reducer HTML/CSV + training (`.../training/<STATE>_digit_reduction_logs.json` required, steps CSV optional); analyzer bundle (`.../analyzer_v2/per_item.csv`, `top_candidates.csv`, `meta.json`, stacked HTML) with `score_v2`/`lockscore_v2`/`final_prob`/`lockscore_prob` populated; overlays under `.../analyzer_v2/winners/`.
+- Config highlights: extended ladder ON by default (kill-switch flag); progression feature (`ls2_progress`) emitted with light weights (near=0.02, far=0.01) and adjustable; LS2/VT-only boosts, funnel/ls_col_42 telemetry intact; optional `drop_only_multiplier` guard in `scoring_v2.guards` (default 1.0, currently 0.9) that gently down-weights pure drop-vtrac-only boxes.
 
 ## Quick Checklist (per workbook)
 1) Stage 0 (CWD sanity): `pwd` → must be repo root. `git status -sb` (print only).

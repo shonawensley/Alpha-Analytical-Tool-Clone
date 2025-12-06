@@ -115,6 +115,9 @@ scoring_v2:
     boost_exact_match: 0.75
     boost_vtrac_match: 0.35
     min_drop_run_len: 5
+    # Optional down-weighting for pure drop-vtrac hits (no exact/VT/family VT).
+    # Set to < 1.0 to slightly de-emphasise boxes supported only by drop_vtrac.
+    drop_only_multiplier: 0.9
 
 lockscore:
   enabled: true
