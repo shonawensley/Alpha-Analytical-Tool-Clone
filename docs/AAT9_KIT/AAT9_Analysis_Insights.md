@@ -74,6 +74,12 @@ _No entries yet — append new insights here._
 - Next sweep: generate fresh validation runs, inspect the compact CSV against Winners HTML, and capture findings here before wiring aggregates into the cross-tool scorer.
 
 
+### 2025-12-07 — Final DR configuration + June history environment pattern
+- Configuration locked for AAT9: extended Set1 ladder (Draw2–Draw7 cols 6→1) ON by default behind `AAT9_DR_EXTENDED_SET1`; progression feature `ls2_progress` enabled with light global weights (`near=0.02`, `far=0.01`); scoring surfaces `score_v2`, `lockscore_v2`, `final_prob`, and `lockscore_prob` emitted in `analyzer_v2_per_item/top_candidates`; optional `drop_only_multiplier` guard in `scoring_v2.guards` (default 1.0, currently 0.9) gently de‑emphasises **pure** drop‑vtrac hits without touching VT/family VT/exact evidence.
+- Six June workbooks (history 2025‑06‑20/21/22/24/25/26) plus results (21/22/23/25/26/27) show a stable environment pattern: CT/FL/IN/PA/NJ/MI (often NC/VA/ON) repeatedly present rich long-string + VT corridors with LS2 support, while OH (and often NY) remain weak or noisy. Primary/support/skip classifications for each date are captured in `AAT9_Digit_Analysis_Log_Part2.md`.
+- Winners HTML/JSON and DR’s VT features are aligned: boxes carrying the key winner VTRAC families across variants (Midday/Evening/Combined) are consistently high-ranked when supported by VT/family VT/exact, and VT-only days are handled cleanly; noisy VT/drop-heavy environments still require thresholds but no longer dominate rankings via drop‑only boxes.
+- Aggregator guidance: treat the current DR outputs (per_item/top/meta + winner maps/flags) and the environment classifications in `AAT9_Digit_Analysis_Log_Part2.md` as the “final” Digit Reduction baseline when wiring the master validation and cross-tool scorer; any further VT or environment gating should happen in the Aggregator layer, not by changing DR’s internal features.
+
 ## Hotzones (Future Module)
 
 _No entries yet — append new insights here._
