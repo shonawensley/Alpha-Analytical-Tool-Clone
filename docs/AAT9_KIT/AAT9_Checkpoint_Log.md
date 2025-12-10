@@ -1,3 +1,13 @@
+## 2025-12-09 22:52 (UTC) - Control Center snapshot/alerts scaffold + pause point
+
+- Context: Needed a safe, read-only Control Center backbone before tackling the A01–A12 profitability indicators, and a clean pause to pivot to Brain1/aggregator work.
+- Change:
+  - Added a timestamped snapshot tool (`scripts/tools/cc_sanity_snapshot.py`) that checks table freshness vs draws, computes draws-since-double, flags VTRAC repeats, ingests Blackapple alerts, and tags hits (exact/boxed/vt_boxed/vt_straight).
+  - Formalized the alert contract (`reports/control_center/alert_schema.json`) and deterministic state mapping (`reports/control_center/state_map.json`); BA ingest is explicit via `control_center.md` or `--ba-csv/--ba-json` flags.
+  - Regression guard (`scripts/checks/test_cc_snapshot_schema.py`) validates JSON/CSV against the schema; Control Center README + pause log added under docs/AAT9_KIT.
+- Impact: Control Center is stable and read-only, producing `cc_snapshot_<stamp>.{json,csv,_alerts.csv,.md}` under `reports/control_center/`. Alerts (blackapple, due_doubles, vtrac_repeat) are schema-validated with consistent hit tagging; state names no longer depend on heuristics.
+- Next: Pause Brain2 here. Resume with A01–A12 by emitting the same alert shape/evidence; keep BA ingest explicit and use the state map. Pivot now to Brain1/aggregator (lean bundles + unified winners logger) before adding more alerts.
+
 ## 2025-11-07 12:30 (UTC) - Pick3 workbook history + Stable Pattern baseline
 
 - Context: We now have multiple dated Pick3StatsC4 workbooks + aligned results so examples/backtests can run across more than one day; Stable Pattern tweaks need Midday/Evening/Combined coverage again before adding new scoring.

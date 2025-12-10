@@ -153,6 +153,45 @@ def get_state_tables_dir(state_name):
     """
     return os.path.join(get_tables_output_dir(), state_name)
 
+
+def resolve_state_table_paths(state_name: str) -> dict:
+    """
+    Resolve the expected per-variant table CSVs for a state with a tolerant lookup.
+
+    Preference order (within data/outputs/tables/<STATE>/):
+      1) State-prefixed names: <STATE>_Combined_Combined.csv, <STATE>_Midday_Combined.csv, <STATE>_Evening_Combined.csv
+      2) Generic names: Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv
+
+    Returns:
+        dict with keys "Combined", "Midday", "Evening" -> absolute paths (strings)
+        Includes a "warnings" list if fallbacks were used or files are missing.
+    """
+    import logging
+    from typing import Optional
+    state_dir = Path(get_state_tables_dir(state_name))
+    warnings = []
+
+    def pick(prefixed: str, generic: str) -> Optional[str]:
+        pref = state_dir / prefixed
+        gen = state_dir / generic
+        if pref.exists():
+            return str(pref.resolve())
+        if gen.exists():
+            warnings.append(f"Fell back to generic table for {state_name}: {generic}")
+            return str(gen.resolve())
+        warnings.append(f"Missing table for {state_name}: {prefixed} / {generic}")
+        return None
+
+    paths = {
+        "Combined": pick(f"{state_name}_Combined_Combined.csv", "Combined_Combined.csv"),
+        "Midday": pick(f"{state_name}_Midday_Combined.csv", "Midday_Combined.csv"),
+        "Evening": pick(f"{state_name}_Evening_Combined.csv", "Evening_Combined.csv"),
+    }
+    if warnings:
+        logging.warning("; ".join(warnings))
+    paths["warnings"] = warnings
+    return paths
+
 def get_state_winners_dir(state_name):
     """
     Get the directory path for a state's winners

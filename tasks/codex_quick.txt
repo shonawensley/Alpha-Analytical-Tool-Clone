@@ -1,0 +1,241 @@
+ can you read the equired aat9 kit docs and agents.md please
+
+
+• Ran wc -l docs/AAT9_KIT/AAT9_KIT_README.md docs/AAT9_KIT/AAT9_Workflow_Standard.md docs/AAT9_KIT/Practices/AAT9_Coding_Standards.md docs/AAT9_KIT/Practices/AAT9_Agent_Operating_Rules.md docs/AAT9_KIT/
+  │ AAT9_Quickstart_Cheat_Sheet.md docs/AAT9_KIT/AAT9_Preflight_Reference.md docs/AAT9_KIT/AAT9_Diagrams_Guide.md docs/AAT9_KIT/AAT9_Unified_Changelog.md AGENTS.md .codex/AGENTS.universal.md
+  └    35 docs/AAT9_KIT/AAT9_KIT_README.md
+       87 docs/AAT9_KIT/AAT9_Workflow_Standard.md
+    … +7 lines
+       51 .codex/AGENTS.universal.md
+      736 total
+
+• Explored
+─ Worked for 1m 21s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Doc Intake
+
+  - Read required KIT docs: docs/AAT9_KIT/AAT9_KIT_README.md, AAT9_Workflow_Standard.md, AAT9_Quickstart_Cheat_Sheet.md, AAT9_Preflight_Reference.md, AAT9_Diagrams_Guide.md, coding/agent practices, and AAT9_Unified_Changelog.md.
+  - Read agent rules: AGENTS.md and .codex/AGENTS.universal.md.
+
+  Key guardrails
+
+  - Always run from repo root /home/ser/code/Alpha-Analytical-Tool-Clone; no writes outside repo; no remote/config changes.
+  - Data contracts: Aux/Blackapple draw-only data/cleaned/*_draws.csv; V-TRAC/Stable/Digit Reduction use combined tables via utils.path_handler.
+  - Minimal, reversible diffs; plan → implement → verify → document (update docs/AAT9_KIT/AAT9_Unified_Changelog.md for any change).
+  - UI should soft-fail with captions; headless boots timeboxed to 120s logging to .codex/first_boot.log.
+  - Avoid touching combined string-table readers/core_legacy unless explicitly asked.
+
+  Want me to run the print-only sanity (git status -s && git branch -vv && git remote -v && pwd) from root next, or dig into specific architecture/flow docs to map the current wiring?
+
+─ Worked for 2m 46s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• - Read all requested docs: wiring (docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md), roadmaps (Macro/Aux/Testing), final validation guides/checklists, master preflight + string-table SOP, pitfalls (PITFALLS.txt and Practices/
+    AAT9_Pitfalls_and_Patterns.md), winners docs, analysis logs (Digit Reduction, Stable, V‑TRAC), architecture/app-flow addenda, onboarding compass, and AGENTS rules.
+  - Wiring & contracts: Streamlit entry src/app.py; path SSOT utils.path_handler; Aux/BA draw-only data/cleaned/*_draws.csv (Combined baseline, Midday/Evening additive); V‑TRAC/Stable/DR use combined tables data/outputs/tables/
+    <STATE>/ via helpers; Hot Zones consumes JSON mirrors. Outputs land under data/outputs/analysis/<tool>/<STATE>/ with winners logs under dated folders.
+  - Master validation flow: Stage 1 tables/JSON via run_tables_with_guard.py (manifest + Set1/Draw1 guard); Stage 2 winners via results day+1 → reports/stable/winners_by_date/<DATE>/; Stage 3 DR batch (extended ladder on) with
+    live outputs being ephemeral—freeze important runs into dated sharepacks before analysis. Final Validation Checklist/Help stress reading index docs and building an “open hooks” list before aggregator work.
+  - Tool specifics: DR finalized with extended ladder/progression/light drop-only guard; lean bundle = per_item/top/meta + overlays, sharepacks for historical runs. Stable logs highlight column-2→1 funnels, VT lanes, and need for
+    literal winner rows; v1 contracts pending some lean-output formalization. V‑TRAC analyzer/compact scorer frozen (recency/lane/straight rescue) with compact report as aggregator feed. Hot Zones V1 validated with triad-level VT
+    gating and guard tests; ledger script ensures 28/28 EB/ES/VB/VS per date.
+  - Roadmaps: Macro roadmap frames Brain1 (per-state tool mastery) → Brain2 (aggregate Control Center) → profitability/ML; Aux roadmap phases (feature extractor, logging, later scoring); Testing roadmap lists acceptance/unit
+    coverage and pending gaps.
+  - Pitfalls: mixed imports (utils shadow, bare vs modules.*), wrong CWD/interpreter, writing outside data/outputs, expensive compute on render, relying on live DR outputs for past dates; mitigate via preflight, Dev Health
+    expanders, SSOT imports, dated sharepacks.
+  - Run/guard discipline: always from repo root; preflight prints cwd/python/imports/draw inventory; no edits to remotes/core_legacy/combined-table readers without explicit ask; UI soft-fail with captions.
+
+
+› im just trying to think of the best way to go about this...i dont really see a way without having you rad through more context unfortunately lets get you to read aat9 archteicture, aat9 auixllary feature,  final validation
+  deep, final validation temp, final validation temp h, final validation control...read all documents within folder "final validation" in the tasks folder with THE KEY WORDS I LAID OUT FOLLOW BY A COMMON STARTING WITH "aat9
+  archtectiure" id try to describe the title of the document with specific keywords but they are all within that "final validation" folder im hoping by then you have a pretty decent idea Of what we're trying to do I'm sure you
+  can tell I'm trying to tile the tools together by now I'm hoping you've learned a lot by reviewing the documents so far Perhaps you can understand why this is kind of tricky for a beginner what I'm envisioning doing is trying
+  to run like a sample of the template I gave you different versions of the template and hopefully you'll be able to understand that there's like template for like regularly evaluating the states Kind of brain one I guess And
+  then there's the Control Center validation brain 2 I think what I'll have you handle is brain one You might notice there's a reference to these like 12 trackers regarding profitability that we want to add to Control Center
+  because I will only get you dealing with brand one template I'm just gonna leave you from even trying to attempt to read the 12 tracker indicators because it's so long so try and review all those documents that I mentioned in
+  this message obviously this is like insane amount of context which probably is A manageable because I won't get enough done in a session by having all of this reviewed however I'm trying to navigate what is necessary that
+  needs to be reviewed maybe you can help me determine that at the end maybe some of what it was in a couple documents that I could have got away with but anyways just so I feel good about this can you review the documents I
+  asked you to in this message all of which being in that final validation folder Once you've done that please give me your best comprehensive and optimal feedback i'm looking for overall feedback of how you feel about
+  everything once you've read those as that would be probably the remainder of the context before I could at least attempt to see if I can get you to try running a template which we are going to do together very slowly but read
+  those last documents first then return with your feedback
+
+
+• Explored
+  └ Search find tasks -maxdepth 3 -type f
+    Read AAT9 Architecture and Master Validation Framework.md, AAT9 Auxiliary Feature Integration.md, FINAL_VALIDATION_DEEP.md, FINAL_VALIDATION_TEMPC.md, FINAL_VALIDATION_TEMPLATEH.md, final_validation_control.md
+
+─ Worked for 58s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• What I read
+
+  - Architecture & framework: AAT9 Architecture and Master Validation Framework – modules flow: tables → Stable/DR/VTRAC/Hot Zones → aggregator; Control Center overlays alerts; 12 profitability indicators; winners logging as the
+    audit spine.
+  - Aux plan: AAT9 Auxiliary Feature Integration – aux features are independent signals with config weights; “strings lead, aux compounds”; compound rules, logging per winner; aux scores boost but never create winners.
+  - Validation templates: FINAL_VALIDATION_DEEP, FINAL_VALIDATION_TEMPLATEH, FINAL_VALIDATION_TEMPC – per-state, pattern-focused master validation (3-variant environment, tool-by-tool alignment, aux/positional support, long-
+    string box mapping for DR); keeps ROI/CC logic separate. v2 template narrows to Brain1 (tools + aux evidence) and defers profitability to a separate CC template.
+  - Control Center: final_validation_control – Brain2 is a lean alerts layer (BA, VTRAC repeat/A09, due doubles/A10, A01–A12 profit indicators) sitting on Brain1 outputs; Ontario-first then mirror to all states; daily CC
+    validation = wiring sanity + which alerts fired + which hit.
+
+  Takeaways / impressions
+
+  - Clear separation: Brain1 = per-state pattern engines + aux scores; Brain2 = cross-state alerts/filters (BA, repeat, due doubles, A0x). Keep master validation on Brain1; do CC/profit checks in a distinct pass.
+  - Aux design is config-driven and transparent: feature keys + weights + optional compound rules; logged per winner for learning. Fits “boost, don’t override.”
+  - Templates are solid: DEEP/TemplateH enumerate 3-variant table read, survivor patterns, long-string boxes to add to DR, tool alignment to 4 hit classes, aux/positional support, and lightweight combo/perm notes. TemplateC trims
+    noise and keeps ROI out.
+  - Control Center validation should stay lightweight: per day, list fired A0x/BA/repeat/due-doubles, note intersections with winner_map, and track hit/cost stats; Ontario as anchor, then apply same grid to other states.
+
+  Suggested next steps
+
+  1. Run the Brain1 master validation on one dated Ontario run using TemplateC structure (tables → tools → aux/positional → concise summary); log long-string boxes not yet mapped into DR.
+  2. Draft the paired Control Center daily checklist (snapshot, BA table, VTRAC repeat table, TopN due doubles, fired A01–A12 with outcomes) and try it on the same date.
+  3. Once Ontario looks clean, mirror both templates across other states for one full day, keeping CC stats shallow (which alerts fired/hit).
+  4. Ensure configs/logs line up: aux/CC weights in SSOT, winners log includes aux and CC flags (ba_status, due_doubles_rank, vtrac_repeat flag, A0x rows) so future tuning is data-backed.
+
+
+› So first I'd like to ask you how do you feel about everything I had you review like overall the vast number of documents and do you somewhat understand why I got you to do this or why starting this from the beginning I might
+  have done this just not knowing what would be best and that more information is better than less ? Especially considering there's a lot wired into the app and I'm trying to separate your understanding with what's important in
+  terms of what's wired into the app and that we're going to try and tie in together versus whatever else jargon could be sitting in the code base especially as a beginner you can somewhat get what I did what I did and what's
+  your impressions on it
+
+
+• I get why you asked for the full sweep: the app is dense, and you want me to focus on the parts that actually drive the integrated workflow (Brain1 tools + aux + Control Center alerts) rather than be surprised by stray docs/
+  code. Having the whole map first makes it easier to separate “core wiring we must respect” from background noise.
+
+  Impressions:
+
+  - The core architecture is coherent: tables → Stable/DR/VTRAC/Hot Zones → aux scores → aggregator/Control Center. Aux is additive, not overriding, and BA/due-doubles/VTRAC-repeat/profit indicators sit on top as a lean alerts
+    layer.
+  - The validation templates are solid and complementary: per-state (pattern/tool/aux focused) vs. Control Center (alerts/boards). They’re already scoped to avoid ROI/progression in Brain1, which keeps things manageable.
+  - Lots of docs, but they’re consistent: “strings lead, aux compounds”, config-driven weights, soft-fail, dated sharepacks for history, Control Center as Brain2 filter. No glaring contradictions—just redundancy from evolution.
+
+  In short: the volume was to ensure we don’t miss a hidden contract or mis-prioritize. Now that the landscape is clear, we can work from the concise templates and configs without being bogged down by the jargon.
+
+
+› Understanding the tasks now would you roughly recommend a collection of documents I might be able to reduce down as the beginner training or context see I concerned with this because every time there's a context reset
+  Essentially it's like a brand new engine even though I think Codex tries to trick you that it's somewhat truncating the context of the prior session I can tell that it doesn't really know much and sometimes even runs things
+  outside of the project root when the contacts resets this is why I'm trying to really deeply review this right now with you and then maybe come up with an optimal yet comprehensive core context management I usually try and use
+  that codex read this training doc you read at first but I don't think that that's enough anymore maybe with you understanding how we're trying to build a template of hypothetically evaluating all the final outputs of the tools
+  which will hopefully help us come up with the most optimal analysis or aggregator system or collection of scripts Basically the ultra brain her core super brain which I think makes sense Does that make sense how i'm kind of
+  framing less than planning to do this the idea is that I was going to once we establish a working template per state this can followed and used to run a number of examples across the excel files That way we can get a ton of
+  valuable information or data about what works optimal and basically reverse engineering wins or validating everything assessing performance The way I see it it's like gonna be a master guide at the end with tons of examples to
+  validate things we will be able to develop the most optimal superbrain or analysis module aggregator module It's basically what is needed to complete the rest of the project which would include from that easy way of
+  understanding how to get our final combination predictions How do I finish off logging all outputs optimally logging the winners logging all information basically keeping metrics starting out databases I'm sure hopefully you
+  can tell this kid all seamlessly tying together as we figure out how to optimally flow toward the most analytically powerful analysis aggregator system The idea is too that I won't have I can lean out everything even further
+  which I'm hoping you got from all the documents Guess I'm looking for some comprehensive thoughts again on what you think or if there's a package you'd recommend based on understanding the final tasks now should I really just
+  try and focus on like what's in that final validation help document and maybe the codex reads this ? What I'm just kind of concerned about is all the like hidden wiring across processes tools isn't completely been made unaware
+  of I don't really know how you even manage things like that besides trying to train you on them and let you know they exist like I bet you have a very concrete understanding of how things flow together and are wired at this
+  point ? do you? I've been considering whether I should try create some sort updated architectural web of what's wired into the app that can make this a lot easier but when I asked prior sessions they said I wouldn't waste too
+  much time on this now when you're going to recreate basically this entire thing when going through the master validation as many of the outputs will likely change or be leaned out or combined you're better off to leave this
+  for when you go through everything and try to combine things together as my documents referecing wahts wired and aat9 is sufccieient until that point i start developing the final core workflow...your thoughts on that as well?
+  I asked a lot of questions there so that's why I'm looking for comprehensive feedback These are probably important that we go over first before we start trying to run a template Hopefully you agree but with a big part of the
+  project like this which is the most important part which could also be the most exciting part It makes sense I think that we almost have like what's like a initial brainstorm discussion perhaps consider us in deep brainstorm
+  mode so feel free to elaborate and share more than you might usually in terms of comprehensive feedback I know typically you're mainly a coding agent who tries to reduce on this but I think in context of what we're discussing
+  and the importance of this job it wouldn't hurt to over share instead of undershare so reason very deeply and provide optimal stateoftheart quality feedback please If you do this I can also use it as reference for the future
+  sessions even if context runs out where they could read your feedback over having to go through 70 trillion documents like you did that last part was a joke
+
+
+• Got it—here’s a tight “starter kit” to carry forward after resets, plus how I’d frame the plan.
+
+  Minimal doc bundle to survive context resets
+
+  - Repo/guardrails: briefings/CODEX_READ_FIRST_AAT9_WSL_2.md, AGENTS.md, .codex/AGENTS.universal.md.
+  - Orientation: docs/AAT9_KIT/AAT9_Onboarding_Compass.md, AAT9_Workflow_Standard.md, AAT9_Quickstart_Cheat_Sheet.md.
+  - Wiring SSOT: docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md (inputs/outputs per tool, data contracts), docs/AAT9_KIT/AAT9_Macro_Roadmap.md (Brain1→Brain2 vision).
+  - Validation core: docs/AAT9_KIT/AAT9_Final_Validation_Help.md + one template (pick FINAL_VALIDATION_TEMPC.md for the trimmed Brain1 version). Pair it with the short Control Center framing in final_validation_control.md so
+    Brain2 stays separate.
+  - Aux/Control Center logic: FINAL VALIDATION/AAT9 Auxiliary Feature Integration.md (aux = additive, config-driven features + synergies), and a brief note that BA/VTRAC-repeat/due-doubles/A01–A12 are the only Brain2 alerts.
+  - If you need one “what changed lately”: docs/AAT9_KIT/AAT9_Unified_Changelog.md skim.
+
+  With that set, every reset only needs a short recap of Brain1 vs Brain2 and the templates—no need to re-read 70 docs.
+
+  Why the big review made sense
+
+  - The codebase is dense; better to know the SSOTs and avoid hidden contracts (data paths, aux is additive, BA/alerts sit on top, sharepacks for history). Now we can ignore old noise and stick to the canonical wiring +
+    templates.
+
+  Plan to build the “super brain”
+
+  - Brain1 (per-state): run the lean template (Tempc) per state/date. Focus on 3-variant environment, tool alignment to the 4 hit classes, aux/positional support, long-string boxes to add to DR. Log in a consistent format.
+  - Brain2 (Control Center): separate checklist per day: BA table, VTRAC repeat table, top-N due-doubles, fired A01–A12 with outcomes. Keep ROI/progression out of Brain1; this is the cross-state filter.
+  - After a few Ontario runs, mirror to all states; the schema is identical. Collect hits/misses stats for alerts; tune configs, not code, where possible (weights/thresholds in SSOT).
+
+  About an updated wiring diagram
+
+  - Not urgent now. The existing wiring doc + the templates are enough to avoid mistakes. A new diagram is worth doing after we’ve run the validations and know which outputs we’ll keep/merge; otherwise it churns. For now, keep
+    the SSOT list above and the two templates.
+
+  Concrete next steps
+
+  2. Lock one Brain1 template (Tempc) and one Brain2 checklist; store them in the repo as the “current” scripts.
+  3. Run a dated Ontario example: Brain1 template + Brain2 checklist; note any wiring issues and DR box additions.
+  4. Mirror to a full-day run across states; record alert hit/miss stats; adjust weights/thresholds in config, not code.
+
+  I do have a concrete picture of the flow: tables → Stable/DR/VTRAC/Hot Zones → aux features (config-weighted, additive) → winners logs; Control Center reads BA/VTRAC-repeat/due-doubles/A01–A12 on top. With the reset pack +
+  templates, we shouldn’t need to re-train future sessions from scratch.
+
+
+› OK here's something to ask right off the bat Now I had recently switched to WSL in the last few months I had been used to running everything off Windows for like the majority of the existence of the app which I was much more familiar with one thing that I know it is that the WSL seems to have everything functioning much better and the features seem to at least on the display site come out more accurately stuff like
+  that etc however I'm less familiar with like the deeper aspects of how things run I mentioned this because I know as a beginner I tried to always add extensive like health helpers or like regression guards or anything that could help with processing and functioning that would get lost as this expanded or that I'd forget about Oregon not know about I would constantly ask about these things now in terms of I'm asking
+  because I think when you start up the app there are some like checks or validations that run now the only reason I'm mentioning that is because what I'm planning to do with you is basically attempt going through a template of the brain one which was not Control Center related If you remember it's more like going through an Ontario mimicking like the brain one across states But I want to mention that just because I'm
+  not if that's relevant to understand that some things run from the start in terms of like a validation that might run at startup regardless of which template I'm starting with if this makes sense somewhat what I'm asking or talking about I'm more so asking in terms of like is that something you can Where can you mimic starting up the app or something Obviously what I think I'm gonna do is just go through the template
+  checklist and this is going to be a probably not optimal the couple examples of us doing this but that's kind of the point We want a more sort through things on like a deep validation level of like how things run and where they run from really narrow that down and deeply understand and then we can put together like share Packs as is discussed often So what I'm basically gonna do is start with asking you to upload the
+  excel like pick a date in the history Actually you know what I'm going to tell you which one And like I said what will be a bit less optimal about how I'll ask you to do this is there be a lot of me asking you to at times run individual pieces which eventually will be ran more as packages just so you're familiar and we can deeply see where everything for each piece is coming from and the idea is it's basically help
+  forming how we would optimally group these items together What's important to realize about this is we will discover some items are package together nicely or in a way that's favorable for us to build out more we're probably going to go a little overboard with this just to be careful What I mean by that is there's already like I could have probably just started with not doing all this work reviewing everything in as
+  much detail as we did and justice having you run things that I asked for 100% probably could have just did that and this would have went along a lot quicker but I'm hoping the more careful review will end up paying off and that you have a much deeper context and understanding of what we're trying to do and run that will pay off as we go through the template What I would ask that you can start with now before we go
+  into the actual template Yes if you wanna attempt running anything or checking on anything that you think could be helpful before I straight up start directing you piece by piece OK I want you to start with Excel June 20th and Remember we  We are going to go through every piece very granular for these first run so the best way to understand that MAY BE PREPARE TO USE JUNE 20 EXXCEL, BUIILD OUT YOUR DATASETS (STRING
+  TABLES) WE AR GOING TO GET TO THE AUXILLARY STUFF ON ITS OWN COMPLETELY , YOU ARE GOING TO WANT TO GET THE RESULTS JJUNE 21 AS YOU SHOULD KNOW ITS A DAY IN ADVANCED, THEN WE ARE GOING TO USE THE BATCH MECHANISM WE WANT THE HTML+JSON WINNERS LOGGING OUTPUT THAT ONE I ALWAYS REFERENCE (MIGHT HAVE A DIFFERENT ANME IM SURE YOU KNOW WHAT IT IS) BUT BASICALLY PAST THAT IF YOU WANT TO ATTEMT Running for all the 4 or 5
+  string table tools and getting all of their outputs all of the analysis outputs and building into a share pack you can do that If we want to just do that for the first time this might mean you adjusting the batch in order to do this and I know we mentioned using Ontario AND YOU MIGHT NOTICE ALOT FO THE DOCS MENTION CONNETICUT I DONT REALLY CARE WHICH STATE WE JSUT WANT TO START WITH 1 TO ESTABLISH THE PROCESS
+  BASICALLY ON A SINGLE STATE WHICH CAN BE MIRROED ACROSS STATES, BUT THE FIRST TASK IS THIS OF GETTING OUR STRING TABLES DAATSETS, THE WINNES LOGGING HTML, GETTING ALL THE FINAL OUTPUTS WHICH YOUVE SHOULDVE SEEN PLENTY OF TIMES 
+• Here’s how I’d tackle the June 20→21 run in WSL, keeping things clean and reproducible for the first Brain‑1 pass and a sharepack. I’ll outline the steps, what to run, and where outputs land. If you want me to execute, I’ll start with preflight and the history/results setup.
+
+  - Use history workbook Pick3StatsC4_2025-06-20.xlsm → tables/JSON → winners for results 2025-06-21.
+  - Run the batch mechanisms to produce winners HTML/JSON and the tool “brain” outputs (Stable, DR, VTRAC, Hot Zones if desired).
+  - Collect outputs into a dated sharepack folder (sharepacks/2025-06-21/<STATE>/…) so we have all artifacts in one place.
+  - Start with one state (Ontario or Connecticut—pick one; I’ll use Ontario unless you prefer CT since docs mention both) to lock the process; later mirror across states.
+
+  Commands / steps (WSL)
+
+  1. Preflight (sanity/wiring)
+      - powershell.exe -NoProfile -File "$(wslpath -w .)\.codex\preflight.ps1" -State "OntarioCanada4" (or Connecticut4). Confirms cwd, Python, imports, draws inventory.
+      - Optional: git status -s && pwd to show we’re at /home/ser/code/Alpha-Analytical-Tool-Clone.
+  2. Stage 1: Tables + JSON (history 2025-06-20)
+      - PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_2025-06-20.xlsm
+      - Check data/outputs/tables/tables_manifest.json points to the 2025-06-20 workbook.
+      - Confirm tables exist: data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv
+      - Confirm JSON mirrors: data/outputs/json_tables/<STATE>_tables.json
+  3. Stage 2: Winners HTML/JSON (results 2025-06-21)
+      - PYTHONPATH=.:src python3 scripts/tools/generate_winners_from_results.py --results-file data/results/2025-06-21.txt --out-dir reports/stable/winners_by_date/2025-06-21/
+      - Outputs: per-state winners HTML/JSON under reports/stable/winners_by_date/2025-06-21/<STATE>/.
+      - Optional: run scripts/tools/run_history_and_results.py --history-file ... to bundle 2) and 3) if you prefer the one-shot.
+  4. Stage 3: Tool batches (brain outputs + winners overlays)
+      - Digit Reduction batch (extended ladder on by default):
+
+        PYTHONPATH=.:src AAT9_DR_EXTENDED_SET1=1 python3 - <<'PY'
+        from pathlib import Path
+        from alpha_analytical.control_center.batch_runner import parse_winner_sheet, filter_tracked, run_digit_reduction_workflow
+        text = Path("data/results/2025-06-21.txt").read_text(encoding="utf-8")
+        entries = filter_tracked(parse_winner_sheet(text))
+        res = run_digit_reduction_workflow(entries,
+                                           run_reducer=True,
+                                           run_overlay=True,
+                                           run_analyzer=True,
+                                           run_bundle=False,
+                                           mirror_to_winners=True,
+                                           include_overlay_html=True)
+        print(res)
+        PY
+          - Stable: data/outputs/analysis/patterns/<STATE>/
+          - DR: data/outputs/analysis/digit_reduction/<STATE>/... (per_item/top/meta, overlays)
+          - VTRAC: data/outputs/analysis/vtrac/<STATE>/... and vtrac_validation/ summary/compact
+          - Hot Zones (if run): data/outputs/analysis/hot_zones/<STATE>/
+  6. Health checks during run
+      - Watch for errors in each step (missing tables, import drift).
+      - Spot-check CT/ON Set1/Draw1 guard in tables vs results to ensure fresh tables.
+      - Verify winners overlays landed (HTML + flags/maps).
+      - Confirm configs: DR extended ladder on (AAT9_DR_EXTENDED_SET1=1), BA/aux thresholds unchanged.
+
+  Recommendations before I start running
+
+  - Pick the state to anchor (OntarioCanada4 or Connecticut4). You mentioned Ontario in the template; docs often use CT. I can run both if you prefer, but starting with one is fine.
+  - Confirm you want Hot Zones included; if not, we can skip for the first pass.
+
+  If you’re good with this plan, I’ll start with preflight and Stage 1 for the chosen state/date (2025-06-20/21) and report back with paths and any issues.

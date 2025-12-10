@@ -1,3 +1,8 @@
+## 2025-12-09 - Control Center snapshot + alert schema + pause before A01–A12
+- Impact: Added a read-only Control Center snapshot tool that checks table freshness vs draws, computes draws-since-double, flags VTRAC repeats, ingests Blackapple alerts, and tags hits (exact/boxed/vt_boxed/vt_straight). Alerts are validated against a frozen schema; state matching is deterministic via a mapping file. Regression guard ensures outputs conform before writing.
+- Files: scripts/tools/cc_sanity_snapshot.py, scripts/checks/test_cc_snapshot_schema.py, reports/control_center/{alert_schema.json,state_map.json,README.md}, docs/AAT9_KIT/AAT9_Final_Workflow_Control_Center.md.
+- Notes: Control Center is paused here (alerts: blackapple, due_doubles, vtrac_repeat). Implement A01–A12 later using the same alert shape; BA ingest is explicit via control_center.md or --ba-csv/--ba-json.
+
 ## 2025-12-05 - Digit Reduction training JSON restored + extended ladder enabled + dual-day reruns
 - Impact: Restored the reducer’s compact training log writer (`*_digit_reduction_logs.json`) so Analyzer V2 and winners overlays can run; kept steps CSV as diagnostics. Added a config-gated Set1 ladder extension (Draw2–Draw7 cols 6→1, on by default) to surface high-signal near-core boxes without touching LS2. Ran the guarded tables pipeline and DR batch for two day-ahead pairs (2025-06-21→22, 2025-06-22→23), regenerating reducer/analyzer/overlay artifacts for ~17 states per day.
 - Files: src/core/module_b_digit_reduction.py, src/core/long_string_reducer_part1.py, alpha_analytical/digit_reduction/long_string_windows.py, data/outputs/analysis/digit_reduction/**, reports/stable/winners_by_date/{2025-06-22,2025-06-23}/

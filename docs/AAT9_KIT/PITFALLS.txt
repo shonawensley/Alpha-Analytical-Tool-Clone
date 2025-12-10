@@ -2422,3 +2422,39 @@ If you want, next step we can do is:
 
 Take one of those gold dates (say 2025‑06‑22), treat it as fully frozen, and I’ll walk through what a state‑by‑state DR+VTRAC+Stable evidence table might look like for the aggregator. That will make your “blank canvas super brain” vision even more concrete.
 
+
+____________________________
+
+
+Explored
+  └ Read AAT9_Master_Validation_Preflight.md, AAT9_String_Table_Testing.md, AAT9_Batch_Workflow_SOP.md, AAT9_Quickstart_Cheat_Sheet.md, AAT9_Table_Swap_Verification.md, AAT9_Pitfalls_and_Patterns.md
+    List AAT9_KIT
+    Search pitfalls
+    Read PITFALLS.txt, AAT9_Data_Validation_Workflow.md, AAT9_KIT_README.md, AAT9_Testing_Roadmap.md
+
+─ Worked for 1m 02s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Read all requested KIT docs. Key takeaways for running and backtesting efficiently (and why the Ontario run failed mid-way):
+
+  - History → results: Use the one-day-ahead rule (history 2025-06-20 → results 2025-06-21). The easiest path is the one-shot wrapper run_history_and_results.py (Master Validation Preflight), which activates the history workbook,
+    rebuilds tables/JSON, and generates winners HTML/JSON in one go (CT/FL guard check included).
+  - Tables are the SSOT: always rebuild via run_tables_with_guard.py when you swap a Pick3StatsC4 workbook. Verify tables_manifest.json and Set1/Draw1 cols in Combined CSV. Winners must be generated from the matching results
+    file.
+  - Batch SOP: In app, paste the full winners list and toggle tools (winners logger, Stable, DR, etc.). Headless equivalents: run_stable_from_results.py, generate_winners_from_results.py, DR batch runner, VTRAC share bundle, Hot
+    Zones CLI. Use bundle stamps for stable/DR bundles.
+  - Lean outputs per tool (what to collect in sharepack):
+      - DR: per_item/top/meta + stacked HTML; overlays/winners flags are optional diagnostics; training logs required.
+      - Stable: scores/families/compound/metrics + winner spotlight CSVs.
+      - VTRAC: compact report + analyzer bundle (lean pass pending); share bundle via run_vtrac_share_bundle.py.
+      - Hot Zones: per_lane/top_lanes/meta + winner_map.
+      - Winners logger (centralized module is the goal): per-date winners map/flags/HTML in reports/stable/winners_by_date/<DATE>/.
+  - Guardrails/pitfalls: canonical paths via utils.path_handler; Aux/BA draw-only; no GA/TX tables; use preflight; acceptance/tests cover loaders, batch runner, doubles/variants, etc.
+  - Quickstart/verification: table swap checklist + Set1 guard; batch workflow SOP mirrors production; testing roadmap lists available smokes/acceptance.
+
+  For the Ontario run: I rebuilt tables and winners (2025-06-21 results) and ran DR across all states (GA/TX missing tables as expected). Stable failed for Ontario because run_stable_from_results defaulted to label
+  “OntarioCanada”; the results file uses “Ontario”. Re-run with --results-label Ontario after tables/winners are set; collect Stable outputs into the sharepack. Next, run VTRAC and Hot Zones for Ontario, then assemble
+  sharepacks/2025-06-21/OntarioCanada4/ with tables/JSON, winners HTML/JSON, DR (per_item/top/meta + overlays), Stable bundle, VTRAC compact/analyzer, and Hot Zones lane maps.
+
+  If you want, I’ll re-run Ontario end-to-end now using the one-shot wrapper, then individual tool CLIs (Stable with --results-label Ontario, VTRAC bundle, Hot Zones CLI) and package the sharepack.
+
+

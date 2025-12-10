@@ -109,47 +109,6 @@ def _parse_results_file(results_path: Optional[Path]) -> list[str]:
     return tokens
 
 
-def _norm_state(name: str) -> str:
-    """Normalize state label for loose matching (strip digits/space/underscore, lower)."""
-    return "".join(ch for ch in name.lower() if ch.isalpha())
-
-
-def _parse_results_by_state(results_path: Optional[Path]) -> Dict[str, Dict[str, str]]:
-    """
-    Parse a structured results file (state rows with Midday/Evening columns).
-    Returns {normalized_state: {"Midday": "123", "Evening": "456"}}.
-    """
-    if not results_path or not results_path.exists():
-        return {}
-    rows: Dict[str, Dict[str, str]] = {}
-    with results_path.open(encoding="utf-8") as fh:
-        header_seen = False
-        for line in fh:
-            line = line.rstrip("\n")
-            if not line:
-                continue
-            if not header_seen:
-                # Skip until header row
-                if line.lower().startswith("state"):
-                    header_seen = True
-                continue
-            parts = [p.strip() for p in line.split("\t")]
-            if len(parts) < 3:
-                continue
-            state_raw, midday_raw, eve_raw = parts[0], parts[1], parts[2]
-            if not state_raw:
-                continue
-            norm_state = _norm_state(state_raw)
-            entry: Dict[str, str] = {}
-            if midday_raw and len(midday_raw) == 3 and midday_raw.isdigit():
-                entry["Midday"] = midday_raw.zfill(3)
-            if eve_raw and len(eve_raw) == 3 and eve_raw.isdigit():
-                entry["Evening"] = eve_raw.zfill(3)
-            if entry:
-                rows[norm_state] = entry
-    return rows
-
-
 def _build_state_map(results_by_state: Dict[str, Dict[str, str]], draws_paths: list[Path]) -> Dict[str, str]:
     """
     Build a map from normalized state token -> draws filename stem for better matching.

@@ -1,0 +1,332 @@
+AAT9 Control Center (Brain 2) Code & Architecture Review
+1. Brain 1 vs. Brain 2: Design Overview
+
+In the AAT9 architecture, Brain 1 refers to the per-state analysis engines (Stable Patterns, Digit Reduction, V-TRAC Analyzer, Aux features, etc.), while Brain 2 (the Control Center) is an aggregate decision layer that operates across all states
+GitHub
+. Brain 1 modules work independently on each state’s data to generate insights (patterns, scores, flags), and Brain 2’s role is to collect those insights and decide which states are favorable for play – managing cross-state strategy and profitability tracking
+GitHub
+GitHub
+. In practical terms, Brain 2 is a “dashboard” of alerts or “profit indicators” (12 are envisioned, labeled A01–A12) that highlight conditions believed to correlate with better outcomes. For example, the architecture notes indicators like BlackApple patterns (BA), VTRAC repeat streaks (indicator A09), and “due doubles” (overdue double-digit draws, indicator A10) as key signals. The Control Center’s job is to surface these signals across states and help decide where to focus bets or further analysis. Importantly, Brain 2 does not redo the heavy computations of Brain 1; it builds on their outputs. This separation is evident in the code: the Control Center reads from Brain 1 output files (draws, analysis JSONs, etc.) and does not modify or re-run the per-state pipelines
+GitHub
+GitHub
+.
+
+2. Control Center Implementation Status
+
+Location & Integration: The Control Center is implemented as part of the Streamlit app (src/app.py) under a “Control Center” page, with supporting logic in the alpha_analytical.control_center module and some standalone tools. When the app runs, the user can navigate to Control Center from the main page selector
+GitHub
+. This page aggregates cross-state metrics and alerts, presenting them in tables and expandable sections for review.
+
+ 
+
+Key Features Implemented: The current Control Center focuses on a few core cross-state analytics, consistent with the AAT9 roadmap:
+
+Overdue Doubles Summary: For each state, Brain 2 assesses how long it’s been since a “double” (a Pick-3 draw with a repeating digit) has occurred. In the UI, this appears as a ranked table of states by “Draws Since Double”
+GitHub
+. Under the hood, the code iterates through every state’s cleaned draws (*_draws.csv) to compute this gap. In cc_sanity_snapshot.py, for example, it calculates ds_double for each state and includes it in the state’s snapshot
+GitHub
+GitHub
+. If a state has a value (meaning a double was found in its recent history), the Control Center logs an alert of type “due_doubles” with the gap as its strength
+GitHub
+. This corresponds to the profit indicator A10. In the Streamlit app, a “Due Doubles” section is rendered – the generate_control_center_report.py tool outputs a markdown table showing each state’s “Draws Since Double” alongside any hits
+GitHub
+GitHub
+. This doubles panel is working as intended, leveraging only the draws data (no direct dependency on combined tables).
+
+VTRAC Repeat Watch: Another implemented alert is the “VTRAC repeat” indicator (planned as A09). This checks if the last two winning draws in a state have the same VTRAC index (i.e., they belong to the same transformed pattern). If so, the Control Center flags it as an alert – the rationale being that a repeated VTRAC pattern might indicate an ongoing trend. In code, cc_sanity_snapshot.py computes last_idx and prev_idx for the most recent draws and, if they match, appends an alert with id="vtrac_repeat"
+GitHub
+. This alert’s evidence contains the repeated index and a simple repeat: True flag
+GitHub
+. The strength is set to 1.0 uniformly (since any repeat triggers it). This logic is straightforward and matches the intended Brain 2 behavior: it’s a binary alert that fires whenever a state’s midday+evening sequence produces back-to-back VTRAC-identical winners. There is no dedicated UI table for this (it’s more of a behind-the-scenes alert), but it would surface in the summary of alerts logged. The architecture’s vision of a “hazard board” for VTRAC patterns
+GitHub
+ is partially fulfilled by this repeat check and the more detailed VTRAC heatboard described below.
+
+Blackapple Alerts: Blackapple is an auxiliary pattern analysis module (Brain 1 Aux tool) that scans draws for certain “mirror and root” patterns. The Control Center integrates Blackapple as a cross-state alert generator. For each state, it runs the Blackapple analyzer on that state’s recent draws and produces a score, status, trigger breakdown, and top candidate combinations. In the app, there is a “Blackapple Alerts” table listing all states (and variants) with their Blackapple score, trigger flags, number of candidate combos, example combos, and whether any of those combos hit the recent winning numbers
+GitHub
+GitHub
+. This corresponds to an indicator (not explicitly numbered as A0x in docs, but clearly part of the profit signals). In code, Blackapple integration was done carefully to avoid module import conflicts: the app uses a helper _load_blackapple_real() to import the project’s modules/blackapple.py safely (ensuring the “staged” aux package doesn’t shadow it)
+GitHub
+. Once loaded, it calls _ba.analyze_blackapple(draws) for each state or each selected variant
+GitHub
+GitHub
+. The result is a dict with keys like score, triggers, candidates. The UI builds a DataFrame from these results (State, Score, Triggers, #Candidates, Candidates), and displays it with a subheader “Blackapple Alerts (All States / Variants)”
+GitHub
+GitHub
+. In addition, the code provides expanders or captions for additional info (like listing the draw files used)
+GitHub
+. The snapshot/logger side also captures Blackapple outputs: cc_sanity_snapshot.py looks for Blackapple data via _parse_control_center_md or provided CSV/JSON, and for each state’s BA result it logs an alert id="blackapple" with the BA score as strength and details in the evidence (status label, triggers, number of candidates, examples)
+GitHub
+. Every state that has Blackapple analysis available will produce a “blackapple” alert entry. This confirms that Blackapple is fully wired into Brain 2 – both in the interactive app and the batch logging. It’s generating exactly the cross-state overview intended by the design
+GitHub
+.
+
+VTRAC Heatboard & Sums (Partially Implemented): The architecture calls for a VTRAC “heatboard” (showing, for each VTRAC index, how overdue or frequent it is, color-coded) and a Sums analysis (showing which digit sums are running cold or hot) as part of Control Center
+GitHub
+. In the current code, there is evidence these are being handled, though mostly on the Aux page and behind the scenes: for instance, the app builds a table of VTRAC indices with styling for singles and doubles occurrence using thresholds (red/blue markers for late appearances)
+GitHub
+GitHub
+. The snippet at lines 2520+ in app.py suggests it creates a dataframe df_v for VTRAC indices with “Singles” and “Doubles” columns styled in HTML
+GitHub
+. It then likely displays it as part of the Control Center (or Aux) page. Similarly, sums analytics (deficit, z-scores) are calculated in the background by the core engine and made available for “downstream scoring”
+GitHub
+, but the UI doesn’t explicitly enumerate a Sums table on Control Center yet. These features seem to be in progress: the data is being gathered (and possibly used for scoring logic or internal checks) but not prominently shown to the user. Since the question is about tracker readiness, we can say that the hazard/heat metrics are computed by Brain 1 (e.g. via core.vtrac_families and core.aux_config values for late thresholds
+GitHub
+GitHub
+) and accessible to Brain 2, even if not all are visible. This is an area for future UI enhancement, but it doesn’t indicate miswiring – rather, it’s an incomplete feature waiting to be surfaced.
+
+Implementation Quality: The Control Center code appears to be robustly designed. Notably:
+
+It maintains the read-only, additive approach: e.g., the Tables Pipeline expander on the Control Center page can regenerate combined tables from the Pick3 Excel workbook if needed, but it does so via a dedicated pipeline_runner call
+GitHub
+, not by Brain 2 doing any table logic itself. Similarly, the preflight checks on the Control Center page (Dev Health) confirm that it’s aware of potential pitfalls like working directory and import resolution, ensuring it uses the correct modules (there’s logic to evict the staged modules package so that imports like modules.blackapple resolve to the project’s code
+GitHub
+GitHub
+). This addresses known pitfalls (which were highlighted in planning documents) around import collisions and CWD issues.
+
+The code uses schema validation and testing to guard the Control Center logic. A JSON Schema (reports/control_center/alert_schema.json) was introduced to define the format of an alert entry (requiring fields like id, state, variant, date, hits). Every time a snapshot is generated, if the schema is present, the code validates each alert against it
+GitHub
+. There’s also an automated test test_cc_snapshot_schema.py that runs the snapshot and checks schema compliance for all alerts
+GitHub
+. This is a strong indicator of quality: it ensures that as new indicators (alerts) are added, they conform to a consistent structure, and it catches any drift in expected fields. It also shows that what Codex “proposed” (like adding a schema and a health check) was actually implemented and committed – for example, the Codex log noted adding this schema, and indeed we find code using it.
+
+In summary, the Control Center implementation is on the right track. It realizes the Brain 2 concept with a Cross-State Analysis Dashboard that currently includes overdue-doubles tracking, VTRAC repeat alerts, and Blackapple pattern alerts in a unified interface
+GitHub
+GitHub
+. The code reflects careful attention to integration details (module import hygiene, data path management, test coverage), which suggests the foundation is solid for adding the remaining features.
+
+3. Tracker Wiring vs. Proposal (Profit Indicators A01–A12)
+
+The AAT9 plan calls for 12 profit indicators (A01 through A12) – effectively specific tracker conditions that Brain 2 will monitor. In the current codebase, only a subset of these indicators have been implemented. Let’s map the implemented features to the indicator codes where possible, and then identify which are missing:
+
+A09 – “VTRAC Repeat Watch”: Implemented. The repeating VTRAC index alert corresponds to this. In design discussions, A09 was described as the VTRAC repeat signal, and we see it realized as the vtrac_repeat alert. The code doesn’t label it “A09” explicitly; instead it uses a descriptive ID "vtrac_repeat" when logging the alert
+GitHub
+. Functionally, it’s in place and logging occurrences. If needed, one could map this in documentation (i.e., clarify that A09 = vtrac_repeat). No issues here aside from naming.
+
+A10 – “Due Doubles”: Implemented. The overdue doubles condition is fully wired in as described above (alert id "due_doubles" in code). Again, it’s not labeled “A10” in code comments, but contextually this is the indicator corresponding to “due doubles” in design. It logs for every state (with a numeric strength equal to the gap length)
+GitHub
+. One thing to note: the current implementation triggers a due_doubles alert for every state that has any double gap, which means essentially every state will always have this alert (since ds_double will almost never be None – every state has at least one double in its history, so the gap is always defined). In other words, the alert fires unconditionally and the “strength” just quantifies how overdue it is. This matches how the code was written, but it might diverge from the intent of a profit indicator. Likely, the intention is to highlight extremely overdue scenarios. We’ll revisit this in recommendations, but for now the key point is that A10’s mechanism exists in code.
+
+Blackapple (Aux Pattern Alert): Not explicitly numbered, but clearly one of the intended profit signals. The architecture lists “BA” separately from A01–A12, implying Blackapple might be considered a distinct, major indicator outside the generic numbered list. In practice, it behaves like another tracker: it generates an alert per state with a score and status. The Codex log and design docs treat Blackapple as a known feature rather than one of the “generic profit indicators,” so we will too. It is fully integrated (as detailed, Brain 2 calls the BA analyzer and logs blackapple alerts for each state
+GitHub
+). The result in the Control Center UI is a comprehensive table of Blackapple statuses across states, fulfilling that proposal.
+
+Other A01–A08, A11–A12: Not yet implemented. These are the remaining profit indicators proposed for Brain 2 that we do not see in the code. Based on architecture materials and typical lottery analytics, these likely include conditions like: stable pattern hits (did the Stable Pattern Extractor strongly predict a winner?), digit reduction hits (were winners in the “reduced” string shortlist?), “Hot Zones” signals (when implemented, perhaps pattern pressure indicators), cumulative profit thresholds (if profit logging were present), etc. The exact definitions aren’t in the visible code, but the Codex session hints at their nature: “they rely on the same inputs we’re stabilizing: tables (for string-tool signals), aux features, etc.”. This implies A01–A08 might cover “string-table signals” (likely outputs of Stable Patterns and possibly VTRAC ranks), and A11–A12 might cover more complex or aggregate conditions. As of now, none of these are wired in the Control Center logic. We do not see any alert IDs corresponding to A01…A08 or A11/A12 in the codebase searches, and no functions explicitly computing such conditions. In the latest Codex log, the assistant actually deferred implementing A01–A12 until the schema and basic alerts were in place: “Once the schema/guard/BA ingest/mapping are stable, implement A01–A12 as alert emitters (deterministic detectors) and log hits. Start ‘experimental,’ then tune conditions…”. This is exactly what happened: the team (via Codex) put in the groundwork (schema, logging, a few example alerts) and planned to add the rest incrementally.
+
+Summary of “what’s installed vs. proposed”: The installed trackers in code are Blackapple, Due Doubles (A10), and VTRAC repeat (A09). The proposed additional trackers (covering Stable patterns, Digit Reduction, Hot Zones, profit metrics, etc.) have not yet been implemented – there is currently a gap between the intended breadth of Brain 2 alerts and the actual set. However, the architecture to support them is largely in place:
+
+The AlertRow dataclass and JSON schema are generic enough to accommodate new indicators. An alert entry can carry an id (e.g., “A01” or a descriptive name), a strength (numeric score or confidence), a blob of evidence (any supporting info), and the hits outcome data. This means adding a new tracker is mostly a matter of computing its condition and then calling alerts.append(AlertRow(...)) similar to the existing ones. The output files and validation will automatically include it. This is a strong point: the “wiring” framework is ready for A01–A12.
+
+The UI and reporting can easily be extended to show new alerts. For instance, right now the Streamlit Control Center page explicitly renders Blackapple and Doubles tables. If a new indicator produces a summary DataFrame, it can be added as another section with st.subheader. If it’s simpler (just a list of states where a condition met), it could be added into the Snapshot summary or a dedicated panel. There’s also a notion of “View All” or aggregated logs – since the snapshot writes everything to JSON/CSV, a power-user or dev can inspect all alerts across states even if the UI doesn’t have a panel for each. The presence of cc_snapshot and its outputs suggests the team can validate new trackers via those logs even before full UI integration.
+
+Naming/Mapping: One thing to verify is whether the code will use the “A01” labels or keep human-readable IDs. So far, the approach has been to use semantic names ("due_doubles", "vtrac_repeat", "blackapple"), which is clear in code and logs. The architecture docs use A-numbers mostly for planning and brevity. This isn’t a problem, but it will be good to maintain a mapping in documentation so that, for example, everyone knows that A09 = vtrac_repeat alert. This avoids confusion between design and implementation. Since the user’s prompt explicitly references A01–A12, they likely have a mapping in mind that we should honor in reports or documentation.
+
+Conclusion here: The Control Center is partially implemented relative to the full suite of profit indicators. What’s in place works correctly (no evidence of misimplementation for A09/A10/BA), but a majority of the proposed trackers remain to be coded. This was a conscious decision to phase the work – laying down infrastructure first (which Codex did) and deferring the rest, rather than an oversight.
+
+4. Access to String-Table Outputs, Hot Zone JSONs, and Aux Features
+
+A critical aspect of Brain 2’s job is to consume outputs from many sources efficiently. We examine how the current setup handles (or plans to handle) each type of data input:
+
+“String-table outputs”: This refers to data coming out of the main pipeline that processes the combined tables (the Excel-derived CSVs). Examples include the Stable Pattern Extractor’s results, V-TRAC Analyzer outcomes, or any derived CSV/JSON from those combined data. Right now, Brain 2 is not yet directly reading stable/vtrac outputs, but the design supports it. The Control Center does a freshness check between the latest draw in Combined_Combined.csv and the latest number in the draws CSV for each state
+GitHub
+GitHub
+ – this is a sanity step to ensure the Brain 1 data isn’t stale. If there’s a mismatch, it flags a freshness mismatch in the snapshot (so the user knows that, say, the combined table hasn’t been updated with the latest draw)
+GitHub
+GitHub
+. This is part of the Master Validation logic. Other than that check, the Brain 2 code does not parse the content of combined tables or stable outputs yet. However, when new profit indicators are added, we expect Brain 2 will load Brain 1 outputs such as:
+
+Stable Pattern results: The stable extractor produces an output DataFrame (and HTML) of top patterns and their scores for each state run
+GitHub
+GitHub
+. It also now can produce a training bundle manifest and JSON if winners are provided
+GitHub
+GitHub
+. The Codex logs (Unified Changelog) mention that Stable Pattern runs can emit versioned training bundles, and the Streamlit page offers a toggle for that. These bundles likely include a manifest of patterns and whether they hit the actual winners. A profit indicator could use that to trigger an alert like “Stable Pattern Hit” if the stable model’s top-ranked pattern matched the winner. Right now, no such code exists in Control Center, but all the pieces are there: the stable module writes a manifest (path accessible via df.attrs["training_bundle"] after run
+GitHub
+), and the winners JSONs are stored under data/outputs/winners_json/. Efficiency: It would be inefficient for Brain 2 to rerun the stable extraction just to evaluate an alert. The correct approach – and what we foresee – is Brain 2 reading a summary file that Brain 1 already wrote. The path conventions are defined via utils.path_handler (e.g., ph.get_analysis_dir("patterns", state) gives the directory for stable pattern outputs)
+GitHub
+. The code already uses path_handler to read and write outputs, so Brain 2 can leverage the same utility to find stable results files quickly. In short, when A01/A02 (likely stable-related indicators) are implemented, the infrastructure is in place to read stable outputs efficiently (by file) rather than recompute them.
+
+V-TRAC Analyzer outputs: The V-TRAC module produces JSON bundles (top indices and their scores) and analysis HTML for each state. If any profit indicator relates to V-TRAC patterns beyond the simple repeat check (for example, “an alert if a certain V-TRAC index has been extremely cold across all states”), Brain 2 could read those JSON outputs. Currently, Brain 2 doesn’t consume these. But again, design conventions make it feasible: all prediction JSONs are under data/outputs/predictions/ and bundle JSONs under data/outputs/bundles/ with known naming. A script or function in Brain 2 could glob those or access via a helper (there might already be a bundler.py or similar to load them). Given that our implemented alerts focus on draws and Blackapple, this integration hasn’t happened yet. There’s no sign of, say, reading a bundle.json in Control Center code so far.
+
+Hot Zones JSONs: The Hot Zones module is a planned feature (likely indicator A11 or A12) which hasn’t been built yet. The UI has a placeholder “Hot Zones (Stub)” page
+GitHub
+GitHub
+, and the Macro Roadmap suggests Hot Zones will be complementary pressure indicators to Stable Patterns
+GitHub
+GitHub
+. Since no Hot Zones analysis exists, there are no JSONs to read yet. The architecture suggests that Hot Zones, once implemented, will output some data (perhaps a set of “hot” string positions or frequencies). The Aux Tools overview doesn’t detail Hot Zones (it jumps from Aux to Positional to Digit Reduction). We can infer that when Hot Zones come, they will be integrated similarly to Aux – possibly producing an output file per state under data/outputs/analysis/hot_zones/. The question is whether Brain 2’s current setup would easily accommodate reading Hot Zone outputs. Given the pattern so far: yes. Brain 2 could either call a modules.hotzones.analyze(state) function if one is provided (similar to Blackapple), or load a JSON if the Hot Zones tool writes one. There is no code yet for this, so efficiency is not an issue now – it will depend on implementing that module properly. The key is to ensure the Hot Zones tool, when built, follows the same pattern of writing results to a known location (and not taking too long per state, since Brain 2 might call it for many states). This is a future integration point.
+
+Auxiliary Feature Runs (General): Aside from Blackapple, AAT9 includes other auxiliary tools (e.g. Positional Pressure, which finds “shortlists” of candidate numbers by positional analysis, and possibly Sums analysis as part of Aux). Let’s see how those are wired and available:
+
+Positional Pressure: This is a sophisticated Aux module (Module D auxiliary tools). It’s implemented in module_d_auxiliary_tools/positional_tool.py and integrated into the app on the Auxiliary Tools page
+GitHub
+. It produces a grid of candidate numbers for each state (with lane and repeat-endcap annotations, etc.). In the documentation, they note that positional candidates “ship with structured evidence…and tag hot families/indices for downstream scoring”
+GitHub
+. This means when the positional tool runs, it likely returns data that includes references to VTRAC families and indices that are “hot” for that state. Notably, “V-TRAC overlay data (top overdue indexes + double families) is shared with Control Center via _rank_double_families”
+GitHub
+. We see this in practice: the rank_double_families function (which produces the top-5 overdue double combos per state) is defined in core.vtrac_family_ranker and is used both in the Aux Positional logic and in the Control Center’s doubles summary. In generate_control_center_report.py, after gathering draws for each state, they call rank_double_families(variant_map, ...) to get the ranked double families
+GitHub
+, and then build the Due Doubles table from that output (including variant badges and severity flags)
+GitHub
+GitHub
+. This is precisely aligning with the Aux design: both Aux and CC leverage the same function, ensuring consistency (Brain 2 isn’t doing something different, it’s using Brain 1’s helper for double combo ranking). For Positional’s own shortlist of candidates, those are displayed on the Aux page state-by-state and not (yet) aggregated globally. Could they feed into Brain 2? Possibly yes – for example, one might imagine an indicator like “A02: Positional tool has a consensus top pick that appears in multiple modules” or “A03: Positional shortlist contains the day’s winner (hit)”. To do that, Brain 2 would need access to the positional output. Currently, positional results are not saved in a simple JSON per state – they’re computed on the fly for the UI. However, the design could be extended to dump the shortlist and its evidence to a file (similar to how other modules produce bundles). If so, Brain 2 could read those. If not, Brain 2 could theoretically import and call the positional tool for each state, but that would be expensive (positional analysis is non-trivial and currently interactive). The better approach is to treat Aux outputs similarly to others: have a background process or on-demand script to produce an Aux summary that CC can use. There is already a scripts/tools/validate_aux_all.ps1 and guard rails in place to ensure Aux data stays in sync – this implies that auxiliary data consistency is monitored. So, hooking Aux features into CC will likely involve using those same data consistency checks and perhaps caching results so that CC doesn’t recalc everything. In summary, auxiliary features are partly wired: Blackapple fully, Positional partially (its underlying data influences CC doubles logic), and others (sums, etc.) not yet surfaced. All Aux features read from data/cleaned/draws as input, and so does Control Center, so they at least share a common base data which is good for consistency
+GitHub
+.
+
+Efficiency Considerations: The phrasing “read … efficiently” suggests we should assess performance and design trade-offs:
+
+The current setup reads each state’s draws from CSV for every snapshot or page load. With ~30+ states, that’s not too bad (each draws CSV is maybe a few hundred lines). Still, it’s done sequentially. If this becomes a bottleneck, a caching mechanism could be added. In fact, the Aux Tools doc mentions “optional lightweight caching for repeated reads (not mandatory to operate)”
+GitHub
+ – indicating the developers are aware of this and have a plan if performance drops. For now, it’s fine.
+
+Blackapple analysis is run for each state on each page view (unless cached in the session as we suspect from code). That could be heavier. But the code does implement a simple cache: in app.py, there’s a ba_results_cache dict keyed by (state, variant) so that if you toggle variants or revisit states in one session, it reuses results
+GitHub
+. Also, Blackapple itself is written in optimized Python and only uses the last N draws, so it should be fairly quick per state.
+
+The design choice to use JSON/CSV outputs as interfaces is inherently efficient from a development standpoint (decoupling modules) and allows using Python’s fast file I/O or Pandas to combine data. We see this pattern: for example, generate_control_center_report.py reads the entire results file into memory once and parses it
+GitHub
+GitHub
+, then uses the in-memory winners dict to evaluate hits for every combo. Similarly, it loads each draws CSV fully once
+GitHub
+ for analysis. This avoids repeatedly opening files in inner loops. The code is thus reasonably optimized for Python (no obvious O(N^2) file operations or the like).
+
+One potential inefficiency: the Blackapple data ingestion in the snapshot tool. In cc_sanity_snapshot.py, instead of re-running Blackapple on each state (which would require heavy imports and possibly a GUI context), the snapshot tries to reuse existing BA outputs: it calls _parse_control_center_md(CONTROL_CENTER_MD)
+GitHub
+ to scrape a markdown report if available, or lets the user provide a --ba-json or --ba-csv. If none is provided, it warns “No BA data found (control_center.md missing…)”
+GitHub
+. This design is a bit unusual – it implies that to include Blackapple in a snapshot, you should run the interactive report first or supply exported data. In other words, the snapshot script does not itself run analyze_blackapple (likely to avoid duplicating complex logic outside Streamlit, or because Blackapple might require Streamlit context for some features). This is arguably inefficient or awkward – it relies on a prior step. One could consider it a minor miswire: ideally, there would be a pure function for BA analysis that both the UI and snapshot could call. Instead, the snapshot reads the markdown report generated by the UI (parsing tables from it) to get BA results. This isn’t a deal-breaker, but it’s worth noting: the BA alert wiring in snapshot is reliant on an external output. The positive is that it avoids re-computation (efficient), but the negative is that it introduces a dependency on running the report or having saved data. As a short-term solution, it’s fine, but before final deployment, we’d want a more direct data pipeline (perhaps have the UI write a JSON of BA results that snapshot can consume). This observation illustrates how the team is balancing efficiency with practicality, but it’s an area to refine.
+
+To directly answer the question: Yes, the setup can enable profit indicators to read string-table outputs, hot zone JSONs, and aux runs efficiently – but those hooks need to be completed. The code base has structured outputs from all tools (CSV/JSON files, data classes) and a consistent naming scheme, making it straightforward to load what’s needed. The instances where this has been done (doubles, BA) show that performance is acceptable and design is clean. The missing indicators will simply require writing similar loader logic. There are no fundamental blockers in the architecture to doing so – the team just hasn’t implemented that part yet.
+
+5. Alignment with Architecture Diagrams & Master Validation Framework
+
+We cross-referenced the current implementation with the architecture diagrams (“AAT9_Diagram” docs) and the “AAT9 Architecture and Master Validation Framework” guidance. The encouraging news is that the code adheres closely to the planned architecture, with only minor deviations or unfilled gaps:
+
+Clear Brain1/Brain2 Separation: The architecture emphasizes that Brain 2 (Control Center) should be a lean aggregation layer, not an alternate computation engine. The code fulfills this: Brain 2 almost exclusively reads data and produces summaries. For example, all Control Center inputs are either draws or outputs from Brain 1 tools – it doesn’t try to recalc stable patterns or dig into table internals beyond the predefined helpers. This matches the “live wiring and data paths” documentation which says aux tools and Control Center operate on data/cleaned/draws and shouldn’t tangle with the combined-table pipeline
+GitHub
+. In code, Control Center uses modules.aux_loaders.load_state_draws to get draw lists
+GitHub
+GitHub
+, and uses Brain 1’s vtrac_reference.get_vtrac_index to compute indices
+GitHub
+. It does not use any Brain 1 internal global state; it either calls pure functions or reads files. This alignment is excellent and reduces risk of “hallucinated” connections. A potential point of drift was ensuring Brain 2 isn’t using stale data – the code addresses that via the freshness check mentioned, which is exactly the kind of validation the framework would want.
+
+Master Validation & Testing: The Master Validation Framework doc likely outlined practices like establishing ground truth comparisons, regression tests, and ensuring all modules’ outputs can be verified. The current code incorporates many such practices:
+
+There are unit tests and acceptance tests relevant to Control Center: e.g., test_vtrac_family_ranker_regression.py to ensure the double-family ranking logic stays consistent (Single Source of Truth for overdue combo logic)
+GitHub
+, and test_control_center_doubles.py which likely launches the Streamlit page in a test context and validates that the doubles table renders as expected (using known fixtures)
+GitHub
+. This shows a strong validation of one profit indicator (overdue doubles), exactly as the framework would require.
+
+The snapshot script is another validation tool: it produces a comprehensive JSON and CSV “snapshot” of the Control Center state, including all alerts and a summary of each state’s status (freshness, draws-since-double, hits counts, etc.)
+GitHub
+. This snapshot can be used to manually or programmatically verify that, say, if an alert fired, it corresponds with a certain outcome (hits data). Indeed, the snapshot includes a breakdown of hit counts (exact/boxed/vt_boxed/vt_straight) for each state’s results
+GitHub
+GitHub
+, and every alert logged carries that hits sub-dictionary
+GitHub
+GitHub
+. The summary markdown it prints at the end tallies each alert type and how many hits of each kind occurred under those alerts
+GitHub
+GitHub
+. This directly addresses the “audit spine” mentioned in planning – using winners logging as the backbone to evaluate alerts. For example, an alert for vtrac_repeat might often coincide with a hit (if patterns are persistent), or maybe not – the snapshot will quickly show if vtrac_repeat alerts had any correct predictions (e.g., if a repeat pattern led to a win, you’d see a hit in the vt_boxed or exact count). This is the kind of cross-check the Master Validation Framework would encourage to gauge each indicator’s performance.
+
+Documentation is kept in sync: The Codex log indicates that whenever changes were made, the Unified Changelog and Checkpoint Log were updated. Specifically, a log entry for “2025-10-10 – Control Center batch winners workflow” describes adding batch runner utilities and mentions the files and docs touched. We can infer that the Architecture & Master Validation doc was likely updated or referenced in those logs. There’s no evidence of the code contradicting the diagrams; if anything, the code is a subset (e.g., no Hot Zones yet) but not something entirely different from what was drawn.
+
+Drift or Misalignment: The only areas of possible drift are due to incomplete implementation rather than wrong implementation:
+
+Profit indicator coverage: The architecture diagrams probably show 12 indicators feeding into an aggregate scoring or decision matrix. Right now, only a few are live. This means the current Control Center is not as comprehensive as the diagrams would suggest. However, this isn’t a case of implementing something incorrectly – it’s just work remaining. There’s no sign that Codex “hallucinated” a feature that doesn’t exist; they simply haven’t built it yet.
+
+Ontario-first strategy: In the planning notes we saw, there was mention of using Ontario as a pilot state and then mirroring logic to others. The current code does not special-case Ontario anywhere – it processes all states uniformly. This is actually fine (it doesn’t harm anything), but it means if the user expected to, say, only see Ontario in the dashboard initially, that expectation isn’t met. In practice, showing all states is more useful, so this is likely a deliberate deviation from a possibly outdated plan. No harm here, but worth noting if the documentation still says “Ontario first”, it should be updated to reflect that the Control Center covers all states now.
+
+Tuning and thresholds: The diagrams or framework might have specified certain threshold values or conditions for alerts (for instance, “flag a due double only if draws-since-double > X”). The current implementation doesn’t incorporate thresholds for firing an alert (every state gets a due_doubles alert with a numeric value). This could be seen as a slight deviation from a presumed design where alerts would denote exceptions rather than just metrics. However, since the Codex approach was to log everything as “experimental” and later tune, this seems intentional and not an oversight. We should align on this in documentation: clarify that initial implementation logs all occurrences and later logic will decide what constitutes a true “alert condition” (perhaps through the strength field or additional logic).
+
+Overall, no major miswirings relative to the intended architecture were found. The Control Center does what it’s supposed to (just not everything it eventually will). The pieces that are in place – alerts, schema, cross-state analysis – actually enhance the robustness envisioned by the Master Validation Framework, by providing a structure to verify each new indicator as it’s added. There is a strong correspondence between design artifacts (like the Aux Tools official overview) and code (for example, the doubles summary, VTRAC heatboard, Blackapple integration all appear in both doc and code)
+GitHub
+. This indicates the project is staying on course.
+
+6. Potential Hallucinations or Miswiring, and Recommendations
+
+After examining the implementation, we did not find evidence of severe “hallucinated” code (i.e., code that Codex wrote based on a misunderstanding of the system). Everything present serves a logical purpose and fits the known design. However, we should highlight a few areas to watch or refine before ramping up the next phase (installing all 12 indicators):
+
+Blackapple Data Flow: As mentioned, the snapshot tool currently relies on a control_center.md or manual input for Blackapple results
+GitHub
+. This is a bit brittle. If someone runs the snapshot without first generating that report, Blackapple alerts will be missing. Recommendation: Create a direct data path for BA. For instance, after the app runs Blackapple for all states, it could dump a JSON file (reports/control_center/blackapple.json) containing the table of results. Then cc_sanity_snapshot.py can simply load that JSON (if present) instead of scraping markdown. This would remove the manual step and potential for error in parsing. Alternatively, integrate the Blackapple analysis function into the snapshot (ensuring it can run headlessly). This improvement will ensure Brain 2 always has access to BA data in automated runs – crucial for validation.
+
+Alert Firing Conditions: As it stands, some alerts are logged rather indiscriminately (e.g., due_doubles for every state, blackapple for every state regardless of score). This is fine for an initial data capture approach, but before using these indicators to drive real decisions or “alerts” in the user-facing sense, conditions should be tightened. Recommendation: Introduce thresholds or boolean “fired” status for alerts:
+
+For Due Doubles: perhaps only consider it a notable alert if draws_since_double exceeds a threshold like the 90th percentile or a defined constant (we see constants COMBO_DOUBLE_LATE = 667 and COMBO_DOUBLE_VERY_LATE = 1000 in core.aux_config
+GitHub
+ – these could be used as blue/red alert levels). The evidence is already there (a state with 1200 draws since a double is clearly in red territory according to those constants). So Brain 2 could mark an alert severity or only include an alert if above, say, 667.
+
+For VTRAC repeat: this is already a strict condition (repeat happened or not), which is fine. We might consider if we want to extend it – e.g., an alert if a particular VTRAC index has repeated multiple times recently or if an index is “stuck.” But that may be over-complicating; the current binary trigger is acceptable. No miswire here, just a possible future enhancement.
+
+For Blackapple: Blackapple’s own output includes a status field that categorizes the pattern scenario (e.g., perhaps “HOT” vs “MIXED” vs “NONE”). Indeed, the code calls _ba.ba_status_label(score) to get a human label like “EXT” (extreme) or “MIX”
+GitHub
+GitHub
+. In the table, that status is shown under “Triggers” or “Status” columns
+GitHub
+. We could use that to decide if a global alert is warranted. For example, if Blackapple status is just “None” or low score, we might not flag it actively. Conversely, “EXT” (extremely due patterns) could raise a flag. Right now, every state appears in the BA table – which is fine for information, but if we move toward automated decision-making, we’d likely focus on states with strong BA triggers. The groundwork is there; it’s a matter of interpretation.
+
+Missing Indicators: obviously, once A01–A08 and A11–A12 are added, each will need its own logic for when it should “fire.” We recommend implementing them first in the current style (log all occurrences with some strength metric) and then using the accumulated data (via the snapshot logs over many days) to decide sensible thresholds. This data-driven tuning aligns with Codex’s suggestion of starting “experimental” then refining. It will help avoid false alerts or trivial signals.
+
+Completing A01–A08 & A11–A12: As identified, these need to be developed. Some suggestions in line with the AAT9 context:
+
+A01 Stable Pattern Hit: If the Stable Pattern Extractor’s top pattern (or top N patterns) for the day includes the actual winning number’s pattern/family, that’s a significant event. Brain 2 can detect this by looking at the stable extractor’s output for each state (the training bundle manifest or a “winners overlay” from stable). In fact, the Unified Changelog notes that stable patterns now produce winners overlays and training JSON. So, implement a function to read that (e.g., check if the stable output JSON for that date contains a flag for the win). Log an alert id="stable_match" or similar for that state. The hits field would redundantly show an exact hit, but the purpose is to capture that the tool predicted it. This would be a high-value indicator.
+
+A02 Stable Pattern Strength: Perhaps an alert for states where the stable pattern score is exceptionally high (even if no win yet). E.g., “State X has a very strong stable pattern signal today.” This could correlate with future wins or just be an evidentiary metric. It would require reading the stable output’s top pattern score.
+
+A03 Digit Reduction Indicator: The digit reduction module (Analyzer V2) recently got an enhancement to tag its outputs with winner flags (dr_win_vt_boxed, dr_win_vt_straight)
+GitHub
+. This means after you run Digit Reduction, you have per-state, per-draw info on whether the day’s winner appeared in the reduced strings (boxed or straight). A Brain 2 tracker could consolidate that. For example, A03 might be “Digit Reduction nailed the winner’s VTRAC family (or exact) in its reduction overlay.” If so, that’s evidence that the reduction method worked for that state/day. Implement by reading the reduction output JSON/CSV (the code notes a “per-item CSV” with these flags
+GitHub
+). If dr_win_vt_boxed is true, log an alert id="digit_reduction_vt_hit" for that state. If dr_win_exact (if such exists) is true, maybe log a separate or additional alert for an exact pick. This is speculative but follows logically from the data now available.
+
+A04 “Hot Family” Indicator: Perhaps an alert if the VTRAC family that a state is targeting (via stable or positional analyses) appears especially promising. The positional tool tags “hot families/indices” in its output
+GitHub
+. Also, the doubles analysis yields a ranked family list for each state
+GitHub
+GitHub
+. If, say, a particular double family is extremely late (beyond a threshold) and at the top for that state, Brain 2 could raise an alert “State Y: Double family 55x is extremely overdue” (some of this is effectively the doubles table we have, but it could be distilled to an alert per state for extremely overdue families).
+
+A05 Sum or Root-sum Indicator: Perhaps if the sum of the winning digits is very “cold” relative to expectation (the Sums analytics mention deficit and z_tail measures
+GitHub
+). If a state shows a sum with a huge negative deviation (very cold), and that sum hasn’t appeared in a long time, maybe that’s a signal (some lottery strategies track digit sums). The data is computed in Aux (not shown in UI yet), but an alert could highlight, e.g., “California: sum 18 is extremely overdue (z=-2.5)”. This would involve reading the sums analysis, which likely is available via build_aux_windows or similar (the code at [49] suggests some “windows” and status for singles and doubles which might include sums).
+
+A06–A08 could involve combinations or intersections: e.g., an alert if multiple tools agree on a particular number or pattern. If stable, vtrac, and positional all point to the same number or family, raise an alert for that synergy. This might require Brain 2 to cross-reference outputs (which is more complex). Alternatively, those might correspond to more Aux features (maybe “Mirror/Echo alert”, “Repeat pair alert”, etc., depending on what specific analytics the user has planned).
+
+A11/A12 – Profit & ML: The last indicators might be reserved for actual profit tracking (once wagering is simulated or logged). For instance, A11 could be “Profit Streak Alert – state has 3 wins in a row” or ROI metrics. A12 could tie into the future ML brain – e.g., an alert when the ML model’s confidence exceeds some threshold for a state. These are forward-looking; right now, there’s no profitability logging or ML output to hook into (Profitability logging is listed as “Pending” in the roadmap
+GitHub
+, and Machine Learning as well). So, these will likely be implemented much later. Recommendation: design placeholders for these so the schema can accommodate them (maybe an alert id like “profit_run” or “ml_signal”), but hold off until the underlying data exists.
+
+In implementing all the above, follow the established pattern: use utils.path_handler to locate files, always handle the case where data isn’t present (the code is careful with if file.exists() and try/except around imports
+GitHub
+GitHub
+), and log through the AlertRow so it goes into the JSON for validation. Each new indicator should come with a unit test if possible (even if it’s just checking schema validity, or using a small fixture to simulate the condition).
+
+UI/UX for Many Alerts: Once a dozen alerts are in play, the Control Center page might become cluttered if we simply dump all tables. This isn’t a code issue per se, but worth planning: perhaps a single “Alerts Summary” table can be shown, listing states vs alerts (like a matrix of which alerts fired per state, with icons or counts). Or use colored badges per state entry. The snapshot CSV alerts_by_variant.csv is already basically a matrix of variant vs alert counts
+GitHub
+. So a pivot of that for Combined variant could show how many of each alert each state had. This can be refined for presentation. For now, the emphasis is correctness over presentation, but as trackers are finalized, aim to make the output high-signal, easily scannable for the user. The user specifically wanted “high-signal insights on Control Center readiness” – one insight here is that as more indicators come, we should aggregate their information so the user isn’t overwhelmed. Perhaps highlight only states which meet multiple alert criteria or have the strongest signals.
+
+Avoiding Miswiring as Complexity Grows: With more data being pulled in, there’s a risk of wiring something incorrectly (e.g., mixing up state data, or reading wrong date files). To guard against that:
+
+Continue to use the consistent state identifiers (the code already normalizes state names and maps them to file stems carefully
+GitHub
+GitHub
+). The state_map logic in snapshot maps fuzzy state names to actual file prefixes (handling things like “Ontario” vs “Ontario4”)
+GitHub
+. This is working well – keep that updated if new states or naming conventions are added.
+
+Use the preflight checks regularly. There’s a PowerShell preflight script that likely checks that all needed files are in place and consistent. For instance, after adding new outputs (say stable JSONs), the preflight or guard hooks should be updated to verify those files exist for each run. The Codex logs mention an aux draw regeneration guardrail and pre-commit hook for aux data consistency. Similar guardrails can be extended for Brain 2: e.g., ensure that if stable patterns were run for the day, then Control Center picks them up without error.
+
+Keep writing unit tests for each new indicator’s logic. If A01 reads a stable JSON, write a test that feeds it a dummy JSON and ensures it logs the expected AlertRow. This will catch any parsing assumptions that don’t hold.
+
+Documentation and Diagram Updates: As a final recommendation, update the architecture diagrams and documentation as the implementation evolves. At this point, any drift is mostly due to unimplemented pieces, but as those pieces get implemented, ensure the docs reflect the actual wiring. For instance, once you implement stable-pattern-based alerts, add that to the “Control Center Map” diagram (which currently doesn’t explicitly list it). The AAT9 Workflow Standard emphasizes updating docs and Mermaid diagrams with each change – following that will keep design and code aligned and prevent future confusion.
+
+In conclusion, the Control Center (Brain 2) is well on its way to fulfilling its role. The Codex-implemented framework is solid – it correctly differentiates Brain 1 vs Brain 2 concerns, uses structured outputs, and has built-in validation
+GitHub
+GitHub
+. There are no glaring errors in the wiring we’ve reviewed; the main task now is to extend that wiring to all planned indicators and fine-tune their behavior. By proceeding methodically (add one indicator at a time, use the snapshot to verify it, update tests and docs), the team can confidently install the remaining A01–A12 profit indicators. Each addition will make the Control Center more insightful, eventually providing a comprehensive, evidence-driven view of where the best opportunities lie each day – which was the ultimate goal of Brain 2 in the AAT9 system.
+
+Sources

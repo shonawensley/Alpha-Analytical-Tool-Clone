@@ -1,0 +1,554 @@
+I’ll answer as a world‑famous analytics‑platform architect and data‑pipeline debugger with an ACM Software System Award under my belt.
+
+TL;DR:
+
+You’re not setting yourself up for disaster; you actually paused Control Center at a very clean checkpoint and documented it well.
+
+The current pain is mostly tool‑wiring / schema‑guard friction, not a fundamental break in the pipeline.
+
+The two concrete blockers I see are:
+
+VTRAC share bundle: the validation step that populates data/outputs/analysis/vtrac_validation hasn’t been run yet, so run_vtrac_share_bundle.py is correctly refusing to run.
+
+Stable patterns: Patterns: 0 almost certainly means the Stable extractor isn’t seeing any valid rows from the Combined tables (schema / header mismatch or a guard failing), not that the tool “doesn’t work”. The repo actually has dedicated schema guards (validate_stable_schema.py, print_stable_header.py) for exactly this scenario.
+
+Strategically, the move Codex already wrote down—park Brain2 / A01–A12, get one “golden” Brain1 run fully working (tables → winners → DR/VTRAC/Stable/Hot Zones) for 1–2 states—is the right call. That golden run then becomes the basis for your Superbrain/aggregator and for backtesting the 12 trackers later.
+
+Below is how I’d think about what’s going wrong and how to proceed, in concrete steps you can hand to Codex.
+
+1. Big‑picture: where you actually are
+
+From the KIT docs and your latest edits:
+
+Stage 1 + Stage 2 (history workbook → tables/JSON → winners with the day‑ahead rule) are already validated for the June 20–22 block using the wrapper run_history_and_results.py.
+
+The Faststart addendum now gives a very compact entry point: wrapper + manual steps + exactly which tool CLIs and sharepack files matter.
+
+The analyzer lean‑outputs doc locks in the contracts for Stable, VTRAC and Hot Zones outputs that the future aggregator will consume.
+
+Control Center (Brain2) now has a frozen alert schema and a safe snapshot tool and is explicitly documented as “paused before A01–A12, resume later using the frozen schema”. (That’s spelled out in the Control Center pause log + changelog you mentioned.)
+
+So you are not improvising on a shaky base. The weirdness is localized to:
+
+VTRAC: missing validation artifacts → bundle refuses to run.
+
+Stable: CLI returns “Patterns: 0” and writes nothing for ON/CT on 2025‑06‑21.
+
+Everything else (tables, JSON tables, winners, DR, Hot Zones) is behaving as designed.
+
+Given that, I’d absolutely keep Brain2 parked here and focus on getting one date + a couple of states fully wired for Brain1. That’s what the architecture/master‑validation docs are pushing you toward: first consolidate tool outputs into clean, lean bundles, then later layer the profit trackers on top.
+
+2. VTRAC: why the share bundle is complaining
+
+Your log shows:
+
+python3 TOOLS/run_vtrac_share_bundle.py → “Validation folder is missing. Run the enhanced validator first. Expected: data/outputs/analysis/vtrac_validation”
+
+That error is exactly consistent with the data‑validation workflow and changelog:
+
+The validator step is supposed to create per‑state reports under data/outputs/analysis/vtrac_validation/<STATE>/ plus a matrix.csv, findings.md, and a compact scoring output vtrac_compact_report.{json,csv}.
+
+The changelog explicitly says consumers (like your aggregator) should read vtrac_compact_report.{csv,json} and related summary files from this folder, and that the scorer is frozen for Aggregator v1.
+
+So the VTRAC situation is basically:
+
+The enhanced analyzer + validator loop was never run for this date, so the validation directory doesn’t exist yet.
+
+run_vtrac_share_bundle.py is supposed to abort in that case; that’s a safety feature so you don’t end up sharing stale or half‑baked VTRAC outputs.
+
+What to have Codex do
+
+For each state you care about (start with OntarioCanada4 and Connecticut4):
+
+Run the enhanced analyzer & validator so that the validation tree is populated. The exact entrypoint names are wired in the KIT docs; they all agree that:
+
+Enhanced analyzer bundles live under data/outputs/analysis/vtrac/<STATE>/….
+
+Validator outputs + compact report live under data/outputs/analysis/vtrac_validation/….
+
+The concrete command names are in your repo (e.g. using TOOLS/vtrac_score_and_export.py and the validator script mentioned in the changelog), but the key is: after this, you should see:
+
+data/outputs/analysis/vtrac_validation/<STATE>/validation_report.md
+
+data/outputs/analysis/vtrac_validation/matrix.csv
+
+data/outputs/analysis/vtrac_validation/vtrac_compact_report.{json,csv}
+
+Then re‑run:
+
+python3 TOOLS/run_vtrac_share_bundle.py
+
+
+(You already did this once; now it should succeed once the validation folder exists.)
+
+At that point you should have the compact report and bundle that the lean‑outputs doc says the aggregator will consume.
+
+3. Stable: why you’re seeing Patterns: 0 (and what to test)
+3.1 What should be happening
+
+The Stable pipeline, when everything lines up, should produce per‑state files like:
+
+OntarioCanada4_stable_patterns_scores.csv
+
+OntarioCanada4_stable_patterns_families.csv
+
+OntarioCanada4_stable_patterns_compound.csv
+
+OntarioCanada4_metrics.json
+
+plus winner spotlight CSVs and HTML reports.
+
+And the tooling section in the lean‑outputs doc says:
+
+Runs are initiated with scripts/tools/run_stable_from_results.py --state <STATE> --results-file data/results/<DATE>.txt (you’ve done this).
+
+Guardrails include scripts/checks/validate_stable_schema.py and scripts/checks/print_stable_header.py to make sure the tables and metrics lines up before/after pipeline changes.
+
+We also know from the KIT docs and changelog that:
+
+The tables for a state live at data/outputs/tables/<STATE>/Combined_Combined.csv (plus Midday/Evening).
+
+Prior validation runs over the June 23/24/25 workbooks successfully ran tools like Hot Zones against these tables, so the table schema for that range is trustworthy.
+
+So Stable can work against these combined tables—there are successful historical runs.
+
+3.2 What your logs are telling us
+
+For OntarioCanada4 and Connecticut4 on results 2025-06-21 you saw:
+
+Stable run complete for OntarioCanada4
+Patterns: 0
+HTML:
+CSV:
+
+
+You then even tried copying the combined tables to state‑prefixed filenames and re‑running, with the same outcome.
+
+Given that run_stable_from_results.py didn’t error, there are only a few realistic classes of failure:
+
+No candidates after analyzer step
+
+The extractor ran, parsed the tables, but the internal analyzer returned an empty DataFrame (so there are literally no patterns that survive its early filters).
+
+Schema/header mismatch → early exit
+
+The extractor is reading the CSV but not finding the columns it expects (common after table refactors). The repo has validate_stable_schema.py and print_stable_header.py exactly to detect this, which means such issues have happened before.
+
+Input / label mismatch
+
+Stable might be filtering to only rows that match winner families; if the results label (Ontario) and state key (OntarioCanada4) aren’t wired correctly, it might end up with “no winners → no patterns”. The Faststart addendum warns about exactly this “Ontario vs OntarioCanada4” mismatch and tells you to use --results-label Ontario.
+
+You already tried the label fix, so we can probably eliminate pure label mismatch.
+
+Given the history, (2) schema/header mismatch is my leading suspect, especially since you’ve evolved the tables and Stable extractor at different times.
+
+3.3 Concrete debugging steps for Codex
+
+I’d have Codex do a very small, focused investigation before more heroic surgery:
+
+Sanity: confirm we’re on a validated dataset
+
+Run the wrapper for that history date and confirm the validation JSON is good for CT/FL (your existing safety net):
+
+PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2025-06-20
+
+
+Then open:
+
+reports/stable/validation_logs/validation_2025-06-21.json
+
+Confirm CT & FL have winners_found true and sequence_in_html true (the KEY_THOUGHTS_TABLE doc explains this).
+
+If that’s good, we can stop worrying about stale tables / wrong workbook.
+
+Inspect Stable’s view of the tables
+
+Have Codex run the schema guards for a state where Stable is failing, e.g.:
+
+PYTHONPATH=.:src python3 scripts/checks/print_stable_header.py --state OntarioCanada4
+PYTHONPATH=.:src python3 scripts/checks/validate_stable_schema.py --state OntarioCanada4
+
+
+(Use the actual script flags; the lean‑outputs/changelog doc lists these scripts explicitly as part of the Stable toolkit.)
+
+What we’re looking for:
+
+Does print_stable_header show the Combined/Midday/Evening CSVs that Stable thinks it should read?
+
+Does validate_stable_schema complain about missing columns, wrong types, or metrics issues?
+
+If either check fails, that’s almost certainly why the main run returns Patterns: 0. In that case the right fix is to:
+
+Either adjust the tables to match the expected schema, or
+
+Relax/update the validator + extractor to accept the new schema, and re‑run the tests in scripts/checks.
+
+Pin down analyzer behavior for one state in an interactive script
+
+Ask Codex to run a tiny Python snippet that calls the core extractor directly and prints counts at each stage (without editing library code). Something in this spirit:
+
+PYTHONPATH=.:src python3 - << "PY"
+from src.core import stable_pattern_extractor
+from pathlib import Path
+
+state = "OntarioCanada4"
+results_file = Path("data/results/2025-06-21.txt")
+
+df = stable_pattern_extractor.run_stable_pattern_extraction(
+    state=state,
+    results_file=results_file,
+    min_occ=1,
+)
+print("Total rows:", len(df))
+print(df.head())
+PY
+
+
+(No placeholders in the snippet; codex can adjust the module import to exactly match your repo.)
+
+If len(df) is 0 there, it confirms the analyzer is filtering everything out before the CLI writes CSV/HTML. That tells Codex where to instrument deeper (for example, printing how many rows survived each filter step in run_stable_pattern_extraction).
+
+Try a date that you know worked historically
+
+Your KIT docs prove that the June 23/24/25 block was used for tool validation (especially Hot Zones).
+
+Have Codex run the exact same Stable commands for, say, history-date 2025-06-23 → results 2025-06-24 and see if Stable produces patterns there. If it does, then:
+
+The code and table schema are fine for that date.
+
+The “Patterns: 0” on 2025‑06‑21 is probably about that specific workbook (maybe a sparser environment or a subtle table difference).
+
+In that case, you can still build your golden aggregator run on a date that you know is fully validated, and only later circle back to 20/21 if needed.
+
+4. Strategy: Brain1 vs Brain2 (and why your current pivot is right)
+
+You’re worried that pushing Brain2/Control Center too far ahead of Brain1 might paint you into a corner. Given the docs and where the code is, I’d frame it like this:
+
+The tables + winners pipeline is already treated as “gospel” and locked in via the wrapper and preflight docs.
+
+The tool‑level outputs and lean contracts (Stable, VTRAC, Hot Zones, DR) are also locked and documented specifically for the future aggregator.
+
+Control Center (Brain2) is intentionally downstream of all that: it consumes winners and high‑level signals and emits cross‑state alerts; that’s exactly what your Control Center pause log says, and what the new Faststart section hints at when it talks about “hooks to consider in aggregator” like Aux VTRAC index summaries and cross‑tool signals.
+
+So the safe order is:
+
+Hard‑lock Stage 1 + 2: done (tables + winners validated, wrapper exists).
+
+Make each tool re‑runnable for at least one golden day/state
+
+That’s the sharepack idea: all lean outputs for ON/CT on a known date.
+
+Design the Brain1 “superbrain” / aggregator purely as a consumer of those lean outputs + Aux features, without changing their contracts.
+
+Return to Brain2 (A01–A12) later, using:
+
+The frozen Control Center alert schema;
+
+Aggregator features as extra evidence where helpful.
+
+Given where you are, I’d stick with this:
+
+Keep Control Center frozen where Codex left it (snapshot + blackapple/due_doubles/VTRAC repeat).
+
+Use your current pause to finish the Ontario/CT “golden run”, even if that means temporarily choosing a date where Stable is definitely working (e.g. one of the June 23–25 workbooks).
+
+Only then worry about wiring the 12 profit trackers into Brain2.
+
+That way, any future complexity in Brain2 is built on top of a proven set of inputs, not vice versa.
+
+5. Concrete next moves I’d give to Codex
+
+Here’s a very explicit sequence, with real commands, that I’d hand Codex now:
+
+Rebuild + validate for a known history date (example: 2025‑06‑20)
+
+PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2025-06-20
+
+
+Sanity‑check the validation log
+
+Open reports/stable/validation_logs/validation_2025-06-21.json and make sure CT/FL pass the checks (winners_found + sequence_in_html).
+
+Run Stable schema guards for OntarioCanada4 and Connecticut4
+
+PYTHONPATH=.:src python3 scripts/checks/print_stable_header.py --state OntarioCanada4
+PYTHONPATH=.:src python3 scripts/checks/validate_stable_schema.py --state OntarioCanada4
+
+PYTHONPATH=.:src python3 scripts/checks/print_stable_header.py --state Connecticut4
+PYTHONPATH=.:src python3 scripts/checks/validate_stable_schema.py --state Connecticut4
+
+
+If those pass, debug Stable extraction for OntarioCanada4
+
+Run the tiny debugging snippet I sketched earlier to see how many rows the extractor actually returns for OntarioCanada4 on 2025‑06‑21.
+
+Run VTRAC enhanced + validator + share bundle
+
+Use the VTRAC tooling listed in the changelog to produce:
+
+data/outputs/analysis/vtrac_validation/OntarioCanada4/validation_report.*
+
+data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}
+
+Then rerun:
+
+python3 TOOLS/run_vtrac_share_bundle.py
+
+
+Confirm Hot Zones + DR are in place
+
+You already saw:
+
+DR outputs under data/outputs/analysis/digit_reduction/OntarioCanada4/.
+
+Hot Zones under data/outputs/analysis/hot_zones/OntarioCanada4/….
+
+Assemble a sharepack folder manually for now
+
+For example, sharepacks/2025-06-21/OntarioCanada4/ containing exactly what the lean‑outputs & Faststart docs list: tables, JSON tables, winners HTML/JSON, Stable bundle, DR bundle, VTRAC compact/bundle, Hot Zones per_lane/top_lanes/meta + winner_map.
+
+Once you have that for at least one state and one date, you can safely start the aggregator template work you originally planned: evaluating each tool’s final outputs and deciding what your “superbrain” should actually consume.
+
+6. Two quick sanity checks you can do yourself
+
+Just so you don’t feel completely reliant on Codex here:
+
+Open one Combined_Combined.csv and one winners HTML by hand
+
+For a validated date (e.g. CT 2025‑06‑23), open Combined_Combined.csv and the CT winners HTML, and confirm you see the Set1/Draw1 sequence inside the HTML as described in KEY_THOUGHTS_TABLE.
+
+That will reassure you the base pipeline is exactly what you think it is.
+
+Check whether Stable works on a date that the KIT says is good
+
+Pick a date in the June 23/24/25 block and have Codex run Stable there.
+
+If it produces patterns and bundles, then you know the tool is sound and the Ontario 2025‑06‑21 issue is local (tables/schema/date), not systemic.
+
+If you’d like, after Codex runs those steps and you get one clean sharepack, we can walk that sharepack together and start sketching the Brain1 superbrain in a very concrete way (e.g., which exact CSVs and JSON fields feed which parts of the aggregator).
+
+_______________
+I’ll answer as a world‑famous software verification / data‑pipelines engineer with a Turing Award in dependable analytics systems.
+
+TL;DR:
+What you’re seeing in those folders is a real smell, but it’s not “tables aren’t being rebuilt” – the guard pipeline is still doing its job. The mess (extra OntarioCanada4_*.csv / Connecticut4_*.csv files) comes from earlier troubleshooting where Codex manually copied tables, which violates the contract that each state dir should only contain Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv under data/outputs/tables/<STATE>/.
+
+Stable returning “Patterns: 0” is almost certainly a Stable extractor issue (schema / filtering) on top of that, not Hot Zones or JSON. Hot Zones correctly uses the JSON mirror; Stable is still supposed to read the CSV tables. The safest next move is:
+
+Clean the state dirs back to the canonical three files (delete the state‑prefixed copies).
+
+Re‑run the guarded tables pipeline for the history workbook.
+
+Have Codex inspect Stable’s CSV parsing step and log what it’s actually loading from Combined_Combined.csv.
+
+Try Stable on a “clean” state like Florida4 or NewJersey4 as a control.
+
+Below is how I’d explain all this to Codex and why it’s happening.
+
+1. What’s going on with the JSON vs CSV question?
+Hot Zones
+
+Your JSON snippet is exactly the Hot Zones view of the string‑table environment:
+
+state_name, sections → Midday / Evening / Combined
+
+nested sets → Set1/2/3
+
+each DrawN with draw_data, pattern_variations R2/R4/R6/R8, and metadata (hot_zone_count, is_hot_zone).
+
+Per the architecture doc, Hot Zones is explicitly designed to read that JSON mirror:
+
+Inputs: data/outputs/json_tables/<STATE>_tables.json.
+
+Outputs: data/outputs/analysis/hot_zones/<STATE>/ (per‑lane, top‑lanes, meta + winner maps).
+
+So the JSON you pasted is correct and expected for Hot Zones. It’s not a bug.
+
+Stable / DR / VTRAC
+
+By design, the CSV tables are still the “single source of truth” for the three heavy analyzers:
+
+Policy: “Combined is baseline… V‑TRAC / Stable / Digit Reduction read combined tables from data/outputs/tables/<STATE>/ via utils.path_handler.”
+
+The Final Validation help and diagrams say Stable’s inputs are simply “Combined tables under data/outputs/tables/<STATE>/”.
+
+So right now the intended split is:
+
+Stable / DR / VTRAC → CSV (Combined_Combined, Midday_Combined, Evening_Combined).
+
+Hot Zones → JSON mirror (built from those same CSVs).
+
+Moving Stable to read JSON directly would mean rewiring a lot of code (parsers, feature configs, tests). It might be nice someday, but it’s a heavy refactor and not required to get it working now.
+
+So: the JSON is fine, but Stable isn’t supposed to depend on it. The core question is “why is Stable seeing zero patterns when the CSV tables exist and are known-good?”
+
+2. The “messy vs clean” table folders — what likely happened
+
+From the screenshots:
+
+Florida4, NewJersey4 look clean:
+Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv.
+
+OntarioCanada4 and Connecticut4 have extra files:
+OntarioCanada4_Combined_Combined.csv, OntarioCanada4_Midday_Combined.csv, etc.
+
+The docs are very explicit about what should be there after a proper Stage‑1 run:
+
+For each state, confirm:
+data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv
+(no state prefix on the filenames).
+
+Stage‑0 of the String‑Table SOP even encourages starting from empty tables/json/analysis dirs for a “clean run”.
+
+In the Codex log you pasted, there’s an explicit cp hack:
+
+cp data/outputs/tables/OntarioCanada4/Combined_Combined.csv \
+   data/outputs/tables/OntarioCanada4/OntarioCanada4_Combined_Combined.csv
+# … same for Midday_Combined / Evening_Combined
+
+
+So those extra OntarioCanada4_*.csv / Connecticut4_*.csv files are not coming from the pipeline; they were added manually during Stable debugging.
+
+Why this matters:
+
+It violates the contract the rest of the code assumes: many helpers and tests assume each state folder has exactly those 3 standard names.
+
+If any Stable/VTRAC code is doing a naive glob like *Combined_Combined.csv instead of using path_handler, those duplicate files can change which file it picks up (alphabetical order, etc.). That’s a very plausible reason Stable behaves differently on “messy” vs “clean” states.
+
+It also makes it much harder, mentally, to be sure we’re looking at the right dataset when debugging.
+
+So yes: your instinct that “this folder mess is part of the problem” is good. Even if it’s not the only cause, it’s worth cleaning up first.
+
+3. Why Stable is printing “Patterns: 0”
+
+Given everything we know from the docs and previous validation:
+
+The guarded pipeline does rebuild per‑state tables correctly from the chosen history workbook and ties them to a manifest.
+
+We’ve confirmed Combined_Combined Set1/Draw1 sequences for CT/FL before, and they match the expected winners for the day‑ahead rule.
+
+So the CSVs themselves are almost certainly valid.
+
+Stable’s flow (from the architecture docs and stable HTML notes) is roughly:
+
+Read the three Combined tables for the state.
+
+Parse rows where RowType is draw_data / R2 / R4 / R6 / R8.
+
+Build a big feature matrix and apply YAML‑configured scoring.
+
+Filter patterns by things like min_occ (you’re already passing --min-occ 1).
+
+Write scores/families/metrics CSVs and optional winner spotlights.
+
+When you see:
+
+Stable run complete for OntarioCanada4
+Patterns: 0
+HTML:
+CSV:
+
+
+that means:
+
+The CLI didn’t crash.
+
+But the internal patterns_df ended up empty before writing, so nothing was saved.
+
+Typical reasons that can happen:
+
+It never actually loaded any rows (e.g. the parser didn’t recognise the CSV header or the expected RowType values).
+
+It loaded rows, but some guard condition filtered everything out (e.g. “no patterns meet the min occurrence or score thresholds”).
+
+Because you’re explicitly using --min-occ 1 and this worked in previous history runs (we have sharepacks and logs from successful Stable runs recorded in the KIT), the more likely culprit is (1) – parsing / schema mismatch, possibly aggravated by the non‑standard filenames.
+
+That’s why I’d have Codex:
+
+Log which file paths Stable is actually opening for Ontario/CT.
+
+Print the first few rows of those CSVs inside the Stable extractor to confirm the header and RowType values look like expected.
+
+Compare against the schema described in the old Stable docs or HTML helper notes.
+
+4. How to explain this cleanly to Codex
+
+Here’s pretty much what I’d paste to Codex as your “project‑manager instruction”:
+
+1. Clean up tables dirs to match the contract.
+For every tracked state, data/outputs/tables/<STATE>/ should contain exactly:
+
+Combined_Combined.csv
+
+Midday_Combined.csv
+
+Evening_Combined.csv
+
+During earlier debugging we manually created files like OntarioCanada4_Combined_Combined.csv and Connecticut4_Combined_Combined.csv. Please delete all of those state‑prefixed copies so the folder layout is back to the documented state.
+
+2. Rebuild tables from the history workbook using the guarded path.
+From repo root, use the Faststart / String‑Table SOP, e.g.:
+
+PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py \
+  --history-file Pick3StatsC4_2025_06_20.xlsm
+
+
+Then confirm:
+
+data/outputs/tables/tables_manifest.json matches that workbook.
+
+data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv exist.
+
+data/outputs/json_tables/<STATE>_tables.json exist.
+
+3. Treat JSON and CSV correctly.
+
+Hot Zones should use data/outputs/json_tables/<STATE>_tables.json.
+
+Stable / DR / VTRAC must read from the CSV tables via utils.path_handler; please do not retarget them to the JSON or rely on manual cp hacks.
+
+4. Debug Stable’s “Patterns: 0” properly.
+
+Instrument run_stable_pattern_extraction (or the helper it calls) to:
+
+Log the exact table paths it opens for the state.
+
+Print df.head() for the combined table and show the RowType column values it sees.
+
+Compare those to the expected schema from the Stable docs (RowType should include draw_data, R2, R4, R6, R8).
+
+Once we see where the rows are being dropped, adjust the parsing logic or thresholds rather than copying/renaming files.
+
+5. Use a “clean” state as a control.
+
+After cleanup, run Stable on a state that never had the cp hacks, e.g. Florida4 or NewJersey4.
+
+If Stable works there but not for Ontario/CT, we know it’s something state‑specific (label, winners mapping).
+
+If it fails everywhere, the bug is general (schema drift / parser bug).
+
+6. Keep the String‑Table SOP as the ground truth.
+
+When in doubt about tables/results freshness, follow AAT9_String_Table_Testing.md Stage‑0/1 and the Final Validation checklist; don’t introduce new naming patterns.
+
+That gives Codex a very concrete, non‑hand‑wavy path: revert the folder layout, rely on the documented contracts, and then debug Stable from the inside instead of fighting the file system.
+
+5. Should you be worried you’re “setting yourself up for disaster”?
+
+No – what you’re hitting here is exactly the kind of integration friction you expect the first time all tools are run together:
+
+The data spine (history → guarded tables → JSON → winners) is already pretty robust and well‑documented.
+
+DR and Hot Zones are clearly working against those datasets.
+
+VTRAC just needs its validation step wired into the current date; Stable needs a small amount of love to line its parser back up with the tables and folder conventions.
+
+Once Stable is reading the CSVs again and VTRAC’s validator is run, you’ll have the full per‑state “brain 1” bundle in place. That’s actually the right time to go back to the aggregator / super‑brain template — not disaster, just one more plumbing bug to knock out.
+
+6. Two concrete sanity checks you can do yourself
+
+Pick one state/date (e.g. CT, 2025‑06‑21) and open Combined_Combined.csv in a text editor (not Excel) and confirm the header and RowType values look like the earlier SOP examples (Set,Draw,RowType,7,...,1). If they do, your tables are fine.
+
+After Codex cleans the folders and fixes Stable, run run_stable_from_results.py for a clean state (say Florida4) and confirm you now see Patterns: <non-zero> and that the corresponding CSV/HTML files land in data/outputs/analysis/patterns/Florida4/.
+
+If both of those pass, you’re back on solid ground and can let Codex grind through the rest of the master‑validation work with a lot more confidence.
