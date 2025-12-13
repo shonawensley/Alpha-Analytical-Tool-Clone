@@ -1,0 +1,254 @@
+TL;DR: Yes—there are a few “bumpy” items worth addressing before we scale to lots of dates/states, but only one rises to “fix soon” status (Digit Reduction winners artifacts semantics). Everything else is either (a) already neutralized by the run-report workflow, or (b) best handled as doc/contract clarifications so Part 3 can proceed safely. Also: your instinct is right—Part A is meant to be partly manual (environment/winner forensics), but we can still automate the mechanical extraction so humans (and future Codex sessions) don’t waste time or introduce counting mistakes.
+
+1) Should we fix the “bumpy” items before Part 3?
+A. What is a true blocker vs a safe defer?
+
+Blocker = anything that makes Part 3 reasoning unreliable or causes us to evaluate tools against the wrong day.
+You already called out the #1 failure mode: timeframe drift. Your own fix_me conclusion is essentially “keep the day-ahead mapping airtight or you get false confusion,” which is exactly right. 
+
+fix_me
+
+
+And your Final Validation help doc now clearly states the convention: sharepacks/<DATE>/... is results/winners day (D), and the history workbook is D-1. 
+
+2025-06-21__OntarioCanada4
+
+Good news: that blocker has already been neutralized by documenting the convention + using per-run reports instead of “editing the template file.” The template explicitly says “generate a per-run report and fill answers there.” 
+
+module_B_digit_reduction
+
+
+And the Run Reports README reinforces the same workflow (generate report → fill it). 
+
+2025-06-21__OntarioCanada4
+
+So: we do not need a “big fix pass” before Part 3—we need a small contract/clarity pass on the remaining bumpy spots.
+
+2) The bumpy items, ranked by “fix now vs defer”
+(1) Digit Reduction winners artifacts semantics mismatch — Fix soon (but not a Part 3 blocker)
+
+Your Ontario run report correctly frames the key semantic reality:
+
+Digit Reduction “winner” artifacts are tracking a final digit/value (e.g., Midday final value = 6, Evening final value = 2), not the triad winners (678/517). 
+
+2025-06-21__OntarioCanada4
+
+Therefore, the 4-criteria mapping (exact/boxed/VT-boxed/VT-straight) is not 1:1 with DR’s job, though DR does still expose VT-style flags you can use as support signals. 
+
+2025-06-21__OntarioCanada4
+
+The actual bumpy defect is this:
+Your report logs that winner_flags.csv shows many positive matches, but winner_hits.csv has final_*_match columns summing to 0 while match_types is populated—making auditing ambiguous. 
+
+2025-06-21__OntarioCanada4
+
+This aligns with your “deep caution” theme: if a future session sees contradictory winner evidence, they may incorrectly conclude the tool is broken (or “rip apart code”) when it’s really a reporting/semantics mismatch.
+
+Recommendation (optimal):
+
+Before we scale to many states/dates, we should “fix or clarify” DR winner evidence so Part 2 stays deterministic across sessions.
+
+But we can still do Part 3 now, because Part 3 is about Aux compound scoring and aggregator logic; DR’s mismatch mainly affects Part 2 audit clarity, not the Aux feature design itself (and you already logged it clearly in the run report). 
+
+2025-06-21__OntarioCanada4
+
+Minimal, no-code-change mitigation right now:
+Add a single “Do not trust final_*_match until clarified; use dr_win_* + match_types” note in the validation docs (you can do this without touching core scoring). The run report already contains that action item. 
+
+2025-06-21__OntarioCanada4
+
+(2) VTRAC global compact report missing/empty — Fix soon as a workflow guard (not Part 3 blocker)
+
+Your fix_me flags a real operational risk:
+
+sharepacks/2025-06-21/vtrac_compact_report.json loaded as an empty list []. 
+
+fix_me
+
+The interpretation is: either the share-bundle step didn’t run, wrong path, or upstream validation artifacts were missing; docs imply it should exist when the share-bundle runner is executed. 
+
+fix_me
+
+Why it matters: it doesn’t break Ontario’s report (we still completed Part A/2/2B), but it can quietly degrade confidence in cross-run comparisons.
+
+Recommendation: treat this as a preflight/workflow invariant (a guardrail), not a “change scoring logic” issue. That aligns with your safe-boundary philosophy in fix_me: focus on contracts/validators first and avoid ripping core logic unless defect is reproducible and evidence-tied. 
+
+fix_me
+
+(3) Documentation drift around VTRAC “Brain vs Winners” outputs — Doc fix (quick win)
+
+fix_me identifies a confusion source:
+
+A lean outputs reference still lists certain VTRAC winner artifacts, while Pitfalls says winners HTML is centralized under the winners sharepack and the VTRAC sharepack summary should pull from there. 
+
+fix_me
+
+Mitigation recommended: mark legacy vs current contract and make the split unambiguous. 
+
+fix_me
+
+This is a classic context-reset hazard: new sessions will “see two truths” and make unnecessary edits.
+
+Recommendation: a doc-only cleanup is optimal (low risk, high payoff).
+
+(4) VTRAC Analyzer not ranking winning indices highly — Defer (this is actually what Part 3 is for)
+
+Your run report captured the key fact:
+
+Winning indices were mid-pack: index 21 ranked 14/35; index 7 ranked 21/35. 
+
+2025-06-21__OntarioCanada4
+
+That’s not automatically a “bug”—it’s exactly the kind of empirical mismatch Part 3/aggregator design should explain and compensate for (via Aux features, cross-tool weighting, etc.). Your 2B synthesis already treats VTRAC Analyzer as more of an environment lens right now. 
+
+2025-06-21__OntarioCanada4
+
+So: do not “fix” this before Part 3—use it as an input to Part 3.
+
+(5) Hot Zones winner map clarity — Already partially fixed; optional improvement later
+
+Your run report notes that:
+
+Winners appear in top_lanes.csv but are low ranked; and winner_map file presence vs triad presence can be explained if winner_map is Top‑N. 
+
+2025-06-21__OntarioCanada4
+
+It recommends making winner map exhaustive or clearly labeled Top‑N. 
+
+2025-06-21__OntarioCanada4
+
+This is not blocking Part 3.
+
+3) Your Part A philosophy is correct — and automation can still help
+Why your “Part A is intentionally manual” argument makes sense
+
+You described Part A as an “environment + winner situation forensic primer” that may reveal factors tools miss, and could even justify new tools. Yes—that’s a coherent purpose statement.
+
+Part A should remain the place where we answer things like:
+
+“Is this a tight perm-lane day or a scatter day?”
+
+“Are signals variant-split (Midday vs Evening vs Combined)?”
+
+“What cluster anchors (e.g., 367/362) are emerging across tables?”
+
+Your Ontario report demonstrates why: it found cross-tool anchors (367, 362, 59x clusters) that aren’t “the winner,” but are still critical environment descriptors. 
+
+2025-06-21__OntarioCanada4
+
+So what would Part A automation actually mean?
+
+Not “automate the thinking.”
+It means automate the mechanical extraction so the human analysis is:
+
+faster,
+
+repeatable,
+
+less error-prone,
+
+and survives context resets.
+
+Concrete example from your Ontario Part A answers:
+
+You wrote objective counts like “Set1 col1/col2 super-hot density (20/28 **).” 
+
+2025-06-21__OntarioCanada4
+
+You computed permutation presence patterns (e.g., 678 manifests mostly via 867/687; 517 via only 175). 
+
+2025-06-21__OntarioCanada4
+
+Those are perfect automation targets because they are deterministic computations from the winners JSON/HTML—not subjective interpretation.
+
+Optimal compromise design:
+
+A small “Part A winners-lens summarizer” script outputs:
+
+hot column density counts,
+
+tag counts (hit-winner, hit-family-gap, etc.),
+
+top survivor patterns by occurrence/persistence,
+
+permutation substring hit counts per variant,
+
+top “example cells” for each key tag,
+
+cross-variant divergence flags (“present in Evening+Combined, absent in Midday”).
+
+Then the human still writes the narrative conclusions (“what does that imply for playing VT-box vs perm-lane?”).
+
+This keeps Part A as your manual “forensics layer,” while removing the tedious “counting and searching” that burns time and risks mistakes.
+
+4) What fix_me adds to this decision (and what I’d do next)
+
+Your fix_me doc strongly supports the idea that the recent work (summarizers + run-report workflow) was the correct precursor to Part 3: it explicitly concludes that focusing on “output contracts + summarizers + validators first” is not off-rails—it’s correct. 
+
+fix_me
+
+It also highlights the two risks most likely to cause future confusion:
+
+Doc drift around VTRAC outputs (fix via doc annotation). 
+
+fix_me
+
+Missing/empty VTRAC compact report (fix via workflow guard / ensure share bundle step ran). 
+
+fix_me
+
+So, in “deep brainstorm mode,” my optimal recommendation before Part 3 is:
+
+Minimal pre–Part 3 “stability pass” (no core logic edits)
+
+Write down a one-paragraph “Contract Truth Table” in the validation docs:
+
+Sharepack date semantics (D results / D-1 history). 
+
+2025-06-21__OntarioCanada4
+
+VTRAC winners location (central winners sharepack). 
+
+fix_me
+
+DR is final digit/value lens; not triad winner lens. 
+
+2025-06-21__OntarioCanada4
+
+Add a “Known bumpy semantics” bullet:
+
+DR winner_hits.csv final_*_match currently unreliable/ambiguous; prefer flags + match_types until clarified. 
+
+2025-06-21__OntarioCanada4
+
+Add a preflight checklist item:
+
+Fail/flag if vtrac_compact_report.json is missing or empty. 
+
+fix_me
+
+That’s it. Then start Part 3, because Part 3 is where we turn the Ontario discoveries into Aux scoring/aggregator logic.
+
+5) What I think you were really “getting at” in your message
+
+You’re trying to prevent a very specific failure mode:
+
+People misread what outputs mean, conclude something is broken, and start rewriting core logic—when the real issue is contract/semantics mismatch + lack of a stable audit surface.
+
+That is exactly why the per-run report workflow is so valuable: it’s a single stable artifact that prevents context reset chaos (the template itself now tells you to generate and fill per-run reports). 
+
+module_B_digit_reduction
+
+And your fix_me explicitly endorses that direction as the right precursor to Part 3. 
+
+fix_me
+
+Sanity Check
+
+Open your Ontario run report and confirm the DR ambiguity is explicitly recorded (Digit Reduction Part 2 Q3 mentions winner_flags.csv vs winner_hits.csv mismatch). 
+
+2025-06-21__OntarioCanada4
+
+Open the Final Validation help doc and confirm the date convention is crystal clear (sharepacks/<DATE> = results day D; history workbook = D‑1). 
+
+2025-06-21__OntarioCanada4

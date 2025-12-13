@@ -1,0 +1,172 @@
+TL;DR: There’s no “hallucination” here. The Codex log is pointing at two specific, real artifacts:
+
+VTRAC’s global compact report file exists but is literally empty ([], sections length 0). 
+
+CODEXLOG66
+
+Digit Reduction is not “empty”, but one particular set of “final_*_match” fields in winner_hits.csv is behaving like all-zeros, which makes summaries read as “exact=0 / vtrac=0” even though winner_flags.csv shows many positives. 
+
+2025-06-21__OntarioCanada4
+
+Step-by-step: what the log is actually saying (and what it is not saying)
+1) VTRAC: “compact report empty” ≠ “VTRAC analyzer empty”
+
+What is NOT empty: the VTRAC analyzer outputs for the run clearly exist and contain ranked outputs (top indices, top straights, and winners lens files). 
+
+2025-06-21__OntarioCanada4
+
+What IS empty: the global compact report at sharepacks/2025-06-21/vtrac_compact_report.json was loaded and found to be an empty list ([]), and its sections length was 0. That is explicitly in the Codex log. 
+
+CODEXLOG66
+
+So, the correct interpretation is:
+
+VTRAC analyzer produced real content (the evidence blocks you were using in Part 2). 
+
+2025-06-21__OntarioCanada4
+
+A separate “share bundle / compact scoring summary artifact” is empty for that date. 
+
+CODEXLOG66
+
+This matches the workflow doc too: the share-bundle step is supposed to refresh vtrac_compact_report.json/csv. 
+
+AAT9_Data_Validation_Workflow
+
+
+And FIX_ME explicitly calls this out as “Risk B” with the same evidence. 
+
+fix_me
+
+Conclusion (High confidence): Codex is not misreading here; it’s correctly distinguishing “per-state analyzer outputs” vs “global compact report”. The compact report is empty, not the analyzer. 
+
+CODEXLOG66
+
+ 
+
+2025-06-21__OntarioCanada4
+
+
+2) Digit Reduction: “zero feedback” is narrowly about winner_hits match columns, not the whole tool
+Your own master validation run report contains the smoking gun summary:
+
+
+winner_flags.csv shows big non-zero totals (example: Midday exact=108, vtrac=112, etc.). 2025-06-21__OntarioCanada4
+
+
+But the winner_hits.csv summary reads like exact=0, vtrac=0 (even though other fields like vt_boxed may be nonzero depending on section). 2025-06-21__OntarioCanada4
+
+
+Then Part 2 Q3 explicitly states the mismatch: it says winner_flags contains hits, but winner_hits has match_types populated while the “final_*_match sums” are 0, so the audit semantics are ambiguous. 2025-06-21__OntarioCanada4
+FIX_ME2 repeats the same point and frames it exactly the way you’re sensing it: it’s an “audit semantics mismatch” where the report can appear to show “all zeros” while other indicators say “there were matches.” FIX_ME2
+Also, your “lean outputs” doc describes winner_hits.csv as something that should mirror those dr_win_* flags so downstream scripts can classify winners. AAT9_Analyzer_Lean_Outputs
+So when you see winner_flags showing positives while the winner_hits final_*_match fields look dead/zero-ish, that’s a real contract mismatch (or at least a “reporting contract mismatch”). 2025-06-21__OntarioCanada4 AAT9_Analyzer_Lean_Outputs
+Conclusion (High confidence): The “zero feedback indicators” are real, but they refer to a specific set of fields/aggregations (the final_*_match-style columns in winner_hits.csv / how they’re summarized), not “Digit Reduction produced nothing.” 2025-06-21__OntarioCanada4 2025-06-21__OntarioCanada4
+
+So… is Codex hallucinating or misinterpreting?
+No — the alarming “empty/zero” statements are grounded in actual artifacts and are already documented as risks in FIX_ME / FIX_ME2. fix_me FIX_ME2
+What is happening is a communication hazard:
+
+
+“Empty compact report” sounds like “VTRAC is empty” — but it’s only the share-bundle compact report artifact. CODEXLOG66
+
+
+“Hits show exact=0/vtrac=0” sounds like “Digit Reduction found nothing” — but it’s actually a mismatch between winner_flags and how some winner_hits match columns behave/summarize. 2025-06-21__OntarioCanada4
+
+
+
+What you should trust for Part 3 right now
+Based on what’s in your repo/docs:
+
+
+For VTRAC (Part 3 inputs): trust the per-state analyzer evidence (top indices/straights, winners lens artifacts). 2025-06-21__OntarioCanada4
+
+
+For Digit Reduction (Part 3 inputs): trust winner_flags.csv and treat the winner_hits final_*_match summaries as “bumpy/unreliable until clarified.” That’s explicitly how FIX_ME2 frames it. FIX_ME2
+
+
+Conclusion (High confidence): You were not “wrong” that Part 1/2 went relatively well; the run report shows the tool outputs were present (no missing brain/winners), and the scary bits are localized to these contract/reporting artifacts. 2025-06-21__OntarioCanada4 2025-06-21__OntarioCanada4
+
+Concrete verification commands (so you can personally confirm in 60 seconds)
+A) Confirm the compact report is empty (or not)
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+p = Path("sharepacks/2025-06-21/vtrac_compact_report.json")
+print("path:", p)
+print("exists:", p.exists())
+if not p.exists():
+    raise SystemExit(1)
+
+obj = json.loads(p.read_text())
+print("json_type:", type(obj).__name__)
+if isinstance(obj, list):
+    print("list_len:", len(obj))
+elif isinstance(obj, dict):
+    print("keys:", sorted(obj.keys()))
+    print("states_len:", len(obj.get("states", [])))
+    print("sections_len:", len(obj.get("sections", [])))
+PY
+
+This is exactly the check your Codex log indicates it effectively performed (it loaded the file and observed [] and sections length 0). CODEXLOG66
+B) Confirm Digit Reduction “flags vs hits” mismatch on the same date
+python3 - <<'PY'
+import pandas as pd
+from pathlib import Path
+
+base = Path("sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/analyzer_v2/winners")
+print("base exists:", base.exists(), "|", base)
+
+hit_files = sorted(base.glob("*_winner_hits.csv"))
+flag_files = sorted(base.glob("*_winner_flags.csv"))
+
+print("\nHITS FILES:", [f.name for f in hit_files])
+print("FLAGS FILES:", [f.name for f in flag_files])
+
+def summarize_flags(path: Path) -> None:
+    df = pd.read_csv(path)
+    cols = [c for c in df.columns if c.startswith("dr_win_")]
+    print(f"\n{path.name} rows={len(df)}")
+    for c in cols:
+        s = df[c].fillna(0)
+        try:
+            print(f"  {c} sum={int(s.sum())}")
+        except Exception:
+            print(f"  {c} unique={df[c].unique()[:5]}")
+
+def summarize_hits(path: Path) -> None:
+    df = pd.read_csv(path)
+    print(f"\n{path.name} rows={len(df)}")
+    for c in ["final_exact_match", "final_vtrac_match", "final_vt_boxed_match", "final_vt_straight_match", "match_types"]:
+        if c in df.columns:
+            if c == "match_types":
+                nonempty = df[c].fillna("").astype(str).str.len().gt(0).sum()
+                print(f"  {c} nonempty_rows={int(nonempty)}")
+            else:
+                s = df[c].fillna(0)
+                try:
+                    print(f"  {c} sum={int(s.sum())}")
+                except Exception:
+                    print(f"  {c} unique={df[c].unique()[:5]}")
+        else:
+            print(f"  {c} MISSING_COLUMN")
+
+for f in flag_files:
+    summarize_flags(f)
+
+for f in hit_files:
+    summarize_hits(f)
+PY
+
+This reproduces the exact “why are matches zero?” confusion: your run report already shows winner_flags has large positive counts while winner_hits summaries can report exact/vtrac as zero. 2025-06-21__OntarioCanada4 2025-06-21__OntarioCanada4
+
+Sanity Check
+
+
+Open sharepacks/2025-06-21/vtrac_compact_report.json and confirm whether it’s literally [] (empty list), matching the Codex log. CODEXLOG66
+
+
+Compare the same date’s DR *_winner_flags.csv vs *_winner_hits.csv sums for “exact/vtrac” (the mismatch is explicitly described in your run report). 2025-06-21__OntarioCanada4 2025-06-21__OntarioCanada4
+
+Sources

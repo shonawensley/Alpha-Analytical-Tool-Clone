@@ -113,6 +113,7 @@ def summarize_winner(
             "score": float(best["score"]),
             "hot": int(best.get("hot", 0)),
             "vtrac_straight": float(best.get("score_vtrac_straight", 0)),
+            "why": str(best.get("why", "")),
             "source": "patterns_scores.csv",
         }
     else:
@@ -131,6 +132,7 @@ def summarize_winner(
             "hot2": int(best.get("hot2_count", 0)),
             "set_chain": int(best.get("set_chain_depth", 0)),
             "draw_chain": int(best.get("draw_chain_depth", 0)),
+            "why": str(best.get("compound_why", "")),
             "source": "patterns_compound.csv",
         }
     else:
@@ -200,12 +202,14 @@ def make_markdown(state: str, winners_info: List[Dict], top_comp: List[Dict], to
         lines.append(f"- Spotlight ({win['spotlight']['source']}): {win['spotlight']['count']} rows | exact_boxed={win['spotlight']['exact_boxed']} | exact_straight={win['spotlight']['exact_straight']} | vt_boxed={win['spotlight']['vt_boxed']}")
         if win["scores"].get("present"):
             s = win["scores"]
-            lines.append(f"- Scores ({s['source']}): rank {s['best_rank']}, section {s['section']}, Set {s['set']}, Draw {s['draw']}, Col {s['col']}, score {s['score']}, hot {s['hot']}, vt_straight {s['vtrac_straight']}")
+            why = f" | why {s['why']}" if s.get("why") else ""
+            lines.append(f"- Scores ({s['source']}): rank {s['best_rank']}, section {s['section']}, Set {s['set']}, Draw {s['draw']}, Col {s['col']}, score {s['score']}, hot {s['hot']}, vt_straight {s['vtrac_straight']}{why}")
         else:
             lines.append(f"- Scores ({win['scores']['source']}): not present")
         if win["compound"].get("present"):
             c = win["compound"]
-            lines.append(f"- Compound ({c['source']}): rank {c['best_rank']}, section {c['section']}, score {c['score']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain {c['set_chain']}, draw_chain {c['draw_chain']}")
+            why = f" | why {c['why']}" if c.get("why") else ""
+            lines.append(f"- Compound ({c['source']}): rank {c['best_rank']}, section {c['section']}, score {c['score']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain {c['set_chain']}, draw_chain {c['draw_chain']}{why}")
         else:
             lines.append(f"- Compound ({win['compound']['source']}): not present")
         if win["families"].get("present"):

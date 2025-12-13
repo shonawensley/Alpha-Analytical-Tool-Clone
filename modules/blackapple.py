@@ -84,7 +84,9 @@ def _floating_digits(draws: List[str], window: int) -> List[str]:
 
 
 def _longest_out_root_sums(draws: List[str], window: int) -> Tuple[int, List[int]]:
-    last_seen = {r: None for r in range(1, 10)}
+    # Root sums are normally 1..9, but allow 0 to avoid crashes if a draw
+    # stream contains "000" placeholders (e.g., from missing values).
+    last_seen = {r: None for r in range(0, 10)}
     for idx, d in enumerate(draws[:window]):
         if not _is_draw(d):
             continue

@@ -4,6 +4,36 @@ Purpose: A single reference for running historical/backtest examples safely and 
 
 Repo root (WSL): `/home/ser/code/Alpha-Analytical-Tool-Clone`
 
+Date convention (important):
+- `sharepacks/<DATE>/...` uses the **results/winners date** (D).
+- The corresponding history workbook is typically the day before (D‑1) and is what tables/JSON were built from.
+
+## Contract Truth Table (SSOT)
+
+| Concept | Single source of truth | Notes |
+|---|---|---|
+| Results date (D) | `sharepacks/<D>/...` folder name | Sharepacks are keyed by **winners/results date**. |
+| History workbook date (D‑1) | Pick3StatsC4 workbook selected for that run | Tables/JSON are rebuilt from this “world snapshot”. |
+| Results input | `data/results/<D>.txt` | Winners list pasted/loaded for D. |
+| 3‑variant winners overlays (HTML/JSON) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | These are the **environment lens** (Template Part 1). |
+| Stable evidence (brain + winners lens) | `sharepacks/<D>/<STATE>/stable/<STATE>/` | `metrics.json` is the Stable “winners + ranks” anchor. |
+| Digit Reduction winners semantics | `.../analyzer_v2/winners/*_winner_stamp.json` | SSOT for **any vs final** counts (see below). |
+| VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
+| Template answers | `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
+
+## Known bumpy semantics (read once)
+
+- **Digit Reduction “any vs final”**  
+  - It is valid for an example to have strong `*_any` counts (e.g., `exact_any`, `vtrac_any`) but **zero** `*_final` counts.  
+  - Do **not** assume the winner must appear in `winner_hits.csv.final_value`. Use `*_winner_stamp.json` `counts` as the semantic anchor.
+- **Canonical vs literal**  
+  - Many tool outputs are canonicalized (sorted digits). Example: literal `517` → canonical `157`. Always map literal → canonical before filtering/spot-checking.
+- **VTRAC compact report can be empty**  
+  - A compact report JSON can exist but contain `states=[]` / `sections=[]`. Run the validator below to fail fast and rerun the VTRAC share bundle if needed.
+
+Workflow changelog (don’t lose “fix later” items across sessions):
+- `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+
 Tracked states (tables present): CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. (GA/TX not tracked; skip to avoid errors.)
 
 Related SOPs/refs:
@@ -17,9 +47,16 @@ Related SOPs/refs:
     - Paste the Markdown into Part 2 before answering the tool questions; it already shows canonical mapping, per-output evidence, 4-criteria counts, and coverage gaps.
   - Digit Reduction winner check: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE>`
   - Digit Reduction sharepack summarizer: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md --json-out summary.json`
-    - Paste the Markdown into Part 2 before answering; includes per-output labels (flags/hits/per_item/top/reducer) and canonical mapping.
+    - Paste the Markdown into Part 2 before answering; includes per-output labels (stamp/flags/hits/per_item/top/reducer) and explicit **any vs final** counts.
   - V-TRAC sharepack summarizer: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md --json-out summary.json`
-    - Analyzer-only bundle: lists top indices/straights and section summaries with source labels (from enhanced JSON). If winner_map/flags are present in a bundle, extend the summarizer to include them.
+    - Lists Brain outputs (enhanced top indices/straights + section summaries) and, if available, auto‑adds the Winners lens from `sharepacks/<DATE>/<STATE>/winners/<STATE>/` (winner VTRAC report JSON/HTML). All facts are labeled by source.
+  - Hot Zones winners check: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE>`
+  - Hot Zones sharepack summarizer: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md --json-out summary.json`
+    - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
+  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+    - Snapshots draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` so Part 3 stays reproducible even after workbook swaps; paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+  - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
+  - VTRAC compact report validator (flags missing/empty states/sections): `python3 scripts/tools/validate_vtrac_compact_report.py --date <DATE>`
 
 ---
 
@@ -105,6 +142,14 @@ Tool quick index — Digit Reduction
      - Analyzer: `.../analyzer_v2/<STATE>_analyzer_v2_{per_item,top_candidates,meta}.csv/json`
      - Overlays: `.../analyzer_v2/winners/` (maps/flags/overlay HTML)
    - If a state errors, check that its tables exist (GA/TX will error because no tables).
+
+5) Stage 4 (Per‑tool Part 2 summaries — paste‑ready):
+   - After brain runs and winners logging exist for the date/state, generate paste‑ready Markdown blocks for Part 2:
+     - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md`
+     - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md`
+     - V‑TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
+     - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
+   - Paste each summary under Part 2 step “0) Outputs reviewed” in `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`, then answer Q1–Q10 for that tool.
 
 ### DR outputs vs. sharepacks (multi-day runs)
 - Live DR outputs under `data/outputs/analysis/digit_reduction/<STATE>/…` always reflect the **latest** run for that state (they are not date-versioned on disk).
@@ -226,3 +271,25 @@ Faststart addendum (to use directly)
   - AAT9_Table_Swap_Verification.md + AAT9_Master_Validation_Preflight.md (Set1 guard, manifests)  
   - AAT9_Quickstart_Cheat_Sheet.md (paths/commands)
 - Label mismatch note: if the results file uses a label that differs from the state key (e.g., “Ontario” vs “OntarioCanada4”), pass `--results-label` to Stable so winners are found; reuse the same results file for DR/VTRAC/Hot Zones.
+
+
+
+***helpful tools for analysis ***
+
+  On the VTRAC reference tool you asked about (TOOLS/VTRAC_REFERENCE_STRAIGHT.MD):
+
+  - It’s essentially the single best “decoder ring” for the 4‑criteria hit logic, because it contains:
+      - Index ↔ boxed families (Singles/Doubles per VTRAC index), plus a VTRAC_LOOKUP that maps any permutation → index.
+      - Canonical boxed label lookup (BOXED_LABEL_LOOKUP) so we can normalize any perm back to the boxed family label.
+      - Straight‑lane sets (“VSTRAIGHTS”): for each v‑code (e.g., v234) it lists the 8 straight combos in that lane (this directly supports “VT‑straight” reasoning).
+  - How it will help in the template runs:
+      - When we see a winner like 517, we can immediately map it to its canonical (157) and to its v‑code lane (v123 contains 517), then reason about whether the environment/tool outputs
+        supported playing the 8 straights vs just boxed vs in‑table perms.
+      - It also lets us cleanly explain “why VT‑boxed hit was plausible” vs “why VT‑straight wasn’t”, using the exact 8‑combo lane sets instead of intuition.
+  - If you want, after we finish the Ontario run report, I can add a short note in docs/AAT9_KIT/AAT9_Final_Validation_Help.md pointing future sessions to TOOLS/
+    VTRAC_REFERENCE_STRAIGHT.MD as the canonical reference for boxed+straight relationships. (I won’t edit docs unless you say “yes”.)
+
+  Current status / remaining tasks before Part 3:
+
+  - Everything needed is already present locally (winners HTML/JSON + per-tool summary.md blocks in the sharepack).
+  - What’s missing is simply writing the answers into tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.

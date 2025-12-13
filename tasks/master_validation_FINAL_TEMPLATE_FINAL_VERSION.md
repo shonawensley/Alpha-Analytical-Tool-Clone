@@ -2,6 +2,11 @@
 
 Purpose: read the 3-variant winners output (HTML + JSON) *before* any tool scoring. Use it as the environment lens to characterize the winning pattern and its family/VT context. Then answer the questions below to extract maximal analytical value.
 
+Execution note (recommended):
+- Do not write answers into this template file. Generate a per-run report and fill answers there:
+  - `python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4`
+  - Output: `tasks/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
+
 How to read:
 - Open the analyzer-style winners HTML for the state/date (Midday, Evening, Combined panes). If available, also skim the JSON twin for counts/index info.
 - Observe how the winning pattern/family appears through the Set3→Set1 progression (R2/R4/R6/R8) and across variants. Note hot markers (*, **), colored overlays (winner, VT family/straight), and column positions (especially col1/col2).
@@ -30,6 +35,11 @@ Part A — 3-variant winners HTML/JSON (environment lens)
 
 Purpose: for each string-table tool (Stable, Digit Reduction, VTRAC Analyzer, Hot Zones), distill the brain outputs + the tool’s winners artifacts into a concise analysis so another AI doesn’t need raw files. Mark validation-only items with “(V)” so they can be retired once stable. Keep winners outputs conceptually separate from brain outputs (brain = analyzer evidence; winners artifacts = post-results logging).
 
+Prereqs / workflow references:
+- If the sharepack + winners artifacts are not already generated for this date/state, follow: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md` (entry) and `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md` (one-shot wrapper + guards).
+- Sharepack convention: `sharepacks/<RESULTS_DATE>/<STATE>/...` (winners/results date D). Tables are built from the history workbook (typically D‑1), then evaluated against winners from D.
+- Per-tool summarizers are intended to be the “paste block” that captures *all key evidence with source labels* (so we don’t paste raw CSVs). Generate/refresh `summary.md`, paste it under step 0), then answer Q1–Q10.
+
 Before you start a tool, confirm you have reviewed *all* of its final outputs (brain vs winners, listed separately per tool). Add a quick “outputs reviewed” note at the top of each tool section.
 
 - **Stable**  
@@ -52,7 +62,11 @@ Use the template below per tool (copy/paste for each: Stable, DR, VTRAC, Hot Zon
    - Brain: […]  
    - Winners: […]  
    - Missing?: …
-   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 517 → 157). Summarizer helper: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md` (paste the Markdown here, then answer Q1–Q10).
+   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 517 → 157). Summarizer helpers (paste their Markdown here, then answer Q1–Q10):
+     - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md`
+     - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md`
+     - V-TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
+     - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
    - Reminder: consult both the lean outputs doc and the tool-specific analysis log for this tool (self-contained optimizations, final outputs, insights). This helps decide what to extract/label and confirms you’re covering all final outputs.
 1) Winners evidence vs brain outputs  
    - Where does the winning triple/family appear in the brain outputs (scores/compound/families/metrics/spotlight or tool-equivalent)? Cite rank/score and key why-tags. If absent, note “not present.”
@@ -79,3 +93,53 @@ Use the template below per tool (copy/paste for each: Stable, DR, VTRAC, Hot Zon
 
 After all tools are reviewed, add a short 2B wrap-up (optional):
 - Cross-tool synthesis (all tools): list the top shared clusters/signals across tools for this date/state, note conflicts, and jot any aggregator/aux hooks to test.
+
+---
+
+# Part 3 — Aux Features (Environment + Compound Evidence)
+
+Purpose: inventory the Aux signals for the same date/state (Combined/Midday/Evening) and log which signals align with (a) the actual winner and (b) the top candidate clusters from Part 2. This is **evidence-first**: we log signals + convergence now, and only later convert them into weights/rules (Strings lead, Aux compounds).
+
+Key rule: Aux draws must be aligned to the **history workbook** used to build the string tables (typically D‑1 for results date D). If the workbook changes, Aux signals change. For master validation, we therefore snapshot the draw CSVs into the sharepack so Part 3 stays reproducible across sessions.
+
+Evidence block (recommended):
+- Generate/update the Aux summary inside the sharepack:
+  - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+- Paste the generated `summary.md` under 0) before answering Q1–Q10.
+
+## 3.Aux — [State] [Date]
+0) Outputs reviewed  
+   - Draw CSV snapshot: `sharepacks/<DATE>/<STATE>/aux/draws/` (Combined/Midday/Evening)  
+   - Aux evidence dump: `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` (all facts labeled by source)  
+   - (Optional) UI cross-check: Aux page screenshots / captions (only if needed)
+1) Aux input validation (V)  
+   - Confirm the draw CSV paths used (original + snapshot), draw counts, and newest two draws per variant.  
+   - Confirm those newest draws match the “world snapshot” implied by tables (e.g., Set1 Draw1/Draw2 columns in Combined table).
+2) Positional pressure (core)  
+   - For each variant: top due digits per position + any hard-due flags.  
+   - Cross-variant consensus: digits that are top‑k in the same position across 2–3 variants (“XVAR consensus”).  
+   - Does the winner (and/or top Part‑2 candidates) intersect these digits/positions?
+3) Positional shortlist (prediction list)  
+   - List the shortlist candidates + tags (top N).  
+   - Any overlap with winner (literal/canonical) or Part‑2 top clusters? If no direct overlap, any “shared digits/positions” clues?
+4) Repeat‑watch + index streak context  
+   - Current repeat index / streak per variant + any notable “hard‑due” repeat conditions.  
+   - Map the winner’s VTRAC index: is it due/repeating/avoided by this context?
+5) VTRAC overlay / heatboard (index pressure)  
+   - Which indices are most overdue/hot per variant? Any that compound across variants?  
+   - Does the winner’s index sit in a high‑pressure zone? Do Part‑2 top clusters sit in those indices?
+6) Doubles + pairs pressure  
+   - Overdue doubles (canonical) and overdue pairs (repeat/non-repeat) per variant; call out multi-variant alerts.  
+   - Does the winner (and/or Part‑2 top candidates) contain any of these overdue doubles/pairs?
+7) Sums / root‑sum pressure  
+   - Due sums / deficit flags per variant (and any cross‑variant compounds).  
+   - Does the winner (or top candidates) align with due sum/root patterns?
+8) Blackapple (if enabled)  
+   - BA score + triggers per variant; list top BA candidates and tags.  
+   - Does BA “agree” with the winner/candidate families or contradict them?
+9) Aux convergence score (new, high‑value)  
+   - Build a tiny table for (winner + top 5–10 candidates): number of Aux signals supporting it, and in how many variants (1/2/3).  
+   - Highlight “high-confidence” candidates where Aux compounding is strongest across variants.
+10) How to apply Aux (design implications + expense lever)  
+   - Should the strongest Aux signals here be used as state-level gating (“play day / pass day”), candidate-level boosts, or both?  
+   - Given Part 1+2+3 evidence, what is the cheapest reasonable play mode (perm-only vs VT-box vs skip), and why?

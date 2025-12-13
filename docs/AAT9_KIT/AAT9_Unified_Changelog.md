@@ -3,6 +3,11 @@
 - Files: scripts/tools/cc_sanity_snapshot.py, scripts/checks/test_cc_snapshot_schema.py, reports/control_center/{alert_schema.json,state_map.json,README.md}, docs/AAT9_KIT/AAT9_Final_Workflow_Control_Center.md.
 - Notes: Control Center is paused here (alerts: blackapple, due_doubles, vtrac_repeat). Implement A01–A12 later using the same alert shape; BA ingest is explicit via control_center.md or --ba-csv/--ba-json.
 
+## 2025-12-12 - Master Validation Part 2 summarizers + safe table resolver
+- Impact: Added per‑tool sharepack summarizers (Stable, Digit Reduction, V‑TRAC, Hot Zones) that emit labeled Markdown/JSON blocks for Part 2, eliminating raw CSV pasting. Added small validators for Stable/DR/Hot Zones winners presence. Introduced a tolerant CSV table resolver (prefixed vs generic) plus a naming validator; no file renames performed.
+- Files: scripts/tools/{stable_sharepack_summary.py,dr_sharepack_summary.py,vtrac_sharepack_summary.py,hot_zones_sharepack_summary.py,validate_stable_winners.py,validate_dr_winners.py,validate_hot_zones_winners.py,validate_tables_naming.py}, utils/path_handler.py, docs/AAT9_KIT/{AAT9_Final_Validation_Help.md,AAT9_Analyzer_Lean_Outputs.md}, tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md.
+- Notes: V‑TRAC winners artifacts remain centralized under Winners Logger sharepacks; the V‑TRAC summarizer auto‑includes them when present.
+
 ## 2025-12-05 - Digit Reduction training JSON restored + extended ladder enabled + dual-day reruns
 - Impact: Restored the reducer’s compact training log writer (`*_digit_reduction_logs.json`) so Analyzer V2 and winners overlays can run; kept steps CSV as diagnostics. Added a config-gated Set1 ladder extension (Draw2–Draw7 cols 6→1, on by default) to surface high-signal near-core boxes without touching LS2. Ran the guarded tables pipeline and DR batch for two day-ahead pairs (2025-06-21→22, 2025-06-22→23), regenerating reducer/analyzer/overlay artifacts for ~17 states per day.
 - Files: src/core/module_b_digit_reduction.py, src/core/long_string_reducer_part1.py, alpha_analytical/digit_reduction/long_string_windows.py, data/outputs/analysis/digit_reduction/**, reports/stable/winners_by_date/{2025-06-22,2025-06-23}/
