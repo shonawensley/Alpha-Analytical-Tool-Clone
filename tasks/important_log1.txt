@@ -1,0 +1,1757 @@
+Added scripts/tools/aux_sharepack_summary.py (+543 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Aux sharepack summary (Master Validation Part 3).
+      4 +
+      5 +This script produces a **sharepack-stable** evidence dump of Aux signals:
+      6 +- Draw CSV snapshot (Combined/Midday/Evening) copied into the sharepack
+      7 +- Repeat-watch + VTRAC overlay/heatboard
+      8 +- Positional pressure + shortlist
+      9 +- Doubles + pairs overdue pressure
+     10 +- Sums/root-sums pressure
+     11 +- Blackapple triggers/candidates
+     12 +
+     13 +Outputs:
+     14 +- `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md`
+     15 +- `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.json`
+     16 +
+     17 +Run:
+     18 +  python3 scripts/tools/aux_sharepack_summary.py --date 2025-06-21 --state OntarioCanada4
+     19 +"""
+     20 +
+     21 +from __future__ import annotations
+     22 +
+     23 +import argparse
+     24 +import json
+     25 +import shutil
+     26 +import sys
+     27 +from datetime import date as _date
+     28 +from pathlib import Path
+     29 +from typing import Any, Dict, List, Tuple
+     30 +
+     31 +ROOT = Path(__file__).resolve().parents[2]
+     32 +if str(ROOT) not in sys.path:
+     33 +    sys.path.insert(0, str(ROOT))
+     34 +SRC = ROOT / "src"
+     35 +if SRC.exists() and str(SRC) not in sys.path:
+     36 +    sys.path.insert(0, str(SRC))
+     37 +
+     38 +from alpha_analytical.control_center import aux_validation  # noqa: E402
+     39 +from core import aux_config  # noqa: E402
+     40 +from modules import blackapple  # noqa: E402
+     41 +from modules.aux_loaders import load_state_draws  # noqa: E402
+     42 +
+     43 +VARIANTS: Tuple[str, ...] = ("combined", "midday", "evening")
+     44 +
+     45 +
+     46 +def parse_iso_date(value: str) -> _date:
+     47 +    try:
+     48 +        return _date.fromisoformat(value)
+     49 +    except ValueError as exc:
+     50 +        raise SystemExit(f"Invalid --date (expected YYYY-MM-DD): {value}") from exc
+     51 +
+     52 +
+     53 +def ensure_dir(path: Path) -> None:
+     54 +    path.mkdir(parents=True, exist_ok=True)
+     55 +
+     56 +
+     57 +def fmt_head(draws: List[str], limit: int = 5) -> str:
+     58 +    sample = draws[:limit]
+     59 +    suffix = " …" if len(draws) > limit else ""
+     60 +    return ", ".join(sample) + suffix
+     61 +
+     62 +
+     63 +def safe_rel(path_str: str | None) -> str:
+     64 +    if not path_str:
+     65 +        return "-"
+     66 +    path = Path(path_str)
+     67 +    try:
+     68 +        return str(path.relative_to(ROOT))
+     69 +    except ValueError:
+     70 +        return str(path)
+     71 +
+     72 +
+     73 +def resolve_live_draw_paths(state: str, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+     74 +    resolved: Dict[str, Dict[str, Any]] = {}
+     75 +    for variant in VARIANTS:
+     76 +        draws, path_str = load_state_draws(state, variant=variant, base=None, max_n=max_n)
+     77 +        resolved[variant] = {
+     78 +            "original_path": path_str,
+     79 +            "draw_count": len(draws),
+     80 +            "draws_head": draws[:5],
+     81 +        }
+     82 +    return resolved
+     83 +
+     84 +
+     85 +def snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+     86 +    ensure_dir(snapshot_dir)
+     87 +    info = resolve_live_draw_paths(state, max_n=max_n)
+     88 +    for variant, payload in info.items():
+     89 +        src_str = payload.get("original_path")
+     90 +        if not src_str:
+     91 +            payload["snapshot_path"] = None
+     92 +            payload["snapshot_error"] = "original_path_missing"
+     93 +            continue
+     94 +        src = Path(src_str)
+     95 +        if not src.exists():
+     96 +            payload["snapshot_path"] = str(snapshot_dir / src.name)
+     97 +            payload["snapshot_error"] = "original_path_not_found"
+     98 +            continue
+     99 +        dst = snapshot_dir / src.name
+    100 +        shutil.copy2(src, dst)
+    101 +        payload["snapshot_path"] = str(dst)
+    102 +    return info
+    103 +
+    104 +
+    105 +def load_snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+    106 +    by_variant: Dict[str, Dict[str, Any]] = {}
+    107 +    for variant in VARIANTS:
+    108 +        draws, resolved_path = load_state_draws(state, variant=variant, base=snapshot_dir, max_n=max_n)
+    109 +        by_variant[variant] = {
+    110 +            "resolved_path": resolved_path,
+    111 +            "draw_count": len(draws),
+    112 +            "draws_head": draws[:5],
+    113 +        }
+    114 +    return by_variant
+    115 +
+    116 +
+    117 +def top_doubles(stats: Dict[str, Dict[str, int]], limit: int) -> List[Dict[str, Any]]:
+    118 +    rows = [{"combo": combo, **payload} for combo, payload in (stats or {}).items()]
+    119 +    rows.sort(key=lambda row: int(row.get("draws_since", 0)), reverse=True)
+    120 +    return rows[:limit]
+    121 +
+    122 +
+    123 +def top_overlay(overlay: Dict[int, int], limit: int) -> List[Dict[str, Any]]:
+    124 +    rows = [{"index": idx, "draws_since": ds} for idx, ds in (overlay or {}).items()]
+    125 +    rows.sort(key=lambda row: row["draws_since"], reverse=True)
+    126 +    return rows[:limit]
+    127 +
+    128 +
+    129 +def top_heatboard(heatboard: Dict[int, Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+    130 +    rows = [{"index": idx, **payload} for idx, payload in (heatboard or {}).items()]
+    131 +    rows.sort(key=lambda row: int(row.get("ds", 0)), reverse=True)
+    132 +    return rows[:limit]
+    133 +
+    134 +
+    135 +def top_sums(payload: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
+    136 +    by_sum = (payload or {}).get("by_sum", {}) or {}
+    137 +    rows = [{"sum": label, **stats} for label, stats in by_sum.items()]
+    138 +    rows.sort(key=lambda row: int(row.get("draws_since", 0)), reverse=True)
+    139 +    return rows[:limit]
+    140 +
+    141 +
+    142 +def top_pairs(payload: Dict[str, Any], limit: int) -> Dict[str, List[Dict[str, Any]]]:
+    143 +    status = (payload or {}).get("status", {}) or {}
+    144 +    repeating = [{"pair": pair, "draws_since": ds, "severity": status.get(pair)} for pair, ds in (payload or {}).get("repeating", {}).items()]
+    145 +    non_repeating = [
+    146 +        {"pair": pair, "draws_since": ds, "severity": status.get(pair)}
+    147 +        for pair, ds in (payload or {}).get("non_repeating", {}).items()
+    148 +    ]
+    149 +    repeating.sort(key=lambda row: int(row.get("draws_since", 0)), reverse=True)
+    150 +    non_repeating.sort(key=lambda row: int(row.get("draws_since", 0)), reverse=True)
+    151 +    return {"repeating": repeating[:limit], "non_repeating": non_repeating[:limit]}
+    152 +
+    153 +
+    154 +def top_blackapple(payload: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
+    155 +    candidates = (payload or {}).get("candidates", []) or []
+    156 +    rows: List[Dict[str, Any]] = []
+    157 +    for cand in candidates[:limit]:
+    158 +        rows.append(
+    159 +            {
+    160 +                "combo": cand.get("combo"),
+    161 +                "score": cand.get("score"),
+    162 +                "tags": sorted(list(cand.get("tags") or [])),
+    163 +            }
+    164 +        )
+    165 +    return rows
+    166 +
+    167 +
+    168 +def build_summary(
+    169 +    state: str,
+    170 +    sharepack_date: str,
+    171 +    *,
+    172 +    snapshot_dir: Path,
+    173 +    max_n: int,
+    174 +    limit: int,
+    175 +    sums_window: int,
+    176 +    pairs_window: int,
+    177 +    positional_window: int,
+    178 +) -> Dict[str, Any]:
+    179 +    live_draws = snapshot_draws(state, snapshot_dir, max_n=max_n)
+    180 +    snapshot_draws_info = load_snapshot_draws(state, snapshot_dir, max_n=max_n)
+    181 +
+    182 +    repeat_watch = aux_validation.repeat_summary_by_variant(state, base=snapshot_dir, max_n=max_n)
+    183 +    positional_shortlist = aux_validation.positional_shortlist_report(
+    184 +        state,
+    185 +        base=snapshot_dir,
+    186 +        max_n=max_n,
+    187 +        window=positional_window,
+    188 +    )
+    189 +    positional_hard_due = aux_validation.positional_hard_due_by_variant(
+    190 +        state,
+    191 +        base=snapshot_dir,
+    192 +        max_n=max_n,
+    193 +        window=positional_window,
+    194 +    )
+    195 +
+    196 +    doubles_by_variant = aux_validation.collect_variant_stats(state, base=snapshot_dir, max_n=max_n)
+    197 +    doubles_alerts = aux_validation.multi_variant_alerts(state, base=snapshot_dir, max_n=max_n)
+    198 +
+    199 +    pairs_by_variant = aux_validation.collect_pair_stats_for_state(
+    200 +        state,
+    201 +        base=snapshot_dir,
+    202 +        max_n=max_n,
+    203 +        window=pairs_window,
+    204 +    )
+    205 +    pairs_alerts = aux_validation.pair_multi_variant_alerts(
+    206 +        state,
+    207 +        base=snapshot_dir,
+    208 +        max_n=max_n,
+    209 +        window=pairs_window,
+    210 +    )
+    211 +
+    212 +    vtrac_overlay = aux_validation.vtrac_overlay_by_variant(state, base=snapshot_dir, max_n=max_n)
+    213 +    vtrac_heatboard = aux_validation.vtrac_heatboard_by_variant(
+    214 +        state,
+    215 +        base=snapshot_dir,
+    216 +        max_n=max_n,
+    217 +        window=max_n,
+    218 +    )
+    219 +
+    220 +    sums_by_variant = aux_validation.sums_stats_by_variant(
+    221 +        state,
+    222 +        base=snapshot_dir,
+    223 +        max_n=max_n,
+    224 +        window=sums_window,
+    225 +    )
+    226 +
+    227 +    ba_by_variant: Dict[str, Any] = {}
+    228 +    for variant in VARIANTS:
+    229 +        draws, _ = load_state_draws(state, variant=variant, base=snapshot_dir, max_n=max_n)
+    230 +        ba_by_variant[variant] = blackapple.analyze_blackapple(draws)
+    231 +
+    232 +    return {
+    233 +        "state": state,
+    234 +        "date": sharepack_date,
+    235 +        "draw_sources": {
+    236 +            "snapshot_dir": str(snapshot_dir),
+    237 +            "live": live_draws,
+    238 +            "snapshot": snapshot_draws_info,
+    239 +        },
+    240 +        "config": {
+    241 +            "PAIRS_WINDOW": getattr(aux_config, "PAIRS_WINDOW", None),
+    242 +            "POSITIONAL_WINDOW": getattr(aux_config, "POSITIONAL_WINDOW", None),
+    243 +            "VTRAC_INDEX_WINDOW": getattr(aux_config, "VTRAC_INDEX_WINDOW", None),
+    244 +            "COMBO_DOUBLE_LATE": getattr(aux_config, "COMBO_DOUBLE_LATE", None),
+    245 +            "COMBO_DOUBLE_VERY_LATE": getattr(aux_config, "COMBO_DOUBLE_VERY_LATE", None),
+    246 +            "REPEATING_LATE": getattr(aux_config, "REPEATING_LATE", None),
+    247 +            "REPEATING_VERY_LATE": getattr(aux_config, "REPEATING_VERY_LATE", None),
+    248 +            "NONREPEATING_LATE": getattr(aux_config, "NONREPEATING_LATE", None),
+    249 +            "NONREPEATING_VERY_LATE": getattr(aux_config, "NONREPEATING_VERY_LATE", None),
+    250 +            "PAIR_PENDING": getattr(aux_config, "PAIR_PENDING", None),
+    251 +            "max_n_used": max_n,
+    252 +            "pairs_window_used": pairs_window,
+    253 +            "positional_window_used": positional_window,
+    254 +            "sums_window_used": sums_window,
+    255 +        },
+    256 +        "repeat_watch": repeat_watch,
+    257 +        "positional": {
+    258 +            "shortlist_report": positional_shortlist,
+    259 +            "hard_due_by_variant": positional_hard_due,
+    260 +        },
+    261 +        "doubles": {
+    262 +            "by_variant": doubles_by_variant,
+    263 +            "multi_variant_alerts": doubles_alerts,
+    264 +            "top_by_variant": {v: top_doubles(payload, limit) for v, payload in doubles_by_variant.items()},
+    265 +        },
+    266 +        "pairs": {
+    267 +            "by_variant": pairs_by_variant,
+    268 +            "multi_variant_alerts": pairs_alerts,
+    269 +            "top_by_variant": {v: top_pairs(payload, limit) for v, payload in pairs_by_variant.items()},
+    270 +        },
+    271 +        "vtrac": {
+    272 +            "overlay_by_variant": vtrac_overlay,
+    273 +            "heatboard_by_variant": vtrac_heatboard,
+    274 +            "overlay_top": {v: top_overlay(payload, limit) for v, payload in vtrac_overlay.items()},
+    275 +            "heatboard_top": {v: top_heatboard(payload, limit) for v, payload in vtrac_heatboard.items()},
+    276 +        },
+    277 +        "sums": {
+    278 +            "by_variant": sums_by_variant,
+    279 +            "top_by_variant": {v: top_sums(payload, limit) for v, payload in sums_by_variant.items()},
+    280 +        },
+    281 +        "blackapple": {
+    282 +            "by_variant": ba_by_variant,
+    283 +            "top_by_variant": {v: top_blackapple(payload, limit) for v, payload in ba_by_variant.items()},
+    284 +        },
+    285 +    }
+    286 +
+    287 +
+    288 +def render_markdown(summary: Dict[str, Any]) -> str:
+    289 +    state = summary["state"]
+    290 +    date = summary["date"]
+    291 +    cfg = summary.get("config", {})
+    292 +    draws = summary.get("draw_sources", {})
+    293 +
+    294 +    lines: List[str] = []
+    295 +    lines.append(f"# Aux Summary — {state} — {date}")
+    296 +    lines.append("")
+    297 +    lines.append("Evidence dump for Master Validation **Part 3** (Aux).")
+    298 +    lines.append("All facts are labeled by source for provenance.")
+    299 +    lines.append("")
+    300 +
+    301 +    lines.append("## Config (source: core/aux_config.py)")
+    302 +    lines.append(
+    303 +        f"- windows: pairs={cfg.get('PAIRS_WINDOW')} positional={cfg.get('POSITIONAL_WINDOW')} vtrac_index={cfg.get('VTRAC_INDEX_WINDOW')} sums_used={cfg.get('sums_window_used')}"
+    304 +    )
+    305 +    lines.append(
+    306 +        f"- thresholds: doubles_late={cfg.get('COMBO_DOUBLE_LATE')} doubles_very_late={cfg.get('COMBO_DOUBLE_VERY_LATE')} pair_pending={cfg.get('PAIR_PENDING')}"
+    307 +    )
+    308 +    lines.append("")
+    309 +
+    310 +    lines.append("## Draw sources (source: modules.aux_loaders.load_state_draws)")
+    311 +    lines.append(f"- snapshot_dir: `{safe_rel(draws.get('snapshot_dir'))}`")
+    312 +    for variant in VARIANTS:
+    313 +        live = (draws.get("live", {}) or {}).get(variant, {})
+    314 +        snap = (draws.get("snapshot", {}) or {}).get(variant, {})
+    315 +        lines.append(
+    316 +            f"- {variant}: live=`{safe_rel(live.get('original_path'))}` snap=`{safe_rel(snap.get('resolved_path'))}` n={snap.get('draw_count')} head={fmt_head(snap.get('draws_head') or [])}"
+    317 +        )
+    318 +    lines.append("")
+    319 +
+    320 +    repeat_watch = summary.get("repeat_watch", {}) or {}
+    321 +    positional = summary.get("positional", {}) or {}
+    322 +    shortlist = positional.get("shortlist_report", {}) or {}
+    323 +    hard_due = positional.get("hard_due_by_variant", {}) or {}
+    324 +    doubles_top = (summary.get("doubles", {}) or {}).get("top_by_variant", {}) or {}
+    325 +    pairs_top = (summary.get("pairs", {}) or {}).get("top_by_variant", {}) or {}
+    326 +    vtrac_overlay_top = (summary.get("vtrac", {}) or {}).get("overlay_top", {}) or {}
+    327 +    vtrac_heat_top = (summary.get("vtrac", {}) or {}).get("heatboard_top", {}) or {}
+    328 +    sums_top = (summary.get("sums", {}) or {}).get("top_by_variant", {}) or {}
+    329 +    ba_top = (summary.get("blackapple", {}) or {}).get("top_by_variant", {}) or {}
+    330 +    ba_by_variant = (summary.get("blackapple", {}) or {}).get("by_variant", {}) or {}
+    331 +
+    332 +    for variant in VARIANTS:
+    333 +        lines.append(f"## {variant.title()} (variant)")
+    334 +        lines.append("")
+    335 +
+    336 +        lines.append("### Repeat watch (source: aux_validation.repeat_summary_by_variant)")
+    337 +        rw = repeat_watch.get(variant, {}) or {}
+    338 +        if rw:
+    339 +            lines.append(
+    340 +                f"- current_index={rw.get('current_index')} streak={rw.get('current_streak')} max={rw.get('max_streak')} last_repeat_gap={rw.get('last_repeat_gap')} last_repeat_index={rw.get('last_repeat_index')}"
+    341 +            )
+    342 +        else:
+    343 +            lines.append("- _no data_")
+    344 +        lines.append("")
+    345 +
+    346 +        lines.append("### Positional (source: aux_validation.positional_shortlist_report)")
+    347 +        top_digits = (shortlist.get("variant_top_digits", {}) or {}).get(variant, []) or []
+    348 +        if top_digits:
+    349 +            parts = [f"P{row['position']+1}:{row['digit']} (gap={row['gap']})" for row in top_digits]
+    350 +            lines.append(f"- top digits: {', '.join(parts)}")
+    351 +        else:
+    352 +            lines.append("- top digits: _no data_")
+    353 +        lines.append(f"- consensus_notes: {', '.join(shortlist.get('consensus_notes', []) or []) or '-'}")
+    354 +        lines.append(f"- double_pressure_notes: {', '.join(shortlist.get('double_pressure_notes', []) or []) or '-'}")
+    355 +        lines.append("")
+    356 +
+    357 +        lines.append("### Positional hard-due (source: aux_validation.positional_hard_due_by_variant)")
+    358 +        hd = hard_due.get(variant, []) or []
+    359 +        if hd:
+    360 +            parts = [f"P{row['position']+1}:{row['digit']} (ds={row['draws_since']})" for row in hd]
+    361 +            lines.append(f"- hard_due: {', '.join(parts)}")
+    362 +        else:
+    363 +            lines.append("- hard_due: none")
+    364 +        lines.append("")
+    365 +
+    366 +        lines.append("### Positional shortlist (source: aux_validation.positional_shortlist_report)")
+    367 +        candidates = shortlist.get("candidates", []) or []
+    368 +        if candidates:
+    369 +            for cand in candidates[:10]:
+    370 +                tags = cand.get("tags") or []
+    371 +                tag_display = ",".join(tags[:5]) if tags else "-"
+    372 +                lines.append(f"- {cand.get('combo')}: score={cand.get('score')} tags={tag_display} src={cand.get('source') or '-'}")
+    373 +        else:
+    374 +            lines.append("- _no candidates_")
+    375 +        lines.append("")
+    376 +
+    377 +        lines.append("### Doubles (source: aux_validation.collect_variant_stats)")
+    378 +        doubles_rows = doubles_top.get(variant, []) or []
+    379 +        if doubles_rows:
+    380 +            for row in doubles_rows:
+    381 +                lines.append(f"- {row.get('combo')}: ds={row.get('draws_since')} sev={row.get('severity')}")
+    382 +        else:
+    383 +            lines.append("- _no late doubles_")
+    384 +        lines.append("")
+    385 +
+    386 +        lines.append("### Pairs (source: aux_validation.collect_pair_stats_for_state)")
+    387 +        pairs_rows = pairs_top.get(variant, {}) or {}
+    388 +        rep = pairs_rows.get("repeating", []) or []
+    389 +        nr = pairs_rows.get("non_repeating", []) or []
+    390 +        if rep:
+    391 +            lines.append("- repeating:")
+    392 +            for row in rep:
+    393 +                sev = row.get("severity") or "-"
+    394 +                lines.append(f"  - {row.get('pair')}: ds={row.get('draws_since')} sev={sev}")
+    395 +        if nr:
+    396 +            lines.append("- non_repeating:")
+    397 +            for row in nr:
+    398 +                sev = row.get("severity") or "-"
+    399 +                lines.append(f"  - {row.get('pair')}: ds={row.get('draws_since')} sev={sev}")
+    400 +        if not rep and not nr:
+    401 +            lines.append("- _no pair rows_")
+    402 +        lines.append("")
+    403 +
+    404 +        lines.append("### VTRAC overlay (source: aux_validation.vtrac_overlay_by_variant)")
+    405 +        overlay = vtrac_overlay_top.get(variant, []) or []
+    406 +        if overlay:
+    407 +            lines.append("- top overdue indices (ds): " + ", ".join(f"{row['index']}:{row['draws_since']}" for row in overlay))
+    408 +        else:
+    409 +            lines.append("- _no data_")
+    410 +        lines.append("")
+    411 +
+    412 +        lines.append("### VTRAC heatboard (source: aux_validation.vtrac_heatboard_by_variant)")
+    413 +        heat = vtrac_heat_top.get(variant, []) or []
+    414 +        if heat:
+    415 +            heat_str = ", ".join(
+    416 +                f"{row['index']}:ds={row.get('ds')} fs={row.get('freq_short')} fl={row.get('freq_long')} hz={row.get('hazard')}"
+    417 +                for row in heat
+    418 +            )
+    419 +            lines.append(f"- top heat (by ds): {heat_str}")
+    420 +        else:
+    421 +            lines.append("- _no data_")
+    422 +        lines.append("")
+    423 +
+    424 +        lines.append("### Sums (source: aux_validation.sums_stats_by_variant)")
+    425 +        sums_rows = sums_top.get(variant, []) or []
+    426 +        if sums_rows:
+    427 +            for row in sums_rows:
+    428 +                flags = row.get("flags") or {}
+    429 +                active = "+".join([k for k, v in flags.items() if v]) if flags else "-"
+    430 +                lines.append(f"- S{row.get('sum')}: ds={row.get('draws_since')} flags={active}")
+    431 +        else:
+    432 +            lines.append("- _no data_")
+    433 +        lines.append("")
+    434 +
+    435 +        lines.append("### Blackapple (source: modules.blackapple.analyze_blackapple)")
+    436 +        ba = ba_by_variant.get(variant, {}) or {}
+    437 +        lines.append(f"- score={ba.get('score')} triggers={ba.get('triggers')}")
+    438 +        top = ba_top.get(variant, []) or []
+    439 +        if top:
+    440 +            lines.append("- top candidates:")
+    441 +            for row in top:
+    442 +                lines.append(f"  - {row.get('combo')}: score={row.get('score')} tags={','.join(row.get('tags') or []) or '-'}")
+    443 +        else:
+    444 +            lines.append("- _no candidates_")
+    447 +    lines.append("## Cross-variant alerts (source: aux_validation.*_multi_variant_alerts)")
+    448 +    lines.append("")
+    449 +    doubles_alerts = (summary.get("doubles", {}) or {}).get("multi_variant_alerts", {}) or {}
+    450 +    pairs_alerts = (summary.get("pairs", {}) or {}).get("multi_variant_alerts", {}) or {}
+    451 +
+    452 +    lines.append("### Doubles multi-variant alerts (source: aux_validation.multi_variant_alerts)")
+    453 +    if doubles_alerts:
+    454 +        for combo, by_variant in sorted(doubles_alerts.items()):
+    455 +            parts = [f"{v}:{p.get('draws_since')}({p.get('severity')})" for v, p in sorted(by_variant.items())]
+    456 +            lines.append(f"- {combo} -> {'; '.join(parts)}")
+    457 +    else:
+    458 +        lines.append("- none")
+    459 +    lines.append("")
+    460 +
+    461 +    lines.append("### Pair multi-variant alerts (source: aux_validation.pair_multi_variant_alerts)")
+    462 +    if pairs_alerts:
+    463 +        for pair, by_variant in sorted(pairs_alerts.items()):
+    464 +            parts = [f"{v}:{p.get('draws_since')}({p.get('severity')})" for v, p in sorted(by_variant.items())]
+    465 +            lines.append(f"- {pair} -> {'; '.join(parts)}")
+    466 +    else:
+    467 +        lines.append("- none")
+    468 +    lines.append("")
+    469 +
+    470 +    lines.append("### Aggregated positional digits (source: aux_validation.positional_shortlist_report)")
+    471 +    agg = shortlist.get("aggregated_digits", {}) or {}
+    472 +    if agg:
+    473 +        for pos, digits in agg.items():
+    474 +            digit_str = ", ".join(
+    475 +                f"{d.get('digit')}({d.get('score')})[{','.join((d.get('tags') or [])[:2])}]"
+    476 +                for d in digits
+    477 +            )
+    478 +            lines.append(f"- P{int(pos)+1}: {digit_str}")
+    479 +    else:
+    480 +        lines.append("- _no data_")
+    481 +    lines.append("")
+    482 +
+    483 +    return "\n".join(lines).rstrip() + "\n"
+    484 +
+    485 +
+    486 +def main() -> None:
+    491 +    ap.add_argument("--limit", type=int, default=10, help="Top-N rows to render per section (default 10)")
+    492 +    ap.add_argument("--sums-window", type=int, default=100, help="Sums analysis window (default 100)")
+    493 +    ap.add_argument(
+    494 +        "--pairs-window",
+    495 +        type=int,
+    496 +        default=int(getattr(aux_config, "PAIRS_WINDOW", 360)),
+    497 +        help="Pairs window override (default: aux_config PAIRS_WINDOW)",
+    498 +    )
+    499 +    ap.add_argument(
+    500 +        "--positional-window",
+    501 +        type=int,
+    502 +        default=int(getattr(aux_config, "POSITIONAL_WINDOW", 150)),
+    503 +        help="Positional window override (default: aux_config POSITIONAL_WINDOW)",
+    504 +    )
+    507 +    args = ap.parse_args()
+    508 +
+    509 +    parse_iso_date(args.date)
+    510 +
+    511 +    sharepack_root = ROOT / "sharepacks" / args.date / args.state
+    512 +    if not sharepack_root.exists():
+    513 +        raise SystemExit(f"Sharepack not found: {sharepack_root}")
+    514 +
+    515 +    aux_root = sharepack_root / "aux" / args.state
+    516 +    snapshot_dir = sharepack_root / "aux" / "draws"
+    517 +    ensure_dir(aux_root)
+    518 +    ensure_dir(snapshot_dir)
+    519 +
+    522 +        args.date,
+    523 +        snapshot_dir=snapshot_dir,
+    524 +        max_n=args.max_n,
+    525 +        limit=args.limit,
+    526 +        sums_window=args.sums_window,
+    531 +
+    532 +    md_path = aux_root / args.md_out
+    533 +    json_path = aux_root / args.json_out
+    534 +    md_path.write_text(md_text, encoding="utf-8")
+    535 +    json_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    536 +
+    537 +    print(f"Wrote: {md_path}")
+    538 +    print(f"Wrote: {json_path}")
+    539 +
+    540 +
+    541 +if __name__ == "__main__":
+    542 +    main()
+    543 +
+
+• Ran python3 -m py_compile scripts/tools/aux_sharepack_summary.py
+  └ (no output)
+
+• Edited scripts/tools/create_master_validation_run_report.py (+29 -0)
+     63          "winners": base / "winners" / state,
+     64 +        "aux": base / "aux" / state,
+     65 +        "aux_draws": base / "aux" / "draws",
+     66      }
+        ⋮
+    198      lines.append(f"- Hot Zones: `{paths['hot_zones'].relative_to(REPO_ROOT)}/`")
+    199 +    lines.append(f"- Aux: `{paths['aux'].relative_to(REPO_ROOT)}/`")
+    200 +    lines.append(f"- Aux draws snapshot: `{paths['aux_draws'].relative_to(REPO_ROOT)}/`")
+    201      lines.append("")
+        ⋮
+    282 +    lines.append("Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.")
+    283 +    lines.append("")
+    284 +    aux_dir = paths["aux"]
+    285 +    if not aux_dir.exists():
+    286 +        lines.append(f"_(Aux folder not found: `{aux_dir.relative_to(REPO_ROOT)}` — run `python3 scripts/tools/aux_sharepack_summary.py --date {sharepack_date} --state {state}`)_")
+    287 +        lines.append("")
+    288 +    else:
+    289 +        lines.append(f"Aux draws snapshot dir: `{paths['aux_draws'].relative_to(REPO_ROOT)}/`")
+    290 +        lines.append("")
+    291 +        lines.append("0) Outputs reviewed")
+    292 +        lines.append("   - Draw CSV snapshot: (see aux draws folder)")
+    293 +        lines.append("   - Evidence dump: summary.md/summary.json")
+    294 +        lines.append("")
+    295 +        lines.append("   Summarizer block (embedded from summary.md):")
+    296 +        lines.append("")
+    297 +        lines.append("```markdown")
+    298 +        lines.append(maybe_embed_summary(aux_dir))
+    299 +        lines.append("```")
+    300 +        lines.append("")
+    304 +        lines.append("")
+    305 +
+    306      out_path.write_text("\n".join(lines), encoding="utf-8")
+
+• Explored
+  └ Search Hot Zones sharepack summarizer in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+2 -0)
+    55      - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
+    56 +  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+    57 +    - Snapshots draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` so Part 3 stays reproducible even after workbook swaps; paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+    58    - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
+
+• Updated Plan
+  └ Added an Aux sharepack summarizer (`summary.md`/`summary.json`) and wired Part 3 into both the master template and the per-run report generator.
+    ✔ Audit existing Aux helpers
+    ✔ Design Part 3 template prompts
+    ✔ Build Aux summarizer script
+    ✔ Wire Part 3 into run report
+    □ Sanity-run Aux summary
+
+      File "/home/ser/code/Alpha-Analytical-Tool-Clone/scripts/tools/aux_sharepack_summary.py", line 542, in <module>
+    86  def _longest_out_root_sums(draws: List[str], window: int) -> Tuple[int, List[int]]:
+    87 -    last_seen = {r: None for r in range(1, 10)}
+    87 +    # Root sums are normally 1..9, but allow 0 to avoid crashes if a draw
+    88 +    # stream contains "000" placeholders (e.g., from missing values).
+    89 +    last_seen = {r: None for r in range(0, 10)}
+    90      for idx, d in enumerate(draws[:window]):
+
+• Ran python3 scripts/tools/aux_sharepack_summary.py --date 2025-06-21 --state OntarioCanada4
+  └ Traceback (most recent call last):
+      File "/home/ser/code/Alpha-Analytical-Tool-Clone/scripts/tools/aux_sharepack_summary.py", line 542, in <module>
+    … +27 lines
+        raise TypeError(f'Object of type {o.__class__.__name__} '
+    TypeError: Object of type set is not JSON serializable
+
+• Explored
+  └ Search candidates\.append|tags in blackapple.py
+    Read blackapple.py
+
+• Edited scripts/tools/aux_sharepack_summary.py (+20 -2)
+    229          draws, _ = load_state_draws(state, variant=variant, base=snapshot_dir, max_n=max_n)
+    230 -        ba_by_variant[variant] = blackapple.analyze_blackapple(draws)
+    230 +        raw = blackapple.analyze_blackapple(draws)
+    231 +        sanitized_candidates: List[Dict[str, Any]] = []
+    232 +        for cand in raw.get("candidates", []) or []:
+    233 +            tags = cand.get("tags") or []
+    234 +            if isinstance(tags, set):
+    235 +                tags_list = sorted(list(tags))
+    236 +            else:
+    237 +                tags_list = list(tags) if isinstance(tags, (list, tuple)) else [str(tags)]
+    238 +            sanitized_candidates.append(
+    239 +                {
+    240 +                    "combo": cand.get("combo"),
+        ⋮
+    561      main()
+    543 -
+
+• Ran python3 scripts/tools/aux_sharepack_summary.py --date 2025-06-21 --state OntarioCanada4
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json
+
+• Edited scripts/tools/create_master_validation_run_report.py (+10 -0)
+    164      )
+    165 +    ap.add_argument(
+    166 +        "--force",
+    167 +        action="store_true",
+    168 +        help="Overwrite the run report if it already exists (default: refuse to overwrite).",
+    169 +    )
+    170      args = ap.parse_args()
+        ⋮
+    183      out_path.parent.mkdir(parents=True, exist_ok=True)
+    184 +    if out_path.exists() and not args.force:
+    185 +        raise SystemExit(
+    186 +            f"Run report already exists: {out_path}. Refusing to overwrite. "
+    187 +            "Use --force to overwrite or --out to write a new file."
+    188 +        )
+    189
+
+• Explored
+  └ Read summary.md, 2025-06-21__OntarioCanada4.md
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+19 -0)
+    489    - Part 3 prep: use Aux compound scoring to explain *why* a tight perm lane was live (doubles pressure, positional pressure, repeat indices, etc.) and to decide when to trust “perm-only” vs “full VT” coverage.
+    490 +
+    491 +---
+    492 +
+    493 +## Part 3 — Aux Features (environment + compound evidence)
+    494 +
+    495 +Primary evidence dump (generated from draw CSV snapshot):
+    496 +- `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md`
+    497 +
+    498 +Part 3 answers (use Part 3 prompts in `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`):
+    499 +- Q1: …
+    500 +- Q2: …
+    501 +- Q3: …
+    502 +- Q4: …
+    503 +- Q5: …
+    504 +- Q6: …
+    505 +- Q7: …
+    506 +- Q8: …
+    507 +- Q9: …
+    508 +- Q10: …
+
+• Ran python3 scripts/tools/create_master_validation_run_report.py --date 2025-06-21 --state OntarioCanada4 --out "tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4__generated.md"
+  └ Wrote: tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4__generated.md
+
+• Explored
+  └ Search Part 3 in 2025-06-21__OntarioCanada4__generated.md
+    Read 2025-06-21__OntarioCanada4__generated.md
+    Read WORKFLOW_CHANGELOG.md
+
+• Edited tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md (+21 -0)
+    35    - `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+    36 +
+    37 +### Part 3: Aux evidence dump + prompts
+    38 +
+    39 +- Added a formal Part 3 section to the master template (Aux signals across Combined/Midday/Evening + convergence + expense/mode question).
+    40 +- Added an Aux sharepack summarizer that snapshots draw CSVs into the sharepack and emits `summary.md`/`summary.json` for paste-ready evidence (no screenshots required).
+    41 +- Files:
+    42 +  - `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+    43 +  - `scripts/tools/aux_sharepack_summary.py`
+    44 +
+    45 +### Run report safety + Part 3 wiring
+    46 +
+    47 +- Run report generator now includes Part 3 scaffolding and Aux sharepack pointers.
+    50 +  - `scripts/tools/create_master_validation_run_report.py`
+    51 +
+    52 +### Blackapple robustness (Aux dependency)
+    53 +
+    54 +- Fix: prevent a crash when draw streams contain `"000"` placeholders (e.g., missing values normalized by loaders) by allowing root-sum `0` in the internal root tracking map.
+    55 +- File:
+    56 +  - `modules/blackapple.py`
+
+• Updated Plan
+  └ Aux Part 3 is now runnable end-to-end: the Aux summarizer generates sharepack-stable evidence (`summary.md/.json`) and the run-report generator can scaffold Part 3 without overwriting existing filled reports.
+    ✔ Audit existing Aux helpers
+    ✔ Design Part 3 template prompts
+    ✔ Build Aux summarizer script
+    ✔ Wire Part 3 into run report
+    ✔ Sanity-run Aux summary
+
+    Read summary.md
+    Search allow 0 in blackapple.py
+    Search Part 3 in WORKFLOW_CHANGELOG.md
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — your framing is exactly right, and it matches what the best “Final Insights” style docs are pushing: strings/tools produce the primary candidate evidence, and Aux should be treated as a separate, draw-driven “environment
+  + compound confirmation layer” (never overriding the string tools, only reinforcing or gating).
+
+  My impressions (Part 3 / Aux)
+
+  - The Aux layer is most valuable when it produces cross‑variant convergence (same pressure showing in Combined + Midday + Evening) and when those signals can be tied to either:
+      - the winner’s VT family / perm lane (4‑criteria lens), or
+      - the top candidate clusters surfaced in Part 2.
+  - The “profitable environment” angle you keep describing is exactly where Aux shines: it’s the best place to build play / no‑play gating and expense control (perm‑only vs full VT vs skip).
+
+  - Only if you want to visually inspect Aux panels; the workflow no longer depends on it.
+
+  Other wiring (so this stays safe across sessions)
+
+  - Run report generator now includes Part 3 scaffolding and won’t overwrite an existing filled report unless --force is used:
+      - scripts/tools/create_master_validation_run_report.py:291
+  - Entry doc now lists the Aux summarizer as an official helper:
+      - docs/AAT9_KIT/AAT9_Final_Validation_Help.md:56
+  - Workflow-level changelog records these Part 3 additions:
+      - tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md:37
+
+  If you want, I can now draft Part 3 Q1–Q10 for Ontario using the Aux summary (summary.md) and the winners (678 / 517) + the Part 2 top clusters, and we can tune the Part 3 questions as we go.
+
+
+› DID YOU PAUSE? PLAY PROVIDE UPDATE ON YOUR COMPREHSIVE PLAN MAYBE A VERY QUICK INTERMSSION THEN ILL ALLLOW YOU BACK TO WORK GREAT JOB SO FAR
+
+
+• Yes — paused.
+
+  What’s done (Part 3 setup)
+
+  - Added a full Part 3 (Aux Features) section to the master template: tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:99
+  - Built an Aux “evidence dump” summarizer that snapshots draw CSVs into the sharepack and writes paste‑ready summary.md/.json: scripts/tools/aux_sharepack_summary.py:1
+  - Ran it for Ontario: sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md:1 (draw snapshot lives in sharepacks/2025-06-21/OntarioCanada4/aux/draws/)
+  - Updated the run-report generator to include Part 3 scaffolding + made it refuse to overwrite filled reports unless --force: scripts/tools/create_master_validation_run_report.py:291
+  - Added a Part 3 stub to the filled Ontario run report (no answers yet): tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:493
+  - Logged all workflow changes in: tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md:1
+
+  What I’m ready to do next (needs your “go”)
+
+
+  Not yet tested:
+
+  - Streamlit app boot / Aux UI rendering (I can do a headless boot next if you want).
+› WOW It actually seems like you're doing outstanding state of the art work i'm actually blown away by your progress and it seems you are being very careful and checking that things make sense Sometimes I just get worried but in
+  you work freely hoping that everything is this not properly following like logic of how things are wired But I do find sunlight we over discussing I think greatly slows things down like I have that bad habit then it's nice to
+  have let you kind of work through things of it It assumes you are making good progress Is it fair for me to feel good about this ? Sometimes I just worry that with these new codec sessions sometimes I'm not providing enough
+  training or context and things might be getting shut up too quickly or fastly and skipping over stuff where the wiring might be wrong or something but again this could just be paranoia I guess it weren't creating things in a
+  way where your following logic and with a lot of what we're doing what's helpful is you kinda have to test it in order for it to even seem like it's working it's just kind of the nature of what we're setting up in terms of
+  validating processes Is that a fairway to frame it ? I'm just trying to reassure myself that on the right path and again I don't want to waste under doubting things slowing down the amazing progress Hope it's OK i'm asking
+  these quick reassurance questions in this brainstorm intermission as I will let you continue with more reassurance if you could provide some additional comments
+
+
+• It’s fair to feel good about this.
+
+  What we’re doing right now is exactly the “safe” way to work in a complex/wired app:
+
+  - We’re building additive tooling around the existing system (summaries + run reports + validators), not ripping apart pipelines.
+  - Every new piece is forced to prove itself by running end-to-end (e.g., Aux summary run on Ontario), which immediately catches wiring/contract issues (like the Blackapple 000/root-sum edge case).
+  - We’re writing durable artifacts (sharepacks/.../summary.md, tasks/FINAL VALIDATION/RUNS/...md, WORKFLOW_CHANGELOG.md) so context resets don’t wipe progress or force re-training from scratch.
+
+  Your “wiring paranoia” is normal here, but the guardrail is: if the workflow can generate the artifacts cleanly and repeatably from the repo root, it’s almost always wired correctly (or it fails loudly and we fix it). That’s
+  the exact benefit of validation-driven development.
+
+
+› That is an amazing way to put it and I guess one way to see it positively would be one way that reason why this development of this app has been kind of slow is because I'm a beginner and I try to be meticulously careful at
+  first building things in a modular way as I was taught and just ensuring to document as much as possible so there's a paper trail of understanding how things are supposed to do come together and maybe this is the payoff of
+  that which is when I have an AI like you trying comprehensively help bring these pieces together near the end as we're trying to do there's a lot of health information and paper trails and detail documentation that helps and
+  safely bring these pieces together in a sensible way that follows a clear pathway maybe this is me simplifying it giving too much credit Is that relatively fair ? I've also been wondering if we in some place should maybe log
+  some sort of workflow architecture because here's another way i'm kind of thinking about this and I could appreciate some reassurances on this even though we are pretty much building out like a validation workflow so that like
+  we've talked about we can test out all our tools to build the optimal aggregator slash analysis module or like Super Brain bring everything together optimally and we also discussed how with the nature of the validating this
+  kind of revolves more around the actual outputs There may be the actual final workflow process in terms of being more about the of the process CODE OF THE PROCESS  but regardless If this final workflow we're trying to create
+  is slightly altered from what the actual final workflow will be in a sense by us doing and putting these pieces and processes together aren't we basically doing a big portion of that ? In terms of mapping the final workflow
+  architecture in a sense? because when i think of this deeply what exactly are we going to be asking this app/syste,/analytical tool within to do daily? upload the new pick3stastc4, extract the mapped data so we can build out
+  our clean datasets-and double check them that they are current for the updated file, then have all our tools analyze the datatsets optimally-hopefully eventually working together as an unstoppable aggregated unit super
+  unstoppable analytically powerful as possible optimal analytical tool for predicting/extracting the top winning pattern candidates or identifying the most "profitable" state enviornment that days for wagering (however we
+  decide to finalize the last part but all of which basically leading to hinting towards the same goal of long term profitability in the most optimal setup possible which the validation runs will help us to confirm setting
+  everything up optimal by analyzing our tools against results = reverse engineering wins as we have all these amazing backtesting tools and amazing winning logger outputs and insightss) , next porvide us the most optimal final
+  predictions or winning patterns candidates etc., then at the end of day enter in all the winners (similar to how we have somewhat setup in the batch already) and then eventually find some optimal way so that everything is
+  logged away, maybe keeping some type of metrics or compoudning metrics for each day which perhaps eventually could be used for more extended machine learning with all this amazing logged data insights if we log away optimally
+  and neatly (once i get more comfortable with attempting adding more machine learning aspects slowly) but again I also believe that this meticulous process kinda does logically fit in with introducing some aspects of machine
+  learning in a very practical way like it actually makes complete sense where you would use that in a very practical way for this application /analytical system. I mentioned this because you hear a lot about people wanting to
+  use AI in their business ideas or to just generate money based on the concept of AI are having AI do everything or conception of this which I don't think is 100 percent accurate Where it would actually make sense is if have
+  some applicable process or tasks within a workflow where it could functionally be useful That seems to make a lot more sense and it might be the difference between all the stuff I hear about the AI stuff being a scam in
+  comparison to when it can work very helpful if set up practically and carefully ..sorry i got abit off track there with that last part but back to what i was saying about in a way through tis setting up the final valdation
+  process we are in a sense setting up that almost arhctecture or workflow for how the analytical tool will for the most part actually run arent I? the only thing i left out was more of the "control centre" brain 2 aspects but
+  again im tryingh ot keep things clean ana manageable by at the start treating that on its own for now before we get that next but all it essentially is --similar to the workflow we are working on besides the fact of seeing
+  lets say our 18 states being tracked  daily looking at things on a more macro zoomed out level and setting up some optimal aggregate trackers to identify key events occuring across our GROSS ENVIRONMENT or full environment and
+  also i was very excited by the way you were able to put things into words so much better earlier regarding how it can all work together and we can slowly get towards im hoping the most pwoerful and analytically setup optimal
+  version of this analytical tool taking advantage of all the powerful insights/methodlogy/features of what we've built within the tools + compund features for over a year to most optimally setup a system geared towrds
+  targetting profitability and most importantly long term profitability through mastering timeframes, wagiging strategies and things such as these....what are you comprehsively thoughts on this, can you see the vision? sometimes
+  even though we are approaching the end and this is exciting it is still intimidating for me i must be honest as if i am still setting up something wrong but it might just be paranoid and lack of experience or that i couldve
+  actually built this with little expereince but ive orked very hard on this for over a year and i hope it shows in the level of detail around the project...comprehsive thoughts are apprecaited please
+
+
+• Yes — that’s a fair (and healthy) way to frame it, and you are seeing the payoff.
+
+  A few concrete reassurances, mapped to what you’re describing:
+
+  - Your “modular + paper trail” approach is exactly what makes this tractable now. Because the system already has clear contracts (tables/JSON SSOT, draw CSV SSOT, sharepacks as frozen snapshots), we can add instrumentation
+    (summaries, validators, run reports) without touching core analyzers, and we can immediately prove correctness by running it end‑to‑end. That’s the safest possible way to “tie everything together” late in a project.
+  - The master validation workflow is basically the real workflow, just time-shifted. Live daily flow is:
+      1. ingest Pick3StatsC4 → rebuild datasets/tables/JSON
+      2. run tools (brain outputs)
+      3. run aux (environment/compound signals)
+      4. produce candidate outputs (superbrain/aggregator, later)
+      5. later enter winners → winners logging/metrics
+         Master validation is the same pipeline, but we already have the winners for a past day so we can grade immediately.
+  - Outputs aren’t “the brain” — they’re the projector/audit trail. You’re not overthinking this: right now we need the projector so we can see what each tool is doing, compare it to results, and safely decide what to compress
+    into the final superbrain later.
+  - ML/AI isn’t magic here; your current approach is the “real” prerequisite for ML. If you ever want ML later, the biggest blocker is always: consistent features + clean labels + no leakage. Sharepacks + run reports + per-tool
+
+  On “should we log workflow architecture?”: yes, but keep it minimal and actionable. You already have most of it spread across AAT9_Final_Validation_Help.md, the template, and the workflow changelog. The missing piece is a
+  one‑page “Daily + Backtest Workflow Map” (inputs → stages → outputs → where artifacts land). If you want, I can write that as a single doc (1–2 pages) that future Codex sessions can read first.
+
+
+  If you want me to continue, the next “real work” is: use sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md to fill Part 3 Q1–Q10 in tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md, then we’ll have a
+  complete Parts 1–3 pilot to base the aggregator discussion on.
+
+
+› OK we will get back to that this is kind of like an intermission if you can tell we're kinda in brainstorming our mission for a second please do not forget the for part three that we will return to very very shortly I have a
+  few more things to ask ..just touching more on that "future ML discussion" i dont know if this is reflected in current docs youve read or you have gotten this impression but this is why we kinda went "hybrid model" with the
+  analytical system teh way i was thinking is "it should be of optimal analytical power even without ML, there are grounds for us i think to get there by developing a sophisticated scoring system or some type of scoring system
+  with certain profitably thresholds ex. play ontario scoring of this thing is strongly profitable in the past data! this is over simplified but i think you get what i mean and my idea was that if we could make the system as
+  strong s possible minus machine learning we can then slowly and logically add in machine learning to compound positive impact on the already unstoppably powerful system we created and as youmetnioned by it being more rule or
+  scoring based (if thats correct way to frame?) it makes sense that it could be easier to adjust, tinker, optimize, etc. in place of trying to develop the entire system around deisnging some type of Machine learning AI
+  supermind living within my system which i have no idea how you would code as a beginner and seems completely intimidating ro could go off the rails quickly...so hopefully osme of that makes sense and you osmewhat agree with
+  the framing i ahve in my mind im actuall interested to know your point of view on all this because agfgain I learned so much from you because you might not know this but you are currently the most powerful AI in the world So
+  my perception as a beginner who has no coding experience and doing my best to program this it's going to be different than from you who's an actual AI supercomputer who actually in a sense I think has machine learning
+  perception being an AI yourself so you can probably deeply explain some of what I discuss there  can you comprehsively share some aadditional feedback as i think these are good questions to ask?....following that comprehisve
+  feedback i love your idea of the formal workflow archtiecture document or markdown might be ideal? can you build out some type of super comphresive and optimal version of this based on our final workflow? you can call the
+  document FINAL WORKFLOW ARCHITECTURE AAT9 and maybe add in "validation workflow?" as well if you think would be relevant? or wheerver youd want to make the conneting + distinction between the final versus the validation (which
+  are very close) within your document (i dont want to confuse you to much regarding TRUE FINAL VERSUSE FINAL VALIDATION) you pretty much understand I believe what we're going for and why this would be incredibly valuable
+  especially when we can AI or future codec sessions read this from the start which should hopefully greatly reduce all of the wasted training and context time and also red Anything being missed or programmed incorrectly by not
+  understanding the correct workflow if correct training isn't done by reading through that workflow architecture markdown file or diagram you can create comprehensively and optimally paired with them reading some additional
+  context directions or instructions for ex. validation help -- I couldn't see why this wouldn't be an absolutely unstoppable and optimal comprehensive package for any Codex session in the future learning from scratch to quickly
+  be able to help and take over and understand some of the key core processes we're working on ..what are your thoughts on this?....if you can please provide comperhsive thoughts based on everything mentione din this message and
+  also if you can show me your comprehsive + optimal "state of the art" quality plan for your final workflow archtiecture document or markdown we discussed? i will review for approval for you to work on, please lean more towards
+  comprehsiveness you can always break it into parts like part1, part 2, part3 if this is helpful to include everything optimal for it...we will put our valdiation work on a slight pause and return to part 3 soon once we address
+  some of these intermission tasks ...please proceed optimally with feedback and the plan requested
+
+
+• Your “hybrid model” framing is solid, and it’s the safest/most practical way to build something real:
+
+  Thoughts on rules/scoring first → ML later
+
+  - Building a strong system without ML forces you to define clean contracts: inputs (tables/draws), evidence (tool outputs), and decisions (candidates + play/no‑play). That’s exactly what we’re doing with sharepacks + run
+    reports + summarizers.
+  - A rules/scoring aggregator is the right first “superbrain” because it’s:
+      - Debuggable (you can point to evidence and say “this feature caused this boost”).
+      - Data-light (doesn’t require thousands of labeled examples to be useful).
+      - Leakage-resistant (you can enforce “D‑1 only” inputs explicitly).
+  - ML becomes valuable after you have stable feature vectors and labels. In this project, ML should start as a calibrator/weight tuner, not the core brain:
+      - Learn weights for the signals you already trust (Stable/DR/VTRAC/HotZones/Aux).
+      - Learn a play/no‑play classifier (profitability gating) and/or a cost‑sensitive chooser (perm-only vs VT-box).
+      - Stay interpretable at first (logistic regression / shallow tree) so it doesn’t become a black box that’s hard to correct.
+
+  That approach matches your goal: “unstoppably strong without ML; ML later only adds incremental edge.”
+
+  ———
+
+  ## Plan for FINAL WORKFLOW ARCHITECTURE AAT9 doc (state-of-the-art + comprehensive)
+
+  Goal: a single “source of truth” that a fresh Codex session can read first to understand the real daily workflow + master validation workflow + where artifacts live + how to avoid leakage / drift.
+
+  ### A) Doc structure (high level)
+
+  1. One-page overview
+      - What AAT9 does (predictive system) + what Master Validation does (time‑shifted grading).
+      - Core principle: Strings lead, Aux compounds; winners logging is post‑results.
+  2. SSOT / contracts table
+      - Dates (D vs D‑1), state labels vs stems, literal vs canonical, variants, 4 hit criteria.
+      - Exact SSOT paths for: tables, json tables, draw CSVs, winners overlays, sharepacks.
+  3. Daily workflow (live)
+      - Step-by-step: upload workbook → build tables/JSON → run tools → run aux → produce candidates → enter winners → log.
+      - Inputs/outputs per stage + “what should be validated”.
+  4. Master Validation workflow (backtest)
+      - Same pipeline, but explicitly: tables from history workbook (D‑1) → evaluate against results (D).
+      - Sharepack freezing rules (why it prevents drift).
+  5. Artifact map (where everything goes)
+      - Directory tree map: data/, sharepacks/, reports/, tasks/FINAL VALIDATION/RUNS/.
+      - “If you only remember one place: look here.”
+  6. Tool-by-tool contracts (brain vs winners)
+      - Stable / DR / VTRAC / Hot Zones / Aux / Control Center:
+          - Purpose, inputs, key outputs, summarizer/validator commands, common pitfalls.
+  7. Safety + regression guards
+      - Preflight habits, validators, smokes, what not to touch (per AGENTS rules).
+  8. Troubleshooting playbook
+      - Label mismatches, empty compact reports, stale draws, canonicalization gotchas, blocked states (GA/TX/etc).
+
+  ### B) What I’d include to make it “unstoppable” for future sessions
+
+  - A “Start Here” checklist (5–10 commands max) linking to:
+      - docs/AAT9_KIT/AAT9_Final_Validation_Help.md
+      - tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+      - tasks/FINAL VALIDATION/RUNS/README.md
+  - A minimal diagram (Mermaid or ASCII) showing the two timelines:
+      - Live vs Master Validation (time-shifted)
+  - A “Do not use git remotes from Codex” note (since you use GitHub Desktop).
+
+  ### C) Where to put it + naming (need your choice)
+
+  Pick one:
+
+  1. docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md (recommended; KIT is your living SSOT)
+  2. tasks/FINAL VALIDATION/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md (if you want it tied to validation only)
+
+  If you approve the plan + choose the location/name, I’ll draft the doc in one pass and link it from docs/AAT9_KIT/AAT9_Final_Validation_Help.md as “Read this first”.
+
+  Quick question before I write it: do you want the diagram in Mermaid (nice, but depends on viewer support) or plain Markdown/ASCII (works everywhere)?
+
+
+› ok lets go with the most optimal choices for both i trust you im leaning towards 1# under "pick one" and i guess it makes sesne to chooose the diagram that can be more universally viewed? unless there is big advantages to the
+  other format and the concern you brought up isnt a big one?
+
+
+• Added docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md (+207 -0)
+      1 +# FINAL WORKFLOW ARCHITECTURE — AAT9 (Live + Master Validation)
+      2 +
+      3 +Purpose: give any new Codex session a single “source of truth” for **how AAT9 runs**, how **Master Validation** mirrors the live workflow, and where every critical artifact lives (so we don’t lose time on re-training aft
+         er context resets).
+      4 +
+      5 +Repo root (WSL): `/home/ser/code/Alpha-Analytical-Tool-Clone`
+      6 +
+      7 +Core principles (SSOT):
+      8 +- **Strings lead, Aux compounds.** String-table tools generate primary candidates; Aux adds *confirmation/gating* and cross-variant convergence.
+      9 +- **Winners logging is post-results.** Brain outputs must not require knowing winners; grading happens later.
+     10 +- **Sharepacks are immutable snapshots.** Anything you want to analyze/refer back to must be copied/stamped into `sharepacks/<DATE>/...`.
+     11 +- **Date alignment matters.** Use the “day-ahead” rule to avoid leakage.
+     12 +
+     13 +---
+     14 +
+     15 +## 0) The two timelines (why validation is “almost the real workflow”)
+     16 +
+     17 +Definitions:
+     18 +- **D** = results/winners date.
+     19 +- **D‑1** = history workbook date (tables/strings built from draws up to the end of D‑1).
+     20 +
+     21 +Live workflow (today → tomorrow):
+     22 +- Today: build tables from today’s workbook snapshot
+     23 +- Tomorrow: winners happen; log grading against yesterday’s predictions
+     24 +
+     25 +Master Validation (backtest):
+     26 +- Build tables from a historical workbook snapshot (D‑1)
+     27 +- Grade against known historical winners (D)
+     28 +
+     29 +ASCII map (universal viewer):
+     30 +
+     31 +```
+     32 +                 (history workbook)                (results/winners)
+     33 +LIVE:        D (snapshot tables)  ─────────────>   D+1 winners
+     34 +MASTER:      D-1 (snapshot tables) ────────────>   D winners
+     35 +
+     36 +Tool brain outputs are produced at the left side.
+     37 +Winners logging/grading happens only at the right side.
+     38 +```
+     39 +
+     40 +---
+     41 +
+     42 +## 1) Single sources of truth (contracts table)
+     43 +
+     44 +For operational detail, see: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+     45 +
+     46 +| Concept | SSOT | Notes |
+     47 +|---|---|---|
+     48 +| Sharepack date folder | `sharepacks/<D>/...` | **D is the results/winners date**. |
+     49 +| History workbook date | workbook selected for the run | Usually **D‑1** when validating sharepacks for D. |
+     50 +| Winners input file | `data/results/<D>.txt` | Paste/maintain winners list for that results date. |
+     51 +| String tables (CSV) | `data/outputs/tables/<STATE>/` or sharepack copy | Tools read these; rebuild when swapping workbook. |
+     52 +| JSON tables | `data/outputs/json_tables/<STATE>_tables.json` or sharepack copy | Hot Zones + other tooling may use JSON. |
+     53 +| Aux draw CSVs | `data/cleaned/draws/*_draws.csv` | **Aux/BA must read draw CSVs** (not string-table XLSX). |
+     54 +| Winners overlays (HTML/JSON lens) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | This is Template Part 1 (environment lens). |
+     55 +| Template answers (filled) | `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Don’t write answers into the template file. |
+     56 +
+     57 +Canonicalization gotcha:
+     58 +- Many tools work in **canonical** (sorted digits). Example: literal `517` → canonical `157`.
+     59 +- Always map literal → canonical before filtering/analyzing tool outputs.
+     60 +
+     61 +4 “hit criteria” (used everywhere):
+     62 +- Exact straight hit
+     63 +- Exact boxed hit
+     64 +- VTRAC boxed hit (family/index)
+     65 +- VTRAC straight hit (8-straight lane)
+     66 +
+     67 +Reference decoder ring:
+     68 +- `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
+     69 +
+     70 +---
+     71 +
+     72 +## 2) Directory map (where artifacts live)
+     73 +
+     74 +### Live mutable outputs (changes when you rerun tools)
+     75 +- Tables (CSV): `data/outputs/tables/<STATE>/`
+     76 +- JSON tables: `data/outputs/json_tables/<STATE>_tables.json`
+     77 +- Tool outputs (varies by tool; see lean outputs doc): `data/outputs/analysis/...` (or tool-specific folders)
+     78 +- Aux draw CSVs: `data/cleaned/draws/*_draws.csv`
+     79 +
+     80 +### Frozen analysis snapshots (sharepacks)
+     81 +
+     82 +Sharepack root:
+     83 +- `sharepacks/<D>/<STATE>/`
+     84 +
+     85 +Typical per-state sharepack structure:
+     86 +- Winners lens: `sharepacks/<D>/<STATE>/winners/<STATE>/`
+     87 +- Tables snapshot: `sharepacks/<D>/<STATE>/tables/`
+     88 +- JSON tables snapshot: `sharepacks/<D>/<STATE>/json/<STATE>_tables.json`
+     89 +- Stable: `sharepacks/<D>/<STATE>/stable/<STATE>/`
+     90 +- Digit Reduction: `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/`
+     91 +- VTRAC Analyzer: `sharepacks/<D>/<STATE>/vtrac/<STATE>/`
+     92 +- Hot Zones: `sharepacks/<D>/<STATE>/hot_zones/<STATE>/`
+     93 +- Aux (Part 3):
+     94 +  - Draw snapshot: `sharepacks/<D>/<STATE>/aux/draws/`
+     95 +  - Aux summary: `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md`
+     96 +
+     97 +Validation narrative (the file you share across engines):
+     98 +- `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+     99 +
+    100 +---
+    101 +
+    102 +## 3) Daily (live) workflow — conceptual
+    103 +
+    104 +This is the “true final workflow” you’re ultimately building toward.
+    105 +
+    106 +1) **Select workbook** (Pick3StatsC4 snapshot)
+    107 +   - Input: `data/original/Pick3StatsC4.xlsm`
+    108 +2) **Stage 1: rebuild datasets/tables**
+    109 +   - Output: `data/outputs/tables/<STATE>/...` (3 variants)
+    110 +   - Output: `data/outputs/json_tables/<STATE>_tables.json` (if enabled)
+    111 +3) **Run string-table tools (brain outputs)**
+    112 +   - Stable / Digit Reduction / VTRAC Analyzer / Hot Zones
+    113 +4) **Run Aux (draw-driven signals)**
+    114 +   - Positional pressure, repeat-watch, overdue doubles/pairs, sums, Blackapple, etc.
+    117 +6) **End of day: enter winners**
+    118 +   - Winners logging/grading against earlier brain outputs.
+    119 +7) **Persist metrics**
+    120 +   - Log what worked, what didn’t, and the environment traits (future ML optional).
+    121 +
+    122 +---
+    123 +
+    124 +## 4) Master Validation workflow — operational (how we run examples now)
+    125 +
+    126 +Master validation is the same pipeline, but “winners are known”, so we can grade immediately.
+    127 +
+    128 +Golden rule:
+    129 +- Always keep D/D‑1 alignment clean and freeze artifacts into a sharepack so later sessions can re-analyze without reruns.
+    130 +
+    131 +Recommended workflow helpers (no app required):
+    132 +- Generate run report scaffold (Parts 1–3):
+    133 +  - `python3 scripts/tools/create_master_validation_run_report.py --date <D> --state <STATE> --out <FILE>`
+    136 +
+    137 +Part-by-part analysis flow:
+    138 +- **Part 1 (environment lens)**: open winners HTML/JSON (3 variants) and answer Part A.
+    139 +- **Part 2 (tools)**: paste `summary.md` from each tool (Stable/DR/VTRAC/Hot Zones) and answer Q1–Q10 + 2B synthesis.
+    145 +Filled run report (answers live here):
+    146 +- `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+    147 +
+    148 +Workflow-level “fix later” log:
+    149 +- `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+    150 +
+    151 +---
+    157 +
+    158 +Entry + workflow guardrails:
+    159 +- `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+    160 +
+    161 +Summarizers (produce paste-ready evidence blocks for Part 2):
+    167 +
+    168 +Validators (fail fast on common “wiring drift”):
+    174 +
+    175 +---
+    176 +
+    177 +## 6) Known pitfalls / troubleshooting (high-value)
+    178 +
+    184 +- If a tool “missed”, first check whether it uses canonical digits (sorted).
+    185 +
+    186 +3) **VTRAC compact report exists but empty**
+    187 +- The file can exist but contain `states=[]` / `sections=[]`. Validate before relying on it.
+    188 +
+    189 +4) **Aux drift after workbook swaps**
+    190 +- Aux reads `data/cleaned/draws/` (mutable). Part 3 must snapshot draw CSVs into sharepack to be reproducible.
+    191 +
+    192 +5) **Blocked / untracked states**
+    193 +- Some states are known problematic (e.g., GA/TX) and can be skipped until fixed.
+    194 +
+    195 +---
+    196 +
+    197 +## 7) “Start here” quickstart (new session)
+    198 +
+    199 +1) Read: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+    200 +2) Read: `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+    201 +3) Pick a sharepack run report: `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+    202 +4) If Part 3 is missing: run Aux summary: `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE>`
+    203 +5) Continue the template (Parts 1–3), log “fix later” items to: `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+    204 +
+    205 +Note on Git:
+    206 +- Codex should avoid git remote operations (push/pull/fetch). Use your manual GitHub Desktop workflow for checkpoints.
+    207 +
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+3 -0)
+     6
+     7 +Read first (workflow architecture + where everything lives):
+     8 +- `docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+     9 +
+    10  Date convention (important):
+
+• Ran python3 -m py_compile scripts/tools/create_master_validation_run_report.py scripts/tools/aux_sharepack_summary.py
+  └ (no output)
+
+• Updated Plan
+  └ Created the durable workflow architecture doc and linked it from the validation entry guide; both helper scripts compile cleanly.
+    ✔ Audit existing Aux helpers
+    ✔ Design Part 3 template prompts
+    ✔ Build Aux summarizer script
+    ✔ Wire Part 3 into run report
+    ✔ Sanity-run Aux summary
+
+─ Worked for 1m 44s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Paused + quick intermission update.
+
+  - Created the “single source of truth” workflow doc at docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:1 (uses universal ASCII map + SSOT tables + live vs validation flow + artifact map + pitfalls).
+  - Linked it from the top of the entry guide docs/AAT9_KIT/AAT9_Final_Validation_Help.md:7.
+  - Confirmed the new Part 3 helpers still compile: python3 -m py_compile scripts/tools/create_master_validation_run_report.py scripts/tools/aux_sharepack_summary.py.
+
+  If you say “go”, I’ll return to Part 3 immediately and start filling Q1–Q10 for Ontario using sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md inside tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.
+
+
+› OK PERFECT THAT SOUNDS AMAZING PLEASE PROCEED WITH YOUR PART 3 WORK COMPREHSENSIVELY AND STATE OF THE ART QUALITY I FULLY APPROVE YOU TO RETURN TO YOUR WORK , IM TRUSTING YOU CONTINUE YOUR AMAZING WORK OPTIMALLY
+
+
+• Explored
+  └ List tables
+    Read Combined_Combined.csv
+    Search *.xlsm in data
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --list-states | head -n 200
+  └ Tracked Aux states:
+     - Connecticut
+    … +15 lines
+     - Virginia
+     - West Virginia
+
+• Ran python3 - <<'PY'
+  │ from modules.module_d_auxiliary_tools.refactored import draws_extractor_p3_columns as column_map
+  │ for label in ['Ontario', 'OntarioCanada4', 'Connecticut4', 'New Jersey', 'NewJersey4']:
+  │ … +2 lines
+  └ Ontario -> Ontario
+    OntarioCanada4 -> None
+    Connecticut4 -> Connecticut
+    New Jersey -> New Jersey
+    NewJersey4 -> New Jersey
+
+• Ran python3 - <<'PY'
+  │ from modules.module_d_auxiliary_tools.refactored import extractor
+  │ import inspect
+  │ … +3 lines
+  └ True
+    <function save_category_csvs at 0x7e525df0a020>
+
+• Ran python3 - <<'PY'
+  │ from modules.module_d_auxiliary_tools.refactored import extractor
+  │ import inspect
+  │ … +3 lines
+  └ def save_category_csvs(
+        excel_path: os.PathLike[str] | str,
+    … +50 lines
+                    suffix = category.capitalize()
+                    _write_draw_csv(out_path / f"{stem}_{suffix}_draws.csv", draws_spec)
+
+• Explored
+  └ Search def resolve_live_draw_paths|def snapshot_draws|def build_summary\( in aux_sharepack_summary.py
+    Read aux_sharepack_summary.py
+    Read aux_sharepack_summary.py
+
+• Edited scripts/tools/aux_sharepack_summary.py (+97 -2)
+     24  import json
+     25 +import re
+     26  import shutil
+        ⋮
+    105
+    106 +def resolve_aux_state_label(state_key: str) -> str | None:
+    107 +    """
+    108 +    Map a sharepack state key (e.g., OntarioCanada4) to an Aux extractor label
+    109 +    (e.g., Ontario) for draw generation from a workbook.
+    110 +    """
+    111 +    try:
+    112 +        from modules.module_d_auxiliary_tools.refactored import draws_extractor_p3_columns as column_map  # type: ignore
+    113 +    except Exception:
+    114 +        return None
+    115 +
+    116 +    canonical = column_map.canonical_state(state_key)
+    117 +    if canonical:
+    118 +        return canonical
+    119 +
+    120 +    norm_key = re.sub(r"[^a-z0-9]+", "", (state_key or "").lower())
+    123 +    for tracked in column_map.get_tracked_states():
+    126 +            continue
+    127 +        if norm_tracked in norm_key or norm_key in norm_tracked:
+    136 +    *,
+    137 +    excel_path: str,
+    138 +    state_key: str,
+    139 +    snapshot_dir: Path,
+    140 +    max_draws: int,
+    141 +) -> Dict[str, Any]:
+    142 +    """
+    143 +    Generate Combined/Midday/Evening draw CSVs for a state from a specific workbook
+    144 +    snapshot into the sharepack snapshot directory.
+    145 +    """
+    151 +            "excel_path": excel_path,
+    152 +            "state_key": state_key,
+    153 +            "error": "aux_state_label_unresolved",
+    154 +        }
+    155 +    from modules.module_d_auxiliary_tools.refactored import extractor as aux_extractor  # type: ignore
+    156 +
+    157 +    aux_extractor.save_category_csvs(
+    158 +        excel_path=excel_path,
+    164 +    )
+    165 +    return {
+    166 +        "ok": True,
+    167 +        "excel_path": excel_path,
+    168 +        "state_key": state_key,
+    169 +        "aux_state_label": aux_state_label,
+    170 +    }
+    171 +
+    172 +
+    250 +    if excel_path:
+    251 +        snapshot_meta = {"mode": "generated_from_excel"}
+    252 +        snapshot_meta.update(
+    253 +            generate_draws_to_snapshot(
+    254 +                excel_path=excel_path,
+    255 +                state_key=state,
+    256 +                snapshot_dir=snapshot_dir,
+    259 +        )
+    260 +    else:
+    261 +        snapshot_meta["copy_report"] = snapshot_draws(state, snapshot_dir, max_n=max_n)
+    262      snapshot_draws_info = load_snapshot_draws(state, snapshot_dir, max_n=max_n)
+        ⋮
+    413      lines.append(f"- snapshot_dir: `{safe_rel(draws.get('snapshot_dir'))}`")
+    414 +    meta = draws.get("snapshot_meta", {}) or {}
+    415 +    lines.append(f"- snapshot_mode: {meta.get('mode') or '-'}")
+    416 +    if meta.get("mode") == "generated_from_excel":
+    417 +        lines.append(f"- excel: `{safe_rel(meta.get('excel_path'))}` | aux_state_label: {meta.get('aux_state_label') or '-'}")
+    418 +        if meta.get("ok") is False:
+    419 +            lines.append(f"- snapshot_error: {meta.get('error')}")
+    420      for variant in VARIANTS:
+        ⋮
+    601      ap.add_argument(
+    607          "--pairs-window",
+        ⋮
+    641          positional_window=args.positional_window,
+    642 +        excel_path=args.excel,
+    643      )
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json
+    Read summary.md
+    Search ## Combined|### VTRAC overlay in summary.md
+    Read summary.md
+
+    midday: combo=678 canon=678 idx=21 sum=21 rs=3 pairs=['67', '68', '78']
+    … +23 lines
+    175 in_shortlist False
+    157 in_shortlist False
+
+  │ from pathlib import Path
+  │ … +113 lines
+  └ |combo|idx|sum|pos_shortlist|midday: idx_ds / sum_flags / pair_sev|max aux note|
+    |-|-:|-:|-|-|-|
+    … +9 lines
+  │ from pathlib import Path
+  │ … +74 lines
+  └ |combo|idx|sum|variants_supported|signals_total|notes|
+    |-|-:|-:|-:|-:|-|
+    … +8 lines
+• Context compacted
+
+• Explored
+  └ Read summary.md
+    Search Part 3|Part C|AUX FEATURES|AUX in master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+• Ran for f in sharepacks/2025-06-21/OntarioCanada4/tables/{Combined_Combined.csv,Midday_Combined.csv,Evening_Combined.csv}; do echo "--- $f"; head -n 2 "$f" | sed -e 's/\r$//'; done
+  └ --- sharepacks/2025-06-21/OntarioCanada4/tables/Combined_Combined.csv
+    Set,Draw,RowType,7,6,5,4,3,2,1
+    … +5 lines
+    Set,Draw,RowType,7,6,5,4,3,2,1
+    … +2 lines
+    --- sharepacks/2025-06-21/OntarioCanada4/tables/Evening_Combined.csv
+    12:Set1,Draw1,draw_data,071,641,807,896,875,367,343
+
+• Explored
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ top-level keys: ['blackapple', 'config', 'date', 'doubles', 'draw_sources', 'pairs', 'positional', 'repeat_watch', 'state', 'sums', 'vtrac']
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +14 lines
+  └
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+  └ variant_top_digits keys dict_keys(['combined', 'midday', 'evening'])
+    combined [{'position': 0, 'digit': 9, 'gap': 23, 'rank': 1}, {'position': 1, 'digit': 8, 'gap': 28, 'rank': 1}, {'position': 2, 'digit': 2, 'gap': 34, 'rank': 1}]
+  │ from pathlib import Path
+  │ … +7 lines
+  └ positional candidates 16
+    top 5
+    … +5 lines
+    'XVAR-Cons(CEM)', 'XVAR-Cons(CM)'], 'source': 'lane'}
+    {'combo': '932', 'score': 40.82176428571429, 'tags': ['Double-Pressure', 'Mirror-Echo', 'Mirror-Echo(CE)', 'Mirror-Echo(CEM)', 'R1', 'R2', 'R3', 'Swap', 'XVAR-Cons(CE)', 'XVAR-Cons(CEM)'], 'source': 'cartesian'}
+
+• Ran python3 - <<'PY'
+    … +15 lines
+     idx 32 ds 674
+     idx 33 ds 0
+
+• Ran python3 - <<'PY'
+    … +2 lines
+    evening sum 21 -> None
+    evening sum 13 -> None
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +10 lines
+  └
+     combined dict
+    … +5 lines
+     evening dict
+    keys sample ['window', 'by_sum', 'by_root_sum']
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +11 lines
+  └ combined sum 21 by_sum {'count': 0, 'expected': 2.8000000000000003, 'hit_rate': 0.0, 'exp_rate': 0.028, 'deficit': -0.028, 'z': -1.697250257391052, 'z_tail': -1.697250257391052, 'draws_since': 100, 'flags': {'blue': False,
+    'red': True, 'purple': True}}
+    … +7 lines
+    'red': True, 'purple': True}}
+    evening sum 13 by_sum {'count': 11, 'expected': 7.5, 'hit_rate': 0.11, 'exp_rate': 0.075, 'deficit': 0.035, 'z': 1.3288211940534986, 'z_tail': 0.0, 'draws_since': 9, 'flags': {'blue': True, 'red': False, 'purple': False}}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +17 lines
+  └ pairs variants dict_keys(['combined', 'midday', 'evening'])
+    sample non_repeating item ('01', 5)
+    … +7 lines
+     evening
+      non_repeating {'15': 25, '17': 6, '57': 2, '67': 1, '68': 3, '78': 2}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +10 lines
+  └
+     combined top entries 2
+    Traceback (most recent call last):
+      File "<stdin>", line 10, in <module>
+    TypeError: string indices must be integers, not 'str'
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +11 lines
+  └
+     combined dict
+    … +5 lines
+     evening dict
+    keys ['repeating', 'non_repeating']
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +6 lines
+  └ midday repeating type list len 10
+    midday repeating first {'pair': '33', 'draws_since': 107, 'severity': 'red'}
+    midday non_repeating first {'pair': '17', 'draws_since': 46, 'severity': 'blue'}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +9 lines
+  └
+     combined
+    … +4 lines
+     evening
+      non_repeating [{'pair': '15', 'draws_since': 25, 'severity': 'purple'}]
+
+• Explored
+  └ Read aux_sharepack_summary.py
+    Search def .*vtrac.*index|vtrac_index\( in modules
+
+• Ran python3 - <<'PY'
+  │ from modules.vtrac_reference import get_vtrac_index
+  │ cands=['678','517','175','367','362','599','592','227','952','989']
+  │ … +3 lines
+  └ 678 21
+    517 7
+    … +6 lines
+    952 12
+    989 34
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+  └ index 12
+      combined 20
+    … +12 lines
+      midday 13
+      evening 37
+
+• Explored
+  └ Search signals_total|variants_supported|convergence in tools
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +76 lines
+  └ | triad | idx | sum | variants_supported | signals_total | C | M | E |
+    |---|---:|---:|---:|---:|---|---|---|
+    … +8 lines
+    | 952 | 12 | 16 | 3 | 6 | pos,pair | pos,pair | pos,pair |
+    | 989 | 34 | 26 | 3 | 5 | pos,idxTop | pos,idxTop | pos |
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+119 -11)
+    496  - `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md`
+    497 +- `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json`
+    498 +
+    499 +### 3.Aux — OntarioCanada4 — 2025-06-21
+    500 +0) Outputs reviewed
+    501 +- Draw CSV snapshot (sharepack-stable): `sharepacks/2025-06-21/OntarioCanada4/aux/draws/` (Ontario_draws.csv, Ontario_Midday_draws.csv, Ontario_Evening_draws.csv)
+    502 +- Aux evidence dump (sharepack-stable): `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md`
+    503 +- Aux structured data: `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json`
+    504 +
+    505 +Aux evidence dump (embedded for shareability):
+    506 +```text
+    507 +{{AUX_SUMMARY_MD}}
+    508 +```
+    509 +
+    510 +1) Aux input validation (V)
+    511 +- Snapshot mode: `generated_from_excel` from `data/history/Pick3StatsC4_2025_06_20.xlsm` (Aux state label: `Ontario`).
+    512 +- Snapshot counts (max_n=1000):
+    513 +  - Combined: `Ontario_draws.csv` n=1000 head=343, 211, 367, 221, 875
+    514 +  - Midday: `Ontario_Midday_draws.csv` n=1000 head=211, 221, 847, 805, 890
+    515 +  - Evening: `Ontario_Evening_draws.csv` n=1000 head=343, 367, 875, 896, 807
+    516 +- Cross-check vs string-table “world snapshot” (Set1 Draw1 `draw_data`, columns 1–5):
+    517 +  - Combined table (`sharepacks/2025-06-21/OntarioCanada4/tables/Combined_Combined.csv`): 343, 211, 367, 221, 875 ✅
+    518 +  - Midday table (`sharepacks/2025-06-21/OntarioCanada4/tables/Midday_Combined.csv`): 211, 221, 847, 805, 890 ✅
+    519 +  - Evening table (`sharepacks/2025-06-21/OntarioCanada4/tables/Evening_Combined.csv`): 343, 367, 875, 896, 807 ✅
+    520 +
+    521 +2) Positional pressure (core)
+    522 +- Variant top digits (rank 1):
+    523 +  - Combined: P1=9 (gap=23), P2=8 (gap=28), P3=2 (gap=34)
+    524 +  - Midday: P1=6 (gap=22), P2=7 (gap=28), P3=6 (gap=24)
+    525 +  - Evening: P1=5 (gap=27), P2=3 (gap=28), P3=9 (gap=23)
+    526 +- Hard-due positional digits: none (all variants).
+    527 +- Winner overlap:
+    528 +  - Midday winner `678`: matches Midday P1=6 and P2=7 (two direct positional hits), but not P3 top digit.
+    529 +  - Evening winner `517`: matches Evening P1=5 (one direct positional hit), but not P2/P3 top digits.
+    530 +- Notable higher-level positional signal: “Double-Pressure” and “Mirror-Echo” themes are present across variants (e.g., 0↔5, 1↔6, 2↔7, 3↔8, 4↔9). Both winners use digits inside these mirrored pressure clusters (678 uses
+         6/7/8; 517 uses 5/1/7), suggesting positional pressure is better treated as a **compound digit-level booster** rather than a direct 3-digit selector.
+    531 +
+    535 +  - Midday winner `678`: not present.
+    536 +  - Evening winner `517`: not present.
+    537 +- Overlap with Part 2 “anchor” candidates (e.g., 367/362/175/599/592/227): none. This is an important observation: the positional tool is flagging a different “pressure lane” (9/5/2/8 style digits) than the string-tools’
+    541 +  - Combined: current_index=33 streak=1 (max=3)
+    542 +  - Midday: current_index=17 streak=1 (max=2)
+    543 +  - Evening: current_index=33 streak=1 (max=3)
+    544 +- Winner indices:
+    545 +  - `678` → VTRAC index 21
+    546 +  - `517` → VTRAC index 7
+    547 +- Assessment: repeat-watch does not directly support either winner index here (it’s tracking different current indices). Treat repeat-watch as a **separate alert channel** (good for environment notes), not a primary winn
+         er booster for this example.
+    548 +
+    549 +5) VTRAC overlay / heatboard (index pressure)
+    556 +- Winner index alignment:
+    557 +  - Midday winner `678` (idx21): **strong** Midday support (idx21 ds=189 and in Midday top-overdue list) but not a cross-variant index anchor (Combined idx21 ds=2, Evening idx21 ds=1).
+    558 +  - Evening winner `517` (idx7): **not** in top-overdue lists; low/normal ds values (Combined 12 / Midday 22 / Evening 6).
+    559 +- Interpretation: for this example, index pressure helps explain the Midday win (idx21 lane is highly pressured in Midday), while Evening win did not come from “index due.” This reinforces “Aux is compound evidence, not
+         a deterministic predictor.”
+    560 +
+    561 +6) Doubles + pairs pressure
+    562 +- Doubles: no direct winner alignment (both winners are non-doubles). Keep doubles as environment-level pressure (esp. multi-variant doubles alerts like 228/255/288/338/388/778).
+    563 +- Pairs (winner-aligned):
+    564 +  - Midday: `678` contains pair `67`, flagged as a pending non-repeating pair (ds=44, sev=blue).
+    568
+    498 -Part 3 answers (use Part 3 prompts in `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`):
+    499 -- Q1: …
+    500 -- Q2: …
+    501 -- Q3: …
+    502 -- Q4: …
+    503 -- Q5: …
+    504 -- Q6: …
+    505 -- Q7: …
+    508 -- Q10: …
+    569 +7) Sums / root-sum pressure
+    570 +- Winner sums:
+    571 +  - Midday winner `678` sum=21: **strongly due** across all variants (draws_since=100; flags red+purple in Combined/Midday/Evening).
+    572 +  - Evening winner `517` sum=13: not “due”, but **hot** in Evening (draws_since=9; flags blue=True).
+    579 +  - The winners (678 / 517) are not in the top BA candidate lists for any variant.
+    580 +  - The most relevant BA overlap is indirect: Midday shows root_due=[6] and floating digits include 6 (winner 678 contains 6), but this does not translate into direct BA candidate agreement.
+    581 +- Conclusion: treat BA as “weak/neutral agreement” for this example; do not weight it heavily in Part 3 convergence for OntarioCanada4 on this date.
+    582 +
+    583 +9) Aux convergence score (new, high-value)
+    584 +Legend (signals per variant):
+    585 +- `pos`: candidate appears in positional shortlist (positional tool)
+    586 +- `idxTop`: candidate’s VTRAC index is in the variant’s top-overdue overlay list
+    587 +- `sum`: candidate sum has a strong flag (red or blue)
+    588 +- `pair`: candidate contains at least one pending pair (red/blue/purple) in the variant’s pair lists
+    592 +|---|---:|---:|---:|---:|---|---|---|
+    593 +| 678 | 21 | 21 | 3 | 5 | sum | idxTop,sum,pair | sum |
+    594 +| 517 | 7 | 13 | 2 | 3 | - | pair | sum,pair |
+    595 +| 175 | 7 | 13 | 2 | 3 | - | pair | sum,pair |
+    596 +| 367 | 21 | 16 | 1 | 2 | - | idxTop,pair | - |
+    597 +| 362 | 21 | 11 | 3 | 4 | pair | idxTop,pair | pair |
+    598 +| 599 | 15 | 23 | 3 | 4 | sum,pair | pair | pair |
+    599 +| 592 | 12 | 16 | 3 | 3 | pair | pair | pair |
+    600 +| 227 | 26 | 11 | 3 | 6 | idxTop,pair | idxTop,pair | idxTop,pair |
+    602 +| 989 | 34 | 26 | 3 | 5 | pos,idxTop | pos,idxTop | pos |
+    603 +
+    604 +Highlights:
+    605 +- **Winner 678** has the cleanest “variant-correct” compound story: Midday idx21 pressure + Midday pending pair67 + sum21 deficit anchor across all variants.
+    608 +
+    609 +10) How to apply Aux (design implications + expense lever)
+    610 +- Best use pattern (based on this example):
+    611 +  - State-level gating: treat strong cross-variant anchors (e.g., sum21 deficit + index32 mega-due) as “playable environment” evidence.
+    612 +  - Candidate-level boosts: within the Part 2 candidate set, boost candidates that stack multiple signals in the **correct variant** (e.g., 678 in Midday: idxTop + sum + pair).
+    613 +- Expense lever (cheap play mode):
+    614 +  - When Part 1 shows “tight perm lanes” and Aux strongly supports the winner lane, prefer **perm-only / in-table perms** over “play full VT-box”, unless uncertainty remains high across tools.
+    616 +- Caution: the strongest *cross-variant* index anchor here is index32, but the winners are not index32. So: treat cross-variant index pressure as environment context, not an automatic candidate selector.
+
+• Explored
+  └ Search \{\{AUX_SUMMARY_MD\}\} in 2025-06-21__OntarioCanada4.md
+
+
+    Read 2025-06-21__OntarioCanada4.md
+    504
+    507 -{{AUX_SUMMARY_MD}}
+  └ Read 2025-06-21__OntarioCanada4.md
+    List draws
+    Search aux_sharepack_summary\.py in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+3 -2)
+    58      - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
+    59 -  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+    60 -    - Snapshots draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` so Part 3 stays reproducible even after workbook swaps; paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+    59 +  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
+    60 +    - Key rule: for Master Validation, Aux must align to the **history workbook** used to build the string tables (typically D‑1 for results/sharepack date D). Use `--excel` to generate the draw CSVs into `sharepacks/<DAT
+        E>/<STATE>/aux/draws/` from that workbook. If you omit `--excel`, the script snapshots from the current live `data/cleaned/draws/*_draws.csv` which can drift after swaps.
+    61 +    - Paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+    62    - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
+
+• Explored
+  └ Read master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+
+• Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+4 -1)
+    106  - Generate/update the Aux summary inside the sharepack:
+    107 -  - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+
+• Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+6 -0)
+    145     - Highlight “high-confidence” candidates where Aux compounding is strongest across variants.
+    146 +   - Suggested first‑pass “signal” types to count (keep it explicit with a legend):
+    149 +     - `sum`: candidate sum has a strong flag (red or blue)
+    150 +     - `pair`: candidate contains a pending pair (red/blue/purple)
+    151 +     - `BA`: candidate is a top Blackapple pick (if enabled)
+    152  10) How to apply Aux (design implications + expense lever)
+
+• Explored
+  └ Search Suggested first in master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+
+─ Worked for 27m 08s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• - Filled Part 3 (Aux) for Ontario in tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:493 (includes validation, per-signal analysis, and the convergence table at tasks/FINAL VALIDATION/RUNS/2025-06-
+    21__OntarioCanada4.md:588).
+  - Updated the template + help so future runs don’t drift:
+      - tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:108 now recommends running Aux with --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm and includes a Q9 signal legend at tasks/
+        master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:146.
+      - docs/AAT9_KIT/AAT9_Final_Validation_Help.md:59 documents the --excel requirement for master validation alignment.
+
+  If you want to review Part 3 together now, open tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:493 and we can walk Q1–Q10 line-by-line.
+
+
+› SO YOU BOTH COMPLETED PART 3 OF THE TEMPLATE THAT WAS TESTED AND WORKS WHILE ALSO COMPLETING ACTUALLY DOING/PEROFMRING  PART 3 FOR OUR ONTARIO VERSION OF ACTUALLY DOING THE FIRST TEMPALTE IS THAT CORRECT? DID IT WORK WELL?
+  WEREE THERE ANY ISSUES?
+
+
+• Yes—Part 3 is now actionable in the template and fully performed for Ontario in the run report.
+
+  - Completed Part 3 (Ontario): tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:493 (Q1–Q10 filled, including the Aux convergence table).
+  └ 0
+
+• Ran git diff --name-only | rg -n "modules/module_d_auxiliary_tools|modules/aux_loaders|alpha_analytical/control_center/aux_validation|modules/blackapple|draws_extractor_p3_columns|refactored/extractor\.py" || true
+  └ (no output)
+
+• Ran git diff -- modules/module_d_auxiliary_tools/refactored/extractor.py | wc -l
+
+› HERES WHAT IM HOPING YOU MENT, WE DID DISCUSS STRENGETHNING THE "CHECK OR VLADATION ASPECT" OF THE DATASETS AS WE KNOW THIS IS IMPORTANT AND NEEDED TO BE RE-INFORCED SINCE WEWANT TO MAKE SURE WHEN WE USE DIFFERNT PICK3STATSC4
+  WE ARE EXTRACTING AND BUILDING OUT FRESH DATASETS ASSOCAITED WITH THE EXCEL FILE UPLOAD SO WE HAD RE-INFORCED THIS FOR THE STRING TABLES EARLIER WHEN WE DISCOVERED THAT IN TEH PAST RUNS WERE NOT BEING DONE PASSED ON FRESH AND
+  CURRENT MATCHING STRING TABLES FOR NEW EXCEL FILES WHICH I THINK WE FIXED AND WHAT I HAD MENTIONED EARLIER WSA A SIMILAR DOUBLE CHECK OR RE-INFORECEMENT ON THE AUX SIDE OF ENSURING THE EXTRACTION OF THE 1000 DRAWS FOR EACH
+  STATE AS ITS MAPPED OUT IS ALSO RE-INFORCED THAT THEY AMTCH OR CORREPSOND WITH THE EXCEL FILE UPLOAD HOWEVER WE DID NOT WANT TOCOOMPLETELY TAMPER OR OVERHAUL THE ENTIRE DATASET EXTRACTION = DRAW DATA EXTRACTION FROM I THINK
+  EXCEL SHEET "P3 DRAWS" WHERE EACH STAE HAS MAPPED OUT COLUMSN TO EXTRAXT THE 1000'S DRAWS FOR ALL 3 VARIANTS WHICH WAS QUITE COMPREHESNIVE TO MAP OUT I REALLY HOPE THIS WASNT MISINTEROPRETTED AND DESTROYED OR MESSED WITH WHEN
+  WE WERE REALLY ONLY LOOKING TO RE-ENOFRCE THE CHECK ASPECT FOR FRESH DATASETS IF YOU ARE UNDERSTANDING ALL THIS I THINK IVE EXPLAINED IT QUITE CLEARLY..IM VERY WORRIED SOMETHING CRITICAL HERE WSAS DELETED BASE DON YOUR WORDING
+  UNLESS IM FREAKING OUT UNNECESSARILY AND YOU MIS-SPPOKE SLIGHTLY?
+
+
+• No — I did not change, delete, or “overhaul” the Aux draw‑extraction mapping from the Excel (your P3 DRAWS sheet / per‑state mapped columns). The actual Aux dataset extraction logic remains untouched.
+
+  What did happen (and why it sounded scary in my wording):
+
+  - The only “issue” was which draw CSV source Part 3 was reading during Master Validation: if Part 3 reads today’s live data/cleaned/draws/*_draws.csv, it can drift after workbook swaps and stop matching the sharepack tables
+    snapshot (built from the D‑1 workbook).
+  - The fix was a validation/reproducibility step, not a pipeline rewrite: scripts/tools/aux_sharepack_summary.py can now (optionally) generate/copy the draw CSVs into sharepacks/<DATE>/<STATE>/aux/draws/ so Part 3 is locked to
+    the same “world snapshot” as the tables.
+
+  Proof (so you can relax):
+
+  - There are zero diffs in core Aux extraction/loader code (modules/module_d_auxiliary_tools/..., modules/aux_loaders.py, alpha_analytical/control_center/aux_validation.py) — the only code change was the helper script scripts/
+    tools/aux_sharepack_summary.py plus docs/template/run-report updates.
+  - Part 3 explicitly cross‑checks the Aux snapshot against the string tables’ Set1 Draw1 draw_data (and it matches ✅ in the Ontario run report).
+
+› OK that's better I think just at times some of the wording gets me very worried but I trust that you have a deep understanding what all the tools are doing and where the data sets are coming from and why I think the best way
+  to understand things is I think this is why we built it into the check Is that the draw data for ogs and the string tables are in a way both saved up into a certain point OR UP UNTIL "MOST RECENT DRAW" Which makes sense since
+  we're building a predictive analytical tool Remember the logic about the results having the next day's date as we are trying to predict into the future So if you can follow that logic I was just thinking like I think I try to
+  communicate during the check reinforcement of the data sets One easy way to do that if you could program it accordingly like I suggested What's finding a way after extracting all the data sets there's a way you should be able
+  to match up our extracted string tables "DRAW DATA" AGAINST TEH AUX DRAW DATA WHICH EVEN JSUT LOGICALLY MAKES PERFECT STRAGIHT FORWARD SENSE AS THE AUX DATASET IS THE DRAW DATA AND THE STRING TABLES HAVE A ROW OR COLUMNS WITH
+  THIS INFO TO MATCH...IF WE DIDNT HAVE THE CORRECT OF EITHER DATASET IT BE EASY TO NOTICE THIS HOWEVER NOW THAT I THINK ABOUT EVERY SCENARIO..There is still a possible way we could have the data sets wrong even if we have that
+  matching mechanism programmed in I just realized and I think this has to do with and I'm pretty sure we addressed this comprehensively I think we had like broken this up into a comprehensive like stepped process where we
+  identified yes some sort of checking as I described and then like a part two or whatever having to do with making sure some form of the data set is compared with the actual excel file That that is the diligent other aspect
+  that I think helps avoid Let's say like here's an example of what I was trying to get at You could technically have aux draw data and string tables compared and match yet they are like from at different dates and not of the
+  current excel file which seems to the way in which this was done incorrectly before is that the data set wasn't made fresh and I guess there was no comparison to the excel file to confirm which is part of what I think we
+  change to make much more robust So I think in a way I'm just repeating or going over things that might already have been programmed properly I do like that you mentioned something about how there could be possible drifts that
+  you have accounted for or made a fix for because that's exactly the type of thing that I might not understand or be mindful of That's more unlike the computer aspect or side of things that you would know that I wouldn't know
+  That's good to reinforce for because I think we're on the same page of understanding exactly what the process is trying to do and I'm hoping it can confidently or has been confidently reinforced so I can feel quite confident
+  that these very important validation runs are being ran on the correctly generated data sets that originated from whatever Excel file is uploaded and associate from as you can probably understand in a straightforward way the
+  analytical program is basically find a way to instead of what I used to do is manually do some form of pattern recognition off the excel file the kind of Mac view where you could see things is we now have this super analytical
+  tool that you can upload the excel file to and it will do the advanced analysis that no longer needs to do manual You see that little analogy I made there kind of you could maybe see things in that way would you agree Now what
+  are your thoughts on everything I said regarding the data set stuff I want to believe we're pretty set with the data set stuff and we have a very robust clearly understood process for it now with diligent checks that we can
+  depend on can you share comprehensively on that so we can finally put that to bed I can't even quite remember why we brought it up again Maybe I'm just again trying to double check on everything as it was the first time you
+  ran auxiliary features for compound scoring or analysis right ?
+
+
+• Yes — what you’re describing is exactly the distinction, and no core Aux extraction logic was changed.
+
+  What happened (plain English)
+
+  - The Aux extractor still maps the P3 DRAWS sheet to build the 1000‑draw histories per state/variant the same way it always has.
+  - The only problem we hit in Part 3 was which copy of those draws we were reading during Master Validation:
+      - If Part 3 reads today’s live data/cleaned/draws/*_draws.csv, those files can change after you swap/upload a new Pick3StatsC4.
+      - But the sharepack tables for the run are a frozen “world snapshot” from the history workbook (D‑1).
+      - So the Aux “world” and the tables “world” can drift apart even though both are “valid” on their own.
+
+  What we did (reinforcement, not overhaul)
+
+  - We made Part 3 reproducible by snapshotting/generating the Aux draw CSVs into the sharepack from the same history workbook used to build the tables (D‑1).
+  - Then we added an explicit validation check: Aux newest draws must match the string tables’ Set1,Draw1,draw_data row.
+  - Core modules like modules/module_d_auxiliary_tools/..., modules/aux_loaders.py, and alpha_analytical/control_center/aux_validation.py were not modified.
+
+  Your “both could match but still be wrong” concern
+  You’re right: if you accidentally use the wrong history workbook for both tables and Aux, they could still match each other.
+
+  - The mitigation is: always record/lock the workbook identity (path + date, ideally a hash later) in the run artifacts.
+  - We already record the workbook path used for the Aux snapshot inside the Aux summary (sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md), and the run report now references the D‑1 logic.
+
+  Ontario confirmation
+
+  - Part 3 is fully completed in tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:493.
+  - The Aux snapshot was generated from data/history/Pick3StatsC4_2025_06_20.xlsm and the newest draws match the tables’ Set1 Draw1 draw_data for all 3 variants (✅ shown in Q1).
+  and all I realized this might be a good opportunity to pause and expand on that architecture diagram or documents you had began as even another AI suggested when I used to get worried about not having great architecture and
+  only THE "AAT9" STUFF That I shouldn't worry about it too much at the moment as there is pretty robust documentation but that the ideal time to do that would be near forming the final workflows which seems to be exactly what
+  we're doing now which is great news and fits right in with that architecture documentation and diagrams we just recently started Does this all make sense and sound like a good call before we continue with more of our core work
+  is maybe to do this kind of see it as an intermission task ? TO REINOFRCE THIS QUICKLY?
+
+
+     13
+        ⋮
+     54  | Aux draw CSVs | `data/cleaned/draws/*_draws.csv` | **Aux/BA must read draw CSVs** (not string-table XLSX). |
+     55 +| Aux draw snapshot (validation) | `sharepacks/<D>/<STATE>/aux/draws/` | For Master Validation Part 3, do not rely on live `data/cleaned/draws/` (it can drift after swaps). |
+     56  | Winners overlays (HTML/JSON lens) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | This is Template Part 1 (environment lens). |
+        ⋮
+    136  - Generate Aux evidence dump (Part 3):
+    193  - Aux reads `data/cleaned/draws/` (mutable). Part 3 must snapshot draw CSVs into sharepack to be reproducible.
+    194 +- For Master Validation, prefer generating the Aux snapshot from the history workbook (D‑1) so it matches the string-table snapshot:
+    195 +  - `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
+    196 +- Quick verification pattern (no “trust me” required):
+
+• Explored
+  └ Read FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    170 +  - Recommended (history-aligned): `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
+    171 +  - Fallback: `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE>`
+    172
+        ⋮
+    210  3) Pick a sharepack run report: `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+─ Worked for 2m 30s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — this is exactly the right moment to “lock in” the golden path and the dataset alignment invariants, because we’re now defining the real operational workflow (and Master Validation is the safest way to harden it).
+
+  1) Your “golden paths vs clutter” framing is correct
+  What we can now reliably depend on (for Master Validation runs):
+
+  - String tables are a world snapshot from the D‑1 workbook (history).
+  - Aux draws must be the same world snapshot (same D‑1 workbook), otherwise Part 3 can drift even if Aux itself is “working.”
+  - We now have a concrete verification pattern that catches drift immediately:
+      - Aux snapshot newest draws == string tables Set1,Draw1,draw_data (per variant).
+
+  That last check is the key “hard guardrail” you were describing.
+
+  3) I logged this into the workflow architecture doc (so future sessions don’t re‑learn it)
+  I updated docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:7 to explicitly encode:
+
+  - The “Snapshots must agree” rule (aux vs tables) docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:7
+  - The Aux sharepack snapshot contract docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:43
+  - The recommended Part 3 command using the D‑1 history workbook docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:126
+  - The pitfall + quick verification pattern docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:180
+
+  And it’s also reflected in:
+
+  - docs/AAT9_KIT/AAT9_Final_Validation_Help.md:59
+  - tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:99
+
+  So: yes, we’re now documenting this as a first-class golden path invariant, not tribal knowledge.
+
+
+› OK now speaking of all this and discussing some of the drift potential it just really has me a bit worried I just want to make sure we are like I guess ensuring there's protection against this I guess what like regression
+  guards or should we have health helper somewhere or I just get worried as a beginner there will be issues that I won't be able to understand or identify later you know what I mean ? Like if I were to understand correctly
+  assuming that everything we set up and reinforced regarding the data set creations being accurate and updated and fresh and matching ETC. Should we therefore expect all the outputs that we're getting from tools to accurate as
+  well as they should be analyzing off the fresh or accurate data sets ? Do you see why I'm asking this 'cause this has my mind wandering do these drifts or regressions can they trickle into even the analysis outputs or
+  something like this And we're not even noticing that ? But it seems logically they should be analyzing BEAST meeting the data set and and there's in some way the data set needs to be populated into an area that the tools are
+  mapped to analyze where that data set is like in that kind of sense it makes sense that it should all work properly but in the same way of like not understanding more back end things like this drift stuff or like is it
+  possible if things dealt with or reset or is there some weird thing with like cache resetting And if not the analytical tools might be producing some form of analysis outputs that aren't even current to the data sets that we
+  think are freshly generated that the tools are using Or am I opening up a can of worms unnecessarily and going down a dark path we don't need to go ? I think it's at least a good question to ask especially something to
+  consider now instead of later when it could be more of a nightmare to try and sort out or we notice it after tons of validation runs that are now not as valid You get what I mean ? I think this also came to mind because one of
+  the mismatches I noticed at some point regarding this data set stuff not matching are being updated via the winners output that you know I love that HTML 3 variant view V track winner output I remember this didn't like it
+  wasn't updated or matched properly and from what I remember as it's kind of changed a few times where this output actually is associated or comes from but we know it's generated through the batch mechanism so hopefully this is
+  making sense why that this is all came up to mind and it's probably good we consider all these things now I also should mention I'm pretty sure we added some sort of check even for that HTML winners output There is something
+  added for that too when I had noticed that Again this gets into like trying to remember so many different things we fixed and worked on it probably is logged somewhere would you wanna our need to understand exactly what was
+  done ? Here's what I'm suggesting since we are in intermission mode still asking some really good questions in dealing with possible things we won't regret Do you wanna go ahead and do like an investigation into some of the
+  items I mentioned to see maybe to collect some insights and then maybe return with your comprehensive thoughts and if you think that we should build some sort of plan to do more deeply deal with or investigate any of this
+  drift or regression potential remember I could also just be lacking experience and being paranoid but I'm just trying to be careful as we are getting very close to the more exciting aspects of being able to run full validation
+  runs I just wanna be very careful and make sure everything works properly It has been robustly checked and reinforced Hopefully you understand this and I agree with my thinking even if it's overkill

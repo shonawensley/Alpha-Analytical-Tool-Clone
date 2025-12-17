@@ -10,14 +10,16 @@ results file.
 Run the wrapper to enforce the day-ahead rule and basic checks for CT/FL:
 
 ```bash
-PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date YYYY-MM-DD
+PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date YYYY-MM-DD --regen-aux-draws
 # or
-PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-file Pick3StatsC4_YYYY-MM-DD.xlsm
+PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-file Pick3StatsC4_YYYY-MM-DD.xlsm --regen-aux-draws
 ```
 
 This will:
 - Activate `data/history/Pick3StatsC4_YYYY-MM-DD.xlsm` into `data/original/Pick3StatsC4.xlsm`.
 - Rebuild tables + JSON (via `run_tables_with_guard.py`).
+- Regenerate Aux draw CSVs for sentinel states (CT/FL) from the activated workbook (avoids Aux/table drift).
+- Validate that CT/FL tables and Aux draws describe the same newest draws (guards against stale Aux draw CSVs).
 - Generate winners using `data/results/(YYYY-MM-DD + 1).txt` into `reports/stable/winners_by_date/<RESULTS_DATE>/`.
 - Validate that CT/FL winners HTML exists for the expected triads and that the Set1/Draw1 sequence from the Combined tables appears inside the HTML (guards against stale tables).
 - Write a summary JSON to `reports/stable/validation_logs/validation_<RESULTS_DATE>.json`.
@@ -33,6 +35,13 @@ PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py --history-file P
   - `data/outputs/tables/<STATE>/Combined_Combined.csv`
   - `data/outputs/json_tables/<STATE>_tables.json`
 - Optional quick check: read CT/FL Set1/Draw1 row in the Combined CSV to see col1/col2 digits.
+
+1b) Regenerate Aux draw CSVs (CT/FL) and validate alignment (recommended)
+```
+python3 scripts/auxiliary/generate_draws_csv.py --states Connecticut Florida --max-draws 1000
+python3 scripts/tools/validate_tables_aux_alignment.py --state Connecticut4
+python3 scripts/tools/validate_tables_aux_alignment.py --state Florida4
+```
 
 2) Generate winners for the day-ahead results (history date + 1)  
 ```

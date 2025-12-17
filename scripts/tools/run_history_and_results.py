@@ -27,6 +27,8 @@ TABLES_DIR = ROOT / "data" / "outputs" / "tables"
 WINNERS_ROOT = ROOT / "reports" / "stable" / "winners_by_date"
 RESULTS_DIR = ROOT / "data" / "results"
 VALIDATION_LOG_DIR = ROOT / "reports" / "stable" / "validation_logs"
+GEN_AUX_DRAWS = ROOT / "scripts" / "auxiliary" / "generate_draws_csv.py"
+VALIDATE_TABLES_AUX = ROOT / "scripts" / "tools" / "validate_tables_aux_alignment.py"
 
 
 @dataclass
@@ -54,6 +56,16 @@ def parse_args() -> argparse.Namespace:
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--history-date", help="History date (YYYY-MM-DD) to infer Pick3StatsC4_*.xlsm")
     g.add_argument("--history-file", help="Explicit history workbook filename under data/history/")
+    p.add_argument(
+        "--regen-aux-draws",
+        action="store_true",
+        help="Regenerate Aux draw CSVs for the sentinel states (CT/FL) from the activated workbook before validation.",
+    )
+    p.add_argument(
+        "--skip-aux-alignment",
+        action="store_true",
+        help="Skip tables↔aux alignment validation (not recommended).",
+    )
     return p.parse_args()
 
 
@@ -145,6 +157,33 @@ def main() -> None:
 
     # 1) Activate history workbook + regenerate tables
     run_subprocess([sys.executable, str(ROOT / "scripts" / "tools" / "run_tables_with_guard.py"), "--history-file", history_file])
+
+    # 1b) Optional: regenerate Aux draw CSVs (CT/FL) from the activated workbook so Aux signals
+    # match the same "world snapshot" as the tables.
+    if args.regen_aux_draws:
+        run_subprocess(
+            [
+                sys.executable,
+                str(GEN_AUX_DRAWS),
+                "--states",
+                "Connecticut",
+                "Florida",
+                "--max-draws",
+                "1000",
+            ]
+        )
+
+    # 1c) Validate tables↔aux alignment for sentinel states (guards against stale/mismatched draws).
+    if not args.skip_aux_alignment:
+        try:
+            for state in ("Connecticut4", "Florida4"):
+                run_subprocess([sys.executable, str(VALIDATE_TABLES_AUX), "--state", state])
+        except subprocess.CalledProcessError:
+            raise SystemExit(
+                "Tables↔Aux alignment failed. "
+                "If you just swapped workbooks, re-run with --regen-aux-draws "
+                "or regenerate the Aux draw CSVs from the active workbook."
+            )
 
     # 2) Generate winners for the day-ahead results
     run_subprocess(

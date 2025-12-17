@@ -42,6 +42,23 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
   - `scripts/tools/aux_sharepack_summary.py`
 
+### Drift guards: tables↔aux alignment (why sentinel checks exist)
+
+- Problem observed: it is possible for **tables** (`data/outputs/tables/...`) and **aux draws** (`data/cleaned/draws/...`) to describe different “world snapshots” after workbook swaps/rebuilds. This can silently invalidate analysis runs.
+- Fix: add a fast validator that compares “newest draws” in tables vs aux draws and fails fast on mismatch.
+- Files:
+  - `scripts/tools/validate_tables_aux_alignment.py`
+- How it’s used (two modes):
+  - **Live workspace guard** (mutable outputs): `python3 scripts/tools/validate_tables_aux_alignment.py --state <STATE>`
+  - **Master Validation guard** (sharepack snapshots): `python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict`
+- Why we default to “check a couple states” in preflight:
+  - Preflight should be **fast enough that you actually run it**, so it uses sentinel states (CT/FL) to catch systemic drift.
+  - This catches global “wrong workbook / stale tables / stale aux draws” problems, but it does **not** guarantee every state is healthy (state-specific issues can still exist).
+  - Recommended escalation:
+    - Quick: CT/FL sentinel checks (default).
+    - Targeted: run alignment for the specific state you are analyzing that day.
+    - Full sweep (optional): iterate all tracked states when debugging or before a large batch.
+
 ### Run report safety + Part 3 wiring
 
 - Run report generator now includes Part 3 scaffolding and Aux sharepack pointers.

@@ -4,6 +4,9 @@ Purpose: A single reference for running historical/backtest examples safely and 
 
 Repo root (WSL): `/home/ser/code/Alpha-Analytical-Tool-Clone`
 
+Read first (workflow architecture + where everything lives):
+- `docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+
 Date convention (important):
 - `sharepacks/<DATE>/...` uses the **results/winners date** (D).
 - The corresponding history workbook is typically the day before (D‑1) and is what tables/JSON were built from.
@@ -40,8 +43,11 @@ Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`
 - Preflight/guards: `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md`, `docs/AAT9_KIT/AAT9_Batch_Workflow_SOP.md`
 - Lean outputs per tool: `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md` (Digit Reduction notes below)
-- Quick validation helpers:
+  - Quick validation helpers:
   - Table naming check (no file changes): `PYTHONPATH=.:src python3 scripts/tools/validate_tables_naming.py --json-out tables_naming.json`
+  - Tables↔Aux alignment check (guards against stale/mismatched Aux draw CSVs):
+    - Live: `python3 scripts/tools/validate_tables_aux_alignment.py --state <STATE>`
+    - Sharepack (Master Validation Part 3): `python3 scripts/tools/validate_tables_aux_alignment.py --date <DATE> --state <STATE> --strict`
   - Stable winners-in-spotlight check: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE>`
   - Stable sharepack summarizer (Markdown/JSON for Part 2): `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md --json-out summary.json`
     - Paste the Markdown into Part 2 before answering the tool questions; it already shows canonical mapping, per-output evidence, 4-criteria counts, and coverage gaps.
@@ -53,8 +59,9 @@ Related SOPs/refs:
   - Hot Zones winners check: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE>`
   - Hot Zones sharepack summarizer: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md --json-out summary.json`
     - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
-  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
-    - Snapshots draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` so Part 3 stays reproducible even after workbook swaps; paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+  - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
+    - Key rule: for Master Validation, Aux must align to the **history workbook** used to build the string tables (typically D‑1 for results/sharepack date D). Use `--excel` to generate the draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` from that workbook. If you omit `--excel`, the script snapshots from the current live `data/cleaned/draws/*_draws.csv` which can drift after swaps.
+    - Paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
   - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
   - VTRAC compact report validator (flags missing/empty states/sections): `python3 scripts/tools/validate_vtrac_compact_report.py --date <DATE>`
 

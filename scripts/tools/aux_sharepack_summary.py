@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from datetime import date as _date
@@ -102,6 +103,73 @@ def snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, D
     return info
 
 
+def resolve_aux_state_label(state_key: str) -> str | None:
+    """
+    Map a sharepack state key (e.g., OntarioCanada4) to an Aux extractor label
+    (e.g., Ontario) for draw generation from a workbook.
+    """
+    try:
+        from modules.module_d_auxiliary_tools.refactored import draws_extractor_p3_columns as column_map  # type: ignore
+    except Exception:
+        return None
+
+    canonical = column_map.canonical_state(state_key)
+    if canonical:
+        return canonical
+
+    norm_key = re.sub(r"[^a-z0-9]+", "", (state_key or "").lower())
+    best: str | None = None
+    best_score = 0
+    for tracked in column_map.get_tracked_states():
+        norm_tracked = re.sub(r"[^a-z0-9]+", "", tracked.lower())
+        if not norm_tracked:
+            continue
+        if norm_tracked in norm_key or norm_key in norm_tracked:
+            score = len(norm_tracked)
+            if score > best_score:
+                best_score = score
+                best = tracked
+    return best
+
+
+def generate_draws_to_snapshot(
+    *,
+    excel_path: str,
+    state_key: str,
+    snapshot_dir: Path,
+    max_draws: int,
+) -> Dict[str, Any]:
+    """
+    Generate Combined/Midday/Evening draw CSVs for a state from a specific workbook
+    snapshot into the sharepack snapshot directory.
+    """
+    ensure_dir(snapshot_dir)
+    aux_state_label = resolve_aux_state_label(state_key)
+    if not aux_state_label:
+        return {
+            "ok": False,
+            "excel_path": excel_path,
+            "state_key": state_key,
+            "error": "aux_state_label_unresolved",
+        }
+    from modules.module_d_auxiliary_tools.refactored import extractor as aux_extractor  # type: ignore
+
+    aux_extractor.save_category_csvs(
+        excel_path=excel_path,
+        states=[aux_state_label],
+        outdir=snapshot_dir,
+        include_combined=True,
+        include_specials=False,
+        max_draws=max_draws,
+    )
+    return {
+        "ok": True,
+        "excel_path": excel_path,
+        "state_key": state_key,
+        "aux_state_label": aux_state_label,
+    }
+
+
 def load_snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, Dict[str, Any]]:
     by_variant: Dict[str, Dict[str, Any]] = {}
     for variant in VARIANTS:
@@ -175,8 +243,22 @@ def build_summary(
     sums_window: int,
     pairs_window: int,
     positional_window: int,
+    excel_path: str | None = None,
 ) -> Dict[str, Any]:
-    live_draws = snapshot_draws(state, snapshot_dir, max_n=max_n)
+    live_info = resolve_live_draw_paths(state, max_n=max_n)
+    snapshot_meta: Dict[str, Any] = {"mode": "copied_from_live"}
+    if excel_path:
+        snapshot_meta = {"mode": "generated_from_excel"}
+        snapshot_meta.update(
+            generate_draws_to_snapshot(
+                excel_path=excel_path,
+                state_key=state,
+                snapshot_dir=snapshot_dir,
+                max_draws=max_n,
+            )
+        )
+    else:
+        snapshot_meta["copy_report"] = snapshot_draws(state, snapshot_dir, max_n=max_n)
     snapshot_draws_info = load_snapshot_draws(state, snapshot_dir, max_n=max_n)
 
     repeat_watch = aux_validation.repeat_summary_by_variant(state, base=snapshot_dir, max_n=max_n)
@@ -253,7 +335,8 @@ def build_summary(
         "date": sharepack_date,
         "draw_sources": {
             "snapshot_dir": str(snapshot_dir),
-            "live": live_draws,
+            "snapshot_meta": snapshot_meta,
+            "live": live_info,
             "snapshot": snapshot_draws_info,
         },
         "config": {
@@ -328,6 +411,12 @@ def render_markdown(summary: Dict[str, Any]) -> str:
 
     lines.append("## Draw sources (source: modules.aux_loaders.load_state_draws)")
     lines.append(f"- snapshot_dir: `{safe_rel(draws.get('snapshot_dir'))}`")
+    meta = draws.get("snapshot_meta", {}) or {}
+    lines.append(f"- snapshot_mode: {meta.get('mode') or '-'}")
+    if meta.get("mode") == "generated_from_excel":
+        lines.append(f"- excel: `{safe_rel(meta.get('excel_path'))}` | aux_state_label: {meta.get('aux_state_label') or '-'}")
+        if meta.get("ok") is False:
+            lines.append(f"- snapshot_error: {meta.get('error')}")
     for variant in VARIANTS:
         live = (draws.get("live", {}) or {}).get(variant, {})
         snap = (draws.get("snapshot", {}) or {}).get(variant, {})
@@ -510,6 +599,11 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=10, help="Top-N rows to render per section (default 10)")
     ap.add_argument("--sums-window", type=int, default=100, help="Sums analysis window (default 100)")
     ap.add_argument(
+        "--excel",
+        default=None,
+        help="Optional Pick3StatsC4 workbook path to generate draw CSVs into the sharepack snapshot dir (recommended for backtests).",
+    )
+    ap.add_argument(
         "--pairs-window",
         type=int,
         default=int(getattr(aux_config, "PAIRS_WINDOW", 360)),
@@ -545,6 +639,7 @@ def main() -> None:
         sums_window=args.sums_window,
         pairs_window=args.pairs_window,
         positional_window=args.positional_window,
+        excel_path=args.excel,
     )
     md_text = render_markdown(summary)
 

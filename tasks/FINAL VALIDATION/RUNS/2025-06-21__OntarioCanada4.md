@@ -494,15 +494,121 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 
 Primary evidence dump (generated from draw CSV snapshot):
 - `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md`
+- `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json`
 
-Part 3 answers (use Part 3 prompts in `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+### 3.Aux — OntarioCanada4 — 2025-06-21
+0) Outputs reviewed
+- Draw CSV snapshot (sharepack-stable): `sharepacks/2025-06-21/OntarioCanada4/aux/draws/` (Ontario_draws.csv, Ontario_Midday_draws.csv, Ontario_Evening_draws.csv)
+- Aux evidence dump (sharepack-stable): `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md`
+- Aux structured data: `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.json`
+
+Aux evidence dump:
+- `sharepacks/2025-06-21/OntarioCanada4/aux/OntarioCanada4/summary.md` (already labeled by source; copy/paste here only if you need a single-file share)
+
+1) Aux input validation (V)
+- Snapshot mode: `generated_from_excel` from `data/history/Pick3StatsC4_2025_06_20.xlsm` (Aux state label: `Ontario`).
+- Snapshot counts (max_n=1000):
+  - Combined: `Ontario_draws.csv` n=1000 head=343, 211, 367, 221, 875
+  - Midday: `Ontario_Midday_draws.csv` n=1000 head=211, 221, 847, 805, 890
+  - Evening: `Ontario_Evening_draws.csv` n=1000 head=343, 367, 875, 896, 807
+- Cross-check vs string-table “world snapshot” (Set1 Draw1 `draw_data`, columns 1–5):
+  - Combined table (`sharepacks/2025-06-21/OntarioCanada4/tables/Combined_Combined.csv`): 343, 211, 367, 221, 875 ✅
+  - Midday table (`sharepacks/2025-06-21/OntarioCanada4/tables/Midday_Combined.csv`): 211, 221, 847, 805, 890 ✅
+  - Evening table (`sharepacks/2025-06-21/OntarioCanada4/tables/Evening_Combined.csv`): 343, 367, 875, 896, 807 ✅
+
+2) Positional pressure (core)
+- Variant top digits (rank 1):
+  - Combined: P1=9 (gap=23), P2=8 (gap=28), P3=2 (gap=34)
+  - Midday: P1=6 (gap=22), P2=7 (gap=28), P3=6 (gap=24)
+  - Evening: P1=5 (gap=27), P2=3 (gap=28), P3=9 (gap=23)
+- Hard-due positional digits: none (all variants).
+- Winner overlap:
+  - Midday winner `678`: matches Midday P1=6 and P2=7 (two direct positional hits), but not P3 top digit.
+  - Evening winner `517`: matches Evening P1=5 (one direct positional hit), but not P2/P3 top digits.
+- Notable higher-level positional signal: “Double-Pressure” and “Mirror-Echo” themes are present across variants (e.g., 0↔5, 1↔6, 2↔7, 3↔8, 4↔9). Both winners use digits inside these mirrored pressure clusters (678 uses 6/7/8; 517 uses 5/1/7), suggesting positional pressure is better treated as a **compound digit-level booster** rather than a direct 3-digit selector.
+
+3) Positional shortlist (prediction list)
+- Top shortlist candidates (from positional tool): 952, 959, 982, 989, 932, 752, 954, 939, 782, 732 (tags commonly include Double-Pressure + Mirror-Echo + XVAR consensus).
+- Direct overlap with winners:
+  - Midday winner `678`: not present.
+  - Evening winner `517`: not present.
+- Overlap with Part 2 “anchor” candidates (e.g., 367/362/175/599/592/227): none. This is an important observation: the positional tool is flagging a different “pressure lane” (9/5/2/8 style digits) than the string-tools’ strongest survivor families for this date/state.
+
+4) Repeat-watch + index streak context
+- Repeat-watch current index / streak:
+  - Combined: current_index=33 streak=1 (max=3)
+  - Midday: current_index=17 streak=1 (max=2)
+  - Evening: current_index=33 streak=1 (max=3)
+- Winner indices:
+  - `678` → VTRAC index 21
+  - `517` → VTRAC index 7
+- Assessment: repeat-watch does not directly support either winner index here (it’s tracking different current indices). Treat repeat-watch as a **separate alert channel** (good for environment notes), not a primary winner booster for this example.
+
+5) VTRAC overlay / heatboard (index pressure)
+- Top overdue indices (draws since) per variant:
+  - Combined: 32:687, 1:283, 6:115, 26:114, 13:108, 5:80, 16:64, 34:58, 28:57, 3:41
+  - Midday: 32:343, 21:189, 16:185, 1:141, 34:126, 27:102, 26:89, 10:71, 33:62, 13:59
+  - Evening: 32:674, 35:232, 6:195, 28:167, 1:147, 20:117, 3:114, 17:100, 26:57, 13:54
+- Cross-variant pressure anchors:
+  - Index 32 is *extremely* overdue across all 3 variants (Combined 687 / Midday 343 / Evening 674). Index 1 / 13 / 26 also recur in multiple variants.
+- Winner index alignment:
+  - Midday winner `678` (idx21): **strong** Midday support (idx21 ds=189 and in Midday top-overdue list) but not a cross-variant index anchor (Combined idx21 ds=2, Evening idx21 ds=1).
+  - Evening winner `517` (idx7): **not** in top-overdue lists; low/normal ds values (Combined 12 / Midday 22 / Evening 6).
+- Interpretation: for this example, index pressure helps explain the Midday win (idx21 lane is highly pressured in Midday), while Evening win did not come from “index due.” This reinforces “Aux is compound evidence, not a deterministic predictor.”
+
+6) Doubles + pairs pressure
+- Doubles: no direct winner alignment (both winners are non-doubles). Keep doubles as environment-level pressure (esp. multi-variant doubles alerts like 228/255/288/338/388/778).
+- Pairs (winner-aligned):
+  - Midday: `678` contains pair `67`, flagged as a pending non-repeating pair (ds=44, sev=blue).
+  - Midday: `517` contains pairs `17` and `57`, both pending non-repeating pairs (ds=46/44, sev=blue).
+  - Evening: `517` contains pair `15`, pending non-repeating pair (ds=25, sev=purple).
+- Cross-variant pair alerts exist (see summary), but the key takeaway here is that **pair pressure did align cleanly** with both winners (especially via Midday’s blue non-repeating pair set).
+
+7) Sums / root-sum pressure
+- Winner sums:
+  - Midday winner `678` sum=21: **strongly due** across all variants (draws_since=100; flags red+purple in Combined/Midday/Evening).
+  - Evening winner `517` sum=13: not “due”, but **hot** in Evening (draws_since=9; flags blue=True).
+- Interpretation:
+  - Sum21 looks like an environment-level “deficit anchor” (very valuable compound feature for the day).
+  - Evening sum13 looks like a localized “hot sum” (candidate-level booster), not a due anchor.
+
+8) Blackapple (if enabled)
+- Scores/triggers are present (Combined score=1; Midday score=2; Evening score=1), but:
+  - The winners (678 / 517) are not in the top BA candidate lists for any variant.
+  - The most relevant BA overlap is indirect: Midday shows root_due=[6] and floating digits include 6 (winner 678 contains 6), but this does not translate into direct BA candidate agreement.
+- Conclusion: treat BA as “weak/neutral agreement” for this example; do not weight it heavily in Part 3 convergence for OntarioCanada4 on this date.
+
+9) Aux convergence score (new, high-value)
+Legend (signals per variant):
+- `pos`: candidate appears in positional shortlist (positional tool)
+- `idxTop`: candidate’s VTRAC index is in the variant’s top-overdue overlay list
+- `sum`: candidate sum has a strong flag (red or blue)
+- `pair`: candidate contains at least one pending pair (red/blue/purple) in the variant’s pair lists
+
+Aux convergence table (winner + cross-tool anchors):
+| triad | idx | sum | variants_supported | signals_total | C | M | E |
+|---|---:|---:|---:|---:|---|---|---|
+| 678 | 21 | 21 | 3 | 5 | sum | idxTop,sum,pair | sum |
+| 517 | 7 | 13 | 2 | 3 | - | pair | sum,pair |
+| 175 | 7 | 13 | 2 | 3 | - | pair | sum,pair |
+| 367 | 21 | 16 | 1 | 2 | - | idxTop,pair | - |
+| 362 | 21 | 11 | 3 | 4 | pair | idxTop,pair | pair |
+| 599 | 15 | 23 | 3 | 4 | sum,pair | pair | pair |
+| 592 | 12 | 16 | 3 | 3 | pair | pair | pair |
+| 227 | 26 | 11 | 3 | 6 | idxTop,pair | idxTop,pair | idxTop,pair |
+| 952 | 12 | 16 | 3 | 6 | pos,pair | pos,pair | pos,pair |
+| 989 | 34 | 26 | 3 | 5 | pos,idxTop | pos,idxTop | pos |
+
+Highlights:
+- **Winner 678** has the cleanest “variant-correct” compound story: Midday idx21 pressure + Midday pending pair67 + sum21 deficit anchor across all variants.
+- **Winner 517** is moderate-confidence: supported by pair pressure (Midday+Evening) and Evening’s hot sum13.
+- **227 / 952 / 989** look “Aux-strong” but did not win → this is exactly why Aux must remain a *compound booster*, not the primary selector.
+
+10) How to apply Aux (design implications + expense lever)
+- Best use pattern (based on this example):
+  - State-level gating: treat strong cross-variant anchors (e.g., sum21 deficit + index32 mega-due) as “playable environment” evidence.
+  - Candidate-level boosts: within the Part 2 candidate set, boost candidates that stack multiple signals in the **correct variant** (e.g., 678 in Midday: idxTop + sum + pair).
+- Expense lever (cheap play mode):
+  - When Part 1 shows “tight perm lanes” and Aux strongly supports the winner lane, prefer **perm-only / in-table perms** over “play full VT-box”, unless uncertainty remains high across tools.
+  - For this example, the strongest “cheap justification” is Midday 678: Aux is highly supportive in Midday; Part 1 noted the winner manifested via a tight perm lane (867/687). That’s the kind of scenario where an aggregator could recommend “play the in-table perms (+ optionally the literal if covered)” instead of full index coverage.
+- Caution: the strongest *cross-variant* index anchor here is index32, but the winners are not index32. So: treat cross-variant index pressure as environment context, not an automatic candidate selector.

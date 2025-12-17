@@ -104,7 +104,10 @@ Key rule: Aux draws must be aligned to the **history workbook** used to build th
 
 Evidence block (recommended):
 - Generate/update the Aux summary inside the sharepack:
-  - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+  - Recommended (history-aligned; prevents drift after workbook swaps):
+    - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
+  - Fallback (copies from current live `data/cleaned/draws`; use only if you don’t have the history workbook snapshot):
+    - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
 - Paste the generated `summary.md` under 0) before answering Q1–Q10.
 
 ## 3.Aux — [State] [Date]
@@ -140,6 +143,12 @@ Evidence block (recommended):
 9) Aux convergence score (new, high‑value)  
    - Build a tiny table for (winner + top 5–10 candidates): number of Aux signals supporting it, and in how many variants (1/2/3).  
    - Highlight “high-confidence” candidates where Aux compounding is strongest across variants.
+   - Suggested first‑pass “signal” types to count (keep it explicit with a legend):
+     - `pos`: in positional shortlist
+     - `idxTop`: candidate VTRAC index is in the variant’s top‑overdue overlay list
+     - `sum`: candidate sum has a strong flag (red or blue)
+     - `pair`: candidate contains a pending pair (red/blue/purple)
+     - `BA`: candidate is a top Blackapple pick (if enabled)
 10) How to apply Aux (design implications + expense lever)  
    - Should the strongest Aux signals here be used as state-level gating (“play day / pass day”), candidate-level boosts, or both?  
    - Given Part 1+2+3 evidence, what is the cheapest reasonable play mode (perm-only vs VT-box vs skip), and why?
