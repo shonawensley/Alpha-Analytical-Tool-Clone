@@ -1,0 +1,2396 @@
+
+
+
+Understood. I’ll go one tool at a time, starting with Digit Reduction, and build a state-of-the-art summarizer that
+  pulls every relevant detail from all final outputs (brain + winners), with clear source labels and canonical mapping,
+  so we never need to dump raw files into chat again. I’ll read the DR lean outputs doc and the DR tool-specific
+  analysis log first, then produce the summarizer/validator and share the output for review before moving on to the
+  next tool.
+
+
+
+Read the DR logs (Part2 and Part1) plus lean outputs; clear on DR outputs and scoring signals. I haven’t edited any
+  DR code yet—just gathered the requirements to build the DR summarizer and validator in the same style as Stable (per-
+  output labels, canonical-aware, Markdown/JSON ready to paste into Part 2).
+
+  What I’ll do next (one-tool focus, no renames):
+
+  - Inventory DR sharepack outputs (reducer report/scores, analyzer_v2 per_item/top/meta, stacked HTML, training logs/
+  steps, overlays/flags/hits/maps).
+  - Build a DR summarizer that:
+      - Reads all of the above and maps literal→canonical.
+      - Reports winner evidence/ranks with explicit source labels (per_item, top_candidates, overlay flags/hits, reducer
+  scores/report, meta).
+      - Lists top candidates with why-tags and coverage gaps (missing winner flags).
+      - Emits Markdown/JSON to paste under Part 2 step 0 before answering questions.
+  - Add a small validator (optional) to check winners are present in winner_flags/overlay (canonical-aware), skipping
+  GA/TX/WV.
+  - Update the help doc with DR summarizer/validator usage once ready.
+
+  I’ll proceed with that now; no file renames, tables untouched, path_handler SSOT respected.
+
+
+• Progress update — Digit Reduction summarizer built and run:
+
+  - New script: scripts/tools/dr_sharepack_summary.py
+      - Reads DR sharepack outputs (reducer scores/report, analyzer_v2 per_item/top/meta, winner flags/hits/map/
+  overlay).
+      - Maps winners (Midday/Evening/Combined) to literal + canonical, reports evidence with source labels (flags, hits,
+  per_item, top, reducer presence), lists top per_item/top candidates, and coverage gaps.
+      - Outputs Markdown + JSON suitable for Part 2 step 0.
+  - Generated for OntarioCanada4 (2025-06-21 sharepack):
+      - Markdown: sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.md
+      - JSON: sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.json
+
+  Next steps:
+
+  - Optionally add a small DR validator to ensure winners appear in winner_flags/hits (canonical-aware).
+  - Update the help doc with DR summarizer/validator usage like we did for Stable.
+  - Repeat the summarizer pattern for VTRAC and Hot Zones (per-tool outputs, labeled, canonical-aware).
+
+  No core logic or tables were changed.
+
+
+DR tooling done:
+
+  - New summarizer: scripts/tools/dr_sharepack_summary.py
+      - Reads DR sharepack outputs (reducer report/scores, analyzer_v2 per_item/top/meta, winner flags/hits/map/
+  overlay).
+      - Canonical-aware, labels every fact by source, lists top per_item/top candidates, shows coverage gaps.
+      - Example run (done):
+        python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/digit_reduction/
+  OntarioCanada4 --md-out .../summary.md --json-out .../summary.json
+      - Outputs generated for Ontario: summary.md / summary.json in the DR sharepack.
+  - New validator: scripts/tools/validate_dr_winners.py
+      - Checks that winners appear in winner_flags/hits (Midday/Evening/Combined, canonical-aware).
+      - Ontario run: OK for all variants.
+  - Help doc updated (docs/AAT9_KIT/AAT9_Final_Validation_Help.md) with DR validator/summarizer usage alongside Stable
+  helpers.
+
+  No core logic or tables changed.
+
+  Next: I can replicate the summarizer/validator pattern for VTRAC and Hot Zones, then paste the summaries into Part 2
+  before answering questions. Let me know if you want me to proceed to VTRAC next.
+
+
+• VTRAC tool covered:
+
+  - New VTRAC summarizer: scripts/tools/vtrac_sharepack_summary.py
+      - Reads the enhanced VTRAC bundle JSON in the sharepack and produces Markdown/JSON (top indices/straights, section
+  summaries) with source labels.
+      - Example run (done):
+        python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/vtrac/
+  OntarioCanada4 --md-out .../summary.md --json-out .../summary.json --top-n 5
+      - Output for Ontario lives in sharepacks/2025-06-21/OntarioCanada4/vtrac/OntarioCanada4/summary.md/json.
+  - Help doc updated (docs/AAT9_KIT/AAT9_Final_Validation_Help.md) with VTRAC summarizer usage alongside Stable/DR
+  helpers.
+
+  Notes:
+
+  - Current bundle is analyzer-only (no winner_map/flags). If a future bundle includes winner_map/flags, we can extend
+  the summarizer to report winner coverage as well.
+  - No code or tables were modified.
+
+  Next: I can build the Hot Zones summarizer/validator in the same pattern (per-output labels, canonical-aware) and
+  add its usage to the help doc. Then all four tools will have drop-in summaries for Part 2. Let me know to proceed to
+  Hot Zones.
+
+ 
+
+
+• You’re right—VTRAC should have winner artifacts when they’re produced. This Ontario bundle appears to be analyzer-
+  only (enhanced JSON + validation report) with no winner_map/flags present. I haven’t added winner coverage to the
+  summarizer because those files aren’t in this sharepack.
+
+  I’ll double-check everything before changing anything:
+
+  - Re-read the VTRAC sections in the lean outputs doc and the VTRAC analysis log.
+  - Re-skim PITFALLS, the changelog, and the checkpoint log for any VTRAC/winner-map notes.
+  - Inspect the sharepack to confirm whether winner_map/flags should be there (maybe a different bundle pattern or
+  missing run).
+
+  Next steps after that check:
+
+  - If winner_map/flags are expected but missing, I’ll note it and propose a fix (e.g., run the winner export or add
+  them to the bundle). Then I’ll extend the VTRAC summarizer to include winner coverage when present.
+  - If this bundle is truly analyzer-only, I’ll keep the summarizer as-is and document the gap.
+
+  I’ll do the doc sweep now and report back with the findings and the right path forward.
+
+
+
+
+• Findings on VTRAC winner artifacts:
+
+  - The Ontario VTRAC sharepack only contains the enhanced analyzer JSON and validation report (no winner_map/flags).
+  This matches the lean outputs doc’s note that bundles can include winner_map/flags but this particular bundle is
+  analyzer-only.
+  - The VTRAC analysis log focuses on using winners HTML + compact report for review; it doesn’t guarantee winner_map/
+  flags are present in every bundle.
+
+  Conclusion: The current sharepack legitimately lacks winner artifacts. I won’t force a change without rerunning
+  the exporter. The summarizer stays analyzer-only; if we later run a bundle with winner_map/flags, I’ll extend the
+  summarizer to include coverage.
+
+  Next options:
+
+  - Proceed to Hot Zones summarizer/validator.
+  - Or, if you want VTRAC winner coverage now, we’d need to re-run the VTRAC bundle with winner_map/flags output
+  enabled; then I’d update the summarizer to ingest those files.
+
+  Let me know which path to take.
+
+
+
+
+
+Investigated VTRAC winner artifacts:
+
+  - Lean outputs doc says bundles can include winner_map/flags; this Ontario sharepack doesn’t—only enhanced analyzer
+  JSON and validation report are present. The VTRAC analysis log focuses on winners HTML + compact/validation overlap;
+  it doesn’t mandate that every bundle contains winner_map/flags.
+  - Winners VTRAC report doc describes separate winners logger outputs (HTML under data/outputs/winners/...) and the
+  analyzer-style full report; those aren’t in this VTRAC sharepack.
+  - Checkpoint/changelog confirm enhanced bundles ship section summaries/top straights but don’t guarantee winner_map/
+  flags unless the share-bundle runner is invoked with that option.
+
+  Conclusion: For this sharepack, the absence of winner_map/flags is expected. To get winner coverage, we’d need to re-
+  run the VTRAC share-bundle with winner_map/flags enabled.
+
+  Current summarizer remains analyzer-only. If you want winner coverage:
+
+  - Re-run VTRAC bundle with run_vtrac_share_bundle.py (or equivalent) producing winner_map.json/winner_flags.csv, then
+  I’ll extend the summarizer to include winner presence/ranks.
+
+  I can proceed to Hot Zones summarizer/validator next, or pause and re-run VTRAC with winner artifacts—your call.
+
+
+
+
+
+________________________________________________________________________________________________________________
+
+
+This is exactly what docs/AAT9_KIT/AAT9_Winners_VTrac_Report.md describes: winners reports are a separate pipeline
+    that reuses VTRAC reference + matchers to overlay winners on the tables.
+  - Global compact/scored V‑TRAC report (across states) is at the date root:
+    sharepacks/2025-06-21/vtrac_compact_report.json / .csv and summary.md / summary.csv.
+
+  - Analyzer bundle = “brain evidence + rankings”
+  - Winners Logger outputs = “post‑results winner overlays / hit evidence”
+
+  This split also matches the lean‑outputs direction in docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md: winner_map/flags
+  are being centralized in the winners module, not duplicated per tool.
+
+  If you want Part 2 to have a single V‑TRAC block, I can extend the VTRAC summarizer to also read the winners folder +
+  compact report and output one combined Markdown (still labeled by source).
+
+
+
+
+Your interpretation is basically right. The clean mental model is:
+
+  - Brain outputs = pre‑results analysis/predictions. These are what each tool produces from the string tables before we
+    know the winners.
+  - Winners outputs = post‑results audit. After we enter/paste the real winners, the system logs whether that tool would
+    have hit under the 4 criteria (EB/ES/VB/VS) and with what evidence. This is for validation/tuning, not for making
+    the prediction that day.
+
+  Where the “winners outputs” live per tool (today):
+
+  - Stable Pattern Extractor
+      - Brain: ..._stable_patterns_scores.csv, ..._families.csv, ..._compound.csv, ..._metrics.json.
+      - Winners lens: ..._winner_family_spotlight_raw.csv, ..._winner_family_spotlight_families.csv.
+      - Those spotlight files + metrics are the Stable “winners output” showing EB/ES and VT‑boxed alignment in
+        canonical space.
+  - Digit Reduction
+      - That map/hits is Hot Zones’ winners output (EB/ES/VB/VS).
+  - V‑TRAC Analyzer
+      - Brain: enhanced analyzer bundle + compact report (in sharepacks/<date>/<state>/vtrac/...).
+      - Winners output is not inside the analyzer bundle. It’s produced by the centralized Winners Logger /
+        V‑Trac Winner Report pipeline and saved under the winners sharepack (e.g., sharepacks/<date>/<state>/
+        winners/..._vtrac*_winner_*.html/json) plus global vtrac_compact_report.*.
+  1. Run tools → get brain outputs (prediction side).
+  2. Enter winners → centralized winners logging + any per‑tool lenses → evaluate hits by 4 criteria.
+  3. Use master validation to decide what to keep/lean and how to wire the super‑brain.
+
+  Your docs aren’t “all over the place”; they reflect an app that evolved. The core contracts are coherent: tools
+  analyze the same tables; winners logging audits them afterward. The master validation is exactly the right move to
+  tighten and unify everything.
+
+Read tasks/ANALYZER_FIX.txt end‑to‑end. It matches what we’ve been circling around, and it unblocks the V‑TRAC
+  confusion cleanly.
+
+  What the ANALYZER_FIX doc is really saying (in plain English)
+
+  - V‑TRAC has two output layers that feel fused because they share the same visual language, but they’re operationally
+    separate:
+      1. Analyzer “brain” outputs (pre‑results): enhanced bundle JSON + validator artifacts + compact report. These are
+         the predictive/evidence feed for the Aggregator.
+      2. Winners outputs (post‑results): Winners Logger / V‑Trac Winner Report HTMLs (compact + analyzer‑style 3‑variant
+         overlays). These are audit/validation visuals, not part of the analyzer run itself.
+  - So “no winner_map/flags inside the V‑TRAC analyzer sharepack” is not a missing feature; it’s a layout/centralization
+    choice. Some tools keep winners lenses inside their tool folder (Stable spotlight, DR overlays). V‑TRAC is moving
+    those to the centralized Winners area.
+
+  How that maps to our current repo/sharepacks
+  For Ontario 2025‑06‑21 we already have exactly the split the doc describes:
+
+  - Brain (V‑TRAC analyzer)
+      - Per‑state enhanced bundle: sharepacks/2025-06-21/OntarioCanada4/vtrac/OntarioCanada4/
+        OntarioCanada4_vtrac_enhanced_20251209_193731.json
+      - Validator artifacts: .../validation_report.json + .md
+      - Global compact/scored feed across states: sharepacks/2025-06-21/vtrac_compact_report.json + .csv, plus
+        summary.md/csv
+  - Winners (V‑TRAC overlays)
+      - Analyzer‑style 3‑variant winners HTML/JSON: sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/
+        *_vtrac*_winner_*.html/.json
+        Those winners files originate from the Winners Logger pipeline, not from the V‑TRAC analyzer bundle, even though
+        they use the same V‑TRAC reference/matchers.
+
+  Why it felt “off” to you
+  Because the winners overlays:
+
+  - reuse V‑TRAC index sets, straights, family matchers, hot/superhot coloring, etc.,
+  - and show Midday/Evening/Combined panels,
+    so cognitively they look like “V‑TRAC analyzer outputs.” But timing-wise they’re generated only after results are
+    known.
+
+  Best path forward (to stop this confusion permanently)
+
+  1. Finalize the V‑TRAC section in docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md.
+      - Declare explicitly:
+          - Brain outputs = enhanced bundle + validation_report + compact_report + summary.*
+        If you want it even smoother, I can extend the V‑TRAC summarizer to optionally ingest the winners folder +
+        compact report and output one combined Markdown block, still labeled by source.
+  3. Don’t force winner_map/flags into the V‑TRAC analyzer folder unless you really want a self‑contained bundle.
+      - Centralization is cleaner and matches the lean direction.
+  4. Keep going with the tool‑specific summarizers.
+      - Stable + DR are done and validated.
+      - V‑TRAC analyzer summarizer is done (brain‑only).
+      - Next is Hot Zones summarizer/validator.
+        After that, Part 2 becomes “paste summaries → answer questions,” with no raw‑CSV dumping.
+
+  My take on your framing
+  You’re not crazy. Your goal—run all brain outputs together, then audit hits via a centralized winners pass, then lean
+  to a final super‑brain—is exactly how this should be done. The system isn’t more scattered than you think; it just
+  needs the contracts written down in one place so the split doesn’t feel like a bug.
+
+  If you want, I’ll draft the V‑TRAC lean‑outputs subsection text for you to drop into AAT9_Analyzer_Lean_Outputs.md,
+  then proceed to Hot Zones.
+
+
+
+
+
+
+Yes, what you’re saying makes sense, and it is safe for you to approve work here — with one clear boundary:
+
+  - To “get unstuck,” we don’t need to touch VTRAC analyzer logic right now.
+  - What we do need is to lock the contract + packaging so Part 2 can examine VTRAC as cleanly as Stable/DR.
+
+  So the optimal, low‑risk solution is:
+
+      - Checks that when winners are logged, the winners HTML/JSON exist for the state/date.
+      - Again, read‑only.
+
+  Not doing yet (higher risk, only if evidence demands it)
+
+  - Changing VTRAC scoring/engine code.
+    We only do that after a few Part 2 runs show a concrete, reproducible defect (not just “it ranked low”), and we can
+    tie the fix to validator evidence. That keeps changes surgical.
+
+  If you approve this scope, I’ll implement steps 1–2 (and 3 if you want), then move on to Hot Zones summarizer.
+
+
+
+
+
+
+
+
+Yes, that’s exactly the model I’m working under, and it matches what we’ve already done for Part 2.
+
+  - For Stable and Digit Reduction, we built summarizer scripts that read all final outputs, extract scoring/evidence
+    with clear source labels, and emit Markdown/JSON meant to be pasted under Part 2 step 0. Then you answer the Part 2
+
+
+
+
+
+____________________________________
+ Edited scripts/tools/vtrac_sharepack_summary.py (+53 -9)
+      1  """
+      2 -Summarize V-TRAC enhanced sharepack outputs into Markdown/JSON with source labels.
+      2 +Summarize V-TRAC sharepack outputs into Markdown/JSON with source labels.
+      3
+        ⋮
+      7  What it does:
+      8 -  - Reads enhanced bundle JSON (<STATE>_vtrac_enhanced_*.json) and validation_report.{json,md} if present.
+      9 -  - Reports top indices and straights with scores + why/evidence tags (source: enhanced JSON).
+     10 -  - Reports section summaries (hot/superhot, consensus, ring votes, analyzer metrics).
+     11 -  - If winner_map/flags are present (not in this bundle), it would include winner coverage; for now this bundle
+          is analyzer-only.
+      8 +  - Reads enhanced analyzer bundle JSON (<STATE>_vtrac_enhanced_*.json) and validation_report.{json,md} if pres
+         ent.
+      9 +  - Reports top indices and straights with scores + evidence features (source: enhanced JSON).
+     10 +  - Reports per-section summaries (hot/superhot, consensus, stable columns, ring votes, analyzer metrics).
+     11 +  - If winners artifacts exist in the sibling winners sharepack folder, includes a winners lens summary
+     12 +    (source: winners VTRAC report JSON/HTML), keeping brain vs winners provenance explicit.
+     13  """
+        ⋮
+     17  from pathlib import Path
+     17 -from typing import Dict, List
+     18 +from typing import Dict, List, Optional
+     19
+        ⋮
+     26
+     27 +def load_winners_lens(winners_dir: Path) -> Optional[List[Dict]]:
+     28 +    """Load latest winners VTRAC report JSONs per winner_combo if present."""
+     29 +    if not winners_dir.exists():
+     30 +        return None
+     31 +    json_files = sorted(winners_dir.glob("*_vtrac*_winner_*.json"))
+     32 +    if not json_files:
+     33 +        return None
+     34 +    # Pick the most recent JSON per winner_combo based on embedded timestamp
+     35 +    by_winner: Dict[str, Dict] = {}
+     36 +    for jf in json_files:
+     37 +        data = json.loads(jf.read_text())
+     38 +        winner = str(data.get("winner_combo"))
+     39 +        ts = data.get("timestamp") or jf.stem.split("_")[-1]
+     40 +        current = by_winner.get(winner)
+     41 +        if current is None or str(ts) > str(current.get("timestamp", "")):
+     42 +            by_winner[winner] = {**data, "_file": jf.name}
+     43 +    return list(by_winner.values())
+     44 +
+     45
+     27 -def make_markdown(state: str, stamp: str, top_indices: List[Dict], top_straights: List[str], section_summaries:
+          Dict) -> str:
+     46 +def make_markdown(
+     47 +    state: str,
+     48 +    stamp: str,
+     49 +    top_indices: List[Dict],
+     50 +    top_straights: List[str],
+     51 +    section_summaries: Dict,
+     52 +    winners_lens: Optional[List[Dict]] = None,
+     53 +) -> str:
+     54      lines: List[str] = []
+        ⋮
+     67          lines.append(f"- {sec}: hot={summary.get('hot_count')} superhot={summary.get('superhot_count')} consens
+         us_col1={summary.get('consensus_col1')} consensus_col2={summary.get('consensus_col2')}")
+     68 +    if winners_lens:
+     69 +        lines.append("\n## Winners lens (from winners VTRAC report JSON/HTML)")
+     70 +        for w in winners_lens:
+     71 +            lines.append(
+     72 +                f"- winner {w.get('winner_combo')} | index {w.get('index')} | file {w.get('_file')} | "
+     73 +                f"stats keys: {', '.join((w.get('stats') or {}).keys())}"
+     74 +            )
+     79      return "\n".join(lines)
+     91 +    # sharepack path: sharepacks/<DATE>/<STATE>/vtrac/<STATE>
+     92 +    state_name = sharepack.parents[1].name if len(sharepack.parents) >= 2 else sharepack.name
+     93 +    date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
+     94      enhanced = load_enhanced_json(sharepack)
+        ⋮
+    100
+     62 -    md = make_markdown(state_name, stamp, top_indices, top_straights, section_summaries)
+    101 +    winners_lens = None
+    102 +    if date_dir is not None:
+    103 +        winners_dir = date_dir / state_name / "winners" / state_name
+    104 +        winners_lens = load_winners_lens(winners_dir)
+    105 +
+    106 +    md = make_markdown(state_name, stamp, top_indices, top_straights, section_summaries, winners_lens=winners_l
+         ens)
+    107      if args.md_out:
+
+• Ran python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/vtrac/
+  │ OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/vtrac/OntarioCanada4/summary.md --json-out
+  │ sharepacks/2025-06-21/OntarioCanada4/vtrac/OntarioCanada4/summary.json --top-n 5
+  └ (no output)
+
+• Explored
+  └ Read summary.md
+
+• Edited docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md (+17 -7)
+    75
+    76 +### 1. Brain bundle (per state/date) — Analyzer inputs
+    77  - `data/outputs/analysis/vtrac/<STATE>/`
+    77 -  - Analyzer CSV/JSON per variant (legacy + enhanced engines).
+    78 -  - Evidence grid JSON (`evidence/*.json`), winners logger HTML, overlay ZIP when sharing.
+    79 -- Training bundles / share bundles include:
+    80 -  - `vtrac_compact_report.{csv,json}`
+    81 -  - `summary.md/csv`, `summary.html`
+    82 -  - `winner_map.json`, `winner_flags.csv`, overlay HTML zipped.
+    78 +  - Enhanced analyzer bundle JSON (`<STATE>_vtrac_enhanced_<STAMP>.json`) with `indices_ranked`, `top_straights`
+        , and `section_summaries` (hot/superhot, consensus, stable columns, ring votes, analyzer_metrics).
+    79 +  - (Legacy CSV/JSON per variant may also exist; enhanced JSON is the SSOT for Brain1).
+    80 +- Validation artifacts (parity vs winners HTML):
+    81 +  - `data/outputs/analysis/vtrac_validation/<STATE>/validation_report.{json,md}`
+    82 +  - Batch summaries: `data/outputs/analysis/vtrac_validation/summary.{md,csv}`
+    83 +- Aggregator feed (global per date):
+    84 +  - `vtrac_compact_report.{json,csv}` produced by `TOOLS/vtrac_score_and_export.py` / `TOOLS/run_vtrac_share_bun
+        dle.py`.
+    85 +
+    86 +### 2. Winners lens (post‑results audit)
+    87 +V‑TRAC winners artifacts are generated by the **centralized Winners Logger**, not by the analyzer run:
+    88 +- Analyzer‑style 3‑variant winners overlays (Midday/Evening/Combined):
+    89 +  - `data/outputs/analysis/winners/<STATE>/*_winner_*_analyzer.html`
+    90 +- Compact V‑TRAC winner report (table‑agnostic):
+    91 +  - `data/outputs/winners/<YYYY-MM-DD>/vtrac_reports/<STATE>/*.html`
+    92 +- Sharepacks mirror these under `sharepacks/<DATE>/<STATE>/winners/<STATE>/`.
+    93
+    84 -→ **Lean target**: Standardize on per_item/top/meta (matching the enhanced evidence grid), keep the compact repo
+        rt as the aggregator feed, move map/flags to the centralized winners module.
+    94 +→ **Lean target**: Standardize Brain outputs on enhanced per_item/top/meta + compact report, and keep all winner
+        _map/flags/HTML in the centralized winners module (no duplication per tool).
+    95
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+1 -1)
+    21    - V-TRAC sharepack summarizer: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>
+        /<STATE>/vtrac/<STATE> --md-out summary.md --json-out summary.json`
+    23
+
+• Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+4 -1)
+    54     - Missing?: …
+    55 -   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 5
+        17 → 157). Summarizer helper: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<
+        STATE>/stable/<STATE> --md-out summary.md` (paste the Markdown here, then answer Q1–Q10).
+    55 +   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 5
+    58 +     - V-TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<ST
+        ATE> --md-out summary.md`
+    59     - Reminder: consult both the lean outputs doc and the tool-specific analysis log for this tool (self-containe
+        d optimizations, final outputs, insights). This helps decide what to extract/label and confirms you’re covering
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+______________________________________________
+
+
+ Added scripts/tools/hot_zones_sharepack_summary.py (+181 -0)
+      1 +"""
+      2 +Summarize Hot Zones sharepack outputs into Markdown/JSON with source labels.
+      3 +
+      4 +Usage:
+      5 +  python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/hot_zon
+         es/OntarioCanada4 [--md-out out.md] [--json-out out.json]
+      6 +
+      7 +What it does:
+      8 +  - Reads Hot Zones brain outputs (per_lane.csv, top_lanes.csv, meta.json).
+      9 +  - Reads winners lens (YYYY-MM-DD_hot_zones_winner_map.json/csv).
+     10 +  - Attempts to load literal winners from the sibling Stable metrics.json (central results mirror).
+     11 +    If not found, you may pass --winners \"678,517\" (Midday,Evening).
+     12 +  - Maps literal→canonical, checks winner presence/rank in top_lanes and per_lane,
+     13 +    and reports EB/ES/VB/VS-style evidence using per_lane flags.
+     14 +  - Lists top candidates with evidence tags and coverage gaps.
+     15 +
+     16 +All facts are labeled by source file so the block can be pasted into Part 2.
+     17 +"""
+     18 +
+     19 +import argparse
+     20 +import json
+     21 +from pathlib import Path
+     22 +from typing import Dict, List, Optional
+     23 +
+     24 +import pandas as pd
+     25 +
+     26 +
+     27 +def canonical_of_literal(literal: str) -> str:
+     28 +    return "".join(sorted(str(literal)))
+     29 +
+     30 +
+     31 +def load_winners_from_stable(date_dir: Path, state: str) -> Optional[Dict[str, str]]:
+     32 +    metrics_path = date_dir / state / "stable" / state / f"{state}_metrics.json"
+     33 +    if not metrics_path.exists():
+     34 +        return None
+     35 +    metrics = json.loads(metrics_path.read_text())
+     36 +    winners = metrics.get("winners") or []
+     37 +    winners = [str(w) for w in winners]
+     38 +    mapping = {}
+     39 +    if len(winners) >= 1:
+     40 +        mapping["Midday"] = winners[0]
+     41 +    if len(winners) >= 2:
+     42 +        mapping["Evening"] = winners[1]
+     43 +    return mapping
+     44 +
+     45 +
+     46 +def summarize_winner_variant(
+     47 +    label: str,
+     48 +    literal: str,
+     49 +    top_lanes: pd.DataFrame,
+     50 +    per_lane: pd.DataFrame,
+     51 +    winner_map: pd.DataFrame,
+     52 +) -> Dict:
+     53 +    canonical = canonical_of_literal(literal)
+     54 +
+     55 +    # Rank top_lanes by score_mean desc
+     56 +    tl = top_lanes.copy()
+     57 +    tl["rank"] = tl["score_mean"].rank(method="min", ascending=False).astype(int)
+     58 +    tl_rows = tl[tl["triad"].astype(str).isin([literal, canonical])]
+     59 +    tl_present = not tl_rows.empty
+     60 +    best_tl_rank = int(tl_rows["rank"].min()) if tl_present else None
+     61 +
+     62 +    # Per-lane evidence for this triad
+     63 +    pl_rows = per_lane[per_lane["triad"].astype(str).isin([literal, canonical])]
+     64 +    pl_present = not pl_rows.empty
+     65 +    has_straight = bool(pl_rows.get("has_straight", pd.Series([], dtype=int)).any()) if pl_present else False
+     66 +    has_vt_straight = bool(pl_rows.get("has_vt_straight", pd.Series([], dtype=int)).any()) if pl_present else F
+         alse
+     67 +
+     68 +    # Winner map presence (top-20 lanes snapshot)
+     69 +    wm_rows = winner_map[winner_map["triad"].astype(str).isin([literal, canonical])]
+     70 +    wm_present = not wm_rows.empty
+     71 +
+     72 +    gaps = []
+     73 +    if not tl_present:
+     74 +        gaps.append("missing_from_top_lanes")
+     75 +    if not pl_present:
+     76 +        gaps.append("missing_from_per_lane")
+     77 +    if not wm_present:
+     78 +        gaps.append("missing_from_winner_map")
+     79 +
+     80 +    return {
+     81 +        "label": label,
+     82 +        "literal": literal,
+     83 +        "canonical": canonical,
+     84 +        "top_lanes": {"present": tl_present, "best_rank": best_tl_rank, "source": "hot_zones_top_lanes.csv"},
+     85 +        "per_lane": {"present": pl_present, "has_straight": has_straight, "has_vt_straight": has_vt_straight, "
+         source": "hot_zones_per_lane.csv"},
+     86 +        "winner_map": {"present": wm_present, "source": "hot_zones_winner_map.json/csv"},
+     87 +        "gaps": gaps,
+     88 +    }
+     89 +
+     90 +
+     91 +def make_markdown(state: str, date: str, winners_info: List[Dict], top_candidates: pd.DataFrame) -> str:
+     92 +    lines: List[str] = []
+     93 +    lines.append(f"# Hot Zones Summary — {state} ({date})")
+     94 +    for w in winners_info:
+     95 +        lines.append(f"\n## {w['label']} winner {w['literal']} (canonical {w['canonical']})")
+     96 +        if w["top_lanes"]["present"]:
+     97 +            lines.append(f"- Top lanes ({w['top_lanes']['source']}): present, best rank {w['top_lanes']['best_r
+         ank']}")
+     98 +        else:
+     99 +            lines.append(f"- Top lanes ({w['top_lanes']['source']}): not present")
+    100 +        if w["per_lane"]["present"]:
+    101 +            lines.append(f"- Per-lane ({w['per_lane']['source']}): has_straight={w['per_lane']['has_straight']}
+          has_vt_straight={w['per_lane']['has_vt_straight']}")
+    102 +        else:
+    103 +            lines.append(f"- Per-lane ({w['per_lane']['source']}): not present")
+    104 +        lines.append(f"- Winner map ({w['winner_map']['source']}): present={w['winner_map']['present']}")
+    105 +        if w["gaps"]:
+    106 +            lines.append(f"- Coverage gaps: {', '.join(w['gaps'])}")
+    107 +
+    108 +    lines.append("\n## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)")
+    109 +    tc = top_candidates.copy()
+    110 +    tc["rank"] = tc["score_mean"].rank(method="min", ascending=False).astype(int)
+    111 +    for _, row in tc.sort_values("score_mean", ascending=False).head(10).iterrows():
+    112 +        lines.append(
+    113 +            f"- rank {int(row['rank']):>4} | triad {row['triad']} | vt_triad {row['vt_triad']} | score_mean {ro
+         w['score_mean']} | tags {row['evidence_tags']}"
+    114 +        )
+    115 +    return "\n".join(lines)
+    116 +
+    117 +
+    118 +def main() -> None:
+    119 +    ap = argparse.ArgumentParser()
+    120 +    ap.add_argument("--sharepack", required=True, help="Path to hot_zones/<STATE>/<STATE>")
+    121 +    ap.add_argument("--md-out", help="Markdown output path")
+    122 +    ap.add_argument("--json-out", help="JSON output path")
+    123 +    ap.add_argument("--winners", help="Comma-separated literal winners Midday,Evening if stable metrics not ava
+         ilable")
+    124 +    args = ap.parse_args()
+    125 +
+    126 +    sharepack = Path(args.sharepack)
+    127 +    state_name = sharepack.parent.name if sharepack.parent else sharepack.name
+    128 +    date_dir = sharepack.parents[1] if len(sharepack.parents) >= 2 else None
+    129 +
+    130 +    top_lanes = pd.read_csv(sharepack / f"{state_name}_hot_zones_top_lanes.csv")
+    131 +    per_lane = pd.read_csv(sharepack / f"{state_name}_hot_zones_per_lane.csv")
+    132 +    meta = json.loads((sharepack / f"{state_name}_hot_zones_meta.json").read_text())
+    133 +
+    134 +    date = meta.get("date") or "unknown"
+    135 +
+    136 +    # winner map list
+    137 +    winner_map_path_json = sharepack / f"{date}_hot_zones_winner_map.json"
+    138 +    winner_map_path_csv = sharepack / f"{date}_hot_zones_winner_map.csv"
+    139 +    if winner_map_path_csv.exists():
+    140 +        winner_map_df = pd.read_csv(winner_map_path_csv)
+    141 +    else:
+    142 +        winner_map_df = pd.DataFrame(json.loads(winner_map_path_json.read_text()))
+    143 +
+    144 +    winners = load_winners_from_stable(date_dir, state_name) if date_dir else None
+    145 +    if winners is None and args.winners:
+    146 +        parts = [p.strip() for p in args.winners.split(",") if p.strip()]
+    147 +        winners = {}
+    148 +        if len(parts) >= 1:
+    149 +            winners["Midday"] = parts[0]
+    150 +        if len(parts) >= 2:
+    151 +            winners["Evening"] = parts[1]
+    152 +
+    153 +    winners_info: List[Dict] = []
+    154 +    if winners:
+    155 +        for label, literal in winners.items():
+    156 +            winners_info.append(
+    157 +                summarize_winner_variant(label, literal, top_lanes, per_lane, winner_map_df)
+    158 +            )
+    163 +    if args.json_out:
+    164 +        Path(args.json_out).write_text(
+    165 +            json.dumps(
+    166 +                {
+    167 +                    "state": state_name,
+    168 +                    "date": date,
+    169 +                    "winners": winners_info,
+    170 +                },
+    171 +                indent=2,
+    172 +                default=lambda o: o.item() if hasattr(o, "item") else str(o),
+    173 +            )
+    174 +        )
+    175 +    if not args.md_out:
+    176 +        print(md)
+    177 +
+    178 +
+    179 +if __name__ == "__main__":
+  │ OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/hot_zones/OntarioCanada4/summary.md --json-out
+    … +20 lines
+    FileNotFoundError: [Errno 2] No such file or directory: 'sharepacks/2025-06-21/OntarioCanada4/hot_zones/
+    OntarioCanada4/hot_zones_hot_zones_top_lanes.csv'
+
+• Edited scripts/tools/hot_zones_sharepack_summary.py (+3 -3)
+    126      sharepack = Path(args.sharepack)
+    127 -    state_name = sharepack.parent.name if sharepack.parent else sharepack.name
+    128 -    date_dir = sharepack.parents[1] if len(sharepack.parents) >= 2 else None
+    127 +    # sharepack path: sharepacks/<DATE>/<STATE>/hot_zones/<STATE>
+    128 +    state_name = sharepack.parents[1].name if len(sharepack.parents) >= 2 else sharepack.name
+    129 +    date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
+    130
+        ⋮
+    181      main()
+    181 -
+
+• Ran python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/hot_zones/
+  │ OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/hot_zones/OntarioCanada4/summary.md --json-out
+  │ sharepacks/2025-06-21/OntarioCanada4/hot_zones/OntarioCanada4/summary.json
+  └ (no output)
+
+• Explored
+  └ Read summary.md
+
+• Added scripts/tools/validate_hot_zones_winners.py (+92 -0)
+     1 +"""
+     2 +Validate that Hot Zones sharepack contains required outputs and that winners are present in top_lanes.
+     3 +
+     4 +Usage:
+     5 +  python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/2025-06-21/OntarioCanada4/hot_zones
+        /OntarioCanada4
+     6 +
+     7 +Winners are loaded from sibling Stable metrics.json if available; otherwise pass --winners \"678,517\".
+     8 +"""
+     9 +
+    10 +import argparse
+    11 +import json
+    12 +from pathlib import Path
+    13 +
+    14 +import pandas as pd
+    15 +
+    16 +
+    17 +def canonical_of_literal(literal: str) -> str:
+    18 +    return "".join(sorted(str(literal)))
+    19 +
+    20 +
+    21 +def load_winners(date_dir: Path, state: str, winners_arg: str | None) -> dict:
+    22 +    metrics_path = date_dir / state / "stable" / state / f"{state}_metrics.json"
+    23 +    if metrics_path.exists():
+    24 +        metrics = json.loads(metrics_path.read_text())
+    25 +        winners = [str(w) for w in (metrics.get("winners") or [])]
+    26 +        out = {}
+    27 +        if len(winners) >= 1:
+    28 +            out["Midday"] = winners[0]
+    29 +        if len(winners) >= 2:
+    30 +            out["Evening"] = winners[1]
+    31 +        return out
+    32 +    if winners_arg:
+    33 +        parts = [p.strip() for p in winners_arg.split(",") if p.strip()]
+    34 +        out = {}
+    35 +        if len(parts) >= 1:
+    36 +            out["Midday"] = parts[0]
+    37 +        if len(parts) >= 2:
+    38 +            out["Evening"] = parts[1]
+    39 +        return out
+    40 +    return {}
+    41 +
+    42 +
+    43 +def main() -> None:
+    44 +    ap = argparse.ArgumentParser()
+    45 +    ap.add_argument("--sharepack", required=True)
+    46 +    ap.add_argument("--winners")
+    47 +    args = ap.parse_args()
+    48 +
+    49 +    sharepack = Path(args.sharepack)
+    50 +    state = sharepack.parents[1].name if len(sharepack.parents) >= 2 else sharepack.name
+    51 +    date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
+    52 +
+    53 +    required = [
+    54 +        sharepack / f"{state}_hot_zones_per_lane.csv",
+    55 +        sharepack / f"{state}_hot_zones_top_lanes.csv",
+    56 +        sharepack / f"{state}_hot_zones_meta.json",
+    57 +    ]
+    58 +    missing_files = [str(p) for p in required if not p.exists()]
+    59 +
+    60 +    print(f"Hot Zones validation for {state}")
+    61 +    if missing_files:
+    62 +        print("Missing required files:")
+    63 +        for p in missing_files:
+    64 +            print(f"- {p}")
+    65 +        return
+    66 +
+    67 +    top_lanes = pd.read_csv(required[1])
+    68 +    top_lanes["rank"] = top_lanes["score_mean"].rank(method="min", ascending=False).astype(int)
+    69 +
+    73 +        return
+    74 +
+    75 +    missing_winners = []
+    76 +    for label, literal in winners.items():
+    77 +        canon = canonical_of_literal(literal)
+    78 +        mask = top_lanes["triad"].astype(str).isin([literal, canon])
+    79 +        if not mask.any():
+    80 +            missing_winners.append(f"{label} {literal} (canonical {canon})")
+    81 +
+    82 +    if not missing_winners:
+    83 +        print("OK: winners present in top_lanes")
+    84 +    else:
+    85 +        print("Missing winners in top_lanes:")
+    86 +        for m in missing_winners:
+    87 +            print(f"- {m}")
+    88 +
+    89 +
+    90 +if __name__ == "__main__":
+    91 +    main()
+    92 +
+
+• Ran python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/2025-06-21/OntarioCanada4/hot_zones/
+  │ OntarioCanada4
+  └ Hot Zones validation for OntarioCanada4
+    OK: winners present in top_lanes
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+3 -0)
+    22      - Lists Brain outputs (enhanced top indices/straights + section summaries) and, if available, auto‑adds the
+        Winners lens from `sharepacks/<DATE>/<STATE>/winners/<STATE>/` (winner VTRAC report JSON/HTML). All facts are la
+        beled by source.
+    23 +  - Hot Zones winners check: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<DATE>/
+        <STATE>/hot_zones/<STATE>`
+    26
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+8 -0)
+    111
+    112 +5) Stage 4 (Per‑tool Part 2 summaries — paste‑ready):
+    113 +   - After brain runs and winners logging exist for the date/state, generate paste‑ready Markdown blocks for Pa
+         rt 2:
+    114 +     - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/
+         <STATE> --md-out summary.md`
+    115 +     - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/di
+         git_reduction/<STATE> --md-out summary.md`
+    116 +     - V‑TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<S
+         TATE> --md-out summary.md`
+    117 +     - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/h
+         ot_zones/<STATE> --md-out summary.md`
+    118 +   - Paste each summary under Part 2 step “0) Outputs reviewed” in `tasks/master_validation_FINAL_TEMPLATE_FINA
+         L_VERSION.md`, then answer Q1–Q10 for that tool.
+    119 +
+    120  ### DR outputs vs. sharepacks (multi-day runs)
+
+• Explored
+  └ Search Control Center snapshot in AAT9_Unified_Changelog.md
+    Read AAT9_Unified_Changelog.md
+
+• Edited docs/AAT9_KIT/AAT9_Unified_Changelog.md (+5 -0)
+     5
+     6 +## 2025-12-12 - Master Validation Part 2 summarizers + safe table resolver
+     7 +- Impact: Added per‑tool sharepack summarizers (Stable, Digit Reduction, V‑TRAC, Hot Zones) that emit labeled Ma
+        rkdown/JSON blocks for Part 2, eliminating raw CSV pasting. Added small validators for Stable/DR/Hot Zones winne
+        _sharepack_summary.py,validate_stable_winners.py,validate_dr_winners.py,validate_hot_zones_winners.py,validate_t
+
+─ Worked for 8m 43s ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+• Updated Plan
+  └ Proceeding with remaining master‑validation prep per handoff: verify repo state, generate missing summaries,
+    sanity‑check VTRAC winners lens, and update docs if needed.
+    □ Inspect current repo state
+    □ Generate Hot Zones summary for CT
+    □ Sanity-check VTRAC winners lens
+    □ Patch/adjust scripts or docs if needed
+    □ Report outputs and next steps
+
+• Explored
+
+› OK IT LOOKS LIKE CONTEXT RESET WHICH ALWAYS MAKES ME WORRIED USUALLY BASICALLY MEANS A FULL RESET WHERE YOU NEED TO
+  BE FULLY RETRAINED TRYING TO FIND THE MOST EFFICENT WAY FOR THIS ...READ THE FOLLOWING..CODEX READ THIS WSL2 FROM
+  BREIFIGNS FOLDER, ENSURE TO READ THE AAT9 CHANGELOG AT MINIMUM...THEN READ THE "FINAL VALDATION HELP" DOCUMENT IN
+  AAT9_KIT AND ANY ASSOCIATED DOCS IT TELLS YOU TO READ WITHIN IT...THEN REVIEW "MASDTER VALDATION FINAL TEMPLATE FINAL
+  VERSION" IN THE TASKS FOLDER..AND FINAL ITEM IS FROM TASKS FOLDER "CODEXLOG66" PROVIDES A NICE SUMMARY OF ALL THE
+  WORK PRIOR TO YOUR TAKEOVER..LETS TRY USING THAT CONTEXT AND TRAINING PACKAGE THEN RETURN WITH YOUR COMPREHISVE
+  FEEDBACK PLEASE..ITS IMPORTANT YOU HAVE PROPER TRAINING BEFOER YOU TAKEOVER
+
+
+    □ Locate requested docs
+    □ Read Codex WSL2 briefing and changelog
+    □ Read final validation help + linked docs
+    □ Read master validation template + codexlog66
+    □ Summarize understanding and next steps
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_____________________________________________________________________________________
+
+Read and absorbed the package you listed:
+
+  - briefings/CODEX_READ_FIRST_AAT9_WSL_2.md
+  - docs/AAT9_KIT/AAT9_Unified_Changelog.md (especially the 2025‑12‑12 Master Validation Part‑2 summarizer entry)
+  - docs/AAT9_KIT/AAT9_Final_Validation_Help.md plus the two main linked refs it points to for this work:
+      - docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md
+      - docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md
+  - tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+  - tasks/CODEXLOG66.txt
+
+  What this re‑anchors for me
+
+  - WSL is canonical. Repo root is /home/ser/code/Alpha-Analytical-Tool-Clone, and all commands/scripts assume that CWD.
+    Git push is via GitHub Desktop on the WSL path; no remotes edits.
+  - Path/IO SSOT. utils/path_handler.py is the single source of truth for locating tables/JSON/etc. No ad‑hoc table
+    renames; instead we tolerate naming variants in the resolver and log warnings.
+  - Data contracts.
+      - Aux/Blackapple consume only data/cleaned/*_draws.csv.
+      - String‑table tools (Stable, Digit Reduction, VTRAC, Hot Zones) consume combined tables in data/outputs/tables/
+        <STATE>/ (simple variant names) + JSON mirrors in data/outputs/json_tables/.
+  - Preflight / day‑ahead rule. Validation always pairs history workbook date D with results file date D+1. Wrapper
+    scripts/tools/run_history_and_results.py is the preferred one‑shot to swap workbook, rebuild tables/JSON, generate
+    winners, and guard against stale tables.
+
+  Where we are in Master Validation
+
+  - Part A (environment lens) is locked in tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:
+      - You inspect the 3‑variant winners HTML + JSON before any tool scores.
+      - 14 questions now cover col1 ladders/persistence, last survivors, variant bias, lane clarity, environment
+        strength/noise, hot‑zones overlap, aux cues, 4‑criteria viability, exact‑triple presence, and “profitable
+        environment” traits.
+  - Part 2 (per‑tool analytical review) is also scaffolded in the same template:
+      - For each tool you must list Brain outputs vs Winners artifacts separately (explicit “outputs reviewed” gate).
+      - Paste the tool’s sharepack summarizer Markdown under step 0, then answer Q1–Q10 (evidence vs brain, 4‑criteria
+        mapping, alignment, dominance/noise, top candidates, miss analysis, (V) checks, optimization notes, cross‑tool
+        seed, extra insights).
+      - Canonical note is mandatory (literal → canonical mapping before filtering).
+
+  Infrastructure already in place (from CODEXLOG66 + changelog)
+
+  - Safe table resolver + naming validator:
+      - utils/path_handler.resolve_state_table_paths(state) prefers simple names in each state folder, falls back if
+        prefixed copies exist, no filesystem edits.
+      - VTRAC: scripts/tools/vtrac_sharepack_summary.py (auto‑includes centralized Winners lens if present)
+      - Hot Zones: scripts/tools/hot_zones_sharepack_summary.py
+  - Small winners validators:
+      - validate_stable_winners.py, validate_dr_winners.py, validate_hot_zones_winners.py
+
+  So I’m fully up‑to‑speed on the wiring, contracts, and the exact “how to run / what to collect / how to report”
+  were trying to sort out all the outputs are created in the forgetting the optimal insights out of the outputs for the
+  Vtrack analyzer and I can't quite remember if they had planned to try and do a similar process for the hot zones that
+  way getting all of them basically done Are you able to update me on where it left off Where I get worried is when the
+  context cuts off and they could have been mid task Just wanna know where we've left off kind of from that POINT
+
+
+• Explored
+  └ List OntarioCanada4
+    Search summary
+    List OntarioCanada4
+    Search summary
+    List OntarioCanada4
+    Search summary
+    List OntarioCanada4
+    Search summary
+    List Connecticut4
+    Search summary
+    List Connecticut4
+    Search summary
+    List Connecticut4
+    Search summary
+    List Connecticut4
+    Search summary
+
+─ Worked for 1m 17s ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Here’s the exact Part‑2 “left‑off” state based on CODEXLOG66 + what’s actually in the sharepacks right now:
+
+  - Part‑2 infrastructure is done. The prior agent stopped mid‑analysis to first fix the “how do we read all outputs
+    without pasting 100 CSVs” problem. Result:
+      - Part‑2 section in tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md now has the per‑tool Brain vs Winners
+        output lists, canonical‑mapping note, and “paste summarizer Markdown here” workflow.
+  - V‑TRAC “missing winners outputs” issue is resolved conceptually and in code.
+      - Discovery: V‑TRAC does not emit its own winners artifacts inside the V‑TRAC tool folder; those are centralized
+        under the Winners Logger sharepack.
+      - Fix: scripts/tools/vtrac_sharepack_summary.py was written to summarize the V‑TRAC Brain bundle and auto‑pull the
+        centralized winners lens from sharepacks/<DATE>/<STATE>/winners/<STATE>/ if present.
+      - So Part‑2 can still evaluate V‑TRAC winners performance even though the files live elsewhere.
+  - Hot Zones got the same treatment.
+      - scripts/tools/hot_zones_sharepack_summary.py was added to pull Hot Zones Brain outputs and map winners (via
+        Stable metrics or --winners fallback).
+      - A small validator validate_hot_zones_winners.py was added.
+  - Ontario summaries are already generated for all 4 tools. I just verified they exist:
+      - sharepacks/2025-06-21/OntarioCanada4/stable/OntarioCanada4/summary.md/.json
+      - sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.md/.json
+      - sharepacks/2025-06-21/OntarioCanada4/vtrac/OntarioCanada4/summary.md/.json
+      - sharepacks/2025-06-21/OntarioCanada4/hot_zones/OntarioCanada4/summary.md/.json
+  - Connecticut summaries were not run yet. There are no summary.md/json files under CT sharepacks for that date. If you
+    want CT as a cross‑check state, we just run:
+      - python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/2025-06-21/Connecticut4/stable/
+        Connecticut4
+      - python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/2025-06-21/Connecticut4/digit_reduction/
+        Connecticut4
+      - python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/2025-06-21/Connecticut4/vtrac/
+        Connecticut4
+      - python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/2025-06-21/Connecticut4/hot_zones/
+        Connecticut4
+  - What was still pending when the context cut:
+      - Actually answering Part‑2 Q1–Q10 for V‑TRAC and Hot Zones (Ontario first), using the new summaries.
+      - Then optional 2B cross‑tool synthesis.
+  HELP DOCUMENT TO MORE DETAIL EXPLAIN THE PROCESS AND LIKE WORKFLOW DETAILS, AND THEN WE ARE WORKING THROUGH THE FINAL TEMPLATE WITH THE TEMPLATE FINAL VERSION IM TRYING TO REMEMBER IF
+  WE HAD A VERSION OF ACTUALLY DOING THE TEMPLATE WHERE WE ATTEMPTED PART 1 ALREADY AND WHERE WE PUT THIS?
+
+
+• Ran ls -1 tasks/"FINAL VALIDATION" 2>/dev/null | head -n 200
+  └ 12 PART PROFIT PART 2.md
+    final_context2.txt
+    final_validation_control.md
+
+• Explored
+  └ Search Part A in tasks
+─ Worked for 1m 42s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — I’d proceed by actually executing Part 2 tool‑by‑tool now, because the “plumbing” work (outputs inventory + summarizers) is already in place for Ontario.
+
+  Where things left off
+
+  - We do not currently have a single “filled run report” document where Part 1 + Part 2 answers are written out in the template format.
+  - Part 1 (environment lens) was partially attempted in the session log: tasks/codex_quick2.txt (search for “Part A — OntarioCanada4…”).
+  - What is ready right now:
+      - The template you’ll use: tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+          - Hot Zones: sharepacks/2025-06-21/OntarioCanada4/hot_zones/OntarioCanada4/summary.md
+
+  How I suggest we proceed (to stop losing track)
+
+  1. Create a dedicated “run report” file (so the template is actually executed and saved), e.g. tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.
+  2. Copy Part 1 + Part 2 headings into it.
+  3. Do Part 1 once (answer the Part‑A questions) using the winners HTML/JSON for Ontario.
+  4. Then do Part 2 one tool at a time:
+      - Paste that tool’s summary.md under step 0) in the template section.
+      - Answer Q1–Q10 (Stable → DR → VTRAC → Hot Zones).
+  5. Optional: do the “2B cross‑tool synthesis” at the end.
+
+  If you want, I can create that run report file now and start filling Part 1 for Ontario first (since Part 2 is already staged via the summary.md files).
+
+
+
+
+_________________________________________________________________________________________
+
+
+
+Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+6 -0)
+    32
+    33 +Prereqs / workflow references:
+    34 +- If the sharepack + winners artifacts are not already generated for this date/state, follow: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md` (entry) and `docs/AAT9_KIT/AAT9_Master
+        _Validation_Preflight.md` (one-shot wrapper + guards).
+    35 +- Sharepack convention: `sharepacks/<HISTORY_DATE>/<STATE>/...` (history workbook date D). Winners/results are day-ahead (results date D+1) and may live under `sharepacks/<HISTOR
+        Y_DATE>/<STATE>/winners/<STATE>/`.
+    36 +- Per-tool summarizers are intended to be the “paste block” that captures *all key evidence with source labels* (so we don’t paste raw CSVs). Generate/refresh `summary.md`, paste
+         it under step 0), then answer Q1–Q10.
+    37 +
+    38  Before you start a tool, confirm you have reviewed *all* of its final outputs (brain vs winners, listed separately per tool). Add a quick “outputs reviewed” note at the top of ea
+        ch tool section.
+       ⋮
+    63       - V-TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
+    64 +     - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
+    65     - Reminder: consult both the lean outputs doc and the tool-specific analysis log for this tool (self-contained optimizations, final outputs, insights). This helps decide what
+        to extract/label and confirms you’re covering all final outputs.
+
+─ Worked for 1m 26s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• That’s the right move: lock the template + workflow linkage first, then we do the first run slowly.
+
+  What I just checked/fixed in the template
+
+  - tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md Part 2 is coherent structurally (outputs reviewed → paste summarizer block → answer Q1–Q10 → then 2B cross-tool synthesis).
+  - It was missing the Hot Zones summarizer command, so I added it.
+  - I also added a short Prereqs / workflow references block at the top of Part 2 pointing directly to:
+      - docs/AAT9_KIT/AAT9_Final_Validation_Help.md
+      - docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md
+      - Plus a clear note about sharepack date vs results (day‑ahead) and that summarizers produce the “paste block”.
+
+  Answer to “did we ever do Part 1 already and where?”
+
+  - There isn’t a clean “filled run report” doc yet.
+  - The closest “Part 1 attempt” lives inside the session log: tasks/codex_quick2.txt (it contains a Part‑A Ontario writeup), but it’s not in a dedicated run report file.
+
+  Suggested next step
+
+  - Create a single run report file (so we stop losing track) and then execute Part 1 + Part 2 into it, using the existing Ontario summary.md blocks.
+
+
+
+
+_______________________
+
+
+ Explored
+  └ Read stable_sharepack_summary.py
+    List OntarioCanada4
+
+• Edited scripts/tools/hot_zones_sharepack_summary.py (+25 -6)
+     51      winner_map: pd.DataFrame,
+     52 +    winner_map_file_present: bool,
+     53  ) -> Dict:
+        ⋮
+     77          gaps.append("missing_from_per_lane")
+     77 -    if not wm_present:
+     78 -        gaps.append("missing_from_winner_map")
+     78 +    if winner_map_file_present and not wm_present:
+     79 +        gaps.append("winner_not_in_winner_map")
+     80 +    if not winner_map_file_present:
+     81 +        gaps.append("winner_map_file_missing")
+     82
+        ⋮
+     88          "per_lane": {"present": pl_present, "has_straight": has_straight, "has_vt_straight": has_vt_straight, "source": "hot_zones_per_lane.csv"},
+     86 -        "winner_map": {"present": wm_present, "source": "hot_zones_winner_map.json/csv"},
+     89 +        "winner_map": {
+     90 +            "file_present": winner_map_file_present,
+     91 +            "triad_present": wm_present,
+     92 +            "source": "hot_zones_winner_map.json/csv",
+     93 +        },
+     94          "gaps": gaps,
+        ⋮
+    110              lines.append(f"- Per-lane ({w['per_lane']['source']}): not present")
+    104 -        lines.append(f"- Winner map ({w['winner_map']['source']}): present={w['winner_map']['present']}")
+    111 +        lines.append(
+    112 +            f"- Winner map ({w['winner_map']['source']}): file_present={w['winner_map']['file_present']} | triad_present={w['winner_map']['triad_present']}"
+    113 +        )
+    114          if w["gaps"]:
+        ⋮
+    148      winner_map_path_csv = sharepack / f"{date}_hot_zones_winner_map.csv"
+    149 +    winner_map_file_present = winner_map_path_csv.exists() or winner_map_path_json.exists()
+    150      if winner_map_path_csv.exists():
+    151          winner_map_df = pd.read_csv(winner_map_path_csv)
+    152 +    elif winner_map_path_json.exists():
+    153 +        winner_map_df = pd.DataFrame(json.loads(winner_map_path_json.read_text()))
+    154      else:
+    143 -        winner_map_df = pd.DataFrame(json.loads(winner_map_path_json.read_text()))
+    155 +        winner_map_df = pd.DataFrame()
+    156
+        ⋮
+    169              winners_info.append(
+    158 -                summarize_winner_variant(label, literal, top_lanes, per_lane, winner_map_df)
+    170 +                summarize_winner_variant(
+    171 +                    label,
+    172 +                    literal,
+    173 +                    top_lanes,
+    174 +                    per_lane,
+    175 +                    winner_map_df,
+    176 +                    winner_map_file_present=winner_map_file_present,
+    177 +                )
+    178              )
+
+• Added scripts/tools/create_master_validation_run_report.py (+269 -0)
+      1 +"""
+      2 +Create a per-date/per-state Master Validation run report Markdown file.
+      3 +
+      4 +Goal
+      5 +----
+      6 +Provide a single artifact you can share with a second analyst (e.g., ChatGPT Pro)
+      7 +WITHOUT pasting raw CSV/JSON outputs:
+      8 +
+      9 +- It links to the sharepack artifacts (winners + tool outputs).
+     10 +- It embeds the per-tool summarizer Markdown blocks (Stable/DR/VTRAC/Hot Zones) if present.
+     11 +- It provides placeholders to answer Part A + Part 2 questions in one place.
+     12 +
+     13 +This script DOES NOT run analyzers or rebuild tables. It is purely a reporting/helper
+     14 +utility that stitches together already-generated artifacts.
+     15 +
+     16 +Usage
+     17 +-----
+     18 +python3 scripts/tools/create_master_validation_run_report.py \\
+     19 +  --history-date 2025-06-21 \\
+     20 +  --state OntarioCanada4
+     21 +"""
+     22 +
+     23 +from __future__ import annotations
+     24 +
+     25 +import argparse
+     26 +from datetime import date as _date
+     27 +from datetime import timedelta
+     28 +from pathlib import Path
+     29 +from typing import Dict, List, Tuple
+     30 +
+     31 +
+     32 +REPO_ROOT = Path(__file__).resolve().parents[2]
+     33 +
+     34 +
+     35 +def parse_iso_date(value: str) -> _date:
+     36 +    try:
+     37 +        return _date.fromisoformat(value)
+     38 +    except ValueError as exc:
+     39 +        raise SystemExit(f"Invalid --history-date (expected YYYY-MM-DD): {value}") from exc
+     40 +
+     41 +
+     42 +def read_text(path: Path) -> str:
+     43 +    return path.read_text(encoding="utf-8", errors="replace")
+     44 +
+     45 +
+     46 +def list_winner_artifacts(winners_dir: Path) -> Tuple[List[str], List[str]]:
+     47 +    if not winners_dir.exists():
+     48 +        return [], []
+     49 +    html = sorted([p.name for p in winners_dir.glob("*.html") if "winner" in p.name.lower()])
+     50 +    json = sorted([p.name for p in winners_dir.glob("*.json") if "winner" in p.name.lower()])
+     51 +    return html, json
+     52 +
+     53 +
+     54 +def tool_sharepack_paths(history_date: str, state: str) -> Dict[str, Path]:
+     55 +    base = REPO_ROOT / "sharepacks" / history_date / state
+     56 +    return {
+     57 +        "stable": base / "stable" / state,
+     58 +        "digit_reduction": base / "digit_reduction" / state,
+     59 +        "vtrac": base / "vtrac" / state,
+     60 +        "hot_zones": base / "hot_zones" / state,
+     61 +        "winners": base / "winners" / state,
+     62 +    }
+     63 +
+     64 +
+     65 +def expected_files_for_tool(state: str) -> Dict[str, Dict[str, List[str]]]:
+     66 +    """
+     67 +    Minimal "final outputs" checklist per tool (sharepack-relative).
+     68 +    This is not exhaustive, but it matches the lean-output contracts and the
+     69 +    sharepack layouts used by the summarizers.
+     70 +    """
+     71 +    return {
+     72 +        "stable": {
+     73 +            "brain": [
+     74 +                f"{state}_stable_patterns_scores.csv",
+     75 +                f"{state}_stable_patterns_families.csv",
+     76 +                f"{state}_stable_patterns_compound.csv",
+     77 +                f"{state}_metrics.json",
+     78 +                f"{state}_stable_patterns_report.html",
+     79 +            ],
+     80 +            "winners": [
+     81 +                f"{state}_winner_family_spotlight_raw.csv",
+     82 +                f"{state}_winner_family_spotlight_families.csv",
+     83 +            ],
+     84 +        },
+     85 +        "digit_reduction": {
+     86 +            "brain": [
+     87 +                f"{state}_digit_reduction_report.html",
+     88 +                f"{state}_digit_reduction_report_stacked.html",
+     89 +                f"{state}_digit_reduction_scores.csv",
+     90 +                "analyzer_v2/" + f"{state}_analyzer_v2_per_item.csv",
+     91 +                "analyzer_v2/" + f"{state}_analyzer_v2_top_candidates.csv",
+     92 +                "analyzer_v2/" + f"{state}_analyzer_v2_meta.json",
+     93 +                "training/" + f"{state}_digit_reduction_logs.json",
+     94 +                "training/" + f"{state}_digit_reduction_steps.csv",
+     95 +            ],
+     96 +            "winners": [
+     97 +                "analyzer_v2/winners/*winner_map*.json",
+     98 +                "analyzer_v2/winners/*winner_flags*.csv",
+     99 +                "analyzer_v2/winners/*winner_hits*.csv",
+    100 +            ],
+    101 +        },
+    102 +        "vtrac": {
+    103 +            "brain": [
+    104 +                f"{state}_vtrac_enhanced_*.json",
+    105 +                "vtrac_compact_report.json",
+    106 +                "vtrac_compact_report.csv",
+    107 +                "summary.md",
+    108 +                "summary.csv",
+    109 +                "validation_report.json",
+    110 +                "validation_report.md",
+    111 +            ],
+    112 +            "winners": [
+    113 +                # Centralized winners lens (not emitted by the VTRAC analyzer itself)
+    114 +                "*vtrac*_winner_*.json",
+    115 +                "*vtrac*_winner_*.html",
+    116 +                "*winner_*_analyzer.html",
+    117 +            ],
+    118 +        },
+    119 +        "hot_zones": {
+    120 +            "brain": [
+    121 +                f"{state}_hot_zones_per_lane.csv",
+    122 +                f"{state}_hot_zones_top_lanes.csv",
+    123 +                f"{state}_hot_zones_meta.json",
+    124 +            ],
+    125 +            "winners": [
+    126 +                "*hot_zones_winner_map.json",
+    127 +                "*hot_zones_winner_map.csv",
+    128 +            ],
+    129 +        },
+    130 +    }
+    131 +
+    132 +
+    133 +def check_exists(tool_dir: Path, patterns: List[str]) -> List[str]:
+    134 +    missing: List[str] = []
+    135 +    for pattern in patterns:
+    136 +        if "*" in pattern:
+    137 +            hits = list(tool_dir.glob(pattern))
+    138 +            if not hits:
+    139 +                missing.append(pattern)
+    140 +        else:
+    141 +            if not (tool_dir / pattern).exists():
+    142 +                missing.append(pattern)
+    143 +    return missing
+    144 +
+    145 +
+    146 +def maybe_embed_summary(tool_dir: Path) -> str:
+    147 +    summary_path = tool_dir / "summary.md"
+    148 +    if not summary_path.exists():
+    149 +        return "_(summary.md not found — run the tool summarizer first)_\n"
+    150 +    return read_text(summary_path).rstrip() + "\n"
+    151 +
+    152 +
+    153 +def main() -> None:
+    154 +    ap = argparse.ArgumentParser()
+    155 +    ap.add_argument("--history-date", required=True, help="History workbook date (YYYY-MM-DD)")
+    156 +    ap.add_argument("--state", required=True, help="State key (e.g., OntarioCanada4)")
+    157 +    ap.add_argument(
+    158 +        "--out",
+    159 +        help="Output Markdown file path (default: tasks/FINAL VALIDATION/RUNS/<DATE>__<STATE>.md)",
+    160 +    )
+    161 +    args = ap.parse_args()
+    162 +
+    163 +    history_date = args.history_date
+    164 +    state = args.state
+    165 +    results_date = parse_iso_date(history_date) + timedelta(days=1)
+    166 +
+    167 +    paths = tool_sharepack_paths(history_date, state)
+    168 +
+    169 +    default_out = REPO_ROOT / "tasks" / "FINAL VALIDATION" / "RUNS" / f"{history_date}__{state}.md"
+    170 +    out_path = Path(args.out) if args.out else default_out
+    171 +    out_path.parent.mkdir(parents=True, exist_ok=True)
+    172 +
+    173 +    winners_html, winners_json = list_winner_artifacts(paths["winners"])
+    174 +
+    175 +    expected = expected_files_for_tool(state)
+    176 +
+    177 +    lines: List[str] = []
+    178 +    lines.append(f"# Master Validation Run Report — {state} — history {history_date} (results {results_date.isoformat()})")
+    179 +    lines.append("")
+    180 +    lines.append("Reference template:")
+    181 +    lines.append(f"- `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`")
+    182 +    lines.append("")
+    183 +    lines.append("Sharepack pointers:")
+    184 +    lines.append(f"- Sharepack root: `sharepacks/{history_date}/{state}/`")
+    185 +    lines.append(f"- Winners lens: `{paths['winners'].relative_to(REPO_ROOT)}/`")
+    186 +    lines.append(f"- Stable: `{paths['stable'].relative_to(REPO_ROOT)}/`")
+    187 +    lines.append(f"- Digit Reduction: `{paths['digit_reduction'].relative_to(REPO_ROOT)}/`")
+    188 +    lines.append(f"- VTRAC: `{paths['vtrac'].relative_to(REPO_ROOT)}/`")
+    189 +    lines.append(f"- Hot Zones: `{paths['hot_zones'].relative_to(REPO_ROOT)}/`")
+    190 +    lines.append("")
+    191 +
+    192 +    lines.append("## Part A — Winners HTML/JSON (environment lens)")
+    193 +    if winners_html:
+    194 +        lines.append("Winners HTML files (open in browser/editor):")
+    195 +        for name in winners_html:
+    199 +    lines.append("")
+    203 +            lines.append(f"- `{paths['winners'].relative_to(REPO_ROOT)}/{name}`")
+    204 +    else:
+    205 +        lines.append("_No winners JSON found in the winners sharepack folder._")
+    214 +    lines.append("## Part 2 — Tool-by-tool (paste blocks + answers)")
+    215 +    lines.append("Paste blocks: the `summary.md` embedded under each tool below is the “evidence dump” (with source labels). Then fill Q1–Q10 for that tool.")
+    216 +    lines.append("")
+    217 +
+    218 +    for tool_key, title in [
+    219 +        ("stable", "Stable"),
+    220 +        ("digit_reduction", "Digit Reduction"),
+    221 +        ("vtrac", "VTRAC Analyzer"),
+    222 +        ("hot_zones", "Hot Zones"),
+    223 +    ]:
+    224 +        tool_dir = paths[tool_key]
+    225 +        lines.append(f"### 2.{title} — {state} — {history_date}")
+    226 +        lines.append("")
+    227 +        if not tool_dir.exists():
+    228 +            lines.append(f"_(Tool folder not found: `{tool_dir.relative_to(REPO_ROOT)}`)_")
+    229 +            lines.append("")
+    230 +            continue
+    231 +
+    232 +        missing_brain = check_exists(tool_dir, expected[tool_key]["brain"])
+    233 +        if tool_key == "vtrac":
+    234 +            missing_winners = check_exists(paths["winners"], expected[tool_key]["winners"])
+    235 +        else:
+    236 +            missing_winners = check_exists(tool_dir, expected[tool_key]["winners"])
+    237 +
+    238 +        lines.append("0) Outputs reviewed")
+    239 +        lines.append("   - Brain: (see file list below)")
+    240 +        lines.append("   - Winners: (see file list below)")
+    241 +        lines.append(f"   - Missing brain?: {', '.join(missing_brain) if missing_brain else 'none'}")
+    242 +        lines.append(f"   - Missing winners?: {', '.join(missing_winners) if missing_winners else 'none'}")
+    245 +        lines.append("")
+    250 +        lines.append("Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):")
+    251 +        for i in range(1, 11):
+    252 +            lines.append(f"- Q{i}: …")
+    253 +        lines.append("")
+    254 +        lines.append("---")
+    255 +        lines.append("")
+    256 +
+    257 +    lines.append("## 2B — Cross-tool synthesis (after all tools)")
+    258 +    lines.append("- Shared clusters/signals: …")
+    259 +    lines.append("- Conflicts/noise: …")
+    260 +    lines.append("- Aggregator/aux hooks to test next: …")
+    261 +    lines.append("")
+    262 +
+    263 +    out_path.write_text("\n".join(lines), encoding="utf-8")
+    264 +    print(f"Wrote: {out_path}")
+    265 +
+    266 +
+    267 +if __name__ == "__main__":
+    268 +    main()
+    269 +
+
+• Added tasks/FINAL VALIDATION/RUNS/README.md (+18 -0)
+     1 +# Master Validation — Run Reports
+     2 +
+     3 +This folder stores **filled, per‑example** master validation reports so we don’t lose track across sessions.
+     4 +
+     5 +- The canonical question template lives in: `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+     6 +- A run report is a *snapshot for one state + one history date* with:
+     7 +  - Links to the sharepack artifacts
+     8 +  - Embedded per‑tool summarizer Markdown blocks (Stable/DR/VTRAC/Hot Zones)
+     9 +  - Placeholders to fill Part A + Part 2 answers in one place
+    10 +
+    11 +Generate a new run report (recommended):
+    12 +```bash
+    13 +python3 scripts/tools/create_master_validation_run_report.py --history-date YYYY-MM-DD --state OntarioCanada4
+    14 +```
+    15 +
+    16 +Default output:
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+1 -0)
+    25      - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
+    26 +  - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --history-date <D
+• Ran python3 scripts/tools/create_master_validation_run_report.py --history-date 2025-06-21 --state OntarioCanada4
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md
+
+• Explored
+  └ Read 2025-06-21__OntarioCanada4.md
+    List 2025-06-21
+    Read master_validation_OntarioCanada4_2025-06-21_AAT9_live_final_runs.md
+    List OntarioCanada4
+    List OntarioCanada4
+    List OntarioCanada4
+
+• Edited scripts/tools/create_master_validation_run_report.py (+10 -5)
+     54  def tool_sharepack_paths(history_date: str, state: str) -> Dict[str, Path]:
+     55 -    base = REPO_ROOT / "sharepacks" / history_date / state
+     55 +    date_root = REPO_ROOT / "sharepacks" / history_date
+     56 +    base = date_root / state
+     57      return {
+     58 +        "date_root": date_root,
+     59          "stable": base / "stable" / state,
+        ⋮
+    106                  f"{state}_vtrac_enhanced_*.json",
+    105 -                "vtrac_compact_report.json",
+    106 -                "vtrac_compact_report.csv",
+    107                  "summary.md",
+    108 -                "summary.csv",
+    108                  "validation_report.json",
+        ⋮
+    232          if tool_key == "vtrac":
+    233 +            # Some VTRAC artifacts are date-global (not state-scoped inside the VTRAC folder).
+    234 +            missing_global = check_exists(
+    235 +                paths["date_root"],
+    236 +                ["vtrac_compact_report.json", "vtrac_compact_report.csv", "summary.md", "summary.csv"],
+    237 +            )
+    238 +            missing_brain.extend([f"GLOBAL:{m}" for m in missing_global])
+    239 +        if tool_key == "vtrac":
+    240              missing_winners = check_exists(paths["winners"], expected[tool_key]["winners"])
+        ⋮
+    274      main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+___________________________________
+
+
+ Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+5 -0)
+     4
+     5 +Execution note (recommended):
+     6 +- Do not write answers into this template file. Generate a per-run report and fill answers there:
+     7 +  - `python3 scripts/tools/create_master_validation_run_report.py --history-date YYYY-MM-DD --state OntarioCanada4`
+     8 +  - Output: `tasks/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
+     9 +
+    10  How to read:
+
+─ Worked for 12m 11s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I agree with your approach: don’t jump to Part 3 until Part 2 is actually executable + trackable for one full example (Ontario), otherwise Part 3 becomes “aux scoring in a vacuum”.
+
+  Where we’re at right now
+
+  - The “how to run the example / collect artifacts” doc already exists: sharepacks/2025-06-21/master_validation_OntarioCanada4_2025-06-21_AAT9_live_final_runs.md (commands + what got
+    collected).
+  - Part 2 plumbing is ready (summarizers exist and Ontario summaries exist for all 4 tools).
+  - What was missing (and caused the “losing track” feeling) was a single place to execute/fill the template.
+
+  What I did to make this followable before Part 3
+
+  - Added a run-report workflow so we don’t write answers into the template:
+      - Template now says “generate a per-run report and fill answers there”: tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+      - New generator: scripts/tools/create_master_validation_run_report.py
+  - Clarified Hot Zones summary wording so it’s clear “winner map file exists” vs “winner triad is in the map”: scripts/tools/hot_zones_sharepack_summary.py (and refreshed Ontario Hot
+        ⋮
+    165
+    162 -    history_date = args.history_date
+    166 +    sharepack_date = args.date
+    168 +    # For the existing sharepacks, the folder date matches the winners/results date.
+    169 +    # The source workbook is typically "day before"; we compute it for labeling only.
+    170 +    results_date = parse_iso_date(sharepack_date)
+    171 +    history_workbook_date = results_date - timedelta(days=1)
+    172
+    166 -    paths = tool_sharepack_paths(history_date, state)
+    173 +    paths = tool_sharepack_paths(sharepack_date, state)
+    174
+    168 -    default_out = REPO_ROOT / "tasks" / "FINAL VALIDATION" / "RUNS" / f"{history_date}__{state}.md"
+    175 +    default_out = REPO_ROOT / "tasks" / "FINAL VALIDATION" / "RUNS" / f"{sharepack_date}__{state}.md"
+    176      out_path = Path(args.out) if args.out else default_out
+        ⋮
+    183      lines: List[str] = []
+    177 -    lines.append(f"# Master Validation Run Report — {state} — history {history_date} (results {results_date.isoformat()})")
+    184 +    lines.append(
+    185 +        f"# Master Validation Run Report — {state} — results {results_date.isoformat()} (history workbook ~ {history_workbook_date.isoformat()})"
+    186 +    )
+    187      lines.append("")
+        ⋮
+    191      lines.append("Sharepack pointers:")
+    183 -    lines.append(f"- Sharepack root: `sharepacks/{history_date}/{state}/`")
+    192 +    lines.append(f"- Sharepack root: `sharepacks/{sharepack_date}/{state}/`")
+    193      lines.append(f"- Winners lens: `{paths['winners'].relative_to(REPO_ROOT)}/`")
+        ⋮
+    232          tool_dir = paths[tool_key]
+    224 -        lines.append(f"### 2.{title} — {state} — {history_date}")
+    233 +        lines.append(f"### 2.{title} — {state} — {sharepack_date}")
+    234          lines.append("")
+
+• Edited tasks/FINAL VALIDATION/RUNS/README.md (+1 -2)
+    12  ```bash
+    13 -python3 scripts/tools/create_master_validation_run_report.py --history-date YYYY-MM-DD --state OntarioCanada4
+    13 +python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4
+    14  ```
+       ⋮
+    17  `tasks/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
+    18 -
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+1 -1)
+    25      - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
+    26 -  - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --history-date <D
+        ATE> --state <STATE>`
+    26 +  - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --s
+        tate <STATE>`
+
+
+
+______________________________________
+
+
+• Yes — what you just outlined is the correct mental model, and I’m aligned with it.
+
+  1) The day‑ahead rule (timeframe)
+
+  - The Excel/history workbook date (D) represents “the world as of the end of D” (tables built from draws up to that point).
+  - For a real predictive system, the thing you’re trying to predict is the next outcomes after that world snapshot, i.e. results date (D+1).
+  - So for backtesting/master validation, we intentionally do: tables from D → evaluate against winners from D+1. That’s the only way to honestly simulate “what would we have seen before
+    the winners existed?”
+
+  In our current example, the sharepack folder sharepacks/2025-06-21/… is effectively the results date, and the corresponding history workbook would be ~2025-06-20 (day before). That’s
+  consistent with your intent.
+
+  2) Brain outputs vs Winners outputs (the split you’re describing)
+  You’re also correct here:
+
+  - Brain outputs (analysis outputs) are what the tool produces without knowing the winners (candidates, scores, signals).
+  - Winners outputs are a separate, later step: once winners are known, we “grade” the brain outputs (4‑criteria hit tagging, ranks, etc.).
+
+  This is why centralizing winners logging is logical: it’s a shared “grading layer” that can be applied to multiple tools’ brain outputs.
+
+  3) “Does the system need to read the outputs twice?”
+  You’re not crazy — and the answer is:
+
+  - For the final app, the superbrain won’t “read the report files to think.” It will compute from data directly.
+  - But during master validation, the outputs are the inspection surface + audit trail:
+      - They let us see what the code is doing (scoring/features/evidence).
+      - They give us a stable “contract” we can later simplify.
+      - They let a second analyst (or future session) review without rerunning everything.
+
+  So the outputs aren’t “redundant”; they’re the bridge from “code did something” → “we can understand it, measure it, and redesign it safely.”
+
+  4) How what I was doing fits your “giant brainstorm canvas” analogy
+  That analogy is spot on. The work we did (summarizers + run report) is specifically to support that:
+
+  - We keep the raw outputs (huge, tool‑specific).
+  - We generate a single labeled evidence block per tool (summary.md) so the template can be filled without pasting raw CSVs.
+  - We generate a single run report file that links everything and embeds those evidence blocks, so we don’t lose the narrative when context resets.
+
+  That’s exactly “dump everything on the canvas, then start pulling the best signals into the final superbrain.”
+
+  5) Where we should go next (before Part 3)
+  I recommend we finish one full example through Part A + Part 2 + 2B first, because Part 3 depends on having the tool evidence fresh in mind.
+
+  We now have a clean place to do that:
+
+  - tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md
+
+  If you say “go”, I’ll start by walking through Part A first (environment lens), then we’ll do Part 2 tool-by-tool using the embedded summary.md blocks, then 2B cross-tool synthesis.
+  After that, we’ll be in a strong, non-burnout spot to start Part 3.
+
+
+
+________________________________________
+
+
+Read create_master_validation_run_report.py
+
+• Edited scripts/tools/create_master_validation_run_report.py (+1 -2)
+    114                  "*vtrac*_winner_*.html",
+    115 -                "*winner_*_analyzer.html",
+    115              ],
+
+• Ran python3 scripts/tools/create_master_validation_run_report.py --date 2025-06-21 --state OntarioCanada4
+• Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+1 -1)
+    39  - If the sharepack + winners artifacts are not already generated for this date/state, follow: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md` (entry) and `docs/AAT9_KIT/AAT9_Master
+        _Validation_Preflight.md` (one-shot wrapper + guards).
+    40 -- Sharepack convention: `sharepacks/<HISTORY_DATE>/<STATE>/...` (history workbook date D). Winners/results are day-ahead (results date D+1) and may live under `sharepacks/<HISTOR
+        Y_DATE>/<STATE>/winners/<STATE>/`.
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+4 -0)
+     6
+     7 +Date convention (important):
+     8 +- `sharepacks/<DATE>/...` uses the **results/winners date** (D).
+     9 +- The corresponding history workbook is typically the day before (D‑1) and is what tables/JSON were built from.
+• Yes — trialing Part A + Part 2 on one real example (Ontario) is the right next step. That’s the “proof” that the template + summarizers are actually usable, and it sets us up cleanly
+  for Part 3 instead of doing Aux work in a vacuum.
+
+  Where I left off (so you’re not worried about mid-task state)
+
+  - Corrected date semantics to match how your sharepacks are actually organized:
+      - sharepacks/<DATE>/... is the results/winners date (D), and the history workbook is typically D‑1.
+      - Updated: docs/AAT9_KIT/AAT9_Final_Validation_Help.md and tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md.
+
+  So the “prep work” is done; we’re ready to actually fill the run report.
+  - Your approach (GitHub Desktop as your checkpoint/push mechanism) is totally fine. If/when you commit, just be mindful to stage only what you intend (there are lots of generated/
+    sharepack changes in this repo).
+
+  My optimal plan up to Part 3
+
+      - Pick the latest stamped HTML/JSON per winner (so we don’t bounce between duplicates), then answer Q1–Q14.
+  3. Complete Part 2 tool-by-tool using the embedded summarizer blocks
+      - Stable → Digit Reduction → VTRAC → Hot Zones
+      - For each: answer Q1–Q10 (brain vs winners evidence, 4-criteria mapping, dominance/noise, miss analysis, optimization notes, synergy seed).
+  4. Write 2B cross-tool synthesis
+      - Identify shared clusters/signals, conflicts, and the initial “aggregator hooks” worth testing.
+  5. Pause, then start Part 3
+      - With the Part A/2 evidence fresh and written down, Part 3 becomes much easier and much safer to reason about.
+
+
+
+
+
+
+
+
+
+
+
+___________________
+
+ Explored
+  └ Search def make_markdown in stable_sharepack_summary.py
+    117              "source": "patterns_scores.csv",
+        ⋮
+    134              "draw_chain": int(best.get("draw_chain_depth", 0)),
+    135 +            "why": str(best.get("compound_why", "")),
+    136              "source": "patterns_compound.csv",
+        ⋮
+    204              s = win["scores"]
+    203 -            lines.append(f"- Scores ({s['source']}): rank {s['best_rank']}, section {s['section']}, Set {s['set']}, Draw {s['draw']}, Col {s['col']}, score {s['score']}, hot {s[
+        ⋮
+    210              c = win["compound"]
+    208 -            lines.append(f"- Compound ({c['source']}): rank {c['best_rank']}, section {c['section']}, score {c['score']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain
+          {c['set_chain']}, draw_chain {c['draw_chain']}")
+    211 +            why = f" | why {c['why']}" if c.get("why") else ""
+    212 +            lines.append(f"- Compound ({c['source']}): rank {c['best_rank']}, section {c['section']}, score {c['score']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain
+          {c['set_chain']}, draw_chain {c['draw_chain']}{why}")
+    213          else:
+
+• Ran python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/stable/OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/stable/
+  │ OntarioCanada4/summary.md --json-out sharepacks/2025-06-21/OntarioCanada4/stable/OntarioCanada4/summary.json
+  └ (no output)
+
+• Explored
+  └ Read summary.md, vtrac_sharepack_summary.py
+
+• Edited scripts/tools/vtrac_sharepack_summary.py (+42 -2)
+     51      section_summaries: Dict,
+     52 +    indices_ranked: List[Dict],
+     53      winners_lens: Optional[List[Dict]] = None,
+        ⋮
+     80 +            winner_combo = str(w.get("winner_combo"))
+     81 +            if idx not in idx_pos:
+     82 +                lines.append(f"- winner {winner_combo} | index {idx}: not found in indices_ranked")
+     83 +                continue
+     84 +            entry = indices_ranked[idx_pos[idx]]
+     85 +            rank = idx_pos[idx] + 1
+     86 +            score = entry.get("score")
+     87 +            straights = entry.get("straights") or []
+     88 +            in_straights = any(
+     89 +                isinstance(s, dict) and str(s.get("straight")) == winner_combo for s in straights
+     95 +                reverse=True,
+     96 +            )[:3]:
+     97 +                try:
+     98 +                    top_s.append(f"{s.get('straight')} ({round(float(s.get('score', 0)), 3)})")
+     99 +                except Exception:
+    105 +            )
+    106          lines.append("  - Note: winners lens lives under the winners sharepack and is generated post-results.")
+        ⋮
+    127
+     97 -    top_indices = enhanced.get("indices_ranked", [])[: args.top_n]
+    106 -    md = make_markdown(state_name, stamp, top_indices, top_straights, section_summaries, winners_lens=winners_lens)
+    138 +    md = make_markdown(
+    139 +        state_name,
+    140 +        stamp,
+    141 +        top_indices,
+• Explored
+  └ Read summary.md
+
+• Ran python3 scripts/tools/create_master_validation_run_report.py --date 2025-06-21 --state OntarioCanada4
+• Explored
+  └ List winners
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+____________
+ I’m going to (1) open the Ontario run report + embedded tool summaries, (2) pull any missing evidence from the sharepack (winners JSON + tool outputs), then (3) fill Part A, Part 2
+  (all tools), and 2B in tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md so we’re cleanly ready to start Part 3 together.
+
+______________
+ No edits / no git operations
+
+  - In this “reset” segment I did not edit code, did not run apply_patch, and did not do any git pull/push/fetch. The only actions were reading logs/files and running small Python one-
+      - 2B cross-tool synthesis
+  - Once that run report is filled, we stop and do Part 3 together exactly as you requested.
+
+  hard for me to determine whether Codex will go off the rails doing what it thinks is correctly but not having the proper training or context to do so see it's hard to understand scale
+  of which you are able to absorb truncated I guess context from prior sessions I do understand there's an attempt to win the context resets for the new codec session to pick up where's
+  left off However I just like to be super careful seeing how important this stage of the project is we're literally talking about bringing the entire power of the analytical system
+  together to its optimal workflow and I'm sure you understand this So it's important that I double check to be careful when there is a context reset Can you confirm that this makes
+  report + template + latest codex log) before making any edits.
+
+  And yes, your interpretation is correct: I’m focused on completing the Ontario pilot through Part A + Part 2 + 2B so we’re cleanly ready to pause and do Part 3 together.
+
+  To stay safely within guardrails, I’ll do the following until you explicitly tell me otherwise:
+
+  - Only edit tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (fill answers); no code changes.
+  - Use read-only inspection (opening files / small Python reads) only to cite evidence.
+  - No git pull/push/fetch or any remote Git operations.
+  - Stop immediately after Part A + Part 2 + 2B are filled and ask you to start Part 3.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Yes, that’s fair — “no code changes unless we discuss” doesn’t restrict the analysis; it just means any fixes I identify get logged as notes/action items instead of being applied
+  immediately.
+
+  And yes, I have everything needed to complete Part A + Part 2 (all tools) + 2B for Ontario before we touch Part 3:
+
+  - The per-run report to fill: tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md
+  - The template reference: tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+  - Winners lens artifacts (HTML+JSON) in sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/
+  - Tool evidence blocks already embedded via each tool’s summary.md (Stable/DR/VTRAC/Hot Zones)
+  - If any ambiguity comes up, the underlying sharepack CSV/JSON/HTML artifacts are all present locally for verification.
+
+  Only one tiny clarifying preference (not required): I’ll treat the latest timestamped winners files (*_20251209_181934/181936.*) as the primary truth for Part A unless you want me to
+  anchor to a different one.
+
+  If you’re good with that, I’ll fill Part A (Q1–Q14) in the run report and then pause for your review before starting Part 2.
+
+
+› ok this sounds good the only other thing i would add is you may want to utilize a tool within the "tools" folder that could assist with analysis in terms of understanding in depth
+  vtrac relationships and all the different combinations relationships..i believe there is boxed vtrac chart, and other vtrac based charts breaking down all the combinations and all
+  permutations of combinations for related vtrac combinations which could be very helpful for your analysis even if there is anything which comes up in terms of permutations or stragiht
+  based analysis features or factors there is i beleive also a "vtrac straight" table which shows all the related 8 combinations vtrac straight of related permutation based
+  combinations ...its a good tool for referenceing within your analysis perhaps and also in terms of how there is alot of touching on how we access winners is relatred to the 4 criteria
+  of not just exact digit boxed and straight winners but also boxed vtrac and vtrac straights therefore all those things directly relate to what im talking about and what that tool can
+  help with to deeply understand these relationships and possibly provide the most optimal analytical insights via your analysis runs im hoping this makes sense? In fact since the point
+  is for us right now to develop the most optimal final validation template What I will ask is for you to pause again and go and inspect that document I just mentioned in the tools to
+  see if you understand exactly what I'm talking about and how it can help with the analysis runs as it can greatly relate to everything I mention I'm also trying to find the best way
+  to explain this but in a way I think it also mirrors closely the vtrac system or vtrac mechanisms already within the coded system "i cant quire remember the central location for this"
+  I just want to ensure we are like I said forming the most optimal process for all this so when things like this pop up it's good for us to quickly examine and see if these things
+  could be helpful tools Also if it turns out that you deeply understand what I'm saying after investigating that we may also decide to add this to some type of master validation notes
+  to tell future codec sessions "hey here is this helpful tool tis document ahs all these tables that can help with an optimal analysis as it assists with deeply understanding the
+  valuable vtrac relationships and insights we are trying to take advantage of in an optimal way and also related to the 4 critera of wins we outline throughout the system, please use
+  this in your analysis" you get what i mean something to taht effect..Because I don't want you just going off working while we sometimes discuss like this consider that we're in deep
+  brainstorm mode I love everything you suggested and I approve all of that 100 percent but can you quickly go and do what I just said See if you can understand the connection I'm
+  trying to make and why I think this tool can be helpful for you and provide me some comprehensive feedback and I will likely approve you after this point to proceed with all your
+› what exactly are you doing did you hear me when i said please provide feedback base don waht i asked you to investigate quickly
+
+
+
+
+
+
+• Yes — this makes sense, and I’m aligned with why you’re being extra cautious during resets.
+
+  I read tasks/codex_68.txt (from the end backwards). It confirms:
+
+  - We’re still in the “finish Ontario up through Part A + Part 2 + 2B” phase (not Part 3 yet).
+  - The “context resets” happened while we were doing evidence gathering (reading files / small Python reads), not applying code changes.
+  - The key remaining work before Part 3 is still: fill tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (Part A Q1–Q14, Part 2 Q1–Q10 per tool, and 2B).
+
+  On the VTRAC reference tool you asked about (TOOLS/VTRAC_REFERENCE_STRAIGHT.MD):
+
+  - It’s essentially the single best “decoder ring” for the 4‑criteria hit logic, because it contains:
+      - Index ↔ boxed families (Singles/Doubles per VTRAC index), plus a VTRAC_LOOKUP that maps any permutation → index.
+      - Canonical boxed label lookup (BOXED_LABEL_LOOKUP) so we can normalize any perm back to the boxed family label.
+      - Straight‑lane sets (“VSTRAIGHTS”): for each v‑code (e.g., v234) it lists the 8 straight combos in that lane (this directly supports “VT‑straight” reasoning).
+  - How it will help in the template runs:
+      - When we see a winner like 517, we can immediately map it to its canonical (157) and to its v‑code lane (v123 contains 517), then reason about whether the environment/tool outputs
+        supported playing the 8 straights vs just boxed vs in‑table perms.
+      - It also lets us cleanly explain “why VT‑boxed hit was plausible” vs “why VT‑straight wasn’t”, using the exact 8‑combo lane sets instead of intuition.
+  - If you want, after we finish the Ontario run report, I can add a short note in docs/AAT9_KIT/AAT9_Final_Validation_Help.md pointing future sessions to TOOLS/
+    VTRAC_REFERENCE_STRAIGHT.MD as the canonical reference for boxed+straight relationships. (I won’t edit docs unless you say “yes”.)
+
+  Current status / remaining tasks before Part 3:
+
+  - Everything needed is already present locally (winners HTML/JSON + per-tool summary.md blocks in the sharepack).
+  - What’s missing is simply writing the answers into tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.
+
+  If you approve, I’ll now start filling Part A (Q1–Q14) in that run report (using the winners JSON/HTML + VTRAC reference), then pause and check in before moving to Part 2.
+
+
+
+
+
+
+
+
+
+
+__________________________________________________
+
+Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+66 -14)
+  
+     39 +Primary files used (latest stamp):
+     40 +- `sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac21_winner_678_20251209_181934.html`
+     41 +- `sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac21_winner_678_20251209_181934.json`
+     42 +- `sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac7_winner_517_20251209_181936.html`
+     43 +- `sharepacks/2025-06-21/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac7_winner_517_20251209_181936.json`
+     44 +
+     45 +- Q1:
+     46 +  - Set1 col1 is extremely hot across *both* winner lenses and all variants: 24/28 Set1 (R2/R4/R6/R8) cells have a star marker; 20/28 are `**` (super-hot).
+     47 +  - **678 / index 21**: Set1 col1 reads as “high pressure” for family-gap + long-string overlap (lots of `hit-family-gap` / `ls-box` tags), but the *winner itself* does not sit
+         cleanly in Set1 col1 (no literal 678; winner perms show up mostly in earlier sets/other columns). Example of Set1 col1 still carrying winner-adjacent tags: Midday `Set1 Draw7 R6
+          col1 = 6687005599334` tagged `hit-winner`.
+     48 +  - **517 / index 7**: same Set1 col1 heat pattern, but the winner’s visible perm lane is not “col1-led” (winner perm shows up in R6, mid-cols). So: col1 ladders are a strong en
+         vironment signal, not a guarantee that the exact winner sits in col1.
+     49 +- Q2:
+     50 +  - Col1/col2 persistence is very strong: Set1 col2 is also 20/28 `**` across variants, indicating dense “most-recent” heat.
+     51 +  - This appears to be an “always hot” Ontario Set1 phenomenon for this date (it’s identical in both winner JSONs), so it’s valuable as a *macro environment* signal (high persis
+         tence pressure), but not sufficient alone for literal extraction.
+     52 +- Q3:
+     53 +  - **678 / index 21 — dominant survivors (from stats)**:
+     54 +    - Occurrence leaders: `367` (12), `362` (11), then `867` (3). Persistence leader: `362` (27), then `367` (14).
+     55 +    - Interpreting “last surviving VT family patterns”: `367` (in index21 family), `867` (winner-perm), and `263` (perm of family member `236`) are the cleanest “family survivor
+         s” visible in stats/cells.
+     56 +    - Relationship to draw_data: `367` appears directly in Evening draw_data col2 repeatedly (e.g., `Set1 Draw1..Draw6 draw_data col2=367`) and shows strongly in Combined; `362`
+          appears in strings across all variants.
+     57 +  - **517 / index 7 — dominant survivors (from stats)**:
+     58 +    - Occurrence/persistence leader: `175` (occ 6, pers 14). Secondary: `256` (occ 2, pers 4). Also `701` and `170` show up lightly.
+     59 +    - “Family survivors”: `175` (perm lane for 517’s boxed family), plus `256` and `701/170` (index7 family members) = a very tight family footprint.
+     60 +    - Cross-variant: the `175` lane shows in Midday+Combined strings but is absent from the Evening table, which is a key cross-variant “hidden lane” insight for this winner.
+     61 +- Q4:
+     62 +  - **678 / index 21**: strongest winner tagging is in **Midday** (hit-winner cells: Midday 20 vs Evening 2 vs Combined 3). However, the family leader `367` shows primarily in *
+         *Evening+Combined** (367 substring hits: Evening 8, Combined 12, Midday 0). That’s a “winner digits show in Midday, family pressure shows in Evening/Combined” split.
+     63 +  - **517 / index 7**: strongest winner tagging is in **Combined** (hit-winner cells: Combined 6 vs Midday 3 vs Evening 0). This supports the idea that “Combined often carries t
+         he perm lane even when the draw is Evening.”
+     64 +- Q5:
+     65 +  - **678 / index 21**: only a subset of winner permutations are actually present as substrings in the table strings: `867` and `687` dominate (25 total substring hits; by perm:
+          `867`=13, `687`=11, `786`=1; no `678` literal). This is a “tight perm lane” rather than “full permutation scatter.”
+     66 +  - **517 / index 7**: even tighter — only `175` appears as a substring (9 hits), and none of `517/157/571/715/751` appear. This strongly suggests a “one-perm lane day”.
+     67 +- Q6:
+     68 +  - Overall verdict: **strong persistence pressure but winner not literal**.
+     69 +    - Strong: Set1 col1/col2 super-hot density + heavy family-gap tagging.
+     70 +    - Weak (for cheap exact): neither winner appears as a clean literal triad in the table cells; both show via specific perm lanes embedded in longer strings.
+     71 +    - Practical read: better environment for **VT-boxed / perm-lane extraction** than for “literal exact-only” plays.
+     72 +- Q7:
+     73 +  - Yes (notably for 678/index21): the same family anchor `367` that dominates the winners stats also shows up as a high-quality lane candidate in Hot Zones later (Part 2: Hot Z
+         ones top lanes includes triad `367` in Top 10). This is strong evidence that “Hot Zones lanes and VTRAC family leaders are converging”.
+     74 +- Q8:
+     75 +  - Cross-set carryover is real:
+     76 +    - **678/index21** hit-family tags appear across Set3→Set2→Set1 in Midday (Set3 9, Set2 10, Set1 11) and Combined (Set3 8, Set2 6, Set1 17). So the family signal is not isola
+         ly (78 each). This supports using DR/long-string features as a “support layer” for these days.
+     80 +  - No explicit doubles/mirror tags exist in this winners lens; defer detailed Aux scoring to Part 3.
+     81 +- Q10:
+     82 +  - **Exact boxed**: plausible *only* via perm lane presence (e.g., 678 via `867/687`, 517 via `175`). Not via literal winner sitting cleanly.
+     83 +  - **Exact straight**: looks weak from this lens (no `678` or `517` literal substring hits).
+     84 +  - **VT-boxed** (boxed index family): strong conceptual path for both (678 is index21; 517 is index7), with strong family survivors (`367` for index21; `175/256/701` for index7
+         ).
+     85 +  - **VT-straight** (8-straight lane): no `hit-vt-straight` tags appear in either report; treat VT-straight as not directly signaled by this lens here.
+     86 +- Q11:
+     92 +- Q12:
+     93 +  - Profitable-environment traits for this example:
+     94 +    - Set1 col1/col2 super-hot density (20/28 `**` each) = high persistence pressure.
+     95 +    - Strong family-gap coverage (`hit-family-gap` dominates tag counts: 156 for index21 view; 118 for index7 view).
+     96 +    - Winner manifests through a **small perm lane**, not literal triad presence (cheap-focus opportunity if we can reliably detect which perm lane is “the one”).
+    101 +- Q14:
+    102 +  - Environment looks **relatively clean** in “survivor count” terms (678 view has 7 nonzero patterns; 517 view has 4).
+    103 +  - Main caution flag: cross-variant dispersion (e.g., 367 absent in Midday but dominant in Evening/Combined for the 678 view) — meaning a single-variant-only read can miss the
+         best family anchor.
+    104 +
+    105  ---
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+45 -10)
+    158  Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
+    159 -- Q1: …
+    160 -- Q2: …
+    161 -- Q3: …
+    162 -- Q4: …
+    163 -- Q5: …
+    164 -- Q6: …
+    165 -- Q7: …
+    166 -- Q8: …
+    167 -- Q9: …
+    168 -- Q10: …
+    159 +- Q1:
+    160 +  - Midday winner 678 (canonical 678):
+    161 +    - Winners artifact (spotlight): 14 rows; exact_boxed=14; exact_straight=7; vt_boxed=14.
+    162 +    - Brain evidence:
+    163 +      - `patterns_scores.csv`: rank 365 (Midday / Set3 Draw1 / Col4), score 21.0, why `boxed|cov4|hp_repeat3|vstr2|hot1|perm3|set_chain3`.
+    164 +      - `patterns_compound.csv`: rank 141 (Midday), score 29.0, why `set_chain3|draw_chain3|col1x1|hot1x1|vstrx1`.
+    165 +      - `metrics.json`: exact_boxed=True, exact_straight=True, vt_boxed_count=93.
+    166 +  - Evening winner 517 (canonical 157):
+    167 +    - Winners artifact (spotlight): 13 rows; exact_boxed=9; exact_straight=9; vt_boxed=13.
+    168 +    - Brain evidence:
+    169 +      - `patterns_scores.csv`: rank 3100 (Combined / Set3 Draw1 / Col7), score 12.0, why `straight|cov1|hp_repeat3|set_chain3`.
+    170 +      - `patterns_compound.csv`: rank 598 (Combined), score 16.5, why `set_chain3|draw_chain1`.
+    171 +      - `metrics.json`: exact_boxed=True, exact_straight=True, vt_boxed_count=50.
+    172 +- Q2:
+    173 +  - Exact boxed: **Yes** (both winners flagged exact_boxed=True; spotlight confirms).
+    174 +  - Exact straight: **Yes** (both winners flagged exact_straight=True; spotlight confirms).
+    175 +  - VT-boxed: **Yes** (spotlight vt_boxed counts; metrics vt_boxed_count non-trivial).
+    176 +  - VT-straight: Not explicitly surfaced as a separate “hit” in this summary, but the why-tags (`vstr2`, `vstrx1`) show Stable is already using a VT-straight-related feature in
+         scoring.
+    177 +- Q3:
+    178 +  - Winners artifacts (spotlights) align with the existence of winners inside Stable’s universe (it can “see” and tag them).
+    179 +  - The mismatch is *ranking*: winners are present but not necessarily top-ranked (especially canonical 157 at rank 3100 in scores). This is important for Part 2: Stable current
+         ly behaves more like a “coverage + evidence” lens than a strict “top-N winner” predictor.
+    180 +- Q4:
+    181 +  - The strongest Stable compound candidates are not the winners (e.g., compound rank 1 is canon 229 with score 92.5). This suggests the environment is “busy” under Stable’s com
+         pound scoring, even though winners still get flagged as exact/vt_boxed.
+    182 +- Q5:
+    183 +  - Top compound clusters (highest scores): 229, 9, 225, 224, 259, 239, 59 (see embedded summary list).
+    184 +  - Notable alignment to other tools:
+    185 +    - `259` is also a top straight in the VTRAC analyzer brain (Part 2 VTRAC “Top straights”), which makes it a good cross-tool candidate even though it’s not the winner.
+    186 +- Q6:
+    187 +  - Stable did not “miss” winners in the sense of hit-flagging, but it **under-prioritized** them in the ranked outputs (especially canonical 157).
+    188 +  - Likely causes (hypothesis to track, not a code change yet):
+    189 +    - Compound scoring heavily favors col1_hits + hot2 density, which may surface “obvious heat” clusters (229/9/225/259…) over the perm-lane winners we saw in Part A.
+    190 +    - The canonical-vs-literal mapping (517→157) can make “why it won” harder to see unless we always normalize in the report.
+    191 +- Q7:
+    192 +  - (V) Data read/schema OK: Yes (no missing artifacts; summary generated cleanly).
+    193 +  - (V) Features/columns missing/zero: None observed here.
+    194 +  - (V) Winners/metrics written: Yes (`metrics.json` + spotlight CSVs exist).
+    195 +- Q8:
+    196 +  - Most promising tuning direction (log as action item): lift/boost Stable’s scoring weight when Part A indicates a “tight perm-lane day” (e.g., 517→only 175 showing; 678→mostl
+         y 867/687) so those winners aren’t buried under generic hot2/col1 pressure.
+    197 +  - Add reporting clarity (already handled by summary): always show literal + canonical together (e.g., 517→157), to avoid mis-reading the tool as “missing” winners.
+    198 +- Q9:
+    199 +  - Use Stable as a “high-confidence confirmation” signal when it flags exact_boxed/exact_straight, even if ranked low.
+    200 +  - Cross-tool aggregator seed: if Stable flags a winner family + VTRAC winner lens shows a tight perm lane, boost only that perm lane rather than paying for full VT box.
+    201 +  - Candidate synergy: Stable compound top `259` aligns with VTRAC’s top straights and DR’s candidate digit clusters (59x) — good for non-winner “environment describing” feature
+         s in 2B.
+    202 +- Q10:
+    203 +  - Stable outputs are rich enough for Part 2 without raw CSV pasting: the summary already captures ranks + why-tags + hit flags. This is the exact workflow we want for future s
+
+
+Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+40 -10)
+    257  Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
+    258 -- Q1: …
+    259 -- Q2: …
+    260 -- Q3: …
+    261 -- Q4: …
+    262 -- Q5: …
+    263 -- Q6: …
+    264 -- Q7: …
+    265 -- Q8: …
+    266 -- Q9: …
+    267 -- Q10: …
+    258 +- Q1:
+    259 +  - Important framing: Digit Reduction’s “winner” artifacts here are tracking a **final digit/value** (e.g., Midday winner 6, Evening winner 2), not the raw 3-digit triad winner
+          (678/517).
+    260 +  - Midday winner final value = 6:
+    261 +    - Winners evidence: `winner_flags.csv` shows dr_win_exact sum 108/112, dr_win_vtrac sum 112/112; `winner_hits.csv` contains `final_value` and `match_types` per row.
+    262 +    - Brain evidence: strong top candidate patterns are in the 59x/99x cluster (top candidates include 599/559/592; top per_item includes long patterns like 5994033667).
+    263 +  - Evening winner final value = 2:
+    264 +    - Winners evidence: dr_win_exact sum 0/112, but dr_win_vtrac sum 102/112 and dr_win_vt_boxed sum 112/112 (so DR is “seeing” the winner more as VT-boxed than exact).
+    265 +  - Combined final value = 6:
+    266 +    - Winners evidence: dr_win_exact sum 156/250 and dr_win_vtrac sum 250/250.
+    267 +- Q2:
+    268 +  - The 4 hit criteria (exact/boxed triad + VT) do **not** map 1:1 to Digit Reduction because DR is not a triad predictor by itself; it’s a reducer/scorer that outputs digit-lev
+         el and candidate-cluster signals.
+    269 +  - What we *can* map cleanly:
+    270 +    - VT-boxed / VT-straight flags exist in DR winners artifacts (`dr_win_vt_boxed`, `dr_win_vt_straight`) and can be used as a support signal for the triad-level tools.
+    271 +- Q3:
+    272 +  - There is a notable logging/semantics mismatch to track:
+    273 +    - `winner_flags.csv` has many positive matches (e.g., Midday dr_win_exact=108).
+    274 +    - But the corresponding `winner_hits.csv` has `final_exact_match`, `final_vtrac_match`, and `final_vt_boxed_match` summing to 0 in the files we inspected (even though `match
+         _types` is populated on every row).
+    275 +  - Action item (note-only for now): clarify/repair the meaning of `winner_hits.csv` “final_*_match” columns vs. the `match_types` field so Part 2 DR evaluation is unambiguous.
+    276 +- Q4:
+    277 +  - DR’s strongest candidate clusters for this run are concentrated around 59x / 599 / 559 / 592 (top candidates list). That indicates a very “digit-clustered” environment, even
+          though the raw triad winners are 678/517.
+    278 +- Q5:
+    279 +  - Top candidates (triad-level) from `analyzer_v2_top_candidates.csv`: 599, 559, 592 (plus repeated 599 variants).
+    280 +  - Top per-item long patterns include: 5994033667 (Midday) and 592240133 (Evening).
+    281 +  - These are high-value for cross-tool synthesis because they overlap other tools’ “environment” candidates (VTRAC top straights includes 592/593/259; Stable compound has 259;
+         Hot Zones has 367).
+    282 +- Q6:
+    283 +  - If we treat DR as “did it capture the winner digit/value”: Midday and Combined look strong (many dr_win_exact matches for final value 6), while Evening indicates “not exact
+         but VT-boxed matches” for final value 2.
+    284 +  - If we try to treat DR as a direct triad-winner predictor: that would be a category error; it needs to be combined with a triad-producing layer (Stable/VTRAC/Hot Zones).
+    285 +- Q7:
+    286 +  - (V) Data read/schema OK: Yes (brain outputs + analyzer_v2 outputs + winners overlays exist).
+    287 +  - (V) Columns populated: Yes for flags; ambiguous for `winner_hits.csv` final_*_match columns (see Q3).
+    288 +  - (V) Winners/overlay artifacts written: Yes (winner_overlay.html and map/stamp files exist).
+    289 +- Q8:
+    290 +  - Highest-priority improvement (log-only): align the DR winners evaluation artifacts so the “hits” file is interpretable and consistent with flags (`match_types` vs final_*_ma
+         tch).
+    291 +  - Optional future improvement: produce a “triad filter” artifact that explicitly says how DR’s final digit/value should constrain triad candidates (so it becomes easier to plu
+         g into the superbrain).
+    292 +- Q9:
+    293 +  - Cross-tool synergy idea: use DR as a **gating / reduction layer**:
+    294 +    - If DR is confident on final digit/value, intersect Stable/VTRAC/Hot Zones candidate triads with that constraint to reduce spend.
+    295 +    - Use DR’s top candidates (599/559/592) as “environment descriptors” even when they don’t match the literal winners; then see if other tools also light up those same cluster
+         s (2B).
+    296 +- Q10:
+    297 +  - DR outputs are already structured enough for the master validation report (we can link to the overlays for visuals), but we need that one semantic clarification so the Part
+         2 narrative is consistent across sessions.
+    298
+
+• Explored
+  └ Read 2025-06-21__OntarioCanada4.md
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+39 -10)
+    345  Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
+    346 -- Q1: …
+    347 -- Q2: …
+    348 -- Q3: …
+    349 -- Q4: …
+    350 -- Q5: …
+    351 -- Q6: …
+    352 -- Q7: …
+    353 -- Q8: …
+    354 -- Q9: …
+    355 -- Q10: …
+    346 +- Q1:
+    347 +  - Winners (post-results) for this date/state are:
+    348 +    - Midday 678 → boxed index 21 (see winners lens JSON/HTML).
+    349 +    - Evening 517 → boxed index 7 (see winners lens JSON/HTML).
+    350 +  - Brain evidence (enhanced analyzer ranking) does **not** rank those indices highly:
+    351 +    - Index 21: rank 14/35, score 11.85.
+    352 +    - Index 7: rank 21/35, score 8.26.
+    353 +  - Even when the index rank is mid-pack, some *within-index* signals line up:
+    354 +    - For index 21, top “index straights” include `362` (which is also the #1 persistence survivor in the winners lens stats for 678).
+    355 +    - For index 7, top “index straights” include `256` (a legitimate index7 family member; winners lens also shows 256 as a secondary survivor behind 175).
+    356 +- Q2:
+    357 +  - Exact boxed / Exact straight: N/A (VTRAC analyzer is not an exact-triad scorer; it’s an index/straight-lane analyzer).
+    358 +  - VT-boxed: Yes in principle (it outputs ranked boxed indices), but for this example the winning indices (21, 7) were not top-ranked.
+    359 +  - VT-straight: “Top straights” exist in the brain output (932, 923, 293, 259, 193, 592, 593, 362, …). The winners (678/517) are not in that short list; however the presence of
+          `362` (which is also a winners-lens survivor) suggests there *was* a plausible VT-straight-adjacent lane, just not the literal winner straight.
+    360 +- Q3:
+    361 +  - The winners lens and brain are consistent at the “environment descriptor” level (e.g., 362 is important in both), but inconsistent at the “winner index prioritization” level
+          (winning indices are mid/low ranked).
+    362 +  - Treat this as the core Part 2 takeaway: the tool is producing signals, but its ranking weights may not yet match the winner reality for this example.
+    363 +- Q4:
+    364 +  - The section summaries show hot=20/superhot=12 everywhere but consensus_col1/col2 are False, suggesting no single col1/col2 consensus lane is dominating the VTRAC analyzer’s
+         view.
+    365 +  - That aligns with Part A’s finding that winners show via tight perm lanes embedded in strings, not as literal top straights.
+    366 +- Q5:
+    367 +  - Top indices (highest score): 20, 23, 30, 27, 28, 10, 29, 24, 33, 18 (see summary block for scores/features).
+    368 +  - Top straights: 932, 923, 293, 259, 193, 592, 593, 362, 963, 913.
+    369 +  - Cross-tool relevance: 259/592/593 also show up as strong “environment digits” in Stable/DR/Hot Zones, even though they are not the literal winners.
+    370 +- Q6:
+    371 +  - Miss (ranking) hypothesis: the scoring appears to overweight broad “presence” features and underweight the kind of “tight perm-lane + family-gap” signal we saw in the winner
+         s lens (e.g., 517 showing only via 175; 678 via 867/687).
+    372 +  - Another likely factor: the VTRAC analyzer’s top indices differ from the winners indices, which may indicate it’s modeling a different “lane” concept than the winners lens (b
+         oxed index vs v-code straights vs straight candidates). This is an architectural clarity item to carry forward.
+    373 +- Q7:
+    374 +  - (V) Data read/schema OK: Yes (summary generated; enhanced JSON present).
+    375 +  - (V) Expected outputs present: Yes (brain ranking + winners lens references present).
+    376 +  - (V) No missing files flagged by the run-report checklist.
+    377 +- Q8:
+    379 +  - Clarify contracts in future outputs: explicitly label whether a “straight” is (a) an index member, (b) a v-code straight lane member, or (c) a top-permutation straight candi
+         date, to reduce confusion in Part 2 evaluation.
+    380 +- Q9:
+    381 +  - Aggregator hook: intersect VTRAC analyzer “top straights” with Hot Zones “top lanes” and Stable/DR environment candidates. Example: `362` is a VTRAC top straight and a winne
+         rs-lens survivor; `367` is a winners-lens survivor and a Hot Zones top lane.
+    382 +  - Practical play hypothesis to test later: when VTRAC analyzer doesn’t rank the winning index highly, but a specific survivor straight like `362` is dominant, treat that as a
+         “lane anchor” and build a reduced candidate set around it (instead of only using index rank).
+    383 +- Q10:
+    384 +  - For this first master validation example, VTRAC analyzer feels like a strong **environment lens** but not yet a strong **winner index ranker**. Logging this clearly now is e
+         xactly why Part 2 exists.
+    385
+    430 -- Q3: …
+    431 -- Q4: …
+    432 -- Q5: …
+    433 -- Q6: …
+    434 -- Q7: …
+    435 -- Q8: …
+    436 -- Q9: …
+    437 -- Q10: …
+    428 +- Q1:
+    429 +  - Winner evidence vs brain outputs:
+    430 +    - Midday winner 678 (canonical 678): present in `hot_zones_top_lanes.csv` but weakly ranked (best rank 92). Per-lane flags indicate straight + vt-straight lanes exist.
+    431 +    - Evening winner 517 (canonical 157): present in `hot_zones_top_lanes.csv` but very weakly ranked (best rank 106). Per-lane flags indicate straight + vt-straight lanes exist
+         .
+    432 +  - The *strongest* Hot Zones brain candidates are not the literal winners; they’re high-scoring lanes like 227/277/267/127/578/334/146/226/367/122.
+    433 +  - Important: triad `367` is in Hot Zones Top 10 and also the dominant survivor in the VTRAC winners lens for the 678/index21 environment — a strong cross-tool anchor.
+    434 +- Q2:
+    435 +  - Exact boxed / Exact straight: Hot Zones is not a direct “exact winner” scorer; it ranks lanes/triads. Treat exact criteria as N/A for this tool alone.
+    436 +  - VT-boxed: Not a primary output of Hot Zones, but it does carry `vt_triad` and `vt_only_lane` tags, which can support VT reasoning.
+    437 +  - VT-straight: Yes as a lane feature (`vt_straight` tag; per-lane has_vt_straight=True). For this example, it indicates the tool recognized vt-straight lanes, even though it d
+         id not rank the literal winners highly.
+    438 +- Q3:
+    439 +  - Winners artifacts vs brain outputs are internally consistent:
+    440 +    - “winner_map file exists but triad_present=False” is expected if the winner map is a Top-N snapshot, not an exhaustive list.
+    441 +    - The actual ranked list (`hot_zones_top_lanes.csv`) still contains the winners (just low-ranked), which is the more important check.
+    442 +- Q4:
+    443 +  - The Hot Zones view is “busy”: many high-scoring lanes cluster around 2xx/3xx/5xx families (top 10 list), while winners (678/157) are far down the ranking.
+    444 +  - This suggests Hot Zones is primarily surfacing “high-pressure lanes” rather than directly surfacing the next literal winner.
+    445 +- Q5:
+    448 +    - A VTRAC winners-lens dominant survivor for index21 (678 environment), and
+    449 +    - A high-scoring Hot Zones lane (rank 9).
+    450 +- Q6:
+    451 +  - Miss analysis: Hot Zones did not strongly prioritize the literal winners (678/157), which likely means:
+    454 +- Q7:
+    455 +  - (V) Data read/schema OK: Yes (per_lane/top_lanes/meta present; summary generated).
+    456 +  - (V) Winner map present: Yes (but Top-N; not exhaustive).
+    457 +  - (V) No missing artifacts flagged by the run checklist.
+    458 +- Q8:
+    459 +  - Optimization note (log-only): make the winner map either exhaustive or clearly labeled Top-N in the report (we already improved wording in the summary to distinguish file_pr
+         esent vs triad_present).
+    460 +  - Aggregator-level improvement to test later: boost lanes that are both “hot zone strong” *and* “VTRAC family survivor strong” (e.g., 367).
+    461 +- Q9:
+    462 +  - Cross-tool seed:
+    463 +    - Use Hot Zones to surface a small set of “lane candidates” (Top 10–20).
+    464 +    - Intersect those with VTRAC winners-lens dominant survivors (e.g., 367/362/175 lanes) and Stable “coverage/why-tag” evidence to produce a reduced play set.
+    465 +- Q10:
+    466 +  - Hot Zones appears most valuable as a **lane ranking + feature tagger** (col1 funnels, verticals, vt_straight, etc.), not as a standalone winner predictor. That fits the supe
+         rbrain direction: Hot Zones contributes “where pressure is,” while other tools contribute “which family/winner lane is live.”
+    467
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+17 -3)
+    470  ## 2B — Cross-tool synthesis (after all tools)
+    471 -- Shared clusters/signals: …
+    472 -- Conflicts/noise: …
+    473 -- Aggregator/aux hooks to test next: …
+    471 +- Shared clusters/signals:
+    472 +  - Strong “environment anchors” show up repeatedly across tools even when they aren’t the literal winners:
+    473 +    - `367` is the standout: it is the #1 occurrence survivor in the VTRAC winners lens for 678/index21 *and* it is a Hot Zones Top-10 lane (rank 9).
+    474 +    - `362` is also key: it is the #1 persistence survivor in the VTRAC winners lens for 678/index21 and appears in the VTRAC analyzer brain’s Top straights list.
+    475 +    - A 59x cluster shows up across DR + VTRAC brain + Stable: DR top candidates include 599/559/592; VTRAC brain top straights include 592/593/259; Stable compound includes 259
+         0), making “hit auditing” ambiguous unless clarified.
+    482 +- Aggregator/aux hooks to test next:
+    483 +  - Perm-lane strategy (cheapness lever): when Part A shows only 1–2 permutations are present in-table (e.g., 517→only 175; 678→mostly 867/687), test an aggregator rule that pre
+         fers “play the in-table perm lane” over “play the full VT box,” unless other tools/aux indicate high uncertainty.
+         g.
+    486 +  - DR gating: treat DR as a digit/value constraint (not a triad predictor) and test whether applying it as a filter reduces candidate space without killing hit-rate.
+    487 +  - Part 3 prep: use Aux compound scoring to explain *why* a tight perm lane was live (doubles pressure, positional pressure, repeat indices, etc.) and to decide when to trust “
+         perm-only” vs “full VT” coverage.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+____________________________________________________________
+
+Completed OntarioCanada4 through Part A + Part 2 (all tools) + 2B, and we’re ready to start Part 3 together.
+
+  - Filled run report: tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:1 (all Qs answered; no placeholders).
+  - Part A key takeaways logged: winners show via tight perm lanes (678 via 867/687; 517 via 175 only), extreme Set1 col1/col2 heat (20/28 **), and strong cross-variant “family anchor”
+      - VTRAC analyzer: winning indices 21/7 are mid/low ranked; better as environment lens right now.
+      - Hot Zones: doesn’t rank winners high, but surfaces 367 top-10 (strong cross-tool anchor for the 678 environment).
+      - Digit Reduction: good as a reducer/gating layer, but winner_hits.csv “final_*_match” columns look inconsistent vs flags (logged as an action item).
+  - Workflow goal met: the report contains the embedded per-tool summary blocks + analysis so you don’t need to paste raw outputs to another model.
+
+  us discussing aprt 3?
+
+
+• Overall it went well, and it validated the exact workflow goal you’ve been aiming for: we can do a full master-validation example without pasting raw outputs around, because the per-
+  tool summarizers + per-run report give a single “shareable artifact” with source-labeled evidence and conclusions.
+
+  Impressions on the scripts + outputs workflow
+
+  - The sharepack summarizers (stable_sharepack_summary.py, dr_sharepack_summary.py, vtrac_sharepack_summary.py, hot_zones_sharepack_summary.py) did what we wanted: each one distilled
+    the key signal into a summary.md with where the evidence came from (scores/compound/metrics/spotlight, etc.), and that block could be embedded directly in the run report.
+  - The run report file (tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md) ended up acting like the “filled template” for that single example, which is the right structure for
+    surviving context resets.
+  - The tool outputs themselves are still rich/verbose, but we no longer need to ship them around: the report links them for audit, and the summarizers surface the key pieces needed
+    for analysis.
+
+  Did it feel “setup so the insights can be added to the template”?
+
+  - Yes—just with the important distinction we already adopted: you don’t write into the master template; you write into the per-run report. The per-run report is now the practical
+    “filled template” artifact for each example.
+  - The summarizer blocks are already in the run report, and the Part A/Part 2 answers sit right under them, so another model can review the run report without needing raw CSVs/HTMLs.
+
+  What was bumpy / what this first run exposed
+
+  - Part A (winners lens) is the least automated: to answer it rigorously I still had to do small Python inspections (tag counts, survivor stats, perm substring hits). It worked, but
+    it’s the one place where we’d benefit most from a dedicated “Part A winners-lens summarizer” in the future (optional; we can just keep doing it manually for now).
+  - Digit Reduction winners artifacts have a semantics mismatch: flags show lots of matches, but winner_hits.csv has final_*_match sums at 0 while match_types is populated. That doesn’t
+    block Part 3, but it’s an important “fix later” item because it affects auditability.
+  - VTRAC analyzer vs winners lens: they’re consistent on “environment anchors” (e.g., 362/367 showing up), but not on “winner index ranking” (winning indices not top-ranked). That’s a
+    real, valuable discovery—exactly the kind of gap master validation is meant to surface.
+
+  If you’re good, we can start Part 3 by using the run report’s 2B anchors (367/362, tight perm-lane days, DR gating) as the “things Aux needs to explain/score.”
+
+
+
+
+___________________________
+
+Yes, what you’re saying about Part A being intentionally “more manual” makes complete sense — and it’s exactly why it’s valuable.
+
+
+  - Level 0 (log + proceed): what we did in tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md — capture the discrepancy as an action item, then move on. This is usually best
+    right before Part 3.
+  - Level 1 (safe clarifications, no scoring changes): short doc/validator tweaks that reduce future confusion without changing tool behavior. These are safe to do either before or after
+    match_types, and/or adjust the DR summary wording to avoid misleading “rows=9” interpretations).
+  - VTRAC analyzer not ranking winning indices highly: not a “bug”, it’s performance signal. Keep as Level 0 for now; Part 3 is where we start thinking about how Aux/compound features
+    might boost the right lanes/indices.
+  - VTRAC global compact report present but empty: sharepacks/2025-06-21/vtrac_compact_report.json exists but has empty states/sections. That’s worth a Level 1 checklist/guard later,
+  - signals the tools aren’t capturing yet,
+  - cross-variant dynamics,
+  - “why this was a win” characteristics that become future profitability trackers.
+
+  When I say “automation,” I don’t mean replacing the reasoning/interpretation. I mean automating the mechanical extraction so Part A becomes:
+  Example of what could be automated without undermining the purpose:
+
+  - Set1 col1/col2 hot density counts (**, *)
+  - top survivor patterns from stats (occ/persistence/stability/straight_counts)
+  - which winner permutations appear as substrings (and where)
+
+  3) tasks/fix_me.txt takeaways (and how it maps to our run)
+  Reading it, the key useful points were:
+
+  - It reinforces the Brain vs Winners split + day-ahead mapping (we’re aligned and the run report follows it).
+        handled now.
+      - VTRAC compact report empty: confirmed in our sharepack (exists but empty). Fix_me’s suggestion to add a “non-empty compact report” guard/checklist item is good.
+
+  Bottom line before Part 3
+
+    runs.
+
+  Say the word on which path you prefer:
+
+  - “Proceed to Part 3 now” (recommended), or
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+______________________________________________________________________________________________________
+
+
+
+CAN YOU EXPLAIN TO ME EXACTLY WHAT IT IS YOURE DOING AS YOU DIDNT PROVIDE FEEDBACK ON YOUR PLAN BASE DON WHAT I SAID TO REVIEW ETC.
+
+
+• Ran sed -n '200,520p' tasks/FIX_ME2.txt
+  │
+  │ echo "\n--- tail again ---"
+  │ … +1 lines
+
+  What I did (no code edits)
+
+  - Read tasks/fix_me.txt and tasks/FIX_ME2.txt to extract the “fix now vs defer” recommendations.
+  - Verified the two concrete “bumpy” risks in the repo using the actual artifacts:
+      - VTRAC compact report: opened sharepacks/2025-06-21/vtrac_compact_report.json and confirmed it exists but is effectively empty (states: [], sections: []). Also opened
+        sharepacks/2025-06-21/summary.md.
+      - Digit Reduction hits vs flags: inspected the actual DR winners artifacts in sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/analyzer_v2/winners/ and
+            are ambiguous.
+  - Cross-checked current contracts in docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md and docs/AAT9_KIT/PITFALLS.txt to see what’s intended vs legacy.
+  - Grepped code locations where final_exact_match etc are referenced (to scope what a future fix would touch) but did not modify anything.
+
+  Why I did that
+  Because you asked for an optimal plan that doesn’t lose “fix later” items. I needed to confirm which items are “real, reproducible artifact issues” vs “just performance observations.”
+
+  ———
+
+  ## My recommended plan before Part 3 (state-of-the-art + low risk)
+
+  ### A) Add a dedicated “Final Validation Workflow Changelog” (high value, very safe)
+
+  Purpose: you won’t lose fix-later items across resets.
+  - First entries (from the Ontario run):
+      - DR: winner_hits.csv semantics mismatch vs flags (audit clarity issue).
+      - VTRAC: compact report exists but empty for 2025-06-21 (workflow guard issue).
+      - VTRAC analyzer: winning indices ranked mid/low (performance tuning, not a bug).
+      - Hot Zones: winner_map is Top‑N (triad_present can be false; expected) (doc clarity).
+  - Add a short section to docs/AAT9_KIT/AAT9_Final_Validation_Help.md (or wherever you prefer) with 4 bullets:
+      1. Sharepack date semantics: sharepacks/<DATE>/ is results day D; history workbook is D‑1.
+      2. VTRAC winners lens lives under sharepacks/<DATE>/<STATE>/winners/<STATE>/.
+      3. Digit Reduction is a final digit/value lens, not triad-winner lens.
+      4. Known bumpy semantics: DR winner_hits.csv final_*_match currently unreliable; prefer winner_flags.csv + match_types until clarified.
+
+  ### C) Add a workflow guard for “VTRAC compact report empty” (optional pre‑Part‑3, still safe)
+
+
+  ### D) DR audit clarity: fix now or log now (your choice)
+
+  This is the only “bumpy” item I’d consider actually fixing before scaling.
+  Two safe approaches:
+
+  - Doc-only (fast): log it in the changelog + help doc (A+B) and proceed to Part 3.
+  - Safe code-only in summarizer (still not core scoring): adjust scripts/tools/dr_sharepack_summary.py to stop implying “hits” are meaningful via final_*_match sums, and instead
+    summarize from flags + earliest-step fields (which are actually populated). This improves Part 2 repeatability without touching DR scoring.
+  This can be a later add, or we can do it now if you want.
+
+  ———
+
+  2. Slightly stronger: A + B + C now, then Part 3.
+  3. Most robust: A + B + C + (D summarizer tweak) now, then Part 3.
+
+  Tell me which option you want, and I’ll implement exactly that (still no core scoring changes unless you explicitly request them).
+
+• Updated Plan
+  └ Proceeding with the approved “most robust” pre–Part 3 stabilization: add a Final Validation workflow changelog, tighten the help doc contracts, add a VTRAC compact-report guard, and
+    improve DR sharepack summarizer to avoid misleading hit counts.
+    □ Add workflow changelog doc
+    □ Tighten Final Validation help contracts
+  └ List RUNS
+    Read AAT9_Final_Validation_Help.md
+    List tools
+    Search validate_vtrac|vtrac_compact|compact_report
+    Read AAT9_Final_Validation_Help.md

@@ -696,7 +696,7 @@ Evening (targeting 517):
 Total “cheap-safe” across both draws (Ontario): 6 + 6 = **12 combos** (post-hoc: would have hit both as exact boxed).
 
 ### 4.5 Optional method checks (log-only)
-- Not executed in this first run. Candidate methods to test later: `tasks/FINAL VALIDATION/combination_forming_2.txt` (12-combo method; consensus method).
+- Not executed in this first run. Candidate methods to test later: `docs/AAT9_KIT/FINAL VALIDATION/combination_forming_2.txt` (12-combo method; consensus method).
 
 ---
 

@@ -5,7 +5,7 @@ Purpose: read the 3-variant winners output (HTML + JSON) *before* any tool scori
 Execution note (recommended):
 - Do not write answers into this template file. Generate a per-run report and fill answers there:
   - `python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4`
-  - Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
+  - Output: `tasks/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
 
 How to read:
 - Open the analyzer-style winners HTML for the state/date (Midday, Evening, Combined panes). If available, also skim the JSON twin for counts/index info.
@@ -36,7 +36,7 @@ Part A — 3-variant winners HTML/JSON (environment lens)
 Purpose: for each string-table tool (Stable, Digit Reduction, VTRAC Analyzer, Hot Zones), distill the brain outputs + the tool’s winners artifacts into a concise analysis so another AI doesn’t need raw files. Mark validation-only items with “(V)” so they can be retired once stable. Keep winners outputs conceptually separate from brain outputs (brain = analyzer evidence; winners artifacts = post-results logging).
 
 Prereqs / workflow references:
-- If the sharepack + winners artifacts are not already generated for this date/state, follow: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md` (entry) and `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md` (one-shot wrapper + guards).
+- If the sharepack + winners artifacts are not already generated for this date/state, follow: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md` (entry) and `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md` (one-shot wrapper + guards).
 - Sharepack convention: `sharepacks/<RESULTS_DATE>/<STATE>/...` (winners/results date D). Tables are built from the history workbook (typically D‑1), then evaluated against winners from D.
 - Per-tool summarizers are intended to be the “paste block” that captures *all key evidence with source labels* (so we don’t paste raw CSVs). Generate/refresh `summary.md`, paste it under step 0), then answer Q1–Q10.
 
@@ -200,7 +200,7 @@ Coverage modes (counts, for planning only):
    - Rule of thumb (first-pass): prefer **boxed** over perm-only when Part A shows the winner family but not the literal permutation; prefer **vstraight** when lanes are clean and multiple tools tag vt-straight; reserve **full index boxed** for high-uncertainty days.
 5) Optional method checks (log-only)  
    - If you want to test special methods, reference:
-     - `docs/AAT9_KIT/FINAL VALIDATION/combination_forming_2.txt` (12-combo method, consensus method, etc.)
+     - `tasks/FINAL VALIDATION/combination_forming_2.txt` (12-combo method, consensus method, etc.)
    - Record whether the method would have produced a 4-criteria hit on this example. If it’s too early, mark “to test later”.
 
 ---
@@ -222,6 +222,6 @@ Purpose: end the run with a compact “what matters” summary that can be compa
    - 2–6 bullets: where tools disagreed with each other or with the winners lens (e.g., tool saw but didn’t elevate; index rank mismatch; lane was present but low-ranked).
 5) Fix-now vs fix-later  
    - Fix-now: anything blocking repeatable runs (broken outputs, missing artifacts, drift guards failing).  
-  - Fix-later: tuning ideas / aggregator hypotheses. Log them to: `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
+   - Fix-later: tuning ideas / aggregator hypotheses. Log them to: `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
 6) Next run recommendation  
    - Which next state/date to run and what hypothesis you want to test (e.g., “does Aux convergence reliably boost the correct variant?”, “does Hot Zones ∩ VTRAC survivors work better than index rank?”).

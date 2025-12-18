@@ -5,7 +5,7 @@
 
 ## 2025-12-12 - Master Validation Part 2 summarizers + safe table resolver
 - Impact: Added per‑tool sharepack summarizers (Stable, Digit Reduction, V‑TRAC, Hot Zones) that emit labeled Markdown/JSON blocks for Part 2, eliminating raw CSV pasting. Added small validators for Stable/DR/Hot Zones winners presence. Introduced a tolerant CSV table resolver (prefixed vs generic) plus a naming validator; no file renames performed.
-- Files: scripts/tools/{stable_sharepack_summary.py,dr_sharepack_summary.py,vtrac_sharepack_summary.py,hot_zones_sharepack_summary.py,validate_stable_winners.py,validate_dr_winners.py,validate_hot_zones_winners.py,validate_tables_naming.py}, utils/path_handler.py, docs/AAT9_KIT/{AAT9_Final_Validation_Help.md,AAT9_Analyzer_Lean_Outputs.md}, tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md.
+- Files: scripts/tools/{stable_sharepack_summary.py,dr_sharepack_summary.py,vtrac_sharepack_summary.py,hot_zones_sharepack_summary.py,validate_stable_winners.py,validate_dr_winners.py,validate_hot_zones_winners.py,validate_tables_naming.py}, utils/path_handler.py, docs/AAT9_KIT/{AAT9_Final_Validation_Help.md,AAT9_Analyzer_Lean_Outputs.md}, docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md.
 - Notes: V‑TRAC winners artifacts remain centralized under Winners Logger sharepacks; the V‑TRAC summarizer auto‑includes them when present.
 
 ## 2025-12-05 - Digit Reduction training JSON restored + extended ladder enabled + dual-day reruns

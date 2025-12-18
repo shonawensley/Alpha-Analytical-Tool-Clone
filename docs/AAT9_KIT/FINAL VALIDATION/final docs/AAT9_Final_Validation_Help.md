@@ -5,7 +5,7 @@ Purpose: A single reference for running historical/backtest examples safely and 
 Repo root (WSL): `/home/ser/code/Alpha-Analytical-Tool-Clone`
 
 Read first (workflow architecture + where everything lives):
-- `docs/AAT9_KIT/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
 
 Date convention (important):
 - `sharepacks/<DATE>/...` uses the **results/winners date** (D).
@@ -22,7 +22,7 @@ Date convention (important):
 | Stable evidence (brain + winners lens) | `sharepacks/<D>/<STATE>/stable/<STATE>/` | `metrics.json` is the Stable “winners + ranks” anchor. |
 | Digit Reduction winners semantics | `.../analyzer_v2/winners/*_winner_stamp.json` | SSOT for **any vs final** counts (see below). |
 | VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
-| Template answers | `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
+| Template answers | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
 
 ## Known bumpy semantics (read once)
 
@@ -35,14 +35,14 @@ Date convention (important):
   - A compact report JSON can exist but contain `states=[]` / `sections=[]`. Run the validator below to fail fast and rerun the VTRAC share bundle if needed.
 
 Workflow changelog (don’t lose “fix later” items across sessions):
-- `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 
 Tracked states (tables present): CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. (GA/TX not tracked; skip to avoid errors.)
 
 Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`
-- Preflight/guards: `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md`, `docs/AAT9_KIT/AAT9_Batch_Workflow_SOP.md`
-- Lean outputs per tool: `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md` (Digit Reduction notes below)
+- Preflight/guards: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`, `docs/AAT9_KIT/AAT9_Batch_Workflow_SOP.md`
+- Lean outputs per tool: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md` (Digit Reduction notes below)
   - Quick validation helpers:
   - Table naming check (no file changes): `PYTHONPATH=.:src python3 scripts/tools/validate_tables_naming.py --json-out tables_naming.json`
   - Tables↔Aux alignment check (guards against stale/mismatched Aux draw CSVs):
@@ -76,7 +76,7 @@ When starting a new master validation session, use this file as ENTRY, then fan 
   - `docs/AAT9_KIT/AAT9_KIT_README.md`
   - `docs/AAT9_KIT/AAT9_Workflow_Standard.md`
   - `docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md`
-  - `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
   - `docs/AAT9_KIT/AAT9_Data_Validation_Workflow.md`
   - `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`
   - `docs/AAT9_KIT/AAT9_Macro_Roadmap.md`
@@ -157,7 +157,7 @@ Tool quick index — Digit Reduction
      - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md`
      - V‑TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
      - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
-   - Paste each summary under Part 2 step “0) Outputs reviewed” in `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`, then answer Q1–Q10 for that tool.
+   - Paste each summary under Part 2 step “0) Outputs reviewed” in `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`, then answer Q1–Q10 for that tool.
 
 ### DR outputs vs. sharepacks (multi-day runs)
 - Live DR outputs under `data/outputs/analysis/digit_reduction/<STATE>/…` always reflect the **latest** run for that state (they are not date-versioned on disk).
@@ -173,7 +173,7 @@ Tool quick index — Digit Reduction
 
 ## Pointers
 - WSL canonical paths: repo root `/home/ser/code/Alpha-Analytical-Tool-Clone`, GitHub Desktop view `\\wsl$\\Ubuntu\\home\\ser\\code\\Alpha-Analytical-Tool-Clone`.
-- Docs with more detail: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`, `docs/AAT9_KIT/AAT9_Master_Validation_Preflight.md`, `docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md`.
+- Docs with more detail: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`, `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`, `docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md`.
 - Extended Set1 ladder (Draw2–Draw7 cols 6→1) is ON by default (`AAT9_DR_EXTENDED_SET1=1`). Leave ON unless troubleshooting.
 - Stage 1 tables/JSON are the single source of truth for **all** tools (Stable, V‑TRAC, Digit Reduction, Aux, Hot Zones). When swapping Excel workbooks, always re-run Stage 1 before any tool/batch so every analyzer sees fresh datasets. For Aux/compound features that operate on draws (not tables), ensure the draws were generated from the same history workbook/date used here before comparing outputs.
 
@@ -241,10 +241,10 @@ Read all requested KIT docs. Key takeaways for running and backtesting efficient
 
   Current best shortcuts:
 
-  - ENTRY: docs/AAT9_KIT/AAT9_Final_Validation_Help.md (quick index + Stage 1/2/3 commands).
-  - Checklist: docs/AAT9_KIT/AAT9_Final_Validation_Checklist.md (guards, day-ahead rule, DR live vs sharepack).
+  - ENTRY: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md (quick index + Stage 1/2/3 commands).
+  - Checklist: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Checklist.md (guards, day-ahead rule, DR live vs sharepack).
   - Batch SOP: docs/AAT9_KIT/AAT9_Batch_Workflow_SOP.md (swap workbook → tables → results → batch → outputs).
-  - Lean outputs: docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md (what to collect per tool).
+  - Lean outputs: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md (what to collect per tool).
   - Table swap/guards: docs/AAT9_KIT/AAT9_Table_Swap_Verification.md + AAT9_Master_Validation_Preflight.md.
   - Quickstart: docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md (paths, commands, common checks).
 
@@ -294,10 +294,10 @@ Faststart addendum (to use directly)
       - When we see a winner like 517, we can immediately map it to its canonical (157) and to its v‑code lane (v123 contains 517), then reason about whether the environment/tool outputs
         supported playing the 8 straights vs just boxed vs in‑table perms.
       - It also lets us cleanly explain “why VT‑boxed hit was plausible” vs “why VT‑straight wasn’t”, using the exact 8‑combo lane sets instead of intuition.
-  - If you want, after we finish the Ontario run report, I can add a short note in docs/AAT9_KIT/AAT9_Final_Validation_Help.md pointing future sessions to TOOLS/
+  - If you want, after we finish the Ontario run report, I can add a short note in `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md` pointing future sessions to TOOLS/
     VTRAC_REFERENCE_STRAIGHT.MD as the canonical reference for boxed+straight relationships. (I won’t edit docs unless you say “yes”.)
 
   Current status / remaining tasks before Part 3:
 
   - Everything needed is already present locally (winners HTML/JSON + per-tool summary.md blocks in the sharepack).
-  - What’s missing is simply writing the answers into tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.
+  - What’s missing is simply writing the answers into docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md.

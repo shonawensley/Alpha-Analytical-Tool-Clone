@@ -42,7 +42,7 @@ Winners logging/grading happens only at the right side.
 
 ## 1) Single sources of truth (contracts table)
 
-For operational detail, see: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+For operational detail, see: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 
 | Concept | SSOT | Notes |
 |---|---|---|
@@ -54,7 +54,7 @@ For operational detail, see: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
 | Aux draw CSVs | `data/cleaned/draws/*_draws.csv` | **Aux/BA must read draw CSVs** (not string-table XLSX). |
 | Aux draw snapshot (validation) | `sharepacks/<D>/<STATE>/aux/draws/` | For Master Validation Part 3, do not rely on live `data/cleaned/draws/` (it can drift after swaps). |
 | Winners overlays (HTML/JSON lens) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | This is Template Part 1 (environment lens). |
-| Template answers (filled) | `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Don’t write answers into the template file. |
+| Template answers (filled) | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Don’t write answers into the template file. |
 
 Canonicalization gotcha:
 - Many tools work in **canonical** (sorted digits). Example: literal `517` → canonical `157`.
@@ -97,7 +97,7 @@ Typical per-state sharepack structure:
   - Aux summary: `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md`
 
 Validation narrative (the file you share across engines):
-- `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
 
 ---
 
@@ -145,23 +145,23 @@ Part-by-part analysis flow:
 - **Part 5 (summary)**: pack-vs-winners check + key tags + conflicts + fix-now vs fix-later + next run.
 
 Template file (questions only):
-- `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
 
 Filled run report (answers live here):
-- `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
 
 Workflow-level “fix later” log:
-- `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 
 ---
 
 ## 5) Tool contracts (brain vs winners) + helper scripts
 
 Lean outputs reference:
-- `docs/AAT9_KIT/AAT9_Analyzer_Lean_Outputs.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md`
 
 Entry + workflow guardrails:
-- `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 
 Summarizers (produce paste-ready evidence blocks for Part 2):
 - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<D>/<STATE>/stable/<STATE> --md-out summary.md --json-out summary.json`
@@ -210,12 +210,12 @@ Validators (fail fast on common “wiring drift”):
 
 ## 7) “Start here” quickstart (new session)
 
-1) Read: `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
-2) Read: `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
-3) Pick a sharepack run report: `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+1) Read: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+2) Read: `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+3) Pick a sharepack run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
 4) If Part 3 is missing: run Aux summary (prefer `--excel` if you have the D‑1 history workbook):
    - `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
-5) Continue the template (Parts 1–3), log “fix later” items to: `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+5) Continue the template (Parts 1–3), log “fix later” items to: `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 
 Note on Git:
 - Codex should avoid git remote operations (push/pull/fetch). Use your manual GitHub Desktop workflow for checkpoints.

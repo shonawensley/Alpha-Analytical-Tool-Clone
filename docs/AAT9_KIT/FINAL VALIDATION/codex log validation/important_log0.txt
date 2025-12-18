@@ -1,0 +1,1894 @@
+
+
+Updated Plan
+  └ ✔ Inspect current scripts and artifacts
+    □ Add workflow changelog + help clarifications
+    □ Add VTRAC compact-report validator
+    □ Fix DR summarizer + DR validator semantics
+    □ Run sanity checks on Ontario sharepack
+    □ Recap changes and pause for Part 3
+
+
+Added tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md (+35 -0)
+     1 +# Final Validation Workflow — Changelog (Master Validation)
+     2 +
+     3 +Purpose: log **workflow-level** changes, “bumpy items”, and follow-ups discovered while running the Master Validation templates (Parts 1–3). This is the place to capture “fix lat
+        er” items so they don’t get lost across Codex context resets.
+     4 +
+     5 +Scope: docs, sharepack helpers (summarizers/validators/run-report generator), and workflow contracts. Avoid changing core analyzers/scorers unless explicitly approved.
+     6 +
+     7 +---
+     8 +
+     9 +## 2025-12-13
+    10 +
+    11 +### Digit Reduction: clarify “any vs final” semantics (SSOT = winner stamp JSON)
+    12 +
+    13 +- Problem observed: `winner_hits.csv` was misread as if the “winner” must appear in `final_value`. In reality:
+    14 +  - “Any” matches (e.g., `exact_any`, `vtrac_any`) are reflected in `winner_flags.csv` (`dr_win_*`) and in `*_winner_stamp.json` `counts`.
+    15 +  - “Final” matches (e.g., `exact_final`, `vtrac_final`) are reflected in `winner_hits.csv` `final_*_match` columns and in `*_winner_stamp.json` `counts`.
+    16 +  - It is valid for an example to have strong `*_any` counts but **zero** `*_final` counts.
+    17 +- Impact: Part 2 DR summaries/validators can look “broken” unless the semantics are explicit.
+    18 +- Fix: update DR summarizer + validator to use `*_winner_stamp.json` as the semantic anchor and to report totals correctly (no `final_value == winner` filtering).
+    19 +- Files:
+    20 +  - `scripts/tools/dr_sharepack_summary.py`
+    21 +  - `scripts/tools/validate_dr_winners.py`
+    22 +
+    23 +### VTRAC: guard against empty compact report
+    24 +
+    25 +- Problem observed: `sharepacks/<DATE>/vtrac_compact_report.json` can exist but contain empty `states=[]` and `sections=[]`, which silently breaks aggregator-style reads.
+    26 +- Fix: add a validator to flag “missing or empty compact report” early in the workflow.
+    27 +- Files:
+    28 +  - `scripts/tools/validate_vtrac_compact_report.py`
+    29 +
+    30 +### Workflow contract clarity
+    31 +
+    32 +- Clarify that `sharepacks/<DATE>/...` uses the **results/winners date (D)** and the history workbook is typically **D-1**.
+    33 +- Add “Contract Truth Table” + “Known bumpy semantics” to the entry doc so future sessions don’t have to rediscover these rules.
+    34 +- Files:
+    35 +  - `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+
+• Edited docs/AAT9_KIT/AAT9_Final_Validation_Help.md (+28 -1)
+    10
+    11 +## Contract Truth Table (SSOT)
+    12 +
+    13 +| Concept | Single source of truth | Notes |
+    14 +|---|---|---|
+    15 +| Results date (D) | `sharepacks/<D>/...` folder name | Sharepacks are keyed by **winners/results date**. |
+    16 +| History workbook date (D‑1) | Pick3StatsC4 workbook selected for that run | Tables/JSON are rebuilt from this “world snapshot”. |
+    17 +| Results input | `data/results/<D>.txt` | Winners list pasted/loaded for D. |
+    18 +| 3‑variant winners overlays (HTML/JSON) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | These are the **environment lens** (Template Part 1). |
+    19 +| Stable evidence (brain + winners lens) | `sharepacks/<D>/<STATE>/stable/<STATE>/` | `metrics.json` is the Stable “winners + ranks” anchor. |
+    20 +| Digit Reduction winners semantics | `.../analyzer_v2/winners/*_winner_stamp.json` | SSOT for **any vs final** counts (see below). |
+    21 +| VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
+    22 +| Template answers | `tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
+    23 +
+    24 +## Known bumpy semantics (read once)
+    25 +
+    26 +- **Digit Reduction “any vs final”**
+    27 +  - It is valid for an example to have strong `*_any` counts (e.g., `exact_any`, `vtrac_any`) but **zero** `*_final` counts.
+    28 +  - Do **not** assume the winner must appear in `winner_hits.csv.final_value`. Use `*_winner_stamp.json` `counts` as the semantic anchor.
+    29 +- **Canonical vs literal**
+    30 +  - Many tool outputs are canonicalized (sorted digits). Example: literal `517` → canonical `157`. Always map literal → canonical before filtering/spot-checking.
+    31 +- **VTRAC compact report can be empty**
+    32 +  - A compact report JSON can exist but contain `states=[]` / `sections=[]`. Run the validator below to fail fast and rerun the VTRAC share bundle if needed.
+    33 +
+    34 +Workflow changelog (don’t lose “fix later” items across sessions):
+    35 +- `tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md`
+    36 +
+    37  Tracked states (tables present): CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. (GA/TX not tracked; skip to avoid errors.)
+       ⋮
+    49    - Digit Reduction sharepack summarizer: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md --json-
+        out summary.json`
+    24 -    - Paste the Markdown into Part 2 before answering; includes per-output labels (flags/hits/per_item/top/reducer) and canonical mapping.
+    50 +    - Paste the Markdown into Part 2 before answering; includes per-output labels (stamp/flags/hits/per_item/top/reducer) and explicit **any vs final** counts.
+    51    - V-TRAC sharepack summarizer: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md --json-out summary.json
+        `
+       ⋮
+    56    - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --s
+        tate <STATE>`
+    57 +  - VTRAC compact report validator (flags missing/empty states/sections): `python3 scripts/tools/validate_vtrac_compact_report.py --date <DATE>`
+    58
+
+• Updated Plan
+  └ ✔ Inspect current scripts and artifacts
+    ✔ Add workflow changelog + help clarifications
+    □ Add VTRAC compact-report validator
+    □ Fix DR summarizer + DR validator semantics
+    □ Run sanity checks on Ontario sharepack
+    □ Recap changes and pause for Part 3
+
+• Explored
+  └ List TOOLS
+    Search vtrac
+    Read run_vtrac_share_bundle.py
+
+• Added scripts/tools/validate_vtrac_compact_report.py (+93 -0)
+     1 +"""
+     2 +Validate that the VTRAC compact report exists and is non-empty for a sharepack date.
+     3 +
+     4 +Why:
+     5 +  `sharepacks/<DATE>/vtrac_compact_report.json` is the global “aggregator feed” artifact.
+     6 +  It can exist but still be effectively empty (e.g., `states=[]`, `sections=[]`), which
+     7 +  silently breaks downstream joins/scoring.
+     8 +
+     9 +Usage:
+    10 +  python3 scripts/tools/validate_vtrac_compact_report.py --date 2025-06-21
+    11 +  python3 scripts/tools/validate_vtrac_compact_report.py --path sharepacks/2025-06-21/vtrac_compact_report.json
+    12 +
+    13 +Exit codes:
+    14 +  0 = OK (non-empty)
+    15 +  1 = missing/empty (or invalid JSON)
+    16 +"""
+    17 +
+    18 +from __future__ import annotations
+    19 +
+    20 +import argparse
+    21 +import json
+    22 +import sys
+    23 +from pathlib import Path
+    24 +from typing import Any, Dict, List, Tuple
+    25 +
+    26 +
+    27 +REPO_ROOT = Path(__file__).resolve().parents[2]
+    28 +
+    29 +
+    30 +def load_json(path: Path) -> Dict[str, Any]:
+    31 +    try:
+    32 +        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    33 +    except json.JSONDecodeError as exc:
+    34 +        raise SystemExit(f"Invalid JSON: {path} ({exc})") from exc
+    35 +
+    36 +
+    37 +def summarize(data: Dict[str, Any]) -> Tuple[int, int, str]:
+    38 +    states: List[Any] = data.get("states") or []
+    39 +    sections: List[Any] = data.get("sections") or []
+    40 +    version = str(data.get("scorer_version") or "")
+    41 +    return len(states), len(sections), version
+    42 +
+    43 +
+    44 +def main() -> int:
+    45 +    ap = argparse.ArgumentParser()
+    46 +    ap.add_argument("--date", help="Sharepack date folder (YYYY-MM-DD), e.g. 2025-06-21")
+    47 +    ap.add_argument("--path", help="Explicit path to vtrac_compact_report.json")
+    48 +    ap.add_argument("--warn-only", action="store_true", help="Print warnings but return exit code 0")
+    49 +    args = ap.parse_args()
+    50 +
+    51 +    if not args.path and not args.date:
+    52 +        raise SystemExit("Provide either --date or --path")
+    53 +
+    54 +    report_path = Path(args.path) if args.path else (REPO_ROOT / "sharepacks" / args.date / "vtrac_compact_report.json")
+    55 +
+    56 +    problems: List[str] = []
+    57 +    if not report_path.exists():
+    58 +        problems.append(f"missing file: {report_path}")
+    59 +        states_n = sections_n = 0
+    60 +        version = ""
+    61 +    else:
+    62 +        data = load_json(report_path)
+    63 +        states_n, sections_n, version = summarize(data)
+    64 +        if states_n == 0:
+    65 +            problems.append("compact report has no states (states=[])")
+    66 +        if sections_n == 0:
+    67 +            problems.append("compact report has no sections (sections=[])")
+    68 +
+    69 +    print(f"VTRAC compact report: {report_path}")
+    70 +    if version:
+    71 +        print(f"- scorer_version: {version}")
+    72 +    print(f"- states: {states_n}")
+    73 +    print(f"- sections: {sections_n}")
+    74 +
+    75 +    if problems:
+    76 +        print("\nProblems:")
+    77 +        for p in problems:
+    78 +            print(f"- {p}")
+    79 +        print("\nSuggested fix:")
+    80 +        print("- Rebuild VTRAC share artifacts, then regenerate/copy into the sharepack date.")
+    81 +        print(f"- Try: {sys.executable} TOOLS/run_vtrac_share_bundle.py")
+    82 +        if args.warn_only:
+    83 +            print("\nWARN-ONLY mode: not failing.")
+    84 +            return 0
+    85 +        return 1
+    86 +
+    87 +    print("\nOK: compact report is present and non-empty.")
+    88 +    return 0
+    89 +
+    90 +
+    91 +if __name__ == "__main__":
+    92 +    raise SystemExit(main())
+    93 +
+
+• Updated Plan
+  └ ✔ Inspect current scripts and artifacts
+    ✔ Add workflow changelog + help clarifications
+    ✔ Add VTRAC compact-report validator
+    □ Fix DR summarizer + DR validator semantics
+    □ Run sanity checks on Ontario sharepack
+    □ Recap changes and pause for Part 3
+
+• Edited scripts/tools/dr_sharepack_summary.py (+164 -69)
+      7  What it does:
+      8 -  - Maps winners (Midday/Evening/Combined) from the winner_flags/hits to literal + canonical.
+      8 +  - Maps winners (Midday/Evening/Combined) from `*_winner_stamp.json` (SSOT) to literal + canonical.
+      9    - Reads analyzer_v2 per_item/top/meta, winner_flags/hits/map/overlay, reducer scores/report (if present).
+     10 -  - Reports winner evidence/ranks with explicit source labels.
+     10 +  - Reports winner evidence/ranks with explicit source labels, including **any vs final** semantics.
+     11    - Lists top candidates and coverage gaps (missing flags/hits) per variant.
+        ⋮
+     21  from pathlib import Path
+     22 -from typing import Dict, List
+     22 +from typing import Any, Dict, List, Optional
+     23
+        ⋮
+     30
+     31 +def load_json(path: Path) -> Dict[str, Any]:
+     32 +    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+     33 +
+     34 +
+     35  def read_flags_hits(root: Path, stamp: str, variant: str) -> Dict[str, pd.DataFrame]:
+     36      winners_dir = root / "analyzer_v2" / "winners"
+     33 -    flags = pd.read_csv(winners_dir / f"{stamp}_{variant}_winner_flags.csv")
+     34 -    hits = pd.read_csv(winners_dir / f"{stamp}_{variant}_winner_hits.csv")
+     37 +    flags_path = winners_dir / f"{stamp}_{variant}_winner_flags.csv"
+     38 +    hits_path = winners_dir / f"{stamp}_{variant}_winner_hits.csv"
+     39 +    flags = pd.read_csv(flags_path) if flags_path.exists() else pd.DataFrame()
+     40 +    hits = pd.read_csv(hits_path) if hits_path.exists() else pd.DataFrame()
+     41      return {"flags": flags, "hits": hits}
+        ⋮
+     44  def detect_latest_stamp(winners_dir: Path) -> str:
+     39 -    stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_flags.csv")})
+     45 +    stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_stamp.json")})
+     46 +    if not stamps:
+     47 +        stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_flags.csv")})
+     48      if not stamps:
+        ⋮
+     52
+     53 +def read_winner_stamp(root: Path, stamp: str, variant: str) -> Optional[Dict[str, Any]]:
+     54 +    winners_dir = root / "analyzer_v2" / "winners"
+     55 +    stamp_path = winners_dir / f"{stamp}_{variant}_winner_stamp.json"
+     56 +    if not stamp_path.exists():
+     57 +        return None
+     58 +    return load_json(stamp_path)
+     59 +
+     60 +
+     61  def summarize_variant(
+        ⋮
+     64      top: pd.DataFrame,
+     65 +    stamp_data: Optional[Dict[str, Any]],
+     66      flags: pd.DataFrame,
+        ⋮
+     69  ) -> Dict:
+     53 -    # Winner literal from flags: assume dr_win_exact/dr_win_vtrac rows contain the literal in final_value/hits
+     54 -    literal = None
+     55 -    if "winner_literal" in flags.columns:
+     56 -        literal = str(flags["winner_literal"].iloc[0])
+     57 -    elif "final_value" in hits.columns:
+     58 -        literal = str(hits["final_value"].iloc[0])
+     59 -    else:
+     60 -        literal = "unknown"
+     61 -    canonical = canonical_of_literal(literal)
+     70 +    # Winner + semantics are anchored by stamp JSON (SSOT).
+     71 +    literal = str((stamp_data or {}).get("winner") or "unknown")
+     72 +    canonical = str((stamp_data or {}).get("winner_canon") or canonical_of_literal(literal))
+     73 +    stamp_counts = (stamp_data or {}).get("counts") or {}
+     74 +    items_total = int(stamp_counts.get("items_total") or 0)
+     75
+     63 -    # Flags summary (4 criteria)
+     64 -    flags_sum = {
+     65 -        "rows": len(flags),
+     66 -        "dr_win_exact": int(flags.get("dr_win_exact", pd.Series([], dtype=int)).sum()),
+     67 -        "dr_win_vtrac": int(flags.get("dr_win_vtrac", pd.Series([], dtype=int)).sum()),
+     68 -        "dr_win_vt_boxed": int(flags.get("dr_win_vt_boxed", pd.Series([], dtype=int)).sum()),
+     69 -        "dr_win_vt_straight": int(flags.get("dr_win_vt_straight", pd.Series([], dtype=int)).sum()),
+     70 -        "source": "winner_flags.csv",
+     71 -    }
+     76 +    # Flags summary ("any" semantics + VT boxed/straight flags)
+     77 +    flags_sum = {"rows": int(len(flags)), "source": "winner_flags.csv"}
+     78 +    for col in [
+     79 +        "dr_win_exact",
+     80 +        "dr_win_vtrac",
+     81 +        "dr_win_drop_exact",
+     82 +        "dr_win_drop_vtrac",
+     83 +        "dr_win_family_exact",
+     84 +        "dr_win_family_vtrac",
+     85 +        "dr_win_vt_boxed",
+     86 +        "dr_win_vt_straight",
+     87 +    ]:
+     88 +        if col in flags.columns:
+     89 +            flags_sum[col] = int(flags[col].fillna(0).sum())
+     90 +        else:
+     91 +            flags_sum[col] = None
+     92
+     73 -    # Hits summary (final_* fields)
+     74 -    hits_rows = hits[hits["final_value"].astype(str) == literal]
+     75 -    hits_sum = {
+     76 -        "rows": len(hits_rows),
+     77 -        "final_exact_match": int(hits_rows.get("final_exact_match", pd.Series([], dtype=int)).sum()),
+     78 -        "final_vtrac_match": int(hits_rows.get("final_vtrac_match", pd.Series([], dtype=int)).sum()),
+     79 -        "final_vt_boxed": int(hits_rows.get("final_vt_boxed", pd.Series([], dtype=int)).sum()),
+     80 -        "final_vt_straight": int(hits_rows.get("final_vt_straight", pd.Series([], dtype=int)).sum()),
+     81 -        "source": "winner_hits.csv",
+     82 -    }
+     93 +    # Hits summary ("final" semantics; do NOT filter by final_value == winner)
+     94 +    hits_sum = {"rows": int(len(hits)), "source": "winner_hits.csv"}
+     95 +    for col in [
+     96 +        "final_exact_match",
+     97 +        "final_vtrac_match",
+     98 +        "final_drop_exact_match",
+     99 +        "final_drop_vtrac_match",
+    100 +        "final_family_exact_match",
+    101 +        "final_family_vtrac_match",
+    102 +        "final_vt_boxed",
+    103 +        "final_vt_straight",
+    104 +    ]:
+    105 +        if col in hits.columns:
+    106 +            hits_sum[col] = int(hits[col].fillna(0).sum())
+    107 +        else:
+    108 +            hits_sum[col] = None
+    109
+     84 -    # per_item evidence
+     85 -    pi_rows = pd.DataFrame()
+     86 -    if "best_pattern" in per_item.columns:
+     87 -        pi_rows = per_item[per_item["best_pattern"].astype(str).str.contains(canonical, na=False)]
+     88 -    elif "box_id" in per_item.columns:
+     89 -        pi_rows = per_item[per_item["box_id"].astype(str).str.contains(canonical, na=False)]
+     90 -    pi_present = not pi_rows.empty
+     91 -    pi_best_rank = int(pi_rows["area_rank"].min()) if pi_present else None
+    110 +    # per_item evidence (best ranks for match flags in this variant)
+    111 +    pi_variant = per_item
+    112 +    if "variant" in per_item.columns:
+    113 +        pi_variant = per_item[per_item["variant"].astype(str) == variant]
+    114 +    pi_present = not pi_variant.empty
+    115 +    pi_best_rank_exact = None
+    116 +    pi_best_rank_vtrac = None
+    117 +    if pi_present and "area_rank" in pi_variant.columns:
+    118 +        if "dr.win_exact" in pi_variant.columns and (pi_variant["dr.win_exact"].fillna(0) > 0).any():
+    119 +            pi_best_rank_exact = int(pi_variant.loc[pi_variant["dr.win_exact"].fillna(0) > 0, "area_rank"].min())
+    120 +        if "dr.win_vtrac" in pi_variant.columns and (pi_variant["dr.win_vtrac"].fillna(0) > 0).any():
+    121 +            pi_best_rank_vtrac = int(pi_variant.loc[pi_variant["dr.win_vtrac"].fillna(0) > 0, "area_rank"].min())
+    122
+     93 -    # top candidates
+     94 -    top_rows = top[top["best_pattern"].astype(str).str.contains(canonical, na=False)] if "best_pattern" in top.columns else pd.DataFrame()
+     95 -    top_present = not top_rows.empty
+     96 -    top_best_rank = int(top_rows["rank"].min()) if top_present else None
+    123 +    # top candidates presence (does the winner triad appear as a candidate pattern?)
+    124 +    winner_in_top = False
+    125 +    top_best_rank = None
+    126 +    if not top.empty and "best_pattern" in top.columns:
+    127 +        winner_rows = top[top["best_pattern"].astype(str) == literal]
+    128 +        winner_in_top = not winner_rows.empty
+    129 +        if winner_in_top and "rank" in winner_rows.columns:
+    130 +            top_best_rank = int(winner_rows["rank"].min())
+    131
+        ⋮
+    135      gaps = []
+    136 +    if stamp_data is None:
+    137 +        gaps.append("missing_stamp_json")
+    138      if flags_sum["rows"] == 0:
+        ⋮
+    143          gaps.append("missing_per_item")
+    108 -    if not top_present:
+    144 +    if top.empty:
+    145          gaps.append("missing_top")
+        ⋮
+    150          "canonical": canonical,
+    151 +        "stamp": {"present": stamp_data is not None, "items_total": items_total, "counts": stamp_counts, "source": "winner_stamp.json"},
+    152          "flags": flags_sum,
+    153          "hits": hits_sum,
+    117 -        "per_item": {"present": pi_present, "best_area_rank": pi_best_rank, "source": "analyzer_v2_per_item.csv"},
+    118 -        "top": {"present": top_present, "best_rank": top_best_rank, "source": "analyzer_v2_top_candidates.csv"},
+    154 +        "per_item": {
+    155 +            "present": pi_present,
+    156 +            "best_area_rank_exact_any": pi_best_rank_exact,
+    157 +            "best_area_rank_vtrac_any": pi_best_rank_vtrac,
+    158 +            "source": "analyzer_v2_per_item.csv",
+    159 +        },
+    160 +        "top": {"winner_present": winner_in_top, "winner_best_rank": top_best_rank, "source": "analyzer_v2_top_candidates.csv"},
+    161          "reducer_present": reducer_present,
+        ⋮
+    165
+    124 -def top_list(df: pd.DataFrame, cols: List[str], score_col: str, top_n: int) -> List[Dict]:
+    166 +def top_list(df: pd.DataFrame, cols: List[str], sort_by: str, top_n: int, *, ascending: bool) -> List[Dict]:
+    167      out = []
+    126 -    df_sorted = df.sort_values(score_col, ascending=False).head(top_n)
+    168 +    if df.empty:
+    169 +        return out
+    170 +    df_sorted = df.sort_values(sort_by, ascending=ascending).head(top_n)
+    171      for _, row in df_sorted.iterrows():
+        ⋮
+    186          lines.append(f"\n## {v['variant']} winner {v['literal']} (canonical {v['canonical']})")
+    143 -        lines.append(f"- Flags ({v['flags']['source']}): rows={v['flags']['rows']} | exact={v['flags']['dr_win_exact']} | vtrac={v['flags']['dr_win_vtrac']} | vt_boxed={v['flags
+         ']['dr_win_vt_boxed']} | vt_straight={v['flags']['dr_win_vt_straight']}")
+    144 -        lines.append(f"- Hits ({v['hits']['source']}): rows={v['hits']['rows']} | exact={v['hits']['final_exact_match']} | vtrac={v['hits']['final_vtrac_match']} | vt_boxed={v['
+         hits']['final_vt_boxed']} | vt_straight={v['hits']['final_vt_straight']}")
+    187 +        if v["stamp"]["present"]:
+    188 +            c = v["stamp"]["counts"]
+    189 +            lines.append(
+    190 +                f"- Stamp ({v['stamp']['source']}): items_total={v['stamp']['items_total']} | "
+    191 +                f"exact_any={c.get('exact_any')} exact_final={c.get('exact_final')} | "
+    192 +                f"vtrac_any={c.get('vtrac_any')} vtrac_final={c.get('vtrac_final')} | "
+    193 +                f"drop_exact_any={c.get('drop_exact_any')} drop_exact_final={c.get('drop_exact_final')} | "
+    194 +                f"drop_vtrac_any={c.get('drop_vtrac_any')} drop_vtrac_final={c.get('drop_vtrac_final')} | "
+    195 +                f"family_exact_any={c.get('family_exact_any')} family_exact_final={c.get('family_exact_final')} | "
+    196 +                f"family_vtrac_any={c.get('family_vtrac_any')} family_vtrac_final={c.get('family_vtrac_final')}"
+    197 +            )
+    198 +        else:
+    199 +            lines.append(f"- Stamp ({v['stamp']['source']}): missing")
+    200 +        lines.append(
+    201 +            f"- Flags ({v['flags']['source']}): rows={v['flags']['rows']} | "
+    202 +            f"exact_any={v['flags'].get('dr_win_exact')} vtrac_any={v['flags'].get('dr_win_vtrac')} | "
+    203 +            f"drop_exact_any={v['flags'].get('dr_win_drop_exact')} drop_vtrac_any={v['flags'].get('dr_win_drop_vtrac')} | "
+    204 +            f"family_exact_any={v['flags'].get('dr_win_family_exact')} family_vtrac_any={v['flags'].get('dr_win_family_vtrac')} | "
+    205 +            f"vt_boxed={v['flags'].get('dr_win_vt_boxed')} vt_straight={v['flags'].get('dr_win_vt_straight')}"
+    206 +        )
+    207 +        lines.append(
+    208 +            f"- Hits ({v['hits']['source']}): rows={v['hits']['rows']} | "
+    209 +            f"exact_final={v['hits'].get('final_exact_match')} vtrac_final={v['hits'].get('final_vtrac_match')} | "
+    210 +            f"drop_exact_final={v['hits'].get('final_drop_exact_match')} drop_vtrac_final={v['hits'].get('final_drop_vtrac_match')} | "
+    211 +            f"family_exact_final={v['hits'].get('final_family_exact_match')} family_vtrac_final={v['hits'].get('final_family_vtrac_match')} | "
+    212 +            f"vt_boxed={v['hits'].get('final_vt_boxed')} vt_straight={v['hits'].get('final_vt_straight')}"
+    213 +        )
+    214          if v["per_item"]["present"]:
+    146 -            lines.append(f"- Per-item ({v['per_item']['source']}): best area_rank={v['per_item']['best_area_rank']}")
+    215 +            lines.append(
+    216 +                f"- Per-item ({v['per_item']['source']}): best area_rank where exact_any=1 → {v['per_item']['best_area_rank_exact_any']} | "
+    217 +                f"best area_rank where vtrac_any=1 → {v['per_item']['best_area_rank_vtrac_any']}"
+    218 +            )
+    219          else:
+    220              lines.append(f"- Per-item ({v['per_item']['source']}): not present")
+    149 -        if v["top"]["present"]:
+    150 -            lines.append(f"- Top candidates ({v['top']['source']}): best rank={v['top']['best_rank']}")
+    151 -        else:
+    152 -            lines.append(f"- Top candidates ({v['top']['source']}): not present")
+    221 +        lines.append(
+    222 +            f"- Top candidates ({v['top']['source']}): winner_triads_as_candidates={v['top']['winner_present']} | winner_best_rank={v['top']['winner_best_rank']}"
+    223 +        )
+    224          lines.append(f"- Reducer scores present: {v['reducer_present']}")
+        ⋮
+    228      for row in top_items:
+    158 -        lines.append(f"- rank {row['area_rank']:>4} | pattern {row.get('best_pattern', row.get('box_id',''))} | variant {row.get('variant','')} | score_v2 {row.get('score_v2',''
+         )} | evidence {row.get('match_types','')}")
+    229 +        lines.append(
+    230 +            f"- area_rank {row.get('area_rank','')} | variant {row.get('variant','')} | section {row.get('section','')} | "
+    231 +            f"set {row.get('set','')} draw {row.get('draw','')} col {row.get('col','')} | "
+    232 +            f"pattern {row.get('pattern','')} | score_v2 {row.get('score_v2','')} | match_types {row.get('match_types','')}"
+    233 +        )
+    234      lines.append("\n## Top candidates (analyzer_v2_top_candidates.csv)")
+    235      for row in top_top:
+    161 -        lines.append(f"- rank {row['rank']:>4} | pattern {row.get('best_pattern','')} | variant {row.get('variant','')} | score {row.get('score','')} | tags {row.get('evidence_t
+         ags','')}")
+    236 +        lines.append(
+    237 +            f"- rank {row.get('rank','')} | variant {row.get('variant','')} | best_pattern {row.get('best_pattern','')} | "
+    238 +            f"score_v2 {row.get('score_v2','')} | tags {row.get('evidence_tags','')}"
+    239 +        )
+    240      return "\n".join(lines)
+        ⋮
+    261          flags_hits = read_flags_hits(sharepack, stamp, variant)
+    184 -        reducer_scores = pd.read_csv(sharepack / f"{sharepack.name}_digit_reduction_scores.csv")
+    262 +        reducer_scores_path = sharepack / f"{sharepack.name}_digit_reduction_scores.csv"
+    263 +        reducer_scores = pd.read_csv(reducer_scores_path) if reducer_scores_path.exists() else pd.DataFrame()
+    264 +        stamp_data = read_winner_stamp(sharepack, stamp, variant)
+    265          variants.append(
+        ⋮
+    269                  top=top,
+    270 +                stamp_data=stamp_data,
+    271                  flags=flags_hits["flags"],
+        ⋮
+    276
+    196 -    # Derive pattern/variant columns for per_item if missing
+    197 -    if "best_pattern" in per_item.columns:
+    198 -        pattern_col = "best_pattern"
+    199 -    else:
+    200 -        per_item["best_pattern"] = per_item["box_id"]
+    201 -        pattern_col = "best_pattern"
+    277      if "variant" not in per_item.columns:
+        ⋮
+    288
+    214 -    top_items = top_list(per_item, ["area_rank", pattern_col, "variant", "score_v2", "match_types"], "area_rank", args.top_n)
+    215 -    top_top = top_list(top, ["rank", "best_pattern", "variant", "score", "evidence_tags"], "score", min(args.top_n, len(top)))
+    289 +    for col in ["section", "set", "draw", "col", "pattern"]:
+    290 +        if col not in per_item.columns:
+    291 +            per_item[col] = ""
+    292 +    if "rank" not in top.columns:
+    293 +        top["rank"] = ""
+    294 +    if "score_v2" not in top.columns:
+    295 +        top["score_v2"] = top.get("score", 0)
+    296 +
+    297 +    top_items = top_list(
+    298 +        per_item,
+    299 +        ["area_rank", "variant", "section", "set", "draw", "col", "pattern", "score_v2", "match_types"],
+    300 +        "score_v2",
+    301 +        args.top_n,
+    302 +        ascending=False,
+    303 +    )
+    304 +    top_top = top_list(
+    305 +        top,
+    306 +        ["rank", "variant", "best_pattern", "score_v2", "evidence_tags"],
+    307 +        "score_v2",
+    308 +        min(args.top_n, len(top)),
+    309 +        ascending=False,
+    310 +    )
+    311
+
+• Edited scripts/tools/validate_dr_winners.py (+100 -23)
+      8    - Detects latest stamp in analyzer_v2/winners.
+      9 -  - For Midday/Evening/Combined, confirms that winner_flags rows exist and that winner_hits rows exist for the literal.
+     10 -  - Canonical-aware: uses literal from flags (winner_literal if present) or final_value from hits; falls back to stamp/date if unknown.
+      9 +  - For Midday/Evening/Combined, confirms that:
+     10 +      - `*_winner_stamp.json` exists (SSOT for winner + any vs final semantics)
+     11 +      - winner_flags/hits files exist and have row counts consistent with stamp `counts.items_total`
+     12 +      - aggregate flag sums match the stamp counts (exact_any/vtrac_any/... and exact_final/vtrac_final/...)
+     13 +  - IMPORTANT: do NOT treat `winner_hits.csv.final_value` as “the winner”; final_value is per-item output.
+     14  """
+        ⋮
+     16  import argparse
+     17 +import json
+     18  from pathlib import Path
+     19 +from typing import Any, Dict, List
+     20
+        ⋮
+     24  def detect_latest_stamp(winners_dir: Path) -> str:
+     20 -    stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_flags.csv")})
+     25 +    stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_stamp.json")})
+     26 +    if not stamps:
+     27 +        stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_flags.csv")})
+     28      if not stamps:
+        ⋮
+     36
+     37 +def load_json(path: Path) -> Dict[str, Any]:
+     38 +    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+     39 +
+     40 +
+     41  def main() -> None:
+        ⋮
+     43      ap.add_argument("--sharepack", required=True, help="Path to digit_reduction/<STATE>/<STATE>")
+     44 +    ap.add_argument("--warn-only", action="store_true", help="Print problems but do not exit non-zero")
+     45      args = ap.parse_args()
+        ⋮
+     52      print(f"Digit Reduction winner validation for {state} (stamp {stamp})")
+     41 -    missing = []
+     53 +    problems: List[str] = []
+     54
+     55      for variant in ["Midday", "Evening", "Combined"]:
+     44 -        flags = pd.read_csv(winners_dir / f"{stamp}_{variant}_winner_flags.csv")
+     45 -        hits = pd.read_csv(winners_dir / f"{stamp}_{variant}_winner_hits.csv")
+     56 +        stamp_path = winners_dir / f"{stamp}_{variant}_winner_stamp.json"
+     57 +        flags_path = winners_dir / f"{stamp}_{variant}_winner_flags.csv"
+     58 +        hits_path = winners_dir / f"{stamp}_{variant}_winner_hits.csv"
+     59 +
+     60 +        if not stamp_path.exists():
+     61 +            problems.append(f"{variant}: missing stamp JSON ({stamp_path.name})")
+     62 +            continue
+     65 +            continue
+     66 +        if not hits_path.exists():
+     67 +            problems.append(f"{variant}: missing hits CSV ({hits_path.name})")
+     68 +            continue
+     69
+     47 -        literal = None
+     48 -        if "winner_literal" in flags.columns:
+     49 -            literal = str(flags["winner_literal"].iloc[0])
+     50 -        elif "final_value" in hits.columns and len(hits):
+     70 +        stamp_data = load_json(stamp_path)
+     71 +        counts = stamp_data.get("counts") or {}
+     72 +        items_total = int(counts.get("items_total") or 0)
+     73 +        literal = str(stamp_data.get("winner") or "unknown")
+     56 -        flags_rows = len(flags)
+     57 -        hits_rows = len(hits[hits["final_value"].astype(str) == literal])
+     76 +        flags = pd.read_csv(flags_path)
+     77 +        hits = pd.read_csv(hits_path)
+     78
+     59 -        if flags_rows == 0 or hits_rows == 0:
+     60 -            missing.append({"variant": variant, "literal": literal, "canonical": canonical, "flags_rows": flags_rows, "hits_rows": hits_rows})
+     79 +        if items_total and len(flags) != items_total:
+     80 +            problems.append(f"{variant}: flags rows={len(flags)} != items_total={items_total}")
+     81 +        if items_total and len(hits) != items_total:
+     82 +            problems.append(f"{variant}: hits rows={len(hits)} != items_total={items_total}")
+     83
+     62 -    if not missing:
+     63 -        print("OK: all variants have winner flags/hits")
+     84 +        # Any counts (from flags)
+     85 +        any_map = {
+     86 +            "exact_any": "dr_win_exact",
+     89 +            "drop_vtrac_any": "dr_win_drop_vtrac",
+     93 +        for k, col in any_map.items():
+     96 +                continue
+     97 +            if k in counts:
+     98 +                got = int(flags[col].fillna(0).sum())
+     99 +                exp = int(counts.get(k) or 0)
+    100 +                if got != exp:
+    106 +            "vtrac_final": "final_vtrac_match",
+    107 +            "drop_exact_final": "final_drop_exact_match",
+    108 +            "drop_vtrac_final": "final_drop_vtrac_match",
+    109 +            "family_exact_final": "final_family_exact_match",
+    110 +            "family_vtrac_final": "final_family_vtrac_match",
+    111 +        }
+    112 +        for k, col in final_map.items():
+    118 +                exp = int(counts.get(k) or 0)
+    119 +                if got != exp:
+    120 +                    problems.append(f"{variant}: {k} mismatch (hits {got} vs stamp {exp})")
+    121 +
+    122 +        vt_boxed_any = int(flags["dr_win_vt_boxed"].fillna(0).sum()) if "dr_win_vt_boxed" in flags.columns else None
+    123 +        vt_straight_any = int(flags["dr_win_vt_straight"].fillna(0).sum()) if "dr_win_vt_straight" in flags.columns else None
+    124 +        vt_boxed_final = int(hits["final_vt_boxed"].fillna(0).sum()) if "final_vt_boxed" in hits.columns else None
+    125 +        vt_straight_final = int(hits["final_vt_straight"].fillna(0).sum()) if "final_vt_straight" in hits.columns else None
+    126 +
+    127 +        print(
+    128 +            f"- {variant}: winner {literal} (canon {canonical}) | items_total={items_total} | "
+    129 +            f"exact_any={counts.get('exact_any')} exact_final={counts.get('exact_final')} | "
+    130 +            f"vtrac_any={counts.get('vtrac_any')} vtrac_final={counts.get('vtrac_final')} | "
+    131 +            f"vt_boxed_any={vt_boxed_any} vt_boxed_final={vt_boxed_final} | "
+    132 +            f"vt_straight_any={vt_straight_any} vt_straight_final={vt_straight_final}"
+    133 +        )
+    134 +
+    135 +    if not problems:
+    136 +        print("\nOK: DR winners artifacts are internally consistent (stamp ↔ flags ↔ hits).")
+    137      else:
+     65 -        print("Missing winners:")
+     66 -        for m in missing:
+     67 -            print(f"- {m['variant']}: literal {m['literal']} (canonical {m['canonical']}), flags_rows={m['flags_rows']}, hits_rows={m['hits_rows']}")
+    138 +        print("\nProblems:")
+    139 +        for p in problems:
+    140 +            print(f"- {p}")
+    141 +        if args.warn_only:
+    142 +            print("\nWARN-ONLY mode: not failing.")
+    143 +            return
+    144 +        raise SystemExit(1)
+    145
+
+• Ran python3 -m py_compile scripts/tools/dr_sharepack_summary.py scripts/tools/validate_dr_winners.py scripts/tools/validate_vtrac_compact_report.py
+  └ (no output)
+
+• Updated Plan
+  └ ✔ Inspect current scripts and artifacts
+    ✔ Add workflow changelog + help clarifications
+    ✔ Add VTRAC compact-report validator
+    ✔ Fix DR summarizer + DR validator semantics
+    □ Run sanity checks on Ontario sharepack
+    □ Recap changes and pause for Part 3
+
+• Explored
+  └ List OntarioCanada4
+    Search summary\.(md|json)
+
+• Ran python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/
+  │ digit_reduction/OntarioCanada4/summary.md --json-out sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.json
+  └ (no output)
+
+• Ran PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4
+  └ Digit Reduction winner validation for digit_reduction (stamp 20251209)
+    - Midday: winner 678 (canon 678) | items_total=112 | exact_any=108 exact_final=0 | vtrac_any=112 vtrac_final=0 | vt_boxed_any=9 vt_boxed_final=9 | vt_straight_any=0
+    … +5 lines
+
+    OK: DR winners artifacts are internally consistent (stamp ↔ flags ↔ hits).
+
+• Edited scripts/tools/dr_sharepack_summary.py (+1 -1)
+    251      sharepack = Path(args.sharepack)
+    252 -    state_name = sharepack.parent.name if sharepack.parent else sharepack.name
+    252 +    state_name = sharepack.name
+    253
+
+• Edited scripts/tools/validate_dr_winners.py (+1 -1)
+    47      sharepack = Path(args.sharepack)
+    48 -    state = sharepack.parent.name if sharepack.parent else sharepack.name
+    48 +    state = sharepack.name
+    49      winners_dir = sharepack / "analyzer_v2" / "winners"
+
+• Ran python3 -m py_compile scripts/tools/dr_sharepack_summary.py scripts/tools/validate_dr_winners.py
+  └ (no output)
+
+• Ran python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4 --md-out sharepacks/2025-06-21/OntarioCanada4/
+  │ digit_reduction/OntarioCanada4/summary.md --json-out sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.json
+  └ (no output)
+
+• Ran PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4
+  └ Digit Reduction winner validation for OntarioCanada4 (stamp 20251209)
+    - Midday: winner 678 (canon 678) | items_total=112 | exact_any=108 exact_final=0 | vtrac_any=112 vtrac_final=0 | vt_boxed_any=9 vt_boxed_final=9 | vt_straight_any=0
+    … +5 lines
+    Search ### 2\.Digit Reduction in 2025-06-21__OntarioCanada4.md
+    Read 2025-06-21__OntarioCanada4.md
+
+• Ran python3 scripts/tools/validate_vtrac_compact_report.py --date 2025-06-21 --warn-only
+  └ VTRAC compact report: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-06-21/vtrac_compact_report.json
+    - scorer_version: 0.4.0
+    … +10 lines
+
+    WARN-ONLY mode: not failing.
+
+• Explored
+  └ Search ### 2\.VTRAC in 2025-06-21__OntarioCanada4.md
+    Search Important framing in 2025-06-21__OntarioCanada4.md
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ p = Path('tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md')
+  │ … +13 lines
+  └ ```markdown
+    # Digit Reduction Summary — digit_reduction (stamp 20251209)
+    … +35 lines
+
+    ```
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+29 -26)
+    217  ```markdown
+    218 -# Digit Reduction Summary — digit_reduction (stamp 20251209)
+    218 +# Digit Reduction Summary — OntarioCanada4 (stamp 20251209)
+    219
+    220 -## Midday winner 6 (canonical 6)
+    221 -- Flags (winner_flags.csv): rows=112 | exact=108 | vtrac=112 | vt_boxed=9 | vt_straight=0
+    222 -- Hits (winner_hits.csv): rows=9 | exact=0 | vtrac=0 | vt_boxed=1 | vt_straight=0
+    223 -- Per-item (analyzer_v2_per_item.csv): best area_rank=1
+    224 -- Top candidates (analyzer_v2_top_candidates.csv): best rank=20
+    220 +## Midday winner 678 (canonical 678)
+    221 +- Stamp (winner_stamp.json): items_total=112 | exact_any=108 exact_final=0 | vtrac_any=112 vtrac_final=0 | drop_exact_any=5 drop_exact_final=0 | drop_vtrac_any=15 drop_vtrac_fin
+         al=0 | family_exact_any=2 family_exact_final=0 | family_vtrac_any=2 family_vtrac_final=0
+    222 +- Flags (winner_flags.csv): rows=112 | exact_any=108 vtrac_any=112 | drop_exact_any=5 drop_vtrac_any=15 | family_exact_any=2 family_vtrac_any=2 | vt_boxed=9 vt_straight=0
+    227 -## Evening winner 2 (canonical 2)
+    228 -- Flags (winner_flags.csv): rows=112 | exact=0 | vtrac=102 | vt_boxed=112 | vt_straight=0
+    229 -- Hits (winner_hits.csv): rows=7 | exact=0 | vtrac=0 | vt_boxed=7 | vt_straight=0
+    230 -- Per-item (analyzer_v2_per_item.csv): best area_rank=1
+    231 -- Top candidates (analyzer_v2_top_candidates.csv): best rank=5
+    228 +## Evening winner 517 (canonical 157)
+    229 +- Stamp (winner_stamp.json): items_total=112 | exact_any=0 exact_final=0 | vtrac_any=102 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=32 drop_vtrac_final
+         =0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=14 family_vtrac_final=0
+    230 +- Flags (winner_flags.csv): rows=112 | exact_any=0 vtrac_any=102 | drop_exact_any=0 drop_vtrac_any=32 | family_exact_any=0 family_vtrac_any=14 | vt_boxed=112 vt_straight=0
+    231 +- Hits (winner_hits.csv): rows=112 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=112 vt_straight=0
+    232 +- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
+    233 +- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+    234  - Reducer scores present: True
+    235
+    234 -## Combined winner 6 (canonical 6)
+    235 -- Flags (winner_flags.csv): rows=250 | exact=156 | vtrac=250 | vt_boxed=15 | vt_straight=0
+    236 -- Hits (winner_hits.csv): rows=9 | exact=0 | vtrac=0 | vt_boxed=1 | vt_straight=0
+    237 -- Per-item (analyzer_v2_per_item.csv): best area_rank=1
+    238 -- Top candidates (analyzer_v2_top_candidates.csv): best rank=20
+    236 +## Combined winner 678 (canonical 678)
+    237 +- Stamp (winner_stamp.json): items_total=250 | exact_any=156 exact_final=0 | vtrac_any=250 vtrac_final=0 | drop_exact_any=5 drop_exact_final=0 | drop_vtrac_any=15 drop_vtrac_fin
+         al=0 | family_exact_any=2 family_exact_final=0 | family_vtrac_any=2 family_vtrac_final=0
+    238 +- Flags (winner_flags.csv): rows=250 | exact_any=156 vtrac_any=250 | drop_exact_any=5 drop_vtrac_any=15 | family_exact_any=2 family_vtrac_any=2 | vt_boxed=15 vt_straight=0
+    239 +- Hits (winner_hits.csv): rows=250 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=15 vt_straight=0
+    240 +- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
+    241 +- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+    242  - Reducer scores present: True
+        ⋮
+    244  ## Top per_item (analyzer_v2_per_item.csv)
+    242 -- rank    2 | pattern 5994033667 | variant Midday | score_v2 9.627143 | evidence
+    243 -- rank    2 | pattern 5994033667 | variant Midday | score_v2 10.627143 | evidence
+    244 -- rank    2 | pattern 5994033667 | variant Midday | score_v2 8.787143 | evidence
+    245 -- rank    2 | pattern 5994033667 | variant Midday | score_v2 7.987143 | evidence
+    246 -- rank    2 | pattern 592240133 | variant Evening | score_v2 9.927143 | evidence
+    245 +- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 2 | pattern 599 | score_v2 16.287143 | match_types
+    246 +- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 1 | pattern 599 | score_v2 15.787143 | match_types
+    250
+    251  ## Top candidates (analyzer_v2_top_candidates.csv)
+    249 -- rank    1 | pattern 599 | variant Combined | score 16.287143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    250 -- rank    2 | pattern 559 | variant Combined | score 14.827143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    251 -- rank    3 | pattern 599 | variant Evening | score 13.227143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    252 -- rank    4 | pattern 599 | variant Combined | score 12.687143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    253 -- rank    5 | pattern 592 | variant Evening | score 11.927143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    252 +- rank 1 | variant Combined | best_pattern 599 | score_v2 16.287143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    253 +- rank 2 | variant Combined | best_pattern 559 | score_v2 14.827143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    254 +- rank 3 | variant Evening | best_pattern 599 | score_v2 13.227143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    255 +- rank 4 | variant Combined | best_pattern 599 | score_v2 12.687143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    256 +- rank 5 | variant Evening | best_pattern 592 | score_v2 11.927143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+    257
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ p=Path('tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md')
+  │ … +4 lines
+     285: - Q6:
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+11 -12)
+    261  - Q1:
+    262 -  - Important framing: Digit Reduction’s “winner” artifacts here are tracking a **final digit/value** (e.g., Midday winner 6, Evening winner 2), not the raw 3-digit triad winner
+          (678/517).
+    263 -  - Midday winner final value = 6:
+    264 -    - Winners evidence: `winner_flags.csv` shows dr_win_exact sum 108/112, dr_win_vtrac sum 112/112; `winner_hits.csv` contains `final_value` and `match_types` per row.
+    265 -    - Brain evidence: strong top candidate patterns are in the 59x/99x cluster (top candidates include 599/559/592; top per_item includes long patterns like 5994033667).
+    266 -  - Evening winner final value = 2:
+    267 -    - Winners evidence: dr_win_exact sum 0/112, but dr_win_vtrac sum 102/112 and dr_win_vt_boxed sum 112/112 (so DR is “seeing” the winner more as VT-boxed than exact).
+    268 -  - Combined final value = 6:
+    269 -    - Winners evidence: dr_win_exact sum 156/250 and dr_win_vtrac sum 250/250.
+    262 +  - Important framing: Digit Reduction’s winners artifacts are anchored by `*_winner_stamp.json` (SSOT). For this run:
+    263 +    - Midday winner = 678 (canonical 678)
+    266 +  - Winners evidence (any vs final):
+    267 +    - Midday 678: `exact_any=108/112`, `vtrac_any=112/112`, but `exact_final=0`, `vtrac_final=0`.
+    268 +    - Evening 517/157: `exact_any=0`, `vtrac_any=102/112`, `vt_boxed=112/112`.
+    269 +  - Brain evidence: DR’s top candidates are 599/559/592 clusters; the literal winner triads (678/517) are not emitted as DR `best_pattern` candidates in this run.
+    270  - Q2:
+        ⋮
+    274  - Q3:
+    275 -  - There is a notable logging/semantics mismatch to track:
+    276 -    - `winner_flags.csv` has many positive matches (e.g., Midday dr_win_exact=108).
+    277 -    - But the corresponding `winner_hits.csv` has `final_exact_match`, `final_vtrac_match`, and `final_vt_boxed_match` summing to 0 in the files we inspected (even though `match
+         _types` is populated on every row).
+    278 -  - Action item (note-only for now): clarify/repair the meaning of `winner_hits.csv` “final_*_match” columns vs. the `match_types` field so Part 2 DR evaluation is unambiguous.
+    275 +  - Alignment status: OK.
+    276 +    - `winner_stamp.json` counts match sums in `winner_flags.csv` (any) and `winner_hits.csv` (final). The earlier “mismatch” was interpreting `final_value` as the winner; it’s
+    277 +    - `scripts/tools/validate_dr_winners.py` now validates stamp ↔ flags ↔ hits consistency.
+    278  - Q4:
+
+• Explored
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ p=Path('tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md')
+  │ … +4 lines
+  └  287: - Q7:
+     288:   - (V) Data read/schema OK: Yes (brain outputs + analyzer_v2 outputs + winners overlays exist).
+    … +16 lines
+     305: 0) Outputs reviewed
+     306:    - Brain: (see file list below)
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+3 -3)
+    288    - (V) Data read/schema OK: Yes (brain outputs + analyzer_v2 outputs + winners overlays exist).
+    289 -  - (V) Columns populated: Yes for flags; ambiguous for `winner_hits.csv` final_*_match columns (see Q3).
+    289 +  - (V) Columns populated: Yes; “any vs final” semantics are now explicit (stamp JSON is SSOT; `final_*_match` can be 0 by design).
+    290    - (V) Winners/overlay artifacts written: Yes (winner_overlay.html and map/stamp files exist).
+    291  - Q8:
+    292 -  - Highest-priority improvement (log-only): align the DR winners evaluation artifacts so the “hits” file is interpretable and consistent with flags (`match_types` vs final_*_ma
+         g into the superbrain).
+        ⋮
+    298  - Q10:
+    299 -  - DR outputs are already structured enough for the master validation report (we can link to the overlays for visuals), but we need that one semantic clarification so the Part
+         e summarizer block.
+    300
+
+• Updated Plan
+  └ ✔ Inspect current scripts and artifacts
+    ✔ Add workflow changelog + help clarifications
+    ✔ Add VTRAC compact-report validator
+    ✔ Fix DR summarizer + DR validator semantics
+    ✔ Run sanity checks on Ontario sharepack
+    □ Recap changes and pause for Part 3
+
+• Explored
+  └ Read fix_me.txt, FIX_ME2.txt, 2025-06-21__OntarioCanada4.md
+
+• Edited tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md (+2 -2)
+    284  - Q6:
+    285 -  - If we treat DR as “did it capture the winner digit/value”: Midday and Combined look strong (many dr_win_exact matches for final value 6), while Evening indicates “not exact
+         but VT-boxed matches” for final value 2.
+    286 -  - If we try to treat DR as a direct triad-winner predictor: that would be a category error; it needs to be combined with a triad-producing layer (Stable/VTRAC/Hot Zones).
+    285 +  - DR did not surface the literal winner triads (678 / 517) as top `best_pattern` candidates in this run.
+    286 +  - What it *does* surface is useful: strong “any” evidence density (Midday `exact_any=108/112`) and very strong VT-box coverage for Evening’s canonical family (157) — but with
+         `*_final` counts at 0, so treat DR as a gating/strength layer, not a standalone predictor.
+    287  - Q7:
+
+    ✔ Add workflow changelog + help clarifications
+    ✔ Add VTRAC compact-report validator
+    ✔ Fix DR summarizer + DR validator semantics
+    ✔ Run sanity checks on Ontario sharepack
+    ✔ Recap changes and pause for Part 3
+
+  - Added a workflow-specific changelog so “fix later” items don’t get lost: tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md:1
+  - Tightened the entry doc with a “Contract Truth Table” + “Known bumpy semantics” (DR any-vs-final + canonical mapping + VTRAC compact report warning): docs/AAT9_KIT/
+    AAT9_Final_Validation_Help.md:11
+  - Added a guardrail validator for the global VTRAC compact report: scripts/tools/validate_vtrac_compact_report.py:1
+      - Run: python3 scripts/tools/validate_vtrac_compact_report.py --date 2025-06-21 (currently flags states=[]/sections=[]; --warn-only available)
+  - Fixed Digit Reduction Part 2 “winner” semantics so it’s unambiguous and labeled:
+      - Summarizer now anchors on *_winner_stamp.json (SSOT) and reports any vs final totals (no final_value == winner filtering): scripts/tools/dr_sharepack_summary.py:1
+      - Validator now checks stamp ↔ flags ↔ hits consistency: scripts/tools/validate_dr_winners.py:1
+      - Rewrote the Ontario DR summary artifact accordingly: sharepacks/2025-06-21/OntarioCanada4/digit_reduction/OntarioCanada4/summary.md:1
+      - Updated the Ontario run report DR section + corrected the old misinterpretation: tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:207
+
+  If you’re good with this stabilization, we’re cleanly at the pause point and ready to discuss Part 3 next.
+
+
+
+• Yes — the main “bumpy” concerns are now either fixed or explicitly guarded/logged:
+
+    RUNS/2025-06-21__OntarioCanada4.md:207)
+  - VTRAC compact report emptiness (guarded + flagged): added a validator that fails fast if sharepacks/<DATE>/vtrac_compact_report.json exists but has states=[]/sections=[]. For 2025-
+    06-21 it still flags empty (so we know it’s not “silently fine”). (scripts/tools/validate_vtrac_compact_report.py:1, tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md:23)
+  - Workflow/contract drift (addressed): added a “Contract Truth Table” + “Known bumpy semantics” and a dedicated workflow changelog so future sessions don’t re-discover rules. (docs/
+    AAT9_KIT/AAT9_Final_Validation_Help.md:11, tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md:1)
+  - Safety: all changes are docs + summarizers/validators/guards; no core analyzer/scoring logic was changed.
+
+
+› IS THERE ANYTHING THAT WOULD BE OPTIMALLY FURTHER LOGGED PRIOR TO JUMPING INTO PART 3 OR WE SHOULD GO FOR PART 3? WHEN YOU ARE EADY FOR PART 3 I WILL NEED YOU TO LIKE RUN THE APP FOR
+  ME I NEED TO CHECK SOMETHING WITHIN IT, I CANT REMEMBER THE EXACT WAY TO DO THIS THE FASTEST ACTUALLY YOU KNOWE WHAT LETS TRY IT THIS WAY...
+
+
+• We’re in a good spot to start Part 3.
+
+  What’s now “clean” / addressed
+
+  - DR bumpy semantics fixed: DR summaries + validator now use *_winner_stamp.json as SSOT and report any vs final correctly (no misleading final_value==winner filtering).
+  - VTRAC compact report risk guarded: there’s now a validator that flags “file exists but empty states/sections” so we don’t silently trust a broken compact feed.
+  - Contracts logged: the “truth table” + “known bumpy semantics” are written down, and there’s a dedicated FINAL VALIDATION workflow changelog so we don’t forget follow-ups across
+    resets.
+
+  Anything else to log before Part 3?
+
+  - Boot check only (headless + log): I’ll run Streamlit for ~120s and write .codex/first_boot.log.
+  - Interactive check (you open browser): I’ll start Streamlit and leave it running; you open http://localhost:8501.
+
+
+› OK what should I honestly still be concerned about here prior to moving to part three I'm trying to understand what's a big concern and what is going on with the V track analyzer or
+  what is going on with the V Track compact report I wonder if something is being misunderstood Like I'm pretty sure the V track compaq report 0 I know what that is remember the HTML
+  the three variant string Table WINNERS OUTPUT? WE ALSO CREATED A JSON VERSION FOR BETTER AI/COMPUTER UDNERSTADNING AS THE HTML IS MAINLY FOR HUMAN VIEW, IS WHAT YOUR DETAILING LIKE
+  NOT UDNERSTADNING WHAT THAT OUTPUT WAS OR WAS USED FOR? ETC?
+
+
+• The only “big” remaining concern before Part 3 is the VTRAC compact report being present-but-empty — and it’s not the same thing as the 3‑variant winners HTML/JSON you’re thinking of.
+
+  What’s what (VTRAC outputs)
+
+
+  - It’s a single, date‑level scoreboard that summarizes VTRAC results across many states/sections in a compact, machine‑readable way.
+  - Think: “If I want one file that says which states/indices look strongest today (for the aggregator/control center), without opening every per‑state bundle.”
+
+  What it is not
+
+  - It is not the 3‑variant winners HTML view.
+  - It is not the winners JSON twin of that HTML.
+  - Those winners overlays live under sharepacks/<DATE>/<STATE>/winners/<STATE>/ and are the Part 1 “environment/winners lens”.
+
+  How it relates to the VTRAC analyzer
+
+  - The VTRAC analyzer produces per‑state brain evidence (enhanced JSON) under sharepacks/<DATE>/<STATE>/vtrac/<STATE>/….
+  - The compact report is a separate export step that takes the VTRAC ecosystem and emits a global per‑date summary at sharepacks/<DATE>/vtrac_compact_report.json.
+
+  Why we’re watching it
+
+  - For 2025-06-21, the compact report file exists but is empty (states=[], sections=[]), so any workflow that depends on that “global scoreboard” would be missing VTRAC input.
+  - Part 3 can still proceed if we rely on the per‑state VTRAC bundle + winners lens (which are present), and just treat the compact report as an “open item” with a guard (the validator
+    we added).
+
+
+› Oh I think I understand that better is it possible that was created during some form of a share PACK To aggregate like we're saying scoring across different states maybe when there
+  self contained optimizations were going on It could have been something we created to see how things performed in the aggregate like i'm just thinking if we're talking about something
+  that exists that we can't really understand that would somewhat make sense that we would have built that out however for talking something that more permanently long term might exist
+  in that sense it still sounds kind of interesting and potentially worthwhile we might be interested in having in terms of like some form of Control Center indicator showing an insight
+  regarding that across states but maybe not a priority at this moment If tell me if some of that makes sense then what are your comments towards that
+
+
+• Yes, that makes sense.
+
+  - The compact report is exactly the kind of thing you’d create during self‑contained optimization/sharepack work: a single “across‑states” scored export so you can compare VTRAC
+    conditions without opening per‑state bundles.
+  - Long‑term, it’s still a good idea because it’s basically the Control Center / aggregator-friendly VTRAC feed: “today’s strongest VTRAC states/sections/indices in one file”.
+
+  Why it’s not the top priority right now:
+
+  - For Part 3, we can still use the per‑state VTRAC enhanced bundle + winners lens (already present and informative).
+  - The compact report becomes priority when you want the Control Center/aggregator to consume VTRAC as a global ranked table across states (and when we start scaling many dates).
+
+  So the right stance is: keep it on the radar + guarded (validator), proceed with Part 3, and later decide whether Control Center should surface it directly.
+
+
+› OK PERFECT NOW LETS MOVE TO PART 3 ...Now I think this is where things get a bit tricky potentially but I think it'll come down kind of investigating a fair amount and deciding how do
+  I best deal with this so we never did the same self-contained back testing really with auxiliary compound features obviously because they are a bit different and I thought about them
+  in some different ways I've been trying to figure out how use these most optimally there were periods where I thought about sorting out their scoring as in A WAY THEY CAN BE SEEN AS
+  NOT ONLY BEING GENERATED ONCE BUT FOR ALL 3 VARIANTS WHICH COULD POTENTIALLY BE TALLIED UP WITHIN THE AUX MODULE EVEN PRIOR TO BEING USED TO OPTIMAL FAVORABLE USE FOR STREGNETHEN
+  PREDICTING OR ADDING COMPOUND SCORING TO HIGH SCORING PATTERN CLUSTERS FROM THE STRING TABLE EVALUATIONS...I basically made this split with part three because I think in a way you
+  could interpret things as an our core analytical tools that we worked on in part I'll analyze these string tables and then we have the auxiliary features which more so give us scoring
+  features based on deep insights into the environment conditions via the draw data ...Now I might have mentioned this I switched to WSL a few months ago I'm not sure how much change it
+  ran on Windows but I know it did work on some validating with these scoring features and auxiliary and I thought we had like wired in some validating that is done to all the values
+  are accurate I'm not sure if that's still present or crosses over ? But basically here's where I settled on things I figured instead of trying to figure out how potentially or use the
+  compound features prior like I did some form with the other tools I figured the most optimal way we would figure out how to use and score these valuable compound features it would
+  likely be through viewing the relevance in master validation runs what better way to understand how to optimally use or score them I seen their effects winning pattern clusters so I
+  kind of settled on that Let's figure that out more once we have some robust final validation example runs in multiple states showing us out these aux features could optimally be
+  scored but in saying that there might be some way to still set them up in a certain context  For this but what I basically settled on was in a similar way to the four criteria I was
+  trying to see if there's a way we could understand our scoring features that we are keeping in auxiliary maybe showed up like anything V track related or maybe you can think 4
+  FEATURE LIKE EXPLANATION OR BREAKDOWN THAT ID LIKE INTERPRETTED, THERES ALSO A PREDICTION LIST ACTUALLY PROVIDED This is obviously not the finalized prediction list we're counting on
+  as that would be more so come at the very end of everything being combined together like we're doing things piece by piece as you can see but we still would potentially want to
+  consider if there's some insights from that prediction list to help us I'm kinda seeing that as something the gathered into this ANALYSIS/AGGRFEGATOR BRAINSTORM CANVAS...Dan this is
+  kind of hard to put in the words but yeah what I was basically trying to see things as is going through each of the items that are tracked as potential compound scoring features and
+  basically account for presented themselves R showed up in examples And then we could maybe figure out how to optimally score and take advantage of them ...Yeah I'm kind of having a
+  hard time putting this into words honestly Let's reference what I actually wrote for this section part three which I think we called part It isn't my guide ...PART C – AUX FEATURES
+  1) Validation
+  Have a check to ensure that the correct draw data is being applied or used. Include something similar to the other checks and add a written confirmation, for example:
+
+  Review the prediction lists produced by the positional tool and analyze if there are favorable insights that can be gathered. List out the prediction lists as well.
+
+
+  Goal: gather valuable and related aux compound features for Midday / Evening / Combined.
+
+  3) Other Aux Features – Midday / Evening / Combined
+  Some version of gathering all valuable insights from aux features across Midday/Evening/Combined:
+
+
+  HEATTRACK VTRAC
+
+
+  Pair analysis
+
+
+  Combination analysis
+
+
+  Sums tracking
+
+
+  BA alert analytics
+
+
+  Basically anything you’ve seen from the images of the different scoring features that we could use to our advantage or convert into favorable compound scoring features, where the
+  insights are of analytical value or pair exactly or VTRAC‑related to the winner.
+
+  4) Review of accumulated compound features
+  Review the accumulated potential related compound features and analyze/assess how they could be applied optimally as:
+  a) Compound scoring features within the Aux module – compounding prior to the analysis/aggregator.
+  b) Compound scoring features forwarded to the aggregator/analysis module – how could they be compounded with high‑scored string‑pattern clusters to enhance final predictions? NOW WHAT
+  ID ASK IS TO REFERENCE ALL 3 OF THE "TEMPLATE GUIDES" TO SEE CONSIDEREATIONS FROM ALL BUT ESSENTIALLY WE WANT TO GATHER INSIGHTS FROM THE SCORING FEATURES AND SEE HOW THEY CONTRIBUTE
+  TO WINNERS AND THEN THIS SHOULD HELP US ACCESS HOW TO USE THEM OPTIMAL, LIKE VERY SIILAR TO THAT "REVRSE ENGINEER WINS" IN PURE FORM AS THEIR MAY BE PLENTY OF WAYS YOU COULD INTERPRET
+  HOW TO USE THESE ADDITIONAL SCORING FEATURES OUTSIDE OF THE STRING PATTERN ANALYSIS TOOLS, ITS ALMOST LIKE HAVING THESE EXTRA FACTORS THAT ***ARE NOT SUPPOSE TO ADD UNNECESSARY
+  COMPLXITY BUT ADD VERY FAVORABLE COMPOUND SCORING THAT MAY LEAN EVEN FURTHER INTO A STATE, PATTERN CLUSTER, INDEX?, GROUP OF COMBINATIONS BE PENDING OR SCORED HIGH FOR WAGERING, OR
+  POTENTIALLY HELP WITH SCORING TO MEET SOME FORM OF PROFITABILITY THRESHOLD TO PLAY THESE COMBINATIONS OR PATTERNS IF YOU GET WHAT I MEAN (THIS STILL ALL NEEDS OT BE DETERMINED BY HOW
+  WE FRAME FINAL SCORING BUT THE MASTER VALDATIONS THE IDEA IS THE RESULTS WILL HELP TELL US HOW TO LEAN THINGS OR STEER OR SETUP THINGS AS WE SEE MORE RESULTS WE KNOW OUR GOAL IS
+  PROFITABILITY OVERALL LONG TERM MACRO GOAL ATLEAST) Now one thing that's important for you to understand is that's why I was saying to run the app The lack of understanding I have
+  from what the computer already can see in terms of scoring features like from what I understand you run the auxiliary and all these robust richly val features are available that can
+  be used so it's really just about framing them properly perhaps ? The other possibly somewhat confusing or complicated I suspect it is i'm not really sure how much the auxiliary
+  features are entwined with other things stuff in the Control Center which we know has more to do with aggregate trackers or brain I'm trying to as its own thing that I will
+  address ..HMM..I think what I mean by that is just being careful and comprehensive about understanding how everything is wired to set things up optim in terms of ETC The other thing
+  we may want to do or we should do is investigate as is mentioned validating the data sets the same way the stream tables are It should be a bit easier because we are just extracting a
+  list OF DRAW DATA BUT WE WANT TO MAKE SURE THE DATASET IS GENERATED FRESH WHEN LIKE SWITHCING EXCEL FILES BASICALLY JUST THE MEASURE OF ENSURING WE ARE NOT LOOKING A TTHE INCORRRECT
+  DATASET RIGHT? THT EVERYTHING MATCHES AND ID EVEN SAY YOU COULD LIKELY EVEN COMBINE IN SOME SENSE SOME FORM OF MATCHING VALIDATION FO DATASETS WITH STRING TABLES AS THE ROBUST
+  CHECKING FOR THE STRING TABLES COLUMN 1 AND 2 LATEST RESULTS WITH DRAW DATA YOU COULD AMTCH UP WITH THE LATEST AUX DRAWS MSOT RECENT AND SECOND MOST RECENT SHOULD MATCH WITH THE
+  STRING TABLESTHAT WAY YOU KNOW YOU HAVE THE MATCHING STRING TABLES +AUX DRAWS THAT ARE OF THE SAME DATE IF THIS MAKES SENSE? PROBABLY A SMALLER CONCERN AND SHOULD BE EASY BUUT
+  HOPEFULLY YOU GET WHAT I MEAN...Like I mentioned a few times I think there's been different ways we brainstormed on how configure or use the compound scoring features in the auxiliary
+  So I think I'm gonna have you read through many different versions we came up with to see what you think it makes the most sense potentially or to make sure to deeply understand how
+  everything's wired But if you can roughly understand that I kind of want to in the master validation be able to see how directly relates scoring features or like V track related
+  scoring features their features or characteristics towards wINNING PATTERNS I FEEL IS THE MOST OPTIMAL WAY WE CAN SEE HOW TO SET THEM UP FOROPTIMAL PREDCITIVE USE OR ANAYLTICAL POWER
+  USE TO CONTRIBUTE TO OUR SYSTEM AT WHOLE? OR CONTRBUTE TO THE WHOLE TYING EVERYTHING IN VIA AN AGGREGATOR/ANALYSIS MODULE/OR SUPERBRAIN COMBINING EVERYTHING TYPE DEAL? IF THIS MAKES
+  SENSE..SO IN THIS WAY I KINDA THINK AFTER READING THROUGH A BUNCH FO THE CONTENT I WOUDL THINK YOU MAY BEING WITH ENSURING THE AUX DRAWS CAN BE VALDIATED THAT ITS CURRENT OR FRESHLY
+  GERNEATED AND ACCURATE TO THE EXCEL FILE JUST LIKE THE STRING TABLES THEN TRY ADN RUN THE AUX MODULE AND LET ME KNOW WHAT YOU SEE ..DO YOU SEE ALL THESE ROBUST SCORIGN FEATURES ETC.
+  FOR YOU TO EASILY USE AND POTENAILLY SCORE IN A COPOUDING WAY WITH THE HIGHLYY SCORED PATTERN CLUSTERS FROM THE STRING TABLES ANALYTICAL EVALUATION? WE HAVENT EVEN REALLY FIGURED OUT
+  HOW TO TALLY THINGS TOGETHER BUT AGAIN WE CAN AGIAN POTENTIALLY INTEPERRET THINGS ESPECIALL IN THE CONTEXT OF THE FINAL VALDATION RUNS AND FIGURE OUT OPTIMAL WAY TO SET THINGS UP LIKE
+  ENVISION THINGS VIA A "BLANK CANVAS WHERE EVERYTHING GET DISPLAYED IN A BRAINSTORM COLLEGUE FOR US TO SORT OUT THE OPTIMAL SETUP FOR EXTRACTING WINNING PATTERNS" TYPE DEAL? I DONT
+  KNOW BUT YES YOU DO WANT TO SEE WHAT YOU CAN SEE WHEN YOU ATTEMPT TO RUN AND GERNEATE THE AUX MODULE AND AGAIN KEEP IN MIND THAT WE DO THIS FOR ALL 3 VARIANTS PER DRAW MIDDAY/EVENING/
+  COMBINED WHICH ISNT TO ADD COMPLEXITY BUT TO BE SEEN AS INCREDIBLY VALUABLE AND INSIGHTFUL ITS EVEN MORE PWOERFUL FOR EX. IF THERE ARE NUMEROUS SCORING FEATURES TOWARDS LETS SSAY A
+  PARTICULAR VTRAC INDEX NOT ONLY WITHIN THE MIDDAY DRAWS BUT ALSO POSSIBLY EVENING AND COMBINED AUX FEATURES SCORING WHICH COULD BE COMBINED TOGETHER AND EVEN MORE SO COULD SIGNAL
+  CONVERGENCE ONTO A SINGLE OUTCOME THAT CAN BE FAVORABLE ACCOUNTED AND SCORED FOR IF TAHT MAKES SENSE? THINK IN THAT WAY BASICALLY AND HOW WE COULD USE THESE VALUABLE INSIGHTFUL
+  FEATURES DESCRIBING THE ENIVONRMENTAL CONDITIONS IN UR FAVOR AS MANY OF THESE FEATURES CAN BE USED BRILLIANTLY I IMAGINE ITS REALLY JUST COMES DOWN TO PROPER AND OPTIMAL EXECUTION AND
+  INTEGRATION ...BUT IN SAYING THAT I THINK THE BEST WAY FORWARD WOULD TO GO INTO VERY DEEP BRAINSTORM MODE AND HAVE YOU FIRST CONSIDER EEVRYTHING IVE WIRTTEN AND DO SOME DEEP CONTENT
+  REVIEW LETS DO SOME BRAINSTORM DATA COLLECTION TO FIGURE OUT PERHAPS TEH BEST WAY AND MOST OPTIMAL WAY TO APPROACH INCOPROATING THESE VALUABLE AUX FEATURES..PLEASE READ "AAT9 AUX
+  ROADMAP" , "AAT9_MARCO ROADMAP", "AAT9 POSITIONAL TRACKER" FROM AAT9_KIT FOLDER AND ALSO ENSURE TO READ ALL THE ASSOCIATED DOCUMENTS MENTIONED WITHIN "AAT9 AUX ROADMAP" I THNK IS VERY
+  IMPORTANT T UNDERSTAND HOW THINGS ARE WIRED AND COULD POTNETIALLY BE SCORED TOGETHER..NEXT I WOULD LIKE YOU TO READ FROM FOLDER "FINAL VALIDATION" THE FOLLOWING DOCS AND PLEASE FOLLOW
+  THESE INSTRUCTIONS -- DOCUMENT "FINAL_INSIGHTS" HAS A GREAT SECTION REGARDING AUX FEATURES AND HOW WE MAY USE THEM, THEN READ AAT9 ARCHTIECTURE AND MASTER VALDATION AND FINALLY "AAT9
+  AUXILLARY FEATURE INTEGRATION" ITS VERY IMPORTANT YOU READ ALL DOCUMENTS MENTIONED ..ALSO I FORGOT THERE ARE SOME ADDITIONAL AUX SCPECIFIC DOCS WITHIN FOLDER AAT9_DOCS THAT ARE LIEKLY
+  WORTH EXPLORING...HERES WAHT IM THIKNG PLEASE REVIEW THIS MESSAGE AND PROVIDE YOURCOMPREHSIVE FEEDBACK AND THEN SHOW ME A COMPREHSIVE LIST OF ALL THE DOCUMENTS IVE ASKED YOU TO REVIEW
+  THEN WE CAN DISCUSS A PLAN FROM THERE IN REGARDS TO REVIEWING ALL THE CONTENT AND ALLOWING YOU TO EXPLORE AND RUN DIFFERENT FUNCTIONS TO GET FAMILAR AND EXPERTISE WITH THE PROGRAMMED
+  AUX FEATURES LOOKING FORWARD TO YOUR FEEDBACK
+
+
+• Updated Plan
+  └ Starting Part 3 (Aux features): gather and read the Aux roadmaps and final validation docs, follow references, then synthesize an actionable Part 3 workflow and what to check in
+    the app.
+    □ Locate Part 3 docs
+    □ Read Aux roadmap + linked docs
+    □ Read final validation Aux sections
+    □ Map Aux outputs to template
+    □ Draft Part 3 execution plan
+
+• Explored
+         AAT9_Aux_Tools_Official.md, AAT9_Aux_Staging_Manifest.md
+
+• Updated Plan
+  └ ✔ Locate Part 3 docs
+    ✔ Read Aux roadmap + linked docs
+    ✔ Read final validation Aux sections
+    □ Map Aux outputs to template
+    □ Draft Part 3 execution plan
+
+• Updated Plan
+  └ ✔ Locate Part 3 docs
+    ✔ Read Aux roadmap + linked docs
+    ✔ Read final validation Aux sections
+    ✔ Map Aux outputs to template
+    ✔ Draft Part 3 execution plan
+
+─ Worked for 6m 44s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — your Part 3 framing is coherent, and the docs align with it:
+
+  - Aux is meant to be a draws‑CSV driven “environment + pressure” layer (pairs/sums/vtrac/positional/BA), kept separate from the string‑table analyzers.
+  - The safest workflow is log evidence first → learn weights later (Aux Roadmap + Big Picture repeat this). Aux should compound (confirm/gate/boost) rather than override string signals.
+
+  Docs you asked me to review (and I did)
+
+  - docs/AAT9_KIT/AAT9_Aux_Roadmap.md
+  - docs/AAT9_KIT/AAT9_Macro_Roadmap.md
+  - docs/AAT9_KIT/aat9_positional_tracker.txt
+  - Aux Roadmap references (all read):
+      - tasks/AUX_WATCH.TXT
+      - tasks/AUX_RESEARCH.TXT
+      - tasks/AUX_VALIDATE.TXT
+      - tasks/AUX_1.TXT
+      - tasks/AUX_2.TXT
+      - tasks/BIG_PICTURE.TXT
+      - tasks/FIX_80.txt
+  - Final Validation docs (all read):
+      - tasks/FINAL VALIDATION/FINAL_INSIGHTS.txt
+      - tasks/FINAL VALIDATION/AAT9 Architecture and Master Validation Framework.md
+      - tasks/FINAL VALIDATION/AAT9 Auxiliary Feature Integration.md
+  - Aux-specific “wiring/contract” docs (recommended by your note; I read these too because they directly answer “how is Aux wired?”):
+
+  - Aux consumes data/cleaned/*_draws.csv (variants Combined/Midday/Evening) and is intentionally decoupled from table tooling; that’s good because it avoids cross-tool side effects.
+  - The Positional tool is already “Aux‑native” and already does its own internal compounding (XVAR consensus, mirror‑echo, double‑pressure, swap). In Part 3 we treat it as both:
+      - a source of candidate lists (shortlist), and
+      - a source of feature evidence we can log against winners and against Part 2’s top clusters.
+  - The most important Part 3 outcome is not “perfect weights” — it’s a repeatable way to answer:
+    “Which Aux signals were active for the winner and for the top Part‑2 candidates, and did they converge across variants?”
+
+  Part 3 plan (what I propose we do next)
+
+  1. Aux data validation (no guessing, no leaks)
+      - For the target state, print the resolved draws CSV path + draw count for Combined/Midday/Evening (this is already how the Aux UI is designed to caption it).
+      - Spot-check freshness by comparing the newest 1–2 draws to what the current Pick3StatsC4 snapshot implies (and optionally confirm they align with the latest string tables snapshot
+        you built for the run).
+  2. Run the app and capture Aux evidence for the example
+      - State: OntarioCanada4 (and we can optionally check Connecticut4 right after).
+      - For each variant (C/M/E) record:
+          - Positional: top‑3 digits per position, XVAR consensus/mirror/double tags, shortlist candidates.
+          - Pairs: classify the winner’s internal pairs (e.g., 678 → 67/68/78) into red/blue/purple/none.
+          - VTRAC overlay: winning indices (from Part 1 winners lens: Midday 678→index21, Evening 517→index7) — where do they sit in overdue/recent?
+          - Sums / BA: due/root status + any BA triggers/alerts relevant to the winner’s family/index.
+  3. Synthesis (the actual Part 3 “value”)
+      - Compare those Aux signals against:
+          - the winners (678 and 517), and
+          - the top Part‑2 candidates (Stable top compounds + DR top candidates + VTRAC top straights/indices + Hot Zones lanes).
+      - Output: a short “compound feature inventory” list: what signals looked supportive, what conflicted, and what seems repeatable enough to consider as future scoring features (still
+        no weight-tuning yet).
+  4. Log it cleanly
+      - For this first run, we can append a “Part 3 — Aux” section into tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md so it survives resets.
+      - After we like the structure, we can decide if we want an aux_summary.md script like Part 2 has (optional, but likely worth it).
+
+  If you tell me what you need to “check in the app” (which page/section), I’ll start Streamlit in the right mode (headless log vs interactive) and we’ll walk through Part 3 evidence
+  capture.
+
+
+› WOW SEEMS LIKE YOU REALLY HAVE AN AMAZING UNDERSTANDING OF THE AUX AD HOW SHOULD SET THIS UP IM IMPRESSED! ALL  I WAS GOING TO DO CHECKING THE APP WAS TRY AND SEE LIKE AN INVENTORY OF THE AUX FEATURES WHICH IT SEEMS WE
+  BASICALLY KNOW I ACTUALLY COUNTED IT OUT WHICH SEEMED TO BE BLACK APPLE ANALYTICS FLOAT AND ALL OTHERS ETC., SOME MIX OF
+  VTRAC boxed analysis insights – combinations
+
+
+  HEATTRACK VTRAC
+
+
+  Pair analysis
+
+
+  Combination analysis
+
+
+  Sums tracking
+
+
+  Basically anything you’ve seen from the images of the different scoring features that we could use to our advantage or convert into favorable compound scoring features, where the insights are of analytical value or pair
+  exactly or VTRAC‑related to the winner. AND I THINK "FINAL INSIGHTS" ALSO OUTLINE THEM WELL WHAT WERE YUOR IMPRESSIONS OF THE "FINAL INSIGHTS" DOC IM CURIOUS TO ASK AND ITS RELATION TO THIS TASK PART 3? BUT IM FEELING QUITE
+  CONDFIDEN T IN WHAT YOU HAVE GATERHERED CAN YOU SHARE MORE THOUGHTS ABOUT YOUR IMPRESSIONS ON HOW WE CAN OPTIMALLY USE THESE FEATTUES TO OUR ADVATANGE? IM CURIOUS YOUR COMPREHSIVE THOUGHTS FURTHER ABIT IF  YOU DONT MIND,
+  HOPING YOU SEE THE EXCITING POTENTIAL I SEE TO STRENGTHEN THINGS OVERALL IF SETUP OR TAKE ADVANTAGE OF IN A FAVORABLE WAY!
+• My impressions of tasks/FINAL VALIDATION/FINAL_INSIGHTS.txt are very aligned with what you’re trying to do in Part 3:
+  - It implicitly supports the same Aux posture you’re describing: strings lead, Aux compounds (confirm/gate/boost), and the master validation is the right place to learn what’s truly predictive before locking weights.
+
+  ### How I’d optimally use Aux features (plain-English, “state of the art” but practical)
+
+  The key is to treat Aux as two things at once:
+  - VTRAC: what is the candidate’s boxed index, and is that index in Top‑10 overdue / last‑5 recent (per variant)?
+  - Sums: does it align with due/root sum conditions (keep weight light early)
+  - Blackapple: if BA triggers are active (mirror/floating/pattern/root due), does the candidate satisfy them?
+
+  Then the “compound scoring” you’re envisioning is just: more independent confirmations → higher confidence (especially when the same confirmations appear across Combined/Midday/Evening).
+
+  ### Why this is exciting (and why it’s the right time)
+
+  - Aux signals are largely orthogonal to the string tables (they describe draw-history pressure, not table-formed patterns), so they’re perfect for strengthening decisions without inventing candidates.
+  - Cross‑variant convergence is a big advantage: when an Aux signal shows up in multiple variants, it’s a natural “confidence multiplier” you can log and later quantify.
+
+  ### What Part 3 should do in the master validation (first runs)
+
+  - Don’t guess weights yet. Instead, inventory + evidence-log: “Which Aux signals were active for the winner and for the top Part‑2 candidates, per variant?”
+  - That creates the dataset you need to later decide what becomes a real “profitability gate” vs noise.
+  COMPREHINSIVE OPTIMAL PLAN IN MIND ?
+
+
+• Yes — Part 3 is the right place to formalize those Aux questions, and adding 1–2 “core” questions now will make the workflow much more reusable.
+
+  My impressions (FINAL_INSIGHTS → Part 3)
+
+  - tasks/FINAL VALIDATION/FINAL_INSIGHTS.txt is basically arguing for the exact Part 3 posture: use the winners/environment lens first, then use tools (and Aux) as evidence + levers; learn what “profitable environments” look
+    like; then later compress into a lean superbrain.
+  - That maps perfectly to Aux: Aux is your environment-condition layer (draw-history pressure), which should compound what strings/tools say, not override it.
+
+  - A compact inventory per variant (C/M/E) of:
+      - resolved draws CSV path + draw count (freshness/validation)
+      - Positional summary (top3 digits P1/P2/P3 + XVAR/Mirror/Double tags + shortlist)
+      - Pairs summary (top overdue + winner’s pairs bucketed)
+  2. Questions (answers underneath)
+     Keep your existing Part C items, but tighten them into “winner alignment” + “candidate alignment” + “compound interpretation”.
+
+  Two Part 3 questions I’d add (high value)
+
+     Example outputs: “full VT-box”, “subset perms from tables”, “straight lane only”, or “skip”.
+
+
+  If you approve those two file edits, tell me which app view you want first (Aux Tools page vs Control Center) and whether you want headless (.codex/first_boot.log) or interactive Streamlit.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+• Ran rg -n "Part 3|Part C|AUX FEATURES|Aux Features" tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md tasks/FINAL\ VALIDATION/RUNS/2025-06-21__OntarioCanada4.md docs/AAT9_KIT/AAT9_Final_Validation_Help.md tasks/FINAL\
+  │ VALIDATION/WORKFLOW_CHANGELOG.md 2>/dev/null || true
+  └ docs/AAT9_KIT/AAT9_Final_Validation_Help.md:290:  Current status / remaining tasks before Part 3:
+    tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:80:  - No explicit doubles/mirror tags exist in this winners lens; defer detailed Aux scoring to Part 3.
+    tasks/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:489:  - Part 3 prep: use Aux compound scoring to explain *why* a tight perm lane was live (doubles pressure, positional pressure, repeat indices, etc.) and to decide
+    when to trust “perm-only” vs “full VT” coverage.
+
+• Ran pwd
+  └ /home/ser/code/Alpha-Analytical-Tool-Clone
+
+• Ran git status -sb
+  └ ## main...origin/main [behind 1]
+     M TOOLS/VTRAC_REFERENCE_STRAIGHT.MD
+    … +1037 lines
+    ?? tasks/digit_05.txt:Zone.Identifier
+    ?? tasks/fix_me.txt
+
+• Explored
+  └ List ls -la
+    Read master_validation_FINAL_TEMPLATE_FINAL_VERSION.md, 2025-06-21__OntarioCanada4.md, AAT9_Final_Validation_Help.md
+    Search Current status / remaining tasks before Part 3 in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md
+    Read create_master_validation_run_report.py
+    List tools
+    Read validate_aux_repeat.py, validate_aux_vtrac.py, validate_aux_doubles.py
+    List cleaned
+    List draws
+
+• Ran python3 -c "import inspect, alpha_analytical.control_center.aux_validation as m; import textwrap; print(m.__file__); print('---'); print(textwrap.dedent(''.join(inspect.getsource(m).splitlines(True)[:120])))"
+  └ /home/ser/code/Alpha-Analytical-Tool-Clone/alpha_analytical/control_center/aux_validation.py
+    ---
+    … +119 lines
+
+
+
+• Updated Plan
+  └ Set up Part 3 (Aux) to be as followable as Parts 1–2: formal prompts + an evidence-dump summarizer so you don’t need to paste raw UI/screenshots/CSVs across sessions.
+    □ Audit existing Aux helpers
+    □ Design Part 3 template prompts
+    □ Build Aux summarizer script
+    □ Wire Part 3 into run report
+    □ Sanity-run Aux summary
+
+• Explored
+  └ List FINAL VALIDATION
+    Search AUX|Aux|aux in FINAL_INSIGHTS.txt
+    Read FINAL_INSIGHTS.txt
+    Search Part C|AUX FEATURES|Aux Features|Positional in AAT9 Auxiliary Feature Integration.md
+    Read AAT9 Auxiliary Feature Integration.md, AAT9_Aux_Roadmap.md, aat9_positional_tracker.txt
+    List modules
+    Read blackapple.py
+
+• Ran python3 - <<'PY'
+  │ from modules.aux_loaders import load_state_draws
+  │ import inspect
+  │ … +2 lines
+  └ def load_state_draws(
+        state_label: str,
+    … +27 lines
+            return [], str(csv_path)
+
+
+• Ran python3 - <<'PY'
+  │ from modules import aux_loaders
+  │ import inspect
+  │ … +6 lines
+  └ def _iter_draw_roots(base: Optional[Path]) -> List[Path]:
+        """Return candidate directories where draw CSVs might live."""
+    … +83 lines
+        return best_path
+
+
+• Ran python3 - <<'PY'
+  │ from modules import aux_loaders
+  │ print('DRAWS_ROOT', aux_loaders._DRAWS_ROOT)
+  │ … +2 lines
+  └ DRAWS_ROOT /home/ser/code/Alpha-Analytical-Tool-Clone/data/cleaned/draws
+    LEGACY_DRAWS_ROOT /home/ser/code/Alpha-Analytical-Tool-Clone/data/cleaned
+
+• Explored
+  └ Search find sharepacks/2025-06-21/OntarioCanada4 -maxdepth 2 -type d -print
+    List json
+    Search draws in run_history_and_results.py
+    Search copy.*draws|draws_root|cleaned/draws|_DRAWS_ROOT in scripts
+    Read generate_draws_csv.py
+
+• Updated Plan
+  └ Found existing Aux computation helpers (repeat/positional/doubles/pairs/vtrac overlay/sums) already exposed via `alpha_analytical.control_center.aux_validation` and CLI validators; these are perfect building blocks for a Part
+    3 evidence-dump summarizer.
+    ✔ Audit existing Aux helpers
+    □ Design Part 3 template prompts
+    □ Build Aux summarizer script
+    □ Wire Part 3 into run report
+    □ Sanity-run Aux summary
+
+• Edited tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md (+50 -0)
+     95  - Cross-tool synthesis (all tools): list the top shared clusters/signals across tools for this date/state, note conflicts, and jot any aggregator/aux hooks to test.
+     96 +
+     97 +---
+     98 +
+     99 +# Part 3 — Aux Features (Environment + Compound Evidence)
+    100 +
+    101 +Purpose: inventory the Aux signals for the same date/state (Combined/Midday/Evening) and log which signals align with (a) the actual winner and (b) the top candidate clusters from Part 2. This is **evidence-first**: we l
+         og signals + convergence now, and only later convert them into weights/rules (Strings lead, Aux compounds).
+    102 +
+    103 +Key rule: Aux draws must be aligned to the **history workbook** used to build the string tables (typically D‑1 for results date D). If the workbook changes, Aux signals change. For master validation, we therefore snapsho
+         t the draw CSVs into the sharepack so Part 3 stays reproducible across sessions.
+    104 +
+    105 +Evidence block (recommended):
+    106 +- Generate/update the Aux summary inside the sharepack:
+    107 +  - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+    108 +- Paste the generated `summary.md` under 0) before answering Q1–Q10.
+    109 +
+    110 +## 3.Aux — [State] [Date]
+    111 +0) Outputs reviewed
+    112 +   - Draw CSV snapshot: `sharepacks/<DATE>/<STATE>/aux/draws/` (Combined/Midday/Evening)
+    113 +   - Aux evidence dump: `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` (all facts labeled by source)
+    114 +   - (Optional) UI cross-check: Aux page screenshots / captions (only if needed)
+    115 +1) Aux input validation (V)
+    116 +   - Confirm the draw CSV paths used (original + snapshot), draw counts, and newest two draws per variant.
+    117 +   - Confirm those newest draws match the “world snapshot” implied by tables (e.g., Set1 Draw1/Draw2 columns in Combined table).
+    118 +2) Positional pressure (core)
+    119 +   - For each variant: top due digits per position + any hard-due flags.
+    120 +   - Cross-variant consensus: digits that are top‑k in the same position across 2–3 variants (“XVAR consensus”).
+    121 +   - Does the winner (and/or top Part‑2 candidates) intersect these digits/positions?
+    122 +3) Positional shortlist (prediction list)
+    123 +   - List the shortlist candidates + tags (top N).
+    124 +   - Any overlap with winner (literal/canonical) or Part‑2 top clusters? If no direct overlap, any “shared digits/positions” clues?
+    125 +4) Repeat‑watch + index streak context
+    126 +   - Current repeat index / streak per variant + any notable “hard‑due” repeat conditions.
+    127 +   - Map the winner’s VTRAC index: is it due/repeating/avoided by this context?
+    128 +5) VTRAC overlay / heatboard (index pressure)
+    129 +   - Which indices are most overdue/hot per variant? Any that compound across variants?
+    130 +   - Does the winner’s index sit in a high‑pressure zone? Do Part‑2 top clusters sit in those indices?
+    131 +6) Doubles + pairs pressure
+    132 +   - Overdue doubles (canonical) and overdue pairs (repeat/non-repeat) per variant; call out multi-variant alerts.
+    133 +   - Does the winner (and/or Part‑2 top candidates) contain any of these overdue doubles/pairs?
+    134 +7) Sums / root‑sum pressure
+    135 +   - Due sums / deficit flags per variant (and any cross‑variant compounds).
+    136 +   - Does the winner (or top candidates) align with due sum/root patterns?
+    137 +8) Blackapple (if enabled)
+    138 +   - BA score + triggers per variant; list top BA candidates and tags.
+    139 +   - Does BA “agree” with the winner/candidate families or contradict them?
+    140 +9) Aux convergence score (new, high‑value)
+    141 +   - Build a tiny table for (winner + top 5–10 candidates): number of Aux signals supporting it, and in how many variants (1/2/3).
+    142 +   - Highlight “high-confidence” candidates where Aux compounding is strongest across variants.
+    143 +10) How to apply Aux (design implications + expense lever)
+    144 +   - Should the strongest Aux signals here be used as state-level gating (“play day / pass day”), candidate-level boosts, or both?
+    145 +   - Given Part 1+2+3 evidence, what is the cheapest reasonable play mode (perm-only vs VT-box vs skip), and why?
+
+• Updated Plan
+  └ Part 3 prompts are now formalized in the master template, including two new high-leverage questions: an explicit Aux convergence score and an expense/play-mode recommendation.
+    ✔ Audit existing Aux helpers
+    ✔ Design Part 3 template prompts
+    □ Build Aux summarizer script
+    □ Wire Part 3 into run report
+    □ Sanity-run Aux summary
+
+• Explored
+  └ Search tracker_grid|top3|grid in aux_validation.py
+    Read aux_validation.py
+    Search def positional_shortlist_report in aux_validation.py
+    Read aux_validation.py
+    Read aux_validation.py
+
+• Added scripts/tools/aux_sharepack_summary.py (+498 -0)
+      1 +"""
+      2 +Create an Aux (draw-driven) evidence dump inside a sharepack for Master Validation Part 3.
+      3 +
+      4 +Why this exists
+      5 +---------------
+      6 +Part 3 needs a *repeatable* snapshot of Aux signals (positional pressure, repeat-watch,
+      7 +doubles/pairs, VTRAC overlay/heatboard, sums, Blackapple) across variants
+      8 +(Combined/Midday/Evening).
+      9 +
+     10 +This script:
+     11 +- Snapshots the state draw CSVs into the sharepack (so later workbook swaps don't drift).
+     12 +- Computes the Aux signals against that snapshot.
+     13 +- Emits `summary.md` (paste into the validation run report) + `summary.json` (full data).
+     14 +
+     15 +It does NOT change any core scoring logic or run Streamlit.
+     16 +
+     17 +Usage
+     18 +-----
+     19 +python3 scripts/tools/aux_sharepack_summary.py --date 2025-06-21 --state OntarioCanada4
+     20 +"""
+     21 +
+     22 +from __future__ import annotations
+     23 +
+     24 +import argparse
+     25 +import json
+     26 +import shutil
+     27 +from datetime import date as _date
+     28 +from pathlib import Path
+     29 +from typing import Any, Dict, List, Tuple
+     30 +
+     31 +from alpha_analytical.control_center import aux_validation
+     32 +from core import aux_config
+     33 +from modules import blackapple
+     34 +from modules.aux_loaders import load_state_draws
+     35 +
+     36 +
+     37 +REPO_ROOT = Path(__file__).resolve().parents[2]
+     38 +VARIANTS: Tuple[str, ...] = ("combined", "midday", "evening")
+     39 +
+     40 +
+     41 +def parse_iso_date(value: str) -> _date:
+     42 +    try:
+     43 +        return _date.fromisoformat(value)
+     44 +    except ValueError as exc:
+     45 +        raise SystemExit(f"Invalid --date (expected YYYY-MM-DD): {value}") from exc
+     46 +
+     47 +
+     48 +def _fmt_list(values: List[str], limit: int = 5) -> str:
+     49 +    sample = values[:limit]
+     50 +    suffix = " …" if len(values) > limit else ""
+     51 +    return ", ".join(sample) + suffix
+     52 +
+     53 +
+     54 +def _ensure_dir(path: Path) -> None:
+     55 +    path.mkdir(parents=True, exist_ok=True)
+     56 +
+     57 +
+     58 +def _copy_draw_csv(src: Path, dst_dir: Path) -> Path:
+     59 +    _ensure_dir(dst_dir)
+     60 +    dst = dst_dir / src.name
+     61 +    shutil.copy2(src, dst)
+     62 +    return dst
+     63 +
+     64 +
+     65 +def _resolve_live_draw_paths(state: str, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+     66 +    resolved: Dict[str, Dict[str, Any]] = {}
+     67 +    for variant in VARIANTS:
+     68 +        draws, path_str = load_state_draws(state, variant=variant, base=None, max_n=max_n)
+     69 +        resolved[variant] = {
+     70 +            "variant": variant,
+     71 +            "draw_count": len(draws),
+     72 +            "draws_head": draws[:5],
+     73 +            "original_path": path_str,
+     74 +        }
+     75 +    return resolved
+     76 +
+     77 +
+     78 +def _snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+     79 +    resolved = _resolve_live_draw_paths(state, max_n=max_n)
+     80 +    for variant, payload in resolved.items():
+     81 +        path_str = payload.get("original_path")
+     82 +        if not path_str:
+     83 +            payload["snapshot_path"] = None
+     84 +            payload["snapshot_error"] = "original_path_missing"
+     85 +            continue
+     86 +        src = Path(path_str)
+     87 +        if not src.exists():
+     88 +            payload["snapshot_path"] = str(snapshot_dir / src.name)
+     89 +            payload["snapshot_error"] = "original_path_not_found"
+     90 +            continue
+     91 +        dst = _copy_draw_csv(src, snapshot_dir)
+     92 +        payload["snapshot_path"] = str(dst)
+     93 +    return resolved
+     94 +
+     95 +
+     96 +def _load_snapshot_draws(state: str, snapshot_dir: Path, *, max_n: int) -> Dict[str, Dict[str, Any]]:
+     97 +    """Load draws from the snapshot dir so later computations are sharepack-stable."""
+     98 +    by_variant: Dict[str, Dict[str, Any]] = {}
+     99 +    for variant in VARIANTS:
+    100 +        draws, resolved_path = load_state_draws(state, variant=variant, base=snapshot_dir, max_n=max_n)
+    101 +        by_variant[variant] = {
+    102 +            "variant": variant,
+    103 +            "draw_count": len(draws),
+    104 +            "draws_head": draws[:5],
+    105 +            "resolved_path": resolved_path,
+    106 +        }
+    107 +    return by_variant
+    108 +
+    109 +
+    110 +def _top_items_by_gap(stats: Dict[str, Dict[str, int]], limit: int) -> List[Dict[str, Any]]:
+    111 +    rows: List[Dict[str, Any]] = []
+    112 +    for key, payload in stats.items():
+    113 +        rows.append({"key": key, **payload})
+    114 +    rows.sort(key=lambda row: row.get("draws_since", 0), reverse=True)
+    115 +    return rows[:limit]
+    116 +
+    117 +
+    118 +def _top_index_overlay(overlay: Dict[int, int], limit: int) -> List[Dict[str, Any]]:
+    119 +    rows = [{"index": idx, "draws_since": gap} for idx, gap in overlay.items()]
+    120 +    rows.sort(key=lambda row: row["draws_since"], reverse=True)
+    121 +    return rows[:limit]
+    122 +
+    123 +
+    124 +def _top_heatboard(heatboard: Dict[int, Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+    125 +    rows = [{"index": idx, **payload} for idx, payload in heatboard.items()]
+    126 +    rows.sort(key=lambda row: int(row.get("ds", 0)), reverse=True)
+    127 +    return rows[:limit]
+    128 +
+    129 +
+    130 +def _top_sums(payload: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
+    131 +    by_sum = payload.get("by_sum", {}) or {}
+    132 +    rows = [{"sum": label, **stats} for label, stats in by_sum.items()]
+    133 +    rows.sort(key=lambda row: int(row.get("draws_since", 0)), reverse=True)
+    134 +    return rows[:limit]
+    135 +
+    136 +
+    137 +def _top_blackapple(payload: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
+    138 +    candidates = payload.get("candidates", []) or []
+    139 +    rows: List[Dict[str, Any]] = []
+    140 +    for cand in candidates[:limit]:
+    141 +        rows.append(
+    142 +            {
+    143 +                "combo": cand.get("combo"),
+    144 +                "score": cand.get("score"),
+    145 +                "tags": sorted(list(cand.get("tags") or [])),
+    146 +            }
+    147 +        )
+    148 +    return rows
+    149 +
+    150 +
+    151 +def build_summary(
+    152 +    state: str,
+    153 +    sharepack_date: str,
+    154 +    *,
+    155 +    snapshot_dir: Path,
+    156 +    max_n: int,
+    157 +    limit: int,
+    158 +    sums_window: int,
+    159 +    pairs_window: int,
+    160 +    positional_window: int,
+    161 +) -> Dict[str, Any]:
+    162 +    live_sources = _snapshot_draws(state, snapshot_dir, max_n=max_n)
+    163 +    snapshot_sources = _load_snapshot_draws(state, snapshot_dir, max_n=max_n)
+    164 +
+    165 +    repeat_watch = aux_validation.repeat_summary_by_variant(state, base=snapshot_dir, max_n=max_n)
+    166 +    positional_hard_due = aux_validation.positional_hard_due_by_variant(
+    167 +        state,
+    168 +        base=snapshot_dir,
+    169 +        max_n=max_n,
+    170 +        window=positional_window,
+    171 +    )
+    172 +    positional_shortlist = aux_validation.positional_shortlist_report(
+    173 +        state,
+    174 +        base=snapshot_dir,
+    175 +        max_n=max_n,
+    176 +        window=positional_window,
+    177 +    )
+    178 +
+    179 +    doubles_by_variant = aux_validation.collect_variant_stats(state, base=snapshot_dir, max_n=max_n)
+    180 +    doubles_alerts = aux_validation.multi_variant_alerts(state, base=snapshot_dir, max_n=max_n)
+    181 +
+    182 +    pairs_by_variant = aux_validation.collect_pair_stats_for_state(
+    183 +        state,
+    184 +        base=snapshot_dir,
+    185 +        max_n=max_n,
+    186 +        window=pairs_window,
+    187 +    )
+    188 +    pairs_alerts = aux_validation.pair_multi_variant_alerts(
+    189 +        state,
+    190 +        base=snapshot_dir,
+    191 +        max_n=max_n,
+    192 +        window=pairs_window,
+    193 +    )
+    194 +
+    195 +    vtrac_overlay = aux_validation.vtrac_overlay_by_variant(state, base=snapshot_dir, max_n=max_n)
+    196 +    vtrac_heatboard = aux_validation.vtrac_heatboard_by_variant(
+    197 +        state,
+    198 +        base=snapshot_dir,
+    199 +        max_n=max_n,
+    200 +        window=max_n,
+    201 +    )
+    202 +
+    203 +    sums_stats = aux_validation.sums_stats_by_variant(
+    204 +        state,
+    205 +        base=snapshot_dir,
+    206 +        max_n=max_n,
+    207 +        window=sums_window,
+    208 +    )
+    209 +
+    210 +    blackapple_by_variant: Dict[str, Any] = {}
+    211 +    for variant in VARIANTS:
+    212 +        draws, _ = load_state_draws(state, variant=variant, base=snapshot_dir, max_n=max_n)
+    213 +        blackapple_by_variant[variant] = blackapple.analyze_blackapple(draws)
+    214 +
+    215 +    return {
+    216 +        "state": state,
+    217 +        "date": sharepack_date,
+    218 +        "draw_sources": {
+    219 +            "live": live_sources,
+    220 +            "snapshot": snapshot_sources,
+    221 +            "snapshot_dir": str(snapshot_dir),
+    222 +        },
+    223 +        "config": {
+    224 +            "PAIRS_WINDOW": getattr(aux_config, "PAIRS_WINDOW", None),
+    225 +            "POSITIONAL_WINDOW": getattr(aux_config, "POSITIONAL_WINDOW", None),
+    226 +            "VTRAC_INDEX_WINDOW": getattr(aux_config, "VTRAC_INDEX_WINDOW", None),
+    227 +            "COMBO_DOUBLE_LATE": getattr(aux_config, "COMBO_DOUBLE_LATE", None),
+    228 +            "COMBO_DOUBLE_VERY_LATE": getattr(aux_config, "COMBO_DOUBLE_VERY_LATE", None),
+    229 +            "REPEATING_LATE": getattr(aux_config, "REPEATING_LATE", None),
+    230 +            "REPEATING_VERY_LATE": getattr(aux_config, "REPEATING_VERY_LATE", None),
+    231 +            "NONREPEATING_LATE": getattr(aux_config, "NONREPEATING_LATE", None),
+    232 +            "NONREPEATING_VERY_LATE": getattr(aux_config, "NONREPEATING_VERY_LATE", None),
+    233 +            "PAIR_PENDING": getattr(aux_config, "PAIR_PENDING", None),
+    234 +            "Sums_window_used": sums_window,
+    235 +            "max_n_used": max_n,
+    236 +        },
+    237 +        "repeat_watch": repeat_watch,
+    238 +        "positional": {
+    239 +            "hard_due_by_variant": positional_hard_due,
+    240 +            "shortlist_report": positional_shortlist,
+    241 +        },
+    242 +        "doubles": {
+    243 +            "by_variant": doubles_by_variant,
+    244 +            "multi_variant_alerts": doubles_alerts,
+    245 +            "top_by_variant": {
+    246 +                variant: _top_items_by_gap(payload, limit)
+    247 +                for variant, payload in doubles_by_variant.items()
+    248 +            },
+    249 +        },
+    250 +        "pairs": {
+    251 +            "by_variant": pairs_by_variant,
+    252 +            "multi_variant_alerts": pairs_alerts,
+    253 +        },
+    254 +        "vtrac": {
+    255 +            "overlay_by_variant": vtrac_overlay,
+    256 +            "heatboard_by_variant": vtrac_heatboard,
+    257 +            "overlay_top": {
+    258 +                variant: _top_index_overlay(payload, limit)
+    259 +                for variant, payload in vtrac_overlay.items()
+    260 +            },
+    261 +            "heatboard_top": {
+    262 +                variant: _top_heatboard(payload, limit)
+    263 +                for variant, payload in vtrac_heatboard.items()
+    264 +            },
+    265 +        },
+    266 +        "sums": {
+    267 +            "by_variant": sums_stats,
+    268 +            "top_by_variant": {
+    269 +                variant: _top_sums(payload, limit)
+    270 +                for variant, payload in sums_stats.items()
+    271 +            },
+    272 +        },
+    273 +        "blackapple": {
+    274 +            "by_variant": blackapple_by_variant,
+    275 +            "top_by_variant": {
+    276 +                variant: _top_blackapple(payload, limit)
+    277 +                for variant, payload in blackapple_by_variant.items()
+    278 +            },
+    279 +        },
+    280 +    }
+    281 +
+    282 +
+    283 +def render_markdown(summary: Dict[str, Any]) -> str:
+    284 +    state = summary["state"]
+    285 +    date = summary["date"]
+    286 +    cfg = summary.get("config", {})
+    287 +
+    288 +    lines: List[str] = []
+    289 +    lines.append(f"# Aux Summary — {state} — {date}")
+    290 +    lines.append("")
+    291 +    lines.append("This is a **Part 3 evidence dump** (Aux signals). All facts below are labeled by source so they can be pasted into the Master Validation run report without raw CSV/UI screenshots.")
+    292 +    lines.append("")
+    293 +    lines.append("## Config (source: core/aux_config.py)")
+    294 +    lines.append(
+    295 +        f"- windows: pairs={cfg.get('PAIRS_WINDOW')} positional={cfg.get('POSITIONAL_WINDOW')} vtrac_index={cfg.get('VTRAC_INDEX_WINDOW')} sums_used={cfg.get('Sums_window_used')}"
+    296 +    )
+    297 +    lines.append(
+    298 +        f"- thresholds: doubles_late={cfg.get('COMBO_DOUBLE_LATE')} doubles_very_late={cfg.get('COMBO_DOUBLE_VERY_LATE')} pair_pending={cfg.get('PAIR_PENDING')}"
+    299 +    )
+    300 +    lines.append("")
+    301 +
+    302 +    lines.append("## Draw sources (source: modules.aux_loaders.load_state_draws)")
+    303 +    snap_dir = summary["draw_sources"].get("snapshot_dir")
+    304 +    lines.append(f"- snapshot_dir: `{Path(snap_dir).relative_to(REPO_ROOT) if snap_dir else snap_dir}`")
+    305 +    for variant in VARIANTS:
+    306 +        live = summary["draw_sources"]["live"].get(variant, {})
+    307 +        snap = summary["draw_sources"]["snapshot"].get(variant, {})
+    308 +        lines.append(
+    309 +            f"- {variant}: live=`{live.get('original_path')}` | snap=`{snap.get('resolved_path')}` | n={snap.get('draw_count')} | head={_fmt_list(snap.get('draws_head') or [])}"
+    310 +        )
+    311 +    lines.append("")
+    312 +
+    313 +    repeat_watch = summary.get("repeat_watch", {})
+    314 +    positional = summary.get("positional", {})
+    315 +    hard_due = positional.get("hard_due_by_variant", {})
+    316 +    shortlist = positional.get("shortlist_report", {}) or {}
+    317 +    doubles_top = summary.get("doubles", {}).get("top_by_variant", {})
+    318 +    doubles_alerts = summary.get("doubles", {}).get("multi_variant_alerts", {}) or {}
+    319 +    pairs = summary.get("pairs", {}).get("by_variant", {}) or {}
+    320 +    pairs_alerts = summary.get("pairs", {}).get("multi_variant_alerts", {}) or {}
+    321 +    vtrac_overlay_top = summary.get("vtrac", {}).get("overlay_top", {})
+    322 +    vtrac_heat_top = summary.get("vtrac", {}).get("heatboard_top", {})
+    323 +    sums_top = summary.get("sums", {}).get("top_by_variant", {})
+    324 +    ba_top = summary.get("blackapple", {}).get("top_by_variant", {})
+    325 +    ba_by_variant = summary.get("blackapple", {}).get("by_variant", {})
+    326 +
+    327 +    for variant in VARIANTS:
+    328 +        lines.append(f"## {variant.title()} (variant)")
+    329 +        lines.append("")
+    330 +
+    331 +        # Repeat
+    332 +        payload = repeat_watch.get(variant, {})
+    333 +        lines.append("### Repeat watch (source: aux_validation.repeat_summary_by_variant)")
+    334 +        if payload:
+    335 +            lines.append(
+    336 +                f"- current_index={payload.get('current_index')} streak={payload.get('current_streak')} max={payload.get('max_streak')} last_repeat_gap={payload.get('last_repeat_gap')} last_repeat_index={payload.get('las
+         t_repeat_index')}"
+    337 +            )
+    338 +        else:
+    339 +            lines.append("- _no data_")
+    340 +        lines.append("")
+    341 +
+    342 +        # Positional
+    343 +        lines.append("### Positional pressure (source: aux_validation.positional_shortlist_report)")
+    344 +        vt = shortlist.get("variant_top_digits", {}).get(variant, []) if shortlist else []
+    345 +        if vt:
+    346 +            parts = [f"P{row['position']+1}:{row['digit']} (gap={row['gap']})" for row in vt]
+    347 +            lines.append(f"- top digits: {', '.join(parts)}")
+    348 +        else:
+    349 +            lines.append("- top digits: _no data_")
+    350 +        lines.append(f"- consensus_notes: {', '.join(shortlist.get('consensus_notes', []) or []) or '-'}")
+    351 +        lines.append(f"- double_pressure_notes: {', '.join(shortlist.get('double_pressure_notes', []) or []) or '-'}")
+    352 +        lines.append("")
+    353 +
+    354 +        lines.append("### Positional hard-due (source: aux_validation.positional_hard_due_by_variant)")
+    355 +        hd = hard_due.get(variant, [])
+    356 +        if hd:
+    357 +            parts = [f"P{row['position']+1}:{row['digit']} (ds={row['draws_since']})" for row in hd]
+    358 +            lines.append(f"- hard_due: {', '.join(parts)}")
+    359 +        else:
+    360 +            lines.append("- hard_due: none")
+    361 +        lines.append("")
+    362 +
+    363 +        lines.append("### Positional shortlist (source: aux_validation.positional_shortlist_report)")
+    364 +        candidates = shortlist.get("candidates", []) if shortlist else []
+    365 +        if candidates:
+    366 +            for cand in candidates[:10]:
+    367 +                tag_display = ",".join((cand.get("tags") or [])[:5]) if cand.get("tags") else "-"
+    368 +                lines.append(f"- {cand.get('combo')}: score={cand.get('score')} tags={tag_display} src={cand.get('source') or '-'}")
+    369 +        else:
+    370 +            lines.append("- _no candidates_")
+    371 +        lines.append("")
+    372 +
+    373 +        # Doubles
+    374 +        lines.append("### Doubles (source: aux_validation.collect_variant_stats)")
+    375 +        top = doubles_top.get(variant, []) if doubles_top else []
+    376 +        if top:
+    377 +            for row in top:
+    378 +                lines.append(f"- {row['key']}: ds={row.get('draws_since')} sev={row.get('severity')}")
+    379 +        else:
+    380 +            lines.append("- _no late doubles_")
+    381 +        lines.append("")
+    382 +
+    383 +        # Pairs
+    384 +        lines.append("### Pairs (source: aux_validation.collect_pair_stats_for_state)")
+    385 +        payload = pairs.get(variant, {}) if pairs else {}
+    386 +        if payload:
+    387 +            status = payload.get("status", {}) or {}
+    388 +            rep = list((payload.get("repeating", {}) or {}).items())[:10]
+    389 +            nr = list((payload.get("non_repeating", {}) or {}).items())[:10]
+    390 +            if rep:
+    391 +                lines.append("- repeating:")
+    392 +                for pair, overdue in rep:
+    393 +                    sev = status.get(pair) or "-"
+    394 +                    lines.append(f"  - {pair}: ds={overdue} sev={sev}")
+    395 +            if nr:
+    396 +                lines.append("- non_repeating:")
+    397 +                for pair, overdue in nr:
+    398 +                    sev = status.get(pair) or "-"
+    399 +                    lines.append(f"  - {pair}: ds={overdue} sev={sev}")
+    400 +            if not rep and not nr:
+    401 +                lines.append("- _no pair rows_")
+    402 +        else:
+    403 +            lines.append("- _no data_")
+    404 +        lines.append("")
+    405 +
+    406 +        # VTRAC overlay/heat
+    407 +        lines.append("### VTRAC overlay (source: aux_validation.vtrac_overlay_by_variant)")
+    408 +        overlay = vtrac_overlay_top.get(variant, []) if vtrac_overlay_top else []
+    409 +        if overlay:
+    410 +            lines.append("- top overdue indices (ds): " + ", ".join(f\"{row['index']}:{row['draws_since']}\" for row in overlay))
+    411 +        else:
+    412 +            lines.append("- _no data_")
+    413 +        lines.append("")
+    414 +
+    415 +        lines.append("### VTRAC heatboard (source: aux_validation.vtrac_heatboard_by_variant)")
+    416 +        heat = vtrac_heat_top.get(variant, []) if vtrac_heat_top else []
+    417 +        if heat:
+    418 +            lines.append(
+    419 +                \"- top heat (by ds): \"
+    420 +                + \", \".join(
+    421 +                    f\"{row['index']}:ds={row.get('ds')} fs={row.get('freq_short')} fl={row.get('freq_long')} hz={row.get('hazard')}\"
+    424 +            )
+    425 +        else:
+    426 +            lines.append(\"- _no data_\")
+    427 +        lines.append(\"\" )
+    431 +        sums_rows = sums_top.get(variant, []) if sums_top else []
+    432 +        if sums_rows:
+    433 +            for row in sums_rows:
+    434 +                flags = row.get(\"flags\") or {}
+    435 +                active = \"+\".join([k for k, v in flags.items() if v]) if flags else \"-\"
+    436 +                lines.append(f\"- S{row.get('sum')}: ds={row.get('draws_since')} flags={active}\")
+    437 +        else:
+    438 +            lines.append(\"- _no data_\")
+    439 +        lines.append(\"\")
+    440 +
+    441 +        # Blackapple
+    442 +        lines.append(\"### Blackapple (source: modules.blackapple.analyze_blackapple)\")
+    443 +        ba_payload = ba_by_variant.get(variant, {}) if ba_by_variant else {}
+    444 +        if ba_payload:
+    445 +            lines.append(f\"- score={ba_payload.get('score')} triggers={ba_payload.get('triggers')}\")
+    446 +        top = ba_top.get(variant, []) if ba_top else []
+    447 +        if top:
+    448 +            lines.append(\"- top candidates:\")
+    449 +            for row in top:
+    450 +                lines.append(f\"  - {row.get('combo')}: score={row.get('score')} tags={','.join(row.get('tags') or []) or '-'}\")
+    451 +        else:
+    452 +            lines.append(\"- _no candidates_\")
+    453 +        lines.append(\"\")
+    454 +
+    455 +    lines.append(\"## Cross-variant alerts (state)\")
+    456 +    lines.append(\"\")
+    457 +    lines.append(\"### Multi-variant doubles alerts (source: aux_validation.multi_variant_alerts)\")
+    458 +    if doubles_alerts:
+    459 +        for combo, by_variant in sorted(doubles_alerts.items()):
+    460 +            parts = [f\"{v}:{p.get('draws_since')}({p.get('severity')})\" for v, p in sorted(by_variant.items())]
+    461 +            lines.append(f\"- {combo} -> {'; '.join(parts)}\")
+    462 +    else:
+    463 +        lines.append(\"- none\")
+    464 +    lines.append(\"\")
+    465 +
+    466 +    lines.append(\"### Multi-variant pair alerts (source: aux_validation.pair_multi_variant_alerts)\")
+    467 +    if pairs_alerts:
+    468 +        for pair, by_variant in sorted(pairs_alerts.items()):
+    469 +            parts = [f\"{v}:{p.get('draws_since')}({p.get('severity')})\" for v, p in sorted(by_variant.items())]
+    470 +            lines.append(f\"- {pair} -> {'; '.join(parts)}\")
+    471 +    else:
+    472 +        lines.append(\"- none\")
+    473 +    lines.append(\"\")
+    474 +
+    475 +    lines.append(\"### Aggregated positional digits (source: aux_validation.positional_shortlist_report)\")
+    476 +    agg = shortlist.get(\"aggregated_digits\", {}) if shortlist else {}
+    477 +    if agg:
+    478 +        for pos, digits in agg.items():
+    479 +            digit_str = \", \".join(
+    480 +                f\"{d.get('digit')}({d.get('score')})[{','.join((d.get('tags') or [])[:2])}]\" for d in digits
+    481 +            )
+    482 +            lines.append(f\"- P{int(pos)+1}: {digit_str}\")
+    483 +    else:
+    484 +        lines.append(\"- _no data_\")
+    485 +    lines.append(\"\")
+    486 +
+    487 +    return \"\\n\".join(lines).rstrip() + \"\\n\"
+    488 +
+    489 +
+    490 +def main() -> None:
+    491 +    ap = argparse.ArgumentParser(description=\"Build Aux summary.md/.json inside a sharepack for Part 3.\")
+    492 +    ap.add_argument(\"--date\", required=True, help=\"Sharepack date folder (results/winners date, YYYY-MM-DD)\")
+    493 +    ap.add_argument(\"--state\", required=True, help=\"State key (e.g., OntarioCanada4)\")
+    494 +    ap.add_argument(\"--max-n\", type=int, default=1000, help=\"Max newest draws to load (default 1000)\")
+    495 +    ap.add_argument(\"--limit\", type=int, default=10, help=\"Top-N rows to render per section (default 10)\")
+    496 +    ap.add_argument(\"--sums-window\", type=int, default=100, help=\"Sums analysis window (default 100)\")
+    497 +    ap.add_argument(\"--pairs-window\", type=int, default=int(getattr(aux_config, \"PAIRS_WINDOW\", 360)), help=\"Pairs window override\")
+    498 +    ap.add_argument(\n+        \"--positional-window\",\n+        type=int,\n+        default=int(getattr(aux_config, \"POSITIONAL_WINDOW\", 150)),\n+        help=\"Positional window override\",\n+    )\n+    ap.add_argu
+         ment(\n+        \"--md-out\",\n+        default=\"summary.md\",\n+        help=\"Markdown output filename (default summary.md in aux sharepack folder)\",\n+    )\n+    ap.add_argument(\n+        \"--json-out\",\n+
+          default=\"summary.json\",\n+        help=\"JSON output filename (default summary.json in aux sharepack folder)\",\n+    )\n+    args = ap.parse_args()\n+\n+    sharepack_date = args.date\n+    parse_iso_date(sharepack_d
+         ate)\n+    state = args.state\n+\n+    sharepack_state_root = REPO_ROOT / \"sharepacks\" / sharepack_date / state\n+    if not sharepack_state_root.exists():\n+        raise SystemExit(f\"Sharepack not found: {sharepack_
+         state_root}\")\n+\n+    aux_root = sharepack_state_root / \"aux\" / state\n+    draws_snapshot_dir = sharepack_state_root / \"aux\" / \"draws\"\n+    _ensure_dir(aux_root)\n+    _ensure_dir(draws_snapshot_dir)\n+\n+    s
+         ummary = build_summary(\n+        state,\n+        sharepack_date,\n+        snapshot_dir=draws_snapshot_dir,\n+        max_n=args.max_n,\n+        limit=args.limit,\n+        sums_window=args.sums_window,\n+        pair
+         s_window=args.pairs_window,\n+        positional_window=args.positional_window,\n+    )\n+\n+    md_text = render_markdown(summary)\n+    md_path = aux_root / args.md_out\n+    json_path = aux_root / args.json_out\n+
+         md_path.write_text(md_text, encoding=\"utf-8\")\n+    json_path.write_text(json.dumps(summary, indent=2), encoding=\"utf-8\")\n+\n+    print(f\"Wrote: {md_path}\")\n+    print(f\"Wrote: {json_path}\")\n+\n+\n+if __name__
+          == \"__main__\":\n+    main()\n*** End Patch"}]}file path? Wait apply_patch should not wrap JSON. It's freeform. Mist. I used apply_patch but incorrectly put JSON wrapper. Need to redo. We'll use apply_patch tool with c
+         orrect freeform patch. Let's correct. We'll call apply_patch again with correct patch content. We'll ensure not to include JSON wrapper. We'll add file with + lines. Let's do that. We'll be careful because patch is long;
+          apply_patch might fail if too long? It can handle. We'll craft patch with proper structure: "*** Begin Patch\n*** Add File: scripts/tools/aux_sharepack_summary.py\n+...\n*** End Patch". We'll ensure each line begins wit
+         h +. We must include patch exactly. Let's do that carefully. We'll craft minimal but complete script. Could shorten but user wants comprehensive; but still manageable. We'll include necessary imports and functions. We'll
+          ensure line lengths not too huge but ok. We'll ensure no weird quoting or invalid characters. We'll also ensure we don't include "..." or truncated. We'll implement fully. We'll keep code style consistent with existing
+         scripts in scripts/tools. They use docstring at top, as we did. We'll keep simple; no one-letter variables etc. We'll use functions. We'll ensure we handle cross-platform path referencing. We'll print relative path for s
+         napshot_dir in markdown; but we used Path.relative_to(REPO_ROOT) which will fail if snap_dir is None; but we handle. But if snap_dir string not relative? It's inside repo; fine. But safe: we can catch ValueError. We'll i
+         mplement safe formatting function to compute relative path or use absolute. We'll make that robust. We'll also ensure to include `from alpha_analytical.control_center import aux_validation` and other modules. But if scri
+         pt is run, it will import these modules; they rely on project path. Should be fine as we are in repo root. But to be safe, we can bootstrap sys.path similar to other scripts: add REPO_ROOT and REPO_ROOT/src to sys.path.
+         The existing validate_aux scripts do that. In this script, we imported directly; but if executed from repo root, python should add current directory to sys.path; still, safe. We'll add explicit path injection at top like
+          other scripts: set ROOT and insert in sys.path. We'll do that for reliability. We'll mimic validate scripts. Let's incorporate that to ensure consistent. We'll include `import sys` and insert root and src. That is safe.
+          We'll update accordingly. We'll also ensure blackapple module has BOM at start; but we import; fine. We'll also ensure `aux_config` in core. We'll import; might require src path. In our environment, core is in src? Actu
+         ally core folder may exist? Let's check. There's `src/core` maybe. There is `core` at root? Let's search. `ls -la core`. We'll check quickly. But we already imported core.aux_config from python earlier; it worked. So fin
+         e. But to ensure import works, we insert src path. We'll follow validate scripts: set ROOT as parents[2]; insert root and src. We'll do that before importing alpha_analytical, core, modules. So we must reorder: at top af
+         ter imports of sys etc, we inject path, then import modules. We'll restructure accordingly. We'll do patch accordingly.

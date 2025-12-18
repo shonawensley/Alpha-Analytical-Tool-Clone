@@ -32,7 +32,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - Clarify that `sharepacks/<DATE>/...` uses the **results/winners date (D)** and the history workbook is typically **D-1**.
 - Add “Contract Truth Table” + “Known bumpy semantics” to the entry doc so future sessions don’t have to rediscover these rules.
 - Files:
-  - `docs/AAT9_KIT/AAT9_Final_Validation_Help.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 
 ### Part 3: Aux evidence dump + prompts
 
