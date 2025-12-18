@@ -1,11 +1,11 @@
-# Master Validation – Final Template (Part A)
+# Master Validation — Final Template
 
 Purpose: read the 3-variant winners output (HTML + JSON) *before* any tool scoring. Use it as the environment lens to characterize the winning pattern and its family/VT context. Then answer the questions below to extract maximal analytical value.
 
 Execution note (recommended):
 - Do not write answers into this template file. Generate a per-run report and fill answers there:
   - `python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4`
-  - Output: `tasks/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
+  - Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__<STATE>.md`
 
 How to read:
 - Open the analyzer-style winners HTML for the state/date (Midday, Evening, Combined panes). If available, also skim the JSON twin for counts/index info.
@@ -152,3 +152,76 @@ Evidence block (recommended):
 10) How to apply Aux (design implications + expense lever)  
    - Should the strongest Aux signals here be used as state-level gating (“play day / pass day”), candidate-level boosts, or both?  
    - Given Part 1+2+3 evidence, what is the cheapest reasonable play mode (perm-only vs VT-box vs skip), and why?
+
+---
+
+# Part 4 — Combination / Permutation Translation (Candidate Universe + Coverage Pack)
+
+Purpose: translate Parts 1–3 into a **small candidate universe** per draw (Midday/Evening) and a concrete **coverage pack decision** (perm-only vs boxed vs VT-boxed vs VTRAC-straight lane). This is a *translation layer*, not more analysis: keep it evidence-based and avoid ROI/progression talk.
+
+Key reminder: Midday/Evening are the real draws. “Combined” is an evidence view that can reinforce or contradict Midday/Evening.
+
+Reference helpers (for mapping):
+- VTRAC decoder tables: `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD` (Index members + VSTRAIGHTS 8-lane sets + permutations).
+- Canonicalization: many tools use canonical (sorted digits). Always map literal → canonical before deciding coverage (e.g., 517 → 157).
+
+Coverage modes (counts, for planning only):
+- Exact straight: 1 combo
+- Exact boxed (single triad): 6 combos (all permutations of canonical digits)
+- VTRAC boxed (index family): typically 8 canonicals × 6 perms = 48 combos (note: some double-based indices differ; use the reference table)
+- VTRAC straight lane (VSTRAIGHTS): 8 combos (v-code lane)
+- Perm-lane (in-table perms): the specific permutations observed in the string tables for that canonical triad (subset of 6)
+
+## 4.Pack — [State] [Results Date]
+0) Inputs reviewed  
+   - Part A: winner lenses (HTML/JSON) + your “perm lane” observations  
+   - Part 2B: cross-tool synthesis (shared clusters + conflicts)  
+   - Part 3.9: Aux convergence table (signals per variant)  
+   - VTRAC reference mapping (index members + VSTRAIGHTS)
+1) Candidate universe (per draw)  
+   - Midday: list the top N (5–10) triads you would carry forward, with 1-line rationale each (evidence vector count + variant correctness).  
+   - Evening: list the top N (5–10) triads you would carry forward, with 1-line rationale each.  
+   - Include the actual winners (literal + canonical) for validation, but keep the universe small.
+2) Evidence vectors (per candidate)  
+   - Create a compact table for each draw with columns like:
+     - `triad (literal)` | `canonical` | `idx` | `vstraight` | `tools` (Stable/DR/VTRAC/HotZones: where/how it appears) | `aux signals` (pos/idxTop/sum/pair/BA per variant) | `notes`
+   - Goal: make it obvious *why* a triad is in the universe (and which evidence is variant-correct).
+3) Coverage mapping (per candidate)  
+   - For each candidate triad (canonical), fill:
+     - In-table permutations observed (from Part A) + count
+     - Exact boxed permutations (6)
+     - VTRAC index members (canonicals) + “index boxed size” (usually 48)
+     - VSTRAIGHT lane members (8) + “vstraight size” (8)
+   - Note overlaps: multiple candidates can share the same canonical family/index lane; don’t double-count combos.
+4) Pack decision (no ROI)  
+   - For Midday and Evening separately:
+     - Choose a coverage mode (perm-only / boxed / vstraight / index-boxed) based on evidence strength + lane clarity from Part A + Aux convergence.
+     - Output: final “pack” list (canonicals + mode) and total combo count.
+   - Rule of thumb (first-pass): prefer **boxed** over perm-only when Part A shows the winner family but not the literal permutation; prefer **vstraight** when lanes are clean and multiple tools tag vt-straight; reserve **full index boxed** for high-uncertainty days.
+5) Optional method checks (log-only)  
+   - If you want to test special methods, reference:
+     - `docs/AAT9_KIT/FINAL VALIDATION/combination_forming_2.txt` (12-combo method, consensus method, etc.)
+   - Record whether the method would have produced a 4-criteria hit on this example. If it’s too early, mark “to test later”.
+
+---
+
+# Part 5 — Overall Summary (Key Insights + Fix/Future Hooks)
+
+Purpose: end the run with a compact “what matters” summary that can be compared across many states/dates and later mined for the superbrain/aggregator.
+
+## 5.Summary — [State] [Results Date]
+1) Pack vs winners (post-hoc validation)  
+   - For each draw (Midday/Evening): did the Part 4 pack cover the actual winner via:
+     - Exact straight / Exact boxed / VT-boxed / VT-straight?
+   - If yes: state which pack element achieved it. If no: state what was missing.
+2) Key environment tags  
+   - 3–6 short tags describing the environment (cross-variant convergence, perm-lane clarity, due sum/index pressure, noise vs dominance).
+3) What actually drove the win (best evidence)  
+   - 3–6 bullets: strongest signals across Part A + tools + Aux that aligned with the winner(s).
+4) Biggest conflicts / miss patterns  
+   - 2–6 bullets: where tools disagreed with each other or with the winners lens (e.g., tool saw but didn’t elevate; index rank mismatch; lane was present but low-ranked).
+5) Fix-now vs fix-later  
+   - Fix-now: anything blocking repeatable runs (broken outputs, missing artifacts, drift guards failing).  
+  - Fix-later: tuning ideas / aggregator hypotheses. Log them to: `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
+6) Next run recommendation  
+   - Which next state/date to run and what hypothesis you want to test (e.g., “does Aux convergence reliably boost the correct variant?”, “does Hot Zones ∩ VTRAC survivors work better than index rank?”).

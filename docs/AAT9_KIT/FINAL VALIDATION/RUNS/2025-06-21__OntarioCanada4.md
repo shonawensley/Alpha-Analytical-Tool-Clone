@@ -1,7 +1,7 @@
 # Master Validation Run Report — OntarioCanada4 — results 2025-06-21 (history workbook ~ 2025-06-20)
 
 Reference template:
-- `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
 
 Sharepack pointers:
 - Sharepack root: `sharepacks/2025-06-21/OntarioCanada4/`
@@ -612,3 +612,135 @@ Highlights:
   - When Part 1 shows “tight perm lanes” and Aux strongly supports the winner lane, prefer **perm-only / in-table perms** over “play full VT-box”, unless uncertainty remains high across tools.
   - For this example, the strongest “cheap justification” is Midday 678: Aux is highly supportive in Midday; Part 1 noted the winner manifested via a tight perm lane (867/687). That’s the kind of scenario where an aggregator could recommend “play the in-table perms (+ optionally the literal if covered)” instead of full index coverage.
 - Caution: the strongest *cross-variant* index anchor here is index32, but the winners are not index32. So: treat cross-variant index pressure as environment context, not an automatic candidate selector.
+
+---
+
+## Part 4 — Combination / Permutation Translation (Candidate Universe + Coverage Pack)
+
+Goal: translate Parts 1–3 into a small “candidate universe” per draw + a concrete coverage pack decision (perm-only vs boxed vs VTRAC-straight vs full index-box). Evidence-first; no ROI/progression.
+
+0) Inputs reviewed
+- Part A (perm-lane notes): Midday winner 678 manifests mainly via in-table perms 687/867; Evening winner 517 manifests mainly via in-table perm 175 (canonical 157).
+- Part 2B (cross-tool anchors): 367/362 dominant survivors for idx21; 59x cluster (599/592/259) is a strong environment signature; Hot Zones Top-10 includes 367 and 227.
+- Part 3.9 (Aux convergence): strongest variant-correct support is 678 (idxTop in Midday + sum21 + pair67) and moderate support for 517/175 (pair + Evening hot sum13).
+- VTRAC mapping ref: `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD` (Index members + permutations + VSTRAIGHTS).
+
+### 4.1 Candidate universe (per draw)
+
+Midday (targeting 678 / canonical 678):
+- 678 (idx21): winner; strongest variant-correct Aux stack (Midday idxTop + sum21 + pair67); Part A shows tight perm lane around 678-family.
+- 367 (idx21): dominant survivor (Part A); Hot Zones Top-10 lane rank 9; Aux supports via idxTop/pair (Midday).
+- 362 (idx21): dominant persistence survivor (Part A); VTRAC brain “top straights” includes 362; Aux supports via idxTop/pair across variants.
+- 268 (idx21): member of idx21 canonical set; useful as “index-box expansion” if we escalate from boxed to index coverage.
+- 227 (idx26 double): Hot Zones #1 lane + very Aux-strong across variants (idxTop+pair everywhere), but *not* winner → keep as “false-positive anchor” to learn from (should not automatically override strings).
+- 592 (idx12): cross-tool environment anchor (DR top candidates + VTRAC straights list); Aux supports via pair across variants (but did not win).
+
+Evening (targeting 517 / canonical 157):
+- 157 (idx7): canonical winner family; Stable flags it (exact boxed/straight), Hot Zones contains it (low rank), Aux supports via pair + Evening hot sum13.
+- 175 (idx7): the main in-table permutation for the 157 family (Part A); boxing it covers 517; Aux support mirrors 517 (pair + Evening hot sum13).
+- 567 (idx7): idx7 member; appears in v-straight lane v123 with 517; useful as “VT-straight lane expansion” if we play v123.
+- 067 / 125 / 256 / 012 / 017 / 026 (idx7 members): only relevant if we escalate from boxed to full idx7 coverage (not recommended here).
+
+### 4.2 Evidence vectors (compact)
+
+Evidence vector legend (first-pass):
+- Tools: `S`=Stable, `DR`=Digit Reduction, `VT`=VTRAC Analyzer, `HZ`=Hot Zones, `WL`=Winners Lens (HTML/JSON)
+- Aux signals: `pos`, `idxTop`, `sum`, `pair`, `BA` (per Part 3.9)
+
+Midday candidates:
+| triad | canonical | idx | vstraight (example) | tools evidence | aux signals (C/M/E) | notes |
+|---|---|---:|---|---|---|---|
+| 678 | 678 | 21 | v234 contains 678 | WL=winner; S flags exact; HZ present (rank 92) | C=sum; M=idxTop,sum,pair; E=sum | strongest variant-correct Aux stack |
+| 367 | 367 | 21 | v423 contains 367 | WL top-occurrence; HZ Top-10 rank 9 | C=-; M=idxTop,pair; E=- | cross-tool anchor (WL∩HZ) |
+| 362 | 362 | 21 | v423 contains 362 | WL top-persistence; VT brain top-straight | C=pair; M=idxTop,pair; E=pair | persistent lane anchor |
+| 268 | 268 | 21 | (idx21 member) | idx21 member (expansion only) | (not primary) | only for “index escalation” |
+| 227 | 227 | 26 | v333 contains 227 | HZ #1 lane; Aux very strong | C=idxTop,pair; M=idxTop,pair; E=idxTop,pair | false-positive risk if overweighted |
+| 592 | 592 | 12 | v153 contains 592 | DR top cluster; VT top straights list | C=pair; M=pair; E=pair | environment anchor (didn’t win) |
+
+Evening candidates:
+| triad | canonical | idx | vstraight (example) | tools evidence | aux signals (C/M/E) | notes |
+|---|---|---:|---|---|---|---|
+| 517 | 157 | 7 | v123 contains 517 | WL=winner; S flags exact; HZ present (rank 106) | C=-; M=pair; E=sum,pair | literal winner |
+| 157 | 157 | 7 | (perm family) | canonical family (boxed covers 517) | C=-; M=pair; E=sum,pair | cheapest “safe” cover (boxed) |
+| 175 | 157 | 7 | v231 contains 175 | Part A: main in-table perm lane; boxing hits 517 | C=-; M=pair; E=sum,pair | perm-lane anchor |
+| 567 | 567 | 7 | v123 contains 567 | idx7 member; shares v123 with 517 | (not primary) | only if playing v123 lane |
+
+### 4.3 Coverage mapping (counts + reference sets)
+
+VTRAC index members (canonicals) from `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`:
+- idx21: `123 128 137 178 236 268 367 678` (boxed index coverage ≈ 8×6=48)
+- idx7: `012 017 026 067 125 157 256 567` (boxed index coverage ≈ 8×6=48)
+- idx26 (double index): members listed as permutations (size differs; do not assume 48)
+
+Coverage table (per key candidate):
+| candidate | in-table perms observed (Part A) | exact boxed size | VT index boxed size | VT-straight lane size | recommended “cheap-safe” |
+|---|---|---:|---:|---:|---|
+| 678 (idx21) | {687, 867} (2) | 6 | 48 | 8 (v234) | Box 678 (6) |
+| 367 (idx21) | (n/a) | 6 | 48 | 8 (v423) | Optional booster (straight/box) |
+| 362 (idx21) | (n/a) | 6 | 48 | 8 (v423) | Optional booster (straight/box) |
+| 517 (canonical 157, idx7) | {175} (1) | 6 | 48 | 8 (v123 covers 517) | Box 157 (6) |
+| 175 (canonical 157, idx7) | {175} (1) | 6 | 48 | 8 (v231 covers 175) | Box 157 (6) |
+
+### 4.4 Pack decision (no ROI)
+
+Midday (targeting 678):
+- Recommended “cheap-safe” pack: **Box 678** (6 combos).
+- Optional add-ons (hypothesis testing only): add lane anchors `367`/`362` as 1-straights or 6-boxes *only* if you see multi-tool elevation in future examples.
+- Why not full idx21 boxed? 48 is too heavy for this evidence level; we already have a strongly supported primary candidate.
+
+Evening (targeting 517):
+- Recommended “cheap-safe” pack: **Box 157** (6 combos) — covers literal 517 as a permutation.
+- Why not perm-only? Part A shows the in-table perm lane as `175`, but the winner is `517`; perm-only would miss.
+- Why not full idx7 boxed? 48 is too heavy given we have a strong canonical-family candidate.
+
+Total “cheap-safe” across both draws (Ontario): 6 + 6 = **12 combos** (post-hoc: would have hit both as exact boxed).
+
+### 4.5 Optional method checks (log-only)
+- Not executed in this first run. Candidate methods to test later: `tasks/FINAL VALIDATION/combination_forming_2.txt` (12-combo method; consensus method).
+
+---
+
+## Part 5 — Overall Summary (Key Insights + Fix/Future Hooks)
+
+### 5.1 Pack vs winners (post-hoc validation)
+- Midday 678:
+  - Exact boxed: ✅ (Box 678 hits)
+  - Exact straight: ✅ only if 678 straight included (not required for boxed)
+  - VT-boxed: ✅ if idx21 boxed played (not needed here)
+  - VT-straight: ✅ if v234 lane played (not needed here)
+- Evening 517 (canonical 157):
+  - Exact boxed: ✅ (Box 157 hits)
+  - Exact straight: ✅ only if 517 straight included (not required for boxed)
+  - VT-boxed: ✅ if idx7 boxed played (not needed here)
+  - VT-straight: ✅ if v123 lane played (not needed here)
+
+### 5.2 Key environment tags
+- High Set1 col1/col2 heat (macro “pressure”)
+- Tight permutation-lane manifestation (winners show via a small perm subset in-table)
+- Strong due-sum anchor (sum21 due across all variants)
+- Variant-specific index pressure (idx21 is Midday-overdue; Evening win not “index due”)
+- Pair-pressure alignment (67 / 15 / 17 / 57 pending)
+- Mixed/noisy tool rankings (winners often present but not elevated)
+
+### 5.3 What drove the wins (best evidence)
+- Midday 678: Aux convergence story is clean and variant-correct (Midday idx21 overdue + pair67 pending + sum21 deficit anchor across variants).
+- Evening 517: winner family (157) is supported by pair pressure + Evening hot sum13; Part A shows family present via perm lane 175 (boxed family capture is the safe play).
+- Cross-tool anchor `367`: Hot Zones Top-10 ∩ Winners-lens dominant survivor suggests a usable “lane anchor” even when literal winner isn’t elevated.
+
+### 5.4 Biggest conflicts / miss patterns
+- VTRAC Analyzer brain ranked indices 20/23/30/27/28 highest; winning idx21/idx7 were not top-ranked → “brain vs reality” gap.
+- Stable flags exact winners but doesn’t elevate them (678 mediocre; 157 very low) → “sees but underweights.”
+- Hot Zones ranks both winners very low (92/106), but correctly surfaces 367 strongly → suggests Hot Zones is more “pressure lanes” than “literal next winner.”
+- Digit Reduction top candidates cluster around 59x (599/559/592) and does not surface winner triads as candidates → treat DR as gating/constraints rather than a primary triad selector.
+
+### 5.5 Fix-now vs fix-later
+- Fix-now: none blocking repeatable master validation runs for Ontario on this date (all sharepack artifacts present; drift checks passed).
+- Fix-later (aggregator hypotheses):
+  - Combine Hot Zones Top lanes ∩ Winners-lens dominant survivors (e.g., 367) as a candidate reducer before spending.
+  - Add a “dominant survivor boost” concept to VTRAC analyzer index ranking (log-only; do not change code yet).
+  - Use DR as a digit/value constraint layer to reduce candidate space (not as a direct predictor).
+
+### 5.6 Next run recommendation
+- Run one more state (e.g., Connecticut4) for the same date to test whether:
+  - “tight perm-lane manifestation” repeats, and
+  - Aux convergence reliably points to the correct variant winner (vs producing strong false positives like 227/952/989).

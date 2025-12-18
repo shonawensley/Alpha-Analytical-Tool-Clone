@@ -1,6 +1,6 @@
 # Final Validation Workflow — Changelog (Master Validation)
 
-Purpose: log **workflow-level** changes, “bumpy items”, and follow-ups discovered while running the Master Validation templates (Parts 1–3). This is the place to capture “fix later” items so they don’t get lost across Codex context resets.
+Purpose: log **workflow-level** changes, “bumpy items”, and follow-ups discovered while running the Master Validation templates (Parts 1–5). This is the place to capture “fix later” items so they don’t get lost across Codex context resets.
 
 Scope: docs, sharepack helpers (summarizers/validators/run-report generator), and workflow contracts. Avoid changing core analyzers/scorers unless explicitly approved.
 
@@ -39,7 +39,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - Added a formal Part 3 section to the master template (Aux signals across Combined/Midday/Evening + convergence + expense/mode question).
 - Added an Aux sharepack summarizer that snapshots draw CSVs into the sharepack and emits `summary.md`/`summary.json` for paste-ready evidence (no screenshots required).
 - Files:
-  - `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
   - `scripts/tools/aux_sharepack_summary.py`
 
 ### Drift guards: tables↔aux alignment (why sentinel checks exist)
@@ -71,3 +71,23 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - Fix: prevent a crash when draw streams contain `"000"` placeholders (e.g., missing values normalized by loaders) by allowing root-sum `0` in the internal root tracking map.
 - File:
   - `modules/blackapple.py`
+
+---
+
+## 2025-12-17
+
+### Part 4–5: add the “translation layer” + final summary to the master template
+
+- Problem observed: after completing Parts 1–3, there was no canonical way to:
+  - freeze a small “candidate universe” per draw (Midday/Evening),
+  - map candidates to coverage modes (perm-only vs boxed vs VT-boxed vs VT-straight), and
+  - end runs with a consistent “what matters” wrap-up.
+- Fix: add **Part 4** (candidate universe + evidence vectors + coverage mapping + pack decision) and **Part 5** (summary + fix-now vs fix-later + next run) to the master template.
+- Files:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+
+### Run report generator: scaffold Parts 4–5
+
+- Fix: extend the run report generator to scaffold Part 4 + Part 5 so new sessions don’t have to manually add those sections.
+- Files:
+  - `scripts/tools/create_master_validation_run_report.py`

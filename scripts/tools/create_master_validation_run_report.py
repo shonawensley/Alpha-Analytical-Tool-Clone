@@ -9,6 +9,7 @@ WITHOUT pasting raw CSV/JSON outputs:
 - It links to the sharepack artifacts (winners + tool outputs).
 - It embeds the per-tool summarizer Markdown blocks (Stable/DR/VTRAC/Hot Zones) if present.
 - It provides placeholders to answer Part A + Part 2 questions in one place.
+- It includes scaffolding for Part 3 (Aux), Part 4 (candidate pack), and Part 5 (final summary).
 
 This script DOES NOT run analyzers or rebuild tables. It is purely a reporting/helper
 utility that stitches together already-generated artifacts.
@@ -160,7 +161,7 @@ def main() -> None:
     ap.add_argument("--state", required=True, help="State key (e.g., OntarioCanada4)")
     ap.add_argument(
         "--out",
-        help="Output Markdown file path (default: tasks/FINAL VALIDATION/RUNS/<DATE>__<STATE>.md)",
+        help="Output Markdown file path (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<DATE>__<STATE>.md)",
     )
     ap.add_argument(
         "--force",
@@ -178,7 +179,14 @@ def main() -> None:
 
     paths = tool_sharepack_paths(sharepack_date, state)
 
-    default_out = REPO_ROOT / "tasks" / "FINAL VALIDATION" / "RUNS" / f"{sharepack_date}__{state}.md"
+    default_out = (
+        REPO_ROOT
+        / "docs"
+        / "AAT9_KIT"
+        / "FINAL VALIDATION"
+        / "RUNS"
+        / f"{sharepack_date}__{state}.md"
+    )
     out_path = Path(args.out) if args.out else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not args.force:
@@ -197,7 +205,7 @@ def main() -> None:
     )
     lines.append("")
     lines.append("Reference template:")
-    lines.append(f"- `tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`")
+    lines.append(f"- `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`")
     lines.append("")
     lines.append("Sharepack pointers:")
     lines.append(f"- Sharepack root: `sharepacks/{sharepack_date}/{state}/`")
@@ -312,6 +320,42 @@ def main() -> None:
         for i in range(1, 11):
             lines.append(f"- Q{i}: …")
         lines.append("")
+
+    lines.append("---")
+    lines.append("")
+    lines.append("## Part 4 — Combination / Permutation Translation (candidate pack)")
+    lines.append("Use Part 4 prompts in the master template to produce:")
+    lines.append("- A small candidate universe per draw (Midday/Evening)")
+    lines.append("- Evidence vectors per candidate (tools + aux signals)")
+    lines.append("- Coverage mapping (perm-only vs boxed vs VTRAC-straight vs full index-box)")
+    lines.append("")
+    lines.append("Reference:")
+    lines.append("- `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`")
+    lines.append("")
+    lines.append("Part 4 notes / answers:")
+    lines.append("- Candidate universe (Midday): …")
+    lines.append("- Candidate universe (Evening): …")
+    lines.append("- Evidence vectors: …")
+    lines.append("- Coverage mapping + pack decision: …")
+    lines.append("")
+
+    lines.append("---")
+    lines.append("")
+    lines.append("## Part 5 — Overall Summary (key insights + fix/future hooks)")
+    lines.append("Use Part 5 prompts in the master template to summarize:")
+    lines.append("- Pack vs winners (post-hoc)")
+    lines.append("- Key environment tags")
+    lines.append("- What drove the win (best evidence)")
+    lines.append("- Conflicts/miss patterns + fix-now vs fix-later")
+    lines.append("")
+    lines.append("Part 5 notes / answers:")
+    lines.append("- Pack vs winners: …")
+    lines.append("- Key tags: …")
+    lines.append("- Drivers: …")
+    lines.append("- Conflicts: …")
+    lines.append("- Fix-now vs fix-later: …")
+    lines.append("- Next run: …")
+    lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote: {out_path}")

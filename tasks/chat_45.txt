@@ -1,0 +1,713 @@
+<I’ll answer as a world‑famous quantitative systems engineer (sequential pattern mining + wagering system design), recipient of the INFORMS Franz Edelman Award>
+
+ 
+
+TL;DR: You’re not “missing steps” inside Parts 1–3 — you’ve reached the point where the next work is a post‑Part‑3 synthesis layer: (Part 4) cluster/synergy consolidation (turn tool outputs + Aux compounding into 2–5 “winning cluster candidates” per variant), then (Part 5) combination‑pack + play‑mode selection (choose which V‑TRAC / double / consensus method to use, how many combos, boxed vs straight, and how to log profitability/timeframe). Ontario shows exactly why: 678 had the cleanest variant‑correct Aux compound story (idx pressure + pending pair + sum anchor), while 517 mostly “shows up” via permutations/canonical form and VTRAC-family evidence rather than literal matches, so you need a structured way to convert that into a compact pack decision. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Step-by-step (deep checkpoint + how to finish the remaining parts)
+1) What you’ve already completed (and why it’s “enough”)
+
+Your Master Validation Final Template (Final Version) is explicitly designed as a 3‑part validation sequence:
+
+Part 1 = environment
+
+Part 2 = tool outputs
+
+Part 3 = Aux (compound features) 
+
+important_log1
+
+And your workflow architecture explicitly calls the next thing “Aggregator / Superbrain (future)” after the tool passes. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+ 
+
+So your instinct is correct: once Parts 1–3 are done, the “natural remaining parts” are where you fuse everything into:
+
+high-scored cluster candidates, and
+
+combination packs + play decisions (expense lever + confidence gate).
+
+This also aligns with the older template’s “Part D / Part E” concept (pattern repeats + extra insights), which you can cleanly re-label as Part 4 / Part 5. 
+
+AAT9_Final_Validation_Help
+
+2) Ontario run: what it proves about the system (and what it implies you must add next)
+2.1 Part 1 environment (Ontario)
+
+Ontario environment summary shows heavy “superhot” digit sets in Set1/col1 across variants (Combined, Midday, Evening), and other col hotspots. 
+
+AAT9_Stable_Analysis_Log
+
+
+This is useful as context, but it doesn’t directly decide “what to play” without a synthesis step.
+
+2.2 Part 2 tools: each tool contributed different pieces (Ontario)
+
+Stable (Ontario):
+
+Midday winner 678 exists in Stable outputs, but not top-ranked (pattern_scores rank 365; compound rank 141). 
+
+AAT9_Stable_Analysis_Log
+
+Evening winner 517 maps canonically to 157, and ranks very low (pattern_scores rank 3100; compound rank 598). 
+
+AAT9_Stable_Analysis_Log
+
+
+Implication: Stable can contain the winner but not necessarily place it high enough alone.
+
+Digit Reduction (Ontario):
+
+Midday 678 shows strong “any” counts, but top candidates reported are different (446/356/138). 
+
+2025-06-21__OntarioCanada4
+
+Evening 157 shows massive VTRAC-any count (102) even with exact_any = 0. 
+
+2025-06-21__OntarioCanada4
+
+
+Implication: DR can scream “family / VTRAC space is hot” even when literal isn’t.
+
+Hot Zones (Ontario):
+
+Midday candidate list includes 678 with score 9.0 (so Hot Zones did surface it). 
+
+important_log1
+
+Evening candidate list includes 157 (score 6.0). 
+
+important_log1
+
+
+Implication: Hot Zones can provide the “candidate surfacing” that Stable/DR don’t rank highly.
+
+2.3 Part 3 Aux: the missing “tie-breaker / compounding engine”
+
+Ontario Aux summary is the key proof of why you need a Part 4/5 synthesis layer:
+
+It explicitly states Winner 678 had the cleanest variant‑correct compound story:
+“Midday idx21 pressure + Midday pending pair67 + sum21 deficit anchor across all variants.” 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+For the Evening winner: Aux explains it is better interpreted via permutation/canonical behavior (“517 shows up as 175 …”), and that the winning story is a composite of multiple Aux signals rather than literal presence. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Also, your template now explicitly lists “signal types to count” (sum, pair, BA, etc.) so your synthesis can be formal and machine-loggable. 
+
+important_log1
+
+ 
+
+What Ontario proves you must add next:
+You need a formal, repeatable mechanism that converts:
+
+tool candidate lists + ranks + match-channels
+
+Aux “signal bundles” (pos/idxTop + pair + sum + BA)
+into:
+
+a ranked list of 2–5 cluster candidates per variant, plus
+
+a recommended combination pack type (and reduced vs expanded play).
+
+3) The missing pieces after Part 3: define “Part 4” and “Part 5” precisely
+
+Below is the cleanest way to finish the “last parts” while staying consistent with your existing template philosophy.
+
+Part 4 — Cluster + synergy consolidation (the “Superbrain pre-pack”)
+
+This is where you stop thinking “single triads” and start thinking “clusters + relations”.
+
+4.1 Output you want from Part 4 (concrete)
+
+For each variant (Midday / Evening / Combined), produce:
+
+Candidate Universe (union):
+Union of:
+
+Hot Zones top candidates (since it actually surfaced 678 and 157 in Ontario) 
+
+important_log1
+
+Stable winners-in-spotlight rows for that day (even if low rank) 
+
+AAT9_Stable_Analysis_Log
+
+Digit Reduction top candidates + any-count outliers (esp. vtrac_any spikes like Evening 157) 
+
+2025-06-21__OntarioCanada4
+
+Optional: any candidate that appears in 2+ tools even if not top-10.
+
+Evidence Vector per triad (structured, not prose):
+Example fields (you already have most of these across Parts 2–3):
+
+stable_rank_pattern, stable_rank_compound
+
+dr_exact_any, dr_vtrac_any, dr_drop_any
+
+hz_score, hz_triggers, hz_superhot
+
+aux_signals: {pos/idx pressure}, {pending pair hits}, {sum flags}, {BA flag}
+This matches your Part‑3 “explicit signal counting” direction. 
+
+important_log1
+
+Synergy score (simple + explainable):
+Don’t overcomplicate at first. A strong starting rule that matches Ontario:
+
+Base = number of tools that surfaced the candidate (Stable/DR/HZ)
+
+Boost = Aux “variant‑correct” compound bundle count
+
+Boost = “winner appears via permutation/canonical/vtrac family” flag (important for things like 517⇄157) 
+
+AAT9_Stable_Analysis_Log
+
+
+The output should include a reasons list (for ML + debugging).
+
+Cluster formation (this is what you said you want: “winning pattern cluster candidates”):
+Group candidates into clusters using relations you already use conceptually:
+
+share a pair (e.g., “67 cluster”)
+
+share a sum regime (e.g., sum21 anchor)
+
+share VTRAC-family / mirrored family
+
+share “positional pressure index” neighborhood
+Ontario’s Midday winner is basically a “67 + sum21 + idx21 pressure” cluster. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+4.2 What Part 4 looks like when written into your template
+
+You can paste something like this into the run report (new section):
+
+ 
+
+Part 4 — Synthesis (Clusters + Relations)
+
+4.1 Candidate Universe (by variant)
+
+4.2 Evidence vectors (top 10 per variant)
+
+4.3 Cluster keys (pair/sum/vtrac/idx) + members
+
+4.4 Top 2–5 cluster candidates per variant
+
+4.5 “Why” bullets (must reference exact signals)
+
+This is essentially the structured version of the old template’s Part D (“Permutation Sequence Repeats (Positional)”) but extended into cross-tool clustering. 
+
+AAT9_Final_Validation_Help
+
+Part 5 — Combination packs + play decision (reduced/expanded + confidence gate)
+
+This is where you convert the Part 4 clusters into compact combo sets using your documented combination methods.
+
+5.1 Your 5 V‑TRAC combo methods become “pack types”
+
+Your combination-forming doc gives a clean menu:
+
+Method 1: “Keep a Pair, Mirror the 3rd Digit” → 12 combos (via R2/R4/R6/R8 permutations). 
+
+important_log1
+
+Method 2: “Prioritize 1 Permutation” → 3 combos (reduced expense mode). 
+
+important_log1
+
+Method 3: Doubles priority + mirror digit significance. 
+
+important_log1
+
+Method 4: Double + mirror double combos. 
+
+important_log1
+
+Method 5: Full VTRAC straight pack (8 combos). 
+
+important_log1
+
+You also have a defined Consensus generator (≤2 digit consensus across R2/R4/R6/R8 → double-trigger → 9 combos + stable overrides). 
+
+important_log1
+
+
+And the “Consensus” doc reinforces how to detect and interpret consensus/combined-table behavior. 
+
+understanding Consensus + Combi…
+
+5.2 Key missing decision rule: “Which pack type should this cluster use?”
+
+This is the core finishing step you’re circling around.
+
+ 
+
+A strong, simple, codable first-pass rule-set:
+
+If cluster is pair-led but third digit uncertain → Method 1 (12‑pack)
+
+Rationale: Pair is stable, you need controlled coverage on the third digit. 
+
+important_log1
+
+If cluster is already permutation-tight (strong positional repeat evidence) → Method 2 (3‑pack)
+
+This aligns with your Ontario note that the cost lever is “play exact perms instead of expanding”. 
+
+important_log1
+
+If cluster shows double persistence / double triggers → Method 3 or 4
+
+Because doubles + mirror doubles are treated as special significance. 
+
+important_log1
+
+If consensus digit exists → Consensus 9‑pack (plus overrides)
+
+This is explicitly documented in your method write-up. 
+
+important_log1
+
+If evidence indicates “VTRAC straight environment” (DR vtrac_any spike, stable vtrac cues, hot zones lane stability) → Method 5 (8‑pack)
+
+This covers cases like Evening 157 where the signal is “family-hot” not literal. 
+
+2025-06-21__OntarioCanada4
+
+5.3 Profit/timeframe integration belongs here (even if initially coarse)
+
+Your combination doc encodes the baseline payout/timeframe framing (store/online, boxed/straight). 
+
+2.0 MESS
+
+
+And it includes a boxed progression example table for an 8‑combo pack. 
+
+2.0 MESS
+
+ 
+
+So Part 5 should output, per chosen pack:
+
+pack_type (method)
+
+combos_count
+
+recommended play_mode (boxed/straight; store/online)
+
+timeframe target
+
+(optional) progression schedule reference
+
+log fields (so PerformanceTracker/ML can learn)
+
+5.4 Dynamic V‑TRAC application (so you don’t “transform everything”)
+
+Your doc explicitly proposes logging V‑TRAC transformation success and using it to decide whether to apply V‑TRAC in the future (threshold-based). 
+
+important_log1
+
+ 
+
+So Part 5 is also where you decide:
+
+“Do we expand to VTRAC pack today?”
+based on confidence thresholds + historical success rate of that pack type.
+
+4) Ontario, rewritten as a Part‑4/Part‑5 “finish” example (what it would look like)
+4.1 Part 4 outcome (clusters)
+
+Midday top cluster (Ontario):
+Cluster key: (pair 67) + (sum21 anchor) + (idx21 pressure)
+Winner alignment: explicitly called “cleanest variant‑correct compound story”. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Evening top cluster (Ontario):
+Cluster key: (pair 17) + (sum13 behavior) + (pos/pressure idx7), with canonical/permutation handling around 517⇄175⇄157. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+4.2 Part 5 outcome (packs)
+
+For the 67/sum21/idx21 Midday cluster:
+If the cluster is permutation-tight (you see stable positional constraints), go Method 2 (3‑pack); if third digit uncertainty remains, go Method 1 (12‑pack). 
+
+important_log1
+
+
+The “expense lever” framing matches the Part‑3 guidance. 
+
+important_log1
+
+For the Evening 157/517 family-hot cluster:
+If DR indicates a VTRAC-family-hot situation (as it does for Evening 157 via vtrac_any), you justify Method 5 (8‑pack) rather than chasing literal. 
+
+2025-06-21__OntarioCanada4
+
+That is the exact “bringing it all together” step you said you’re missing.
+
+5) Concrete instructions to give Codex (so you can implement Part 4/5 fast)
+5.1 Add a new “post-Part-3” generator (one script, two outputs)
+
+Create a script that consumes the sharepack summaries and emits:
+
+clusters.json / clusters.md
+
+candidate universe
+
+evidence vectors
+
+cluster keys + members
+
+top clusters per variant
+
+combo_packs.json / combo_packs.md
+
+chosen pack type per cluster (Method 1–5 / Consensus / Doubles) 
+
+important_log1
+
+combos list
+
+recommended play_mode + timeframe baseline (store/online; boxed/straight) 
+
+2.0 MESS
+
+“why” list (for ML + audit)
+
+5.2 Keep the system’s existing core rule intact
+
+Your own notes emphasize: “Strings lead, Aux compounds.” 
+
+FIX_ME2
+
+
+So the generator should:
+
+build candidate universe from the string-table tools (Stable/DR/HotZones),
+
+then use Aux signals as boost/gate/expense lever (not as the only generator).
+
+5.3 Don’t forget reproducibility guardrails (already solved)
+
+You already added a tables↔aux alignment validator to prevent drift between string tables and Aux draws, and documented sharepack usage. 
+
+important_log2
+
+
+That matters because Part 4/5 will be very sensitive to “world snapshot” mismatches.
+
+Sanity Check (2 actions)
+
+Verify Ontario’s “variant-correct compound story” claim by re-reading the Aux section that explicitly names the Midday 678 bundle (idx21 pressure + pair67 + sum21) and the Evening permutation/canonical behavior. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Verify that “Parts 1–3 are the validation template, and the next step is an Aggregator/Superbrain layer” by checking the workflow architecture line that lists “Aggregator / Superbrain (future)”. 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+
+_____________
+
+
+TL;DR: I didn’t freeze. With the docs you added, the right move is to lock a “v1 Master Validation package” and keep Part 4 + Part 5 lightweight: Part 4 = final candidate set + coverage-mode mapping (combo-count only); Part 5 = scorecard + tags + fix-later list + run manifest. This avoids the “combination-method rabbit hole” while still producing a repeatable workflow baseline. Your SSOT/date rules and “don’t write into template; write into run reports” approach are already correct. 
+
+AAT9_Final_Validation_Help
+
+ 
+
+AAT9_Final_Validation_Help
+
+Step-by-step (concrete, burnout-safe)
+1) Re-anchor on the “non-negotiables” (so you don’t ruin it at the end)
+
+A. SSOT + date semantics are already defined — keep them as the spine.
+Your entry doc explicitly states: sharepacks/<DATE>/... uses the results/winners date (D) and the history workbook is typically D‑1 (the “world snapshot” the tables were built from). 
+
+AAT9_Final_Validation_Help
+
+ 
+
+B. Your answers live in per-run reports, not in the template.
+The Contract Truth Table nails this: “Template answers” belong in tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md and are generated via the run-report script (don’t write into the template). 
+
+AAT9_Final_Validation_Help
+
+ 
+
+C. Aux must not drift (this is the silent workflow killer).
+You already documented the key rule: for Master Validation, Aux must align to the same history workbook used for the string tables (typically D‑1), and the Aux sharepack summarizer should snapshot draw CSVs into sharepacks/<DATE>/<STATE>/aux/draws/ from that workbook using --excel—otherwise it can drift by reading mutable live draws. 
+
+important_log1
+
+
+You also explicitly flagged “Aux drift after workbook swaps” as a known pitfall. 
+
+important_log1
+
+ 
+
+These three points are what prevent “end-stage burnout mistakes” (wrong date, wrong SSOT, wrong Aux alignment).
+
+2) What Parts 4 + 5 should be (and what they should not be)
+
+You’re correct that Parts 1–3 already generate the evidence (winners lens + per-tool summaries + aux compounding). Your Part 4/5 should be translation + wrap, not “more analysis.”
+
+ 
+
+Part 4 should answer one question:
+
+“Given Parts 1–3, what is the smallest reasonable coverage mode that would likely capture at least one of the 4 criteria — using combo-count only (no ROI)?”
+
+Part 5 should answer one question:
+
+“What did we learn + what do we change next so the next run is faster and more consistent?”
+
+That framing matches your own documented Aux “expense lever” logic: when the environment indicates tight permutation lanes and Aux supports the winner lane, prefer perm-only/in-table perms over “full VT-box,” unless uncertainty remains. 
+
+important_log1
+
+3) My “final form” Part 4 + Part 5 (copy/paste Markdown)
+
+Below is the exact lightweight structure I recommend adding after Part 3 in:
+
+the master template (so every run has the prompts), and
+
+the run-report generator output (so every run report includes the scaffolding automatically).
+
+✅ Part 4 — Coverage / Combination Perspective (NO ROI)
+## Part 4 — Coverage / Combination Perspective (NO ROI)
+
+Goal: translate Parts 1–3 into a final candidate set and a recommended “coverage mode”.
+Rules:
+- No ROI / $ discussion.
+- Use **combo-count** only (how many 3-digit plays a method implies).
+- Keep Midday/Evening separate.
+
+### 4.0 Freeze the final candidate set (per draw)
+
+**Midday**
+- Final candidate triads (N=5–15): …
+  - For each: (source tags) e.g., Stable / DR / VTRAC / HotZones / Aux / WinnersLens
+- Anchors (non-literal, environment drivers): …
+  - Mark as: ANCHOR (environment) vs CANDIDATE (playable triad)
+
+**Evening**
+- Final candidate triads (N=5–15): …
+- Anchors: …
+
+### 4.1 Coverage mapping table (4 criteria + combo-count)
+
+Fill one row per candidate triad:
+
+| Draw | Candidate (literal) | Candidate (canonical) | VTRAC index | V-straight lane (if known) | Perm-only hit? (Exact Box/Straight) | VT-box hit? | VT-straight hit? | Combo-count (perm-only / VT-box / VT-straight) | Notes (why/which evidence) |
+|---|---|---|---|---|---|---|---|---|---|
+
+Notes:
+- “Perm-only hit?” means: would playing only in-table permutations plausibly cover exact boxed/straight?
+- “VT-box hit?” means: would playing the index family plausibly cover VT-boxed?
+- “VT-straight hit?” means: would playing the straight-lane set plausibly cover VT-straight?
+
+### 4.2 Coverage mode decision (cheap mode vs full VT)
+
+For each draw (Midday / Evening), decide ONE default mode:
+- Mode chosen: Perm-only OR VT-box OR VT-straight (or “hybrid” if justified)
+- Evidence:
+  - From Part 1 (environment / tight perm lanes vs noisy day)
+  - From Part 2 (which tools converged vs conflicted)
+  - From Part 3 (Aux compounding strength in the correct variant)
+
+### 4.3 Optional appendix (post-hoc only; do not block completion)
+- 12-combo mirror / pair method: would it have produced any criterion hit?
+- Consensus method: would it have produced any criterion hit?
+- If skipped, write: “Skipped (not required for v1).”
+
+✅ Part 5 — Summary / Next-Run Speedups (Bridge to Brain 2 later)
+## Part 5 — Summary / Next-Run Speedups
+
+Goal: freeze learnings and make the next run easier.
+
+### 5.0 Run manifest (freeze the context)
+
+- Sharepack date (results D): …
+- History workbook used (D-1): …
+- State: …
+- Key artifact pointers:
+  - Winners overlays: sharepacks/<D>/<STATE>/winners/<STATE>/
+  - Stable: sharepacks/<D>/<STATE>/stable/<STATE>/
+  - DR: sharepacks/<D>/<STATE>/digit_reduction/<STATE>/
+  - VTRAC: sharepacks/<D>/<STATE>/vtrac/<STATE>/ and sharepacks/<D>/vtrac_compact_report.json
+  - Hot Zones: sharepacks/<D>/<STATE>/hot_zones/<STATE>/
+  - Aux summary: sharepacks/<D>/<STATE>/aux/<STATE>/summary.md
+
+### 5.1 Tool scorecard (per draw)
+
+| Tool | Midday: Hit / Weak path / Miss | Evening: Hit / Weak path / Miss | Notes (why) |
+|---|---|---|---|
+| Winners Lens (Part A) |  |  |  |
+| Stable |  |  |  |
+| Digit Reduction |  |  |  |
+| VTRAC |  |  |  |
+| Hot Zones |  |  |  |
+| Aux |  |  |  |
+
+### 5.2 Environment tags (reusable vocabulary)
+
+Pick 3–8 tags total (Midday/Evening if different):
+- Tags: …
+
+### 5.3 Fix / tune list (top 2–5 only)
+
+- (1) …
+- (2) …
+- (3) …
+Log any “fix later” items to: tasks/FINAL VALIDATION/WORKFLOW_CHANGELOG.md
+
+### 5.4 Brain 2 hooks (optional, 3–6 bullets)
+
+- If a Control Center existed today, it should have surfaced: …
+
+
+Why I’m confident this matches your system: you already treat winners overlays as the “environment lens” and sharepack artifacts as SSOT, and you explicitly want a repeatable workflow with “filled per-example run reports.” 
+
+AAT9_Final_Validation_Help
+
+4) How Part 4 + 5 connects to what you’ve already logged in Ontario (without getting bogged down)
+
+You already captured the key conceptual rule in Part 3’s “How to apply Aux” section:
+
+Use cross-variant anchors as environment gating, not automatic candidate selection. 
+
+important_log1
+
+Boost candidates that stack multiple signals in the correct variant. 
+
+important_log1
+
+Prefer perm-only when Part 1 shows tight perm lanes and Aux supports the lane. 
+
+important_log1
+
+So Part 4 is basically: turn that into a table + one decision per draw. Nothing more.
+
+ 
+
+And Part 5 is where you preserve the “v1 baseline package”: run manifest + scorecard + tags + fix list.
+
+5) “Package the workflow” without moving everything (the least risky organization approach)
+
+You’re right that things feel scattered — but moving files late is risky. Instead, do this:
+
+ 
+
+A. Declare the entrypoint and keep it stable
+Your help doc literally says: “When starting a new master validation session, use this file as ENTRY, then fan out…” and provides a Quick Index. 
+
+AAT9_Final_Validation_Help
+
+
+So: treat docs/AAT9_KIT/AAT9_Final_Validation_Help.md as the single entry door.
+
+ 
+
+B. Use the Contract Truth Table as your “workflow map”
+It already enumerates SSOT paths for results date, winners overlays, stable evidence, VTRAC compact report, and where answers live. 
+
+AAT9_Final_Validation_Help
+
+
+That is already your “package manifest,” conceptually.
+
+ 
+
+C. Add one new “Master Validation Package Index” file (no refactors needed)
+Create one lightweight index doc (e.g., docs/AAT9_KIT/AAT9_Master_Validation_Package_INDEX.md) that contains only:
+
+The SSOT table (or links to it)
+
+The “v1 workflow steps”
+
+Pointers to:
+
+Master template location
+
+Runs folder
+
+Sharepacks structure
+
+Scripts used
+
+This mirrors what your runs README already explains: run reports are the per-example snapshots, and the canonical question template lives elsewhere. 
+
+important_logstart
+
+ 
+
+D. Archive brainstorm templates instead of mixing them with the canonical one
+You referenced multiple brainstorm templates (TemplateH / TEMPC / DEEP). The clean move is: keep them, but move them under an obvious “archive/notes” subfolder or label them clearly in an index as “non-canonical.”
+This reduces cognitive load in future sessions without losing ideas.
+
+ 
+
+E. Enforce the two biggest “drift guards” as habit
+
+Aux alignment guard exists in your workflow notes: validate_tables_aux_alignment.py can be run for sharepacks with --date <DATE> --state <STATE> --strict. 
+
+important_log2
+
+VTRAC compact report emptiness is explicitly called out as a known bumpy semantic (validate before relying on it). 
+
+AAT9_Final_Validation_Help
+
+These two checks are what keep multi-run automation sane.
+
+6) The minimal “finish line” plan (so you can hand off to Codex confidently)
+
+Append Part 4 + Part 5 scaffolding (paste the Markdown above) into:
+
+the master template, and
+
+optionally the run-report generator output (later), so every run report includes it automatically.
+Your generator already exists and is the recommended way to create run reports. 
+
+AAT9_Final_Validation_Help
+
+Fill Part 4/5 for Ontario (don’t add new tools/methods):
+
+Candidate set (N=5–15) per draw
+
+Coverage table rows for those candidates
+
+One coverage mode decision per draw
+
+Scorecard + tags + fix list + manifest
+
+Log only the “fix later” items in the changelog (don’t rewrite the whole system mid-run).
+Your docs already emphasize using the workflow changelog so you don’t lose changes across sessions. 
+
+AAT9_Final_Validation_Help
+
+That’s enough to declare a clean “v1 baseline,” then iterate across many states/examples.
+
+Sanity Check (2 quick actions to verify the key points)
+
+Verify date alignment before you trust any conclusion: confirm your run uses sharepacks/<D>/... where D is the results/winners date, and that the history workbook used was D‑1 as documented. 
+
+AAT9_Final_Validation_Help
+
+Verify Aux cannot drift for the run you’re finishing: run (or confirm you ran) the sharepack alignment guard for Aux/tables using the sharepack mode (--date … --state … --strict) so Part 3 → Part 4 decisions are grounded in the same snapshot. 
+
+important_log2
