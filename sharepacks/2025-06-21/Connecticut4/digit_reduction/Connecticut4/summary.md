@@ -1,4 +1,4 @@
-# Digit Reduction Summary — Connecticut4 (stamp 20251209)
+# Digit Reduction Summary — Connecticut4 (stamp 20251219)
 
 ## Midday winner 950 (canonical 059)
 - Stamp (winner_stamp.json): items_total=294 | exact_any=112 exact_final=0 | vtrac_any=278 vtrac_final=0 | drop_exact_any=128 drop_exact_final=0 | drop_vtrac_any=294 drop_vtrac_final=0 | family_exact_any=2 family_exact_final=0 | family_vtrac_any=278 family_vtrac_final=0

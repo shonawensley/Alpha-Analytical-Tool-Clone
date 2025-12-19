@@ -1,4 +1,4 @@
-# V-TRAC Summary — Connecticut4 (stamp 20251209_193741)
+# V-TRAC Summary — Connecticut4 (stamp 20251219_165151)
 
 ## Top indices (from enhanced JSON)
 - index 23 | score 57.40263749999999 | features: presence=41.48513749999999, cross_section=0.5, set_echo=0.6, first_hit=0.4
@@ -21,8 +21,8 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 155 | index 2 | file Connecticut4_vtrac2_winner_155_20251209_181910.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 950 | index 5 | file Connecticut4_vtrac5_winner_950_20251209_181910.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 155 | index 2 | file Connecticut4_vtrac2_winner_155_20251219_164349.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 950 | index 5 | file Connecticut4_vtrac5_winner_950_20251219_164349.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
 - winner 155 | index 2 rank 13/35 | score 21.470546666666667 | winner_in_index_straights=False | top_index_straights: 056 (6.308), 065 (5.994), 506 (5.868)

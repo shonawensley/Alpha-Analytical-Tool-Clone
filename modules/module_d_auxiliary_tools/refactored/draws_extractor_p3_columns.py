@@ -49,6 +49,7 @@ MIDDAY_COL: Dict[str, str] = {
     "South Carolina": "DH",
     "Texas": "DL",
     "Tri-State": "DM",
+    "Virginia": "DN",
 }
 
 # Evening column letters (entries may contain multiple draws such as Evening + Nite).

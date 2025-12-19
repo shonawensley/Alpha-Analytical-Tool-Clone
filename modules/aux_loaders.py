@@ -103,7 +103,9 @@ def _pick_draws_csv_for_variant(label: str, base: Path, variant: Variant) -> Opt
             best_score = score
             best_path = path
 
-    return best_path
+    # Do not "guess" a completely unrelated state's file if the desired variant
+    # doesn't exist for this label (e.g., Virginia_Midday_draws.csv missing).
+    return best_path if best_score >= 2 else None
 
 
 def _pick_combined_csv(label: str, base: Path) -> Optional[Path]:
@@ -183,4 +185,3 @@ def load_state_draws(
 
 
 __all__ = ["Variant", "load_state_draws"]
-

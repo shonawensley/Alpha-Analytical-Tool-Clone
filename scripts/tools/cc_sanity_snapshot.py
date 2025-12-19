@@ -28,6 +28,11 @@ CONTROL_CENTER_MD = REPORT_DIR / "control_center.md"
 ALERT_SCHEMA_PATH = REPORT_DIR / "alert_schema.json"
 DEFAULT_STATE_MAP_PATH = REPORT_DIR / "state_map.json"
 
+# Control Center snapshots should treat only "combined" draw CSVs as the state stream.
+# Variant CSVs (Midday/Evening/etc) are helpers for Aux and should not be enumerated
+# as separate "states" in cross-state snapshots.
+_DRAW_VARIANT_SUFFIXES = ("_Midday", "_Evening", "_Morning", "_Nite", "_Noon")
+
 # Ensure project root on sys.path for modules imports (VTRAC reference)
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -250,6 +255,51 @@ def _norm_state(name: str) -> str:
     return "".join(ch for ch in name.lower() if ch.isalpha())
 
 
+def _is_combined_draws_csv(path: Path) -> bool:
+    stem = path.stem
+    if stem.endswith("_draws"):
+        stem = stem[: -len("_draws")]
+    return not any(stem.endswith(sfx) for sfx in _DRAW_VARIANT_SUFFIXES)
+
+
+def _resolve_tables_state(draw_stem: str) -> Optional[str]:
+    """
+    Map a draw CSV stem (e.g., 'New_Jersey') to an existing tables directory
+    (e.g., 'NewJersey4') using normalized matching and a conservative fallback.
+    """
+    if not TABLES_DIR.exists():
+        return None
+
+    draw_norm = _norm_state(draw_stem.rstrip("4"))
+    if not draw_norm:
+        return None
+
+    table_dirs = [p.name for p in TABLES_DIR.iterdir() if p.is_dir()]
+    if not table_dirs:
+        return None
+
+    norm_to_dir: Dict[str, str] = {}
+    for d in table_dirs:
+        key = _norm_state(d.rstrip("0123456789"))
+        if key and key not in norm_to_dir:
+            norm_to_dir[key] = d
+
+    exact = norm_to_dir.get(draw_norm)
+    if exact:
+        return exact
+
+    # Substring fallback (e.g., 'ontario' -> 'ontariocanada4'), preferring the
+    # longest matching normalized directory key. Exact matches are handled above,
+    # so this won't map 'virginia' -> 'westvirginia4'.
+    best_dir: Optional[str] = None
+    best_len = 0
+    for key, d in norm_to_dir.items():
+        if draw_norm in key and len(key) > best_len:
+            best_len = len(key)
+            best_dir = d
+    return best_dir
+
+
 def _vtrac_index(draw: str) -> Optional[int]:
     if vtrac_reference is None:
         return None
@@ -328,16 +378,21 @@ def build_snapshot(results_tokens: list[str]) -> dict:
     if not ba_rows and not CONTROL_CENTER_MD.exists() and not (ARGS.ba_csv or ARGS.ba_json):
         print("[WARN] No BA data found (control_center.md missing and no BA CSV/JSON provided)")
     snapshots: list[StateSnapshot] = []
-    draws_paths = sorted(DRAW_CLEAN_DIR.glob("*_draws.csv"))
+    draws_paths = sorted(p for p in DRAW_CLEAN_DIR.glob("*_draws.csv") if _is_combined_draws_csv(p))
     state_map = _load_state_map(ARGS.state_map) or _build_state_map(results_by_state, draws_paths)
     alerts: list[AlertRow] = []
     for draws_path in draws_paths:
-        state = draws_path.name.replace("_draws.csv", "")
-        norm_state = _norm_state(state.rstrip("4"))
-        mapped_state = state_map.get(norm_state, state)
+        draw_stem = draws_path.name.replace("_draws.csv", "")
+        norm_state = _norm_state(draw_stem.rstrip("4"))
+        mapped_state = state_map.get(norm_state, draw_stem)
+        tables_state = _resolve_tables_state(draw_stem)
+        if not tables_state:
+            continue
         draws = _read_draws(draws_path)
         latest_draw = draws[0] if draws else None
-        table_path = TABLES_DIR / state / "Combined_Combined.csv"
+        table_path = TABLES_DIR / tables_state / "Combined_Combined.csv"
+        if not table_path.exists():
+            continue
         col1, col2 = _read_tables_latest(table_path)
         freshness = None
         if latest_draw and col2:
@@ -357,7 +412,7 @@ def build_snapshot(results_tokens: list[str]) -> dict:
         }
         snapshots.append(
             StateSnapshot(
-                state=state,
+                state=tables_state,
                 draws_path=str(draws_path.relative_to(ROOT)),
                 tables_path=str(table_path.relative_to(ROOT)) if table_path.exists() else None,
                 latest_draw=latest_draw,
@@ -377,7 +432,7 @@ def build_snapshot(results_tokens: list[str]) -> dict:
             alerts.append(
                 AlertRow(
                     id="due_doubles",
-                    state=state,
+                    state=tables_state,
                     variant="Combined",
                     date=ARGS.results_file.name if ARGS.results_file else None,
                     strength=float(ds_double),
@@ -392,7 +447,7 @@ def build_snapshot(results_tokens: list[str]) -> dict:
                 alerts.append(
                     AlertRow(
                         id="vtrac_repeat",
-                        state=state,
+                        state=tables_state,
                         variant="Combined",
                         date=ARGS.results_file.name if ARGS.results_file else None,
                         strength=1.0,
@@ -404,7 +459,7 @@ def build_snapshot(results_tokens: list[str]) -> dict:
                         hits=hits_agg,
                     )
                 )
-        for ba_row in ba_rows.get(state, []):
+        for ba_row in (ba_rows.get(tables_state, []) or []) + (ba_rows.get(draw_stem, []) or []):
             try:
                 strength = float(ba_row.get("BA-Score", "") or 0.0)
             except Exception:
@@ -412,7 +467,7 @@ def build_snapshot(results_tokens: list[str]) -> dict:
             alerts.append(
                 AlertRow(
                     id="blackapple",
-                    state=state,
+                    state=tables_state,
                     variant=ba_row.get("Variant", "Combined"),
                     date=ARGS.results_file.name if ARGS.results_file else None,
                     strength=strength,

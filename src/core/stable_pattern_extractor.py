@@ -70,29 +70,58 @@ def run_stable_pattern_extraction(
         name = path.name.lower()
         return name.endswith("_combined.csv") and "_r2" not in name
 
-    csv_files = sorted(p for p in tables_path.glob(f"{state}_*_combined.csv") if _is_combined_file(p))
-    if not csv_files:
-        # Nothing to process
+    def _resolve_tables() -> list[tuple[str, Path]]:
+        """Resolve the canonical Combined/Midday/Evening combined tables.
+
+        Supports both the current per-state layout:
+          data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv
+
+        and older/alternate layouts that prefix filenames with the state.
+        """
+        standard = [
+            ("Combined", "Combined_Combined.csv"),
+            ("Midday", "Midday_Combined.csv"),
+            ("Evening", "Evening_Combined.csv"),
+        ]
+
+        resolved: list[tuple[str, Path]] = []
+        for section, generic_name in standard:
+            prefixed = tables_path / f"{state}_{generic_name}"
+            generic = tables_path / generic_name
+            if prefixed.exists():
+                resolved.append((section, prefixed))
+            elif generic.exists():
+                resolved.append((section, generic))
+
+        if resolved:
+            return resolved
+
+        # Fallback: glob any state-prefixed combined tables and infer section.
+        resolved = []
+        for path in sorted(p for p in tables_path.glob(f"{state}_*_combined.csv") if _is_combined_file(p)):
+            name = path.name.lower()
+            if "evening" in name:
+                section = "Evening"
+            elif "midday" in name or "noon" in name:
+                section = "Midday"
+            else:
+                section = "Combined"
+            resolved.append((section, path))
+        return resolved
+
+    tables = _resolve_tables()
+    if not tables:
         return pd.DataFrame(), "", ""
 
     html_sections = []
     all_rows: list[dict] = []
 
-    for csv_file in csv_files:
+    for section, csv_file in tables:
         try:
             df_table = pd.read_csv(csv_file, dtype=str).fillna("")
         except Exception:
             # Skip malformed CSVs silently; could be expanded to logging
             continue
-
-        # Derive section name from filename
-        fname = csv_file.name.lower()
-        if "_evening_" in fname:
-            section = "Evening"
-        elif "_midday_" in fname:
-            section = "Midday"
-        else:
-            section = "Combined"
 
         mask_map, results = _ex.analyse(df_table, section)
         html_sections.append(_ex.build_html(df_table, mask_map, section, results))
