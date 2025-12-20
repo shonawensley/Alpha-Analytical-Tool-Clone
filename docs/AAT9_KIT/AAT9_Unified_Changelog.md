@@ -1,3 +1,7 @@
+## 2025-12-20 - Sharepack-aligned Control Center export (Brain‑2 freeze)
+- Impact: Added a drift-proof Brain‑2 export that mirrors the Streamlit Control Center boards (Blackapple, Due Doubles, VTRAC Repeat Watch) by reading frozen Aux snapshots from `sharepacks/<D>/<STATE>/aux/...` and writing day-level artifacts to `sharepacks/<D>/control_center/`.
+- Files: scripts/tools/export_control_center_sharepack.py, sharepacks/2025-06-21/control_center/**, sharepacks/2025-06-21/README.md, docs/AAT9_KIT/FINAL VALIDATION/final docs/{AAT9_Final_Workflow_Control_Center.md,AAT9_Final_Validation_Help.md,FINAL_WORKFLOW_ARCHITECTURE_AAT9.md,README.md}, docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md, briefings/CODEX_READ_FIRST_AAT9_WSL_2.md.
+
 ## 2025-12-09 - Control Center snapshot + alert schema + pause before A01–A12
 - Impact: Added a read-only Control Center snapshot tool that checks table freshness vs draws, computes draws-since-double, flags VTRAC repeats, ingests Blackapple alerts, and tags hits (exact/boxed/vt_boxed/vt_straight). Alerts are validated against a frozen schema; state matching is deterministic via a mapping file. Regression guard ensures outputs conform before writing.
 - Files: scripts/tools/cc_sanity_snapshot.py, scripts/checks/test_cc_snapshot_schema.py, reports/control_center/{alert_schema.json,state_map.json,README.md}, docs/AAT9_KIT/AAT9_Final_Workflow_Control_Center.md.

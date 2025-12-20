@@ -1,0 +1,480 @@
+
+Step‑by‑step: what your artifacts are saying (and what they are not)
+1) What you opened (*_alerts.csv) is not the “ranked table”
+
+Per the Control Center pause log, the snapshot run writes multiple files and the _alerts.csv is only an alert summary (“counts/hits by alert id”).
+
+ 
+
+That matches your screenshots: the sheet only has one row (due_doubles) with count=14 and hit totals (user). That’s expected if the snapshot run produced only due_doubles alerts.
+
+ 
+
+Where the doubles ranking actually lives:
+
+reports/control_center/cc_snapshot_<timestamp>.csv (state rows include draws_since_double, etc.)
+
+reports/control_center/cc_snapshot_<timestamp>.json (has per‑state snapshots + optional ranking lists)
+
+reports/control_center/cc_snapshot_<timestamp>_summary.md (human summary like “Top 5 states by draws‑since‑double”) (user)
+
+So: nothing is “blank” — you were just looking at the summary table (user).
+
+2) Yes: “ranked since draws double” is being calculated
+
+In your pasted cc_snapshot_...json, you have:
+
+per‑state numeric draws_since_double under each entry in snapshots (user)
+
+an explicit ordered list rank_by_draws_since_double (user)
+
+So it’s definitely computed (user).
+
+ 
+
+Also, the due‑doubles metric itself is typically computed by scanning recent draws and returning how many draws back the last “double” occurred (implementation sketch shown in your PITFALLS doc).
+
+3) Why Blackapple is missing from your cc_snapshot_* export
+
+This is the single most important clarification:
+
+ 
+
+The Control Center snapshot pipeline you ran is explicitly described as read‑only and it ingests Blackapple alerts; it does not promise to compute Blackapple by itself.
+
+ 
+
+And the BA ingest is explicit:
+
+it reads reports/control_center/control_center.md if present, or
+
+expects --ba-csv/--ba-json flags,
+
+and warns if BA is missing (not silent).
+
+So your observation:
+
+“I don’t see Blackapple anywhere” (user)
+
+…does not prove Blackapple is broken. It only proves: your exported snapshot didn’t have BA rows to ingest.
+
+ 
+
+Separately, Blackapple as a feature/module is documented as its own analyzer feeding a “Blackapple Alerts” board on the Control Center side of the system (and it’s not the same thing as the snapshot exporter).
+
+AAT9_Blackapple_Module
+
+ 
+
+Bottom line:
+
+BA missing in the export ≠ BA not running in the app.
+
+BA missing in the export = BA wasn’t provided to this snapshot run (or the file/flags weren’t available).
+
+4) Why VTRAC repeat tracking might also look “missing”
+
+The pause log says the snapshot pipeline “flags VTRAC repeats,” but the implemented alert is specifically vtrac_repeat (an alert) — not necessarily the full “Repeat Watch” table UI you’re used to.
+
+ 
+
+That means two things can both be true:
+
+The app’s Control Center UI can have richer VTRAC boards (Repeat Watch / overlays / heatboard).
+
+Your exported snapshot can still show zero vtrac_repeat alerts if the strict repeat condition didn’t trigger that day (user), because the snapshot is alert‑oriented.
+
+5) The “freshness mismatches everywhere” is a real red flag — but it’s also a known failure mode
+
+Your cc_snapshot summary shows freshness mismatches for every state (user).
+
+ 
+
+Per the Control Center pause log, the snapshot’s freshness check compares:
+
+data/outputs/tables/<STATE>/Combined_Combined.csv at Set1/Draw1 col1/col2
+vs
+
+the latest draw in data/cleaned/draws/<STATE>_draws.csv
+
+So if those are all mismatching, it strongly suggests your tables pipeline and draws CSVs are not describing the same “world snapshot.” That’s exactly the drift scenario the guardrails talk about.
+
+ 
+
+You already have (documented) guardrails for this:
+
+regenerate Aux draw CSVs from the activated workbook (sentinel states CT/FL are explicitly mentioned) and validate alignment
+
+run the tables↔aux alignment checker (live or sharepack strict mode)
+
+This isn’t theoretical; the workflow docs explicitly say drift can “poison” outputs and the safest approach is to fail fast when tables and aux draws differ.
+
+Your “big picture” mental model is correct (and matches the docs)
+
+What you described (“upload Pick3StatsC4 → build the datasets inventory → run tools/aux off that snapshot → freeze everything → evaluate with winners → later lean out into a superbrain”) is exactly the Brain‑1 / Brain‑2 separation described in the Control Center pause log:
+
+Brain‑2 (Control Center) exists, has a frozen schema/hit‑tagging pipeline, but is paused before A01–A12.
+
+Brain‑1 / Aggregator is the planned next focus: “lean evidence bundles per tool… and an aggregator ‘super brain’ consuming the bundles.”
+
+So: the vision is coherent and reflected in the written workflow.
+
+Where the Control Center artifacts are (for your run)
+
+The snapshot pipeline’s outputs “land under reports/control_center/cc_snapshot_<timestamp>.{json,csv,_alerts.csv,.md}”.
+
+ 
+
+For your run, the timestamp you’re seeing is 20251219_222801 (user), so the relevant files are the ones with that stem inside reports/control_center/ (user + doc).
+
+ 
+
+Also:
+
+schema contract: reports/control_center/alert_schema.json
+
+deterministic state labels: reports/control_center/state_map.json
+
+Your question: “Is the workflow actually clearing and rebuilding data, or are we carrying stale stuff?”
+
+From the validation/logging side, your environment explicitly recognizes stale‑data risk and added mitigation:
+
+There’s explicit guidance to regenerate draw CSVs from the activated workbook to keep Aux aligned with tables.
+
+important_log2
+
+There is a documented delete/purge toggle for draw refresh to prevent stale CSVs lingering between runs.
+
+AAT9_Unified_Changelog
+
+So the system does not rely on “magic clearing”; it provides explicit tooling/flags to ensure clean refreshes and to detect drift.
+
+Should you allow Codex to proceed with the work it’s recommending?
+
+Yes — with strict guardrails. Here’s why, grounded in your own pause-log SSOT:
+
+The current CC snapshot is intentionally minimal and paused; the doc explicitly says keep schema stable and use BA ingest flags if control_center.md is absent.
+
+It also says the “Pivot focus” is Brain‑1/aggregator, but your immediate need is evaluation; that requires frozen Brain‑2 artifacts, not just a live dashboard.
+
+So the safest “Codex proceed” plan is:
+
+The minimal acceptable Brain‑2 upgrade (doesn’t violate the pause line)
+
+Do not change alert_schema.json shape or meaning (schema stability is explicitly required).
+
+Keep cc_sanity_snapshot.py as the contract snapshot tool (it already exists and has a regression guard).
+
+Add a repeatable way to ensure BA rows exist for ingestion (either generate the BA file(s) or export them from the app), because BA ingest is explicit and otherwise you’ll keep seeing “only doubles.”
+
+Ensure tables/draws are aligned (otherwise the CC snapshot will keep screaming “freshness mismatches”). Use the documented regen + alignment validator path.
+
+This gets you comprehensive, drift‑proof evaluation artifacts without prematurely implementing A01–A12 (which the doc explicitly says are not yet implemented).
+
+What I would not let Codex do yet
+
+Don’t add new indicators A01–A12 until you have a stable Brain‑2 export loop and have started evaluating (the pause log says A01–A12 are future work and the schema/hit pipeline is ready for them later).
+
+Concrete, “no guessing” validation loop you can run for your day (2025‑06‑21)
+A) Prove tables ↔ draws describe the same world snapshot
+
+These are documented, and they directly address the all‑states freshness mismatch you saw:
+
+python3 scripts/auxiliary/generate_draws_csv.py --states Connecticut Florida --max-draws 1000
+python3 scripts/tools/validate_tables_aux_alignment.py --state Connecticut4
+python3 scripts/tools/validate_tables_aux_alignment.py --state Florida4
+
+B) Prove the Control Center snapshot export matches the frozen schema
+python3 scripts/checks/test_cc_snapshot_schema.py
+
+C) Know exactly what the snapshot is checking for “freshness”
+
+The doc tells you the exact comparison to manually sanity‑check in files if needed.
+
+What I think is happening in your specific cc_snapshot_20251219_222801 artifacts (interpretation)
+
+Not blank: doubles ranking exists (user) and is a known computed metric.
+
+Only due_doubles showing: consistent with “BA ingest needs input” + “vtrac_repeat may not trigger.”
+
+All freshness mismatches: strongly suggests drift/misalignment between data/outputs/tables and data/cleaned/draws in the live workspace; guardrails exist to detect/fix this.
+
+Confidence: Medium‑High (because this matches the documented snapshot behavior + your pasted outputs).
+Where confidence drops to Medium is anything about why the live data drifted — the docs confirm the symptom and mitigation, not the exact root cause for your run.
+
+Sanity Check
+
+Open reports/control_center/cc_snapshot_20251219_222801.csv (not _alerts.csv) and confirm draws_since_double is populated per state (user + the snapshot output contract).
+
+Run the alignment guard for Connecticut4 and Florida4 exactly as documented, and confirm it passes; if it fails, you’ve proven the “freshness mismatch” is due to drift and not a display bug.
+
+If you want to continue in the same “deep brainstorm but concrete” mode, the next highest‑leverage thing to paste is the warning line(s) produced by the snapshot run about BA ingest (if any) and whether reports/control_center/control_center.md exists — because the docs say BA absence should be warned, not silent.
+
+
+
+
+
+
+
+
+
+
+
+
+___________________________________________________________________________________________
+
+TL;DR: Yes — it’s fair to say you’re close and capable of getting exactly what you want with a small, targeted adjustment: Brain‑1 sharepacks are already the “frozen world snapshot” you need for evaluation, but Brain‑2 (Control Center) is currently only exporting a minimal “sanity snapshot,” not the full boards you see in the app.
+
+AAT9_Final_Workflow_Control_Cen…
+
+AAT9_Final_Workflow_Control_Cen…
+
+
+On the “red flag”: the freshness mismatches are a confirmed mismatch between the specific live table file and live draws file that the snapshot script compares — so it’s a real warning signal, but it does not automatically prove your sharepack freeze is wrong. It’s a “don’t trust live‑mutable folders for evaluation” alarm, which is a known failure mode the workflow is explicitly designed to catch.
+
+AAT9_Final_Workflow_Control_Cen…
+
+important_insights
+
+Step‑by‑step (tying your mental model to what the repo is actually doing)
+1) Your “LIVE → freeze → evaluate → lean out” model is correct
+
+The docs explicitly describe that there are two realities you’re juggling:
+
+Live workspace outputs (mutable; can change when you swap workbooks)
+
+Sharepacks (frozen; must remain internally consistent so evaluation is reproducible)
+
+important_insights
+
+So you’re not “talking about a different reality” than the system. You’re describing the same thing, just in your own terms:
+
+“Live” = “the app/workspace currently reflects the staged workbook world”
+
+“Snapshot/sharepack” = “a frozen copy of that world so it won’t drift later”
+
+important_insights
+
+Key implication: you do not need mystical terminology here. The only thing that matters is mutability: are we reading from folders that can silently change, or from a frozen bundle?
+
+2) Why you only saw “doubles” in the Control Center artifacts
+
+This is exactly explained by the Control Center pause log:
+
+The thing generating cc_snapshot_<timestamp>... is scripts/tools/cc_sanity_snapshot.py and it’s described as a read‑only snapshot/alerts pipeline (not a full export of the app’s boards).
+
+AAT9_Final_Workflow_Control_Cen…
+
+It supports alerts (contract/schema is frozen) including blackapple, due_doubles, vtrac_repeat, but it does not say it computes everything the UI renders; it’s a snapshot pipeline with a narrow contract.
+
+AAT9_Final_Workflow_Control_Cen…
+
+And the most important line for your “Blackapple is missing” concern:
+
+BA ingest is explicit: it reads reports/control_center/control_center.md when present OR you must pass --ba-csv/--ba-json.
+
+If BA is missing, that’s warned, not silently assumed.
+
+AAT9_Final_Workflow_Control_Cen…
+
+So if your run didn’t provide BA rows to ingest, then BA being absent from the snapshot export means “not exported/ingested,” not “Blackapple is broken.” (This matches your intuition that the UI can still compute it live, but nothing wrote it out.)
+
+Also: the pause log explicitly says Control Center is paused pre‑A01–A12; only certain alerts are implemented so far.
+
+AAT9_Final_Workflow_Control_Cen…
+
+3) The “ranked draws since double” is not blank — you were likely looking at the summary file
+
+From what you pasted, your JSON includes:
+
+snapshots: [...] with per‑state draws_since_double
+
+rank_by_draws_since_double: [...]
+
+So the ranking is being calculated (user).
+What is tiny is the alert roll‑up CSV (alerts_by_variant / alerts.csv) which, per the pause log, is a summary of counts/hits by alert id (not the full per‑state snapshot table).
+
+AAT9_Final_Workflow_Control_Cen…
+
+That explains the “it looks empty” feeling: one file is a roll‑up; the other file is the detailed per‑state snapshot.
+
+The “freshness mismatches everywhere” red flag — what it really means
+4) Clarifying your question: was I confirming something wrong, or flagging a potential risk?
+
+It’s both, but in different scopes:
+
+What is confirmed (based on the snapshot output you pasted):
+
+The snapshot script’s “freshness” comparison found that the values it pulled from:
+
+data/outputs/tables/<STATE>/Combined_Combined.csv (Set1/Draw1 col1/col2)
+did not match
+
+the “latest draw” it pulled from data/cleaned/draws/<STATE>_draws.csv
+for every state (user).
+
+And the pause log tells us that’s exactly what the script compares.
+
+AAT9_Final_Workflow_Control_Cen…
+
+So yes: that specific check failed everywhere. That’s not hypothetical.
+
+What is not automatically proven:
+
+That your sharepacks are wrong or that your entire Brain‑1 run is invalid.
+
+Why? Because the docs explicitly warn that live outputs can drift when workbooks swap, and sharepacks exist specifically to avoid this exact poisoning risk.
+
+important_insights
+
+5) Why this “mismatch everywhere” happens in real life (without implying you broke everything)
+
+The workflow notes explicitly describe drift as a known hazard:
+
+Drift can “poison” outputs when tools read from mutable live folders that no longer correspond to the same workbook snapshot, and the recommended approach is to fail fast when tables and aux draws describe different “world snapshots.”
+
+important_log2
+
+And the project added guardrails to catch this (again, consistent with your mission):
+
+run_history_and_results.py supports --regen-aux-draws and an alignment validation step to prevent silent invalid runs.
+
+important_insights
+
+So: the red flag is a warning that the Control Center snapshot (as currently produced) is reading from live‑mutable folders that may not represent one consistent “world.”
+It’s exactly the reason your next step (sharepack‑aligned Brain‑2 export) is the correct move.
+
+What I think the “optimal plan forward” is (and whether you should let Codex proceed)
+6) Definition of Done for a “Gold Day” (this is the exit ramp from code hell)
+
+Based on the workflow architecture doc, evaluation is supposed to be driven by:
+
+A filled run report living under tasks/FINAL VALIDATION/RUNS/<D>__<STATE>.md
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Evidence blocks coming from sharepack summarizers (Stable/DR/VTRAC/Hot Zones)
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Aux summary pulled in Part 3
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Validators that “fail fast,” including tables↔aux alignment in live or in sharepack strict mode
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+So: a “Gold Day” is done when Brain‑1 + winners + validators pass, and when Brain‑2 outputs are also frozen against the same sharepack world.
+
+7) The missing piece is exactly what Codex proposed: a sharepack‑aligned Control Center exporter
+
+The pause log says:
+
+Keep the schema stable; emit alert objects in a consistent shape.
+
+AAT9_Final_Workflow_Control_Cen…
+
+Reuse modules.vtrac_reference for VT hit tagging; don’t change VT mappings.
+
+AAT9_Final_Workflow_Control_Cen…
+
+So the “minimal blast radius” plan that matches your mission is:
+
+Do not refactor Brain‑1. It’s already producing the evidence bundles you need.
+
+Add/extend a Brain‑2 exporter that:
+
+reads from sharepacks/<D>/ (not from live data/cleaned/...),
+
+computes/exports the same “boards” you care about (BA + repeat watch + due doubles, etc.),
+
+writes outputs into an immutable folder (ideally sharepacks/<D>/control_center/...),
+
+keeps the alert schema stable (so you can backtest across days).
+
+AAT9_Final_Workflow_Control_Cen…
+
+My recommendation: yes — you should allow Codex to proceed with that work as long as it is constrained to “export/freeze Brain‑2 using sharepack inputs” and doesn’t reopen the whole pipeline. This is aligned with the documented pause/resume guidance for Control Center and the frozen schema approach.
+
+AAT9_Final_Workflow_Control_Cen…
+
+AAT9_Final_Workflow_Control_Cen…
+
+The clean “confidence loop” to stop toxic debugging spirals
+8) Use the workflow’s own guardrails instead of intuition
+
+Your goal is to stop “guessing” whether the world is consistent. The docs already give you deterministic checks:
+
+Tables↔Aux alignment (Sharepack strict)
+python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Preflight guard path (regen sentinel Aux draws + validate alignment) is explicitly documented as a recommended step to avoid drift poisoning.
+
+important_log2
+
+important_insights
+
+Once those pass, you have the right to trust the freeze.
+
+9) Then immediately shift into evaluation using the run report generator
+
+Your system already supports generating an evaluation “workspace” per state/date:
+
+python3 scripts/tools/create_master_validation_run_report.py --history-date YYYY-MM-DD --state OntarioCanada4 (example in the logs)
+
+important_logstart
+
+That’s your “evaluation mode switch.” Run report exists → paste tool summaries → answer the template → log “fix later” items → repeat.
+
+Key docs surfaced (so you and Codex stay aligned)
+
+Control Center Pause Log (what CC snapshot is, how BA ingest works, schema, and what’s paused): 
+
+AAT9_Final_Workflow_Control_Cen…
+
+ 
+
+AAT9_Final_Workflow_Control_Cen…
+
+Final workflow architecture (summarizers + validators + where run reports live): 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+ 
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9
+
+Drift/guardrail rationale (“two realities” and why fail‑fast matters): 
+
+important_insights
+
+ 
+
+important_insights
+
+Also surfacing the two earlier files you were told to keep handy: 
+
+AAT9_Final_Validation_Checklist
+
+ 
+
+deepresearch_trackers
+
+Sanity Check
+
+Open the Control Center pause log and verify two lines match your understanding:
+
+BA ingest is explicit (control_center.md or flags)
+
+freshness compares live tables vs live draws
+
+AAT9_Final_Workflow_Control_Cen…
+
+AAT9_Final_Workflow_Control_Cen…
+
+Pick one state/date (your gold day) and run the sharepack strict alignment validator; if it passes, treat Brain‑1 as evaluation‑grade and focus your energy on exporting Brain‑2 into the same sharepack root.
+
+FINAL_WORKFLOW_ARCHITECTURE_AAT9

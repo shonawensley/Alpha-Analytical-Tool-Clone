@@ -17,6 +17,13 @@ python3 scripts/tools/cc_sanity_snapshot.py \
 ```
 Outputs are written to `reports/control_center/` with the timestamp. Freshness compares `data/outputs/tables/<STATE>/Combined_Combined.csv` Set1/Draw1 col1/col2 to the latest draw in `data/cleaned/draws/<STATE>_draws.csv`.
 
+## Sharepack-aligned export (Brain‑2 freeze for Master Validation)
+For a given results date **D**, export a full Control Center bundle into the frozen sharepack day folder so Brain‑2 cannot drift:
+```bash
+python3 scripts/tools/export_control_center_sharepack.py --date <D>
+```
+Outputs land under: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch + README/meta/report).
+
 Regression check:
 ```bash
 python3 scripts/checks/test_cc_snapshot_schema.py

@@ -22,6 +22,7 @@ Date convention (important):
 | Stable evidence (brain + winners lens) | `sharepacks/<D>/<STATE>/stable/<STATE>/` | `metrics.json` is the Stable “winners + ranks” anchor. |
 | Digit Reduction winners semantics | `.../analyzer_v2/winners/*_winner_stamp.json` | SSOT for **any vs final** counts (see below). |
 | VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
+| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Sharepack-aligned export of Control Center boards (Blackapple, Due Doubles, VTRAC Repeat Watch). |
 | Template answers | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
 
 ## Known bumpy semantics (read once)
@@ -38,6 +39,10 @@ Workflow changelog (don’t lose “fix later” items across sessions):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 
 Tracked states (tables present): CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. (GA/TX not tracked; skip to avoid errors.)
+
+Control Center (Brain‑2) sharepack export (recommended when freezing a full day):
+- Export day-level CC boards (BA + Due Doubles + Repeat Watch) into: `sharepacks/<D>/control_center/`
+- Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
 
 Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`
@@ -62,6 +67,7 @@ Related SOPs/refs:
   - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
     - Key rule: for Master Validation, Aux must align to the **history workbook** used to build the string tables (typically D‑1 for results/sharepack date D). Use `--excel` to generate the draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` from that workbook. If you omit `--excel`, the script snapshots from the current live `data/cleaned/draws/*_draws.csv` which can drift after swaps.
     - Paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+  - Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <DATE>`
   - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
     - Includes scaffolding through Part 5 (Part 4 “candidate pack” + Part 5 summary). For Part 4 mapping (indices/VSTRAIGHTS/perms), use `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`.
   - VTRAC compact report validator (flags missing/empty states/sections): `python3 scripts/tools/validate_vtrac_compact_report.py --date <DATE>`

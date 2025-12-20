@@ -91,3 +91,18 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - Fix: extend the run report generator to scaffold Part 4 + Part 5 so new sessions don’t have to manually add those sections.
 - Files:
   - `scripts/tools/create_master_validation_run_report.py`
+
+---
+
+## 2025-12-20
+
+### Brain‑2: export Control Center into sharepacks (drift-proof)
+
+- Added a sharepack-aligned Control Center exporter so Brain‑2 artifacts are frozen alongside Brain‑1 under `sharepacks/<D>/...`.
+- Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+- Outputs: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch + README/meta/report).
+- Files:
+  - `scripts/tools/export_control_center_sharepack.py`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`

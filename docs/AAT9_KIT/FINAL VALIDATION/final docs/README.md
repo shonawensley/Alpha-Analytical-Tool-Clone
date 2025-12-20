@@ -39,6 +39,8 @@ python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD -
 
 Per-run workflow (high level):
 1) Generate/verify sharepack artifacts (see help + preflight).
+   - Optional (recommended for full-day freeze): export Control Center (Brain‑2) into `sharepacks/<D>/control_center/`:
+     - `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
 2) Generate the run report scaffold (command above).
 3) Fill the run report Parts 1–5 (using embedded `summary.md` evidence blocks).
 4) Log “fix later” items to `WORKFLOW_CHANGELOG.md` so they aren’t lost.

@@ -53,6 +53,7 @@ For operational detail, see: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Fin
 | JSON tables | `data/outputs/json_tables/<STATE>_tables.json` or sharepack copy | Hot Zones + other tooling may use JSON. |
 | Aux draw CSVs | `data/cleaned/draws/*_draws.csv` | **Aux/BA must read draw CSVs** (not string-table XLSX). |
 | Aux draw snapshot (validation) | `sharepacks/<D>/<STATE>/aux/draws/` | For Master Validation Part 3, do not rely on live `data/cleaned/draws/` (it can drift after swaps). |
+| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Day-level Control Center boards exported from the frozen sharepack world (no drift). |
 | Winners overlays (HTML/JSON lens) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | This is Template Part 1 (environment lens). |
 | Template answers (filled) | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Don’t write answers into the template file. |
 
@@ -95,6 +96,7 @@ Typical per-state sharepack structure:
 - Aux (Part 3):
   - Draw snapshot: `sharepacks/<D>/<STATE>/aux/draws/`
   - Aux summary: `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md`
+- Control Center (Brain‑2, day-level): `sharepacks/<D>/control_center/`
 
 Validation narrative (the file you share across engines):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
@@ -181,6 +183,7 @@ Validators (fail fast on common “wiring drift”):
 - DR winners semantics: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE>`
 - Hot Zones winners: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>`
 - VTRAC compact report non-empty: `python3 scripts/tools/validate_vtrac_compact_report.py --date <D>`
+- Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
 
 ---
 

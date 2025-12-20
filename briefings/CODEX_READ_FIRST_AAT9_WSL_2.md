@@ -46,6 +46,10 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 
 “Combined” is baseline; “Midday/Evening” are additive variants surfaced alongside.
 
+Master Validation (frozen day snapshot):
+- Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
+- Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
+
 2) WSL alignment & PowerShell bridging
 
 Always treat the repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone

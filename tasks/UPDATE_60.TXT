@@ -1,0 +1,222 @@
+TL;DR: Yes—your read is fair: Brain‑1 looks “basically done” for the gold day (sharepacks + run scaffolds exist), and Brain‑2 is “close but not exported the way you expect.” The “freshness mismatches everywhere” is a real warning about LIVE folder drift, not proof that your sharepacks are wrong. The fastest way out of the context-reset hell is to maintain a single Codex Context Pack (SSOT) that Codex must read + restate before doing anything, and to generate/maintain one Status Snapshot file per day/run so a reset can be recovered in 60 seconds.
+
+Step-by-step (with concrete details)
+1) Clarify what’s “done” vs “missing”
+2) Clarify the “freshness mismatch red flag” (warning vs confirmed wrong)
+3) Put a hard anti-context-reset system in place (SSOT + bootstrap + status snapshot)
+4) Give you a copy/paste “Codex Boot Message” that forces alignment every session
+5) Reconfirm the minimal, optimal plan forward (Brain‑2 export into sharepacks/<D>/control_center)
+
+1) Are we “in a decent place” or not?
+
+Based on what you pasted, you are in a decent place for Brain‑1:
+
+Brain‑1 “full day” sharepacks exist under sharepacks/2025-06-21/ and cover 14 states (CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA). (user)
+
+Run scaffolds exist under docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__*.md. (user)
+
+A strict alignment validator was run in sharepack mode and reported OK (at least shown explicitly for Connecticut, and the log claims the guard passes for all 14 states). (user)
+
+Where you’re not complete yet is Brain‑2 as you actually mean it:
+
+You only have the minimal Control Center snapshot artifacts (the cc_snapshot_*222801* set). (user)
+
+That snapshot is not the full exported set of what the Streamlit Control Center page renders (Blackapple table, repeat watch board, etc.). (user)
+
+So your “close with adjustments” interpretation is fair: Brain‑1 freeze is present; Brain‑2 export is the gap. (user)
+
+2) The “freshness mismatches everywhere” red flag — warning or confirmed wrong?
+What is confirmed by the artifacts you showed?
+
+The snapshot summary explicitly reports freshness mismatches for every state (e.g., “Connecticut4: draws=763 vs tables col2=201”, etc.). (user)
+
+That is confirmed as “the snapshot script detected mismatches.” It is not ambiguous. (user)
+
+What is not automatically confirmed (and is the crucial nuance)?
+
+A mismatch in that minimal snapshot does not automatically prove your sharepacks are wrong, because the minimal snapshot’s “freshness check” is comparing LIVE folders that can drift:
+
+It compares data/cleaned/draws/<STATE>_draws.csv (live) vs data/outputs/tables/<STATE>/Combined_Combined.csv columns (live). (user)
+
+Meanwhile, your intended validation safety rail is “sharepack frozen inputs + strict alignment validation,” which you indicated passed in sharepack mode. (user)
+
+So the “red flag” is best understood as:
+
+Red flag about live drift / environment drift, i.e., “your live tables and live draws aren’t guaranteed to be the same workbook-world at the moment you ran the snapshot.” (user)
+
+Not, by itself, proof that the frozen sharepack snapshot is poisoned. (user)
+
+When would it mean something is truly “wrong”?
+
+It becomes “actually wrong” (not just a warning) if you intended the live folders to represent the staged workbook-world at that moment and they still disagree.
+
+In other words:
+
+If your operating rule is “after upload, the live folders are the canonical world,” then mismatches everywhere mean your canonical world is incoherent right now.
+
+If your operating rule is “sharepacks are canonical, live folders can drift,” then mismatches are expected noise—and that’s exactly why you freeze sharepacks.
+
+Given your stated mission (“freeze the world snapshot so it can’t drift”), the mismatches are primarily telling you:
+don’t use cc_snapshot_ (as currently implemented) as your Brain‑2 export of record.* (user)
+
+That aligns perfectly with the plan you approved: Brain‑2 must read from sharepack frozen draws and export into the sharepack so it can’t drift. (user)
+
+3) Why the context resets are wrecking you
+
+You’re not crazy—this is a predictable failure mode:
+
+Your project has lots of moving parts (Brain‑1, Brain‑2, sharepacks, run scaffolds, snapshot reports, app UI behavior).
+
+If the agent resets, you lose the “current truth” about what is canonical and what is already produced.
+
+The result is circular conversations and re-deriving the same mental model every time.
+
+The fix is not “try harder”; it’s to enforce a single source of truth + a forced boot protocol.
+
+4) The practical fix: build a “Codex Context Pack” and force a boot ritual
+
+You want one file / one message that is the only thing Codex needs to rehydrate accurately.
+
+Rules that stop the loop
+
+Rule A — SSOT file exists and is short.
+One page. No essays. It must include:
+
+Mission
+
+Gold day D
+
+Workbook date D‑1
+
+Tracked states list
+
+Canonical artifact locations
+
+What is done vs missing
+
+Definition of Done for the current task
+
+Constraints (“no code changes until plan approved”)
+
+Rule B — Every new Codex session starts with:
+
+“Read SSOT”
+
+“Restate SSOT in 10 bullets”
+
+“State exactly what you will do next”
+
+Only then touch code.
+
+If Codex can’t restate it, it’s not allowed to proceed.
+
+Rule C — Every meaningful milestone writes a tiny status line back into SSOT
+Example: “✅ Brain‑2 export generated for D=2025‑06‑21; files: …; validated by …; date/time; commit hash.”
+
+That makes resets survivable.
+
+5) Copy/paste: Codex Boot Message that prevents re-litigating everything
+
+Use this at the top of every new Codex session (or after a reset). It forces the agent to rehydrate correctly in minutes.
+
+✅ “CODEX BOOT MESSAGE — MASTER VALIDATION SSOT”
+
+Paste the block below into Codex as the first message after any reset.
+
+# AAT9 Master Validation — SSOT Boot (READ FIRST, THEN RESTATE)
+
+## Mission (non-negotiable)
+We are validating the full “live → freeze → evaluate → lean-out” loop.
+- Brain‑1 = per‑state evidence freeze into sharepacks/<D>/ so templates can be filled later without drift.
+- Brain‑2 = Control Center boards/trackers computed against the SAME frozen world and exported as artifacts.
+
+## Gold day
+- Results date D = 2025-06-21
+- History workbook date D‑1 = 2025-06-20 (Pick3StatsC4_2025_06_20.xlsm)
+
+## Tracked states (14)
+Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4,
+NorthCarolina4, Ohio4, OntarioCanada4, Pennsylvania4, PuertoRico4, SouthCarolina4, Virginia4
+
+## What is already done (do NOT redo)
+- Brain‑1 sharepacks exist: sharepacks/2025-06-21/<STATE>/... (tools + aux + summaries).
+- RUN scaffolds exist: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__*.md
+- Minimal CC snapshot exists (NOT full Brain‑2): reports/control_center/cc_snapshot_20251219_222801_*
+
+## What is missing (current task)
+Produce a FULL Brain‑2 export that mirrors what the app shows, but frozen & drift-proof:
+- Create sharepacks/2025-06-21/control_center/
+- Export: blackapple table, due doubles, VTRAC repeat watch (board-style), plus a human-readable report.md
+- Inputs MUST come from sharepack frozen draws: sharepacks/<D>/<STATE>/aux/draws/*_draws.csv
+- Also add a small README stating clearly:
+  "Evaluating Pick3StatsC4 D‑1=2025-06-20 → Results D=2025-06-21"
+
+## Constraints
+- NO code changes until you:
+  1) read tasks/LOG_55.txt and the Control Center final docs,
+  2) restate the plan + exact files you’ll touch,
+  3) get explicit approval.
+
+## Read-first files (must cite)
+- tasks/LOG_55.txt
+- tasks/WORKFLOW_CONFIRM.txt
+- tasks/WORKFLOW_2.txt
+- docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md
+- docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md
+
+## Definition of Done
+- sharepacks/2025-06-21/control_center/ exists and contains non-empty:
+  - control_center_report.md
+  - blackapple_alerts.csv (+ optional .md)
+  - due_doubles.csv (+ optional .md)
+  - vtrac_repeat_watch.csv (+ optional .md)
+  - README.md (states D‑1 and D)
+- Output is reproducible and does NOT depend on Streamlit UI state or live folders.
+
+### Now do this:
+1) Restate this SSOT in 8–12 bullets.
+2) List the exact files you plan to create/edit.
+3) Only then proceed.
+
+
+This single boot message eliminates 80% of the “talking in circles” problem because it forces re-alignment before action.
+
+6) Reconfirming the optimal plan forward (the one you already approved)
+
+Your approved path is still the best one:
+
+Export Brain‑2 into sharepacks (not into reports/control_center/ as the primary), so you have one day folder that contains Brain‑1 + Brain‑2 together. (user)
+
+Use sharepack frozen draws as inputs so the export is drift-proof. (user)
+
+Fix/avoid misleading cc_sanity_snapshot.py behavior (at minimum, stop relying on it for Brain‑2 completeness). (user)
+
+Add a small README/metadata file that explicitly states “Pick3StatsC4 D‑1 → Results D” so humans never get lost. (user)
+
+That’s the shortest route to “stop fighting code and start evaluating.”
+
+7) What I recommend you do immediately to reduce stress from resets
+
+Two actions you can do today that don’t require new code:
+
+Create a single pinned note (in your own notes app) titled:
+“AAT9 SSOT Boot Message”
+and paste the boot block above.
+Any time Codex resets, you paste that first—no improvisation.
+
+Create a single “CURRENT_STATUS.md” (even if manually) where you record only:
+
+gold day D / D‑1
+
+what exists
+
+what’s missing
+
+what Codex is allowed to modify next
+This becomes your human SSOT even if Git is messy.
+
+Sanity Check
+
+Open reports/control_center/cc_snapshot_20251219_222801_summary.md and verify it’s the minimal snapshot (mostly “due_doubles”), not the full boards. (user)
+
+Verify whether sharepacks/2025-06-21/control_center/ exists. If it does not, Brain‑2 export is still missing exactly as described. (user)
