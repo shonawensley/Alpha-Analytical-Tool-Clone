@@ -1,0 +1,314 @@
+# Aux Summary — NewYork4 — 2025-06-21
+
+Evidence dump for Master Validation **Part 3** (Aux).
+All facts are labeled by source for provenance.
+
+## Config (source: core/aux_config.py)
+- windows: pairs=360 positional=360 vtrac_index=1000 sums_used=100
+- thresholds: doubles_late=667 doubles_very_late=1000 pair_pending=25
+
+## Draw sources (source: modules.aux_loaders.load_state_draws)
+- snapshot_dir: `sharepacks/2025-06-21/NewYork4/aux/draws`
+- snapshot_mode: generated_from_excel
+- excel: `data/history/Pick3StatsC4_2025_06_20.xlsm` | aux_state_label: New York
+- combined: live=`data/cleaned/draws/New_York_draws.csv` snap=`sharepacks/2025-06-21/NewYork4/aux/draws/New_York_draws.csv` n=1000 head=308, 573, 520, 255, 610
+- midday: live=`data/cleaned/draws/New_York_Midday_draws.csv` snap=`sharepacks/2025-06-21/NewYork4/aux/draws/New_York_Midday_draws.csv` n=1000 head=573, 255, 878, 211, 984
+- evening: live=`data/cleaned/draws/New_York_Evening_draws.csv` snap=`sharepacks/2025-06-21/NewYork4/aux/draws/New_York_Evening_draws.csv` n=1000 head=308, 520, 610, 680, 134
+
+## Combined (variant)
+
+### Repeat watch (source: aux_validation.repeat_summary_by_variant)
+- current_index=13 streak=1 max=3 last_repeat_gap=3 last_repeat_index=3
+
+### Positional (source: aux_validation.positional_shortlist_report)
+- top digits: P1:4 (gap=34), P2:4 (gap=18), P3:7 (gap=29)
+- consensus_notes: P1 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P1 digit 0 aligns across Combined, Evening (XVAR-Cons(CE)), P2 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P2 digit 9 aligns across Combined, Midday (XVAR-Cons(CM)), P3 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P3 digit 9 aligns across Combined, Evening (XVAR-Cons(CE)), P1 mirror cluster around digit 9 (Mirror-Echo(CEM)), P1 mirror cluster around digit 5 (Mirror-Echo(CE)), P2 mirror cluster around digit 9 (Mirror-Echo(CEM)), P2 mirror cluster around digit 4 (Mirror-Echo(CM)), P3 mirror cluster around digit 2 (Mirror-Echo(CEM)), P3 mirror cluster around digit 4 (Mirror-Echo(CE)), Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+- double_pressure_notes: Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+
+### Positional hard-due (source: aux_validation.positional_hard_due_by_variant)
+- hard_due: none
+
+### Positional shortlist (source: aux_validation.positional_shortlist_report)
+- 447: score=49.07158571428572 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 497: score=43.63567857142857 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),Mirror-Echo(CM),R1 src=cartesian
+- 047: score=41.45781428571429 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 747: score=40.18179285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=repeat_endcap
+- 457: score=38.574600000000004 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 437: score=38.385171428571425 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 449: score=38.332321428571426 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 477: score=38.28214285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 467: score=38.18174285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 442: score=37.133785714285715 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+
+### Doubles (source: aux_validation.collect_variant_stats)
+- 677: ds=998 sev=B
+- 189: ds=720 sev=B
+- 014: ds=715 sev=B
+- 228: ds=700 sev=B
+- 477: ds=690 sev=B
+- 113: ds=683 sev=B
+- 888: ds=673 sev=B
+
+### Pairs (source: aux_validation.collect_pair_stats_for_state)
+- repeating:
+  - 22: ds=68 sev=purple
+  - 44: ds=51 sev=purple
+  - 77: ds=38 sev=purple
+  - 33: ds=30 sev=purple
+  - 99: ds=26 sev=purple
+  - 66: ds=17 sev=-
+  - 00: ds=15 sev=-
+  - 11: ds=7 sev=-
+  - 88: ds=5 sev=-
+  - 55: ds=3 sev=-
+- non_repeating:
+  - 56: ds=93 sev=red
+  - 18: ds=65 sev=red
+  - 15: ds=39 sev=blue
+  - 45: ds=39 sev=blue
+  - 39: ds=37 sev=blue
+  - 24: ds=35 sev=purple
+  - 59: ds=33 sev=purple
+  - 17: ds=32 sev=purple
+  - 04: ds=31 sev=purple
+  - 07: ds=28 sev=purple
+
+### VTRAC overlay (source: aux_validation.vtrac_overlay_by_variant)
+- top overdue indices (ds): 35:160, 32:112, 16:80, 23:65, 7:61, 5:59, 10:58, 4:56, 20:55, 19:54
+
+### VTRAC heatboard (source: aux_validation.vtrac_heatboard_by_variant)
+- top heat (by ds): 35:ds=160 fs=4 fl=1 hz=0.008086253369272238, 32:ds=112 fs=3 fl=3 hz=0.007972665148063782, 16:ds=80 fs=3 fl=1 hz=0.005868544600938967, 23:ds=65 fs=19 fl=2 hz=0.02354260089686099, 7:ds=61 fs=42 fl=0 hz=0.04491978609625668, 5:ds=59 fs=22 fl=1 hz=0.02505446623093682, 10:ds=58 fs=28 fl=1 hz=0.03269447576099211, 4:ds=56 fs=24 fl=0 hz=0.030808729139922976, 20:ds=55 fs=19 fl=2 hz=0.022269353128313893, 19:ds=54 fs=19 fl=0 hz=0.024906600249066005
+
+### Sums (source: aux_validation.sums_stats_by_variant)
+- S0: ds=100 flags=purple
+- S1: ds=100 flags=purple
+- S2: ds=100 flags=purple
+- S25: ds=100 flags=purple
+- S26: ds=100 flags=purple
+- S27: ds=100 flags=purple
+- S3: ds=88 flags=purple
+- S22: ds=78 flags=purple
+- S24: ds=75 flags=purple
+- S6: ds=44 flags=purple
+
+### Blackapple (source: modules.blackapple.analyze_blackapple)
+- score=2 triggers={'mirror': True, 'root_due': [], 'pattern': {'extreme_due': False, 'mixed_due': False}, 'floating': ['4', '9'], 'pairs': {'remaining_count': 0}}
+- top candidates:
+  - 045: score=2 tags=FLT,MIR
+  - 049: score=2 tags=FLT,MIR
+  - 059: score=2 tags=FLT,MIR
+  - 146: score=2 tags=FLT,MIR
+  - 149: score=2 tags=FLT,MIR
+  - 169: score=2 tags=FLT,MIR
+  - 247: score=2 tags=FLT,MIR
+  - 249: score=2 tags=FLT,MIR
+  - 279: score=2 tags=FLT,MIR
+  - 348: score=2 tags=FLT,MIR
+
+## Midday (variant)
+
+### Repeat watch (source: aux_validation.repeat_summary_by_variant)
+- current_index=11 streak=1 max=2 last_repeat_gap=46 last_repeat_index=2
+
+### Positional (source: aux_validation.positional_shortlist_report)
+- top digits: P1:1 (gap=32), P2:3 (gap=18), P3:7 (gap=14)
+- consensus_notes: P1 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P1 digit 0 aligns across Combined, Evening (XVAR-Cons(CE)), P2 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P2 digit 9 aligns across Combined, Midday (XVAR-Cons(CM)), P3 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P3 digit 9 aligns across Combined, Evening (XVAR-Cons(CE)), P1 mirror cluster around digit 9 (Mirror-Echo(CEM)), P1 mirror cluster around digit 5 (Mirror-Echo(CE)), P2 mirror cluster around digit 9 (Mirror-Echo(CEM)), P2 mirror cluster around digit 4 (Mirror-Echo(CM)), P3 mirror cluster around digit 2 (Mirror-Echo(CEM)), P3 mirror cluster around digit 4 (Mirror-Echo(CE)), Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+- double_pressure_notes: Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+
+### Positional hard-due (source: aux_validation.positional_hard_due_by_variant)
+- hard_due: none
+
+### Positional shortlist (source: aux_validation.positional_shortlist_report)
+- 447: score=49.07158571428572 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 497: score=43.63567857142857 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),Mirror-Echo(CM),R1 src=cartesian
+- 047: score=41.45781428571429 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 747: score=40.18179285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=repeat_endcap
+- 457: score=38.574600000000004 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 437: score=38.385171428571425 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 449: score=38.332321428571426 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 477: score=38.28214285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 467: score=38.18174285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 442: score=37.133785714285715 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+
+### Doubles (source: aux_validation.collect_variant_stats)
+- 477: ds=980 sev=B
+- 666: ds=958 sev=B
+- 066: ds=956 sev=B
+- 444: ds=922 sev=B
+- 166: ds=875 sev=B
+- 344: ds=825 sev=B
+- 001: ds=801 sev=B
+
+### Pairs (source: aux_validation.collect_pair_stats_for_state)
+- repeating:
+  - 77: ds=99 sev=blue
+  - 22: ds=95 sev=blue
+  - 99: ds=82 sev=blue
+  - 44: ds=25 sev=purple
+  - 33: ds=23 sev=-
+  - 66: ds=8 sev=-
+  - 00: ds=7 sev=-
+  - 11: ds=3 sev=-
+  - 88: ds=2 sev=-
+  - 55: ds=1 sev=-
+- non_repeating:
+  - 16: ds=58 sev=red
+  - 06: ds=51 sev=blue
+  - 56: ds=46 sev=blue
+  - 13: ds=41 sev=blue
+  - 03: ds=38 sev=blue
+  - 18: ds=32 sev=purple
+  - 17: ds=30 sev=purple
+  - 07: ds=28 sev=purple
+  - 27: ds=27 sev=purple
+  - 38: ds=26 sev=purple
+
+### VTRAC overlay (source: aux_validation.vtrac_overlay_by_variant)
+- top overdue indices (ds): 32:413, 35:173, 26:145, 27:126, 10:99, 6:96, 28:93, 4:89, 19:71, 16:68
+
+### VTRAC heatboard (source: aux_validation.vtrac_heatboard_by_variant)
+- top heat (by ds): 32:ds=413 fs=0 fl=0 hz=0.0, 35:ds=173 fs=3 fl=2 hz=0.008075370121130552, 26:ds=145 fs=1 fl=0 hz=0.0038809831824062092, 27:ds=126 fs=19 fl=2 hz=0.02573529411764706, 10:ds=99 fs=24 fl=1 hz=0.029137529137529136, 6:ds=96 fs=18 fl=2 hz=0.022779043280182234, 28:ds=93 fs=17 fl=2 hz=0.021420518602029315, 4:ds=89 fs=30 fl=0 hz=0.037267080745341616, 19:ds=71 fs=25 fl=1 hz=0.030373831775700938, 16:ds=68 fs=4 fl=0 hz=0.006195786864931846
+
+### Sums (source: aux_validation.sums_stats_by_variant)
+- S0: ds=100 flags=purple
+- S1: ds=100 flags=purple
+- S2: ds=100 flags=purple
+- S3: ds=100 flags=red+purple
+- S26: ds=100 flags=purple
+- S27: ds=100 flags=purple
+- S25: ds=56 flags=blue+purple
+- S22: ds=50 flags=purple
+- S14: ds=47 flags=purple
+- S6: ds=45 flags=purple
+
+### Blackapple (source: modules.blackapple.analyze_blackapple)
+- score=1 triggers={'mirror': False, 'root_due': [], 'pattern': {'extreme_due': False, 'mixed_due': False}, 'floating': ['0', '6'], 'pairs': {'remaining_count': 0}}
+- top candidates:
+  - 012: score=1 tags=FLT
+  - 013: score=1 tags=FLT
+  - 014: score=1 tags=FLT
+  - 015: score=1 tags=FLT
+  - 016: score=1 tags=FLT
+  - 017: score=1 tags=FLT
+  - 018: score=1 tags=FLT
+  - 019: score=1 tags=FLT
+  - 023: score=1 tags=FLT
+  - 024: score=1 tags=FLT
+
+## Evening (variant)
+
+### Repeat watch (source: aux_validation.repeat_summary_by_variant)
+- current_index=13 streak=1 max=2 last_repeat_gap=12 last_repeat_index=8
+
+### Positional (source: aux_validation.positional_shortlist_report)
+- top digits: P1:9 (gap=26), P2:5 (gap=22), P3:7 (gap=24)
+- consensus_notes: P1 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P1 digit 0 aligns across Combined, Evening (XVAR-Cons(CE)), P2 digit 4 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P2 digit 9 aligns across Combined, Midday (XVAR-Cons(CM)), P3 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM)), P3 digit 9 aligns across Combined, Evening (XVAR-Cons(CE)), P1 mirror cluster around digit 9 (Mirror-Echo(CEM)), P1 mirror cluster around digit 5 (Mirror-Echo(CE)), P2 mirror cluster around digit 9 (Mirror-Echo(CEM)), P2 mirror cluster around digit 4 (Mirror-Echo(CM)), P3 mirror cluster around digit 2 (Mirror-Echo(CEM)), P3 mirror cluster around digit 4 (Mirror-Echo(CE)), Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+- double_pressure_notes: Digit 0 (mirror 5) pressuring two positions across evening (Double-Pressure), Digit 1 (mirror 6) pressuring two positions across combined, midday (Double-Pressure), Digit 2 (mirror 7) pressuring two positions across combined, evening, midday (Double-Pressure), Digit 3 (mirror 8) pressuring two positions across midday (Double-Pressure), Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)
+
+### Positional hard-due (source: aux_validation.positional_hard_due_by_variant)
+- hard_due: none
+
+### Positional shortlist (source: aux_validation.positional_shortlist_report)
+- 447: score=49.07158571428572 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 497: score=43.63567857142857 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),Mirror-Echo(CM),R1 src=cartesian
+- 047: score=41.45781428571429 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 747: score=40.18179285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=repeat_endcap
+- 457: score=38.574600000000004 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 437: score=38.385171428571425 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R3 src=cartesian
+- 449: score=38.332321428571426 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CE),Mirror-Echo(CEM),R1 src=cartesian
+- 477: score=38.28214285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 467: score=38.18174285714286 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+- 442: score=37.133785714285715 tags=Double-Pressure,Mirror-Echo,Mirror-Echo(CEM),R1,R2 src=cartesian
+
+### Doubles (source: aux_validation.collect_variant_stats)
+- 169: ds=974 sev=B
+- 355: ds=929 sev=B
+- 358: ds=924 sev=B
+- 666: ds=892 sev=B
+- 011: ds=856 sev=B
+- 566: ds=780 sev=B
+- 446: ds=779 sev=B
+- 113: ds=759 sev=B
+- 039: ds=670 sev=B
+
+### Pairs (source: aux_validation.collect_pair_stats_for_state)
+- repeating:
+  - 44: ds=80 sev=blue
+  - 00: ds=59 sev=purple
+  - 11: ds=40 sev=purple
+  - 22: ds=34 sev=purple
+  - 66: ds=27 sev=purple
+  - 55: ds=25 sev=purple
+  - 88: ds=21 sev=-
+  - 77: ds=19 sev=-
+  - 33: ds=15 sev=-
+  - 99: ds=13 sev=-
+- non_repeating:
+  - 18: ds=62 sev=red
+  - 45: ds=50 sev=blue
+  - 56: ds=48 sev=blue
+  - 89: ds=47 sev=blue
+  - 59: ds=41 sev=blue
+  - 39: ds=32 sev=purple
+  - 04: ds=31 sev=purple
+  - 58: ds=28 sev=purple
+  - 69: ds=27 sev=purple
+  - 48: ds=23 sev=-
+
+### VTRAC overlay (source: aux_validation.vtrac_overlay_by_variant)
+- top overdue indices (ds): 15:162, 20:124, 14:122, 29:90, 35:80, 18:60, 32:56, 33:52, 34:47, 7:44
+
+### VTRAC heatboard (source: aux_validation.vtrac_heatboard_by_variant)
+- top heat (by ds): 15:ds=162 fs=29 fl=0 hz=0.037613488975356685, 20:ds=124 fs=18 fl=1 hz=0.0247074122236671, 14:ds=122 fs=40 fl=0 hz=0.04581901489117984, 29:ds=90 fs=22 fl=0 hz=0.02756892230576441, 35:ds=80 fs=5 fl=3 hz=0.010238907849829351, 18:ds=60 fs=16 fl=1 hz=0.019522776572668113, 32:ds=56 fs=6 fl=1 hz=0.009944751381215469, 33:ds=52 fs=15 fl=4 hz=0.020364415862808145, 34:ds=47 fs=19 fl=0 hz=0.022988505747126436, 7:ds=44 fs=39 fl=0 hz=0.04271631982475356
+
+### Sums (source: aux_validation.sums_stats_by_variant)
+- S0: ds=100 flags=purple
+- S1: ds=100 flags=purple
+- S2: ds=100 flags=purple
+- S23: ds=100 flags=red+purple
+- S25: ds=100 flags=purple
+- S26: ds=100 flags=purple
+- S27: ds=100 flags=purple
+- S24: ds=70 flags=purple
+- S5: ds=64 flags=purple
+- S3: ds=44 flags=purple
+
+### Blackapple (source: modules.blackapple.analyze_blackapple)
+- score=3 triggers={'mirror': True, 'root_due': [], 'pattern': {'extreme_due': True, 'mixed_due': False}, 'floating': ['7', '9'], 'pairs': {'remaining_count': 0}}
+- top candidates:
+  - 027: score=2 tags=FLT,MIR
+  - 049: score=2 tags=FLT,MIR
+  - 057: score=2 tags=FLT,MIR
+  - 059: score=2 tags=FLT,MIR
+  - 127: score=2 tags=FLT,MIR
+  - 149: score=2 tags=FLT,MIR
+  - 167: score=2 tags=FLT,MIR
+  - 169: score=2 tags=FLT,MIR
+  - 237: score=2 tags=FLT,MIR
+  - 247: score=2 tags=FLT,MIR
+
+## Cross-variant alerts (source: aux_validation.*_multi_variant_alerts)
+
+### Doubles multi-variant alerts (source: aux_validation.multi_variant_alerts)
+- 113 -> combined:683(B); evening:759(B)
+- 477 -> combined:690(B); midday:980(B)
+- 666 -> evening:892(B); midday:958(B)
+
+### Pair multi-variant alerts (source: aux_validation.pair_multi_variant_alerts)
+- 04 -> combined:31(purple); evening:31(purple)
+- 07 -> combined:28(purple); midday:28(purple)
+- 17 -> combined:32(purple); midday:30(purple)
+- 18 -> combined:65(red); evening:62(red); midday:32(purple)
+- 22 -> combined:68(purple); evening:34(purple); midday:95(blue)
+- 39 -> combined:37(blue); evening:32(purple)
+- 44 -> combined:51(purple); evening:80(blue); midday:25(purple)
+- 45 -> combined:39(blue); evening:50(blue)
+- 56 -> combined:93(red); evening:48(blue); midday:46(blue)
+- 59 -> combined:33(purple); evening:41(blue)
+- 77 -> combined:38(purple); midday:99(blue)
+- 99 -> combined:26(purple); midday:82(blue)
+
+### Aggregated positional digits (source: aux_validation.positional_shortlist_report)
+- P1: 4(6.678242857142857)[R1,XVAR-Cons(CEM)], 0(2.5644714285714287)[R3,XVAR-Cons(CE)], 1(1.6254285714285714)[R1,Double-Pressure], 9(1.580107142857143)[R1,Mirror-Echo], 3(1.0807)[R2,Double-Pressure]
+- P2: 4(5.823842857142857)[R1,Mirror-Echo], 9(2.8879357142857143)[R3,Mirror-Echo], 5(1.3268571428571427)[R1,Double-Pressure], 3(1.1374285714285712)[R1,Double-Pressure], 7(1.0344)[R2,Double-Pressure]
+- P3: 7(8.069500000000001)[R1,XVAR-Cons(CEM)], 9(1.8302357142857142)[R3,XVAR-Cons(CE)], 2(1.1317)[R2,Mirror-Echo], 6(0.974)[R2,Double-Pressure], 5(0.8926)[R2,Double-Pressure]
