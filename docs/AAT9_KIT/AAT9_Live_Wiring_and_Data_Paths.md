@@ -83,6 +83,7 @@ flowchart LR
 - Control Center (cross‑state doubles + BA summary)
   - Logic: scans `data/cleaned/*_draws.csv` to build a doubles table; renders BA summary across states
   - Optional: “Tables Pipeline” panel to regenerate combined tables from Excel
+  - Master Validation (sharepack-aligned Brain‑2 export): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
 
 ## String‑Table Pipeline (from Excel)
 - Source Excel: `data/original/Pick3StatsC4.xlsm`
