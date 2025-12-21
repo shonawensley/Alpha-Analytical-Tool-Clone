@@ -49,6 +49,9 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 Master Validation (frozen day snapshot):
 - Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
 - Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
+- Quickstarts (zero-context):
+  - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+  - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
 
 2) WSL alignment & PowerShell bridging
 

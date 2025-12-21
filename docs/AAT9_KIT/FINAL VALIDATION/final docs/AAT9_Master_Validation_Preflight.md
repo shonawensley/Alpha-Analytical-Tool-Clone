@@ -15,6 +15,10 @@ PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date
 PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-file Pick3StatsC4_YYYY-MM-DD.xlsm --regen-aux-draws
 ```
 
+Notes:
+- `--history-date` accepts a date and will auto-detect `data/history/Pick3StatsC4_YYYY-MM-DD.xlsm` or `data/history/Pick3StatsC4_YYYY_MM_DD.xlsm` when present.
+- If you pass `--history-file`, use the exact filename under `data/history/` (either hyphen or underscore naming).
+
 This will:
 - Activate `data/history/Pick3StatsC4_YYYY-MM-DD.xlsm` into `data/original/Pick3StatsC4.xlsm`.
 - Rebuild tables + JSON (via `run_tables_with_guard.py`).

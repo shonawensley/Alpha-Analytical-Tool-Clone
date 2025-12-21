@@ -9,6 +9,11 @@ then perform basic validation:
 Usage examples:
   PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2025-06-22
   PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-file Pick3StatsC4_2025-06-22.xlsm
+
+Notes:
+  - When using --history-date, the runner will look for either:
+      - data/history/Pick3StatsC4_YYYY-MM-DD.xlsm
+      - data/history/Pick3StatsC4_YYYY_MM_DD.xlsm
 """
 from __future__ import annotations
 
@@ -70,7 +75,16 @@ def parse_args() -> argparse.Namespace:
 
 
 def history_filename_from_date(date_str: str) -> str:
+    # Prefer the canonical YYYY-MM-DD naming, but tolerate YYYY_MM_DD when present
+    # (both exist in the repo's data/history inventory).
     return f"Pick3StatsC4_{date_str}.xlsm"
+
+
+def history_filename_candidates_from_date(date_str: str) -> List[str]:
+    return [
+        f"Pick3StatsC4_{date_str}.xlsm",
+        f"Pick3StatsC4_{date_str.replace('-', '_')}.xlsm",
+    ]
 
 
 def compute_results_date(history_date: str) -> str:
@@ -138,7 +152,13 @@ def main() -> None:
     args = parse_args()
     if args.history_date:
         history_date = args.history_date
-        history_file = history_filename_from_date(history_date)
+        candidates = history_filename_candidates_from_date(history_date)
+        history_path_candidates = [ROOT / "data" / "history" / name for name in candidates]
+        hit = next((p for p in history_path_candidates if p.exists()), None)
+        if not hit:
+            expected = ", ".join(p.name for p in history_path_candidates)
+            raise SystemExit(f"History workbook not found for {history_date}. Expected one of: {expected}")
+        history_file = hit.name
     else:
         history_file = args.history_file
         history_date = history_file.replace("Pick3StatsC4_", "").replace(".xlsm", "").replace("_", "-")

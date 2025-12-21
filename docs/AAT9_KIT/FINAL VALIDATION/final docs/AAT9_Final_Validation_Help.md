@@ -7,6 +7,12 @@ Repo root (WSL): `/home/ser/code/Alpha-Analytical-Tool-Clone`
 Read first (workflow architecture + where everything lives):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
 
+If you are building a new full day sharepack from a history workbook (H → D), use:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+
+If you are **only evaluating** an already-built sharepack day (no rebuilds), use:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+
 Date convention (important):
 - `sharepacks/<DATE>/...` uses the **results/winners date** (D).
 - The corresponding history workbook is typically the day before (D‑1) and is what tables/JSON were built from.
