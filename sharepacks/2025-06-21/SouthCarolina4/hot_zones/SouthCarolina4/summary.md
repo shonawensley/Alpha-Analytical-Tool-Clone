@@ -1,10 +1,10 @@
 # Hot Zones Summary — SouthCarolina4 (2025-06-21)
 
 ## Midday winner 069 (canonical 069)
-- Top lanes (hot_zones_top_lanes.csv): not present
-- Per-lane (hot_zones_per_lane.csv): not present
+- Top lanes (hot_zones_top_lanes.csv): present, best rank 35
+- Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
 - Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: missing_from_top_lanes, missing_from_per_lane, winner_not_in_winner_map
+- Coverage gaps: winner_not_in_winner_map
 
 ## Evening winner 847 (canonical 478)
 - Top lanes (hot_zones_top_lanes.csv): present, best rank 123

@@ -19,7 +19,7 @@
 - rank    4 | triad 126 | vt_triad 223 | score_mean 21.532 | tags col1,funnel_precol1,guard_set1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_only_lane,vt_straight
 - rank    5 | triad 267 | vt_triad 233 | score_mean 21.48 | tags hot16,hot20,ls_col_42,set1_bonus,straight_lane,vertical2,vertical3,vt_only_lane,vt_straight
 - rank    6 | triad 127 | vt_triad 233 | score_mean 21.36 | tags hot16,hot20,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vt_only_lane,vt_straight
-- rank    7 | triad 77 | vt_triad 13 | score_mean 20.684 | tags col1,funnel_precol1,guard_set1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_straight
+- rank    7 | triad 077 | vt_triad 13 | score_mean 20.684 | tags col1,funnel_precol1,guard_set1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_straight
 - rank    8 | triad 169 | vt_triad 225 | score_mean 20.611 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vertical4,vt_only_lane,vt_straight
 - rank    9 | triad 146 | vt_triad 225 | score_mean 20.608 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vertical4,vt_only_lane,vt_straight
-- rank   10 | triad 22 | vt_triad 13 | score_mean 20.508 | tags hot12,hot16,hot20,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical4,vt_only_lane,vt_straight
+- rank   10 | triad 022 | vt_triad 13 | score_mean 20.508 | tags hot12,hot16,hot20,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical4,vt_only_lane,vt_straight

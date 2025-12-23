@@ -7,10 +7,9 @@
 - Coverage gaps: winner_not_in_winner_map
 
 ## Evening winner 280 (canonical 028)
-- Top lanes (hot_zones_top_lanes.csv): not present
-- Per-lane (hot_zones_per_lane.csv): not present
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: missing_from_top_lanes, missing_from_per_lane, winner_not_in_winner_map
+- Top lanes (hot_zones_top_lanes.csv): present, best rank 131
+- Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 156 | vt_triad 122 | score_mean 22.577 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vertical4,vt_only_lane,vt_straight

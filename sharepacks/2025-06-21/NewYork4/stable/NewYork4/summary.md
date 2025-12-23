@@ -1,20 +1,20 @@
-# Stable Summary — 2025-06-21
+# Stable Summary — NewYork4 (2025-06-21)
 
 ## Midday winner 802 (canonical 028)
-- Spotlight (winner_family_spotlight_raw.csv): 0 rows | exact_boxed=0 | exact_straight=0 | vt_boxed=0
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=120 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
 - Families (patterns_families.csv): 30 rows contain digits; best rank 572, section Midday, score 15.0, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=89
-- Coverage gaps: missing_from_spotlight, missing_from_scores, missing_from_compound
+- Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Evening winner 602 (canonical 026)
-- Spotlight (winner_family_spotlight_raw.csv): 0 rows | exact_boxed=0 | exact_straight=0 | vt_boxed=0
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=198 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
 - Families (patterns_families.csv): 35 rows contain digits; best rank 572, section Combined, score 15.0, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=60
-- Coverage gaps: missing_from_spotlight, missing_from_scores, missing_from_compound
+- Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Top compound candidates (patterns_compound.csv)
 - rank    1 | canon 499 | section Combined | score 98.5 | col1_hits 6 | hot2 11
