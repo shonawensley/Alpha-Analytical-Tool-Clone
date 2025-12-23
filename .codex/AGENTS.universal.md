@@ -5,6 +5,7 @@ Scope: These nonâ€‘negotiable rules apply to all work done by Codex in this
 Nonâ€‘Negotiables
 
 - Working Directory: Always operate from the project root: C:\dev\Alpha-Analytical-Tool. Never run or write from C:\Windows\System32 or any other directory.
+- Working Directory: Always operate from the project root: `/home/ser/code/Alpha-Analytical-Tool-Clone` (WSL canonical). Windows view of the same tree: `\\wsl$\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone`. Never run or write from `C:\Windows\System32` or any other directory.
 - Write Bounds: Never write outside the repo. No temp files outside .codex/ without approval. No edits to Git remotes/config.
 - Reasoning Mode: Highâ€‘effort by default. Plan â†’ implement â†’ verify. Show minimal diffs and log tails for meaningful changes.
 - Approvals: Ask before executing stateâ€‘changing commands. Prefer readâ€‘only exploration first.
@@ -40,7 +41,7 @@ Path Preflight (before any tests/changes)
 
 - Run .codex/always_root.ps1 to force CWD to the repo root and print it.
 - Run a Python import check: python -c "import modules.blackapple as ba, sys; print('BA from:', ba.__file__)"; ensure it points inside the repo.
-- List candidate draw CSVs: dir data\cleaned\*_draws.csv. For a given state, confirm the exact file to be used.
+- List candidate draw CSVs: `ls data/cleaned/*_draws.csv` (WSL) or `dir data\cleaned\*_draws.csv` (Windows). For a given state, confirm the exact file to be used.
 - If any step fails, fix the first issue only (cwd/import/data) before proceeding.
 
 Blast Radius (always minimize)

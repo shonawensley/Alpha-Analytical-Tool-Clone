@@ -37,8 +37,8 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def load_csv(path: Path) -> pd.DataFrame:
-    df = pd.read_csv(path)
+def load_csv(path: Path, *, dtype: dict | None = None) -> pd.DataFrame:
+    df = pd.read_csv(path, dtype=dtype)
     return df
 
 
@@ -52,12 +52,20 @@ def canonical_of_literal(literal: str) -> str:
     return "".join(sorted(str(literal)))
 
 
+def normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def map_winners(metrics: Dict) -> Dict[str, str]:
     """
     Map metrics.winners (list) to {Midday: ..., Evening: ...} heuristically.
     """
     winners = metrics.get("winners") or []
-    winners = [str(w) for w in winners]
+    winners = [normalize_pick3_literal(w) for w in winners]
+    winners = [w for w in winners if w]
     mapping = {}
     if len(winners) >= 1:
         mapping["Midday"] = winners[0]
@@ -89,18 +97,29 @@ def summarize_winner(
     canonical = canonical_of_literal(literal)
     res = {"label": label, "literal": literal, "canonical": canonical}
 
-    # Spotlight rows (use canonical; literal columns are constant)
-    spot_rows = spotlight[spotlight["Canonical"].astype(str) == canonical]
+    # Metrics hits (used to determine whether an "exact" winner row is expected).
+    mh = winner_hits.get(literal) or winner_hits.get(canonical) or {}
+    expects_exact = bool(mh.get("exact_boxed") or mh.get("exact_straight"))
+
+    # Spotlight rows:
+    # - exact_rows: rows where Canonical matches the winner canonical triad
+    # - family_rows: all rows for the winner family_id (evidence context), if present
+    exact_rows = spotlight[spotlight["Canonical"] == canonical]
+    family_rows = pd.DataFrame()
+    if winner_family_id is not None and "family_id" in spotlight.columns:
+        family_rows = spotlight[spotlight["family_id"] == winner_family_id]
     res["spotlight"] = {
-        "count": len(spot_rows),
-        "exact_boxed": int(spot_rows.get("is_exact_boxed", []).sum()) if not spot_rows.empty else 0,
-        "exact_straight": int(spot_rows.get("is_exact_straight", []).sum()) if not spot_rows.empty else 0,
-        "vt_boxed": int(spot_rows.get("is_vtrac_boxed", []).sum()) if not spot_rows.empty else 0,
+        "expects_exact": expects_exact,
+        "exact_canonical_rows": len(exact_rows),
+        "family_rows": len(family_rows) if winner_family_id is not None else None,
+        "exact_boxed": int(exact_rows.get("is_exact_boxed", []).sum()) if not exact_rows.empty else 0,
+        "exact_straight": int(exact_rows.get("is_exact_straight", []).sum()) if not exact_rows.empty else 0,
+        "vt_boxed": int(exact_rows.get("is_vtrac_boxed", []).sum()) if not exact_rows.empty else 0,
         "source": "winner_family_spotlight_raw.csv",
     }
 
     # Scores
-    sc_rows = scores[scores["Canonical"].astype(str) == canonical]
+    sc_rows = scores[scores["Canonical"] == canonical]
     if len(sc_rows):
         best = sc_rows.sort_values("score", ascending=False).iloc[0]
         res["scores"] = {
@@ -120,7 +139,7 @@ def summarize_winner(
         res["scores"] = {"present": False, "source": "patterns_scores.csv"}
 
     # Compound
-    cp_rows = compound[compound["Canonical"].astype(str) == canonical]
+    cp_rows = compound[compound["Canonical"] == canonical]
     if len(cp_rows):
         best = cp_rows.sort_values("compound_score", ascending=False).iloc[0]
         res["compound"] = {
@@ -159,8 +178,7 @@ def summarize_winner(
     else:
         res["families"] = {"present": False, "source": "patterns_families.csv"}
 
-    # Metrics hits
-    mh = winner_hits.get(literal) or winner_hits.get(canonical) or {}
+    # Metrics hits (redundant with expects_exact, but kept explicit for the report)
     res["metrics_hits"] = {
         "exact_boxed": mh.get("exact_boxed"),
         "exact_straight": mh.get("exact_straight"),
@@ -170,7 +188,7 @@ def summarize_winner(
 
     # Coverage gap flags
     gaps = []
-    if res["spotlight"]["count"] == 0:
+    if res["spotlight"]["expects_exact"] and res["spotlight"]["exact_canonical_rows"] == 0:
         gaps.append("missing_from_spotlight")
     if not res["scores"].get("present"):
         gaps.append("missing_from_scores")
@@ -194,12 +212,14 @@ def top_list(df: pd.DataFrame, cols: List[str], top_n: int) -> List[Dict]:
     return out
 
 
-def make_markdown(state: str, winners_info: List[Dict], top_comp: List[Dict], top_fam: List[Dict]) -> str:
+def make_markdown(state: str, date: str, winners_info: List[Dict], top_comp: List[Dict], top_fam: List[Dict]) -> str:
     lines: List[str] = []
-    lines.append(f"# Stable Summary — {state}")
+    lines.append(f"# Stable Summary — {state} ({date})")
     for win in winners_info:
         lines.append(f"\n## {win['label']} winner {win['literal']} (canonical {win['canonical']})")
-        lines.append(f"- Spotlight ({win['spotlight']['source']}): {win['spotlight']['count']} rows | exact_boxed={win['spotlight']['exact_boxed']} | exact_straight={win['spotlight']['exact_straight']} | vt_boxed={win['spotlight']['vt_boxed']}")
+        lines.append(
+            f"- Spotlight ({win['spotlight']['source']}): exact_canonical_rows={win['spotlight']['exact_canonical_rows']} | family_rows={win['spotlight']['family_rows']} | exact_boxed={win['spotlight']['exact_boxed']} | exact_straight={win['spotlight']['exact_straight']} | vt_boxed={win['spotlight']['vt_boxed']}"
+        )
         if win["scores"].get("present"):
             s = win["scores"]
             why = f" | why {s['why']}" if s.get("why") else ""
@@ -241,10 +261,27 @@ def main() -> None:
         raise SystemExit(f"sharepack path not found: {sharepack}")
 
     metrics = json.loads(sharepack.joinpath(f"{sharepack.name}_metrics.json").read_text())
-    scores = rank_frame(load_csv(sharepack / f"{sharepack.name}_stable_patterns_scores.csv"), "score")
-    compound = rank_frame(load_csv(sharepack / f"{sharepack.name}_stable_patterns_compound.csv"), "compound_score")
+    scores = rank_frame(load_csv(sharepack / f"{sharepack.name}_stable_patterns_scores.csv", dtype={"Canonical": str}), "score")
+    compound = rank_frame(
+        load_csv(sharepack / f"{sharepack.name}_stable_patterns_compound.csv", dtype={"Canonical": str}), "compound_score"
+    )
     families = rank_frame(load_csv(sharepack / f"{sharepack.name}_stable_patterns_families.csv"), "family_score")
-    spotlight = load_csv(sharepack / f"{sharepack.name}_winner_family_spotlight_raw.csv")
+    spotlight_path = sharepack / f"{sharepack.name}_winner_family_spotlight_raw.csv"
+    if spotlight_path.exists():
+        spotlight = load_csv(
+            spotlight_path,
+            dtype={
+                "Canonical": str,
+                "raw_canonical": str,
+                "family_canonical_3v": str,
+                "winner_literal_midday": str,
+                "winner_literal_evening": str,
+            },
+        )
+    else:
+        # Some days/states may not have winners provided, so the spotlight artifact
+        # isn't generated. Treat it as empty instead of failing the summary step.
+        spotlight = pd.DataFrame({"Canonical": pd.Series(dtype="string")})
 
     winners = map_winners(metrics)
     winner_family_ids = map_winner_family_ids(metrics, winners)
@@ -268,9 +305,10 @@ def main() -> None:
     top_comp = top_list(compound, ["rank", "Canonical", "section", "compound_score", "col1_hits", "hot2_count"], args.top_n)
     top_fam = top_list(families, ["rank", "family_id", "family_score", "hot2_count", "section"], min(5, args.top_n))
 
-    # Derive state from path: …/<DATE>/<STATE>/stable/<STATE>
-    state_name = sharepack.parents[2].name if len(sharepack.parents) >= 3 else sharepack.parent.name
-    md = make_markdown(state=state_name, winners_info=winners_info, top_comp=top_comp, top_fam=top_fam)
+    # sharepack path: sharepacks/<DATE>/<STATE>/stable/<STATE>
+    state_name = sharepack.name
+    date = sharepack.parents[2].name if len(sharepack.parents) >= 3 else "unknown"
+    md = make_markdown(state=state_name, date=date, winners_info=winners_info, top_comp=top_comp, top_fam=top_fam)
 
     if args.md_out:
         Path(args.md_out).write_text(md)
@@ -279,6 +317,7 @@ def main() -> None:
             json.dumps(
                 {
                     "state": state_name,
+                    "date": date,
                     "sharepack": str(sharepack),
                     "winners": winners_info,
                     "top_compound": top_comp,

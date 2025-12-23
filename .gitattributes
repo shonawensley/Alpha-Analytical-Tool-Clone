@@ -1,0 +1,33 @@
+# Default: normalize text files to LF in repo + working tree
+* text=auto eol=lf
+
+# Common text types
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+
+# Sharepacks are frozen snapshots; disable expensive diffs for large artifacts
+# (GitHub Desktop can hang when trying to render huge CSV/JSON/HTML diffs).
+sharepacks/**/*.csv binary
+sharepacks/**/*.json binary
+sharepacks/**/*.html binary
+sharepacks/**/*.zip binary
+
+# Keep sharepack markdown diffable (README + summary blocks)
+sharepacks/**/*.md text eol=lf
+
+# Binary formats
+*.xlsm binary
+*.xlsx binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary

@@ -18,11 +18,19 @@ def canonical_of_literal(literal: str) -> str:
     return "".join(sorted(str(literal)))
 
 
+def normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def load_winners(date_dir: Path, state: str, winners_arg: str | None) -> dict:
     metrics_path = date_dir / state / "stable" / state / f"{state}_metrics.json"
     if metrics_path.exists():
         metrics = json.loads(metrics_path.read_text())
-        winners = [str(w) for w in (metrics.get("winners") or [])]
+        winners = [normalize_pick3_literal(w) for w in (metrics.get("winners") or [])]
+        winners = [w for w in winners if w]
         out = {}
         if len(winners) >= 1:
             out["Midday"] = winners[0]
@@ -31,6 +39,8 @@ def load_winners(date_dir: Path, state: str, winners_arg: str | None) -> dict:
         return out
     if winners_arg:
         parts = [p.strip() for p in winners_arg.split(",") if p.strip()]
+        parts = [normalize_pick3_literal(p) for p in parts]
+        parts = [p for p in parts if p]
         out = {}
         if len(parts) >= 1:
             out["Midday"] = parts[0]
@@ -64,7 +74,8 @@ def main() -> None:
             print(f"- {p}")
         return
 
-    top_lanes = pd.read_csv(required[1])
+    top_lanes = pd.read_csv(required[1], dtype={"triad": str})
+    top_lanes["triad"] = top_lanes["triad"].map(normalize_pick3_literal)
     top_lanes["rank"] = top_lanes["score_mean"].rank(method="min", ascending=False).astype(int)
 
     winners = load_winners(date_dir, state, args.winners) if date_dir else {}
@@ -74,6 +85,7 @@ def main() -> None:
 
     missing_winners = []
     for label, literal in winners.items():
+        literal = normalize_pick3_literal(literal)
         canon = canonical_of_literal(literal)
         mask = top_lanes["triad"].astype(str).isin([literal, canon])
         if not mask.any():
@@ -89,4 +101,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

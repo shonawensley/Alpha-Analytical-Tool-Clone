@@ -65,7 +65,13 @@ PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharep
 python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>
 ```
 
-If any validator fails: stop and log it as **Fix‑Now** in
+Interpretation (important):
+- **Pipeline / wiring failure (Fix‑Now):** missing required artifacts, or `validate_tables_aux_alignment.py` fails (world snapshot drift).
+- **Tool outcome (record):** `validate_hot_zones_winners.py` can fail simply because Hot Zones didn’t isolate the winner (performance signal), even when the pipeline is fine.
+- `validate_stable_winners.py` prints `NOTE` for “no exact hit”; it fails only on artifact mismatch.
+- **Leading zeros / dtype inference:** treat Pick‑3 literals/triads/canonicals as 3‑digit strings; a naive CSV read can coerce `033 → 33` and create false “missing winner” alarms. Prefer the repo’s summarizers/validators.
+
+If you hit a real Fix‑Now failure: stop and log it in
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 
 ---
@@ -169,4 +175,3 @@ If missing, regenerate (sharepack‑aligned; drift‑proof):
 ```bash
 python3 scripts/tools/export_control_center_sharepack.py --date <D>
 ```
-

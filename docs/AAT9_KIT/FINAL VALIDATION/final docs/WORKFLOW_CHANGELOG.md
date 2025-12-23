@@ -106,3 +106,48 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+
+---
+
+## 2025-12-23
+
+### Evaluation layer: leading-zero false negatives + correct Stable/Hot Zones semantics
+
+- Problem: evaluation scripts were vulnerable to pandas dtype inference (e.g., `033 → 33`), creating false “missing winner” alarms in Stable + Hot Zones summaries/validators.
+- Problem: `validate_stable_winners.py` was validating the wrong criterion (treating “no exact Stable hit” as “pipeline failure”).
+- Fix: force string dtype for ID-like columns (Canonical/triad and winner-literal cols) + normalize Pick‑3 literals as 3-digit strings in sharepack summarizers/validators.
+- Fix: Stable validator now matches the real contract:
+  - validates winner-family presence via `winner_family_ids` + spotlight `family_id`
+  - only requires exact-canonical rows when metrics indicates `exact_*`
+  - prints `NOTE` for “no exact hit” (tool outcome) instead of failing
+- Files:
+  - `scripts/tools/stable_sharepack_summary.py`
+  - `scripts/tools/validate_stable_winners.py`
+  - `scripts/tools/hot_zones_sharepack_summary.py`
+  - `scripts/tools/validate_hot_zones_winners.py`
+  - `scripts/tools/build_winners_log.py`
+  - `scripts/tools/dr_sharepack_summary.py` (tolerate missing winners overlays)
+
+### Sharepack determinism: multi-day-safe freezer (winners hygiene)
+
+- Problem: sharepack “winners” folders could accumulate multiple timestamped reruns copied from live outputs, undermining snapshot clarity.
+- Fix: `freeze_sharepack_day.py` now copies only the newest `.html`/`.json` per winner artifact key (no deletions in live cache).
+- Files:
+  - `scripts/tools/freeze_sharepack_day.py`
+
+### Docs: “Pipeline vs tool outcome” callout (prevents panic loops)
+
+- Added explicit guidance that “tool miss” ≠ “pipeline broke”, plus a note about leading zeros / dtype inference.
+- Files:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+
+### Sharepack evidence refresh (no reruns)
+
+- Regenerated paste-ready `summary.md`/`summary.json` blocks using the updated scripts:
+  - `sharepacks/2025-06-22/*/stable/*/summary.*` and `sharepacks/2025-06-22/*/hot_zones/*/summary.*`
+  - Fixed straggler Stable/Hot Zones summaries for: `sharepacks/2025-06-21/SouthCarolina4/...` and `sharepacks/2025-06-21/Virginia4/...`

@@ -38,8 +38,23 @@ Date convention (important):
   - Do **not** assume the winner must appear in `winner_hits.csv.final_value`. Use `*_winner_stamp.json` `counts` as the semantic anchor.
 - **Canonical vs literal**  
   - Many tool outputs are canonicalized (sorted digits). Example: literal `517` → canonical `157`. Always map literal → canonical before filtering/spot-checking.
+- **Leading zeros / dtype inference (evaluation layer)**  
+  - Treat Pick‑3 literals/triads/canonicals as **3‑digit strings**. A naive `pandas.read_csv()` can silently coerce `033 → 33`, which causes false “missing winner” alarms in validators/summaries.  
+  - Fix: use the repo’s sharepack summarizers/validators (they force string dtype for ID-like columns); don’t reimplement them with default dtype inference.
 - **VTRAC compact report can be empty**  
   - A compact report JSON can exist but contain `states=[]` / `sections=[]`. Run the validator below to fail fast and rerun the VTRAC share bundle if needed.
+
+## Pipeline vs tool outcome (don’t confuse these)
+
+You will see two kinds of “bad news” while validating:
+
+- **Pipeline / wiring failure (Fix‑Now)**: inputs are wrong, missing, or drifting (e.g., tables don’t match Aux draws; sharepack folder missing required artifacts). This invalidates evaluation.
+- **Tool outcome (record, don’t panic)**: the tool ran and wrote artifacts correctly, but it simply did not isolate the winner (e.g., Hot Zones winner not in Top Lanes; Stable “no exact hit”). This is evaluation signal, not corruption.
+
+Interpret the checks accordingly:
+- `validate_tables_aux_alignment.py` is primarily a pipeline guard (world snapshot integrity).
+- `validate_stable_winners.py` is an artifact‑integrity check; it prints `NOTE` for “no exact Stable hit” and fails only on mismatch.
+- `validate_hot_zones_winners.py` is a tool‑coverage check (winner present in Top Lanes); failure is usually a tool performance outcome unless required files are missing.
 
 Workflow changelog (don’t lose “fix later” items across sessions):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
@@ -59,7 +74,7 @@ Related SOPs/refs:
   - Tables↔Aux alignment check (guards against stale/mismatched Aux draw CSVs):
     - Live: `python3 scripts/tools/validate_tables_aux_alignment.py --state <STATE>`
     - Sharepack (Master Validation Part 3): `python3 scripts/tools/validate_tables_aux_alignment.py --date <DATE> --state <STATE> --strict`
-  - Stable winners-in-spotlight check: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE>`
+  - Stable winner spotlight integrity check: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE>` (prints `NOTE` for “no exact hit”; fails only on artifact mismatch)
   - Stable sharepack summarizer (Markdown/JSON for Part 2): `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md --json-out summary.json`
     - Paste the Markdown into Part 2 before answering the tool questions; it already shows canonical mapping, per-output evidence, 4-criteria counts, and coverage gaps.
   - Digit Reduction winner check: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE>`
@@ -67,7 +82,7 @@ Related SOPs/refs:
     - Paste the Markdown into Part 2 before answering; includes per-output labels (stamp/flags/hits/per_item/top/reducer) and explicit **any vs final** counts.
   - V-TRAC sharepack summarizer: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md --json-out summary.json`
     - Lists Brain outputs (enhanced top indices/straights + section summaries) and, if available, auto‑adds the Winners lens from `sharepacks/<DATE>/<STATE>/winners/<STATE>/` (winner VTRAC report JSON/HTML). All facts are labeled by source.
-  - Hot Zones winners check: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE>`
+  - Hot Zones winners check (coverage/performance): `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE>` (failure often means “Hot Zones didn’t isolate winner”, not “pipeline broke”)
   - Hot Zones sharepack summarizer: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md --json-out summary.json`
     - Paste the Markdown into Part 2; includes per-output labels (per_lane/top_lanes/meta/winner_map) and canonical mapping via Stable metrics.
   - Aux sharepack summarizer (Markdown/JSON for Part 3): `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`

@@ -28,13 +28,21 @@ def canonical_of_literal(literal: str) -> str:
     return "".join(sorted(str(literal)))
 
 
+def normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def load_winners_from_stable(date_dir: Path, state: str) -> Optional[Dict[str, str]]:
     metrics_path = date_dir / state / "stable" / state / f"{state}_metrics.json"
     if not metrics_path.exists():
         return None
     metrics = json.loads(metrics_path.read_text())
     winners = metrics.get("winners") or []
-    winners = [str(w) for w in winners]
+    winners = [normalize_pick3_literal(w) for w in winners]
+    winners = [w for w in winners if w]
     mapping = {}
     if len(winners) >= 1:
         mapping["Midday"] = winners[0]
@@ -51,6 +59,7 @@ def summarize_winner_variant(
     winner_map: pd.DataFrame,
     winner_map_file_present: bool,
 ) -> Dict:
+    literal = normalize_pick3_literal(literal)
     canonical = canonical_of_literal(literal)
 
     # Rank top_lanes by score_mean desc
@@ -137,8 +146,10 @@ def main() -> None:
     state_name = sharepack.parents[1].name if len(sharepack.parents) >= 2 else sharepack.name
     date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
 
-    top_lanes = pd.read_csv(sharepack / f"{state_name}_hot_zones_top_lanes.csv")
-    per_lane = pd.read_csv(sharepack / f"{state_name}_hot_zones_per_lane.csv")
+    top_lanes = pd.read_csv(sharepack / f"{state_name}_hot_zones_top_lanes.csv", dtype={"triad": str})
+    top_lanes["triad"] = top_lanes["triad"].map(normalize_pick3_literal)
+    per_lane = pd.read_csv(sharepack / f"{state_name}_hot_zones_per_lane.csv", dtype={"triad": str})
+    per_lane["triad"] = per_lane["triad"].map(normalize_pick3_literal)
     meta = json.loads((sharepack / f"{state_name}_hot_zones_meta.json").read_text())
 
     date = meta.get("date") or "unknown"
@@ -148,11 +159,14 @@ def main() -> None:
     winner_map_path_csv = sharepack / f"{date}_hot_zones_winner_map.csv"
     winner_map_file_present = winner_map_path_csv.exists() or winner_map_path_json.exists()
     if winner_map_path_csv.exists():
-        winner_map_df = pd.read_csv(winner_map_path_csv)
+        winner_map_df = pd.read_csv(winner_map_path_csv, dtype={"triad": str})
     elif winner_map_path_json.exists():
         winner_map_df = pd.DataFrame(json.loads(winner_map_path_json.read_text()))
     else:
         winner_map_df = pd.DataFrame()
+
+    if not winner_map_df.empty and "triad" in winner_map_df.columns:
+        winner_map_df["triad"] = winner_map_df["triad"].map(normalize_pick3_literal)
 
     winners = load_winners_from_stable(date_dir, state_name) if date_dir else None
     if winners is None and args.winners:

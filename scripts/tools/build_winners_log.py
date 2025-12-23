@@ -90,9 +90,16 @@ def read_vtrac_hits(winners_dir: Path) -> dict[str, dict[str, str]]:
     return hits
 
 
-def canonicalize(value: str) -> str:
+def normalize_pick3_literal(value: str) -> str:
     digits = "".join(ch for ch in str(value) if ch.isdigit())
-    return "".join(sorted(digits))
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
+def canonicalize(value: str) -> str:
+    norm = normalize_pick3_literal(value)
+    return "".join(sorted(norm))
 
 
 def build_records_for_state(date: str, state_dir: Path, state: str) -> list[WinnerRecord]:
@@ -106,17 +113,23 @@ def build_records_for_state(date: str, state_dir: Path, state: str) -> list[Winn
         return []
 
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
-    compound = pd.read_csv(compound_path)
+    compound = pd.read_csv(compound_path, dtype={"Canonical": str})
     spotlight_mid = ""
     spotlight_eve = ""
     if spotlight_path.exists():
-        spotlight = pd.read_csv(spotlight_path)
+        spotlight = pd.read_csv(
+            spotlight_path,
+            dtype={
+                "winner_literal_midday": str,
+                "winner_literal_evening": str,
+            },
+        )
         if "winner_literal_midday" in spotlight:
-            spotlight_mid = str(
+            spotlight_mid = normalize_pick3_literal(
                 next((v for v in spotlight["winner_literal_midday"].tolist() if str(v).strip()), "")
             )
         if "winner_literal_evening" in spotlight:
-            spotlight_eve = str(
+            spotlight_eve = normalize_pick3_literal(
                 next((v for v in spotlight["winner_literal_evening"].tolist() if str(v).strip()), "")
             )
 
@@ -134,26 +147,28 @@ def build_records_for_state(date: str, state_dir: Path, state: str) -> list[Winn
     records: list[WinnerRecord] = []
 
     for variant, winner in variant_map.items():
-        winner = str(winner).strip()
+        winner = normalize_pick3_literal(winner)
         if not winner:
             continue
         canonical = canonicalize(winner)
         comp_row = combined.loc[combined["Canonical"].astype(str) == canonical]
         row = comp_row.iloc[0] if not comp_row.empty else None
 
+        fallback_key = winner.lstrip("0") or "0"
         evidence = {
-            "best_compound_rank": best_comp.get(winner),
-            "winner_family_rank": family_ranks.get(winner),
+            "best_compound_rank": best_comp.get(winner) or best_comp.get(fallback_key),
+            "winner_family_rank": family_ranks.get(winner) or family_ranks.get(fallback_key),
             "vt_only_lane": bool(row["vt_only_lane"]) if row is not None and "vt_only_lane" in row else None,
             "funnel_precol1": int(row["funnel_precol1"])
             if row is not None and "funnel_precol1" in row and not pd.isna(row["funnel_precol1"])
             else None,
         }
 
+        hit_row = hits.get(winner) or hits.get(fallback_key) or {}
         classes = {
-            "exact_straight": bool(hits.get(winner, {}).get("exact_straight")),
-            "exact_boxed": bool(hits.get(winner, {}).get("exact_boxed")),
-            "vt_boxed": bool(hits.get(winner, {}).get("vtrac_boxed")),
+            "exact_straight": bool(hit_row.get("exact_straight")),
+            "exact_boxed": bool(hit_row.get("exact_boxed")),
+            "vt_boxed": bool(hit_row.get("vtrac_boxed")),
             "vt_straight": bool(row["vtrac_straight_hits"]) if row is not None and "vtrac_straight_hits" in row else False,
         }
 

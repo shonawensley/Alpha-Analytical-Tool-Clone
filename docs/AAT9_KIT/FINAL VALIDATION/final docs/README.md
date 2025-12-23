@@ -39,6 +39,7 @@ python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD -
 
 Per-run workflow (high level):
 1) Generate/verify sharepack artifacts (see help + preflight).
+   - Interpretation note: a tool can “miss” the winner even when the pipeline is correct; treat that as evaluation signal, not corruption. (See: `AAT9_Final_Validation_Help.md` → “Pipeline vs tool outcome”.)
    - Optional (recommended for full-day freeze): export Control Center (Brain‑2) into `sharepacks/<D>/control_center/`:
      - `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
 2) Generate the run report scaffold (command above).

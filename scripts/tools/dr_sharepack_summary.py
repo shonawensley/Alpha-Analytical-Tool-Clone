@@ -41,12 +41,14 @@ def read_flags_hits(root: Path, stamp: str, variant: str) -> Dict[str, pd.DataFr
     return {"flags": flags, "hits": hits}
 
 
-def detect_latest_stamp(winners_dir: Path) -> str:
+def detect_latest_stamp(winners_dir: Path) -> Optional[str]:
+    if not winners_dir.exists():
+        return None
     stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_stamp.json")})
     if not stamps:
         stamps = sorted({p.name.split("_")[0] for p in winners_dir.glob("*_winner_flags.csv")})
     if not stamps:
-        raise SystemExit("No winner_flags found in sharepack winners/")
+        return None
     return stamps[-1]
 
 
@@ -257,22 +259,23 @@ def main():
     stamp = detect_latest_stamp(winners_dir)
 
     variants = []
-    for variant in ["Midday", "Evening", "Combined"]:
-        flags_hits = read_flags_hits(sharepack, stamp, variant)
-        reducer_scores_path = sharepack / f"{sharepack.name}_digit_reduction_scores.csv"
-        reducer_scores = pd.read_csv(reducer_scores_path) if reducer_scores_path.exists() else pd.DataFrame()
-        stamp_data = read_winner_stamp(sharepack, stamp, variant)
-        variants.append(
-            summarize_variant(
-                variant=variant,
-                per_item=per_item,
-                top=top,
-                stamp_data=stamp_data,
-                flags=flags_hits["flags"],
-                hits=flags_hits["hits"],
-                reducer_scores=reducer_scores,
+    if stamp:
+        for variant in ["Midday", "Evening", "Combined"]:
+            flags_hits = read_flags_hits(sharepack, stamp, variant)
+            reducer_scores_path = sharepack / f"{sharepack.name}_digit_reduction_scores.csv"
+            reducer_scores = pd.read_csv(reducer_scores_path) if reducer_scores_path.exists() else pd.DataFrame()
+            stamp_data = read_winner_stamp(sharepack, stamp, variant)
+            variants.append(
+                summarize_variant(
+                    variant=variant,
+                    per_item=per_item,
+                    top=top,
+                    stamp_data=stamp_data,
+                    flags=flags_hits["flags"],
+                    hits=flags_hits["hits"],
+                    reducer_scores=reducer_scores,
+                )
             )
-        )
 
     if "variant" not in per_item.columns:
         per_item["variant"] = ""
@@ -309,7 +312,7 @@ def main():
         ascending=False,
     )
 
-    md = make_markdown(state_name, stamp, variants, top_items, top_top)
+    md = make_markdown(state_name, stamp or "N/A", variants, top_items, top_top)
     if args.md_out:
         Path(args.md_out).write_text(md)
     if args.json_out:

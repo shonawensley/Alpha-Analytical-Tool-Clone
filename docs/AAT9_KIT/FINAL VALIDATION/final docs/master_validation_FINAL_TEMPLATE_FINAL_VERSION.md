@@ -40,6 +40,11 @@ Prereqs / workflow references:
 - Sharepack convention: `sharepacks/<RESULTS_DATE>/<STATE>/...` (winners/results date D). Tables are built from the history workbook (typically D‑1), then evaluated against winners from D.
 - Per-tool summarizers are intended to be the “paste block” that captures *all key evidence with source labels* (so we don’t paste raw CSVs). Generate/refresh `summary.md`, paste it under step 0), then answer Q1–Q10.
 
+Pipeline vs tool outcome (keep your sanity):
+- **Pipeline / wiring failure (Fix‑Now):** missing required artifacts, drift between tables and Aux draws, empty day-level VTRAC compact report, or missing expected winners artifacts for a state that has winners that day.
+- **Tool outcome (record):** the tool ran and wrote artifacts correctly, but did not isolate the winner (e.g., Hot Zones winner not in Top Lanes; Stable “no exact hit”). This is evaluation signal, not corruption.
+- **Leading zeros / dtype inference:** treat Pick‑3 literals/triads/canonicals as **3‑digit strings**. A naive `pandas.read_csv()` can silently coerce `033 → 33`, creating false “missing winner” alarms. Use the repo’s summarizers/validators (they force string dtype for ID-like columns).
+
 Before you start a tool, confirm you have reviewed *all* of its final outputs (brain vs winners, listed separately per tool). Add a quick “outputs reviewed” note at the top of each tool section.
 
 - **Stable**  

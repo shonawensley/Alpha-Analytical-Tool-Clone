@@ -133,6 +133,8 @@ Golden rule:
 - Always keep D/D‑1 alignment clean and freeze artifacts into a sharepack so later sessions can re-analyze without reruns.
 
 Recommended workflow helpers (no app required):
+- Freeze Brain‑1 into `sharepacks/<D>/` (multi‑day safe):  
+  - `python3 scripts/tools/freeze_sharepack_day.py --date <D>`
 - Generate run report scaffold (Parts 1–5):  
   - `python3 scripts/tools/create_master_validation_run_report.py --date <D> --state <STATE> --out <FILE>`
 - Generate Aux evidence dump (Part 3):  
@@ -179,9 +181,9 @@ Validators (fail fast on common “wiring drift”):
 - Tables↔Aux alignment:
   - Live: `python3 scripts/tools/validate_tables_aux_alignment.py --state <STATE>`
   - Sharepack: `python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict`
-- Stable winners present: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<D>/<STATE>/stable/<STATE>`
+- Stable winner spotlight integrity: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<D>/<STATE>/stable/<STATE>` (prints NOTE for “no exact hit”; fails only on artifact mismatch)
 - DR winners semantics: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE>`
-- Hot Zones winners: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>`
+- Hot Zones winners (coverage/performance): `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>` (failure often means “Hot Zones didn’t isolate winner”)
 - VTRAC compact report non-empty: `python3 scripts/tools/validate_vtrac_compact_report.py --date <D>`
 - Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
 
@@ -196,17 +198,25 @@ Validators (fail fast on common “wiring drift”):
 2) **Canonical vs literal mismatch**
 - If a tool “missed”, first check whether it uses canonical digits (sorted).
 
-3) **VTRAC compact report exists but empty**
+3) **Pipeline vs tool outcome**
+- Pipeline/wiring failure = missing required artifacts or drift (Fix‑Now; evaluation invalid).
+- Tool outcome = artifacts exist but the tool simply didn’t isolate the winner (record as performance; not corruption).
+
+4) **Leading zeros / dtype inference (evaluation layer)**
+- Treat Pick‑3 literals/triads/canonicals as **3‑digit strings**. A naive `pandas.read_csv()` can silently coerce `033 → 33`, creating false “missing winner” alarms in validators/summaries.
+- Fix: use the repo’s summarizers/validators (they force string dtype for ID-like columns).
+
+5) **VTRAC compact report exists but empty**
 - The file can exist but contain `states=[]` / `sections=[]`. Validate before relying on it.
 
-4) **Aux drift after workbook swaps**
+6) **Aux drift after workbook swaps**
 - Aux reads `data/cleaned/draws/` (mutable). Part 3 must snapshot draw CSVs into sharepack to be reproducible.
 - For Master Validation, prefer generating the Aux snapshot from the history workbook (D‑1) so it matches the string-table snapshot:
   - `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
 - Quick verification pattern (no “trust me” required):
   - Compare Aux snapshot head (newest draws) vs the string tables’ `Set1,Draw1,draw_data` row (they should match per variant).
 
-5) **Blocked / untracked states**
+7) **Blocked / untracked states**
 - Some states are known problematic (e.g., GA/TX) and can be skipped until fixed.
 
 ---

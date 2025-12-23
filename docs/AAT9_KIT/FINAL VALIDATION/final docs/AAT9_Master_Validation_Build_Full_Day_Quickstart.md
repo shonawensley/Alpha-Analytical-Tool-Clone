@@ -175,15 +175,23 @@ done
 
 ## 4) Freeze Brain‑1 into sharepacks/<D>/ (full‑day snapshot)
 
-Create the day folder:
-```bash
-mkdir -p sharepacks/<D>
-```
-
 Safety rule:
 - If `sharepacks/<D>/` already exists and contains artifacts, treat it as immutable. Do not overwrite it silently. Either pick a new date folder (for a re-run) or intentionally archive/remove it first.
 
-For each tracked state, copy the live outputs into the sharepack layout:
+### Recommended (multi‑day safe): use the freezer script
+
+If you have run more than one day in this repo, the live output folders can contain multiple historical artifacts (especially Digit Reduction overlays and Hot Zones winner maps). In that case, **do not** use a naive `cp -a .../.` copy; it will drag stale files into the new day sharepack.
+
+Use the safe freezer:
+```bash
+python3 scripts/tools/freeze_sharepack_day.py --date <D>
+```
+
+This copies only the lean, day‑relevant files into `sharepacks/<D>/...` and avoids cross‑day contamination.
+
+### Manual copy (single‑day / clean-output only)
+
+If you are running in a clean workspace (or you just want to do this manually), copy the live outputs into the sharepack layout:
 
 Required inputs (live → sharepack):
 - Tables: `data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv` → `sharepacks/<D>/<STATE>/tables/`
@@ -297,6 +305,13 @@ Per state, generate per‑tool `summary.md` blocks inside the sharepack so later
 - VTRAC: `scripts/tools/vtrac_sharepack_summary.py`
 - Hot Zones: `scripts/tools/hot_zones_sharepack_summary.py`
 (Commands and output paths: see the Evaluate‑Only quickstart.)
+
+Optional validation helpers (interpretation matters):
+- **Pipeline / wiring failures (Fix‑Now):** missing required artifacts, `validate_tables_aux_alignment.py` failures (drift), empty `vtrac_compact_report.json`.
+- **Tool outcomes (record):** a tool can “miss” the winner even when artifacts are correct (this is evaluation signal, not corruption).
+  - Stable: `PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<D>/<STATE>/stable/<STATE>` (prints `NOTE` for “no exact hit”; fails only on mismatch)
+  - DR: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE>` (internal consistency vs stamp)
+  - Hot Zones: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>` (coverage/performance; failure often means “Hot Zones didn’t isolate winner”)
 
 Then scaffold the run report (what you actually fill/share):
 ```bash

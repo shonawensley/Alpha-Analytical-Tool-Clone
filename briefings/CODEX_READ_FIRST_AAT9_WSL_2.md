@@ -52,6 +52,7 @@ Master Validation (frozen day snapshot):
 - Quickstarts (zero-context):
   - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
   - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+  - “Pipeline vs tool outcome” sanity + dtype/leading-zero pitfalls: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 
 2) WSL alignment & PowerShell bridging
 
@@ -122,12 +123,31 @@ python TOOLS/run_vtrac_share_bundle.py
 
 Edit in WSL; commit/push in GitHub Desktop (same WSL path).
 
+GitHub Desktop reliability note (important):
+- Desktop can hang on very large commits (lots of CSV/JSON/HTML) because it tries to diff/render everything.
+- For **sharepacks** and other large artifact batches, prefer **CLI commit** (WSL) and then use Desktop only to **push** (or push via CLI).
+- Repo guard: `.gitattributes` forces LF for text and treats `sharepacks/**/*.csv|json|html` as binary to reduce Desktop diff load.
+
 Local checkpoint (only if asked; no editor popup):
 
 ```bash
 git add -A
 git commit -m "checkpoint: WSL startup doc finalized"
 # prefer pushing in GitHub Desktop
+```
+
+Safer checkpoint pattern (recommended):
+- Commit “code/docs” separately from “sharepacks day” so review/reverts stay clean.
+- Avoid committing the staged working workbook unless you explicitly intend to:
+  - `data/original/Pick3StatsC4.xlsm` is an active staging file and is usually not part of a checkpoint.
+
+Example (sharepacks day only; no push):
+```bash
+D=2025-06-22
+git status -s
+git add "sharepacks/$D" "docs/AAT9_KIT/FINAL VALIDATION/final docs" scripts/tools
+git restore --staged data/original/Pick3StatsC4.xlsm 2>/dev/null || true
+git commit -m "checkpoint: sharepacks $D + validation workflow fixes"
 ```
 
 

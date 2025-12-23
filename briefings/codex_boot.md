@@ -1,6 +1,9 @@
-# Codex Boot Contract — Universal, Desktop-first
+# Codex Boot Contract — Universal (WSL-first)
 
-**Working dir**: `C:\dev\Alpha-Analytical-Tool`
+Status:
+- This file is legacy; prefer `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md` as the session entrypoint.
+
+**Working dir (canonical)**: `/home/ser/code/Alpha-Analytical-Tool-Clone`
 
 **Session config (aim high)**  
 /config model_reasoning_effort=high  
@@ -14,9 +17,11 @@
 **Operating rules**
 1. Think → write a short checkbox plan; wait for **Approved**.
 2. Implement in small diffs; show the /diff before any commit step.
-3. **Do not** change Git remotes or push.
-4. **Do not** run Linux tools on Windows; use PowerShell-native when needed.
-5. When a change is ready, show the diff and STOP. The operator will commit/push via GitHub Desktop.
+3. **Do not** change Git remotes.
+4. Prefer running tools in WSL (avoid `/mnt/c/...` working copies).
+5. Git operations:
+   - OK: local `git status`, `git diff`, staging, and local commits when requested.
+   - Push only when explicitly approved (and never change origin/remote settings).
 
 **Guardrails (edits allowed)**
 - briefings/**
@@ -31,5 +36,5 @@
 
 **Special one-off exception**
 - If a briefings/* document (e.g., hygiene) explicitly asks to edit a root file (like `.gitignore`),
-  you may propose the patch, show /diff, and STOP for operator commit via Desktop.
+  you may propose the patch, show /diff, and proceed with a local commit only if the operator approves.
 Read briefings\codex_boot.md and follow it exactly. After config + quick checks, reply: READY.
