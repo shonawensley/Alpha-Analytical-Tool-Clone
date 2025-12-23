@@ -1,0 +1,34 @@
+# Stable Summary — Florida4 (2025-06-22)
+
+## Midday winner 330 (canonical 033)
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=18 | family_rows=130 | exact_boxed=18 | exact_straight=18 | vt_boxed=18
+- Scores (patterns_scores.csv): rank 23, section Midday, Set Set2, Draw Draw1, Col 3, score 29.0, hot 1, vt_straight 2.0 | why straight|cov3|hp_repeat6|vstr2|vstr3|hot1|double_mirror|vtrac_straight|set_chain3
+- Compound (patterns_compound.csv): rank 24, section Midday, score 50.0, col1_hits 0, hot2 1, set_chain 3, draw_chain 1 | why set_chain3|draw_chain1|hot1x6|hot2x1|vstrx4|dblmirrorx13
+- Families (patterns_families.csv): 57 rows contain digits; best rank 9, section Combined, score 31.5, hot2 1
+- Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=13
+
+## Evening winner 924 (canonical 249)
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=7 | family_rows=41 | exact_boxed=7 | exact_straight=7 | vt_boxed=7
+- Scores (patterns_scores.csv): rank 2977, section Midday, Set Set1, Draw Draw6, Col 2, score 13.0, hot 0, vt_straight 2.0 | why straight|cov2|vstr2|mirror|vtrac_straight
+- Compound (patterns_compound.csv): rank 635, section Combined, score 16.5, col1_hits 0, hot2 0, set_chain 3, draw_chain 1 | why set_chain3|draw_chain1
+- Families (patterns_families.csv): 17 rows contain digits; best rank 86, section Combined, score 25.0, hot2 0
+- Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=8
+
+## Top compound candidates (patterns_compound.csv)
+- rank    1 | canon 788 | section Combined | score 110.0 | col1_hits 8 | hot2 11
+- rank    9 | canon 6788 | section Combined | score 61.5 | col1_hits 6 | hot2 8
+- rank    6 | canon 688 | section Combined | score 67.5 | col1_hits 6 | hot2 8
+- rank   24 | canon 678 | section Combined | score 50.0 | col1_hits 4 | hot2 8
+- rank   22 | canon 0688 | section Combined | score 52.0 | col1_hits 4 | hot2 7
+- rank   27 | canon 068 | section Combined | score 46.5 | col1_hits 3 | hot2 7
+- rank   17 | canon 388 | section Evening | score 54.5 | col1_hits 5 | hot2 6
+- rank   23 | canon 088 | section Evening | score 51.0 | col1_hits 3 | hot2 6
+- rank   12 | canon 788 | section Evening | score 59.0 | col1_hits 5 | hot2 6
+- rank    4 | canon 007 | section Evening | score 81.0 | col1_hits 2 | hot2 6
+
+## Top families (patterns_families.csv)
+- rank 1474 | family 27 | score 7.0 | hot2 0 | section Midday
+- rank 1463 | family 7 | score 7.5 | hot2 0 | section Midday
+- rank  183 | family 32 | score 23.0 | hot2 0 | section Midday
+- rank  248 | family 8 | score 22.0 | hot2 0 | section Midday
+- rank  281 | family 2 | score 21.5 | hot2 0 | section Midday
