@@ -1,17 +1,16 @@
-# Stable Sharepack — NewYork4 (2025-06-23 results)
+# Sharepack — 2025-06-23 — NewYork4
 
-- Workbook: Pick3StatsC4_2025-06-22.xlsm
-- Results file: data/results/2025-06-23.txt
-- Stable command: python3 scripts/tools/run_stable_from_results.py \
-    --state NewYork4 --results-file data/results/2025-06-23.txt --min-occ 1 --results-label "New York"
-- Winners HTML source: reports/stable/winners_by_date/2025-06-23/NewYork4/
+Contents (tool-by-tool, lean bundles + winners):
 
-## Contents
-- stable/ — lean Stable artifacts (scores, families, compound, metrics, winner spotlights, report)
-- winners/ — analyzer-style V-TRAC winners HTML
-- compound_top5.txt — Midday/Evening/Combined Top-5 snapshot
-- headers.txt — column lists for scores/families/compound CSVs
+- Tables (tables/): Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv
+- JSON tables (json/): NewYork4_tables.json
+- Winners (winners/): reports/stable/winners_by_date/2025-06-23/NewYork4/* (HTML/JSON)
+- Digit Reduction (digit_reduction/): reducer report/scores, analyzer_v2 per_item/top/meta, overlays (maps/flags/hits)
+- Stable (stable/): scores, families, compound, metrics.json, winner spotlight raw/families, report HTML
+- VTRAC (vtrac/): enhanced analyzer bundle + validation report for this state
+- Hot Zones (hot_zones/): per_lane, top_lanes, meta, 2025-06-23_hot_zones_winner_map.json
+- Aux (aux/): draw snapshot + Part 3 summary
 
-## Notes
-- Runs use draws through the workbook date (2025-06-22) to target 2025-06-23 winners.
-- See docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md for analysis write-ups.
+Global VTRAC summaries live one level up (`sharepacks/2025-06-23/`):
+- summary.md, summary.csv
+- vtrac_compact_report.json, vtrac_compact_report.csv

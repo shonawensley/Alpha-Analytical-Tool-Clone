@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 from typing import Iterable, List
@@ -115,6 +116,83 @@ def _copy_latest_winner_files(src_dir: Path, dst_dir: Path) -> None:
 
     for _, src in sorted(newest.values(), key=lambda t: t[0]):
         shutil.copy2(src, dst_dir / src.name)
+
+
+def _write_readmes(share_day: Path, *, date: str, states: List[str]) -> None:
+    history_file: str | None = None
+    history_date: str | None = None
+    validation_log = ROOT / "reports" / "stable" / "validation_logs" / f"validation_{date}.json"
+    if validation_log.exists():
+        try:
+            payload = json.loads(validation_log.read_text(encoding="utf-8"))
+            history_file = payload.get("history_file")
+            history_date = payload.get("history_date")
+        except Exception:
+            history_file = None
+            history_date = None
+
+    day_readme = share_day / "README.md"
+    if not day_readme.exists():
+        history_display = history_file
+        if history_display:
+            try:
+                history_display = str(Path(history_display).resolve().relative_to(ROOT))
+            except Exception:
+                pass
+        day_readme.write_text(
+            "\n".join(
+                [
+                    f"# Sharepacks — {date}",
+                    "",
+                    f"Evaluating Pick3StatsC4 `D-1={history_date or 'UNKNOWN'} -> D={date}`",
+                    "",
+                    "This folder is the frozen day snapshot used for Master Validation.",
+                    "",
+                    "## Inputs",
+                    f"- History workbook (H): `{history_display or 'UNKNOWN'}`",
+                    f"- Results file (D): `data/results/{date}.txt`",
+                    "",
+                    "## Contents",
+                    "- Per-state bundles: `<STATE>/` (Stable, Digit Reduction, VTRAC, Hot Zones, Aux, winners lens, tables/json)",
+                    "- Global VTRAC day summaries: `summary.md`, `summary.csv`, `vtrac_compact_report.*`",
+                    "- Brain-2 Control Center export: `control_center/`",
+                    "",
+                    "## Notes",
+                    "- Some states may have missing winners in the results file; in that case the winners lens and winner-overlays may be absent (expected).",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    for state in states:
+        state_readme = share_day / state / "README.md"
+        if state_readme.exists():
+            continue
+        state_readme.write_text(
+            "\n".join(
+                [
+                    f"# Sharepack — {date} — {state}",
+                    "",
+                    "Contents (tool-by-tool, lean bundles + winners):",
+                    "",
+                    "- Tables (tables/): Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv",
+                    f"- JSON tables (json/): {state}_tables.json",
+                    f"- Winners (winners/): reports/stable/winners_by_date/{date}/{state}/* (HTML/JSON)",
+                    "- Digit Reduction (digit_reduction/): reducer report/scores, analyzer_v2 per_item/top/meta, overlays (maps/flags/hits)",
+                    "- Stable (stable/): scores, families, compound, metrics.json, winner spotlight raw/families, report HTML",
+                    "- VTRAC (vtrac/): enhanced analyzer bundle + validation report for this state",
+                    f"- Hot Zones (hot_zones/): per_lane, top_lanes, meta, {date}_hot_zones_winner_map.json",
+                    "- Aux (aux/): draw snapshot + Part 3 summary",
+                    "",
+                    f"Global VTRAC summaries live one level up (`sharepacks/{date}/`):",
+                    "- summary.md, summary.csv",
+                    "- vtrac_compact_report.json, vtrac_compact_report.csv",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
 
 def main() -> None:
@@ -253,6 +331,8 @@ def main() -> None:
         src = vtrac_val_dir / fname
         if src.exists():
             _copy_file(src, share_day / fname)
+
+    _write_readmes(share_day, date=date, states=states)
 
     print(f"[OK] Frozen Brain-1 into {share_day}")
 

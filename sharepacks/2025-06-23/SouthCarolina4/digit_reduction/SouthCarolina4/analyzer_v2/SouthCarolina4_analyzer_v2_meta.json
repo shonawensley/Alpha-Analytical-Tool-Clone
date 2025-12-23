@@ -1,0 +1,97 @@
+{
+  "state": "SouthCarolina4",
+  "items": 1116,
+  "source": "/home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/digit_reduction/SouthCarolina4/training/SouthCarolina4_digit_reduction_logs.json",
+  "config_path": "/home/ser/code/Alpha-Analytical-Tool-Clone/alpha_analytical/digit_reduction/analyzer_v2/config.yml",
+  "config_hash": "832279b576d51e3153e7b756f7ef4fc6e04b5220d258d85891298fc547c085fb",
+  "git_sha": "caddc0f28360730da12913b83998230c1b34ef58",
+  "policy": {
+    "combined_auto_run": true,
+    "write_own_vs_combined_delta": "diagnostic"
+  },
+  "cluster_scan": {
+    "min_len": 3,
+    "max_len": 12
+  },
+  "diagnostics": {
+    "write_training_steps": true,
+    "write_feature_distributions": false,
+    "write_debug_deltas": false,
+    "write_overlay": false
+  },
+  "overlay": {
+    "write_flags": true,
+    "write_detailed_hits_csv": false,
+    "write_html": false,
+    "near_miss_hint": true
+  },
+  "scoring_linear": {
+    "enabled": true,
+    "use_for_top": false,
+    "final_logit_bias": -0.25,
+    "final_logit_scale": 1.0,
+    "thresholds": {
+      "lock": 0.92,
+      "hold": 0.85
+    },
+    "weights": {
+      "w_recency_carryover": 0.2,
+      "w_set_echo": 0.05,
+      "w_variant_echo": 0.05,
+      "w_single_column_rescue": 0.25,
+      "w_vtrac_hot": 0.1,
+      "w_vtrac_local_set": 0.05,
+      "w_mode_own_bonus": 0.1,
+      "w_section_combined_penalty": -0.05,
+      "w_box_family_density": 0.05,
+      "w_dup_bonus": 0.03
+    }
+  },
+  "scoring_v2": {
+    "enabled": true,
+    "use_for_top": true,
+    "weights": {
+      "recency_bonus": 0.5,
+      "family_persistence": 0.2,
+      "singlecol_rescue": 0.35,
+      "density_min": 0.4,
+      "vhot": 0.15,
+      "late_penalty": 0.3,
+      "extended_cluster_bonus": 0.2,
+      "vtrac_family_rescue": 0.3
+    },
+    "guards": {
+      "boost_exact_match": 0.75,
+      "boost_vtrac_match": 0.35,
+      "min_drop_run_len": 5,
+      "drop_only_multiplier": 0.9
+    }
+  },
+  "lockscore": {
+    "enabled": true,
+    "use_for_top": false,
+    "min_lockscore_to_lock": 0.85,
+    "weights": {
+      "w_score_raw": 1.0,
+      "w_earliest_exact": 0.4,
+      "w_earliest_vtrac": 0.3,
+      "w_persistence": 0.35,
+      "w_box_density": 0.25,
+      "w_set_echo": 0.2,
+      "w_variant_echo": 0.1,
+      "w_recency": 0.25,
+      "w_vtrac_hot": 0.2,
+      "w_single_col_rescue": 0.6,
+      "w_double_guard": 0.1,
+      "w_extended_cluster": 0.3
+    },
+    "guards": {
+      "t_early": 3,
+      "t_cols_hit_rescue": 1,
+      "penalty_combined_bias": 0.1,
+      "min_drop_run_len": 5
+    }
+  },
+  "vtrac_hot_source": "none",
+  "vtrac_hot_families": []
+}

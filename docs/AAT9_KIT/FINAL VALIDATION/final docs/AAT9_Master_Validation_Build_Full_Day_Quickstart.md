@@ -128,10 +128,13 @@ done
 ```
 
 ### 3.3 VTRAC enhanced + validator + day bundle
+Important: validate against the **date-scoped winners lens** under `reports/stable/winners_by_date/<D>/<STATE>/`.
+The legacy `data/outputs/winners/` cache can be stale and can produce empty/invalid `vtrac_compact_report.*` if used accidentally.
+
 Per state:
 ```bash
 python3 TOOLS/vtrac_enhanced_cli.py --state <STATE>
-python3 TOOLS/vtrac_validate.py --state <STATE>
+python3 TOOLS/vtrac_validate.py --state <STATE> --winners-dir reports/stable/winners_by_date/<D>/<STATE>
 ```
 
 Then rebuild day‑level VTRAC share artifacts:
@@ -144,7 +147,7 @@ Batch example:
 states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
 for S in "${states[@]}"; do
   python3 TOOLS/vtrac_enhanced_cli.py --state "$S"
-  python3 TOOLS/vtrac_validate.py --state "$S"
+  python3 TOOLS/vtrac_validate.py --state "$S" --winners-dir "reports/stable/winners_by_date/$D/$S"
 done
 python3 TOOLS/run_vtrac_share_bundle.py
 ```

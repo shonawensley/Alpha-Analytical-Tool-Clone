@@ -151,3 +151,24 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - Regenerated paste-ready `summary.md`/`summary.json` blocks using the updated scripts:
   - `sharepacks/2025-06-22/*/stable/*/summary.*` and `sharepacks/2025-06-22/*/hot_zones/*/summary.*`
   - Fixed straggler Stable/Hot Zones summaries for: `sharepacks/2025-06-21/SouthCarolina4/...` and `sharepacks/2025-06-21/Virginia4/...`
+
+### Build-from-scratch gate: full day sharepacks/2025-06-23 (H=2025-06-22 → D=2025-06-23)
+
+- Built a full-day frozen snapshot for `D=2025-06-23` using history workbook `H=2025-06-22`:
+  - Brain‑1 frozen under `sharepacks/2025-06-23/<STATE>/...`
+  - Aux snapshots generated (history‑aligned) and alignment validated (strict)
+  - Brain‑2 Control Center export frozen under `sharepacks/2025-06-23/control_center/`
+  - Run report scaffolds generated under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-23__*.md`
+- Note: there was an older legacy/partial `sharepacks/2025-06-23` snapshot in repo history; it was replaced by the modern schema so `sharepacks/<D>/` remains the canonical “day folder”.
+
+### VTRAC validation: use date-scoped winners lens (prevents empty compact reports)
+
+- Updated the build-from-scratch quickstart to ensure `TOOLS/vtrac_validate.py` validates against:
+  - `reports/stable/winners_by_date/<D>/<STATE>/`
+- The legacy `data/outputs/winners/` cache can be stale and may yield empty/invalid `vtrac_compact_report.*` if used accidentally.
+
+### Sharepack usability: freezer writes README.md if missing
+
+- `scripts/tools/freeze_sharepack_day.py` now writes:
+  - `sharepacks/<D>/README.md` (history/results mapping, contents)
+  - `sharepacks/<D>/<STATE>/README.md` (what should be inside per state)
