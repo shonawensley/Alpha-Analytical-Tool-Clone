@@ -1,0 +1,241 @@
+TL;DR: Yes—give Codex a single “master implementation packet” for the 12 profit trackers, but include a few extra guardrails so Codex doesn’t drift: (1) lock the alerts contract (path + schema) and resolve the current “two competing paths/schemas” in your docs, (2) implement trackers as deterministic event detectors that convert string‑table events → computed flags, (3) ship unit/backtest checks that prove alerts don’t fire when they shouldn’t, and (4) wire a minimal Control Center Alerts Panel that reads the emitted CSVs and ranks by strength/caps/decay.
+
+Step‑by‑step (what you should give Codex + the extra optimal instructions)
+1) What to give Codex as the “single doc”
+
+If you truly want one document that Codex can implement from end‑to‑end, the closest thing to a ready‑to‑paste spec is 12 PART PROFIT.md, which explicitly says it contains the full spec including “what to detect… caps/decay… fields to add… unit tests… config… and Control Center wiring.”
+
+12 PART PROFIT
+
+So, yes: you can hand Codex one primary doc (that one), and only add support docs if Codex needs clarification on “why”/interpretation.
+
+Support docs worth attaching only if needed (recommended):
+
+12_trackers_advice.txt (your condensed “integration plan + practical notes”). It is aimed at implementation sequencing and how to keep it “tracker‑only” first.
+
+12_trackers_advice
+
+AAT9 Architecture and Master Validation Framework.md (because it defines how you validate alerts, tune caps/decay, and check co‑occurrences).
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…
+
+THE PROFIT BLUEPRINT.md only if Codex needs deeper “why/how to read tables” context (but the core coding should be driven by the formal spec).
+
+2) The most important “extra instructions” I’d add before you send Codex off
+
+These are the guardrails that prevent 80% of integration failures.
+
+A) Force a single canonical Alerts Contract (path + schema) before coding
+
+Right now your docs describe two different output locations / shapes:
+
+12_trackers_advice.txt proposes a Control‑Center‑centric daily file like:
+reports/control_center/daily_alerts/<DATE>/alerts.csv
+
+12_trackers_advice
+
+
+with columns like state,date,alert_id,variant,set,draw_idx,col,k_canon,strength,action,cap_lines,decay_draws,badges,evidence_json
+
+12_trackers_advice
+
+12 PART PROFIT.md proposes a per‑state daily file like:
+data/outputs/alerts/<STATE>/<YYYY-MM-DD>.csv
+
+12 PART PROFIT
+
+
+with columns like alert_id,state,section,set,draw,col,canonical,strength,suggested_kind,cap_lines,decay_in_draws,venue_default,evidence_json,created_at
+
+12 PART PROFIT
+
+Instruction to Codex: pick one canonical contract and implement everything around it (writers + readers + UI). If you want both, implement one canonical and have the other be a generated copy/rollup. (This is a design decision, but the need to choose is evidenced by the conflicting specs above.)
+
+B) Treat trackers as “event detectors,” not “betting logic”
+
+The intended architecture is explicitly: Brain‑1 modules emit alert rows, Control Center displays/ranks them, and any “Operator Plan” / spend discipline comes later.
+
+12 PART PROFIT
+
+12 PART PROFIT
+
+So Codex should implement:
+
+detection + serialization (alerts CSV rows) in Brain‑1 tools
+
+loading + display (Alerts Panel) in Brain‑2 Control Center
+
+…and stop there (no ROI engine, no wagering automation).
+
+C) Codex must implement “string‑table events” as computed flags, not as manual table reading
+
+Your condensed plan explicitly frames the goal as capturing profitability signals without depending on long string tables, by converting “string‑table events” into computed columns/flags that trackers can use deterministically.
+
+12_trackers_advice
+
+So the instruction is:
+
+every alert must have a clear boolean trigger derived from computed fields (e.g., cons_tail_2d, rowcov, perm==1, cross‑section consensus count, etc.), not from “a human noticed it in the table.”
+
+those computed fields must be exported into evidence (evidence_json) so Master Validation can verify them.
+
+D) Require evidence_json on every alert row (non‑negotiable)
+
+Both the advice doc and the spec emphasize that each alert row must include compact evidence for debugging and validation.
+
+12_trackers_advice
+
+12 PART PROFIT
+
+Codex should treat evidence_json as a required, schema‑validated field.
+
+E) Implement (and surface) a consistent strength score rubric
+
+Your spec defines a starter strength formula (base + bonuses like consensus grade, row coverage, perm/entropy, BA triggers, VTRAC align/repeat risk, minus age penalty) and a 1–5 interpretation (“watch” → “green‑light”).
+
+12 PART PROFIT
+
+Codex should implement it exactly as written first (even if imperfect), because it allows Control Center to rank alerts consistently.
+
+F) Codex must include the “don’t fire when invalid” checks and co‑occurrence validation hooks
+
+Your architecture doc is explicit that validation should confirm alerts do not fire when prerequisites are missing (example: incomplete consensus rows), and that you should validate intended co‑occurrences (example: A03 should imply A01 or A02 in the same context).
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…
+
+So Codex’s integration must include:
+
+negative tests / guardrails for “insufficient rows / incomplete consensus” cases
+
+at least basic co‑occurrence checks for the “designed relationships” (A03 vs A01/A02, etc.)
+
+G) Caps & decay must be implemented, and later tuned by Master Validation
+
+Your validation guidance says to compute median draws‑to‑hit and tune decay accordingly, and to flag cases where an alert would exceed its cap (meaning the alert is too broad).
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…
+
+So Codex should:
+
+store cap_lines + decay_in_draws on each alert row (as in spec)
+
+12 PART PROFIT
+
+ensure any “recommended lines” logic never emits more than cap (or emits an explicit “over cap” badge for validation)
+
+3) What Codex should build, in the smallest reliable sequence
+
+This ordering minimizes rework and keeps the system testable at every stage:
+
+Implement the shared Alerts Contract
+
+choose canonical path + schema (resolve the mismatch above)
+
+12_trackers_advice
+
+12 PART PROFIT
+
+create a single writer helper (append rows; create dirs) (spec hints at this helper)
+
+12 PART PROFIT
+
+Implement alert detection for the first alert(s) end‑to‑end
+Start with A01 (explicitly specified and tied to Stable + BA) so the pipeline is proven. A01’s detect/play/evidence/tests are clearly outlined in the spec.
+
+12 PART PROFIT
+
+Wire Control Center Alerts Panel to read the alert CSVs and show rows
+This is part of the intended architecture (alerts CSVs → Control Center Alerts Panel).
+
+12 PART PROFIT
+
+AAT9 Architecture and Master Va…
+
+Add unit/backtest checks for “shouldn’t fire” + co‑occurrence expectations
+Because the Master Validation harness is expected to behave like “unit tests with real data.”
+
+AAT9 Architecture and Master Va…
+
+Repeat alert‑by‑alert until A12, keeping contract stable
+
+4) The exact “Codex prompt” structure I’d use (so it can run long unattended)
+
+You can paste something like this to Codex (no placeholders; keep it strict):
+
+Read these docs fully first:
+
+12 PART PROFIT.md (authoritative spec; implement exactly)
+
+12 PART PROFIT
+
+12_trackers_advice.txt (sequencing + tracker‑only guidance)
+
+12_trackers_advice
+
+AAT9 Architecture and Master Validation Framework.md (validation + tuning expectations)
+
+AAT9 Architecture and Master Va…
+
+Non‑negotiables:
+
+Choose ONE canonical alerts output path/schema (docs conflict; resolve explicitly).
+
+12_trackers_advice
+
+12 PART PROFIT
+
+Every emitted alert row must include evidence_json.
+
+12_trackers_advice
+
+12 PART PROFIT
+
+Implement strength rubric from spec; rank alerts in Control Center.
+
+12 PART PROFIT
+
+Add negative tests: alerts must not fire when prerequisites missing; add at least one co‑occurrence validation check. 
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…
+
+Deliverables:
+
+Alert rows written by Brain‑1 modules → visible in Control Center Alerts Panel (end‑to‑end).
+
+12 PART PROFIT
+
+Implement A01..A12 detection per spec, each with tests (spec explicitly calls for evidence + tests per alert).
+
+12 PART PROFIT
+
+Document the final chosen alert schema/path decision in a repo doc.
+
+Direct answer to your question
+
+Should you just give Codex the comprehensive plan? Yes—but only if that plan includes (a) the canonical alerts contract, (b) the computed‑flag translation of string‑table events, and (c) the validation guardrails (don’t‑fire‑when‑invalid + co‑occurrence checks). Those are the additional instructions that keep this from turning into a fragile integration.
+
+12_trackers_advice
+
+AAT9 Architecture and Master Va…
+
+If you want to give only one document: give 12 PART PROFIT.md (it’s explicitly positioned as the ready‑to‑implement spec for Codex).
+
+12 PART PROFIT
+
+Sanity Check
+
+After Codex finishes, run a single state/day pipeline and verify an alerts CSV is produced in the chosen canonical path with all required columns including evidence_json. Compare against the schema in the spec/advice doc. 
+
+12 PART PROFIT
+
+12_trackers_advice
+
+Pick one alert (A01 is ideal) and confirm a “negative case” where prerequisites are missing produces zero fires, as your validation methodology requires.

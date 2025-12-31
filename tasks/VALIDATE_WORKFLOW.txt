@@ -1,0 +1,233 @@
+TL;DR:
+
+Yes — it’s totally OK (and usually best) to have the trackers read the JSON tables as the primary “string table” input, as long as you treat JSON as a mirror of the CSV tables (so the scanner logic is format‑agnostic and you can fall back to CSV if needed).
+
+AAT9 Architecture and Master Va…
+
+Your proposed path is the right order: (1) validate the day‑freeze workflow, (2) prove it repeats on a second workbook/day, (3) then install A01–A12 as tracker‑only alerts using the shared alert‑row schema.
+
+Architecturally, “Control Center having access to everything” should be interpreted as: Control Center reads frozen outputs (sharepacks) and displays precomputed alert rows. It should not be doing heavy computation live; your detectors should write alert rows, and CC just aggregates/displays them.
+
+deepresearch_trackers
+
+1) Quick clarification: JSON tables vs CSV tables for trackers (your confusion)
+What the docs imply is the clean mental model
+
+The system produces tables in CSV (Midday_Combined / Evening_Combined / Combined_Combined) and also produces JSON tables alongside them (described as rebuilt together / “JSON mirrors”).
+
+Tools may treat the CSV tables as a “primary/SSOT” input in places, but the presence of JSON is explicitly part of the rebuild outputs, and downstream code can often be written to accept either representation if the keys/semantics match.
+
+AAT9 Architecture and Master Va…
+
+So can you “stick to JSON tables” for tracker detection?
+
+Yes, that’s a reasonable and efficient choice for the “string table scanner” layer, provided you keep one discipline:
+
+Treat JSON as a mirror of the CSV tables (same information, different container), and design the scanner so it’s format‑agnostic (read JSON in prod, but keep a trivial fallback path to load CSV if a JSON build breaks). This is consistent with the broader “CSV + JSON mirror” pattern described in the Stable outputs doc (“downstream code can choose either format with zero logic change”).
+
+AAT9 Architecture and Master Va…
+
+Why you may have “heard CSV again” in the last message
+
+Because some modules still cite CSV as SSOT (example: Digit Reduction notes say it relies on the tables folder as SSOT, not JSON).
+
+AAT9_Final_Validation_Help
+
+
+That doesn’t mean trackers must use CSV — it just means: don’t delete/ignore CSV; keep both so you can validate parity and avoid a future dead-end.
+
+Conclusion (High confidence): Trackers can read JSON as the primary “string tables” source; keep CSV as SSOT/backstop and validate mirror parity on at least two days.
+
+2) Your proposed path forward (validate → repeat → install A01–A12) is the correct risk order
+
+Your idea matches the “low risk / bounded scope” philosophy in the Profit blueprint:
+
+The blueprint explicitly supports installing signals/indicators + Control Center first, and delaying the heavier “profitability manager / progression manager” layer until later.
+
+And it matches what your current Final Validation tooling is trying to guarantee:
+
+The preflight wrapper exists to guarantee the correct workbook is active, tables + JSON rebuilt, Aux drift guarded, and winners generated from the intended day‑ahead results file.
+
+AAT9_Master_Validation_Preflight
+
+AAT9_Master_Validation_Preflight
+
+So: yes — validate the current “freeze a day” workflow, then repeat it for a second day/workbook as an integration test, then add trackers.
+
+3) What’s actually “solid now” vs what still needs proving (so you don’t get burned)
+Solid (evaluation is reproducible once frozen)
+
+You now have a sharepack‑aligned Control Center export (“Brain‑2 freeze”) that outputs day-level CC artifacts into sharepacks/<D>/control_center/.
+
+important_insights
+
+The unified changelog describes this as reading frozen Aux snapshots from sharepacks/<D>/<STATE>/aux/... and writing day-level artifacts to sharepacks/<D>/control_center/.
+
+deepresearch_trackers
+
+This is exactly the “drift-proof evaluation” concept: once frozen, you can re-open/share/compare without the live folders mutating underneath you.
+
+deepresearch_trackers
+
+Still needs proving (repeatable “day builder” across multiple workbooks)
+
+Even if the steps are understood, real-world runs can fail for “data-shaped” reasons (missing/odd results formatting, a state missing tables, etc.). The preflight doc is basically a catalog of drift guards for that reason (CT/FL sentinel checks, winners/table alignment, Aux alignment).
+
+AAT9_Master_Validation_Preflight
+
+AAT9_Master_Validation_Preflight
+
+Also: one snapshot suggests that (at least at the time of that log) sharepacks/2025-06-21 contained only Ontario and Connecticut, and CT was missing Aux/summary artifacts — which is exactly why doing a second full-day run is a good confidence-builder before declaring “done.”
+
+important_insights
+
+4) The fastest “is this day actually valid?” validation loop (practical checklist)
+
+This is the shortest path to confidence without reading hundreds of outputs — it uses the repo’s own drift guards.
+
+A. Prove the “world snapshot” is correct (tables/JSON/winners/Aux alignment)
+
+Use the wrapper whose stated goal is correctness of: active workbook, rebuilt tables+JSON, day-ahead results winners, plus CT/FL alignment checks.
+
+AAT9_Master_Validation_Preflight
+
+AAT9_Master_Validation_Preflight
+
+It explicitly rebuilds tables + JSON and regenerates Aux draw CSVs for sentinel states to avoid drift, then validates tables↔Aux alignment.
+
+AAT9_Master_Validation_Preflight
+
+B. Prove sharepack freeze has the required artifacts
+
+Your “Definition of Done” for a day (for later tracker install) should be:
+
+sharepacks/<D>/<STATE>/tables/ has the three combined tables (CSV) AND sharepacks/<D>/<STATE>/json/<STATE>_tables.json exists.
+
+AAT9_Master_Validation_Preflight
+
+Aux snapshot exists in the sharepack (sharepacks/<D>/<STATE>/aux/...) so Part 3 stays reproducible; the docs say it snapshots draw CSVs into sharepacks/<DATE>/<STATE>/aux/draws/ and you paste sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md when answering Part 3.
+
+important_log1
+
+Brain‑2 export exists under sharepacks/<D>/control_center/ (and can be regenerated by the export script).
+
+important_insights
+
+If any of those are missing, it’s not “ready for trackers” yet — because trackers should read the frozen day snapshot.
+
+5) Now, your earlier beginner questions (Q1–Q4) — clarified cleanly
+Q1) “Do trackers have access to everything across states/tools if Control Center runs?”
+
+Conceptually yes, but only in the filesystem sense — not as one big in-memory brain.
+
+What the architecture implies:
+
+Brain‑1 tools produce per‑state outputs.
+
+Brain‑2 / Control Center is designed to read Brain‑1 outputs and present aggregated boards; it should not rerun or mutate per-state pipelines.
+
+deepresearch_trackers
+
+For the Profit alerts, the spec is: tools/trackers write alert rows in a shared schema, and Control Center displays them as an “Alerts Panel.”
+
+So the “optimal” pattern is:
+
+Detectors run against the frozen sharepack artifacts (tables/json + stable/dr/vtrac/hotzones + aux snapshots),
+
+Emit daily alert rows,
+
+Control Center simply loads and displays them.
+
+That is exactly the “easy to gather everything” advantage you’re describing.
+
+Q2) Shared schema — what it really means (and how it relates to JSON tables)
+
+The “shared schema” is not a list of features all trackers share. It’s the standard output row shape that every alert writes so Control Center can display it consistently.
+
+The schema fields are explicitly listed as:
+state, date, alert_id, variant, set, draw_idx, col, k_canon, strength, action, cap_lines, decay_draws, badges, evidence_json
+
+Anything “feature-like” that is alert-specific goes into evidence_json. That’s why the schema includes that field explicitly.
+
+So: if you’re worried “we can’t currently identify certain features,” the first pass doesn’t require stuffing them into JSON tables. You can:
+
+compute them in the tools (Stable/DR/VTRAC/Hot Zones) and
+
+attach them as evidence in evidence_json.
+
+Q3) Mix of table-specific features vs analytical tool features?
+
+Yes — the rollout checklist is explicit that you cannot depend only on string tables; you need computed columns/flags from the analytical tools too.
+
+Example: the checklist calls out needed Stable computed columns (cons_*, rowcov_*, perm_*, order dominance, etc.) and also flags from other modules like Digit Reduction / VTRAC / Hot Zones.
+And the “module-level field additions” list is very explicit about extra fields to add to Stable (consensus tail, row coverage, perm collapse, order dominance), Digit Reduction (survivor/doubles bias), VTRAC (repeat risk), and Hot Zones (star levels).
+
+Q4) “If these features aren’t in the tools, is it doable to add them?”
+
+Yes — the spec expects exactly that.
+
+You’re not “misunderstanding”: the build plan literally includes “module-level field additions” and a rollout checklist that requires adding computed columns and small flags so alerts can be detected deterministically.
+
+So if you don’t find a field in the tool output, that’s not a dead end — it’s a known integration step.
+
+6) How A01–A12 should be installed after validation (clean, low-risk plan)
+A. Use the shared daily alerts schema as SSOT
+
+The spec explicitly defines the daily alerts output location and schema:
+
+Output path: reports/control_center/daily_alerts/<DATE>/alerts.csv
+
+Output fields: state, date, alert_id, variant, set, draw_idx, col, k_canon, strength, action, cap_lines, decay_draws, badges, evidence_json
+
+B. Make it tracker‑only first (no progression logic)
+
+This is directly aligned with the blueprint’s “install signals/indicators first; profitability manager later” modular plan.
+
+C. Keep caps/strength deterministic via config
+
+The Profit doc provides explicit caps for A01–A12 (max lines), e.g.:
+A01=12, A02=6, A03=8, A04=12, A05=8, A06=12, A07=12, A08=12, A09=8, A10=6, A11=12, A12=5.
+It also lists strength weights (A01 1.20, A02 1.10, …).
+
+That gives you a “first-pass strength” that’s consistent and won’t devolve into subjective tuning on day 1.
+
+D. Use fixtures so context resets stop destroying progress
+
+The doc literally lists fixtures to validate each alert (A01…A12), e.g. A01_cons_break_midday_2025_06_21, … A12_carry_clamp_2025_06_21 etc.
+This is exactly how you prevent “new Codex session” regressions: fixtures are the shared language.
+
+7) One more thing: how “scripts + blocks + questions” actually fit (in plain English)
+
+You do still answer the questions — but you answer them inside a run report, not by pasting raw outputs.
+
+The system’s structure (as described in your logs/docs) is:
+
+Summarizers produce compact evidence blocks (like summary.md) from tool outputs so you don’t paste hundreds of files. The Aux summarizer explicitly snapshots draw CSVs into the sharepack and tells you to paste sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md into Part 3 before answering Q1–Q10.
+
+important_log1
+
+The run report generator “stitches links + embeds per-tool summary.md blocks.”
+
+important_logstart
+
+The canonical template and run-report structure include Parts 4–5 (translation layer + final summary), and the docs explicitly position the run report as the “one place” to fill Parts A–5 with embedded summarizer blocks.
+
+important_insights
+
+important_insights
+
+That’s the “single place where it all comes together”: sharepacks store evidence, run report is what you fill/share.
+
+Sanity Check
+
+Verify JSON-vs-CSV tracker safety: pick one state and confirm the rebuilt outputs include both data/outputs/tables/<STATE>/Combined_Combined.csv and data/outputs/json_tables/<STATE>_tables.json as part of the “rebuild tables + JSON” process.
+
+AAT9_Master_Validation_Preflight
+
+AAT9_Master_Validation_Preflight
+
+Verify the milestone you’re relying on: confirm you can regenerate Brain‑2 day artifacts into sharepacks/<D>/control_center/ using the Control Center exporter described in the workflow changelog (2025-12-20 entry).
+
+important_insights
+
+If you want, paste one sharepack day folder tree (just ls output for sharepacks/<D>/) and I’ll tell you, deterministically, whether that day is “ready for trackers” or which exact artifact class is missing.

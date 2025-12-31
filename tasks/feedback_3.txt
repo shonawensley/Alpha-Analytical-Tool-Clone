@@ -1,0 +1,229 @@
+TL;DR: The “cut off / thinking failed” behavior is almost certainly a message-length/context glitch (logs + long transcripts often exceed what the chat UI will reliably preserve). Splitting into REVIEW_5 and REVIEW_6 was the right fix. After reviewing both, I agree with Codex’s recommendations: you already have the correct backbone (windowed/decay evaluation + deterministic evaluator + Pick‑3 canonical correctness). The #1 remaining blocker to trustworthy readouts is still the same: a per‑AID grading contract (candidate vs overlay/promoter) + set-based grading + merged-episode view before you expand the corpus. (/mnt/data/REVIEW_5.txt:L102-L111)
+
+Step-by-step (what I see, what’s done, what’s missing, and what to tell Codex)
+1) Why your pasted sections “got cut off” (and why “thinking failed” can show up)
+When a single message contains very large logs + multiple long transcripts, many chat systems will truncate or drop segments (sometimes silently). That’s consistent with what you experienced. Splitting the material into two files (as you did) reduces the chance of truncation and makes review/quoting deterministic.
+Practical rule: keep one message = one primary artifact (one log, or one doc, or one question), and attach the rest as files.
+
+2) What’s already “structurally correct” per REVIEW_5
+From REVIEW_5, you already have the key engineering primitives in place:
+
+
+A written evaluation contract/charter + a deterministic evaluator harness. (/mnt/data/REVIEW_5.txt:L102-L111)
+
+
+Evaluation is explicitly windowed-first (DecayDraws), with strict “D-only” treated as diagnostic. (/mnt/data/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md:L140-L145)
+
+
+You added a hard contract for Pick‑3 actionable canonicals (3-digit Canonical; 3-digit orders_modal_value when used), and you’re filtering out non‑Pick‑3 rows in the exporter for A05/A12 candidate selection. (/mnt/data/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md:L146-L152)
+
+
+You re-exported and re-evaluated the “gold days” (and called out that missing future results should be treated as CENSORED, not failure). (/mnt/data/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md:L135-L139)
+
+
+So you’re not “in a mess” structurally; you’re at the exact point where measurement semantics must be finalized.
+
+3) Why Codex’s “#1 blocker = grading contract” is correct
+Codex’s summary says the remaining blocker is: per‑AID grading contract (candidate alerts vs overlay/condition alerts). That matches what REVIEW_5 itself frames as the unresolved semantic gap. (/mnt/data/REVIEW_5.txt:L184-L189)
+This is also consistent with your architecture doctrine that profit alerts should be tracked as episodes with outcomes over time (hit rate + average draws-to-hit), not merely “did it hit tomorrow.” (/mnt/data/AAT9%20Architecture%20and%20Master%20Validation%20Framework.md:L9-L10)
+And Profit Part 2 explicitly operationalizes this via the concept of active_episodes.json (i.e., “carryover as state,” not memory). (/mnt/data/12%20PART%20PROFIT%20PART%202.md:L3087-L3090)
+
+4) The missing SSOT deliverable: Profit Alerts Grading Matrix
+You need one small SSOT artifact that removes ambiguity forever:
+
+
+For each A01–A12: type, graded object, window policy, coverage/cost proxy, and required evidence fields.
+
+
+Your own Profit spec already defines the alerts in a way that supports this classification (including the fact that A03 is explicitly an overlay and A10/A11 “promote” other alerts, i.e., they are not clean “number calls” in isolation). (/mnt/data/12%20PART%20PROFIT.md:L352-L416)
+A working draft grading matrix (you can paste into a doc)
+Below is a concrete matrix aligned to the A01–A12 definitions you have in the spec. (/mnt/data/12%20PART%20PROFIT.md:L352-L416)
+AlertTypePrimary graded objectWhat the evaluator should scoreA01CandidateBOX hit within DecayDrawsWinner matches Canonical under boxed equivalence within windowA02CandidateStraight-overlay set hit within DecayDrawsWinner ∈ A02’s STR8 set within window (set defined by your STR8 logic)A03OverlayRelationship / correlationDo not grade as “canonical hit”; score conditional lift / co-fire relationshipsA04CandidateBOX hit within DecayDrawsWinner matches Canonical boxed within windowA05CandidateStraight hit within DecayDrawsWinner equals orders_modal_value (and/or ∈ STR8 set when applicable)A06CandidateBOX hit within DecayDrawsWinner matches Canonical boxed within windowA07CandidateBOX hit within DecayDrawsWinner matches Canonical boxed within windowA08CandidateBOX hit but sourced from BA “remaining pairs”Winner ∈ BA-derived candidate pack within window (not necessarily a single canonical)A09CandidateVTRAC index hit within DecayDrawsWinner falls into the alert’s vtrac_current_index family within windowA10Promoter / overlayEvent hit within DecayDraws“A double occurred” (and optionally “top-3 due double family occurred”) within windowA11Candidate + promoterBOX hit, plus stratify by star metricsWinner matches Canonical boxed; also report metrics by a11_star_levelA12CandidateClamp straight-set hit within DecayDrawsWinner ∈ A12’s “selected straights” set (4–5 of 8) within window
+Key grounding points from the spec:
+
+
+A03 is explicitly “overlay: yes.” (/mnt/data/12%20PART%20PROFIT.md:L389-L398)
+
+
+A10 outputs due_doubles_rank and “promotes A02.” (/mnt/data/12%20PART%20PROFIT.md:L409-L411)
+
+
+A11 outputs star metrics and “promotes A01/A04.” (/mnt/data/12%20PART%20PROFIT.md:L412-L413)
+
+
+This is why grading everything as “did canonical equal winner” will necessarily produce false “0 hits” for overlay/promoter alerts.
+
+5) The other missing SSOT behavior: merged-episode view
+Your Profit spec explicitly says co-firing alerts should be collapsed/merged into a single actionable row, keeping the strongest signal and using the lowest cap. (/mnt/data/12%20PART%20PROFIT.md:L3126-L3141)
+If you only report 12 raw rows per day per state, humans will misread it as “12 independent bets,” which the spec explicitly tries to avoid. (/mnt/data/12%20PART%20PROFIT.md:L3126-L3141)
+So the evaluator should output two views:
+
+
+Raw alert rows (for debugging)
+
+
+Merged episodes (for “what you would actually do” and for stable performance reading)
+
+
+
+6) What I think about Codex’s recommended plan (and how I’d tighten it)
+I agree with Codex’s steps in the same order, with one tightening: do not expand corpus until grading semantics are correct—otherwise you just scale ambiguity.
+Codex’s key items that are correct:
+
+
+Windowed evaluation + episode lifecycle are first-class. (/mnt/data/REVIEW_5.txt:L102-L111)
+
+
+The evaluator must remain local + deterministic, using frozen sharepacks and results files (consistent with the “drift-proof” posture implied by your architecture). (/mnt/data/AAT9%20Architecture%20and%20Master%20Validation%20Framework.md:L9-L10)
+
+
+Pick‑3 correctness is a hard contract for export (you already implemented that). (/mnt/data/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md:L146-L152)
+
+
+One addition I would explicitly require (because it’s in your Profit doc):
+
+
+Decay tuning should use time-to-hit distributions, and the system should record “time_to_hit” when it hits within the window. (/mnt/data/12%20PART%20PROFIT.md:L3154-L3155)
+
+
+
+7) My answer to Codex’s “decision preference” question (A03/A08/A10/A11)
+Codex asked whether you want A03/A08/A10/A11 treated primarily as overlay correlation metrics, or whether the exporter should surface a concrete candidate pack so they can be graded like “did the pack hit.”
+Here’s the clean, spec-aligned answer:
+
+
+A03: keep as overlay/correlation, do not force it into a candidate pack. It is explicitly an overlay. (/mnt/data/12%20PART%20PROFIT.md:L389-L398)
+
+
+A10: treat as promoter/event overlay (double-event likelihood); grade the event within window and measure conditional lift when it co-fires with A02. It “promotes A02,” which is a tell that it’s not meant to stand alone as a number call. (/mnt/data/12%20PART%20PROFIT.md:L409-L411)
+
+
+A08: treat as candidate-style, but the “candidate” may live as a BA-derived pack rather than a single canonical. The spec positions it as “Remaining pairs BA … Suggested: BOX.” (/mnt/data/12%20PART%20PROFIT.md:L403-L405)
+
+
+A11: treat as candidate + promoter: grade boxed hits, but stratify performance by star level/score, because the spec exports those fields. (/mnt/data/12%20PART%20PROFIT.md:L412-L413)
+
+
+This preserves semantics and prevents the “overlay graded as a number call” trap.
+
+8) Exact instructions you can paste to Codex (minimal risk, maximum forward progress)
+Message to Codex
+
+
+Write SSOT: Profit Alerts Grading Matrix
+
+
+Add a short doc “Profit Alerts Grading Matrix” defining for each A01–A12:
+
+
+type: candidate vs overlay/promoter
+
+
+graded_object: box_set / straight_set / vtrac_index_set / event / relationship
+
+
+windows: primary = DecayDraws, plus diagnostic 7/14 draw-steps
+
+
+required evidence fields and coverage_size (cost proxy)
+
+
+
+
+Ground it directly in the A01–A12 definitions and the “co-firing merge” rule. (/mnt/data/12%20PART%20PROFIT.md:L352-L416) (/mnt/data/12%20PART%20PROFIT.md:L3126-L3141)
+
+
+
+
+Upgrade evaluator to set-based grading
+
+
+If Suggested is BOX: grade boxed membership (coverage is permutations of digits).
+
+
+If Suggested is STR8_*: grade membership in the explicit STR8 set produced by your system’s STR8 logic (not “canonical equals winner”).
+
+
+Add explicit “coverage_size” and “hit_type” fields (BOX vs STR8 vs VTRAC vs EVENT).
+
+
+Record time_to_hit when a hit occurs, consistent with decay tuning guidance. (/mnt/data/12%20PART%20PROFIT.md:L3154-L3155)
+
+
+
+
+Implement overlay/promoter grading
+
+
+A03: do not produce HIT/MISS on canonical; output relationship/correlation metrics (e.g., conditional hit rate uplift when A03 is present).
+
+
+A10: grade as EVENT within window (double occurred), and report conditional uplift when co-fired with A02. (/mnt/data/12%20PART%20PROFIT.md:L409-L411)
+
+
+
+
+Add merged-episode view
+
+
+Implement an “episode merge” output that collapses co-firing alerts into one actionable row:
+
+
+keep strongest strength
+
+
+cap = min cap_lines
+
+
+preserve badges/tags that explain why it merged
+
+
+
+
+This is required by the spec to prevent misreading alerts as 12 independent bets. (/mnt/data/12%20PART%20PROFIT.md:L3126-L3141)
+
+
+
+
+Re-run only the 3 gold days after grading changes
+
+
+Re-export + re-evaluate 2025-06-21 / 06-22 / 06-23 and produce a before/after delta summary.
+
+
+Only after that expands corpus.
+
+
+
+
+No analyzer behavior changes
+
+
+All changes stay in exporter + evaluator + SSOT docs until the grading contract is proven stable.
+
+
+
+
+
+Sanity Check (2 quick actions you can do to verify the key points)
+
+
+Open your Profit spec and confirm the semantic types directly:
+
+
+
+
+A03 is explicitly marked overlay, and A10/A11 are described as “promoters.” (/mnt/data/12%20PART%20PROFIT.md:L389-L413)
+
+
+
+
+Confirm the system is aligning with your SSOT contracts:
+
+
+
+
+Check the “Pick‑3 canonical correctness” rule and confirm your exporter is enforcing 3-digit Canonical / 3-digit orders_modal_value. (/mnt/data/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md:L146-L152)
+
+
+If you want, I can also turn the grading matrix above into a ready-to-drop markdown document (SSOT style) that matches your existing doc structure—without changing any code.

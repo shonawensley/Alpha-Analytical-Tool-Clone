@@ -1,0 +1,1973 @@
+ 
+
+
+
+
+ _alerts.csv is just a counts/hits by alert_id summary; the per‑state rows live in cc_snapshot_<ts>.csv and the full structure in cc_snapshot_<ts>.json. (You were looking at the “summary of the summary”.)
+  - Blackapple is missing from cc_snapshot_* because cc_sanity_snapshot.py doesn’t compute BA; it only ingests BA rows if reports/control_center/control_center.md exists or you provide --ba-csv/--ba-json. That’s consistent with
+    docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:1.
+  - VTRAC repeat in cc_sanity_snapshot.py is an alert, not the full “Repeat Watch” table. So it’s totally possible to have “no vtrac_repeat alerts” on a given day even though the app’s repeat board would still show streak/heat
+    stats.
+     Meanwhile, the proper sharepack alignment guard passes for all 14 states using the intended validator: scripts/tools/validate_tables_aux_alignment.py in sharepack mode.
+  2. The cc_sanity_snapshot.py VTRAC plumbing is incomplete/incorrect for what you expect.
+     It currently doesn’t load the VTRAC resolver, and it also misuses modules.vtrac_reference.get_index_straights (that function returns permutations of a draw, not the 8‑lane straights). So the snapshot output is not a reliable
+     “VTRAC board export” yet.
+
+
+  ### Goal
+
+  For a given results date D (starting with 2025-06-21), make one day folder that contains:
+
+
+  - control_center_report.md (human review, like the app)
+  - blackapple_alerts.csv + blackapple_alerts.md
+  - due_doubles.csv + due_doubles.md
+
+  ### Step 2 — Implement an exporter that mirrors the app (small, surgical)
+  - Reads draws from sharepack Aux snapshots, not live folders:
+      - sharepacks/<D>/<STATE>/aux/draws/*_draws.csv
+  - Computes:
+      - VTRAC Repeat Watch per state + variant (copy the same small math used in src/app.py so the table matches what you see)
+  - Writes those tables into sharepacks/<D>/control_center/… (plus optional reports/control_center/2025-06-21.md for convenience).
+
+  ### Step 3 — Generate Brain‑2 artifacts for the existing “gold day”
+
+  Run the exporter for D=2025-06-21, confirm outputs exist and are non-empty.
+
+  ### Step 4 — Fix the misleading parts of cc_sanity_snapshot.py (so it stops confusing you)
+  - Load VTRAC correctly (so vtrac_repeat can actually fire when it should).
+  - (Optional) Add a --sharepack-date mode so the snapshot can run against frozen inputs too.
+
+  ### Step 5 — One short doc update (so future sessions don’t repeat this confusion)
+
+  Add 5–10 lines to docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:1 pointing to the new “Brain‑2 sharepack export” location and command.
+
+  ———
+
+  If you approve, I’ll proceed with exactly the above, and I’ll keep code changes limited to:
+
+  - scripts/tools/ (new exporter + small cc_sanity_snapshot fixes)
+  - sharepacks/2025-06-21/control_center/ (new artifacts)
+  - 1 small doc pointer (optional, per your preference)
+
+
+
+
+_____________________
+• I’m not making any code changes right now — I have not used apply_patch, and git status shows no pending diffs in the key code paths (scripts/tools/*, modules/*) for the Control Center work.
+
+  What I’ve done since this context reset (read‑only / training mode only):
+
+  - Located your log: it’s tasks/LOG_55.txt:1 (not tasks/LOG_55). I reviewed the Control Center / Brain‑2 plan section starting around tasks/LOG_55.txt:1879 through ~tasks/LOG_55.txt:2104.
+  - Re-read the official Control Center “pause log” doc: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:1 to ensure I’m aligned with how CC was intended to work.
+  - Audited the current “gold day” snapshot state:
+      - The Brain‑1 run-report scaffolds exist for every tracked state/date: e.g. docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__Connecticut4.md:1.
+      - The sharepacks day folder exists and has all 14 states, but there is no sharepack Brain‑2 export yet: sharepacks/2025-06-21/control_center/ is currently missing.
+  - Confirmed the key enabler for the plan is already present: Aux sharepack summaries contain Blackapple + doubles + vtrac heatboard + repeat_watch, so we can export Control Center boards from the frozen day without “live
+    drift”; example: sharepacks/2025-06-21/Connecticut4/aux/Connecticut4/summary.json:1.
+  - Confirmed Virginia is already fine (Midday/Evening/Combined draws exist in both live + sharepack), so Virginia is not part of the current plan.
+
+  What LOG_55 says the plan is (and what I’m aligned to do next — but only after you say “go”):
+
+  - The reports/control_center/cc_snapshot_20251219_222801_summary.md:1 artifact you found is a minimal alert snapshot (from scripts/tools/cc_sanity_snapshot.py), not the full Control Center boards; that’s why it looked “doubles-
+    only” in that run (LOG_55 explains this around tasks/LOG_55.txt:1879).
+  - The approved “get back on track” work is: add a sharepack-aligned Control Center exporter that writes full Brain‑2 artifacts into sharepacks/<D>/control_center/ for D=2025-06-21 (BA table + due doubles + VTRAC repeat watch +
+    a README/meta that clearly states “Pick3StatsC4 (D‑1) → Results (D)”).
+
+  If you confirm you’re satisfied I’m up to date, my next message will be: the exact minimal file list I intend to add/edit (diff preview) for your approval before I touch any code.
+
+
+
+
+
+
+__________________________________________
+
+You’re not crazy — the excerpt you pasted is still the correct plan, and the reason you’re “only seeing doubles” is exactly as described: cc_snapshot_* is the minimal alert snapshot, not a full export of the Streamlit Control
+  Center boards.
+
+  Where we actually are right now (confirmed in this repo state)
+
+  - Brain‑1 full-day freeze exists: sharepacks/2025-06-21/ has all 14 tracked states + per‑state READMEs (e.g. sharepacks/2025-06-21/Connecticut4/README.md:1).
+  - The frozen Aux summaries already contain the CC-relevant data we need to export (including Blackapple + repeat watch): e.g. sharepacks/2025-06-21/Connecticut4/aux/Connecticut4/summary.json:1.
+  - The thing you wanted but couldn’t find does not exist yet: sharepacks/2025-06-21/control_center/ is currently missing.
+  - The CC artifacts you did find are here and are intentionally thin: reports/control_center/cc_snapshot_20251219_222801_summary.md:1 (+ .json/.csv/_alerts.csv) from scripts/tools/cc_sanity_snapshot.py:1.
+
+  What I will do next (no refactors, sharepack-aligned, minimal blast radius)
+      - sharepacks/2025-06-21/control_center/meta.json
+      - sharepacks/2025-06-21/control_center/blackapple_alerts.{csv,md}
+      - sharepacks/2025-06-21/control_center/due_doubles.{csv,md}
+      - sharepacks/2025-06-21/control_center/vtrac_repeat_watch.{csv,md}
+      - sharepacks/2025-06-21/control_center/control_center_report.md
+  - Optional (tiny doc clarity pointer): add a short “Brain‑2 sharepack export” note to docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:1.
+
+  You asked me not to change code until you’re sure I’m aligned: I’m aligned, and I haven’t applied any patches yet. If you reply “GO”, I’ll start with only the files listed above.
+
+• Explored
+  └ Read UPDATE_60.TXT
+
+
+
+
+
+• Read tasks/UPDATE_60.TXT:1 — it matches what we already aligned on, and it adds one very practical improvement: a short SSOT “boot ritual” to survive resets.
+
+  SSOT restate (8–12 bullets, per UPDATE_60)
+
+  - Mission: validate “live → freeze → evaluate → lean‑out” end‑to‑end without drift.
+  - Gold day: results D=2025-06-21, history workbook D‑1=2025-06-20 (data/history/Pick3StatsC4_2025_06_20.xlsm).
+  - Tracked states: 14 (CT, DE, FL, IN, MI, NJ, NY, NC, OH, Ontario, PA, PR, SC, VA).
+  - Brain‑1 is frozen: sharepacks/2025-06-21/<STATE>/... exists for all 14.
+  - RUN scaffolds exist: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__*.md.
+  - Current CC artifacts in reports/control_center/cc_snapshot_* are minimal alerts, not full boards.
+  - “Freshness mismatches” in the minimal snapshot are about live-folder drift; sharepacks are the canonical frozen world.
+  - Missing deliverable: a full Brain‑2 export (BA + due doubles + repeat watch) written into the sharepack day folder.
+  - Inputs for Brain‑2 export must come from sharepack-frozen Aux snapshots (not live data/cleaned/...).
+  - Definition of done: sharepacks/2025-06-21/control_center/ exists with non-empty board exports + README/meta.
+
+  One key confidence check I ran (read-only)
+
+  - All 14 states’ Aux sharepack summaries are consistent and “generated_from_excel” with the same workbook path, and include blackapple, doubles, repeat_watch, vtrac: sharepacks/2025-06-21/*/aux/*/summary.json.
+
+  Exact files I plan to create/edit (for your approval)
+
+  - Create scripts/tools/export_control_center_sharepack.py (new exporter; reads sharepacks, writes sharepacks).
+  - Create day-level clarity README: sharepacks/2025-06-21/README.md (states D‑1 → D and what’s inside).
+  - Create Brain‑2 sharepack folder + artifacts:
+      - sharepacks/2025-06-21/control_center/README.md
+      - sharepacks/2025-06-21/control_center/meta.json
+      - sharepacks/2025-06-21/control_center/blackapple_alerts.csv (+ optional .md)
+      - sharepacks/2025-06-21/control_center/due_doubles.csv (+ optional .md)
+      - sharepacks/2025-06-21/control_center/vtrac_repeat_watch.csv (+ optional .md)
+      - sharepacks/2025-06-21/control_center/control_center_report.md
+  - Optional small doc pointer (only if you want it): update docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:1 to mention the new exporter + location.
+
+  If you reply “APPROVED — GO”, I’ll start implementing exactly the above, then run the exporter for D=2025-06-21 and validate the outputs are non-empty and mapped to the correct results labels (using aux_state_label from the
+  sharepack metadata).
+
+
+› OK APPROVED GO PLEASE PROCEED WITH THE OPTIMAL COMPREHENSIVE PLAN,  BE CAREFUL BUT STAE OF THE ART QUALITY OF INTEGRATIONS IM TRUSTING YOU PROCEED OPTIMALLY
+
+
+
+
+
+
+
+
+
+
+
+ Explored
+  └ Search def load_state_draws in aux_loaders.py
+    Read aux_loaders.py
+    List draws
+    Read vtrac_family_ranker.py
+    Search def build_due_doubles_table in generate_control_center_report.py
+    Read generate_control_center_report.py
+    Search blackapple in aux_sharepack_summary.py
+    Read aux_sharepack_summary.py
+    Search def draws_since_last_double in draw_catalog.py
+    Read draw_catalog.py
+    Read app.py
+    Search hot_hazard in app.py
+    Read app.py
+    Search Family 1 in app.py
+    Read app.py
+    Search def _rank_double_families in app.py
+    Read app.py
+    Search VTRAC_INDEX_WINDOW in app.py
+
+
+
+_________________________________
+Explored
+  └ Search def ba_status_label in blackapple.py
+    Read blackapple.py
+    Read blackapple.py
+
+• Updated Plan
+  └ User approved implementation; proceeding to create the sharepack-aligned Control Center exporter and its day-level artifacts for 2025-06-21.
+    ✔ Review LOG_55 + CC docs
+    ✔ Audit sharepack inputs (2025-06-21)
+    ✔ Confirm scope + files to touch
+    □ Implement sharepack CC exporter
+    □ Generate CC artifacts for the day
+    □ Validate outputs + doc pointer
+
+• Added scripts/tools/export_control_center_sharepack.py (+582 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Export a sharepack-aligned Control Center (Brain-2) bundle for a results date D.
+      4 +
+      5 +This intentionally reads ONLY from the frozen sharepack day folder to avoid drift:
+      6 +  - Inputs:  sharepacks/<D>/<STATE>/aux/<STATE>/summary.json
+      7 +             sharepacks/<D>/<STATE>/aux/draws/*_draws.csv
+      8 +             data/results/<D>.txt
+      9 +  - Outputs: sharepacks/<D>/control_center/...
+     10 +
+     11 +Run:
+     12 +  python3 scripts/tools/export_control_center_sharepack.py --date 2025-06-21
+     13 +"""
+     14 +
+     15 +from __future__ import annotations
+     16 +
+     17 +import argparse
+     18 +import csv
+     19 +import json
+     20 +import re
+     21 +import sys
+     22 +from dataclasses import dataclass
+     23 +from datetime import datetime, timezone
+     24 +from pathlib import Path
+     25 +from typing import Any, Dict, Iterable, List, Optional, Tuple
+     26 +
+     27 +ROOT = Path(__file__).resolve().parents[2]
+     28 +if str(ROOT) not in sys.path:
+     29 +    sys.path.insert(0, str(ROOT))
+     30 +
+     31 +import pandas as pd
+     32 +
+     33 +from modules.aux_loaders import load_state_draws
+     34 +from modules.blackapple import ba_status_label
+     35 +from modules.draw_catalog import draws_since_last_double
+     36 +from modules.vtrac_reference import get_vtrac_index
+     37 +from src.core.aux_config import COMBO_DOUBLE_LATE, COMBO_DOUBLE_VERY_LATE
+     38 +from src.core.vtrac_family_ranker import rank_double_families
+     39 +
+     40 +VARIANT_SPECS: List[Tuple[str, str]] = [
+     41 +    ("Combined", "combined"),
+     42 +    ("Midday", "midday"),
+     43 +    ("Evening", "evening"),
+     44 +]
+     45 +VARIANT_ORDER = {key: idx for idx, (_, key) in enumerate(VARIANT_SPECS)}
+     46 +VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
+     47 +
+     48 +
+     49 +def _norm_state(label: str) -> str:
+     50 +    return "".join(ch for ch in (label or "").lower() if ch.isalpha())
+     51 +
+     52 +
+     53 +def _canon_draw(draw: str) -> str:
+     54 +    value = (draw or "").strip()
+     55 +    if len(value) != 3 or not value.isdigit():
+     56 +        return ""
+     57 +    return "".join(sorted(value))
+     58 +
+     59 +
+     60 +def _parse_results(results_file: Path) -> Dict[str, Dict[str, str]]:
+     61 +    """Parse data/results/<D>.txt into {norm_state: {"Midday": "123", "Evening": "456"}}."""
+     62 +    winners: Dict[str, Dict[str, str]] = {}
+     63 +    with results_file.open(newline="", encoding="utf-8") as fh:
+     64 +        reader = csv.reader(fh, delimiter="\t")
+     65 +        for row in reader:
+     66 +            if not row:
+     67 +                continue
+     68 +            state_raw = (row[0] or "").strip()
+     69 +            if not state_raw or state_raw.lower() == "state":
+     70 +                continue
+     71 +            if state_raw.lower() in {"midday", "evening"}:
+     72 +                continue
+     73 +            if len(row) < 3:
+     74 +                continue
+     75 +            midday = (row[1] or "").strip()
+     76 +            evening = (row[2] or "").strip()
+     77 +            entry: Dict[str, str] = {}
+     78 +            if midday.isdigit() and 1 <= len(midday) <= 3:
+     79 +                entry["Midday"] = midday.zfill(3)
+     80 +            if evening.isdigit() and 1 <= len(evening) <= 3:
+     81 +                entry["Evening"] = evening.zfill(3)
+     82 +            if entry:
+     83 +                winners[_norm_state(state_raw)] = entry
+     84 +    return winners
+     85 +
+     86 +
+     87 +def _render_ba_triggers(triggers: Dict[str, Any]) -> str:
+     88 +    if not triggers:
+     89 +        return "-"
+     90 +    parts: List[str] = []
+     91 +    if triggers.get("mirror"):
+     92 +        parts.append("Mirror")
+     93 +    roots = triggers.get("root_due") or []
+     94 +    if roots:
+     95 +        parts.append("Root " + "/".join(str(r) for r in roots))
+     96 +    pattern = triggers.get("pattern") or {}
+     97 +    if pattern.get("extreme_due"):
+     98 +        parts.append("SSS/TTT")
+     99 +    if pattern.get("mixed_due"):
+    100 +        parts.append("SST/STS/TSS")
+    101 +    floats = triggers.get("floating") or []
+    102 +    if floats:
+    103 +        parts.append("Float " + "".join(str(d) for d in floats))
+    104 +    pairs = triggers.get("pairs") or {}
+    105 +    remaining = pairs.get("remaining_count")
+    106 +    if isinstance(remaining, int):
+    107 +        parts.append(f"Pairs {remaining}")
+    108 +    return ", ".join(parts) if parts else "-"
+    109 +
+    110 +
+    111 +def _summarize_hits(combo: str, winners: Dict[str, str]) -> Dict[str, str]:
+    112 +    summary: Dict[str, str] = {}
+    113 +    combo = (combo or "").strip()
+    114 +    if len(combo) != 3 or not combo.isdigit():
+    115 +        return {k: "-" for k in winners.keys()}
+    116 +    combo_sorted = "".join(sorted(combo))
+    117 +    combo_index = get_vtrac_index(combo)
+    118 +    for period, winner in winners.items():
+    119 +        winner = (winner or "").strip()
+    120 +        if len(winner) != 3 or not winner.isdigit():
+    121 +            summary[period] = "-"
+    122 +            continue
+    123 +        flags: List[str] = []
+    124 +        if combo == winner:
+    125 +            flags.append("Straight")
+    126 +        winner_sorted = "".join(sorted(winner))
+    127 +        if combo_sorted == winner_sorted and combo != winner:
+    128 +            flags.append("Boxed")
+    129 +        winner_index = get_vtrac_index(winner)
+    130 +        if combo_index is not None and winner_index is not None and combo_index == winner_index:
+    131 +            flags.append("VTRAC")
+    132 +        summary[period] = ", ".join(flags) if flags else "-"
+    133 +    return summary
+    134 +
+    135 +
+    136 +def _aggregate_period_hits(hits: List[Dict[str, str]]) -> Dict[str, str]:
+    137 +    agg: Dict[str, List[str]] = {}
+    138 +    for entry in hits:
+    139 +        for period, label in entry.items():
+    140 +            if not label or label == "-":
+    141 +                continue
+    142 +            agg.setdefault(period, []).append(label)
+    143 +    return {period: ", ".join(sorted(set(labels))) if labels else "-" for period, labels in agg.items()}
+    144 +
+    145 +
+    146 +def _render_family_display(entry: dict) -> str:
+    147 +    label = entry.get("label") or "-"
+    148 +    members = entry.get("members") or []
+    149 +    tokens: List[Tuple[str, int, str]] = []
+    150 +    for member in members:
+    151 +        combo = member.get("combo")
+    152 +        severity = member.get("severity") or ""
+    153 +        variant_key = member.get("variant") or ""
+    154 +        badge = VARIANT_BADGES.get(variant_key, (variant_key[:1].upper() if variant_key else ""))
+    155 +        draws_since = int(member.get("draws_since") or 0)
+    156 +        token = f"{combo}({severity}{badge}:{draws_since})"
+    157 +        tokens.append((severity, draws_since, token))
+    158 +    tokens.sort(key=lambda item: (item[0] != "R", -item[1]))
+    159 +    rendered = " ".join(token for _, _, token in tokens)
+    160 +    return f"{label}: {rendered}" if rendered else f"{label}: -"
+    161 +
+    162 +
+    163 +def _safe_rel(path: Path) -> str:
+    164 +    try:
+    165 +        return str(path.relative_to(ROOT))
+    166 +    except ValueError:
+    167 +        return str(path)
+    168 +
+    169 +
+    170 +@dataclass(frozen=True)
+    171 +class SharepackState:
+    172 +    state_key: str
+    173 +    aux_state_label: str
+    174 +    aux_summary_path: Path
+    175 +    aux_draws_dir: Path
+    176 +    excel_path: str
+    177 +    summary: Dict[str, Any]
+    178 +    winners: Dict[str, str]
+    179 +
+    180 +
+    181 +def _discover_states(day_dir: Path) -> List[SharepackState]:
+    182 +    states: List[SharepackState] = []
+    183 +    for state_dir in sorted([p for p in day_dir.iterdir() if p.is_dir()]):
+    184 +        if state_dir.name == "control_center":
+    185 +            continue
+    186 +        aux_summary = next(state_dir.glob("aux/*/summary.json"), None)
+    187 +        aux_draws_dir = state_dir / "aux" / "draws"
+    188 +        if not aux_summary or not aux_draws_dir.exists():
+    189 +            continue
+    190 +        summary = json.loads(aux_summary.read_text(encoding="utf-8"))
+    191 +        meta = (summary.get("draw_sources") or {}).get("snapshot_meta") or {}
+    192 +        aux_state_label = meta.get("aux_state_label") or ""
+    193 +        excel_path = meta.get("excel_path") or ""
+    194 +        if not aux_state_label or not excel_path:
+    195 +            continue
+    196 +        states.append(
+    197 +            SharepackState(
+    198 +                state_key=state_dir.name,
+    199 +                aux_state_label=aux_state_label,
+    200 +                aux_summary_path=aux_summary,
+    201 +                aux_draws_dir=aux_draws_dir,
+    202 +                excel_path=excel_path,
+    203 +                summary=summary,
+    204 +                winners={},
+    205 +            )
+    206 +        )
+    207 +    return states
+    208 +
+    209 +
+    210 +def _write_df_outputs(df: pd.DataFrame, *, csv_path: Path, md_path: Path, title: str) -> None:
+    211 +    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    212 +    df.to_csv(csv_path, index=False)
+    213 +
+    214 +    display = df.copy()
+    215 +    display = display.fillna("-")
+    216 +    lines = [f"# {title}", "", f"- Generated: `{datetime.now(timezone.utc).isoformat()}`", ""]
+    217 +    lines.append("```")
+    218 +    lines.append(display.to_string(index=False))
+    219 +    lines.append("```")
+    220 +    lines.append("")
+    221 +    md_path.write_text("\n".join(lines), encoding="utf-8")
+    222 +
+    223 +
+    224 +def _build_blackapple_df(states: List[SharepackState]) -> pd.DataFrame:
+    225 +    rows: List[Dict[str, Any]] = []
+    226 +    for st in states:
+    227 +        ba = (st.summary.get("blackapple") or {}).get("by_variant") or {}
+    228 +        for variant_title, variant_key in VARIANT_SPECS:
+    229 +            analysis = ba.get(variant_key) or {}
+    230 +            score = int(analysis.get("score") or 0)
+    231 +            candidates = analysis.get("candidates") or []
+    232 +            winners_for_variant: Dict[str, str] = {}
+    233 +            if variant_key == "midday":
+    234 +                if st.winners.get("Midday"):
+    235 +                    winners_for_variant = {"Midday": st.winners.get("Midday", "")}
+    236 +            elif variant_key == "evening":
+    237 +                if st.winners.get("Evening"):
+    238 +                    winners_for_variant = {"Evening": st.winners.get("Evening", "")}
+    239 +            else:
+    240 +                winners_for_variant = dict(st.winners)
+    241 +
+    242 +            hits: List[Dict[str, str]] = []
+    243 +            for cand in candidates:
+    244 +                combo = cand.get("combo")
+    245 +                if combo:
+    246 +                    hits.append(_summarize_hits(combo, winners_for_variant))
+    247 +            agg_hits = _aggregate_period_hits(hits)
+    248 +
+    249 +            rows.append(
+    250 +                {
+    251 +                    "State": st.aux_state_label,
+    252 +                    "StateKey": st.state_key,
+    253 +                    "Variant": variant_title,
+    254 +                    "BA-Score": score,
+    255 +                    "Status": ba_status_label(score),
+    256 +                    "Triggers": _render_ba_triggers(analysis.get("triggers") or {}),
+    257 +                    "#Candidates": len(candidates),
+    258 +                    "Examples": " ".join((c.get("combo") or "") for c in candidates[:3]).strip() or "-",
+    259 +                    "Winner Midday": st.winners.get("Midday", "-") or "-",
+    260 +                    "Winner Evening": st.winners.get("Evening", "-") or "-",
+    261 +                    "Midday Hits": agg_hits.get("Midday", "-"),
+    262 +                    "Evening Hits": agg_hits.get("Evening", "-"),
+    263 +                }
+    264 +            )
+    265 +    df = pd.DataFrame(rows)
+    266 +    if df.empty:
+    267 +        return df
+    268 +    df["VariantOrder"] = df["Variant"].map(lambda v: VARIANT_ORDER.get(v.lower(), 99) if isinstance(v, str) else 99)
+    269 +    df.sort_values(["BA-Score", "VariantOrder", "State"], ascending=[False, True, True], inplace=True)
+    270 +    return df.drop(columns=["VariantOrder"], errors="ignore")
+    271 +
+    272 +
+    273 +def _build_due_doubles_df(states: List[SharepackState]) -> pd.DataFrame:
+    274 +    rows: List[Dict[str, Any]] = []
+    275 +    for st in states:
+    276 +        variant_draws: Dict[str, List[str]] = {}
+    277 +        for _, variant_key in VARIANT_SPECS:
+    278 +            draws, _ = load_state_draws(st.state_key, variant=variant_key, base=st.aux_draws_dir, max_n=1000)
+    279 +            if draws:
+    280 +                variant_draws[variant_key] = draws
+    281 +        rankings = (
+    282 +            rank_double_families(
+    283 +                variant_draws,
+    284 +                red_threshold=COMBO_DOUBLE_VERY_LATE,
+    285 +                blue_threshold=COMBO_DOUBLE_LATE,
+    286 +                limit=5,
+    287 +            )
+    288 +            if variant_draws
+    289 +            else []
+    290 +        )
+    291 +        family_cols = {f"Family {i+1}": (_render_family_display(rankings[i]) if i < len(rankings) else "-") for i in range(5)}
+    292 +        family_member_combos = {m.get("combo") for r in rankings for m in (r.get("members") or []) if m.get("combo")}
+    293 +        midday_canon = _canon_draw(st.winners.get("Midday", ""))
+    294 +        evening_canon = _canon_draw(st.winners.get("Evening", ""))
+    295 +        for variant_title, variant_key in VARIANT_SPECS:
+    296 +            draws = variant_draws.get(variant_key) or []
+    297 +            if not draws:
+    298 +                continue
+    299 +            ds, _ = draws_since_last_double(draws)
+    300 +            rows.append(
+    301 +                {
+    302 +                    "State": st.aux_state_label,
+    303 +                    "StateKey": st.state_key,
+    304 +                    "Variant": variant_title,
+    305 +                    "Draws Since Double": ds,
+    306 +                    **family_cols,
+    307 +                    "Winner Midday": st.winners.get("Midday", "-") or "-",
+    308 +                    "Winner Evening": st.winners.get("Evening", "-") or "-",
+    309 +                    "Midday Winner In Family": bool(midday_canon and midday_canon in family_member_combos),
+    310 +                    "Evening Winner In Family": bool(evening_canon and evening_canon in family_member_combos),
+    311 +                }
+    312 +            )
+    313 +    df = pd.DataFrame(rows)
+    314 +    if df.empty:
+    315 +        return df
+    316 +    df["VariantOrder"] = df["Variant"].map(lambda v: VARIANT_ORDER.get(v.lower(), 99) if isinstance(v, str) else 99)
+    317 +    df.sort_values(["Draws Since Double", "VariantOrder", "State"], ascending=[False, True, True], inplace=True)
+    318 +    return df.drop(columns=["VariantOrder"], errors="ignore")
+    319 +
+    320 +
+    321 +def _best_heat_index(heatboard: Dict[str, Dict[str, Any]]) -> Tuple[str | int, float, Optional[float]]:
+    322 +    best_idx: str | int = "-"
+    323 +    best_hazard = 0.0
+    324 +    best_avg_gap: Optional[float] = None
+    325 +    candidates: List[Tuple[int, Dict[str, Any]]] = []
+    326 +    for idx_str, metrics in (heatboard or {}).items():
+    327 +        try:
+    328 +            idx = int(idx_str)
+    329 +        except (TypeError, ValueError):
+    330 +            continue
+    331 +        if not isinstance(metrics, dict):
+    332 +            continue
+    333 +        if not metrics.get("sample_size", 0):
+    334 +            continue
+    335 +        candidates.append((idx, metrics))
+    336 +    if not candidates:
+    337 +        return best_idx, best_hazard, best_avg_gap
+    338 +    idx_best, metrics_best = max(
+    339 +        candidates,
+    340 +        key=lambda item: (float(item[1].get("hazard", 0.0) or 0.0), int(item[1].get("ds", 0) or 0)),
+    341 +    )
+    342 +    best_idx = idx_best
+    343 +    best_hazard = float(metrics_best.get("hazard", 0.0) or 0.0)
+    344 +    avg = metrics_best.get("avg_gap")
+    345 +    best_avg_gap = float(avg) if isinstance(avg, (int, float)) else None
+    346 +    return best_idx, best_hazard, best_avg_gap
+    347 +
+    348 +
+    349 +def _build_vtrac_repeat_watch_df(states: List[SharepackState]) -> pd.DataFrame:
+    350 +    rows: List[Dict[str, Any]] = []
+    351 +    for st in states:
+    352 +        repeat = st.summary.get("repeat_watch") or {}
+    353 +        vtrac = st.summary.get("vtrac") or {}
+    354 +        heat_by_variant = vtrac.get("heatboard_by_variant") or {}
+    355 +        for variant_title, variant_key in VARIANT_SPECS:
+    356 +            rep = repeat.get(variant_key) or {}
+    357 +            heatboard = heat_by_variant.get(variant_key) or {}
+    358 +            heat_idx, heat_hazard, heat_avg_gap = _best_heat_index(heatboard)
+    359 +            winner = "-"
+    360 +            if variant_key == "midday":
+    361 +                winner = st.winners.get("Midday", "-") or "-"
+    362 +            elif variant_key == "evening":
+    363 +                winner = st.winners.get("Evening", "-") or "-"
+    364 +            winner_index = get_vtrac_index(winner) if winner and winner != "-" else None
+    365 +            current_index = rep.get("current_index")
+    366 +            matches = bool(winner_index is not None and current_index is not None and winner_index == current_index)
+    367 +            rows.append(
+    368 +                {
+    369 +                    "State": st.aux_state_label,
+    370 +                    "StateKey": st.state_key,
+    371 +                    "Variant": variant_title,
+    372 +                    "Current Index": current_index if current_index is not None else "-",
+    373 +                    "Current Streak": rep.get("current_streak", 0),
+    374 +                    "Heat Index": heat_idx,
+    375 +                    "Heat Hazard": round(heat_hazard, 3) if heat_hazard else 0.0,
+    376 +                    "Heat Avg Gap": round(heat_avg_gap, 1) if heat_avg_gap else "-",
+    377 +                    "Last Repeat (draws)": rep.get("last_repeat_gap"),
+    378 +                    "Last Repeat Index": rep.get("last_repeat_index") if rep.get("last_repeat_index") is not None else "-",
+    379 +                    "Max Streak": rep.get("max_streak", 0),
+    380 +                    "Window": rep.get("window", 0),
+    381 +                    "Winner": winner,
+    382 +                    "Winner VTRAC": winner_index if winner_index is not None else "-",
+    383 +                    "Current==WinnerVTRAC": matches,
+    384 +                }
+    385 +            )
+    386 +    df = pd.DataFrame(rows)
+    387 +    if df.empty:
+    388 +        return df
+    389 +    df["VariantKey"] = df["Variant"].str.lower()
+    390 +    df["VariantOrder"] = df["VariantKey"].map(lambda v: VARIANT_ORDER.get(v, 99))
+    391 +    df.sort_values(
+    392 +        ["Current Streak", "Last Repeat (draws)", "VariantOrder", "State"],
+    393 +        ascending=[False, True, True, True],
+    394 +        inplace=True,
+    395 +    )
+    396 +    return df.drop(columns=["VariantKey", "VariantOrder"], errors="ignore")
+    397 +
+    398 +
+    399 +def _write_report(
+    400 +    *,
+    401 +    out_dir: Path,
+    402 +    results_date: str,
+    403 +    results_file: Path,
+    404 +    history_excel_path: str,
+    405 +    state_rows: List[SharepackState],
+    406 +    artifacts: Dict[str, str],
+    407 +) -> None:
+    408 +    lines: List[str] = []
+    409 +    lines.append(f"# Control Center Export — {results_date}")
+    410 +    lines.append("")
+    411 +    lines.append(f"- Generated: `{datetime.now(timezone.utc).isoformat()}`")
+    412 +    lines.append(f"- Results date (D): `{results_date}`")
+    413 +    lines.append(f"- Results file: `{_safe_rel(results_file)}`")
+    414 +    lines.append(f"- History workbook (D-1): `{history_excel_path}`")
+    415 +    lines.append(f"- States: `{len(state_rows)}`")
+    416 +    lines.append("")
+    417 +    lines.append("## Artifacts")
+    418 +    for label, rel_path in artifacts.items():
+    419 +        lines.append(f"- {label}: `{rel_path}`")
+    420 +    lines.append("")
+    421 +    lines.append("## Notes")
+    422 +    lines.append("- This export is sharepack-aligned: it reads frozen Aux snapshots under `sharepacks/<D>/<STATE>/aux/...`.")
+    423 +    lines.append("- It does not depend on Streamlit UI state or live `data/cleaned/*` folders.")
+    424 +    lines.append("")
+    425 +    (out_dir / "control_center_report.md").write_text("\n".join(lines), encoding="utf-8")
+    426 +
+    427 +
+    428 +def main() -> None:
+    429 +    parser = argparse.ArgumentParser(description="Export sharepack-aligned Control Center (Brain-2) artifacts")
+    430 +    parser.add_argument("--date", required=True, help="Results date D (sharepacks/<D>/...)")
+    431 +    parser.add_argument(
+    432 +        "--results-file",
+    433 +        default=None,
+    434 +        help="Path to results file (default: data/results/<D>.txt)",
+    435 +    )
+    436 +    parser.add_argument(
+    437 +        "--sharepacks-root",
+    438 +        default=str(ROOT / "sharepacks"),
+    439 +        help="Sharepacks root directory (default: sharepacks/)",
+    440 +    )
+    441 +    args = parser.parse_args()
+    442 +
+    443 +    results_date = args.date.strip()
+    444 +    sharepacks_root = Path(args.sharepacks_root)
+    445 +    day_dir = sharepacks_root / results_date
+    446 +    if not day_dir.exists():
+    447 +        raise SystemExit(f"Sharepack day folder not found: {day_dir}")
+    448 +
+    449 +    results_file = Path(args.results_file) if args.results_file else (ROOT / "data" / "results" / f"{results_date}.txt")
+    450 +    if not results_file.exists():
+    451 +        raise SystemExit(f"Results file not found: {results_file}")
+    452 +
+    453 +    winners_by_state = _parse_results(results_file)
+    454 +
+    455 +    states = _discover_states(day_dir)
+    456 +    if not states:
+    457 +        raise SystemExit(f"No sharepack states found under: {day_dir}")
+    458 +
+    459 +    # Attach winners deterministically via Aux state label.
+    460 +    enriched: List[SharepackState] = []
+    461 +    for st in states:
+    462 +        winners = winners_by_state.get(_norm_state(st.aux_state_label), {})
+    463 +        enriched.append(
+    464 +            SharepackState(
+    465 +                **{**st.__dict__, "winners": winners}  # type: ignore[arg-type]
+    466 +            )
+    467 +        )
+    468 +
+    469 +    excel_paths = sorted({st.excel_path for st in enriched if st.excel_path})
+    470 +    history_excel_path = excel_paths[0] if excel_paths else "-"
+    471 +
+    472 +    out_dir = day_dir / "control_center"
+    473 +    out_dir.mkdir(parents=True, exist_ok=True)
+    474 +
+    475 +    df_ba = _build_blackapple_df(enriched)
+    476 +    df_due = _build_due_doubles_df(enriched)
+    477 +    df_repeat = _build_vtrac_repeat_watch_df(enriched)
+    478 +
+    479 +    artifacts = {
+    480 +        "blackapple_alerts.csv": _safe_rel(out_dir / "blackapple_alerts.csv"),
+    481 +        "blackapple_alerts.md": _safe_rel(out_dir / "blackapple_alerts.md"),
+    482 +        "due_doubles.csv": _safe_rel(out_dir / "due_doubles.csv"),
+    486 +        "meta.json": _safe_rel(out_dir / "meta.json"),
+    487 +        "README.md": _safe_rel(out_dir / "README.md"),
+    488 +        "control_center_report.md": _safe_rel(out_dir / "control_center_report.md"),
+    489 +    }
+    490 +
+    491 +    _write_df_outputs(df_ba, csv_path=out_dir / "blackapple_alerts.csv", md_path=out_dir / "blackapple_alerts.md", title="Blackapple Alerts")
+    495 +        csv_path=out_dir / "vtrac_repeat_watch.csv",
+    496 +        md_path=out_dir / "vtrac_repeat_watch.md",
+    497 +        title="VTRAC Repeat Watch",
+    498 +    )
+    499 +
+    500 +    history_date = None
+    501 +    match = re.search(r"Pick3StatsC4_(\\d{4})_(\\d{2})_(\\d{2})", history_excel_path or "")
+    502 +    if match:
+    503 +        history_date = f\"{match.group(1)}-{match.group(2)}-{match.group(3)}\"
+    504 +
+    505 +    meta = {
+    506 +        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    509 +        "history_excel_path": history_excel_path,
+    512 +        "states": [
+    518 +                "winners": st.winners,
+    519 +            }
+    520 +            for st in enriched
+    521 +        ],
+    522 +        "artifacts": artifacts,
+    523 +        "script": _safe_rel(Path(__file__).resolve()),
+    524 +    }
+    525 +    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    526 +
+    527 +    readme_lines = [
+    533 +        "",
+    534 +        "## Inputs (frozen, drift-proof)",
+    535 +        f"- Results file: `{_safe_rel(results_file)}`",
+    536 +        f"- History workbook: `{history_excel_path}`",
+    537 +        "- Per-state Aux summaries: `sharepacks/<D>/<STATE>/aux/<STATE>/summary.json`",
+    538 +        "- Per-state Aux draw snapshots: `sharepacks/<D>/<STATE>/aux/draws/*_draws.csv`",
+    539 +        "",
+    540 +        "## Outputs",
+    546 +        "",
+    552 +
+    553 +    _write_report(
+    554 +        out_dir=out_dir,
+    555 +        results_date=results_date,
+    556 +        results_file=results_file,
+    562 +    day_readme = day_dir / "README.md"
+    563 +    if not day_readme.exists():
+    564 +        day_lines = [
+    565 +            f"# Sharepacks — {results_date}",
+    566 +            "",
+    567 +            f"Evaluating Pick3StatsC4 `D-1={history_date or '?'} -> D={results_date}`",
+    568 +            "",
+    569 +            "This folder is the frozen day snapshot used for Master Validation.",
+    570 +            "",
+    571 +            "## Contents",
+    572 +            "- Per-state bundles: `<STATE>/` (Stable, Digit Reduction, VTRAC, Hot Zones, Aux, winners lens, tables/json)",
+    573 +            "- Global VTRAC day summaries: `summary.md`, `summary.csv`, `vtrac_compact_report.*`",
+    574 +            "- Brain-2 Control Center export: `control_center/`",
+    575 +            "",
+    576 +        ]
+    577 +        day_readme.write_text("\n".join(day_lines), encoding="utf-8")
+    578 +
+    579 +
+    580 +if __name__ == "__main__":
+    581 +    main()
+    582 +
+
+• Explored
+  └ Read aux_sharepack_summary.py
+    SyntaxError: unexpected character after line continuation character
+
+• Explored
+  └ Read export_control_center_sharepack.py
+
+• Edited scripts/tools/export_control_center_sharepack.py (+2 -3)
+    500      history_date = None
+    501 -    match = re.search(r"Pick3StatsC4_(\\d{4})_(\\d{2})_(\\d{2})", history_excel_path or "")
+    501 +    match = re.search(r"Pick3StatsC4_(\d{4})_(\d{2})_(\d{2})", history_excel_path or "")
+    502      if match:
+    503 -        history_date = f\"{match.group(1)}-{match.group(2)}-{match.group(3)}\"
+    503 +        history_date = f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+    504
+
+
+
+
+
+
+
+
+• Explored
+  └ Search Sharepack-aligned export in AAT9_Final_Workflow_Control_Center.md
+    Read AAT9_Final_Workflow_Control_Center.md
+
+• Updated Plan
+  └ Validated the generated Brain‑2 artifacts are present and non-empty, and added a short pointer in the Control Center final-docs pause log to the new sharepack export command.
+    ✔ Review LOG_55 + CC docs
+    ✔ Audit sharepack inputs (2025-06-21)
+    ✔ Confirm scope + files to touch
+    ✔ Implement sharepack CC exporter
+    ✔ Generate CC artifacts for the day
+    ✔ Validate outputs + doc pointer
+
+─ Worked for 13m 06s ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  - Added day-level clarity README: sharepacks/2025-06-21/README.md.
+  - Added a small “how to run the sharepack export” pointer to the Control Center pause log: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:20.
+  - Regenerate anytime with: python3 scripts/tools/export_control_center_sharepack.py --date 2025-06-21.
+
+
+› CAN YOU PLEASE ENSURE TO UPDATE ANY RELEVANT DOCUMENTS ID EXPLORE "CODEX READ THIS WSL 2" SO TO UPDATE ITEMS LIKE CHANGELOG LIVE WIRING ETC. BUT ALSO ENSURE TO REFERENCE THE FINAL VALDATION FOLDER OR "FINAL DOCS" FOLDER WITHIN
+  THATS MORE SPECIFIC TO THE FINAL VALDATION WORKFLOW WE ARE WORKING ON PROBABLY IMPORTANT TO UPDATE WHATS NECESSARY WITHIN THOSE FILES IM THKING?
+
+
+• Explored
+  └ Read WORKFLOW_CHANGELOG.md, AAT9_Final_Validation_Help.md, CODEX_READ_FIRST_AAT9_WSL_2.md, README.md, AAT9_Unified_Changelog.md
+    Search Control Center|Brain\s*2|cc_snapshot|cc_sanity_snapshot|control_center in AAT9_Final_Validation_Help.md
+    Search Brain\s*2|Control Center|sharepacks/<D>/control_center in FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    Read FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+
+• Updated Plan
+  └ User requested documentation updates to reflect the new sharepack-aligned Brain‑2 (Control Center) export; proceeding with small, targeted edits to the briefing + Final Validation “final docs” + changelogs.
+    □ Identify docs needing updates
+    □ Patch briefing + final docs
+    □ Append to changelogs
+    □ Quick doc sanity check
+
+• Updated Plan
+  └ Identified the minimal set of docs to update: the WSL Codex briefing, Final Validation “final docs” (Help/README/Architecture), and the workflow + unified changelogs.
+    ✔ Identify docs needing updates
+    □ Patch briefing + final docs
+    □ Append to changelogs
+    □ Quick doc sanity check
+
+• Explored
+  └ Search Tracked states \(tables present\) in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md, README.md
+
+• Edited 4 files (+22 -7)
+  └ briefings/CODEX_READ_FIRST_AAT9_WSL_2.md (+11 -7)
+    49 -2) WSL alignment & PowerShell bridging
+    50 -
+    51 -Always treat the repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone
+    52 -
+    53 -To call a Windows PowerShell script from WSL (only when necessary):
+    51 +- Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
+    52 +
+    53 +2) WSL alignment & PowerShell bridging
+    54 +
+    55 +Always treat the repo root as: /home/ser/code/Alpha-Analytical-Tool-Clone
+    56 +
+    57 +To call a Windows PowerShell script from WSL (only when necessary):
+    58
+    24  | VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
+       ⋮
+    42
+    43 +Control Center (Brain‑2) sharepack export (recommended when freezing a full day):
+    44 +- Export day-level CC boards (BA + Due Doubles + Repeat Watch) into: `sharepacks/<D>/control_center/`
+    45 +- Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+       ⋮
+    69      - Paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
+    70 +  - Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <DATE>`
+    71    - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
+
+     98    - Aux summary: `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md`
+     99 +- Control Center (Brain‑2, day-level): `sharepacks/<D>/control_center/`
+    100
+        ⋮
+    185  - VTRAC compact report non-empty: `python3 scripts/tools/validate_vtrac_compact_report.py --date <D>`
+    42 +   - Optional (recommended for full-day freeze): export Control Center (Brain‑2) into `sharepacks/<D>/control_center/`:
+
+• Updated Plan
+    □ Append to changelogs
+    □ Quick doc sanity check
+
+• Explored
+  └ Read WORKFLOW_CHANGELOG.md
+
+• Edited 2 files (+19 -0)
+  └ docs/AAT9_KIT/AAT9_Unified_Changelog.md (+4 -0)
+    1 +## 2025-12-20 - Sharepack-aligned Control Center export (Brain‑2 freeze)
+    2 +- Impact: Added a drift-proof Brain‑2 export that mirrors the Streamlit Control Center boards (Blackapple, Due Doubles, VTRAC Repeat Watch) by reading frozen Aux snapshots from `sharepacks/<D>/<STATE>/aux/...` and writing
+       day-level artifacts to `sharepacks/<D>/control_center/`.
+    3 +- Files: scripts/tools/export_control_center_sharepack.py, sharepacks/2025-06-21/control_center/**, sharepacks/2025-06-21/README.md, docs/AAT9_KIT/FINAL VALIDATION/final docs/{AAT9_Final_Workflow_Control_Center.md,AAT9_Fin
+  └ docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md (+15 -0)
+     93    - `scripts/tools/create_master_validation_run_report.py`
+     94 +
+     95 +---
+     96 +
+     97 +## 2025-12-20
+     98 +
+     99 +### Brain‑2: export Control Center into sharepacks (drift-proof)
+    100 +
+    101 +- Added a sharepack-aligned Control Center exporter so Brain‑2 artifacts are frozen alongside Brain‑1 under `sharepacks/<D>/...`.
+    102 +- Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+    103 +- Outputs: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch + README/meta/report).
+    104 +- Files:
+    105 +  - `scripts/tools/export_control_center_sharepack.py`
+    108 +  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+__________________________________________
+
+
+ Explored
+  └ Search ## 2025-12-20 in WORKFLOW_CHANGELOG.md
+    Search Control Center export \(Brain in AAT9_Final_Validation_Help.md
+    Search Master Validation \(frozen day snapshot\) in CODEX_READ_FIRST_AAT9_WSL_2.md
+    Search Control Center export \(Brain in FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    Search export Control Center \(Brain in README.md
+    Search Master Validation \(sharepack-aligned Brain in AAT9_Live_Wiring_and_Data_Paths.md
+    Search Sharepack-aligned export in AAT9_Final_Workflow_Control_Center.md
+    Search Sharepack-aligned Control Center export in AAT9_Unified_Changelog.md
+    Search Control Center \(Brain‑2\) sharepack export in AAT9_Final_Validation_Help.md
+
+─ Worked for 9m 03s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Updated the docs so the new Brain‑2 sharepack export is discoverable (command + output path) in the same places you’d naturally look:
+
+  - Briefing: briefings/CODEX_READ_FIRST_AAT9_WSL_2.md:49 (adds Master Validation Brain‑2 export note).
+  - Final Validation “final docs” wiring:
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:25 and docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:43
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md:42
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:56
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md:20
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md:97
+  - Live wiring reference: docs/AAT9_KIT/AAT9_Live_Wiring_and_Data_Paths.md:86
+  - Unified changelog: docs/AAT9_KIT/AAT9_Unified_Changelog.md:1
+
+  Canonical Brain‑2 export command (now referenced in all the above): python3 scripts/tools/export_control_center_sharepack.py --date <D> → sharepacks/<D>/control_center/.
+
+
+› Can I just ask your opinion on how you feel about where we're at with the project in terms of the final workflow validation it seems like you pretty much run the share packs across all the states when we upload the excel and
+  also seems to have a great understanding now of running Control Center and the aggregate trackers and providing some accurate reports for that which mimics what we seemingly add is this a decent understanding ? AM I GETTING
+  TOO EXICTED? WOULD YOU SAY THERE IS BASICALLY A PRETTY CONSISTENT WORKFLOW THAT CAN BASICALLY FULLY WORK IN THAT WAY IN CURRENT STATUS FOR WHEN WE UPLOAD A "PICK3STATSC4" SO I CAN FINALLY EVALUATE RESULTS ETC. ..WHAT IS YOUR
+  What’s Solid Now (What You Can Rely On)
+
+  - You can evaluate a day without re-running the app: Brain‑1 tool outputs + Aux snapshots + winners lens + run-report scaffolds exist, and Brain‑2 boards are exported in sharepack form (BA, Due Doubles, VTRAC Repeat Watch).
+  - The Control Center export is drift-proof by design: it reads frozen sharepack Aux inputs (not live folders), which is exactly what you wanted for sane backtesting.
+
+  What’s Still Not Fully Proven (So You Don’t Get Burned)
+  - You’re not getting “too excited” — you’re excited about the right thing: you now have a reproducible evaluation snapshot (Brain‑1 + Brain‑2) for a day.
+  - The one sober note: do one more full-day freeze + Brain‑2 export for a second date before you emotionally declare victory. After that, you’ll be in “rinse + evaluate + improve” mode instead of “debug plumbing” mode.
+
+
+› OK I HEAR YOU BUT I GUESS WHAT IM WONDERING IS HYPOTHETICALLY ITS UNDERSTOOD HOW TO RUN ALL THIS ON A PICK3STATSC4 UPLOAD MEANING THE WORKFLOW SEEMS SET TO DO THIS EVEN IN TERMS OF WITH A DIFFERENT EXCEL FILE ITS MORE SO
+  IRONING OUT ANY KINKS THAT MIGHT NEED TO BE STRAIGHTENED OUT BUT THERE IS A CLEAR UDNERSTANDING FOR HOW TO DO THIS? BECAUSE I HOPE ITS UNDERSTOOD ANY UPLOAD OF THE EXCEL ITS THE EXACT SAME PROCESS, EVEYRTHING THE SAME DAY BY
+  DAY IT SEEM JUST ESSNETIALLY BEING SURE EVERYTHING GETS CLEARED AND IT RUNS PROPERLY? LIKE IN MY MIND I DONT QUITE UNDERSTAND WHY IT WOULD BE HARD TO DO EXACLTY WHAT YOU ARE SAYING IT SEEMS WE ARE ABLE TO DO NOW PERTAINING TO
+  WHEN A PICK3STATSC4 IS UPLOADED AND RUNNING EVERYTHING..DO YOU GET WHAT I MEAN? IT SEMS YOU ARE SUGGESTING WE MADE IT DRIFT PROOF SO WHAT EXACTLY IS THE CONCERN OR THE DISCONNECT IN ME HEARING YOU SAY WE HAVE THE WORKFLOW FOR
+  DOING A FULL DAY WHICH SHOULD MEAN WE HAVE THE WORKFLOW TO DO FOR ANY DAY OF PICK3STASTC4 AS WELL AS WE UNDERSTAND THE CORRECT OR OPTIMAL STEPS TO ENSURE ALL DATASETS OR OUTPUTS ARE FRESH RO ASSOCIATED WITH THE UPLOADED
+  PICK3STATSC4? CAN YOU SPEAK MORE COMPREHSIVELY TO ALL THAT PLEASE
+
+
+• Explored
+  └ List tools
+    Search run_|history|tables|winners
+    Search run_history_and_results|run_tables_with_guard|generate_winners_from_results|run_stable_from_results in scripts
+    List tools
+    Search sharepack|build_.*sharepack|bundle
+
+─ Worked for 2m 26s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+• Explored
+  └ List export_control_center_sharepack.py
+    Read export_control_center_sharepack.py
+    List 2025-06-21
+    List ls -la
+    Read README.md
+    List control_center
+    Read README.md
+    Search export_control_center_sharepack in CODEX_READ_FIRST_AAT9_WSL_2.md
+    Read AAT9_Final_Validation_Help.md, AAT9_Final_Workflow_Control_Center.md, README.md
+
+
+
+• You’re not getting “too excited” — you’ve crossed a real milestone: you now have a drift‑proof, day‑scoped folder that contains both:
+
+
+  The only disconnect: “drift‑proof evaluation” vs “repeatable day builder”
+
+  - Drift‑proof evaluation (now strong): once sharepacks/<D>/... exists, you can fill templates and compare results forever; it won’t mutate.
+  - Repeatable day builder (mostly understood, still needs proving): generating a brand‑new sharepacks/<D>/... from a different workbook/results pair is the same process every day, but it can still fail on “data-shaped” edge
+    cases (missing draws variant, weird results formatting, a state missing tables, etc.). That’s why I still recommend a second day as an integration test: not because the workflow is unclear, but because it’s how you confirm
+  Is the workflow documented well enough for future Codex sessions?
+
+  - It’s in much better shape now because there’s a single entry point + truth table + command index: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:1
+  - The “portal/roles” doc reduces the context‑reset spiral (“what gets filled vs read vs appended”): docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md:1
+  - The day folder itself is self‑describing (D‑1 → D) so you can always sanity‑check you’re evaluating the right upload: sharepacks/2025-06-21/README.md:1
+
+  If you want the “daily upload = one command” feel, the next logical improvement is a single wrapper “build one full day” script that runs the existing steps in the right order and writes a day manifest — but even without that,
+
+
+• Explored
+  └ Read AAT9_Analyzer_Lean_Outputs.md, master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+    List RUNS
+    List create_master_validation_run_report.py
+    Read create_master_validation_run_report.py
+    List 2025-06-21__OntarioCanada4.md
+    Read 2025-06-21__OntarioCanada4.md
+    Read CODEX_READ_FIRST_AAT9_WSL_2.md, AAT9_Master_Validation_Preflight.md, README.md, master_validation_FINAL_TEMPLATE_FINAL_VERSION.md, AAT9_Final_Validation_Help.md, create_master_validation_run_report.py,
+         AAT9_Final_Validation_Checklist.md
+    Search sharepack in FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    Read FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    Search full[- ]day in FINAL_WORKFLOW_ARCHITECTURE_AAT9.md
+    Search Per-tool summarizers in master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+    Search Summarizer block in 2025-06-21__OntarioCanada4.md
+    Search summary\.md not found in create_master_validation_run_report.py
+    Read AAT9_Final_Validation_Help.md
+
+─ Worked for 3m 22s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Onboarding A “Zero‑Context” Codex Session (Optimal + Drift‑Proof)
+
+  - Start with environment/guardrails so the agent doesn’t break state or paths: briefings/CODEX_READ_FIRST_AAT9_WSL_2.md:1 (repo root, print‑only git sanity, data contracts, and “sharepacks are the frozen day”).
+  - Then give them the SSOT portal + roles so they understand what gets filled vs read: docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md:1.
+  - Then give them the “how the whole system fits together” map (this is explicitly written to prevent context‑reset retraining loops): docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md:1.
+  - Then give them the command index + truth table (what D means, where artifacts live, what scripts to run): docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:1.
+
+  At that point, a new session can correctly choose between two modes:
+
+  - Evaluate mode (sharepacks already exist): treat sharepacks/<D>/... as read‑only evidence and only generate summaries/run reports.
+  - Build mode (new Pick3StatsC4 day): run the preflight wrapper to rebuild the “world snapshot” safely (tables/JSON/winners guards), then generate/freeze sharepacks. The preflight entry is: docs/AAT9_KIT/FINAL VALIDATION/final
+    docs/AAT9_Master_Validation_Preflight.md:1.
+
+  Your “Template Filling Uses Scripts To Extract Key Details” Understanding Is Correct
+
+  - The template is intentionally questions-only; you don’t write answers into it. It literally instructs you to generate a per‑run report and fill that instead: docs/AAT9_KIT/FINAL VALIDATION/final docs/
+    master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:5.
+  - The workflow is designed so you do not paste raw CSV/JSON. Instead, you run sharepack summarizers that produce summary.md “paste blocks” (evidence labeled by source), then those blocks get embedded into the run report:
+      - Summarizers are explicitly listed as the intended mechanism in the “help/command index”: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:57.
+      - The template explicitly tells the analyst to use summarizers as the paste block: docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:41.
+      - The run-report generator is explicitly built to embed those blocks if present: scripts/tools/create_master_validation_run_report.py:1, and it even prints a “run the summarizer first” placeholder if summary.md is missing:
+        scripts/tools/create_master_validation_run_report.py:150.
+      - This is not theoretical — the Ontario run report shows multiple embedded “Summarizer block (embedded from summary.md)” sections: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__OntarioCanada4.md:118.
+
+  So yes: the shareable artifact is the filled run report at docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md (not the template), and the “scripts you run while filling it” are the summarizers/validators listed in docs/
+  AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:35.
+
+  If A Sharepack Day Is Already Ready, Here’s The Minimal “Do This” Loop
+
+  - Confirm you’re looking at the right day: sharepacks/<D>/README.md:1 (it states D‑1 -> D).
+  - Confirm Brain‑2 is present and how to regen it: sharepacks/<D>/control_center/README.md:1.
+  - Generate the state run report scaffold (this is the “one file to fill/share”): docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md:35.
+  - If any summary.md blocks are missing or stale, run the summarizers listed in docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:57, then regenerate/refresh the run report so it embeds them.
+  - Fill Parts 1–5 in the run report; log “fix later” items to the workflow changelog (so context resets don’t lose them): docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:38.
+
+  If you want, tell me whether you want a one‑page “Evaluation‑Only Quickstart” (copy/paste prompt) for future Codex sessions; the content mostly already exists, but I can condense it into a single “do exactly these 8 steps”
+  block without changing any pipelines.
+
+
+› YES ANY OF THESE QUICKSTART DOCS YOU THINK COULD HELP PLEASE CREATE THEM NOW OPTIMALLY AND AS COMPREHSIVELY AND "STATE OF TEH ART " QUALITY AS POSSIBLE BUT PLESAE DO NOT ELIMINATE OR DELETE ANY OF THE OTHER PREP MATERIAL
+  DOCUMENTS JUST IN CASE THEY COULD ALSO READ WHAT WE HAVE IF NEEDED HOPEFULLY THAT MAKES SENSE ALSO IN ADDITION TO THAT CAN YOU PLESAE PROVIDE ABIT MORE COMPREHSIVE EXPLANATION REGARDING THE FILLINGOUT The template explanation
+  that you provided I did find it helpful as it seems like you deeply understand what needs to occur in terms of running some scripts too extract some of the key comprehensive details from the final outputs to eliminate us
+  having to share hundreds of outputs anymore intelligently compact them or aggregate them into the report but I'm still kind of somewhat not fully understanding because you mention in certain parts not having to fill out the
+  questions We know that a big part of the template is filling out the questions so I was hoping you could just further comprehensively explain the connection between whatever the scripts that are run and those details that are
+  gathered from the final outputs that hopefully would go somewhere into the template or report in some sense in some more efficient aggregated way how that's connected to also the questions being answered and how I can
+  understand this as a single template being filled out or if it extends into a couple documents that's fine but as long as it's like kind of understood of extracting those blocks of data from the final outputs and answering the
+  questions as well from the template I just wasn't sure I completely followed you explaining how that all comes together in some sense All right just want to make sure I can find everything that's required and he said slightly
+  confusing or not optimal as is Hopefully that makes sense but yes if you could please create any quick start document that could be helpful and then if you could comprehensively clarify or speak in more detail about what I
+  asked about would be greatly appreciated
+
+
+• Explored
+  └ List final docs
+    List tools
+    Search sharepacks/ in scripts
+    Search build_.*sharepack|sharepack in scripts
+    Search build_stable_sharepacks|sharepack in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md
+
+• Updated Plan
+  └ Create a clean, one-page Quickstart for new zero-context Codex sessions (evaluate-only + build/freeze modes), then wire links from the Final Validation SSOT portal, and finally clarify how summarizer scripts + run reports +
+    questions fit together.
+    □ Draft zero-context quickstart doc
+    □ Link quickstart from SSOT docs
+    □ Explain template filling workflow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Explored
+  └ Search md-out|json-out in stable_sharepack_summary.py
+    Read stable_sharepack_summary.py
+    Search AAT9_DR_EXTENDED_SET1 in AAT9_Final_Validation_Help.md
+    Read AAT9_Final_Validation_Help.md
+    List OntarioCanada4
+    List analyzer_v2
+    List winners
+    Search sharepacks
+    Read build_stable_sharepacks.py
+    Search find sharepacks/2025-06-21/OntarioCanada4 -maxdepth 3 -type d -print
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md (+172 -0)
+      1 +# Master Validation — Evaluate‑Only Quickstart (Sharepacks Already Built)
+      2 +
+      3 +Purpose: let a brand‑new Codex/AI session with **zero context** pick an existing frozen day sharepack and produce **filled run reports** (the “template answers”) without rerunning pipelines or sharing hundreds of raw out
+         puts.
+      4 +
+      5 +Assumption: `sharepacks/<D>/` already exists and is treated as the immutable day snapshot.
+      6 +
+      7 +Definitions:
+      8 +- **D** = results/winners date (folder name under `sharepacks/`)
+      9 +- **D‑1** = history workbook date that produced the tables/strings used to predict D
+     10 +
+     11 +If you do **not** already have `sharepacks/<D>/`, stop and use:
+     12 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
+     13 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+     14 +
+     15 +---
+     16 +
+     17 +## 0) Session safety (do this first)
+     18 +
+     19 +From repo root:
+     20 +```bash
+     21 +pwd
+     22 +git status -s
+     23 +```
+     24 +
+     25 +Hard rule for evaluate‑only mode:
+     26 +- Do **not** run table rebuilds or analyzers (they mutate live outputs and can confuse you).
+     27 +- Only read from `sharepacks/<D>/...` and write **derived summaries** into the same sharepack if needed (deterministic `summary.md` blocks).
+     28 +
+     29 +---
+     30 +
+     31 +## 1) Pick your target (D + state)
+     32 +
+     33 +1) Choose the sharepack day folder (results date D), e.g.:
+     34 +```bash
+     35 +ls -la sharepacks/2025-06-21
+     36 +```
+     37 +
+     38 +2) Confirm day mapping is correct (it spells out D‑1 → D):
+     39 +- `sharepacks/<D>/README.md`
+     40 +
+     41 +3) Choose a tracked state folder (examples): `Connecticut4`, `Florida4`, `OntarioCanada4`, etc.
+     42 +
+     43 +Tracked state list (SSOT for master validation): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+     44 +
+     45 +---
+     46 +
+     47 +## 2) Quick deterministic validations (no guessing)
+     48 +
+     49 +These catch the common “it looks right but is misaligned” failures.
+     50 +
+     51 +1) Global VTRAC aggregator feed exists and is non‑empty:
+     52 +```bash
+     53 +python3 scripts/tools/validate_vtrac_compact_report.py --date <D>
+     54 +```
+     55 +
+     56 +2) Tables ↔ Aux draws alignment for this state (sharepack mode; strict):
+     57 +```bash
+     58 +python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict
+     59 +```
+     60 +
+     61 +3) Tool winners sanity (sharepack mode):
+     62 +```bash
+     63 +PYTHONPATH=.:src python3 scripts/tools/validate_stable_winners.py --sharepack sharepacks/<D>/<STATE>/stable/<STATE>
+     64 +PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE>
+     65 +python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>
+     66 +```
+     67 +
+     68 +If any validator fails: stop and log it as **Fix‑Now** in
+     69 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
+     70 +
+     71 +---
+     72 +
+     73 +## 3) Ensure “paste‑ready” evidence blocks exist (summary.md)
+     74 +
+     75 +Goal: the run report should contain compact evidence blocks so you don’t paste raw CSV/JSON.
+     76 +
+     77 +If a `summary.md` is missing (or you want to refresh it), write it directly into the sharepack folder.
+     81 +python3 scripts/tools/stable_sharepack_summary.py \
+     82 +  --sharepack sharepacks/<D>/<STATE>/stable/<STATE> \
+     83 +  --md-out sharepacks/<D>/<STATE>/stable/<STATE>/summary.md \
+     84 +  --json-out sharepacks/<D>/<STATE>/stable/<STATE>/summary.json
+     85 +```
+     86 +
+     87 +Digit Reduction:
+     88 +```bash
+     89 +python3 scripts/tools/dr_sharepack_summary.py \
+     90 +  --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE> \
+     91 +  --md-out sharepacks/<D>/<STATE>/digit_reduction/<STATE>/summary.md \
+     92 +  --json-out sharepacks/<D>/<STATE>/digit_reduction/<STATE>/summary.json
+     96 +```bash
+     97 +python3 scripts/tools/vtrac_sharepack_summary.py \
+     98 +  --sharepack sharepacks/<D>/<STATE>/vtrac/<STATE> \
+     99 +  --md-out sharepacks/<D>/<STATE>/vtrac/<STATE>/summary.md \
+    100 +  --json-out sharepacks/<D>/<STATE>/vtrac/<STATE>/summary.json
+    101 +```
+    102 +
+    103 +Hot Zones:
+    104 +```bash
+    105 +python3 scripts/tools/hot_zones_sharepack_summary.py \
+    106 +  --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE> \
+    107 +  --md-out sharepacks/<D>/<STATE>/hot_zones/<STATE>/summary.md \
+    108 +  --json-out sharepacks/<D>/<STATE>/hot_zones/<STATE>/summary.json
+    109 +```
+    110 +
+    111 +Aux (Part 3 evidence block; preferred history‑aligned):
+    112 +```bash
+    113 +python3 scripts/tools/aux_sharepack_summary.py \
+    114 +  --date <D> \
+    115 +  --state <STATE> \
+    116 +  --excel data/history/Pick3StatsC4_<D-1>.xlsm
+    117 +```
+    118 +
+    119 +Notes:
+    120 +- `aux_sharepack_summary.py` writes into:
+    121 +  - `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md`
+    122 +  - `sharepacks/<D>/<STATE>/aux/<STATE>/summary.json`
+    123 +- Use `--excel` when you have the D‑1 workbook so Aux snapshots cannot drift after workbook swaps.
+    124 +
+    125 +---
+    139 +
+    140 +If the file already exists, do **not** overwrite it (it contains answers).
+    141 +- Either paste updated `summary.md` blocks manually, or write a new run report file using `--out`.
+    142 +
+    143 +---
+    144 +
+    167 +
+    168 +If missing, regenerate (sharepack‑aligned; drift‑proof):
+    169 +```bash
+    170 +python3 scripts/tools/export_control_center_sharepack.py --date <D>
+    171 +```
+    172 +
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md (+1 -0)
+    49  - Entry (contracts + semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+    50 +- Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+    51  - Preflight / drift guards: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
+
+• Explored
+  └ Read AAT9_Final_Validation_Help.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md (+3 -0)
+     9
+    10 +If you are **only evaluating** an already-built sharepack day (no rebuilds), use:
+    11 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+    12 +
+    13  Date convention (important):
+
+• Updated Plan
+  └ ✔ Draft zero-context quickstart doc
+    ✔ Link quickstart from SSOT docs
+    □ Explain template filling workflow
+
+• Explored
+  └ Read README.md, AAT9_Master_Validation_Evaluate_Only_Quickstart.md, AAT9_Final_Validation_Help.md
+
+• Updated Plan
+  └ ✔ Draft zero-context quickstart doc
+    ✔ Link quickstart from SSOT docs
+    ✔ Explain template filling workflow
+
+─ Worked for 6m 27s ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Created an evaluate‑only “zero context” quickstart and wired it into the SSOT entry points:
+
+  - New: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md:1
+  - Linked from the portal: docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md:48
+  - Linked from the main help entry: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:10
+
+  How “scripts + blocks + questions” actually fit together (the missing connection)
+
+  - You still fill out the questions — you just don’t fill them inside the template file. The template is “questions-only” and explicitly says to generate a per‑run report and fill that instead: docs/AAT9_KIT/FINAL VALIDATION/
+    final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md:5.
+  - The scripts are there to solve a different problem than “answer the questions”:
+      - Summarizer scripts (Stable/DR/VTRAC/HotZones/Aux) are evidence extractors. They read lots of tool outputs and emit one compact summary.md (and summary.json) with the key facts labeled by source (ranks, counts, hit flags,
+        stamps). They are the “paste‑ready blocks” so you don’t share hundreds of files.
+      - Run report generator scripts/tools/create_master_validation_run_report.py is a stitcher. It links to the sharepack artifacts and embeds those summary.md blocks if they exist; it does not run analyzers and it does not
+        decide anything for you.
+      - Your (or Codex’s) job while filling the run report is the analysis/synthesis: environment classification, conflicts, what to carry forward, and the pack decision. The summaries make that fast and reproducible; they don’t
+        replace it.
+
+  The “single place” where it all comes together
+
+  - The filled artifact you share is the run report: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md (scaffolded by the script, then filled by an analyst/AI).
+  - The evidence store it cites is the sharepack day folder: sharepacks/<D>/... (Brain‑1 per state + Brain‑2 day‑level Control Center).
+  - The clean, step-by-step “do this in order” flow for a new session when sharepacks already exist is now spelled out in the quickstart, including (1) validators, (2) generating summary.md blocks into the sharepack paths, (3)
+    generating the run report after summaries so it embeds them, and (4) filling Parts A–5: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md:47.
+
+
+› AND JUST SO WE ARE CLEAR I KNOW YOU JUST OUTLINED AND EXPLAINED AND MAY HAVE CREATED A QUCIKSTART DOCUMENT FOR SCNEARIOS WHERE THERRE ARE ALREADY SHAREPACKS FOR A FULL DAY OF PICK3STASTC4 AVAILABLE TO BEGIN ATTACKING SOME OF
+  THE TEMPLATES TO BE COMPLETED BUT JUST SO I FULLY UNDERSTAND DID WE ALSO SOMEWHAT HAVE TI OUTLINED IN A CLEAR COMPREHSIVE "STATE OF THE ART" WAY OF HOW TO DO THINGS FROM COMPLETE SCRATCH FOR A FRESH CDOEX SESSION IN TERMS OF
+  IF I TELL THEM TO "SETUP A FULL FINAL VALADTION WORKFLOW FOR EXCEL FILE PICK3STATSC4 - JUNE 21" WHERE THEY WOULD FULLY UNDERSTAND OR HAVE THE FULL WORKFLOW UNDERSTANDING OR INSTRUCTIONS FOR MAKING SURE EVERYTHING IS CLEAR AND
+  THEN USING THAT FILE TO GENERATE AND GET EVERYTHING IT NEEDS IN TERMS OF THE FRESH MATCHING DATATSETS THAT MATCH WITH THE UPLOADED PICK3STASTC4, THEN UNDERSTNDING HOW TO RUN THE BATCH OR WHATEVER TO GET THE PROPER RESULTS AND
+  WINNER OUTPUTS (ONE DAY AHEAD) AND CREATE ALL THE COMPREHSIVE SHAREPACKS FOR ALL THE STATES ETC. IS THAT ALL LAID OUR SOMEWHERE OR IS THERE LIKE A QUICKSTART OR SOMETHING LAYING OUT THE MORE FULLY FROM SCRATCH ENTIRE
+  WORKFLOW ? I KNOW IN ONE OF YOUR RECENT MESSAGES YOU HAD PROVIDED FEEDBACK ABOUT BUILDING SOMETHING ANDIM WONDERING IF THATS WHAT YOU WERE REFERRING TO IN TERMS OF THIS FEEDBACK AHEAD? IF SO PLEASE MOVE FORWARD WITH THAT I
+  THINK YOU ARE UNDERSTANDING LIEKLY HOW WITH YOU PROPERLY AND FULLY COMPREHSINEISVELY UDNESTANDING EVERYTHING AND THE PROCESSES ENTIRELY I WANT TO TKE ADVANTAGE OF THIS AND COMPREHSIVELY AND EFFICIENTLY SETUP THE BEST SETUPS,
+  DOCUMENTS, START-UP KITS , WORKFLOW UDNERSTANDING FOR THE MASSIVE "CONTEXT RESET NEW AGENT" PROBLEMS THATS BEEN DIRVING ME INSANE AND WASTING INSANE AMOUNTS OF TIME IM SURE YOU ARE LIKELY UNDERSTNADING WHY IM DOING THIS AND
+  WHY ITS LIEKLY IMPORTANT AND COULD SAVE SO MUCH TIME ESPECIALLY IF ITS COMPLETELY PROPERLY, STATE FO THE ART QUALITY, AND COMPREHSIVELY? YOU ARE DOING A GREA TJOB SO FAR BUT ANYTHING THAT CAN HELP WITH ALL THIS I FULLY
+  APPROAVE FOR YOU TO ADD THIS AS WELL OR WORK ON THAT NOW BUT HERE IS THE COMMENT IM REFERRING TO AHEAD IN QUATATIONS YOU MENTIONE DIN A RECENT MESSAGE BUT YES I COMPREHSIVELY APPROVE YOU WORKING ON ANYTHIGN OPTIMAL TO HELP
+  WITH THIS I THINK IT COULD SAVE SOOOO MUCH TIME AND REALLY HELP THINGS MOVE FORWARD WITH CLEAR AND QUICK UNDERSTANDING S OF WORKFLOWS + PROCESSES BY CODEX AGETNS/SESSIONS EARLY AND TO A LEVEL TEHY ARE EXPERTS IN THESE FIELDS
+  BY REVIEWING THESE AMAZING DOCUMENTS OR WORKFLOW GUIDES OR ARHCTECITURE OR WAHTEVER IS OPTIMAL IM SURE YOU UNDERSTNAD BUT HERE IS WHAT YOU SAID..." If you want, tell me whether you want a one‑page “Evaluation‑Only
+  Quickstart” (copy/paste prompt) for future Codex sessions; the content mostly already exists, but I can condense it into a single “do exactly these 8 steps”
+    block without changing any pipelines."
+
+
+
+Added docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md (+209 -0)
+      1 +# Master Validation — Build + Freeze Full‑Day Sharepacks (From Scratch)
+      2 +
+      3 +Purpose: let a brand‑new Codex/AI session (zero context) take a **specific Pick3StatsC4 history workbook** and produce a **drift‑proof full day snapshot**:
+      4 +- Brain‑1 per‑state sharepacks under `sharepacks/<D>/<STATE>/...`
+      5 +- Brain‑2 Control Center export under `sharepacks/<D>/control_center/`
+      6 +- Optional: run‑report scaffolds under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
+      7 +
+      8 +Use this when you want to “set up the day” for later template filling.
+      9 +
+     10 +If `sharepacks/<D>/` already exists and you only want to fill templates, use:
+     11 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+     12 +
+     13 +Definitions:
+     14 +- **H** = history workbook date (workbook contains draws through end of H)
+     15 +- **D** = results/winners date (**D = H + 1 day**)
+     16 +
+     17 +Example: Pick3StatsC4 `H=2025-06-20` → results `D=2025-06-21` → sharepacks live under `sharepacks/2025-06-21/`.
+     18 +
+     19 +---
+     20 +
+     21 +## 0) Session safety + preflight
+     22 +
+     23 +From repo root:
+     24 +```bash
+     25 +pwd
+     26 +git status -s
+     27 +```
+     28 +
+     29 +Read (fast, high-signal):
+     30 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+     31 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+     32 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
+     33 +
+     34 +Tracked states (tables exist; skip GA/TX):
+     35 +CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA
+     36 +(SSOT: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`)
+     37 +
+     38 +---
+     39 +
+     40 +## 1) Select the workbook + results inputs (H → D)
+     41 +
+     42 +1) Confirm the history workbook exists:
+     43 +- `data/history/Pick3StatsC4_<H>.xlsm`
+     44 +
+     45 +2) Confirm the day‑ahead results file exists:
+     46 +- `data/results/<D>.txt`
+     47 +
+     48 +If you’re starting from a results date D and unsure of H:
+     49 +- `H = D - 1 day`
+     50 +
+     51 +---
+     52 +
+     53 +## 2) Build the “world snapshot” (tables/JSON + winners guard)
+     54 +
+     55 +Recommended one‑shot wrapper (enforces day‑ahead rule and performs CT/FL sanity checks):
+     56 +```bash
+     57 +PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date <H> --regen-aux-draws
+     58 +```
+     59 +
+     60 +This will (see the preflight doc for details):
+     61 +- activate the workbook into `data/original/Pick3StatsC4.xlsm`
+     62 +- rebuild tables + JSON
+     63 +- generate winners HTML/JSON under `reports/stable/winners_by_date/<D>/`
+     64 +- write a run log JSON under `reports/stable/validation_logs/validation_<D>.json`
+     65 +
+     66 +Stop if this step fails. Do not run analyzers on stale tables.
+     67 +
+     68 +---
+     69 +
+     70 +## 3) Run Brain‑1 tools (live outputs)
+     71 +
+     72 +### 3.1 Digit Reduction (batch via results file)
+     73 +Use the batch snippet in:
+     74 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+     75 +
+     76 +Important: live DR outputs are overwritten by the next run/date. Freeze to sharepacks immediately after a successful run.
+     77 +
+     78 +### 3.2 Stable (per state; winners pulled from results file)
+     79 +Run Stable per tracked state using `scripts/tools/run_stable_from_results.py`.
+     80 +
+     81 +Results label overrides (Stable only):
+     82 +- `NewJersey4` → `"New Jersey"`
+     83 +- `NewYork4` → `"New York"`
+     84 +- `NorthCarolina4` → `"North Carolina"`
+     85 +- `OntarioCanada4` → `"Ontario"`
+     86 +- `PuertoRico4` → `"Puerto Rico"`
+     87 +- `SouthCarolina4` → `"South Carolina"`
+     88 +(Source: `scripts/tools/build_stable_sharepacks.py`)
+     89 +
+     90 +Example:
+     91 +```bash
+     92 +PYTHONPATH=.:src python3 scripts/tools/run_stable_from_results.py \
+     93 +  --state OntarioCanada4 \
+     94 +  --results-file data/results/<D>.txt \
+     95 +  --results-label Ontario \
+     96 +  --min-occ 1 \
+     97 +  --write-bundle
+     98 +```
+     99 +
+    100 +### 3.3 VTRAC enhanced + validator + day bundle
+    101 +Per state:
+    102 +```bash
+    103 +python3 TOOLS/vtrac_enhanced_cli.py --state <STATE>
+    104 +python3 TOOLS/vtrac_validate.py --state <STATE>
+    105 +```
+    106 +
+    107 +Then rebuild day‑level VTRAC share artifacts:
+    108 +```bash
+    109 +python3 TOOLS/run_vtrac_share_bundle.py
+    110 +```
+    111 +
+    112 +### 3.4 Hot Zones (per state)
+    113 +```bash
+    114 +PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py \
+    115 +  --state <STATE> \
+    116 +  --date <D> \
+    117 +  --json data/outputs/json_tables/<STATE>_tables.json \
+    118 +  --out-dir data/outputs/analysis/hot_zones/<STATE>
+    119 +```
+    120 +
+    121 +---
+    125 +Create the day folder:
+    126 +```bash
+    127 +mkdir -p sharepacks/<D>
+    128 +```
+    129 +
+    130 +For each tracked state, copy the live outputs into the sharepack layout:
+    131 +
+    132 +Required inputs (live → sharepack):
+    133 +- Tables: `data/outputs/tables/<STATE>/{Combined_Combined,Midday_Combined,Evening_Combined}.csv` → `sharepacks/<D>/<STATE>/tables/`
+    134 +- JSON tables: `data/outputs/json_tables/<STATE>_tables.json` → `sharepacks/<D>/<STATE>/json/<STATE>_tables.json`
+    135 +- Winners lens: `reports/stable/winners_by_date/<D>/<STATE>/` → `sharepacks/<D>/<STATE>/winners/<STATE>/`
+    136 +- Stable: `data/outputs/analysis/patterns/<STATE>/` → `sharepacks/<D>/<STATE>/stable/<STATE>/`
+    137 +- Digit Reduction: `data/outputs/analysis/digit_reduction/<STATE>/` → `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/`
+    138 +- VTRAC:
+    139 +  - Enhanced: `data/outputs/analysis/vtrac/<STATE>/` → `sharepacks/<D>/<STATE>/vtrac/<STATE>/`
+    140 +  - Validation: `data/outputs/analysis/vtrac_validation/<STATE>/validation_report.{json,md}` → `sharepacks/<D>/<STATE>/vtrac/<STATE>/`
+    141 +- Hot Zones: `data/outputs/analysis/hot_zones/<STATE>/` → `sharepacks/<D>/<STATE>/hot_zones/<STATE>/`
+    142 +
+    143 +Day‑level VTRAC artifacts (copy once per day):
+    144 +- `data/outputs/analysis/vtrac_validation/summary.{md,csv}` → `sharepacks/<D>/`
+    145 +- `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{json,csv}` → `sharepacks/<D>/`
+    146 +- Optional: `data/outputs/analysis/vtrac_validation/*.zip` → `sharepacks/<D>/`
+    147 +
+    148 +After freezing, validate the compact report:
+    149 +```bash
+    150 +python3 scripts/tools/validate_vtrac_compact_report.py --date <D>
+    151 +```
+    152 +
+    153 +---
+    154 +
+    155 +## 5) Freeze Aux (Part 3) into the sharepack (history‑aligned; no drift)
+    156 +
+    157 +Aux must align to the same history workbook that produced the tables (H).
+    158 +
+    159 +Per state (writes into `sharepacks/<D>/<STATE>/aux/...`):
+    160 +```bash
+    161 +python3 scripts/tools/aux_sharepack_summary.py \
+    162 +  --date <D> \
+    163 +  --state <STATE> \
+    164 +  --excel data/history/Pick3StatsC4_<H>.xlsm
+    165 +```
+    166 +
+    167 +Sanity check (sharepack mode; strict):
+    168 +```bash
+    169 +python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict
+    170 +```
+    171 +
+    172 +---
+    173 +
+    174 +## 6) Freeze Brain‑2 / Control Center into the same sharepack day folder
+    175 +
+    176 +Once per day:
+    177 +```bash
+    178 +python3 scripts/tools/export_control_center_sharepack.py --date <D>
+    179 +```
+    180 +
+    181 +Outputs land under:
+    182 +- `sharepacks/<D>/control_center/`
+    183 +
+    184 +---
+    185 +
+    186 +## 7) (Optional but recommended) Generate paste‑ready evidence blocks + run‑report scaffolds
+    187 +
+    188 +Per state, generate per‑tool `summary.md` blocks inside the sharepack so later sessions don’t need raw files:
+    189 +- Stable: `scripts/tools/stable_sharepack_summary.py`
+    190 +- DR: `scripts/tools/dr_sharepack_summary.py`
+    191 +- VTRAC: `scripts/tools/vtrac_sharepack_summary.py`
+    192 +- Hot Zones: `scripts/tools/hot_zones_sharepack_summary.py`
+    193 +(Commands and output paths: see the Evaluate‑Only quickstart.)
+    194 +
+    195 +Then scaffold the run report (what you actually fill/share):
+    196 +```bash
+    197 +python3 scripts/tools/create_master_validation_run_report.py --date <D> --state <STATE>
+    198 +```
+    199 +
+    200 +---
+    201 +
+    202 +## Definition of Done (full‑day ready for template filling)
+    203 +
+    204 +For the day folder `sharepacks/<D>/`:
+    205 +- Per‑state folders exist for the tracked states and contain: tables/json/winners + all tool bundles + aux snapshot.
+    206 +- Day‑level VTRAC artifacts exist and validate: `sharepacks/<D>/vtrac_compact_report.json` is non‑empty.
+    207 +- Brain‑2 export exists: `sharepacks/<D>/control_center/README.md`.
+    208 +- (Optional) Run reports are scaffolded under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`.
+    209 +
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md (+1 -0)
+    49  - Entry (contracts + semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+    50 +- Build + freeze (from scratch): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+    51  - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md (+3 -0)
+     9
+    10 +If you are building a new full day sharepack from a history workbook (H → D), use:
+    11 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+    12 +
+    13  If you are **only evaluating** an already-built sharepack day (no rebuilds), use:
+
+• Explored
+  └ Read AAT9_Final_Validation_Help.md, README.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md (+97 -1)
+     99
+    100 +Batch example (recommended; applies label overrides automatically):
+    101 +```bash
+    102 +D=2025-06-21
+    103 +states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+    104 +
+    105 +declare -A LABEL_OVERRIDE=(
+    106 +  [NewJersey4]="New Jersey"
+    107 +  [NewYork4]="New York"
+    108 +  [NorthCarolina4]="North Carolina"
+    109 +  [OntarioCanada4]="Ontario"
+    110 +  [PuertoRico4]="Puerto Rico"
+    111 +  [SouthCarolina4]="South Carolina"
+    112 +)
+    117 +    extra=(--results-label "${LABEL_OVERRIDE[$S]}")
+    118 +  fi
+    119 +  PYTHONPATH=.:src python3 scripts/tools/run_stable_from_results.py \
+    120 +    --state "$S" \
+    121 +    --results-file "data/results/$D.txt" \
+    122 +    --min-occ 1 \
+    123 +    --write-bundle \
+    124 +    "${extra[@]}"
+    125 +done
+    126 +```
+    127 +
+    128  ### 3.3 VTRAC enhanced + validator + day bundle
+        ⋮
+    139
+    140 +Batch example:
+    141 +```bash
+    142 +states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+    143 +for S in "${states[@]}"; do
+    144 +  python3 TOOLS/vtrac_enhanced_cli.py --state "$S"
+    145 +  python3 TOOLS/vtrac_validate.py --state "$S"
+    146 +done
+    147 +python3 TOOLS/run_vtrac_share_bundle.py
+    148 +```
+    149 +
+    150  ### 3.4 Hot Zones (per state)
+        ⋮
+    158
+    159 +Batch example:
+    160 +```bash
+    161 +D=2025-06-21
+    162 +states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+    163 +for S in "${states[@]}"; do
+    164 +  PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py \
+    165 +    --state "$S" \
+    166 +    --date "$D" \
+    167 +    --json "data/outputs/json_tables/${S}_tables.json" \
+    168 +    --out-dir "data/outputs/analysis/hot_zones/$S"
+    169 +done
+    170 +```
+    171 +
+    172  ---
+        ⋮
+    198
+    199 +Batch copy example (safe: creates folders, copies files; does not delete anything):
+    200 +```bash
+    201 +D=2025-06-21
+    202 +mkdir -p "sharepacks/$D"
+    203 +
+    204 +states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+    205 +
+    206 +for S in "${states[@]}"; do
+    207 +  mkdir -p "sharepacks/$D/$S"/{tables,json}
+    208 +  mkdir -p "sharepacks/$D/$S/winners/$S"
+    209 +  mkdir -p "sharepacks/$D/$S/stable/$S" "sharepacks/$D/$S/digit_reduction/$S" "sharepacks/$D/$S/vtrac/$S" "sharepacks/$D/$S/hot_zones/$S"
+    210 +
+    211 +  cp -a "data/outputs/tables/$S/Combined_Combined.csv" "sharepacks/$D/$S/tables/"
+    212 +  cp -a "data/outputs/tables/$S/Midday_Combined.csv" "sharepacks/$D/$S/tables/"
+    213 +  cp -a "data/outputs/tables/$S/Evening_Combined.csv" "sharepacks/$D/$S/tables/"
+    214 +  cp -a "data/outputs/json_tables/${S}_tables.json" "sharepacks/$D/$S/json/${S}_tables.json"
+    215 +
+    216 +  cp -a "reports/stable/winners_by_date/$D/$S/." "sharepacks/$D/$S/winners/$S/"
+    217 +  cp -a "data/outputs/analysis/patterns/$S/." "sharepacks/$D/$S/stable/$S/"
+    218 +  cp -a "data/outputs/analysis/digit_reduction/$S/." "sharepacks/$D/$S/digit_reduction/$S/"
+    219 +  cp -a "data/outputs/analysis/vtrac/$S/." "sharepacks/$D/$S/vtrac/$S/"
+    220 +  cp -a "data/outputs/analysis/vtrac_validation/$S/validation_report.json" "sharepacks/$D/$S/vtrac/$S/" || true
+    221 +  cp -a "data/outputs/analysis/vtrac_validation/$S/validation_report.md" "sharepacks/$D/$S/vtrac/$S/" || true
+    222 +  cp -a "data/outputs/analysis/hot_zones/$S/." "sharepacks/$D/$S/hot_zones/$S/"
+    223 +done
+    224 +
+    225 +cp -a data/outputs/analysis/vtrac_validation/summary.md "sharepacks/$D/summary.md" || true
+    226 +cp -a data/outputs/analysis/vtrac_validation/summary.csv "sharepacks/$D/summary.csv" || true
+    227 +cp -a data/outputs/analysis/vtrac_validation/vtrac_compact_report.json "sharepacks/$D/" || true
+    228 +cp -a data/outputs/analysis/vtrac_validation/vtrac_compact_report.csv "sharepacks/$D/" || true
+    229 +cp -a data/outputs/analysis/vtrac_validation/*.zip "sharepacks/$D/" || true
+    230 +```
+    231 +
+    232  After freezing, validate the compact report:
+        ⋮
+    250
+    251 +Batch example:
+    252 +```bash
+    253 +D=2025-06-21
+    254 +H=2025-06-20
+    255 +states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+    256 +for S in "${states[@]}"; do
+    257 +  python3 scripts/tools/aux_sharepack_summary.py \
+    258 +    --date "$D" \
+    259 +    --state "$S" \
+    260 +    --excel "data/history/Pick3StatsC4_${H//-/_}.xlsm"
+    261 +done
+    262 +```
+    263 +
+    264  Sanity check (sharepack mode; strict):
+        ⋮
+    305  - (Optional) Run reports are scaffolded under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`.
+    209 -
+
+• Explored
+  └ Read run_history_and_results.py
+    List history
+
+• Edited scripts/tools/run_history_and_results.py (+13 -1)
+     72  def history_filename_from_date(date_str: str) -> str:
+     73 +    # Prefer the canonical YYYY-MM-DD naming, but tolerate YYYY_MM_DD when present
+     74 +    # (both exist in the repo's data/history inventory).
+     75      return f"Pick3StatsC4_{date_str}.xlsm"
+        ⋮
+     77
+     78 +def history_filename_candidates_from_date(date_str: str) -> List[str]:
+     79 +    return [
+     80 +        f"Pick3StatsC4_{date_str}.xlsm",
+     81 +        f"Pick3StatsC4_{date_str.replace('-', '_')}.xlsm",
+     82 +    ]
+     83 +
+     84 +
+     85  def compute_results_date(history_date: str) -> str:
+        ⋮
+    149          history_date = args.history_date
+    141 -        history_file = history_filename_from_date(history_date)
+    150 +        candidates = history_filename_candidates_from_date(history_date)
+    151 +        history_path_candidates = [ROOT / "data" / "history" / name for name in candidates]
+    152 +        hit = next((p for p in history_path_candidates if p.exists()), None)
+    153 +        history_file = hit.name if hit else candidates[0]
+    154      else:
+
+    263  done
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md (+1 -1)
+    249    --state <STATE> \
+    19 +- `--history-date` accepts a date and will auto-detect `data/history/Pick3StatsC4_YYYY-MM-DD.xlsm` or `data/history/Pick3StatsC4_YYYY_MM_DD.xlsm` when present.
+    20 +- If you pass `--history-file`, use the exact filename under `data/history/` (either hyphen or underscore naming).
+    21 +
+    22  This will:
+
+• Edited briefings/CODEX_READ_FIRST_AAT9_WSL_2.md (+3 -0)
+    51  - Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
+    52 +- Quickstarts (zero-context):
+    182
+    183 +Safety rule:
+    184 +- If `sharepacks/<D>/` already exists and contains artifacts, treat it as immutable. Do not overwrite it silently. Either pick a new date folder (for a re-run) or intentionally archive/remove it first.
+    185 +
+    186  For each tracked state, copy the live outputs into the sharepack layout:
+        ⋮
+    206  D=2025-06-21
+    207 +if [[ -d "sharepacks/$D" ]] && [[ -n "$(ls -A "sharepacks/$D" 2>/dev/null)" ]]; then
+    208 +  echo "[ABORT] sharepacks/$D already exists and is non-empty; refusing to overwrite."
+    209 +  exit 1
+    210 +fi
+    211  mkdir -p "sharepacks/$D"
+
+• Edited scripts/tools/run_history_and_results.py (+5 -0)
+    11    PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-file Pick3StatsC4_2025-06-22.xlsm
+    12 +
+    13 +Notes:
+
+• Yes — you now have both sides documented as “zero‑context” quickstarts:
+
+  - Build from scratch (history workbook → full‑day freeze): docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md:1
+      - Covers H→D (day‑ahead) mapping, running the preflight wrapper, running the tools, freezing all tracked states into sharepacks/<D>/..., freezing Aux, and exporting Brain‑2 Control Center into sharepacks/<D>/
+        control_center/.
+  - Evaluate‑only (sharepacks already built): docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md:1
+  - Help entry: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md:1
+
+  One key “from scratch” robustness fix to reduce day‑setup failures: the preflight wrapper now auto-detects history workbook filenames with either hyphens or underscores when you use --history-date (Pick3StatsC4_YYYY-MM-DD.xlsm
+  or Pick3StatsC4_YYYY_MM_DD.xlsm): scripts/tools/run_history_and_results.py:1.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________________________
+
+
+Yes — your mental model is exactly right:
+
+  - History workbook (D‑1) is the “world snapshot” (tables/JSON + Aux draws) the tools read.
+  - Results file (D) is the day‑ahead outcome you grade against (winners HTML/JSON + overlays), so you can compare “what the tools saw” vs “what hit”.
+
+  Confirming what was actually frozen for the current gold day
+
+  - The sharepack day folder is keyed by results date D: sharepacks/2025-06-21/README.md:1 (explicitly states D-1=2025-06-20 -> D=2025-06-21).
+  - Brain‑2 Control Center metadata proves the same mapping and the exact workbook path used: sharepacks/2025-06-21/control_center/meta.json:1 (history_excel_path=data/history/Pick3StatsC4_2025_06_20.xlsm, history_date=2025-06-
+    20, results_date=2025-06-21).
+  - Aux Part‑3 summaries also show snapshot_mode: generated_from_excel and cite the same workbook path (example): sharepacks/2025-06-21/Connecticut4/aux/Connecticut4/summary.md:1.
+
+  Validation status (so you don’t have to “trust vibes”)
+
+  - sharepacks/2025-06-21/vtrac_compact_report.json is non‑empty: 14 states / 42 sections (validated via scripts/tools/validate_vtrac_compact_report.py).
+  - Tables↔Aux alignment (sharepack strict mode) passes for all 14 tracked states (validated via scripts/tools/validate_tables_aux_alignment.py --date 2025-06-21 --strict).
+  - Spot‑checked winners validators pass for CT/FL/ON/VA (Stable/DR/Hot Zones).
+
+  About “clearing cache / emptying folders” when swapping workbooks
+
+  - The automated path doesn’t need to “empty everything”; it rebuilds and overwrites the SSOT inputs (tables/JSON) from the chosen workbook, then generates winners from the day‑ahead results, then freezes outputs into
+    sharepacks/<D>/....
+  - The drift problem you’re worried about is real in live folders (because some tools write timestamped artifacts and old files can remain), which is why the workflow is designed to:
+      - Prove freshness with guards (preflight + alignment validators), and
+      - Treat sharepacks/<D>/... as immutable evaluation truth (so leftover live files can’t contaminate the day you’re analyzing).
+
+  Where the Control Center artifacts live for a day
+
+  - They are now day‑scoped and localized inside the sharepack: sharepacks/2025-06-21/control_center/README.md:1 (BA + due doubles + repeat watch + report + meta).
+
+  Re: tasks/VALIDATE_WORKFLOW.txt
+
+  - It matches the right risk order: (1) validate the freeze workflow, (2) repeat on a second workbook/day, (3) only then add A01–A12. See tasks/VALIDATE_WORKFLOW.txt:1.
+
+  What you should do next (your proposed order makes sense)
+
+  - Inspect/spot‑check the existing gold day (sharepacks/2025-06-21/) using the evaluate-only quickstart: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md:1.
+  - Then run one more day “from scratch” as the integration test using the build quickstart: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md:1 (e.g., history data/history/
+    Pick3StatsC4_2025-06-21.xlsm → results data/results/2025-06-22.txt).
+
+
+› I FEEL LIKE MY GITHUB DESKTOP PUSHES HAS BEEN ACTING SOMEWHAT STRANGE AND MIGHT BE GETTING STUCK IS THERE SOMEWAY FOR YOU TO HELP ME PUSH THROUGH MY RECENT UPDDATE OR I BASICALLY WANT TO BE ABLE TO HAVE THE SHAREPACKS ACESSBLE
+  TO VIEW I DONT WANT YOU TO DO ANYTHING THAT WILL CAUE A MASSIVE PROBLEM I JUST NTICE IT SEEMS WHEN I TRY TO DO A COMMIT IT GETS STUCK JSUT SPINNING AND IM NOT SURE WHY ANY THOGUHTS? LETS BRAINSTORM FIRST
+
+
+______________________________
+
+
+
+• Your instinct to treat GitHub as “smart checkpoints” is fine — what’s changing is just that the repo now contains big, high-churn artifacts (sharepacks, CSV/JSON), and GitHub Desktop is not great at handling that volume (it
+  tries to diff/preview/index everything and can appear to hang).
+
+  What I’ve investigated (safe / read-only)
+
+  - I have not committed, pushed, or touched remotes.
+  - Your repo currently has ~1108 changed paths, and sharepacks/2025-06-21/ alone is ~211MB and ~1289 files. That’s exactly the kind of workload that makes GitHub Desktop “spin” during commit UI rendering.
+
+  Why GitHub Desktop gets stuck
+  - If line endings (LF/CRLF) churn is happening, it amplifies this (Desktop may treat whole files as changed).
+
+  A more optimal “checkpoint” workflow (you stay in control)
+
+  1. Make checkpoints as local commits first; push only when you choose
+      - CLI: git commit makes a checkpoint without pushing anywhere.
+      - Then you decide if/when to git push (or use Desktop to push later).
+  2. Use branches/tags for “checkpoint snapshots”
+      - Example: create a branch like checkpoint/2025-06-21-sharepack and push that branch when you want ChatGPT Pro to inspect.
+      - This avoids mixing giant artifact commits with main if you don’t want them there yet.
+      - Tags are also great: git tag cp-2025-06-21 (then push tag when ready).
+  3. Stage/commit in smaller, intentional chunks
+      - One commit for docs + scripts (quickstarts, exporters).
+      - One commit for sharepacks/2025-06-21/ only.
+      - This dramatically reduces Desktop pain and makes checkpoints more meaningful.
+
+  Important strategic point (so you don’t paint yourself into a corner)
+
+  - If you start pushing every day of sharepacks, the repo will grow very fast (hundreds of MB per day → multi‑GB quickly). Two good options:
+
+  Line endings (the advice you pasted is right)
+
+  - There is no .gitattributes right now. Adding one to force LF for .md/.txt/.csv/.json will reduce churn and Desktop grief.
+  - Caveat: it can cause a one-time “renormalization” wave, so it should be its own small, deliberate commit.
+
+  Two quick questions so I can recommend the safest next move
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________
+
+• I pushed sharepacks/2025-06-21/ to GitHub on a dedicated checkpoint branch so ChatGPT Pro can safely inspect it without touching main.
+
+  - Published branch: checkpoint/sharepack-2025-06-21 (contains only sharepacks/2025-06-21/** changes; main unchanged)
+  - Start here in the repo UI (on that branch): sharepacks/2025-06-21/README.md:1
+  - Control Center artifacts for that day live here: sharepacks/2025-06-21/control_center/README.md:1, sharepacks/2025-06-21/control_center/control_center_report.md:1, sharepacks/2025-06-21/control_center/meta.json:1
+
+  Copy/paste prompt for ChatGPT Pro (Deep Research)
+  “Use repo shonawensley/Alpha-Analytical-Tool-Clone, branch checkpoint/sharepack-2025-06-21. Review sharepacks/2025-06-21/README.md and sharepacks/2025-06-21/control_center/meta.json + control_center_report.md. Summarize what
+  artifacts exist for the day, confirm the history/results date linkage, and list any missing/odd items you’d want validated next. Avoid reading large raw CSV/JSON unless necessary; prefer the README/summary MDs.”
+
+  If ChatGPT Pro can only see the default branch in your setup, tell me and I’ll outline the least-risk way to move this checkpoint onto main (PR/merge) while keeping control on your side.
+
+
+› I was wondering if you could help me with something So I am looking to inspect a share pack and just validate some things One thing I did notice Was that I was inspecting the winners
+  folder to look at the HTML3 variant winners output that I often like to look add and confirm well it's a key part of step one in the template it is involved with that and it's Jason
+  version that's also generated One thing I noticed about the HTML version is even though IN SHOWS THE WINNING PATTERN AND ITS VTRC PATTERNS WITHIN THE PATTERN PROGRESSION OF TEH TABLES
+  WHICH IS INCREDIBLY VALUABLE THERE REALLY ISNT ANYWHERE WITHIN THE OUTPUT THAT ACTUALLY LISTS OR TELLS US THE ACTUAL WINNER OR WINNING COMBINATIONS HAHA PROBABLY WOULD MAKE SENSE THAT
+  ITS LISTEED  SOMWHERE RIGHT? Now I'm guessing it's somewhat identifies it by providing the index or listing it out you will see that in the output So this isn't like crazy vital as
+  long as I can find it somewhere I mean that in terms of like obviously it would make sense to probably have it listed somewhere on the output in more clear detail but I don't wanna go
+  about ripping anything apart unless it's truly vital I guess what I wanted to confirm with you is I was looking at its Jason version or relative that's also in the folder Remember
+  they kinda are both generated together when we made the Jason version it appears the Jason version has actually the listed win  OH AND YOU KNOW WHAT THE WINNER IS IN THE TITLE OF THE
+  ACTUAL OUTPUT HAHA IM AN IDIOT NEVERMIND I THINK THERE ARE ENOUGH PLACES TO GATHER THE WIN DETAILS, AS YOU CAN PROBABLY TELL I WAS TRYING TO QUICKLY CONFIRM SOME THINGS TO SEE IF
+  EVERYTHING IS BEING CREATED ACCURATELY BY COMPARING SORRY ABOUT THAT I THINK ITS FINE I WAS LOOKING AT CONNETICUT IN THE WINNERS FOLDER WONDRING ABOUT THIS BUT NOW REALIZING THERE ARE
+  MANY PLACES WHERE THE ACTUAL WIN IS LISTED HAHA SORRY
+
+
+• Explored
+  └ Search *.html in 2025-06-21
+    Search winner|winners
+
+• Yep — you’re looking at the right artifact, and your final conclusion is correct.
+
+  - Those sharepacks/2025-06-21/<STATE>/winners/<STATE>/*_winner_XXX_*.html files are meant to be a “pattern context / progression” view, so the body doesn’t always restate the combo in
+    a big obvious block.
+  - The actual winner combo is already captured redundantly:
+      - In the filename (winner_950, winner_155, etc.)
+      - In the HTML title/header (same winner_XXX)
+      - In the paired JSON as winner_combo (example you looked at: sharepacks/2025-06-21/Connecticut4/winners/Connecticut4/Connecticut4_vtrac5_winner_950_20251219_164349.json:1)
+      - Canonically in data/results/2025-06-21.txt for cross-checking
+
+  If you want (optional, no urgency), I can add a tiny “Winner combo: XXX” line near the top of the HTML generator so it’s impossible to miss—but it’s not required for correctness.
+
+
+› Do you know what I was wondering and maybe this seems crazy I'm kind of just wondering since you have a deep understanding of everything I'm doing in the ultimate goal I'm kinda just
+  curious as to your comprehensive viewpoint how you think things are coming along and if I'm on the right path to headed the conclusion of what I'm trying to do with this analytical
+  tool and getting to a point of tying in all the tools valuable analytical insights into and optimal super brain we're managing things optimally towards the superbrain can master
+  profitability Like maybe you've seen enough to understand what I'm roughly trying to do here now frankly finally tie in all the comprehensive analytical insights from the tools we
+  built individually and self contained optimized over the last year and now we're trying to find a way of building a workflow I was slowly tie everything in together and by many
+  examples are reverse engineering wins We can very powerfully design this almost as optimal as possible like there's still a lot of work remaining in terms of I guess setting up the
+  share packs and having a lot of the templates filled out so we can analyze those unt get to the point of understanding what's most powerfully scores together and what should be
+  focused on and how to set up optimal scoring towards profitability and stuff such as this just talking about sometimes I doubt myself a bit about the past I'm taking or if I'm just
+  being too comprehensive and making this way longer than it needs to be but the way I have it in my head kinda is we come this far doing it very meticulously and comprehensive and I'm
+  hoping it will pay off that we have all this comprehensive outputs and scoring features to collect insights from The way I kinda see it is the more you can deeply quantify or explain
+  what's going on in the environment Like either quantify explain or be able to score it the more specifically you can score are described exactly what's going on and because I think a
+  lot of what we built is set up towards that thinking or with all those comprehensive details perhaps to some might seem like overkill I'm hoping that this will eventually all pay off
+  in terms of providing us the most optimal insights into what makes up a winning environments or scenarios which will then help us narrow things down And Tina was optimal super in the
+  most optimal and analytically powerful way I think it's just I've been working on this for so long a lot of painful times and sessions as a beginner and it's just interesting that I'm
+  starting to get a bit burnt out Well it seems I'm approaching the most exciting The one good thing being though is how I'm thinking about this is if I can keep working towards getting
+  these workflows finalized in a situation where I can even get AI is helping me fill out the templates I am then moving towards more automation but I don't need to be and stressfully
+  involved in sorting out or building or debugging as a lot of that can be some dunmore in an automated way or at least with some more help than I'm used to if that sorta makes sense I
+  know it's not perfectly in that way but that's kind of my mindset I'm trying to just stay motivated and positive as I think there's a way to see things with that mindset that we are
+  pretty close to that I'm just wondering your comprehensive thoughts and opinions on the project ON WHOLE OR EVERYTHING YOUVE SEEN OR UNDERSTAND ABOUT WHAT YOUVE LEARNED, I TINK AT
+  THIS POINT I JSUT REALLY NEED ABIT OF ENCOURAEGEMENT AND GUIDANCE (AND I MEAN HONEST ENCOURAGEMENT NOT DILLUSION IF THINGS DONT LOOK LIKE THEY ARE GOING THAT WELL OR SETUP WELL) But
+  I'm hoping that we have some good pieces to pretty excited about where we're headed so I'm wondering if you can give me some comprehensive feedback or your opinion Consider we're
+  still in a deep brainstorm mode For me its just important with us getting to these very important stages Basically final stages of the projects are analytical tools development that I
+  get more insights from a deeply intelligent AI that's been deeply trained on the app the analytical tools are the concepts of what we're trying to do as it seems you have by deeply
+  investigating in understanding the process that exists in the processes we're trying to get to I mention this also because when I inspect that share pack it's actually even more
+  impressive than I could even imagine like there's so much valuable insights and details and calculations being made even in the summer summary reports and I'm just actually blown away
+• You’re on the right path, and you’re past the hardest phase (the phase where “nothing is real because nothing is frozen”).
+
+  What’s genuinely strong about where you are
+
+      - Brain‑2 / Control Center = cross‑state trackers/boards exported as artifacts (so it can be evaluated, not just viewed).
+  - The “template + evidence blocks” approach is exactly how you stop drowning in raw outputs and start producing shareable, comparable run reports.
+
+  The honest caution (not discouragement)
+
+  - Your biggest risk isn’t missing features anymore — it’s overfitting + output sprawl:
+  - At this stage, comprehensiveness isn’t “overkill”; it’s what creates trust in the data and makes later simplification safe.
+  - The trick is to be comprehensive in capture, but selective in decision-making:
+      - Capture a lot → so you can audit/revisit.
+      - Decide from a small, stable set of metrics/features → so you can iterate fast.
+
+  What I’d consider the “on-track” milestone path to a real Superbrain
+
+      - no hidden dependencies on leftover state
+  - Milestone D: scale to ~5–20 days and evaluate out-of-sample against a clearly defined “bet policy / decision rule”, otherwise “profitability” can’t be measured meaningfully.
+
+  My overall read
+
+  - You’re not delusional and you’re not “stuck in weeds” anymore — you’ve built the foundation that makes evaluation possible.
+  - The remaining work is less about adding more tools and more about: repeatability across days + measurement discipline + simplifying the decision layer.
+  - If you keep the workflow deterministic and focus on “learn per day” (not “perfect it per day”), you’re set up to finally transition from building → evaluating → narrowing →
+  SEE THESE ISOLATION RATES IS A BETTER MORE FLEXIBLE WAY TO SE THINGS BECAUSE ONCE WE CAN ISOLATE OR NOTICE A RATHER CONSISTENT RATE AT WHICH SOMETHING CAN BE ISOLATED (WHICH ALSO
+  DOESNT ALWAYS NEED OT BE THE CASE BUT IS MOST FAVORABLE) IS BASICALLY HOW I AM LEANING TO SET THINGS UP AND HOW WINS CAN FUNCTION ALLOWING FOR ALOT MORE FLEXIXIBILITY, ALLOWING FOR
+  LOSES BUILT IN, ALLOWING FOR MORE DEPENDING ON CERTAIN OUTCOMES ONLY NEEDING TO OCCUR AT CERTAIN RATES WHILE ALREAY FAVORBLE SETTING UP CERTAIN ENVIRONMENTS FOR THESE I don't know if
+  I'm even putting that into the right wording but if you're somewhat following what I mean by this I basically this is a big part of how I'm setting this up which allows for a lot of
+  flexibility and like I said also allows do not need a certain outcome Adjust evaluate and analyze for outcomes our rates of things happening identifying and analyzing these rates and
+  once you have this you can design I GUESS "PROFITABILITY" IN SOME SENSE AROUND THIS INSTEAD OF WAYS IN WHICH THE GAMES WOULD TRADITIONALLY BE SETUP , ITS SORT OF IN A WAY TO HAVE THE
+  RULES WORK FOR YOU AND PARTICIPATE IN OPTIMAL SCENARIOS FOR THIS INSTEAD OF THE OTHER WAY AROUND IF ANY OF THAT MAKES SOME SENSE?
+
+
+• You’re not crazy — that framing is actually the right “engineering target”, with one important caveat.
+
+  What you’re describing (and why it’s good)
+
+  - You’re shifting from “must be profitable” to “can we consistently isolate the winner into a smaller search space,” i.e. a coverage / hit-rate-at-budget problem.
+  - That’s exactly how to evaluate a complex signal stack without prematurely arguing about bet sizing or “guaranteed profit” in a near‑random environment.
+
+  The caveat (so it stays honest and measurable)
+
+  - “Hit rate” by itself can be faked by just outputting more candidates.
+  - So every claim must be tied to a budget (how many combos you’d actually play) and compared to a baseline.
+
+  The clean way to formalize what you mean
+
+  - Define, per state+variant+draw: a ranked list of candidates (or a candidate set).
+  - Measure:
+      - Lift vs random: compare Top-K hit rate to K / 1000 (Pick3 has 1000 combos) so you’re measuring “how much better than chance”.
+      - A “coverage curve”: hit rate as K increases (K=5,10,20,50,…). This tells you how quickly your system “homes in”.
+
+  How “profitability” fits without forcing it
+
+  - Once you have Top-K hit rate, profit is just math for a chosen wager type (cost per ticket × K vs payout).
+  - So you can absolutely stay in “hit-rate mastery” mode now, and only later translate it into EV/bet policies.
+
+  Why your sharepack + templates approach is aligned with this
+
+  - Sharepacks freeze the world (inputs + tool outputs) so your hit-rate measurements don’t drift.
+  - Winners artifacts give deterministic labels.
+  - Templates are the human layer that captures why a hit/miss happened (pattern cluster behavior), which is what you’ll later compress into a Superbrain feature contract.

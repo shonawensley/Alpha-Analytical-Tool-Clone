@@ -1,0 +1,180 @@
+TL;DR
+Yes — what you’re describing (Explorer → \\wsl.localhost\Ubuntu\... + Codex CLI seeing changes instantly) strongly suggests you’re working on the real WSL filesystem, not a copy. (user)
+But that does not automatically protect you from CRLF / encoding churn — those issues come from which editor writes the file and which Git client commits it. (Unverified; verify below)
+
+If GitHub Desktop is freezing/spinning and you’re seeing “weird encoding / line-ending” behavior, moving “checkpoint commits” back into WSL git (CLI or VS Code WSL) is often the cleanest fix. (Unverified; verification steps below)
+
+1) Are your Explorer (WSL) edits “really WSL”?
+
+Very likely yes, based on your observation:
+
+You edit/create files via the Explorer view of \\wsl.localhost\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone (user)
+
+Codex CLI running in Ubuntu sees changes immediately (user)
+
+That’s consistent with Explorer browsing the same WSL filesystem.
+
+✅ But: “It’s WSL storage” ≠ “files will always be LF + UTF-8.”
+Line endings and encoding depend on the app that wrote the file. (Unverified)
+
+Quick verification (takes 10 seconds)
+
+In Ubuntu, run:
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+pwd
+git rev-parse --show-toplevel
+
+
+If both point to /home/ser/code/Alpha-Analytical-Tool-Clone, you’re truly operating in the WSL working copy. (Your doc already encodes this habit; user)
+
+2) Is it safe to assume Codex CLI is “WSL-safe” by default?
+
+Mostly yes, with one important condition:
+
+Codex CLI is “WSL-safe” only if you started it inside WSL and inside the correct folder. (Unverified)
+
+Your boot doc already forces this:
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+git status -s && git branch -vv && git remote -v && pwd
+
+
+(user)
+
+That’s great. It’s the right kind of “guardrail” because it checks reality, not assumptions.
+
+One improvement I’d add to your boot doc (high value)
+
+Add this right after the pwd line:
+
+git config --show-origin --get core.autocrlf || true
+git config --show-origin --get core.eol || true
+
+
+Why: if CRLF churn is happening, it often shows up here. (Unverified)
+
+3) Your “CODEX READ THIS WSL 2” doc — is it good?
+
+Yes. Structurally, it’s doing the most important things:
+
+Declares canonical repo root in WSL (/home/ser/...) (user)
+
+Declares the Windows view (\\wsl$\Ubuntu\...) (user)
+
+Forces sanity commands at the start (user)
+
+Keeps Windows PowerShell bridging as “only when needed” (user)
+
+Defines a Plan → Implement → Verify → Document loop (user)
+
+The one missing section (relevant to your GitHub Desktop pain)
+
+You should add a small section explicitly about line endings + encoding, because you’re now seeing symptoms.
+
+Add something like:
+
+“We enforce LF for csv/json/md/py via .gitattributes”
+
+“We avoid editing text files with Windows editors that rewrite line endings”
+
+“We prefer committing via WSL git to avoid Desktop conversions / GUI diff hangs”
+
+(Unverified best practice; verify below)
+
+4) Should you move “checkpoint saves” away from GitHub Desktop and into WSL git / Codex?
+
+Given what you’ve described (Desktop spinning, weird diff behavior), yes, I’d seriously consider it.
+
+Why this helps (in your specific project)
+
+You regularly generate:
+
+lots of CSV/JSON outputs
+
+lots of sharepack artifacts
+
+lots of files per commit
+
+GitHub Desktop can choke on big diff/indexing operations (especially for large CSVs). (Unverified)
+WSL git committing from terminal is usually more resilient because it doesn’t try to render huge diffs in a UI. (Unverified)
+
+The safest “hybrid” approach (so you stay comfortable)
+
+Keep using Explorer-for-WSL for navigation/file creation (your favorite workflow)
+
+Keep Codex CLI as your “builder”
+
+Use WSL git for commit/push (manual, you control it)
+
+Use GitHub Desktop only as a viewer if you want (optional)
+
+This reduces the chance Desktop is the thing rewriting line endings and/or freezing. (Unverified)
+
+5) How to confirm CRLF / encoding is actually your problem (no guessing)
+
+Run these in Ubuntu:
+
+A) Find files that contain CRLF (\r)
+cd ~/code/Alpha-Analytical-Tool-Clone
+grep -IUlr $'\r' . | head -n 50
+
+
+If this prints a bunch of files, you’ve got CRLF present in working tree. (Unverified)
+
+B) See if Git is warning about whitespace / CRLF issues
+git diff --check | head -n 50
+
+C) Inspect one suspicious file’s format
+file -bi path/to/suspicious_file
+
+
+If you want, you can paste just the first ~20 lines of output from A/B and I’ll tell you exactly what it implies.
+
+6) The real fix (once you confirm CRLF churn): .gitattributes
+
+If you confirm line-ending churn, the clean solution is to enforce LF at repo level.
+
+Create or update .gitattributes at repo root:
+
+*.py  text eol=lf
+*.md  text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+
+
+Then renormalize (start small to avoid a massive commit):
+
+git add --renormalize briefings docs .codex
+git status -sb
+
+
+If that looks good, commit it. If it explodes into thousands of changes, stop and we’ll narrow it further. (Unverified; depends on current repo state)
+
+Direct answers to your two key questions
+Q1) “If Codex CLI sees changes instantly, doesn’t that mean I’m WSL-safe?”
+
+It means you’re on the WSL filesystem, yes. (user)
+It does not guarantee line endings/encoding stay clean — that depends on the editor and git client that last wrote/committed the file. (Unverified)
+
+Q2) “Does feeding ‘CODEX READ THIS WSL 2’ ensure consistency?”
+
+It helps a lot because it forces the right cd + sanity checks. (user)
+But the only true guarantee is: the sanity checks actually pass (pwd/root), and your repo enforces line endings via attributes/config. (Unverified)
+
+Sanity Check (2 actions)
+
+In Ubuntu, run and paste the output of:
+
+cd ~/code/Alpha-Analytical-Tool-Clone
+pwd
+git config --show-origin --get core.autocrlf || true
+
+
+Run:
+
+grep -IUlr $'\r' . | head -n 20
+
+
+Those two outputs will tell us—immediately—whether your GitHub Desktop pain is likely tied to CRLF churn, and whether shifting checkpoints to WSL git is the right “forever fix.”

@@ -1,0 +1,229 @@
+TL;DR: Yes—approve Codex to proceed through Phase 1–3 (evaluation charter + deterministic harness + the 3 inspections), but require one key upgrade up-front: the harness must measure time-to-hit within a configurable draw window (decay), not only “next-day hits.” That “within a range / kicks-at-the-can” logic is explicitly supported by your own Master Validation framework (time-to-hit + median draws-to-hit → decay tuning). Also: do not integrate automated LotteryPost scraping—LotteryPost explicitly prohibits automated software extraction and says to verify with official records; use it as a manual verification link only.
+
+1) Is Codex’s plan fundamentally the right shape?
+
+Yes. The sequencing “measure first, tune later” matches your Master Validation intent: profitability signals should be deterministic, logged, and tracked over time—with a future layer envisioned to track each alert as an episode (capped budget, eventual outcome) and compute hit rate / draws-to-hit / ROI per indicator. 
+
+AAT9 Architecture and Master Va…
+
+Codex’s plan also correctly prioritizes your “inspect immediately before tuning” items:
+
+BA foundation gating (the spec repeatedly treats BA foundation as a gating/evidence field, not a vibe) 
+
+12 PART PROFIT
+
+A11 as a governor/booster (should confirm + time plays; not invent them) 
+
+12 PART PROFIT
+
+A12 clamp math (must be mechanical + validated, not hand-wavy) 
+
+12 PART PROFIT
+
+So: the plan is structurally aligned with your documents.
+
+2) The “range / longer timeframe” issue you raised is real—and your docs already anticipate it
+
+What you’re describing (“we can’t expect next draw, but we can measure whether it hits within N draws”) is exactly what your framework says to measure:
+
+It explicitly calls for looking at time-to-hit distributions per alert (and cost per alert), and it even gives an example: if an alert “hits 5 draws later on average,” that changes how you interpret it and how you tune it. 
+
+AAT9 Architecture and Master Va…
+
+It explicitly says to set decay using median draws-to-hit, with practical guidance like: cap at ~6–7 if there’s a long tail, to avoid chasing too long. 
+
+AAT9 Architecture and Master Va…
+
+So if Codex’s evaluation is only “strict next-day,” it will systematically underrate signals whose design intent is “cluster is incubating; hit soon,” not “hit tomorrow.” That’s why your instinct here is correct.
+
+3) My recommendation on Codex’s Option A vs Option B
+Recommend: Option B (decay window / time-to-hit), plus keep Option A as a “diagnostic”
+
+Do both in the harness, but treat them differently:
+
+Option A (strict next draw/day-ahead) = a diagnostic metric (“how often do we nail immediacy?”)
+
+Option B (hit within window) = the primary profitability-signal metric, because your framework explicitly discusses time-to-hit and tuning decay using median draws-to-hit. 
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…
+
+Concrete implementation in the Evaluation Charter:
+
+Define a standard set of windows, e.g. N = 2, 3, 5, 7 draws (or per-alert decay_draws when defined).
+
+Report:
+
+P(hit by N draws) (hit-rate-within-window)
+
+median draws-to-hit (conditional on hit)
+
+expiration rate (no hit within decay)
+
+This exactly matches the “median gap / decay” guidance in your framework. 
+
+AAT9 Architecture and Master Va…
+
+4) How to make “within a range” practical and not complicated
+
+Your best “universal” mechanism is to formalize what your framework already hints at: treat each alert as an EPISODE with a lifecycle.
+
+Minimal “Episode model” (what Codex should implement in the harness output)
+
+For each alert row (state + variant + alert_id + anchor_id + canonical):
+
+start_draw_id = when alert fires
+
+expiry_draw_id = start + decay_draws (or a default like 7 if not yet defined)
+
+status ∈ {ACTIVE, HIT, EXPIRED}
+
+time_to_hit_draws = draws until first match (boxed/straight/vtrac definition)
+
+cost_estimate = based on cap/linecount for that alert
+
+hit_type = boxed / straight / vtrac-index (as per your charter)
+
+That is exactly the “episode with a capped budget and recording whether it paid off” concept in your architecture. 
+
+AAT9 Architecture and Master Va…
+
+Why this solves your daily operational concern
+
+Once “episode state” exists, “carryover” becomes mechanical:
+
+An alert doesn’t need you to remember anything—if it’s ACTIVE, it’s still in its window.
+
+When a new day’s results arrive, the harness updates episode status.
+
+This makes “kicks at the can” a tracked, auditable object, not a vague idea.
+
+5) BA foundation: log-only first or hard-gate?
+
+The spec clearly treats BA foundation as first-class evidence, and in multiple places it implies gating by BA foundation (e.g., blueprint-style rules saying BOX only if ba_foundation_ok=1). 
+
+THE PROFIT BLUEPRINT
+
+At the same time, from a safe engineering standpoint (and because you’re still validating), you can do this:
+
+Recommendation:
+
+Phase 3: compute + surface ba_foundation_ok everywhere it’s referenced (no behavior change yet) 
+
+12 PART PROFIT
+
+In the harness, publish conditional metrics:
+
+hit rate when ba_foundation_ok=1
+
+hit rate when ba_foundation_ok=0
+
+Phase 5 decision gate: turn hard-gating on only if metrics justify it.
+
+This preserves correctness while letting data decide when the gate is worth enforcing.
+
+6) A11 “governor/star model” and why Codex’s inspection focus is correct
+
+Your spec is explicit that A11 is not “just another overlap row.”
+It’s a booster/gate that:
+
+does not create a box,
+
+only confirms/times an already surfaced BA-vetted box when star + consensus co-locate,
+
+and controls overlay sizing (8 → clamp 4). 
+
+12 PART PROFIT
+
+And your Profit Blueprint explicitly tells Codex to compute:
+
+a11_star_score
+
+a11_star_level
+and then compare hit rates and ROI by star level. 
+
+THE PROFIT BLUEPRINT
+
+So: do not let Codex proceed to “tuning” until A11 behaves like this governor. The plan’s Phase 3 focus is exactly right.
+
+7) A12 clamp: don’t let it stay a proxy without measuring correlation
+
+Your 12-part spec defines A12 as a permutation clamp driven by order dominance (and it includes decay behavior tied to dominance dropping). 
+
+12 PART PROFIT
+
+So Codex’s “A12 clamp inspection” should end in one of two acceptable outcomes:
+
+True clamp math is implemented (best), OR
+
+It remains a proxy but the harness reports correlation between the proxy signal and actual straight hits/time-to-hit (so you can quantify whether it’s useful).
+
+That “quantify correlation before believing it” approach is consistent with the Master Validation spirit.
+
+8) About LotteryPost: should you integrate it, and how?
+Manual verification links: YES
+Automated scraping / “history lookup via bot”: NO (don’t build the system on this)
+
+Two hard constraints from LotteryPost itself:
+
+It says results are for personal use only and prohibits use by automated software to “glean content.”
+
+It also says you should verify winning numbers with official lottery records.
+
+Also, the exact “daily aggregated” URL you shared appears to require login in at least some contexts (automation/bot-like access may fail), so it’s not a stable backbone for a deterministic evaluator. 
+Lottery Post
+
+The optimal integration pattern (universally useful)
+
+Have Codex add (in the report, not as an automated dependency):
+
+verify_url (LotteryPost past-results page for that state) for quick human cross-checking
+
+optionally verify_official_url (state lottery page you trust)
+
+But keep the harness evaluation based on frozen artifacts (your existing results files / stored draws), which is aligned with your “drift-proof” philosophy.
+
+9) My final answer: should you approve Codex to proceed?
+
+Yes—approve, with these explicit conditions added to the plan before Codex writes code:
+
+The evaluation contract must include windowed performance:
+
+report next-draw AND “hit within N draws” (N tied to decay policy). 
+
+AAT9 Architecture and Master Va…
+
+The harness must output “episode” lifecycle fields (status/time_to_hit/cost), because your framework explicitly describes profitability tracking evolving into episode-style logs. 
+
+AAT9 Architecture and Master Va…
+
+No tuning / behavioral changes until:
+
+BA foundation is visible/usable (at least logged everywhere),
+
+A11 behaves like a governor/star model (not just overlap),
+
+A12 clamp is either real or its proxy is measured for correlation. 
+
+12 PART PROFIT
+
+12 PART PROFIT
+
+No automated LotteryPost integration (links are fine; scraping is not).
+
+If Codex agrees to those constraints, your plan is not only safe to proceed—it is well aligned with your own architecture and validation doctrine.
+
+Note about PLAN_88
+
+You referenced a document named “PLAN_88,” but I do not have its contents in the materials available to cite here—so I can’t confirm whether it adds anything beyond what we’ve already covered. Insufficient evidence.
+
+Sanity Check
+
+Open LotteryPost’s results page footer and confirm the “personal use only / automated software prohibited / verify with official records” language before deciding on any automation path.
+
+In your AAT9 Architecture doc, re-check the sections discussing time-to-hit distributions and using median draws-to-hit to set decay, then ensure Codex’s Evaluation Charter explicitly implements those metrics. 
+
+AAT9 Architecture and Master Va…
+
+AAT9 Architecture and Master Va…

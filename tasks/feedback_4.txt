@@ -1,0 +1,158 @@
+TL;DR: Based on review_5 and review_6, you should let Codex proceed—but only on a tightly scoped “make the trackers measurable” sprint: (1) write a per‑AID grading matrix (candidate vs overlay), (2) implement set-based grading (winner ∈ implied set) and a merged-episode view (co-firing dedupe), (3) add overlay grading for A03/A08/A10 and ensure every row has enough evidence to audit, then (4) rerun the 3 gold days with your longer results timeline. Do not do “tuning” until BA foundation visibility, A11 governor behavior, and A12 clamp validity/correlation are in place. This avoids the “zero hits” trap, which was largely a measurement mismatch, not proof the 12 trackers are worthless.REVIEW_5REVIEW_6
+
+Step-by-step: deep feedback + the optimal plan to get back on track (brainstorm → executable)
+1) First, defuse the “zero hits = wasted year” panic with what the docs actually say
+What the “zero hits” finding meant in the earlier audit is explicitly: on those 3 days, the D-only columns (Midday Hits / Evening Hits) in profit_alerts.csv were always “-”, i.e., no immediate same‑day / strict winner matches for the surfaced candidates.REVIEW_5
+That does not logically invalidate the 12-trackers approach, because both review docs emphasize that profitability measurement must be windowed (time-to-hit / decay) and modeled as episodes (ACTIVE → HIT/EXPIRED), rather than “did it hit immediately tomorrow.”REVIEW_5REVIEW_5
+In fact, review_5 explicitly notes “windowed hits” exist even when same‑day hit columns stay “-” (example mentions A02 boxed hit within window; A05/A12 boxed hit within window).REVIEW_5
+So: the old “no hits” observation is primarily a grading lens problem, not definitive proof the trackers have no signal.REVIEW_5
+
+2) What’s already structurally “right” (and why you’re not about to destroy the system)
+Both docs converge on the same safety shape:
+
+
+Measure first, tune later (don’t adjust gates/thresholds until the measurement contract is correct).REVIEW_6REVIEW_6
+
+
+Evaluation must include windowed performance (hit within N draws / decay) plus strict as diagnostic, and must output episode lifecycle fields (status/time-to-hit/cost).REVIEW_6REVIEW_6
+
+
+No automated LotteryPost dependency—manual verify links only, and the deterministic evaluator must rely on your frozen artifacts / stored results timeline.REVIEW_6REVIEW_6
+
+
+That combination is exactly what reduces the “destroy the project” risk: you’re not ripping analyzers apart; you’re making the trackers auditable + gradeable before you believe any performance conclusions.REVIEW_6
+
+3) The #1 remaining blocker is not “the trackers are broken”—it’s that “hit” is not defined per A‑ID
+Review_5 is very direct: the highest‑ROI remaining fix is a per‑AID grading contract distinguishing:
+
+
+Candidate-style alerts (emit actionable candidates like Canonical / orders_modal_value) vs
+
+
+Overlay/condition alerts (often Canonical = "-"), which cannot be graded as “did a canonical hit?” and require a different hit object.REVIEW_5
+
+
+Until this matrix exists, you’ll keep seeing “0 hits” artifacts that are simply “graded against the wrong object.”REVIEW_5
+This is the single most important “finish line” item before you declare the 12-trackers integration “done and in final validation.”
+
+4) The 3 critical “engineering-completion” fixes to make the trackers gradeable (not just logged)
+These are stated plainly across review_5/review_6:
+Fix A — Implement set-based grading (winner ∈ implied set), not only single-canonical equality
+If Suggested implies a pack like BOX_8 or STR8_4of8, the evaluator should generate that implied set and grade HIT if the winner is in that set within the window.REVIEW_6
+This matters because otherwise you systematically undercount what the tracker actually instructed you to cover cheaply (which is the whole point of caps/clamps).REVIEW_6
+Fix B — Make co-firing merge behavior explicit (merged-episode view)
+Review_6 says evaluation should support both:
+
+
+grading each raw alert row, and
+
+
+grading a merged “episode view” as the recommended primary, because the spec says co-firing alerts must collapse into a single actionable row/episode with derived strength/cap.REVIEW_6
+
+
+And 12 PART PROFIT explicitly describes co-firing rules and says to deduplicate on a play key and collapse evidence/alert IDs so you don’t double-count cap spend.12 PART PROFIT
+Fix C — Ensure every alert row has enough evidence to audit and grade
+Example given: cross‑variant consensus that doesn’t record what tail/col triggered can’t be graded faithfully, which forces manual spelunking and slows you down.REVIEW_6REVIEW_5
+
+5) The “overlay grading” must be implemented for the biggest offenders (A03/A08/A10)
+Review_5 identifies the “big three” overlay grading gaps:
+
+
+A10 (Due Doubles Top‑3): grade as “did a double occur within window?” (and optionally whether the winner fell into any due-doubles family, using due_doubles.csv).REVIEW_5
+
+
+A08 (BA foundation / remaining pairs): grade against BA candidate sets from aux/.../summary.json (winner ∈ BA candidates within window), not against Canonical.REVIEW_5
+
+
+A03: exporter currently only records a count; include the triggering tail/col/sections so it can be graded as structure behavior within window.REVIEW_5
+
+
+Without these, you will continue to “misgrade overlays as candidates,” which is exactly the kind of thing that feels like the system is failing when it’s actually a scoring contract mismatch.REVIEW_5
+
+6) Only after grading is correct: inspect/tune the “big 3” mechanisms (BA foundation, A11 governor, A12 clamp)
+Review_6 is explicit about sequencing:
+
+
+Don’t allow “tuning” until:
+
+
+BA foundation is at least logged everywhere it’s referenced,
+
+
+A11 behaves like a governor/star model (not just overlap),
+
+
+A12 clamp is either true clamp math or its proxy is measured for correlation.REVIEW_6REVIEW_6
+
+
+
+
+And specifically for A12: either implement true clamp math OR keep proxy but quantify correlation with straight hits/time‑to‑hit so you can decide if it’s useful.REVIEW_6
+This is directly aligned with the “measure time‑to‑hit distributions and cost per alert” philosophy described in the Master Validation framework (including using median draws-to-hit to set decay).AAT9 Architecture and Master Va…AAT9 Architecture and Master Va…
+
+My answer to your decision question: should you let Codex proceed?
+Yes—with explicit scope constraints matching review_6:
+Codex should proceed now with:
+
+
+grading contract + set-based grading + merged episodes + overlay grading + evidence completeness,
+
+
+rerun gold days with your extended results timeline,
+
+
+then (only then) do the BA/A11/A12 inspections and consider tuning.
+
+
+And Codex should not proceed to “tuning” until the above is complete.REVIEW_6REVIEW_6
+That is the safest path that also gets you to the milestone you want: “dev is done; we’re in final validation,” because you’ll finally be grading the trackers the way the spec expects them to be used (cheap packs, episode lifecycle, co-firing collapse).REVIEW_612 PART PROFIT
+
+A paste-ready instruction block you can give to Codex (tight + unambiguous)
+Below is a cleaned version of what review_6 recommends you tell Codex (and it matches review_5’s outstanding fixes):
+
+
+Write SSOT “Profit Alerts Grading Matrix”: for each A01–A12 declare candidate vs overlay, define the graded object (canonical equality vs winner ∈ implied set vs event condition), and which hit modes apply (boxed/straight/vtrac/event).REVIEW_5REVIEW_6
+
+
+Upgrade evaluator to set-based grading: if Suggested indicates a pack like BOX_8 / STR8_4of8, derive the implied set and score HIT if winner ∈ set within window (DecayDraws primary; 7/14 diagnostic).REVIEW_6
+
+
+Add merged-episode evaluation: implement a dedupe key and merged “episode view” so co-firing alerts collapse into one actionable episode and caps aren’t double-counted (per spec).REVIEW_612 PART PROFIT
+
+
+Implement overlay grading for A03/A08/A10:
+
+
+A10: grade “double occurred within window” and optionally “winner fell into any due-doubles family.”REVIEW_5
+
+
+A08: grade “winner ∈ BA candidate set within window.”REVIEW_5
+
+
+A03: export evidence (tail/col/sections) so it can be graded faithfully.REVIEW_5REVIEW_6
+
+
+
+
+No tuning until BA foundation visibility, A11 governor behavior, and A12 clamp correlation/true math are validated in harness outputs.REVIEW_6REVIEW_6
+
+
+No automated LotteryPost scraping; only add manual verify links in reports if useful, but keep evaluation deterministic off your frozen artifacts/results timeline.REVIEW_6
+
+
+Rerun the 3 gold days after the above and compare deltas; use time‑to‑hit and cost/cap distributions to decide any future tuning (median draws-to-hit informs decay).REVIEW_6AAT9 Architecture and Master Va…
+
+
+
+If you want one extra thing from the helping chat
+Not necessary—the two review docs already identify the missing work clearly. If anything, the only “extra” that might help is a definitive mapping of every Suggested token to its exact implied combination set if that mapping is not already fully specified in your Profit spec (Unverified; verification route: check the Profit Blueprint / 12 PART PROFIT sections defining BOX/STR8 actions and pack construction).REVIEW_612 PART PROFIT
+
+Sanity Check:
+
+
+Pick a single alert row that says Suggested=BOX_8 or STR8_4of8, manually derive the implied set, and confirm whether the winner appears within the row’s window—this tests whether your evaluator is grading the right object.REVIEW_6REVIEW_6
+
+
+Verify Codex’s next changes are limited to “grading/evidence/merge semantics” and that it does not introduce automated LotteryPost scraping (links only).REVIEW_6REVIEW_6
+
+Sources
