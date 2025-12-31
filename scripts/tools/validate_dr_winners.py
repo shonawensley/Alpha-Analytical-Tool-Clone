@@ -14,6 +14,7 @@ Checks:
 """
 
 import argparse
+import csv
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -38,6 +39,63 @@ def load_json(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8", errors="replace"))
 
 
+def _norm_state(label: str) -> str:
+    return "".join(ch for ch in (label or "").lower() if ch.isalpha())
+
+
+def _normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
+def _parse_results(results_file: Path) -> Dict[str, Dict[str, str]]:
+    """Parse data/results/<D>.txt into {norm_state: {"Midday": "123", "Evening": "456"}}."""
+    winners: Dict[str, Dict[str, str]] = {}
+    if not results_file.exists():
+        return winners
+    with results_file.open(newline="", encoding="utf-8") as fh:
+        reader = csv.reader(fh, delimiter="\t")
+        for row in reader:
+            if not row:
+                continue
+            state_raw = (row[0] or "").strip()
+            if not state_raw or state_raw.lower() == "state":
+                continue
+            if state_raw.lower() in {"midday", "evening"}:
+                continue
+            if len(row) < 3:
+                continue
+            midday = (row[1] or "").strip()
+            evening = (row[2] or "").strip()
+            entry: Dict[str, str] = {}
+            if midday.isdigit() and 1 <= len(midday) <= 3:
+                entry["Midday"] = midday.zfill(3)
+            if evening.isdigit() and 1 <= len(evening) <= 3:
+                entry["Evening"] = evening.zfill(3)
+            if entry:
+                winners[_norm_state(state_raw)] = entry
+    return winners
+
+
+def _load_aux_state_label(sharepack: Path) -> str | None:
+    """
+    Try to load the Aux state label (matches results file labels) from the sibling Aux sharepack summary.
+    """
+    try:
+        state_dir = sharepack.parent.parent
+        aux_summary = state_dir / "aux" / sharepack.name / "summary.json"
+        if not aux_summary.exists():
+            return None
+        payload = json.loads(aux_summary.read_text(encoding="utf-8", errors="replace"))
+        meta = (payload.get("draw_sources") or {}).get("snapshot_meta") or {}
+        label = (meta.get("aux_state_label") or "").strip()
+        return label or None
+    except Exception:
+        return None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sharepack", required=True, help="Path to digit_reduction/<STATE>/<STATE>")
@@ -48,18 +106,56 @@ def main() -> None:
     state = sharepack.name
     winners_dir = sharepack / "analyzer_v2" / "winners"
     stamp = detect_latest_stamp(winners_dir)
+    date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
+    results_date = date_dir.name if date_dir else None
+    results_file = (Path(__file__).resolve().parents[2] / "data" / "results" / f"{results_date}.txt") if results_date else None
+
+    expected_winners: Dict[str, str] | None = None
+    aux_state_label = _load_aux_state_label(sharepack)
+    if results_file and aux_state_label:
+        expected_winners = _parse_results(results_file).get(_norm_state(aux_state_label))
 
     print(f"Digit Reduction winner validation for {state} (stamp {stamp})")
     problems: List[str] = []
+    notes: List[str] = []
 
     for variant in ["Midday", "Evening", "Combined"]:
+        expected_for_variant = expected_winners.get(variant) if expected_winners and variant in {"Midday", "Evening"} else None
+        if expected_winners is not None:
+            if variant in {"Midday", "Evening"} and not expected_for_variant:
+                print(f"- {variant}: no winner in results file; skipping (expected on some days)")
+                continue
+            if variant == "Combined" and not expected_winners:
+                print("- Combined: no winners in results file; skipping (expected)")
+                continue
+
+        stamp_variant = variant
         stamp_path = winners_dir / f"{stamp}_{variant}_winner_stamp.json"
         flags_path = winners_dir / f"{stamp}_{variant}_winner_flags.csv"
         hits_path = winners_dir / f"{stamp}_{variant}_winner_hits.csv"
 
         if not stamp_path.exists():
-            problems.append(f"{variant}: missing stamp JSON ({stamp_path.name})")
-            continue
+            # If only one of Midday/Evening exists in results, allow the tool to have written it under the other period bucket.
+            aliased = False
+            if expected_winners is not None and variant in {"Midday", "Evening"} and expected_for_variant:
+                other = "Evening" if variant == "Midday" else "Midday"
+                other_expected = expected_winners.get(other) if expected_winners else None
+                other_stamp = winners_dir / f"{stamp}_{other}_winner_stamp.json"
+                other_flags = winners_dir / f"{stamp}_{other}_winner_flags.csv"
+                other_hits = winners_dir / f"{stamp}_{other}_winner_hits.csv"
+                if not other_expected and other_stamp.exists() and other_flags.exists() and other_hits.exists():
+                    other_data = load_json(other_stamp)
+                    other_winner = _normalize_pick3_literal(str(other_data.get("winner") or ""))
+                    if other_winner == expected_for_variant:
+                        notes.append(
+                            f"{variant}: missing {variant} stamp; using {other} artifacts because results has only {variant} winner"
+                        )
+                        stamp_variant = other
+                        stamp_path, flags_path, hits_path = other_stamp, other_flags, other_hits
+                        aliased = True
+            if not aliased:
+                problems.append(f"{variant}: missing stamp JSON ({stamp_path.name})")
+                continue
         if not flags_path.exists():
             problems.append(f"{variant}: missing flags CSV ({flags_path.name})")
             continue
@@ -124,8 +220,11 @@ def main() -> None:
         vt_boxed_final = int(hits["final_vt_boxed"].fillna(0).sum()) if "final_vt_boxed" in hits.columns else None
         vt_straight_final = int(hits["final_vt_straight"].fillna(0).sum()) if "final_vt_straight" in hits.columns else None
 
+        label = variant
+        if stamp_variant != variant:
+            label = f"{variant} (using {stamp_variant} artifacts)"
         print(
-            f"- {variant}: winner {literal} (canon {canonical}) | items_total={items_total} | "
+            f"- {label}: winner {literal} (canon {canonical}) | items_total={items_total} | "
             f"exact_any={counts.get('exact_any')} exact_final={counts.get('exact_final')} | "
             f"vtrac_any={counts.get('vtrac_any')} vtrac_final={counts.get('vtrac_final')} | "
             f"vt_boxed_any={vt_boxed_any} vt_boxed_final={vt_boxed_final} | "
@@ -134,10 +233,14 @@ def main() -> None:
 
     if not problems:
         print("\nOK: DR winners artifacts are internally consistent (stamp ↔ flags ↔ hits).")
+        for note in notes:
+            print(f"NOTE: {note}")
     else:
         print("\nProblems:")
         for p in problems:
             print(f"- {p}")
+        for note in notes:
+            print(f"NOTE: {note}")
         if args.warn_only:
             print("\nWARN-ONLY mode: not failing.")
             return

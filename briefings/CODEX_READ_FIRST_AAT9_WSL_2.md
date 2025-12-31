@@ -49,6 +49,11 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 Master Validation (frozen day snapshot):
 - Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
 - Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
+  - Includes Profit Alerts board (A01–A12): `sharepacks/<D>/control_center/profit_alerts.*`
+- Profit Alerts windowed evaluation (episodes): `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+  - Per‑AID grading matrix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+- Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 - Quickstarts (zero-context):
   - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
   - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`

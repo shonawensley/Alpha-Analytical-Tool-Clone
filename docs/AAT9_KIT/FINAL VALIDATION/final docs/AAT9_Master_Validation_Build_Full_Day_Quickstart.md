@@ -3,6 +3,7 @@
 Purpose: let a brand‑new Codex/AI session (zero context) take a **specific Pick3StatsC4 history workbook** and produce a **drift‑proof full day snapshot**:
 - Brain‑1 per‑state sharepacks under `sharepacks/<D>/<STATE>/...`
 - Brain‑2 Control Center export under `sharepacks/<D>/control_center/`
+  - Boards: `blackapple_alerts.*`, `due_doubles.*`, `vtrac_repeat_watch.*`, `profit_alerts.*`
 - Optional: run‑report scaffolds under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
 
 Use this when you want to “set up the day” for later template filling.
@@ -298,6 +299,18 @@ python3 scripts/tools/export_control_center_sharepack.py --date <D>
 Outputs land under:
 - `sharepacks/<D>/control_center/`
 
+Optional (recommended if you have future results files available):
+- Profit Alerts (A01–A12) windowed evaluation (“episode” scoring):
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+  - Per‑AID grading matrix (prevents “graded the wrong object”): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+  ```bash
+  python3 scripts/tools/evaluate_profit_alerts.py --date <D>
+  ```
+  Outputs:
+  - `sharepacks/<D>/control_center/profit_alerts_eval.md`
+  - `sharepacks/<D>/control_center/profit_alerts_eval.csv`
+  - `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv` (deduped play‑sets)
+
 ---
 
 ## 7) (Optional but recommended) Generate paste‑ready evidence blocks + run‑report scaffolds
@@ -307,6 +320,7 @@ Per state, generate per‑tool `summary.md` blocks inside the sharepack so later
 - DR: `scripts/tools/dr_sharepack_summary.py`
 - VTRAC: `scripts/tools/vtrac_sharepack_summary.py`
 - Hot Zones: `scripts/tools/hot_zones_sharepack_summary.py`
+- Winners lens JSON digest (optional, paste-friendly Part 1 helper): `scripts/tools/winners_json_digest.py`
 (Commands and output paths: see the Evaluate‑Only quickstart.)
 
 Optional validation helpers (interpretation matters):

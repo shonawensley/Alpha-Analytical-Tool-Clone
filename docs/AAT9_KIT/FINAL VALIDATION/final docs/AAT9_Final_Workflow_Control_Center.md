@@ -22,7 +22,7 @@ For a given results date **D**, export a full Control Center bundle into the fro
 ```bash
 python3 scripts/tools/export_control_center_sharepack.py --date <D>
 ```
-Outputs land under: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch + README/meta/report).
+Outputs land under: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch, Profit Alerts A01–A12 + README/meta/report).
 
 Regression check:
 ```bash
@@ -31,8 +31,32 @@ python3 scripts/checks/test_cc_snapshot_schema.py
 
 ## Pause line (pre-A01–A12)
 - Implemented alerts: `blackapple`, `due_doubles`, `vtrac_repeat` with hit tagging across four criteria.
-- Not yet implemented: A01–A12 profitability indicators. Schema and hit tagging are ready; add them as detectors emitting the same alert shape.
+- A01–A12 profitability indicators are implemented as **sharepack-aligned exports** (see “Profit Alerts export status” below). They are not yet emitted by the minimal `cc_sanity_snapshot.py` path.
 - State matching is deterministic via `state_map.json`; avoid heuristic matching going forward.
+
+## Profit Alerts (A01–A12) export status
+- A01–A12 are now exported as a sharepack-aligned Brain‑2 board:
+  - `sharepacks/<D>/control_center/profit_alerts.csv`
+  - `sharepacks/<D>/control_center/profit_alerts.md`
+- These are **detectors + evidence** intended for Master Validation evaluation (no wagering engine).
+
+## Profit Alerts evaluation (windowed “episode” scoring)
+
+Profit Alerts are not meant to be graded only “D‑only”. The primary evaluation is **hit within a draw-step window** (DecayDraws), with strict D‑only as diagnostic.
+
+SSOT contract:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md` (per‑AID “what is a hit”)
+
+Evaluator (local only; uses `data/results/*.txt` + frozen sharepacks):
+```bash
+python3 scripts/tools/evaluate_profit_alerts.py --date <D>
+```
+
+Outputs:
+- `sharepacks/<D>/control_center/profit_alerts_eval.csv`
+- `sharepacks/<D>/control_center/profit_alerts_eval.md`
+- `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv` (deduped play‑sets; avoids double counting)
 
 ## When resuming Control Center
 - Keep the alert schema stable; emit `{id, state, variant, date, strength?, status?, evidence, hits}` for any new indicator.

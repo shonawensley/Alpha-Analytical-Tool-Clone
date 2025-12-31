@@ -122,14 +122,23 @@ def summarize_winner(
     sc_rows = scores[scores["Canonical"] == canonical]
     if len(sc_rows):
         best = sc_rows.sort_values("score", ascending=False).iloc[0]
+        scores_total = int(len(scores))
+        scores_top = float(scores["score"].max()) if scores_total else None
+        score_ratio = float(best["score"]) / scores_top if scores_top not in (None, 0) else None
+        score_delta = float(scores_top) - float(best["score"]) if scores_top is not None else None
         res["scores"] = {
             "present": True,
             "best_rank": int(best["rank"]),
+            "rows_total": scores_total,
+            "winner_rank_fraction": float(best["rank"]) / float(scores_total) if scores_total else None,
             "section": best["section"],
             "set": best["Set"],
             "draw": best["Draw"],
             "col": best["Column"],
             "score": float(best["score"]),
+            "top_score": scores_top,
+            "winner_score_ratio_to_top": score_ratio,
+            "winner_score_delta_from_top": score_delta,
             "hot": int(best.get("hot", 0)),
             "vtrac_straight": float(best.get("score_vtrac_straight", 0)),
             "why": str(best.get("why", "")),
@@ -142,11 +151,20 @@ def summarize_winner(
     cp_rows = compound[compound["Canonical"] == canonical]
     if len(cp_rows):
         best = cp_rows.sort_values("compound_score", ascending=False).iloc[0]
+        comp_total = int(len(compound))
+        comp_top = float(compound["compound_score"].max()) if comp_total else None
+        comp_ratio = float(best["compound_score"]) / comp_top if comp_top not in (None, 0) else None
+        comp_delta = float(comp_top) - float(best["compound_score"]) if comp_top is not None else None
         res["compound"] = {
             "present": True,
             "best_rank": int(best["rank"]),
+            "rows_total": comp_total,
+            "winner_rank_fraction": float(best["rank"]) / float(comp_total) if comp_total else None,
             "section": best["section"],
             "score": float(best["compound_score"]),
+            "top_score": comp_top,
+            "winner_score_ratio_to_top": comp_ratio,
+            "winner_score_delta_from_top": comp_delta,
             "col1_hits": int(best.get("col1_hits", 0)),
             "hot2": int(best.get("hot2_count", 0)),
             "set_chain": int(best.get("set_chain_depth", 0)),
@@ -165,12 +183,21 @@ def summarize_winner(
         fam_rows = families[families["family_id"].astype(str).str.contains(canonical)]
     if len(fam_rows):
         best = fam_rows.sort_values("family_score", ascending=False).iloc[0]
+        fam_total = int(len(families))
+        fam_top = float(families["family_score"].max()) if fam_total else None
+        fam_ratio = float(best["family_score"]) / fam_top if fam_top not in (None, 0) else None
+        fam_delta = float(fam_top) - float(best["family_score"]) if fam_top is not None else None
         res["families"] = {
             "present": True,
             "count": len(fam_rows),
             "best_rank": int(best["rank"]),
+            "rows_total": fam_total,
+            "winner_rank_fraction": float(best["rank"]) / float(fam_total) if fam_total else None,
             "section": best["section"],
             "score": float(best["family_score"]),
+            "top_score": fam_top,
+            "winner_score_ratio_to_top": fam_ratio,
+            "winner_score_delta_from_top": fam_delta,
             "hot2": int(best.get("hot2_count", 0)),
             "col1_hits": int(best.get("col1_hits", 0)) if "col1_hits" in best else None,
             "source": "patterns_families.csv",
@@ -223,18 +250,30 @@ def make_markdown(state: str, date: str, winners_info: List[Dict], top_comp: Lis
         if win["scores"].get("present"):
             s = win["scores"]
             why = f" | why {s['why']}" if s.get("why") else ""
-            lines.append(f"- Scores ({s['source']}): rank {s['best_rank']}, section {s['section']}, Set {s['set']}, Draw {s['draw']}, Col {s['col']}, score {s['score']}, hot {s['hot']}, vt_straight {s['vtrac_straight']}{why}")
+            lines.append(
+                f"- Scores ({s['source']}): rank {s['best_rank']}/{s.get('rows_total')} (rank_frac {s.get('winner_rank_fraction')}) | "
+                f"score {s['score']} (top {s.get('top_score')}, ratio {s.get('winner_score_ratio_to_top')}, delta {s.get('winner_score_delta_from_top')}) | "
+                f"section {s['section']}, Set {s['set']}, Draw {s['draw']}, Col {s['col']}, hot {s['hot']}, vt_straight {s['vtrac_straight']}{why}"
+            )
         else:
             lines.append(f"- Scores ({win['scores']['source']}): not present")
         if win["compound"].get("present"):
             c = win["compound"]
             why = f" | why {c['why']}" if c.get("why") else ""
-            lines.append(f"- Compound ({c['source']}): rank {c['best_rank']}, section {c['section']}, score {c['score']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain {c['set_chain']}, draw_chain {c['draw_chain']}{why}")
+            lines.append(
+                f"- Compound ({c['source']}): rank {c['best_rank']}/{c.get('rows_total')} (rank_frac {c.get('winner_rank_fraction')}) | "
+                f"score {c['score']} (top {c.get('top_score')}, ratio {c.get('winner_score_ratio_to_top')}, delta {c.get('winner_score_delta_from_top')}) | "
+                f"section {c['section']}, col1_hits {c['col1_hits']}, hot2 {c['hot2']}, set_chain {c['set_chain']}, draw_chain {c['draw_chain']}{why}"
+            )
         else:
             lines.append(f"- Compound ({win['compound']['source']}): not present")
         if win["families"].get("present"):
             f = win["families"]
-            lines.append(f"- Families ({f['source']}): {f['count']} rows contain digits; best rank {f['best_rank']}, section {f['section']}, score {f['score']}, hot2 {f['hot2']}")
+            lines.append(
+                f"- Families ({f['source']}): count {f['count']} | rank {f['best_rank']}/{f.get('rows_total')} (rank_frac {f.get('winner_rank_fraction')}) | "
+                f"score {f['score']} (top {f.get('top_score')}, ratio {f.get('winner_score_ratio_to_top')}, delta {f.get('winner_score_delta_from_top')}) | "
+                f"section {f['section']}, hot2 {f['hot2']}"
+            )
         else:
             lines.append(f"- Families ({win['families']['source']}): not present")
         mh = win["metrics_hits"]

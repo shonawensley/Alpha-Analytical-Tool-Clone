@@ -100,7 +100,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 - Added a sharepack-aligned Control Center exporter so Brain‑2 artifacts are frozen alongside Brain‑1 under `sharepacks/<D>/...`.
 - Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
-- Outputs: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch + README/meta/report).
+- Outputs: `sharepacks/<D>/control_center/` (Blackapple, Due Doubles, VTRAC Repeat Watch, Profit Alerts A01–A12 + README/meta/report).
 - Files:
   - `scripts/tools/export_control_center_sharepack.py`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
@@ -172,3 +172,145 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 - `scripts/tools/freeze_sharepack_day.py` now writes:
   - `sharepacks/<D>/README.md` (history/results mapping, contents)
   - `sharepacks/<D>/<STATE>/README.md` (what should be inside per state)
+
+---
+
+## 2025-12-24
+
+### Sharepack summaries: add cross-tool comparability metrics (rank + magnitude)
+
+- Problem observed: cross-tool comparisons were hard when summaries only included raw rank. Also, some “winner present” checks were overly literal (doubles like `330` vs canonical `033`).
+- Fix: enhance sharepack summarizers to emit standardized “rank + magnitude” fields (names vary slightly by tool), e.g.:
+  - `rows_total`, `winner_best_rank`, `winner_rank_fraction`
+  - `top_score_*`, `winner_score_*`, `winner_score_ratio_to_top`, `winner_score_delta_from_top`
+- Files:
+  - `scripts/tools/stable_sharepack_summary.py`
+  - `scripts/tools/dr_sharepack_summary.py`
+  - `scripts/tools/hot_zones_sharepack_summary.py`
+  - `scripts/tools/vtrac_sharepack_summary.py`
+
+### Digit Reduction: canonical/permutation-aware winner presence in top candidates
+
+- Fix: treat the winner as present in DR top candidates if **any permutation** of the canonical triad is present (prevents false negatives for doubles like `330`).
+- File:
+  - `scripts/tools/dr_sharepack_summary.py`
+
+### Digit Reduction validation: results-aware missing-period handling
+
+- Problem observed: some states/days can have only one winner in `data/results/<D>.txt` (e.g., Midday blank but Evening present). In that case, strict Midday+Evening stamp expectations can produce false failures.
+- Fix: `validate_dr_winners.py` now:
+  - skips validating periods with no winner in the results file, and
+  - allows a single-winner day to be stored under the other period bucket (prints `NOTE`) while still validating stamp↔flags↔hits consistency.
+- File:
+  - `scripts/tools/validate_dr_winners.py`
+
+### Hot Zones: winner-map semantics clarity (top-20 snapshot, not exhaustive)
+
+- Fix: Hot Zones sharepack summary now records winner-map scope (`top20+guard_hits`) and treats “not in winner_map” as a note (often expected) rather than a coverage gap.
+- File:
+  - `scripts/tools/hot_zones_sharepack_summary.py`
+
+### VTRAC: winner index placement included in summary JSON
+
+- Fix: VTRAC sharepack summary JSON now includes a small winners digest + winner index placement metrics (rank fraction + score-vs-top ratio/delta) so templates don’t require raw winners JSON.
+- File:
+  - `scripts/tools/vtrac_sharepack_summary.py`
+
+### Control Center meta: parse history date from both workbook name styles
+
+- Fix: the Control Center sharepack exporter now parses `Pick3StatsC4_YYYY-MM-DD.xlsm` and `Pick3StatsC4_YYYY_MM_DD.xlsm` so `history_date (D-1)` is populated consistently.
+- File:
+  - `scripts/tools/export_control_center_sharepack.py`
+
+### Sharepack day README: fill missing Inputs sections
+
+- Fix: `sharepacks/2025-06-21/README.md` and `sharepacks/2025-06-23/README.md` now include Inputs (history workbook + results file) and consistent Notes.
+- Files:
+  - `sharepacks/2025-06-21/README.md`
+  - `sharepacks/2025-06-23/README.md`
+
+### Part A helper: winners JSON digest script
+
+- Added a helper to generate a small Markdown digest from winners JSON (avoids pasting thousands of lines into chat).
+- File:
+  - `scripts/tools/winners_json_digest.py`
+
+### Template + docs: comparability + digest pointers
+
+- Updated template and SSOT docs to point to the digest script and to explicitly request rank+magnitude fields in per-tool evidence blocks.
+- Files:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+  - `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md`
+
+---
+
+## 2025-12-25
+
+### Brain‑2: Profit Alerts (A01–A12) exported into sharepacks
+
+- Added a sharepack-aligned Profit Alerts board (A01–A12) so Brain‑2 can be evaluated like Brain‑1 without relying on Streamlit UI state.
+- Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+- Outputs:
+  - `sharepacks/<D>/control_center/profit_alerts.csv`
+  - `sharepacks/<D>/control_center/profit_alerts.md`
+- Notes:
+  - This is detectors + evidence (no wagering engine).
+  - Inputs are frozen sharepack artifacts (Stable/DR/Hot Zones/Aux + results file for evaluation).
+- Files:
+  - `scripts/tools/export_control_center_sharepack.py`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
+
+---
+
+## 2025-12-26
+
+### Profit Alerts: windowed evaluation harness + charter
+
+- Added SSOT evaluation semantics (variants, draw-steps, decay windows, censored handling):
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+- Added a deterministic evaluator that grades Profit Alerts against `data/results/*.txt` timelines (primary = hit within per-row `DecayDraws`, secondary = 7/14 draw-steps):
+  - Command: `python3 scripts/tools/evaluate_profit_alerts.py --date <D>`
+  - Outputs:
+    - `sharepacks/<D>/control_center/profit_alerts_eval.md`
+    - `sharepacks/<D>/control_center/profit_alerts_eval.csv`
+- Tightened Profit Alerts candidate validity (Pick‑3 only): filter out Stable rows where `Canonical` or `orders_modal_value` are not 3-digit (prevents impossible 4-digit candidates in A05/A12 exports):
+  - `scripts/tools/export_control_center_sharepack.py`
+- Control Center sharepack README now lists the optional evaluation artifacts + command:
+  - `sharepacks/<D>/control_center/README.md` (generated by `scripts/tools/export_control_center_sharepack.py`)
+- Updated SSOT pointers so zero-context sessions find the charter + evaluator quickly:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
+  - `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md`
+
+---
+
+## 2025-12-27
+
+### Profit Alerts: implied_set exports + merged episode scoring (SSOT)
+
+- Added SSOT grading matrix clarifying “pipeline vs tool outcome” and per‑AID hit definitions (prevents the “0 hits” panic loop caused by grading the wrong object):
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+- Exporter now emits explicit `ImpliedSet` (JSON list of 3‑digit strings) where required so evaluation never guesses clamp subsets:
+  - A06/A07/A11 boxed perms (optional) and A12 STR8_4of8 clamp lane
+  - A05/A09/A10 already export implied sets (STR8_8, STR8_3)
+  - `scripts/tools/export_control_center_sharepack.py`
+- Evaluator now grades set membership when `ImpliedSet` is present (primary), and writes a **merged play‑set** view so co‑firing alerts don’t double count spend:
+  - `scripts/tools/evaluate_profit_alerts.py`
+  - Outputs:
+    - `sharepacks/<D>/control_center/profit_alerts_eval.csv`
+    - `sharepacks/<D>/control_center/profit_alerts_eval.md`
+    - `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv`
+- Updated SSOT pointers and docs to reference the grading matrix and merged output:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`

@@ -65,9 +65,15 @@ def summarize_winner_variant(
     # Rank top_lanes by score_mean desc
     tl = top_lanes.copy()
     tl["rank"] = tl["score_mean"].rank(method="min", ascending=False).astype(int)
+    rows_total = int(len(tl))
+    top_score_mean = float(tl["score_mean"].max()) if rows_total else None
     tl_rows = tl[tl["triad"].astype(str).isin([literal, canonical])]
     tl_present = not tl_rows.empty
     best_tl_rank = int(tl_rows["rank"].min()) if tl_present else None
+    winner_score_mean = float(tl_rows["score_mean"].max()) if tl_present else None
+    winner_rank_fraction = float(best_tl_rank) / float(rows_total) if best_tl_rank is not None and rows_total else None
+    winner_score_ratio_to_top = float(winner_score_mean) / float(top_score_mean) if winner_score_mean is not None and top_score_mean not in (None, 0) else None
+    winner_score_delta_from_top = float(top_score_mean) - float(winner_score_mean) if winner_score_mean is not None and top_score_mean is not None else None
 
     # Per-lane evidence for this triad
     pl_rows = per_lane[per_lane["triad"].astype(str).isin([literal, canonical])]
@@ -80,27 +86,45 @@ def summarize_winner_variant(
     wm_present = not wm_rows.empty
 
     gaps = []
+    notes: List[str] = []
     if not tl_present:
         gaps.append("missing_from_top_lanes")
     if not pl_present:
         gaps.append("missing_from_per_lane")
-    if winner_map_file_present and not wm_present:
-        gaps.append("winner_not_in_winner_map")
     if not winner_map_file_present:
         gaps.append("winner_map_file_missing")
+    if winner_map_file_present and not wm_present:
+        # Winner map is a top-N snapshot (default limit=20 + guard rows). Absence here is not a pipeline failure.
+        if best_tl_rank is not None and best_tl_rank > 20:
+            notes.append("winner_not_in_top20_winner_map (expected when winner rank > 20)")
+        else:
+            notes.append("winner_not_in_top20_winner_map (note: map is a top-20 snapshot)")
 
     return {
         "label": label,
         "literal": literal,
         "canonical": canonical,
-        "top_lanes": {"present": tl_present, "best_rank": best_tl_rank, "source": "hot_zones_top_lanes.csv"},
+        "top_lanes": {
+            "present": tl_present,
+            "best_rank": best_tl_rank,
+            "rows_total": rows_total,
+            "winner_rank_fraction": winner_rank_fraction,
+            "winner_score_mean": winner_score_mean,
+            "top_score_mean": top_score_mean,
+            "winner_score_ratio_to_top": winner_score_ratio_to_top,
+            "winner_score_delta_from_top": winner_score_delta_from_top,
+            "source": "hot_zones_top_lanes.csv",
+        },
         "per_lane": {"present": pl_present, "has_straight": has_straight, "has_vt_straight": has_vt_straight, "source": "hot_zones_per_lane.csv"},
         "winner_map": {
             "file_present": winner_map_file_present,
             "triad_present": wm_present,
+            "scope": "top20+guard_hits",
+            "limit": 20,
             "source": "hot_zones_winner_map.json/csv",
         },
         "gaps": gaps,
+        "notes": notes,
     }
 
 
@@ -110,7 +134,12 @@ def make_markdown(state: str, date: str, winners_info: List[Dict], top_candidate
     for w in winners_info:
         lines.append(f"\n## {w['label']} winner {w['literal']} (canonical {w['canonical']})")
         if w["top_lanes"]["present"]:
-            lines.append(f"- Top lanes ({w['top_lanes']['source']}): present, best rank {w['top_lanes']['best_rank']}")
+            lines.append(
+                f"- Top lanes ({w['top_lanes']['source']}): present | rank {w['top_lanes']['best_rank']}/{w['top_lanes'].get('rows_total')} "
+                f"(rank_frac {w['top_lanes'].get('winner_rank_fraction')}) | "
+                f"score_mean {w['top_lanes'].get('winner_score_mean')} (top {w['top_lanes'].get('top_score_mean')}, "
+                f"ratio {w['top_lanes'].get('winner_score_ratio_to_top')}, delta {w['top_lanes'].get('winner_score_delta_from_top')})"
+            )
         else:
             lines.append(f"- Top lanes ({w['top_lanes']['source']}): not present")
         if w["per_lane"]["present"]:
@@ -118,10 +147,13 @@ def make_markdown(state: str, date: str, winners_info: List[Dict], top_candidate
         else:
             lines.append(f"- Per-lane ({w['per_lane']['source']}): not present")
         lines.append(
-            f"- Winner map ({w['winner_map']['source']}): file_present={w['winner_map']['file_present']} | triad_present={w['winner_map']['triad_present']}"
+            f"- Winner map ({w['winner_map']['source']}): file_present={w['winner_map']['file_present']} | triad_present={w['winner_map']['triad_present']} "
+            f"(scope {w['winner_map'].get('scope')}, limit {w['winner_map'].get('limit')})"
         )
         if w["gaps"]:
             lines.append(f"- Coverage gaps: {', '.join(w['gaps'])}")
+        if w.get("notes"):
+            lines.append(f"- Notes: {', '.join(w['notes'])}")
 
     lines.append("\n## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)")
     tc = top_candidates.copy()

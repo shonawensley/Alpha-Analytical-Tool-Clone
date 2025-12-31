@@ -28,7 +28,7 @@ Date convention (important):
 | Stable evidence (brain + winners lens) | `sharepacks/<D>/<STATE>/stable/<STATE>/` | `metrics.json` is the Stable “winners + ranks” anchor. |
 | Digit Reduction winners semantics | `.../analyzer_v2/winners/*_winner_stamp.json` | SSOT for **any vs final** counts (see below). |
 | VTRAC compact report (global) | `sharepacks/<D>/vtrac_compact_report.json` | Must be **non-empty** for aggregator-style reads. |
-| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Sharepack-aligned export of Control Center boards (Blackapple, Due Doubles, VTRAC Repeat Watch). |
+| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Sharepack-aligned export of Control Center boards (Blackapple, Due Doubles, VTRAC Repeat Watch, Profit Alerts A01–A12). |
 | Template answers | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Generate via run-report script; don’t write into the template. |
 
 ## Known bumpy semantics (read once)
@@ -41,6 +41,12 @@ Date convention (important):
 - **Leading zeros / dtype inference (evaluation layer)**  
   - Treat Pick‑3 literals/triads/canonicals as **3‑digit strings**. A naive `pandas.read_csv()` can silently coerce `033 → 33`, which causes false “missing winner” alarms in validators/summaries.  
   - Fix: use the repo’s sharepack summarizers/validators (they force string dtype for ID-like columns); don’t reimplement them with default dtype inference.
+- **Hot Zones winner-map scope (top‑N snapshot)**  
+  - `*_hot_zones_winner_map.json/csv` is a **top‑20 (+guard rows) snapshot**, not an exhaustive list of all lanes. A winner can be absent there even when Hot Zones ran correctly.
+- **Winners JSON can be very large (paste-friendly digest)**  
+  - If the winners JSON is too large to paste/share, generate a small Markdown digest: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
+- **Cross-tool comparability (recommended fields in summaries)**  
+  - When comparing tools, prefer “rank + magnitude” over raw rank alone. Sharepack summaries now include standard fields like: `rows_total`, `winner_best_rank`, `winner_rank_fraction`, `top_score_*`, `winner_score_*`, `winner_score_ratio_to_top`, `winner_score_delta_from_top` (names vary slightly by tool).
 - **VTRAC compact report can be empty**  
   - A compact report JSON can exist but contain `states=[]` / `sections=[]`. Run the validator below to fail fast and rerun the VTRAC share bundle if needed.
 
@@ -62,8 +68,12 @@ Workflow changelog (don’t lose “fix later” items across sessions):
 Tracked states (tables present): CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA. (GA/TX not tracked; skip to avoid errors.)
 
 Control Center (Brain‑2) sharepack export (recommended when freezing a full day):
-- Export day-level CC boards (BA + Due Doubles + Repeat Watch) into: `sharepacks/<D>/control_center/`
+- Export day-level CC boards (BA + Due Doubles + Repeat Watch + Profit Alerts) into: `sharepacks/<D>/control_center/`
 - Command: `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+- Profit Alerts evaluation (windowed; primary = hit within DecayDraws draw-steps):
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+  - Per‑AID “what is a hit” matrix (prevents grading the wrong object): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+  - Command: `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
 
 Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`

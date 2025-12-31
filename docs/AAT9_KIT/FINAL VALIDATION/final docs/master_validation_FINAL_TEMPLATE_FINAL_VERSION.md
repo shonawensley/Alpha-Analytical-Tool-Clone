@@ -9,6 +9,7 @@ Execution note (recommended):
 
 How to read:
 - Open the analyzer-style winners HTML for the state/date (Midday, Evening, Combined panes). If available, also skim the JSON twin for counts/index info.
+- Optional: if the winners JSON is too large to paste/share, generate a small digest: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 - Observe how the winning pattern/family appears through the Set3→Set1 progression (R2/R4/R6/R8) and across variants. Note hot markers (*, **), colored overlays (winner, VT family/straight), and column positions (especially col1/col2).
 - Think in terms of the 4 hit criteria (exact straight, exact boxed, VT-boxed, VT-straight) and “profitable environment” traits (cross-variant convergence, col1/2 density, clear lanes).
 - Then answer Part A (questions 1–10), keeping it environment-only (no tool scores).
@@ -67,7 +68,9 @@ Use the template below per tool (copy/paste for each: Stable, DR, VTRAC, Hot Zon
    - Brain: […]  
    - Winners: […]  
    - Missing?: …
-   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 517 → 157). Summarizer helpers (paste their Markdown here, then answer Q1–Q10):
+   - Canonical note: tools often use canonical (sorted) forms. Map literal → canonical before filtering (e.g., 517 → 157).
+   - Standardized comparability (recommended): capture rank + total rows and score-vs-top metrics when available (e.g., `rows_total`, `winner_best_rank`, `winner_rank_fraction`, `top_score_*`, `winner_score_*`, `winner_score_ratio_to_top`, `winner_score_delta_from_top`).
+   - Summarizer helpers (paste their Markdown here, then answer Q1–Q10):
      - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md`
      - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md`
      - V-TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`

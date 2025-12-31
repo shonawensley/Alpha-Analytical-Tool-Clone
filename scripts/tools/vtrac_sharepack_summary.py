@@ -69,12 +69,20 @@ def make_markdown(
     if winners_lens:
         lines.append("\n## Winners lens (from winners VTRAC report JSON/HTML)")
         for w in winners_lens:
+            lens_rank = w.get("rank")
+            lens_score = w.get("score")
             lines.append(
                 f"- winner {w.get('winner_combo')} | index {w.get('index')} | file {w.get('_file')} | "
-                f"stats keys: {', '.join((w.get('stats') or {}).keys())}"
+                f"rank {lens_rank} score {lens_score} | stats keys: {', '.join((w.get('stats') or {}).keys())}"
             )
         lines.append("\n## Winner index placement (in enhanced JSON rankings)")
         idx_pos = {e.get("index"): i for i, e in enumerate(indices_ranked)}
+        top_index_score = None
+        if indices_ranked:
+            try:
+                top_index_score = float(indices_ranked[0].get("score") or 0)
+            except Exception:
+                top_index_score = None
         for w in winners_lens:
             idx = w.get("index")
             winner_combo = str(w.get("winner_combo"))
@@ -84,6 +92,16 @@ def make_markdown(
             entry = indices_ranked[idx_pos[idx]]
             rank = idx_pos[idx] + 1
             score = entry.get("score")
+            rank_fraction = float(rank) / float(len(indices_ranked)) if indices_ranked else None
+            score_ratio = None
+            score_delta = None
+            try:
+                if score is not None and top_index_score not in (None, 0):
+                    score_ratio = float(score) / float(top_index_score)
+                    score_delta = float(top_index_score) - float(score)
+            except Exception:
+                score_ratio = None
+                score_delta = None
             straights = entry.get("straights") or []
             in_straights = any(
                 isinstance(s, dict) and str(s.get("straight")) == winner_combo for s in straights
@@ -100,7 +118,8 @@ def make_markdown(
                     top_s.append(f"{s.get('straight')} ({s.get('score')})")
             top_s_str = ", ".join(top_s) if top_s else "(none)"
             lines.append(
-                f"- winner {winner_combo} | index {idx} rank {rank}/{len(indices_ranked)} | score {score} | "
+                f"- winner {winner_combo} | index {idx} rank {rank}/{len(indices_ranked)} (rank_frac {rank_fraction}) | "
+                f"score {score} (top {top_index_score}, ratio {score_ratio}, delta {score_delta}) | "
                 f"winner_in_index_straights={in_straights} | top_index_straights: {top_s_str}"
             )
         lines.append("  - Note: winners lens lives under the winners sharepack and is generated post-results.")
@@ -147,6 +166,60 @@ def main():
     if args.md_out:
         Path(args.md_out).write_text(md)
     if args.json_out:
+        winners_digest = None
+        winner_index_placements = None
+        if winners_lens:
+            winners_digest = []
+            idx_pos = {e.get("index"): i for i, e in enumerate(indices_ranked)}
+            top_index_score = None
+            if indices_ranked:
+                try:
+                    top_index_score = float(indices_ranked[0].get("score") or 0)
+                except Exception:
+                    top_index_score = None
+
+            winner_index_placements = []
+            for w in winners_lens:
+                winner_combo = str(w.get("winner_combo"))
+                idx = w.get("index")
+                winners_digest.append(
+                    {
+                        "winner_combo": winner_combo,
+                        "index": idx,
+                        "rank": w.get("rank"),
+                        "score": w.get("score"),
+                        "timestamp": w.get("timestamp"),
+                        "file": w.get("_file"),
+                        "stats_keys": sorted((w.get("stats") or {}).keys()),
+                    }
+                )
+                if idx in idx_pos:
+                    rank = idx_pos[idx] + 1
+                    score = indices_ranked[idx_pos[idx]].get("score")
+                    rank_fraction = float(rank) / float(len(indices_ranked)) if indices_ranked else None
+                    score_ratio = None
+                    score_delta = None
+                    try:
+                        if score is not None and top_index_score not in (None, 0):
+                            score_ratio = float(score) / float(top_index_score)
+                            score_delta = float(top_index_score) - float(score)
+                    except Exception:
+                        score_ratio = None
+                        score_delta = None
+                    winner_index_placements.append(
+                        {
+                            "winner_combo": winner_combo,
+                            "index": idx,
+                            "index_rank": rank,
+                            "indices_total": len(indices_ranked),
+                            "rank_fraction": rank_fraction,
+                            "index_score": score,
+                            "top_index_score": top_index_score,
+                            "score_ratio_to_top": score_ratio,
+                            "score_delta_from_top": score_delta,
+                        }
+                    )
+
         Path(args.json_out).write_text(
             json.dumps(
                 {
@@ -155,6 +228,8 @@ def main():
                     "top_indices": top_indices,
                     "top_straights": top_straights,
                     "section_summaries": section_summaries,
+                    "winners_lens": winners_digest,
+                    "winner_index_placements": winner_index_placements,
                 },
                 indent=2,
             )

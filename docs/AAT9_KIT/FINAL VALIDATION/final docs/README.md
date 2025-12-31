@@ -42,8 +42,11 @@ Per-run workflow (high level):
    - Interpretation note: a tool can “miss” the winner even when the pipeline is correct; treat that as evaluation signal, not corruption. (See: `AAT9_Final_Validation_Help.md` → “Pipeline vs tool outcome”.)
    - Optional (recommended for full-day freeze): export Control Center (Brain‑2) into `sharepacks/<D>/control_center/`:
      - `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+   - Optional (recommended when future results files exist): evaluate Profit Alerts windowed episodes:
+     - `python3 scripts/tools/evaluate_profit_alerts.py --date <D>`
 2) Generate the run report scaffold (command above).
 3) Fill the run report Parts 1–5 (using embedded `summary.md` evidence blocks).
+   - Optional: generate a paste-friendly winners JSON digest for Part A: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 4) Log “fix later” items to `WORKFLOW_CHANGELOG.md` so they aren’t lost.
 
 ## Operational guides
@@ -55,4 +58,7 @@ Per-run workflow (high level):
 
 ## Key references
 - Lean outputs index: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md`
+- Profit alerts (A01–A12) integration notes: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
+- Profit alerts evaluation charter (variants/decay semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+- Profit alerts grading matrix (per‑AID “what is a hit”): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
 - VTRAC permutations + VSTRAIGHTS reference: `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`

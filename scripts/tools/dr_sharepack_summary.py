@@ -17,6 +17,7 @@ Notes:
 """
 
 import argparse
+import itertools
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -24,8 +25,25 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 
+def normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def canonical_of_literal(literal: str) -> str:
-    return "".join(sorted(str(literal)))
+    literal = normalize_pick3_literal(literal)
+    if not literal:
+        return ""
+    return "".join(sorted(literal))
+
+
+def permuted_triads(canonical: str) -> set[str]:
+    canonical = normalize_pick3_literal(canonical)
+    if len(canonical) != 3 or not canonical.isdigit():
+        return set()
+    return {"".join(p) for p in set(itertools.permutations(canonical, 3))}
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -70,8 +88,11 @@ def summarize_variant(
     reducer_scores: pd.DataFrame = None,
 ) -> Dict:
     # Winner + semantics are anchored by stamp JSON (SSOT).
-    literal = str((stamp_data or {}).get("winner") or "unknown")
-    canonical = str((stamp_data or {}).get("winner_canon") or canonical_of_literal(literal))
+    raw_winner = (stamp_data or {}).get("winner") or ""
+    literal = normalize_pick3_literal(raw_winner) or "unknown"
+    raw_canon = (stamp_data or {}).get("winner_canon") or ""
+    canonical = normalize_pick3_literal(raw_canon) or (canonical_of_literal(literal) if literal != "unknown" else "unknown")
+    winner_variants = permuted_triads(canonical) | {literal, canonical}
     stamp_counts = (stamp_data or {}).get("counts") or {}
     items_total = int(stamp_counts.get("items_total") or 0)
 
@@ -123,13 +144,41 @@ def summarize_variant(
             pi_best_rank_vtrac = int(pi_variant.loc[pi_variant["dr.win_vtrac"].fillna(0) > 0, "area_rank"].min())
 
     # top candidates presence (does the winner triad appear as a candidate pattern?)
+    top_variant = top
+    if "variant" in top.columns:
+        top_variant = top[top["variant"].astype(str) == variant]
     winner_in_top = False
     top_best_rank = None
-    if not top.empty and "best_pattern" in top.columns:
-        winner_rows = top[top["best_pattern"].astype(str) == literal]
+    rows_total = int(len(top_variant))
+    winner_score_v2 = None
+    top_score_v2 = None
+    winner_rank_fraction = None
+    winner_score_ratio_to_top = None
+    winner_score_delta_from_top = None
+
+    if rows_total and "score_v2" in top_variant.columns:
+        try:
+            top_score_v2 = float(pd.to_numeric(top_variant["score_v2"], errors="coerce").fillna(0).max())
+        except Exception:
+            top_score_v2 = None
+
+    if not top_variant.empty and "best_pattern" in top_variant.columns:
+        patterns = top_variant["best_pattern"].astype(str).map(normalize_pick3_literal)
+        winner_rows = top_variant[patterns.isin(winner_variants)]
         winner_in_top = not winner_rows.empty
         if winner_in_top and "rank" in winner_rows.columns:
-            top_best_rank = int(winner_rows["rank"].min())
+            top_best_rank = int(pd.to_numeric(winner_rows["rank"], errors="coerce").min())
+        if winner_in_top and "score_v2" in winner_rows.columns:
+            try:
+                winner_score_v2 = float(pd.to_numeric(winner_rows["score_v2"], errors="coerce").fillna(0).max())
+            except Exception:
+                winner_score_v2 = None
+
+    if top_best_rank is not None and rows_total:
+        winner_rank_fraction = float(top_best_rank) / float(rows_total)
+    if winner_score_v2 is not None and top_score_v2 not in (None, 0):
+        winner_score_ratio_to_top = float(winner_score_v2) / float(top_score_v2)
+        winner_score_delta_from_top = float(top_score_v2) - float(winner_score_v2)
 
     # Reducer scores (optional)
     reducer_present = reducer_scores is not None and not reducer_scores.empty
@@ -159,7 +208,17 @@ def summarize_variant(
             "best_area_rank_vtrac_any": pi_best_rank_vtrac,
             "source": "analyzer_v2_per_item.csv",
         },
-        "top": {"winner_present": winner_in_top, "winner_best_rank": top_best_rank, "source": "analyzer_v2_top_candidates.csv"},
+        "top": {
+            "winner_present": winner_in_top,
+            "winner_best_rank": top_best_rank,
+            "rows_total": rows_total,
+            "winner_rank_fraction": winner_rank_fraction,
+            "winner_score_v2": winner_score_v2,
+            "top_score_v2": top_score_v2,
+            "winner_score_ratio_to_top": winner_score_ratio_to_top,
+            "winner_score_delta_from_top": winner_score_delta_from_top,
+            "source": "analyzer_v2_top_candidates.csv",
+        },
         "reducer_present": reducer_present,
         "gaps": gaps,
     }
@@ -221,7 +280,12 @@ def make_markdown(state: str, stamp: str, variants: List[Dict], top_items: List[
         else:
             lines.append(f"- Per-item ({v['per_item']['source']}): not present")
         lines.append(
-            f"- Top candidates ({v['top']['source']}): winner_triads_as_candidates={v['top']['winner_present']} | winner_best_rank={v['top']['winner_best_rank']}"
+            f"- Top candidates ({v['top']['source']}): rows_total={v['top'].get('rows_total')} | "
+            f"winner_present={v['top']['winner_present']} | winner_best_rank={v['top']['winner_best_rank']} | "
+            f"winner_rank_fraction={v['top'].get('winner_rank_fraction')} | "
+            f"winner_score_v2={v['top'].get('winner_score_v2')} top_score_v2={v['top'].get('top_score_v2')} | "
+            f"winner_score_ratio_to_top={v['top'].get('winner_score_ratio_to_top')} "
+            f"winner_score_delta_from_top={v['top'].get('winner_score_delta_from_top')}"
         )
         lines.append(f"- Reducer scores present: {v['reducer_present']}")
         if v["gaps"]:
@@ -253,8 +317,38 @@ def main():
     sharepack = Path(args.sharepack)
     state_name = sharepack.name
 
-    per_item = pd.read_csv(sharepack / "analyzer_v2" / f"{sharepack.name}_analyzer_v2_per_item.csv")
-    top = pd.read_csv(sharepack / "analyzer_v2" / f"{sharepack.name}_analyzer_v2_top_candidates.csv")
+    per_item = pd.read_csv(
+        sharepack / "analyzer_v2" / f"{sharepack.name}_analyzer_v2_per_item.csv",
+        dtype={"pattern": str, "variant": str},
+    )
+    top = pd.read_csv(
+        sharepack / "analyzer_v2" / f"{sharepack.name}_analyzer_v2_top_candidates.csv",
+        dtype={"best_pattern": str, "variant": str},
+    )
+    if "pattern" in per_item.columns:
+        per_item["pattern"] = per_item["pattern"].astype(str).map(normalize_pick3_literal)
+    if "best_pattern" in top.columns:
+        top["best_pattern"] = top["best_pattern"].astype(str).map(normalize_pick3_literal)
+
+    if "variant" not in per_item.columns:
+        per_item["variant"] = ""
+    if "match_types" not in per_item.columns:
+        per_item["match_types"] = ""
+    if "score_v2" not in per_item.columns:
+        per_item["score_v2"] = per_item.get("score", 0)
+
+    if "variant" not in top.columns:
+        top["variant"] = ""
+    if "evidence_tags" not in top.columns:
+        top["evidence_tags"] = ""
+    if "rank" not in top.columns:
+        top["rank"] = ""
+    if "score_v2" not in top.columns:
+        top["score_v2"] = top.get("score", 0)
+
+    for col in ["section", "set", "draw", "col", "pattern"]:
+        if col not in per_item.columns:
+            per_item[col] = ""
     winners_dir = sharepack / "analyzer_v2" / "winners"
     stamp = detect_latest_stamp(winners_dir)
 
@@ -276,26 +370,6 @@ def main():
                     reducer_scores=reducer_scores,
                 )
             )
-
-    if "variant" not in per_item.columns:
-        per_item["variant"] = ""
-    if "match_types" not in per_item.columns:
-        per_item["match_types"] = ""
-    if "score_v2" not in per_item.columns:
-        per_item["score_v2"] = per_item.get("score", 0)
-
-    if "variant" not in top.columns:
-        top["variant"] = ""
-    if "evidence_tags" not in top.columns:
-        top["evidence_tags"] = ""
-
-    for col in ["section", "set", "draw", "col", "pattern"]:
-        if col not in per_item.columns:
-            per_item[col] = ""
-    if "rank" not in top.columns:
-        top["rank"] = ""
-    if "score_v2" not in top.columns:
-        top["score_v2"] = top.get("score", 0)
 
     top_items = top_list(
         per_item,

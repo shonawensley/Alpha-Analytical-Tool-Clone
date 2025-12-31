@@ -53,7 +53,7 @@ For operational detail, see: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Fin
 | JSON tables | `data/outputs/json_tables/<STATE>_tables.json` or sharepack copy | Hot Zones + other tooling may use JSON. |
 | Aux draw CSVs | `data/cleaned/draws/*_draws.csv` | **Aux/BA must read draw CSVs** (not string-table XLSX). |
 | Aux draw snapshot (validation) | `sharepacks/<D>/<STATE>/aux/draws/` | For Master Validation Part 3, do not rely on live `data/cleaned/draws/` (it can drift after swaps). |
-| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Day-level Control Center boards exported from the frozen sharepack world (no drift). |
+| Control Center export (Brain‑2) | `sharepacks/<D>/control_center/` | Day-level Control Center boards exported from the frozen sharepack world (no drift): Blackapple, Due Doubles, VTRAC Repeat Watch, Profit Alerts (A01–A12). |
 | Winners overlays (HTML/JSON lens) | `sharepacks/<D>/<STATE>/winners/<STATE>/` | This is Template Part 1 (environment lens). |
 | Template answers (filled) | `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md` | Don’t write answers into the template file. |
 
@@ -175,6 +175,10 @@ Summarizers (produce paste-ready evidence blocks for Part 2):
 - Aux (Part 3):
   - Recommended (history-aligned): `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
   - Fallback: `python3 scripts/tools/aux_sharepack_summary.py --date <D> --state <STATE>`
+- Optional (Part 1 helpers): generate a paste-friendly winners JSON digest: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
+
+Summary comparability note:
+- Prefer rank + magnitude over rank alone when comparing tools. The sharepack summaries include fields like `rows_total`, `winner_best_rank`, `winner_rank_fraction`, `top_score_*`, `winner_score_*`, `winner_score_ratio_to_top`, `winner_score_delta_from_top` (names vary slightly by tool).
 
 Validators (fail fast on common “wiring drift”):
 - Tables naming: `PYTHONPATH=.:src python3 scripts/tools/validate_tables_naming.py --json-out tables_naming.json`

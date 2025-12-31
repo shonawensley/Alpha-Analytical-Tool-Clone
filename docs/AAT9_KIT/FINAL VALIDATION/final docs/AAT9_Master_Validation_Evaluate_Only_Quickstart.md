@@ -76,6 +76,28 @@ If you hit a real Fix‑Now failure: stop and log it in
 
 ---
 
+## 2.5) Profit Alerts evaluation (Brain‑2 windowed scoring)
+
+Profit Alerts A01–A12 live under the day sharepack Control Center export:
+- `sharepacks/<D>/control_center/profit_alerts.csv`
+
+Primary evaluation is **hit within DecayDraws draw-steps** (not “D-only”). Run:
+- Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+- Per‑AID grading matrix (prevents “graded the wrong object”): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+```bash
+python3 scripts/tools/evaluate_profit_alerts.py --date <D>
+```
+
+Outputs:
+- `sharepacks/<D>/control_center/profit_alerts_eval.md`
+- `sharepacks/<D>/control_center/profit_alerts_eval.csv`
+- `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv` (deduped play‑sets)
+
+Notes:
+- `profit_alerts_eval.csv` reports both the **variant-faithful** hit lens and an **any-outcome (cross-variant)** diagnostic lens (`hit_any_*`) so Midday alerts resolving on Evening (and vice versa) are explicitly counted.
+
+If future `data/results/<D+k>.txt` files are not present yet, episodes will be marked `CENSORED` (unknown), not failed.
+
 ## 3) Ensure “paste‑ready” evidence blocks exist (summary.md)
 
 Goal: the run report should contain compact evidence blocks so you don’t paste raw CSV/JSON.
@@ -156,6 +178,7 @@ Key idea:
 
 Recommended fill order:
 1) **Part A (environment lens):** open the winners HTML/JSON under `sharepacks/<D>/<STATE>/winners/<STATE>/` and answer the Part A prompts (no tool scores).
+   - If the winners JSON is too large to paste/share, generate a digest: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 2) **Part 2 (tools):** for each tool, read the embedded summarizer block and answer Q1–Q10 using that evidence (cite ranks/why‑tags/coverage).
 3) **Part 3 (Aux):** paste/verify the Aux summary block, then answer Q1–Q10 (variant convergence, doubles pressure, repeat watch, etc.).
 4) **Part 4 (pack decision):** synthesize candidates + coverage mode (boxed vs VT‑boxed vs VT‑straight, etc.). Use `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD` for mapping.
@@ -170,6 +193,7 @@ Global memory (don’t lose insights):
 
 Day‑level Control Center export (Brain‑2):
 - `sharepacks/<D>/control_center/`
+  - Boards: `blackapple_alerts.*`, `due_doubles.*`, `vtrac_repeat_watch.*`, `profit_alerts.*`
 
 If missing, regenerate (sharepack‑aligned; drift‑proof):
 ```bash
