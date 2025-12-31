@@ -155,6 +155,11 @@ git restore --staged data/original/Pick3StatsC4.xlsm 2>/dev/null || true
 git commit -m "checkpoint: sharepacks $D + validation workflow fixes"
 ```
 
+Clutter/retention policy (recommended):
+- Treat `sharepacks/<D>/` as the **frozen day** snapshot; do not “commit-all” large runs. Stage only the day(s) you intend to checkpoint.
+- If you need to re-run/experiment without polluting Git history, use `sharepacks/_legacy/` (gitignored) until you’re happy.
+- When derived summaries/evals are refreshed (e.g., `summary.md` blocks or `control_center/profit_alerts_eval.*`), commit them in a dedicated “refresh summaries/evals” commit so changes stay auditable.
+
 
 Never edit Git remotes/config. Never write outside the repo.
 
