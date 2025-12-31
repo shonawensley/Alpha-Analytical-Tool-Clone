@@ -48,6 +48,12 @@ Tracked state list (SSOT for master validation): `docs/AAT9_KIT/FINAL VALIDATION
 
 These catch the common “it looks right but is misaligned” failures.
 
+0) (Optional, recommended for confidence) Audit multiple sharepack days at once:
+```bash
+python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23
+# Writes a single report under: reports/audit/sharepacks_audit_<timestamp>.md
+```
+
 1) Global VTRAC aggregator feed exists and is non‑empty:
 ```bash
 python3 scripts/tools/validate_vtrac_compact_report.py --date <D>
