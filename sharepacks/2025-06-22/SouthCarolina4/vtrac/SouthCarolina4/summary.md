@@ -21,8 +21,8 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 675 | index 7 | file SouthCarolina4_vtrac7_winner_675_20251221_222134.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 675 | index 7 | file SouthCarolina4_vtrac7_winner_675_20251221_222134.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 675 | index 7 rank 29/35 | score 3.3089583333333334 | winner_in_index_straights=False | top_index_straights: 175 (1.24), 170 (0.55)
+- winner 675 | index 7 rank 29/35 (rank_frac 0.8285714285714286) | score 3.3089583333333334 (top 42.1971875, ratio 0.07841656113534423, delta 38.88822916666666) | winner_in_index_straights=False | top_index_straights: 175 (1.24), 170 (0.55)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

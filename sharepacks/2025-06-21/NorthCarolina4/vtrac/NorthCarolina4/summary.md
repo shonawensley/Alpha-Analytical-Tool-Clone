@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 427 | index 28 | file NorthCarolina4_vtrac28_winner_427_20251219_164407.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 397 | index 30 | file NorthCarolina4_vtrac30_winner_397_20251219_164408.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 427 | index 28 | file NorthCarolina4_vtrac28_winner_427_20251219_164407.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 397 | index 30 | file NorthCarolina4_vtrac30_winner_397_20251219_164408.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 427 | index 28 rank 32/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 397 | index 30 rank 34/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 427 | index 28 rank 32/35 (rank_frac 0.9142857142857143) | score 0.0 (top 78.00220499999996, ratio 0.0, delta 78.00220499999996) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 397 | index 30 rank 34/35 (rank_frac 0.9714285714285714) | score 0.0 (top 78.00220499999996, ratio 0.0, delta 78.00220499999996) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

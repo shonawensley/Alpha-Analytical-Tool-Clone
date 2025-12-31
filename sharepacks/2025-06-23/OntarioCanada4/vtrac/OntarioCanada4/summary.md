@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 325 | index 11 | file OntarioCanada4_vtrac11_winner_325_20251223_052103.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 438 | index 33 | file OntarioCanada4_vtrac33_winner_438_20251223_052105.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 325 | index 11 | file OntarioCanada4_vtrac11_winner_325_20251223_052103.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 438 | index 33 | file OntarioCanada4_vtrac33_winner_438_20251223_052105.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 325 | index 11 rank 32/35 | score 0.5918749999999999 | winner_in_index_straights=False | top_index_straights: 875 (0.09)
-- winner 438 | index 33 rank 3/35 | score 35.9823 | winner_in_index_straights=False | top_index_straights: 983 (9.83), 834 (9.306)
+- winner 325 | index 11 rank 32/35 (rank_frac 0.9142857142857143) | score 0.5918749999999999 (top 83.91228499999995, ratio 0.007053496398054233, delta 83.32040999999995) | winner_in_index_straights=False | top_index_straights: 875 (0.09)
+- winner 438 | index 33 rank 3/35 (rank_frac 0.08571428571428572) | score 35.9823 (top 83.91228499999995, ratio 0.4288084873388923, delta 47.92998499999995) | winner_in_index_straights=False | top_index_straights: 983 (9.83), 834 (9.306)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

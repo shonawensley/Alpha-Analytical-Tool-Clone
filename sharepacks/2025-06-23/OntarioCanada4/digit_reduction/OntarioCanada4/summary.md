@@ -5,7 +5,7 @@
 - Flags (winner_flags.csv): rows=30 | exact_any=0 vtrac_any=23 | drop_exact_any=2 drop_vtrac_any=12 | family_exact_any=0 family_vtrac_any=2 | vt_boxed=30 vt_straight=0
 - Hits (winner_hits.csv): rows=30 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=30 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=16 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=12.577143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Evening winner 438 (canonical 348)
@@ -13,7 +13,7 @@
 - Flags (winner_flags.csv): rows=147 | exact_any=0 vtrac_any=147 | drop_exact_any=0 drop_vtrac_any=20 | family_exact_any=0 family_vtrac_any=2 | vt_boxed=33 vt_straight=0
 - Hits (winner_hits.csv): rows=147 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=33 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=10 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=12.477143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Combined winner 325 (canonical 235)
@@ -21,7 +21,7 @@
 - Flags (winner_flags.csv): rows=73 | exact_any=0 vtrac_any=52 | drop_exact_any=9 drop_vtrac_any=24 | family_exact_any=9 family_vtrac_any=3 | vt_boxed=69 vt_straight=0
 - Hits (winner_hits.csv): rows=73 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=69 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=12 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=12.937143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Top per_item (analyzer_v2_per_item.csv)

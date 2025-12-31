@@ -4,15 +4,15 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=59 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 23 rows contain digits; best rank 835, section Midday, score 14.0, hot2 0
+- Families (patterns_families.csv): count 23 | rank 835/1485 (rank_frac 0.5622895622895623) | score 14.0 (top 35.5, ratio 0.39436619718309857, delta 21.5) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=19
 - Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Evening winner 199 (canonical 199)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=23 | family_rows=35 | exact_boxed=23 | exact_straight=23 | vt_boxed=23
-- Scores (patterns_scores.csv): rank 1387, section Evening, Set Set1, Draw Draw1, Col 5, score 15.0, hot 1, vt_straight 0.0 | why straight|cov1|hp_repeat4|hot1|double_mirror|draw_chain5
-- Compound (patterns_compound.csv): rank 157, section Evening, score 26.5, col1_hits 0, hot2 0, set_chain 1, draw_chain 5 | why draw_chain5|hot1x3|vstrx1|dblmirrorx11
-- Families (patterns_families.csv): 30 rows contain digits; best rank 956, section Evening, score 13.0, hot2 0
+- Scores (patterns_scores.csv): rank 1387/5253 (rank_frac 0.2640395964210927) | score 15.0 (top 41.5, ratio 0.3614457831325301, delta 26.5) | section Evening, Set Set1, Draw Draw1, Col 5, hot 1, vt_straight 0.0 | why straight|cov1|hp_repeat4|hot1|double_mirror|draw_chain5
+- Compound (patterns_compound.csv): rank 157/1756 (rank_frac 0.08940774487471526) | score 26.5 (top 66.0, ratio 0.4015151515151515, delta 39.5) | section Evening, col1_hits 0, hot2 0, set_chain 1, draw_chain 5 | why draw_chain5|hot1x3|vstrx1|dblmirrorx11
+- Families (patterns_families.csv): count 30 | rank 956/1485 (rank_frac 0.6437710437710438) | score 13.0 (top 35.5, ratio 0.36619718309859156, delta 22.5) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=9
 
 ## Top compound candidates (patterns_compound.csv)

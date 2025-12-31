@@ -1,16 +1,16 @@
 # Hot Zones Summary — Delaware4 (2025-06-23)
 
 ## Midday winner 669 (canonical 669)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 167
+- Top lanes (hot_zones_top_lanes.csv): present | rank 167/210 (rank_frac 0.7952380952380952) | score_mean 17.004 (top 24.472, ratio 0.6948349133703825, delta 7.468)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 919 (canonical 199)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 114
+- Top lanes (hot_zones_top_lanes.csv): present | rank 114/210 (rank_frac 0.5428571428571428) | score_mean 17.867 (top 24.472, ratio 0.7300997057862046, delta 6.605)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 277 | vt_triad 33 | score_mean 24.472 | tags col1,funnel_precol1,hot12,hot16,hot20,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vertical4,vt_straight

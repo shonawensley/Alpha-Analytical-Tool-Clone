@@ -1,16 +1,16 @@
 # Hot Zones Summary — PuertoRico4 (2025-06-23)
 
 ## Midday winner 858 (canonical 588)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 207
+- Top lanes (hot_zones_top_lanes.csv): present | rank 207/210 (rank_frac 0.9857142857142858) | score_mean 11.346 (top 23.858, ratio 0.4755637522005197, delta 12.512)
 - Per-lane (hot_zones_per_lane.csv): has_straight=False has_vt_straight=False
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 454 (canonical 445)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 119
+- Top lanes (hot_zones_top_lanes.csv): present | rank 119/210 (rank_frac 0.5666666666666667) | score_mean 16.111 (top 23.858, ratio 0.6752871154329785, delta 7.747)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=False
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 155 | vt_triad 12 | score_mean 23.858 | tags col1,guard_set1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_only_lane,vt_straight

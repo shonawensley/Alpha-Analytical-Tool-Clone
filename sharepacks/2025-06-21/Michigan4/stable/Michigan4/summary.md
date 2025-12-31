@@ -2,16 +2,16 @@
 
 ## Midday winner 432 (canonical 234)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=13 | family_rows=160 | exact_boxed=13 | exact_straight=12 | vt_boxed=13
-- Scores (patterns_scores.csv): rank 148, section Combined, Set Set1, Draw Draw4, Col 1, score 22.0, hot 2, vt_straight 2.0 | why straight|cov2|hp_repeat4|vstr2|hot2|vtrac_straight|set_chain2|draw_chain2
-- Compound (patterns_compound.csv): rank 48, section Combined, score 38.0, col1_hits 2, hot2 4, set_chain 2, draw_chain 2 | why set_chain2|draw_chain2|col1x2|hot2x4|vstrx6
-- Families (patterns_families.csv): 40 rows contain digits; best rank 224, section Combined, score 21.0, hot2 5
+- Scores (patterns_scores.csv): rank 148/4779 (rank_frac 0.03096882192927391) | score 22.0 (top 40.0, ratio 0.55, delta 18.0) | section Combined, Set Set1, Draw Draw4, Col 1, hot 2, vt_straight 2.0 | why straight|cov2|hp_repeat4|vstr2|hot2|vtrac_straight|set_chain2|draw_chain2
+- Compound (patterns_compound.csv): rank 48/1855 (rank_frac 0.02587601078167116) | score 38.0 (top 80.0, ratio 0.475, delta 42.0) | section Combined, col1_hits 2, hot2 4, set_chain 2, draw_chain 2 | why set_chain2|draw_chain2|col1x2|hot2x4|vstrx6
+- Families (patterns_families.csv): count 40 | rank 224/1348 (rank_frac 0.1661721068249258) | score 21.0 (top 34.5, ratio 0.6086956521739131, delta 13.5) | section Combined, hot2 5
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=112
 
 ## Evening winner 280 (canonical 028)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=2 | family_rows=381 | exact_boxed=2 | exact_straight=0 | vt_boxed=2
-- Scores (patterns_scores.csv): rank 2645, section Combined, Set Set1, Draw Draw3, Col 1, score 12.0, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot2|perm2
-- Compound (patterns_compound.csv): rank 528, section Combined, score 17.5, col1_hits 1, hot2 2, set_chain 1, draw_chain 1 | why draw_chain1|col1x1|hot2x2
-- Families (patterns_families.csv): 55 rows contain digits; best rank 97, section Combined, score 24.0, hot2 15
+- Scores (patterns_scores.csv): rank 2645/4779 (rank_frac 0.5534630675873614) | score 12.0 (top 40.0, ratio 0.3, delta 28.0) | section Combined, Set Set1, Draw Draw3, Col 1, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot2|perm2
+- Compound (patterns_compound.csv): rank 528/1855 (rank_frac 0.2846361185983827) | score 17.5 (top 80.0, ratio 0.21875, delta 62.5) | section Combined, col1_hits 1, hot2 2, set_chain 1, draw_chain 1 | why draw_chain1|col1x1|hot2x2
+- Families (patterns_families.csv): count 55 | rank 97/1348 (rank_frac 0.07195845697329377) | score 24.0 (top 34.5, ratio 0.6956521739130435, delta 10.5) | section Combined, hot2 15
 - Metrics (metrics.json): exact_boxed=True | exact_straight=False | vt_boxed_count=54
 
 ## Top compound candidates (patterns_compound.csv)

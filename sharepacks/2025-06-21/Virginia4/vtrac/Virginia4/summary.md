@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 473 | index 30 | file Virginia4_vtrac30_winner_473_20251219_164424.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 016 | index 6 | file Virginia4_vtrac6_winner_016_20251219_164426.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 473 | index 30 | file Virginia4_vtrac30_winner_473_20251219_164424.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 016 | index 6 | file Virginia4_vtrac6_winner_016_20251219_164426.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 473 | index 30 rank 16/35 | score 11.4087625 | winner_in_index_straights=False | top_index_straights: 437 (4.378), 847 (4.281), 734 (3.942)
-- winner 016 | index 6 rank 29/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 473 | index 30 rank 16/35 (rank_frac 0.45714285714285713) | score 11.4087625 (top 145.30232500000002, ratio 0.0785174118858731, delta 133.89356250000003) | winner_in_index_straights=False | top_index_straights: 437 (4.378), 847 (4.281), 734 (3.942)
+- winner 016 | index 6 rank 29/35 (rank_frac 0.8285714285714286) | score 0.0 (top 145.30232500000002, ratio 0.0, delta 145.30232500000002) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

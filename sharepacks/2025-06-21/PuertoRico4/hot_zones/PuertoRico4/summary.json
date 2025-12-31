@@ -7,25 +7,32 @@
       "literal": "910",
       "canonical": "019",
       "top_lanes": {
-        "present": false,
-        "best_rank": null,
+        "present": true,
+        "best_rank": 74,
+        "rows_total": 208,
+        "winner_rank_fraction": 0.3557692307692308,
+        "winner_score_mean": 17.731,
+        "top_score_mean": 24.271,
+        "winner_score_ratio_to_top": 0.7305426228832764,
+        "winner_score_delta_from_top": 6.539999999999999,
         "source": "hot_zones_top_lanes.csv"
       },
       "per_lane": {
-        "present": false,
-        "has_straight": false,
-        "has_vt_straight": false,
+        "present": true,
+        "has_straight": true,
+        "has_vt_straight": true,
         "source": "hot_zones_per_lane.csv"
       },
       "winner_map": {
         "file_present": true,
         "triad_present": false,
+        "scope": "top20+guard_hits",
+        "limit": 20,
         "source": "hot_zones_winner_map.json/csv"
       },
-      "gaps": [
-        "missing_from_top_lanes",
-        "missing_from_per_lane",
-        "winner_not_in_winner_map"
+      "gaps": [],
+      "notes": [
+        "winner_not_in_top20_winner_map (expected when winner rank > 20)"
       ]
     },
     {
@@ -35,6 +42,12 @@
       "top_lanes": {
         "present": true,
         "best_rank": 36,
+        "rows_total": 208,
+        "winner_rank_fraction": 0.17307692307692307,
+        "winner_score_mean": 19.467,
+        "top_score_mean": 24.271,
+        "winner_score_ratio_to_top": 0.8020683119772567,
+        "winner_score_delta_from_top": 4.804000000000002,
         "source": "hot_zones_top_lanes.csv"
       },
       "per_lane": {
@@ -46,10 +59,13 @@
       "winner_map": {
         "file_present": true,
         "triad_present": false,
+        "scope": "top20+guard_hits",
+        "limit": 20,
         "source": "hot_zones_winner_map.json/csv"
       },
-      "gaps": [
-        "winner_not_in_winner_map"
+      "gaps": [],
+      "notes": [
+        "winner_not_in_top20_winner_map (expected when winner rank > 20)"
       ]
     }
   ]

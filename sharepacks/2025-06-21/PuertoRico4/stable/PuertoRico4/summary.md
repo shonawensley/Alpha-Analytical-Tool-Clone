@@ -2,16 +2,16 @@
 
 ## Midday winner 910 (canonical 019)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=17 | family_rows=49 | exact_boxed=17 | exact_straight=16 | vt_boxed=17
-- Scores (patterns_scores.csv): rank 1734, section Midday, Set Set1, Draw Draw2, Col 4, score 15.0, hot 1, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot1|perm2|set_chain2|draw_chain5
-- Compound (patterns_compound.csv): rank 261, section Midday, score 22.5, col1_hits 0, hot2 0, set_chain 2, draw_chain 5 | why set_chain2|draw_chain5|hot1x1|vstrx2
-- Families (patterns_families.csv): 29 rows contain digits; best rank 150, section Midday, score 25.5, hot2 0
+- Scores (patterns_scores.csv): rank 1734/5085 (rank_frac 0.3410029498525074) | score 15.0 (top 41.0, ratio 0.36585365853658536, delta 26.0) | section Midday, Set Set1, Draw Draw2, Col 4, hot 1, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot1|perm2|set_chain2|draw_chain5
+- Compound (patterns_compound.csv): rank 261/1555 (rank_frac 0.16784565916398714) | score 22.5 (top 111.0, ratio 0.20270270270270271, delta 88.5) | section Midday, col1_hits 0, hot2 0, set_chain 2, draw_chain 5 | why set_chain2|draw_chain5|hot1x1|vstrx2
+- Families (patterns_families.csv): count 29 | rank 150/1320 (rank_frac 0.11363636363636363) | score 25.5 (top 36.5, ratio 0.6986301369863014, delta 11.0) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=25
 
 ## Evening winner 551 (canonical 155)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=138 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 42 rows contain digits; best rank 258, section Midday, score 23.0, hot2 0
+- Families (patterns_families.csv): count 42 | rank 258/1320 (rank_frac 0.19545454545454546) | score 23.0 (top 36.5, ratio 0.6301369863013698, delta 13.5) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=9
 - Coverage gaps: missing_from_scores, missing_from_compound
 

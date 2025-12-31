@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 565 | index 2 | file Indiana4_vtrac2_winner_565_20251219_164355.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 135 | index 8 | file Indiana4_vtrac8_winner_135_20251219_164356.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 565 | index 2 | file Indiana4_vtrac2_winner_565_20251219_164355.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 135 | index 8 | file Indiana4_vtrac8_winner_135_20251219_164356.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 565 | index 2 rank 30/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 135 | index 8 rank 31/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 565 | index 2 rank 30/35 (rank_frac 0.8571428571428571) | score 0.0 (top 72.66062999999997, ratio 0.0, delta 72.66062999999997) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 135 | index 8 rank 31/35 (rank_frac 0.8857142857142857) | score 0.0 (top 72.66062999999997, ratio 0.0, delta 72.66062999999997) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

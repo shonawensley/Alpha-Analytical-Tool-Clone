@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 964 | index 25 | file Michigan4_vtrac25_winner_964_20251223_052052.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 392 | index 30 | file Michigan4_vtrac30_winner_392_20251223_052050.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 964 | index 25 | file Michigan4_vtrac25_winner_964_20251223_052052.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 392 | index 30 | file Michigan4_vtrac30_winner_392_20251223_052050.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 964 | index 25 rank 33/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 392 | index 30 rank 8/35 | score 26.0804725 | winner_in_index_straights=False | top_index_straights: 847 (12.758), 824 (7.377), 487 (5.988)
+- winner 964 | index 25 rank 33/35 (rank_frac 0.9428571428571428) | score 0.0 (top 61.45114999999996, ratio 0.0, delta 61.45114999999996) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 392 | index 30 rank 8/35 (rank_frac 0.22857142857142856) | score 26.0804725 (top 61.45114999999996, ratio 0.4244098361055898, delta 35.370677499999964) | winner_in_index_straights=False | top_index_straights: 847 (12.758), 824 (7.377), 487 (5.988)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

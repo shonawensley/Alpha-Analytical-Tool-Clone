@@ -4,15 +4,15 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=51 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 32 rows contain digits; best rank 108, section Midday, score 28.5, hot2 0
+- Families (patterns_families.csv): count 32 | rank 108/1354 (rank_frac 0.07976366322008863) | score 28.5 (top 38.5, ratio 0.7402597402597403, delta 10.0) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=9
 - Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Evening winner 454 (canonical 445)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=12 | family_rows=97 | exact_boxed=12 | exact_straight=12 | vt_boxed=12
-- Scores (patterns_scores.csv): rank 1264, section Evening, Set Set1, Draw Draw5, Col 2, score 17.5, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat2|hot2|hidden3v|double_mirror|vtrac_straight|set_chain3|draw_chain2
-- Compound (patterns_compound.csv): rank 115, section Evening, score 31.0, col1_hits 0, hot2 1, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|hot2x1|vstrx3|dblmirrorx9
-- Families (patterns_families.csv): 66 rows contain digits; best rank 7, section Evening, score 34.5, hot2 0
+- Scores (patterns_scores.csv): rank 1264/5150 (rank_frac 0.24543689320388348) | score 17.5 (top 42.0, ratio 0.4166666666666667, delta 24.5) | section Evening, Set Set1, Draw Draw5, Col 2, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat2|hot2|hidden3v|double_mirror|vtrac_straight|set_chain3|draw_chain2
+- Compound (patterns_compound.csv): rank 115/1531 (rank_frac 0.07511430437622468) | score 31.0 (top 114.5, ratio 0.27074235807860264, delta 83.5) | section Evening, col1_hits 0, hot2 1, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|hot2x1|vstrx3|dblmirrorx9
+- Families (patterns_families.csv): count 66 | rank 7/1354 (rank_frac 0.0051698670605613) | score 34.5 (top 38.5, ratio 0.8961038961038961, delta 4.0) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=7
 
 ## Top compound candidates (patterns_compound.csv)

@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 989 | index 34 | file Delaware4_vtrac34_winner_989_20251219_164352.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 756 | index 7 | file Delaware4_vtrac7_winner_756_20251219_164350.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 989 | index 34 | file Delaware4_vtrac34_winner_989_20251219_164352.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 756 | index 7 | file Delaware4_vtrac7_winner_756_20251219_164350.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 989 | index 34 rank 12/35 | score 14.829267500000002 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 756 | index 7 rank 11/35 | score 15.575550000000005 | winner_in_index_straights=False | top_index_straights: 206 (6.273), 102 (4.717), 201 (4.591)
+- winner 989 | index 34 rank 12/35 (rank_frac 0.34285714285714286) | score 14.829267500000002 (top 56.02397249999999, ratio 0.2646950374681125, delta 41.19470499999999) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 756 | index 7 rank 11/35 (rank_frac 0.3142857142857143) | score 15.575550000000005 (top 56.02397249999999, ratio 0.2780158083220537, delta 40.448422499999985) | winner_in_index_straights=False | top_index_straights: 206 (6.273), 102 (4.717), 201 (4.591)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

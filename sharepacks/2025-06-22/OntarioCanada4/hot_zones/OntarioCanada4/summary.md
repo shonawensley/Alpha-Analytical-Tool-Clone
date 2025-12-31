@@ -1,16 +1,16 @@
 # Hot Zones Summary — OntarioCanada4 (2025-06-22)
 
 ## Midday winner 918 (canonical 189)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 137
+- Top lanes (hot_zones_top_lanes.csv): present | rank 137/210 (rank_frac 0.6523809523809524) | score_mean 16.479 (top 22.372, ratio 0.7365903808331843, delta 5.893000000000001)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 616 (canonical 166)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 182
+- Top lanes (hot_zones_top_lanes.csv): present | rank 182/210 (rank_frac 0.8666666666666667) | score_mean 15.496 (top 22.372, ratio 0.6926515286965851, delta 6.8759999999999994)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 227 | vt_triad 33 | score_mean 22.372 | tags funnel_precol1,hot16,hot20,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical4,vt_only_lane,vt_straight

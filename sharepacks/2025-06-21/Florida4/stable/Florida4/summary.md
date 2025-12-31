@@ -4,15 +4,15 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=221 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 58 rows contain digits; best rank 252, section Evening, score 21.5, hot2 0
+- Families (patterns_families.csv): count 58 | rank 252/1511 (rank_frac 0.16677696889477167) | score 21.5 (top 34.0, ratio 0.6323529411764706, delta 12.5) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=4
 - Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Evening winner 120 (canonical 012)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=1 | family_rows=40 | exact_boxed=1 | exact_straight=1 | vt_boxed=1
-- Scores (patterns_scores.csv): rank 5190, section Midday, Set Set1, Draw Draw4, Col 3, score 8.5, hot 0, vt_straight 2.0 | why straight|cov1|hidden3v|vtrac_straight
-- Compound (patterns_compound.csv): rank 1413, section Midday, score 9.5, col1_hits 0, hot2 0, set_chain 1, draw_chain 1 | why draw_chain1|vstrx1
-- Families (patterns_families.csv): 31 rows contain digits; best rank 25, section Evening, score 28.0, hot2 0
+- Scores (patterns_scores.csv): rank 5190/5444 (rank_frac 0.9533431300514328) | score 8.5 (top 42.0, ratio 0.20238095238095238, delta 33.5) | section Midday, Set Set1, Draw Draw4, Col 3, hot 0, vt_straight 2.0 | why straight|cov1|hidden3v|vtrac_straight
+- Compound (patterns_compound.csv): rank 1413/1631 (rank_frac 0.8663396689147762) | score 9.5 (top 107.0, ratio 0.08878504672897196, delta 97.5) | section Midday, col1_hits 0, hot2 0, set_chain 1, draw_chain 1 | why draw_chain1|vstrx1
+- Families (patterns_families.csv): count 31 | rank 25/1511 (rank_frac 0.01654533421575116) | score 28.0 (top 34.0, ratio 0.8235294117647058, delta 6.0) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=55
 
 ## Top compound candidates (patterns_compound.csv)

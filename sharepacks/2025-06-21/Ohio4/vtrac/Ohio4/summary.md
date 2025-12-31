@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 868 | index 23 | file Ohio4_vtrac23_winner_868_20251219_164412.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 069 | index 9 | file Ohio4_vtrac9_winner_069_20251219_164410.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 868 | index 23 | file Ohio4_vtrac23_winner_868_20251219_164412.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 069 | index 9 | file Ohio4_vtrac9_winner_069_20251219_164410.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 868 | index 23 rank 22/35 | score 4.847458333333334 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 069 | index 9 rank 5/35 | score 29.6627375 | winner_in_index_straights=False | top_index_straights: 901 (17.029), 109 (10.86), 019 (9.506)
+- winner 868 | index 23 rank 22/35 (rank_frac 0.6285714285714286) | score 4.847458333333334 (top 45.3072, ratio 0.10699090505114714, delta 40.459741666666666) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 069 | index 9 rank 5/35 (rank_frac 0.14285714285714285) | score 29.6627375 (top 45.3072, ratio 0.6547025086520464, delta 15.644462500000003) | winner_in_index_straights=False | top_index_straights: 901 (17.029), 109 (10.86), 019 (9.506)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

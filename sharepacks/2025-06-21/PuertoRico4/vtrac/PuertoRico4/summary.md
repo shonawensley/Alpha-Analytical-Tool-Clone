@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 551 | index 2 | file PuertoRico4_vtrac2_winner_551_20251219_164420.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 910 | index 9 | file PuertoRico4_vtrac9_winner_910_20251219_164419.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 551 | index 2 | file PuertoRico4_vtrac2_winner_551_20251219_164420.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 910 | index 9 | file PuertoRico4_vtrac9_winner_910_20251219_164419.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 551 | index 2 rank 7/35 | score 17.58034166666667 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 910 | index 9 rank 20/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 551 | index 2 rank 7/35 (rank_frac 0.2) | score 17.58034166666667 (top 94.70779999999993, ratio 0.1856271781908848, delta 77.12745833333327) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 910 | index 9 rank 20/35 (rank_frac 0.5714285714285714) | score 0.0 (top 94.70779999999993, ratio 0.0, delta 94.70779999999993) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

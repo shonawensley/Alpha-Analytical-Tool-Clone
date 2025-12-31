@@ -4,7 +4,7 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=120 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 30 rows contain digits; best rank 572, section Midday, score 15.0, hot2 0
+- Families (patterns_families.csv): count 30 | rank 572/1254 (rank_frac 0.45614035087719296) | score 15.0 (top 32.0, ratio 0.46875, delta 17.0) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=89
 - Coverage gaps: missing_from_scores, missing_from_compound
 
@@ -12,7 +12,7 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=198 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 35 rows contain digits; best rank 572, section Combined, score 15.0, hot2 0
+- Families (patterns_families.csv): count 35 | rank 572/1254 (rank_frac 0.45614035087719296) | score 15.0 (top 32.0, ratio 0.46875, delta 17.0) | section Combined, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=60
 - Coverage gaps: missing_from_scores, missing_from_compound
 

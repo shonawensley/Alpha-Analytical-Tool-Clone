@@ -1,15 +1,15 @@
 # Hot Zones Summary — Virginia4 (2025-06-21)
 
 ## Midday winner 473 (canonical 347)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 83
+- Top lanes (hot_zones_top_lanes.csv): present | rank 83/208 (rank_frac 0.39903846153846156) | score_mean 16.847 (top 21.777, ratio 0.7736143637782982, delta 4.93)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True (scope top20+guard_hits, limit 20)
 
 ## Evening winner 016 (canonical 016)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 48
+- Top lanes (hot_zones_top_lanes.csv): present | rank 48/208 (rank_frac 0.23076923076923078) | score_mean 17.62 (top 21.777, ratio 0.8091105294576847, delta 4.157)
 - Per-lane (hot_zones_per_lane.csv): has_straight=False has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 168 | vt_triad 224 | score_mean 21.777 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_only_lane,vt_straight

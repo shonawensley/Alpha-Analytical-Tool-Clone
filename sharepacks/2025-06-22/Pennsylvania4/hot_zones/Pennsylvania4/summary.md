@@ -1,16 +1,16 @@
 # Hot Zones Summary — Pennsylvania4 (2025-06-22)
 
 ## Midday winner 398 (canonical 389)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 66
+- Top lanes (hot_zones_top_lanes.csv): present | rank 66/212 (rank_frac 0.3113207547169811) | score_mean 17.25 (top 22.85, ratio 0.7549234135667395, delta 5.600000000000001)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 570 (canonical 057)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 169
+- Top lanes (hot_zones_top_lanes.csv): present | rank 169/212 (rank_frac 0.7971698113207547) | score_mean 14.655 (top 22.85, ratio 0.6413566739606126, delta 8.195000000000002)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 227 | vt_triad 33 | score_mean 22.85 | tags funnel_precol1,hot16,hot20,ls2_lane,ls_col_42,set1_bonus,superhot_set1,vertical1,vt_only_lane,vt_straight

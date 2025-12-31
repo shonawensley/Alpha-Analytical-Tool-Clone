@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 920 | index 12 | file NorthCarolina4_vtrac12_winner_920_20251223_052057.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 145 | index 9 | file NorthCarolina4_vtrac9_winner_145_20251223_052059.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 920 | index 12 | file NorthCarolina4_vtrac12_winner_920_20251223_052057.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 145 | index 9 | file NorthCarolina4_vtrac9_winner_145_20251223_052059.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 920 | index 12 rank 18/35 | score 12.52555 | winner_in_index_straights=False | top_index_straights: 524 (6.858), 245 (6.204), 259 (3.836)
-- winner 145 | index 9 rank 5/35 | score 41.8883625 | winner_in_index_straights=True | top_index_straights: 541 (17.745), 645 (13.245), 564 (12.733)
+- winner 920 | index 12 rank 18/35 (rank_frac 0.5142857142857142) | score 12.52555 (top 95.59938749999996, ratio 0.1310212369299961, delta 83.07383749999997) | winner_in_index_straights=False | top_index_straights: 524 (6.858), 245 (6.204), 259 (3.836)
+- winner 145 | index 9 rank 5/35 (rank_frac 0.14285714285714285) | score 41.8883625 (top 95.59938749999996, ratio 0.43816559494170415, delta 53.711024999999964) | winner_in_index_straights=True | top_index_straights: 541 (17.745), 645 (13.245), 564 (12.733)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

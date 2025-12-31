@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 164 | index 19 | file Pennsylvania4_vtrac19_winner_164_20251223_052106.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 040 | index 5 | file Pennsylvania4_vtrac5_winner_040_20251223_052107.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 164 | index 19 | file Pennsylvania4_vtrac19_winner_164_20251223_052106.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 040 | index 5 | file Pennsylvania4_vtrac5_winner_040_20251223_052107.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 164 | index 19 rank 30/35 | score 0.6543749999999999 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 040 | index 5 rank 29/35 | score 1.790375 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 164 | index 19 rank 30/35 (rank_frac 0.8571428571428571) | score 0.6543749999999999 (top 39.62276, ratio 0.016515129183327964, delta 38.968385) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 040 | index 5 rank 29/35 (rank_frac 0.8285714285714286) | score 1.790375 (top 39.62276, ratio 0.04518551963568414, delta 37.832385) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

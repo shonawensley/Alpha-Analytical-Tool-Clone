@@ -3,14 +3,15 @@
 ## Midday winner 927 (canonical 279)
 - Top lanes (hot_zones_top_lanes.csv): not present
 - Per-lane (hot_zones_per_lane.csv): not present
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: missing_from_top_lanes, missing_from_per_lane, winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Coverage gaps: missing_from_top_lanes, missing_from_per_lane
+- Notes: winner_not_in_top20_winner_map (note: map is a top-20 snapshot)
 
 ## Evening winner 120 (canonical 012)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 90
+- Top lanes (hot_zones_top_lanes.csv): present | rank 90/204 (rank_frac 0.4411764705882353) | score_mean 17.173 (top 25.3, ratio 0.6787747035573122, delta 8.127000000000002)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 278 | vt_triad 334 | score_mean 25.3 | tags hot16,hot20,literal_draw,set1_bonus,straight_lane,vertical1,vertical2,vt_straight

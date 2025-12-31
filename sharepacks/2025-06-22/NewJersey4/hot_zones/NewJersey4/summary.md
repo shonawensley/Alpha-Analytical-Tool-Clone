@@ -1,15 +1,15 @@
 # Hot Zones Summary — NewJersey4 (2025-06-22)
 
 ## Midday winner 985 (canonical 589)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 37
+- Top lanes (hot_zones_top_lanes.csv): present | rank 37/211 (rank_frac 0.17535545023696683) | score_mean 18.147 (top 23.35, ratio 0.7771734475374731, delta 5.203000000000003)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 887 (canonical 788)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 9
+- Top lanes (hot_zones_top_lanes.csv): present | rank 9/211 (rank_frac 0.04265402843601896) | score_mean 20.139 (top 23.35, ratio 0.8624839400428265, delta 3.211000000000002)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True (scope top20+guard_hits, limit 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 999 | vt_triad 5 | score_mean 23.35 | tags hot16,literal_draw,straight_lane,vertical1,vt_straight

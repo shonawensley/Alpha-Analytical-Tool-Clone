@@ -9,6 +9,12 @@
       "top_lanes": {
         "present": true,
         "best_rank": 201,
+        "rows_total": 208,
+        "winner_rank_fraction": 0.9663461538461539,
+        "winner_score_mean": 14.058,
+        "top_score_mean": 21.61,
+        "winner_score_ratio_to_top": 0.6505321610365572,
+        "winner_score_delta_from_top": 7.552,
         "source": "hot_zones_top_lanes.csv"
       },
       "per_lane": {
@@ -20,10 +26,13 @@
       "winner_map": {
         "file_present": true,
         "triad_present": false,
+        "scope": "top20+guard_hits",
+        "limit": 20,
         "source": "hot_zones_winner_map.json/csv"
       },
-      "gaps": [
-        "winner_not_in_winner_map"
+      "gaps": [],
+      "notes": [
+        "winner_not_in_top20_winner_map (expected when winner rank > 20)"
       ]
     },
     {
@@ -33,6 +42,12 @@
       "top_lanes": {
         "present": true,
         "best_rank": 7,
+        "rows_total": 208,
+        "winner_rank_fraction": 0.03365384615384615,
+        "winner_score_mean": 19.428,
+        "top_score_mean": 21.61,
+        "winner_score_ratio_to_top": 0.899028227672374,
+        "winner_score_delta_from_top": 2.1819999999999986,
         "source": "hot_zones_top_lanes.csv"
       },
       "per_lane": {
@@ -44,9 +59,12 @@
       "winner_map": {
         "file_present": true,
         "triad_present": true,
+        "scope": "top20+guard_hits",
+        "limit": 20,
         "source": "hot_zones_winner_map.json/csv"
       },
-      "gaps": []
+      "gaps": [],
+      "notes": []
     }
   ]
 }

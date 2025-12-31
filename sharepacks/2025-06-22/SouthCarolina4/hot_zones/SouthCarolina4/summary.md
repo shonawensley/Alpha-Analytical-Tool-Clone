@@ -1,10 +1,10 @@
 # Hot Zones Summary — SouthCarolina4 (2025-06-22)
 
 ## Midday winner 675 (canonical 567)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 187
+- Top lanes (hot_zones_top_lanes.csv): present | rank 187/204 (rank_frac 0.9166666666666666) | score_mean 13.792 (top 23.119, ratio 0.5965655953977248, delta 9.327)
 - Per-lane (hot_zones_per_lane.csv): has_straight=False has_vt_straight=False
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 237 | vt_triad 334 | score_mean 23.119 | tags funnel_precol1,hot12,hot16,hot20,hot8,literal_draw,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vt_only_lane,vt_straight

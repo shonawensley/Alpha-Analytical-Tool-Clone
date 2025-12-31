@@ -1,16 +1,16 @@
 # Hot Zones Summary — Indiana4 (2025-06-23)
 
 ## Midday winner 110 (canonical 011)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 55
+- Top lanes (hot_zones_top_lanes.csv): present | rank 55/210 (rank_frac 0.2619047619047619) | score_mean 17.518 (top 21.988, ratio 0.7967072948881209, delta 4.469999999999999)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 032 (canonical 023)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 164
+- Top lanes (hot_zones_top_lanes.csv): present | rank 164/210 (rank_frac 0.780952380952381) | score_mean 15.422 (top 21.988, ratio 0.7013825723121703, delta 6.565999999999999)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 227 | vt_triad 33 | score_mean 21.988 | tags col1,funnel_precol1,hot12,hot16,hot20,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical4,vt_only_lane,vt_straight

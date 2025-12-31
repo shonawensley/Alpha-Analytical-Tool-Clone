@@ -2,16 +2,16 @@
 
 ## Midday winner 665 (canonical 566)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=7 | family_rows=61 | exact_boxed=7 | exact_straight=5 | vt_boxed=7
-- Scores (patterns_scores.csv): rank 843, section Combined, Set Set1, Draw Draw4, Col 1, score 17.5, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat4|hot2|perm2|hidden3v|double_mirror|draw_chain3
-- Compound (patterns_compound.csv): rank 113, section Combined, score 33.5, col1_hits 3, hot2 3, set_chain 1, draw_chain 3 | why draw_chain3|col1x3|hot1x1|hot2x3|vstrx3|dblmirrorx6
-- Families (patterns_families.csv): 47 rows contain digits; best rank 290, section Midday, score 21.5, hot2 1
+- Scores (patterns_scores.csv): rank 843/5763 (rank_frac 0.14627798021863614) | score 17.5 (top 37.0, ratio 0.47297297297297297, delta 19.5) | section Combined, Set Set1, Draw Draw4, Col 1, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat4|hot2|perm2|hidden3v|double_mirror|draw_chain3
+- Compound (patterns_compound.csv): rank 113/1684 (rank_frac 0.0671021377672209) | score 33.5 (top 96.5, ratio 0.3471502590673575, delta 63.0) | section Combined, col1_hits 3, hot2 3, set_chain 1, draw_chain 3 | why draw_chain3|col1x3|hot1x1|hot2x3|vstrx3|dblmirrorx6
+- Families (patterns_families.csv): count 47 | rank 290/1528 (rank_frac 0.18979057591623036) | score 21.5 (top 33.5, ratio 0.6417910447761194, delta 12.0) | section Midday, hot2 1
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=6
 
 ## Evening winner 465 (canonical 456)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=7 | family_rows=350 | exact_boxed=7 | exact_straight=7 | vt_boxed=7
-- Scores (patterns_scores.csv): rank 2718, section Combined, Set Set1, Draw Draw5, Col 2, score 13.5, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat2|hot2|hidden3v|vtrac_straight|draw_chain3
-- Compound (patterns_compound.csv): rank 347, section Combined, score 23.0, col1_hits 2, hot2 1, set_chain 1, draw_chain 3 | why draw_chain3|col1x2|hot1x1|hot2x1|vstrx4
-- Families (patterns_families.csv): 67 rows contain digits; best rank 109, section Midday, score 24.5, hot2 0
+- Scores (patterns_scores.csv): rank 2718/5763 (rank_frac 0.4716293597084852) | score 13.5 (top 37.0, ratio 0.36486486486486486, delta 23.5) | section Combined, Set Set1, Draw Draw5, Col 2, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat2|hot2|hidden3v|vtrac_straight|draw_chain3
+- Compound (patterns_compound.csv): rank 347/1684 (rank_frac 0.20605700712589073) | score 23.0 (top 96.5, ratio 0.23834196891191708, delta 73.5) | section Combined, col1_hits 2, hot2 1, set_chain 1, draw_chain 3 | why draw_chain3|col1x2|hot1x1|hot2x1|vstrx4
+- Families (patterns_families.csv): count 67 | rank 109/1528 (rank_frac 0.07133507853403141) | score 24.5 (top 33.5, ratio 0.7313432835820896, delta 9.0) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=75
 
 ## Top compound candidates (patterns_compound.csv)

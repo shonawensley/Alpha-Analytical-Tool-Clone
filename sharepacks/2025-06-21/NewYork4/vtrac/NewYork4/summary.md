@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 802 | index 11 | file NewYork4_vtrac11_winner_802_20251219_164404.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 602 | index 7 | file NewYork4_vtrac7_winner_602_20251219_164406.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 802 | index 11 | file NewYork4_vtrac11_winner_802_20251219_164404.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 602 | index 7 | file NewYork4_vtrac7_winner_602_20251219_164406.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 802 | index 11 rank 26/35 | score 3.869075 | winner_in_index_straights=False | top_index_straights: 203 (1.195), 325 (1.017), 253 (0.71)
-- winner 602 | index 7 rank 27/35 | score 3.0525583333333337 | winner_in_index_straights=False | top_index_straights: 625 (1.209), 201 (0.525)
+- winner 802 | index 11 rank 26/35 (rank_frac 0.7428571428571429) | score 3.869075 (top 37.261645, ratio 0.10383532450056888, delta 33.39257) | winner_in_index_straights=False | top_index_straights: 203 (1.195), 325 (1.017), 253 (0.71)
+- winner 602 | index 7 rank 27/35 (rank_frac 0.7714285714285715) | score 3.0525583333333337 (top 37.261645, ratio 0.0819222643909933, delta 34.209086666666664) | winner_in_index_straights=False | top_index_straights: 625 (1.209), 201 (0.525)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

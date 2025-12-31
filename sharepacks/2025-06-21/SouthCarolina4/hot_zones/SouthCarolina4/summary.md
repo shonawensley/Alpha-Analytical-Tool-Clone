@@ -1,16 +1,16 @@
 # Hot Zones Summary — SouthCarolina4 (2025-06-21)
 
 ## Midday winner 069 (canonical 069)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 35
+- Top lanes (hot_zones_top_lanes.csv): present | rank 35/206 (rank_frac 0.16990291262135923) | score_mean 18.155 (top 21.884, ratio 0.8296015353683056, delta 3.728999999999999)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 847 (canonical 478)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 123
+- Top lanes (hot_zones_top_lanes.csv): present | rank 123/206 (rank_frac 0.5970873786407767) | score_mean 15.823 (top 21.884, ratio 0.7230396636812283, delta 6.061)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 237 | vt_triad 334 | score_mean 21.884 | tags col1,funnel_precol1,hot12,hot16,hot20,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vt_only_lane,vt_straight

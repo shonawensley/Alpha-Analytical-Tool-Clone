@@ -4,7 +4,7 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=151 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 47 rows contain digits; best rank 518, section Evening, score 17.5, hot2 0
+- Families (patterns_families.csv): count 47 | rank 518/1507 (rank_frac 0.34372926343729265) | score 17.5 (top 32.5, ratio 0.5384615384615384, delta 15.0) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=42
 - Coverage gaps: missing_from_scores, missing_from_compound
 

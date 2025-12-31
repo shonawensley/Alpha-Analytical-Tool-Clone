@@ -2,16 +2,16 @@
 
 ## Midday winner 565 (canonical 556)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=19 | family_rows=103 | exact_boxed=19 | exact_straight=18 | vt_boxed=19
-- Scores (patterns_scores.csv): rank 265, section Midday, Set Set1, Draw Draw4, Col 1, score 20.5, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat3|hot2|hidden3v|double_mirror|vtrac_straight|set_chain3|draw_chain2
-- Compound (patterns_compound.csv): rank 14, section Midday, score 50.5, col1_hits 1, hot2 2, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|col1x1|hot1x8|hot2x2|vstrx5|dblmirrorx18
-- Families (patterns_families.csv): 43 rows contain digits; best rank 278, section Combined, score 20.0, hot2 0
+- Scores (patterns_scores.csv): rank 265/4860 (rank_frac 0.05452674897119342) | score 20.5 (top 38.5, ratio 0.5324675324675324, delta 18.0) | section Midday, Set Set1, Draw Draw4, Col 1, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat3|hot2|hidden3v|double_mirror|vtrac_straight|set_chain3|draw_chain2
+- Compound (patterns_compound.csv): rank 14/1912 (rank_frac 0.007322175732217573) | score 50.5 (top 94.5, ratio 0.5343915343915344, delta 44.0) | section Midday, col1_hits 1, hot2 2, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|col1x1|hot1x8|hot2x2|vstrx5|dblmirrorx18
+- Families (patterns_families.csv): count 43 | rank 278/1247 (rank_frac 0.22293504410585405) | score 20.0 (top 35.5, ratio 0.5633802816901409, delta 15.5) | section Combined, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=20
 
 ## Evening winner 135 (canonical 135)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=321 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 53 rows contain digits; best rank 159, section Combined, score 22.5, hot2 0
+- Families (patterns_families.csv): count 53 | rank 159/1247 (rank_frac 0.12750601443464316) | score 22.5 (top 35.5, ratio 0.6338028169014085, delta 13.0) | section Combined, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=115
 - Coverage gaps: missing_from_scores, missing_from_compound
 

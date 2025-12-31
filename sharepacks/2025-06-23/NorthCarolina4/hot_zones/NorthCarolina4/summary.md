@@ -1,15 +1,15 @@
 # Hot Zones Summary — NorthCarolina4 (2025-06-23)
 
 ## Midday winner 920 (canonical 029)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 20
+- Top lanes (hot_zones_top_lanes.csv): present | rank 20/210 (rank_frac 0.09523809523809523) | score_mean 19.748 (top 24.253, ratio 0.8142497835319342, delta 4.504999999999999)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (note: map is a top-20 snapshot)
 
 ## Evening winner 145 (canonical 145)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 69
+- Top lanes (hot_zones_top_lanes.csv): present | rank 69/210 (rank_frac 0.32857142857142857) | score_mean 18.569 (top 24.253, ratio 0.7656372407537212, delta 5.684000000000001)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=True (scope top20+guard_hits, limit 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 247 | vt_triad 335 | score_mean 24.253 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vertical4,vertical5,vt_only_lane,vt_straight

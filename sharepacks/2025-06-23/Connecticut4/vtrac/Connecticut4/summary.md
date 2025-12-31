@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 938 | index 33 | file Connecticut4_vtrac33_winner_938_20251223_052042.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 130 | index 8 | file Connecticut4_vtrac8_winner_130_20251223_052041.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 938 | index 33 | file Connecticut4_vtrac33_winner_938_20251223_052042.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 130 | index 8 | file Connecticut4_vtrac8_winner_130_20251223_052041.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 938 | index 33 rank 5/35 | score 41.754037499999995 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 130 | index 8 rank 18/35 | score 7.44883 | winner_in_index_straights=False | top_index_straights: 568 (2.599), 086 (1.003)
+- winner 938 | index 33 rank 5/35 (rank_frac 0.14285714285714285) | score 41.754037499999995 (top 66.93029999999997, ratio 0.6238435730902149, delta 25.17626249999998) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 130 | index 8 rank 18/35 (rank_frac 0.5142857142857142) | score 7.44883 (top 66.93029999999997, ratio 0.11129234442397544, delta 59.48146999999997) | winner_in_index_straights=False | top_index_straights: 568 (2.599), 086 (1.003)
   - Note: winners lens lives under the winners sharepack and is generated post-results.

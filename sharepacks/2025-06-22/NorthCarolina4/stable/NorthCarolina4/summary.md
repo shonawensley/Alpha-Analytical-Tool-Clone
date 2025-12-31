@@ -4,15 +4,15 @@
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=160 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 42 rows contain digits; best rank 212, section Midday, score 22.0, hot2 0
+- Families (patterns_families.csv): count 42 | rank 212/1435 (rank_frac 0.14773519163763066) | score 22.0 (top 31.5, ratio 0.6984126984126984, delta 9.5) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=64
 - Coverage gaps: missing_from_scores, missing_from_compound
 
 ## Evening winner 153 (canonical 135)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=11 | family_rows=589 | exact_boxed=11 | exact_straight=11 | vt_boxed=11
-- Scores (patterns_scores.csv): rank 538, section Combined, Set Set1, Draw Draw3, Col 1, score 20.0, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat4|hot2|vtrac_straight|set_chain3|draw_chain2
-- Compound (patterns_compound.csv): rank 65, section Combined, score 39.5, col1_hits 2, hot2 4, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|col1x2|hot1x1|hot2x4|vstrx6
-- Families (patterns_families.csv): 63 rows contain digits; best rank 118, section Midday, score 24.0, hot2 0
+- Scores (patterns_scores.csv): rank 538/6074 (rank_frac 0.08857425090549885) | score 20.0 (top 34.5, ratio 0.5797101449275363, delta 14.5) | section Combined, Set Set1, Draw Draw3, Col 1, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat4|hot2|vtrac_straight|set_chain3|draw_chain2
+- Compound (patterns_compound.csv): rank 65/1822 (rank_frac 0.03567508232711306) | score 39.5 (top 86.0, ratio 0.45930232558139533, delta 46.5) | section Combined, col1_hits 2, hot2 4, set_chain 3, draw_chain 3 | why set_chain3|draw_chain3|col1x2|hot1x1|hot2x4|vstrx6
+- Families (patterns_families.csv): count 63 | rank 118/1435 (rank_frac 0.08222996515679443) | score 24.0 (top 31.5, ratio 0.7619047619047619, delta 7.5) | section Midday, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=200
 
 ## Top compound candidates (patterns_compound.csv)

@@ -21,10 +21,10 @@
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 927 | index 28 | file Florida4_vtrac28_winner_927_20251219_164353.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 120 | index 7 | file Florida4_vtrac7_winner_120_20251219_164354.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 927 | index 28 | file Florida4_vtrac28_winner_927_20251219_164353.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 120 | index 7 | file Florida4_vtrac7_winner_120_20251219_164354.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 927 | index 28 rank 10/35 | score 12.149808333333333 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 120 | index 7 rank 25/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
+- winner 927 | index 28 rank 10/35 (rank_frac 0.2857142857142857) | score 12.149808333333333 (top 75.207685, ratio 0.16155009070327497, delta 63.057876666666665) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 120 | index 7 rank 25/35 (rank_frac 0.7142857142857143) | score 0.0 (top 75.207685, ratio 0.0, delta 75.207685) | winner_in_index_straights=False | top_index_straights: (none)
   - Note: winners lens lives under the winners sharepack and is generated post-results.
