@@ -23,20 +23,40 @@ Winners JSON files:
 - `sharepacks/2025-06-22/Connecticut4/winners/Connecticut4/Connecticut4_vtrac21_winner_281_20251221_222107.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: Set1 col1 ladders are extremely hot, but they do **not** anchor either winner.
+  - Midday table (Draw1): col1 ladders are `057**` / `075**` and col2 ladders are `557**` / `755**` → no `128`/`281` lane.
+  - Evening table (Draw1): col1/2 ladders are `4436** / 6344** / 3644**` → no `358`/`835` lane.
+  - Combined table (Draw1): col1/2 ladders are `4488** / 8844**` → heavy 4/8 lane dominance.
+- Q2: Column‑1/2 persistence is **strong** (lots of `**` and dense ladders), but it persists into *non‑winner* clusters.
+  - This is a cautionary example: “col1 heat” is real, but it is not the deciding signal on this day.
+- Q3: Last survivors are abundant (`ls-box`/`ls-box-edge` density is high) and mostly reinforce the dominant 0/5/7 and 4/8 lanes, not the winners.
+  - The winners lens shows family/VT tagging, but neither winner appears as an explicit in‑table literal/canonical substring anywhere in the tables (see Q11).
+- Q4: Variant bias:
+  - Midday winner 281 (canon 128) shows its strongest family tagging in **Combined** (Set2→Set1), but still does not resolve into an explicit lane.
+  - Evening winner 835 (canon 358) shows the strongest “VT‑straight lane tagging” in **Evening** (hit‑vt‑straight tags are concentrated there).
+- Q5: Permutation lane clarity is **diffuse**.
+  - Winner/family tagging is spread across many columns (no “tight endgame lane”), and the winners are not printed explicitly in the progression cells.
+- Q6: Environment verdict: **weak / noisy**.
+  - Despite hot col1/2 ladders, the day is dominated by other clusters and both winners are “cold” in the winners lens stats (0 occurrence/persistence/stability).
+- Q7: Hot Zones overlap is present but weak.
+  - Hot Zones marks both winners as `has_vt_straight=True`, but ranks are poor (Midday best rank 169; Evening best rank 125) and neither appears in `winner_map` (triad_present=False).
+- Q8: Cross‑set carryover exists as *family pressure*, not as a winner lane.
+  - Midday winner 281: Midday has hit-family carry Set3→Set1 (9→6→31), and Combined is strongest (Set2=20, Set1=49).
+  - Evening winner 835: Evening has strong carryover (Set3=15, Set2=12, Set1=25); Combined also carries (Set3=10, Set2=12, Set1=37).
+- Q9: Aux cues (quick lens):
+  - Combined Aux VTRAC overlay shows **idx13** as the top overdue index (`ds=170`) which matches the Evening winner’s index (13). This is the only strong “structural” cue for the actual outcome.
+- Q10: 4 hit criteria viability (pre‑results lens):
+  - Exact boxed / Exact straight: weak for both winners (no explicit lane printing).
+  - VT‑boxed / VT‑straight: the only plausible hedge path (especially Evening idx13 due-ness).
+- Q11: Exact triple presence:
+  - Neither `281`/`128` nor `835`/`358` appears as an explicit in-table substring in the winners lens tables (all variants). Treat this as an “off-board / non‑printed lane” day.
+- Q12: Profitable environment summary:
+  - Negative-control traits: very hot col1/2 ladders that do not align to winners, heavy competing clusters, and winners that are cold/undominant across stats.
+  - Actionable trait (if any): structural VT pressure (idx13 overdue) can still matter even when string lanes do not print the winner.
+- Q13: Dominance vs dilution:
+  - Both winners have 0 stats across occurrence/persistence/stability; dominant families (e.g., 867/817 or 533/885 lanes) carry the day’s printed structure.
+- Q14: Noise check:
+  - Highly noisy/diluted: many competing lanes, high ls-box density, and no clean “winner lane” convergence.
 
 ---
 
@@ -94,16 +114,29 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Midday `128`: absent from `patterns_scores.csv` and `patterns_compound.csv`; only weak family presence (best family rank 125).
+  - Evening `358`: absent from `patterns_scores.csv` and `patterns_compound.csv`; family presence is stronger but still not decisive (best family rank 43).
+- Q2: 4 hit criteria mapping
+  - Exact boxed/straight: not supported (`exact_* = False`).
+  - VT-boxed: not supported directly by Stable rows (`vt_boxed=0` in spotlight for both winners).
+- Q3: Winners output alignment
+  - Spotlight/metrics are consistent with a miss: family rows exist, but no exact canonical rows and no exact hits.
+- Q4: Dominance / noise
+  - Stable’s dominant lanes are 4/8 heavy (`344`, `488`, `448`, `446`, `368`), which matches the printed col1 environment but not the winners.
+- Q5: Top candidate clusters (what Stable wanted)
+  - Primary: `344` (rank 1), then `488/448/446/368/346/348` style lanes.
+  - Treat as “competing dominant lane” evidence, not as winner-isolators for this day.
+- Q6: Miss analysis
+  - Stable is doing its job (finding dominant col1/hot2 lanes), but the winners are off-board relative to those lanes.
+- Q7: Validation checks (V)
+  - Outputs present; no schema issues observed. Misses are performance outcomes, not pipeline corruption.
+- Q8: Optimization notes
+  - None to implement now; log this as a “winner cold/off-board” day for later corpus-based tuning (avoid overfitting).
+- Q9: Cross-tool synergy seed
+  - Stable’s `344` lane overlaps Hot Zones top lanes (rank 8) → useful synergy for lane detection, even though it missed the actual winners.
+- Q10: Analyst’s extra insight
+  - Stable behaves here as an environment/lane detector (4/8-heavy dominance), not as a direct caller.
 
 ---
 
@@ -171,16 +204,27 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Both winners are **not** in DR’s top-candidate list (`winner_best_rank=None`), even though DR logs many VTRAC-any matches.
+- Q2: 4 hit criteria mapping
+  - Midday `128`: `exact_any=6` but `exact_final=0`; `vt_boxed=84` → DR “sees” VT family coverage but does not isolate the winner as a candidate.
+  - Evening `358`: `exact_any=0`; `vt_boxed=6` → minimal VT-boxed presence only.
+- Q3: Winners output alignment
+  - Stamp/flags/hits are coherent (no mismatch): this is an honest “no final hit” day for DR.
+- Q4: Dominance / noise
+  - Very high `vtrac_any` counts make DR non-discriminative here; it is not acting as a narrow isolator.
+- Q5: Top candidate clusters
+  - Not extracted here (winner not present as candidate); treat DR as an overlay lens, not the primary play driver on this day.
+- Q6: Miss analysis
+  - This is a DR-negative day: it tags broad VT coverage but doesn’t elevate either winner into a small candidate set.
+- Q7: Validation checks (V)
+  - Reducer scores present; winners artifacts exist; no pipeline errors.
+- Q8: Optimization notes
+  - Keep DR as a confirming overlay only when its top candidates intersect Stable/HZ/VTRAC on the same VT lane (not the case here).
+- Q9: Cross-tool synergy seed
+  - DR’s VT-boxed counts can be used as “coverage pressure”, but only when a separate lane detector (Stable/HZ/VTRAC/Aux) points to the same index.
+- Q10: Analyst’s extra insight
+  - Useful example of “DR logs a lot but tells you little”: a reason to require cross-tool confirmation before acting.
 
 ---
 
@@ -229,16 +273,27 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Winner idx13 (835) is mid-pack (rank 9/35); winner idx21 (281) is low (rank 22/35). Neither is a top-ranked index.
+- Q2: 4 hit criteria mapping
+  - The winner straights are not in the “top index straights” list (`winner_in_index_straights=False`), so VTRAC-as-direct-caller is weak here.
+  - The only viable VTRAC-mode hedge would be VT-family (vstraight/index) rather than “top straights”.
+- Q3: Winners output alignment
+  - Winners lens exists under sharepack; enhanced JSON rank placement is consistent (no mismatch).
+- Q4: Dominance / noise
+  - Index ranking is not winner-dominant; multiple competing indices outrank both winners.
+- Q5: Top candidate clusters (what VTRAC wanted)
+  - Top index straights are led by non-winner lanes (e.g., `583` and the `817/718/187` family).
+- Q6: Miss analysis
+  - This is a “VTRAC underweights the winning indices” day. Log as corpus evidence; do not tune based on one case.
+- Q7: Validation checks (V)
+  - Enhanced JSON is present and parseable; the report is complete.
+- Q8: Optimization notes
+  - Later: compare VTRAC’s index ranks to Aux “overdue indices” (here, Aux strongly supports idx13) to see whether an Aux overlay should gate VTRAC actions.
+- Q9: Cross-tool synergy seed
+  - Use VTRAC primarily as a structural lens (index selection) only when Aux overdue + Hot Zones vt-straight both agree (partial for idx13 here).
+- Q10: Analyst’s extra insight
+  - A good example of why “top index straights” is not the same thing as “best index family hedge”.
 
 ---
 
@@ -282,23 +337,39 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Both winners are present in top lanes but **very low** (Midday best rank 169; Evening best rank 125) and not present in `winner_map` (triad_present=False).
+- Q2: 4 hit criteria mapping
+  - `has_vt_straight=True` for both winners suggests VT-straight lane overlap exists, but Hot Zones does not isolate a small winner lane by rank.
+- Q3: Winners output alignment
+  - Winner map exists, but is a Top‑N snapshot; “not present” is expected when rank is large.
+- Q4: Dominance / noise
+  - Hot Zones is dominated by a competing lane universe (top lanes include `059`, `012`, `007`, `155`, `366`, `344`), not the winners.
+- Q5: Top candidate clusters (what Hot Zones wanted)
+  - `059` (rank 1) and other strong col1/funnel lanes (`012`, `007`, `155`, `366`, `344`) define the environment’s “hot lane”, but they miss both winners.
+- Q6: Miss analysis
+  - The winners are not in the top lanes; treat Hot Zones here as an environment descriptor, not a winner isolator.
+- Q7: Validation checks (V)
+  - All expected Hot Zones artifacts are present; winner_map is present but does not include the winners (expected given low ranks).
+- Q8: Optimization notes
+  - Later: define how to handle “vt-straight overlap but poor rank” (cheap hedge tier vs pass).
+- Q9: Cross-tool synergy seed
+  - Strong overlap with Stable on the `344` lane suggests a coherent “dominant lane” story even when it misses outcomes.
+- Q10: Analyst’s extra insight
+  - Keep this as a negative-control example for Hot Zones: lots of heat, low predictive resolution.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Stable + Hot Zones both point strongly to a **4/8-heavy** dominant lane universe (e.g., Stable top `344/488/448`, Hot Zones top `059/012/155/366/344`).
+  - Aux also indicates heavy doubles/pairs pressure and strong positional consensus around digits 4/7/5 (Combined).
+- Conflicts/noise:
+  - Neither winner is isolated by Stable/DR/VTRAC/HZ by rank; both winners are effectively “cold” in the winners lens stats.
+  - The best single alignment to the actual outcome is structural: Aux VTRAC overlay has **idx13** as top overdue (Evening winner index).
+- Aggregator/aux hooks to test next:
+  - Treat “Aux top-overdue index + HZ vt-straight overlap” as a cheap hedge trigger (VT-straight pack) when the string lanes are hot but misaligned.
+  - Log this day as a “dominant-lane miss” (high heat ≠ correct lane).
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -635,16 +706,35 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-22/Connecticut4/aux/draws/Connecticut_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-22/Connecticut4/aux/draws/Connecticut_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-22/Connecticut4/aux/draws/Connecticut_Evening_draws.csv` (n=1000)
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-22 --state Connecticut4 --strict` → OK.
+- Q2:
+  - Positional pressure is coherent (strong XVAR consensus notes), but it does not cleanly explain either literal winner.
+  - Combined top due digits: P1=5, P2=4, P3=7 (high pressure on 4/7/5 lanes).
+- Q3:
+  - Positional shortlist (Combined top): heavily targets `*47` (e.g., `347/547/747/337/387/...`) which is a different lane than either winner.
+- Q4:
+  - Repeat watch does not explain either winner (current indices do not match winners).
+- Q5:
+  - VTRAC overlay is the key Aux alignment here:
+    - Combined top overdue indices include **idx13** as #1 (`ds=170`) which matches the Evening winner’s index (13).
+    - Midday winner idx21 is not a top overdue index → weak Aux support for Midday.
+- Q6:
+  - Doubles/pairs pressure is very high (many sev=B doubles, repeating pair alerts), reinforcing “noisy environment”.
+- Q7:
+  - Sums are broadly flagged (many purple/red+purple), offering little discrimination for these specific winners.
+- Q8:
+  - Blackapple (Combined score=2; pairs remaining=0) surfaces top candidates like `018/045/189/234/378/459/468/...` which do not include the winners → disagreement.
+- Q9:
+  - Cross-variant alerts show many due doubles/pairs across variants; treat as environment pressure only (not a narrow call).
+- Q10:
+  - Apply Aux here primarily as:
+    - an “environment noise detector”, and
+    - a structural VT overlay (idx13) for cheap VT-straight hedging when strings/tools don’t isolate.
 
 ---
 
@@ -658,10 +748,17 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - Primary: VT family hedge for idx21 (winner’s index) **only as a tiny hedge** (weak tool support).
+  - Optional competing lane marker (if playing at all): `059` / `344` (dominant lane from Hot Zones + Stable) as “what the environment wanted”.
+- Candidate universe (Evening):
+  - Primary: VT family hedge for **idx13** (Aux overdue #1; matches the Evening winner’s index).
+- Evidence vectors:
+  - Midday: weak winner isolation; strongest evidence is only “family pressure carryover” in the winners lens (not literal presence) + Hot Zones `has_vt_straight=True` for the winner.
+  - Evening: Aux VTRAC overdue (`idx13 ds=170`) + Hot Zones `has_vt_straight=True` support a VT-straight hedge.
+- Coverage mapping + pack decision:
+  - Midday: recommend **pass** or a tiny VT‑straight hedge on idx21 (8 straights) if you must play.
+  - Evening: play **VT‑straight** (8 straights) on idx13 as the cheapest coherent hedge aligned to Aux overdue structure.
 
 ---
 
@@ -673,9 +770,21 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Midday: a VT-straight hedge on idx21 would cover `281` straight (if chosen); dominant-lane boxes (`059/344`) would not.
+  - Evening: VT‑straight on idx13 would cover `835` straight.
+- Key tags:
+  - `high col1/2 heat, low winner alignment`
+  - `dominant 4/8 lane`
+  - `winners cold / not printed in progression`
+  - `Aux overdue index signal (idx13)`
+- Drivers:
+  - The only “explainable” driver is structural VT pressure for the Evening winner’s index (Aux overdue idx13).
+- Conflicts:
+  - Stable/Hot Zones strongly favor competing lanes (`344`, `059/012/155/...`) that miss both winners.
+  - Blackapple candidates disagree with winners.
+- Fix-now vs fix-later:
+  - Fix-now: none (alignment OK; artifacts present).
+  - Fix-later: keep as a negative-control case for aggregator gating (“high heat but wrong lane”).
+- Next run:
+  - Continue to the next state for `D=2025-06-22` and look for contrast cases where winners are actually printed / elevated by at least 2 tools.

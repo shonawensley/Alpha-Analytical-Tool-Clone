@@ -41,20 +41,55 @@ Winners JSON files:
 - `sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac8_winner_360_20251219_164417.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Primary files used (latest stamp):
+  - `sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac17_winner_667_20251219_164416.html`
+  - `sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac17_winner_667_20251219_164416.json`
+  - `sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac8_winner_360_20251219_164417.html`
+  - `sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac8_winner_360_20251219_164417.json`
+
+- Q1:
+  - Set1 col1 ladders are hot/dense but do not tightly “advertise” either winner as a clean survivor lane.
+  - Midday winner 667 has some `hit-winner` tagging (12 total cells), but it does not appear as an explicit `667` cell value.
+  - Evening winner 360 (canonical 036) is essentially absent from the winners lens (1 `hit-winner` tagged cell total) and does not appear as an explicit `360/036` cell value.
+- Q2:
+  - Col1/col2 persistence is strong for other dominant clusters, but not for the winners’ literal/canonical forms.
+- Q3:
+  - Last-survivor story (from winners JSON digests):
+    - Midday idx17: winner 667 has 0; the highest-occurrence family members are low-count (`117`, `662`, `711` with occ=1).
+    - Evening idx8: environment is dominated by `013` (occ=18, pers=48), then `068`, `018`, `810`; winner canonical `036` has 0.
+- Q4:
+  - Variant bias: weak-to-mixed.
+    - Midday: tool evidence later is stronger than the winners lens (Stable isolates 667 well even though the VTRAC winners stats show 0 occurrence).
+    - Evening: winner is not carried strongly by the winners lens.
+- Q5:
+  - Perm lane clarity is low for both: neither `667` nor `360/036` appears as explicit cell values in the winners tables.
+- Q6:
+  - Environment verdict: **mixed** (Midday is tool-friendly; Evening is noisy/weak by winners lens).
+- Q7:
+  - Hot Zones overlap is weak for both winners (both are present but low-ranked in top_lanes; neither appears in the top20 winner map).
+- Q8:
+  - Cross-set carryover is strong for `013/068` style clusters (Evening family dominance), but not for the winners.
+- Q9:
+  - Aux-visible cues exist for the Evening winner canonical:
+    - `036` appears as a due double candidate in Aux (Combined doubles list) and is the Evening winner canonical.
+- Q10:
+  - 4-hit-criteria viability:
+    - Midday 667: Exact boxed is plausible if the tool stack elevates it (Stable does).
+    - Evening 036: Exact boxed is plausible as a due-double/box play; VT-straight/VT-boxed is not strongly supported by VTRAC analyzer.
+- Q11:
+  - Exact triple presence in string tables:
+    - `667` is not present as an explicit cell value in the winners lens.
+    - `360/036` is not present as an explicit cell value in the winners lens.
+- Q12:
+  - Profitable environment summary:
+    - Midday has strong Stable confirmation (even if the winners lens is not clean).
+    - Evening is a classic “dominant other-family day” (013/068/018/810 dominate), so winner is not a clean survivor.
+- Q13:
+  - Dominance vs dilution:
+    - Midday winner family is diluted (no clear dominance in the winners stats tables).
+    - Evening is dominated by 013/068 clusters, not by 036.
+- Q14:
+  - Noise check: overall noisy; treat Evening as “high uncertainty” without strong convergence.
 
 ---
 
@@ -72,34 +107,33 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
    Summarizer block (embedded from summary.md):
 
 ```markdown
-# Stable Summary — 2025-06-21
+# Stable Summary — Pennsylvania4 (2025-06-21)
 
 ## Midday winner 667 (canonical 667)
-- Spotlight (winner_family_spotlight_raw.csv): 12 rows | exact_boxed=12 | exact_straight=12 | vt_boxed=12
-- Scores (patterns_scores.csv): rank 160, section Midday, Set Set1, Draw Draw4, Col 1, score 21.5, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat4|hot2|hidden3v|double_mirror|vtrac_straight|set_chain2|draw_chain4
-- Compound (patterns_compound.csv): rank 17, section Midday, score 48.5, col1_hits 4, hot2 4, set_chain 2, draw_chain 4 | why set_chain2|draw_chain4|col1x4|hot1x1|hot2x4|vstrx9|dblmirrorx11
-- Families (patterns_families.csv): 67 rows contain digits; best rank 18, section Combined, score 27.0, hot2 0
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=12 | family_rows=380 | exact_boxed=12 | exact_straight=12 | vt_boxed=12
+- Scores (patterns_scores.csv): rank 160/4489 (rank_frac 0.035642682111828916) | score 21.5 (top 37.0, ratio 0.581081081081081, delta 15.5) | section Midday, Set Set1, Draw Draw4, Col 1, hot 2, vt_straight 2.0 | why straight|cov1|hp_repeat4|hot2|hidden3v|double_mirror|vtrac_straight|set_chain2|draw_chain4
+- Compound (patterns_compound.csv): rank 17/1653 (rank_frac 0.0102843315184513) | score 48.5 (top 77.5, ratio 0.6258064516129033, delta 29.0) | section Midday, col1_hits 4, hot2 4, set_chain 2, draw_chain 4 | why set_chain2|draw_chain4|col1x4|hot1x1|hot2x4|vstrx9|dblmirrorx11
+- Families (patterns_families.csv): count 67 | rank 18/1364 (rank_frac 0.013196480938416423) | score 27.0 (top 31.0, ratio 0.8709677419354839, delta 4.0) | section Combined, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=11
 
 ## Evening winner 360 (canonical 036)
-- Spotlight (winner_family_spotlight_raw.csv): 0 rows | exact_boxed=0 | exact_straight=0 | vt_boxed=0
-- Scores (patterns_scores.csv): not present
-- Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 24 rows contain digits; best rank 516, section Midday, score 16.5, hot2 2
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=1 | family_rows=51 | exact_boxed=1 | exact_straight=1 | vt_boxed=1
+- Scores (patterns_scores.csv): rank 4466/4489 (rank_frac 0.9948763644464246) | score 6.0 (top 37.0, ratio 0.16216216216216217, delta 31.0) | section Evening, Set Set1, Draw Draw1, Col 7, hot 0, vt_straight 0.0 | why straight|cov1
+- Compound (patterns_compound.csv): rank 1637/1653 (rank_frac 0.9903206291591047) | score 6.5 (top 77.5, ratio 0.08387096774193549, delta 71.0) | section Evening, col1_hits 0, hot2 0, set_chain 1, draw_chain 1 | why draw_chain1
+- Families (patterns_families.csv): count 24 | rank 516/1364 (rank_frac 0.3782991202346041) | score 16.5 (top 31.0, ratio 0.532258064516129, delta 14.5) | section Midday, hot2 2
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=81
-- Coverage gaps: missing_from_spotlight, missing_from_scores, missing_from_compound
 
 ## Top compound candidates (patterns_compound.csv)
-- rank    5 | canon 38 | section Evening | score 63.0 | col1_hits 6 | hot2 8
+- rank    5 | canon 038 | section Evening | score 63.0 | col1_hits 6 | hot2 8
 - rank    4 | canon 229 | section Midday | score 68.0 | col1_hits 6 | hot2 8
 - rank    8 | canon 228 | section Midday | score 60.5 | col1_hits 3 | hot2 7
 - rank    9 | canon 338 | section Evening | score 56.5 | col1_hits 5 | hot2 6
 - rank   11 | canon 133 | section Evening | score 54.0 | col1_hits 5 | hot2 6
-- rank   12 | canon 1338 | section Evening | score 51.5 | col1_hits 4 | hot2 6
+- rank   12 | canon 01338 | section Evening | score 51.5 | col1_hits 4 | hot2 6
 - rank   14 | canon 1338 | section Evening | score 49.5 | col1_hits 5 | hot2 6
 - rank   17 | canon 678 | section Midday | score 48.5 | col1_hits 3 | hot2 6
-- rank   30 | canon 338 | section Evening | score 44.5 | col1_hits 5 | hot2 6
-- rank   33 | canon 13 | section Evening | score 43.5 | col1_hits 4 | hot2 6
+- rank   30 | canon 0338 | section Evening | score 44.5 | col1_hits 5 | hot2 6
+- rank   33 | canon 013 | section Evening | score 43.5 | col1_hits 4 | hot2 6
 
 ## Top families (patterns_families.csv)
 - rank 1364 | family 2 | score 3.0 | hot2 0 | section Midday
@@ -111,16 +145,31 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Midday winner 667 is strongly present in Stable brain outputs:
+    - Scores rank 160/4489 (~3.6%), Set1 Draw4 Col1, hot2=2, vt_straight=2.0.
+    - Compound rank 17/1653 (~1.0%), with strong col1_hits/hot2 and chain evidence.
+  - Evening winner 036 is present but buried:
+    - Scores rank 4466/4489 (~99.5%), low score, weak compound.
+- Q2:
+  - Midday: exact boxed/straight is viable (Stable exact flags True, and the winner is high ranked).
+  - Evening: exact viability exists only in a “box it because it exists” sense; Stable does not elevate it.
+- Q3:
+  - Stable winners artifacts align with metrics (`validate_stable_winners.py` passes).
+- Q4:
+  - Midday is relatively clean in Stable; Evening is noisy with many competing clusters.
+- Q5:
+  - Top compound clusters include `038`, `338`, `133`, `013/0338` families (dominant in Evening), while Midday has the winner elevated directly.
+- Q6:
+  - Miss analysis (Evening): winner `036` lacks reinforcing hot/chain signals and is not prioritized.
+- Q7:
+  - (V) Data/schema OK; artifacts present; strict tables↔aux alignment passed.
+- Q8:
+  - Optimization note (log-only): consider whether “due-double evidence” should boost low-ranked but present Stable rows like 036 (only as a controlled overlay, not a global weight).
+- Q9:
+  - Cross-tool synergy seed: use Stable as the primary “caller” for Midday here; Evening likely requires Aux confirmation (doubles/pairs) to justify any coverage.
+- Q10:
+  - Extra: Pennsylvania shows a clear Midday/evening asymmetry: Stable can be strong on one draw and nearly useless on the other.
 
 ---
 
@@ -142,7 +191,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=172 | exact_any=120 vtrac_any=172 | drop_exact_any=6 drop_vtrac_any=121 | family_exact_any=0 family_vtrac_any=9 | vt_boxed=135 vt_straight=0
 - Hits (winner_hits.csv): rows=172 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=135 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=22 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=10.577143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Evening winner 360 (canonical 036)
@@ -150,7 +199,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=204 | exact_any=0 vtrac_any=202 | drop_exact_any=0 drop_vtrac_any=51 | family_exact_any=0 family_vtrac_any=15 | vt_boxed=36 vt_straight=0
 - Hits (winner_hits.csv): rows=204 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=36 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=40 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=10.864643 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Combined winner 667 (canonical 667)
@@ -158,13 +207,13 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=236 | exact_any=132 vtrac_any=236 | drop_exact_any=6 drop_vtrac_any=122 | family_exact_any=0 family_vtrac_any=9 | vt_boxed=139 vt_straight=0
 - Hits (winner_hits.csv): rows=236 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=139 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=16 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.777143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Top per_item (analyzer_v2_per_item.csv)
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 1 | pattern 990 | score_v2 11.777143 | match_types 
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw7 col 1 | pattern 599 | score_v2 10.958571 | match_types 
-- area_rank 1 | variant Evening | section Evening | set Set1 draw Draw1 col 2 | pattern 3 | score_v2 10.864643 | match_types 
+- area_rank 1 | variant Evening | section Evening | set Set1 draw Draw1 col 2 | pattern 003 | score_v2 10.864643 | match_types 
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw6 col 2 | pattern 599 | score_v2 10.837143 | match_types 
 - area_rank 1 | variant Midday | section Midday | set Set1 draw Draw5 col 2 | pattern 922 | score_v2 10.577143 | match_types 
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 3 | pattern 599 | score_v2 10.558571 | match_types 
@@ -176,7 +225,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ## Top candidates (analyzer_v2_top_candidates.csv)
 - rank 1 | variant Combined | best_pattern 990 | score_v2 11.777143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 2 | variant Combined | best_pattern 599 | score_v2 10.958571 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
-- rank 3 | variant Evening | best_pattern 3 | score_v2 10.864643 | tags exact,vtrac,family_exact,family_vtrac
+- rank 3 | variant Evening | best_pattern 003 | score_v2 10.864643 | tags exact,vtrac,family_exact,family_vtrac
 - rank 4 | variant Midday | best_pattern 922 | score_v2 10.577143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 5 | variant Evening | best_pattern 599 | score_v2 10.308571 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 6 | variant Evening | best_pattern 599 | score_v2 10.208571 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
@@ -188,16 +237,26 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - DR does not surface either winner as a top candidate (`winner_present=False` for both Midday and Evening top candidates), despite large exact_any/vtrac_any coverage counts.
+- Q2:
+  - Practical DR read: it is a “coverage detector” here (vt_boxed high), not a winner caller (no top-candidate hit).
+- Q3:
+  - DR winners artifacts are internally consistent (`validate_dr_winners.py` passes).
+- Q4:
+  - Dominance inside DR is on patterns like `990/599/003/922`, not on either winner.
+- Q5:
+  - Top candidates: `990`, `599`, `003`, `922` dominate the score list.
+- Q6:
+  - Miss analysis: winner may be present in the broader reducer space but not promoted into top candidates.
+- Q7:
+  - (V) Schema/data OK; stamp↔flags↔hits consistent.
+- Q8:
+  - Optimization note (log-only): if DR is intended to be actionable, it likely needs a different “top candidates” extraction mode for triples/doubles days.
+- Q9:
+  - Cross-tool synergy seed: DR top candidates align more with Stable’s Evening compound dominance (003/013/038 lanes), reinforcing that Evening was “013/038-family driven”.
+- Q10:
+  - Extra: DR is useful here primarily as a coverage sanity layer, not a direct caller.
 
 ---
 
@@ -235,27 +294,40 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 667 | index 17 | file Pennsylvania4_vtrac17_winner_667_20251219_164416.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 360 | index 8 | file Pennsylvania4_vtrac8_winner_360_20251219_164417.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 667 | index 17 | file Pennsylvania4_vtrac17_winner_667_20251219_164416.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 360 | index 8 | file Pennsylvania4_vtrac8_winner_360_20251219_164417.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 667 | index 17 rank 16/35 | score 6.165958333333333 | winner_in_index_straights=False | top_index_straights: 617 (1.266), 167 (1.245), 162 (0.69)
-- winner 360 | index 8 rank 7/35 | score 22.624785000000003 | winner_in_index_straights=False | top_index_straights: 018 (9.652), 013 (7.457), 810 (6.481)
+- winner 667 | index 17 rank 16/35 (rank_frac 0.45714285714285713) | score 6.165958333333333 (top 66.34507749999997, ratio 0.09293769132055556, delta 60.17911916666664) | winner_in_index_straights=False | top_index_straights: 617 (1.266), 167 (1.245), 162 (0.69)
+- winner 360 | index 8 rank 7/35 (rank_frac 0.2) | score 22.624785000000003 (top 66.34507749999997, ratio 0.3410167845534586, delta 43.72029249999997) | winner_in_index_straights=False | top_index_straights: 018 (9.652), 013 (7.457), 810 (6.481)
   - Note: winners lens lives under the winners sharepack and is generated post-results.
 
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Winner indices:
+    - Midday 667 (idx17) is weak (rank 16/35).
+    - Evening 360 (idx8) is moderately supported (rank 7/35).
+- Q2:
+  - VT-straight is weak for both (`winner_in_index_straights=False`).
+  - VT-boxed is not clearly justified from the day-level rankings for Midday; for Evening it’s “possible” but not a top-ranked call.
+- Q3:
+  - Winners lens agrees: Evening family dominance is on `013/068/018/810`, not on `036`.
+- Q4:
+  - VTRAC analyzer’s top indices (27/11/29/10/4/13/8/7/3/20) do not match Midday winner idx17; Evening idx8 is present in the top indices list but not dominant.
+- Q5:
+  - Use VTRAC here more as “day context” than a direct win caller; it does not isolate Midday 667 at all.
+- Q6:
+  - Miss analysis: Midday winner is off the top-index lane; Evening winner is in a moderately supported index but not in the straight shortlist.
+- Q7:
+  - (V) VTRAC artifacts exist and are non-empty.
+- Q8:
+  - Optimization note (log-only): for Evening, consider whether “dominant family stats (013) + due double (036)” should be treated as conflicting signals that cause a pass.
+- Q9:
+  - Cross-tool synergy seed: treat VTRAC as secondary confirmation only when it agrees with Stable/Hot Zones; it does not here for Midday.
+- Q10:
+  - Extra: VTRAC is a strong illustration of why we need cross-tool stacking — a mid-ranked index (idx8) can still host the winner, but doesn’t become actionable alone.
 
 ---
 
@@ -273,25 +345,25 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 # Hot Zones Summary — Pennsylvania4 (2025-06-21)
 
 ## Midday winner 667 (canonical 667)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 157
+- Top lanes (hot_zones_top_lanes.csv): present | rank 157/212 (rank_frac 0.7405660377358491) | score_mean 15.264 (top 22.783, ratio 0.6699732256507044, delta 7.519000000000002)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 360 (canonical 036)
-- Top lanes (hot_zones_top_lanes.csv): not present
-- Per-lane (hot_zones_per_lane.csv): not present
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: missing_from_top_lanes, missing_from_per_lane, winner_not_in_winner_map
+- Top lanes (hot_zones_top_lanes.csv): present | rank 142/212 (rank_frac 0.6698113207547169) | score_mean 15.538 (top 22.783, ratio 0.6819997366457446, delta 7.245000000000001)
+- Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 277 | vt_triad 33 | score_mean 22.783 | tags col1,funnel_precol1,hot12,hot16,hot20,ls2_lane,ls_col_42,set1_bonus,superhot_set1,vertical1,vt_only_lane,vt_straight
 - rank    1 | triad 227 | vt_triad 33 | score_mean 22.783 | tags col1,funnel_precol1,hot12,hot16,hot20,ls2_lane,ls_col_42,set1_bonus,superhot_set1,vertical1,vt_only_lane,vt_straight
 - rank    3 | triad 459 | vt_triad 155 | score_mean 22.718 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vt_only_lane,vt_straight
-- rank    4 | triad 0 | vt_triad 1 | score_mean 22.0 | tags col1,funnel_precol1,hot16,ls_col_42,straight_lane,vertical4
-- rank    5 | triad 11 | vt_triad 12 | score_mean 20.667 | tags hot12,hot16,hot20,set1_bonus,straight_lane,vertical2,vertical3,vt_straight
-- rank    6 | triad 3 | vt_triad 14 | score_mean 20.633 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical4,vt_only_lane,vt_straight
-- rank    7 | triad 56 | vt_triad 112 | score_mean 20.347 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical5,vt_only_lane,vt_straight
+- rank    4 | triad 000 | vt_triad 1 | score_mean 22.0 | tags col1,funnel_precol1,hot16,ls_col_42,straight_lane,vertical4
+- rank    5 | triad 011 | vt_triad 12 | score_mean 20.667 | tags hot12,hot16,hot20,set1_bonus,straight_lane,vertical2,vertical3,vt_straight
+- rank    6 | triad 003 | vt_triad 14 | score_mean 20.633 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical4,vt_only_lane,vt_straight
+- rank    7 | triad 056 | vt_triad 112 | score_mean 20.347 | tags col1,funnel_precol1,hot12,hot16,hot20,hot4,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical5,vt_only_lane,vt_straight
 - rank    8 | triad 267 | vt_triad 233 | score_mean 20.167 | tags col1,funnel_precol1,hot12,hot16,hot20,ls2_lane,ls_col_42,set1_bonus,superhot_set1,vertical1,vt_only_lane,vt_straight
 - rank    8 | triad 127 | vt_triad 233 | score_mean 20.167 | tags col1,funnel_precol1,hot12,hot16,hot20,ls2_lane,ls_col_42,set1_bonus,superhot_set1,vertical1,vt_only_lane,vt_straight
 - rank   10 | triad 466 | vt_triad 25 | score_mean 19.8 | tags hot16,hot8,literal_draw,set1_bonus,straight_lane,vertical1,vertical3,vertical5,vt_only_lane,vt_straight
@@ -299,23 +371,39 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Both winners are present in Hot Zones `top_lanes`, but at very low ranks:
+    - 667 rank 157/212; 036 rank 142/212.
+- Q2:
+  - Lane structure exists (has_straight=True and has_vt_straight=True), but the winners are not dominant lanes.
+- Q3:
+  - Validation OK: `validate_hot_zones_winners.py` confirms winners present in top_lanes.
+- Q4:
+  - Noise: both winners are diluted (not top-lane; not in winner_map top20).
+- Q5:
+  - Dominant Hot Zones lanes are `277/227/459/000/011/003/056/...` (not winners).
+- Q6:
+  - Miss analysis: Hot Zones is not a useful “caller” here; it would require additional gating.
+- Q7:
+  - (V) Artifacts exist; schema OK.
+- Q8:
+  - Optimization note (log-only): verify whether Hot Zones winner_map top20 should remain strict; days like this suggest many hits occur outside the top20.
+- Q9:
+  - Cross-tool synergy seed: Hot Zones provides little support for either winner; lean on Stable/Aux instead.
+- Q10:
+  - Extra: Pennsylvania demonstrates a mismatch where Stable can isolate Midday even when Hot Zones does not, suggesting Hot Zones is not always the best confirmation layer.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Evening environment is consistently dominated by `013/038` family clusters across Stable/DR/VTRAC winners stats, not by the actual Evening winner canonical `036`.
+  - Midday is primarily a Stable-driven win isolation case (667 is high-ranked in Stable).
+- Conflicts/noise:
+  - Hot Zones does not support either winner strongly (both are very low-ranked), while Stable strongly supports Midday 667.
+- Aggregator/aux hooks to test next:
+  - Consider a rule: when Stable is strong but Hot Zones is very weak, treat Hot Zones as non-required confirmation (avoid false “it must be hot-zones too” gating).
+  - For Evening, treat due-double cues (036 is due in Aux) as a candidate-level boost only if at least one string-table tool surfaces it above a minimum threshold.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -647,16 +735,41 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Aux snapshot is history-aligned (`excel: data/history/Pick3StatsC4_2025_06_20.xlsm`) and strict alignment passed for this state/day:
+    - `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-21 --state Pennsylvania4 --strict` → OK.
+- Q2:
+  - Positional pressure emphasizes digits 1/3/2 with cross-variant consensus.
+  - Winner alignment:
+    - 667 (digits 6/6/7): weak positional alignment.
+    - 036 (digits 0/3/6): partial alignment (digit 3 is a major consensus digit; digit 0 appears in consensus notes).
+- Q3:
+  - Positional shortlist top candidates (`132/130/732/...`) do not include either winner directly.
+- Q4:
+  - Repeat-watch current_index=20; winners indices are 17 and 8 (not in repeat context).
+- Q5:
+  - VTRAC overlay shows very overdue indices (35/26/4/1/6/...), not winner idx17; winner idx8 is not a highlighted pressure index in Aux.
+- Q6:
+  - Doubles/pairs:
+    - `036` appears explicitly in the Combined overdue doubles list (ds=699), aligning with the Evening winner canonical.
+    - Pairs show heavy repeating pressure on 55/77/00/44, which does not align directly with either winner.
+- Q7:
+  - Sums: the due/flagged sums do not obviously map to either winner as a primary driver.
+- Q8:
+  - Blackapple is active (score 2; root_due includes 6), but top candidates do not include either winner.
+- Q9:
+  - Aux convergence (signals counted: `idxTop`, `pair`, `pos`, `BA`, plus “due_double”):
+
+    | candidate | canonical | pos | idxTop | pair | BA | due_double | notes |
+    |---|---:|---:|---:|---:|---:|---:|---|
+    | 667 | 667 | - | - | ✓ (`66`) | - | - | Midday is mostly Stable-driven |
+    | 360 | 036 | - | - | - | - | ✓ (`036` overdue) | best Aux support is “due double” |
+    | 013 | 013 | - | - | - | - | - | dominant in winners lens for Evening, not the winner |
+    | 168 | 168 | - | - | - | ✓ | - | BA top pick (not winner-aligned) |
+- Q10:
+  - Aux application recommendation:
+    - Use Aux “due doubles” as a candidate-level boost (e.g., elevate 036 if it is already present in tool candidate lists).
+    - Avoid using Aux as a day-level gate here because it does not discriminate winner-aligned vs dominant-environment-aligned clusters cleanly.
 
 ---
 
@@ -670,10 +783,18 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - `667` (winner canonical) — Stable rank 160/4489, Compound rank 17/1653.
+  - `678` — appears in Stable top compound list (and shares digit set).
+- Candidate universe (Evening):
+  - `036` (winner canonical) — weak tool support but Aux due-double signal exists.
+  - `013` / `068` / `018` / `810` — dominant Evening-family survivors (from VTRAC winners stats + Stable compound clusters).
+- Evidence vectors:
+  - Midday: Stable is the anchor tool for 667.
+  - Evening: winners lens indicates 013-family dominance; 036 is not a survivor, but Aux doubles flags it as overdue.
+- Coverage mapping + pack decision:
+  - Midday: box `667` (6 combos) as the cheapest evidence-respecting pack (would hit Midday winner).
+  - Evening: treat as “noisy”; if playing, a small box `036` (6 combos) is justified only because of the due-double flag (would hit Evening winner boxed), but evidence is not otherwise convergent.
 
 ---
 
@@ -685,9 +806,18 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Midday: box `667` covers Midday winner `667` (boxed hit).
+  - Evening: box `036` covers Evening winner `360` (boxed hit), but note the environment lens did not elevate 036.
+- Key tags:
+  - `Stable-midday-strong`, `Evening-013-family-dominance`, `Aux-due-double-036`, `HotZones-low-rank`.
+- Drivers:
+  - Midday win was driven by Stable’s strong exact + compound evidence for 667.
+  - Evening win is better explained as a “due-double hit” (036) inside a dominant 013-family environment.
+- Conflicts:
+  - Hot Zones is weak on both winners; VTRAC is weak on Midday; Evening winner is not a family survivor even though it hits.
+- Fix-now vs fix-later:
+  - Fix-now: none (alignment + validators pass).
+  - Fix-later: consider explicit logic for “due double canonical” as an overlay that can rescue a low-ranked stable/hz candidate.
+- Next run:
+  - Contrast Pennsylvania with a state where Evening also has strong Stable/Hot Zones convergence, to avoid building “due doubles” rules off a single example.

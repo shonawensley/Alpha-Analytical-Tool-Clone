@@ -41,20 +41,69 @@ Winners JSON files:
 - `sharepacks/2025-06-21/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac9_winner_069_20251219_164421.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Primary files used (latest stamp):
+  - `sharepacks/2025-06-21/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac9_winner_069_20251219_164421.html`
+  - `sharepacks/2025-06-21/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac9_winner_069_20251219_164421.json`
+  - `sharepacks/2025-06-21/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac30_winner_847_20251219_164423.html`
+  - `sharepacks/2025-06-21/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac30_winner_847_20251219_164423.json`
+
+- Q1:
+  - Midday winner 069 (canonical 069, VT index 9):
+    - Midday `hit-winner`=7 (spread across Set1/2/3, mostly in draw_data rowtype; strongest in mid columns col3–6; no strong Set1 col1 ladder).
+    - Combined `hit-winner`=5 (all Set1; includes some col1 presence but not dominant).
+  - Evening winner 847 (canonical 478, VT index 30):
+    - Evening `hit-winner`=2 (both in col1, Set1).
+    - Combined `hit-winner`=11 (strongest in col3; mainly Set1/2; rowtypes R2/R8).
+    - Interpretation: the winner family is visible, but the “Set1 col1 ladder” is not the main carrier; Combined mid-columns carry more of the evidence.
+- Q2:
+  - Column-1 persistence/hotness:
+    - 478-family shows meaningful persistence in winners stats (top patterns include multiple 4/7/8 permutations such as 487/784/798/987), but it expresses more as a mid-column cluster than a clean col1 ladder.
+    - 069 does not look like a dominant persistent lane in the winners stats layer (more like a weaker/later resolution).
+- Q3:
+  - Last-survivor framing (3-value + 3-VTRAC):
+    - Both winners are in a heavily “boxed/survivor annotated” environment (`ls-box` / `ls-box-edge` are prominent), but:
+      - 478-family has meaningful Combined hit-winner density (11) indicating survivor structures are at least partially aligned with the evening win.
+      - 069 is present but not dominant (no strong progressive R2/R4/R6/R8 ladder signature; much of its Midday presence is in draw_data).
+- Q4:
+  - Variant bias:
+    - 069 is most visible on the Midday lens (7 hit-winner).
+    - 847/478 is most visible on the Combined lens (11 hit-winner); Evening has only 2 hit-winner cells.
+- Q5:
+  - Permutation lane clarity:
+    - 478-family expresses across multiple permutations (e.g., 487/784/798), suggesting boxed coverage is more defensible than trying to call an exact straight.
+    - 069 has modest visibility and doesn’t read as a tight “straight lane” either; treat it as “box-first” unless stronger straight-lane evidence emerges.
+- Q6:
+  - Environment verdict:
+    - Overall: weak-to-support (some family visibility exists, but it is not a clean single-lane dominance day; many competing lanes exist).
+- Q7:
+  - Hot Zones overlap (environment lens):
+    - Both winners express primarily in mid columns (col3–5 range) when they appear, which is consistent with “hotzone overlap” rather than col1-only dominance.
+- Q8:
+  - Cross-set carryover:
+    - 069 shows cross-set presence in the winners lens (Set1/2/3 in Midday, albeit draw_data-weighted).
+    - 478-family shows Set1/2 carryover in Combined (Set1:7, Set2:4).
+- Q9:
+  - Aux cues (quick note, environment-only):
+    - Treat deeper digit/positional/doubles interpretations as Aux-layer evidence (Part 3); the winners lens alone here suggests a “busy/noisy” environment rather than a clean narrow lane.
+- Q10:
+  - 4-hit criteria viability:
+    - 069: plausible for exact boxed / exact straight (winner is explicitly present as a winner cell); VT-boxed plausible (idx9), VT-straight less clear.
+    - 478: plausible for exact boxed; exact straight less clear; VT-based viability is weak for idx30 without tool support.
+- Q11:
+  - Exact triple presence:
+    - 069 is explicitly present as hit-winner in the Midday lens (non-zero hit-winner).
+    - 847/478 is explicitly present as hit-winner in Evening and Combined (non-zero hit-winner).
+- Q12:
+  - Profitable environment summary (repeatable traits):
+    - 478-family persistence across permutations (family-level convergence) looks like a repeatable “boxed-friendly” trait.
+    - Absence of a clean single-lane dominance suggests “cheap hedge / pass” posture is often appropriate on days like this.
+- Q13:
+  - Dominance vs dilution:
+    - 478-family shows stronger dominance signals than 069 (multiple top-occurrence/persistence patterns are 4/7/8 permutations).
+    - 069 is more diluted (not a leading lane in occurrence/persistence).
+- Q14:
+  - Noise check:
+    - This is a noisy environment: multiple competing families/lanes are prominent; winners are not “laser” isolated by a single variant/column ladder.
 
 ---
 
@@ -72,21 +121,20 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
    Summarizer block (embedded from summary.md):
 
 ```markdown
-# Stable Summary — 2025-06-21
+# Stable Summary — SouthCarolina4 (2025-06-21)
 
 ## Midday winner 069 (canonical 069)
-- Spotlight (winner_family_spotlight_raw.csv): 0 rows | exact_boxed=0 | exact_straight=0 | vt_boxed=0
-- Scores (patterns_scores.csv): not present
-- Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 54 rows contain digits; best rank 401, section Evening, score 19.5, hot2 0
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=7 | family_rows=207 | exact_boxed=7 | exact_straight=7 | vt_boxed=7
+- Scores (patterns_scores.csv): rank 3774/5478 (rank_frac 0.6889375684556407) | score 11.5 (top 41.5, ratio 0.27710843373493976, delta 30.0) | section Combined, Set Set1, Draw Draw6, Col 1, hot 1, vt_straight 2.0 | why straight|cov1|hot1|hidden3v|vtrac_straight|draw_chain2
+- Compound (patterns_compound.csv): rank 515/1719 (rank_frac 0.2995927865037813) | score 17.5 (top 93.0, ratio 0.1881720430107527, delta 75.5) | section Combined, col1_hits 2, hot2 0, set_chain 1, draw_chain 4 | why draw_chain4|col1x2|hot1x1|vstrx2
+- Families (patterns_families.csv): count 54 | rank 401/1527 (rank_frac 0.26260641781270466) | score 19.5 (top 33.5, ratio 0.582089552238806, delta 14.0) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=63
-- Coverage gaps: missing_from_spotlight, missing_from_scores, missing_from_compound
 
 ## Evening winner 847 (canonical 478)
-- Spotlight (winner_family_spotlight_raw.csv): 8 rows | exact_boxed=8 | exact_straight=3 | vt_boxed=8
-- Scores (patterns_scores.csv): rank 2265, section Combined, Set Set1, Draw Draw1, Col 3, score 14.0, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot2|perm2|set_chain2|draw_chain3
-- Compound (patterns_compound.csv): rank 226, section Combined, score 25.0, col1_hits 0, hot2 1, set_chain 2, draw_chain 3 | why set_chain2|draw_chain3|hot1x5|hot2x1|vstrx1
-- Families (patterns_families.csv): 67 rows contain digits; best rank 190, section Evening, score 23.0, hot2 0
+- Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=8 | family_rows=476 | exact_boxed=8 | exact_straight=3 | vt_boxed=8
+- Scores (patterns_scores.csv): rank 2265/5478 (rank_frac 0.4134720700985761) | score 14.0 (top 41.5, ratio 0.3373493975903614, delta 27.5) | section Combined, Set Set1, Draw Draw1, Col 3, hot 2, vt_straight 0.0 | why boxed|cov2|hp_repeat2|hot2|perm2|set_chain2|draw_chain3
+- Compound (patterns_compound.csv): rank 226/1719 (rank_frac 0.1314717859220477) | score 25.0 (top 93.0, ratio 0.26881720430107525, delta 68.0) | section Combined, col1_hits 0, hot2 1, set_chain 2, draw_chain 3 | why set_chain2|draw_chain3|hot1x5|hot2x1|vstrx1
+- Families (patterns_families.csv): count 67 | rank 190/1527 (rank_frac 0.12442698100851342) | score 23.0 (top 33.5, ratio 0.6865671641791045, delta 10.5) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=True | exact_straight=True | vt_boxed_count=113
 
 ## Top compound candidates (patterns_compound.csv)
@@ -111,16 +159,36 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Stable sees both winners, but neither is a top-tier isolate:
+    - Midday 069: present but low rank in Scores (3774/5478) and moderate in Compound (515/1719).
+    - Evening 478: present with better Compound rank (226/1719) but still not near top.
+- Q2:
+  - 4-hit mapping inside Stable:
+    - Both winners have exact_boxed=True and exact_straight=True in metrics (Stable recognizes the literal and boxed lanes), but the ranks indicate “weak-to-moderate” confidence.
+- Q3:
+  - Artifact alignment:
+    - Stable artifacts exist; spotlight exact rows are present for both winners (7 for 069, 8 for 478).
+- Q4:
+  - Dominance/noise:
+    - Stable’s strongest compound lanes are 113/118-heavy; winners are not in the most dominant Stable lanes → consistent with a noisy day.
+- Q5:
+  - Stable “best bet” posture:
+    - Pre-results, Stable would not justify a single tiny pack on either winner; it would push you toward its dominant lanes (113/118 cluster).
+- Q6:
+  - Miss analysis:
+    - Treat both winners as “Stable weak hits”: present, but not high-ranked enough to be an anchor caller.
+- Q7:
+  - (V) Validation: Stable artifacts are present; no missing-file issues observed.
+- Q8:
+  - Fix-later:
+    - None required to proceed; log this as a “noisy Stable day” example.
+- Q9:
+  - Cross-tool synergy seed:
+    - When Stable’s dominant lane (113/118) diverges from Hot Zones/VTRAC/Aux, the superbrain should learn to down-weight Stable-only calls for that day.
+- Q10:
+  - Analyst extra:
+    - This is not a “Stable greenlight” state/day; it’s useful as a contrast to stronger convergence days.
 
 ---
 
@@ -142,7 +210,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=197 | exact_any=0 vtrac_any=145 | drop_exact_any=0 drop_vtrac_any=173 | family_exact_any=0 family_vtrac_any=84 | vt_boxed=5 vt_straight=0
 - Hits (winner_hits.csv): rows=197 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=5 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=26 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=12.977143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Evening winner 847 (canonical 478)
@@ -150,7 +218,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=16 | exact_any=6 vtrac_any=13 | drop_exact_any=0 drop_vtrac_any=4 | family_exact_any=0 family_vtrac_any=6 | vt_boxed=16 vt_straight=0
 - Hits (winner_hits.csv): rows=16 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=16 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=16 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=10.727143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Combined winner 069 (canonical 069)
@@ -158,7 +226,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=333 | exact_any=0 vtrac_any=277 | drop_exact_any=0 drop_vtrac_any=251 | family_exact_any=0 family_vtrac_any=138 | vt_boxed=39 vt_straight=0
 - Hits (winner_hits.csv): rows=333 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=39 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=22 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.520476 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Top per_item (analyzer_v2_per_item.csv)
@@ -188,16 +256,33 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Digit Reduction does not isolate winners as top candidates (`winner_present=False` for both Midday and Evening).
+- Q2:
+  - 4-hit mapping inside DR:
+    - Midday 069: exact channel is off (`exact_any=0`), and vt-straight is not active.
+    - Evening 478: some exact_any (6) exists, but it does not elevate to a top-candidate outcome.
+- Q3:
+  - Artifact integrity:
+    - DR stamps/flags/hits exist and appear coherent; Combined winner stamp matches the Midday winner here (no PR-style anomaly).
+- Q4:
+  - Interpretation:
+    - DR is background-only on this day; it provides structure but not a narrow actionable lane for either winner.
+- Q5:
+  - DR’s top patterns (e.g., 551/559/924…) are not the winners; treat them as competing-lane context.
+- Q6:
+  - Practical posture:
+    - Do not anchor any pack decisions on DR for this day.
+- Q7:
+  - (V) Validation: artifacts present; no schema/read issues observed.
+- Q8:
+  - Fix-later: none.
+- Q9:
+  - Cross-tool synergy seed:
+    - DR’s “winner_present False” is still useful as a feature: it helps flag “DR not supportive” environments.
+- Q10:
+  - Analyst extra:
+    - This is a clean negative-control example for DR.
 
 ---
 
@@ -235,27 +320,46 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Combined: hot=20 superhot=12 consensus_col1=False consensus_col2=False
 
 ## Winners lens (from winners VTRAC report JSON/HTML)
-- winner 847 | index 30 | file SouthCarolina4_vtrac30_winner_847_20251219_164423.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
-- winner 069 | index 9 | file SouthCarolina4_vtrac9_winner_069_20251219_164421.json | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 847 | index 30 | file SouthCarolina4_vtrac30_winner_847_20251219_164423.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
+- winner 069 | index 9 | file SouthCarolina4_vtrac9_winner_069_20251219_164421.json | rank 0 score 0 | stats keys: pattern_occurrence, pattern_persistence, pattern_stability, straight_counts
 
 ## Winner index placement (in enhanced JSON rankings)
-- winner 847 | index 30 rank 33/35 | score 0.0 | winner_in_index_straights=False | top_index_straights: (none)
-- winner 069 | index 9 rank 8/35 | score 32.4962 | winner_in_index_straights=False | top_index_straights: 541 (13.008), 154 (11.826), 401 (6.56)
+- winner 847 | index 30 rank 33/35 (rank_frac 0.9428571428571428) | score 0.0 (top 89.04196249999998, ratio 0.0, delta 89.04196249999998) | winner_in_index_straights=False | top_index_straights: (none)
+- winner 069 | index 9 rank 8/35 (rank_frac 0.22857142857142856) | score 32.4962 (top 89.04196249999998, ratio 0.36495377109416255, delta 56.54576249999998) | winner_in_index_straights=False | top_index_straights: 541 (13.008), 154 (11.826), 401 (6.56)
   - Note: winners lens lives under the winners sharepack and is generated post-results.
 
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - VTRAC Analyzer supports the Midday winner modestly but misses the Evening winner:
+    - Winner 069 idx9: rank 8/35 with non-zero score (moderate support).
+    - Winner 847 idx30: rank 33/35 with score 0 (strong miss).
+- Q2:
+  - Variant bias:
+    - No consensus_col1/col2 is true; treat the day as “no VTRAC consensus” and use VTRAC as a secondary lens only.
+- Q3:
+  - Winner-in-top-straights:
+    - winner_in_index_straights=False for both winners; the “top straights” list does not explicitly include the winner lane.
+- Q4:
+  - Interpretation:
+    - VTRAC is only mildly aligned with the Midday environment (idx9 present), and it is not aligned with the Evening outcome (idx30).
+- Q5:
+  - Practical posture:
+    - Avoid treating top VTRAC indices as an actionable pack without other-tool confirmation on days like this.
+- Q6:
+  - Miss analysis:
+    - Evening is a clear VTRAC miss; Midday is only moderate.
+- Q7:
+  - (V) Validation: artifacts present; no missing winners-lens files.
+- Q8:
+  - Fix-later: none (this is a measurement result, not a workflow error).
+- Q9:
+  - Cross-tool synergy seed:
+    - “VTRAC misses one draw” is exactly why we need multi-tool stacking; log this as a state/day where VTRAC should be down-weighted.
+- Q10:
+  - Analyst extra:
+    - The Midday win (idx9) aligns better with VTRAC overlay (Aux) than the Evening win does; this is worth tracking when we build compound scoring.
 
 ---
 
@@ -273,16 +377,16 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 # Hot Zones Summary — SouthCarolina4 (2025-06-21)
 
 ## Midday winner 069 (canonical 069)
-- Top lanes (hot_zones_top_lanes.csv): not present
-- Per-lane (hot_zones_per_lane.csv): not present
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: missing_from_top_lanes, missing_from_per_lane, winner_not_in_winner_map
+- Top lanes (hot_zones_top_lanes.csv): present | rank 35/206 (rank_frac 0.16990291262135923) | score_mean 18.155 (top 21.884, ratio 0.8296015353683056, delta 3.728999999999999)
+- Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Evening winner 847 (canonical 478)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 123
+- Top lanes (hot_zones_top_lanes.csv): present | rank 123/206 (rank_frac 0.5970873786407767) | score_mean 15.823 (top 21.884, ratio 0.7230396636812283, delta 6.061)
 - Per-lane (hot_zones_per_lane.csv): has_straight=True has_vt_straight=True
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 237 | vt_triad 334 | score_mean 21.884 | tags col1,funnel_precol1,hot12,hot16,hot20,hot8,literal_draw,ls2_lane,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vt_only_lane,vt_straight
@@ -299,23 +403,48 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Hot Zones supports Midday better than Evening:
+    - Midday 069: rank 35/206 (reasonable lane visibility).
+    - Evening 478: rank 123/206 (weak).
+- Q2:
+  - Lane traits:
+    - Both winners have straight=True and vt_straight=True in per-lane outputs (so the lane exists), but the Evening rank is weak.
+- Q3:
+  - Winner map note:
+    - winner_map is top20-scoped; both winners are outside that top20 scope here, so triad_present=False is expected.
+- Q4:
+  - Interpretation:
+    - Hot Zones provides only moderate guidance for this day; it does not provide a high-confidence “winner_map” call.
+- Q5:
+  - Practical posture:
+    - If forced to play, treat Midday as a box hedge day; treat Evening as “pass or wide hedge” given weak rank.
+- Q6:
+  - Miss analysis:
+    - Hot Zones does not “miss” 069 (rank 35) but is effectively a miss/weak-read on 478 (rank 123).
+- Q7:
+  - (V) Validation: artifacts exist and read correctly.
+- Q8:
+  - Fix-later: none.
+- Q9:
+  - Cross-tool synergy seed:
+    - When Hot Zones rank is weak AND Stable/VTRAC are not strongly aligned, that’s a “pass day” tag candidate for the future gating layer.
+- Q10:
+  - Analyst extra:
+    - This state/day is a good “noisy environment” example where no tool gives a clean greenlight.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Midday 069 has modest multi-tool visibility (Stable exact + Hot Zones rank 35 + VTRAC idx9 moderate).
+  - Evening 478 has some Stable visibility but weak Hot Zones and VTRAC miss (idx30).
+- Conflicts/noise:
+  - Stable’s strongest lanes (113/118 cluster) do not align with either winner.
+  - DR is non-supportive for both winners.
+  - VTRAC strongly misses the Evening winner index.
+- Aggregator/aux hooks to test next:
+  - This is an “inconclusive day” candidate for future gating (play/pass decision): when multiple tools are weak or disagree, prefer cheap hedges or skip.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -648,16 +777,42 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Aux history alignment + strict guard:
+    - Aux summary cites `excel: data/history/Pick3StatsC4_2025_06_20.xlsm` and the sharepack snapshot CSVs.
+    - Strict alignment passed:
+      - `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-21 --state SouthCarolina4 --strict` → `[OK]`.
+- Q2:
+  - Positional pressure:
+    - Combined top digits: P1=5, P2=9, P3=4 (strong 5/9/4 lane), which does not directly map to either winner (069 or 478).
+- Q3:
+  - Positional shortlist:
+    - Shortlist is dominated by 5/9/4 and mirrors/pressure (594/593/694/584/595...), not by the winners → treat as non-driver.
+- Q4:
+  - Repeat watch:
+    - current_index=12; winners are idx9 and idx30 → not a repeat-watch driver.
+- Q5:
+  - VTRAC overlay:
+    - Overdue indices are led by 29/32/1/2…; idx9 and idx30 are not highlighted as top overdue indices here → minimal support.
+- Q6:
+  - Doubles/pairs:
+    - Doubles/pair alerts are present and dense, but no single pair/double is a clean driver for 069 or 478 on this day.
+- Q7:
+  - Sums:
+    - Sums are background-only here (no “winner sum” driver claim needed).
+- Q8:
+  - Blackapple:
+    - BA is mild (score=1; floating digits 1/5; remaining_pairs=1) and does not directly surface either winner.
+- Q9:
+  - Aux convergence (simple, transparent signals counted: `stable`, `HZ`, `idx`, `pos`, `BA`):
+
+    | candidate | canonical | stable | HZ | idx/VT | pos | BA | notes |
+    |---|---:|---:|---:|---:|---:|---:|---|
+    | 069 | 069 | ✓ (weak ranks) | ✓ (rank 35) | ✓ (idx9 moderate) | - | - | best-supported lane, but still modest |
+    | 847 | 478 | ✓ (moderate ranks) | - (rank 123) | - (idx30 score 0) | - | - | weak/discordant evidence |
+- Q10:
+  - Aux application recommendation:
+    - Use Aux primarily as a “do we pass?” gate here: positional lane does not align with the winners, and VTRAC overdue does not support the winners → this is the kind of day where cheap hedges or skipping is rational.
 
 ---
 
@@ -671,10 +826,19 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - `069` (winner canonical) — modest multi-tool visibility (Stable exact, Hot Zones rank 35, VTRAC idx9 moderate).
+- Candidate universe (Evening):
+  - `478` (winner canonical) — present in Stable (moderate), but weak in VTRAC/Hot Zones; included for post-hoc validation.
+- Evidence vectors:
+  - `069`: Stable exact recognition + HZ lane present + VTRAC idx9 moderate.
+  - `478`: Stable recognizes, but HZ/VTRAC/Aux do not meaningfully converge (low confidence).
+- Coverage mapping + pack decision:
+  - Midday:
+    - Box `069` (6 combos) would cover the Midday winner `069`.
+  - Evening:
+    - This is not a “confidence greenlight” environment; best truthful posture is **pass** or a very small hedge.
+    - If hedging: box `478` (6 combos) is the minimal mode that would cover `847` boxed.
 
 ---
 
@@ -686,9 +850,20 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Midday: box `069` covers winner `069` (straight + boxed).
+  - Evening: box `478` covers winner `847` (boxed hit), but evidence was weak.
+- Key tags:
+  - `noisy day`
+  - `weak convergence`
+  - `Stable dominant lane diverges (113/118 cluster)`
+  - `VTRAC miss (idx30)`
+- Drivers:
+  - There is no clean “driver” across tools; this is an example of why we need (a) pass-day gating and (b) cross-tool evidence weighting.
+- Conflicts:
+  - Stable points to 113/118-lane; VTRAC/DR do not support the winners; Hot Zones weak on Evening winner lane.
+- Fix-now vs fix-later:
+  - Fix-now: none required for workflow integrity (sharepack alignment OK).
+  - Fix-later: treat this as a negative-control “no greenlight” case when designing gating thresholds.
+- Next run:
+  - Continue the next remaining state for 2025-06-21; South Carolina is a useful “noisy environment” contrast example.

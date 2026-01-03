@@ -23,20 +23,37 @@ Winners JSON files:
 - `sharepacks/2025-06-22/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac24_winner_918_20251221_222130.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: Set1 ladder lanes are active but do not anchor the winners (both are largely off-board).
+  - Set1/Draw1 ladders (from winners JSON; same in both winner files):
+    - Midday: col1 ladders `094**`; col2 ladders `9467** / 9647** / 6794** / 7964**`
+    - Evening: col1 ladders `922** / 229**`; col2 ladders `5922** / 2259** / 9225**`
+    - Combined: col1 ladders `900** / 009**`; col2 ladders `5900** / 0059** / 0095**`
+- Q2: Column persistence is high (repeated `094**`, `922**`, and `900/009` lanes), but that dominant lane story does not “narrate” either winner (918 / 616).
+- Q3: “Last survivors” density is high, but winner tagging is limited and mostly indirect:
+  - Winner presence in lens tags:
+    - 918 (canon 189): `hit-winner` cells=2; literal substring cells=0; canonical substring cells=0.
+    - 616 (canon 166): `hit-winner` cells=6; literal substring cells=0; canonical substring cells=0.
+- Q4: Variant bias is clear in the board (0/9/4, 9/2, 0/9), but the winners are orthogonal:
+  - Midday 918 (canon 189): not reflected in the dominant ladders.
+  - Evening 616 (canon 166): also not reflected; only modest `hit-winner` tagging exists.
+- Q5: Permutation lane clarity is high (very legible lane universes), but it points to non-winner structure → not an actionable winner-isolation day.
+- Q6: Environment verdict: low-confidence day for direct prediction; treat as **pass/tiny hedge**.
+- Q7: Hot Zones overlap is weak for both winners (best ranks 137 and 182; both `triad_present=False` in the winner_map snapshot).
+- Q8: Cross-set carryover exists (board + Stable + DR emphasize `229/009/922/900`), but it does not resolve into the actual winners.
+- Q9: Aux cues don’t align to the winners:
+  - Positional top digits: Combined `9/8/2`, Midday `7/8/6`, Evening `1/3/9` (none match 918 or 616 cleanly).
+  - Blackapple: score=2 with `pairs.remaining_count=0` and floating digits `3/9`, but top candidates do not include winners.
+- Q10: 4 hit criteria viability (pre-results lens): low; treat this as a “skip posture” training example.
+- Q11: Exact triple presence (winners lens):
+  - 918 / canonical 189: literal substring cells=0; canonical substring cells=0; `hit-winner` cells=2.
+  - 616 / canonical 166: literal substring cells=0; canonical substring cells=0; `hit-winner` cells=6.
+- Q12: “Profitable environment” summary:
+  - Strong lane dominance exists, but it’s the wrong lane → useful negative-control for “busy board ≠ correct board”.
+- Q13: Dominance vs dilution:
+  - Dominance exists (`094`, `922`, `900/009`), but it is not the winner universe → dilution relative to outcomes.
+- Q14: Noise check:
+  - High noise / wrong convergence; treat as a pass/tiny day.
+  - Fix-later note: DR Evening winner overlay has missing flags/hits (see Part 2.DR).
 
 ---
 
@@ -92,16 +109,29 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Both winners have exact boxed/straight=True in Stable, but both are very deep-ranked:
+    - 918: scores rank 4877; compound rank 1243.
+    - 616: scores rank 2543; compound rank 417.
+- Q2: 4 hit criteria mapping
+  - Midday (918): exact boxed/straight=True; VT boxed exists (vt_boxed_count=134) but it’s not a top-tier call.
+  - Evening (616): exact boxed/straight=True; VT boxed exists (vt_boxed_count=3) but still deep-ranked.
+- Q3: Winners output alignment
+  - Stable spotlight/scores/compound/metrics are internally consistent; this is a true “weak hit / deep rank”, not missing artifacts.
+- Q4: Dominance / noise
+  - Stable’s top compound candidates are dominated by other canonicals (229/009/005/099…) rather than 189 or 166.
+- Q5: Where the winners show up
+  - Strong “post-results” spotlight presence exists (918: exact_canonical_rows=2; 616: exact_canonical_rows=6), but neither is competitive vs top compounds.
+- Q6: Miss analysis
+  - Not a hard miss (exact exists), but not actionable isolation (too deep).
+- Q7: Validation checks (V)
+  - Outputs present; no missing brain artifacts.
+- Q8: Optimization notes
+  - None now (avoid tuning from one state/day).
+- Q9: Cross-tool synergy seed
+  - Stable’s dominant canonicals (229/009) align with the winners-lens ladders (`922/229`, `900/009`) and with DR’s top patterns (`922/599`), even though the actual winners are elsewhere.
+- Q10: Analyst’s extra insight
+  - Stable is acting as a strong “environment map” here; the correct learning is “how to detect and skip when the environment converges away from winners”.
 
 ---
 
@@ -170,16 +200,30 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - DR does not isolate either winner as a top-candidate triad (`winner_triads_as_candidates=False` for both).
+  - Midday 918: broad VTRAC-any coverage (vtrac_any=78), but no final hits.
+  - Evening 616: **evidence gap** (items_total=0; missing_flags/missing_hits).
+- Q2: Stamp interpretation
+  - Midday 918: vtrac_any=78 (very broad), vt_boxed=7 → “covered broadly”, not “narrowed”.
+  - Evening 616: stamp/flags/hits are empty; treat as non-gradeable DR winner overlay for this variant.
+  - Combined 918: vtrac_any=112 (very broad), vt_boxed=17 → also broad.
+- Q3: 4 hit criteria mapping
+  - DR is registering VTRAC/drop signals, not producing a clean exact/boxed candidate set for these winners.
+- Q4: Dominance / noise
+  - Top per_item and top candidates emphasize `922`/`599` patterns (non-winner dominance), not 189/166.
+- Q5: Where the winners show up
+  - Midday/Combined show vtrac_any, but the winner is not a top candidate; Evening overlay is missing.
+- Q6: Miss analysis
+  - This is a practical DR miss (or “non-isolation”) for the winners, plus an Evening overlay generation gap.
+- Q7: Validation checks (V)
+  - Flag as fix-later: Evening 616 has missing flags/hits outputs despite reducer scores being present.
+- Q8: Optimization notes
+  - None now; first fix is workflow-layer hygiene for the missing Evening overlay.
+- Q9: Cross-tool synergy seed
+  - DR’s dominant patterns (`922`/`599`) agree with Stable and the winners-lens board dominance (9/2/0 universe), reinforcing that the environment converged elsewhere.
+- Q10: Analyst’s extra insight
+  - DR is functioning as an environment detector on this day; it’s valuable evidence for skip/low-spend posture rather than direct candidate generation.
 
 ---
 
@@ -228,16 +272,27 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - 918: index 24 ranks 9/35 (score ~14.8) → moderate presence but not in top straights.
+  - 616: index 16 ranks 31/35 (score 0.0) → effectively absent.
+- Q2: 4 hit criteria mapping
+  - For both winners: `winner_in_index_straights=False` (top straights list does not contain winners).
+- Q3: Winners output alignment
+  - Outputs are consistent (winners lens identifies indices 24 and 16); the analyzer’s ranking simply doesn’t favor them.
+- Q4: Dominance / noise
+  - Top indices are 5/34/33/14/15…, not 24/16.
+- Q5: Where the winners show up
+  - 918 is “mid-tier” (rank 9/35); 616 is very weak (31/35).
+- Q6: Miss analysis
+  - Treat as a VTRAC analyzer miss day for both winners (especially 616).
+- Q7: Validation checks (V)
+  - Outputs present; no missing artifacts.
+- Q8: Optimization notes
+  - None now (avoid tuning).
+- Q9: Cross-tool synergy seed
+  - Aux VTRAC overdue list includes idx16 as highly overdue (ds=186), which matches the Evening winner’s index even though the VTRAC analyzer rank is poor → worth tracking across more days.
+- Q10: Analyst’s extra insight
+  - VTRAC analyzer here is not acting as a “winner isolator”; keep it as a contributor signal, not a primary decider, until we have more days.
 
 ---
 
@@ -281,23 +336,40 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Both winners appear in top lanes, but only at weak ranks:
+    - 918 best rank 137; 616 best rank 182.
+  - Winner map is present but `triad_present=False` for both (top-20 snapshot limitation).
+- Q2: 4 hit criteria mapping
+  - Per-lane indicates has_straight=True and has_vt_straight=True, but ranks are too deep for strong isolation.
+- Q3: Winners output alignment
+  - “winner_not_in_winner_map” is expected when the winner rank is outside the top-20 (+guard) snapshot; do not treat as corruption.
+- Q4: Dominance / noise
+  - Hot Zones top lanes emphasize 227/277/… and include 009 in the top-10; not a clean story for 189/166.
+- Q5: Where the winners show up
+  - Deep ranks only (137 and 182).
+- Q6: Miss analysis
+  - Practical miss / weak corroboration day for Hot Zones.
+- Q7: Validation checks (V)
+  - Outputs present; no missing artifacts.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Hot Zones top lanes include `009` (rank 10), matching Stable’s top compound `009` and the Combined winners-lens ladder `009**` — strong non-winner convergence.
+- Q10: Analyst’s extra insight
+  - Hot Zones aligns with Stable on the “0/9 universe” but not on the actual winners; this is strong evidence for skip gating when multiple tools converge away from the outcomes.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Broad cross-tool agreement on a non-winner universe: `009/229/922/900` shows up in winners lens ladders, Stable top compounds, DR top patterns, Hot Zones top lanes, and Aux positional consensus notes.
+- Conflicts/noise:
+  - That strong convergence did not resolve into either winner (918/616).
+  - Stable does have exact hits for both winners, but only at very deep ranks → low-confidence.
+- Aggregator/aux hooks to test next:
+  - Treat “multi-tool convergence away from winners” as a skip/low-spend posture candidate.
+  - Fix-later: investigate why DR Evening overlay artifacts are missing for Ontario (616) even though reducer scores exist.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -640,16 +712,36 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-22/OntarioCanada4/aux/draws/Ontario_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-22/OntarioCanada4/aux/draws/Ontario_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-22/OntarioCanada4/aux/draws/Ontario_Evening_draws.csv` (n=1000)
+  - Workbook provenance: `data/history/Pick3StatsC4_2025-06-21.xlsm` (aux_state_label=Ontario).
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-22 --state OntarioCanada4 --strict` → OK.
+- Q2:
+  - Positional pressure is coherent internally, but does not match the winners:
+    - Combined top digits: `9/8/2`
+    - Midday top digits: `7/8/6`
+    - Evening top digits: `1/3/9`
+- Q3:
+  - Positional shortlist is dominated by `952/982/959/...` lanes; neither 918 nor 616 appears as a top positional candidate.
+- Q4:
+  - Repeat watch is “active” but not explanatory for the winners’ indices:
+    - Combined current_index=7; Midday current_index=21; Evening current_index=7.
+- Q5:
+  - VTRAC overlay is interesting for idx16 (Evening winner 616’s index):
+    - top overdue indices include idx16 (ds=186), but idx24 is not near the top overdue list.
+- Q6:
+  - Doubles/pairs pressure is high (many sev=B doubles; lots of repeating pairs), but it doesn’t narrow to the winners.
+- Q7:
+  - Sums are broadly flagged (mostly purple / red+purple) → low discrimination for these outcomes.
+- Q8:
+  - Blackapple score is moderate (score=2; pairs_remaining=0), but top candidates do not include the winners; treat as context only.
+- Q9:
+  - Cross-variant alerts show multi-variant doubles/pairs pressure, reinforcing a “busy environment” posture (not a direct call).
+- Q10:
+  - Use Aux here primarily to corroborate “dominant lane universes” (0/9/2/4 and positional consensus) and record this as a miss day for the winners.
 
 ---
 
@@ -663,10 +755,17 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - Default posture: pass/tiny (no coherent convergence on `189`).
+  - If forced to act on board dominance: a small box-leaning universe around the visible lanes (`094`, `229`, `009`) is the most coherent “environment” hedge, but it would miss the actual Midday winner (918).
+- Candidate universe (Evening):
+  - Default posture: pass/tiny (no coherent convergence on `166`).
+  - If forced: same board-dominance hedge (`922/229/009`) is the smallest coherent idea, but it would miss 616.
+- Evidence vectors:
+  - Pro: Stable has exact boxed/straight=True for both winners (post-results), and winners-lens `hit-winner` tags exist.
+  - Contra: all primary “environment narratives” converge on `0/9/2/4` structure, not 918/616.
+- Coverage mapping + pack decision:
+  - Recommend pass/tiny posture; if you play, keep it to very small box hedges only (avoid broad spend on a “busy but wrong” day).
 
 ---
 
@@ -678,9 +777,18 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Any “board dominance” pack (094/229/009/922) would miss the actual winners (918/616).
+  - A post-hoc minimal “winner capture” hedge would be `189` boxed and `166` boxed, but the pre-results evidence for those was weak (deep ranks).
+- Key tags:
+  - Strong lane dominance (`094`, `922`, `900/009`) + heavy cross-variant positional consensus notes.
+  - Blackapple pairs_remaining=0 (context), but no direct winner inclusion.
+- Drivers:
+  - Tools agree on a loud environment, but the outcomes land off-board.
+- Conflicts:
+  - Strong multi-tool convergence on non-winner structure vs actual winners.
+- Fix-now vs fix-later:
+  - Fix-now: none (alignment guard passes).
+  - Fix-later: DR Evening overlay missing flags/hits for Ontario (winner 616).
+- Next run:
+  - Continue D=2025‑06‑22 reports (Pennsylvania4 next); keep OntarioCanada4 as a negative-control “busy board, off-board winners” case.

@@ -23,20 +23,52 @@ Winners JSON files:
 - `sharepacks/2025-06-23/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac5_winner_040_20251223_052107.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: Set1 ladder lanes are active and show clear Midday/Evening/Combined structures, but this is not a direct “printed lane equals winner” day; we have to rely on tool evidence + tags.
+  - Winners: Midday=164 (canonical 146); Evening=040 (canonical 004) from `data/results/2025-06-23.txt`.
+  - Set1/Draw1 ladders (from winners JSON; lens only, not “outcomes”):
+    - Midday: col1 `022**`; col2 `2298** / 8922** / 9228** / 9822**`
+    - Evening: col1/col2 `138** / 183** / 813** / 831**`
+    - Combined: col1/col2 `019** / 091**`
+- Q2: Ladder persistence exists (`**`), but ladder strings do not resolve as winners (146/004); treat ladders as a structure lens, not a direct candidate generator.
+- Q3: Winner tagging (from winners JSON):
+  - 164 (canon 146): low hit-winner presence; mostly family/gap pressure plus some vt-straight tagging, especially Combined.
+    - Midday: hit-winner=0; hit-winner-gap=3; hit-family=2; hit-family-gap=25; hit-vt-straight=1.
+    - Evening: hit-winner=0; hit-winner-gap=0; hit-family=11; hit-family-gap=19; hit-vt-straight=8.
+    - Combined: hit-winner=0; hit-winner-gap=1; hit-family=26; hit-family-gap=42; hit-vt-straight=11.
+  - 040 (canon 004): moderate hit-winner tagging across variants but still no literal/canonical substring cells.
+    - Midday: hit-winner=2; hit-winner-gap=3; hit-family=13; hit-family-gap=17; hit-vt-straight=2.
+    - Evening: hit-winner=6; hit-winner-gap=7; hit-family=21; hit-family-gap=29; hit-vt-straight=5.
+    - Combined: hit-winner=2; hit-winner-gap=2; hit-family=33; hit-family-gap=44; hit-vt-straight=11.
+- Q4: Variant bias:
+  - Midday 164 is not strongly on-board via hit-winner tags, but it is strongly supported by Hot Zones (see below).
+  - Evening 040 has better hit-winner tagging but is still not a “substring / printed lane” day.
+- Q5: Permutation lane clarity:
+  - 164: moderate-high via Hot Zones placement (best rank 18).
+  - 040: lower (Stable is exact but deep; Hot Zones is weak).
+- Q6: Environment verdict: **Midday playable; Evening cautious**
+  - Midday: Hot Zones isolates 164 strongly (best rank 18) even though Stable misses it as a direct canonical isolate.
+  - Evening: Stable is exact for 040, but ranks are deep (scores rank 1034; compound rank 168) and Hot Zones is very weak (best rank 184).
+- Q7: Hot Zones overlap:
+  - 164 best rank 18 (strong); triad_present=False (note: winner_map is a top-20 snapshot).
+  - 040 best rank 184 (weak); triad_present=False (expected when rank > 20).
+- Q8: Cross-set carryover:
+  - Both winners show more vt-straight and family/gap tagging in Combined than in single variants (Combined is the densest tag surface here).
+- Q9: Aux cues (quick lens):
+  - Repeat watch current_index (Combined=3, Midday=33, Evening=3) does not match winners’ indices (19/5).
+  - Positional top digits (Midday 1/3/2) partially support 164’s digit profile (digit 1), but do not isolate 146/004.
+  - BA score is moderate (2 across variants) but not decisive by itself.
+- Q10: 4 hit criteria viability (pre-results lens):
+  - Midday: Hot Zones is the strongest criterion; Stable is not a direct isolate but has family evidence.
+  - Evening: Stable provides the clearest criterion (exact), but ranks are not top-dominant.
+  - VTRAC analyzer is weak for both (indices rank 29/30); DR does not isolate.
+- Q11: Exact triple presence (winners lens):
+  - Literal/canonical substring cells are 0 for both winners; rely on tag density + tool evidence instead.
+- Q12: “Profitable environment” summary:
+  - This is a “tool split” state/day: Hot Zones leads Midday; Stable leads Evening (but deep).
+- Q13: Dominance vs dilution:
+  - Ladder strings are structured but not direct; avoid over-weighting lane equality.
+- Q14: Noise check:
+  - Moderate-high: weak VTRAC support and low substring evidence, so treat this as a corroboration-required day.
 
 ---
 
@@ -93,16 +125,29 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Midday 164: winner canonical 146 is missing from Stable scores and compound (gaps: missing_from_scores, missing_from_compound). Stable family evidence exists (families best rank 12 in Combined), but it is not a direct isolate.
+  - Evening 040: Stable is exact (exact_boxed=True; exact_straight=True) but deep (scores rank 1034; compound rank 168).
+- Q2: 4 hit criteria mapping
+  - Stable is not usable as a direct Midday caller on this day; treat any Stable signal for 164 as family/context only.
+  - For Evening, Stable can support a tight `004` box idea, but it is not top-dominant.
+- Q3: Output integrity
+  - Stable outputs exist; gaps are “winner not present” (tool outcome), not missing files.
+- Q4: Dominance / noise
+  - Top compound candidates are dominated by other canonicals (022/138/348/etc.), not 146/004; interpret as a non-dominant Stable day.
+- Q5: Where the winners show up
+  - 164: only in family/metrics layers, not in scores/compound.
+  - 040: present in scores and compound (deep ranks).
+- Q6: Miss analysis
+  - Stable misses Midday as a canonical caller; it supports Evening only weakly due to deep rank.
+- Q7: Validation checks (V)
+  - Winner presence gaps should be treated as tool outcome, not pipeline corruption.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Use Stable as confirmatory for Evening only; rely on Hot Zones for Midday on this date.
+- Q10: Analyst’s extra insight
+  - This is a “Stable family evidence without canonical isolation” example (important to recognize so we do not mislabel as pipeline failure).
 
 ---
 
@@ -170,16 +215,26 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - DR shows high contact in stamps/flags, but both winners are absent from DR top candidates (winner_present=False across variants).
+- Q2: 4 hit criteria mapping
+  - DR does not provide actionable top candidates; treat as context only.
+- Q3: Output integrity
+  - Stamp/flags/hits artifacts exist and are internally consistent.
+- Q4: Dominance / noise
+  - Top DR candidates are dominated by 224/220/922/994/etc., not 146/004.
+- Q5: Where the winners show up
+  - Only as broad “contact” flags, not as final/top candidates.
+- Q6: Miss analysis
+  - As a caller, DR misses both outcomes for this state/day.
+- Q7: Validation checks (V)
+  - No missing artifacts indicated.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - DR is a low-weight background layer behind Hot Zones (Midday) and Stable (Evening).
+- Q10: Analyst’s extra insight
+  - DR behaves consistently: high contact, low isolation.
 
 ---
 
@@ -228,16 +283,27 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winner indices vs brain outputs
+  - 164: idx19 rank 30/35 (deep).
+  - 040: idx5 rank 29/35 (deep).
+- Q2: 4 hit criteria mapping
+  - VTRAC does not support either draw as an index-level isolate on this date.
+- Q3: Output integrity
+  - Enhanced JSON + summary artifacts exist and include winner placements.
+- Q4: Dominance / noise
+  - Top indices are far from the winners’ indices; interpret as a weak VTRAC environment.
+- Q5: Where the winners show up
+  - Only as deep placements, not as actionable top ranks.
+- Q6: Miss analysis
+  - VTRAC misses both draws as an isolator.
+- Q7: Validation checks (V)
+  - Winner placement is auditable; it is simply weak.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Use VTRAC only when it is top-ranked; on this day it should not be a decision driver.
+- Q10: Analyst’s extra insight
+  - This is a strong example of why VTRAC ranking must be treated as “optional driver”, not a forced scoring ingredient every day.
 
 ---
 
@@ -281,23 +347,42 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Midday 164 is strongly present in top lanes (best rank 18) but per-lane indicates no straight/vt-straight lane (has_straight=False, has_vt_straight=False).
+  - Evening 040 is very deep in top lanes (best rank 184) but per-lane shows straight/vt-straight lanes exist.
+- Q2: 4 hit criteria mapping
+  - Hot Zones is the leading corroborator for Midday (rank 18).
+  - Hot Zones provides little support for Evening (rank 184).
+- Q3: Output integrity
+  - Top lanes + per-lane + winner_map artifacts exist; winner_map is a top-20 snapshot.
+- Q4: Dominance / noise
+  - Top lanes are dominated by 667/226/278/etc.; treat Hot Zones as broad lane structure.
+- Q5: Where the winners show up
+  - 164: actionable placement (rank 18).
+  - 040: not actionable (rank 184).
+- Q6: Miss analysis
+  - Hot Zones misses Evening; it supports Midday.
+- Q7: Validation checks (V)
+  - “Not in winner_map” is expected when best_rank > 20.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Use Hot Zones to lead Midday when Stable misses (this state/day is exactly that pattern).
+- Q10: Analyst’s extra insight
+  - The “no straight lane” note for 164 is useful: this looks more like a box/triad-lane story than a straight-lane story.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Midday 164: Hot Zones isolates strongly (rank 18) while other tools are weak.
+  - Evening 040: Stable is exact (deep) while other tools are weak.
+- Conflicts/noise:
+  - VTRAC is deep for both indices (29/30); DR does not isolate; winners-lens substring evidence is 0.
+  - This is a high-variance day where single-tool leadership matters.
+- Aggregator/aux hooks to test next:
+  - Allow “Hot Zones-led Midday” as a valid channel even when Stable/VTRAC are weak.
+  - Treat Stable family-only evidence as context, not as a canonical-caller substitute.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -624,16 +709,36 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-23/Pennsylvania4/aux/draws/Pennsylvania_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-23/Pennsylvania4/aux/draws/Pennsylvania_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-23/Pennsylvania4/aux/draws/Pennsylvania_Evening_draws.csv` (n=1000)
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-23 --state Pennsylvania4 --strict` → OK.
+- Q2:
+  - Positional top digits:
+    - Combined: 1/3/2; Midday: 1/3/2; Evening: 7/5/2.
+  - These do not isolate 146/004; treat as context only.
+- Q3:
+  - Positional shortlist is broad; use only when it converges with a tight candidate set.
+- Q4:
+  - Repeat watch current_index:
+    - Combined=3; Midday=33; Evening=3 (does not match winners’ indices 19/5).
+- Q5:
+  - VTRAC overdue overlay:
+    - Winner idx19 is moderately due in Midday (ds=9) but overall VTRAC ranking is deep; treat as weak corroboration.
+    - Winner idx5 is due in Combined/Evening (ds=67/66) but also ranks deep; treat as weak corroboration.
+- Q6:
+  - Due doubles are extreme (e.g., Midday 133 ds=999), but do not directly isolate 146/004.
+- Q7:
+  - Pairs show some multi-variant pressure (55/77, etc.) but do not isolate the winners.
+- Q8:
+  - Sums/pairs alerts are plentiful; treat as low-discrimination environment notes.
+- Q9:
+  - Blackapple is moderate (score=2 across variants) but not decisive.
+- Q10:
+  - Actionability:
+    - Aux is context only on this day; the actionable drivers are Hot Zones for Midday and Stable for Evening.
 
 ---
 
@@ -647,10 +752,15 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - Primary: `146` box as a Hot Zones-led candidate (perm set contains 164).
+- Candidate universe (Evening):
+  - Primary: `004` box as a Stable-led candidate (perm set contains 040), but only as a cautious play due to deep ranks.
+- Evidence vectors:
+  - Midday: Hot Zones best rank 18 plus moderate Combined tag density.
+  - Evening: Stable exact presence plus moderate on-board tagging.
+- Coverage mapping + pack decision:
+  - Keep spend tight: box `146` (Midday); treat Evening `004` as optional (only if you accept deep-rank Stable signals).
 
 ---
 
@@ -662,9 +772,19 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Midday: `146` box would have hit (perm set contains 164).
+  - Evening: `004` box would have hit (perm set contains 040).
+- Key tags:
+  - 040: moderate hit-winner density in Evening (6) and decent family/gap pressure.
+  - 164: very low hit-winner tags, but strong Hot Zones placement.
+- Drivers:
+  - Midday win is driven by Hot Zones placement; Stable does not isolate.
+  - Evening win is driven by Stable exact presence (deep), not by VTRAC/DR.
+- Conflicts:
+  - VTRAC is weak for both; DR does not isolate; substring evidence is 0 for both winners.
+- Fix-now vs fix-later:
+  - Fix-now: none.
+  - Fix-later: none (this day should be treated as a “channel split” example in later synthesis).
+- Next run:
+  - Proceed to the next remaining 2025-06-23 state (OntarioCanada4, PuertoRico4, SouthCarolina4, Virginia4).

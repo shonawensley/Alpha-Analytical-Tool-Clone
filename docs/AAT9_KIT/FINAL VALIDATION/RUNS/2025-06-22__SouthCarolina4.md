@@ -21,20 +21,43 @@ Winners JSON files:
 - `sharepacks/2025-06-22/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac7_winner_675_20251221_222134.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: South Carolina has no Midday result recorded for 2025-06-22; only Evening winner exists.
+  - Results line: `South Carolina\t\t675` in `data/results/2025-06-22.txt` (Midday blank; Evening=675).
+  - Set1/Draw1 ladders (from winners JSON; lens only, not “outcomes”):
+    - Midday: col1/col2 `51138** / 58311** / 81153** / 11835**`
+    - Evening: col1 `098** / 089**`; col2 `9488** / 9884** / 8894**`
+    - Combined: col1 `005**`; col2 `587** / 875** / 785**`
+- Q2: Lane persistence is high (dense `**` ladders), but the printed lane universes (5/1/8/3, 0/9/8, 0/5) do not narrate the winner canonical `567`.
+- Q3: Winner tagging is weak (no on-board “hit”).
+  - `hit-winner` tags are absent in all variants.
+  - `hit-winner-gap` exists (Evening=2, Combined=2), meaning the winner is “near” a family lane but not printed as a direct survivor.
+  - Family pressure exists (hit-family totals: Midday=24, Evening=6, Combined=14), but it never resolves to an exact lane.
+- Q4: Variant bias is not helpful here:
+  - literal substring cells for `675` = 0 in Midday/Evening/Combined
+  - canonical substring cells for `567` = 0 in Midday/Evening/Combined
+- Q5: Permutation lane clarity is low (no decisive printed lane for `567` or `675`).
+- Q6: Environment verdict: **pass / tiny hedge only** (good negative-control day).
+- Q7: Hot Zones overlap is weak:
+  - best rank 187; has_straight=False; has_vt_straight=False; winner_map triad_present=False.
+- Q8: Cross-set carryover exists only as broad family pressure (`hit-family(-gap)`), not as actionable narrowing.
+- Q9: Aux cues (quick lens) are not supportive:
+  - VTRAC overdue list does not elevate winner idx7 (top overdue indices are 29/32/1/2/5/…).
+  - Aggregated positional digits show strong cross-variant pressure (P1=5/6, P2=9/7/8, P3=4/3/5), but it does not isolate `567`.
+- Q10: 4 hit criteria viability (pre-results lens): low.
+  - Stable: no exact boxed/straight.
+  - DR: vt_boxed exists but no finals; winner not in top candidates.
+  - VTRAC analyzer: winner index rank is very weak.
+  - Hot Zones: winner not in top slice.
+- Q11: Exact triple presence (winners lens):
+  - `hit-winner` cells=0 (Midday/Evening/Combined).
+  - `hit-winner-gap` cells: 0/2/2 (Midday/Evening/Combined).
+- Q12: “Profitable environment” summary:
+  - Useful example of a very active board that still provides no decisive convergence to the winner.
+  - Also a good workflow guard case: missing Midday result should not be treated as a “broken pipeline”.
+- Q13: Dominance vs dilution:
+  - Dominant ladders exist, but the winner is orthogonal to that dominance → dilution relative to the actual outcome.
+- Q14: Noise check:
+  - High noise / low discrimination; record as a “skip posture” environment example.
 
 ---
 
@@ -84,16 +107,28 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Winner canonical `567` is not present in scores/compound; only weak family presence (best family rank 518; score 17.5).
+  - Note: Stable summary labels this as “Midday winner 675” because the results file has Midday blank; treat `675` as the Evening outcome for this state/day.
+- Q2: 4 hit criteria mapping
+  - No exact boxed/straight (exact_boxed=False, exact_straight=False).
+  - vt_boxed_count=42 indicates broad VTRAC-family presence, not isolation.
+- Q3: Output integrity
+  - Stable artifacts exist; this is a true “no isolation” outcome, not missing tool output.
+- Q4: Dominance / noise
+  - Top compounds are dominated by non-winner canonicals (113/118/138/1138/11358/…), not `567`.
+- Q5: Where the winner shows up
+  - Family-only presence; no actionable candidate rank.
+- Q6: Miss analysis
+  - Stable miss (no candidate isolation for `567`).
+- Q7: Validation checks (V)
+  - Brain outputs present + winners lens present.
+- Q8: Optimization notes
+  - None now (avoid tuning from a single miss day).
+- Q9: Cross-tool synergy seed
+  - Stable’s dominant “11* / 13* / 18*” environment aligns loosely with DR’s top Midday patterns (511/551), but neither aligns to the winner.
+- Q10: Analyst’s extra insight
+  - This is a good “active board, wrong universe” example: Stable produces rich top compounds, but the winner lives outside them.
 
 ---
 
@@ -162,16 +197,28 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Midday winner section shows `675` (but state’s Midday result is blank; treat `675` as Evening).
+  - Winner is not present in top candidates (winner_present=False for Midday/Combined; Evening winner is “unknown” due to missing stamp/flags/hits).
+  - vt_boxed is non-zero (Midday=20, Combined=56) but no finals (exact_final=0, vtrac_final=0).
+- Q2: 4 hit criteria mapping
+  - DR provides broad VT coverage (vt_boxed>0), but it does not isolate the winner as a top candidate.
+- Q3: Output integrity (important)
+  - Evening winner overlay is missing (coverage gaps: missing_stamp_json, missing_flags, missing_hits). This is consistent with `South Carolina\t\t675` (Midday blank) and should be treated as a workflow-layer issue, not an analyzer failure.
+- Q4: What DR wanted (top candidates)
+  - Top patterns are 513 (Combined) and 551/511 (Midday); no lift toward `567`.
+- Q5: Miss analysis
+  - As graded by DR’s own top-candidates lens, this is a miss day.
+- Q6: Validation checks (V)
+  - Reducer scores exist; Midday/Combined overlays exist; Evening overlay missing.
+- Q7: Cross-tool synergy seed
+  - None (Stable/DR/HotZones/VTRAC do not converge on a shared winner-adjacent cluster).
+- Q8: Optimization notes
+  - None now.
+- Q9: Aux hook
+  - Treat vt_boxed>0 as “broad VT-family contact,” not isolation.
+- Q10: Analyst’s extra insight
+  - This is a clean test case for “missing Midday results should not create an ‘Evening winner unknown’ hard failure.”
 
 ---
 
@@ -218,16 +265,26 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Winner idx7 ranks 29/35 (very weak) with score 3.31 vs top 42.20 (ratio ~0.08).
+- Q2: What VTRAC wanted (top straights / indices)
+  - Top indices are 15/18/14/31/…; top straights include 534/153/541/… — none point to idx7 as a priority.
+- Q3: Winner index isolation
+  - winner_in_index_straights=False; treat idx7 as not isolated.
+- Q4: Consensus / cross-section
+  - consensus_col1/2 are False across variants; no structural convergence.
+- Q5: Miss analysis
+  - VTRAC analyzer is a miss day for this winner.
+- Q6: Validation checks (V)
+  - Artifacts exist; winners lens JSON/HTML present.
+- Q7: Cross-tool synergy seed
+  - Supports the “pass/tiny” posture due to lack of convergence.
+- Q8: Optimization notes
+  - None now.
+- Q9: Aux hook
+  - Aux overdue indices do not elevate idx7; treat as non-support.
+- Q10: Analyst’s extra insight
+  - Good negative-control day where all three brain tools (Stable/DR/VTRAC) fail to isolate the winner.
 
 ---
 
@@ -265,23 +322,38 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - Winner triad `567` is weak: best rank 187; triad_present=False; has_straight=False; has_vt_straight=False.
+- Q2: What Hot Zones wanted (top lanes)
+  - Top lanes are dominated by other triads (237/278/244/069/113/…); no alignment to `567`.
+- Q3: Winner map interpretation
+  - triad_present=False is expected for non-top slices; interpret as signal weakness (not corruption).
+- Q4: Miss analysis
+  - Hot Zones does not isolate the winner.
+- Q5: Validation checks (V)
+  - Outputs exist; winner map artifacts present.
+- Q6: Cross-tool synergy seed
+  - None for the winner; Hot Zones aligns with the “pass/tiny” posture.
+- Q7: Optimization notes
+  - None now.
+- Q8: Aux hook
+  - No decisive doubles/pairs event aligns with `567`.
+- Q9: Guardrails / notes
+  - Missing Midday results should not be interpreted as a Hot Zones pipeline failure.
+- Q10: Analyst’s extra insight
+  - This day is useful to test “skip policies” based on low Hot Zones rank + no winners-lens hit-winner tags.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - No convergence cluster for winner `675/567`; each tool highlights different non-winner structures (Stable 11*/13*, DR 513/551, Hot Zones 237/278/…, VTRAC idx15/18/…).
+- Conflicts/noise:
+  - Winner is broadly off-board (no hit-winner tags anywhere; only small hit-winner-gap counts).
+  - Results feed irregularity: Midday missing (South Carolina line has Midday blank), which causes “winner labeling” confusion in tool summaries and missing DR Evening overlay.
+- Aggregator/aux hooks to test next:
+  - Add/confirm a runbook guard: when Midday is blank, treat this as “one-winner day” and do not label Evening as “unknown”.
+  - Use “hit-winner present vs absent” as a simple binary gate (here: absent → skip posture).
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -615,16 +687,31 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-22/SouthCarolina4/aux/draws/South_Carolina_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-22/SouthCarolina4/aux/draws/South_Carolina_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-22/SouthCarolina4/aux/draws/South_Carolina_Evening_draws.csv` (n=1000)
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-22 --state SouthCarolina4 --strict` → OK.
+- Q2:
+  - Positional pressure is active but non-isolating:
+    - Aggregated positional digits show heavy cross-variant pressure (P1=5/6, P2=9/7/8, P3=4/3/5), which does not isolate `567`.
+- Q3:
+  - Positional shortlist does not surface `675` as a top candidate (treat as non-supportive).
+- Q4:
+  - Repeat watch is active (current_index=30 across variants), but it does not support winner idx7.
+- Q5:
+  - VTRAC overlay overdue list does not elevate idx7; treat as non-support.
+- Q6:
+  - Doubles/pairs multi-variant alerts show broad pressure, but nothing narrows to the winner.
+- Q7:
+  - Sums are broadly flagged (many purple/red+purple) → low discrimination.
+- Q8:
+  - Blackapple is low signal (scores 0–1; candidates mostly float clusters like *x9 / 0x9*) and does not isolate `567`.
+- Q9:
+  - Cross-variant alerts are useful as context only; they do not provide a clean “winner lane” here.
+- Q10:
+  - Use Aux as corroboration for environment activity; treat this as a “skip posture” day because it does not converge on the winner.
 
 ---
 
@@ -638,10 +725,15 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - N/A (Midday result is blank for South Carolina on 2025-06-22; treat this as a one-winner day).
+- Candidate universe (Evening):
+  - Default posture: pass/tiny (no cross-tool convergence on `567` / winner `675`).
+- Evidence vectors:
+  - Stable/DR/VTRAC/Hot Zones all fail to isolate `567` (and winners lens has no hit-winner tags).
+  - Aux is active but non-isolating.
+- Coverage mapping + pack decision:
+  - No recommended pack; if forced, keep spend minimal and treat as a negative-control example.
 
 ---
 
@@ -653,9 +745,19 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - Evening: winner `675` (canon `567`) is off-board and not isolated by any tool → expected miss under a “convergence-only” posture.
+  - Midday: N/A (no result recorded).
+- Key tags:
+  - Missing Midday result (one-winner day).
+  - Winner is off-board (`hit-winner` absent; only small `hit-winner-gap` counts).
+- Drivers:
+  - None (no dominant convergent signal).
+- Conflicts:
+  - Cross-tool miss day; strong “other-universe” dominance that excludes the winner.
+- Fix-now vs fix-later:
+  - Fix-later: handle one-winner days cleanly (South Carolina Midday blank):
+    - Stable/Hot Zones summaries label “Midday winner 675” even though it’s the Evening outcome.
+    - DR produces “Evening winner unknown” + missing Evening stamp/flags/hits; should be skipped/treated as expected when Midday is blank.
+- Next run:
+  - Continue to the next state/day; use this as a regression case for missing-results handling.

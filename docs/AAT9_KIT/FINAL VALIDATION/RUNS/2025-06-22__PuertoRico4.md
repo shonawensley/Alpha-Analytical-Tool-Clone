@@ -19,20 +19,29 @@ _No winners HTML found in the winners sharepack folder._
 _No winners JSON found in the winners sharepack folder._
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: N/A — no winners HTML/JSON were generated for Puerto Rico on this results date (there is no Puerto Rico line in `data/results/2025-06-22.txt`).
+- Q2: N/A — without winners lens tables, we can’t assess Set1 ladder lanes or survivor narratives for a specific winner.
+- Q3: N/A — no winner tagging possible (no winners overlay artifacts for this date).
+- Q4: Environment proxy (tool-based, since winners are missing):
+  - Stable top compounds are heavily concentrated in Evening section and dominated by `244/447/007/004/009` style canonicals.
+- Q5: Permutation lane clarity (proxy):
+  - Strong “0/2/4/4” cluster shows up across Stable + DR, suggesting a tight lane universe for candidate generation (but not gradeable without results).
+- Q6: Environment verdict:
+  - Treat this as a **pre-results snapshot only** (candidate universe capture), not an evaluable “did we hit” day.
+- Q7: Hot Zones (proxy):
+  - Top lanes include `155` (vt_triad 12) and `168` (vt_triad 224), aligning with the `224/244` theme.
+- Q8: Cross-set carryover: N/A (no winners grading lens).
+- Q9: Aux quick lens:
+  - Positional top digits: Combined `0/3/4`, Midday `3/3/6`, Evening `7/0/0`.
+  - Blackapple score=1 with floating digits `2/4` and `pairs.remaining_count=0` (context only).
+- Q10: 4 hit criteria viability: N/A (no results/winners to grade).
+- Q11: Exact triple presence: N/A (no winners overlays).
+- Q12: “Profitable environment” summary:
+  - This looks like a potentially strong **lane-dominance** environment (224/244/024-family), but we can’t validate without results.
+- Q13: Dominance vs dilution:
+  - Dominance is present (stable+DR concentrate on a small set of canonicals), but cannot be evaluated for dilution vs winners.
+- Q14: Noise check:
+  - No pipeline integrity issues (alignment guard passes); the missing winners lens is expected given missing results data for this state/day.
 
 ---
 
@@ -74,16 +83,26 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - No winners overlays exist for this state/day, so Stable cannot be graded for hit/miss.
+- Q2: 4 hit criteria mapping
+  - N/A (no winners/results for grading).
+- Q3: Winners output alignment
+  - Stable brain outputs are present; “missing winners” files are expected when `data/results/<D>.txt` lacks the state line.
+- Q4: Dominance / noise
+  - Very strong dominance in top compounds: `244`, `447`, `007`, `004`, `009`, plus expanded canonicals like `0244`.
+- Q5: Candidate universe takeaways
+  - A compact “box candidate” universe suggested by Stable would start around: `244`, `447`, `007`, `004`, `009`, `249`.
+- Q6: Miss analysis
+  - N/A (no results/winners to grade).
+- Q7: Validation checks (V)
+  - Outputs present; no missing brain artifacts.
+- Q8: Optimization notes
+  - None now; keep this as an “environment snapshot” example until we have results for PR on some D.
+- Q9: Cross-tool synergy seed
+  - Stable’s `244/224/024` dominance aligns with DR’s top candidates (`224/244/924`) and VTRAC top straights (`024/240/204/924`).
+- Q10: Analyst’s extra insight
+  - PuertoRico4 is still useful without winners: it helps define what a “high dominance lane day” looks like across Stable+DR+VTRAC.
 
 ---
 
@@ -127,16 +146,26 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - No winners overlays exist for this state/day, so DR cannot be graded for hit/miss.
+- Q2: Brain-only interpretation
+  - DR strongly favors a small candidate cluster: top per_item and top candidates are dominated by `224`, `244`, and `924`.
+- Q3: 4 hit criteria mapping
+  - N/A (no results/winners to grade).
+- Q4: Dominance / noise
+  - This is a high-dominance DR day (candidate space concentrates heavily on a few triads).
+- Q5: Candidate universe takeaways
+  - Candidate triads suggested: `224`, `244`, `924` (and related 0/2/4 permutations).
+- Q6: Miss analysis
+  - N/A (no results/winners).
+- Q7: Validation checks (V)
+  - Brain outputs present; missing winners overlays are expected given missing results.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - DR’s `224/244` dominance agrees with Stable compounds (`244/0244`) and with VTRAC’s straights list including `024/240/204/924`.
+- Q10: Analyst’s extra insight
+  - This is a good candidate for “pre-results candidate pack design” (Part 4), but cannot be scored post-hoc until PR results exist for some D.
 
 ---
 
@@ -179,16 +208,26 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - No winners VTRAC report JSONs exist for this state/day → cannot grade.
+- Q2: Brain-only interpretation
+  - Very strong top indices (index 12, 3, 31, 5…) with high presence; top straights include `024/240/204/924`.
+- Q3: 4 hit criteria mapping
+  - N/A (no winners/results).
+- Q4: Dominance / noise
+  - VTRAC analyzer indicates a high-confidence index environment, but it’s not evaluable without results.
+- Q5: Candidate universe takeaways
+  - Use top straights as the “lean” universe: `024, 240, 204, 924, 092, 047, 407, 290, 524, 245`.
+- Q6: Miss analysis
+  - N/A (no winners/results).
+- Q7: Validation checks (V)
+  - Analyzer outputs present; missing winners lens is expected for this day.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Aligns strongly with Stable+DR on the `024/224/244/924` structure.
+- Q10: Analyst’s extra insight
+  - This is an ideal day to test “candidate-set compression” rules (how to go from index + stable + DR into a small box/straight hedge).
 
 ---
 
@@ -220,23 +259,36 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - No winners to grade; interpret Hot Zones as an environment map only.
+- Q2: Brain-only interpretation
+  - Top lanes are dominated by vt_triad 12/224/44/255 and include triads like `155`, `006`, `168`, `469`.
+- Q3: 4 hit criteria mapping
+  - N/A (no results/winners).
+- Q4: Dominance / noise
+  - Strong dominance in top lanes (clear ordering); not evaluable vs outcomes.
+- Q5: Candidate universe takeaways
+  - Consider the top-10 lanes as a compact triad universe: `155, 469, 338, 168, 006, 566, 019, 166, 149, 118`.
+- Q6: Miss analysis
+  - N/A (no results/winners).
+- Q7: Validation checks (V)
+  - Outputs present.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Hot Zones has vt_triad 224 (triad 168), matching DR’s `224` focus.
+- Q10: Analyst’s extra insight
+  - Use Hot Zones here as a “vote” for which triads within the 0/2/4 universe deserve the most attention when designing a small pack.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Strong convergence on a compact universe: `224/244/024/924` appears in Stable, DR, VTRAC straights, and Hot Zones vt_triad references.
+- Conflicts/noise:
+  - Not gradeable: no Puerto Rico results line for D=2025-06-22 → no winners overlays.
+- Aggregator/aux hooks to test next:
+  - Keep this sharepack as an “environment-only” example for pack design rules (how to compress to a playable set when multiple tools agree).
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -586,16 +638,35 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-22/PuertoRico4/aux/draws/Puerto_Rico_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-22/PuertoRico4/aux/draws/Puerto_Rico_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-22/PuertoRico4/aux/draws/Puerto_Rico_Evening_draws.csv` (n=1000)
+  - Workbook provenance: `data/history/Pick3StatsC4_2025-06-21.xlsm` (aux_state_label=Puerto Rico).
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-22 --state PuertoRico4 --strict` → OK.
+- Q2:
+  - Positional pressure (by variant):
+    - Combined top digits: `0/3/4`
+    - Midday top digits: `3/3/6`
+    - Evening top digits: `7/0/0`
+- Q3:
+  - Positional shortlist is dominated by `234/244/274/...` lanes, consistent with the `224/244` environment.
+- Q4:
+  - Repeat watch indicates:
+    - Combined current_index=2; Midday current_index=9; Evening current_index=2.
+- Q5:
+  - VTRAC overlay top overdue indices: `33, 4, 26, 3, 29, 23, 20, 1, 35, 14` (Combined section).
+- Q6:
+  - Doubles/pairs pressure exists, but without results we can only treat it as “busy vs calm” context.
+- Q7:
+  - Sums are broadly flagged (purple / red+purple) → low discrimination by itself.
+- Q8:
+  - Blackapple score=1 (floating digits `2/4`, pairs_remaining=0) aligns with the 2/4-heavy environment, but is not gradeable here.
+- Q9:
+  - Cross-variant alerts show multi-variant pair/double pressure; treat as context only.
+- Q10:
+  - Aux supports the same compact universe the tools are pointing at; keep this as a pack-design training example until PR results are available for some D.
 
 ---
 
@@ -609,10 +680,19 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - Candidate core: `224/244/024/924` families (from Stable+DR+VTRAC).
+  - Lean hedge option: play VTRAC straights list from analyzer (`024/240/204/924/...`) rather than expanding broadly.
+- Candidate universe (Evening):
+  - Similar to Midday (tools are dominated by the same compact universe); keep spend tight.
+- Evidence vectors:
+  - Stable top compounds heavily favor `244/447/007/004/009`.
+  - DR top candidates heavily favor `224/244/924`.
+  - VTRAC top straights include `024/240/204/924`.
+  - Hot Zones top lanes include vt_triad 224.
+- Coverage mapping + pack decision:
+  - Box-first posture for `224` and `244` (small perms), plus a small VTRAC-straight hedge (8 straights) if you want a lane-index hedge.
+  - Not evaluable post-hoc for this D due to missing results.
 
 ---
 
@@ -624,9 +704,16 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - N/A (no results/winners for PR on D=2025-06-22).
+- Key tags:
+  - Strong compact lane dominance: 2/4-heavy environment across Stable+DR+VTRAC+Hot Zones.
+- Drivers:
+  - Agreement across tools (dominant canonicals + straights) is the key takeaway.
+- Conflicts:
+  - Missing results line prevents any hit/miss grading.
+- Fix-now vs fix-later:
+  - Fix-now: none (alignment guard passes).
+  - Fix-later: decide whether PR “missing results days” should be skipped automatically in report generation (to reduce confusion).
+- Next run:
+  - Continue D=2025‑06‑22 reports (SouthCarolina4 next); treat PuertoRico4 as “environment-only” for this D.

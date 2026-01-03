@@ -23,20 +23,44 @@ Winners JSON files:
 - `sharepacks/2025-06-22/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac3_winner_570_20251221_222133.json`
 
 Part A answers (fill using the template’s Part A questions):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
-- Q11: …
-- Q12: …
-- Q13: …
-- Q14: …
+- Q1: Set1 ladder lanes are active, and they show a very strong “8-centered” environment (with variant-specific universes).
+  - Set1/Draw1 ladders (from winners JSON; same in both winner files):
+    - Midday: col1 `9228** / 2298** / 8922** / 9822**`; col2 `92287** / 22987** / 87922** / 79822**`
+    - Evening: col1 `008**`; col2 `038** / 083** / 803**`
+    - Combined: col1 `008**`; col2 `038** / 083** / 803**`
+- Q2: Column persistence is high (especially Evening/Combined `008**`), suggesting a strong “0/8/3” lane story, while Midday shows a “9/2/8” lane story.
+- Q3: Winner tagging exists, but it’s largely via `hit-winner` tags rather than literal/canonical text:
+  - 398 (canon 389): `hit-winner` cells=29; literal substring cells=0; canonical substring cells=0.
+  - 570 (canon 057): `hit-winner` cells=13; literal substring cells=0; canonical substring cells=0.
+- Q4: Variant bias and cross-variant “bounce” is plausible here:
+  - Midday lane leans `9/2/8`, Evening/Combined leans `0/8/3`.
+  - Midday winner 398 (3/8/9) looks like a cross-variant intersection candidate (shares 8 with both; 9 from Midday; 3 from Evening/Combined).
+  - Evening winner 570 (0/5/7) is not narrated by the dominant ladders (only digit `0` overlaps).
+- Q5: Permutation lane clarity is high; Midday looks like a day where a small intersection hedge could be justified, while Evening looks lower-confidence.
+- Q6: Environment verdict: mixed day
+  - Midday: moderate confidence (multiple tools give non-trivial corroboration).
+  - Evening: low confidence (weak tool corroboration).
+- Q7: Hot Zones overlap is asymmetric:
+  - 398 best rank 66 (meaningful support vs other days).
+  - 570 best rank 169 (weak).
+  - Both have `triad_present=False` in the winner_map snapshot (expected for deep ranks).
+- Q8: Cross-set carryover exists (Stable places 398 in an Evening section/chain), consistent with the “bounce” interpretation above.
+- Q9: Aux cues:
+  - Positional top digits: Combined `1/3/2`, Midday `1/3/2`, Evening `7/5/2` (Evening partially aligns to 570’s 7/5, but misses 0).
+  - Repeat watch current_index is 8 for Combined/Evening (matches the “8 environment” feel) but not the winners’ indices (33 and 3).
+- Q10: 4 hit criteria viability (pre-results lens):
+  - Midday: moderate (there is enough corroboration to justify a small hedge).
+  - Evening: low (treat as pass/tiny).
+- Q11: Exact triple presence (winners lens):
+  - 398 / canonical 389: literal substring cells=0; canonical substring cells=0; `hit-winner` cells=29.
+  - 570 / canonical 057: literal substring cells=0; canonical substring cells=0; `hit-winner` cells=13.
+- Q12: “Profitable environment” summary:
+  - This is closer to a “positive-control” day for cross-variant structure (8-centered ladders) than a pure random miss day, at least for Midday.
+- Q13: Dominance vs dilution:
+  - Digit 8 dominance is real; it supports 398 (contains 8) but not 570 (no 8).
+- Q14: Noise check:
+  - Overall manageable noise for Midday; higher noise for Evening.
+  - Fix-later note: DR Combined overlay uses a winner value (925) that does not match Pennsylvania’s results (likely a results lookup/mapping issue).
 
 ---
 
@@ -92,16 +116,29 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - 398 (canon 389): strong Stable placement (scores rank 115; compound rank 32) even though it lands in an Evening section/chain.
+  - 570 (canon 057): weaker but present (scores rank 585; compound rank 96).
+- Q2: 4 hit criteria mapping
+  - Both winners have exact boxed/straight=True and VT boxed support (vt_boxed=28 for 398; vt_boxed=13 for 570).
+- Q3: Winners output alignment
+  - Stable spotlight/scores/compound/metrics are internally consistent; no missing brain artifacts.
+- Q4: Dominance / noise
+  - Stable’s top compounds include strong non-winner clusters (229/228/899/038…), but 389 is still reasonably competitive (rank 32).
+- Q5: Where the winners show up
+  - 398 appears in Evening section (draw_chain4) which fits the cross-variant narrative (Evening/Combined ladders include `038**` / `083**` / `803**`).
+  - 570 appears in Combined section (draw_chain5), but is much weaker.
+- Q6: Miss analysis
+  - Midday: positive-control style “tool found the winner” day (good to keep as a reference).
+  - Evening: weak isolation (still far from top compounds).
+- Q7: Validation checks (V)
+  - Outputs present; no missing brain artifacts.
+- Q8: Optimization notes
+  - None now (avoid tuning from one day).
+- Q9: Cross-tool synergy seed
+  - Stable’s `038` candidates (top compound appears in Evening/Combined) match the winners-lens Evening/Combined ladder universe (`038/083/803`) and likely contribute to 398’s cross-variant convergence.
+- Q10: Analyst’s extra insight
+  - Stable is capturing Midday 398 well enough to treat this state/day as a “working example” when calibrating how much evidence is “enough” to justify a small hedge.
 
 ---
 
@@ -169,16 +206,31 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - DR does not isolate 398 or 570 as top candidates (`winner_triads_as_candidates=False`).
+  - Midday 398: some VTRAC/drop coverage exists (vtrac_any=17; drop_vtrac_any=43) but no finals.
+  - Evening 570: no vtrac_any; mostly drop_vtrac_any; still no finals.
+  - Combined overlay is suspect: it uses winner=925 (not Pennsylvania’s results) and date=None.
+- Q2: Stamp interpretation
+  - Midday 398: vt_boxed=50 suggests broad boxed coverage, not narrow isolation.
+  - Evening 570: vt_boxed=2 and some drop_exact_any=3, but still not isolating.
+  - Combined: treat as non-gradeable until the winner mapping is corrected.
+- Q3: 4 hit criteria mapping
+  - DR is operating as “coverage flags”, not a tight caller here (no exact finals; vtrac finals all 0).
+- Q4: Dominance / noise
+  - Top per_item patterns are dominated by 599/922 families rather than the winners.
+- Q5: Where the winners show up
+  - Only as broad any-flags; not as top candidates.
+- Q6: Miss analysis
+  - DR is effectively a miss day for both winners (for actionable isolation).
+- Q7: Validation checks (V)
+  - Flag as fix-later: Combined winner stamp (925) mismatches the results for Pennsylvania; likely a results lookup/state mapping issue in DR overlay generation.
+- Q8: Optimization notes
+  - None now; first fix is correctness of the Combined winner mapping for DR.
+- Q9: Cross-tool synergy seed
+  - DR top patterns (`599`/`922`) align with general lane dominance but don’t explain 398/570.
+- Q10: Analyst’s extra insight
+  - For this day, DR should be treated as “background context” rather than a decider.
 
 ---
 
@@ -227,16 +279,27 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - 398: idx33 rank 14/35 (score ~3.82) → weak/moderate.
+  - 570: idx3 rank 19/35 (score ~1.96) → weak.
+- Q2: 4 hit criteria mapping
+  - `winner_in_index_straights=False` for both winners (top straights list does not contain them).
+- Q3: Winners output alignment
+  - VTRAC outputs are consistent with winners lens indices (33 and 3); they’re simply not favored in the ranking.
+- Q4: Dominance / noise
+  - Top indices are 27/29/28/30/32…, not 33/3.
+- Q5: Where the winners show up
+  - Both are mid/low tier; neither is a strong VTRAC call.
+- Q6: Miss analysis
+  - Treat as VTRAC analyzer miss day (Stable/HotZones carried the Midday win instead).
+- Q7: Validation checks (V)
+  - Outputs present; no missing artifacts.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - The “8 environment” seen in winners lens and repeat watch (current_index=8) did not translate into VTRAC index ranking strength; worth tracking across more days.
+- Q10: Analyst’s extra insight
+  - Keep VTRAC analyzer as a secondary corroborator here; it’s not the primary source of the win on this day.
 
 ---
 
@@ -280,23 +343,43 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1: Winners evidence vs brain outputs
+  - 398: present with best rank 66 (meaningful support).
+  - 570: present with best rank 169 (weak).
+  - Winner map triad snapshot is present but `triad_present=False` for both (top-20 snapshot limitation).
+- Q2: 4 hit criteria mapping
+  - Per-lane indicates has_straight=True and has_vt_straight=True for winners, but only 398 is ranked well enough to matter.
+- Q3: Winners output alignment
+  - “winner_not_in_winner_map” is expected when the winner is outside the top-20 (+guard) snapshot; do not treat as corruption.
+- Q4: Dominance / noise
+  - Top lanes emphasize `227/277/000/278/237/...` which do not narrate 389/057.
+- Q5: Where the winners show up
+  - 398: modestly actionable (rank 66).
+  - 570: weak corroboration only.
+- Q6: Miss analysis
+  - Midday: Hot Zones adds corroboration to Stable’s win.
+  - Evening: miss/weak day for Hot Zones.
+- Q7: Validation checks (V)
+  - Outputs present; no missing artifacts.
+- Q8: Optimization notes
+  - None now.
+- Q9: Cross-tool synergy seed
+  - Treat Hot Zones as a “support vote”: when it ranks the winner in the low double-digits (like 66), it’s meaningful corroboration for Stable-driven candidates.
+- Q10: Analyst’s extra insight
+  - This state/day is a good example where Hot Zones improves confidence for Midday but not for Evening, reinforcing the need for draw-specific posture.
 
 ---
 
 ## 2B — Cross-tool synthesis (after all tools)
-- Shared clusters/signals: …
-- Conflicts/noise: …
-- Aggregator/aux hooks to test next: …
+- Shared clusters/signals:
+  - Strong “8 environment” in winners lens (Evening/Combined `008**` and `038/083/803` ladders) + repeat watch current_index=8 (Combined/Evening).
+  - Stable + Hot Zones both provide meaningful support for Midday 398 (Stable compound rank 32; Hot Zones best rank 66).
+- Conflicts/noise:
+  - Evening 570 is weakly corroborated by tools; it is mostly off-board.
+  - DR Combined overlay appears to use the wrong winner value (925) for this state/day.
+- Aggregator/aux hooks to test next:
+  - Track “cross-variant intersection” situations (Midday 9/2/8 lane + Evening 0/8/3 lane → 3/8/9 outcomes) as a hypothesis class.
+  - Fix-later: confirm/fix DR Combined results lookup so Combined overlays don’t pull the wrong state’s winner.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -616,16 +699,35 @@ All facts are labeled by source for provenance.
 ```
 
 Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):
-- Q1: …
-- Q2: …
-- Q3: …
-- Q4: …
-- Q5: …
-- Q6: …
-- Q7: …
-- Q8: …
-- Q9: …
-- Q10: …
+- Q1:
+  - Draw snapshot provenance:
+    - combined: `sharepacks/2025-06-22/Pennsylvania4/aux/draws/Pennsylvania_draws.csv` (n=1000)
+    - midday: `sharepacks/2025-06-22/Pennsylvania4/aux/draws/Pennsylvania_Midday_draws.csv` (n=1000)
+    - evening: `sharepacks/2025-06-22/Pennsylvania4/aux/draws/Pennsylvania_Evening_draws.csv` (n=1000)
+  - Workbook provenance: `data/history/Pick3StatsC4_2025-06-21.xlsm` (aux_state_label=Pennsylvania).
+  - Alignment guard: `python3 scripts/tools/validate_tables_aux_alignment.py --date 2025-06-22 --state Pennsylvania4 --strict` → OK.
+- Q2:
+  - Positional pressure (by variant):
+    - Combined top digits: `1/3/2`
+    - Midday top digits: `1/3/2`
+    - Evening top digits: `7/5/2` (partial alignment to winner 570’s 7/5)
+- Q3:
+  - Positional shortlist is dominated by `132/732/182/...`; neither winner appears as a top positional candidate.
+- Q4:
+  - Repeat watch suggests an “8 environment” but not the winners’ indices:
+    - Combined current_index=8; Midday current_index=17; Evening current_index=8.
+- Q5:
+  - VTRAC overlay does not obviously support the winners’ indices (33 and 3) as top overdue indices.
+- Q6:
+  - Doubles/pairs pressure is moderate-to-high; it does not directly narrow to the winners.
+- Q7:
+  - Sums are broadly flagged (mostly purple / red+purple) → low discrimination.
+- Q8:
+  - Blackapple is low-signal (score=0 in Combined; no candidates) → treat as neutral.
+- Q9:
+  - Cross-variant alerts show multi-variant pair/double pressure (e.g., 059, 255), reinforcing “busy environment” posture rather than direct calls.
+- Q10:
+  - Use Aux as corroboration: repeat watch + ladder dominance supports the “8 environment” narrative; Stable/HotZones carry the Midday win (398), while Evening remains weak.
 
 ---
 
@@ -639,10 +741,18 @@ Reference:
 - `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`
 
 Part 4 notes / answers:
-- Candidate universe (Midday): …
-- Candidate universe (Evening): …
-- Evidence vectors: …
-- Coverage mapping + pack decision: …
+- Candidate universe (Midday):
+  - Smallest coherent “capture” pack: `389` boxed set (covers winner 398) — supported by Stable (compound rank 32) + Hot Zones (rank 66).
+  - Optional structural hedge: include the winners-lens Evening/Combined lane `038` boxed (since 038/083/803 ladders are dominant), but keep spend tight.
+- Candidate universe (Evening):
+  - Default posture: pass/tiny (weak corroboration).
+  - If forced: `057` boxed set is the smallest post-hoc capture (covers 570), but treat as low confidence.
+- Evidence vectors:
+  - Pro Midday 398: Stable strong ranks + Hot Zones decent rank + heavy winners-lens `hit-winner` tagging.
+  - Contra Evening 570: weak Stable/HotZones ranks; mostly off-board.
+- Coverage mapping + pack decision:
+  - Midday: box-focused (6 perms of 389) is the cleanest small-spend posture.
+  - Evening: pass/tiny only.
 
 ---
 
@@ -654,9 +764,19 @@ Use Part 5 prompts in the master template to summarize:
 - Conflicts/miss patterns + fix-now vs fix-later
 
 Part 5 notes / answers:
-- Pack vs winners: …
-- Key tags: …
-- Drivers: …
-- Conflicts: …
-- Fix-now vs fix-later: …
-- Next run: …
+- Pack vs winners:
+  - A small Midday `389` box would have hit (winner 398).
+  - Evening: there was no strong pre-results isolation; a tiny `057` box would have hit post-hoc but is low confidence.
+- Key tags:
+  - “8 environment” dominance in winners lens (008/038 ladders) + repeat watch current_index=8 (Combined/Evening).
+  - Stable+HotZones corroboration for Midday winner 398.
+- Drivers:
+  - The Midday win is driven primarily by Stable (and supported by Hot Zones), not by DR/VTRAC analyzer.
+- Conflicts:
+  - Evening winner lacks corroboration; DR is mostly noise here.
+  - DR Combined overlay winner mismatch (925) is confusing and should be treated as an artifact issue, not an analytical signal.
+- Fix-now vs fix-later:
+  - Fix-now: none (alignment guard passes).
+  - Fix-later: DR Combined winner mapping (shows 925, date=None) likely pulling the wrong state’s result.
+- Next run:
+  - Continue D=2025‑06‑22 reports; Pennsylvania4 is a good “Midday positive-control / Evening weak” example.
