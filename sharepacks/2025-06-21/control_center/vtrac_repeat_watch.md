@@ -1,6 +1,6 @@
 # VTRAC Repeat Watch
 
-- Generated: `2025-12-27T11:38:15.233715+00:00`
+- Generated: `2026-01-03T10:05:32.928271+00:00`
 
 ```
          State       StateKey  Variant  Current Index  Current Streak  Heat Index  Heat Hazard  Heat Avg Gap  Last Repeat (draws)  Last Repeat Index  Max Streak  Window Winner Winner VTRAC  Current==WinnerVTRAC

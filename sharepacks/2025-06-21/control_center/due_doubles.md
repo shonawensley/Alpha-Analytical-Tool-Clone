@@ -1,6 +1,6 @@
 # Due Doubles
 
-- Generated: `2025-12-27T11:38:15.230814+00:00`
+- Generated: `2026-01-03T10:05:32.925256+00:00`
 
 ```
          State       StateKey  Variant  Draws Since Double                                                                                                                   Family 1                                                                                                     Family 2                                                                           Family 3                                                               Family 4                                                                          Family 5 Winner Midday Winner Evening  Midday Winner In Family  Evening Winner In Family

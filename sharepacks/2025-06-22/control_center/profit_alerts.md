@@ -1,6 +1,6 @@
 # Profit Alerts (A01–A12)
 
-- Generated: `2025-12-27T11:38:16.309435+00:00`
+- Generated: `2026-01-03T10:05:33.978709+00:00`
 
 ```
          State       StateKey  Variant AlertId  Strength Suggested  CapLines  DecayDraws          Badges Canonical                                        ImpliedSet                                                                                                                                                                                                                                                                                       Evidence Winner Midday Winner Evening Midday Hits Evening Hits
