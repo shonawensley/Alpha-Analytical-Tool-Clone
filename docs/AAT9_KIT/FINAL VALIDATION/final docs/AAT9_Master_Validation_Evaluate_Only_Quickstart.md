@@ -8,6 +8,9 @@ Definitions:
 - **D** = results/winners date (folder name under `sharepacks/`)
 - **D‑1** = history workbook date that produced the tables/strings used to predict D
 
+Analysis order (to avoid rabbit holes):
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+
 If you do **not** already have `sharepacks/<D>/`, stop and use:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
@@ -25,6 +28,21 @@ git status -s
 Hard rule for evaluate‑only mode:
 - Do **not** run table rebuilds or analyzers (they mutate live outputs and can confuse you).
 - Only read from `sharepacks/<D>/...` and write **derived summaries** into the same sharepack if needed (deterministic `summary.md` blocks).
+
+Context reset / handoff rule (so progress survives):
+- The “artifact of record” is the filled run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`.
+- Never overwrite an existing run report unless you intentionally archived it first.
+- To resume work after a reset: open the run report, continue at the first unanswered prompt, and only regenerate scaffolds to a *new* file (then merge blocks manually).
+
+Copy/paste handoff (new Codex session takeover):
+```text
+Mode: Evaluate-only. Do NOT rebuild tables/analyzers; read sharepacks only.
+SSOT: docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md
+Target: D=<results date folder under sharepacks>, STATE=<TrackedStateLabel> (e.g., Florida4).
+Resume: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md (continue at first “- Q#: …” / “…” placeholder).
+Guard: python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict
+Note: winners filenames include a generation timestamp (e.g., *_20251219_164353.json); results date is D (sharepacks/<D>/ + data/results/<D>.txt).
+```
 
 ---
 
@@ -205,3 +223,15 @@ If missing, regenerate (sharepack‑aligned; drift‑proof):
 ```bash
 python3 scripts/tools/export_control_center_sharepack.py --date <D>
 ```
+
+Optional (recommended when future results files exist): evaluate Profit Alerts windowed episodes:
+```bash
+python3 scripts/tools/evaluate_profit_alerts.py --date <D>
+```
+
+Optional: scaffold a per-day Control Center run report (Brain-2) into `RUNS/`:
+```bash
+python3 scripts/tools/create_control_center_daily_run_report.py --date <D>
+```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`

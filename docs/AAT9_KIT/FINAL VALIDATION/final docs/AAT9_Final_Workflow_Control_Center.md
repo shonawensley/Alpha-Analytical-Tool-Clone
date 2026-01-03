@@ -58,6 +58,18 @@ Outputs:
 - `sharepacks/<D>/control_center/profit_alerts_eval.md`
 - `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv` (deduped play‑sets; avoids double counting)
 
+## Control Center daily run report (Brain-2, one file per day)
+Scaffold a per-day Brain-2 report (auto-summarized from the sharepack Control Center bundle):
+```bash
+python3 scripts/tools/create_control_center_daily_run_report.py --date <D>
+```
+
+Template:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
+
+Output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+
 ## When resuming Control Center
 - Keep the alert schema stable; emit `{id, state, variant, date, strength?, status?, evidence, hits}` for any new indicator.
 - Use the BA ingest flags if `control_center.md` is absent; warn if BA cannot be parsed.

@@ -22,19 +22,30 @@ There are 3 “classes” of docs in this workflow:
 
 ## Core docs (keep in sync)
 - Master template (questions only): `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+- Analysis navigator (how to review without getting lost): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
 - Workflow changelog (“fix later” capture): `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
 - Final validation checklist (guardrails + design notes): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Checklist.md`
 - Control Center / Brain 2 reference (keep for later): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+- Control Center daily template (Brain-2, per day): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
 
 Optional (brainstorm / historical templates; not SSOT):
 - `docs/AAT9_KIT/FINAL VALIDATION/FINAL_VALIDATION_TEMPC.md`
 
 ## Run reports (filled answers live here)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
+  - Resume/handoff rule (context resets): see `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md` → “Context reset / handoff rule”.
+  - Progress tracker (which reports are filled): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+  - Per-day Control Center run report (Brain-2): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+  - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
 
 Generate a run report scaffold:
 ```bash
 python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4
+```
+
+Generate a Control Center daily run report scaffold:
+```bash
+python3 scripts/tools/create_control_center_daily_run_report.py --date YYYY-MM-DD
 ```
 
 Per-run workflow (high level):
@@ -44,6 +55,8 @@ Per-run workflow (high level):
      - `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
    - Optional (recommended when future results files exist): evaluate Profit Alerts windowed episodes:
      - `python3 scripts/tools/evaluate_profit_alerts.py --date <D>`
+   - Optional (recommended for Brain-2 day summary): scaffold the Control Center daily run report:
+     - `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>`
 2) Generate the run report scaffold (command above).
 3) Fill the run report Parts 1–5 (using embedded `summary.md` evidence blocks).
    - Optional: generate a paste-friendly winners JSON digest for Part A: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`

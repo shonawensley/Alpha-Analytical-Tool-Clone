@@ -190,6 +190,7 @@ Validators (fail fast on common “wiring drift”):
 - Hot Zones winners (coverage/performance): `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>` (failure often means “Hot Zones didn’t isolate winner”)
 - VTRAC compact report non-empty: `python3 scripts/tools/validate_vtrac_compact_report.py --date <D>`
 - Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>`
+- Control Center daily run report scaffold (Brain‑2; per day): `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
 
 ---
 

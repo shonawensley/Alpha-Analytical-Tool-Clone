@@ -1,3 +1,12 @@
+# Moved (SSOT)
+
+This document is maintained here:
+- `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md`
+
+Legacy content below is retained for history only.
+
+---
+
 # CODEX READ THIS — AAT9 (WSL / Ubuntu Canonical)
 
 **This document supersedes any Windows‑first startup docs.**  

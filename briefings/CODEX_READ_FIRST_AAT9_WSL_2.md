@@ -53,6 +53,11 @@ Master Validation (frozen day snapshot):
 - Profit Alerts windowed evaluation (episodes): `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
   - Per‑AID grading matrix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+- Control Center daily run report (Brain-2, per day): `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+- Analysis navigator (how to review a day without drifting): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+- Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+- Run report progress index (avoid “where are we?” drift): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+- Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
 - Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 - Quickstarts (zero-context):
   - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`

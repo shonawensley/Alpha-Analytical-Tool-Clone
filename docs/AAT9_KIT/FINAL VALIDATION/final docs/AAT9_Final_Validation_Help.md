@@ -74,6 +74,9 @@ Control Center (Brain‑2) sharepack export (recommended when freezing a full da
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
   - Per‑AID “what is a hit” matrix (prevents grading the wrong object): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
   - Command: `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
+- Optional (recommended): scaffold a per-day Control Center run report (Brain-2) into `RUNS/`:
+  - Template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
+  - Command: `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
 
 Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`

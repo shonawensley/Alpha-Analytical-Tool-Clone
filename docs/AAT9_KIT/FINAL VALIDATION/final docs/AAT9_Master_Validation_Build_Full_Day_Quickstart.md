@@ -311,6 +311,13 @@ Optional (recommended if you have future results files available):
   - `sharepacks/<D>/control_center/profit_alerts_eval.csv`
   - `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv` (deduped play‑sets)
 
+Optional (recommended): scaffold the per-day Control Center run report (Brain-2) into `RUNS/`:
+```bash
+python3 scripts/tools/create_control_center_daily_run_report.py --date <D>
+```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+
 ---
 
 ## 7) (Optional but recommended) Generate paste‑ready evidence blocks + run‑report scaffolds

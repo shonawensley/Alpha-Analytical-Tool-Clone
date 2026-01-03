@@ -6,6 +6,57 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-01-03
+
+### Brain-2: Control Center daily run report template + generator
+
+- Added a fillable per-day Control Center report template (Brain-2, sharepack-aligned):
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
+- Added a generator that scaffolds one Control Center run report per results date `D` using only frozen sharepack artifacts:
+  - `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>`
+  - Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+- Updated the generator + template to summarize not just HIT(decay), but also <=7 and <=14 diagnostic windows (variant-faithful + any-outcome).
+- Generated Control Center run reports for the gold days:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__CONTROL_CENTER.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-22__CONTROL_CENTER.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-23__CONTROL_CENTER.md`
+- Added an SSOT “Analysis Navigator” so day review follows a deterministic order (CC daily → day synthesis → state runs → sharepack evidence) and context resets can resume without re-explaining the workflow:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+- Added a curated “research pack” entry point (pointer-only) so external reviews can load the corpus without repo spelunking or duplicating sharepacks:
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/README.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/MANIFEST.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
+
+## 2026-01-01
+
+### Run report progress tracking + day close (D=2025-06-21)
+
+- Added a simple progress index so context resets don’t cause “where are we?” loops:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+- Closed out the last missing 2025-06-21 run reports (filled end-to-end, Parts A–5):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__PuertoRico4.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__SouthCarolina4.md`
+- Fix-later (workflow hygiene): PuertoRico4 Digit Reduction “Combined” winner stamp appears inconsistent with Puerto Rico winners on `D=2025-06-21` (captured in the run report; do not treat as sharepack drift).
+
+## 2025-12-31
+
+### Sharepacks corpus audit (confidence + drift guard)
+
+- Added a deterministic corpus audit that scans one or more frozen days and reports:
+  - required artifacts present per state/tool,
+  - day mapping + winners availability,
+  - basic “freshness fingerprints” (so obvious cross-day copy mistakes are caught quickly).
+- Command:
+  - `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
+- Output:
+  - a timestamped markdown report under `reports/audit/sharepacks_audit_<timestamp>.md` (read-only; intended for humans).
+- Notes:
+  - WARN/SKIP can be expected for states/periods with no draws or missing winners lines (e.g., Puerto Rico on certain days); treat FAIL as “fix-now”.
+- Files:
+  - `scripts/tools/audit_sharepacks_corpus.py`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+
 ## 2025-12-13
 
 ### Digit Reduction: clarify “any vs final” semantics (SSOT = winner stamp JSON)
