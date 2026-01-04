@@ -19,6 +19,7 @@ Important: do not suggest changing analyzers yet unless there is a clear contrac
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+- (Optional concept context) `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 
 2) Corpus entry points (analysis artifacts):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md`
@@ -73,4 +74,3 @@ Only if you need to audit raw evidence: drill into `sharepacks/<D>/...` (immutab
 - Treat `sharepacks/<D>/` as immutable evidence.
 - Do not recommend changing combined-table extraction/readers or analyzer logic based only on 3 days.
 - Prefer evidence already embedded in run reports; use raw sharepacks only as audit proof.
-

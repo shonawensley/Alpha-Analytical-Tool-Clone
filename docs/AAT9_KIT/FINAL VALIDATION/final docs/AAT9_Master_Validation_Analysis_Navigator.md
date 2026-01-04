@@ -18,6 +18,7 @@ Scope: analysis + navigation only.
 Always ground yourself with:
 - `sharepacks/<D>/README.md`
 - `sharepacks/<D>/control_center/meta.json` (Brain‑2 provenance)
+- Concept primer (pattern progression lens): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 
 ---
 
@@ -124,6 +125,7 @@ If a Codex session resets mid‑analysis, do this *first*:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md` (concept primer; optional but helpful)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
 
 2) Then open the day portals:
@@ -133,4 +135,3 @@ If a Codex session resets mid‑analysis, do this *first*:
 3) Use this handoff message:
 
 > We are analyzing results date D=`YYYY-MM-DD`. Do not rebuild tools or touch analyzers. Only read from `sharepacks/<D>/...` and the run reports under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`. Follow the Analysis Navigator review order, then either (a) fill the next `<D>__<STATE>.md` run report, or (b) extend `<D>__DAY_SYNTHESIS.md`. Log fix‑later items to `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`.
-

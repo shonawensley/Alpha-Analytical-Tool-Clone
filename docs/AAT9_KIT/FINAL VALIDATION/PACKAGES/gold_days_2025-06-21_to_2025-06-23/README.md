@@ -12,6 +12,7 @@ If you are a Codex session: do not rebuild analyzers; read sharepacks only.
 
 1) Review order (prevents rabbit holes):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+   - Optional concept primer (pattern progression lens): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 
 2) Corpus summary + fix-later rollup:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md`
@@ -34,4 +35,3 @@ If you are a Codex session: do not rebuild analyzers; read sharepacks only.
 
 - File manifest (exact scope): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/MANIFEST.md`
 - ChatGPT Pro deep research prompt (copy/paste): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
-

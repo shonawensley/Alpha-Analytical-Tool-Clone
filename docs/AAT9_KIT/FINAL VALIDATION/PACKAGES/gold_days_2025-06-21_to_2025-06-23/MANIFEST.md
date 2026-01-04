@@ -17,6 +17,7 @@ Dates:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md` (concept training lens; optional)
 
 Control Center / trackers semantics:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
@@ -86,4 +87,3 @@ Per-state evidence folders (all tracked states):
 - `data/results/2025-06-22.txt`
 - `data/results/2025-06-23.txt`
 - (Optional, if present) additional `data/results/2025-06-24..2025-07-06.txt` to reduce censoring for window evaluation.
-
