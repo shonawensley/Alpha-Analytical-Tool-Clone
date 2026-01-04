@@ -35,6 +35,7 @@ Progress + navigation:
 Corpus-level synthesis:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CODEX_DEEP_ANALYSIS.md` (Codex deep analysis; comparable to external reviews)
 
 Per-day portals (Brain‑2 + Brain‑1):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__CONTROL_CENTER.md`

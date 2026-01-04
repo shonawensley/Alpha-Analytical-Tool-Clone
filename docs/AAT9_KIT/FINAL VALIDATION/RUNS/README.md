@@ -6,6 +6,7 @@ This folder stores **filled, per‑example** master validation reports so we don
 - Optional per-day cross-state synthesis (aggregates the 14 state reports for one day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__DAY_SYNTHESIS.md`
 - Per-day Control Center run report (Brain-2, built from `sharepacks/<D>/control_center/`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__CONTROL_CENTER.md`
 - Optional cross-day corpus synthesis (aggregates multiple day syntheses): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CORPUS_SYNTHESIS.md`
+- Optional cross-day Codex deep analysis (parallel reviewer output): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CODEX_DEEP_ANALYSIS.md`
 - Auto-exported corpus summary (one row per day/state/period): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - Auto-extracted Fix-later index (from filled run reports): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
 
