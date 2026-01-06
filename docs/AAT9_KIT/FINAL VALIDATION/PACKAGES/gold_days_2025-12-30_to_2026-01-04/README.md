@@ -18,6 +18,7 @@ If you are a Codex session: do not rebuild analyzers; read sharepacks only.
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+- (Optional) Codex deep analysis (use for comparison after independent review): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md`
 
 3) Per-day “portals” (Brain‑2 then Brain‑1):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`

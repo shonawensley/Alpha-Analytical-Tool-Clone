@@ -81,5 +81,6 @@ Only if you need to audit raw evidence: drill into `sharepacks/<D>/...` (immutab
 ## Constraints (must follow)
 
 - Treat `sharepacks/<D>/` as immutable evidence.
+- Do not read `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md` until after you’ve produced your own independent analysis (it’s a parallel reviewer output for comparison).
 - Do not recommend changing combined-table extraction/readers or analyzer logic based only on 6 days.
 - Prefer evidence already embedded in run reports; use raw sharepacks only as audit proof.

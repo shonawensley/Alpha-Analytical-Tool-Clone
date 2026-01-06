@@ -1,0 +1,49 @@
+# Digit Reduction Summary — SouthCarolina4 (stamp 20260105)
+
+## Midday winner 754 (canonical 457)
+- Stamp (winner_stamp.json): items_total=115 | exact_any=0 exact_final=0 | vtrac_any=114 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=115 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=68 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=115 | exact_any=0 vtrac_any=114 | drop_exact_any=0 drop_vtrac_any=115 | family_exact_any=0 family_vtrac_any=68 | vt_boxed=10 vt_straight=0
+- Hits (winner_hits.csv): rows=115 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=10 vt_straight=0
+- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=28 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=10.577143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
+- Reducer scores present: True
+
+## Evening winner 976 (canonical 679)
+- Stamp (winner_stamp.json): items_total=6 | exact_any=0 exact_final=0 | vtrac_any=6 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=6 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=4 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=6 | exact_any=0 vtrac_any=6 | drop_exact_any=0 drop_vtrac_any=6 | family_exact_any=0 family_vtrac_any=4 | vt_boxed=6 vt_straight=0
+- Hits (winner_hits.csv): rows=6 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=6 vt_straight=0
+- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=30 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=10.047143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
+- Reducer scores present: True
+
+## Combined winner 754 (canonical 457)
+- Stamp (winner_stamp.json): items_total=176 | exact_any=0 exact_final=0 | vtrac_any=171 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=158 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=102 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=176 | exact_any=0 vtrac_any=171 | drop_exact_any=0 drop_vtrac_any=158 | family_exact_any=0 family_vtrac_any=102 | vt_boxed=39 vt_straight=0
+- Hits (winner_hits.csv): rows=176 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=39 vt_straight=0
+- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=16 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=12.677143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
+- Reducer scores present: True
+
+## Top per_item (analyzer_v2_per_item.csv)
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw4 col 2 | pattern 901 | score_v2 12.677143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw3 col 2 | pattern 901 | score_v2 11.397143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 2 | pattern 900 | score_v2 11.287143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 1 | pattern 900 | score_v2 11.087143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw6 col 2 | pattern 900 | score_v2 11.037143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw2 col 4 | pattern 599 | score_v2 10.987143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw3 col 4 | pattern 599 | score_v2 10.937143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw4 col 4 | pattern 599 | score_v2 10.820476 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set1 draw Draw1 col 4 | pattern 599 | score_v2 10.787143 | match_types 
+- area_rank 1 | variant Combined | section Combined | set Set3 draw Draw1 col 7 | pattern 599 | score_v2 10.708571 | match_types 
+
+## Top candidates (analyzer_v2_top_candidates.csv)
+- rank 1 | variant Combined | best_pattern 901 | score_v2 12.677143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 2 | variant Combined | best_pattern 900 | score_v2 11.287143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 3 | variant Combined | best_pattern 599 | score_v2 10.987143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 4 | variant Midday | best_pattern 900 | score_v2 10.577143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 5 | variant Combined | best_pattern 901 | score_v2 10.477143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 6 | variant Combined | best_pattern 559 | score_v2 10.247143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 7 | variant Combined | best_pattern 991 | score_v2 10.177143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 8 | variant Midday | best_pattern 990 | score_v2 10.177143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 9 | variant Evening | best_pattern 918 | score_v2 10.047143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
+- rank 10 | variant Combined | best_pattern 599 | score_v2 9.987143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac

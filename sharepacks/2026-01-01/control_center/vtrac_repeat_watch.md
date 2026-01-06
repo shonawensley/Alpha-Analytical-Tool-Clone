@@ -1,0 +1,49 @@
+# VTRAC Repeat Watch
+
+- Generated: `2026-01-05T12:31:53.539064+00:00`
+
+```
+         State       StateKey  Variant  Current Index  Current Streak  Heat Index  Heat Hazard  Heat Avg Gap  Last Repeat (draws)  Last Repeat Index  Max Streak  Window Winner Winner VTRAC  Current==WinnerVTRAC
+      Virginia      Virginia4 Combined             18               2           9        0.058          17.4                    1                 18           2    1000      -            -                 False
+   Puerto Rico    PuertoRico4  Evening             24               2           7        0.059          17.1                    1                 24           2    1000      -            -                 False
+South Carolina SouthCarolina4   Midday              8               1           9        0.054          18.4                    2                 12           3    1000    910            9                 False
+       Florida       Florida4  Evening             17               1          24        0.056          18.0                    2                 11           2    1000    291           22                 False
+   Puerto Rico    PuertoRico4 Combined             24               1          24        0.058          17.4                    5                 11           3    1000      -            -                 False
+      Michigan      Michigan4   Midday             13               1          24        0.067          14.8                    5                 31           3    1000    032           11                 False
+      Virginia      Virginia4   Midday             18               1          12        0.058          17.2                    5                 30           3    1000    019            9                 False
+    New Jersey     NewJersey4  Evening             24               1           8        0.066          15.2                    7                  9           3    1000    504            5                 False
+   Connecticut   Connecticut4  Evening             18               1          30        0.065          15.4                    9                  5           3    1000    109            9                 False
+          Ohio          Ohio4  Evening             22               1           9        0.066          15.0                    9                 21           3    1000    416           19                 False
+          Ohio          Ohio4   Midday              8               1           9        0.052          19.2                   12                 13           3    1000    746           22                 False
+      Delaware      Delaware4 Combined             29               1          11        0.062          16.1                   13                  8           3    1000      -            -                 False
+South Carolina SouthCarolina4 Combined             15               1          14        0.070          14.2                   13                 11           2    1000      -            -                 False
+       Indiana       Indiana4  Evening             14               1          12        0.066          15.2                   13                 12           3    1000    909           15                 False
+       Indiana       Indiana4 Combined             14               1           9        0.059          17.1                   15                 27           3    1000      -            -                 False
+      New York       NewYork4   Midday             25               1          12        0.062          16.1                   15                 14           2    1000    117           17                 False
+       Ontario OntarioCanada4   Midday             24               1          11        0.057          17.5                   16                 22           2    1000    528           11                 False
+    New Jersey     NewJersey4   Midday             18               1          24        0.062          16.2                   17                  7           3    1000    770           10                 False
+       Florida       Florida4   Midday             12               1          21        0.066          15.2                   18                 20           2    1000    195            9                 False
+      Michigan      Michigan4  Evening             28               1          12        0.057          17.5                   18                 22           3    1000    204           12                 False
+North Carolina NorthCarolina4  Evening              3               1          21        0.064          15.7                   19                 11           3    1000    053            4                 False
+    New Jersey     NewJersey4 Combined             24               1          24        0.067          15.0                   20                 31           3    1000      -            -                 False
+      New York       NewYork4 Combined             16               1          22        0.054          18.6                   21                 12           2    1000      -            -                 False
+  Pennsylvania  Pennsylvania4 Combined             20               1          21        0.059          16.9                   21                  4           3    1000      -            -                 False
+      Virginia      Virginia4  Evening             18               1          11        0.064          15.7                   23                 28           4    1000    354           14                 False
+North Carolina NorthCarolina4 Combined              3               1          21        0.063          16.0                   25                 19           3    1000      -            -                 False
+       Florida       Florida4 Combined             17               1          21        0.058          17.3                   27                 23           2    1000      -            -                 False
+South Carolina SouthCarolina4  Evening             15               1          22        0.064          15.7                   29                  9           3    1000    821           21                 False
+      New York       NewYork4  Evening             16               1          12        0.052          19.1                   30                  7           2    1000    174           22                 False
+   Connecticut   Connecticut4 Combined             18               1          30        0.061          16.4                   31                 14           2    1000      -            -                 False
+  Pennsylvania  Pennsylvania4   Midday             24               1          21        0.054          18.4                   32                  6           3    1000    322           27                 False
+      Michigan      Michigan4 Combined             28               1          30        0.068          14.8                   40                 11           3    1000      -            -                 False
+      Delaware      Delaware4   Midday             11               1           8        0.072          14.0                   40                 14           2    1000    149           25                 False
+       Ontario OntarioCanada4 Combined             30               1          24        0.059          17.1                   48                 21           3    1000      -            -                 False
+       Ontario OntarioCanada4  Evening             30               1          22        0.061          16.4                   53                  9           3    1000    546            9                 False
+   Puerto Rico    PuertoRico4   Midday              9               1          11        0.062          16.2                   59                 12           3    1000      -            -                 False
+          Ohio          Ohio4 Combined             22               1           9        0.062          16.2                   60                  9           2    1000      -            -                 False
+  Pennsylvania  Pennsylvania4  Evening             20               1          14        0.061          16.3                   62                 11           3    1000    328           29                 False
+      Delaware      Delaware4  Evening             29               1          11        0.060          16.8                   67                 24           3    1000    937           30                 False
+   Connecticut   Connecticut4   Midday             30               1          11        0.056          18.0                   72                 23           3    1000    228           27                 False
+       Indiana       Indiana4   Midday             12               1          22        0.060          16.7                   80                 28           2    1000    474           31                 False
+North Carolina NorthCarolina4   Midday             21               1          11        0.057          17.6                   95                 13           2    1000    416           19                 False
+```

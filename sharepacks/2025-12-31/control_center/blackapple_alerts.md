@@ -1,0 +1,49 @@
+# Blackapple Alerts
+
+- Generated: `2026-01-05T12:31:51.993131+00:00`
+
+```
+         State       StateKey  Variant  BA-Score Status                            Triggers  #Candidates    Examples Winner Midday Winner Evening  Midday Hits Evening Hits
+       Ontario OntarioCanada4 Combined         3  ALERT  Mirror, Root 1, Float 158, Pairs 0           12 127 136 019           918            932            -        VTRAC
+   Connecticut   Connecticut4   Midday         3  ALERT   Mirror, Root 3, Float 38, Pairs 0           12 138 237 489           932            361            -            -
+          Ohio          Ohio4   Midday         3  ALERT   Mirror, Root 8, Float 25, Pairs 0           12 035 278 026           306            197            -            -
+North Carolina NorthCarolina4  Evening         3  ALERT Root 7, SSS/TTT, Float 045, Pairs 0           12 034 124 016           867            057            -        VTRAC
+       Florida       Florida4 Combined         2  WATCH         Root 5, Float 1469, Pairs 0           12 014 059 068           407            211            -        VTRAC
+       Indiana       Indiana4 Combined         2  WATCH           Root 1, Float 37, Pairs 0           12 037 127 136           204            539            -            -
+North Carolina NorthCarolina4 Combined         2  WATCH         SSS/TTT, Float 023, Pairs 0           12 012 013 014           867            057        VTRAC            -
+          Ohio          Ohio4 Combined         2  WATCH           Mirror, Float 05, Pairs 0           12 015 016 025           306            197            -            -
+South Carolina SouthCarolina4 Combined         2  WATCH           Root 8, Float 01, Pairs 1           12 017 026 035           653            044            -            -
+       Ontario OntarioCanada4   Midday         2  WATCH          Mirror, Float 258, Pairs 0           12 015 025 027           918            932            -            -
+  Pennsylvania  Pennsylvania4   Midday         2  WATCH            Mirror, SSS/TTT, Pairs 0           12 027 057 127           684            221            -            -
+South Carolina SouthCarolina4   Midday         2  WATCH          Root 8, Float 039, Pairs 0           12 017 026 035           653            044            -            -
+      Virginia      Virginia4   Midday         2  WATCH         Root 3, Float 1367, Pairs 0           12 012 039 057           686            636            -            -
+      Michigan      Michigan4  Evening         2  WATCH           Root 9, Float 35, Pairs 0           12 036 045 135           583            477            -            -
+      New York       NewYork4  Evening         2  WATCH          Root 7, Float 678, Pairs 1           12 016 079 169           419            116            -            -
+       Ontario OntarioCanada4  Evening         2  WATCH           Mirror, Float 18, Pairs 0           12 015 016 038           918            932            -            -
+   Connecticut   Connecticut4 Combined         1    OFF                   Float 38, Pairs 0           12 013 018 023           932            361            -            -
+      Delaware      Delaware4 Combined         1    OFF                 Float 1249, Pairs 1           12 012 013 014           082            337        VTRAC            -
+    New Jersey     NewJersey4 Combined         1    OFF                  Float 789, Pairs 0           12 017 018 019           366            418            -            -
+      New York       NewYork4 Combined         1    OFF                 Float 4678, Pairs 0           12 014 016 017           419            116            -            -
+   Puerto Rico    PuertoRico4 Combined         1    OFF                   Float 12, Pairs 1           12 012 013 014           451            913        VTRAC            -
+      Virginia      Virginia4 Combined         1    OFF                  Float 247, Pairs 0           12 012 014 017           686            636            -            -
+       Florida       Florida4   Midday         1    OFF                  Float 168, Pairs 1           12 012 013 014           407            211            -            -
+       Indiana       Indiana4   Midday         1    OFF                  Float 026, Pairs 1           12 012 013 014           204            539 Boxed, VTRAC            -
+      Michigan      Michigan4   Midday         1    OFF                     Mirror, Pairs 0           12 016 056 126           583            477            -            -
+      New York       NewYork4   Midday         1    OFF                     Mirror, Pairs 0           12 027 057 127           419            116            -            -
+North Carolina NorthCarolina4   Midday         1    OFF                  Float 023, Pairs 1           12 012 013 014           867            057            -            -
+   Puerto Rico    PuertoRico4   Midday         1    OFF                   Float 14, Pairs 1           12 012 013 014           451            913        VTRAC            -
+      Delaware      Delaware4  Evening         1    OFF                 Float 1479, Pairs 0           12 012 013 014           082            337            -            -
+       Indiana       Indiana4  Evening         1    OFF                   Float 47, Pairs 0           12 014 017 024           204            539            -        VTRAC
+    New Jersey     NewJersey4  Evening         1    OFF                  Float 249, Pairs 0           12 012 014 019           366            418            -            -
+          Ohio          Ohio4  Evening         1    OFF                     Mirror, Pairs 0           12 038 058 138           306            197            -            -
+   Puerto Rico    PuertoRico4  Evening         1    OFF                     Root 3, Pairs 0           12 012 039 048           451            913            -            -
+South Carolina SouthCarolina4  Evening         1    OFF                     Root 8, Pairs 0           12 017 125 134           653            044            -            -
+      Virginia      Virginia4  Evening         1    OFF                   Float 27, Pairs 0           12 012 017 023           686            636            -            -
+      Michigan      Michigan4 Combined         0    OFF                             Pairs 0            0           -           583            477            -            -
+  Pennsylvania  Pennsylvania4 Combined         0    OFF                             Pairs 0           12 015 025 035           684            221            -            -
+      Delaware      Delaware4   Midday         0    OFF                             Pairs 0           12 014 024 034           082            337            -            -
+    New Jersey     NewJersey4   Midday         0    OFF                             Pairs 0           12 019 029 039           366            418            -            -
+   Connecticut   Connecticut4  Evening         0    OFF                             Pairs 0           12 012 013 014           932            361            -            -
+       Florida       Florida4  Evening         0    OFF                             Pairs 2           12 012 013 014           407            211            -        VTRAC
+  Pennsylvania  Pennsylvania4  Evening         0    OFF                             Pairs 0           12 018 028 038           684            221            -            -
+```
