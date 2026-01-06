@@ -34,10 +34,14 @@ Progress + navigation:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/README.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/GOLD_RUNS_2_TRIAGE.md` (maps the Gold Runs 2 report into SSOT-safe actions)
 
 Corpus-level synthesis:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv` (numeric evidence extracted from sharepack `summary.json` files)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md` (Combined + cross-variant quantification)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md` (literal doubles vs VTRAC-space mirror repeats)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md` (Codex deep analysis; parallel reviewer output)
 
 Per-day portals (Brain‑2 + Brain‑1):

@@ -24,6 +24,9 @@ Important: do not suggest changing analyzers yet unless there is a clear contrac
 2) Corpus entry points (analysis artifacts):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv` (numeric evidence; prefer this for quantification)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md` (Combined + cross-variant quantification)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md` (mirror-double frequency lens)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
 
 3) Per-day portals (Brain‑2 then Brain‑1):
