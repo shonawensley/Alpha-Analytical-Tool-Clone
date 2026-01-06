@@ -1,6 +1,6 @@
 # Hot Zones Summary — SouthCarolina4 (2025-06-22)
 
-## Midday winner 675 (canonical 567)
+## Evening winner 675 (canonical 567)
 - Top lanes (hot_zones_top_lanes.csv): present | rank 187/204 (rank_frac 0.9166666666666666) | score_mean 13.792 (top 23.119, ratio 0.5965655953977248, delta 9.327)
 - Per-lane (hot_zones_per_lane.csv): has_straight=False has_vt_straight=False
 - Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)

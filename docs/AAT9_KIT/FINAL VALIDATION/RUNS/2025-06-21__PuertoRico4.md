@@ -231,10 +231,10 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Top candidates (analyzer_v2_top_candidates.csv): rows_total=20 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.877143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
-## Combined winner 221 (canonical 122)
-- Stamp (winner_stamp.json): items_total=71 | exact_any=9 exact_final=0 | vtrac_any=69 vtrac_final=0 | drop_exact_any=6 drop_exact_final=0 | drop_vtrac_any=6 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=9 family_vtrac_final=0
-- Flags (winner_flags.csv): rows=71 | exact_any=9 vtrac_any=69 | drop_exact_any=6 drop_vtrac_any=6 | family_exact_any=0 family_vtrac_any=9 | vt_boxed=35 vt_straight=0
-- Hits (winner_hits.csv): rows=71 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=35 vt_straight=0
+## Combined winner 910 (canonical 019)
+- Stamp (winner_stamp.json): items_total=287 | exact_any=0 exact_final=0 | vtrac_any=257 vtrac_final=0 | drop_exact_any=24 drop_exact_final=0 | drop_vtrac_any=119 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=68 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=287 | exact_any=0 vtrac_any=257 | drop_exact_any=24 drop_vtrac_any=119 | family_exact_any=0 family_vtrac_any=68 | vt_boxed=67 vt_straight=0
+- Hits (winner_hits.csv): rows=287 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=67 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
 - Top candidates (analyzer_v2_top_candidates.csv): rows_total=20 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=15.397143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
@@ -262,20 +262,18 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - rank 8 | variant Combined | best_pattern 924 | score_v2 11.777143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 9 | variant Evening | best_pattern 924 | score_v2 11.227143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 10 | variant Combined | best_pattern 922 | score_v2 10.970476 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
-
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q1:
   - Digit Reduction is not isolating winners as top candidates (`winner_present=False` for Midday and Evening).
-  - Important caveat: the DR “Combined winner” overlay is stamped as 221 (canonical 122), which is not a Puerto Rico draw result for this day; treat DR Combined overlays for this state/day as suspect (log-only).
 - Q2:
   - 4-hit mapping inside DR:
     - Neither Midday (019) nor Evening (155) shows as an exact/top candidate in DR’s top-candidates set; vt_straight is not active (`vt_straight=0` in the per-variant winner flags).
 - Q3:
   - Artifact integrity:
     - DR artifacts exist and are coherent for Midday and Evening stamps/flags/hits.
-    - The Combined stamp’s “winner=221” indicates a winner-selection quirk; do not interpret Combined DR evidence here.
+    - Combined overlays are coherent (Combined uses the Midday winner as the default “Combined winner” lens).
 - Q4:
   - Interpretation:
     - DR is behaving as a background lens on this state/day; it does not provide an actionable isolated winner lane for either draw.
@@ -287,10 +285,8 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q7:
   - (V) Validation:
     - No missing-file issues; strict tables↔aux alignment passed for this state/day.
-    - Combined-winner stamping should be investigated later as workflow hygiene (not a tool-performance conclusion).
 - Q8:
-  - Fix-later:
-    - Investigate why DR Combined winner is set to 221 for PuertoRico4 on 2025-06-21 (likely a winner selection/mapping quirk inside DR winners overlay generation).
+  - Fix-later: none.
 - Q9:
   - Cross-tool synergy seed:
     - This is a “DR not primary” day; useful as a negative control when stacking DR with other tools.
@@ -457,10 +453,10 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Conflicts/noise:
   - Stable’s strongest compound lanes are 244/044/007-family, not the evening winner 155.
   - VTRAC analyzer’s top indices do not align with either winner (idx2 is mid-ranked; idx9 is low).
-  - DR does not elevate either winner as top candidates (and DR Combined winner stamping appears mismapped).
+  - DR does not elevate either winner as top candidates.
 - Aggregator/aux hooks to test next:
   - Treat “Stable miss + Hot Zones presence” as a distinct environment type worth tagging (possible “box hedge only” posture).
-  - Log the DR Combined winner stamp anomaly for later workflow hygiene investigation.
+  - Keep DR misses separate from pipeline failures: this is a legitimate “DR not primary” day.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -900,9 +896,9 @@ Part 5 notes / answers:
   - Evening win has weak tool visibility; treat it as a low-clarity/noisy environment where only broad lane heuristics (Hot Zones) provided a reasonable hedge.
 - Conflicts:
   - Stable strongly prefers 244-family lanes, not the evening winner 155.
-  - VTRAC analyzer and Digit Reduction do not align with the winners (and DR Combined winner stamping is anomalous here).
+  - VTRAC analyzer and Digit Reduction do not align with the winners.
 - Fix-now vs fix-later:
   - Fix-now: none required for template filling (sharepack integrity is OK).
-  - Fix-later: investigate DR Combined winner stamp being 221 for PuertoRico4 on 2025-06-21; log outcome as workflow hygiene.
+  - Fix-later: none.
 - Next run:
   - Continue to the next state for 2025-06-21; Puerto Rico is a good “mixed difficulty” contrast case (supported Midday vs noisy Evening).

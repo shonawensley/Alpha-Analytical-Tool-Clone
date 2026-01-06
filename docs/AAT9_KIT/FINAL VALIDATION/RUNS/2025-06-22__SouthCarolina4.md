@@ -77,11 +77,11 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 ```markdown
 # Stable Summary — SouthCarolina4 (2025-06-22)
 
-## Midday winner 675 (canonical 567)
+## Evening winner 675 (canonical 567)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=151 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
-- Families (patterns_families.csv): 47 rows contain digits; best rank 518, section Evening, score 17.5, hot2 0
+- Families (patterns_families.csv): count 47 | rank 518/1507 (rank_frac 0.34372926343729265) | score 17.5 (top 32.5, ratio 0.5384615384615384, delta 15.0) | section Evening, hot2 0
 - Metrics (metrics.json): exact_boxed=False | exact_straight=False | vt_boxed_count=42
 - Coverage gaps: missing_from_scores, missing_from_compound
 
@@ -103,13 +103,12 @@ Paste blocks: the `summary.md` embedded under each tool below is the “evidence
 - rank  341 | family 33 | score 20.0 | hot2 0 | section Midday
 - rank  269 | family 14 | score 21.0 | hot2 0 | section Midday
 - rank  225 | family 17 | score 21.5 | hot2 0 | section Midday
-
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q1: Winners evidence vs brain outputs
   - Winner canonical `567` is not present in scores/compound; only weak family presence (best family rank 518; score 17.5).
-  - Note: Stable summary labels this as “Midday winner 675” because the results file has Midday blank; treat `675` as the Evening outcome for this state/day.
+  - One-winner day: Midday is blank in results; analysis uses the Evening winner `675`.
 - Q2: 4 hit criteria mapping
   - No exact boxed/straight (exact_boxed=False, exact_straight=False).
   - vt_boxed_count=42 indicates broad VTRAC-family presence, not isolation.
@@ -145,29 +144,23 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```markdown
 # Digit Reduction Summary — SouthCarolina4 (stamp 20251222)
 
-## Midday winner 675 (canonical 567)
-- Stamp (winner_stamp.json): items_total=59 | exact_any=0 exact_final=0 | vtrac_any=20 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=53 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=9 family_vtrac_final=0
-- Flags (winner_flags.csv): rows=59 | exact_any=0 vtrac_any=20 | drop_exact_any=0 drop_vtrac_any=53 | family_exact_any=0 family_vtrac_any=9 | vt_boxed=20 vt_straight=0
-- Hits (winner_hits.csv): rows=59 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=20 vt_straight=0
-- Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
-- Reducer scores present: True
+## Midday: no winner in results file
+- Skipped: state missing or blank for this period
 
-## Evening winner unknown (canonical knnnouw)
-- Stamp (winner_stamp.json): missing
-- Flags (winner_flags.csv): rows=0 | exact_any=None vtrac_any=None | drop_exact_any=None drop_vtrac_any=None | family_exact_any=None family_vtrac_any=None | vt_boxed=None vt_straight=None
-- Hits (winner_hits.csv): rows=0 | exact_final=None vtrac_final=None | drop_exact_final=None drop_vtrac_final=None | family_exact_final=None family_vtrac_final=None | vt_boxed=None vt_straight=None
+## Evening winner 675 (canonical 567)
+- Stamp (winner_stamp.json): items_total=23 | exact_any=0 exact_final=0 | vtrac_any=17 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=11 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=8 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=23 | exact_any=0 vtrac_any=17 | drop_exact_any=0 drop_vtrac_any=11 | family_exact_any=0 family_vtrac_any=8 | vt_boxed=15 vt_straight=0
+- Hits (winner_hits.csv): rows=23 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=15 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=16 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.327143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
-- Coverage gaps: missing_stamp_json, missing_flags, missing_hits
 
 ## Combined winner 675 (canonical 567)
 - Stamp (winner_stamp.json): items_total=103 | exact_any=0 exact_final=0 | vtrac_any=50 vtrac_final=0 | drop_exact_any=0 drop_exact_final=0 | drop_vtrac_any=85 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=23 family_vtrac_final=0
 - Flags (winner_flags.csv): rows=103 | exact_any=0 vtrac_any=50 | drop_exact_any=0 drop_vtrac_any=85 | family_exact_any=0 family_vtrac_any=23 | vt_boxed=56 vt_straight=0
 - Hits (winner_hits.csv): rows=103 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=56 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=22 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=15.047143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Top per_item (analyzer_v2_per_item.csv)
@@ -193,24 +186,24 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - rank 8 | variant Combined | best_pattern 559 | score_v2 11.127143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 9 | variant Evening | best_pattern 559 | score_v2 10.877143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 10 | variant Combined | best_pattern 559 | score_v2 10.827143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
-
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q1: Winners evidence vs brain outputs
-  - Midday winner section shows `675` (but state’s Midday result is blank; treat `675` as Evening).
-  - Winner is not present in top candidates (winner_present=False for Midday/Combined; Evening winner is “unknown” due to missing stamp/flags/hits).
-  - vt_boxed is non-zero (Midday=20, Combined=56) but no finals (exact_final=0, vtrac_final=0).
+  - Midday has no winner in the results file (one-winner day) and is skipped.
+  - Evening/Combined winner `675` (canon `567`) is not present in top candidates (winner_present=False) despite broad VT contact.
+  - vt_boxed is non-zero (Evening=15, Combined=56) but no finals (exact_final=0, vtrac_final=0).
 - Q2: 4 hit criteria mapping
   - DR provides broad VT coverage (vt_boxed>0), but it does not isolate the winner as a top candidate.
 - Q3: Output integrity (important)
-  - Evening winner overlay is missing (coverage gaps: missing_stamp_json, missing_flags, missing_hits). This is consistent with `South Carolina\t\t675` (Midday blank) and should be treated as a workflow-layer issue, not an analyzer failure.
+  - Evening/Combined overlays exist and validate cleanly (stamp ↔ flags ↔ hits).
+  - Midday overlay is intentionally absent because there is no Midday result in the results file.
 - Q4: What DR wanted (top candidates)
   - Top patterns are 513 (Combined) and 551/511 (Midday); no lift toward `567`.
 - Q5: Miss analysis
   - As graded by DR’s own top-candidates lens, this is a miss day.
 - Q6: Validation checks (V)
-  - Reducer scores exist; Midday/Combined overlays exist; Evening overlay missing.
+  - Reducer scores exist; Evening/Combined overlays exist; Midday skipped (expected).
 - Q7: Cross-tool synergy seed
   - None (Stable/DR/HotZones/VTRAC do not converge on a shared winner-adjacent cluster).
 - Q8: Optimization notes
@@ -218,7 +211,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q9: Aux hook
   - Treat vt_boxed>0 as “broad VT-family contact,” not isolation.
 - Q10: Analyst’s extra insight
-  - This is a clean test case for “missing Midday results should not create an ‘Evening winner unknown’ hard failure.”
+  - Keep this as a regression case: missing Midday results should not be interpreted as a tool/pipeline failure.
 
 ---
 
@@ -301,11 +294,11 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 ```markdown
 # Hot Zones Summary — SouthCarolina4 (2025-06-22)
 
-## Midday winner 675 (canonical 567)
-- Top lanes (hot_zones_top_lanes.csv): present, best rank 187
+## Evening winner 675 (canonical 567)
+- Top lanes (hot_zones_top_lanes.csv): present | rank 187/204 (rank_frac 0.9166666666666666) | score_mean 13.792 (top 23.119, ratio 0.5965655953977248, delta 9.327)
 - Per-lane (hot_zones_per_lane.csv): has_straight=False has_vt_straight=False
-- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False
-- Coverage gaps: winner_not_in_winner_map
+- Winner map (hot_zones_winner_map.json/csv): file_present=True | triad_present=False (scope top20+guard_hits, limit 20)
+- Notes: winner_not_in_top20_winner_map (expected when winner rank > 20)
 
 ## Top candidate lanes (hot_zones_top_lanes.csv, Top 10)
 - rank    1 | triad 237 | vt_triad 334 | score_mean 23.119 | tags funnel_precol1,hot12,hot16,hot20,hot8,literal_draw,ls_col_42,set1_bonus,straight_lane,vertical1,vertical2,vertical3,vt_only_lane,vt_straight
@@ -318,7 +311,6 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - rank    8 | triad 469 | vt_triad 255 | score_mean 19.386 | tags hot12,hot16,hot20,hot4,literal_draw,set1_bonus,straight_lane,superhot_set1,vertical1,vertical3,vt_only_lane,vt_straight
 - rank    9 | triad 388 | vt_triad 44 | score_mean 19.236 | tags funnel_precol1,hot12,hot16,hot20,hot4,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical3,vt_straight
 - rank   10 | triad 889 | vt_triad 45 | score_mean 19.184 | tags funnel_precol1,hot12,hot16,hot20,hot4,hot8,ls2_lane,ls_col_42,set1_bonus,straight_lane,superhot_set1,vertical1,vertical2,vertical3,vt_only_lane,vt_straight
-
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
@@ -350,7 +342,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
   - No convergence cluster for winner `675/567`; each tool highlights different non-winner structures (Stable 11*/13*, DR 513/551, Hot Zones 237/278/…, VTRAC idx15/18/…).
 - Conflicts/noise:
   - Winner is broadly off-board (no hit-winner tags anywhere; only small hit-winner-gap counts).
-  - Results feed irregularity: Midday missing (South Carolina line has Midday blank), which causes “winner labeling” confusion in tool summaries and missing DR Evening overlay.
+  - Results feed irregularity: Midday missing (one-winner day). Workflow now treats this as expected (summaries use Evening winner; DR skips Midday).
 - Aggregator/aux hooks to test next:
   - Add/confirm a runbook guard: when Midday is blank, treat this as “one-winner day” and do not label Evening as “unknown”.
   - Use “hit-winner present vs absent” as a simple binary gate (here: absent → skip posture).
@@ -756,8 +748,7 @@ Part 5 notes / answers:
 - Conflicts:
   - Cross-tool miss day; strong “other-universe” dominance that excludes the winner.
 - Fix-now vs fix-later:
-  - Fix-later: handle one-winner days cleanly (South Carolina Midday blank):
-    - Stable/Hot Zones summaries label “Midday winner 675” even though it’s the Evening outcome.
-    - DR produces “Evening winner unknown” + missing Evening stamp/flags/hits; should be skipped/treated as expected when Midday is blank.
+  - Fix-now: none (workflow handles one-winner days; Midday is skipped and Evening is labeled correctly).
+  - Fix-later: none.
 - Next run:
   - Continue to the next state/day; use this as a regression case for missing-results handling.

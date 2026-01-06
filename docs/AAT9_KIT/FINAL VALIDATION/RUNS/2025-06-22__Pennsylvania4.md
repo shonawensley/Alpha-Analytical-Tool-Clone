@@ -60,7 +60,6 @@ Part A answers (fill using the template’s Part A questions):
   - Digit 8 dominance is real; it supports 398 (contains 8) but not 570 (no 8).
 - Q14: Noise check:
   - Overall manageable noise for Midday; higher noise for Evening.
-  - Fix-later note: DR Combined overlay uses a winner value (925) that does not match Pennsylvania’s results (likely a results lookup/mapping issue).
 
 ---
 
@@ -160,7 +159,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=50 | exact_any=0 vtrac_any=17 | drop_exact_any=22 drop_vtrac_any=43 | family_exact_any=0 family_vtrac_any=5 | vt_boxed=50 vt_straight=0
 - Hits (winner_hits.csv): rows=50 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=50 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=22 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.727143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Evening winner 570 (canonical 057)
@@ -168,15 +167,15 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Flags (winner_flags.csv): rows=26 | exact_any=0 vtrac_any=0 | drop_exact_any=3 drop_vtrac_any=26 | family_exact_any=0 family_vtrac_any=0 | vt_boxed=2 vt_straight=0
 - Hits (winner_hits.csv): rows=26 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=2 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → 1 | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=36 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.477143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
-## Combined winner 925 (canonical 259)
-- Stamp (winner_stamp.json): items_total=568 | exact_any=12 exact_final=0 | vtrac_any=340 vtrac_final=0 | drop_exact_any=60 drop_exact_final=0 | drop_vtrac_any=507 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=158 family_vtrac_final=0
-- Flags (winner_flags.csv): rows=568 | exact_any=12 vtrac_any=340 | drop_exact_any=60 drop_vtrac_any=507 | family_exact_any=0 family_vtrac_any=158 | vt_boxed=54 vt_straight=0
-- Hits (winner_hits.csv): rows=568 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=54 vt_straight=0
+## Combined winner 398 (canonical 389)
+- Stamp (winner_stamp.json): items_total=130 | exact_any=3 exact_final=0 | vtrac_any=83 vtrac_final=0 | drop_exact_any=28 drop_exact_final=0 | drop_vtrac_any=104 drop_vtrac_final=0 | family_exact_any=2 family_exact_final=0 | family_vtrac_any=50 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=130 | exact_any=3 vtrac_any=83 | drop_exact_any=28 drop_vtrac_any=104 | family_exact_any=2 family_vtrac_any=50 | vt_boxed=130 vt_straight=0
+- Hits (winner_hits.csv): rows=130 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=130 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
-- Top candidates (analyzer_v2_top_candidates.csv): winner_triads_as_candidates=False | winner_best_rank=None
+- Top candidates (analyzer_v2_top_candidates.csv): rows_total=20 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=13.727143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
 ## Top per_item (analyzer_v2_per_item.csv)
@@ -202,7 +201,6 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - rank 8 | variant Evening | best_pattern 599 | score_v2 11.477143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 9 | variant Evening | best_pattern 599 | score_v2 11.437143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
 - rank 10 | variant Combined | best_pattern 922 | score_v2 10.927143 | tags exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac
-
 ```
 
 Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
@@ -210,11 +208,9 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
   - DR does not isolate 398 or 570 as top candidates (`winner_triads_as_candidates=False`).
   - Midday 398: some VTRAC/drop coverage exists (vtrac_any=17; drop_vtrac_any=43) but no finals.
   - Evening 570: no vtrac_any; mostly drop_vtrac_any; still no finals.
-  - Combined overlay is suspect: it uses winner=925 (not Pennsylvania’s results) and date=None.
 - Q2: Stamp interpretation
   - Midday 398: vt_boxed=50 suggests broad boxed coverage, not narrow isolation.
   - Evening 570: vt_boxed=2 and some drop_exact_any=3, but still not isolating.
-  - Combined: treat as non-gradeable until the winner mapping is corrected.
 - Q3: 4 hit criteria mapping
   - DR is operating as “coverage flags”, not a tight caller here (no exact finals; vtrac finals all 0).
 - Q4: Dominance / noise
@@ -224,9 +220,9 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q6: Miss analysis
   - DR is effectively a miss day for both winners (for actionable isolation).
 - Q7: Validation checks (V)
-  - Flag as fix-later: Combined winner stamp (925) mismatches the results for Pennsylvania; likely a results lookup/state mapping issue in DR overlay generation.
+  - No missing-file issues; DR winners overlays are internally consistent (stamp ↔ flags ↔ hits).
 - Q8: Optimization notes
-  - None now; first fix is correctness of the Combined winner mapping for DR.
+  - None now.
 - Q9: Cross-tool synergy seed
   - DR top patterns (`599`/`922`) align with general lane dominance but don’t explain 398/570.
 - Q10: Analyst’s extra insight
@@ -376,10 +372,8 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
   - Stable + Hot Zones both provide meaningful support for Midday 398 (Stable compound rank 32; Hot Zones best rank 66).
 - Conflicts/noise:
   - Evening 570 is weakly corroborated by tools; it is mostly off-board.
-  - DR Combined overlay appears to use the wrong winner value (925) for this state/day.
 - Aggregator/aux hooks to test next:
   - Track “cross-variant intersection” situations (Midday 9/2/8 lane + Evening 0/8/3 lane → 3/8/9 outcomes) as a hypothesis class.
-  - Fix-later: confirm/fix DR Combined results lookup so Combined overlays don’t pull the wrong state’s winner.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -774,9 +768,8 @@ Part 5 notes / answers:
   - The Midday win is driven primarily by Stable (and supported by Hot Zones), not by DR/VTRAC analyzer.
 - Conflicts:
   - Evening winner lacks corroboration; DR is mostly noise here.
-  - DR Combined overlay winner mismatch (925) is confusing and should be treated as an artifact issue, not an analytical signal.
 - Fix-now vs fix-later:
   - Fix-now: none (alignment guard passes).
-  - Fix-later: DR Combined winner mapping (shows 925, date=None) likely pulling the wrong state’s result.
+  - Fix-later: none.
 - Next run:
   - Continue D=2025‑06‑22 reports; Pennsylvania4 is a good “Midday positive-control / Evening weak” example.

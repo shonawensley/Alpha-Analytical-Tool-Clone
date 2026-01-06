@@ -53,7 +53,7 @@ Part A answers (fill using the template’s Part A questions):
   - Dominance exists (`094`, `922`, `900/009`), but it is not the winner universe → dilution relative to outcomes.
 - Q14: Noise check:
   - High noise / wrong convergence; treat as a pass/tiny day.
-  - Fix-later note: DR Evening winner overlay has missing flags/hits (see Part 2.DR).
+  - Fix-later note: DR Evening winner overlay has 0 matches (items_total=0); treat as tool outcome, not missing artifacts (see Part 2.DR).
 
 ---
 
@@ -203,23 +203,23 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
 - Q1: Winners evidence vs brain outputs
   - DR does not isolate either winner as a top-candidate triad (`winner_triads_as_candidates=False` for both).
   - Midday 918: broad VTRAC-any coverage (vtrac_any=78), but no final hits.
-  - Evening 616: **evidence gap** (items_total=0; missing_flags/missing_hits).
+  - Evening 616: 0 DR matches for this winner (items_total=0); flags/hits are header-only because there are no matched items.
 - Q2: Stamp interpretation
   - Midday 918: vtrac_any=78 (very broad), vt_boxed=7 → “covered broadly”, not “narrowed”.
-  - Evening 616: stamp/flags/hits are empty; treat as non-gradeable DR winner overlay for this variant.
+  - Evening 616: stamp/flags/hits indicate 0 matches; treat as a DR miss (tool outcome), not missing artifacts.
   - Combined 918: vtrac_any=112 (very broad), vt_boxed=17 → also broad.
 - Q3: 4 hit criteria mapping
   - DR is registering VTRAC/drop signals, not producing a clean exact/boxed candidate set for these winners.
 - Q4: Dominance / noise
   - Top per_item and top candidates emphasize `922`/`599` patterns (non-winner dominance), not 189/166.
 - Q5: Where the winners show up
-  - Midday/Combined show vtrac_any, but the winner is not a top candidate; Evening overlay is missing.
+  - Midday/Combined show vtrac_any, but the winner is not a top candidate; Evening has 0 DR matches (items_total=0).
 - Q6: Miss analysis
-  - This is a practical DR miss (or “non-isolation”) for the winners, plus an Evening overlay generation gap.
+  - This is a practical DR miss (or “non-isolation”) for the winners; Evening has a clean 0-match overlay (items_total=0).
 - Q7: Validation checks (V)
-  - Flag as fix-later: Evening 616 has missing flags/hits outputs despite reducer scores being present.
+  - Fix-later: treat Evening 616 as a DR negative-control example (0 matches); do not label as missing artifacts.
 - Q8: Optimization notes
-  - None now; first fix is workflow-layer hygiene for the missing Evening overlay.
+  - None now; main caution is to interpret “0 matches” as tool outcome (not pipeline failure).
 - Q9: Cross-tool synergy seed
   - DR’s dominant patterns (`922`/`599`) agree with Stable and the winners-lens board dominance (9/2/0 universe), reinforcing that the environment converged elsewhere.
 - Q10: Analyst’s extra insight
@@ -369,7 +369,7 @@ Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):
   - Stable does have exact hits for both winners, but only at very deep ranks → low-confidence.
 - Aggregator/aux hooks to test next:
   - Treat “multi-tool convergence away from winners” as a skip/low-spend posture candidate.
-  - Fix-later: investigate why DR Evening overlay artifacts are missing for Ontario (616) even though reducer scores exist.
+  - Fix-later: log Ontario Evening 616 as a DR 0-match negative-control (overlay exists; items_total=0) so it’s not confused with pipeline failure later.
 
 ## Part 3 — Aux Features (paste block + answers)
 Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.
@@ -789,6 +789,6 @@ Part 5 notes / answers:
   - Strong multi-tool convergence on non-winner structure vs actual winners.
 - Fix-now vs fix-later:
   - Fix-now: none (alignment guard passes).
-  - Fix-later: DR Evening overlay missing flags/hits for Ontario (winner 616).
+  - Fix-later: DR Evening overlay for Ontario 616 is a 0-match negative-control (items_total=0); do not treat as missing artifacts.
 - Next run:
   - Continue D=2025‑06‑22 reports (Pennsylvania4 next); keep OntarioCanada4 as a negative-control “busy board, off-board winners” case.

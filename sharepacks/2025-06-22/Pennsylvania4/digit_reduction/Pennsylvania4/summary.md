@@ -16,10 +16,10 @@
 - Top candidates (analyzer_v2_top_candidates.csv): rows_total=36 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=11.477143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True
 
-## Combined winner 925 (canonical 259)
-- Stamp (winner_stamp.json): items_total=568 | exact_any=12 exact_final=0 | vtrac_any=340 vtrac_final=0 | drop_exact_any=60 drop_exact_final=0 | drop_vtrac_any=507 drop_vtrac_final=0 | family_exact_any=0 family_exact_final=0 | family_vtrac_any=158 family_vtrac_final=0
-- Flags (winner_flags.csv): rows=568 | exact_any=12 vtrac_any=340 | drop_exact_any=60 drop_vtrac_any=507 | family_exact_any=0 family_vtrac_any=158 | vt_boxed=54 vt_straight=0
-- Hits (winner_hits.csv): rows=568 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=54 vt_straight=0
+## Combined winner 398 (canonical 389)
+- Stamp (winner_stamp.json): items_total=130 | exact_any=3 exact_final=0 | vtrac_any=83 vtrac_final=0 | drop_exact_any=28 drop_exact_final=0 | drop_vtrac_any=104 drop_vtrac_final=0 | family_exact_any=2 family_exact_final=0 | family_vtrac_any=50 family_vtrac_final=0
+- Flags (winner_flags.csv): rows=130 | exact_any=3 vtrac_any=83 | drop_exact_any=28 drop_vtrac_any=104 | family_exact_any=2 family_vtrac_any=50 | vt_boxed=130 vt_straight=0
+- Hits (winner_hits.csv): rows=130 | exact_final=0 vtrac_final=0 | drop_exact_final=0 drop_vtrac_final=0 | family_exact_final=0 family_vtrac_final=0 | vt_boxed=130 vt_straight=0
 - Per-item (analyzer_v2_per_item.csv): best area_rank where exact_any=1 → None | best area_rank where vtrac_any=1 → 1
 - Top candidates (analyzer_v2_top_candidates.csv): rows_total=20 | winner_present=False | winner_best_rank=None | winner_rank_fraction=None | winner_score_v2=None top_score_v2=13.727143 | winner_score_ratio_to_top=None winner_score_delta_from_top=None
 - Reducer scores present: True

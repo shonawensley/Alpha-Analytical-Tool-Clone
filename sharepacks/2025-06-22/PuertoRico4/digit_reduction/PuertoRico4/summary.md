@@ -1,5 +1,14 @@
 # Digit Reduction Summary — PuertoRico4 (stamp N/A)
 
+## Midday: no winner in results file
+- Skipped: state missing or blank for this period
+
+## Evening: no winner in results file
+- Skipped: state missing or blank for this period
+
+## Combined: no winner in results file
+- Skipped: state missing or blank for this period
+
 ## Top per_item (analyzer_v2_per_item.csv)
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw5 col 2 | pattern 224 | score_v2 19.077143 | match_types 
 - area_rank 1 | variant Combined | section Combined | set Set1 draw Draw4 col 2 | pattern 224 | score_v2 18.927143 | match_types 

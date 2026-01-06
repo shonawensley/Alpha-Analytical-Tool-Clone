@@ -1,6 +1,6 @@
 # Stable Summary — SouthCarolina4 (2025-06-22)
 
-## Midday winner 675 (canonical 567)
+## Evening winner 675 (canonical 567)
 - Spotlight (winner_family_spotlight_raw.csv): exact_canonical_rows=0 | family_rows=151 | exact_boxed=0 | exact_straight=0 | vt_boxed=0
 - Scores (patterns_scores.csv): not present
 - Compound (patterns_compound.csv): not present
