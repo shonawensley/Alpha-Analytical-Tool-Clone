@@ -51,6 +51,14 @@ CT, DE, FL, IN, MI, NJ, NY, NC, OH, OntarioCanada, PA, PR, SC, VA
 If you’re starting from a results date D and unsure of H:
 - `H = D - 1 day`
 
+Quick sanity (recommended when adding new history workbooks):
+- Confirm the history workbook is truly “H” (not misdated) by checking 1 state’s newest draw against `data/results/<H>.txt`.
+  - Example (New York Midday head should equal `New York` Midday in `data/results/<H>.txt`):
+    ```bash
+    python3 scripts/auxiliary/generate_draws_csv.py --excel "data/history/Pick3StatsC4_<H>.xlsm" --states "New York" --outdir .codex/tmp_draws_check
+    head -n 5 .codex/tmp_draws_check/New_York_Midday_draws.csv
+    ```
+
 ---
 
 ## 2) Build the “world snapshot” (tables/JSON + winners guard)

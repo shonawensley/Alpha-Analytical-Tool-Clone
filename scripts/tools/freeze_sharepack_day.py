@@ -247,12 +247,28 @@ def main() -> None:
             f"{state}_stable_patterns_families.csv",
             f"{state}_stable_patterns_compound.csv",
             f"{state}_metrics.json",
+        ]
+        stable_optional = [
             f"{state}_stable_patterns_report.html",
         ]
+        missing_stable: list[str] = []
         for fname in stable_required:
+            src = stable_src / fname
+            if not src.exists():
+                missing_stable.append(str(src))
+                continue
+            _copy_file(src, stable_dest / fname)
+        for fname in stable_optional:
             src = stable_src / fname
             if src.exists():
                 _copy_file(src, stable_dest / fname)
+        if missing_stable:
+            joined = "\n  - ".join(missing_stable)
+            raise SystemExit(
+                f"Missing Stable artifacts for {state} (naming drift / tool not run?):\n"
+                f"  - {joined}\n"
+                f"Stable outputs must exist before freezing a sharepack day; verify the Stable run and the state label mapping."
+            )
 
         # Spotlights + newest training bundle only when winners exist for the day.
         if winners_src.exists():

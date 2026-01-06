@@ -18,6 +18,7 @@ All facts are labeled by source file so the block can be pasted into Part 2.
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -33,6 +34,65 @@ def normalize_pick3_literal(value: str) -> str:
     if not digits:
         return ""
     return digits.zfill(3) if len(digits) <= 3 else digits
+
+
+def _results_label_from_state(state_name: str) -> str:
+    base = re.sub(r"\d+$", "", state_name or "")
+    if base.lower().startswith("ontariocanada"):
+        return "Ontario"
+    words = re.findall(r"[A-Z][a-z]*|[A-Z]+(?![a-z])", base) or [base]
+    return " ".join(words).strip()
+
+
+def load_winners_from_results(results_date: str, state_name: str) -> Optional[Dict[str, str]]:
+    """
+    Prefer the tab-structured results file so we preserve Midday vs Evening on one-winner days.
+    """
+    results_path = Path("data/results") / f"{results_date}.txt"
+    if not results_path.exists():
+        return None
+    target = _results_label_from_state(state_name)
+
+    def norm(label: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", (label or "").lower())
+
+    def first_tri(token: str) -> str | None:
+        if not token:
+            return None
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct[0]
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3:
+            return None
+        if len(digits) == 3:
+            return digits
+        if len(digits) % 3 != 0:
+            return None
+        return digits[:3]
+
+    mapping: Dict[str, str] = {}
+    for raw in results_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header = line.lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        label = parts[0].strip()
+        if norm(label) != norm(target):
+            continue
+        midday = first_tri(parts[1]) if len(parts) >= 2 else None
+        evening = first_tri(parts[2]) if len(parts) >= 3 else None
+        if midday:
+            mapping["Midday"] = midday
+        if evening:
+            mapping["Evening"] = evening
+        return mapping or None
+    return None
 
 
 def load_winners_from_stable(date_dir: Path, state: str) -> Optional[Dict[str, str]]:
@@ -200,7 +260,10 @@ def main() -> None:
     if not winner_map_df.empty and "triad" in winner_map_df.columns:
         winner_map_df["triad"] = winner_map_df["triad"].map(normalize_pick3_literal)
 
-    winners = load_winners_from_stable(date_dir, state_name) if date_dir else None
+    results_date = date_dir.name if date_dir else date
+    winners = load_winners_from_results(results_date, state_name) if date_dir else None
+    if winners is None and date_dir:
+        winners = load_winners_from_stable(date_dir, state_name)
     if winners is None and args.winners:
         parts = [p.strip() for p in args.winners.split(",") if p.strip()]
         winners = {}

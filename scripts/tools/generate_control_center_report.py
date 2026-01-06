@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import csv
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -79,28 +80,37 @@ def _normalize(label: str) -> str:
     return "".join(ch for ch in label.lower() if ch.isalnum())
 
 
+def _normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def parse_results(results_path: Path) -> Dict[str, Dict[str, str]]:
     winners: Dict[str, Dict[str, str]] = {}
-    for raw_line in results_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.lower().startswith("pick") or line.lower().startswith("midday"):
-            continue
-        tokens = [tok for tok in line.replace("\t", " ").split(" ") if tok]
-        digits = [tok for tok in tokens if tok.isdigit() and len(tok) == 3]
-        if not digits:
-            continue
-        state_part = line
-        for tok in digits:
-            state_part = state_part.replace(tok, " ")
-        state_code = STATE_OVERRIDES.get(_normalize(state_part), None)
-        if not state_code:
-            continue
-        entry: Dict[str, str] = {}
-        if digits:
-            entry["Midday"] = digits[0]
-        if len(digits) >= 2:
-            entry["Evening"] = digits[1]
-        winners[state_code] = entry
+    with results_path.open(newline="", encoding="utf-8", errors="replace") as fh:
+        reader = csv.reader(fh, delimiter="\t")
+        for row in reader:
+            if not row:
+                continue
+            state_raw = (row[0] or "").strip()
+            if not state_raw or state_raw.lower() in {"state", "pick 3", "midday", "evening"}:
+                continue
+            if len(row) < 3:
+                continue
+            state_code = STATE_OVERRIDES.get(_normalize(state_raw), None)
+            if not state_code:
+                continue
+            midday = _normalize_pick3_literal((row[1] or "").strip())
+            evening = _normalize_pick3_literal((row[2] or "").strip())
+            entry: Dict[str, str] = {}
+            if len(midday) == 3 and midday.isdigit():
+                entry["Midday"] = midday
+            if len(evening) == 3 and evening.isdigit():
+                entry["Evening"] = evening
+            if entry:
+                winners[state_code] = entry
     return winners
 
 

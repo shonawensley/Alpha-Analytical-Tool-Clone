@@ -19,6 +19,7 @@ Notes:
 import argparse
 import itertools
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -37,6 +38,67 @@ def canonical_of_literal(literal: str) -> str:
     if not literal:
         return ""
     return "".join(sorted(literal))
+
+
+def _results_label_from_state(state_name: str) -> str:
+    base = re.sub(r"\d+$", "", state_name or "")
+    if base.lower().startswith("ontariocanada"):
+        return "Ontario"
+    words = re.findall(r"[A-Z][a-z]*|[A-Z]+(?![a-z])", base) or [base]
+    return " ".join(words).strip()
+
+
+def load_winners_from_results(results_date: str, state_name: str) -> Optional[Dict[str, str]]:
+    """
+    Prefer the tab-structured results file so we preserve Midday vs Evening on one-winner days.
+    Returns {'Midday': 'DDD', 'Evening': 'DDD'} with missing keys omitted.
+    """
+    results_path = Path("data/results") / f"{results_date}.txt"
+    if not results_path.exists():
+        return None
+    target = _results_label_from_state(state_name)
+
+    def norm(label: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", (label or "").lower())
+
+    def first_tri(token: str) -> Optional[str]:
+        if not token:
+            return None
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct[0]
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3:
+            return None
+        if len(digits) == 3:
+            return digits
+        if len(digits) % 3 != 0:
+            return None
+        return digits[:3]
+
+    for raw in results_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header = line.lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        label = parts[0].strip()
+        if norm(label) != norm(target):
+            continue
+
+        mapping: Dict[str, str] = {}
+        midday = first_tri(parts[1]) if len(parts) >= 2 else None
+        evening = first_tri(parts[2]) if len(parts) >= 3 else None
+        if midday:
+            mapping["Midday"] = midday
+        if evening:
+            mapping["Evening"] = evening
+        return mapping or None
+    return None
 
 
 def permuted_triads(canonical: str) -> set[str]:
@@ -82,16 +144,16 @@ def summarize_variant(
     variant: str,
     per_item: pd.DataFrame,
     top: pd.DataFrame,
+    expected_winner: str,
     stamp_data: Optional[Dict[str, Any]],
     flags: pd.DataFrame,
     hits: pd.DataFrame,
     reducer_scores: pd.DataFrame = None,
 ) -> Dict:
-    # Winner + semantics are anchored by stamp JSON (SSOT).
-    raw_winner = (stamp_data or {}).get("winner") or ""
-    literal = normalize_pick3_literal(raw_winner) or "unknown"
-    raw_canon = (stamp_data or {}).get("winner_canon") or ""
-    canonical = normalize_pick3_literal(raw_canon) or (canonical_of_literal(literal) if literal != "unknown" else "unknown")
+    # Winner labels are anchored by the tab-structured results file so we preserve
+    # Midday vs Evening on one-winner days. Stamp JSON remains SSOT for counts.
+    literal = normalize_pick3_literal(expected_winner) or "unknown"
+    canonical = canonical_of_literal(literal) if literal != "unknown" else "unknown"
     winner_variants = permuted_triads(canonical) | {literal, canonical}
     stamp_counts = (stamp_data or {}).get("counts") or {}
     items_total = int(stamp_counts.get("items_total") or 0)
@@ -186,9 +248,11 @@ def summarize_variant(
     gaps = []
     if stamp_data is None:
         gaps.append("missing_stamp_json")
-    if flags_sum["rows"] == 0:
+    # If the stamp says there are 0 overlay items, empty flags/hits files are expected.
+    # Only treat missing/empty flags/hits as a gap when there was something to annotate.
+    if items_total > 0 and flags_sum["rows"] == 0:
         gaps.append("missing_flags")
-    if hits_sum["rows"] == 0:
+    if items_total > 0 and hits_sum["rows"] == 0:
         gaps.append("missing_hits")
     if not pi_present:
         gaps.append("missing_per_item")
@@ -197,6 +261,7 @@ def summarize_variant(
 
     return {
         "variant": variant,
+        "skipped": False,
         "literal": literal,
         "canonical": canonical,
         "stamp": {"present": stamp_data is not None, "items_total": items_total, "counts": stamp_counts, "source": "winner_stamp.json"},
@@ -224,6 +289,10 @@ def summarize_variant(
     }
 
 
+def summarize_missing_variant(variant: str, reason: str) -> Dict[str, Any]:
+    return {"variant": variant, "skipped": True, "skip_reason": reason}
+
+
 def top_list(df: pd.DataFrame, cols: List[str], sort_by: str, top_n: int, *, ascending: bool) -> List[Dict]:
     out = []
     if df.empty:
@@ -244,6 +313,10 @@ def make_markdown(state: str, stamp: str, variants: List[Dict], top_items: List[
     lines: List[str] = []
     lines.append(f"# Digit Reduction Summary — {state} (stamp {stamp})")
     for v in variants:
+        if v.get("skipped"):
+            lines.append(f"\n## {v['variant']}: no winner in results file")
+            lines.append(f"- Skipped: {v.get('skip_reason', 'expected on some days')}")
+            continue
         lines.append(f"\n## {v['variant']} winner {v['literal']} (canonical {v['canonical']})")
         if v["stamp"]["present"]:
             c = v["stamp"]["counts"]
@@ -352,24 +425,38 @@ def main():
     winners_dir = sharepack / "analyzer_v2" / "winners"
     stamp = detect_latest_stamp(winners_dir)
 
+    results_date = sharepack.parents[2].name if len(sharepack.parents) >= 3 else ""
+    winners = load_winners_from_results(results_date, state_name) or {}
+    expected = {
+        "Midday": winners.get("Midday"),
+        "Evening": winners.get("Evening"),
+        "Combined": winners.get("Midday") or winners.get("Evening"),
+    }
+
+    reducer_scores_path = sharepack / f"{sharepack.name}_digit_reduction_scores.csv"
+    reducer_scores = pd.read_csv(reducer_scores_path) if reducer_scores_path.exists() else pd.DataFrame()
+
     variants = []
-    if stamp:
-        for variant in ["Midday", "Evening", "Combined"]:
-            flags_hits = read_flags_hits(sharepack, stamp, variant)
-            reducer_scores_path = sharepack / f"{sharepack.name}_digit_reduction_scores.csv"
-            reducer_scores = pd.read_csv(reducer_scores_path) if reducer_scores_path.exists() else pd.DataFrame()
-            stamp_data = read_winner_stamp(sharepack, stamp, variant)
-            variants.append(
-                summarize_variant(
-                    variant=variant,
-                    per_item=per_item,
-                    top=top,
-                    stamp_data=stamp_data,
-                    flags=flags_hits["flags"],
-                    hits=flags_hits["hits"],
-                    reducer_scores=reducer_scores,
-                )
+    for variant in ["Midday", "Evening", "Combined"]:
+        expected_winner = expected.get(variant)
+        if not expected_winner:
+            variants.append(summarize_missing_variant(variant, "state missing or blank for this period"))
+            continue
+
+        stamp_data = read_winner_stamp(sharepack, stamp, variant) if stamp else None
+        flags_hits = read_flags_hits(sharepack, stamp, variant) if stamp else {"flags": pd.DataFrame(), "hits": pd.DataFrame()}
+        variants.append(
+            summarize_variant(
+                variant=variant,
+                per_item=per_item,
+                top=top,
+                expected_winner=expected_winner,
+                stamp_data=stamp_data,
+                flags=flags_hits["flags"],
+                hits=flags_hits["hits"],
+                reducer_scores=reducer_scores,
             )
+        )
 
     top_items = top_list(
         per_item,

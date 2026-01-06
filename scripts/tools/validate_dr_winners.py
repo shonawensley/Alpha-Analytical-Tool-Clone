@@ -67,13 +67,13 @@ def _parse_results(results_file: Path) -> Dict[str, Dict[str, str]]:
                 continue
             if len(row) < 3:
                 continue
-            midday = (row[1] or "").strip()
-            evening = (row[2] or "").strip()
+            midday = _normalize_pick3_literal((row[1] or "").strip())
+            evening = _normalize_pick3_literal((row[2] or "").strip())
             entry: Dict[str, str] = {}
-            if midday.isdigit() and 1 <= len(midday) <= 3:
-                entry["Midday"] = midday.zfill(3)
-            if evening.isdigit() and 1 <= len(evening) <= 3:
-                entry["Evening"] = evening.zfill(3)
+            if len(midday) == 3 and midday.isdigit():
+                entry["Midday"] = midday
+            if len(evening) == 3 and evening.isdigit():
+                entry["Evening"] = evening
             if entry:
                 winners[_norm_state(state_raw)] = entry
     return winners
@@ -105,15 +105,21 @@ def main() -> None:
     sharepack = Path(args.sharepack)
     state = sharepack.name
     winners_dir = sharepack / "analyzer_v2" / "winners"
-    stamp = detect_latest_stamp(winners_dir)
     date_dir = sharepack.parents[2] if len(sharepack.parents) >= 3 else None
     results_date = date_dir.name if date_dir else None
     results_file = (Path(__file__).resolve().parents[2] / "data" / "results" / f"{results_date}.txt") if results_date else None
 
     expected_winners: Dict[str, str] | None = None
-    aux_state_label = _load_aux_state_label(sharepack)
-    if results_file and aux_state_label:
+    aux_state_label = _load_aux_state_label(sharepack) or state
+    if results_file and results_file.exists():
         expected_winners = _parse_results(results_file).get(_norm_state(aux_state_label))
+        if expected_winners is None:
+            print(
+                f"Digit Reduction winner validation for {state}: no winners in results file for this state/day; skipping."
+            )
+            return
+
+    stamp = detect_latest_stamp(winners_dir)
 
     print(f"Digit Reduction winner validation for {state} (stamp {stamp})")
     problems: List[str] = []

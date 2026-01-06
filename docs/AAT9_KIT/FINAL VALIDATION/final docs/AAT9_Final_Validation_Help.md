@@ -165,17 +165,19 @@ Tool quick index — Digit Reduction
    - Guard check: Set1/Draw1 in Combined_Combined matches the **history** workbook’s most recent draw; results will always be history+1 day (so we never reuse stale tables).
 3) Stage 2 (Winners HTML/JSON, day-ahead results):
    - Results file = history date + 1 (e.g., history 2025-06-21 → results `data/results/2025-06-22.txt`).
+   - Results file format (SSOT): tab-separated `State<TAB>Midday<TAB>Evening`. Midday/Evening may be blank on some days; treat blank as “no winner for that period”.
    - `PYTHONPATH=.:src python3 scripts/tools/generate_winners_from_results.py --results-file data/results/YYYY-MM-DD.txt --out-dir reports/stable/winners_by_date/YYYY-MM-DD/`
    - Verify winners HTML/JSON exist under `reports/stable/winners_by_date/<RESULTS_DATE>/<STATE>/`.
    - Optional sanity: spot-check winners HTML against Combined_Combined Set1/Draw1 sequence for CT/FL.
 4) Stage 3 (Digit Reduction batch, extended ladder ON by default):
    - `PYTHONPATH=.:src AAT9_DR_EXTENDED_SET1=1 python3 - <<'PY'`
      ```python
-     from pathlib import Path
-     from alpha_analytical.control_center.batch_runner import parse_winner_sheet, filter_tracked, run_digit_reduction_workflow
-     text = Path("data/results/YYYY-MM-DD.txt").read_text(encoding="utf-8")
-     entries = filter_tracked(parse_winner_sheet(text))
-     res = run_digit_reduction_workflow(entries,
+	     from pathlib import Path
+	     from alpha_analytical.control_center.batch_runner import parse_winner_sheet, filter_tracked, run_digit_reduction_workflow
+	     # Results files are tab-separated: State<TAB>Midday<TAB>Evening (Midday/Evening may be blank).
+	     text = Path("data/results/YYYY-MM-DD.txt").read_text(encoding="utf-8")
+	     entries = filter_tracked(parse_winner_sheet(text))
+	     res = run_digit_reduction_workflow(entries,
                                         run_reducer=True,
                                         run_overlay=True,
                                         run_analyzer=True,
@@ -201,10 +203,8 @@ Tool quick index — Digit Reduction
 
 ### DR outputs vs. sharepacks (multi-day runs)
 - Live DR outputs under `data/outputs/analysis/digit_reduction/<STATE>/…` always reflect the **latest** run for that state (they are not date-versioned on disk).
-- For multi‑workbook backtests or when you want a permanent snapshot per day, use dated DR sharepacks under `sharepacks/DR_<RESULTS_DATE>/`:
-  - Each sharepack contains reducer/analyzer/overlay outputs per state plus the matching winners HTML/JSON, and a `manifest.json` recording `history_date` and `results_date`.
-  - When comparing different Excel files/dates, prefer reading from these sharepacks instead of assuming `data/outputs/analysis/digit_reduction/<STATE>` holds multiple days at once.
-  - If you re-run DR for a given date, it is safe; live outputs are overwritten, while existing sharepacks remain as historical snapshots.
+- SSOT for Master Validation is the per-day sharepack layout: `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/…` (frozen alongside the rest of Brain‑1).
+- Legacy note: you may also see older snapshots under `sharepacks/DR_<RESULTS_DATE>/`. Treat those as archival/legacy format; do not mix them with the SSOT per-day sharepacks.
 
 ## Minimal Manual QA (per run)
 - Tables fresh? Manifest timestamp matches history file; Combined_Combined present for tracked states.

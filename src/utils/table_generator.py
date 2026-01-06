@@ -66,12 +66,14 @@ def mark_hot_zones(set_label, draw_label, row_type, vals):
                 idx = n - 1 - i  # start from the end
                 if idx < 0:
                     break
+                if not vals[idx]:
+                    continue
                 
                 # Check if this position should be super hot
                 if i < super_hot_count:
-                    vals[idx] = vals[idx] + "**" if vals[idx] else "**"
+                    vals[idx] = vals[idx] + "**"
                 else:
-                    vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+                    vals[idx] = vals[idx] + "*"
                     
         except:
             return vals  # parsing error: do nothing
@@ -339,7 +341,7 @@ def build_combined_table(section_data):
                 # 1️⃣ canonicalise to zero-padded strings (keep leading zeros)
                 vals = []
                 for x in digits:
-                    if x in (None, ""):
+                    if x in (None, "") or pd.isna(x):
                         vals.append("")
                     else:
                         s = str(x).split(".")[0]  # drop trailing .0 if present

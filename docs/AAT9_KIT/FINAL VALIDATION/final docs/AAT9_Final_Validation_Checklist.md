@@ -18,6 +18,7 @@ Purpose: Running list of important considerations, caveats, and “don’t forge
 - Stage‑1/2 pipeline is already well-documented in:
   - `AAT9_String_Table_Testing.md`
   - `AAT9_Master_Validation_Preflight.md`
+  
   - `AAT9_Table_Swap_Verification.md`
   - `AAT9_Final_Validation_Help.md`
 

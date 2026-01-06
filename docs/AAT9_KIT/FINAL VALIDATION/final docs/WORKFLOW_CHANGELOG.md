@@ -6,6 +6,73 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-01-05
+
+### Fix-Now: results parsing + DR overlays (Québec / Combined mismatch)
+
+- Fixed results parsing to be **tab-aware + diacritic-robust** (prevents “Québec” / continuation lines contaminating the next state).
+  - `alpha_analytical/control_center/batch_runner.py`
+- Removed unsafe Digit Reduction `Combined` winner inference from “extra digits” on the results line (Combined winner is now driven only by the actual results mapping + sharepack convention).
+  - `alpha_analytical/control_center/batch_runner.py`
+- DR sharepack summarizer now loads winners from `data/results/<D>.txt` and **skips missing periods/states** (one-winner days, missing PR line) instead of emitting misleading “unknown” winners.
+  - `scripts/tools/dr_sharepack_summary.py`
+- DR winner validator now skips cleanly when a state has no line in `data/results/<D>.txt` (expected on some days; prevents false “missing winners/overlays” failures).
+  - `scripts/tools/validate_dr_winners.py`
+- Regenerated DR overlays + summaries in sharepacks (no full reruns):
+  - `sharepacks/2025-06-21/PuertoRico4/digit_reduction/PuertoRico4/` (Combined winner now 910)
+  - `sharepacks/2025-06-22/Pennsylvania4/digit_reduction/Pennsylvania4/` (Combined winner now 398)
+  - `sharepacks/2025-06-23/PuertoRico4/digit_reduction/PuertoRico4/` (Combined winner now 858)
+  - `sharepacks/2025-06-22/SouthCarolina4/digit_reduction/SouthCarolina4/` (Midday skipped; Evening/Combined winner 675)
+
+### Fix-Now: one-winner day semantics (Midday blank)
+
+- Stable/Hot Zones summarizers + validators now preserve Midday vs Evening using the tab-structured results mapping (no “Evening unknown” / false Midday labeling on one-winner days).
+  - `scripts/tools/stable_sharepack_summary.py`
+  - `scripts/tools/validate_stable_winners.py`
+  - `scripts/tools/hot_zones_sharepack_summary.py`
+  - `scripts/tools/validate_hot_zones_winners.py`
+
+### Fix (future): table hygiene (`nan**`)
+
+- Future table generation treats NaN as empty and avoids applying `*`/`**` markers to empty cells (prevents confusing `nan**` artifacts).
+  - `src/utils/table_generator.py`
+
+### Run reports + corpus refresh
+
+- Updated run reports to remove now-fixed DR Combined mismatch narratives and reflect corrected one-winner handling:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__PuertoRico4.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-22__Pennsylvania4.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-22__SouthCarolina4.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-23__PuertoRico4.md`
+- Refreshed corpus exports after fixes:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md`
+
+### New corpus days: Dec/Jan block (2025‑12‑30 → 2026‑01‑04)
+
+- Added new history workbooks + results files and built sharepacks for:
+  - `sharepacks/2025-12-30/` (H=2025-12-29)
+  - `sharepacks/2025-12-31/` (H=2025-12-30)
+  - `sharepacks/2026-01-01/` (H=2025-12-31)
+  - `sharepacks/2026-01-02/` (H=2026-01-01)
+  - `sharepacks/2026-01-03/` (H=2026-01-02)
+  - `sharepacks/2026-01-04/` (H=2026-01-03)
+- Corpus audit passes for the full 6-day block:
+  - `reports/audit/sharepacks_audit_20260105_125553.md` (PASS=825 WARN=3 FAIL=0 SKIP=6)
+  - WARN/SKIP can be expected when a state/day has no results line (e.g., Puerto Rico on some days); treat FAIL as “fix-now”.
+- Filled per-state run reports (Parts A–5) using sharepack summaries + results mapping (no analyzer reruns):
+  - `scripts/tools/fill_master_validation_run_report.py`
+- Normalized Part 5 formatting in run reports so corpus export can parse Pack/Drivers/Fix‑Later blocks deterministically:
+  - `python3 scripts/tools/fill_master_validation_run_report.py --date <D> --state <STATE> --normalize-part5`
+- Generated day synthesis stubs (Brain‑1 cross‑state summaries):
+  - `python3 scripts/tools/create_day_synthesis_run_report.py --date <D>`
+  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__DAY_SYNTHESIS.md`
+- Added a 6‑day corpus synthesis pointer doc:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+- Added a pointer-only research pack for external review / ChatGPT Pro:
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md`
+
 ## 2026-01-03
 
 ### Brain-2: Control Center daily run report template + generator

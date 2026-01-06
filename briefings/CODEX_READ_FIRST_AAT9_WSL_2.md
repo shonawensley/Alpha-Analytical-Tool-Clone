@@ -59,6 +59,7 @@ Master Validation (frozen day snapshot):
 - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
 - Run report progress index (avoid “where are we?” drift): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
 - Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
+- If you add new `data/history/Pick3StatsC4_*.xlsm` files: do a 60‑second sanity check that the workbook is truly “H” (not misdated) by extracting 1 state’s newest draw and comparing to `data/results/<H>.txt` before building `sharepacks/<D=H+1>/`.
 - Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 - Quickstarts (zero-context):
   - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`

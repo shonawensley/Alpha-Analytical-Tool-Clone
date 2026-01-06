@@ -59,6 +59,13 @@ def _is_double(draw: str) -> bool:
     return len(set(draw)) <= 2
 
 
+def _normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def _draws_since_double(draws: Sequence[str]) -> Optional[int]:
     for idx, d in enumerate(draws):
         if _is_double(d):
@@ -109,8 +116,9 @@ def _parse_results_file(results_path: Optional[Path]) -> list[str]:
         for line in fh:
             for part in line.replace(",", " ").split():
                 part = part.strip()
-                if len(part) == 3 and part.isdigit():
-                    tokens.append(part.zfill(3))
+                digits = "".join(ch for ch in part if ch.isdigit())
+                if len(digits) == 3:
+                    tokens.append(digits)
     return tokens
 
 
@@ -223,28 +231,25 @@ def _parse_results_by_state(results_path: Optional[Path]) -> Dict[str, Dict[str,
         return {}
     rows: Dict[str, Dict[str, str]] = {}
     with results_path.open(encoding="utf-8") as fh:
-        header_seen = False
-        for line in fh:
-            line = line.rstrip("\n")
-            if not line:
+        reader = csv.reader(fh, delimiter="\t")
+        for row in reader:
+            if not row:
                 continue
-            if not header_seen:
-                # Skip header lines until we see the two-line header
-                if line.lower().startswith("state"):
-                    header_seen = True
-                continue
-            parts = [p.strip() for p in line.split("\t")]
-            if len(parts) < 3:
-                continue
-            state_raw, midday_raw, eve_raw = parts[0], parts[1], parts[2]
+            state_raw = (row[0] or "").strip()
             if not state_raw:
                 continue
+            if state_raw.lower() in {"state", "pick 3", "midday", "evening"}:
+                continue
+            if len(row) < 3:
+                continue
             norm_state = _norm_state(state_raw)
+            midday = _normalize_pick3_literal((row[1] or "").strip())
+            eve = _normalize_pick3_literal((row[2] or "").strip())
             entry: Dict[str, str] = {}
-            if midday_raw and len(midday_raw) == 3 and midday_raw.isdigit():
-                entry["Midday"] = midday_raw.zfill(3)
-            if eve_raw and len(eve_raw) == 3 and eve_raw.isdigit():
-                entry["Evening"] = eve_raw.zfill(3)
+            if len(midday) == 3 and midday.isdigit():
+                entry["Midday"] = midday
+            if len(eve) == 3 and eve.isdigit():
+                entry["Evening"] = eve
             if entry:
                 rows[norm_state] = entry
     return rows

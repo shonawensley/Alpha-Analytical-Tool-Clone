@@ -13,6 +13,7 @@ The script:
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -74,9 +75,73 @@ def map_winners(metrics: Dict) -> Dict[str, str]:
     return mapping
 
 
+def _results_label_from_state(state_name: str) -> str:
+    base = re.sub(r"\d+$", "", state_name or "")
+    if base.lower().startswith("ontariocanada"):
+        return "Ontario"
+    words = re.findall(r"[A-Z][a-z]*|[A-Z]+(?![a-z])", base) or [base]
+    return " ".join(words).strip()
+
+
+def load_winners_from_results(results_date: str, state_name: str) -> Dict[str, str] | None:
+    """
+    Prefer the tab-structured results file so we preserve Midday vs Evening on one-winner days.
+    Falls back to stable metrics when unavailable.
+    """
+    results_path = Path("data/results") / f"{results_date}.txt"
+    if not results_path.exists():
+        return None
+    target = _results_label_from_state(state_name)
+
+    def norm(label: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", (label or "").lower())
+
+    def first_tri(token: str) -> str | None:
+        if not token:
+            return None
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct[0]
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3:
+            return None
+        if len(digits) == 3:
+            return digits
+        if len(digits) % 3 != 0:
+            return None
+        return digits[:3]
+
+    mapping: Dict[str, str] = {}
+    for raw in results_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header = line.lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        label = parts[0].strip()
+        if norm(label) != norm(target):
+            continue
+        midday = first_tri(parts[1]) if len(parts) >= 2 else None
+        evening = first_tri(parts[2]) if len(parts) >= 3 else None
+        if midday:
+            mapping["Midday"] = midday
+        if evening:
+            mapping["Evening"] = evening
+        return mapping or None
+    return mapping or None
+
+
 def map_winner_family_ids(metrics: Dict, winners: Dict[str, str]) -> Dict[str, str]:
     fam_ids = metrics.get("winner_family_ids") or []
     out = {}
+    labels = list(winners.keys())
+    if len(fam_ids) == 1 and len(labels) == 1:
+        out[labels[0]] = fam_ids[0]
+        return out
     if len(fam_ids) >= 1 and "Midday" in winners:
         out["Midday"] = fam_ids[0]
     if len(fam_ids) >= 2 and "Evening" in winners:
@@ -299,6 +364,10 @@ def main() -> None:
     if not sharepack.exists():
         raise SystemExit(f"sharepack path not found: {sharepack}")
 
+    # sharepack path: sharepacks/<DATE>/<STATE>/stable/<STATE>
+    state_name = sharepack.name
+    date = sharepack.parents[2].name if len(sharepack.parents) >= 3 else "unknown"
+
     metrics = json.loads(sharepack.joinpath(f"{sharepack.name}_metrics.json").read_text())
     scores = rank_frame(load_csv(sharepack / f"{sharepack.name}_stable_patterns_scores.csv", dtype={"Canonical": str}), "score")
     compound = rank_frame(
@@ -322,7 +391,7 @@ def main() -> None:
         # isn't generated. Treat it as empty instead of failing the summary step.
         spotlight = pd.DataFrame({"Canonical": pd.Series(dtype="string")})
 
-    winners = map_winners(metrics)
+    winners = load_winners_from_results(date, state_name) or map_winners(metrics)
     winner_family_ids = map_winner_family_ids(metrics, winners)
     winner_hits = metrics.get("winner_hits", {})
 
@@ -344,9 +413,6 @@ def main() -> None:
     top_comp = top_list(compound, ["rank", "Canonical", "section", "compound_score", "col1_hits", "hot2_count"], args.top_n)
     top_fam = top_list(families, ["rank", "family_id", "family_score", "hot2_count", "section"], min(5, args.top_n))
 
-    # sharepack path: sharepacks/<DATE>/<STATE>/stable/<STATE>
-    state_name = sharepack.name
-    date = sharepack.parents[2].name if len(sharepack.parents) >= 3 else "unknown"
     md = make_markdown(state=state_name, date=date, winners_info=winners_info, top_comp=top_comp, top_fam=top_fam)
 
     if args.md_out:

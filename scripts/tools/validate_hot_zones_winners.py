@@ -9,6 +9,7 @@ Winners are loaded from sibling Stable metrics.json if available; otherwise pass
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -25,7 +26,67 @@ def normalize_pick3_literal(value: str) -> str:
     return digits.zfill(3) if len(digits) <= 3 else digits
 
 
+def _results_label_from_state(state_name: str) -> str:
+    base = re.sub(r"\d+$", "", state_name or "")
+    if base.lower().startswith("ontariocanada"):
+        return "Ontario"
+    words = re.findall(r"[A-Z][a-z]*|[A-Z]+(?![a-z])", base) or [base]
+    return " ".join(words).strip()
+
+
+def load_winners_from_results(results_date: str, state_name: str) -> dict | None:
+    results_path = Path("data/results") / f"{results_date}.txt"
+    if not results_path.exists():
+        return None
+    target = _results_label_from_state(state_name)
+
+    def norm(label: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", (label or "").lower())
+
+    def first_tri(token: str) -> str | None:
+        if not token:
+            return None
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct[0]
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3:
+            return None
+        if len(digits) == 3:
+            return digits
+        if len(digits) % 3 != 0:
+            return None
+        return digits[:3]
+
+    for raw in results_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header = line.lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        label = parts[0].strip()
+        if norm(label) != norm(target):
+            continue
+        midday = first_tri(parts[1]) if len(parts) >= 2 else None
+        evening = first_tri(parts[2]) if len(parts) >= 3 else None
+        mapping: dict[str, str] = {}
+        if midday:
+            mapping["Midday"] = midday
+        if evening:
+            mapping["Evening"] = evening
+        return mapping or None
+    return None
+
+
 def load_winners(date_dir: Path, state: str, winners_arg: str | None) -> dict:
+    results_winners = load_winners_from_results(date_dir.name, state)
+    if results_winners:
+        return results_winners
+
     metrics_path = date_dir / state / "stable" / state / f"{state}_metrics.json"
     if metrics_path.exists():
         metrics = json.loads(metrics_path.read_text())

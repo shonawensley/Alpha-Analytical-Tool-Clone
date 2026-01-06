@@ -129,11 +129,115 @@ def resolve_project_state(canonical: str) -> Optional[str]:
 def parse_winner_sheet(text: str) -> List[ParsedWinnerEntry]:
     if not text or not text.strip():
         return []
+
+    def _triads_from_token(token: str) -> List[str]:
+        if not token:
+            return []
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct
+        digits = "".join(ch for ch in token if ch.isdigit())
+        if len(digits) < 3:
+            return []
+        if len(digits) == 3:
+            return [digits]
+        if len(digits) % 3 != 0:
+            return []
+        return [digits[i : i + 3] for i in range(0, len(digits), 3)]
+
+    def first_tri(token: str) -> Optional[str]:
+        tris = _triads_from_token(token)
+        return tris[0] if tris else None
+
+    def all_tris(token: str) -> List[str]:
+        return _triads_from_token(token)
+
+    # Preferred: parse the LotteryPost-style exported results (tabbed), preserving
+    # blank Midday/Evening cells and associating continuation lines (additional
+    # draws) with the most recently seen state.
+    by_state: Dict[str, Dict[str, object]] = {}
+    order: List[str] = []
+    current: Optional[str] = None
+    for raw in text.splitlines():
+        line = raw.strip("\r\n")
+        if not line.strip():
+            continue
+        header = line.strip().lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+
+        parts = line.split("\t")
+        head = parts[0].strip() if parts else ""
+        canonical = _STATE_LOOKUP.get(_normalize_token(head))
+
+        if canonical:
+            if canonical not in by_state:
+                by_state[canonical] = {
+                    "label": head,
+                    "midday": None,
+                    "evening": None,
+                    "raw_digits": [],
+                }
+                order.append(canonical)
+            else:
+                by_state[canonical]["label"] = head
+
+            current = canonical
+            cols = [p.strip() for p in parts[1:]]
+            midday_val = first_tri(cols[0]) if len(cols) >= 1 else None
+            evening_val = first_tri(cols[1]) if len(cols) >= 2 else None
+            if midday_val:
+                by_state[canonical]["midday"] = midday_val
+            if evening_val:
+                by_state[canonical]["evening"] = evening_val
+            for col in cols:
+                by_state[canonical]["raw_digits"].extend(all_tris(col))  # type: ignore[arg-type]
+            continue
+
+        if not current:
+            continue
+
+        # Continuation line (no state label): append additional draw(s) to the
+        # previously-seen state and fill Midday/Evening if they were missing.
+        digits: List[str] = []
+        for token in [p.strip() for p in parts if p.strip()]:
+            digits.extend(all_tris(token))
+        if not digits:
+            continue
+        entry = by_state[current]
+        for digit in digits:
+            if entry.get("midday") is None:
+                entry["midday"] = digit
+            elif entry.get("evening") is None:
+                entry["evening"] = digit
+            entry["raw_digits"].append(digit)  # type: ignore[union-attr]
+
+    if by_state:
+        parsed: List[ParsedWinnerEntry] = []
+        for canonical in order:
+            payload = by_state[canonical]
+            project_state = resolve_project_state(canonical)
+            parsed.append(
+                ParsedWinnerEntry(
+                    label=str(payload.get("label") or canonical),
+                    canonical=canonical,
+                    project_state=project_state,
+                    midday=payload.get("midday") if isinstance(payload.get("midday"), str) else None,
+                    evening=payload.get("evening") if isinstance(payload.get("evening"), str) else None,
+                    raw_digits=tuple(payload.get("raw_digits") or []),
+                )
+            )
+        return parsed
+
+    # Fallback: legacy parsing for non-tabbed inputs.
+    # Normalize away diacritics so STATE_ORDER labels still match (Québec → Quebec).
+    normalized = unicodedata.normalize("NFKD", text)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
     pattern = re.compile(
         "(" + "|".join(re.escape(label) for label in STATE_ORDER) + ")",
         flags=re.IGNORECASE,
     )
-    parts = pattern.split(text)
+    parts = pattern.split(normalized)
     if len(parts) <= 1:
         return []
     entries: List[ParsedWinnerEntry] = []
@@ -280,9 +384,6 @@ def _collect_digit_reduction_winners(entry: ParsedWinnerEntry) -> Dict[str, str]
         winners["Midday"] = entry.midday
     if entry.evening:
         winners["Evening"] = entry.evening
-    for extra in entry.raw_digits[2:]:
-        if len(extra) == 3 and extra.isdigit() and extra not in winners.values():
-            winners.setdefault("Combined", extra)
     if winners and "Combined" not in winners:
         winners["Combined"] = winners.get("Midday") or winners.get("Evening") or next(iter(winners.values()))
     return {k: v for k, v in winners.items() if v}

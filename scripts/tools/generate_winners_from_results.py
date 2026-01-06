@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.winner_report_full import write_winner_full_report
+from alpha_analytical.control_center.batch_runner import parse_winner_sheet
 
 STATE_OVERRIDES: Dict[str, str] = {
     "connecticut": "Connecticut4",
@@ -64,22 +65,18 @@ def normalize_state(label: str) -> str | None:
 
 def parse_results(results_path: Path) -> Dict[str, List[str]]:
     winners: Dict[str, List[str]] = {}
-    pattern = re.compile(r"\d{3}")
-    for raw_line in results_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.lower().startswith("pick") or line.lower().startswith("midday"):
+    entries = parse_winner_sheet(results_path.read_text(encoding="utf-8", errors="replace"))
+    for entry in entries:
+        state = entry.project_state
+        if not state:
             continue
-        nums = pattern.findall(line)
-        if not nums:
-            continue
-        state_part = line
-        for num in nums:
-            state_part = state_part.replace(num, " ")
-        state_part = re.sub(r"\s+", " ", state_part).strip(" -")
-        state_code = normalize_state(state_part)
-        if not state_code:
-            continue
-        winners[state_code] = nums[:2]
+        triads: List[str] = []
+        if entry.midday:
+            triads.append(entry.midday)
+        if entry.evening and entry.evening not in triads:
+            triads.append(entry.evening)
+        if triads:
+            winners[state] = triads
     return winners
 
 

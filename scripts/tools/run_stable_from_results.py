@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from typing import List
@@ -28,6 +29,18 @@ def _detect_winners(results_file: Path, label: str) -> List[str]:
     winners: List[str] = []
     if not results_file.exists():
         raise FileNotFoundError(results_file)
+
+    def _triads_from_token(token: str) -> List[str]:
+        if not token:
+            return []
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3 or len(digits) % 3 != 0:
+            return []
+        return [digits[i : i + 3] for i in range(0, len(digits), 3)]
+
     for raw_line in results_file.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or not line.lower().startswith(label_lower):
@@ -35,12 +48,10 @@ def _detect_winners(results_file: Path, label: str) -> List[str]:
         remainder = line[len(label):].strip()
         remainder = remainder.replace("\t", " ")
         parts = [p for p in remainder.split(" ") if p]
-        if parts:
-            winners.append(parts[0])
-        if len(parts) >= 2:
-            winners.append(parts[1])
+        for part in parts:
+            winners.extend(_triads_from_token(part))
         break
-    return [w for w in winners if w and w.isdigit()]
+    return winners[:2]
 
 
 def main() -> None:

@@ -73,6 +73,13 @@ def _results_state_name(state: str) -> str:
     return specials.get(base, base)
 
 
+def _normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def _parse_results_file(*, root: Path, date: str, states: set[str]) -> dict[str, Results]:
     path = root / "data" / "results" / f"{date}.txt"
     if not path.exists():
@@ -93,12 +100,18 @@ def _parse_results_file(*, root: Path, date: str, states: set[str]) -> dict[str,
                 parts = line.split("\t")
                 midday_raw = parts[1].strip() if len(parts) > 1 else ""
                 evening_raw = parts[2].strip() if len(parts) > 2 else ""
-                if re.fullmatch(r"\d{3}", midday_raw):
-                    midday = midday_raw
-                if re.fullmatch(r"\d{3}", evening_raw):
-                    evening = evening_raw
+                midday_norm = _normalize_pick3_literal(midday_raw)
+                evening_norm = _normalize_pick3_literal(evening_raw)
+                if len(midday_norm) == 3 and midday_norm.isdigit():
+                    midday = midday_norm
+                if len(evening_norm) == 3 and evening_norm.isdigit():
+                    evening = evening_norm
             else:
-                nums = re.findall(r"\b\d{3}\b", line)
+                nums = []
+                for part in line.replace(",", " ").split():
+                    literal = _normalize_pick3_literal(part)
+                    if len(literal) == 3 and literal.isdigit():
+                        nums.append(literal)
                 if len(nums) >= 2:
                     midday, evening = nums[0], nums[1]
                 elif len(nums) == 1:

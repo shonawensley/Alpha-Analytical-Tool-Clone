@@ -64,6 +64,13 @@ def _canon_draw(draw: str) -> str:
     return "".join(sorted(value))
 
 
+def _normalize_pick3_literal(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    return digits.zfill(3) if len(digits) <= 3 else digits
+
+
 def _parse_results(results_file: Path) -> Dict[str, Dict[str, str]]:
     """Parse data/results/<D>.txt into {norm_state: {"Midday": "123", "Evening": "456"}}."""
     winners: Dict[str, Dict[str, str]] = {}
@@ -79,13 +86,13 @@ def _parse_results(results_file: Path) -> Dict[str, Dict[str, str]]:
                 continue
             if len(row) < 3:
                 continue
-            midday = (row[1] or "").strip()
-            evening = (row[2] or "").strip()
+            midday = _normalize_pick3_literal((row[1] or "").strip())
+            evening = _normalize_pick3_literal((row[2] or "").strip())
             entry: Dict[str, str] = {}
-            if midday.isdigit() and 1 <= len(midday) <= 3:
-                entry["Midday"] = midday.zfill(3)
-            if evening.isdigit() and 1 <= len(evening) <= 3:
-                entry["Evening"] = evening.zfill(3)
+            if len(midday) == 3 and midday.isdigit():
+                entry["Midday"] = midday
+            if len(evening) == 3 and evening.isdigit():
+                entry["Evening"] = evening
             if entry:
                 winners[_norm_state(state_raw)] = entry
     return winners

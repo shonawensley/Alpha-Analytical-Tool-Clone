@@ -13,6 +13,7 @@ Checks:
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -27,6 +28,62 @@ def normalize_pick3_literal(value: str) -> str:
     if not digits:
         return ""
     return digits.zfill(3) if len(digits) <= 3 else digits
+
+
+def _results_label_from_state(state_name: str) -> str:
+    base = re.sub(r"\d+$", "", state_name or "")
+    if base.lower().startswith("ontariocanada"):
+        return "Ontario"
+    words = re.findall(r"[A-Z][a-z]*|[A-Z]+(?![a-z])", base) or [base]
+    return " ".join(words).strip()
+
+
+def load_winners_from_results(results_date: str, state_name: str) -> dict | None:
+    results_path = Path("data/results") / f"{results_date}.txt"
+    if not results_path.exists():
+        return None
+    target = _results_label_from_state(state_name)
+
+    def norm(label: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", (label or "").lower())
+
+    def first_tri(token: str) -> str | None:
+        if not token:
+            return None
+        direct = re.findall(r"\d{3}", token)
+        if direct:
+            return direct[0]
+        digits = "".join(ch for ch in str(token) if ch.isdigit())
+        if len(digits) < 3:
+            return None
+        if len(digits) == 3:
+            return digits
+        if len(digits) % 3 != 0:
+            return None
+        return digits[:3]
+
+    for raw in results_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        header = line.lower()
+        if header.startswith(("state", "pick", "midday", "evening")):
+            continue
+        parts = line.split("\t")
+        if not parts:
+            continue
+        label = parts[0].strip()
+        if norm(label) != norm(target):
+            continue
+        midday = first_tri(parts[1]) if len(parts) >= 2 else None
+        evening = first_tri(parts[2]) if len(parts) >= 3 else None
+        mapping: dict[str, str] = {}
+        if midday:
+            mapping["Midday"] = midday
+        if evening:
+            mapping["Evening"] = evening
+        return mapping or None
+    return None
 
 
 def map_winners(metrics: dict) -> dict:
@@ -44,6 +101,10 @@ def map_winners(metrics: dict) -> dict:
 def map_winner_family_ids(metrics: dict, winners: dict) -> dict:
     fam_ids = metrics.get("winner_family_ids") or []
     mapping = {}
+    labels = list(winners.keys())
+    if len(fam_ids) == 1 and len(labels) == 1:
+        mapping[labels[0]] = str(fam_ids[0])
+        return mapping
     if len(fam_ids) >= 1 and "Midday" in winners:
         mapping["Midday"] = str(fam_ids[0])
     if len(fam_ids) >= 2 and "Evening" in winners:
@@ -78,7 +139,8 @@ def main() -> None:
         raise SystemExit(f"Missing metrics file in sharepack: {metrics_path}")
 
     metrics = json.loads(metrics_path.read_text())
-    winners = map_winners(metrics)
+    results_date = sharepack.parents[2].name if len(sharepack.parents) >= 3 else ""
+    winners = load_winners_from_results(results_date, state) or map_winners(metrics)
     if not winners:
         print(f"Stable winner spotlight validation for {state}")
         print("No winners in metrics.json; skipping (expected when results are missing for this state/day).")

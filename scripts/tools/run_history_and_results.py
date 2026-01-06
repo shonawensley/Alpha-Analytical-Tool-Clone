@@ -35,6 +35,9 @@ VALIDATION_LOG_DIR = ROOT / "reports" / "stable" / "validation_logs"
 GEN_AUX_DRAWS = ROOT / "scripts" / "auxiliary" / "generate_draws_csv.py"
 VALIDATE_TABLES_AUX = ROOT / "scripts" / "tools" / "validate_tables_aux_alignment.py"
 
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 
 @dataclass
 class StateCheck:
@@ -98,19 +101,14 @@ def run_subprocess(cmd: List[str]) -> None:
 
 def parse_results(results_path: Path) -> Dict[str, List[str]]:
     winners: Dict[str, List[str]] = {}
-    pat = re.compile(r"\d{3}")
-    for raw in results_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.lower().startswith(("pick", "midday")):
+    from alpha_analytical.control_center.batch_runner import parse_winner_sheet
+
+    entries = parse_winner_sheet(results_path.read_text(encoding="utf-8", errors="replace"))
+    for entry in entries:
+        triads = [t for t in (entry.midday, entry.evening) if t]
+        if not triads:
             continue
-        nums = pat.findall(line)
-        if not nums:
-            continue
-        # crude state name extraction (first token stripped of digits)
-        state_part = re.sub(r"\d", " ", line)
-        state_part = re.sub(r"\s+", " ", state_part).strip(" -")
-        state_key = state_part.replace(" ", "").title()
-        winners[state_key] = nums[:2]
+        winners[entry.canonical] = triads
     return winners
 
 
