@@ -23,16 +23,22 @@ If you are a Codex session: do not rebuild analyzers; read sharepacks only.
 3) Per-day “portals” (Brain‑2 then Brain‑1):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__WINNERS_DIGEST.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__WINNERS_DIGEST.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__WINNERS_DIGEST.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__WINNERS_DIGEST.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__WINNERS_DIGEST.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__DAY_SYNTHESIS.md`
+- Winners lens (condensed; single-scroll per day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__WINNERS_DIGEST.md`
 
 4) Per-state run reports (the “template answers”):
 - All state reports live under: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
