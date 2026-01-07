@@ -39,9 +39,18 @@ Progress + navigation:
 Corpus-level synthesis:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv` (numeric evidence extracted from sharepack `summary.json` files)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__AUDIT_SUMMARY.md` (pipeline health; PASS/WARN/FAIL snapshot)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md` (fast “where are we” dashboard + distributions)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md` (study targets; not rules)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.csv` (machine-readable convergence examples)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md` (Combined + cross-variant quantification)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md` (literal doubles vs VTRAC-space mirror repeats)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.md` (Brain‑2 boards rollup across days)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.csv`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md` (A01–A12 evaluation rollup)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_ROWS.csv`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_MERGED.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md` (Codex deep analysis; parallel reviewer output)
 
 Per-day portals (Brain‑2 + Brain‑1):

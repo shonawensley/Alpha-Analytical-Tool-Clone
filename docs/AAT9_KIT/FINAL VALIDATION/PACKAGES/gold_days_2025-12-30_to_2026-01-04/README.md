@@ -18,8 +18,13 @@ If you are a Codex session: do not rebuild analyzers; read sharepacks only.
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - Numeric tool evidence (machine-readable): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv`
+- Corpus dashboard (fast “where are we”): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md`
+- Convergence study targets: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md`
 - Combined / cross-variant quantification: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md`
 - Mirror-double frequency (VTRAC-space repeats): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md`
+- Brain‑2 rollups:
+  - Control Center boards: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.md`
+  - Profit Alerts evaluation: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
 - (Optional) Codex deep analysis (use for comparison after independent review): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md`
 

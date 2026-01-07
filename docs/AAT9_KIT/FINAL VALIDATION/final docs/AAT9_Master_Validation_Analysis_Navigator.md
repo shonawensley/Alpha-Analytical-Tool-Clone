@@ -135,3 +135,50 @@ If a Codex session resets mid‑analysis, do this *first*:
 3) Use this handoff message:
 
 > We are analyzing results date D=`YYYY-MM-DD`. Do not rebuild tools or touch analyzers. Only read from `sharepacks/<D>/...` and the run reports under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`. Follow the Analysis Navigator review order, then either (a) fill the next `<D>__<STATE>.md` run report, or (b) extend `<D>__DAY_SYNTHESIS.md`. Log fix‑later items to `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`.
+
+---
+
+## 5) Multi‑day corpus review (optional, recommended once you have 3+ days)
+
+When you have multiple days filled (e.g., a “gold corpus”), you can review the work *without opening hundreds of state reports* by using the corpus exports + rollups.
+
+### 5.1 Read order (fastest way to get oriented)
+
+1) The package README/manifest (defines scope + prevents spelunking)
+2) Corpus synthesis + dashboard (distributions + “where are we”)
+3) Cross‑variant + mirror‑double lenses (Combined influence + VTRAC‑space repeats)
+4) Control Center rollups + Profit Alerts rollups (Brain‑2 across days)
+5) Only then drill into a few per‑day portals and 3–5 per‑state run reports
+
+### 5.2 Regenerating corpus exports (SSOT, small outputs)
+
+These write Git‑friendly summaries under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` and do not change analyzers.
+
+1) Run-report corpus (one row per state×period):
+```bash
+python3 scripts/tools/export_master_validation_corpus.py
+```
+
+2) Tool metrics corpus (reads `sharepacks/<D>/.../summary.json` files; one row per state×period):
+```bash
+python3 scripts/tools/export_tool_metrics_corpus.py
+```
+
+### 5.3 Multi‑day rollups (SSOT, small outputs)
+
+These are “analysis accelerators” once `corpus_summary.csv` and `corpus_tool_metrics.csv` exist.
+
+```bash
+# Profit Alerts (A01–A12) episode behavior across a date range
+python3 scripts/tools/rollup_profit_alerts_corpus.py --start YYYY-MM-DD --end YYYY-MM-DD
+
+# Control Center boards rollup across a date range (BA/Due Doubles/Repeat Watch)
+python3 scripts/tools/rollup_control_center_boards.py --start YYYY-MM-DD --end YYYY-MM-DD
+
+# Corpus dashboard + convergence study cases (heuristic “study targets”, not rules)
+python3 scripts/tools/create_corpus_dashboard.py --start YYYY-MM-DD --end YYYY-MM-DD
+```
+
+Interpretation reminder:
+- These rollups help you *choose which examples to study*.
+- They do not imply tuning rules; changes to analyzers should still wait for a larger sample size.

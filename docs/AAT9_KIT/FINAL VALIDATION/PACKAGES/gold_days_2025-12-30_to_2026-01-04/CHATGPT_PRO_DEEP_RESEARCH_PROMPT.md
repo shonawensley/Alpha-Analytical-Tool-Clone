@@ -25,8 +25,14 @@ Important: do not suggest changing analyzers yet unless there is a clear contrac
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv` (numeric evidence; prefer this for quantification)
+- Pipeline health (PASS/WARN/FAIL snapshot): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__AUDIT_SUMMARY.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md` (+ CSV)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md` (Combined + cross-variant quantification)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md` (mirror-double frequency lens)
+- Brain‑2 rollups:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.md` (+ CSV)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md` (+ CSVs)
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
 
 3) Per-day portals (Brain‑2 then Brain‑1):
