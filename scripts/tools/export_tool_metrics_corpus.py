@@ -99,6 +99,16 @@ def safe_bool(value: Any) -> Optional[bool]:
     return None
 
 
+def fmt_int(value: Any) -> str:
+    v = safe_int(value)
+    return "" if v is None else str(v)
+
+
+def fmt_float(value: Any) -> str:
+    v = safe_float(value)
+    return "" if v is None else str(v)
+
+
 def iter_sharepack_days(*, root: Path, dates: List[str] | None) -> Iterable[Tuple[str, Path]]:
     sharepacks_dir = root / "sharepacks"
     if dates is not None:
@@ -281,13 +291,34 @@ def main() -> None:
         "hz_top_lanes_rank_fraction",
         "hz_top_lanes_rows_total",
         # Digit Reduction
+        "dr_skipped",
+        "dr_skip_reason",
         "dr_stamp_items_total",
+        "dr_stamp_exact_any",
+        "dr_stamp_exact_final",
         "dr_stamp_vtrac_any",
+        "dr_stamp_vtrac_final",
+        "dr_stamp_drop_vtrac_any",
+        "dr_stamp_drop_vtrac_final",
         "dr_stamp_family_vtrac_any",
+        "dr_stamp_family_vtrac_final",
+        "dr_flags_dr_win_exact",
+        "dr_flags_dr_win_vtrac",
+        "dr_flags_dr_win_vt_boxed",
+        "dr_flags_dr_win_vt_straight",
+        "dr_hits_final_vt_boxed",
+        "dr_hits_final_vt_straight",
         "dr_per_item_present",
+        "dr_best_area_rank_exact_any",
         "dr_best_area_rank_vtrac_any",
         "dr_top_winner_present",
         "dr_top_winner_best_rank",
+        "dr_top_rows_total",
+        "dr_top_winner_rank_fraction",
+        "dr_top_winner_score_v2",
+        "dr_top_top_score_v2",
+        "dr_top_winner_score_ratio_to_top",
+        "dr_top_winner_score_delta_from_top",
         # VTRAC
         "vtrac_index_rank",
         "vtrac_index_rank_fraction",
@@ -363,8 +394,8 @@ def main() -> None:
                     if sw:
                         fam = sw.get("families") or {}
                         row["stable_families_present"] = "1" if safe_bool(fam.get("present")) else "0"
-                        row["stable_families_best_rank"] = safe_int(fam.get("best_rank")) or ""
-                        row["stable_families_rank_fraction"] = safe_float(fam.get("winner_rank_fraction")) or ""
+                        row["stable_families_best_rank"] = fmt_int(fam.get("best_rank"))
+                        row["stable_families_rank_fraction"] = fmt_float(fam.get("winner_rank_fraction"))
                         row["stable_families_section"] = fam.get("section") or ""
 
                         row["stable_scores_present"] = "1" if safe_bool((sw.get("scores") or {}).get("present")) else "0"
@@ -373,44 +404,74 @@ def main() -> None:
                         mh = sw.get("metrics_hits") or {}
                         row["stable_exact_boxed"] = "1" if safe_bool(mh.get("exact_boxed")) else "0"
                         row["stable_exact_straight"] = "1" if safe_bool(mh.get("exact_straight")) else "0"
-                        row["stable_vt_boxed_count"] = safe_int(mh.get("vt_boxed_count")) or ""
+                        row["stable_vt_boxed_count"] = fmt_int(mh.get("vt_boxed_count"))
 
                     # Hot Zones
                     hw = pick_hot_zones_winner_block(hz_summary, label=period) if hz_summary else None
                     if hw:
                         tl = hw.get("top_lanes") or {}
                         row["hz_top_lanes_present"] = "1" if safe_bool(tl.get("present")) else "0"
-                        row["hz_top_lanes_best_rank"] = safe_int(tl.get("best_rank")) or ""
-                        row["hz_top_lanes_rank_fraction"] = safe_float(tl.get("winner_rank_fraction")) or ""
-                        row["hz_top_lanes_rows_total"] = safe_int(tl.get("rows_total")) or ""
+                        row["hz_top_lanes_best_rank"] = fmt_int(tl.get("best_rank"))
+                        row["hz_top_lanes_rank_fraction"] = fmt_float(tl.get("winner_rank_fraction"))
+                        row["hz_top_lanes_rows_total"] = fmt_int(tl.get("rows_total"))
 
                     # Digit Reduction
                     dw = pick_dr_winner_block(dr_summary, variant=period) if dr_summary else None
                     if dw:
-                        stamp = dw.get("stamp") or {}
-                        counts = stamp.get("counts") if isinstance(stamp, dict) else {}
-                        if isinstance(counts, dict):
-                            row["dr_stamp_items_total"] = safe_int(counts.get("items_total")) or ""
-                            row["dr_stamp_vtrac_any"] = safe_int(counts.get("vtrac_any")) or ""
-                            row["dr_stamp_family_vtrac_any"] = safe_int(counts.get("family_vtrac_any")) or ""
+                        dr_skipped = safe_bool(dw.get("skipped")) is True
+                        row["dr_skipped"] = "1" if dr_skipped else "0"
+                        if dr_skipped:
+                            row["dr_skip_reason"] = str(dw.get("skip_reason") or "")
+                        else:
+                            stamp = dw.get("stamp") or {}
+                            counts = stamp.get("counts") if isinstance(stamp, dict) else {}
+                            if isinstance(counts, dict):
+                                row["dr_stamp_items_total"] = fmt_int(counts.get("items_total"))
+                                row["dr_stamp_exact_any"] = fmt_int(counts.get("exact_any"))
+                                row["dr_stamp_exact_final"] = fmt_int(counts.get("exact_final"))
+                                row["dr_stamp_vtrac_any"] = fmt_int(counts.get("vtrac_any"))
+                                row["dr_stamp_vtrac_final"] = fmt_int(counts.get("vtrac_final"))
+                                row["dr_stamp_drop_vtrac_any"] = fmt_int(counts.get("drop_vtrac_any"))
+                                row["dr_stamp_drop_vtrac_final"] = fmt_int(counts.get("drop_vtrac_final"))
+                                row["dr_stamp_family_vtrac_any"] = fmt_int(counts.get("family_vtrac_any"))
+                                row["dr_stamp_family_vtrac_final"] = fmt_int(counts.get("family_vtrac_final"))
 
-                        per_item = dw.get("per_item") or {}
-                        row["dr_per_item_present"] = "1" if safe_bool(per_item.get("present")) else "0"
-                        row["dr_best_area_rank_vtrac_any"] = safe_int(per_item.get("best_area_rank_vtrac_any")) or safe_int(per_item.get("best_area_rank_vtrac_any".replace("_vtrac_", "_"))) or ""
+                            per_item = dw.get("per_item") or {}
+                            row["dr_per_item_present"] = "1" if safe_bool(per_item.get("present")) else "0"
+                            row["dr_best_area_rank_exact_any"] = fmt_int(per_item.get("best_area_rank_exact_any"))
+                            row["dr_best_area_rank_vtrac_any"] = fmt_int(per_item.get("best_area_rank_vtrac_any") or per_item.get("best_area_rank_any"))
 
-                        top = dw.get("top") or {}
-                        row["dr_top_winner_present"] = "1" if safe_bool(top.get("winner_present")) else "0"
-                        row["dr_top_winner_best_rank"] = safe_int(top.get("winner_best_rank")) or ""
+                            flags = dw.get("flags") or {}
+                            if isinstance(flags, dict):
+                                row["dr_flags_dr_win_exact"] = fmt_int(flags.get("dr_win_exact"))
+                                row["dr_flags_dr_win_vtrac"] = fmt_int(flags.get("dr_win_vtrac"))
+                                row["dr_flags_dr_win_vt_boxed"] = fmt_int(flags.get("dr_win_vt_boxed"))
+                                row["dr_flags_dr_win_vt_straight"] = fmt_int(flags.get("dr_win_vt_straight"))
+
+                            hits = dw.get("hits") or {}
+                            if isinstance(hits, dict):
+                                row["dr_hits_final_vt_boxed"] = fmt_int(hits.get("final_vt_boxed"))
+                                row["dr_hits_final_vt_straight"] = fmt_int(hits.get("final_vt_straight"))
+
+                            top = dw.get("top") or {}
+                            row["dr_top_winner_present"] = "1" if safe_bool(top.get("winner_present")) else "0"
+                            row["dr_top_winner_best_rank"] = fmt_int(top.get("winner_best_rank"))
+                            row["dr_top_rows_total"] = fmt_int(top.get("rows_total"))
+                            row["dr_top_winner_rank_fraction"] = fmt_float(top.get("winner_rank_fraction"))
+                            row["dr_top_winner_score_v2"] = fmt_float(top.get("winner_score_v2"))
+                            row["dr_top_top_score_v2"] = fmt_float(top.get("top_score_v2"))
+                            row["dr_top_winner_score_ratio_to_top"] = fmt_float(top.get("winner_score_ratio_to_top"))
+                            row["dr_top_winner_score_delta_from_top"] = fmt_float(top.get("winner_score_delta_from_top"))
 
                     # VTRAC
                     wl, placement = pick_vtrac_winner_rows(vtrac_summary, winner_combo=winner_literal) if vtrac_summary else (None, None)
                     if wl:
-                        row["winner_vtrac_index"] = safe_int(wl.get("index")) or ""
+                        row["winner_vtrac_index"] = fmt_int(wl.get("index"))
                     if placement:
-                        row["winner_vtrac_index"] = row["winner_vtrac_index"] or (safe_int(placement.get("index")) or "")
-                        row["vtrac_index_rank"] = safe_int(placement.get("index_rank")) or ""
-                        row["vtrac_index_rank_fraction"] = safe_float(placement.get("rank_fraction")) or ""
-                        row["vtrac_score_ratio_to_top"] = safe_float(placement.get("score_ratio_to_top")) or ""
+                        row["winner_vtrac_index"] = row["winner_vtrac_index"] or fmt_int(placement.get("index"))
+                        row["vtrac_index_rank"] = fmt_int(placement.get("index_rank"))
+                        row["vtrac_index_rank_fraction"] = fmt_float(placement.get("rank_fraction"))
+                        row["vtrac_score_ratio_to_top"] = fmt_float(placement.get("score_ratio_to_top"))
 
                     winner_index = safe_int(row["winner_vtrac_index"]) if row["winner_vtrac_index"] else None
                     if winner_index is not None:
@@ -428,9 +489,9 @@ def main() -> None:
                     # Aux (repeat watch + BA top list membership)
                     rw = aux_repeat_watch_row(aux_summary, variant=period)
                     if isinstance(rw, dict):
-                        row["aux_repeat_current_index"] = safe_int(rw.get("current_index")) or ""
-                        row["aux_repeat_current_streak"] = safe_int(rw.get("current_streak")) or ""
-                        row["aux_repeat_last_repeat_gap"] = safe_int(rw.get("last_repeat_gap")) or ""
+                        row["aux_repeat_current_index"] = fmt_int(rw.get("current_index"))
+                        row["aux_repeat_current_streak"] = fmt_int(rw.get("current_streak"))
+                        row["aux_repeat_last_repeat_gap"] = fmt_int(rw.get("last_repeat_gap"))
 
                     top_list = blackapple_top_list(aux_summary, variant=period)
                     present, rank = blackapple_winner_rank(top_list, winner=winner_literal) if top_list else (None, None)
@@ -444,4 +505,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

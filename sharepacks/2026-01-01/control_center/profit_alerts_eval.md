@@ -1,6 +1,6 @@
 # Profit Alerts Evaluation — 2026-01-01
 
-- Generated: `2026-01-05T12:31:54.002148+00:00`
+- Generated: `2026-01-07T09:21:06.863534+00:00`
 - Inputs:
   - `sharepacks/2026-01-01/control_center/profit_alerts.csv`
   - `data/results/*.txt` (local only)
@@ -17,7 +17,7 @@
 ## Scorecard (variant-faithful lens, by AlertId)
 | AlertId | Fired | HIT(decay) | EXPIRED | CENSORED | HIT<=7 | HIT<=14 | mean t_hit |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| A01 | 6 | 0 | 5 | 1 | 0 | 0 | - |
+| A01 | 6 | 0 | 6 | 0 | 0 | 0 | - |
 | A02 | 8 | 0 | 8 | 0 | 0 | 0 | - |
 | A04 | 14 | 0 | 14 | 0 | 1 | 1 | - |
 | A05 | 14 | 0 | 14 | 0 | 0 | 0 | - |
@@ -37,7 +37,7 @@ For `Midday` / `Evening` variant rows, this counts a hit if the episode resolves
 
 | AlertId | Fired | HIT_any(decay) | EXPIRED_any | CENSORED_any | HIT_any<=7 | HIT_any<=14 |
 |---:|---:|---:|---:|---:|---:|---:|
-| A01 | 6 | 0 | 5 | 1 | 0 | 0 |
+| A01 | 6 | 0 | 6 | 0 | 0 | 0 |
 | A02 | 8 | 0 | 8 | 0 | 0 | 0 |
 | A04 | 14 | 0 | 14 | 0 | 1 | 1 |
 | A05 | 14 | 0 | 14 | 0 | 0 | 0 |
@@ -77,9 +77,9 @@ This view dedupes rows that imply the same concrete play-set (same `StateKey × 
 | PuertoRico4 | Combined | 4 | A02 | - | 2 | EXPIRED | - | - | - | ? | ? | N | - |
 | PuertoRico4 | Combined | 4 | A10 | - | 3 | EXPIRED | - | - | - | ? | ? | N | - |
 | PuertoRico4 | Evening | 4 | A05 | - | 2 | EXPIRED | - | - | - | ? | ? | N | - |
+| PuertoRico4 | Evening | 4 | A01 | - | 3 | EXPIRED | - | - | - | ? | ? | N | - |
 | PuertoRico4 | Evening | 4 | A09 | - | 1 | EXPIRED | - | - | - | ? | ? | N | - |
 | SouthCarolina4 | Midday | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | ? | ? | N | - |
-| Virginia4 | Combined | 4 | A09 | A08 | 1 | EXPIRED | - | - | - | N | ? | N | - |
 
 Full merged evaluation:
 - `sharepacks/2026-01-01/control_center/profit_alerts_eval_merged.csv`
@@ -97,6 +97,7 @@ Full merged evaluation:
 | 3 | Connecticut4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | ? | ? | N | - | N |
 | 4 | Michigan4 | Combined | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | ? | N | - | N |
 | 5 | Michigan4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | ? | ? | N | - | N |
+| 6 | PuertoRico4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | ? | ? | N | - | ? |
 | 7 | Connecticut4 | Combined | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | N | ? | N | - | N |
 | 8 | Connecticut4 | Evening | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | ? | ? | N | - | N |
 | 9 | OntarioCanada4 | Midday | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | ? | ? | N | - | N |
@@ -112,7 +113,6 @@ Full merged evaluation:
 | 37 | NorthCarolina4 | Midday | A05 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | ? | ? | N | - | N |
 | 38 | Ohio4 | Combined | A05 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | N | ? | N | - | N |
 | 39 | OntarioCanada4 | Midday | A05 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | ? | ? | N | - | N |
-| 40 | Pennsylvania4 | Midday | A05 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | ? | ? | N | - | N |
 
 Full per-row evaluation:
 - `sharepacks/2026-01-01/control_center/profit_alerts_eval.csv`

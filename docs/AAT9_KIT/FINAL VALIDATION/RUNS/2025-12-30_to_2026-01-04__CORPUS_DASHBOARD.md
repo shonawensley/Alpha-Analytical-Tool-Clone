@@ -39,7 +39,15 @@ Total graded outcomes (state×period): **163**
 
 ## Run-report synthesis (from completed RUNS)
 
-- No run-report rows found for this date range in corpus_summary.csv.
+- Run-report rows: **163**
+- Cross-variant mentioned: **163/163** (100.0%)
+
+| env_verdict | n | % |
+|---|---:|---:|
+| strong (Stable exact boxed hits) | 80 | 49.1% |
+| support (some Stable exact boxed hits) | 50 | 30.7% |
+| weak/noisy (no exact Stable hit; rely on cross-tool/Aux) | 25 | 15.3% |
+| support (Hot Zones top lanes overlap) | 8 | 4.9% |
 
 ## Convergence score (heuristic; used to pick study examples)
 

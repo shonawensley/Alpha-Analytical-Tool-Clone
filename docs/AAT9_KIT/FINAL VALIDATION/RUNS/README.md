@@ -12,6 +12,8 @@ This folder stores **filled, per‑example** master validation reports so we don
 - Optional cross-day lenses (quantification, not betting advice):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CROSS_VARIANT_REPORT.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__MIRROR_DOUBLE_FREQUENCY.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__DR_LENS_REPORT.md`
+- Optional results-horizon helper (explains CENSORED episode tails): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__RESULTS_HORIZON.md`
 - Optional cross-day Brain-2 rollups:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CONTROL_CENTER_ROLLUP.md` (+ `.csv`)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__PROFIT_ALERTS_ROLLUP.md` (+ `.csv`)
