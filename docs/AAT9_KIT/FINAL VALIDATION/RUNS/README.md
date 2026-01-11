@@ -2,6 +2,7 @@
 
 This folder stores **filled, per‑example** master validation reports so we don’t lose track across sessions.
 
+- Start-here portal (fast navigation): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
 - Progress tracker (which reports are filled): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
 - Optional per-day cross-state synthesis (aggregates the 14 state reports for one day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__DAY_SYNTHESIS.md`
 - Per-day Control Center run report (Brain-2, built from `sharepacks/<D>/control_center/`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__CONTROL_CENTER.md`

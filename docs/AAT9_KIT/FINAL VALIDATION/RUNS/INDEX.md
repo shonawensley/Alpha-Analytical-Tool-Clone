@@ -184,3 +184,93 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
 - DONE `2026-01-04__PuertoRico4.md`
 - DONE `2026-01-04__SouthCarolina4.md`
 - DONE `2026-01-04__Virginia4.md`
+
+## D=2026-01-05 (H=2026-01-04)
+
+- DONE `2026-01-05__CONTROL_CENTER.md`
+- DONE `2026-01-05__Connecticut4.md`
+- DONE `2026-01-05__Delaware4.md`
+- DONE `2026-01-05__Florida4.md`
+- DONE `2026-01-05__Indiana4.md`
+- DONE `2026-01-05__Michigan4.md`
+- DONE `2026-01-05__NewJersey4.md`
+- DONE `2026-01-05__NewYork4.md`
+- DONE `2026-01-05__NorthCarolina4.md`
+- DONE `2026-01-05__Ohio4.md`
+- DONE `2026-01-05__OntarioCanada4.md`
+- DONE `2026-01-05__Pennsylvania4.md`
+- DONE `2026-01-05__PuertoRico4.md`
+- DONE `2026-01-05__SouthCarolina4.md`
+- DONE `2026-01-05__Virginia4.md`
+
+## D=2026-01-06 (H=2026-01-05)
+
+- DONE `2026-01-06__CONTROL_CENTER.md`
+- DONE `2026-01-06__Connecticut4.md`
+- DONE `2026-01-06__Delaware4.md`
+- DONE `2026-01-06__Florida4.md`
+- DONE `2026-01-06__Indiana4.md`
+- DONE `2026-01-06__Michigan4.md`
+- DONE `2026-01-06__NewJersey4.md`
+- DONE `2026-01-06__NewYork4.md`
+- DONE `2026-01-06__NorthCarolina4.md`
+- DONE `2026-01-06__Ohio4.md`
+- DONE `2026-01-06__OntarioCanada4.md`
+- DONE `2026-01-06__Pennsylvania4.md`
+- DONE `2026-01-06__PuertoRico4.md`
+- DONE `2026-01-06__SouthCarolina4.md`
+- DONE `2026-01-06__Virginia4.md`
+
+## D=2026-01-07 (H=2026-01-06)
+
+- DONE `2026-01-07__CONTROL_CENTER.md`
+- DONE `2026-01-07__Connecticut4.md`
+- DONE `2026-01-07__Delaware4.md`
+- DONE `2026-01-07__Florida4.md`
+- DONE `2026-01-07__Indiana4.md`
+- DONE `2026-01-07__Michigan4.md`
+- DONE `2026-01-07__NewJersey4.md`
+- DONE `2026-01-07__NewYork4.md`
+- DONE `2026-01-07__NorthCarolina4.md`
+- DONE `2026-01-07__Ohio4.md`
+- DONE `2026-01-07__OntarioCanada4.md`
+- DONE `2026-01-07__Pennsylvania4.md`
+- DONE `2026-01-07__PuertoRico4.md`
+- DONE `2026-01-07__SouthCarolina4.md`
+- DONE `2026-01-07__Virginia4.md`
+
+## D=2026-01-08 (H=2026-01-07)
+
+- DONE `2026-01-08__CONTROL_CENTER.md`
+- DONE `2026-01-08__Connecticut4.md`
+- DONE `2026-01-08__Delaware4.md`
+- DONE `2026-01-08__Florida4.md`
+- DONE `2026-01-08__Indiana4.md`
+- DONE `2026-01-08__Michigan4.md`
+- DONE `2026-01-08__NewJersey4.md`
+- DONE `2026-01-08__NewYork4.md`
+- DONE `2026-01-08__NorthCarolina4.md`
+- DONE `2026-01-08__Ohio4.md`
+- DONE `2026-01-08__OntarioCanada4.md`
+- DONE `2026-01-08__Pennsylvania4.md`
+- DONE `2026-01-08__PuertoRico4.md`
+- DONE `2026-01-08__SouthCarolina4.md`
+- DONE `2026-01-08__Virginia4.md`
+
+## D=2026-01-09 (H=2026-01-08)
+
+- DONE `2026-01-09__CONTROL_CENTER.md`
+- DONE `2026-01-09__Connecticut4.md`
+- DONE `2026-01-09__Delaware4.md`
+- DONE `2026-01-09__Florida4.md`
+- DONE `2026-01-09__Indiana4.md`
+- DONE `2026-01-09__Michigan4.md`
+- DONE `2026-01-09__NewJersey4.md`
+- DONE `2026-01-09__NewYork4.md`
+- DONE `2026-01-09__NorthCarolina4.md`
+- DONE `2026-01-09__Ohio4.md`
+- DONE `2026-01-09__OntarioCanada4.md`
+- DONE `2026-01-09__Pennsylvania4.md`
+- DONE `2026-01-09__PuertoRico4.md`
+- DONE `2026-01-09__SouthCarolina4.md`
+- DONE `2026-01-09__Virginia4.md`
