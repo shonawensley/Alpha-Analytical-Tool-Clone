@@ -201,6 +201,150 @@ def _extract_due_family_labels(row: Dict[str, str]) -> List[str]:
     return labels
 
 
+def _pick_winners_json(winners_dir: Path, *, winner_literal: str) -> Optional[Path]:
+    """
+    Winners lens JSON files are named like:
+      <STATE>_vtrac<IDX>_winner_<WINNER>_<STAMP>.json
+    """
+    if not winners_dir.exists():
+        return None
+    w = _normalize_pick3_literal(winner_literal)
+    if not w:
+        return None
+    matches = sorted(winners_dir.glob(f"*winner_{w}_*.json"))
+    return matches[-1] if matches else None
+
+
+def _draw_num(draw_label: str) -> Optional[int]:
+    m = re.match(r"^Draw(?P<n>\d+)$", str(draw_label).strip())
+    if not m:
+        return None
+    try:
+        return int(m.group("n"))
+    except Exception:
+        return None
+
+
+def _winners_lens_set1_col12_metrics(winners_json: Path, *, focus_variant: str) -> Dict[str, str]:
+    """
+    Extract a few stable, comparable metrics from the winners JSON "string table lens".
+
+    Focus region:
+    - variant = focus_variant (Midday or Evening)
+    - Set1 only
+    - RowType in {R2,R4,R6,R8}
+    - columns 1 and 2 only (col1/col2 ladder lens)
+    """
+    try:
+        obj = json.loads(winners_json.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+    tables = obj.get("tables") if isinstance(obj, dict) else None
+    if not isinstance(tables, dict):
+        return {}
+
+    variants = [v for v in ("Midday", "Evening", "Combined") if v in tables]
+    focus_rows = tables.get(focus_variant, [])
+    if not isinstance(focus_rows, list):
+        focus_rows = []
+
+    tag_counts = Counter()
+    draws_with_family = set()
+    draws_with_winner = set()
+    samples: List[str] = []
+
+    def scan_variant(rows: Sequence[Dict[str, object]]) -> Tuple[bool, bool]:
+        any_family = False
+        any_winner = False
+        for r in rows:
+            if not isinstance(r, dict):
+                continue
+            if r.get("Set") != "Set1":
+                continue
+            if r.get("RowType") not in ("R2", "R4", "R6", "R8"):
+                continue
+            draw = str(r.get("Draw") or "")
+            cells = r.get("cells") if isinstance(r.get("cells"), dict) else {}
+            for col in ("1", "2"):
+                cell = cells.get(col) if isinstance(cells, dict) else None
+                if not isinstance(cell, dict):
+                    continue
+                tags = cell.get("tags") if isinstance(cell.get("tags"), list) else []
+                tags = [str(t) for t in tags]
+                if "hit-family" in tags:
+                    any_family = True
+                if "hit-winner" in tags:
+                    any_winner = True
+        return any_family, any_winner
+
+    # focus variant metrics + samples
+    for r in focus_rows:
+        if not isinstance(r, dict):
+            continue
+        if r.get("Set") != "Set1":
+            continue
+        if r.get("RowType") not in ("R2", "R4", "R6", "R8"):
+            continue
+        draw = str(r.get("Draw") or "")
+        cells = r.get("cells") if isinstance(r.get("cells"), dict) else {}
+        for col in ("1", "2"):
+            cell = cells.get(col) if isinstance(cells, dict) else None
+            if not isinstance(cell, dict):
+                continue
+            tags = cell.get("tags") if isinstance(cell.get("tags"), list) else []
+            tags = [str(t) for t in tags]
+            if not tags:
+                continue
+            for t in tags:
+                tag_counts[t] += 1
+            if "hit-family" in tags:
+                draws_with_family.add(draw)
+            if "hit-winner" in tags:
+                draws_with_winner.add(draw)
+            if any(t.startswith("hit-") for t in tags) and len(samples) < 6:
+                txt = str(cell.get("text") or "")
+                txt = txt.replace("\n", " ").strip()
+                if len(txt) > 36:
+                    txt = txt[:36] + "…"
+                samples.append(f"{draw}:{r.get('RowType')} col{col} {txt} [{','.join(tags)}]")
+
+    # Cross-variant presence (family/winner hits) in the same Set1 col1/2 region.
+    xvar_family = 0
+    xvar_winner = 0
+    for v in variants:
+        rows = tables.get(v, [])
+        if not isinstance(rows, list):
+            continue
+        any_family, any_winner = scan_variant(rows)
+        xvar_family += 1 if any_family else 0
+        xvar_winner += 1 if any_winner else 0
+
+    # Draw recency summary
+    family_draw_nums = [_draw_num(d) for d in draws_with_family]
+    family_draw_nums = [n for n in family_draw_nums if n is not None]
+    winner_draw_nums = [_draw_num(d) for d in draws_with_winner]
+    winner_draw_nums = [n for n in winner_draw_nums if n is not None]
+
+    def fmt_min(nums: Sequence[int]) -> str:
+        return str(min(nums)) if nums else ""
+
+    return {
+        "winners_json": _safe_rel(winners_json),
+        "winners_index": str(obj.get("index", "")) if isinstance(obj, dict) else "",
+        "wl_focus_set1_col12_hit_family_cells": str(tag_counts.get("hit-family", 0)),
+        "wl_focus_set1_col12_hit_winner_cells": str(tag_counts.get("hit-winner", 0)),
+        "wl_focus_set1_col12_hit_vt_straight_cells": str(tag_counts.get("hit-vt-straight", 0)),
+        "wl_focus_set1_col12_ls_box_cells": str(tag_counts.get("ls-box", 0)),
+        "wl_focus_set1_col12_family_draws_count": str(len(draws_with_family)),
+        "wl_focus_set1_col12_winner_draws_count": str(len(draws_with_winner)),
+        "wl_focus_set1_col12_family_recentest_draw": fmt_min(family_draw_nums),
+        "wl_focus_set1_col12_winner_recentest_draw": fmt_min(winner_draw_nums),
+        "wl_xvar_set1_col12_family_variants": str(xvar_family),
+        "wl_xvar_set1_col12_winner_variants": str(xvar_winner),
+        "wl_focus_set1_col12_samples": " | ".join(samples),
+    }
+
+
 def _find_aux_draws_csv(date: str, state_key: str, period: str) -> Optional[Path]:
     """
     period: Midday | Evening
@@ -338,6 +482,21 @@ def main() -> None:
         due_by_date[d] = _read_due_doubles_by_date(d)
 
     out_rows: List[Dict[str, str]] = []
+    wl_defaults: Dict[str, str] = {
+        "winners_json": "",
+        "winners_index": "",
+        "wl_focus_set1_col12_hit_family_cells": "",
+        "wl_focus_set1_col12_hit_winner_cells": "",
+        "wl_focus_set1_col12_hit_vt_straight_cells": "",
+        "wl_focus_set1_col12_ls_box_cells": "",
+        "wl_focus_set1_col12_family_draws_count": "",
+        "wl_focus_set1_col12_winner_draws_count": "",
+        "wl_focus_set1_col12_family_recentest_draw": "",
+        "wl_focus_set1_col12_winner_recentest_draw": "",
+        "wl_xvar_set1_col12_family_variants": "",
+        "wl_xvar_set1_col12_winner_variants": "",
+        "wl_focus_set1_col12_samples": "",
+    }
 
     for row in summary_rows:
         date = row.get("date", "")
@@ -414,9 +573,14 @@ def main() -> None:
 
         run_report = Path(row.get("source_run_report", "")) if row.get("source_run_report") else None
         winners_dir = REPO_ROOT / "sharepacks" / date / state / "winners" / state
+        winners_json = _pick_winners_json(winners_dir, winner_literal=winner)
         aux_summary_json = REPO_ROOT / "sharepacks" / date / state / "aux" / state / "summary.json"
         predictive_play_card = REPO_ROOT / "sharepacks" / "_predictive" / date / state / "play_card.json"
         predictive_cu = REPO_ROOT / "sharepacks" / "_predictive" / date / state / "candidate_universe.json"
+
+        winners_lens = dict(wl_defaults)
+        if winners_json:
+            winners_lens.update(_winners_lens_set1_col12_metrics(winners_json, focus_variant=period))
 
         out_rows.append(
             {
@@ -430,7 +594,9 @@ def main() -> None:
                 "mirror_pairs": ",".join(mirror_pairs),
                 "vtrac_group_family": vtrac_family,
                 "env_verdict": row.get("env_verdict", ""),
+                "pack": row.get("pack", ""),
                 "drivers": row.get("drivers", ""),
+                "fix_later": row.get("fix_later", ""),
                 # Control Center due doubles
                 "cc_due_doubles_ds": due_ds,
                 "cc_due_doubles_winner_in_family": str(_parse_bool(due_in_family_flag)) if due_in_family_flag else "",
@@ -472,6 +638,7 @@ def main() -> None:
                 "winners_dir": _safe_rel(winners_dir) if winners_dir.exists() else "",
                 "predictive_candidate_universe": _safe_rel(predictive_cu) if predictive_cu.exists() else "",
                 "predictive_play_card": _safe_rel(predictive_play_card) if predictive_play_card.exists() else "",
+                **winners_lens,
             }
         )
 
@@ -482,7 +649,11 @@ def main() -> None:
     out_deep.parent.mkdir(parents=True, exist_ok=True)
 
     # Write CSV
-    cols = list(out_rows[0].keys()) if out_rows else []
+    cols: List[str] = []
+    for r in out_rows:
+        for k in r.keys():
+            if k not in cols:
+                cols.append(k)
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
@@ -615,6 +786,44 @@ def main() -> None:
     if not hits:
         dd.append("| *(none)* | | | | | | | | | |")
     dd.append("")
+    dd.append("## Winners lens quick stats (Set1 col1/2 ladder)")
+    dd.append("")
+    dd.append("Computed from the winners JSON lens for the same event (focus variant = period).")
+    dd.append("")
+    dd.append("| Type | Rows | Any hit-family | Any hit-winner | Any hit-vt-straight | Any ls-box | Avg family cells | Avg winner cells | Avg xvar family | Avg xvar winner |")
+    dd.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+
+    def wl_i(r: Dict[str, str], key: str) -> int:
+        return _parse_int(r.get(key, "")) or 0
+
+    def wl_avg(rows: Sequence[Dict[str, str]], key: str) -> str:
+        if not rows:
+            return ""
+        return f"{sum(wl_i(r, key) for r in rows) / len(rows):.2f}"
+
+    for t in ("double", "triple", "mirror_double"):
+        trows = [r for r in out_rows if r.get("type") == t and r.get("winners_json")]
+        if not trows:
+            continue
+        dd.append(
+            "| "
+            + " | ".join(
+                [
+                    t,
+                    str(len(trows)),
+                    str(sum(1 for r in trows if wl_i(r, "wl_focus_set1_col12_hit_family_cells") > 0)),
+                    str(sum(1 for r in trows if wl_i(r, "wl_focus_set1_col12_hit_winner_cells") > 0)),
+                    str(sum(1 for r in trows if wl_i(r, "wl_focus_set1_col12_hit_vt_straight_cells") > 0)),
+                    str(sum(1 for r in trows if wl_i(r, "wl_focus_set1_col12_ls_box_cells") > 0)),
+                    wl_avg(trows, "wl_focus_set1_col12_hit_family_cells"),
+                    wl_avg(trows, "wl_focus_set1_col12_hit_winner_cells"),
+                    wl_avg(trows, "wl_xvar_set1_col12_family_variants"),
+                    wl_avg(trows, "wl_xvar_set1_col12_winner_variants"),
+                ]
+            )
+            + " |"
+        )
+    dd.append("")
     dd.append("## Per-event evidence pointers")
     dd.append("")
     for r in out_rows:
@@ -635,7 +844,27 @@ def main() -> None:
         if r.get("play_card_hit_any"):
             dd.append(f"- Play Card: box_hit=`{r.get('play_card_box_hit','')}` idx_hit=`{r.get('play_card_index_hit','')}`")
         dd.append(f"- RUNS report: `{r.get('run_report','')}`")
-        dd.append(f"- Winners lens: `{r.get('winners_dir','')}`")
+        dd.append(f"- Winners lens dir: `{r.get('winners_dir','')}`")
+        if r.get("winners_json"):
+            dd.append(f"- Winners lens JSON: `{r.get('winners_json','')}` (index `{r.get('winners_index','')}`)")
+            dd.append(
+                "- Winners lens Set1 col1/2 (focus variant = period): "
+                + f"hit-family-cells=`{r.get('wl_focus_set1_col12_hit_family_cells','')}` "
+                + f"hit-winner-cells=`{r.get('wl_focus_set1_col12_hit_winner_cells','')}` "
+                + f"hit-vt-straight-cells=`{r.get('wl_focus_set1_col12_hit_vt_straight_cells','')}` "
+                + f"ls-box-cells=`{r.get('wl_focus_set1_col12_ls_box_cells','')}` "
+                + f"xvar-family-variants=`{r.get('wl_xvar_set1_col12_family_variants','')}` "
+                + f"xvar-winner-variants=`{r.get('wl_xvar_set1_col12_winner_variants','')}`"
+            )
+            dd.append(
+                "- Set1 col1/2 draw recency: "
+                + f"family_draws=`{r.get('wl_focus_set1_col12_family_draws_count','')}` "
+                + f"winner_draws=`{r.get('wl_focus_set1_col12_winner_draws_count','')}` "
+                + f"family_recentest_draw=`{r.get('wl_focus_set1_col12_family_recentest_draw','')}` "
+                + f"winner_recentest_draw=`{r.get('wl_focus_set1_col12_winner_recentest_draw','')}`"
+            )
+            if r.get("wl_focus_set1_col12_samples"):
+                dd.append(f"- Winners lens samples: `{r.get('wl_focus_set1_col12_samples','')}`")
         if r.get("predictive_candidate_universe"):
             dd.append(f"- Predictive Candidate Universe: `{r.get('predictive_candidate_universe','')}`")
         if r.get("predictive_play_card"):
