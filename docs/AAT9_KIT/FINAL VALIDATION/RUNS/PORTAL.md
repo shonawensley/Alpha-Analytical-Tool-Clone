@@ -28,6 +28,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 6) The fast “are we improving?” rollups (cross-day):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
+- Doubles / mirror-doubles research (reverse-engineering lens):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md`
 
 ---
 
@@ -93,4 +96,3 @@ Codex analysis docs are a **parallel reviewer** that:
 Existing Codex analyses:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CODEX_DEEP_ANALYSIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md`
-

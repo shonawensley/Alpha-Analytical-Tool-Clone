@@ -22,6 +22,13 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
 
 ---
 
+## Cross-day / special reports (not a single D)
+
+- Doubles / mirror-doubles inventory: `DOUBLES_MIRROR_DOUBLES__INVENTORY.md`
+- Doubles / mirror-doubles deep dive: `DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md`
+- Candidate Universe rollup: `candidate_universe_rollup.md`
+- Play Card rollup: `play_card_rollup.md`
+
 ## D=2025-06-21 (H=2025-06-20)
 
 - DONE `2025-06-21__CONTROL_CENTER.md`
