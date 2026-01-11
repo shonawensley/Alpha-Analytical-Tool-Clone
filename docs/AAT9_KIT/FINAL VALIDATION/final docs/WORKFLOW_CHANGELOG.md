@@ -6,6 +6,73 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-01-08
+
+### Candidate Universe (pre-results): playset contract + generator + grader
+
+- Added a first-class, gradeable predictions artifact (“Candidate Universe / Playset”) to bridge predictive snapshots → measurable performance:
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
+  - Output (predictive SSOT): `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
+- Added Candidate Universe generator (reads sharepacks only; deterministic; anti-leakage gate for predictive roots):
+  - Command: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
+  - File: `scripts/tools/create_candidate_universe.py`
+- Candidate Universe now also ingests the Control Center “Due Doubles” board as a bounded, gradeable BOX pack:
+  - Evidence: `sharepacks/_predictive/<D>/control_center/due_doubles.csv`
+  - Packs: `method_id=due_doubles` (`due_doubles:Combined|Midday|Evening`)
+- Candidate Universe also supports bounded “mirror double” expansions seeded from the due-doubles top canonical (COMBINATION_FORMING3 primitive):
+  - `method_id=due_doubles_mirror_single`
+  - `method_id=due_doubles_mirror_double`
+- Added Candidate Universe grader (reads results + candidate_universe.json; writes only to RUNS to keep predictive sharepacks immutable):
+  - Command: `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
+  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.*`
+  - File: `scripts/tools/grade_candidate_universe.py`
+- Added a predictive run report scaffold to capture pre-results analysis alongside the Candidate Universe:
+  - Command: `python3 scripts/tools/create_predictive_run_report.py --date <D> --state <STATE> --sharepacks-root sharepacks/_predictive`
+  - Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>__PREDICTIVE.md`
+  - File: `scripts/tools/create_predictive_run_report.py`
+- Added an optional cross-state predictive portfolio triage report (fast “where to focus” view):
+  - Command: `python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive`
+  - Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO.md`
+  - File: `scripts/tools/create_predictive_portfolio_report.py`
+- Added deterministic budgeted “Play Cards” (e.g., 12/24/36 combo cuts) derived from Candidate Universe (useful for live-style competitions + controlled selection experiments):
+  - Command: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --budgets 12,24,36`
+  - Output: `sharepacks/_predictive/<D>/<STATE>/play_card.json`
+  - File: `scripts/tools/create_play_card.py`
+  - Built-in strategies: `play_box_first`, `analysis_prefix`, `convergence_box_first`
+- Added Play Card grader (writes only to RUNS):
+  - Command: `python3 scripts/tools/grade_play_card.py --date <D> --sharepacks-root sharepacks/_predictive`
+  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PLAY_CARD_GRADE.*`
+  - File: `scripts/tools/grade_play_card.py`
+- Candidate Universe generator adds two additional bounded, gradeable pack sources:
+  - Aux VTRAC overdue index closures: `method_id=aux_vtrac_index_overdue`
+  - COMBINATION_FORMING3 consensus double pack: `method_id=consensus_double_9`
+- Added corpus rollups (RUNS-only) to summarize grades across days (no horizon/carryover semantics; same-day grading only):
+  - `python3 scripts/tools/rollup_candidate_universe_corpus.py` → `RUNS/candidate_universe_rollup.*`
+  - `python3 scripts/tools/rollup_play_card_corpus.py` → `RUNS/play_card_rollup.*`
+- Added “superbrain primitives” ledger (taxonomy layer mapping evidence → transforms → packs → grading):
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md`
+
+## 2026-01-07
+
+### Predictive day (no results yet): isolated sharepacks + CC export
+
+- Added a predictive-day orchestrator that builds a “no results yet” snapshot from a history workbook:
+  - Command: `PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H>`
+  - Output root: `sharepacks/_predictive/<D>/...` (kept separate from SSOT `sharepacks/<D>/`)
+  - Notes:
+    - No winners lens is generated (no `winners/`), and Profit Alerts evaluation is not run (requires future `data/results/*.txt`).
+    - Control Center export is produced using a tab-header placeholder results file written into the predictive sharepack.
+  - Files:
+    - `scripts/tools/run_predictive_day.py`
+    - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Predictive_Day_Quickstart.md`
+- Freezer now supports alternate sharepack roots and can skip winners-dependent VTRAC validation bundles (prevents stale `validation_report.*` from leaking into predictive packs):
+  - `scripts/tools/freeze_sharepack_day.py` (`--sharepacks-root`, `--skip-global-vtrac`, `--skip-winners`)
+- Aux sharepack summarizer supports alternate sharepack roots:
+  - `scripts/tools/aux_sharepack_summary.py` (`--sharepacks-root`)
+- SSOT pointers updated:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+  - `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md`
+
 ## 2026-01-05
 
 ### Fix-Now: results parsing + DR overlays (Québec / Combined mismatch)

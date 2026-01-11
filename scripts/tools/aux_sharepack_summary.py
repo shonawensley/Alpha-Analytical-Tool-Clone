@@ -595,6 +595,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Build Aux summary.md/.json inside a sharepack for Part 3.")
     ap.add_argument("--date", required=True, help="Sharepack date folder (results/winners date, YYYY-MM-DD)")
     ap.add_argument("--state", required=True, help="State key (e.g., OntarioCanada4)")
+    ap.add_argument(
+        "--sharepacks-root",
+        default=str(ROOT / "sharepacks"),
+        help="Sharepacks root directory (default: sharepacks/)",
+    )
     ap.add_argument("--max-n", type=int, default=1000, help="Max newest draws to load (default 1000)")
     ap.add_argument("--limit", type=int, default=10, help="Top-N rows to render per section (default 10)")
     ap.add_argument("--sums-window", type=int, default=100, help="Sums analysis window (default 100)")
@@ -621,7 +626,11 @@ def main() -> None:
 
     parse_iso_date(args.date)
 
-    sharepack_root = ROOT / "sharepacks" / args.date / args.state
+    sharepacks_root = Path(args.sharepacks_root)
+    if not sharepacks_root.is_absolute():
+        sharepacks_root = (ROOT / sharepacks_root).resolve()
+
+    sharepack_root = sharepacks_root / args.date / args.state
     if not sharepack_root.exists():
         raise SystemExit(f"Sharepack not found: {sharepack_root}")
 

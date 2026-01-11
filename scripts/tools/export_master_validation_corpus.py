@@ -42,6 +42,14 @@ def _runs_dir(root: Path) -> Path:
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
+def _is_master_validation_run_report(path: Path) -> bool:
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as f:
+            first_line = f.readline()
+    except Exception:
+        return False
+    return "Master Validation Run Report" in first_line
+
 
 def _iter_run_reports(*, runs_dir: Path, dates: set[str] | None) -> Iterable[Path]:
     for path in sorted(runs_dir.glob("*.md")):
@@ -53,6 +61,8 @@ def _iter_run_reports(*, runs_dir: Path, dates: set[str] | None) -> Iterable[Pat
         date, state_md = name.split("__", 1)
         state = state_md.removesuffix(".md")
         if state == "DAY_SYNTHESIS":
+            continue
+        if not _is_master_validation_run_report(path):
             continue
         if dates is not None and date not in dates:
             continue

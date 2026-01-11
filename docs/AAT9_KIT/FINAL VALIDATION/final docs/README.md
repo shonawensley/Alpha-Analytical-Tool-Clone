@@ -44,6 +44,44 @@ Generate a run report scaffold:
 python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4
 ```
 
+Generate a predictive run report scaffold (pre-results, no winners):
+```bash
+python3 scripts/tools/create_predictive_run_report.py --date YYYY-MM-DD --state OntarioCanada4 --sharepacks-root sharepacks/_predictive
+```
+
+Generate a predictive portfolio triage report (cross-state):
+```bash
+python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
+```
+
+Generate a Candidate Universe (gradeable predictions) inside a predictive sharepack:
+```bash
+python3 scripts/tools/create_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
+```
+
+Generate budgeted Play Cards (e.g., 12/24/36 combos) from Candidate Universe:
+```bash
+python3 scripts/tools/create_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --budgets 12,24,36
+```
+(Add `--write-md` to also write `play_card.md`.)
+Play Cards include multiple strategies for controlled experiments: `play_box_first`, `analysis_prefix`, `convergence_box_first`.
+
+Grade Candidate Universe once results exist (writes only to RUNS):
+```bash
+python3 scripts/tools/grade_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
+```
+
+Grade Play Cards once results exist (writes only to RUNS):
+```bash
+python3 scripts/tools/grade_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
+```
+
+Roll up grades across all available days (RUNS):
+```bash
+python3 scripts/tools/rollup_candidate_universe_corpus.py
+python3 scripts/tools/rollup_play_card_corpus.py
+```
+
 Generate a Control Center daily run report scaffold:
 ```bash
 python3 scripts/tools/create_control_center_daily_run_report.py --date YYYY-MM-DD
@@ -66,12 +104,16 @@ Per-run workflow (high level):
 ## Operational guides
 - Entry (contracts + semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 - Build + freeze (from scratch): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
+- Predictive day (no results yet): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Predictive_Day_Quickstart.md`
+- Candidate Universe (pre-results, gradeable predictions): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
 - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
 - Preflight / drift guards: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
 - Workflow architecture map: `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
 
 ## Key references
 - Lean outputs index: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md`
+- Aux coverage + legend: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md`
+- Research ledger (primitives taxonomy): `docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md`
 - Profit alerts (A01–A12) integration notes: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
 - Profit alerts evaluation charter (variants/decay semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
 - Profit alerts grading matrix (per‑AID “what is a hit”): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`

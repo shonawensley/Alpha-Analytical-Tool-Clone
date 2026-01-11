@@ -141,6 +141,7 @@ Evidence block (recommended):
    - Does the winner’s index sit in a high‑pressure zone? Do Part‑2 top clusters sit in those indices?
 6) Doubles + pairs pressure  
    - Overdue doubles (canonical) and overdue pairs (repeat/non-repeat) per variant; call out multi-variant alerts.  
+   - Review Control Center Due Doubles (sharepack-aligned): `sharepacks/<DATE>/control_center/due_doubles.md` / `due_doubles.csv` (legend: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md`).  
    - Does the winner (and/or Part‑2 top candidates) contain any of these overdue doubles/pairs?
 7) Sums / root‑sum pressure  
    - Due sums / deficit flags per variant (and any cross‑variant compounds).  
@@ -186,6 +187,7 @@ Coverage modes (counts, for planning only):
    - Part 2B: cross-tool synthesis (shared clusters + conflicts)  
    - Part 3.9: Aux convergence table (signals per variant)  
    - VTRAC reference mapping (index members + VSTRAIGHTS)
+   - (Optional, if available) Predictive baseline: `sharepacks/_predictive/<RESULTS_DATE>/<STATE>/candidate_universe.json` + `play_card.json` (pre-results; do not edit; use as a starting candidate list and for “before → after” comparison).
 1) Candidate universe (per draw)  
    - Midday: list the top N (5–10) triads you would carry forward, with 1-line rationale each (evidence vector count + variant correctness).  
    - Evening: list the top N (5–10) triads you would carry forward, with 1-line rationale each.  

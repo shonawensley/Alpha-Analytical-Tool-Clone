@@ -48,6 +48,10 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 
 Master Validation (frozen day snapshot):
 - Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
+- Predictive (no results) sharepacks: `sharepacks/_predictive/<D>/...` via `python3 scripts/tools/run_predictive_day.py --history-date <H>`
+- Candidate Universe (gradeable pre-results playset): `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
+  - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
 - Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
   - Includes Profit Alerts board (A01–A12): `sharepacks/<D>/control_center/profit_alerts.*`
 - Profit Alerts windowed evaluation (episodes): `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`

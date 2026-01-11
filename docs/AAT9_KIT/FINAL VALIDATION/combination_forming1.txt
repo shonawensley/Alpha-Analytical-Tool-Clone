@@ -1,0 +1,1140 @@
+Here’s how I’d frame this so we stop going in circles and you end up with a clear, coded “Profit + Combination Master Engine” that plugs into AAT9 at the final validation stage.
+
+I’ll do three things:
+
+Summarize your goals in plain language so we’re perfectly aligned.
+
+Propose the architecture for a “Universal Master Validation Profit + Combination Module”.
+
+Give you a concrete Python module (performance_metrics.py) you can actually drop into the repo and then wire into the Aggregator / Combination Engine later.
+
+I’ll keep everything consistent with your mandatory notes and existing engines (Stable, Digit Reduction, Hot Zones, V‑TRAC, Aggregator).
+
+1. What you want this final module to do (clean summary)
+A. Combination forming logic (WHAT are we playing?)
+
+From all the docs you uploaded, the combination logic boils down to:
+
+We do NOT blindly V‑TRAC every pattern.
+We want reduced, high‑signal combination sets, usually ≤ 8–16 combos, driven by:
+
+V‑TRAC combination methods 1–5 (keep pair + mirror 3rd digit, priority permutation, double/mirror double, full V‑TRAC 8‑way, etc.). 
+
+##MANDATORY INTO SCRIPT- NEED C…
+
+Consensus double logic – 9‑combo double baskets when consensus digits fire (like 9/9/9/9 + nearby keys). 
+
+IMPORTANT THOUGHTS FINAL
+
+R2/R4/R6/R8 permutation clues – we don’t play all 6 permutations; we use stable permutations across R2–R8 and late columns to cut to 3–4 best straights.
+
+Double + mirror double ladders – e.g. 002 → mirror 052; 366 → 316; driven by persistent double patterns in the strings.
+
+Lingering 3‑value patterns – especially ones that survive digit‑reduction and/or converge to V‑TRAC 3‑value cores (the “lingering lane” idea).
+
+These patterns are scored upstream by Stable, Digit Reduction, Hot Zones, and V‑TRAC (top candidates, VT lanes, funnels, set1/col1, etc.), then the final module chooses how to form combinations from them.
+
+B. Profitability logic (HOW we bet them)
+
+You want a metrics / performance system that understands:
+
+Base payouts / “timeframes” per 1‑combo play:
+
+Store boxed: $100 → target timeframe ≈ 1/100
+
+Store straight: $500 → target timeframe ≈ 1/500
+
+Online boxed: $160 → timeframe ≈ 1/160
+
+Online straight: $900 → timeframe ≈ 1/900
+
+Progressive wagering tracks, especially for 8‑combo baskets:
+
+Boxed 8‑combo progression (5 rounds) with explicit round expense, cumulative expense, and net profit if hit.
+
+Straight 8‑combo progression (similar idea, higher payouts, more aggressive profit).
+
+Core goal: establish a consistent profit ratio within a timeframe, even if the per‑sequence profit is small. Once the system can show “I can hit within N draws at cost C to get payout P > C consistently”, you can scale stake size.
+
+Metric system must track:
+
+How often a given combo‑set hits (boxed & straight).
+
+How many draws to hit (timeframe) for that pattern / strategy.
+
+ROI: payout − total expense, over many campaigns.
+
+Distinguish “as‑is” hits vs V‑TRAC family hits vs mirror‑double hits so ML can learn which transformation modes are most profitable.
+
+C. Machine learning role (WHO learns from this?)
+
+Your mandatory notes are super clear:
+
+ML must learn from module synergies (Stable + DR + HotZones + V‑TRAC) and also diversify to capture winners that only appear in one strong module (e.g., Digit Reduction only, no cross‑module convergence).
+
+ML must have profitability as a first‑class feature:
+
+Learn which pattern types and combo‑sizes meet profitable timeframe ratios (e.g., 8‑combo boxed hits within ≤10 draws).
+
+Learn when it’s safe to engage or skip progressive wagering based on evidence strength and past performance.
+
+You want explicit logging of:
+
+Digit‑reduction → V‑TRAC convergence timing (how many draws after convergence until the VT family hits).
+
+Lingering 3‑value repeats and their eventual hit times.
+
+2. Architecture for the Master Validation Profit + Combination Module
+
+Let’s treat this as a new top‑level module:
+
+src/core/module_z_master_validation.py
+(“Z” = last step: aggregation → combos → profitability)
+
+2.1. Inputs (what this module reads)
+
+It should consume only lean analyzer outputs, not raw tables, just like the other modules.
+
+Stable top patterns
+
+<STATE>_stable_patterns_scores.csv
+
+<STATE>_stable_patterns_compound.csv
+
+Digit Reduction analyzer V2
+
+<STATE>_digit_reduction/.../top_candidates.csv (or per_item). 
+
+Digit-Reduction Module AAT9 v1…
+
+Hot Zones (Part 2) top candidates
+
+<STATE>_hotzones_top_candidates.csv + per_item for reasons.
+
+V‑TRAC compact / winners evidence
+
+vtrac_compact_report.csv/json + winners logs for VT lanes.
+
+Central Winners Map (optional, for backtesting)
+
+Per‑date winners_map.json and/or winner_flags.csv to measure actual hits vs predictions. 
+
+AAT9_Winners_Module
+
+Combination‑forming engine output (triads → combos)
+
+Your existing Combination Forming Engine (the big CLI script you pasted) already merges triads + scores and produces ranked combos. That script becomes the “combination backend”; module Z sits on top and adds profitability & timeframe metrics.
+
+2.2. Internal layers
+
+Think of it as three stacked layers:
+
+Layer 1 – Pattern & Combo Synthesizer
+
+Receives triad candidates with scores from Stable / DR / HotZones / V‑TRAC (and their joint features: vt_only_lane, col1_hits, superhot, etc.).
+
+Applies your 5 V‑TRAC methods + consensus doubles + mirror double rules to each eligible triad, generating a small menu of combo‑packs:
+
+PACK_TYPE="vt_pair_mirror_12" → 12 combos from Method 1. 
+
+##MANDATORY INTO SCRIPT- NEED C…
+
+PACK_TYPE="vt_primary_3" → 3 combos from Method 2.
+
+PACK_TYPE="double_mirror_8" → 8 combos like 002/052/… from double/mirror logic. 
+
+##MANDATORY INTO SCRIPT- NEED C…
+
+PACK_TYPE="consensus_double_9" → 9 combos for consensus double scenario. 
+
+IMPORTANT THOUGHTS FINAL
+
+PACK_TYPE="vt_full_8" → 8 full V‑TRAC straights (Method 5). 
+
+##MANDATORY INTO SCRIPT- NEED C…
+
+Each combo‑pack carries:
+
+combos: List[str]
+
+origin_triad: str
+
+origin_tools: {stable:score, dr:score, hotzones:score, vtrac:score}
+
+signals: {vt_straight_hits, vt_only_lane_hits, col1_hits, precol1_hits, set_span, etc.}
+
+Layer 2 – Profitability Evaluator
+
+For each combo‑pack, we evaluate it under different play modes:
+
+store_boxed
+
+store_straight
+
+online_boxed
+
+online_straight
+
+progressive_8_boxed
+
+progressive_8_straight
+(and potentially extended progressive_N_X for N>8 later).
+
+For each (pack, play_mode) pair we compute:
+
+cost_per_draw = combos_count × stake_per_ticket
+
+max_rounds (for progressive strategies)
+
+payout = payout table above (× stake multiplier if using multiple tickets)
+
+theoretical_profit_metric = payout - (cost_per_draw × max_draws_allowed) (your own profitability_metric idea). 
+
+##MANDATORY INTO SCRIPT- NEED C…
+
+And for backtesting / live logging we also track, per pack:
+
+draws_until_hit_boxed, draws_until_hit_straight (from winners map). 
+
+AAT9_Winners_Module
+
+hit_rate_boxed, hit_rate_straight over past K campaigns.
+
+roi = (total_payout - total_cost) / total_cost.
+
+This is the exact information you wanted the ML to optimize over: profitability within timeframe, not just raw hit rate.
+
+Layer 3 – Confidence / Play Decision Layer
+
+This is where your “confidence‑based play” lives:
+
+Use pattern scores + evidence tags (vt_straight lane, lingering, consensus double, etc.) to compute a confidence score per combo‑pack.
+
+Use the profitability evaluator to check:
+
+Does this pack historically hit within the target timeframe for a given play_mode?
+
+Does it show positive or close‑to‑break‑even ROI under your progressive plan?
+
+If both evidence and profitability surpass thresholds, the module:
+
+Marks the pack as “Recommended Play” for that day, with:
+
+which mode(s) (e.g., progressive_8_boxed, store_straight),
+
+suggested stake levels per round (from your progression tables).
+
+Otherwise, the pack is either:
+
+Tracked only (for ML learning), or
+
+Used in a reduced way (e.g., only 3 primary straight combos instead of full VT 8).
+
+This layer is what lets you say:
+
+“Don’t always go full 8‑combo VT. Only do it when the evidence + historic profitability justify it.”
+
+3. Concrete Python skeleton: performance_metrics.py
+
+This module focuses on Part B: the metrics / profitability engine.
+You can drop this into the repo (e.g. src/core/performance_metrics.py) and later have module_z_master_validation.py call into it.
+
+It:
+
+Defines payouts and progressive plans based on your docs.
+
+Lets you log results of campaigns (combo‑packs played over time).
+
+Computes ROI, hit rates, and timeframe stats per strategy.
+
+Gives you a clean, ML‑friendly history dataframe.
+
+___________________
+
+#!/usr/bin/env python3
+# AAT9 — Performance Metrics & Progressive Wagering Core
+
+from __future__ import annotations
+
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Optional, Literal
+import pandas as pd
+
+# -----------------------------
+# 1. Core payout & strategy config
+# -----------------------------
+
+PlayMode = Literal[
+    "store_boxed",
+    "store_straight",
+    "online_boxed",
+    "online_straight",
+    "progressive_8_boxed",
+    "progressive_8_straight",
+]
+
+# Single-ticket payouts (1 play, 1 combo)
+# Values from your docs: 100/500/160/900 
+PAYOUTS: Dict[str, int] = {
+    "store_boxed": 100,
+    "store_straight": 500,
+    "online_boxed": 160,
+    "online_straight": 900,
+}
+
+# Progressive plans for 8-combo baskets (store tickets example)
+# Numbers from your combination/progressive tables. 
+PROGRESSIVE_PLANS: Dict[str, List[Dict[str, float]]] = {
+    "progressive_8_boxed": [
+        {"round": 1, "expense": 160, "payout": 1600},  # 8 combos, $10 x2 tickets each
+        {"round": 2, "expense": 176, "payout": 1800},
+        {"round": 3, "expense": 200, "payout": 2050},
+        {"round": 4, "expense": 240, "payout": 2400},
+        {"round": 5, "expense": 240, "payout": 3200},
+    ],
+    "progressive_8_straight": [
+        {"round": 1, "expense": 160, "payout": 10000},
+        {"round": 2, "expense": 168, "payout": 10500},
+        {"round": 3, "expense": 176, "payout": 11000},
+        {"round": 4, "expense": 200, "payout": 12500},
+        {"round": 5, "expense": 240, "payout": 15000},
+    ],
+}
+
+# -----------------------------
+# 2. Data structures
+# -----------------------------
+
+@dataclass
+class CampaignResult:
+    """
+    One 'campaign' = one combo-pack played across draws until:
+    - a hit occurs, or
+    - we stop after max_rounds / max_draws.
+    This is the atomic unit ML will learn from.
+    """
+
+    state: str
+    date_started: str       # 'YYYY-MM-DD' (tables date or run date)
+    pack_id: str            # some stable identifier for combo-pack
+    pack_type: str          # e.g. vt_full_8, consensus_double_9, etc.
+    play_mode: PlayMode
+    combos_count: int       # how many combos in the pack
+    max_draws_planned: int  # target timeframe window for this campaign
+    draws_played: int       # how many draws actually played this pack
+
+    # Result flags
+    hit_type: Literal["none", "boxed", "straight", "vt_boxed", "vt_straight"]
+    hit_draw_offset: Optional[int]  # 1-based draw index where hit occurred (if any)
+
+    # Money
+    total_expense: float
+    total_payout: float
+
+    # Evidence snapshot (for ML features)
+    evidence_score: float          # combined pattern score
+    vt_straight_hint: int          # 1 if vt-straight lane evidence, else 0
+    consensus_double_hint: int     # 1 if consensus double pack, else 0
+    lingering_pattern_hint: int    # 1 if flagged as lingering 3-value pattern, else 0
+
+    @property
+    def net_profit(self) -> float:
+        return self.total_payout - self.total_expense
+
+    @property
+    def roi(self) -> float:
+        if self.total_expense <= 0:
+            return 0.0
+        return self.net_profit / self.total_expense
+
+
+# -----------------------------
+# 3. Helper: theoretical profitability metric
+# -----------------------------
+
+def profitability_metric(
+    combos_count: int,
+    payout: float,
+    max_draws_allowed: int,
+    cost_per_combo: float = 1.0,
+) -> float:
+    """
+    Your 'profitability metric' in closed form:
+    payout - total_investment_for_timeframe. :contentReference[oaicite:35]{index=35}
+
+    This does NOT guarantee real-world profit; it's a planning tool.
+    """
+    investment_per_draw = combos_count * cost_per_combo
+    total_investment = investment_per_draw * max_draws_allowed
+    return payout - total_investment
+
+
+# -----------------------------
+# 4. Engine: PerformanceTracker
+# -----------------------------
+
+class PerformanceTracker:
+    """
+    Stores all campaign results and provides roll-ups:
+    - per play_mode
+    - per pack_type
+    - per state
+    """
+
+    def __init__(self) -> None:
+        self._records: List[CampaignResult] = []
+
+    # --- logging ---
+
+    def log_campaign(self, result: CampaignResult) -> None:
+        """Append a finished campaign result."""
+        self._records.append(result)
+
+    # --- export & summary ---
+
+    def to_dataframe(self) -> pd.DataFrame:
+        if not self._records:
+            return pd.DataFrame()
+        return pd.DataFrame([asdict(r) | {
+            "net_profit": r.net_profit,
+            "roi": r.roi,
+        } for r in self._records])
+
+    def summary_by_mode(self) -> pd.DataFrame:
+        """
+        Aggregate stats per play_mode.
+        """
+        df = self.to_dataframe()
+        if df.empty:
+            return df
+
+        group = df.groupby("play_mode")
+        summary = group.agg(
+            campaigns=("pack_id", "nunique"),
+            total_expense=("total_expense", "sum"),
+            total_payout=("total_payout", "sum"),
+            net_profit=("net_profit", "sum"),
+            mean_roi=("roi", "mean"),
+            hit_rate_any=("hit_type", lambda s: (s != "none").mean()),
+            hit_rate_straight=("hit_type", lambda s: (s == "straight").mean()),
+            avg_draws_to_hit=("hit_draw_offset", lambda s: s.dropna().mean()),
+        )
+        return summary.sort_values("mean_roi", ascending=False)
+
+    def summary_by_pack_type(self) -> pd.DataFrame:
+        """
+        Aggregate stats per combination-pack type.
+        """
+        df = self.to_dataframe()
+        if df.empty:
+            return df
+
+        group = df.groupby("pack_type")
+        summary = group.agg(
+            campaigns=("pack_id", "nunique"),
+            total_expense=("total_expense", "sum"),
+            total_payout=("total_payout", "sum"),
+            net_profit=("net_profit", "sum"),
+            mean_roi=("roi", "mean"),
+            hit_rate_any=("hit_type", lambda s: (s != "none").mean()),
+            hit_rate_straight=("hit_type", lambda s: (s == "straight").mean()),
+            avg_evidence_score=("evidence_score", "mean"),
+        )
+        return summary.sort_values("mean_roi", ascending=False)
+
+    def filter_profitable_strategies(
+        self,
+        min_roi: float = 0.0,
+        max_avg_draws: Optional[int] = None,
+        min_hit_rate: float = 0.0,
+    ) -> pd.DataFrame:
+        """
+        Helper to find strategies that meet a target:
+        - ROI threshold
+        - timeframe threshold
+        - hit rate threshold
+        """
+        by_mode = self.summary_by_mode()
+        if by_mode.empty:
+            return by_mode
+
+        mask = by_mode["mean_roi"] >= min_roi
+        if max_avg_draws is not None:
+            mask &= (by_mode["avg_draws_to_hit"] <= max_avg_draws)
+        mask &= (by_mode["hit_rate_any"] >= min_hit_rate)
+        return by_mode[mask]
+
+
+# -----------------------------
+# 5. Helpers to compute expense/payout per campaign
+# -----------------------------
+
+def compute_flat_play_cost(
+    combos_count: int,
+    play_mode: PlayMode,
+    draws_played: int,
+    cost_per_combo: float = 1.0,
+) -> float:
+    """
+    Simple (non-progressive) cost = combos * cost_per_combo * draws_played.
+    """
+    if play_mode in ("progressive_8_boxed", "progressive_8_straight"):
+        raise ValueError("Use compute_progressive_cost for progressive modes.")
+    return combos_count * cost_per_combo * draws_played
+
+
+def compute_flat_play_payout(
+    play_mode: PlayMode,
+    hit_type: str,
+    stake_multiplier: float = 1.0,
+) -> float:
+    """
+    For flat play modes, only pay out if hit_type is compatible with the play_mode.
+    Boxed play pays for boxed OR straight hits; straight play pays only on straight.
+    """
+    if play_mode in ("progressive_8_boxed", "progressive_8_straight"):
+        raise ValueError("Use compute_progressive_payout for progressive modes.")
+
+    base = 0.0
+    if "boxed" in play_mode:
+        if hit_type in ("boxed", "straight", "vt_boxed", "vt_straight"):
+            base = PAYOUTS[play_mode]
+    else:  # straight modes
+        if hit_type in ("straight", "vt_straight"):
+            base = PAYOUTS[play_mode]
+
+    return base * stake_multiplier
+
+
+def compute_progressive_cost_and_payout(
+    play_mode: PlayMode,
+    round_hit: Optional[int],
+) -> tuple[float, float]:
+    """
+    Look up your pre-defined progressive plan and compute:
+    - total cost up to (and including) the final round played
+    - payout if hit occured at round_hit, else 0
+
+    round_hit: 1-based index of round where hit occurred, or None if no hit.
+    """
+    if play_mode not in PROGRESSIVE_PLANS:
+        raise ValueError(f"No progressive plan defined for {play_mode}")
+
+    plan = PROGRESSIVE_PLANS[play_mode]
+    max_round = len(plan)
+
+    if round_hit is None:
+        total_cost = sum(r["expense"] for r in plan)
+        return total_cost, 0.0
+
+    # Clamp round_hit to [1, max_round]
+    round_hit = max(1, min(round_hit, max_round))
+
+    total_cost = sum(r["expense"] for r in plan[:round_hit])
+    payout = plan[round_hit - 1]["payout"]
+    return total_cost, payout
+
+
+# -----------------------------
+# 6. Example wiring (to be replaced by real integration)
+# -----------------------------
+
+if __name__ == "__main__":
+    # Very small self-test: pretend we had a single 8-combo VT-straight pack
+    tracker = PerformanceTracker()
+
+    # Example 1: progressive_8_boxed campaign, hit on round 3
+    total_cost, payout = compute_progressive_cost_and_payout(
+        "progressive_8_boxed",
+        round_hit=3,
+    )
+    tracker.log_campaign(
+        CampaignResult(
+            state="DemoState4",
+            date_started="2025-12-01",
+            pack_id="vt_pair_mirror_12__demo",
+            pack_type="vt_pair_mirror_12",
+            play_mode="progressive_8_boxed",
+            combos_count=8,
+            max_draws_planned=5,
+            draws_played=3,
+            hit_type="boxed",
+            hit_draw_offset=3,
+            total_expense=total_cost,
+            total_payout=payout,
+            evidence_score=0.85,
+            vt_straight_hint=1,
+            consensus_double_hint=0,
+            lingering_pattern_hint=1,
+        )
+    )
+
+    # Example 2: store_boxed flat play, 8 combos, 10 draws, no hit
+    expense = compute_flat_play_cost(8, "store_boxed", draws_played=10)
+    payout = compute_flat_play_payout("store_boxed", hit_type="none")
+    tracker.log_campaign(
+        CampaignResult(
+            state="DemoState4",
+            date_started="2025-12-01",
+            pack_id="consensus_double_9__demo",
+            pack_type="consensus_double_9",
+            play_mode="store_boxed",
+            combos_count=8,
+            max_draws_planned=10,
+            draws_played=10,
+            hit_type="none",
+            hit_draw_offset=None,
+            total_expense=expense,
+            total_payout=payout,
+            evidence_score=0.72,
+            vt_straight_hint=0,
+            consensus_double_hint=1,
+            lingering_pattern_hint=1,
+        )
+    )
+
+    print("\n== Summary by play mode ==")
+    print(tracker.summary_by_mode())
+
+    print("\n== Profitable-ish strategies (ROI >= 0) ==")
+    print(tracker.filter_profitable_strategies(min_roi=0.0))
+
+__________________
+
+
+4. How this plugs into your Master Validation pass
+
+When you get to the “final canvas” for a day/state:
+
+Aggregator has already fused Stable + DR + HotZones + V‑TRAC into a ranked triad list with their signals.
+
+Combination Engine turns each triad into one or more combo‑packs using your V‑TRAC methods, consensus doubles, mirror doubles, etc.
+
+Master Validation / Profit module (Z):
+
+For each combo‑pack, decide candidate play_mode(s) based on signals
+(e.g., strong VT lane ⇒ consider progressive_8_straight; consensus double ⇒ store_boxed or progressive_8_boxed).
+
+Use performance_metrics.PerformanceTracker to:
+
+log what you would play (or did play),
+
+later backfill actual hits from winners map,
+
+compute ROI, timeframe adherence, and hit rates.
+
+Over time, ML reads the campaign history dataframe and learns:
+
+Which combination‑types + signals + play_modes give consistent profit ratios.
+
+When to go aggressive (progressive) vs conservative (flat).
+
+How many combos to allocate per pattern to stay within profitable windows.
+
+5. What’s next (if you want)
+
+If you’d like, next step I can:
+
+Sketch module_z_master_validation.py that:
+
+loads Stable / DR / HotZones / V‑TRAC lean outputs,
+
+calls your existing Combination Engine,
+
+wraps results in combo‑packs,
+
+and generates a “Universal Profit & Combination Report” CSV per state/day summarizing:
+
+triad, combo‑pack type, evidence signals,
+
+suggested play_modes,
+
+theoretical profit metrics (per mode),
+
+and a placeholder row ready for you to fill in actual winners later.
+
+That keeps everything modular and aligned with your AAT9 architecture and existing scripts, while finally giving you the one place where combination forming and profitability live together.
+
+
+_____________________________________
+_________________________________________
+
+
+
+Yes 👍 — and your own docs literally call out what “Part 2” and “Part 3” should be.
+
+ 
+
+From FRAMING PROFIT AND HOT ZONES 2.docx you already defined:
+
+Part 2 — Pack calculus & budgeter
+
+Part 3 — Combination‑forming engine (production stub) 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+You already have a pretty solid Part 1: the evidence vector / lane scoring concept + Hot Zones brainbundle + combination engine stubs. 
+
+COMBINATION
+
+ So let me actually deliver a concrete, usable Part 2 module now.
+
+PART 2 — Pack Calculus & Budgeter (Concrete Design + Code)
+
+Goal:
+Given:
+
+scored lanes / pattern clusters (from Stable, VTRAC, Digit Reduction, Hot Zones),
+
+calibrated hit/ROI stats from master validation,
+
+your payout/timeframe rules (1/100, 1/160, 1/500, 1/900, plus 8‑combo progressive blocks),
+
+…compute a safe, profitability‑biased staking plan per “pack”:
+
+Pack A: VTRAC8 pack (8 combos)
+
+Pack B: 12‑combo pair+mirror straight pack
+
+Pack C: Literal straight permutations pack
+
+Pack D: Reduced boxed cluster pack
+
+(as previewed in your FRAMING doc: “Pack A (8), Pack B (12), literals, boxed”. 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+)
+
+1. Pack definitions (what we’re budgeting over)
+
+We treat each pack as: “If I activate this pattern today, what exact bet‑block am I placing?”
+
+ 
+
+Minimal fields:
+
+from dataclasses import dataclass
+from typing import Literal, Optional
+
+PlayMode = Literal[
+    "store_boxed",      # 1 play = $1, pays ~$100
+    "store_straight",   # 1 play = $1, pays ~$500
+    "online_boxed",     # 1 play = $1, pays ~$160
+    "online_straight"   # 1 play = $1, pays ~$900
+]
+
+@dataclass
+class PackDefinition:
+    pack_id: str              # "A", "B", "C", "D"
+    label: str                # human label
+    combos_per_ticket: int    # e.g. 8, 12, etc.
+    play_mode: PlayMode       # which payout curve applies
+    progressive_steps: int    # how many draws you allow progression
+
+
+You wire them to your logic like:
+
+PACKS = {
+    "A": PackDefinition(
+        pack_id="A",
+        label="VTRAC 8-combo lane",
+        combos_per_ticket=8,
+        play_mode="online_boxed",   # or "store_boxed" if you prefer
+        progressive_steps=8,        # your 8-combo timeframe concept
+    ),
+    "B": PackDefinition(
+        pack_id="B",
+        label="12-combo pair+mirror straight",
+        combos_per_ticket=12,
+        play_mode="online_straight",
+        progressive_steps=14,       # e.g. 2 weeks worth of draws
+    ),
+    "C": PackDefinition(
+        pack_id="C",
+        label="Literal straight permutations",
+        combos_per_ticket=3,        # 3–6 perms of one triad
+        play_mode="online_straight",
+        progressive_steps=30,       # your 1/900 window (longer)
+    ),
+    "D": PackDefinition(
+        pack_id="D",
+        label="Reduced boxed cluster",
+        combos_per_ticket=4,        # small boxed cluster
+        play_mode="online_boxed",
+        progressive_steps=20,
+    ),
+}
+
+
+You can extend later (doubles pack, due‑double pack, consensus pack, etc.), but this core 4 matches what your FRAMING notes talk about. 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+2. Payout & timeframe metrics (your 1/100, 1/160, 1/500, 1/900)
+
+Let’s encode your baseline metrics:
+
+@dataclass
+class PayoutCurve:
+    mode: PlayMode
+    payout: float         # per $1 on ONE combo
+    timeframe_draws: int  # “reasonable” cycle length
+
+PAYOUTS = {
+    "store_boxed": PayoutCurve("store_boxed",    payout=100.0, timeframe_draws=100),   # 1/100
+    "store_straight": PayoutCurve("store_straight", payout=500.0, timeframe_draws=500),
+    "online_boxed": PayoutCurve("online_boxed",  payout=160.0, timeframe_draws=160),
+    "online_straight": PayoutCurve("online_straight", payout=900.0, timeframe_draws=900),
+}
+
+
+This is not saying “we actually only hit once in 900 draws”; it’s the profitability target you described: “If we can consistently hit within these windows, progressive wagering becomes very profitable.”
+
+3. What the budgeter receives per lane
+
+After validation you’ll have stats per lane/pack, e.g.:
+
+estimated hit probability per draw or per cycle (from your master validation log),
+
+estimated ROI per $1 stake (ROI_A, ROI_B, etc.),
+
+approximate variance / volatility (so we know which packs are “spiky”). 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+We model one “activation candidate” like:
+
+@dataclass
+class PackSignal:
+    state: str
+    date_tag: str        # YYYYMMDD
+    lane_id: str         # internal lane key
+    pack_id: str         # "A"|"B"|"C"|"D"
+    score: float         # evidence score from Aggregator
+    roi_est: float       # expected ROI from validation (e.g. 0.25 = 25%)
+    hit_prob_cycle: float  # probability of at least one hit within progressive_steps
+    ir_est: float        # “information ratio” style: roi / stdev
+
+
+The Aggregator will produce a list of these PackSignal entries for that state/date, one per lane that qualifies.
+
+4. Budget rules (Part 2 logic)
+
+Inputs to the budgeter:
+
+bankroll – your total bankroll (moving target; can be updated),
+
+daily_budget – what you’re willing to risk per cycle/day,
+
+risk_cap_pct – max % of bankroll you are willing to lose on a single day,
+
+pack_signals – list of PackSignal from aggregator (already filtered to “interesting” lanes).
+
+Core rules (you can tweak thresholds later):
+
+Risk cap:
+
+max_spend_today = min(daily_budget, bankroll * risk_cap_pct)
+
+Eligibility:
+
+Only consider packs with roi_est > 0 and hit_prob_cycle above some minimum (e.g. ≥ 0.4 for A, ≥ 0.25 for C). 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+Priority weight:
+
+Each pack gets a weight like w = roi_est * ir_est * score.
+
+Normalize weights → per‑pack spend
+
+spend_i = max_spend_today * (w_i / sum(w))
+
+Translate spend → stake per combo & progression
+
+For pack P: combos = P.combos_per_ticket
+
+If you allow P.progressive_steps draws before stop, you can compute base stake so that the total cost over those steps ≈ spend_i.
+
+Simple fixed stake per draw (no escalating):
+
+# spend_i is total planned spend across the whole progression window
+stake_per_draw_per_combo = spend_i / (PACKS[pack_id].progressive_steps * PACKS[pack_id].combos_per_ticket)
+
+
+If you want progressive stake (like 1x, 1x, 2x, 3x…):
+
+progression_multipliers = [1, 1, 2, 3]  # example
+total_multiplier = sum(progression_multipliers)
+stake_base_per_combo = spend_i / (PACKS[pack_id].combos_per_ticket * total_multiplier)
+
+
+Then stake in draw k = stake_base_per_combo * progression_multipliers[k].
+
+5. Python skeleton: profit_pack_budgeter.py
+
+Here’s a self‑contained Part 2 module that does all of the above and returns a plan the combination engine (Part 3) can consume:
+
+# profit_pack_budgeter.py
+
+from dataclasses import dataclass, asdict
+from typing import List, Literal, Dict, Optional
+
+PlayMode = Literal[
+    "store_boxed",
+    "store_straight",
+    "online_boxed",
+    "online_straight",
+]
+
+
+@dataclass
+class PayoutCurve:
+    mode: PlayMode
+    payout: float         # per $1 on ONE combo
+    timeframe_draws: int  # target timeframe for profitability
+
+
+PAYOUTS: Dict[PlayMode, PayoutCurve] = {
+    "store_boxed":      PayoutCurve("store_boxed",      payout=100.0, timeframe_draws=100),
+    "store_straight":   PayoutCurve("store_straight",   payout=500.0, timeframe_draws=500),
+    "online_boxed":     PayoutCurve("online_boxed",     payout=160.0, timeframe_draws=160),
+    "online_straight":  PayoutCurve("online_straight",  payout=900.0, timeframe_draws=900),
+}
+
+
+@dataclass
+class PackDefinition:
+    pack_id: str
+    label: str
+    combos_per_ticket: int
+    play_mode: PlayMode
+    progressive_steps: int          # draws in progression window
+    min_roi: float = 0.0            # minimum expected ROI to activate
+    min_hit_prob: float = 0.0       # minimum hit probability over window
+
+
+PACKS: Dict[str, PackDefinition] = {
+    "A": PackDefinition(
+        pack_id="A",
+        label="VTRAC 8-combo lane",
+        combos_per_ticket=8,
+        play_mode="online_boxed",
+        progressive_steps=8,
+        min_roi=0.0,
+        min_hit_prob=0.4,
+    ),
+    "B": PackDefinition(
+        pack_id="B",
+        label="12-combo pair+mirror straight",
+        combos_per_ticket=12,
+        play_mode="online_straight",
+        progressive_steps=14,
+        min_roi=0.0,
+        min_hit_prob=0.3,
+    ),
+    "C": PackDefinition(
+        pack_id="C",
+        label="Literal straight permutations",
+        combos_per_ticket=3,
+        play_mode="online_straight",
+        progressive_steps=30,
+        min_roi=0.0,
+        min_hit_prob=0.2,
+    ),
+    "D": PackDefinition(
+        pack_id="D",
+        label="Reduced boxed cluster",
+        combos_per_ticket=4,
+        play_mode="online_boxed",
+        progressive_steps=20,
+        min_roi=0.0,
+        min_hit_prob=0.3,
+    ),
+}
+
+
+@dataclass
+class PackSignal:
+    state: str
+    date_tag: str       # YYYYMMDD
+    lane_id: str        # internal lane key from Aggregator
+    pack_id: str        # "A","B","C","D"
+    score: float        # evidence score from Aggregator
+    roi_est: float      # expected ROI (net / stake) from validation
+    hit_prob_cycle: float  # probability of ≥1 hit over progressive window
+    ir_est: float       # information ratio-like (roi / stdev), can be 1.0 if unknown
+
+
+@dataclass
+class PackAllocation:
+    state: str
+    date_tag: str
+    lane_id: str
+    pack_id: str
+    combos_per_ticket: int
+    play_mode: PlayMode
+    total_spend: float
+    stake_per_combo_base: float
+    progression_multipliers: List[float]
+    expected_payout_per_hit: float
+    roi_est: float
+    hit_prob_cycle: float
+    evidence_score: float
+
+    def as_dict(self) -> Dict:
+        return asdict(self)
+
+
+def _default_progression(pack: PackDefinition) -> List[float]:
+    """
+    Simple progression profile.
+    You can tune per pack if needed (e.g. look up from config).
+    """
+    if pack.pack_id == "A":
+        # short window, modest progression
+        return [1, 1, 1, 2, 2, 3, 3, 4][: pack.progressive_steps]
+    if pack.pack_id == "B":
+        return [1] * pack.progressive_steps  # flat stake
+    if pack.pack_id == "C":
+        return [1, 1, 1, 2, 2, 3] + [3] * max(0, pack.progressive_steps - 6)
+    if pack.pack_id == "D":
+        return [1, 1, 2, 2] + [2] * max(0, pack.progressive_steps - 4)
+    return [1] * pack.progressive_steps
+
+
+def allocate_budget(
+    bankroll: float,
+    daily_budget: float,
+    risk_cap_pct: float,
+    signals: List[PackSignal],
+) -> List[PackAllocation]:
+    """
+    Core Part 2 budgeter.
+
+    - Filters pack signals by per-pack min ROI / hit probability.
+    - Computes weights from (roi_est * ir_est * score).
+    - Allocates spend under max_spend_today.
+    - Converts spend into base stake per combo + progression profile.
+    """
+    max_spend_today = min(daily_budget, bankroll * risk_cap_pct)
+    if max_spend_today <= 0 or not signals:
+        return []
+
+    # Filter by pack-specific thresholds
+    eligible: List[PackSignal] = []
+    for sig in signals:
+        pack = PACKS.get(sig.pack_id)
+        if not pack:
+            continue
+        if sig.roi_est < pack.min_roi:
+            continue
+        if sig.hit_prob_cycle < pack.min_hit_prob:
+            continue
+        eligible.append(sig)
+
+    if not eligible:
+        return []
+
+    # Compute weights
+    weights: List[float] = []
+    for sig in eligible:
+        # simple weight; can be made more complex based on your validation
+        w = max(0.0, sig.roi_est) * max(0.0, sig.ir_est) * max(0.0, sig.score)
+        weights.append(w)
+
+    weight_sum = sum(weights)
+    if weight_sum <= 0:
+        return []
+
+    allocations: List[PackAllocation] = []
+    for sig, w in zip(eligible, weights):
+        pack = PACKS[sig.pack_id]
+        payout_curve = PAYOUTS[pack.play_mode]
+
+        # total spend this pack gets today
+        total_spend = max_spend_today * (w / weight_sum)
+
+        # progression profile
+        multipliers = _default_progression(pack)
+        if not multipliers:
+            continue
+        total_mult = sum(multipliers)
+
+        # base stake per combo for the whole progression window
+        if pack.combos_per_ticket * total_mult == 0:
+            continue
+        stake_base = total_spend / (pack.combos_per_ticket * total_mult)
+
+        allocations.append(
+            PackAllocation(
+                state=sig.state,
+                date_tag=sig.date_tag,
+                lane_id=sig.lane_id,
+                pack_id=sig.pack_id,
+                combos_per_ticket=pack.combos_per_ticket,
+                play_mode=pack.play_mode,
+                total_spend=round(total_spend, 2),
+                stake_per_combo_base=round(stake_base, 4),
+                progression_multipliers=multipliers,
+                expected_payout_per_hit=payout_curve.payout,
+                roi_est=sig.roi_est,
+                hit_prob_cycle=sig.hit_prob_cycle,
+                evidence_score=sig.score,
+            )
+        )
+
+    return allocations
+
+
+What this gives you:
+
+ 
+
+For each lane/pack that passes your thresholds it returns something like:
+
+{
+  "state": "Connecticut4",
+  "date_tag": "20250625",
+  "lane_id": "CT4_VT35_lane_01",
+  "pack_id": "A",
+  "combos_per_ticket": 8,
+  "play_mode": "online_boxed",
+  "total_spend": 24.0,
+  "stake_per_combo_base": 0.125,
+  "progression_multipliers": [1,1,1,2,2,3,3,4],
+  "expected_payout_per_hit": 160.0,
+  "roi_est": 0.35,
+  "hit_prob_cycle": 0.6,
+  "evidence_score": 9.2
+}
+
+
+You would:
+
+log these into your “universal profitability report” for master validation,
+
+and feed lane_id + pack_id + stake_per_combo_base + progression_multipliers straight into Part 3 (combination engine / build_combination_sets) where you actually expand to the literal combos (VTRAC8, 12‑combo pair+mirror, etc.) and write winner_map JSON/CSV with cost/payout/ROI, as your Hot Zones spec already anticipates. 
+
+COMBINATION
+
+6. How this connects to everything else
+
+Stable / VTRAC / Digit Reduction / Hot Zones
+still generate their lean outputs & lane scores exactly as in your KIT and Hot Zones combi plan.
+
+Aggregator
+turns that into an evidence vector per lane and decides which pack (A/B/C/D) is appropriate for that lane (e.g., A when VTRAC straight evidence is strong, B when pair+mirror straight pattern is strong, etc.). 
+
+FRAMING PROFIT AND HOT ZONES 2
+
+Part 2 (this module)
+takes those lane→pack signals, plus bankroll + risk settings, and outputs a concrete staking plan which respects your profit ratios / timeframes and risk caps.
+
+Part 3
+uses this plan to physically form the 8‑combo VTRAC sets, 12‑combo pair+mirror sets, literal straights, reduced boxed sets, and emits the same winner_map structure as your Hot Zones Part 7 so that everything lines up for validation. 
+
+COMBINATION
+
+If you’d like, next step I can treat Part 3 as its own module: wire your 5 VTRAC combination methods + consensus/double logic into a concrete build_combination_sets that cooperates with this budgeter and writes the ROI rows your master validation wants.

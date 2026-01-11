@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""
+Create a cross-state Predictive Portfolio Markdown summary for a day D.
+
+This is a reporting-only tool:
+- Reads ONLY existing predictive sharepack artifacts (no analyzer runs).
+- Aggregates the "bet-ready" Control Center signals (Profit Alerts) plus the
+  per-state Candidate Universe summary so you can triage states quickly.
+
+Usage
+-----
+python3 scripts/tools/create_predictive_portfolio_report.py --date 2026-01-07
+python3 scripts/tools/create_predictive_portfolio_report.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _runs_dir() -> Path:
+    return REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _read_json(path: Path) -> object:
+    return json.loads(_read_text(path))
+
+
+def _safe_rel(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _load_csv_rows(path: Path) -> List[Dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        return [{k: (v or "") for k, v in row.items()} for row in csv.DictReader(f)]
+
+
+def _normalize_pick3(value: str) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    digits = digits.zfill(3) if len(digits) <= 3 else digits
+    return digits if len(digits) == 3 else ""
+
+
+def _canon(value: str) -> str:
+    v = _normalize_pick3(value)
+    return "".join(sorted(v)) if v else ""
+
+
+@dataclass(frozen=True)
+class ProfitAlertRow:
+    variant: str
+    alert_id: str
+    strength: int
+    suggested: str
+    canonical: str
+    combos: List[str]
+    badges: str
+
+    @property
+    def cost_units(self) -> int:
+        return len(self.combos)
+
+
+def _parse_profit_alerts_for_state(rows: Sequence[Dict[str, str]], *, state_key: str) -> List[ProfitAlertRow]:
+    out: List[ProfitAlertRow] = []
+    for r in rows:
+        if (r.get("StateKey") or "").strip() != state_key:
+            continue
+        suggested = (r.get("Suggested") or "").strip()
+        if not suggested or suggested == "OVERLAY":
+            continue
+        implied_raw = (r.get("ImpliedSet") or "").strip()
+        if not implied_raw.startswith("["):
+            continue
+        try:
+            implied = json.loads(implied_raw)
+        except Exception:
+            continue
+        if not isinstance(implied, list):
+            continue
+        combos = sorted({_normalize_pick3(x) for x in implied if _normalize_pick3(x)})
+        if not combos:
+            continue
+
+        variant = (r.get("Variant") or "").strip() or "Unknown"
+        alert_id = (r.get("AlertId") or "").strip() or "?"
+        try:
+            strength = int((r.get("Strength") or "0").strip() or "0")
+        except Exception:
+            strength = 0
+        canonical = _canon((r.get("Canonical") or "").strip())
+        badges = (r.get("Badges") or "").strip()
+
+        out.append(
+            ProfitAlertRow(
+                variant=variant,
+                alert_id=alert_id,
+                strength=strength,
+                suggested=suggested,
+                canonical=canonical,
+                combos=combos,
+                badges=badges,
+            )
+        )
+    # Highest strength first, then cheaper, then stable ordering.
+    out.sort(key=lambda x: (-x.strength, x.cost_units, x.variant, x.alert_id, x.suggested, x.canonical))
+    return out
+
+
+def _load_candidate_universe_summary(state_dir: Path) -> Tuple[int, int, List[str]]:
+    """
+    Returns: (packs_count, union_count, due_doubles_canonicals_union)
+    """
+    cu = state_dir / "candidate_universe.json"
+    if not cu.exists():
+        return 0, 0, []
+    raw = _read_json(cu)
+    if not isinstance(raw, dict):
+        return 0, 0, []
+    packs = raw.get("packs")
+    packs_list = packs if isinstance(packs, list) else []
+    union_count = raw.get("union_combos_count")
+    try:
+        union_count_int = int(union_count)
+    except Exception:
+        union = raw.get("union_combos")
+        union_count_int = len(union) if isinstance(union, list) else 0
+
+    dd_canon: set[str] = set()
+    for p in packs_list:
+        if not isinstance(p, dict):
+            continue
+        if str(p.get("method_id") or "") != "due_doubles":
+            continue
+        for c in p.get("canonicals") or []:
+            cc = _canon(str(c))
+            if cc:
+                dd_canon.add(cc)
+
+    return len(packs_list), union_count_int, sorted(dd_canon)
+
+
+def _load_play_card_b12_box_first(state_dir: Path) -> Tuple[int, List[str], List[str]]:
+    """
+    Returns: (boxed_canonicals_count, boxed_canonicals, combos) for play_box_first B12.
+    """
+    pc = state_dir / "play_card.json"
+    if not pc.exists():
+        return 0, [], []
+    raw = _read_json(pc)
+    if not isinstance(raw, dict):
+        return 0, [], []
+    strategies = raw.get("strategies")
+    if not isinstance(strategies, dict):
+        return 0, [], []
+    box_first = strategies.get("play_box_first")
+    if not isinstance(box_first, dict):
+        return 0, [], []
+    card = box_first.get("B12")
+    if not isinstance(card, dict):
+        return 0, [], []
+    combos_raw = card.get("combos") or []
+    combos: List[str] = []
+    combos_seen: set[str] = set()
+    for x in combos_raw:
+        n = _normalize_pick3(x)
+        if not n or n in combos_seen:
+            continue
+        combos.append(n)
+        combos_seen.add(n)
+    boxed_raw = card.get("boxed_canonicals") or []
+    boxed = sorted({_canon(x) for x in boxed_raw if _canon(x)})
+    try:
+        boxed_count = int(card.get("boxed_canonicals_count"))
+    except Exception:
+        boxed_count = len(boxed)
+    return boxed_count, boxed, combos
+
+
+def parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Create a cross-state predictive portfolio report for a day D.")
+    ap.add_argument("--date", required=True, help="Predictive results/sharepack date D (YYYY-MM-DD)")
+    ap.add_argument(
+        "--sharepacks-root",
+        default="sharepacks/_predictive",
+        help="Sharepacks root directory (default: sharepacks/_predictive)",
+    )
+    ap.add_argument("--out", default=None, help="Override output path (default: RUNS/<D>__PREDICTIVE_PORTFOLIO.md)")
+    ap.add_argument("--force", action="store_true", help="Overwrite an existing report (default: refuse).")
+    ap.add_argument("--top-n-alerts", type=int, default=3, help="Top N Profit Alerts rows to list per state (default: 3)")
+    ap.add_argument("--top-n-due-doubles", type=int, default=6, help="Top N Due Doubles canonicals to show per state (default: 6)")
+    return ap.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    sharepacks_root = Path(args.sharepacks_root)
+    if not sharepacks_root.is_absolute():
+        sharepacks_root = (REPO_ROOT / sharepacks_root).resolve()
+    day_dir = sharepacks_root / args.date
+    if not day_dir.exists():
+        raise SystemExit(f"Missing sharepack day dir: {_safe_rel(day_dir)}")
+
+    cc_dir = day_dir / "control_center"
+    pa_path = cc_dir / "profit_alerts.csv"
+    pa_rows = _load_csv_rows(pa_path)
+
+    states = sorted(p.name for p in day_dir.iterdir() if p.is_dir() and p.name != "control_center")
+    if not states:
+        raise SystemExit(f"No states found under: {_safe_rel(day_dir)}")
+
+    runs_dir = _runs_dir()
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    out_path = Path(args.out) if args.out else (runs_dir / f"{args.date}__PREDICTIVE_PORTFOLIO.md")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if out_path.exists() and not args.force:
+        raise SystemExit(f"Predictive portfolio already exists: {_safe_rel(out_path)} (use --force to overwrite).")
+
+    # Build state rows.
+    table_rows: List[Dict[str, Any]] = []
+    for state_key in states:
+        state_dir = day_dir / state_key
+        alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key)
+        packs_count, union_count, dd_canon = _load_candidate_universe_summary(state_dir)
+        play_boxed_count, play_boxed, play_combos = _load_play_card_b12_box_first(state_dir)
+
+        top_alerts = alerts[: max(0, int(args.top_n_alerts))]
+        top_strs: List[str] = []
+        strength_sum = 0
+        for a in top_alerts:
+            strength_sum += int(a.strength)
+            canon_label = a.canonical or (a.combos[0] if a.combos else "-")
+            top_strs.append(f"{a.variant}:{a.alert_id}:{a.suggested}:{canon_label}({a.cost_units})")
+
+        dd_show = dd_canon[: max(0, int(args.top_n_due_doubles))]
+        play_boxed_show = play_boxed[:3]
+
+        table_rows.append(
+            {
+                "StateKey": state_key,
+                "alerts_count": len(alerts),
+                "alerts_strength_sum_top": strength_sum,
+                "alerts_top": "; ".join(top_strs) if top_strs else "-",
+                "candidate_union": union_count,
+                "candidate_packs": packs_count,
+                "due_doubles_canon": " ".join(dd_show) if dd_show else "-",
+                "play_b12_boxed": (
+                    f"{play_boxed_count}:{' '.join(play_boxed_show)}" if play_boxed_count else ("0" if play_combos else "-")
+                ),
+                "play_b12_combos": " ".join(play_combos),
+            }
+        )
+
+    # Rank: more alerts + higher strength, then smaller candidate universe.
+    table_rows.sort(
+        key=lambda r: (
+            -int(r["alerts_count"]),
+            -int(r["alerts_strength_sum_top"]),
+            int(r["candidate_union"]),
+            str(r["StateKey"]),
+        )
+    )
+
+    # Render markdown.
+    lines: List[str] = []
+    lines.append(f"# Predictive Portfolio — D={args.date}")
+    lines.append("")
+    lines.append("Purpose")
+    lines.append("- Cross-state triage for a predictive day (pre-results).")
+    lines.append("- Starts from Control Center Profit Alerts (bet-ready) and annotates with Candidate Universe size.")
+    lines.append("")
+    lines.append("Evidence roots")
+    lines.append(f"- Predictive sharepacks root: `{_safe_rel(sharepacks_root)}`")
+    lines.append(f"- Control Center Profit Alerts: `{_safe_rel(pa_path)}`")
+    lines.append("")
+    lines.append("## Portfolio table (ranked)")
+    lines.append("")
+    lines.append("| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | Due doubles (canonicals) | PlayCard B12 boxed |")
+    lines.append("|---|---:|---:|---|---:|---:|---|---|")
+    for r in table_rows:
+        lines.append(
+            "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {due_doubles_canon} | {play_b12_boxed} |".format(
+                **r
+            )
+        )
+    lines.append("")
+    lines.append("## Play cards (B12, play_box_first)")
+    lines.append("")
+    lines.append("These are the budgeted “what to play now” cuts derived from Candidate Universe (pre-results).")
+    lines.append("")
+    for r in table_rows:
+        combos = str(r.get("play_b12_combos") or "").strip()
+        if not combos:
+            continue
+        lines.append(f"- **{r['StateKey']}**: `{combos}`")
+    lines.append("")
+    lines.append("## Notes")
+    lines.append("")
+    lines.append("- This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.")
+    lines.append("- For any state, the canonical “what to play” remains:")
+    lines.append(f"  - `{_safe_rel(cc_dir / 'profit_alerts.csv')}` (bet-ready implied sets)")
+    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/candidate_universe.json` (gradeable playset)")
+    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/play_card.json` (budgeted cuts)")
+    lines.append("")
+
+    out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    print(f"Wrote: {_safe_rel(out_path)}")
+
+
+if __name__ == "__main__":
+    main()

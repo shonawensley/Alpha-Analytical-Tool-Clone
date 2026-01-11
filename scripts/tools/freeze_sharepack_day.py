@@ -19,6 +19,7 @@ It does NOT generate Aux or Control Center exports. Run separately:
 
 Usage:
   python3 scripts/tools/freeze_sharepack_day.py --date 2025-06-22
+  python3 scripts/tools/freeze_sharepack_day.py --date 2025-06-22 --sharepacks-root sharepacks/_predictive
 """
 
 from __future__ import annotations
@@ -54,6 +55,21 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Freeze Brain-1 artifacts into sharepacks/<D>/ (multi-day safe).")
     p.add_argument("--date", required=True, help="Results date D (YYYY-MM-DD), e.g. 2025-06-22")
     p.add_argument("--states", nargs="*", help="Optional subset of states (default: tracked list)")
+    p.add_argument(
+        "--sharepacks-root",
+        default=str(ROOT / "sharepacks"),
+        help="Sharepacks root directory (default: sharepacks/)",
+    )
+    p.add_argument(
+        "--skip-global-vtrac",
+        action="store_true",
+        help="Skip copying VTRAC validation artifacts (validation_report.*, summary.*, vtrac_compact_report.*, payload zips).",
+    )
+    p.add_argument(
+        "--skip-winners",
+        action="store_true",
+        help="Skip copying winners lens artifacts (reports/stable/winners_by_date/<D>/...) even if they exist.",
+    )
     return p.parse_args()
 
 
@@ -118,7 +134,12 @@ def _copy_latest_winner_files(src_dir: Path, dst_dir: Path) -> None:
         shutil.copy2(src, dst_dir / src.name)
 
 
-def _write_readmes(share_day: Path, *, date: str, states: List[str]) -> None:
+def _write_readmes(share_day: Path, *, date: str, states: List[str], skip_winners: bool) -> None:
+    try:
+        day_rel = str(share_day.resolve().relative_to(ROOT))
+    except Exception:
+        day_rel = str(share_day)
+
     history_file: str | None = None
     history_date: str | None = None
     validation_log = ROOT / "reports" / "stable" / "validation_logs" / f"validation_{date}.json"
@@ -159,6 +180,7 @@ def _write_readmes(share_day: Path, *, date: str, states: List[str]) -> None:
                     "",
                     "## Notes",
                     "- Some states may have missing winners in the results file; in that case the winners lens and winner-overlays may be absent (expected).",
+                    "- If `--skip-winners` is used, the winners lens is intentionally omitted (predictive/no-results snapshots).",
                     "",
                 ]
             ),
@@ -178,14 +200,18 @@ def _write_readmes(share_day: Path, *, date: str, states: List[str]) -> None:
                     "",
                     "- Tables (tables/): Combined_Combined.csv, Midday_Combined.csv, Evening_Combined.csv",
                     f"- JSON tables (json/): {state}_tables.json",
-                    f"- Winners (winners/): reports/stable/winners_by_date/{date}/{state}/* (HTML/JSON)",
+                    *(
+                        []
+                        if skip_winners
+                        else [f"- Winners (winners/): reports/stable/winners_by_date/{date}/{state}/* (HTML/JSON)"]
+                    ),
                     "- Digit Reduction (digit_reduction/): reducer report/scores, analyzer_v2 per_item/top/meta, overlays (maps/flags/hits)",
                     "- Stable (stable/): scores, families, compound, metrics.json, winner spotlight raw/families, report HTML",
                     "- VTRAC (vtrac/): enhanced analyzer bundle + validation report for this state",
                     f"- Hot Zones (hot_zones/): per_lane, top_lanes, meta, {date}_hot_zones_winner_map.json",
                     "- Aux (aux/): draw snapshot + Part 3 summary",
                     "",
-                    f"Global VTRAC summaries live one level up (`sharepacks/{date}/`):",
+                    f"Global VTRAC summaries live one level up (`{day_rel}/`):",
                     "- summary.md, summary.csv",
                     "- vtrac_compact_report.json, vtrac_compact_report.csv",
                     "",
@@ -200,7 +226,11 @@ def main() -> None:
     date = args.date.strip()
     states = list(args.states) if args.states else list(DEFAULT_STATES)
 
-    share_day = ROOT / "sharepacks" / date
+    sharepacks_root = Path(args.sharepacks_root)
+    if not sharepacks_root.is_absolute():
+        sharepacks_root = (ROOT / sharepacks_root).resolve()
+
+    share_day = sharepacks_root / date
     _abort_if_nonempty(share_day)
     share_day.mkdir(parents=True, exist_ok=True)
 
@@ -234,7 +264,7 @@ def main() -> None:
 
         # Winners lens (date-scoped)
         winners_src = winners_dir / state
-        if winners_src.exists():
+        if winners_src.exists() and not args.skip_winners:
             _copy_latest_winner_files(winners_src, dest_state / "winners" / state)
 
         # Stable (lean artifacts; avoid dragging older bundles)
@@ -271,7 +301,7 @@ def main() -> None:
             )
 
         # Spotlights + newest training bundle only when winners exist for the day.
-        if winners_src.exists():
+        if winners_src.exists() and not args.skip_winners:
             for fname in (f"{state}_winner_family_spotlight_raw.csv", f"{state}_winner_family_spotlight_families.csv"):
                 src = stable_src / fname
                 if src.exists():
@@ -295,7 +325,7 @@ def main() -> None:
             analyzer_dest.mkdir(parents=True, exist_ok=True)
             if analyzer_src.exists():
                 _copy_many([p for p in analyzer_src.iterdir() if p.is_file()], analyzer_dest)
-                if winners_src.exists():
+                if winners_src.exists() and not args.skip_winners:
                     wsrc = analyzer_src / "winners"
                     if wsrc.exists():
                         stamp_files = [p for p in wsrc.glob("*_winner_stamp.json") if p.is_file()]
@@ -315,10 +345,11 @@ def main() -> None:
         if enhanced:
             _copy_file(enhanced[-1], vtrac_dest / enhanced[-1].name)
         val_src_dir = vtrac_val_dir / state
-        for fname in ("validation_report.json", "validation_report.md"):
-            src = val_src_dir / fname
-            if src.exists():
-                _copy_file(src, vtrac_dest / fname)
+        if not args.skip_global_vtrac:
+            for fname in ("validation_report.json", "validation_report.md"):
+                src = val_src_dir / fname
+                if src.exists():
+                    _copy_file(src, vtrac_dest / fname)
 
         # Hot Zones (current day winner maps only)
         hz_src = hz_dir / state
@@ -336,19 +367,20 @@ def main() -> None:
                 _copy_file(src, hz_dest / fname)
 
     # Day-level VTRAC artifacts (copy once)
-    for fname in (
-        "summary.md",
-        "summary.csv",
-        "vtrac_compact_report.json",
-        "vtrac_compact_report.csv",
-        "vtrac_pro_payload.zip",
-        "vtrac_validation_full_payload.zip",
-    ):
-        src = vtrac_val_dir / fname
-        if src.exists():
-            _copy_file(src, share_day / fname)
+    if not args.skip_global_vtrac:
+        for fname in (
+            "summary.md",
+            "summary.csv",
+            "vtrac_compact_report.json",
+            "vtrac_compact_report.csv",
+            "vtrac_pro_payload.zip",
+            "vtrac_validation_full_payload.zip",
+        ):
+            src = vtrac_val_dir / fname
+            if src.exists():
+                _copy_file(src, share_day / fname)
 
-    _write_readmes(share_day, date=date, states=states)
+    _write_readmes(share_day, date=date, states=states, skip_winners=args.skip_winners)
 
     print(f"[OK] Frozen Brain-1 into {share_day}")
 
