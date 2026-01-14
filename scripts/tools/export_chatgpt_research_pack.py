@@ -72,6 +72,15 @@ def _parse_args() -> argparse.Namespace:
 
     p.add_argument("--include-predictive", action="store_true", help="Also copy predictive artifacts (sharepacks/_predictive).")
     p.add_argument(
+        "--profile",
+        choices=("mixed", "tool_only", "profit_only"),
+        default="mixed",
+        help=(
+            "Ablation profile for predictive artifacts + profile-scoped RUNS exports (default: mixed). "
+            "tool_only = exclude Profit Alerts derived packs; profit_only = Profit Alerts derived packs only."
+        ),
+    )
+    p.add_argument(
         "--include-control-center",
         action="store_true",
         help="Copy sharepacks/<D>/control_center boards (filtered; see flags).",
@@ -273,10 +282,14 @@ def _copy_runs_docs(
     dates: List[str],
     export_root: Path,
     *,
+    profile: str,
     dry_run: bool,
     manifest_rows: List[Dict[str, object]],
 ) -> None:
     dest_runs = export_root / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
+    profile = str(profile or "mixed").strip()
+    rollup_suffix = "" if profile == "mixed" else f"__{profile}"
+
     # Global navigation + synthesis docs (small, and critical for context)
     always = [
         "PORTAL.md",
@@ -288,10 +301,10 @@ def _copy_runs_docs(
         "DOUBLES_MIRROR_DOUBLES__INVENTORY.csv",
         "DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md",
         "DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md",
-        "candidate_universe_rollup.md",
-        "candidate_universe_rollup.csv",
-        "play_card_rollup.md",
-        "play_card_rollup.csv",
+        f"candidate_universe_rollup{rollup_suffix}.md",
+        f"candidate_universe_rollup{rollup_suffix}.csv",
+        f"play_card_rollup{rollup_suffix}.md",
+        f"play_card_rollup{rollup_suffix}.csv",
     ]
     for fname in always:
         _copy_file(RUNS_DIR / fname, dest_runs / fname, dry_run=dry_run, manifest_rows=manifest_rows)
@@ -301,12 +314,33 @@ def _copy_runs_docs(
         window_prefix = f"{dates[0]}_to_{dates[-1]}__"
         for path in sorted(RUNS_DIR.glob(f"{window_prefix}*")):
             if path.is_file():
+                if profile != "mixed" and "profit_alert" in path.name.lower():
+                    continue
                 _copy_file(path, dest_runs / path.name, dry_run=dry_run, manifest_rows=manifest_rows)
 
     # Per-day docs
     for date in dates:
         for path in sorted(RUNS_DIR.glob(f"{date}__*")):
             if path.is_file():
+                if profile != "mixed":
+                    name = path.name
+                    lower = name.lower()
+                    if "profit_alert" in lower:
+                        continue
+                    if name.endswith("__CONTROL_CENTER.md"):
+                        continue
+                    # Predictive per-state reports are profile-agnostic and often reference mixed artifacts.
+                    if "__PREDICTIVE.md" in name:
+                        continue
+                    if "__PREDICTIVE_PORTFOLIO" in name:
+                        if f"__PREDICTIVE_PORTFOLIO__{profile}.md" not in name:
+                            continue
+                    if "__CANDIDATE_UNIVERSE_GRADE" in name:
+                        if f"__CANDIDATE_UNIVERSE_GRADE__{profile}" not in name:
+                            continue
+                    if "__PLAY_CARD_GRADE" in name:
+                        if f"__PLAY_CARD_GRADE__{profile}" not in name:
+                            continue
                 _copy_file(path, dest_runs / path.name, dry_run=dry_run, manifest_rows=manifest_rows)
 
 
@@ -394,10 +428,18 @@ def _copy_predictive_state_artifacts(
     src_state_dir: Path,
     dest_state_dir: Path,
     *,
+    profile: str,
     dry_run: bool,
     manifest_rows: List[Dict[str, object]],
 ) -> None:
-    for fname in ("candidate_universe.json", "candidate_universe.md", "play_card.json", "play_card.md"):
+    profile = str(profile or "mixed").strip()
+    suffix = "" if profile == "mixed" else f"__{profile}"
+    for fname in (
+        f"candidate_universe{suffix}.json",
+        f"candidate_universe{suffix}.md",
+        f"play_card{suffix}.json",
+        f"play_card{suffix}.md",
+    ):
         _copy_file(src_state_dir / fname, dest_state_dir / fname, dry_run=dry_run, manifest_rows=manifest_rows)
 
     state = src_state_dir.name
@@ -460,13 +502,17 @@ def _write_readme(
     lines.append("- `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/analyzer_v2/winners/*_overlay.html` (DR overlay subset)")
     lines.append("")
     if args.include_predictive:
-        lines.append("- `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json` + `play_card.json` (pre-results artifacts)")
+        suffix = "" if args.profile == "mixed" else f"__{args.profile}"
+        lines.append(
+            f"- `sharepacks/_predictive/<D>/<STATE>/candidate_universe{suffix}.json` + `play_card{suffix}.json` (pre-results artifacts)"
+        )
         lines.append("")
     lines.append("## Export parameters")
     lines.append("")
     lines.append(f"- mode: `{args.mode}`")
     lines.append(f"- dates: `{dates[0] if dates else ''}` → `{dates[-1] if dates else ''}` ({len(dates)} days)")
     lines.append(f"- include_predictive: `{bool(args.include_predictive)}`")
+    lines.append(f"- profile: `{args.profile}`")
     lines.append(f"- include_control_center: `{bool(args.include_control_center)}`")
     lines.append(f"- include_profit_alerts: `{bool(args.include_profit_alerts)}`")
     lines.append("")
@@ -545,7 +591,7 @@ def main() -> None:
         _copy_context_docs(out_dir, dry_run=args.dry_run, manifest_rows=manifest_rows)
 
     # RUNS (always copy; small, and anchors navigation)
-    _copy_runs_docs(dates, out_dir, dry_run=args.dry_run, manifest_rows=manifest_rows)
+    _copy_runs_docs(dates, out_dir, profile=args.profile, dry_run=args.dry_run, manifest_rows=manifest_rows)
 
     # Post-results sharepacks (winners lens lives here)
     for date in dates:
@@ -591,6 +637,7 @@ def main() -> None:
                 _copy_predictive_state_artifacts(
                     src_day / state,
                     dest_day / state,
+                    profile=args.profile,
                     dry_run=args.dry_run,
                     manifest_rows=manifest_rows,
                 )
