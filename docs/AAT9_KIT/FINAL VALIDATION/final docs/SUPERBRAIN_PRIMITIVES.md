@@ -53,6 +53,12 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
     - Optional derived packs (also bounded): mirror-double expansions from the top due-doubles seed:
       - `method_id=due_doubles_mirror_single` (mirror the single digit)
       - `method_id=due_doubles_mirror_double` (mirror the repeated digit)
+    - Optional derived packs (also bounded): mirror-pair closure packs for **mirror-double** conversion:
+      - `method_id=mirror_pair_closure` (pair selection + third-digit closure from Aux aggregated digits)
+      - `method_id=mirror_pair_closure_due_doubles` (EXPERIMENTAL; pair selection from Due Doubles families; disabled by default)
+        - Enable via `create_candidate_universe.py` flags:
+          - `--mirror-pair-closure-due-doubles-pairs <N>` (recommended: `2`)
+          - `--top-n-mirror-pair-closure-due-doubles <M>` (recommended: `2`)
 
 ### Stable patterns primitives
 

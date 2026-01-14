@@ -414,6 +414,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out-csv", default=None, help="Override CSV output path")
     p.add_argument("--out-md", default=None, help="Override Markdown inventory output path")
     p.add_argument("--out-deep-dive", default=None, help="Override Markdown deep dive output path")
+    p.add_argument("--out-study-queue", default=None, help="Override Markdown study queue output path")
     p.add_argument("--from-date", default=None, help="Start date (YYYY-MM-DD), inclusive")
     p.add_argument("--to-date", default=None, help="End date (YYYY-MM-DD), inclusive")
     p.add_argument("--include-all", action="store_true", help="Include all winners (not just doubles/mirror-doubles)")
@@ -447,6 +448,7 @@ def main() -> None:
     out_csv = Path(args.out_csv) if args.out_csv else runs_dir / "DOUBLES_MIRROR_DOUBLES__INVENTORY.csv"
     out_md = Path(args.out_md) if args.out_md else runs_dir / "DOUBLES_MIRROR_DOUBLES__INVENTORY.md"
     out_deep = Path(args.out_deep_dive) if args.out_deep_dive else runs_dir / "DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md"
+    out_study = Path(args.out_study_queue) if args.out_study_queue else runs_dir / "DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md"
 
     # Index tool metrics by (date,state,period)
     tool_rows = _read_csv_dicts(corpus_tool_metrics)
@@ -718,6 +720,7 @@ def main() -> None:
 
     # Write deep dive MD (auto-generated, evidence-first)
     dd: List[str] = []
+    deep_line_by_key: Dict[_EventKey, int] = {}
     dd.append("# Doubles + Mirror-Doubles — Deep Dive (Evidence Pointers + Quick Audit)")
     dd.append("")
     dd.append(f"- Generated: `{_now_iso()}`")
@@ -827,6 +830,7 @@ def main() -> None:
     dd.append("## Per-event evidence pointers")
     dd.append("")
     for r in out_rows:
+        deep_line_by_key[_EventKey(r["date"], r["state"], r["period"])] = len(dd) + 1
         dd.append(f"### {r['date']} — {r['state']} — {r['period']} — {r['winner']} ({r.get('type','')})")
         dd.append("")
         dd.append(f"- Winner canonical: `{r.get('winner_canonical','')}`")
@@ -872,9 +876,92 @@ def main() -> None:
         dd.append("")
     out_deep.write_text("\n".join(dd) + "\n", encoding="utf-8")
 
+    # Write study queue MD (mirror-double index-hit -> box-miss)
+    out_study.parent.mkdir(parents=True, exist_ok=True)
+    queue = [
+        r
+        for r in out_rows
+        if r.get("type") == "mirror_double"
+        and r.get("cu_index_hit") == "True"
+        and r.get("cu_box_hit") != "True"
+    ]
+
+    def wl_i(r: Dict[str, str], key: str) -> int:
+        return _parse_int(r.get(key, "")) or 0
+
+    def date_i(d: str) -> int:
+        try:
+            return int(str(d).replace("-", ""))
+        except Exception:
+            return 0
+
+    def sort_key(r: Dict[str, str]) -> Tuple[int, int, int, int, str, str]:
+        return (
+            -wl_i(r, "wl_focus_set1_col12_hit_family_cells"),
+            -wl_i(r, "wl_focus_set1_col12_hit_winner_cells"),
+            -wl_i(r, "wl_focus_set1_col12_hit_vt_straight_cells"),
+            -date_i(r.get("date", "")),
+            r.get("state", ""),
+            r.get("period", ""),
+        )
+
+    queue_sorted = sorted(queue, key=sort_key)
+
+    sq: List[str] = []
+    sq.append("# Doubles + Mirror-Doubles — Study Queue (Index Hit → Box Miss)")
+    sq.append("")
+    sq.append(f"- Generated: `{_now_iso()}`")
+    sq.append(f"- Source: `{_safe_rel(out_csv)}`")
+    sq.append("")
+    sq.append(
+        "Purpose: review **mirror-double** events where the predictive **Candidate Universe hit the VTRAC/index lane** (`cu_index_hit=True`) but **missed the exact box** (`cu_box_hit=False`)."
+    )
+    sq.append("These are the highest-leverage examples for designing **bounded closure packs** that convert “lane hits” into “box hits” without changing analyzers.")
+    sq.append("")
+    sq.append("How to use each row:")
+    sq.append("- Open the deep-dive section (line pointer) for winners-lens Set1 col1/2 samples + evidence paths.")
+    sq.append("- Open the Master Validation run report for the full post-results analysis context.")
+    sq.append("- Open the predictive artifacts for the same day/state (`candidate_universe.json`, `play_card.json`) to see what we actually played pre-results.")
+    sq.append("")
+    sq.append(
+        "| Rank | Date | State | Period | Winner | Canon | MirrorPair | VTRAC idx | WL family cells | WL winner cells | WL vt-straight cells | Best CU index method | Play idx hit | Deep dive | Run report | Predictive CU | Predictive Play Card |"
+    )
+    sq.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    for rank, r in enumerate(queue_sorted, start=1):
+        key = _EventKey(r.get("date", ""), r.get("state", ""), r.get("period", ""))
+        line = deep_line_by_key.get(key)
+        deep_ptr = f"{_safe_rel(out_deep)}:{int(line)}" if line else _safe_rel(out_deep)
+        sq.append(
+            "| "
+            + " | ".join(
+                [
+                    str(rank),
+                    r.get("date", ""),
+                    r.get("state", ""),
+                    r.get("period", ""),
+                    r.get("winner", ""),
+                    r.get("winner_canonical", ""),
+                    r.get("mirror_pairs", ""),
+                    r.get("winner_vtrac_index", ""),
+                    r.get("wl_focus_set1_col12_hit_family_cells", ""),
+                    r.get("wl_focus_set1_col12_hit_winner_cells", ""),
+                    r.get("wl_focus_set1_col12_hit_vt_straight_cells", ""),
+                    r.get("cu_best_index_method", ""),
+                    r.get("play_card_index_hit", ""),
+                    f"`{deep_ptr}`",
+                    f"`{r.get('run_report','')}`",
+                    f"`{r.get('predictive_candidate_universe','')}`",
+                    f"`{r.get('predictive_play_card','')}`",
+                ]
+            )
+            + " |"
+        )
+    out_study.write_text("\n".join(sq).rstrip() + "\n", encoding="utf-8")
+
     print(f"[OK] Wrote: {out_csv}")
     print(f"[OK] Wrote: {out_md}")
     print(f"[OK] Wrote: {out_deep}")
+    print(f"[OK] Wrote: {out_study}")
 
 
 if __name__ == "__main__":

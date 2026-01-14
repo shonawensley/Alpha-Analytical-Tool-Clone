@@ -28,9 +28,18 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 6) The fast “are we improving?” rollups (cross-day):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
+- Profit Alerts quarantine (ablation profiles; compare without deleting):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__tool_only.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__profit_only.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__profit_only.md`
 - Doubles / mirror-doubles research (reverse-engineering lens):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md` (includes winners-lens Set1 col1/2 ladder metrics + samples)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md` (top “index hit → box miss” cases to study first)
+7) v0 “stop running, extract gold” (synthesis sprint):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
 
 ---
 
@@ -69,8 +78,10 @@ For any predictive date `D`, start here:
 
 Then drill into a state:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>__PREDICTIVE.md` (pack inventory + evidence pointers)
-- Predictive evidence (canonical “what to play now” boards live here):
-  - `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
+- Predictive evidence (canonical “what to play now” boards):
+  - Default (includes Profit Alerts): `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
+  - If you want to quarantine Profit Alerts (recommended during synthesis): generate `__tool_only` artifacts (see `SUPERBRAIN_V0__SYNTHESIS_SPRINT.md`) and use:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO__tool_only.md`
 
 ---
 

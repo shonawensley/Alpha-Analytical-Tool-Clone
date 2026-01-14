@@ -3,8 +3,8 @@
 Roll up Candidate Universe grading outputs across all available days.
 
 This is reporting-only:
-- Reads: RUNS/*__CANDIDATE_UNIVERSE_GRADE.csv
-- Writes: RUNS/candidate_universe_rollup.{csv,md}
+- Reads: RUNS/*__CANDIDATE_UNIVERSE_GRADE*.csv
+- Writes: RUNS/candidate_universe_rollup*.{csv,md}
 
 No analyzer changes, no sharepack writes.
 """
@@ -92,6 +92,13 @@ def _iter_grade_csvs(runs_dir: Path) -> List[Path]:
     return sorted(runs_dir.glob("*__CANDIDATE_UNIVERSE_GRADE.csv"))
 
 
+def _iter_grade_csvs_profile(runs_dir: Path, *, profile: str) -> List[Path]:
+    p = (profile or "mixed").strip()
+    if p == "mixed":
+        return _iter_grade_csvs(runs_dir)
+    return sorted(runs_dir.glob(f"*__CANDIDATE_UNIVERSE_GRADE__{p}.csv"))
+
+
 def _load_csv_rows(path: Path) -> List[Dict[str, str]]:
     with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
         return list(csv.DictReader(f))
@@ -117,6 +124,12 @@ def main() -> None:
         default=str(_runs_dir()),
         help="RUNS directory (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=["mixed", "tool_only", "profit_only"],
+        default="mixed",
+        help="Ablation profile to roll up (default: mixed).",
+    )
     ap.add_argument("--out-csv", default=None, help="Override output CSV path")
     ap.add_argument("--out-md", default=None, help="Override output Markdown path")
     args = ap.parse_args()
@@ -126,9 +139,12 @@ def main() -> None:
         runs_dir = (REPO_ROOT / runs_dir).resolve()
     runs_dir.mkdir(parents=True, exist_ok=True)
 
-    grade_csvs = _iter_grade_csvs(runs_dir)
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+
+    grade_csvs = _iter_grade_csvs_profile(runs_dir, profile=profile)
     if not grade_csvs:
-        raise SystemExit(f"No Candidate Universe grade CSVs found under: {_safe_rel(runs_dir)}")
+        raise SystemExit(f"No Candidate Universe grade CSVs found under: {_safe_rel(runs_dir)} (profile={profile})")
 
     by_key: Dict[Tuple[str, str, str], Agg] = {}
     all_dates: Set[str] = set()
@@ -145,8 +161,8 @@ def main() -> None:
             agg.add(row)
             all_dates.update(agg.dates)
 
-    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / "candidate_universe_rollup.csv"
-    out_md = Path(args.out_md) if args.out_md else runs_dir / "candidate_universe_rollup.md"
+    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"candidate_universe_rollup{out_suffix}.csv"
+    out_md = Path(args.out_md) if args.out_md else runs_dir / f"candidate_universe_rollup{out_suffix}.md"
 
     out_rows: List[Dict[str, object]] = []
     for (method_id, winner_label, play_mode), agg in by_key.items():
@@ -249,4 +265,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

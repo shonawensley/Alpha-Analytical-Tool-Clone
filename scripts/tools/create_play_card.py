@@ -11,8 +11,8 @@ Play cards are *budgeted cuts* (e.g., 12/24/36 combos) used for:
 - later grading + rollups without hindsight contamination.
 
 This tool:
-- Reads ONLY: `sharepacks/<root>/<D>/<STATE>/candidate_universe.json`
-- Writes ONLY (predictive-safe): `sharepacks/<root>/<D>/<STATE>/play_card.json`
+- Reads ONLY: `sharepacks/<root>/<D>/<STATE>/candidate_universe*.json`
+- Writes ONLY (predictive-safe): `sharepacks/<root>/<D>/<STATE>/play_card*.json`
 
 Notes
 -----
@@ -202,6 +202,10 @@ def _method_weight(method_id: str) -> float:
         return 85.0
     if m in {"due_doubles_mirror_single", "due_doubles_mirror_double"}:
         return 70.0
+    if m == "mirror_pair_closure":
+        return 65.0
+    if m == "mirror_pair_closure_due_doubles":
+        return 63.0
     if m == "consensus_double_9":
         return 60.0
     if m == "stable_top":
@@ -490,6 +494,12 @@ def parse_args() -> argparse.Namespace:
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=["mixed", "tool_only", "profit_only"],
+        default="mixed",
+        help="Ablation profile (default: mixed). Determines input candidate_universe filename and output play_card filename.",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of states (default: auto-discover).")
     ap.add_argument(
         "--budgets",
@@ -536,17 +546,20 @@ def main() -> None:
 
     strict_predictive = _is_predictive_root(sharepacks_root) and not args.allow_winners_artifacts
 
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+
     for state_key in states:
         state_dir = day_dir / state_key
-        cu_path = state_dir / "candidate_universe.json"
+        cu_path = state_dir / f"candidate_universe{out_suffix}.json"
         if not cu_path.exists():
             raise SystemExit(f"Missing candidate universe: {_safe_rel(cu_path)}")
 
-        out_path = state_dir / "play_card.json"
+        out_path = state_dir / f"play_card{out_suffix}.json"
         if out_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card (use --force): {_safe_rel(out_path)}")
 
-        md_path = state_dir / "play_card.md"
+        md_path = state_dir / f"play_card{out_suffix}.md"
         if args.write_md and md_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card markdown (use --force): {_safe_rel(md_path)}")
 
@@ -587,6 +600,7 @@ def main() -> None:
             "schema_version": SCHEMA_VERSION,
             "generated_at": _now_iso(),
             "results_date": args.date,
+            "profile": profile,
             "state_key": state_key,
             "sharepack_root": _safe_rel(sharepacks_root),
             "candidate_universe_path": _safe_rel(cu_path),

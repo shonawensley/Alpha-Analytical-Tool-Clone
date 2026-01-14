@@ -6,6 +6,27 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-01-13
+
+### Candidate Universe: experimental mirror-pair closure (due-doubles seeded)
+
+- Added an **optional**, bounded Candidate Universe pack to improve mirror-double conversion (index-hit → box-hit) by seeding mirror-pair selection from the Control Center Due Doubles families:
+  - `method_id=mirror_pair_closure_due_doubles` (disabled by default; enabled via CLI flags)
+  - Flags:
+    - `create_candidate_universe.py --mirror-pair-closure-due-doubles-pairs <N>`
+    - `create_candidate_universe.py --top-n-mirror-pair-closure-due-doubles <M>`
+- Play Card selection recognizes the new method when present (still derived from Candidate Universe; does not change analyzers).
+
+### Profit Alerts quarantine (ablation profiles; additive)
+
+- Added `--profile {mixed,tool_only,profit_only}` support across the predictive “playset → selection → grading” layer so we can measure Profit Alerts without deleting them:
+  - Candidate Universe: `scripts/tools/create_candidate_universe.py`
+  - Play Cards: `scripts/tools/create_play_card.py`
+  - Graders: `scripts/tools/grade_candidate_universe.py`, `scripts/tools/grade_play_card.py`
+  - Rollups: `scripts/tools/rollup_candidate_universe_corpus.py`, `scripts/tools/rollup_play_card_corpus.py`
+  - Predictive portfolio triage: `scripts/tools/create_predictive_portfolio_report.py`
+- Output files are suffix-named (e.g., `candidate_universe__tool_only.json`, `RUNS/*__PLAY_CARD_GRADE__profit_only.*`) so they do not overwrite the default mixed view.
+
 ## 2026-01-08
 
 ### Candidate Universe (pre-results): playset contract + generator + grader

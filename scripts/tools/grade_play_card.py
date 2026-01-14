@@ -4,7 +4,7 @@ Grade play_card.json artifacts against posted results.
 
 This is an "analysis layer" tool:
 - Reads ONLY existing artifacts:
-  - sharepacks/<root>/<D>/<STATE>/play_card.json
+  - sharepacks/<root>/<D>/<STATE>/play_card*.json
   - data/results/<D>.txt (or an explicit --results-file)
 - Writes grading outputs ONLY into RUNS (never into predictive sharepacks).
 """
@@ -172,6 +172,12 @@ def parse_args() -> argparse.Namespace:
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=["mixed", "tool_only", "profit_only"],
+        default="mixed",
+        help="Ablation profile (default: mixed). Selects play_card filename and grade output suffix.",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys to grade.")
     ap.add_argument(
         "--results-file",
@@ -197,8 +203,11 @@ def main() -> None:
     runs_dir = _runs_dir()
     runs_dir.mkdir(parents=True, exist_ok=True)
 
-    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"{args.date}__PLAY_CARD_GRADE.csv"
-    out_md = Path(args.out_md) if args.out_md else runs_dir / f"{args.date}__PLAY_CARD_GRADE.md"
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+
+    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}.csv"
+    out_md = Path(args.out_md) if args.out_md else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}.md"
     if (out_csv.exists() or out_md.exists()) and not args.force:
         raise SystemExit(f"Refusing to overwrite existing outputs (use --force): {_safe_rel(out_csv)} / {_safe_rel(out_md)}")
 
@@ -212,6 +221,7 @@ def main() -> None:
     fieldnames = [
         "results_date",
         "sharepacks_root",
+        "profile",
         "play_card_path",
         "state_key",
         "winner_label",
@@ -234,12 +244,13 @@ def main() -> None:
 
     for state_dir in state_dirs:
         state_key = state_dir.name
-        pc_path = state_dir / "play_card.json"
+        pc_path = state_dir / f"play_card{out_suffix}.json"
         if not pc_path.exists():
             continue
         raw = _read_json(pc_path)
         if not isinstance(raw, dict):
             continue
+        profile_in_payload = str(raw.get("profile") or profile or "mixed").strip()
 
         strategies = raw.get("strategies") or {}
         if not isinstance(strategies, dict):
@@ -274,6 +285,7 @@ def main() -> None:
                         {
                             "results_date": args.date,
                             "sharepacks_root": _safe_rel(sharepacks_root),
+                            "profile": profile_in_payload,
                             "play_card_path": _safe_rel(pc_path),
                             "state_key": state_key,
                             "winner_label": winner_label,
@@ -322,4 +334,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

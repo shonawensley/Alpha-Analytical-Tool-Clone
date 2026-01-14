@@ -17,6 +17,7 @@ Usage
 -----
 python3 scripts/tools/create_candidate_universe.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive
 python3 scripts/tools/create_candidate_universe.py --date 2026-01-07 --states NewJersey4
+python3 scripts/tools/create_candidate_universe.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive --profile tool_only
 """
 
 from __future__ import annotations
@@ -912,6 +913,338 @@ def _parse_aux_vtrac_indices(*, state_dir: Path, state_key: str, top_n: int = 2)
     return packs, [aux_path]
 
 
+def _rank_aux_aggregated_digits(*, state_dir: Path, state_key: str) -> Tuple[List[str], List[Path]]:
+    """
+    Return digits ranked by Aux aggregated digit evidence (cross-position).
+
+    We treat this as a discovery-safe signal:
+    - Base score comes from Aux `aggregated_digits` weights.
+    - We add explicit bonuses when tags include XVAR consensus and/or double-pressure.
+    """
+    aux_path = state_dir / "aux" / state_key / "summary.json"
+    if not aux_path.exists():
+        return [], []
+    raw = _read_json(aux_path)
+    if not isinstance(raw, dict):
+        return [], [aux_path]
+    positional = raw.get("positional") or {}
+    if not isinstance(positional, dict):
+        return [], [aux_path]
+    shortlist = positional.get("shortlist_report") or {}
+    if not isinstance(shortlist, dict):
+        return [], [aux_path]
+    aggregated = shortlist.get("aggregated_digits") or {}
+    if not isinstance(aggregated, dict):
+        return [], [aux_path]
+
+    # digit -> best weighted score (max across positions)
+    scores: Dict[str, float] = {}
+    for _, items in aggregated.items():
+        if not isinstance(items, list):
+            continue
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            d = str(it.get("digit") if it.get("digit") is not None else "").strip()
+            if d and d.isdigit():
+                d = d[0]
+            if d not in MIRROR_MAP:
+                continue
+            try:
+                score = float(it.get("score") or 0.0)
+            except Exception:
+                score = 0.0
+            tags = it.get("tags") if isinstance(it.get("tags"), list) else []
+            tags_str = " ".join(str(t) for t in tags)
+            if "XVAR-Cons" in tags_str:
+                score += 100.0
+            if "Double-Pressure" in tags_str:
+                score += 50.0
+            if score > scores.get(d, float("-inf")):
+                scores[d] = score
+
+    ranked = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [d for d, _ in ranked], [aux_path]
+
+
+def _rank_due_doubles_mirror_pairs(*, day_dir: Path, state_key: str) -> Tuple[List[str], List[Path]]:
+    """
+    Return mirror-pair keys ranked by Control Center Due Doubles families.
+
+    This is a *pair-selection* signal only. It does NOT imply the winner is a double.
+    It is useful for mirror-double conversion because Due Doubles families are defined
+    over the same VTRAC mirror-pair taxonomy (0/5, 1/6, 2/7, 3/8, 4/9).
+
+    Input: sharepacks/<root>/<D>/control_center/due_doubles.csv
+    Output: list of pair keys like ["1/6","3/8",...]
+    """
+    path = day_dir / "control_center" / "due_doubles.csv"
+    rows = _load_csv_dict_rows(path)
+    if not rows:
+        return [], []
+
+    inputs = [path]
+    scores: Dict[str, float] = {}
+    for r in rows:
+        if (r.get("StateKey") or "").strip() != state_key:
+            continue
+        for i in range(1, 6):
+            cell = (r.get(f"Family {i}") or "").strip()
+            if not cell or cell == "-":
+                continue
+            family_label = cell.split(":", 1)[0].strip() if ":" in cell else ""
+            if not family_label:
+                continue
+            # Family 1 is most important, Family 5 least.
+            weight = float(6 - i)
+            for token in (t.strip() for t in family_label.split("-") if t.strip()):
+                if "/" not in token:
+                    continue
+                a, b = (x.strip() for x in token.split("/", 1))
+                if not a or not b or a not in MIRROR_MAP or b not in MIRROR_MAP:
+                    continue
+                # Only accept true mirror pairs (vtrac_pair mapping).
+                if _mirror_digit(a) != b and _mirror_digit(b) != a:
+                    continue
+                pair_key = f"{min(a, b)}/{max(a, b)}"
+                scores[pair_key] = scores.get(pair_key, 0.0) + weight
+
+    ranked = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [k for k, _ in ranked], inputs
+
+
+def _build_mirror_pair_closure_packs_from_pairs(
+    *,
+    pair_keys: List[str],
+    state_dir: Path,
+    state_key: str,
+    envelope: dict,
+    top_pairs: int,
+    top_thirds: int,
+    method_id: str,
+    pack_prefix: str,
+    why_tag_src: str,
+    evidence_paths: List[str],
+) -> List[dict]:
+    if top_pairs <= 0 or top_thirds <= 0:
+        return []
+    if not pair_keys:
+        return []
+
+    ranked_digits, _ = _rank_aux_aggregated_digits(state_dir=state_dir, state_key=state_key)
+    has_aux_rank = bool(ranked_digits)
+    ranked_pool = [d for d in ranked_digits if d in MIRROR_MAP]
+
+    env_digits = envelope.get("digits") if isinstance(envelope, dict) else []
+    if not isinstance(env_digits, list):
+        env_digits = []
+    env_digits = [str(d) for d in env_digits if str(d) in MIRROR_MAP]
+    fallback_pool = env_digits + [str(d) for d in range(10)]
+
+    selected: List[Tuple[str, str]] = []
+    for pk in pair_keys:
+        if "/" not in pk:
+            continue
+        a, b = (x.strip() for x in pk.split("/", 1))
+        if a in MIRROR_MAP and b in MIRROR_MAP and (_mirror_digit(a) == b or _mirror_digit(b) == a):
+            selected.append((min(a, b), max(a, b)))
+        if len(selected) >= top_pairs:
+            break
+    if not selected:
+        return []
+
+    packs: List[dict] = []
+    for a, b in selected:
+        thirds: List[str] = []
+        used_fallback = False
+        for d in ranked_pool:
+            if d in {a, b} or d in thirds:
+                continue
+            thirds.append(d)
+            if len(thirds) >= top_thirds:
+                break
+        if len(thirds) < top_thirds:
+            for d in fallback_pool:
+                if d not in MIRROR_MAP or d in {a, b} or d in thirds:
+                    continue
+                thirds.append(d)
+                used_fallback = True
+                if len(thirds) >= top_thirds:
+                    break
+
+        canonicals: List[str] = []
+        combos: set[str] = set()
+        for t in thirds:
+            if t in {a, b}:
+                continue
+            canon = "".join(sorted([a, b, t]))
+            if not canon or len(set(canon)) != 3:
+                continue
+            canonicals.append(canon)
+            combos.update(_unique_perms(canon))
+
+        canonicals = sorted(set(canonicals))
+        combos_list = sorted(combos)
+        if not combos_list:
+            continue
+
+        pair_key = f"{a}/{b}"
+        why_tags = [
+            pack_prefix,
+            f"pair:{pair_key}",
+            f"top_pairs:{int(top_pairs)}",
+            f"top_thirds:{int(top_thirds)}",
+            f"thirds:{''.join(thirds)}",
+            why_tag_src,
+        ]
+        if has_aux_rank:
+            why_tags.append("thirds_src:aux_aggregated_digits")
+        else:
+            why_tags.append("thirds_src:digit_envelope")
+        if used_fallback:
+            why_tags.append("thirds_fallback:envelope_or_0_9")
+
+        packs.append(
+            {
+                "pack_id": f"{pack_prefix}:pair={pair_key}",
+                "method_id": method_id,
+                "variant": "Unknown",
+                "play_mode": "BOX",
+                "canonicals": canonicals,
+                "combos": combos_list,
+                "combos_count": len(combos_list),
+                "cost_units": len(combos_list),
+                "why_tags": why_tags,
+                "transform_chain": [
+                    "aux_summary:positional_shortlist_report:aggregated_digits",
+                    f"{pack_prefix}:{pair_key}:thirds_top{int(top_thirds)}(vtrac_pair)",
+                    "box_expand_unique_perms",
+                ],
+                "evidence_paths": evidence_paths,
+            }
+        )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs
+
+
+def _build_mirror_pair_closure_packs(
+    *,
+    state_dir: Path,
+    state_key: str,
+    envelope: dict,
+    top_pairs: int = 2,
+    top_thirds: int = 3,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Build bounded mirror-pair closure packs for mirror-double conversion.
+
+    Target failure mode: Candidate Universe hits the correct vtrac_index lane but misses the exact box.
+    This pack adds a small BOX closure set of the form:
+      { sort(d, mirror(d), t) for top t } * perms
+
+    - d is selected from Aux aggregated digit evidence (fallback: digit envelope).
+    - Third digits t are selected from Aux evidence (fallback: digit envelope / 0–9).
+    """
+    if top_pairs <= 0 or top_thirds <= 0:
+        return [], []
+
+    ranked_digits, inputs = _rank_aux_aggregated_digits(state_dir=state_dir, state_key=state_key)
+    has_aux_rank = bool(ranked_digits)
+
+    env_digits = envelope.get("digits") if isinstance(envelope, dict) else []
+    if not isinstance(env_digits, list):
+        env_digits = []
+    env_digits = [str(d) for d in env_digits if str(d) in MIRROR_MAP]
+
+    # Choose unique mirror pairs (unordered) from ranked digits (fallback: envelope digits).
+    selected_pairs: List[Tuple[str, str]] = []
+    seen_pairs: set[str] = set()
+    for d in list(ranked_digits) + env_digits:
+        if d not in MIRROR_MAP:
+            continue
+        m = _mirror_digit(d)
+        a, b = (min(d, m), max(d, m))
+        pair_key = f"{a}/{b}"
+        if pair_key in seen_pairs:
+            continue
+        seen_pairs.add(pair_key)
+        selected_pairs.append((a, b))
+        if len(selected_pairs) >= top_pairs:
+            break
+
+    if not selected_pairs:
+        return [], inputs
+
+    ranked_pool = [d for d in ranked_digits if d in MIRROR_MAP]
+    fallback_pool = env_digits + [str(d) for d in range(10)]
+
+    packs: List[dict] = []
+    evidence_paths = [_safe_rel(p) for p in inputs] if inputs else []
+
+    packs = _build_mirror_pair_closure_packs_from_pairs(
+        pair_keys=[f"{a}/{b}" for a, b in selected_pairs],
+        state_dir=state_dir,
+        state_key=state_key,
+        envelope=envelope,
+        top_pairs=top_pairs,
+        top_thirds=top_thirds,
+        method_id="mirror_pair_closure",
+        pack_prefix="mirror_pair_closure",
+        why_tag_src="src:aux_aggregated_digits" if has_aux_rank else "src:digit_envelope",
+        evidence_paths=evidence_paths,
+    )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, inputs
+
+
+def _build_mirror_pair_closure_due_doubles_packs(
+    *,
+    day_dir: Path,
+    state_dir: Path,
+    state_key: str,
+    envelope: dict,
+    top_pairs: int = 2,
+    top_thirds: int = 2,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Mirror-pair closure packs seeded from Control Center Due Doubles families.
+
+    This is designed to address the dominant mirror-double miss mode:
+    the correct mirror pair is often not selected by Aux digit ranking alone.
+    """
+    if top_pairs <= 0 or top_thirds <= 0:
+        return [], []
+
+    pair_keys, dd_inputs = _rank_due_doubles_mirror_pairs(day_dir=day_dir, state_key=state_key)
+    if not pair_keys:
+        return [], dd_inputs
+
+    evidence_paths: List[str] = []
+    for p in dd_inputs:
+        evidence_paths.append(_safe_rel(p))
+    aux_path = state_dir / "aux" / state_key / "summary.json"
+    if aux_path.exists():
+        evidence_paths.append(_safe_rel(aux_path))
+    evidence_paths = sorted(set(evidence_paths))
+
+    packs = _build_mirror_pair_closure_packs_from_pairs(
+        pair_keys=pair_keys,
+        state_dir=state_dir,
+        state_key=state_key,
+        envelope=envelope,
+        top_pairs=top_pairs,
+        top_thirds=top_thirds,
+        method_id="mirror_pair_closure_due_doubles",
+        pack_prefix="mirror_pair_closure_due_doubles",
+        why_tag_src="src:due_doubles_families",
+        evidence_paths=evidence_paths,
+    )
+    # IMPORTANT: do not return dd_inputs here; due_doubles.csv is already hashed by the main due_doubles parser.
+    return packs, []
+
+
 def _consensus_double_9(*, consensus_digit: str, key_digits: List[str], stable_additions: Optional[List[str]] = None) -> List[str]:
     """
     COMBINATION_FORMING3 primitive: CONSENSUS9 (9 core combos + optional stable additions).
@@ -1317,11 +1650,17 @@ def parse_args() -> argparse.Namespace:
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=["mixed", "tool_only", "profit_only"],
+        default="mixed",
+        help="Ablation profile for pack sources (default: mixed). tool_only = skip profit_alerts packs; profit_only = profit_alerts packs only.",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys (default: auto-discover from day dir)")
     ap.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite an existing candidate_universe.json (default: refuse).",
+        help="Overwrite an existing candidate_universe*.json (default: refuse).",
     )
     ap.add_argument(
         "--allow-winners-artifacts",
@@ -1350,6 +1689,30 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=1,
         help="Seed count (per due-doubles variant row) to expand into mirror-double packs (default: 1; 0 disables).",
+    )
+    ap.add_argument(
+        "--mirror-pair-closure-pairs",
+        type=int,
+        default=2,
+        help="Top N mirror pairs to close using Aux aggregated digits (default: 2; 0 disables).",
+    )
+    ap.add_argument(
+        "--top-n-mirror-pair-closure",
+        type=int,
+        default=3,
+        help="Top N third digits per mirror-pair closure pack (default: 3; 0 disables).",
+    )
+    ap.add_argument(
+        "--mirror-pair-closure-due-doubles-pairs",
+        type=int,
+        default=0,
+        help="Top N mirror pairs to close using Due Doubles families (default: 0 disables; recommended starting point: 2).",
+    )
+    ap.add_argument(
+        "--top-n-mirror-pair-closure-due-doubles",
+        type=int,
+        default=2,
+        help="Top N third digits per due-doubles mirror-pair closure pack (default: 2; 0 disables).",
     )
     ap.add_argument(
         "--skip-combo-packs",
@@ -1395,12 +1758,17 @@ def main() -> None:
 
     cc_meta = _load_control_center_meta(day_dir)
 
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+    include_profit_alerts = profile in {"mixed", "profit_only"}
+    include_non_profit = profile in {"mixed", "tool_only"}
+
     for state_key in states:
         state_dir = day_dir / state_key
         if not state_dir.exists():
             raise SystemExit(f"Missing state dir: {_safe_rel(state_dir)}")
 
-        out_path = state_dir / "candidate_universe.json"
+        out_path = state_dir / f"candidate_universe{out_suffix}.json"
         if out_path.exists() and not args.force:
             raise SystemExit(
                 f"Refusing to overwrite existing candidate universe: {_safe_rel(out_path)} (use --force)"
@@ -1420,86 +1788,113 @@ def main() -> None:
         inputs: List[Path] = []
 
         # 1) Profit Alerts (Control Center)
-        pa_packs, pa_inputs = _parse_profit_alerts(day_dir=day_dir, state_key=state_key)
-        packs.extend(pa_packs)
-        inputs.extend(pa_inputs)
+        if include_profit_alerts:
+            pa_packs, pa_inputs = _parse_profit_alerts(day_dir=day_dir, state_key=state_key)
+            packs.extend(pa_packs)
+            inputs.extend(pa_inputs)
 
-        # 1b) Due Doubles (Control Center) (bounded BOX packs)
-        dd_packs, dd_inputs = _parse_due_doubles(
-            day_dir=day_dir, state_key=state_key, top_n=int(args.top_n_due_doubles)
-        )
-        packs.extend(dd_packs)
-        inputs.extend(dd_inputs)
+        # 1b+) Non-profit packs (Brain-1 + Aux + bounded combo packs)
+        if include_non_profit:
+            # 1b) Due Doubles (Control Center) (bounded BOX packs)
+            dd_packs, dd_inputs = _parse_due_doubles(
+                day_dir=day_dir, state_key=state_key, top_n=int(args.top_n_due_doubles)
+            )
+            packs.extend(dd_packs)
+            inputs.extend(dd_inputs)
 
-        # 1c) Due Doubles mirror packs (bounded)
-        dd_mirror = _derive_due_doubles_mirror_packs(
-            due_packs=dd_packs, seed_top_n=int(args.due_doubles_mirror_seeds)
-        )
-        packs.extend(dd_mirror)
+            # 1c) Due Doubles mirror packs (bounded)
+            dd_mirror = _derive_due_doubles_mirror_packs(
+                due_packs=dd_packs, seed_top_n=int(args.due_doubles_mirror_seeds)
+            )
+            packs.extend(dd_mirror)
 
-        # 2) Stable (top canonicals per section, BOX-expanded)
-        st_packs, st_inputs = _parse_stable_top(
-            state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_stable)
-        )
-        packs.extend(st_packs)
-        inputs.extend(st_inputs)
+            # 2) Stable (top canonicals per section, BOX-expanded)
+            st_packs, st_inputs = _parse_stable_top(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_stable)
+            )
+            packs.extend(st_packs)
+            inputs.extend(st_inputs)
 
-        # 3) Digit Reduction analyzer v2 (top patterns per variant)
-        dr_packs, dr_inputs = _parse_dr_top(
-            state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_dr)
-        )
-        packs.extend(dr_packs)
-        inputs.extend(dr_inputs)
+            # 3) Digit Reduction analyzer v2 (top patterns per variant)
+            dr_packs, dr_inputs = _parse_dr_top(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_dr)
+            )
+            packs.extend(dr_packs)
+            inputs.extend(dr_inputs)
 
-        # 4) VTRAC enhanced (top straights)
-        vt_packs, vt_inputs = _parse_vtrac_top(
-            state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_vtrac)
-        )
-        packs.extend(vt_packs)
-        inputs.extend(vt_inputs)
+            # 4) VTRAC enhanced (top straights)
+            vt_packs, vt_inputs = _parse_vtrac_top(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_vtrac)
+            )
+            packs.extend(vt_packs)
+            inputs.extend(vt_inputs)
 
-        # 5) Hot Zones (top triads)
-        hz_packs, hz_inputs = _parse_hot_zones_top(
-            state_dir=state_dir, state_key=state_key, date=args.date, top_n=int(args.top_n_hot)
-        )
-        packs.extend(hz_packs)
-        inputs.extend(hz_inputs)
+            # 5) Hot Zones (top triads)
+            hz_packs, hz_inputs = _parse_hot_zones_top(
+                state_dir=state_dir, state_key=state_key, date=args.date, top_n=int(args.top_n_hot)
+            )
+            packs.extend(hz_packs)
+            inputs.extend(hz_inputs)
 
-        # 6) Aux (positional shortlist)
-        aux_packs, aux_inputs = _parse_aux_top(
-            state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_aux)
-        )
-        packs.extend(aux_packs)
-        inputs.extend(aux_inputs)
+            # 6) Aux (positional shortlist)
+            aux_packs, aux_inputs = _parse_aux_top(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_aux)
+            )
+            packs.extend(aux_packs)
+            inputs.extend(aux_inputs)
 
-        # 6b) Aux (overdue VTRAC indices; index-closure packs)
-        aux_vt_packs, aux_vt_inputs = _parse_aux_vtrac_indices(
-            state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_aux_vtrac_indices)
-        )
-        packs.extend(aux_vt_packs)
-        inputs.extend(aux_vt_inputs)
+            # 6b) Aux (overdue VTRAC indices; index-closure packs)
+            aux_vt_packs, aux_vt_inputs = _parse_aux_vtrac_indices(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_aux_vtrac_indices)
+            )
+            packs.extend(aux_vt_packs)
+            inputs.extend(aux_vt_inputs)
 
-        # 7) Digit envelope + combination packs (bounded)
+        # 7) Digit envelope (always recorded; derived packs only for non-profit_only profiles)
         digit_envelopes: List[dict] = []
         envelope = _build_digit_envelope(packs=packs)
         digit_envelopes.append(envelope)
 
-        # 7b) COMBINATION_FORMING3 consensus double-trigger pack (CONSENSUS9)
-        if not args.skip_consensus_double_pack:
-            consensus_pack, consensus_inputs = _build_consensus_double_pack(
+        if profile != "profit_only":
+            # 7b) COMBINATION_FORMING3 consensus double-trigger pack (CONSENSUS9)
+            if not args.skip_consensus_double_pack:
+                consensus_pack, consensus_inputs = _build_consensus_double_pack(
+                    state_dir=state_dir,
+                    state_key=state_key,
+                    packs=packs,
+                    envelope=envelope,
+                    stable_additions_n=int(args.consensus_stable_additions),
+                )
+                if consensus_pack:
+                    packs.append(consensus_pack)
+                inputs.extend(consensus_inputs)
+
+            # 7c) Mirror-pair closure packs (bounded; mirror-double conversion helper)
+            mp_packs, mp_inputs = _build_mirror_pair_closure_packs(
                 state_dir=state_dir,
                 state_key=state_key,
-                packs=packs,
                 envelope=envelope,
-                stable_additions_n=int(args.consensus_stable_additions),
+                top_pairs=int(args.mirror_pair_closure_pairs),
+                top_thirds=int(args.top_n_mirror_pair_closure),
             )
-            if consensus_pack:
-                packs.append(consensus_pack)
-            inputs.extend(consensus_inputs)
+            packs.extend(mp_packs)
+            inputs.extend(mp_inputs)
 
-        if not args.skip_combo_packs:
-            combo_packs = _build_combo_packs_from_envelope(envelope=envelope)
-            packs.extend(combo_packs)
+            # 7d) Mirror-pair closure packs seeded from Control Center Due Doubles families (optional; additive)
+            mpdd_packs, mpdd_inputs = _build_mirror_pair_closure_due_doubles_packs(
+                day_dir=day_dir,
+                state_dir=state_dir,
+                state_key=state_key,
+                envelope=envelope,
+                top_pairs=int(args.mirror_pair_closure_due_doubles_pairs),
+                top_thirds=int(args.top_n_mirror_pair_closure_due_doubles),
+            )
+            packs.extend(mpdd_packs)
+            inputs.extend(mpdd_inputs)
+
+            if not args.skip_combo_packs:
+                combo_packs = _build_combo_packs_from_envelope(envelope=envelope)
+                packs.extend(combo_packs)
 
         # Stabilize ordering and fill missing evidence_paths for combo packs.
         for p in packs:
@@ -1518,6 +1913,7 @@ def main() -> None:
             "generated_at": _now_iso(),
             "results_date": args.date,
             "history_date": cc_meta.history_date,
+            "profile": profile,
             "state_key": state_key,
             "sharepack_root": _safe_rel(sharepacks_root),
             "sharepack_state_dir": _safe_rel(state_dir),
@@ -1544,7 +1940,7 @@ def main() -> None:
 
         _write_json(out_path, payload)
         if args.write_md:
-            md_path = state_dir / "candidate_universe.md"
+            md_path = state_dir / f"candidate_universe{out_suffix}.md"
             _write_candidate_universe_md(out_path=md_path, payload=payload)
             print(f"Wrote: {_safe_rel(md_path)}")
         print(f"Wrote: {_safe_rel(out_path)} (packs={len(packs)} union={union_count})")

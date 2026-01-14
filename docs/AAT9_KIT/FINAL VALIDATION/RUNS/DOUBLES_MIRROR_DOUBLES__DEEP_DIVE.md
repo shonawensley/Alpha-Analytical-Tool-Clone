@@ -1,6 +1,6 @@
 # Doubles + Mirror-Doubles — Deep Dive (Evidence Pointers + Quick Audit)
 
-- Generated: `2026-01-11T21:33:45.733132+00:00`
+- Generated: `2026-01-13T02:30:00.034378+00:00`
 - Rows: `190`
 
 ## Interpretation notes (so we don’t contaminate)
@@ -27,16 +27,24 @@ Rows where Candidate Universe or Play Card achieved a **BOX hit** (useful for le
 | 2026-01-05 | Florida4 | Midday | 080 | double | True | due_doubles_mirror_single | 6 | True | True |
 | 2026-01-05 | Michigan4 | Evening | 772 | double | True | union |  | False | False |
 | 2026-01-05 | NewYork4 | Midday | 080 | double | True | consensus_double_9 | 9 | True | True |
-| 2026-01-05 | PuertoRico4 | Midday | 732 | mirror_double | True | union |  | False | True |
+| 2026-01-05 | Ohio4 | Midday | 651 | mirror_double | True | mirror_pair_closure_due_doubles | 12 | False | False |
+| 2026-01-05 | PuertoRico4 | Midday | 732 | mirror_double | True | mirror_pair_closure | 18 | True | True |
+| 2026-01-06 | Delaware4 | Midday | 165 | mirror_double | True | mirror_pair_closure | 18 | False | True |
+| 2026-01-06 | Michigan4 | Midday | 618 | mirror_double | True | mirror_pair_closure_due_doubles | 12 | True | True |
 | 2026-01-06 | NewYork4 | Midday | 181 | double | True | union |  | False | False |
 | 2026-01-07 | Pennsylvania4 | Midday | 060 | double | True | union |  | False | True |
+| 2026-01-07 | Virginia4 | Evening | 990 | double | True | consensus_double_9 | 9 | False | False |
 | 2026-01-08 | Indiana4 | Evening | 242 | double | True | union |  | False | False |
-| 2026-01-08 | NewJersey4 | Evening | 055 | double | True | union |  | True | True |
+| 2026-01-08 | NewJersey4 | Evening | 055 | double | True | union |  | False | False |
 | 2026-01-08 | Ohio4 | Evening | 580 | mirror_double | True | union |  | False | False |
+| 2026-01-08 | Ohio4 | Midday | 681 | mirror_double | True | mirror_pair_closure_due_doubles | 12 | False | False |
 | 2026-01-08 | OntarioCanada4 | Evening | 498 | mirror_double | True | union |  | False | False |
-| 2026-01-08 | OntarioCanada4 | Midday | 022 | double | True | consensus_double_9 | 9 | True | True |
+| 2026-01-08 | OntarioCanada4 | Midday | 022 | double | True | consensus_double_9 | 9 | False | True |
 | 2026-01-08 | Pennsylvania4 | Midday | 750 | mirror_double | True | union |  | False | True |
 | 2026-01-08 | SouthCarolina4 | Midday | 277 | double | True | union |  | False | False |
+| 2026-01-09 | Delaware4 | Midday | 843 | mirror_double | True | mirror_pair_closure_due_doubles | 12 | False | False |
+| 2026-01-09 | NewJersey4 | Midday | 287 | mirror_double | True | mirror_pair_closure | 18 | False | False |
+| 2026-01-09 | NewYork4 | Evening | 835 | mirror_double | True | mirror_pair_closure | 18 | False | False |
 | 2026-01-09 | Ohio4 | Evening | 090 | double | True | due_doubles_mirror_double | 6 | True | True |
 | 2026-01-09 | PuertoRico4 | Evening | 225 | double | True | due_doubles_mirror_single | 6 | True | True |
 
@@ -1695,8 +1703,8 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `0/5-1/6`
 - Control Center due-doubles: DS=`2` family_rank_match=`5` winner_in_family=`False`
 - Aux DS audit: DS=`2` delta(cc-aux)=`0` draws=`sharepacks/2026-01-05/Ohio4/aux/draws/Ohio_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure_due_doubles`@`12` box_methods_non_union=`mirror_pair_closure_due_doubles`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__Ohio4.md`
 - Winners lens dir: `sharepacks/2026-01-05/Ohio4/winners/Ohio4`
 - Winners lens JSON: `sharepacks/2026-01-05/Ohio4/winners/Ohio4/Ohio4_vtrac6_winner_651_20260110_035736.json` (index `6`)
@@ -1746,7 +1754,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`1` family_rank_match=`3` winner_in_family=`False`
 - Aux DS audit: DS=`1` delta(cc-aux)=`0` draws=`sharepacks/2026-01-05/Pennsylvania4/aux/draws/Pennsylvania_Evening_draws.csv`
 - Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`False`
+- Play Card: box_hit=`False` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__Pennsylvania4.md`
 - Winners lens dir: `sharepacks/2026-01-05/Pennsylvania4/winners/Pennsylvania4`
 - Winners lens JSON: `sharepacks/2026-01-05/Pennsylvania4/winners/Pennsylvania4/Pennsylvania4_vtrac2_winner_600_20260110_035740.json` (index `2`)
@@ -1779,8 +1787,8 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `2/7` | vtrac_group_family: `2/7-3/8`
 - Control Center due-doubles: DS=`1` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`1` delta(cc-aux)=`0` draws=`sharepacks/2026-01-05/PuertoRico4/aux/draws/Puerto_Rico_Midday_draws.csv`
-- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure`@`18` box_methods_non_union=`mirror_pair_closure`
+- Play Card: box_hit=`True` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__PuertoRico4.md`
 - Winners lens dir: `sharepacks/2026-01-05/PuertoRico4/winners/PuertoRico4`
 - Winners lens JSON: `sharepacks/2026-01-05/PuertoRico4/winners/PuertoRico4/PuertoRico4_vtrac27_winner_732_20260110_035741.json` (index `27`)
@@ -1848,7 +1856,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`0` family_rank_match=`4` winner_in_family=`False`
 - Aux DS audit: DS=`0` delta(cc-aux)=`0` draws=`sharepacks/2026-01-06/Connecticut4/aux/draws/Connecticut_Evening_draws.csv`
 - Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Connecticut4.md`
 - Winners lens dir: `sharepacks/2026-01-06/Connecticut4/winners/Connecticut4`
 - Winners lens JSON: `sharepacks/2026-01-06/Connecticut4/winners/Connecticut4/Connecticut4_vtrac27_winner_737_20260107_052253.json` (index `27`)
@@ -1864,7 +1872,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `0/5-1/6`
 - Control Center due-doubles: DS=`2` family_rank_match=`4` winner_in_family=`False`
 - Aux DS audit: DS=`2` delta(cc-aux)=`0` draws=`sharepacks/2026-01-06/Delaware4/aux/draws/Delaware_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure`@`18` box_methods_non_union=`mirror_pair_closure`
 - Play Card: box_hit=`False` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Delaware4.md`
 - Winners lens dir: `sharepacks/2026-01-06/Delaware4/winners/Delaware4`
@@ -1882,7 +1890,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`0` family_rank_match=`4` winner_in_family=`False`
 - Aux DS audit: DS=`0` delta(cc-aux)=`0` draws=`sharepacks/2026-01-06/Florida4/aux/draws/Florida_Evening_draws.csv`
 - Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Florida4.md`
 - Winners lens dir: `sharepacks/2026-01-06/Florida4/winners/Florida4`
 - Winners lens JSON: `sharepacks/2026-01-06/Florida4/winners/Florida4/Florida4_vtrac6_winner_160_20260107_052258.json` (index `6`)
@@ -1897,7 +1905,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `1/6-4/9`
 - Control Center due-doubles: DS=`2` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`2` delta(cc-aux)=`0` draws=`sharepacks/2026-01-06/Indiana4/aux/draws/Indiana_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Indiana4.md`
 - Winners lens dir: `sharepacks/2026-01-06/Indiana4/winners/Indiana4`
@@ -1914,8 +1922,8 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `1/6-3/8`
 - Control Center due-doubles: DS=`9` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`9` delta(cc-aux)=`0` draws=`sharepacks/2026-01-06/Michigan4/aux/draws/Michigan_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure_due_doubles`@`12` box_methods_non_union=`mirror_pair_closure,mirror_pair_closure_due_doubles`
+- Play Card: box_hit=`True` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Michigan4.md`
 - Winners lens dir: `sharepacks/2026-01-06/Michigan4/winners/Michigan4`
 - Winners lens JSON: `sharepacks/2026-01-06/Michigan4/winners/Michigan4/Michigan4_vtrac18_winner_618_20260107_052302.json` (index `18`)
@@ -2130,7 +2138,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `1/6-3/8`
 - Control Center due-doubles: DS=`4` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`4` delta(cc-aux)=`0` draws=`sharepacks/2026-01-07/NewJersey4/aux/draws/New_Jersey_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-07__NewJersey4.md`
 - Winners lens dir: `sharepacks/2026-01-07/NewJersey4/winners/NewJersey4`
@@ -2164,7 +2172,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `` | vtrac_group_family: `0/5-2/7`
 - Control Center due-doubles: DS=`2` family_rank_match=`5` winner_in_family=`False`
 - Aux DS audit: DS=`2` delta(cc-aux)=`0` draws=`sharepacks/2026-01-07/NorthCarolina4/aux/draws/North_Carolina_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-07__NorthCarolina4.md`
 - Winners lens dir: `sharepacks/2026-01-07/NorthCarolina4/winners/NorthCarolina4`
@@ -2215,7 +2223,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `` | vtrac_group_family: `1/6-4/9`
 - Control Center due-doubles: DS=`9` family_rank_match=`1` winner_in_family=`False`
 - Aux DS audit: DS=`9` delta(cc-aux)=`0` draws=`sharepacks/2026-01-07/PuertoRico4/aux/draws/Puerto_Rico_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-07__PuertoRico4.md`
 - Winners lens dir: `sharepacks/2026-01-07/PuertoRico4/winners/PuertoRico4`
@@ -2250,7 +2258,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`1` family_rank_match=`2` winner_in_family=`True`
 - Aux DS audit: DS=`1` delta(cc-aux)=`0` draws=`sharepacks/2026-01-07/SouthCarolina4/aux/draws/South_Carolina_Midday_draws.csv`
 - Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-07__SouthCarolina4.md`
 - Winners lens dir: `sharepacks/2026-01-07/SouthCarolina4/winners/SouthCarolina4`
 - Winners lens JSON: `sharepacks/2026-01-07/SouthCarolina4/winners/SouthCarolina4/SouthCarolina4_vtrac29_winner_288_20260110_033445.json` (index `29`)
@@ -2266,7 +2274,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `` | vtrac_group_family: `0/5-4/9`
 - Control Center due-doubles: DS=`1` family_rank_match=`3` winner_in_family=`False`
 - Aux DS audit: DS=`1` delta(cc-aux)=`0` draws=`sharepacks/2026-01-07/Virginia4/aux/draws/Virginia_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`consensus_double_9`@`9` box_methods_non_union=`consensus_double_9`
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-07__Virginia4.md`
 - Winners lens dir: `sharepacks/2026-01-07/Virginia4/winners/Virginia4`
@@ -2367,7 +2375,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`5` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`5` delta(cc-aux)=`0` draws=`sharepacks/2026-01-08/NewJersey4/aux/draws/New_Jersey_Evening_draws.csv`
 - Candidate Universe: box_hit=`True` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`True` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__NewJersey4.md`
 - Winners lens dir: `sharepacks/2026-01-08/NewJersey4/winners/NewJersey4`
 - Winners lens JSON: `sharepacks/2026-01-08/NewJersey4/winners/NewJersey4/NewJersey4_vtrac1_winner_055_20260110_034430.json` (index `1`)
@@ -2433,8 +2441,8 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `1/6` | vtrac_group_family: `1/6-3/8`
 - Control Center due-doubles: DS=`0` family_rank_match=`1` winner_in_family=`False`
 - Aux DS audit: DS=`0` delta(cc-aux)=`0` draws=`sharepacks/2026-01-08/Ohio4/aux/draws/Ohio_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure_due_doubles`@`12` box_methods_non_union=`mirror_pair_closure_due_doubles`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__Ohio4.md`
 - Winners lens dir: `sharepacks/2026-01-08/Ohio4/winners/Ohio4`
 - Winners lens JSON: `sharepacks/2026-01-08/Ohio4/winners/Ohio4/Ohio4_vtrac18_winner_681_20260110_034436.json` (index `18`)
@@ -2466,7 +2474,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`1` family_rank_match=`5` winner_in_family=`False`
 - Aux DS audit: DS=`1` delta(cc-aux)=`0` draws=`sharepacks/2026-01-08/OntarioCanada4/aux/draws/Ontario_Midday_draws.csv`
 - Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`consensus_double_9`@`9` box_methods_non_union=`consensus_double_9`
-- Play Card: box_hit=`True` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__OntarioCanada4.md`
 - Winners lens dir: `sharepacks/2026-01-08/OntarioCanada4/winners/OntarioCanada4`
 - Winners lens JSON: `sharepacks/2026-01-08/OntarioCanada4/winners/OntarioCanada4/OntarioCanada4_vtrac10_winner_022_20260110_034438.json` (index `10`)
@@ -2500,7 +2508,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Control Center due-doubles: DS=`0` family_rank_match=`2` winner_in_family=`False`
 - Aux DS audit: DS=`0` delta(cc-aux)=`0` draws=`sharepacks/2026-01-08/PuertoRico4/aux/draws/Puerto_Rico_Evening_draws.csv`
 - Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`True`
+- Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__PuertoRico4.md`
 - Winners lens dir: `sharepacks/2026-01-08/PuertoRico4/winners/PuertoRico4`
 - Winners lens JSON: `sharepacks/2026-01-08/PuertoRico4/winners/PuertoRico4/PuertoRico4_vtrac31_winner_479_20260110_034446.json` (index `31`)
@@ -2549,7 +2557,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `3/8` | vtrac_group_family: `3/8-4/9`
 - Control Center due-doubles: DS=`5` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`5` delta(cc-aux)=`0` draws=`sharepacks/2026-01-09/Delaware4/aux/draws/Delaware_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure_due_doubles`@`12` box_methods_non_union=`mirror_pair_closure_due_doubles`
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__Delaware4.md`
 - Winners lens dir: `sharepacks/2026-01-09/Delaware4/winners/Delaware4`
@@ -2566,8 +2574,8 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `` | vtrac_group_family: `2/7-3/8`
 - Control Center due-doubles: DS=`0` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`0` delta(cc-aux)=`0` draws=`sharepacks/2026-01-09/Indiana4/aux/draws/Indiana_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`False` best_box=``@`` box_methods_non_union=``
-- Play Card: box_hit=`False` idx_hit=`False`
+- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
+- Play Card: box_hit=`False` idx_hit=`True`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__Indiana4.md`
 - Winners lens dir: `sharepacks/2026-01-09/Indiana4/winners/Indiana4`
 - Winners lens JSON: `sharepacks/2026-01-09/Indiana4/winners/Indiana4/Indiana4_vtrac27_winner_377_20260110_035042.json` (index `27`)
@@ -2600,7 +2608,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `2/7` | vtrac_group_family: `2/7-3/8`
 - Control Center due-doubles: DS=`6` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`6` delta(cc-aux)=`0` draws=`sharepacks/2026-01-09/NewJersey4/aux/draws/New_Jersey_Midday_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure`@`18` box_methods_non_union=`mirror_pair_closure`
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__NewJersey4.md`
 - Winners lens dir: `sharepacks/2026-01-09/NewJersey4/winners/NewJersey4`
@@ -2617,7 +2625,7 @@ Computed from the winners JSON lens for the same event (focus variant = period).
 - Mirror pairs: `3/8` | vtrac_group_family: `0/5-3/8`
 - Control Center due-doubles: DS=`8` family_rank_match=`` winner_in_family=`False`
 - Aux DS audit: DS=`8` delta(cc-aux)=`0` draws=`sharepacks/2026-01-09/NewYork4/aux/draws/New_York_Evening_draws.csv`
-- Candidate Universe: box_hit=`False` idx_hit=`True` best_box=``@`` box_methods_non_union=``
+- Candidate Universe: box_hit=`True` idx_hit=`True` best_box=`mirror_pair_closure`@`18` box_methods_non_union=`mirror_pair_closure`
 - Play Card: box_hit=`False` idx_hit=`False`
 - RUNS report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__NewYork4.md`
 - Winners lens dir: `sharepacks/2026-01-09/NewYork4/winners/NewYork4`

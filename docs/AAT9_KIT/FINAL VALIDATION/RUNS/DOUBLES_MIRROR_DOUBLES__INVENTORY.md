@@ -1,6 +1,6 @@
 # Doubles + Mirror-Doubles — Inventory (Gold-Day Corpus)
 
-- Generated: `2026-01-11T21:33:45.732115+00:00`
+- Generated: `2026-01-13T02:30:00.033780+00:00`
 - Source corpus: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - Rows (filtered): `190`
 

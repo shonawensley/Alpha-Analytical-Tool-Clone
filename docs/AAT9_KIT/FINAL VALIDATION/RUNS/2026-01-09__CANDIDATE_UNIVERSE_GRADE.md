@@ -1,7 +1,7 @@
 # Candidate Universe Grade — D=2026-01-09
 
 Provenance
-- Generated: `2026-01-10T08:29:20.907888+00:00`
+- Generated: `2026-01-13T02:29:51.549759+00:00`
 - Candidate Universe root: `sharepacks/_predictive/2026-01-09`
 - Results file: `data/results/2026-01-09.txt` (present)
 
@@ -10,12 +10,12 @@ Provenance
 | StateKey | Midday | Midday Hit | Midday VTRAC | Evening | Evening Hit | Evening VTRAC |
 |---|---:|---:|---:|---:|---:|---:|
 | `Connecticut4` | 234 | Y | Y | 513 | N | N |
-| `Delaware4` | 843 | N | Y | 681 | N | Y |
+| `Delaware4` | 843 | Y | Y | 681 | N | Y |
 | `Florida4` | 860 | N | Y | 093 | N | Y |
-| `Indiana4` | 219 | N | N | 377 | N | N |
+| `Indiana4` | 219 | N | N | 377 | N | Y |
 | `Michigan4` | 842 | Y | Y | 273 | N | N |
-| `NewJersey4` | 287 | N | Y | 028 | Y | Y |
-| `NewYork4` | 989 | N | N | 835 | N | Y |
+| `NewJersey4` | 287 | Y | Y | 028 | Y | Y |
+| `NewYork4` | 989 | N | N | 835 | Y | Y |
 | `NorthCarolina4` | 177 | N | N | 960 | Y | Y |
 | `Ohio4` | 785 | Y | Y | 090 | Y | Y |
 | `OntarioCanada4` | 772 | N | N | 104 | N | N |

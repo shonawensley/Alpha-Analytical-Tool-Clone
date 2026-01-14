@@ -1,8 +1,8 @@
 # Play Card Grade — 2026-01-05
 
-- generated_at: `2026-01-10T09:22:36.574088+00:00`
+- generated_at: `2026-01-13T02:29:42.819578+00:00`
 - results_file: `data/results/2026-01-05.txt`
 - rows: `252`
-- hit_any: `14`
+- hit_any: `16`
 
 - CSV: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__PLAY_CARD_GRADE.csv`

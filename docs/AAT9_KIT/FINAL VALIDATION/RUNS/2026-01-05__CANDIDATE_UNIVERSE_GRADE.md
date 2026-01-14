@@ -1,7 +1,7 @@
 # Candidate Universe Grade — D=2026-01-05
 
 Provenance
-- Generated: `2026-01-10T09:22:35.810221+00:00`
+- Generated: `2026-01-13T02:29:42.027857+00:00`
 - Candidate Universe root: `sharepacks/_predictive/2026-01-05`
 - Results file: `data/results/2026-01-05.txt` (present)
 
@@ -17,7 +17,7 @@ Provenance
 | `NewJersey4` | 604 | N | N | 694 | N | N |
 | `NewYork4` | 080 | Y | Y | 735 | N | Y |
 | `NorthCarolina4` | 553 | N | Y | 895 | N | N |
-| `Ohio4` | 651 | N | Y | 711 | N | N |
+| `Ohio4` | 651 | Y | Y | 711 | N | N |
 | `OntarioCanada4` | 555 | N | N | 797 | N | Y |
 | `Pennsylvania4` | 546 | N | Y | 600 | N | Y |
 | `PuertoRico4` | 732 | Y | Y | 972 | N | Y |

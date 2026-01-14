@@ -68,6 +68,21 @@ After the predictive sharepack exists, generate the **Candidate Universe** (the 
 python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive
 ```
 
+Optional: Profit Alerts quarantine (ablation profiles; additive, does not delete anything):
+- `mixed` (default): current behavior (includes Profit Alerts packs)
+- `tool_only`: excludes Profit Alerts packs
+- `profit_only`: Profit Alerts packs only
+
+```bash
+python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile profit_only
+```
+
+Optional (experimental): enable due-doubles–seeded mirror-pair closure packs (mirror-double conversion):
+```bash
+python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --mirror-pair-closure-due-doubles-pairs 2 --top-n-mirror-pair-closure-due-doubles 2
+```
+
 Optional: also write a small human-readable summary next to the JSON:
 ```bash
 python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --write-md
@@ -76,6 +91,11 @@ python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root 
 Optional: generate budgeted “Play Cards” (e.g., 12/24/36 combos) from Candidate Universe (what to play now):
 ```bash
 python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --budgets 12,24,36
+```
+
+Optional: generate Play Cards for an ablation profile:
+```bash
+python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --budgets 12,24,36
 ```
 
 Optional: also write a small human-readable Play Card summary next to the JSON:
@@ -95,6 +115,11 @@ Optional: create a cross-state predictive portfolio triage report (fast “what 
 python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive
 ```
 
+Optional: portfolio report for an ablation profile:
+```bash
+python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
+```
+
 ---
 
 ## 4) How to “upgrade” a predictive pack once results exist
@@ -110,7 +135,17 @@ Then grade Candidate Universe (writes only to RUNS; keeps predictive sharepacks 
 python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive
 ```
 
+Optional: grade Candidate Universe for an ablation profile:
+```bash
+python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
+```
+
 Grade Play Cards (writes only to RUNS):
 ```bash
 python3 scripts/tools/grade_play_card.py --date <D> --sharepacks-root sharepacks/_predictive
+```
+
+Optional: grade Play Cards for an ablation profile:
+```bash
+python3 scripts/tools/grade_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
 ```

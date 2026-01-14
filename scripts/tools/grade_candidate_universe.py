@@ -12,6 +12,7 @@ Usage
 -----
 python3 scripts/tools/grade_candidate_universe.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive
 python3 scripts/tools/grade_candidate_universe.py --date 2026-01-07 --states NewJersey4
+python3 scripts/tools/grade_candidate_universe.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive --profile tool_only
 """
 
 from __future__ import annotations
@@ -197,6 +198,12 @@ def parse_args() -> argparse.Namespace:
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=["mixed", "tool_only", "profit_only"],
+        default="mixed",
+        help="Ablation profile (default: mixed). Selects candidate_universe filename and grade output suffix.",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys to grade.")
     ap.add_argument(
         "--results-file",
@@ -222,8 +229,11 @@ def main() -> None:
     runs_dir = _runs_dir()
     runs_dir.mkdir(parents=True, exist_ok=True)
 
-    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"{args.date}__CANDIDATE_UNIVERSE_GRADE.csv"
-    out_md = Path(args.out_md) if args.out_md else runs_dir / f"{args.date}__CANDIDATE_UNIVERSE_GRADE.md"
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+
+    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"{args.date}__CANDIDATE_UNIVERSE_GRADE{out_suffix}.csv"
+    out_md = Path(args.out_md) if args.out_md else runs_dir / f"{args.date}__CANDIDATE_UNIVERSE_GRADE{out_suffix}.md"
     if (out_csv.exists() or out_md.exists()) and not args.force:
         raise SystemExit(f"Refusing to overwrite existing outputs (use --force): {_safe_rel(out_csv)} / {_safe_rel(out_md)}")
 
@@ -237,6 +247,7 @@ def main() -> None:
     fieldnames = [
         "results_date",
         "sharepacks_root",
+        "profile",
         "candidate_universe_path",
         "state_key",
         "history_date",
@@ -264,7 +275,7 @@ def main() -> None:
 
     for state_dir in state_dirs:
         state_key = state_dir.name
-        cu_path = state_dir / "candidate_universe.json"
+        cu_path = state_dir / f"candidate_universe{out_suffix}.json"
         if not cu_path.exists():
             continue
 
@@ -277,6 +288,7 @@ def main() -> None:
 
         history_date = str(raw.get("history_date") or "") or ""
         contains_winners_artifacts = bool(raw.get("contains_winners_artifacts"))
+        profile_in_payload = str(raw.get("profile") or profile or "mixed").strip()
 
         # Union pack (convenience): best-case across all packs.
         union_combos = raw.get("union_combos") if isinstance(raw.get("union_combos"), list) else []
@@ -367,6 +379,7 @@ def main() -> None:
                     {
                         "results_date": args.date,
                         "sharepacks_root": _safe_rel(sharepacks_root),
+                        "profile": profile_in_payload,
                         "candidate_universe_path": _safe_rel(cu_path),
                         "state_key": state_key,
                         "history_date": history_date,
@@ -395,6 +408,7 @@ def main() -> None:
                 {
                     "results_date": args.date,
                     "sharepacks_root": _safe_rel(sharepacks_root),
+                    "profile": profile_in_payload,
                     "candidate_universe_path": _safe_rel(cu_path),
                     "state_key": state_key,
                     "history_date": history_date,
