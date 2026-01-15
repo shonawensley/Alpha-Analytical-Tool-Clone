@@ -225,11 +225,26 @@ def summarize_variant(
             top_score_v2 = None
 
     if not top_variant.empty and "best_pattern" in top_variant.columns:
-        patterns = top_variant["best_pattern"].astype(str).map(normalize_pick3_literal)
-        winner_rows = top_variant[patterns.isin(winner_variants)]
+        # IMPORTANT: `rank` in analyzer_v2_top_candidates.csv is global across variants
+        # (not re-based per variant). Compute a variant-local rank so rank_fraction stays
+        # meaningful when we filter to Midday/Evening/Combined.
+        sorted_top = top_variant.copy()
+        if "rank" in sorted_top.columns:
+            sorted_top["_rank"] = pd.to_numeric(sorted_top["rank"], errors="coerce")
+        else:
+            sorted_top["_rank"] = float("inf")
+        if "score_v2" in sorted_top.columns:
+            sorted_top["_score_v2"] = pd.to_numeric(sorted_top["score_v2"], errors="coerce")
+        else:
+            sorted_top["_score_v2"] = 0.0
+        sorted_top = sorted_top.sort_values(["_rank", "_score_v2"], ascending=[True, False], na_position="last")
+        sorted_top["_local_rank"] = range(1, len(sorted_top) + 1)
+
+        patterns = sorted_top["best_pattern"].astype(str).map(normalize_pick3_literal)
+        winner_rows = sorted_top[patterns.isin(winner_variants)]
         winner_in_top = not winner_rows.empty
-        if winner_in_top and "rank" in winner_rows.columns:
-            top_best_rank = int(pd.to_numeric(winner_rows["rank"], errors="coerce").min())
+        if winner_in_top:
+            top_best_rank = int(pd.to_numeric(winner_rows["_local_rank"], errors="coerce").min())
         if winner_in_top and "score_v2" in winner_rows.columns:
             try:
                 winner_score_v2 = float(pd.to_numeric(winner_rows["score_v2"], errors="coerce").fillna(0).max())

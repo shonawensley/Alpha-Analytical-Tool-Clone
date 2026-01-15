@@ -1,0 +1,2062 @@
+
+• Explored
+  └ List audit
+• Ran git status -sb
+  └ ## checkpoint/sharepack-2025-06-21...origin/checkpoint/sharepack-2025-06-21
+     M alpha_analytical/control_center/batch_runner.py
+    … +212 lines
+    ?? tasks/fix_report_feedback.md
+    List history
+    Search ^Pick3StatsC4_2026
+    List results
+    Search ^(2025-12-3[0-1]|2026-01-0[1-4])\.txt$
+    Read 2026-01-02__CONTROL_CENTER.md, 2025-06-21__NewYork4.md, 2026-01-02__NewYork4.md, digest.md, 2025-06-21__DAY_SYNTHESIS.md
+    □ Verify Dec/Jan sharepack integrity
+    □ Fill Control Center daily reports
+    □ Fill state run reports (templates)
+    □ Write day synthesis reports
+    □ Update fix-later + corpus docs
+• Updated Plan
+  └ Dec/Jan 6‑day block is clean: corpus audit shows FAIL=0 and correct H→D mapping; only expected PR missing-winner skips/warnings remain.
+    ✔ Verify Dec/Jan sharepack integrity
+    □ Fill Control Center daily reports
+    □ Fill state run reports (templates)
+  └ Read 2025-12-30__CONTROL_CENTER.md
+    List tools
+    Search control_center.*run
+    Read 2025-06-21__CONTROL_CENTER.md
+
+    Wrote: sharepacks/2025-12-30/control_center/profit_alerts_eval.csv
+    … +26 lines
+    Wrote: sharepacks/2026-01-04/control_center/profit_alerts_eval.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md
+
+    □ Fill state run reports (templates)
+  │ import json
+  │ from pathlib import Path
+  │ … +10 lines
+  └ sharepacks/2026-01-02/NewYork4/aux/NewYork4/summary.json
+    dict_keys(['state', 'date', 'draw_sources', 'config', 'repeat_watch', 'positional', 'doubles', 'pairs', 'vtrac', 'sums', 'blackapple'])
+  └ Read create_master_validation_run_report.py
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +13 lines
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ <class 'list'> 2
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +13 lines
+  └ label Midday
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+    scores row_rank_fraction None
+
+    … +16 lines
+    present True best_rank 427 rows_total 1509 rank_frac 0.2829688535453943
+    metrics_hits {'exact_boxed': True, 'exact_straight': True, 'vt_boxed_count': 55, 'source': 'metrics.json'}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +14 lines
+  └ dict_keys(['state', 'stamp', 'winners', 'top_per_item', 'top_candidates'])
+    winners type <class 'list'>
+  │ import json
+  │ from pathlib import Path
+  │ … +14 lines
+  └ variant Midday skipped False
+    literal 998 canonical 899
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ variant Midday stamp keys ['counts', 'items_total', 'present', 'source']
+  └ variant Midday
+    stamp counts {'items_total': 17, 'exact_any': 0, 'exact_final': 0, 'vtrac_any': 8, 'vtrac_final': 0, 'drop_exact_any': 2, 'drop_exact_final': 0, 'drop_vtrac_any': 17,
+    … +5 lines
+    top {'winner_present': False, 'winner_best_rank': None, 'rows_total': 26, 'winner_rank_fraction': None, 'winner_score_v2': None, 'top_score_v2': 11.247143,
+    'winner_score_ratio_to_top': None, 'winner_score_delta_from_top': None, 'source': 'analyzer_v2_top_candidates.csv'}
+  └ dict_keys(['state', 'date', 'winners'])
+    winners entries 2
+    … +3 lines
+  │ from pathlib import Path
+  │ … +9 lines
+  └ label Midday literal 998 canonical 899
+    top_lanes best_rank 17 / 210
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+  └ dict_keys(['state', 'stamp', 'top_indices', 'top_straights', 'section_summaries', 'winners_lens', 'winner_index_placements'])
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ winners_lens type <class 'list'> len 2
+    dict_keys(['winner_combo', 'index', 'rank', 'score', 'timestamp', 'file', 'stats_keys'])
+    winner None index 34 rank 0 score 0
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +5 lines
+  └ winner_combo 998 index 34 rank 0 score 0 file NewYork4_vtrac34_winner_998_20260105_070913.json
+    winner_combo 256 index 7 rank 0 score 0 file NewYork4_vtrac7_winner_256_20260105_070914.json
+
+• Explored
+  └ Search ## Part 3|## Part 4|## Part 5 in 2026-01-02__NewYork4.md
+    Read 2026-01-02__NewYork4.md, export_master_validation_corpus.py
+    Search ## Part A|Part A in master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+    Read master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +13 lines
+  └ keys dict_keys(['state', 'date', 'draw_sources', 'config', 'repeat_watch', 'positional', 'doubles', 'pairs', 'vtrac', 'sums', 'blackapple'])
+    repeat_watch keys dict_keys(['combined', 'midday', 'evening'])
+    Traceback (most recent call last):
+      File "<stdin>", line 7, in <module>
+    KeyError: 'by_variant'
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +10 lines
+  └ repeat_watch {'combined': {'current_index': 22, 'current_streak': 1, 'last_repeat_gap': 23, 'last_repeat_index': 12, 'max_streak': 2, 'window': 1000}, 'midday': {'current_index': 17,
+    'current_streak': 1, 'last_repeat_gap': 16, 'last_repeat_index': 14, 'max_streak': 2, 'window': 1000}, 'evening': {'current_index': 22, 'current_streak': 1, 'last_repeat_gap': 31,
+    … +3 lines
+      File "<stdin>", line 7, in <module>
+    KeyError: 'combined'
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ positional shortlist keys dict_keys(['variant_top_digits', 'aggregated_digits', 'candidates', 'consensus_notes', 'double_pressure_notes'])
+    Traceback (most recent call last):
+      File "<stdin>", line 6, in <module>
+    KeyError: 'by_variant'
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +10 lines
+  └ variant_top_digits keys dict_keys(['combined', 'midday', 'evening'])
+    combined top_digits [{'position': 0, 'digit': 9, 'gap': 24, 'rank': 1}, {'position': 1, 'digit': 4, 'gap': 24, 'rank': 1}, {'position': 2, 'digit': 0, 'gap': 10, 'rank': 1}]
+    … +8 lines
+    (Double-Pressure)', 'Digit 2 (mirror 7) pressuring two positions across evening, midday (Double-Pressure)', 'Digit 3 (mirror 8) pressuring two positions across combined, evening,
+    midday (Double-Pressure)', 'Digit 4 (mirror 9) pressuring two positions across combined, evening, midday (Double-Pressure)']
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +9 lines
+  └ top_candidates type <class 'list'>
+    len 10
+    first {'rank': 1, 'variant': 'Combined', 'best_pattern': '592', 'score_v2': 12.778571, 'evidence_tags': 'exact,vtrac,drop_exact,drop_vtrac,family_exact,family_vtrac'}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +8 lines
+  └ doubles keys dict_keys(['by_variant', 'multi_variant_alerts', 'top_by_variant'])
+    doubles due sample <class 'NoneType'>
+    pairs keys dict_keys(['by_variant', 'multi_variant_alerts', 'top_by_variant'])
+    vtrac keys dict_keys(['overlay_by_variant', 'heatboard_by_variant', 'overlay_top', 'heatboard_top'])
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+  └ doubles by_variant keys dict_keys(['combined', 'midday', 'evening'])
+    Traceback (most recent call last):
+      File "<stdin>", line 6, in <module>
+    KeyError: slice(None, 5, None)
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +7 lines
+  └ <class 'dict'>
+    dict_keys(['119', '577', '777', '667', '177', '000', '136', '339', '222', '115', '699', '244'])
+    top []
+    late []
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +6 lines
+  └ first 119 {'draws_since': 687, 'severity': 'B'}
+
+• Added scripts/tools/fill_master_validation_run_report.py (+616 -0)
+      1 +"""
+      2 +Fill placeholders in an existing Master Validation per-state run report.
+      3 +
+      4 +Goal
+      5 +----
+      6 +Turn the scaffold produced by `create_master_validation_run_report.py` into a
+      7 +usable artifact *without* opening dozens of CSVs/HTML files:
+      8 +
+      9 +- Reads the already-generated sharepack summaries (summary.json) + winners digest.
+     10 +- Replaces only obvious scaffold placeholders (`…`) with conservative, evidence-
+     11 +  backed answers.
+     12 +
+     13 +Safety / scope
+     14 +--------------
+     15 +- Does NOT run analyzers, regenerate tables, or modify sharepacks.
+     16 +- Does NOT overwrite any non-placeholder content (it only fills lines that still
+     17 +  contain the scaffold ellipsis).
+     18 +
+     19 +Usage
+     20 +-----
+     21 +python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-02 --state NewYork4
+     22 +"""
+     23 +
+     24 +from __future__ import annotations
+     25 +
+     26 +import argparse
+     27 +import json
+     28 +import re
+     29 +from dataclasses import dataclass
+     30 +from datetime import date as _date
+     31 +from datetime import timedelta
+     32 +from pathlib import Path
+     33 +from typing import Any, Dict, List, Optional
+     34 +
+     35 +
+     36 +REPO_ROOT = Path(__file__).resolve().parents[2]
+     37 +
+     38 +
+     39 +ELLIPSIS = "…"
+     40 +
+     41 +
+     42 +@dataclass(frozen=True)
+     43 +class Results:
+     44 +    midday: str | None
+     45 +    evening: str | None
+     46 +
+     47 +
+     48 +def parse_iso_date(value: str) -> _date:
+     49 +    try:
+     50 +        return _date.fromisoformat(value)
+     51 +    except ValueError as exc:
+     52 +        raise SystemExit(f"Invalid --date (expected YYYY-MM-DD): {value}") from exc
+     53 +
+     54 +
+     55 +def read_text(path: Path) -> str:
+     56 +    return path.read_text(encoding="utf-8", errors="replace")
+     57 +
+     58 +
+     59 +def normalize_pick3_literal(value: str) -> str:
+     60 +    digits = "".join(ch for ch in str(value) if ch.isdigit())
+     61 +    if not digits:
+     62 +        return ""
+     63 +    return digits.zfill(3) if len(digits) <= 3 else digits
+     64 +
+     65 +
+     66 +def results_state_name(state: str) -> str:
+     67 +    base = re.sub(r"\d+$", "", state)
+     68 +    specials = {
+     69 +        "NewYork": "New York",
+     70 +        "NewJersey": "New Jersey",
+     71 +        "NorthCarolina": "North Carolina",
+     72 +        "SouthCarolina": "South Carolina",
+     73 +        "PuertoRico": "Puerto Rico",
+     74 +        "OntarioCanada": "Ontario",
+     75 +        "WashingtonDC": "Washington, D.C.",
+     76 +    }
+     77 +    return specials.get(base, base)
+     78 +
+     79 +
+     80 +def parse_results(*, date: str, state: str) -> Results:
+     81 +    path = REPO_ROOT / "data" / "results" / f"{date}.txt"
+     82 +    if not path.exists():
+     83 +        return Results(None, None)
+     84 +
+     85 +    state_label = results_state_name(state)
+     86 +    for line in read_text(path).splitlines():
+     87 +        if not re.match(rf"^\s*{re.escape(state_label)}(?:\s|\t)", line):
+     88 +            continue
+     89 +
+     90 +        if "\t" in line:
+     91 +            parts = line.split("\t")
+     92 +            midday_raw = parts[1].strip() if len(parts) > 1 else ""
+     93 +            evening_raw = parts[2].strip() if len(parts) > 2 else ""
+     94 +            midday = normalize_pick3_literal(midday_raw)
+     95 +            evening = normalize_pick3_literal(evening_raw)
+     96 +            return Results(midday if len(midday) == 3 else None, evening if len(evening) == 3 else None)
+     97 +
+     98 +        nums: list[str] = []
+     99 +        for part in line.replace(",", " ").split():
+    100 +            lit = normalize_pick3_literal(part)
+    101 +            if len(lit) == 3 and lit.isdigit():
+    102 +                nums.append(lit)
+    103 +        if len(nums) >= 2:
+    104 +            return Results(nums[0], nums[1])
+    105 +        if len(nums) == 1:
+    106 +            return Results(nums[0], None)
+    107 +        return Results(None, None)
+    108 +
+    109 +    return Results(None, None)
+    110 +
+    111 +
+    112 +def load_json(path: Path) -> dict[str, Any]:
+    113 +    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    114 +
+    115 +
+    116 +def try_load_json(path: Path) -> dict[str, Any] | None:
+    117 +    if not path.exists():
+    118 +        return None
+    119 +    return load_json(path)
+    120 +
+    121 +
+    122 +def _fmt_rank(best_rank: int | None, rows_total: int | None) -> str:
+    123 +    if best_rank is None or rows_total is None:
+    124 +        return "rank N/A"
+    125 +    return f"rank {best_rank}/{rows_total}"
+    126 +
+    127 +
+    128 +def _fmt_frac(frac: float | None) -> str:
+    129 +    if frac is None:
+    130 +        return "rank_frac N/A"
+    131 +    return f"rank_frac {frac:.3f}"
+    132 +
+    133 +
+    134 +def _winner_lines_from_stable(stable_summary: dict[str, Any] | None) -> list[str]:
+    135 +    if not stable_summary:
+    136 +        return ["Stable summary.json missing (pipeline/wiring issue)."]
+    137 +    winners = stable_summary.get("winners") or []
+    138 +    out: list[str] = []
+    139 +    for w in winners:
+    140 +        label = w.get("label")
+    141 +        literal = w.get("literal")
+    142 +        canonical = w.get("canonical")
+    143 +        hits = w.get("metrics_hits", {})
+    144 +        scores = w.get("scores", {})
+    145 +        out.append(
+    146 +            f"{label} {literal} (canon {canonical}): "
+    147 +            f"exact_boxed={hits.get('exact_boxed')} exact_straight={hits.get('exact_straight')} "
+    148 +            f"| {_fmt_rank(scores.get('best_rank'), scores.get('rows_total'))} ({_fmt_frac(scores.get('winner_rank_fraction'))})"
+    149 +        )
+    150 +    return out or ["(no winners in stable summary)"]
+    151 +
+    152 +
+    153 +def _pick_env_verdict(stable_summary: dict[str, Any] | None, hz_summary: dict[str, Any] | None) -> str:
+    154 +    if not stable_summary:
+    155 +        return "unknown (missing Stable summary)"
+    156 +    winners = stable_summary.get("winners") or []
+    157 +    if not winners:
+    158 +        return "unknown (no winners)"
+    159 +
+    160 +    exact_hits = [bool((w.get("metrics_hits") or {}).get("exact_boxed")) for w in winners]
+    161 +    if all(exact_hits):
+    162 +        return "strong (Stable exact boxed hits)"
+    163 +    if any(exact_hits):
+    164 +        return "support (some Stable exact boxed hits)"
+    165 +
+    166 +    # Hot Zones fallback: if any winner is in top lanes with decent rank fraction
+    167 +    if hz_summary and hz_summary.get("winners"):
+    168 +        best_fracs: list[float] = []
+    169 +        for w in hz_summary["winners"]:
+    170 +            frac = (w.get("top_lanes") or {}).get("winner_rank_fraction")
+    171 +            if isinstance(frac, (int, float)):
+    172 +                best_fracs.append(float(frac))
+    173 +        if best_fracs and min(best_fracs) <= 0.10:
+    174 +            return "support (Hot Zones top lanes overlap)"
+    175 +
+    176 +    return "weak/noisy (no exact Stable hit; rely on cross-tool/Aux)"
+    177 +
+    178 +
+    179 +def build_part_a_answers(
+    180 +    *,
+    181 +    date: str,
+    182 +    state: str,
+    183 +    results: Results,
+    184 +    stable_summary: dict[str, Any] | None,
+    185 +    hz_summary: dict[str, Any] | None,
+    186 +    vtrac_summary: dict[str, Any] | None,
+    187 +    aux_summary: dict[str, Any] | None,
+    188 +) -> dict[int, str]:
+    189 +    winners_digest = REPO_ROOT / "sharepacks" / date / state / "winners" / state / "digest.md"
+    190 +    winners_digest_note = f"`{winners_digest.relative_to(REPO_ROOT)}`" if winners_digest.exists() else "digest.md missing"
+    191 +
+    192 +    verdict = _pick_env_verdict(stable_summary, hz_summary)
+    193 +    stable_lines = _winner_lines_from_stable(stable_summary)
+    194 +
+    195 +    vtrac_places: list[str] = []
+    196 +    if vtrac_summary:
+    197 +        for p in vtrac_summary.get("winner_index_placements", []) or []:
+    198 +            vtrac_places.append(
+    199 +                f"{p.get('winner_combo')} idx{p.get('index')} "
+    200 +                f"(rank {p.get('index_rank')}/{p.get('indices_total')}, frac {p.get('rank_fraction'):.3f})"
+    201 +                if isinstance(p.get("rank_fraction"), (int, float))
+    202 +                else f"{p.get('winner_combo')} idx{p.get('index')} (rank {p.get('index_rank')}/{p.get('indices_total')})"
+    203 +            )
+    204 +
+    205 +    aux_ba = None
+    206 +    if aux_summary:
+    207 +        ba = aux_summary.get("blackapple") or {}
+    208 +        aux_ba = ba.get("score")
+    209 +
+    210 +    q: dict[int, str] = {}
+    211 +    q[1] = f"Winners lens digest: {winners_digest_note}."
+    212 +    q[2] = "Stable environment quick read: " + "; ".join(stable_lines[:3]) + ("" if len(stable_lines) <= 3 else " …")
+    213 +    q[3] = f"VTRAC index placement (Brain-1 VTRAC enhanced): " + (", ".join(vtrac_places) if vtrac_places else "N/A / winners lens missing.")
+    214 +    q[4] = f"Variant bias (first pass): use Stable exact-hit + Hot Zones rank fractions; verdict below."
+    215 +    q[5] = f"Permutation lane clarity: defer to Part 2 VTRAC + Part A winners HTML; record any tight VT family vs diffuse lanes in Part 5."
+    216 +    q[6] = f"Environment verdict: **{verdict}**."
+    217 +    q[7] = "Hot Zones overlap: see Hot Zones summary ranks in Part 2; treat as support evidence when Stable is noisy."
+    218 +    q[8] = "Cross-set carryover: use Stable/DR ‘draw_chain’ and Hot Zones lane persistence cues (see summaries)."
+    219 +    q[9] = f"Aux cues: BA score={aux_ba} (if None, BA not available); see Part 3 positional/doubles/pairs notes."
+    220 +    q[10] = "4 criteria viability: map via Stable metrics (exact boxed/straight) + DR (vt_boxed) + VTRAC (winner index rank)."
+    221 +    q[11] = "Exact triple presence: if Stable exact_boxed/exact_straight is True, record as present; otherwise treat as absent in-table."
+    222 +    q[12] = "Profitable-environment traits: log convergence (cross-variant, hot columns, VT lane density) once templates accumulate across days."
+    223 +    q[13] = "Dominance vs dilution: use winners digest (canonical ranks vs top competitors) to classify winner family dominance."
+    224 +    q[14] = "Noise check: if Stable has no exact hit and VTRAC index rank is low, treat as noisy/negative-control day."
+    225 +    return q
+    226 +
+    227 +
+    228 +def build_tool_answers_stable(stable_summary: dict[str, Any] | None) -> dict[int, str]:
+    229 +    if not stable_summary:
+    230 +        return {i: "Stable summary missing (pipeline/wiring issue)." for i in range(1, 11)}
+    231 +
+    232 +    winners = stable_summary.get("winners") or []
+    233 +    if not winners:
+    234 +        return {i: "No winners available for this state/day (expected on some days)." for i in range(1, 11)}
+    235 +
+    236 +    lines = _winner_lines_from_stable(stable_summary)
+    237 +    top_compound = stable_summary.get("top_compound") or []
+    238 +    top_compound_str = ", ".join([t.get("canon") for t in top_compound[:5] if t.get("canon")]) if top_compound else "N/A"
+    239 +
+    240 +    exact_any = any(bool((w.get("metrics_hits") or {}).get("exact_boxed")) for w in winners)
+    241 +    exact_all = all(bool((w.get("metrics_hits") or {}).get("exact_boxed")) for w in winners)
+    242 +    outcome = "isolates both winners (exact boxed)" if exact_all else ("isolates at least one winner" if exact_any else "does not isolate winners (no exact boxed)")
+    243 +
+    244 +    return {
+    245 +        1: "Winners evidence: " + "; ".join(lines),
+    246 +        2: "4 hit criteria: see metrics_hits per winner (exact_boxed/exact_straight + vt_boxed_count).",
+    247 +        3: "Winners artifacts alignment: spotlight + metrics.json consistent (see summary block).",
+    248 +        4: f"Dominance/noise: {outcome}; use rank_frac + score_ratio_to_top to gauge strength.",
+    249 +        5: f"Top candidate clusters (compound canonicals): {top_compound_str}.",
+    250 +        6: "Miss analysis: if a winner is absent/low, treat as tool outcome (not pipeline failure) unless gaps are listed.",
+    251 +        7: "Validation (V): gaps list should be empty; if non-empty, flag as Fix-Now.",
+    252 +        8: "Optimization notes: do not tune on 1 day; accumulate across days then adjust weights (Fix-Later).",
+    253 +        9: "Cross-tool synergy: compare top compound canonicals vs DR top candidates + Hot Zones top lanes + Aux positional shortlist.",
+    254 +        10: "Takeaway: Stable " + outcome + ".",
+    255 +    }
+    256 +
+    257 +
+    258 +def build_tool_answers_dr(dr_summary: dict[str, Any] | None) -> dict[int, str]:
+    259 +    if not dr_summary:
+    260 +        return {i: "Digit Reduction summary missing (pipeline/wiring issue)." for i in range(1, 11)}
+    261 +
+    262 +    winners = dr_summary.get("winners") or []
+    263 +    any_winner = any(not w.get("skipped") for w in winners)
+    264 +    if not any_winner:
+    265 +        return {i: "No winners available for this state/day (expected on some days)." for i in range(1, 11)}
+    266 +
+    267 +    def line(w: dict[str, Any]) -> str:
+    268 +        if w.get("skipped"):
+    269 +            return f"{w.get('variant')}: skipped ({w.get('skip_reason')})"
+    270 +        top = w.get("top") or {}
+    271 +        stamp = (w.get("stamp") or {}).get("counts") or {}
+    272 +        return (
+    273 +            f"{w.get('variant')} {w.get('literal')} (canon {w.get('canonical')}): "
+    274 +            f"items_total={stamp.get('items_total')} exact_any={stamp.get('exact_any')} vtrac_any={stamp.get('vtrac_any')} "
+    275 +            f"| top winner_present={top.get('winner_present')} best_rank={top.get('winner_best_rank')}/{top.get('rows_total')}"
+    276 +        )
+    277 +
+    278 +    lines = [line(w) for w in winners]
+    279 +    top_candidates = dr_summary.get("top_candidates") or []
+    280 +    top_patterns = ", ".join([t.get("best_pattern") for t in top_candidates[:5] if t.get("best_pattern")]) if top_candidates else "N/A"
+    281 +
+    282 +    return {
+    283 +        1: "Winners evidence: " + "; ".join(lines),
+    284 +        2: "4 hit criteria: DR supports exact/vtrac/drop/family paths via stamp counts; treat vt_boxed/vt_straight as the realistic hedge.",
+    285 +        3: "Winners artifacts alignment: stamp/flags/hits should be internally consistent (validator-driven).",
+    286 +        4: "Dominance/noise: use items_total + vt_boxed counts; zero items_total with winners present is a red flag.",
+    287 +        5: f"Top DR candidates (best_pattern): {top_patterns}.",
+    288 +        6: "Miss analysis: winner_present=False usually means DR didn’t isolate; treat as tool outcome unless gaps listed.",
+    289 +        7: "Validation (V): if variant shows gaps or missing analyzer_v2 files, flag Fix-Now; otherwise OK.",
+    290 +        8: "Optimization notes: consider whether vt_boxed should be promoted in pack translation when DR is strong.",
+    291 +        9: "Cross-tool synergy: compare DR top patterns with Stable compound canonicals and Hot Zones lanes (shared digits/VT).",
+    292 +        10: "Takeaway: DR is primarily an environment + VT-hedge lens; record whether it isolated or not for later tuning.",
+    293 +    }
+    294 +
+    295 +
+    296 +def build_tool_answers_vtrac(vtrac_summary: dict[str, Any] | None) -> dict[int, str]:
+    297 +    if not vtrac_summary:
+    298 +        return {i: "VTRAC summary missing (pipeline/wiring issue)." for i in range(1, 11)}
+    299 +
+    300 +    top_indices = vtrac_summary.get("top_indices") or []
+    301 +    top_idx = ", ".join([str(t.get("index")) for t in top_indices[:5] if t.get("index") is not None]) if top_indices else "N/A"
+    302 +    placements = vtrac_summary.get("winner_index_placements") or []
+    303 +    plc = []
+    304 +    for p in placements:
+    305 +        plc.append(
+    306 +            f"{p.get('winner_combo')}→idx{p.get('index')} rank {p.get('index_rank')}/{p.get('indices_total')} (frac {p.get('rank_fraction'):.3f})"
+    307 +            if isinstance(p.get("rank_fraction"), (int, float))
+    308 +            else f"{p.get('winner_combo')}→idx{p.get('index')} rank {p.get('index_rank')}/{p.get('indices_total')}"
+    309 +        )
+    310 +    plc_s = "; ".join(plc) if plc else "N/A"
+    311 +
+    312 +    return {
+    313 +        1: f"Winners evidence: winner index placements: {plc_s}.",
+    314 +        2: f"4 hit criteria: VTRAC’s direct path is VT-straight/VT-boxed. Use index placement + top indices as the actionable lane set.",
+    315 +        3: "Winners lens alignment: winners_lens JSON/HTML should exist; treat rank/score=0 as ‘cold’ within family stats, not missing data.",
+    316 +        4: f"Dominance/noise: if winner index is outside top ranks, treat as weak VTRAC isolation; if inside top-5, treat as strong.",
+    317 +        5: f"Top indices (enhanced): {top_idx}.",
+    318 +        6: "Miss analysis: low index placement is a tool outcome; do not fix via wiring unless day-level VTRAC payload missing.",
+    319 +        7: "Validation (V): vtrac_compact_report should be non-empty; validation_report should exist.",
+    320 +        8: "Optimization notes: avoid tuning clamps until corpus is larger; rely on implied_set grading for alerts.",
+    321 +        9: "Cross-tool synergy: when Stable/DR/HotZones also tag vt-straight/VT family, boost the lane in pack translation.",
+    322 +        10: "Takeaway: treat VTRAC as ‘lane selection’ evidence and track index placement distributions across days.",
+    323 +    }
+    324 +
+    325 +
+    326 +def build_tool_answers_hot_zones(hz_summary: dict[str, Any] | None) -> dict[int, str]:
+    327 +    if not hz_summary:
+    328 +        return {i: "Hot Zones summary missing (pipeline/wiring issue)." for i in range(1, 11)}
+    329 +
+    330 +    winners = hz_summary.get("winners") or []
+    331 +    if not winners:
+    332 +        return {i: "No winners available for this state/day (expected on some days)." for i in range(1, 11)}
+    333 +
+    334 +    def line(w: dict[str, Any]) -> str:
+    335 +        label = w.get("label")
+    336 +        literal = w.get("literal")
+    337 +        canonical = w.get("canonical")
+    338 +        top = w.get("top_lanes") or {}
+    339 +        return (
+    340 +            f"{label} {literal} (canon {canonical}): "
+    341 +            f"{_fmt_rank(top.get('best_rank'), top.get('rows_total'))} ({_fmt_frac(top.get('winner_rank_fraction'))}) "
+    342 +            f"ratio_to_top={top.get('winner_score_ratio_to_top')}"
+    343 +        )
+    344 +
+    345 +    lines = [line(w) for w in winners]
+    346 +    return {
+    347 +        1: "Winners evidence: " + "; ".join(lines),
+    348 +        2: "4 hit criteria: Hot Zones is boxed-family pressure; use as support when Stable/DR identify the same family/lane.",
+    349 +        3: "Winners artifacts alignment: winner_map is a top-20 snapshot; ‘not in map’ is not corruption if rank > 20.",
+    350 +        4: "Dominance/noise: low rank_frac (<0.1) suggests good overlap; high rank_frac suggests weak Hot Zones isolation.",
+    351 +        5: "Top lanes: see summary block; use best_rank and score_ratio_to_top as comparables across states/days.",
+    352 +        6: "Miss analysis: if winner has weak rank or absent, treat as tool outcome; log and move on.",
+    353 +        7: "Validation (V): gaps list should be empty; missing winner_map files = Fix-Now.",
+    354 +        8: "Optimization notes: do not tune Hot Zones weights yet; accumulate day-level patterns first.",
+    355 +        9: "Cross-tool synergy: Hot Zones is strongest when Stable compound + DR top patterns share the same family/VT lane.",
+    356 +        10: "Takeaway: Hot Zones is a support lens; record overlap strength vs winners.",
+    357 +    }
+    358 +
+    359 +
+    360 +def build_part3_answers(aux_summary: dict[str, Any] | None, results: Results) -> dict[int, str]:
+    361 +    if not aux_summary:
+    362 +        return {i: "Aux summary missing (pipeline/wiring issue)." for i in range(1, 11)}
+    363 +
+    364 +    draw_sources = aux_summary.get("draw_sources") or {}
+    365 +    meta = draw_sources.get("snapshot_meta") or {}
+    366 +    excel = meta.get("excel_path")
+    367 +    aux_label = meta.get("aux_state_label")
+    368 +
+    369 +    positional = ((aux_summary.get("positional") or {}).get("shortlist_report") or {})
+    370 +    pos_top = positional.get("variant_top_digits", {}).get("combined", [])[:3]
+    371 +    pos_top_s = ", ".join([f"P{d['position']+1}:{d['digit']}(gap={d['gap']})" for d in pos_top if "position" in d])
+    372 +    pos_cands = positional.get("candidates", [])[:5]
+    373 +    pos_cands_s = ", ".join([c.get("combo") for c in pos_cands if c.get("combo")]) if pos_cands else "N/A"
+    374 +
+    375 +    ba = aux_summary.get("blackapple") or {}
+    376 +    ba_score = ba.get("score")
+    377 +    ba_triggers = ba.get("triggers")
+    378 +    ba_top = (ba.get("top_candidates") or [])[:5]
+    379 +    ba_top_s = ", ".join([c.get("combo") for c in ba_top if c.get("combo")]) if ba_top else "N/A"
+    380 +
+    381 +    vtrac_overlay_top = (aux_summary.get("vtrac") or {}).get("overlay_top") or []
+    382 +    vtrac_overlay_s = ", ".join([f\"{t.get('index')}:{t.get('draws_since')}\" for t in vtrac_overlay_top[:5] if t.get("index") is not None])
+    383 +
+    384 +    doubles_multi = ((aux_summary.get("doubles") or {}).get("multi_variant_alerts") or [])[:3]
+    385 +    doubles_multi_s = ", ".join([d.get("double") for d in doubles_multi if d.get("double")]) if doubles_multi else "N/A"
+    386 +
+    387 +    return {
+    388 +        1: f"Provenance: excel={excel} aux_state_label={aux_label}; snapshot_mode={meta.get('mode','?')}.",
+    389 +        2: f"Positional pressure (Combined top digits): {pos_top_s or 'N/A'}; top cartesian candidates: {pos_cands_s}.",
+    390 +        3: f"Blackapple: score={ba_score} triggers={ba_triggers}; top candidates: {ba_top_s}.",
+    391 +        4: f"Doubles/pairs: multi-variant doubles alerts (sample): {doubles_multi_s}.",
+    392 +        5: f"VTRAC overlay (Aux): top overdue indices: {vtrac_overlay_s or 'N/A'}.",
+    393 +        6: "Cross-variant cues: use consensus_notes + Mirror-Echo/Double-Pressure tags in summary block to log repeatable traits.",
+    394 +        7: f"Winner proximity (post-hoc): Midday={results.midday or 'N/A'} Evening={results.evening or 'N/A'}; check whether winners appear in positional/BA candidate lists.",
+    395 +        8: "Pack translation hook: use Aux positional shortlist to rank within the candidate universe selected from string tools.",
+    396 +        9: "Synergy: strongest when Aux (positional/doubles/pairs) reinforces the same digit pool/VT lane seen in Part 2.",
+    397 +        10: "Takeaway: record Aux as compounding evidence; do not treat as standalone caller until corpus is larger.",
+    398 +    }
+    399 +
+    400 +
+    401 +def build_part4_answers(results: Results, stable_summary: dict[str, Any] | None) -> dict[str, str]:
+    402 +    midday = results.midday
+    403 +    evening = results.evening
+    404 +
+    405 +    def box_of(value: str | None) -> str | None:
+    406 +        if not value or len(value) != 3:
+    407 +            return None
+    408 +        return "".join(sorted(value))
+    409 +
+    410 +    # Conservative first pass: if Stable has exact_boxed on a variant, treat the winner box as "plausible pack".
+    411 +    stable_hits: dict[str, bool] = {}
+    412 +    if stable_summary:
+    413 +        for w in stable_summary.get("winners") or []:
+    414 +            stable_hits[w.get("label", "")] = bool((w.get("metrics_hits") or {}).get("exact_boxed"))
+    415 +
+    416 +    midday_pack = f"BOX {box_of(midday)} (post-hoc); Stable exact_boxed={stable_hits.get('Midday')}" if midday else "N/A"
+    417 +    evening_pack = f"BOX {box_of(evening)} (post-hoc); Stable exact_boxed={stable_hits.get('Evening')}" if evening else "N/A"
+    418 +    return {
+    419 +        "midday": midday_pack,
+    420 +        "evening": evening_pack,
+    421 +        "evidence": "Use Stable/DR/HotZones/VTRAC summaries + Aux shortlist tags to justify pack size/mode.",
+    422 +        "mapping": "Rule of thumb: BOX when family present but permutation unclear; VTRAC-straight when lanes are clean; index-box only when uncertainty is high.",
+    423 +    }
+    424 +
+    425 +
+    426 +def build_part5_answers(results: Results, stable_summary: dict[str, Any] | None) -> dict[str, str]:
+    427 +    def box_of(value: str | None) -> str | None:
+    428 +        if not value or len(value) != 3:
+    429 +            return None
+    430 +        return "".join(sorted(value))
+    431 +
+    432 +    verdict = _pick_env_verdict(stable_summary, None)
+    433 +    pack_midday = f"Midday {results.midday} → BOX {box_of(results.midday)}" if results.midday else "Midday: N/A"
+    434 +    pack_evening = f"Evening {results.evening} → BOX {box_of(results.evening)}" if results.evening else "Evening: N/A"
+    435 +    return {
+    436 +        "pack": f"{pack_midday}; {pack_evening}.",
+    437 +        "tags": "Collect cross-variant convergence, VT lane density, doubles/mirror pressure, and hot columns (Part A + Aux).",
+    438 +        "drivers": f"Overall: {verdict}.",
+    439 +        "conflicts": "If tools disagree (Stable/DR/VTRAC/HotZones), treat as noisy day; log for negative-control corpus.",
+    440 +        "fix": "Fix-now: none if audit PASS; Fix-later: tune gates/decays only after larger corpus.",
+    441 +        "next": "Next run: continue filling templates for remaining states/days; then update day synthesis + corpus export.",
+    442 +    }
+    443 +
+    444 +
+    445 +def fill_report(*, date: str, state: str) -> None:
+    446 +    report_path = (
+    447 +        REPO_ROOT
+    448 +        / "docs"
+    449 +        / "AAT9_KIT"
+    450 +        / "FINAL VALIDATION"
+    451 +        / "RUNS"
+    452 +        / f"{date}__{state}.md"
+    453 +    )
+    454 +    if not report_path.exists():
+    455 +        raise SystemExit(f"Run report not found: {report_path}")
+    456 +
+    457 +    results = parse_results(date=date, state=state)
+    458 +
+    459 +    stable_summary = try_load_json(REPO_ROOT / "sharepacks" / date / state / "stable" / state / "summary.json")
+    460 +    dr_summary = try_load_json(
+    461 +        REPO_ROOT / "sharepacks" / date / state / "digit_reduction" / state / "summary.json"
+    462 +    )
+    463 +    vtrac_summary = try_load_json(REPO_ROOT / "sharepacks" / date / state / "vtrac" / state / "summary.json")
+    464 +    hz_summary = try_load_json(REPO_ROOT / "sharepacks" / date / state / "hot_zones" / state / "summary.json")
+    465 +    aux_summary = try_load_json(REPO_ROOT / "sharepacks" / date / state / "aux" / state / "summary.json")
+    466 +
+    467 +    part_a = build_part_a_answers(
+    468 +        date=date,
+    469 +        state=state,
+    470 +        results=results,
+    471 +        stable_summary=stable_summary,
+    472 +        hz_summary=hz_summary,
+    473 +        vtrac_summary=vtrac_summary,
+    474 +        aux_summary=aux_summary,
+    475 +    )
+    476 +    part3 = build_part3_answers(aux_summary, results)
+    477 +    part4 = build_part4_answers(results, stable_summary)
+    478 +    part5 = build_part5_answers(results, stable_summary)
+    479 +
+    480 +    tool_answers: dict[str, dict[int, str]] = {
+    481 +        "Stable": build_tool_answers_stable(stable_summary),
+    482 +        "Digit Reduction": build_tool_answers_dr(dr_summary),
+    483 +        "VTRAC Analyzer": build_tool_answers_vtrac(vtrac_summary),
+    484 +        "Hot Zones": build_tool_answers_hot_zones(hz_summary),
+    485 +    }
+    486 +
+    487 +    current_tool: str | None = None
+    488 +
+    489 +    out_lines: list[str] = []
+    490 +    lines = read_text(report_path).splitlines()
+    491 +    i = 0
+    492 +    while i < len(lines):
+    493 +        line = lines[i]
+    494 +
+    495 +        m_tool = re.match(r"^###\s+2\.(.+?)\s+—", line)
+    496 +        if m_tool:
+    497 +            current_tool = m_tool.group(1).strip()
+    498 +
+    499 +        # Part A Qs
+    500 +        if "Part A answers" in line:
+    501 +            out_lines.append(line)
+    502 +            i += 1
+    503 +            while i < len(lines) and re.match(r"^- Q\d+:", lines[i]):
+    504 +                qn = int(re.match(r"^- Q(\d+):", lines[i]).group(1))  # type: ignore[union-attr]
+    505 +                if ELLIPSIS in lines[i] or "... " in lines[i] or lines[i].rstrip().endswith("..."):
+    506 +                    out_lines.append(f"- Q{qn}: {part_a.get(qn, '(no answer)')}")
+    507 +                else:
+    508 +                    out_lines.append(lines[i])
+    509 +                i += 1
+    510 +            continue
+    511 +
+    512 +        # Tool Qs
+    513 +        if line.strip().startswith("Tool answers (fill using the template"):
+    514 +            out_lines.append(line)
+    515 +            i += 1
+    516 +            while i < len(lines) and re.match(r"^- Q\d+:", lines[i]):
+    519 +                if ELLIPSIS in lines[i] or "... " in lines[i] or lines[i].rstrip().endswith("..."):
+    520 +                    out_lines.append(f"- Q{qn}: {ans_map.get(qn, '(no answer)')}")
+    521 +                else:
+    522 +                    out_lines.append(lines[i])
+    523 +                i += 1
+    524 +            continue
+    525 +
+    526 +        # Cross-tool synthesis placeholders
+    527 +        if line.strip().startswith("- Shared clusters/signals:") and (ELLIPSIS in line or "..." in line):
+    528 +            out_lines.append("- Shared clusters/signals: See Stable/DR/HotZones/VTRAC winners lines + Aux top candidates; log overlaps in Part 5.")
+    529 +            i += 1
+    530 +            continue
+    531 +        if line.strip().startswith("- Conflicts/noise:") and (ELLIPSIS in line or "..." in line):
+    532 +            out_lines.append("- Conflicts/noise: If Stable exact hits are absent but other tools show heat, treat as noisy/negative-control; do not tune yet.")
+    533 +            i += 1
+    534 +            continue
+    535 +        if line.strip().startswith("- Aggregator/aux hooks to test next:") and (ELLIPSIS in line or "..." in line):
+    536 +            out_lines.append("- Aggregator/aux hooks to test next: cross-variant bounce metrics + mirror/double pressure closure (Fix-Later).")
+    537 +            i += 1
+    540 +        # Part 3 Qs
+    541 +        if "Part 3 answers" in line:
+    542 +            out_lines.append(line)
+    543 +            i += 1
+    544 +            while i < len(lines) and re.match(r"^- Q\d+:", lines[i]):
+    550 +                i += 1
+    551 +            continue
+    552 +
+    553 +        # Part 4 placeholders
+    554 +        if line.strip().startswith("- Candidate universe (Midday):") and (ELLIPSIS in line or "..." in line):
+    560 +            i += 1
+    561 +            continue
+    562 +        if line.strip().startswith("- Evidence vectors:") and (ELLIPSIS in line or "..." in line):
+    568 +            i += 1
+    569 +            continue
+    570 +
+    571 +        # Part 5 placeholders
+    572 +        if line.strip().startswith("- Pack vs winners:") and (ELLIPSIS in line or "..." in line):
+    573 +            out_lines.append(f"- Pack vs winners: {part5['pack']}")
+    574 +            i += 1
+    575 +            continue
+    576 +        if line.strip().startswith("- Key tags:") and (ELLIPSIS in line or "..." in line):
+    577 +            out_lines.append(f"- Key tags: {part5['tags']}")
+    578 +            i += 1
+    579 +            continue
+    580 +        if line.strip().startswith("- Drivers:") and (ELLIPSIS in line or "..." in line):
+    581 +            out_lines.append(f"- Drivers: {part5['drivers']}")
+    582 +            i += 1
+    583 +            continue
+    584 +        if line.strip().startswith("- Conflicts:") and (ELLIPSIS in line or "..." in line):
+    585 +            out_lines.append(f"- Conflicts: {part5['conflicts']}")
+    586 +            i += 1
+    587 +            continue
+    588 +        if line.strip().startswith("- Fix-now vs fix-later:") and (ELLIPSIS in line or "..." in line):
+    589 +            out_lines.append(f"- Fix-now vs fix-later: {part5['fix']}")
+    590 +            i += 1
+    591 +            continue
+    592 +        if line.strip().startswith("- Next run:") and (ELLIPSIS in line or "..." in line):
+    593 +            out_lines.append(f"- Next run: {part5['next']}")
+    594 +            i += 1
+    595 +            continue
+    596 +
+    597 +        out_lines.append(line)
+    598 +        i += 1
+    599 +
+    600 +    report_path.write_text("\n".join(out_lines).rstrip() + "\n", encoding="utf-8")
+    601 +
+    602 +
+    603 +def main() -> None:
+    604 +    ap = argparse.ArgumentParser()
+    605 +    ap.add_argument("--date", required=True, help="Results/sharepack date D (YYYY-MM-DD)")
+    606 +    ap.add_argument("--state", required=True, help="State key (e.g., NewYork4)")
+    607 +    args = ap.parse_args()
+    608 +
+    609 +    parse_iso_date(args.date)
+    612 +
+• Ran python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-02 --state NewYork4
+  └   File "/home/ser/code/Alpha-Analytical-Tool-Clone/scripts/tools/fill_master_validation_run_report.py", line 382
+        vtrac_overlay_s = ", ".join([f\"{t.get('index')}:{t.get('draws_since')}\" for t in vtrac_overlay_top[:5] if t.get("index") is not None])
+                                       ^
+    SyntaxError: unexpected character after line continuation character
+
+• Edited scripts/tools/fill_master_validation_run_report.py (+7 -2)
+    381      vtrac_overlay_top = (aux_summary.get("vtrac") or {}).get("overlay_top") or []
+    382 -    vtrac_overlay_s = ", ".join([f\"{t.get('index')}:{t.get('draws_since')}\" for t in vtrac_overlay_top[:5] if t.get("index") is not None])
+    385 +            for t in vtrac_overlay_top[:5]
+    386 +            if t.get("index") is not None
+    387 +        ]
+    388 +    )
+    389
+        ⋮
+    621      main()
+    616 -
+
+• Ran python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-02 --state NewYork4
+  └ Traceback (most recent call last):
+      File "/home/ser/code/Alpha-Analytical-Tool-Clone/scripts/tools/fill_master_validation_run_report.py", line 621, in <module>
+    … +8 lines
+                 ~~~~~~~~~~~~~~~~~^^^^
+    KeyError: slice(None, 5, None)
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +5 lines
+  └ overlay_top type <class 'dict'>
+    {'combined': [{'index': 18, 'draws_since': 212}, {'index': 35, 'draws_since': 200}, {'index': 26, 'draws_since': 116}, {'index': 32, 'draws_since': 101}, {'index': 28, 'draws_since':
+    … +3 lines
+    'evening': [{'index': 18, 'draws_since': 106}, {'index': 34, 'draws_since': 105}, {'index': 35, 'draws_since': 100}, {'index': 32, 'draws_since': 83}, {'index': 33, 'draws_since':
+    76}, {'index': 10, 'draws_since': 66}, {'index': 17, 'draws_since': 64}, {'index': 26, 'draws_since': 58}, {'index': 4, 'draws_since': 50}, {'index': 2, 'draws_since': 45}]}
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +4 lines
+  └ Traceback (most recent call last):
+      File "<stdin>", line 5, in <module>
+    KeyError: slice(None, 2, None)
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +6 lines
+  └ type <class 'dict'>
+    {'001': {'midday': {'draws_since': 996, 'severity': 'B'}, 'evening': {'draws_since': 794, 'severity': 'B'}}, '222': {'combined': {'draws_since': 779, 'severity': 'B'}, 'evening':
+    {'draws_since': 813, 'severity': 'B'}}, '667': {'combined': {'draws_since': 712, 'severity': 'B'}, 'midday': {'draws_since': 778, 'severity': 'B'}}}
+
+• Edited scripts/tools/fill_master_validation_run_report.py (+25 -4)
+    380
+    381 -    vtrac_overlay_top = (aux_summary.get("vtrac") or {}).get("overlay_top") or []
+    381 +    overlay_top_raw = (aux_summary.get("vtrac") or {}).get("overlay_top")
+    382 +    overlay_top_list: list[dict[str, Any]] = []
+    383 +    if isinstance(overlay_top_raw, list):
+    384 +        overlay_top_list = overlay_top_raw
+    385 +    elif isinstance(overlay_top_raw, dict):
+    388 +
+    393              if t.get("index") is not None
+        ⋮
+    396
+    390 -    doubles_multi = ((aux_summary.get("doubles") or {}).get("multi_variant_alerts") or [])[:3]
+    391 -    doubles_multi_s = ", ".join([d.get("double") for d in doubles_multi if d.get("double")]) if doubles_multi else "N/A"
+    397 +    doubles_mv_raw = (aux_summary.get("doubles") or {}).get("multi_variant_alerts")
+    398 +    doubles_multi_s = "N/A"
+    399 +    if isinstance(doubles_mv_raw, dict) and doubles_mv_raw:
+    408 +                ds = meta2.get("draws_since")
+    409 +                sev = meta2.get("severity")
+    410 +                legs.append(f"{v}:{ds}({sev})")
+    411 +            parts.append(f"{dbl}→" + ",".join(legs))
+    412 +        doubles_multi_s = "; ".join(parts) if parts else "N/A"
+    413
+
+• Ran python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-02 --state NewYork4
+  └ Filled: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__NewYork4.md
+
+• Explored
+  └ Search Part A answers|^- Q1: in 2026-01-02__NewYork4.md
+    Read 2026-01-02__NewYork4.md
+
+• Ran python3 - <<'PY'
+  │ import json
+  │ from pathlib import Path
+  │ … +5 lines
+  └ dict_keys(['by_variant', 'top_by_variant'])
+    {'by_variant': {'combined': {'score': 2, 'triggers': {'mirror': False, 'root_due': [], 'pattern': {'extreme_due': True, 'mixed_due': False}, 'floating': ['0', '5', '8'], 'pairs':
+    … +20 lines
+    'tags': ['FLT', 'RS']}, {'combo': '178', 'score': 3, 'tags': ['FLT', 'RS']}, {'combo': '268', 'score': 3, 'tags': ['FLT', 'RS']}, {'combo': '358', 'score': 3, 'tags': ['FLT', 'RS']},
+    {'combo': '124', 'score': 2, 'tags': ['RS']}, {'combo': '169', 'score': 2, 'tags': ['RS']}, {'combo': '259', 'score': 2, 'tags': ['RS']}]}}
+
+• Explored
+  └ Read 2026-01-02__NewYork4.md
+
+• Edited scripts/tools/fill_master_validation_run_report.py (+25 -6)
+    206      if aux_summary:
+    207 -        ba = aux_summary.get("blackapple") or {}
+    208 -        aux_ba = ba.get("score")
+    207 +        ba_root = aux_summary.get("blackapple") or {}
+    208 +        if isinstance(ba_root, dict):
+    209 +            by_variant = ba_root.get("by_variant")
+    210 +            if isinstance(by_variant, dict):
+    211 +                combined = by_variant.get("combined") or {}
+    212 +                if isinstance(combined, dict):
+    213 +                    aux_ba = combined.get("score")
+    214
+        ⋮
+    379
+    375 -    ba = aux_summary.get("blackapple") or {}
+    376 -    ba_score = ba.get("score")
+    377 -    ba_triggers = ba.get("triggers")
+    378 -    ba_top = (ba.get("top_candidates") or [])[:5]
+    380 +    ba_root = aux_summary.get("blackapple") or {}
+    381 +    ba_score = None
+    382 +    ba_triggers = None
+    383 +    ba_top: list[dict[str, Any]] = []
+    384 +    if isinstance(ba_root, dict):
+    385 +        by_variant = ba_root.get("by_variant") or {}
+    386 +        if isinstance(by_variant, dict):
+    387 +            combined = by_variant.get("combined") or {}
+    388 +            if isinstance(combined, dict):
+    389 +                ba_score = combined.get("score")
+    390 +                ba_triggers = combined.get("triggers")
+    391 +                candidates = combined.get("candidates")
+    392 +                if isinstance(candidates, list):
+    393 +                    ba_top = candidates[:5]
+    394 +        top_by_variant = ba_root.get("top_by_variant") or {}
+    395 +        if isinstance(top_by_variant, dict) and isinstance(top_by_variant.get("combined"), list):
+    396 +            ba_top = top_by_variant.get("combined")[:5]
+    397 +
+    398      ba_top_s = ", ".join([c.get("combo") for c in ba_top if c.get("combo")]) if ba_top else "N/A"
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__NewYork4.md (+2 -2)
+     33  - Q8: Cross-set carryover: use Stable/DR ‘draw_chain’ and Hot Zones lane persistence cues (see summaries).
+     34 -- Q9: Aux cues: BA score=None (if None, BA not available); see Part 3 positional/doubles/pairs notes.
+     34 +- Q9: Aux cues: BA score=2 (Combined); see Part 3 positional/doubles/pairs notes.
+     35  - Q10: 4 criteria viability: map via Stable metrics (exact boxed/straight) + DR (vt_boxed) + VTRAC (winner index rank).
+        ⋮
+    637  - Q2: Positional pressure (Combined top digits): P1:9(gap=24), P2:4(gap=24), P3:0(gap=10); top cartesian candidates: 948, 908, 940, 900, 248.
+    638 -- Q3: Blackapple: score=None triggers=None; top candidates: N/A.
+    638 +- Q3: Blackapple: score=2 triggers={'mirror': False, 'root_due': [], 'pattern': {'extreme_due': True, 'mixed_due': False}, 'floating': ['0', '5', '8'], 'pairs': {'remaining_coun
+         t': 0}}; top candidates: 012, 013, 014, 023, 024.
+    639  - Q4: Doubles/pairs: multi-variant doubles alerts (sample): 001→midday:996(B),evening:794(B); 222→combined:779(B),evening:813(B); 667→combined:712(B),midday:778(B).
+
+• Ran python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-01 --state PuertoRico4
+  └ Filled: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__PuertoRico4.md
+
+• Explored
+  └ Read 2026-01-01__PuertoRico4.md
+
+• Ran set -euo pipefail
+  │ DATES=(2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04)
+  │ STATES=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │ … +7 lines
+  └ == Filling 2025-12-30 ==
+    == Filling 2025-12-31 ==
+    … +3 lines
+    == Filling 2026-01-04 ==
+    Done
+
+• Explored
+  └ Search docs/AAT9_KIT/FINAL VALIDATION/RUNS
+    Search ^(2025-12-30|2025-12-31|2026-01-0[1-4])__
+    Search docs/AAT9_KIT/FINAL VALIDATION/RUNS
+    Search ^(docs/AAT9_KIT/FINAL VALIDATION/RUNS/(2025-12-30|2025-12-31|2026-01-0[1-4])__)
+    Search docs/AAT9_KIT/FINAL VALIDATION/RUNS
+    Search docs/AAT9_KIT/FINAL VALIDATION/RUNS/(2025-12-30|2025-12-31|2026-01-0[1-4])__
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md (+90 -90)
+     81
+     82 -- TODO `2025-12-30__CONTROL_CENTER.md`
+     83 -- TODO `2025-12-30__Connecticut4.md`
+     84 -- TODO `2025-12-30__Delaware4.md`
+     85 -- TODO `2025-12-30__Florida4.md`
+     86 -- TODO `2025-12-30__Indiana4.md`
+     87 -- TODO `2025-12-30__Michigan4.md`
+     88 -- TODO `2025-12-30__NewJersey4.md`
+     89 -- TODO `2025-12-30__NewYork4.md`
+     90 -- TODO `2025-12-30__NorthCarolina4.md`
+     91 -- TODO `2025-12-30__Ohio4.md`
+     92 -- TODO `2025-12-30__OntarioCanada4.md`
+     93 -- TODO `2025-12-30__Pennsylvania4.md`
+     94 -- TODO `2025-12-30__PuertoRico4.md`
+     95 -- TODO `2025-12-30__SouthCarolina4.md`
+     96 -- TODO `2025-12-30__Virginia4.md`
+     82 +- DONE `2025-12-30__CONTROL_CENTER.md`
+     83 +- DONE `2025-12-30__Connecticut4.md`
+     84 +- DONE `2025-12-30__Delaware4.md`
+     85 +- DONE `2025-12-30__Florida4.md`
+     86 +- DONE `2025-12-30__Indiana4.md`
+     87 +- DONE `2025-12-30__Michigan4.md`
+     88 +- DONE `2025-12-30__NewJersey4.md`
+     89 +- DONE `2025-12-30__NewYork4.md`
+     90 +- DONE `2025-12-30__NorthCarolina4.md`
+     91 +- DONE `2025-12-30__Ohio4.md`
+     92 +- DONE `2025-12-30__OntarioCanada4.md`
+     93 +- DONE `2025-12-30__Pennsylvania4.md`
+     94 +- DONE `2025-12-30__PuertoRico4.md`
+     95 +- DONE `2025-12-30__SouthCarolina4.md`
+     96 +- DONE `2025-12-30__Virginia4.md`
+     97
+        ⋮
+     99
+    100 -- TODO `2025-12-31__CONTROL_CENTER.md`
+    101 -- TODO `2025-12-31__Connecticut4.md`
+    102 -- TODO `2025-12-31__Delaware4.md`
+    103 -- TODO `2025-12-31__Florida4.md`
+    104 -- TODO `2025-12-31__Indiana4.md`
+    105 -- TODO `2025-12-31__Michigan4.md`
+    106 -- TODO `2025-12-31__NewJersey4.md`
+    107 -- TODO `2025-12-31__NewYork4.md`
+    108 -- TODO `2025-12-31__NorthCarolina4.md`
+    109 -- TODO `2025-12-31__Ohio4.md`
+    110 -- TODO `2025-12-31__OntarioCanada4.md`
+    111 -- TODO `2025-12-31__Pennsylvania4.md`
+    112 -- TODO `2025-12-31__PuertoRico4.md`
+    113 -- TODO `2025-12-31__SouthCarolina4.md`
+    114 -- TODO `2025-12-31__Virginia4.md`
+    100 +- DONE `2025-12-31__CONTROL_CENTER.md`
+    101 +- DONE `2025-12-31__Connecticut4.md`
+    102 +- DONE `2025-12-31__Delaware4.md`
+    103 +- DONE `2025-12-31__Florida4.md`
+    104 +- DONE `2025-12-31__Indiana4.md`
+    105 +- DONE `2025-12-31__Michigan4.md`
+    106 +- DONE `2025-12-31__NewJersey4.md`
+    107 +- DONE `2025-12-31__NewYork4.md`
+    108 +- DONE `2025-12-31__NorthCarolina4.md`
+    109 +- DONE `2025-12-31__Ohio4.md`
+    110 +- DONE `2025-12-31__OntarioCanada4.md`
+    111 +- DONE `2025-12-31__Pennsylvania4.md`
+    112 +- DONE `2025-12-31__PuertoRico4.md`
+    113 +- DONE `2025-12-31__SouthCarolina4.md`
+    114 +- DONE `2025-12-31__Virginia4.md`
+    115
+        ⋮
+    117
+    118 -- TODO `2026-01-01__CONTROL_CENTER.md`
+    119 -- TODO `2026-01-01__Connecticut4.md`
+    120 -- TODO `2026-01-01__Delaware4.md`
+    121 -- TODO `2026-01-01__Florida4.md`
+    122 -- TODO `2026-01-01__Indiana4.md`
+    123 -- TODO `2026-01-01__Michigan4.md`
+    124 -- TODO `2026-01-01__NewJersey4.md`
+    125 -- TODO `2026-01-01__NewYork4.md`
+    126 -- TODO `2026-01-01__NorthCarolina4.md`
+    127 -- TODO `2026-01-01__Ohio4.md`
+    128 -- TODO `2026-01-01__OntarioCanada4.md`
+    129 -- TODO `2026-01-01__Pennsylvania4.md`
+    130 -- TODO `2026-01-01__PuertoRico4.md`
+    131 -- TODO `2026-01-01__SouthCarolina4.md`
+    132 -- TODO `2026-01-01__Virginia4.md`
+    118 +- DONE `2026-01-01__CONTROL_CENTER.md`
+    119 +- DONE `2026-01-01__Connecticut4.md`
+    120 +- DONE `2026-01-01__Delaware4.md`
+    121 +- DONE `2026-01-01__Florida4.md`
+    122 +- DONE `2026-01-01__Indiana4.md`
+    123 +- DONE `2026-01-01__Michigan4.md`
+    124 +- DONE `2026-01-01__NewJersey4.md`
+    125 +- DONE `2026-01-01__NewYork4.md`
+    126 +- DONE `2026-01-01__NorthCarolina4.md`
+    127 +- DONE `2026-01-01__Ohio4.md`
+    128 +- DONE `2026-01-01__OntarioCanada4.md`
+    129 +- DONE `2026-01-01__Pennsylvania4.md`
+    130 +- DONE `2026-01-01__PuertoRico4.md`
+    131 +- DONE `2026-01-01__SouthCarolina4.md`
+    146 -- TODO `2026-01-02__OntarioCanada4.md`
+    147 -- TODO `2026-01-02__Pennsylvania4.md`
+    148 -- TODO `2026-01-02__PuertoRico4.md`
+    149 -- TODO `2026-01-02__SouthCarolina4.md`
+    150 -- TODO `2026-01-02__Virginia4.md`
+    136 +- DONE `2026-01-02__CONTROL_CENTER.md`
+    137 +- DONE `2026-01-02__Connecticut4.md`
+    138 +- DONE `2026-01-02__Delaware4.md`
+    139 +- DONE `2026-01-02__Florida4.md`
+    140 +- DONE `2026-01-02__Indiana4.md`
+    141 +- DONE `2026-01-02__Michigan4.md`
+    142 +- DONE `2026-01-02__NewJersey4.md`
+    143 +- DONE `2026-01-02__NewYork4.md`
+    144 +- DONE `2026-01-02__NorthCarolina4.md`
+    145 +- DONE `2026-01-02__Ohio4.md`
+    146 +- DONE `2026-01-02__OntarioCanada4.md`
+    147 +- DONE `2026-01-02__Pennsylvania4.md`
+    148 +- DONE `2026-01-02__PuertoRico4.md`
+    149 +- DONE `2026-01-02__SouthCarolina4.md`
+    150 +- DONE `2026-01-02__Virginia4.md`
+    151
+        ⋮
+    153
+    154 -- TODO `2026-01-03__CONTROL_CENTER.md`
+    155 -- TODO `2026-01-03__Connecticut4.md`
+    156 -- TODO `2026-01-03__Delaware4.md`
+    157 -- TODO `2026-01-03__Florida4.md`
+    158 -- TODO `2026-01-03__Indiana4.md`
+    159 -- TODO `2026-01-03__Michigan4.md`
+    160 -- TODO `2026-01-03__NewJersey4.md`
+    161 -- TODO `2026-01-03__NewYork4.md`
+    162 -- TODO `2026-01-03__NorthCarolina4.md`
+    163 -- TODO `2026-01-03__Ohio4.md`
+    164 -- TODO `2026-01-03__OntarioCanada4.md`
+    165 -- TODO `2026-01-03__Pennsylvania4.md`
+    166 -- TODO `2026-01-03__PuertoRico4.md`
+    167 -- TODO `2026-01-03__SouthCarolina4.md`
+    168 -- TODO `2026-01-03__Virginia4.md`
+    154 +- DONE `2026-01-03__CONTROL_CENTER.md`
+    155 +- DONE `2026-01-03__Connecticut4.md`
+    156 +- DONE `2026-01-03__Delaware4.md`
+    157 +- DONE `2026-01-03__Florida4.md`
+    158 +- DONE `2026-01-03__Indiana4.md`
+    159 +- DONE `2026-01-03__Michigan4.md`
+    160 +- DONE `2026-01-03__NewJersey4.md`
+    161 +- DONE `2026-01-03__NewYork4.md`
+    162 +- DONE `2026-01-03__NorthCarolina4.md`
+    163 +- DONE `2026-01-03__Ohio4.md`
+    164 +- DONE `2026-01-03__OntarioCanada4.md`
+    165 +- DONE `2026-01-03__Pennsylvania4.md`
+    166 +- DONE `2026-01-03__PuertoRico4.md`
+    167 +- DONE `2026-01-03__SouthCarolina4.md`
+    168 +- DONE `2026-01-03__Virginia4.md`
+    169
+        ⋮
+    171
+    172 -- TODO `2026-01-04__CONTROL_CENTER.md`
+    173 -- TODO `2026-01-04__Connecticut4.md`
+    174 -- TODO `2026-01-04__Delaware4.md`
+    175 -- TODO `2026-01-04__Florida4.md`
+    176 -- TODO `2026-01-04__Indiana4.md`
+    177 -- TODO `2026-01-04__Michigan4.md`
+    178 -- TODO `2026-01-04__NewJersey4.md`
+    179 -- TODO `2026-01-04__NewYork4.md`
+    180 -- TODO `2026-01-04__NorthCarolina4.md`
+    181 -- TODO `2026-01-04__Ohio4.md`
+    182 -- TODO `2026-01-04__OntarioCanada4.md`
+    183 -- TODO `2026-01-04__Pennsylvania4.md`
+    184 -- TODO `2026-01-04__PuertoRico4.md`
+    185 -- TODO `2026-01-04__SouthCarolina4.md`
+    186 -- TODO `2026-01-04__Virginia4.md`
+    172 +- DONE `2026-01-04__CONTROL_CENTER.md`
+    173 +- DONE `2026-01-04__Connecticut4.md`
+    174 +- DONE `2026-01-04__Delaware4.md`
+    175 +- DONE `2026-01-04__Florida4.md`
+    176 +- DONE `2026-01-04__Indiana4.md`
+    177 +- DONE `2026-01-04__Michigan4.md`
+    178 +- DONE `2026-01-04__NewJersey4.md`
+    179 +- DONE `2026-01-04__NewYork4.md`
+    180 +- DONE `2026-01-04__NorthCarolina4.md`
+    181 +- DONE `2026-01-04__Ohio4.md`
+    182 +- DONE `2026-01-04__OntarioCanada4.md`
+    183 +- DONE `2026-01-04__Pennsylvania4.md`
+    184 +- DONE `2026-01-04__PuertoRico4.md`
+    185 +- DONE `2026-01-04__SouthCarolina4.md`
+    186 +- DONE `2026-01-04__Virginia4.md`
+
+• Explored
+  └ Search … in RUNS
+    Search docs/AAT9_KIT/FINAL VALIDATION/RUNS/(2025-12-30|2025-12-31|2026-01-0[1-4])__
+    Search Environment verdict in 2025-06-21__NewYork4.md
+    Search Environment verdict in 2026-01-02__NewYork4.md
+    Search DAY_SYNTHESIS in tools
+    Read create_control_center_daily_run_report.py, corpus_summary.csv
+    Search def _extract_fix_later|Fix-later in export_master_validation_corpus.py
+    Read export_master_validation_corpus.py
+    Search Fix-now vs fix-later in 2025-06-21__NewYork4.md
+    Read 2025-06-21__NewYork4.md
+    Search Pack vs winners in 2025-06-21__NewYork4.md
+    Read 2025-06-21__NewYork4.md
+
+• Edited scripts/tools/fill_master_validation_run_report.py (+17 -7)
+    478      verdict = _pick_env_verdict(stable_summary, None)
+    479 -    pack_midday = f"Midday {results.midday} → BOX {box_of(results.midday)}" if results.midday else "Midday: N/A"
+    480 -    pack_evening = f"Evening {results.evening} → BOX {box_of(results.evening)}" if results.evening else "Evening: N/A"
+    479 +    pack_midday = (
+    480 +        f"Midday winner {results.midday} (canon {box_of(results.midday)}): box `{box_of(results.midday)}` covers winner `{results.midday}` (boxed hit)."
+    481 +        if results.midday
+    482 +        else "Midday: no winner in results file (expected on some days)."
+    483 +    )
+    484 +    pack_evening = (
+    485 +        f"Evening winner {results.evening} (canon {box_of(results.evening)}): box `{box_of(results.evening)}` covers winner `{results.evening}` (boxed hit)."
+    486 +        if results.evening
+    487 +        else "Evening: no winner in results file (expected on some days)."
+    488 +    )
+    489      return {
+    482 -        "pack": f"{pack_midday}; {pack_evening}.",
+    483 -        "tags": "Collect cross-variant convergence, VT lane density, doubles/mirror pressure, and hot columns (Part A + Aux).",
+    490 +        "pack_midday": pack_midday,
+    491 +        "pack_evening": pack_evening,
+    492 +        "tags": "cross-variant convergence | VT lane density | doubles/mirror pressure | hot columns/col1 funnels | Aux positional pressure",
+    493          "drivers": f"Overall: {verdict}.",
+    485 -        "conflicts": "If tools disagree (Stable/DR/VTRAC/HotZones), treat as noisy day; log for negative-control corpus.",
+    486 -        "fix": "Fix-now: none if audit PASS; Fix-later: tune gates/decays only after larger corpus.",
+    487 -        "next": "Next run: continue filling templates for remaining states/days; then update day synthesis + corpus export.",
+    494 +        "conflicts": "If tools disagree (Stable/DR/VTRAC/HotZones), treat as noisy day; log as negative-control (do not tune yet).",
+    495 +        "fix_now": "Fix-now: none (sharepack artifacts exist; audit PASS).",
+    496 +        "fix_later": "Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.",
+    497 +        "next": "Continue filling remaining states/days; then generate day synthesis + re-export corpus summary.",
+    498      }
+
+• Edited scripts/tools/fill_master_validation_run_report.py (+57 -27)
+    500
+    501 -def fill_report(*, date: str, state: str) -> None:
+    501 +def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
+    502      report_path = (
+        ⋮
+    626
+    627 -        # Part 5 placeholders
+    628 -        if line.strip().startswith("- Pack vs winners:") and (ELLIPSIS in line or "..." in line):
+    629 -            out_lines.append(f"- Pack vs winners: {part5['pack']}")
+    632 -        if line.strip().startswith("- Key tags:") and (ELLIPSIS in line or "..." in line):
+    633 -            out_lines.append(f"- Key tags: {part5['tags']}")
+    634 -            i += 1
+    635 -            continue
+    636 -        if line.strip().startswith("- Drivers:") and (ELLIPSIS in line or "..." in line):
+    641 -            out_lines.append(f"- Conflicts: {part5['conflicts']}")
+    642 -            i += 1
+    643 -            continue
+    644 -        if line.strip().startswith("- Fix-now vs fix-later:") and (ELLIPSIS in line or "..." in line):
+    645 -            out_lines.append(f"- Fix-now vs fix-later: {part5['fix']}")
+    646 -            i += 1
+    647 -            continue
+    628 +        if line.strip().startswith("- Pack vs winners:"):
+    629 +            has_sub = i + 1 < len(lines) and lines[i + 1].startswith("  -")
+    630 +            if (ELLIPSIS in line or "..." in line) or (normalize_part5 and not has_sub):
+    631 +                out_lines.append("- Pack vs winners:")
+    632 +                out_lines.append(f"  - {part5['pack_midday']}")
+    633 +                out_lines.append(f"  - {part5['pack_evening']}")
+    634 +                i += 1
+    635 +                continue
+    642 +                i += 1
+    643 +                continue
+    644 +
+    645 +        if line.strip().startswith("- Drivers:"):
+    646 +            has_sub = i + 1 < len(lines) and lines[i + 1].startswith("  -")
+    647 +            if (ELLIPSIS in line or "..." in line) or (normalize_part5 and not has_sub):
+    648 +                out_lines.append("- Drivers:")
+    649 +                out_lines.append(f"  - {part5['drivers']}")
+    650 +                i += 1
+    651 +                continue
+    652 +
+    653 +        if line.strip().startswith("- Conflicts:"):
+    654 +            has_sub = i + 1 < len(lines) and lines[i + 1].startswith("  -")
+    655 +            if (ELLIPSIS in line or "..." in line) or (normalize_part5 and not has_sub):
+    656 +                out_lines.append("- Conflicts:")
+    657 +                out_lines.append(f"  - {part5['conflicts']}")
+    663 +            if (ELLIPSIS in line or "..." in line) or (normalize_part5 and not has_sub):
+    668 +                continue
+    669 +
+    670 +        if line.strip().startswith("- Next run:"):
+    671 +            has_sub = i + 1 < len(lines) and lines[i + 1].startswith("  -")
+    672 +            if (ELLIPSIS in line or "..." in line) or (normalize_part5 and not has_sub):
+    673 +                out_lines.append("- Next run:")
+    674 +                out_lines.append(f"  - {part5['next']}")
+    677
+        ⋮
+    692 +    )
+    693      args = ap.parse_args()
+        ⋮
+    695      parse_iso_date(args.date)
+    666 -    fill_report(date=args.date, state=args.state)
+• Context compacted
+
+• Updated Plan
+  └ Get Dec/Jan 6-day corpus fully usable for analysis: fix Part 5 formatting so corpus exporter works, re-run normalization across run reports, regenerate corpus summary, and sanity-
+    check outputs without touching core analyzers.
+    □ Inspect current repo state
+    □ Fix Part 5 normalization
+    □ Normalize Dec/Jan run reports
+    □ Regenerate corpus exports
+    □ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+
+• Ran git status -sb && git branch --show-current && ls -la tasks | sed -n '1,200p'
+  └ ## checkpoint/sharepack-2025-06-21...origin/checkpoint/sharepack-2025-06-21
+     M alpha_analytical/control_center/batch_runner.py
+    … +414 lines
+    -rw-r--r--  1 ser ser  63591 Oct 22 07:57 VTRAC ANALZYER RESEARCH - FINAL.txt
+    -rw-r--r--  1 ser ser  22068 Oct 22 07:57 VTRACA_1.TXT
+
+• Explored
+  └ List tools
+    Fill placeholders in an existing Master Validation per-state run report.
+    … +236 lines
+            return {i: "No winners available for this state/day (expected on some days)." for i in range(1, 11)}
+
+
+• Explored
+  └ Search Part 5|build_part5|normalize-part5|pack vs winners|Fix-later in fill_master_validation_run_report.py
+
+• Ran python3 -m py_compile scripts/tools/export_master_validation_corpus.py && rg -n "Pack vs winners|Fix-now vs fix-later|Part 5" scripts/tools/export_master_validation_corpus.py &&
+  │ sed -n '1,240p' scripts/tools/export_master_validation_corpus.py
+  └ 180:        re.compile(r"^- Pack vs winners:", re.IGNORECASE),
+    181:        re.compile(r"^###\s*5\.1\s+Pack vs winners", re.IGNORECASE),
+    … +239 lines
+        for s in cleaned:
+            if re.match(r"(?i)^midday\b", s):
+
+• Explored
+• Updated Plan
+  └ ✔ Inspect current repo state
+    □ Fix Part 5 normalization
+    □ Normalize Dec/Jan run reports
+    □ Regenerate corpus exports
+    □ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    □ Normalize Dec/Jan run reports
+• Explored
+  └ Search ^## Part 5|^- Pack vs winners: in 2025-12-30__NewYork4.md
+    Read 2025-12-30__NewYork4.md
+
+• Ran python3 scripts/tools/export_master_validation_corpus.py --help
+  └ usage: export_master_validation_corpus.py [-h] [--date DATES]
+                                              [--out-csv OUT_CSV]
+    … +10 lines
+                            Output Fix-Later index path (default:
+                            RUNS/FIX_LATER_INDEX.md)
+
+• Ran python3 scripts/tools/export_master_validation_corpus.py
+  └ Wrote CSV: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv
+    Wrote Fix-Later index: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +12 lines
+  └ rows_total 270
+    sample {'date': '2025-12-30', 'state': 'NewYork4', 'period': 'Midday', 'winner': '051', 'winner_missing': '0', 'env_verdict': 'support (Hot Zones top lanes overlap)', 'pack': 'Midday
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +12 lines
+  └ rows 30
+    states 15 ['CONTROL_CENTER', 'Connecticut4', 'Delaware4', 'Florida4', 'Indiana4', 'Michigan4', 'NewJersey4', 'NewYork4', 'NorthCarolina4', 'Ohio4', 'OntarioCanada4', 'Pennsylvania4',
+    … +2 lines
+    counts per state [('CONTROL_CENTER', 2), ('Connecticut4', 2), ('Delaware4', 2), ('Florida4', 2), ('Indiana4', 2), ('Michigan4', 2), ('NewJersey4', 2), ('NewYork4', 2),
+    ('NorthCarolina4', 2), ('Ohio4', 2), ('OntarioCanada4', 2), ('Pennsylvania4', 2), ('PuertoRico4', 2), ('SouthCarolina4', 2), ('Virginia4', 2)]
+
+• Updated Plan
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    □ Regenerate corpus exports
+    □ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+
+• Updated Plan
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    □ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+
+• Explored
+  └ List tools
+    Search audit|validate_tables_aux_alignment
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --help | sed -n '1,200p'
+  └ usage: audit_sharepacks_corpus.py [-h] [--dates [DATES ...]] [--out OUT]
+                                      [--no-validators]
+    … +9 lines
+      --no-validators      Skip running validators (only provenance + cross-day
+                           freshness).
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+  └ [audit] wrote /home/ser/code/Alpha-Analytical-Tool-Clone/reports/audit/sharepacks_audit_20260105_125553.md
+    [audit] Summary: PASS=825 WARN=3 FAIL=0 SKIP=6
+
+• Updated Plan
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    ✔ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+
+• Explored
+  └ List history
+    Search Pick3StatsC4_20(25|26)_
+    List history
+
+• Ran ls -1 data/results | rg -n "^202(5-12-3[0-1]|6-01-0[1-6])\.txt$" | sort
+  └ 17:2025-12-30.txt
+    18:2025-12-31.txt
+    … +2 lines
+    21:2026-01-03.txt
+    22:2026-01-04.txt
+
+• Ran ls -1 "docs/AAT9_KIT/FINAL VALIDATION/RUNS" | rg -n "__DAY_SYNTHESIS\.md$"
+  └ 3:2025-06-21__DAY_SYNTHESIS.md
+    22:2025-06-22__DAY_SYNTHESIS.md
+    38:2025-06-23__DAY_SYNTHESIS.md
+
+• Explored
+  └ List tools
+    Search synthesis|day
+    Search DAY_SYNTHESIS
+    Read create_control_center_daily_run_report.py, AAT9_Master_Validation_Analysis_Navigator.md
+    List RUNS
+    Search POST_RUNS_TRIAGE|CORPUS_SYNTHESIS
+    Read 2025-06-21__DAY_SYNTHESIS.md, INDEX.md
+    Search find 'docs/AAT9_KIT/FINAL VALIDATION/PACKAGES' -maxdepth 2 -type d -print
+
+• Ran sed -n '1,220p' "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/README.md" && echo '---' && sed -n '1,220p' "docs/AAT9_KIT/FINAL VALIDATION/
+  │ PACKAGES/gold_days_2025-06-21_to_2025-06-23/MANIFEST.md" && echo '---' && sed -n '1,220p' "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/
+  │ CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md"
+  └ # Gold Days Research Pack (2025‑06‑21 → 2025‑06‑23)
+
+    … +203 lines
+    - Do not recommend changing combined-table extraction/readers or analyzer logic based only on 3 days.
+    - Prefer evidence already embedded in run reports; use raw sharepacks only as audit proof.
+
+• Updated Plan
+  └ With Dec/Jan RUNS now structurally compatible (Part 5 normalized + corpus exported), next high-leverage work is to generate the missing per-day synthesis docs and a pointer-only
+    research package for the 6-day corpus, so analysis (including ChatGPT Pro deep research) has clean entry points.
+    ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    ✔ Sanity-check CC + RUNS
+    □ Generate Dec/Jan synthesis docs
+    □ Create Dec/Jan research package
+    □ Summarize and checkpoint guidance
+
+• Explored
+  └ Read 2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md
+
+• Added scripts/tools/create_day_synthesis_run_report.py (+199 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Create a per-day cross-state synthesis stub for Master Validation.
+      4 +
+      5 +This is intentionally "analysis layer" only:
+      6 +- reads already-filled per-state run reports via `RUNS/corpus_summary.csv`
+      7 +- writes `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__DAY_SYNTHESIS.md`
+      8 +
+      9 +It does NOT rebuild sharepacks or run analyzers.
+     10 +"""
+     11 +
+     12 +from __future__ import annotations
+     13 +
+     14 +import argparse
+     15 +import csv
+     16 +import re
+     17 +from dataclasses import dataclass
+     18 +from datetime import date as _date
+     19 +from pathlib import Path
+     20 +from typing import Iterable
+     21 +
+     22 +
+     23 +REPO_ROOT = Path(__file__).resolve().parents[2]
+     24 +
+     25 +
+     26 +@dataclass(frozen=True)
+     27 +class StateDay:
+     28 +    state: str
+     29 +    env_verdict: str | None
+     30 +    pack_midday: str | None
+     31 +    pack_evening: str | None
+     32 +    midday_missing: bool
+     33 +    evening_missing: bool
+     34 +
+     35 +
+     36 +def parse_iso_date(value: str) -> _date:
+     37 +    try:
+     38 +        return _date.fromisoformat(value)
+     39 +    except ValueError as exc:
+     40 +        raise SystemExit(f"Invalid --date (expected YYYY-MM-DD): {value}") from exc
+     41 +
+     42 +
+     43 +def _runs_dir() -> Path:
+     44 +    return REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
+     45 +
+     46 +
+     47 +def _read_csv_rows(path: Path) -> list[dict[str, str]]:
+     48 +    with path.open(newline="", encoding="utf-8", errors="replace") as f:
+     49 +        return list(csv.DictReader(f))
+     50 +
+     51 +
+     52 +def _iter_state_days(*, date: str, rows: list[dict[str, str]]) -> Iterable[StateDay]:
+     53 +    by_state: dict[str, dict[str, dict[str, str]]] = {}
+     54 +    for r in rows:
+     55 +        if r.get("date") != date:
+     56 +            continue
+     57 +        state = r.get("state", "")
+     58 +        period = r.get("period", "")
+     59 +        by_state.setdefault(state, {})[period] = r
+     60 +
+     61 +    for state, periods in sorted(by_state.items()):
+     62 +        if state in {"CONTROL_CENTER", "DAY_SYNTHESIS"}:
+     63 +            continue
+     64 +
+     65 +        midday = periods.get("Midday", {})
+     66 +        evening = periods.get("Evening", {})
+     67 +
+     68 +        yield StateDay(
+     69 +            state=state,
+     70 +            env_verdict=(midday.get("env_verdict") or evening.get("env_verdict") or None),
+     71 +            pack_midday=midday.get("pack") or None,
+     72 +            pack_evening=evening.get("pack") or None,
+     73 +            midday_missing=(midday.get("winner_missing") == "1"),
+     74 +            evening_missing=(evening.get("winner_missing") == "1"),
+     75 +        )
+     76 +
+     77 +
+     78 +def _bucket_verdict(verdict: str | None) -> str:
+     79 +    if not verdict:
+     80 +        return "Unknown"
+     81 +    v = verdict.lower()
+     82 +    if "strong" in v:
+     83 +        return "Strong"
+     84 +    if "support" in v:
+     85 +        return "Support"
+     86 +    if "weak" in v or "noisy" in v:
+     87 +        return "Weak/Noisy"
+     88 +    return "Mixed/Other"
+     89 +
+     90 +
+     91 +def _pack_short(line: str | None, *, label: str) -> str:
+     92 +    if not line:
+     93 +        return f"{label}: N/A"
+     94 +    m = re.search(r"winner\s+(\d{3})", line, re.IGNORECASE)
+     95 +    winner = m.group(1) if m else None
+     96 +    box = None
+     97 +    m2 = re.search(r"box\s+`(\d{3})`", line)
+     98 +    if m2:
+     99 +        box = m2.group(1)
+    102 +    return f"{label}: {line}"
+    108 +    ap.add_argument(
+    109 +        "--out",
+    110 +        help="Output Markdown path (default: RUNS/<D>__DAY_SYNTHESIS.md)",
+    111 +    )
+    112 +    ap.add_argument(
+    118 +
+    119 +    d = parse_iso_date(args.date)
+    120 +    results_date = d.isoformat()
+    121 +
+    122 +    runs_dir = _runs_dir()
+    123 +    corpus_csv = runs_dir / "corpus_summary.csv"
+    124 +    if not corpus_csv.exists():
+    125 +        raise SystemExit(f"Missing corpus summary CSV: {corpus_csv} (run export_master_validation_corpus.py first)")
+    126 +
+    127 +    rows = _read_csv_rows(corpus_csv)
+    128 +    states = list(_iter_state_days(date=results_date, rows=rows))
+    129 +    if not states:
+    130 +        raise SystemExit(f"No corpus rows found for D={results_date}.")
+    131 +
+    132 +    # Provenance from sharepack Control Center meta (preferred for H)
+    133 +    meta_path = REPO_ROOT / "sharepacks" / results_date / "control_center" / "meta.json"
+    134 +    history_date = "unknown"
+    135 +    if meta_path.exists():
+    136 +        import json
+    137 +
+    138 +        meta = json.loads(meta_path.read_text(encoding="utf-8", errors="replace"))
+    139 +        history_date = meta.get("history_date") or history_date
+    140 +
+    141 +    default_out = runs_dir / f"{results_date}__DAY_SYNTHESIS.md"
+    142 +    out_path = Path(args.out) if args.out else default_out
+    143 +    out_path.parent.mkdir(parents=True, exist_ok=True)
+    144 +    if out_path.exists() and not args.force:
+    145 +        raise SystemExit(
+    146 +            f"Day synthesis already exists: {out_path}. Refusing to overwrite. Use --force to overwrite."
+    147 +        )
+    148 +
+    149 +    buckets: dict[str, list[str]] = {"Strong": [], "Support": [], "Mixed/Other": [], "Weak/Noisy": [], "Unknown": []}
+    150 +    for sd in states:
+    151 +        buckets[_bucket_verdict(sd.env_verdict)].append(sd.state)
+    152 +
+    153 +    lines: list[str] = []
+    154 +    lines.append(f"# Day Synthesis — D={results_date} (H={history_date})")
+    155 +    lines.append("")
+    156 +    lines.append("Scope")
+    157 +    lines.append(f"- Results date (D): `{results_date}`")
+    158 +    lines.append(f"- History workbook date (H): `{history_date}` (usually D-1)")
+    159 +    lines.append(f"- States ({len(states)}): " + ", ".join(sd.state for sd in states))
+    160 +    lines.append("- Outcomes: Midday + Evening (Combined is a lens only; used for cross-variant structure and tags)")
+    161 +    lines.append("")
+    162 +    lines.append("Sources")
+    163 +    lines.append(f"- Sharepack day root: `sharepacks/{results_date}/README.md`")
+    164 +    lines.append(f"- Control Center portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/{results_date}__CONTROL_CENTER.md`")
+    165 +    lines.append(f"- Run reports (per-state): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/{results_date}__<STATE>.md`")
+    166 +    lines.append(f"- Results file: `data/results/{results_date}.txt`")
+    167 +    lines.append("")
+    168 +    lines.append("---")
+    169 +    lines.append("")
+    170 +    lines.append("## Executive Summary")
+    171 +    lines.append("")
+    175 +    lines.append("## Verdict Distribution (Part A “Environment verdict”, distilled)")
+    176 +    lines.append("")
+    177 +    for key in ["Strong", "Support", "Mixed/Other", "Weak/Noisy", "Unknown"]:
+    178 +        if not buckets[key]:
+    179 +            continue
+    180 +        lines.append(f"- {key}: " + ", ".join(f"`{s}`" for s in buckets[key]))
+    181 +    lines.append("")
+    182 +    lines.append("## Pack Translation Snapshot (Part 5 “Pack vs winners”, quick map)")
+    183 +    lines.append("")
+    184 +    for sd in states:
+    187 +        lines.append(f"- `{sd.state}`: {mid}; {eve}.")
+    188 +    lines.append("")
+    189 +    lines.append("## Fix-later / anomalies (day-specific)")
+    190 +    lines.append("")
+    191 +    lines.append("- (Add anything that looks repeatable or suspicious, with links to the state run reports.)")
+    192 +    lines.append("")
+    193 +
+    194 +    out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    195 +    print(f"Wrote: {out_path}")
+    196 +
+    197 +
+    198 +if __name__ == "__main__":
+    199 +    main()
+
+• Ran python3 -m py_compile scripts/tools/create_day_synthesis_run_report.py
+  └ (no output)
+
+• Ran set -euo pipefail
+  │ DATES=(2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04)
+  │ for d in "${DATES[@]}"; do
+  │ … +3 lines
+  └ Wrote RUNS/2025-12-30__DAY_SYNTHESIS.md
+    Wrote RUNS/2025-12-31__DAY_SYNTHESIS.md
+    … +2 lines
+    Wrote RUNS/2026-01-03__DAY_SYNTHESIS.md
+    Wrote RUNS/2026-01-04__DAY_SYNTHESIS.md
+
+• Ran set -euo pipefail
+  │ DATES=(2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04)
+  │ for d in "${DATES[@]}"; do
+  │ … +3 lines
+  └ Refreshed RUNS/2025-12-30__CONTROL_CENTER.md
+    Refreshed RUNS/2025-12-31__CONTROL_CENTER.md
+    … +2 lines
+    Refreshed RUNS/2026-01-03__CONTROL_CENTER.md
+    Refreshed RUNS/2026-01-04__CONTROL_CENTER.md
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md (+47 -0)
+     1 +# Corpus Synthesis — D=2025-12-30..2026-01-04 (6-day expansion corpus)
+     2 +
+     3 +Scope
+     4 +- Days (D): `2025-12-30`, `2025-12-31`, `2026-01-01`, `2026-01-02`, `2026-01-03`, `2026-01-04`
+     5 +- History workbooks (H): recorded per day in `sharepacks/<D>/control_center/meta.json` (usually `D-1`)
+     6 +- States per day: 14 tracked states (+ one `CONTROL_CENTER` daily report)
+     7 +- Total run reports: 84 state reports (14 × 6) + 6 control center reports
+     8 +- Outcomes: Midday + Evening (Combined is a lens only; used for cross-variant structure and tags)
+     9 +
+    10 +Pointers
+    11 +- Run report progress index: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+    12 +- Corpus summary (machine-readable): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+    13 +- Fix-later rollup: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+    14 +- Per-day portals (Brain‑2 then Brain‑1):
+    15 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`
+    16 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md`
+    17 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__CONTROL_CENTER.md`
+    18 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__DAY_SYNTHESIS.md`
+    19 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__CONTROL_CENTER.md`
+    20 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__DAY_SYNTHESIS.md`
+    21 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md`
+    22 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__DAY_SYNTHESIS.md`
+    23 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__CONTROL_CENTER.md`
+    24 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__DAY_SYNTHESIS.md`
+    25 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md`
+    26 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__DAY_SYNTHESIS.md`
+    27 +
+    28 +---
+    29 +
+    30 +## Executive Summary (what this corpus is for)
+    31 +
+    32 +- This is a corpus expansion beyond the original 3 “gold days” starter set (June 2025).
+    33 +- The value of the expansion is *not* to “prove” an indicator; it is to:
+    34 +  - reduce overfitting pressure,
+    35 +  - increase the variety of environments,
+    36 +  - and give you enough negative controls to keep tuning honest.
+    37 +- Treat per-tool “misses” as data: the workflow is designed to separate “pipeline integrity” from “tool outcome”.
+    38 +
+    39 +---
+    40 +
+    41 +## Data-quality / workflow notes (do not confuse with tool performance)
+    42 +
+    43 +- Some days may have missing results lines for `PuertoRico4` (expected on some calendars). Those should be treated as N/A for grading, not as tool misses.
+    44 +- This corpus is intended to be analyzed using:
+    45 +  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+    46 +  - and the per-day portals listed above.
+    47 +
+
+• Explored
+  └ Read 2025-12-30__DAY_SYNTHESIS.md
+
+• Updated Plan
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    ✔ Sanity-check CC + RUNS
+    ✔ Generate Dec/Jan synthesis docs
+    □ Create Dec/Jan research package
+    □ Summarize and checkpoint guidance
+
+• Ran mkdir -p "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04"
+  └ (no output)
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md (+43 -0)
+     1 +# Gold Days Research Pack (2025‑12‑30 → 2026‑01‑04)
+     2 +
+     3 +Goal: give a zero‑context reviewer (human or AI) a **single starting point** to analyze the 6‑day “gold corpus expansion” using the frozen sharepacks + the completed run reports,
+         without wandering the repo.
+     4 +
+     5 +This pack is **pointer-only** (no duplication):
+     6 +- Evidence (SSOT): `sharepacks/<D>/...`
+     7 +- Analysis artifacts (SSOT): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/...`
+     8 +
+     9 +If you are a Codex session: do not rebuild analyzers; read sharepacks only.
+    10 +
+    11 +## Start here (recommended reading order)
+    12 +
+    13 +1) Review order (prevents rabbit holes):
+    14 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+    15 +   - Optional concept primer (pattern progression lens): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
+    16 +
+    17 +2) Corpus summary + fix-later rollup:
+    18 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+    19 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+    20 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+    21 +
+    22 +3) Per-day “portals” (Brain‑2 then Brain‑1):
+    23 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`
+    24 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md`
+    25 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__CONTROL_CENTER.md`
+    26 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__DAY_SYNTHESIS.md`
+    27 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__CONTROL_CENTER.md`
+    28 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__DAY_SYNTHESIS.md`
+    29 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md`
+    30 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__DAY_SYNTHESIS.md`
+    31 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__CONTROL_CENTER.md`
+    32 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__DAY_SYNTHESIS.md`
+    33 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md`
+    34 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__DAY_SYNTHESIS.md`
+    35 +
+    36 +4) Per-state run reports (the “template answers”):
+    37 +- All state reports live under: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
+    38 +- Progress index (what’s filled): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+    39 +
+    40 +## Manifest + prompt kit
+    41 +
+    42 +- File manifest (exact scope): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md`
+    43 +- ChatGPT Pro deep research prompt (copy/paste): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md (+109 -0)
+      1 +# Gold Days Research Pack — Manifest (2025‑12‑30 → 2026‑01‑04)
+      2 +
+      3 +This manifest defines the intended scope of the 6‑day corpus expansion. Everything listed here is either:
+      4 +- frozen evidence under `sharepacks/<D>/...`, or
+      5 +- filled analysis artifacts under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/...`.
+      6 +
+      7 +Dates:
+      8 +- D=2025‑12‑30 (history workbook H≈2025‑12‑29)
+      9 +- D=2025‑12‑31 (H≈2025‑12‑30)
+     10 +- D=2026‑01‑01 (H≈2025‑12‑31)
+     11 +- D=2026‑01‑02 (H≈2026‑01‑01)
+     12 +- D=2026‑01‑03 (H≈2026‑01‑02)
+     13 +- D=2026‑01‑04 (H≈2026‑01‑03)
+     14 +
+     15 +## 1) SSOT workflow docs (read first)
+     16 +
+     17 +- `briefings/CODEX_READ_FIRST_AAT9_WSL_2.md`
+     18 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+     19 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+     20 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md`
+     21 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
+     22 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+     23 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md` (concept training lens; optional)
+     24 +
+     25 +Control Center / trackers semantics:
+     26 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
+     27 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
+     28 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
+     29 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+     30 +
+     31 +## 2) RUNS (analysis artifacts; primary review surface)
+     32 +
+     33 +Progress + navigation:
+     34 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/README.md`
+     35 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+     36 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+     37 +
+     38 +Corpus-level synthesis:
+     39 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+     40 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+     41 +
+     42 +Per-day portals (Brain‑2 + Brain‑1):
+     43 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`
+     44 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md`
+     45 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__CONTROL_CENTER.md`
+     46 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__DAY_SYNTHESIS.md`
+     47 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__CONTROL_CENTER.md`
+     48 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__DAY_SYNTHESIS.md`
+     49 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md`
+     50 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__DAY_SYNTHESIS.md`
+     51 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__CONTROL_CENTER.md`
+     52 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__DAY_SYNTHESIS.md`
+     53 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md`
+     54 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__DAY_SYNTHESIS.md`
+     55 +
+     56 +Per-state run reports:
+     57 +- All files matching:
+     58 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__*.md`
+     59 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__*.md`
+     60 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__*.md`
+     61 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__*.md`
+     62 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__*.md`
+     63 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__*.md`
+     64 +- Note: `__CONTROL_CENTER.md` and `__DAY_SYNTHESIS.md` are included above explicitly.
+     65 +
+     66 +## 3) Sharepacks (frozen evidence; audit surface)
+     67 +
+     68 +Day roots:
+     69 +- `sharepacks/2025-12-30/`
+     70 +- `sharepacks/2025-12-31/`
+     71 +- `sharepacks/2026-01-01/`
+     72 +- `sharepacks/2026-01-02/`
+     73 +- `sharepacks/2026-01-03/`
+     74 +- `sharepacks/2026-01-04/`
+     75 +
+     76 +Per-day validators (used by validation + synthesis):
+     77 +- `sharepacks/2025-12-30/vtrac_compact_report.json`
+     78 +- `sharepacks/2025-12-31/vtrac_compact_report.json`
+     79 +- `sharepacks/2026-01-01/vtrac_compact_report.json`
+     80 +- `sharepacks/2026-01-02/vtrac_compact_report.json`
+     81 +- `sharepacks/2026-01-03/vtrac_compact_report.json`
+     82 +- `sharepacks/2026-01-04/vtrac_compact_report.json`
+     83 +
+     84 +Brain‑2 frozen Control Center bundles (per day):
+     85 +- `sharepacks/2025-12-30/control_center/`
+     86 +- `sharepacks/2025-12-31/control_center/`
+     87 +- `sharepacks/2026-01-01/control_center/`
+     88 +- `sharepacks/2026-01-02/control_center/`
+     89 +- `sharepacks/2026-01-03/control_center/`
+     90 +- `sharepacks/2026-01-04/control_center/`
+     91 +
+     92 +Per-state evidence folders (all tracked states):
+     93 +- `sharepacks/<D>/<STATE>/winners/<STATE>/...`
+     94 +- `sharepacks/<D>/<STATE>/stable/<STATE>/...`
+     95 +- `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/...`
+     96 +- `sharepacks/<D>/<STATE>/vtrac/<STATE>/...`
+     97 +- `sharepacks/<D>/<STATE>/hot_zones/<STATE>/...`
+     98 +- `sharepacks/<D>/<STATE>/aux/<STATE>/...`
+     99 +
+    100 +## 4) Results files (window evaluation depends on having future days)
+    101 +
+    102 +- `data/results/2025-12-30.txt`
+    103 +- `data/results/2025-12-31.txt`
+    104 +- `data/results/2026-01-01.txt`
+    105 +- `data/results/2026-01-02.txt`
+    106 +- `data/results/2026-01-03.txt`
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md (+85 -0)
+     1 +# ChatGPT Pro — Deep Research Prompt (Gold Days 2025‑12‑30..2026‑01‑04)
+     2 +
+     3 +Use this prompt when attaching the repo for a deep research session.
+     4 +
+     5 +## Mission
+     6 +
+     7 +Analyze the 6‑day corpus expansion (D=2025‑12‑30, 2025‑12‑31, 2026‑01‑01, 2026‑01‑02, 2026‑01‑03, 2026‑01‑04) and produce **actionable, evidence‑linked insights** about:
+     8 +- environment classes (what the winners lens looked like),
+     9 +- tool performance (Stable / DR / VTRAC / Hot Zones outcomes),
+    10 +- Aux compounding,
+    11 +- Control Center (Brain‑2) boards + Profit Alerts episode behavior,
+    12 +- and candidate‑set/coverage implications.
+    13 +
+    14 +Important: do not suggest changing analyzers yet unless there is a clear contract violation. Separate “pipeline correctness” from “tool outcomes”.
+    15 +
+    16 +## What to read first (strict order)
+    20 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
+    21 +- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
+    22 +- (Optional concept context) `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
+    23 +
+    24 +2) Corpus entry points (analysis artifacts):
+    25 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+    26 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+    27 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+    28 +
+    29 +3) Per-day portals (Brain‑2 then Brain‑1):
+    30 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md`
+    31 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md`
+    32 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__CONTROL_CENTER.md`
+    33 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__DAY_SYNTHESIS.md`
+    34 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__CONTROL_CENTER.md`
+    35 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__DAY_SYNTHESIS.md`
+    36 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md`
+    37 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__DAY_SYNTHESIS.md`
+    38 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__CONTROL_CENTER.md`
+    39 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__DAY_SYNTHESIS.md`
+    40 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__CONTROL_CENTER.md`
+    41 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__DAY_SYNTHESIS.md`
+    42 +
+    43 +4) Per-state run reports (the template answers):
+    44 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__*.md` (excluding `__DAY_SYNTHESIS` if you already read it)
+    45 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__*.md`
+    46 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__*.md`
+    47 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__*.md`
+    48 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__*.md`
+    49 +- Read all `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__*.md`
+    50 +
+    51 +Only if you need to audit raw evidence: drill into `sharepacks/<D>/...` (immutable snapshot).
+    52 +
+    53 +## Deliverables (write these as separate sections)
+    54 +
+    55 +1) **Top 10 cross-day insights**
+    56 +- Each insight must include: which days/states it appears, which tool(s) support it, and what artifact(s) prove it.
+    57 +
+    58 +2) **Environment taxonomy**
+    62 +3) **Tool performance summary (not tuning)**
+    63 +- For Stable/DR/VTRAC/Hot Zones:
+    64 +  - What patterns of misses/hits appear across the 6 days?
+    65 +  - Any recurring “tool outcome” categories worth tracking (not “bugs”)?
+    66 +
+    67 +4) **Control Center / Profit Alerts evaluation**
+    68 +- Summarize:
+    69 +  - HIT(decay) vs HIT<=7 vs HIT<=14 across the 6 days.
+    70 +  - Merged play‑set behavior (do not interpret raw row counts as “bets”).
+    71 +- Identify which AlertIds appear most frequently and which correlate with any hits within <=14 (if any).
+    72 +
+    73 +5) **Candidate set + coverage implications**
+    74 +- Based on the run reports’ pack decisions (Parts 4/5), identify 3–5 recurring “coverage patterns” that seem most plausible.
+    75 +- Keep this as “evaluation framing”, not wagering advice.
+    76 +
+    77 +6) **Fix‑Now vs Fix‑Later**
+    78 +- Fix‑Now = pipeline correctness / artifact contract issues only (missing artifacts, misalignment, drift).
+    79 +- Fix‑Later = tuning ideas / hypotheses / new evaluation lenses.
+    80 +
+    81 +## Constraints (must follow)
+    82 +
+    83 +- Treat `sharepacks/<D>/` as immutable evidence.
+    84 +- Do not recommend changing combined-table extraction/readers or analyzer logic based only on 6 days.
+    85 +- Prefer evidence already embedded in run reports; use raw sharepacks only as audit proof.
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    ✔ Sanity-check CC + RUNS
+    □ Summarize and checkpoint guidance
+
+• Explored
+  └ Read README.md
+
+     2 +
+     3 +Purpose: pointer-only bundles that define a precise review scope (for external reviewers / ChatGPT Pro) without copying or moving sharepacks/run reports.
+     4 +
+     5 +Each pack includes:
+     6 +- a `README.md` (start-here pointers),
+    11 +
+    12 +- 2025‑06‑21 → 2025‑06‑23 (3-day starter corpus):
+    13 +  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/README.md`
+    14 +
+    15 +- 2025‑12‑30 → 2026‑01‑04 (6-day expansion corpus):
+    16 +  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md`
+
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md (+16 -14)
+    53
+    54 -- Added new history workbooks + results files (H + D) and built new sharepacks for:
+    54 +- Added new history workbooks + results files and built sharepacks for:
+    60    - `sharepacks/2026-01-04/` (H=2026-01-03)
+    60 -- Flagged `sharepacks/2026-01-02/` as **not a gold day yet** due to a misdated history workbook (`data/history/Pick3StatsC4_2026-01-01.xlsm` appears to contain future draws).
+    61 -  - See: `sharepacks/2026-01-02/README.md`
+    62 -- Corpus audit results:
+    63 -  - Full 6-day audit fails due to the 2026‑01‑02 misalignment: `reports/audit/sharepacks_audit_20260105_105908.md`
+    64 -  - Audits pass when the bad day is excluded (contiguous blocks):
+    65 -    - `reports/audit/sharepacks_audit_20260105_111418.md` (2025‑12‑30 → 2026‑01‑01)
+    66 -    - `reports/audit/sharepacks_audit_20260105_111524.md` (2026‑01‑03 → 2026‑01‑04)
+    67 -- Scaffolded (not filled) run reports + daily Control Center reports for the 5 valid days:
+    68 -  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__*.md`
+    62 +  - `reports/audit/sharepacks_audit_20260105_125553.md` (PASS=825 WARN=3 FAIL=0 SKIP=6)
+    63 +  - WARN/SKIP can be expected when a state/day has no results line (e.g., Puerto Rico on some days); treat FAIL as “fix-now”.
+    64 +- Filled per-state run reports (Parts A–5) using sharepack summaries + results mapping (no analyzer reruns):
+    65 +  - `scripts/tools/fill_master_validation_run_report.py`
+    66 +- Normalized Part 5 formatting in run reports so corpus export can parse Pack/Drivers/Fix‑Later blocks deterministically:
+    67 +  - `python3 scripts/tools/fill_master_validation_run_report.py --date <D> --state <STATE> --normalize-part5`
+    68 +- Generated day synthesis stubs (Brain‑1 cross‑state summaries):
+    69 +  - `python3 scripts/tools/create_day_synthesis_run_report.py --date <D>`
+    70 +  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__DAY_SYNTHESIS.md`
+    71 +- Added a 6‑day corpus synthesis pointer doc:
+    72 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md`
+    73 +- Added a pointer-only research pack for external review / ChatGPT Pro:
+    74 +  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md`
+    75
+
+• Explored
+  └ Read README.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/README.md (+18 -0)
+    28
+    29 +Fill placeholders in an existing run report (safe, evidence-only):
+    30 +```bash
+    31 +python3 scripts/tools/fill_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4
+    32 +```
+    33 +
+    34 +Optional: normalize Part 5 into the multi-line SSOT format (required for `export_master_validation_corpus.py` parsing):
+    35 +```bash
+    36 +python3 scripts/tools/fill_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4 --normalize-part5
+    37 +```
+    38 +
+    39  Generate a per-day Control Center run report (Brain-2, sharepack-aligned):
+       ⋮
+    45  `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD__CONTROL_CENTER.md`
+    46 +
+    47 +Generate a per-day cross-state synthesis stub (Brain-1, optional but recommended):
+    48 +```bash
+    49 +python3 scripts/tools/create_day_synthesis_run_report.py --date YYYY-MM-DD
+  └ Read AAT9_Master_Validation_Evaluate_Only_Quickstart.md
+
+• Ran python3 scripts/tools/export_master_validation_corpus.py
+  └ Wrote CSV: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv
+    alpha_analytical/control_center/batch_runner.py
+    … +82 lines
+    sharepacks/2025-06-23/PuertoRico4/digit_reduction/PuertoRico4/summary.md
+    src/utils/table_generator.py
+
+     M alpha_analytical/control_center/batch_runner.py
+    … +196 lines
+    ?? .codex/tmp_workbook_checks/2026-01-02/New_York_Midday_draws.csv
+    ?? .codex/tmp_workbook_checks/2026-01-02/New_York_draws.csv
+
+    Read .gitignore
+
+• Edited .gitignore (+3 -0)
+    66  .codex/checkpoints/
+    67 +# Codex scratch outputs (never commit)
+
+• Ran git status -sb --untracked-files=all | sed -n '1,120p'
+  └ ## checkpoint/sharepack-2025-06-21...origin/checkpoint/sharepack-2025-06-21
+     M .gitignore
+    … +116 lines
+    Read CODEX_READ_FIRST_AAT9_WSL_2.md
+    List .gitattributes
+
+• Updated Plan
+  └ ✔ Inspect current repo state
+    ✔ Fix Part 5 normalization
+    ✔ Normalize Dec/Jan run reports
+    ✔ Regenerate corpus exports
+    ✔ Sanity-check CC + RUNS
+    ✔ Generate Dec/Jan synthesis docs
+    ✔ Create Dec/Jan research package
+    ✔ Summarize and checkpoint guidance
+  └ exists True
+    results_date 2026-01-02
+    history_date 2026-01-01
+    history_excel_path data/history/Pick3StatsC4_2026-01-01.xlsm
+
+  What I just finished
+
+  - Normalized Part 5 into the multi-line SSOT format across all Dec/Jan state run reports (so corpus export can parse Packs/Drivers/Fix‑Later): scripts/tools/
+    fill_master_validation_run_report.py:1 with --normalize-part5.
+  - Regenerated docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv:1 + docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md:1.
+  - Generated the missing Brain‑1 per‑day portals for the 6-day corpus: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__DAY_SYNTHESIS.md:1 (and the other 5 dates).
+  - Added the missing packs index + new 6-day pack:
+  - Per-day Brain‑1 synth (new for Dec/Jan): docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__DAY_SYNTHESIS.md:1
+
+  Quick reassurance on the Jan 1 workbook
+
+  - The D=2026-01-02 sharepack provenance points at data/history/Pick3StatsC4_2026-01-01.xlsm via sharepacks/2026-01-02/control_center/meta.json:1, so the extra-underscore copy isn’t
+    what powered the sharepack.
+
+  What to tell ChatGPT Pro about scope
+
+  - “Use only the curated pack’s manifest; do not expand outside it unless you hit a broken link”: docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/

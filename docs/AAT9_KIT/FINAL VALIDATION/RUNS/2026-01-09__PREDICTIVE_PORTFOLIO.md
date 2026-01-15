@@ -2,30 +2,33 @@
 
 Purpose
 - Cross-state triage for a predictive day (pre-results).
-- Starts from Control Center Profit Alerts (bet-ready) and annotates with Candidate Universe size.
+- Profile: `mixed` | rank_by: `profit_alerts`
+- Annotates state snapshots with Candidate Universe size + Due Doubles + Play Card closures.
 
 Evidence roots
 - Predictive sharepacks root: `sharepacks/_predictive`
 - Control Center Profit Alerts: `sharepacks/_predictive/2026-01-09/control_center/profit_alerts.csv`
+- Candidate Universe file: `candidate_universe.json`
+- Play Card file: `play_card.json`
 
 ## Portfolio table (ranked)
 
-| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | Due doubles (canonicals) | PlayCard B12 boxed |
-|---|---:|---:|---|---:|---:|---|---|
-| NewYork4 | 8 | 13 | Combined:A11:BOX:045(6); Combined:A05:STR8_3:005(3); Combined:A01:BOX:045(6) | 40 | 180 | 001 007 011 066 | 3:001 005 057 |
-| Delaware4 | 5 | 10 | Midday:A05:STR8_3:033(3); Midday:A02:STR8_3:033(3); Midday:A02:STR8_3:033(3) | 37 | 203 | 009 088 117 223 | 4:009 033 344 |
-| Virginia4 | 4 | 12 | Evening:A01:BOX:024(6); Evening:A01:BOX:024(6); Evening:A05:STR8_8:024(8) | 36 | 184 | 004 177 199 377 | 3:004 346 455 |
-| Connecticut4 | 4 | 11 | Combined:A05:STR8_3:224(3); Midday:A09:STR8_8:011(8); Midday:A12:STR8_4of8:448(4) | 36 | 166 | 088 099 223 228 | 3:088 448 489 |
-| PuertoRico4 | 4 | 11 | Midday:A05:STR8_3:006(3); Midday:A01:BOX:068(6); Combined:A12:STR8_4of8:088(4) | 36 | 189 | 022 033 088 199 | 3:022 068 088 |
-| OntarioCanada4 | 4 | 10 | Midday:A05:STR8_3:224(3); Combined:A12:STR8_4of8:006(4); Combined:A06:BOX:015(6) | 36 | 183 | 004 044 144 228 | 3:004 015 224 |
-| Florida4 | 3 | 11 | Combined:A10:STR8_3:077(3); Evening:A05:STR8_3:224(3); Evening:A04:BOX:034(6) | 35 | 153 | 003 009 011 077 | 4:003 077 224 |
-| Pennsylvania4 | 3 | 11 | Midday:A05:STR8_3:009(3); Midday:A04:BOX:019(6); Combined:A10:STR8_3:066(3) | 35 | 199 | 007 066 228 255 | 3:007 019 066 |
-| Ohio4 | 3 | 10 | Combined:A05:STR8_3:399(3); Combined:A10:STR8_3:066(3); Combined:A04:BOX:039(6) | 35 | 178 | 009 066 113 118 | 3:009 066 489 |
-| NewJersey4 | 3 | 10 | Combined:A05:STR8_3:003(3); Evening:A12:STR8_4of8:078(4); Evening:A04:BOX:078(6) | 35 | 189 | 022 114 155 339 | 3:003 022 078 |
-| SouthCarolina4 | 2 | 7 | Midday:A05:STR8_3:244(3); Combined:A04:BOX:059(6) | 34 | 153 | 115 155 224 233 | 3:059 115 599 |
-| Michigan4 | 2 | 7 | Combined:A05:STR8_3:334(3); Evening:A04:BOX:019(6) | 34 | 165 | 112 119 155 199 | 3:019 112 334 |
-| NorthCarolina4 | 2 | 7 | Combined:A05:STR8_3:066(3); Combined:A04:BOX:039(6) | 34 | 183 | 001 009 044 225 | 3:001 049 446 |
-| Indiana4 | 2 | 7 | Combined:A05:STR8_3:004(3); Midday:A04:BOX:069(6) | 34 | 233 | 002 022 177 226 | 3:002 004 069 |
+| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed |
+|---|---:|---:|---|---:|---:|---|---|---|
+| NewYork4 | 8 | 13 | Combined:A11:BOX:045(6); Combined:A05:STR8_3:005(3); Combined:A01:BOX:045(6) | 40 | 180 | 14:001 | 001 007 011 066 | 3:001 005 057 |
+| Delaware4 | 5 | 10 | Midday:A05:STR8_3:033(3); Midday:A02:STR8_3:033(3); Midday:A02:STR8_3:033(3) | 37 | 203 | 10:009 | 009 088 117 223 | 4:009 033 344 |
+| Virginia4 | 4 | 12 | Evening:A01:BOX:024(6); Evening:A01:BOX:024(6); Evening:A05:STR8_8:024(8) | 36 | 184 | 10:004 | 004 177 199 377 | 3:004 346 455 |
+| Connecticut4 | 4 | 11 | Combined:A05:STR8_3:224(3); Midday:A09:STR8_8:011(8); Midday:A12:STR8_4of8:448(4) | 36 | 166 | 9:088 | 088 099 223 228 | 3:088 448 489 |
+| PuertoRico4 | 4 | 11 | Midday:A05:STR8_3:006(3); Midday:A01:BOX:068(6); Combined:A12:STR8_4of8:088(4) | 36 | 189 | 15:022 | 022 033 088 199 | 3:022 068 088 |
+| OntarioCanada4 | 4 | 10 | Midday:A05:STR8_3:224(3); Combined:A12:STR8_4of8:006(4); Combined:A06:BOX:015(6) | 36 | 183 | 9:004 | 004 044 144 228 | 3:004 015 224 |
+| Florida4 | 3 | 11 | Combined:A10:STR8_3:077(3); Evening:A05:STR8_3:224(3); Evening:A04:BOX:034(6) | 35 | 153 | 11:003 | 003 009 011 077 | 4:003 077 224 |
+| Pennsylvania4 | 3 | 11 | Midday:A05:STR8_3:009(3); Midday:A04:BOX:019(6); Combined:A10:STR8_3:066(3) | 35 | 199 | 9:007 | 007 066 228 255 | 3:007 019 066 |
+| Ohio4 | 3 | 10 | Combined:A05:STR8_3:399(3); Combined:A10:STR8_3:066(3); Combined:A04:BOX:039(6) | 35 | 178 | 9:009 | 009 066 113 118 | 3:009 066 489 |
+| NewJersey4 | 3 | 10 | Combined:A05:STR8_3:003(3); Evening:A12:STR8_4of8:078(4); Evening:A04:BOX:078(6) | 35 | 189 | 9:022 | 022 114 155 339 | 3:003 022 078 |
+| SouthCarolina4 | 2 | 7 | Midday:A05:STR8_3:244(3); Combined:A04:BOX:059(6) | 34 | 153 | 9:115 | 115 155 224 233 | 3:059 115 599 |
+| Michigan4 | 2 | 7 | Combined:A05:STR8_3:334(3); Evening:A04:BOX:019(6) | 34 | 165 | 10:112 | 112 119 155 199 | 3:019 112 334 |
+| NorthCarolina4 | 2 | 7 | Combined:A05:STR8_3:066(3); Combined:A04:BOX:039(6) | 34 | 183 | 9:001 | 001 009 044 225 | 3:001 049 446 |
+| Indiana4 | 2 | 7 | Combined:A05:STR8_3:004(3); Midday:A04:BOX:069(6) | 34 | 233 | 9:002 | 002 022 177 226 | 3:002 004 069 |
 
 ## Play cards (B12, play_box_first)
 
@@ -49,7 +52,7 @@ These are the budgeted “what to play now” cuts derived from Candidate Univer
 ## Notes
 
 - This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.
-- For any state, the canonical “what to play” remains:
-  - `sharepacks/_predictive/2026-01-09/control_center/profit_alerts.csv` (bet-ready implied sets)
+- For any state, the canonical evidence remains the frozen predictive sharepack artifacts:
+  - `sharepacks/_predictive/2026-01-09/control_center/profit_alerts.csv` (bet-ready implied sets; may be excluded by profile)
   - `sharepacks/_predictive/2026-01-09/<STATE>/candidate_universe.json` (gradeable playset)
   - `sharepacks/_predictive/2026-01-09/<STATE>/play_card.json` (budgeted cuts)

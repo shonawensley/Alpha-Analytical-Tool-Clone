@@ -131,16 +131,25 @@ def _parse_profit_alerts_for_state(rows: Sequence[Dict[str, str]], *, state_key:
     return out
 
 
-def _load_candidate_universe_summary(state_dir: Path, *, profile: str) -> Tuple[int, int, List[str]]:
+def _load_candidate_universe_summary(state_dir: Path, *, profile: str) -> Tuple[int, int, List[str], int, List[str]]:
     """
-    Returns: (packs_count, union_count, due_doubles_canonicals_union)
+    Returns:
+      - packs_count
+      - union_count
+      - due_doubles_canonicals_union
+      - top_support_count (how many packs support the top canonical)
+      - top_support_canonicals (up to 3 canonicals tied for top support)
+
+    Notes:
+    - "Support" is computed as a per-pack vote over that pack's `canonicals` list.
+    - This is intended as a lightweight convergence proxy for tool-first ranking.
     """
     cu = state_dir / f"candidate_universe{_profile_suffix(profile)}.json"
     if not cu.exists():
-        return 0, 0, []
+        return 0, 0, [], 0, []
     raw = _read_json(cu)
     if not isinstance(raw, dict):
-        return 0, 0, []
+        return 0, 0, [], 0, []
     packs = raw.get("packs")
     packs_list = packs if isinstance(packs, list) else []
     union_count = raw.get("union_combos_count")
@@ -151,17 +160,32 @@ def _load_candidate_universe_summary(state_dir: Path, *, profile: str) -> Tuple[
         union_count_int = len(union) if isinstance(union, list) else 0
 
     dd_canon: set[str] = set()
+    support: Dict[str, int] = {}
     for p in packs_list:
         if not isinstance(p, dict):
             continue
-        if str(p.get("method_id") or "") != "due_doubles":
+        method_id = str(p.get("method_id") or "")
+        canonicals = p.get("canonicals") or []
+        if isinstance(canonicals, list):
+            uniq: set[str] = set()
+            for c in canonicals:
+                cc = _canon(str(c))
+                if cc:
+                    uniq.add(cc)
+            for cc in uniq:
+                support[cc] = support.get(cc, 0) + 1
+
+        if method_id != "due_doubles":
             continue
-        for c in p.get("canonicals") or []:
+        for c in canonicals or []:
             cc = _canon(str(c))
             if cc:
                 dd_canon.add(cc)
 
-    return len(packs_list), union_count_int, sorted(dd_canon)
+    top_support_count = max(support.values(), default=0)
+    top_support = [c for c, n in sorted(support.items(), key=lambda x: (-x[1], x[0])) if n == top_support_count][:3]
+
+    return len(packs_list), union_count_int, sorted(dd_canon), top_support_count, top_support
 
 
 def _load_play_card_b12_box_first(state_dir: Path, *, profile: str) -> Tuple[int, List[str], List[str]]:
@@ -263,7 +287,9 @@ def main() -> None:
     for state_key in states:
         state_dir = day_dir / state_key
         alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key)
-        packs_count, union_count, dd_canon = _load_candidate_universe_summary(state_dir, profile=profile)
+        packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary(
+            state_dir, profile=profile
+        )
         play_boxed_count, play_boxed, play_combos = _load_play_card_b12_box_first(state_dir, profile=profile)
 
         top_alerts = alerts[: max(0, int(args.top_n_alerts))]
@@ -276,6 +302,9 @@ def main() -> None:
 
         dd_show = dd_canon[: max(0, int(args.top_n_due_doubles))]
         play_boxed_show = play_boxed[:3]
+        top_support_label = (
+            f"{top_support_count}:{' '.join(top_support)}" if top_support_count and top_support else ("0" if packs_count else "-")
+        )
 
         table_rows.append(
             {
@@ -285,6 +314,8 @@ def main() -> None:
                 "alerts_top": "; ".join(top_strs) if top_strs else "-",
                 "candidate_union": union_count,
                 "candidate_packs": packs_count,
+                "candidate_top_support": int(top_support_count),
+                "candidate_top_support_label": top_support_label,
                 "due_doubles_canon": " ".join(dd_show) if dd_show else "-",
                 "due_doubles_count": len(dd_canon),
                 "play_b12_boxed_count": int(play_boxed_count),
@@ -309,7 +340,7 @@ def main() -> None:
         # Tool-first triage: prefer stronger low-cost closures and narrower universes.
         table_rows.sort(
             key=lambda r: (
-                -int(r.get("play_b12_boxed_count") or 0),
+                -int(r.get("candidate_top_support") or 0),
                 int(r["candidate_union"]),
                 -int(r.get("due_doubles_count") or 0),
                 -int(r["candidate_packs"]),
@@ -334,11 +365,11 @@ def main() -> None:
     lines.append("")
     lines.append("## Portfolio table (ranked)")
     lines.append("")
-    lines.append("| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | Due doubles (canonicals) | PlayCard B12 boxed |")
-    lines.append("|---|---:|---:|---|---:|---:|---|---|")
+    lines.append("| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed |")
+    lines.append("|---|---:|---:|---|---:|---:|---|---|---|")
     for r in table_rows:
         lines.append(
-            "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {due_doubles_canon} | {play_b12_boxed} |".format(
+            "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} |".format(
                 **r
             )
         )

@@ -1,0 +1,1623 @@
+Updated Plan
+  └ ✔ Inspect repo + results formats
+    □ Patch results triad parsing everywhere
+    □ Smoke-test winners + parsers
+    □ Build/freeze 6-day sharepacks block
+    □ Scaffold RUNS + CC reports
+    □ Update SSOT docs + summarize
+
+• Explored
+  └ List tables
+
+• Edited 5 files (+65 -10)
+  └ scripts/tools/dr_sharepack_summary.py (+13 -2)
+    64      def first_tri(token: str) -> Optional[str]:
+    65 -        match = re.search(r"\d{3}", token or "")
+    66 -        return match.group(0) if match else None
+    65 +        if not token:
+    66 +            return None
+    67 +        direct = re.findall(r"\d{3}", token)
+    68 +        if direct:
+    69 +            return direct[0]
+    70 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    71 +        if len(digits) < 3:
+    72 +            return None
+    73 +        if len(digits) == 3:
+    74 +            return digits
+    75 +        if len(digits) % 3 != 0:
+    76 +            return None
+    77 +        return digits[:3]
+    78
+
+  └ scripts/tools/hot_zones_sharepack_summary.py (+13 -2)
+    59      def first_tri(token: str) -> str | None:
+    60 -        match = re.search(r"\d{3}", token or "")
+    61 -        return match.group(0) if match else None
+    60 +        if not token:
+    61 +            return None
+    62 +        direct = re.findall(r"\d{3}", token)
+    63 +        if direct:
+    64 +            return direct[0]
+    65 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    66 +        if len(digits) < 3:
+    67 +            return None
+    68 +        if len(digits) == 3:
+    69 +            return digits
+    70 +        if len(digits) % 3 != 0:
+    71 +            return None
+    72 +        return digits[:3]
+    73
+
+  └ scripts/tools/stable_sharepack_summary.py (+13 -2)
+     99      def first_tri(token: str) -> str | None:
+    100 -        match = re.search(r"\d{3}", token or "")
+    101 -        return match.group(0) if match else None
+    100 +        if not token:
+    101 +            return None
+    102 +        direct = re.findall(r"\d{3}", token)
+    103 +        if direct:
+    104 +            return direct[0]
+    105 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    106 +        if len(digits) < 3:
+    107 +            return None
+    108 +        if len(digits) == 3:
+    109 +            return digits
+    110 +        if len(digits) % 3 != 0:
+    111 +            return None
+    112 +        return digits[:3]
+    113
+
+  └ scripts/tools/validate_hot_zones_winners.py (+13 -2)
+    46      def first_tri(token: str) -> str | None:
+    47 -        match = re.search(r"\d{3}", token or "")
+    48 -        return match.group(0) if match else None
+    47 +        if not token:
+    48 +            return None
+    49 +        direct = re.findall(r"\d{3}", token)
+    50 +        if direct:
+    51 +            return direct[0]
+    52 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    53 +        if len(digits) < 3:
+    54 +            return None
+    55 +        if len(digits) == 3:
+    56 +            return digits
+    57 +        if len(digits) % 3 != 0:
+    58 +            return None
+    59 +        return digits[:3]
+    60
+
+  └ scripts/tools/validate_stable_winners.py (+13 -2)
+    50      def first_tri(token: str) -> str | None:
+    51 -        match = re.search(r"\d{3}", token or "")
+    52 -        return match.group(0) if match else None
+    51 +        if not token:
+    52 +            return None
+    53 +        direct = re.findall(r"\d{3}", token)
+    54 +        if direct:
+    55 +            return direct[0]
+    56 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    57 +        if len(digits) < 3:
+    58 +            return None
+    59 +        if len(digits) == 3:
+    60 +            return digits
+    61 +        if len(digits) % 3 != 0:
+• Edited scripts/tools/generate_winners_from_results.py (+12 -15)
+    23  from modules.winner_report_full import write_winner_full_report
+    24 +from alpha_analytical.control_center.batch_runner import parse_winner_sheet
+    25
+       ⋮
+    67      winners: Dict[str, List[str]] = {}
+    67 -    pattern = re.compile(r"\d{3}")
+    68 -    for raw_line in results_path.read_text(encoding="utf-8").splitlines():
+    69 -        line = raw_line.strip()
+    70 -        if not line or line.lower().startswith("pick") or line.lower().startswith("midday"):
+    71 -            continue
+    72 -        nums = pattern.findall(line)
+    73 -        if not nums:
+    74 -            continue
+    75 -        state_part = line
+    76 -        for num in nums:
+    77 -            state_part = state_part.replace(num, " ")
+    78 -        state_part = re.sub(r"\s+", " ", state_part).strip(" -")
+    79 -        state_code = normalize_state(state_part)
+    80 -        if not state_code:
+    68 +    entries = parse_winner_sheet(results_path.read_text(encoding="utf-8", errors="replace"))
+    69 +    for entry in entries:
+    70 +        state = entry.project_state
+    71 +        if not state:
+    72              continue
+    82 -        winners[state_code] = nums[:2]
+    73 +        triads: List[str] = []
+    74 +        if entry.midday:
+    75 +            triads.append(entry.midday)
+    76 +        if entry.evening and entry.evening not in triads:
+    77 +            triads.append(entry.evening)
+    78 +        if triads:
+    79 +            winners[state] = triads
+    80      return winners
+
+• Edited scripts/tools/run_history_and_results.py (+10 -12)
+     37
+     38 +if str(ROOT) not in sys.path:
+     39 +    sys.path.insert(0, str(ROOT))
+     40 +
+     41
+        ⋮
+    103      winners: Dict[str, List[str]] = {}
+    101 -    pat = re.compile(r"\d{3}")
+    102 -    for raw in results_path.read_text(encoding="utf-8").splitlines():
+    103 -        line = raw.strip()
+    104 -        if not line or line.lower().startswith(("pick", "midday")):
+    105 -            continue
+    106 -        nums = pat.findall(line)
+    107 -        if not nums:
+    104 +    from alpha_analytical.control_center.batch_runner import parse_winner_sheet
+    105 +
+    106 +    entries = parse_winner_sheet(results_path.read_text(encoding="utf-8", errors="replace"))
+    107 +    for entry in entries:
+    108 +        triads = [t for t in (entry.midday, entry.evening) if t]
+    109 +        if not triads:
+    110              continue
+    109 -        # crude state name extraction (first token stripped of digits)
+    110 -        state_part = re.sub(r"\d", " ", line)
+    111 -        state_part = re.sub(r"\s+", " ", state_part).strip(" -")
+    112 -        state_key = state_part.replace(" ", "").title()
+    113 -        winners[state_key] = nums[:2]
+    111 +        winners[entry.canonical] = triads
+    112      return winners
+
+• Edited scripts/tools/run_stable_from_results.py (+16 -5)
+    12  import argparse
+    13 +import re
+    14  import sys
+       ⋮
+    31          raise FileNotFoundError(results_file)
+    32 +
+    33 +    def _triads_from_token(token: str) -> List[str]:
+    34 +        if not token:
+    35 +            return []
+    36 +        direct = re.findall(r"\d{3}", token)
+    37 +        if direct:
+    38 +            return direct
+    39 +        digits = "".join(ch for ch in str(token) if ch.isdigit())
+    40 +        if len(digits) < 3 or len(digits) % 3 != 0:
+    41 +            return []
+    42 +        return [digits[i : i + 3] for i in range(0, len(digits), 3)]
+    43 +
+    44      for raw_line in results_file.read_text(encoding="utf-8").splitlines():
+       ⋮
+    50          parts = [p for p in remainder.split(" ") if p]
+    38 -        if parts:
+    39 -            winners.append(parts[0])
+    40 -        if len(parts) >= 2:
+    41 -            winners.append(parts[1])
+    51 +        for part in parts:
+    52 +            winners.extend(_triads_from_token(part))
+    53          break
+    43 -    return [w for w in winners if w and w.isdigit()]
+    54 +    return winners[:2]
+    55
+
+• Explored
+  └ Search def _canon_draw in export_control_center_sharepack.py
+    Read export_control_center_sharepack.py
+
+• Edited scripts/tools/export_control_center_sharepack.py (+13 -6)
+    66
+    69 +    if not digits:
+    70 +        return ""
+    71 +    return digits.zfill(3) if len(digits) <= 3 else digits
+    72 +
+    73 +
+    82 -            midday = (row[1] or "").strip()
+    83 -            evening = (row[2] or "").strip()
+    89 +            midday = _normalize_pick3_literal((row[1] or "").strip())
+    90 +            evening = _normalize_pick3_literal((row[2] or "").strip())
+    91              entry: Dict[str, str] = {}
+    85 -            if midday.isdigit() and 1 <= len(midday) <= 3:
+    86 -                entry["Midday"] = midday.zfill(3)
+    87 -            if evening.isdigit() and 1 <= len(evening) <= 3:
+    88 -                entry["Evening"] = evening.zfill(3)
+    92 +            if len(midday) == 3 and midday.isdigit():
+    93 +                entry["Midday"] = midday
+    94 +            if len(evening) == 3 and evening.isdigit():
+    95 +                entry["Evening"] = evening
+    96              if entry:
+
+• Edited scripts/tools/validate_dr_winners.py (+6 -6)
+    69                  continue
+    70 -            midday = (row[1] or "").strip()
+    71 -            evening = (row[2] or "").strip()
+    70 +            midday = _normalize_pick3_literal((row[1] or "").strip())
+    71 +            evening = _normalize_pick3_literal((row[2] or "").strip())
+    72              entry: Dict[str, str] = {}
+    73 -            if midday.isdigit() and 1 <= len(midday) <= 3:
+    74 -                entry["Midday"] = midday.zfill(3)
+    75 -            if evening.isdigit() and 1 <= len(evening) <= 3:
+    76 -                entry["Evening"] = evening.zfill(3)
+    73 +            if len(midday) == 3 and midday.isdigit():
+    74 +                entry["Midday"] = midday
+    75 +            if len(evening) == 3 and evening.isdigit():
+    76 +                entry["Evening"] = evening
+    77              if entry:
+
+• Edited scripts/tools/generate_control_center_report.py (+30 -20)
+     16  import sys
+     17 +import csv
+     18  from pathlib import Path
+        ⋮
+     82
+     83 +def _normalize_pick3_literal(value: str) -> str:
+     84 +    digits = "".join(ch for ch in str(value) if ch.isdigit())
+     85 +    if not digits:
+     86 +        return ""
+     87 +    return digits.zfill(3) if len(digits) <= 3 else digits
+     88 +
+     89 +
+     90  def parse_results(results_path: Path) -> Dict[str, Dict[str, str]]:
+     91      winners: Dict[str, Dict[str, str]] = {}
+     84 -    for raw_line in results_path.read_text(encoding="utf-8").splitlines():
+     85 -        line = raw_line.strip()
+     86 -        if not line or line.lower().startswith("pick") or line.lower().startswith("midday"):
+     87 -            continue
+     88 -        tokens = [tok for tok in line.replace("\t", " ").split(" ") if tok]
+     89 -        digits = [tok for tok in tokens if tok.isdigit() and len(tok) == 3]
+     90 -        if not digits:
+     91 -            continue
+     92 -        state_part = line
+     93 -        for tok in digits:
+     94 -            state_part = state_part.replace(tok, " ")
+     95 -        state_code = STATE_OVERRIDES.get(_normalize(state_part), None)
+     96 -        if not state_code:
+     97 -            continue
+     98 -        entry: Dict[str, str] = {}
+     99 -        if digits:
+    100 +            if len(row) < 3:
+    101 +                continue
+    102 +            state_code = STATE_OVERRIDES.get(_normalize(state_raw), None)
+    103 +            if not state_code:
+    104 +                continue
+    105 +            midday = _normalize_pick3_literal((row[1] or "").strip())
+    106 +            evening = _normalize_pick3_literal((row[2] or "").strip())
+    107 +            entry: Dict[str, str] = {}
+    108 +            if len(midday) == 3 and midday.isdigit():
+    109 +                entry["Midday"] = midday
+
+• Ran rg -n "def .*parse_results|csv\.reader|data/results" scripts/tools/cc_sanity_snapshot.py | head -n 120 && echo '---' && sed -n '1,160p' scripts/tools/cc_sanity_snapshot.py
+  └ 47:        reader = csv.reader(fh)
+    95:        reader2 = csv.reader(fh)
+    … +161 lines
+
+• Edited scripts/tools/cc_sanity_snapshot.py (+16 -6)
+     66 +    return digits.zfill(3) if len(digits) <= 3 else digits
+     67 +
+     68 +
+    119 +                literal = _normalize_pick3_literal(part)
+    120 +                if len(literal) == 3 and literal.isdigit():
+    121 +                    tokens.append(literal)
+    122      return tokens
+    247 -                entry["Evening"] = eve_raw.zfill(3)
+    252 +            midday = _normalize_pick3_literal(midday_raw)
+    253 +            eve = _normalize_pick3_literal(eve_raw)
+
+• Edited scripts/tools/export_master_validation_corpus.py (+18 -5)
+     80 +    return digits.zfill(3) if len(digits) <= 3 else digits
+     81 +
+     82 +
+     83  def _parse_results_file(*, root: Path, date: str, states: set[str]) -> dict[str, Results]:
+        ⋮
+    103 +                midday_norm = _normalize_pick3_literal(midday_raw)
+    104 +                evening_norm = _normalize_pick3_literal(evening_raw)
+    105 +                if len(midday_norm) == 3 and midday_norm.isdigit():
+    106 +                    midday = midday_norm
+    107 +                if len(evening_norm) == 3 and evening_norm.isdigit():
+    108 +                    evening = evening_norm
+    109              else:
+    101 -                nums = re.findall(r"\b\d{3}\b", line)
+    110 +                nums = []
+    111 +                for part in line.replace(",", " ").split():
+    112 +                    literal = _normalize_pick3_literal(part)
+    113 +                    if len(literal) == 3 and literal.isdigit():
+    114 +                        nums.append(literal)
+    115                  if len(nums) >= 2:
+
+• Explored
+  └ Search re\\.search\(r\"\\\\d\{3\}\"|re\\.fullmatch\(r\"\\\\d\{3\}\"|len\(midday_raw\) == 3 and midday_raw\.isdigit\(\)|len\(eve_raw\) == 3 and eve_raw\.isdigit\(\)|
+           midday_raw\.isdigit\(\) in tools
+    Search re\.search\(r\"\\\\d\{3\} in tools
+    Search \\\\d\{3\} in tools
+    Search load_winners_from_results|results_path = Path\(\"data/results\"\) in vtrac_sharepack_summary.py
+    Read vtrac_sharepack_summary.py
+    Read vtrac_sharepack_summary.py
+    Search results in audit_sharepacks_corpus.py
+    Search results in build_winners_log.py
+    Search def _parse_results\b|def parse_results\b in tools
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from alpha_analytical.control_center.batch_runner import parse_winner_sheet
+  │ … +10 lines
+  └ Connecticut     M=095 E=467 -> Connecticut4
+    Delaware        M=706 E=563 -> Delaware4
+    … +10 lines
+    South Carolina  M=754 E=976 -> SouthCarolina4
+    Virginia        M=888 E=100 -> Virginia4
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from scripts.tools import export_control_center_sharepack as cc
+  │ … +5 lines
+  └ connecticut {'Midday': '095', 'Evening': '467'}
+    delaware {'Midday': '706', 'Evening': '563'}
+    … +7 lines
+    southcarolina {'Midday': '754', 'Evening': '976'}
+  │ … +5 lines
+  └ {'Midday': '095', 'Evening': '467'}
+    {'Midday': '421', 'Evening': '356'}
+
+  └ {'Midday': '095', 'Evening': '467'}
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from scripts.tools.generate_winners_from_results import parse_results
+  │ … +5 lines
+  └ Connecticut4 ['095', '467']
+    Florida4 ['377', '870']
+    OntarioCanada4 ['409', '372']
+    PuertoRico4 ['098', '643']
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from scripts.tools.export_master_validation_corpus import _parse_results_file
+  │ … +7 lines
+  └ Connecticut4 Results(midday='095', evening='467')
+    OntarioCanada4 Results(midday='409', evening='372')
+    NewJersey4 Results(midday='421', evening='356')
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from scripts.tools.run_stable_from_results import _detect_winners
+  │ … +4 lines
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │ from scripts.tools.generate_control_center_report import parse_results
+  │ … +5 lines
+  └ Connecticut4 {'Midday': '095', 'Evening': '467'}
+    Florida4 {'Midday': '377', 'Evening': '870'}
+    … +2 lines
+    OntarioCanada4 {'Midday': '409', 'Evening': '372'}
+  │ from pathlib import Path
+  │ from scripts.tools import cc_sanity_snapshot as cc
+  │ … +6 lines
+  └ tokens ['003', '593', '681', '192', '362', '061', '942', '085', '095', '467']
+    ct None
+    pr None
+
+    119 -                literal = _normalize_pick3_literal(part)
+    120 -                if len(literal) == 3 and literal.isdigit():
+    121 -                    tokens.append(literal)
+    119 +                digits = "".join(ch for ch in part if ch.isdigit())
+    120 +                if len(digits) == 3:
+    236 -            line = line.rstrip("\n")
+    237 -            if not line:
+    234 +        reader = csv.reader(fh, delimiter="\t")
+    235 +        for row in reader:
+    236 +            if not row:
+    237                  continue
+    239 -            if not header_seen:
+    242 -                    header_seen = True
+    238 +            state_raw = (row[0] or "").strip()
+    239 +            if not state_raw:
+    240                  continue
+    244 -            parts = [p.strip() for p in line.split("\t")]
+    242                  continue
+    247 -            state_raw, midday_raw, eve_raw = parts[0], parts[1], parts[2]
+    248 -            if not state_raw:
+    243 +            if len(row) < 3:
+    244                  continue
+    248              entry: Dict[str, str] = {}
+    252 -            midday = _normalize_pick3_literal(midday_raw)
+    253 -            eve = _normalize_pick3_literal(eve_raw)
+    249              if len(midday) == 3 and midday.isdigit():
+
+    ct {'Midday': '095', 'Evening': '467'}
+    pr {'Midday': '098', 'Evening': '643'}
+    qc None
+
+• Ran rm -rf .codex/smokes && mkdir -p .codex/smokes && python3 scripts/tools/generate_winners_from_results.py --results-file data/results/2025-12-30.txt --out-dir .codex/smokes/
+  │ smokes/winners_2025-12-30 -maxdepth 2 -type f -name '*.html' | wc -l && echo 'CT files:' && ls -1 .codex/smokes/winners_2025-12-30/Connecticut4 | head -n 10
+
+• Updated Plan
+  └ ✔ Inspect repo + results formats
+    ✔ Patch results triad parsing everywhere
+    □ Smoke-test winners + parsers
+  └ ✔ Inspect repo + results formats
+    ✔ Patch results triad parsing everywhere
+    ✔ Smoke-test winners + parsers
+    □ Build/freeze 6-day sharepacks block
+    □ Scaffold RUNS + CC reports
+• Ran rg -n "Digit Reduction" -n "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md" | head -n 80 && echo '---' && sed -n '120,220p' "docs/AAT9_KIT/FINAL
+  │ VALIDATION/final docs/AAT9_Final_Validation_Help.md"
+  └ 3:Purpose: A single reference for running historical/backtest examples safely and repeatably (fresh tables, day-ahead results, winners HTML/JSON, and Digit Reduction outputs). Use
+    this when swapping Excel workbooks and generating analysis artifacts for reverse-engineering wins.
+    … +113 lines
+
+• Explored
+  └ List TOOLS
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --help | sed -n '1,120p'
+  └ usage: generate_draws_csv.py [-h] [--excel EXCEL] [--outdir OUTDIR]
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --list-states | head -n 120
+  └ Tracked Aux states:
+     - Connecticut
+    … +15 lines
+     - Virginia
+     - West Virginia
+
+• Explored
+  └ Search state_tables = tables_root in batch_runner.py
+    Read batch_runner.py
+    Search stable_sharepack_summary|hot_zones_sharepack_summary|dr_sharepack_summary|vtrac_sharepack_summary|aux_sharepack_summary in freeze_sharepack_day.py
+    Read aux_sharepack_summary.py, freeze_sharepack_day.py
+
+• Ran python3 scripts/tools/validate_tables_aux_alignment.py --help | sed -n '1,200p'
+• Ran python3 scripts/tools/aux_sharepack_summary.py --help | sed -n '1,200p'
+  └ usage: aux_sharepack_summary.py [-h] --date DATE --state STATE [--max-n MAX_N]
+                                    [--limit LIMIT] [--sums-window SUMS_WINDOW]
+    … +24 lines
+      --md-out MD_OUT       Markdown output filename (default summary.md)
+      --json-out JSON_OUT   JSON output filename (default summary.json)
+
+    winners_by_date/2025-12-30/Florida4/Florida4_vtrac11_winner_870_20260105_051153.html
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --states Connecticut Delaware Florida Indiana Michigan "New Jersey" "New York" "North Carolina" Ohio Ontario Pennsylvania "Puerto
+  │ Rico" "South Carolina" Virginia --max-draws 1000
+  └ Draw exports complete:
+     - Connecticut_draws.csv
+    … +39 lines
+
+• Ran states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  └ [OK] Tables vs Aux alignment: Connecticut4 (data/outputs/tables/Connecticut4)
+    [OK] Tables vs Aux alignment: Delaware4 (data/outputs/tables/Delaware4)
+    … +10 lines
+    [OK] Tables vs Aux alignment: SouthCarolina4 (data/outputs/tables/SouthCarolina4)
+    [OK] Tables vs Aux alignment: Virginia4 (data/outputs/tables/Virginia4)
+  │ from pathlib import Path
+
+• Ran D=2025-12-30
+  │ states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │
+  │ … +21 lines
+  └ Stable run complete for Connecticut4
+    Patterns: 4725
+    … +52 lines
+    HTML: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/patterns/Virginia4/Virginia4_stable_patterns_report.html
+    CSV: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/patterns/Virginia4/Virginia4_stable_patterns_scores.csv
+
+• Ran D=2025-12-30
+  │ … +4 lines
+  └ Mask digits: 126
+
+    … +792 lines
+      - data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip (optional)
+  │ for S in "${states[@]}"; do
+  │ … +6 lines
+  └ Per-item CSV: data/outputs/analysis/hot_zones/Connecticut4/Connecticut4_hot_zones_per_lane.csv
+    Top candidates CSV: data/outputs/analysis/hot_zones/Connecticut4/Connecticut4_hot_zones_top_lanes.csv
+    … +66 lines
+    Winner map: data/outputs/analysis/hot_zones/Virginia4/2025-12-30_hot_zones_winner_map.json
+    Guard triads (total/top20): 4/2
+• Context compacted
+
+• Explored
+  └ List ls
+    Read AGENTS.md
+
+• Ran git status -s && git branch -vv && git remote -v
+    … +115 lines
+    origin    https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git (fetch)
+    origin    https://github.com/shonawensley/Alpha-Analytical-Tool-Clone.git (push)
+
+• Updated Plan
+  └ List history
+    Search Pick3StatsC4_ in run_history_and_results.py
+    List results
+    List sharepacks
+
+• Updated Plan
+  └ ✔ Verify new workbooks/results inventory
+    □ Audit corpus and scaffold RUNS
+    □ Summarize outputs and anomalies
+
+• Explored
+  └ List 2025-12-30
+
+• Ran python3 scripts/tools/aux_sharepack_summary.py --help | sed -n '1,200p'
+  └ usage: aux_sharepack_summary.py [-h] --date DATE --state STATE [--max-n MAX_N]
+                                    [--limit LIMIT] [--sums-window SUMS_WINDOW]
+    … +24 lines
+  │ $states; do echo "== $s =="; python3 scripts/tools/aux_sharepack_summary.py --date 2025-12-30 --state "$s" --excel data/history/Pick3StatsC4_2025-12-29.xlsm || exit 1; done
+  └ == Connecticut4 ==
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-12-30/Connecticut4/aux/Connecticut4/summary.md
+    … +38 lines
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-12-30/Virginia4/aux/Virginia4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-12-30/Virginia4/aux/Virginia4/summary.json
+  └ (no output)
+
+• Explored
+  └ List control_center
+
+• Ran PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2025-12-30 --regen-aux-draws
+  └ Activated data/history/Pick3StatsC4_2025_12_30.xlsm -> /home/ser/code/Alpha-Analytical-Tool-Clone/data/original/Pick3StatsC4.xlsm
+
+    … +3113 lines
+    Florida4: triads=['407', '211'] winners_found={'407': True, '211': True} sequence_in_html=True seq_html=/home/ser/code/Alpha-Analytical-Tool-Clone/reports/stable/
+    winners_by_date/2025-12-31/Florida4/Florida4_vtrac12_winner_407_20260105_052145.html
+
+    Search digit|dr
+
+• Ran python3 scripts/tools/run_stable_from_results.py --help | sed -n '1,200p'
+  └ usage: run_stable_from_results.py [-h] --state STATE --results-file
+                                      RESULTS_FILE [--results-label RESULTS_LABEL]
+
+• Explored
+  └ Search data/outputs in run_stable_from_results.py
+    Read run_stable_from_results.py
+    Search stable in freeze_sharepack_day.py
+
+• Ran python3 TOOLS/vtrac_enhanced_cli.py --help | sed -n '1,200p'
+  └ usage: vtrac_enhanced_cli.py [-h] --state STATE [--tables-root TABLES_ROOT]
+                                 [--analysis-root ANALYSIS_ROOT] [--mask MASK]
+    … +9 lines
+• Ran python3 TOOLS/vtrac_validate.py --help | sed -n '1,200p'
+  └ usage: vtrac_validate.py [-h] --state STATE [--winners-dir WINNERS_DIR]
+                             [--analysis-dir ANALYSIS_DIR]
+    … +21 lines
+      --label-a LABEL_A     Label for analyzer JSON A (default: A)
+  └ Search winners_by_date in vtrac_validate.py
+    Read vtrac_validate.py
+    Search winners_dir in vtrac_validate.py
+    Read vtrac_validate.py
+    List tools
+    … +13 lines
+      --limit LIMIT         How many rows to display for overlay / heatboard
+    … +4 lines
+                                   [--winners-root WINNERS_ROOT]
+    … +20 lines
+  └ Search analysis_json_pattern in vtrac_validate_batch.py
+    Read vtrac_validate_batch.py
+    Search vtrac_compact_report in freeze_sharepack_day.py
+    Read freeze_sharepack_day.py
+    Search def run_hot in alpha_analytical
+• Ran python3 scripts/hot_zones/run_hot_zones_cli.py --help | sed -n '1,200p'
+  └ Traceback (most recent call last):
+      File "/home/ser/code/Alpha-Analytical-Tool-Clone/scripts/hot_zones/run_hot_zones_cli.py", line 12, in <module>
+        from utils import path_handler as ph
+    ModuleNotFoundError: No module named 'utils'
+                                [--out-dir OUT_DIR] [--winners-dir WINNERS_DIR]
+    … +11 lines
+      --winners-dir WINNERS_DIR
+                            Optional overrides for winner map output
+
+    Search def write_winner_map in hot_zones.py
+    Read batch_runner.py
+    Search include_overlay_html in batch_runner.py
+    Read batch_runner.py
+
+• Ran python3 TOOLS/run_vtrac_share_bundle.py --help | sed -n '1,200p'
+  └ INFO Wrote 42 section rows
+      - data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip (optional)
+
+
+                                 [--states [STATES ...]] [--skip-combined]
+    … +17 lines
+                            Number of newest draws to keep (default: 1000)
+      --list-states         Print tracked states and exit
+
+    Draw exports complete:
+    … +37 lines
+     - Virginia_Midday_draws.csv
+     - Virginia_Evening_draws.csv
+
+    … +15 lines
+     - Virginia
+     - West Virginia
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --excel data/original/Pick3StatsC4.xlsm --states "Connecticut" "Delaware" "Florida" "Indiana" "Michigan" "New Jersey" "New York"
+     - Virginia_Evening_draws.csv
+
+    [OK] Tables vs Aux alignment: SouthCarolina4 (data/outputs/tables/SouthCarolina4)
+    [OK] Tables vs Aux alignment: Virginia4 (data/outputs/tables/Virginia4)
+  │ … +16 lines
+  └ entries 14
+    states_run 14 errors 0
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ … +16 lines
+  └ (no output)
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+    states_run 14 errors 0
+  │ in $states; do echo "== VTRAC $s =="; python3 TOOLS/vtrac_enhanced_cli.py --state "$s" || exit 1; python3 TOOLS/vtrac_validate.py --state "$s" --winners-dir "reports/stable/
+    Mask digits: 024
+
+• Ran python3 TOOLS/run_vtrac_share_bundle.py
+  └ Wrote data/outputs/analysis/vtrac_validation/summary.csv
+    Wrote data/outputs/analysis/vtrac_validation/summary.md
+    … +35 lines
+
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4"; for s in
+  │ $states; do echo "== HZ $s =="; PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py --state "$s" --date 2025-12-31 >/dev/null || exit 1; done; echo "OK"
+    … +11 lines
+    == HZ Virginia4 ==
+    OK
+
+• Ran test -d sharepacks/2025-12-31 && echo "exists" || echo "missing"
+  └ [OK] Frozen Brain-1 into /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2025-12-31
+  └ == AUX Connecticut4 ==
+• Ran python3 scripts/tools/export_control_center_sharepack.py --date 2025-12-31 && python3 scripts/tools/evaluate_profit_alerts.py --date 2025-12-31
+  └ Activated data/history/Pick3StatsC4_2025_12_31.xlsm -> /home/ser/code/Alpha-Analytical-Tool-Clone/data/original/Pick3StatsC4.xlsm
+
+  └ Draw exports complete:
+     - Connecticut_draws.csv
+    … +39 lines
+     - Virginia_Midday_draws.csv
+     - Virginia_Evening_draws.csv
+  └ [OK] Tables vs Aux alignment: Connecticut4 (data/outputs/tables/Connecticut4)
+    [OK] Tables vs Aux alignment: SouthCarolina4 (data/outputs/tables/SouthCarolina4)
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  └ entries 14
+    states_run 14 errors 0
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+  └ entries 14
+    states_run 14 errors 0
+
+  │ stable/winners_by_date/2026-01-01/$s" --analysis-dir data/outputs/analysis/vtrac >/dev/null || exit 1; done; echo OK
+  └ == VTRAC Connecticut4 ==
+    == VTRAC Delaware4 ==
+    … +11 lines
+    == VTRAC Virginia4 ==
+  └ INFO Wrote 39 section rows
+    OK
+• Ran test -d sharepacks/2026-01-01 && echo exists || echo missing
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4"; for s in
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-01/Virginia4/aux/Virginia4/summary.md
+• Ran python3 scripts/tools/export_control_center_sharepack.py --date 2026-01-01 && python3 scripts/tools/evaluate_profit_alerts.py --date 2026-01-01
+  └ Wrote: sharepacks/2026-01-01/control_center/profit_alerts_eval.csv
+    Wrote: sharepacks/2026-01-01/control_center/profit_alerts_eval_merged.csv
+    Wrote: sharepacks/2026-01-01/control_center/profit_alerts_eval.md
+
+    … +3113 lines
+
+  └ OK
+  └ OK
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+  │ from alpha_analytical.control_center.batch_runner import parse_winner_sheet, run_digit_reduction_workflow
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+  └ states_run 14 errors 0
+
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4";
+  │ for s in $states; do python3 TOOLS/vtrac_enhanced_cli.py --state "$s" >/dev/null || exit 1; python3 TOOLS/vtrac_validate.py --state "$s" --winners-dir "reports/stable/
+  │ winners_by_date/2026-01-02/$s" --analysis-dir data/outputs/analysis/vtrac >/dev/null || exit 1; done; echo OK
+  └ INFO Wrote 42 section rows
+    OK
+• Ran test -d sharepacks/2026-01-02 && echo exists || echo missing
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4"; for s in
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-02/Virginia4/aux/Virginia4/summary.json
+
+• Ran python3 scripts/tools/export_control_center_sharepack.py --date 2026-01-02 && python3 scripts/tools/evaluate_profit_alerts.py --date 2026-01-02
+  └ Wrote: sharepacks/2026-01-02/control_center/profit_alerts_eval.csv
+    Wrote: sharepacks/2026-01-02/control_center/profit_alerts_eval_merged.csv
+    Wrote: sharepacks/2026-01-02/control_center/profit_alerts_eval.md
+
+• Ran PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2026-01-02 --regen-aux-draws
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --excel data/original/Pick3StatsC4.xlsm --states "Connecticut" "Delaware" "Florida" "Indiana" "Michigan" "New Jersey" "New York"
+  │ "North Carolina" "Ohio" "Ontario" "Pennsylvania" "Puerto Rico" "South Carolina" "Virginia" --max-draws 1000 >/dev/null && echo OK
+  └ OK
+
+  │ from pathlib import Path
+  │ from pathlib import Path
+  │ from alpha_analytical.control_center.batch_runner import parse_winner_sheet, run_stable_bundles
+  │ for s in $states; do python3 TOOLS/vtrac_enhanced_cli.py --state "$s" >/dev/null || exit 1; python3 TOOLS/vtrac_validate.py --state "$s" --winners-dir "reports/stable/
+  │ winners_by_date/2026-01-03/$s" --analysis-dir data/outputs/analysis/vtrac >/dev/null || exit 1; done; echo OK
+  └ OK
+  └ INFO Wrote 42 section rows
+    INFO  - JSON: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/vtrac_validation/vtrac_compact_report.json
+    … +15 lines
+    INFO    Virginia4 (): 3 sections, 3 top indices
+    OK
+  └ OK
+  └ missing
+  └ [OK] Frozen Brain-1 into /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-03
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-03/Connecticut4/aux/Connecticut4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-03/Connecticut4/aux/Connecticut4/summary.json
+    … +24 lines
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-03/Virginia4/aux/Virginia4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-03/Virginia4/aux/Virginia4/summary.json
+  └ Wrote: sharepacks/2026-01-03/control_center/profit_alerts_eval.csv
+    Wrote: sharepacks/2026-01-03/control_center/profit_alerts_eval_merged.csv
+    Wrote: sharepacks/2026-01-03/control_center/profit_alerts_eval.md
+    … +3113 lines
+    Florida4: triads=['171', '871'] winners_found={'171': True, '871': True} sequence_in_html=True seq_html=/home/ser/code/Alpha-Analytical-Tool-Clone/reports/stable/
+    winners_by_date/2026-01-04/Florida4/Florida4_vtrac17_winner_171_20260105_055129.html
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --excel data/original/Pick3StatsC4.xlsm --states "Connecticut" "Delaware" "Florida" "Indiana" "Michigan" "New Jersey" "New York"
+  │ "North Carolina" "Ohio" "Ontario" "Pennsylvania" "Puerto Rico" "South Carolina" "Virginia" --max-draws 1000 >/dev/null && echo OK
+  └ OK
+  │ $states; do PYTHONPATH=.:src python3 scripts/tools/validate_tables_aux_alignment.py --state "$s" >/dev/null || exit 1; done; echo OK
+  └ OK
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+  └ states_run 13 errors 0
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from pathlib import Path
+  │ from alpha_analytical.control_center.batch_runner import parse_winner_sheet
+  │ … +13 lines
+  └ seen 13 ['Connecticut4', 'Delaware4', 'Florida4', 'Indiana4', 'Michigan4', 'NewJersey4', 'NewYork4', 'NorthCarolina4', 'Ohio4', 'OntarioCanada4', 'Pennsylvania4', 'SouthCarolina4',
+    'Virginia4']
+    missing ['PuertoRico4']
+
+• Ran PYTHONPATH=.:src python3 - <<'PY'
+  │ from alpha_analytical.control_center.batch_runner import ParsedWinnerEntry, run_digit_reduction_workflow
+    'csv': '/home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/digit_reduction/PuertoRico4/PuertoRico4_digit_reduction_scores.csv'} {'skipped': 'no winners provided'}
+    {'rows': 1116, 'per_item': '/home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/digit_reduction/PuertoRico4/analyzer_v2/PuertoRico4_analyzer_v2_per_item.csv',
+    'vt_only_hits': 2, 'ls_col_42_hits': 324, 'top_candidates': '/home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/digit_reduction/PuertoRico4/analyzer_v2/
+    PuertoRico4_analyzer_v2_top_candidates.csv'}
+
+  │ $states; do python3 TOOLS/vtrac_enhanced_cli.py --state "$s" >/dev/null || exit 1; wdir="reports/stable/winners_by_date/2026-01-04/$s"; if [ -d "$wdir" ]; then python3 TOOLS/
+  │ vtrac_validate.py --state "$s" --winners-dir "$wdir" --analysis-dir data/outputs/analysis/vtrac >/dev/null || exit 1; else echo "skip validate (no winners html): $s"; fi; done;
+  │ … +1 lines
+  └ skip validate (no winners html): PuertoRico4
+
+• Ran rm -f data/outputs/analysis/vtrac_validation/PuertoRico4/validation_report.json data/outputs/analysis/vtrac_validation/PuertoRico4/validation_report.md
+  └ (no output)
+
+• Ran python3 TOOLS/run_vtrac_share_bundle.py 2>&1 | head -n 40
+  └ Wrote data/outputs/analysis/vtrac_validation/summary.csv
+    Wrote data/outputs/analysis/vtrac_validation/summary.md
+
+
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4"; for s in
+  │ $states; do PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py --state "$s" --date 2026-01-04 >/dev/null || exit 1; done; echo OK
+  └ OK
+• Ran python3 scripts/tools/freeze_sharepack_day.py --date 2026-01-04
+  └ [OK] Frozen Brain-1 into /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-04
+
+• Ran states="Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4"; for s in
+  │ $states; do python3 scripts/tools/aux_sharepack_summary.py --date 2026-01-04 --state "$s" --excel data/history/Pick3StatsC4_2026-01-03.xlsm || exit 1; done
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-04/Connecticut4/aux/Connecticut4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-04/Connecticut4/aux/Connecticut4/summary.json
+    … +24 lines
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-04/Virginia4/aux/Virginia4/summary.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/2026-01-04/Virginia4/aux/Virginia4/summary.json
+
+• Ran python3 scripts/tools/export_control_center_sharepack.py --date 2026-01-04 && python3 scripts/tools/evaluate_profit_alerts.py --date 2026-01-04
+  └ Wrote: sharepacks/2026-01-04/control_center/profit_alerts_eval.csv
+    Wrote: sharepacks/2026-01-04/control_center/profit_alerts_eval_merged.csv
+• Updated Plan
+  └ ✔ Verify new workbooks/results inventory
+    ✔ Finish 2025-12-30 Brain-2 outputs
+    ✔ Build and freeze remaining 5 days
+    □ Audit corpus and scaffold RUNS
+    □ Summarize outputs and anomalies
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --help | sed -n '1,200p'
+  └ usage: audit_sharepacks_corpus.py [-h] [--dates [DATES ...]] [--out OUT]
+                                      [--no-validators]
+                           freshness).
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+  └ [audit] wrote /home/ser/code/Alpha-Analytical-Tool-Clone/reports/audit/sharepacks_audit_20260105_105908.md
+    [audit] Summary: PASS=744 WARN=0 FAIL=84 SKIP=6
+
+• Explored
+  └ Read sharepacks_audit_20260105_105908.md
+    List aux
+    List draws
+    Read Connecticut_Midday_draws.csv
+    Search ^New York in 2026-01-02.txt
+    Search ^New York in 2026-01-01.txt
+    Read New_York_Midday_draws.csv
+
+• Ran rm -rf .codex/tmp_draws_check && mkdir -p .codex/tmp_draws_check/{h_2025_12_31,h_2026_01_01,h_2026_01_02}; python3 scripts/auxiliary/generate_draws_csv.py --excel data/history/
+  │ Pick3StatsC4_2025_12_31.xlsm --states "New York" --outdir .codex/tmp_draws_check/h_2025_12_31 >/dev/null; python3 scripts/auxiliary/generate_draws_csv.py --excel data/history/
+  │ Pick3StatsC4_2026-01-01.xlsm --states "New York" --outdir .codex/tmp_draws_check/h_2026_01_01 >/dev/null; python3 scripts/auxiliary/generate_draws_csv.py --excel data/history/
+    Draw
+    … +17 lines
+    051
+    321
+    … +3 lines
+    419
+    051
+
+• Explored
+    Search ^Connecticut in 2025-12-31.txt
+
+• Ran sha256sum data/history/Pick3StatsC4_2026-01-01.xlsm data/history/Pick3StatsC4_2026-01-03.xlsm | cat
+  └ 3a6381e5eabfff4d37d6415f3177e1a9b022bc7ab02a4345ff4ba635580c6d8e  data/history/Pick3StatsC4_2026-01-01.xlsm
+    98af5601649d4d52923e9462099d37719504604cb860cb6ca6cca4bab93dbef2  data/history/Pick3StatsC4_2026-01-03.xlsm
+  └ Search ^Puerto Rico in 2026-01-01.txt
+    List tools
+    Search create_
+
+                                                  [--out OUT] [--force]
+    … +8 lines
+      --force        Overwrite the run report if it already exists (default:
+                     refuse to overwrite).
+    … +5 lines
+                   VALIDATION/RUNS/<D>__CONTROL_CENTER.md)
+      --force      Overwrite an existing report (default: refuse to overwrite).
+
+• Explored
+  └ List RUNS
+    Search 2025-12|2026-01
+
+• Context compacted
+
+• Updated Plan
+  └ Verify current repo state and the new Dec/Jan sharepack builds, diagnose the audit failure (likely a misdated history workbook), then scaffold run reports/docs for the valid days and
+    leave the invalid day clearly flagged so you can fix the source workbook without confusion.
+    □ Inspect git state and audit report
+    □ Confirm workbook/date misalignment root cause
+    □ Re-audit excluding suspect day
+    □ Flag or rebuild suspect day
+    □ Scaffold RUNS and CC reports
+    □ Update SSOT docs and changelog
+
+    List audit
+
+• Ran python3 - <<'PY'
+  │ … +6 lines
+  └ True reports/audit/sharepacks_audit_20260105_105908.md
+• Ran git status -sb
+  └ ## checkpoint/sharepack-2025-06-21...origin/checkpoint/sharepack-2025-06-21
+     M alpha_analytical/control_center/batch_runner.py
+    … +116 lines
+    ?? tasks/fix_report_feedback.md
+    ?? tasks/profit_discuss.txt
+
+• Updated Plan
+  └ ✔ Inspect git state and audit report
+    □ Confirm workbook/date misalignment root cause
+    □ Re-audit excluding suspect day
+    □ Flag or rebuild suspect day
+    □ Scaffold RUNS and CC reports
+    □ Update SSOT docs and changelog
+
+• Ran for d in ny_2025_12_31 ny_2026_01_01 ny_2026_01_02 ny_2026_01_03; do echo "--- $d"; head -n 6 .codex/tmp_draws_check/$d/New_York_Midday_draws.csv; done
+    --- ny_2026_01_03
+    head: cannot open '.codex/tmp_draws_check/ny_2026_01_03/New_York_Midday_draws.csv' for reading: No such file or directory
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --excel data/history/Pick3StatsC4_2025_12_31.xlsm --states "New York" --outdir .codex/tmp_draws_check/ny_2025_12_31
+  └ Draw exports complete:
+     - New_York_draws.csv
+     - New_York_Midday_draws.csv
+     - New_York_Evening_draws.csv
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │
+  │ … +16 lines
+  └ 2025-12-30 ['New York', '0-5-1', '1-3-2']
+    2025-12-31 ['New York', '4-1-9', '1-1-6']
+    … +2 lines
+    2026-01-03 ['New York', '2-4-3', '6-7-9']
+    2026-01-04 ['New York', '7-9-3', '4-8-9']
+
+• Ran rm -rf .codex/tmp_draws_check/ny_* && mkdir -p .codex/tmp_draws_check
+  └ (no output)
+  └ Draw exports complete:
+     - New_York_draws.csv
+     - New_York_Midday_draws.csv
+     - New_York_Evening_draws.csv
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --excel data/history/Pick3StatsC4_2026-01-03.xlsm --states "New York" --outdir .codex/tmp_draws_check/ny_2026_01_03
+  └ Draw exports complete:
+     - New_York_draws.csv
+     - New_York_Midday_draws.csv
+     - New_York_Evening_draws.csv
+
+• Explored
+    --- ny_2026_01_01
+    … +9 lines
+    New_York_Midday_draws.csv
+    New_York_draws.csv
+
+    051
+
+• Updated Plan
+  └ ✔ Inspect git state and audit report
+    ✔ Confirm workbook/date misalignment root cause
+    □ Re-audit excluding suspect day
+    □ Flag or rebuild suspect day
+    □ Scaffold RUNS and CC reports
+    □ Update SSOT docs and changelog
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01
+  └ (no output)
+
+  └ [audit] wrote /home/ser/code/Alpha-Analytical-Tool-Clone/reports/audit/sharepacks_audit_20260105_111524.md
+    [audit] Summary: PASS=247 WARN=0 FAIL=0 SKIP=3
+
+• Explored
+  └ List audit
+
+• Ran python3 - <<'PY'
+    === reports/audit/sharepacks_audit_20260105_111418.md
+    … +14 lines
+    - **2026-01-04:PuertoRico4:validate_hot_zones_winners**: No winners in results file (expected for some states/days)
+  └ ✔ Inspect git state and audit report
+    ✔ Confirm workbook/date misalignment root cause
+    ✔ Re-audit excluding suspect day
+    □ Flag or rebuild suspect day
+    □ Scaffold RUNS and CC reports
+    □ Update SSOT docs and changelog
+
+• Explored
+  └ Read README.md
+
+• Edited sharepacks/2026-01-02/README.md (+8 -0)
+     6
+     7 +## IMPORTANT: Input workbook appears misdated (do not treat as a “gold day” yet)
+     8 +The corpus audit flagged this day as misaligned, consistent with the history workbook containing “future” draws (at least for `NewYork4`).
+     9 +
+    10 +- Audit report: `reports/audit/sharepacks_audit_20260105_105908.md`
+    11 +- Example symptom (NY Midday): `data/results/2026-01-01.txt` says `New York\t1-1-7\t1-7-4`, but `data/history/Pick3StatsC4_2026-01-01.xlsm` yields `New York Midday` head=`243` (t
+        he `2026-01-03` Midday winner).
+    12 +
+    13 +Fix: replace `data/history/Pick3StatsC4_2026-01-01.xlsm` with the correct workbook for `H=2026-01-01`, then rebuild this day and re-run the audit.
+    14 +
+    15  ## Inputs
+
+• Updated Plan
+  └ ✔ Inspect git state and audit report
+    ✔ Confirm workbook/date misalignment root cause
+    □ Update SSOT docs and changelog
+
+• Ran python3 scripts/tools/create_master_validation_run_report.py --help | head -n 80
+  └ usage: create_master_validation_run_report.py [-h] --date DATE --state STATE
+                                                  [--out OUT] [--force]
+    … +8 lines
+      --force        Overwrite the run report if it already exists (default:
+                     refuse to overwrite).
+
+• Explored
+  └ List tools
+    Search ^create_.*run
+    List tools
+    Search control_center.*run|control.*daily|daily.*control
+
+• Ran python3 scripts/tools/create_control_center_daily_run_report.py --help | head -n 120
+  └ usage: create_control_center_daily_run_report.py [-h] --date DATE [--out OUT]
+                                                     [--force]
+    … +5 lines
+                   VALIDATION/RUNS/<D>__CONTROL_CENTER.md)
+      --force      Overwrite an existing report (default: refuse to overwrite).
+
+• Explored
+  └ List tools
+    Search synth
+
+• Ran python3 - <<'PY'
+  │ from pathlib import Path
+  │
+  │ … +21 lines
+  └ OK: all sharepack state dirs present for 5 dates
+
+• Ran set -euo pipefail
+  │
+  │ dates=(2025-12-30 2025-12-31 2026-01-01 2026-01-03 2026-01-04)
+  │ … +11 lines
+  └ == 2025-12-30: control center run report
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__CONTROL_CENTER.md
+    … +81 lines
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__Virginia4.md
+    == 2026-01-04: done
+
+• Updated Plan
+  └ ✔ Inspect git state and audit report
+    ✔ Confirm workbook/date misalignment root cause
+    ✔ Re-audit excluding suspect day
+    ✔ Flag or rebuild suspect day
+    ✔ Scaffold RUNS and CC reports
+    □ Update SSOT docs and changelog
+
+• Explored
+  └ List RUNS
+    Search ^2025-12|^2026-01
+    Read README.md, CODEX_READ_FIRST_AAT9_WSL_2.md, WORKFLOW_CHANGELOG.md
+
+• Ran python3 scripts/auxiliary/generate_draws_csv.py --help | head -n 120
+  └ usage: generate_draws_csv.py [-h] [--excel EXCEL] [--outdir OUTDIR]
+                                 [--states [STATES ...]] [--skip-combined]
+    … +17 lines
+                            Number of newest draws to keep (default: 1000)
+      --list-states         Print tracked states and exit
+
+• Explored
+  └ Search regen-aux|generate_draws_csv|--regen-aux in run_history_and_results.py
+    Read run_history_and_results.py
+
+• Ran ls -1 "docs/AAT9_KIT/FINAL VALIDATION/RUNS" | rg -n "^INDEX\.md$" || true
+  └ 129:INDEX.md
+
+• Explored
+  └ Read INDEX.md, POST_RUNS_TRIAGE.md, FIX_NOW_LEDGER.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md (+22 -0)
+    51
+    52 +### New corpus days: Dec/Jan block (2025‑12‑30 → 2026‑01‑04)
+    53 +
+    54 +- Added new history workbooks + results files (H + D) and built new sharepacks for:
+    55 +  - `sharepacks/2025-12-30/` (H=2025-12-29)
+    56 +  - `sharepacks/2025-12-31/` (H=2025-12-30)
+    57 +  - `sharepacks/2026-01-01/` (H=2025-12-31)
+    58 +  - `sharepacks/2026-01-03/` (H=2026-01-02)
+    59 +  - `sharepacks/2026-01-04/` (H=2026-01-03)
+    60 +- Flagged `sharepacks/2026-01-02/` as **not a gold day yet** due to a misdated history workbook (`data/history/Pick3StatsC4_2026-01-01.xlsm` appears to contain future draws).
+    61 +  - See: `sharepacks/2026-01-02/README.md`
+    62 +- Corpus audit results:
+    63 +  - Full 6-day audit fails due to the 2026‑01‑02 misalignment: `reports/audit/sharepacks_audit_20260105_105908.md`
+    64 +  - Audits pass when the bad day is excluded (contiguous blocks):
+    65 +    - `reports/audit/sharepacks_audit_20260105_111418.md` (2025‑12‑30 → 2026‑01‑01)
+    66 +    - `reports/audit/sharepacks_audit_20260105_111524.md` (2026‑01‑03 → 2026‑01‑04)
+    67 +- Scaffolded (not filled) run reports + daily Control Center reports for the 5 valid days:
+    68 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30__*.md`
+    69 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-31__*.md`
+    70 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01__*.md`
+    71 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-03__*.md`
+    72 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-04__*.md`
+    73 +
+    74  ## 2026-01-03
+
+• Explored
+  └ Read INDEX.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md (+95 -0)
+     78  - DONE `2025-06-23__Virginia4.md`
+     79 +
+     80 +## D=2025-12-30 (H=2025-12-29)
+     81 +
+     82 +- TODO `2025-12-30__CONTROL_CENTER.md`
+     83 +- TODO `2025-12-30__Connecticut4.md`
+     84 +- TODO `2025-12-30__Delaware4.md`
+     85 +- TODO `2025-12-30__Florida4.md`
+     86 +- TODO `2025-12-30__Indiana4.md`
+     87 +- TODO `2025-12-30__Michigan4.md`
+     88 +- TODO `2025-12-30__NewJersey4.md`
+     89 +- TODO `2025-12-30__NewYork4.md`
+     90 +- TODO `2025-12-30__NorthCarolina4.md`
+     93 +- TODO `2025-12-30__Pennsylvania4.md`
+     94 +- TODO `2025-12-30__PuertoRico4.md`
+     95 +- TODO `2025-12-30__SouthCarolina4.md`
+     96 +- TODO `2025-12-30__Virginia4.md`
+     97 +
+    105 +- TODO `2025-12-31__Michigan4.md`
+    106 +- TODO `2025-12-31__NewJersey4.md`
+    107 +- TODO `2025-12-31__NewYork4.md`
+    108 +- TODO `2025-12-31__NorthCarolina4.md`
+    109 +- TODO `2025-12-31__Ohio4.md`
+    110 +- TODO `2025-12-31__OntarioCanada4.md`
+    111 +- TODO `2025-12-31__Pennsylvania4.md`
+    112 +- TODO `2025-12-31__PuertoRico4.md`
+    113 +- TODO `2025-12-31__SouthCarolina4.md`
+    114 +- TODO `2025-12-31__Virginia4.md`
+    115 +
+    116 +## D=2026-01-01 (H=2025-12-31)
+    117 +
+    118 +- TODO `2026-01-01__CONTROL_CENTER.md`
+    119 +- TODO `2026-01-01__Connecticut4.md`
+    120 +- TODO `2026-01-01__Delaware4.md`
+    121 +- TODO `2026-01-01__Florida4.md`
+    122 +- TODO `2026-01-01__Indiana4.md`
+    123 +- TODO `2026-01-01__Michigan4.md`
+    124 +- TODO `2026-01-01__NewJersey4.md`
+    125 +- TODO `2026-01-01__NewYork4.md`
+    126 +- TODO `2026-01-01__NorthCarolina4.md`
+    127 +- TODO `2026-01-01__Ohio4.md`
+    128 +- TODO `2026-01-01__OntarioCanada4.md`
+    129 +- TODO `2026-01-01__Pennsylvania4.md`
+    130 +- TODO `2026-01-01__PuertoRico4.md`
+    131 +- TODO `2026-01-01__SouthCarolina4.md`
+    132 +- TODO `2026-01-01__Virginia4.md`
+    133 +
+    134 +## D=2026-01-02 (H=2026-01-01)
+    135 +
+    136 +- BLOCKED: `sharepacks/2026-01-02/` is flagged as misaligned due to a misdated history workbook; do not fill run reports until fixed.
+    137 +  - See: `sharepacks/2026-01-02/README.md`
+    138 +
+    139 +## D=2026-01-03 (H=2026-01-02)
+    140 +
+    141 +- TODO `2026-01-03__CONTROL_CENTER.md`
+    142 +- TODO `2026-01-03__Connecticut4.md`
+    143 +- TODO `2026-01-03__Delaware4.md`
+    144 +- TODO `2026-01-03__Florida4.md`
+    145 +- TODO `2026-01-03__Indiana4.md`
+    146 +- TODO `2026-01-03__Michigan4.md`
+    147 +- TODO `2026-01-03__NewJersey4.md`
+    148 +- TODO `2026-01-03__NewYork4.md`
+    149 +- TODO `2026-01-03__NorthCarolina4.md`
+    151 +- TODO `2026-01-03__OntarioCanada4.md`
+    152 +- TODO `2026-01-03__Pennsylvania4.md`
+    153 +- TODO `2026-01-03__PuertoRico4.md`
+    154 +- TODO `2026-01-03__SouthCarolina4.md`
+    159 +- TODO `2026-01-04__CONTROL_CENTER.md`
+    164 +- TODO `2026-01-04__Michigan4.md`
+    165 +- TODO `2026-01-04__NewJersey4.md`
+    166 +- TODO `2026-01-04__NewYork4.md`
+    171 +- TODO `2026-01-04__PuertoRico4.md`
+    172 +- TODO `2026-01-04__SouthCarolina4.md`
+    173 +- TODO `2026-01-04__Virginia4.md`
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/POST_RUNS_TRIAGE.md (+4 -1)
+    64
+    65 +0) Quick workbook sanity (preflight): confirm the history workbook is actually “H”
+    72 -
+
+• Edited briefings/CODEX_READ_FIRST_AAT9_WSL_2.md (+1 -0)
+    61  - Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
+    62 +- If you add new `data/history/Pick3StatsC4_*.xlsm` files: do a 60‑second sanity check that the workbook is truly “H” (not misdated) by extracting 1 state’s newest draw and compa
+                                              [--out-csv OUT_CSV]
+    … +10 lines
+                            Output Fix-Later index path (default:
+                            RUNS/FIX_LATER_INDEX.md)
+
+• Explored
+    Read AAT9_Master_Validation_Build_Full_Day_Quickstart.md
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md (+8 -0)
+    53
+    54 +Quick sanity (recommended when adding new history workbooks):
+    55 +- Confirm the history workbook is truly “H” (not misdated) by checking 1 state’s newest draw against `data/results/<H>.txt`.
+    56 +  - Example (New York Midday head should equal `New York` Midday in `data/results/<H>.txt`):
+    57 +    ```bash
+  └ ✔ Inspect git state and audit report
+    ✔ Confirm workbook/date misalignment root cause
+    ✔ Re-audit excluding suspect day
+    ✔ Flag or rebuild suspect day
+    ✔ Scaffold RUNS and CC reports
+      - Failing audit: reports/audit/sharepacks_audit_20260105_105908.md:1 (FAIL=84)
+      - Passing audits (contiguous blocks excluding the bad day): reports/audit/sharepacks_audit_20260105_111418.md:1, reports/audit/sharepacks_audit_20260105_111524.md:1
+
+  Root Cause (Confirmed)
+
+  - data/history/Pick3StatsC4_2026-01-01.xlsm contains future draws (example: NY Midday head is 243, but data/results/2026-01-01.txt says NY Midday is 117), which breaks the D-1→D
+    alignment and makes sharepacks/2026-01-02/README.md:1 not trustworthy.
+
+  What I Added (No tampering with your filled templates)
+
+  - Flagged the bad day clearly in sharepacks/2026-01-02/README.md:1.
+  - Scaffolded (not filled) RUNS + Control Center daily reports for the 5 valid days under docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md:1 (and created the new 2025-12-30__*.md, 2025-12-
+    31__*.md, 2026-01-01__*.md, 2026-01-03__*.md, 2026-01-04__*.md files).
+  - Logged the new Dec/Jan block + the “bad workbook” finding in docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md:1 and added a preflight note in docs/AAT9_KIT/FINAL
+    VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md:1.
+
+  What I Need From You (to make all 6 days fully green)
+
+  - Replace data/history/Pick3StatsC4_2026-01-01.xlsm with the correct workbook for H=2026-01-01, then I’ll rebuild sharepacks/2026-01-02/README.md:1 and re-run the full 6-day audit.
+
+
+• Explored
+  └ List history
+    Search Pick3StatsC4_2026
+
+
+› WAIT I HAD ADDED THEDATE WRONG FIXED TO 2026\\wsl.localhost\Ubuntu\home\ser\code\Alpha-Analytical-Tool-Clone\data\history\Pick3StatsC4_2026_01_01___.xlsm
+
+
+• Ran for f in data/history/Pick3StatsC4_2026-01-01.xlsm data/history/Pick3StatsC4_2026_01_01___.xlsm; do if [ -f "$f" ]; then echo "--- $f"; python3 scripts/auxiliary/
+  │ generate_draws_csv.py --excel "$f" --states "New York" --outdir .codex/tmp_draws_check/$(basename "$f" .xlsm); head -n 6 .codex/tmp_draws_check/$(basename "$f" .xlsm)/
+    Draw exports complete:
+    … +18 lines
+    321
+    498
+
+  │ … +7 lines
+  └ results file exists: True data/results/2026-01-01.txt
+    New York row: New York    1-1-7    1-7-4
+
+• Explored
+  └ List history
+    Search 2026-01-01|2026_01_01
+
+• Ran for f in data/history/Pick3StatsC4_2026-01-01.xlsm data/history/Pick3StatsC4_2026_01_01___.xlsm; do if [ -f "$f" ]; then echo "--- $f"; head -n 6 .codex/tmp_draws_check/$(basename
+  │ "$f" .xlsm)/New_York_Evening_draws.csv; fi; done
+  └ --- data/history/Pick3StatsC4_2026-01-01.xlsm
+    Draw
+    … +10 lines
+    195
+    353
+
+• Explored
+  └ List tools
+    Search build|full|freeze|sharepack
+    Search freeze_sharepack_day\.py in tools
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report the issue.
+
+
+  └ Search already exists|exists\(\)|refuse|overwrite in freeze_sharepack_day.py
+    Read freeze_sharepack_day.py
+    List tools
+    Search digit|reduction|dr
+    List tools
+    Search stable
+    Read build_stable_sharepacks.py
+
+─ Worked for 3m 14s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  What I’ll do next (minimal + targeted):
+
+  1. Swap the correct workbook into the canonical H=2026-01-01 slot (I’ll preserve the bad one by moving it aside; no deletion).
+  2. Rebuild only sharepacks/2026-01-02/ from scratch (Brain‑1 + Control Center + profit eval).
+  3. Re-run the corpus audit for the full Dec/Jan block to confirm all 6 days go green.
+
+  All other new sharepacks (2025-12-30, 2025-12-31, 2026-01-01, 2026-01-03, 2026-01-04) stay untouched.
+• Explored
+  └ Search find data/history -maxdepth 1 -type d -print
+    List _legacy
+    List RUNS
+    Search ^2026-01-02__
+
+› SORRY TO INTERUPT I NEED TO MENTION SOMETHING QUICKLY, I TOTALLY FORGOT THAT AFTER YOU ARE DONE BEFORE WE CAN DO THE MASSIVE ANALYSIS WE HAVE TO ACTUAL COMPLETE THE STATE BY STATE
+  COMPREHSIVE TEMPLATES AND THE CONTROL CENTER TEMPLATE WHICH I COMPLETELY FORGOT ABOUT, THIS IS WHAT THE "ANALYSIS" AND "RUNS" I BELIEVE IS BASED ON? MAYBE YOU UNDERSTAND THIS AND IT
+  WWAS PART OF THE COMPREHSIVE PLAN BUT I SORTA FORGOT THIS PART..HERES THE THING I NEED TO GO TO BED IDEALLY YOU CAN KEEP WORKING FOR A FEW HOURS COMPREHISIVELY CAN YOU QUICKLY GIVEME
+  SOME FEEDBACK ON THAT THOUGHT, IF YOU KNW THAT HAD TO BE DONE, IF YOU KNOW WHERETHAT FITS IN THE PROCESS, IF YOU CAN PROCEED WITH AN ACTION PLAN TO GET TEMPLATES FILLED WHILE I SLEEP
+    … +11 lines
+      --top-n TOP_N         Top N candidates to list for compound and families
+                            (default: 10)
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report the issue.
+
+
+› IT COULD BE THAT IM JUST GETTING TIRED AS THIS MIGHT BE CLEAR PART OF PLAN, WE CREATE SHAREPACKS, TEMPLATES ARE COMPLETED BASED ON SHAREPACKS AND GO INTO RUNS, THERE WAS SOME
+  ADDITIONAL CODEX ANALYSIS AFTERWARDS SEEMS TO MAKE SENSE YOU  MIGHT KNOW ALL THIS ANDIMCAUSINGCONFUSION IF YOU CAN REMEMBER YOUR COMPREHSIVE PLAN JUST MAKING SURE SORRY
+
+    List Florida4
+    List Florida4
+
+• Ran set -euo pipefail
+  │
+  │ # 0) Preserve the bad H=2026-01-01 workbook and promote the corrected one.
+  │ … +23 lines
+  └ OK: history workbook for H=2026-01-01 is now:
+    -rw-r--r-- 1 ser ser 19497202 Jan  5 06:54 data/history/Pick3StatsC4_2026-01-01.xlsm
+
+• Context compacted
+
+• Updated Plan
+  └ I’ll first inventory what’s already fixed (from POST_RUNS + ledgers), then rebuild the one tainted day (2026-01-02) using the corrected 2026-01-01 history workbook, re-run audits,
+    regenerate Control Center/eval artifacts, and finally scaffold/continue the Master Validation run reports/templates for the new 6-day block.
+    □ Inventory fixes vs open items
+    □ Verify new workbooks/results inventory
+    □ Rebuild sharepack 2026-01-02
+    □ Re-audit 6-day corpus
+    □ Regenerate summaries and run scaffolds
+    □ Continue template/run report filling
+
+  │ ls -la
+  │ ls -ლა tasks | head
+  │ … +3 lines
+  └ /home/ser/code/Alpha-Analytical-Tool-Clone
+    ?? tasks/fix_report_feedback.md
+    ?? tasks/profit_discuss.txt
+
+• Explored
+  └ List sharepacks
+    □ Rebuild sharepack 2026-01-02
+    □ Re-audit 6-day corpus
+    □ Regenerate summaries and run scaffolds
+    □ Continue template/run report filling
+
+• Ran python3 - <<'PY'
+  │ from __future__ import annotations
+  └ Draw exports complete:
+     - New_York_draws.csv
+    … +4 lines
+     - New_York_Midday_draws.csv
+     - New_York_Evening_draws.csv
+  │ … +94 lines
+  └ Draw exports complete:
+     - New_York_draws.csv
+    … +21 lines
+    2026-01-02 | Pick3StatsC4_2026-01-02.xlsm | 9-9-8/2-5-6 | None/None => MISMATCH
+  │ … +39 lines
+  └ Draw exports complete:
+     - Florida_draws.csv
+    … +2 lines
+    workbook Florida head 522 208
+    results Florida 407 211
+
+• Explored
+  └ Search ^Florida\t in 2025-12-29.txt
+• Ran python3 - <<'PY'
+  │ from __future__ import annotations
+  │
+  │ … +66 lines
+  └ Sanity check (sentinel: New York)
+    2026-01-02 | 998/256 | 998/256 | OK
+    2026-01-03 | 243/679 | 243/679 | OK
+
+• Ran set -euo pipefail
+  │ mkdir -p data/results/_legacy
+    27:New York    419    116^M
+    … +25 lines
+    drwxr-xr-x  2 ser ser 4096 Jan  5 07:02 _legacy
+    -rw-r--r--  1 ser ser  332 Nov 13 20:10 results_checkCT.txt
+
+• Updated Plan
+    □ Rebuild sharepack 2026-01-02
+    □ Re-audit 6-day corpus
+    □ Regenerate summaries and run scaffolds
+    □ Continue template/run report filling
+
+  └ 6:-rw-r--r--  1 ser ser 28103 Dec 31 00:36 audit_sharepacks_corpus.py
+    13:-rw-r--r--  1 ser ser 20965 Jan  3 04:59 create_control_center_daily_run_report.py
+    … +4 lines
+    scripts/tools/run_history_and_results.py:149:def main() -> None:
+    -rw-r--r-- 1 ser ser 9483 Jan  5 04:58 scripts/tools/run_history_and_results.py
+
+• Ran python3 scripts/tools/run_history_and_results.py --help
+    … +12 lines
+      --skip-aux-alignment  Skip tables↔aux alignment validation (not
+                            recommended).
+
+• Explored
+    Search build.*sharepack|freeze_sharepack_day\( in tools
+    Search export_control_center_sharepack\.py in tools
+    Search evaluate_profit_alerts\.py in tools
+    Search run_stable|run_digit_reduction|run_hot_zones|run_vtrac in tools
+    Read freeze_sharepack_day.py, run_tables_with_guard.py
+                            Number of newest draws to keep (default: 1000)
+      --list-states         Print tracked states and exit
+
+                     only)
+
+• Ran ls -la scripts/tools | rg -n "build.*day|full_day|sharepack" || true
+  │ rg -n "def main\(" scripts/tools/build_stable_sharepacks.py | head -n 40
+  │ python3 scripts/tools/build_stable_sharepacks.py --help | head -n 120
+
+• Explored
+  └ Search if __name__ == '__main__' in batch_runner.py
+    Search argparse in batch_runner.py
+    Read batch_runner.py
+    Read freeze_sharepack_day.py
+    Search 2025-12-30|2025-12-31|2026-01-01|2026-01-02|freeze_sharepack_day\.py --date|export_control_center_sharepack\.py --date|evaluate_profit_alerts\.py --date|run_hot_zones_cli\.py|
+           run_vtrac_share_bundle\.py|run_stable_from_results\.py in comprehensive_codexfix.txt
+    Read comprehensive_codexfix.txt
+
+    NY ParsedWinnerEntry(label='New York', canonical='New York', project_state='NewYork4', midday='051', evening='132', raw_digits=('051', '132'))
+    NY midday/evening 051 132 project_state NewYork4
+    SC 754 976
+
+• Ran python3 scripts/tools/generate_winners_from_results.py --help | head -n 120
+  └ usage: generate_winners_from_results.py [-h] --results-file RESULTS_FILE
+                                            --out-dir OUT_DIR
+    … +5 lines
+      --results-file RESULTS_FILE
+    … +18 lines
+                            Optional training bundle stamp (defaults to timestamp
+                            when writing).
+
+• Explored
+        from utils import path_handler as ph
+    ModuleNotFoundError: No module named 'utils'
+
+• Ran PYTHONPATH=.:src python3 scripts/hot_zones/run_hot_zones_cli.py --help | head -n 160
+  └ usage: run_hot_zones_cli.py [-h] --state STATE --date DATE [--json JSON]
+• Explored
+  └ Read run_hot_zones_cli.py
+                            Override analysis output directory
+      --mask MASK           Digits to mask (defaults to most recent draw)
+
+• Ran python3 TOOLS/vtrac_validate.py --help | head -n 200
+  └ usage: vtrac_validate.py [-h] --state STATE [--winners-dir WINNERS_DIR]
+• Ran python3 TOOLS/run_vtrac_share_bundle.py --help | head -n 200
+  └ INFO Wrote 39 section rows
+    INFO  - JSON: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/vtrac_validation/vtrac_compact_report.json
+    … +34 lines
+      - data/outputs/analysis/vtrac_validation/vtrac_validation_full_payload.zip (optional)
+
+
+• Ran set -euo pipefail
+  │ … +6 lines
+  │ PYTHONPATH=.:src python3 scripts/tools/run_tables_with_guard.py --history-file Pick3StatsC4_2026-01-01.xlsm
+  │ python3 scripts/auxiliary/generate_draws_csv.py --max-draws 1000
+  │ … +3 lines
+  └ Activated data/history/Pick3StatsC4_2026-01-01.xlsm -> /home/ser/code/Alpha-Analytical-Tool-Clone/data/original/Pick3StatsC4.xlsm
+
+  │ states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │ for s in "${states[@]}"; do
+  │ … +4 lines
+
+• Ran set -euo pipefail
+  └ == Stable: Connecticut4
+    Stable run complete for Connecticut4
+    … +23 lines
+    == Stable: NewJersey4
+    No winners found for label 'NewJersey' in data/results/2026-01-02.txt
+
+• Explored
+  └ Search ^(New Jersey|New York|North Carolina|Puerto Rico|South Carolina|Ontario)\t in 2026-01-02.txt
+    Read -v
+
+• Ran set -euo pipefail
+  │ results=data/results/2026-01-02.txt
+  │ # remaining states
+  │ … +10 lines
+  └ Stable run complete for NewJersey4
+    Patterns: 5055
+    … +32 lines
+    HTML: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/patterns/Virginia4/Virginia4_stable_patterns_report.html
+    CSV: /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/analysis/patterns/Virginia4/Virginia4_stable_patterns_scores.csv
+
+• Ran python3 - <<'PY'
+  │ from __future__ import annotations
+  │
+  │ … +18 lines
+  └ parsed entries 41 tracked 17
+    Traceback (most recent call last):
+    … +3 lines
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ModuleNotFoundError: No module named 'core'
+  │ from __future__ import annotations
+  │
+  │ … +26 lines
+  └ parsed entries 41 tracked 17
+    states processed 17 errors 3
+     - WestVirginia4 reducer Missing tables at /home/ser/code/Alpha-Analytical-Tool-Clone/data/outputs/tables/WestVirginia4
+
+  └ tracked entries (sharepack set): 14
+    states processed 14 errors 0
+
+• Ran set -euo pipefail
+  │ states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │ for s in "${states[@]}"; do
+  │ … +8 lines
+  └ == Hot Zones: Connecticut4
+    == Hot Zones: Delaware4
+    … +11 lines
+    == Hot Zones: Virginia4
+    [OK] Hot Zones complete for 14 states
+
+  │ … +11 lines
+  └ == VTRAC enhanced: Connecticut4
+    == VTRAC validate: Connecticut4
+    … +43 lines
+    INFO    Virginia4 (): 3 sections, 3 top indices
+    [OK] VTRAC enhanced+validated+bundled
+
+
+• Ran set -euo pipefail
+  │ excel=data/history/Pick3StatsC4_2026-01-01.xlsm
+  │ states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │ … +8 lines
+    … +11 lines
+    == Aux summary: Virginia4
+    [OK] Aux summaries complete
+
+• Ran set -euo pipefail
+• Ran set -euo pipefail
+  │ python3 scripts/tools/create_control_center_daily_run_report.py --date 2026-01-02
+  │ states=(Connecticut4 Delaware4 Florida4 Indiana4 Michigan4 NewJersey4 NewYork4 NorthCarolina4 Ohio4 OntarioCanada4 Pennsylvania4 PuertoRico4 SouthCarolina4 Virginia4)
+  │ … +6 lines
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-02__CONTROL_CENTER.md
+    [OK] RUNS scaffolds created for 2026-01-02
+
+• Explored
+  └ Read README.md
+    136 +- TODO `2026-01-02__CONTROL_CENTER.md`
+    137 +- TODO `2026-01-02__Connecticut4.md`
+    138 +- TODO `2026-01-02__Delaware4.md`
+    139 +- TODO `2026-01-02__Florida4.md`
+    140 +- TODO `2026-01-02__Indiana4.md`
+    146 +- TODO `2026-01-02__OntarioCanada4.md`
+    147 +- TODO `2026-01-02__Pennsylvania4.md`
+    148 +- TODO `2026-01-02__PuertoRico4.md`
+    149 +- TODO `2026-01-02__SouthCarolina4.md`
+    150 +- TODO `2026-01-02__Virginia4.md`
+    ✔ Rebuild sharepack 2026-01-02
+    □ Re-audit 6-day corpus
+    □ Regenerate summaries and run scaffolds
+    □ Continue template/run report filling
+
+      --no-validators      Skip running validators (only provenance + cross-day
+                           freshness).
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+  └ [audit] wrote /home/ser/code/Alpha-Analytical-Tool-Clone/reports/audit/sharepacks_audit_20260105_121558.md
+    [audit] Summary: PASS=825 WARN=3 FAIL=0 SKIP=6
+
+• Ran report=reports/audit/sharepacks_audit_20260105_121558.md
+  │ sed -n '1,120p' "$report"
+  │ rg -n "\bWARN\b|\bFAIL\b|\bSKIP\b" "$report" | head -n 80
+  └ # Sharepacks Corpus Audit (2026-01-05T12:15:58.945841+00:00Z)
+
+    … +76 lines
+    ✔ Rebuild sharepack 2026-01-02
+    ✔ Re-audit 6-day corpus
+    □ Regenerate summaries and run scaffolds
+  └ List Connecticut4
+    List Connecticut4
+    List Connecticut4
+    List Connecticut4
+
+• Ran python3 scripts/tools/create_master_validation_run_report.py --help | head -n 120
+  └ usage: create_master_validation_run_report.py [-h] --date DATE --state STATE
+• Ran python3 scripts/tools/create_control_center_daily_run_report.py --help | head -n 120
+  └ usage: create_control_center_daily_run_report.py [-h] --date DATE [--out OUT]
+                                                     [--force]
+    … +5 lines
+                   VALIDATION/RUNS/<D>__CONTROL_CENTER.md)
+                            (default: 10)
+
+• Explored
+  └ Search md_out|json_out|summary\.md in stable_sharepack_summary.py
+    Read stable_sharepack_summary.py
+    Search write_text\( in stable_sharepack_summary.py
+    Search if args\.md_out in stable_sharepack_summary.py
+
+• Ran for d in 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04; do
+  │   echo "== ${d} control_center files"
+  │   ls -1 "sharepacks/${d}/control_center" 2>/dev/null | head -n 30 || echo "(missing control_center)"
+  │ … +1 lines
+  └ == 2025-12-30 control_center files
+    README.md
+    … +86 lines
+    vtrac_repeat_watch.csv
+    vtrac_repeat_watch.md
+  │ dates=(2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04)
+  │ … +35 lines
+  └ === Generating per-tool summaries for 2025-12-30 ===
+    === Generating per-tool summaries for 2025-12-31 ===
+    … +3 lines
+    === Generating per-tool summaries for 2026-01-04 ===
+    [OK] Wrote summary.md/summary.json for Stable/DR/HotZones/VTRAC across 6 days
+
+• Ran set -euo pipefail
+    === Regenerating RUNS scaffolds for 2026-01-04 ===
+    [OK] Refreshed RUNS scaffolds (embedded summary blocks now present)
+
+• Ran ls -la scripts/tools | rg -n "export_master_validation_corpus|corpus" || true
+  │ ls -la scripts/tools/export_master_validation_corpus.py || true
+  │ python3 scripts/tools/export_master_validation_corpus.py --help | head -n 120 || true
+  └ 6:-rw-r--r--  1 ser ser 28103 Dec 31 00:36 audit_sharepacks_corpus.py
+    18:-rw-r--r--  1 ser ser 14772 Jan  5 05:00 export_master_validation_corpus.py
+    … +13 lines
+                            Output Fix-Later index path (default:
+                            RUNS/FIX_LATER_INDEX.md)
+
+• Updated Plan
+  └ ✔ Inventory fixes vs open items
+    ✔ Verify new workbooks/results inventory
+    ✔ Rebuild sharepack 2026-01-02
+    ✔ Re-audit 6-day corpus
+    ✔ Regenerate summaries and run scaffolds
+    □ Continue template/run report filling
+
+
+• Ran ls -1 "docs/AAT9_KIT/FINAL VALIDATION/RUNS" | rg -n "^2025-12-30__DAY_SYNTHESIS\.md$|^2025-12-31__DAY_SYNTHESIS\.md$|^2026-01-0[1-4]__DAY_SYNTHESIS\.md$" || true
+  └ (no output)
+
+• Explored
+    … +6 lines
+                            to stdout)
+      --top-n TOP_N         Top N patterns to show per stats dict (default: 5)
+
+• Ran set -euo pipefail
+  │
+  │ dates=(2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04)
+• Context compacted
+
+• Explored
+  └ List audit

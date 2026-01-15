@@ -1,0 +1,1853 @@
+
+• Yes — the gold-day runs are already grouped into windows, and the “messy colleague of data” problem is exactly what
+  RUNS/PORTAL.md + interval synth/docs were built to solve.
+
+  Gold-Day Windows (already grouped)
+
+  - 3-day: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md:1 + docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/2025-06-21_to_2025-06-23__CODEX_DEEP_ANALYSIS.md:1
+  - 6-day: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md:1 + docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md:1
+  - 5-day Jan window: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CORPUS_SYNTHESIS.md:1 + docs/
+    AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CODEX_DEEP_ANALYSIS.md:1
+
+  Where The “Special Doubles Report” Is
+
+  - Inventory: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md:1 (+ docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.csv:1)
+  - Deep dive (winners-lens patterns + evidence links): docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md:1
+  - Study queue (best first reads): docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md:1
+  - Cross-day frequency lens (per window): docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-
+    09__MIRROR_DOUBLE_FREQUENCY.md:1
+
+  RUNS Folder Is Already “Unified” (you don’t need to reinvent it)
+
+  - Start here: docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md:1
+  - What exists/filled: docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md:1
+  - Daily “after” anchors: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__WINNERS_DIGEST.md, docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/<D>__CONTROL_CENTER.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__DAY_SYNTHESIS.md
+  - Interval rollups (find “gold” without reading 70 reports): docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-
+    01-09__CONVERGENCE_CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CORPUS_DASHBOARD.md:1,
+    docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__DR_LENS_REPORT.md:1
+  - Fix-now vs fix-later separation (prevents spiraling): docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md:1, docs/
+    AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/POST_RUNS_TRIAGE.md:1
+
+  Profit Alerts: not “the superbrain”, but also not “pollution”
+
+  - Profit Alerts (A01–A12) are a Brain‑2 board; they’re one signal source, not the whole aggregator.
+    They’re documented as part of the workflow: docs/AAT9_KIT/FINAL VALIDATION/final docs/
+    AAT9_Master_Validation_Build_Full_Day_Quickstart.md:6.
+  - Right now, Candidate Universe does ingest control_center/profit_alerts.csv as method_id=profit_alerts (see scripts/
+    tools/create_candidate_universe.py:493), so if you feel they’re warping the “core essence”, the correct move is
+    quarantine via ablation, not deletion:
+      - Add --skip-profit-alerts to Candidate Universe + Play Cards so we can compare “tool-only” vs “profit-alerts-
+        included” on the same graded window.
+      - Deleting now would destroy the ability to prove/disprove your instinct with evidence.
+
+  Your “do it my way” request (Synthesis Sprint / Superbrain v0) — State-of-the-Art Plan
+
+  1. Lock the windows as “v0 corpus” (no new runs for a moment).
+
+  - Treat the three windows above as the complete dataset for v0 synthesis.
+
+  2. Extract “gold” from templates the way you want (but do it mechanically).
+
+  - Use docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md:1 as the auto-extracted “what the templates already
+    said”.
+  - Use docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md:1 to pick 10–20 best study
+    examples (so you’re not reading 70×5 reports).
+
+  3. Produce one single “Superbrain v0 Realignment” document (additive, no analyzer changes).
+
+  - Contents:
+      - “What repeats” primitives (mirror/double-space prevalence, lane-hit vs box-hit decomposition, cross-variant
+        bounce).
+      - “Tool roles” (what each tool is actually good at, based on corpus metrics).
+      - “Selection layers” (Candidate Universe vs Play Cards vs any future scorer).
+      - “Do-not-touch-yet” list (analyzers) vs “safe-to-iterate” list (reporting/selection/grading).
+
+  4. Do the DR alignment audit you’re asking for, using real numbers (before touching DR code).
+
+  - The Jan window already shows the diagnosis you suspect:
+      - DR is “active” 91% of the time, but “top winner present” ~4%: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-
+        05_to_2026-01-09__DR_LENS_REPORT.md:1
+      - Interpretation: DR is behaving more like a broad VT-boxed envelope lens than a final-candidate picker — which
+        means we should change how we consume it (selection layer) before changing the analyzer.
+
+  5. Quarantine Profit Alerts (no deletion).
+
+  - Implement optional flags and run both modes across the same windows:
+      - tool-only Candidate Universe / Play Cards
+      - mixed (current)
+      - profit-alerts-heavy (if you want)
+  - Grade all modes using the existing grading scripts (so it’s measurable and reversible).
+
+  6. Only after (2)–(5): decide what “Superbrain v1” actually is.
+
+  - If the evidence says “lane-hit is common, box-hit is the conversion problem”, then v1 work should focus on bounded
+    closure transforms (which you’re already circling with doubles/mirror-doubles and index closures), not random new
+    heuristics.
+
+  If you want, I’ll start immediately by writing the v0 synthesis doc using the three interval corpuses + the doubles
+  deep dive, and at the same time add the Profit Alerts quarantine flag (ablation-ready) so the next window can be a
+  clean “v1” experiment.
+
+
+› YA SEE I LIKE WHAT YOU ARE SUGGESTING A FEW COMMENTS -- A) I SEE THIS AS A DEEP DIVE THAT WE WILL QUANTIFY OVERALL IN
+  SOME SENSE LIKE MAYBE SO BIG DOCUMENT WHERE WE "EXTRACT THE GOLD FROM THIS MASSIVE COLLEAGUE OF DATA" SO IF YOU ARE
+  GOING TO HELP ME WITH THIS I WOULD LIKE YOU TO KEEP SOME DOCUMENT FOR IT REGISTERING AS WE GO TGHROUGH THINGS HOW WE
+  ARE EXTRACTING OPTIMAL INSIGHTS WE WANT TO KEEP , ALOT IF IT SHOULD BE BASED ON "OK THIS IS POWERFUL AND LEADING TO
+  HITS" TYPE DEAL, OR "THIS ISNT FIXED STILL AND IF IT WAS WOULD LEAD TO HITS" IM DOING YM BES TTO TRY AND PUT THIS
+  INTO WORDS UGHH  B) 100% WE ARE QUANRATINE PROFIT ALERTS IN WHATEVER WAY IS OPTIMAL I KNOW YOU HAVE SUGGESTED SOME
+  WAY BUT BY ESTABLIUSHING THAT OFF THE BAT IT SHOUDL HELP WITH THIS ANALYSIS TO SKIP OVER THEM C) JUST TO BE SURE WHEN
+  WE SAY "TOOL FIRST" IT CAN STILL INCLUDE EVERYTHING ELSE VALUABLE THE 4-5 TOOLS EVAULATING STRING TABLES + AUX
+  FEATURES + ANYTHING CONTROL CENTER RELATED (NOT PROFIT ALERTS) THAT COULD BE HELPFUL D) I ACTUALLY DONT MIND GOING
+  THROUGH 70 TEMPLATES THATS EXACTLY THE TYPE OF DEEP DIVE IN TALKING ABOUT , WE DIDNT WRITE OUT THOSE COMPRESHIVE AND
+  POWERFUL TEMPLATES FOR THEM NOT TO BE READ OR TO NOT EXTRACT OPTIMAL INSIGHTS FROM LIKE IM SURE THIS MIGHT HAVE
+  ALREADY BEEN DONE IN SOME SENSE IN SOME OF THESE DOCUMENTS THIS IS WHY I NEED HELP IN TERMS OF DECIDING HOW I WANT TO
+  DO THIS ITS VERY FRUSTARTING JSUT TALKING IN CIRCLES AND GETTING NOTHING DONE..UGHH...WHAT ARE YOUR THOUGHTS?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report
+the issue.
+
+
+› ok i think we're just at a riok of going in circles here because the context keep resetting...recent_d1, d3,d4 please
+  read those 3 docs in tasks folder and return with your comprehsive thoughts ...gotta make a comprehsive plan or im
+  gonna lose it going in cricles read those 3 docs should give overall insights into instructions
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I read tasks/recent_d1.txt, tasks/recent_d3.txt, and tasks/recent_d4.txt. They all point to the same conclusion:
+  you’re not crazy—what you want is a synthesis sprint (extract the gold from what we already ran), and the clean way to
+  stop spiraling is to quarantine Profit Alerts via ablation (not deletion) so we can prove what helps.
+
+  What those 3 docs are telling us (in plain terms)
+
+  - Gold days are already grouped into 3 review windows, with interval synth + “Codex deep analysis” already written:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CORPUS_SYNTHESIS.md
+      - And their pairs: ...__CODEX_DEEP_ANALYSIS.md
+  - RUNS is already “unified” and intended to prevent exactly this overwhelm:
+      - Start at docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md
+      - Index at docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md
+      - Fix separation at docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md + docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+        FIX_LATER_INDEX.md
+  - Your “special doubles report” work exists and is meant to be mined during synthesis:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md
+  - Profit Alerts aren’t corrupting data, but they are currently dominating attention/triage because:
+      - Candidate Universe always ingests them (scripts/tools/create_candidate_universe.py calls _parse_profit_alerts()
+        unconditionally).
+      - Play Cards weight them highest (scripts/tools/create_play_card.py gives profit_alerts weight 100).
+      - Portfolio ranking is Profit-Alerts-first (scripts/tools/create_predictive_portfolio_report.py).
+
+  That matches your lived experience: “it feels like Profit Alerts polluted everything” = selection UI + ranking got
+  anchored to them, not that the underlying tool evidence was replaced.
+
+  ———
+
+  ## State-of-the-art plan to stop circles (Synthesis Sprint / “Superbrain v0 Realignment”)
+
+  ### Phase 0 — Freeze the corpus (no new runs)
+
+  Definition of done: we treat the three windows above as the complete “v0 dataset” for analysis.
+
+  - No new sharepacks.
+  - No new analyzer tuning.
+  - Only reporting/selection/grading layer changes allowed.
+
+  ### Phase 1 — Create the “Gold Extraction Ledger” (your big doc)
+
+  Deliverable: one SSOT doc that’s the “extract the gold from the messy colleague” write-up.
+
+  - Proposed file: docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md
+  - It will be structured exactly the way you described:
+      - Gold (hit-linked): repeatable signals that correlate with hits (boxed + index-hit decomposition).
+      - Would-hit-if-fixed: pipeline/consumption problems (links to FIX_NOW_LEDGER.md).
+      - Tool roles (measured): e.g., DR looks like an envelope lens more than a top-caller (already evidenced by docs/
+        AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__DR_LENS_REPORT.md).
+      - What we will NOT change yet (analyzers) vs safe iteration surfaces (Candidate Universe / Play Cards / rollups).
+
+  ### Phase 2 — Profit Alerts quarantine via ablation (additive, reversible)
+
+  Definition of done: you can generate and grade parallel prediction surfaces:
+
+  - mixed (current behavior)
+  - tool_only (no profit_alerts packs anywhere)
+  - profit_only (Profit Alerts only, for honest measurement)
+
+  This is the key: we don’t delete Profit Alerts; we make it impossible for them to “pollute” by default and we can
+  prove/disprove them with side-by-side grades.
+
+  Implementation approach (minimal confusion, additive artifacts):
+
+  - Add a --profile {mixed,tool_only,profit_only} to:
+      - scripts/tools/create_candidate_universe.py (writes candidate_universe.json for mixed; writes
+        candidate_universe__tool_only.json etc for the others)
+      - scripts/tools/create_play_card.py (reads a chosen Candidate Universe file and writes play_card__tool_only.json
+        etc)
+      - grading scripts to grade each profile and write separate RUNS outputs
+      - scripts/tools/create_predictive_portfolio_report.py to support --profile tool_only and rank without Profit
+        Alerts
+
+  ### Phase 3 — Tool-first “Brain‑2” ranking (what you keep asking for)
+
+  Deliverable: a state ranking that is not “alerts_count”.
+
+  - Ranking inputs (measurable, not vibes):
+      - CU union size (smaller can mean more convergence)
+      - Top candidate support counts (methods/variants/packs)
+      - Historical conversion: vtrac_index_hit_only → box_hit by method/profile (from rollups)
+      - Doubles/mirror-double pressure outcomes (from the doubles deep dive)
+
+  This becomes the “state vs state” view you want without pretending it’s a learned model yet.
+
+  ### Phase 4 — Only after the above: version “Superbrain v0.2” and resume runs
+
+  Definition of done: we have a clearly documented ruleset + ablation results, so the next run window is a clean v1
+  experiment, not an ever-growing pile.
+
+  ———
+
+  ## Two quick clarifications to reduce confusion right now
+
+  - Predictive workflow is not learning. It’s deterministic aggregation + grading scaffolding. No day-to-day weight
+    updates exist unless we explicitly build that.
+  - “Double report” (RC/RM/RE/BC/BM/BE) is the Due Doubles board (Aux-derived), and it’s correct for that sharepack’s
+    history snapshot. Differences across runs usually mean you’re looking at a different H workbook (different world
+    snapshot), not random behavior.
+
+  ———
+
+  If you want the “stop spiraling” move right now: I start Phase 2 first (profit alerts ablation profiles + tool-first
+  portfolio), then Phase 1 (write the gold extraction ledger referencing the existing window synth docs + doubles deep
+  dive).
+
+
+› ok this sounds like a great plan im just trying to decide if i can get chat got pro to help with something via a deep
+  research..do this for me first lock in your comprehensive plan phase 0 all the way through phase 4 LOCK IN AS
+  APPROVED...I MIGHT INTERRUPT AT SOME POINT TO GET CAHT GPT TO DO DEEP RESEARCH ON SOME ITEMS TO HELP US BT I THINK
+  BEST CALL IS TO GET YOU ACTUALLY WORKING INSTEAD OF WAITING AROUND AND KEEP JUST DOING NOTHING AT MINIMUM YOU GT TO
+  QUANTIFY EVERYTHING OR AGGREGATE ALL THE MOST OPTIMAL THINGS WE WANT TO BSERVE, QUANTIFY, OPTIMIZE, FIX ETC. SO YOU
+  AER FULLY APPROVED AND CAN CHECK IN AS NEEDED
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — the gold-day runs are already grouped into “windows”, and RUNS is already structured to prevent you from having
+  to brute-force 70+ state templates.
+
+  Gold-Day Windows (already grouped)
+
+  - 3‑day starter: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md:1
+  - 6‑day expansion: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md:1
+  - 5‑day Jan window: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CORPUS_SYNTHESIS.md:1
+  - “Codex analysis” exists per window (it’s not a script; it’s a written synthesis doc): docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/2026-01-05_to_2026-01-09__CODEX_DEEP_ANALYSIS.md:1 (and the other two listed inside docs/AAT9_KIT/
+    FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1)
+
+  Where the “Special Doubles Report” is
+
+  - Inventory (+ CSV): docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md:1, docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.csv:1
+  - Deep dive (winners-lens evidence pointers + CC vs Aux DS audit + predictive coverage rows): docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md:1
+  - Study queue (“index hit → box miss” highest-leverage cases): docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md:1
+
+  What I changed/added to address your “Profit Alerts are polluting everything” concern
+
+  - I did not delete Profit Alerts. I added an ablation quarantine so we can measure them cleanly:
+      - --profile mixed (default), --profile tool_only (no Profit Alerts), --profile profit_only (Profit Alerts only)
+      - This works across Candidate Universe, Play Cards, graders, rollups, and portfolio.
+      - Sprint doc + commands: docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1
+  - The v0 Jan window results strongly support your instinct:
+      - Profit Alerts alone are extremely weak (profit_only Candidate Universe union hit_any=0.0145 Evening;
+        hit_any=0.0145 Midday): docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__profit_only.md:1
+      - Tool-only is far stronger (tool_only union hit_any=0.2029 Evening; hit_any=0.2609 Midday): docs/AAT9_KIT/FINAL
+        VALIDATION/RUNS/candidate_universe_rollup__tool_only.md:1
+      - Play Cards show the same pattern (profit_only flatlines; tool_only ≈ mixed): docs/AAT9_KIT/FINAL VALIDATION/
+        RUNS/play_card_rollup__profit_only.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md:1
+  - I wrote a single “stop runs, extract gold” ledger to keep you out of spiral mode: docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:1
+
+  RUNS folder is already “unified” (what’s filled vs missing)
+
+  - Start here: docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md:1
+  - Progress tracker (DONE/TODO): docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md:1
+
+  Your “superbrain/aggregator” confusion (plain-language answer)
+
+  - Profit Alerts are not “the superbrain”; they’re one Brain‑2 board/source of suggested playsets.
+  - The actual “superbrain build-out” we’re doing right now is: evidence → gradeable playsets → grading → rollups, so we
+    can learn what works without hindsight or analyzer tuning.
+  - If you want “state strength vs state strength” without Profit Alerts dominating, use the profile portfolios:
+      - Example: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__PREDICTIVE_PORTFOLIO__tool_only.md:1
+      - Or generate any day: python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root
+        sharepacks/_predictive --profile tool_only
+
+  Quick clarifications
+
+  - set -euo pipefail is just a Bash safety setting (exit on error, undefined vars, pipefail). It doesn’t “do GitHub
+    stuff” and doesn’t change repo state by itself.
+  - I did not push/commit anything; git status is currently very dirty (lots of RUNS outputs + untracked .xlsm history
+    files). If you want me to handle Git commits/push safely, tell me whether you want: (A) code/docs only, or (B) code/
+    docs + RUNS outputs, and I’ll stage only those and explicitly exclude data/history/*.xlsm + bulk sharepacks.
+
+
+› IM NOT REALLY SURE HOW TO HANDLE GIT UPDATE RIGHT NOW TO BE HONEST...I WANTED TO ASK SOMETHING TO SEE IF ITS POSSIBLE
+  I WAS THINKING OF A MORE POTENTIALLY MANAGEABLE WAY I COULD ALSO GET CHAT GPT PRO TO DEEPLY INVESTIGATE FOR ME IF I
+  CHOOSE IT SEEMS THE FULL SHAREPACKS + ALL ARTIFACTS + RUNS ARE TOO MUCH THESE DAYS FOR A DEEP RESEARCH HOWEVER I
+  WONDER IF THERE WAS A WAY TO AGGREGATE CERTAIN ITEMS IF IT COULD BE DONE?  OK LET ME KNOW WHAT YOU THINK OF THIS
+  IDEA...A) THE WINNERS ARTIFACTS THE HTML+JSON VERSION + EVERYTHING IN RUNS + DIGIT REDUCTION OVERLAY + EACH STATES
+  aUX SUMMARY.MD...HERES WHY THIS IS POWERFUL IF YOU COULD FIND A WAY TO SETUP THIS "SPECIAL SHAREPACK FOR ME" ...THE
+  A) IS ALREADY RICH SHOWING THE WINNING PATTERN THROUGH ALL THE STRING TABLES + PROGRESSION+ VTRAC PATTERNS +CROSS
+  VARIANCE + IT ALSO SHOWS THE YELLOW R2/R4/R6/R8 BOXES ASSOCIATED WITH DIGIT REDCUTION TOOL + SHOWS THE * AND ** BOXES
+  FOR HOT ZONES + SHOWS VTRC RELATIONSHIPS (=VTRAC ANALZYER) BUT BASICALLY YOU CAN GET A DEEP UNDERSTANDING OF ALL THE
+  TOOLS OR WHAT EACH TOOOL COULD BE DOING IN REFECEN TO THE WINNING PATTERNS, NEXT BY PROVIDING THE STATES TEMPALTE
+  FILLED FROM "RUNS" YOU BASICALLY GET TO SEE BEST ATTEMPT AT EXTRACTION OF OPTIMAL INSIGHTS FROM THE TOOLS OUTPUTS ,
+  NEXT WE INCLUDE THE DIGIT REDUCTION OVERLAY AS IT VERY IN DETAIL SHOWS IN SIMILAR TO THE HTML WINNERS HOW THE WINNER
+  PATTERN FORMED WITHIN THE REDUCTION WHICH ISNT SHOWN IN HTML AND LAST ITEM THE AUX SUMMARY.MD FOR EACH STATE WE
+  INCLUDE THIS IN CASE TEMPLATE DIDNT ACCOUNT FOR MOST OPTIMAL AUX AVAILABLE INSIGHTS IS A GREAT WAY TO AUDIT THIS SO
+  YOU CAN BASICALLY GET ALMOST EVERYTHING YOU NEED THROUGH THOSE ITEMS...I HOWEVER WOULD LIKE EVERYTHING IN THE RUNS
+  FOLDER NO JSUT THE TEMPLATES BUT I THINK YOU CAN UNDERSTAND HOW THIS COULD ALL WORK TOGETHER AND POTENTIALLY BE A WAY
+  I CAN GET CHAT GPT PRO TO INVESTIGATE DEEPLY WHILE REDUCING TO A REASONABLE LEVEL AND NOT HAVING TO REVIEW MASSIVE
+  ENT IRE SHAREPACKS, WHAT AR YOR THOUGHTS? CAN YOU BUILD A SPECIAL SHAREPACK FOR ME LIKE THIS?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — and I built it.
+
+  - New exporter: scripts/tools/export_chatgpt_research_pack.py:1 (copies winners HTML/JSON + Aux summary.* + bounded DR
+    overlay subset + relevant RUNS/docs; avoids huge full DR folders).
+  - Sample “curated” export pack (2026-01-05→2026-01-09) already created:
+      - Folder: sharepacks/_scratch/chatgpt_research_pack_20260113_234519/README.md:1
+      - Manifest: sharepacks/_scratch/chatgpt_research_pack_20260113_234519/MANIFEST.csv:1
+      - Zip (upload-ready): sharepacks/_scratch/chatgpt_research_pack_20260113_234519.zip:1 (Profit Alerts excluded
+        by default)
+  - Re-run for a different window:
+      - python3 scripts/tools/export_chatgpt_research_pack.py --start-date <D0> --end-date <D1> --mode curated
+        --include-predictive --include-control-center --zip
+  - Gold-day “grouped windows” already exist in RUNS:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CORPUS_SYNTHESIS.md:1
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS.md:1
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md:1
+  - “Special doubles report” lives here:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md:1
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md:1
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md:1
+  - Doc pointer updated: docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md:1 (now shows the export command for physical
+    upload packs).
+
+
+› OK CAN YOU PROVIDE SOME TYPE OF OPTIMAL GUIDANCE OR PROMPT FOR CHAT GPT PRO AND ILL LET IT RUN A DEEP RESEARCH
+  AMAZING JOB!
+
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report
+the issue.
+
+
+› HOLD ON I JUST GOT THIS ALERT, THIS MIGHT HAVE TO DO WITH PUSHING OF GITHUB UPDATES SHOULD WE DO THAT FIRST?
+  Repository snapshot encountered large untracked directories: sharepacks/_scratch/
+  chatgpt_research_pack_20260113_234519/docs/AAT9_KIT/FINAL VALIDATION/RUNS (251 files). This can slow Codex; consider
+  adding
+    these paths to .gitignore or disabling undo in your config.
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• That alert isn’t about pushing to GitHub — it’s Codex warning that the untracked export folder under sharepacks/
+  _scratch/ has lots of files and can slow snapshots. I already fixed the root cause by adding sharepacks/_scratch/
+  to .gitignore (safe; scratch exports should never be committed).
+
+  You can run ChatGPT Pro deep research now.
+
+  What to upload
+
+  - Upload: sharepacks/_scratch/chatgpt_research_pack_20260113_234519.zip
+
+  Paste this prompt into ChatGPT Pro
+  You are reviewing an offline AAT9 “ChatGPT Research Pack” exported from a repo. This pack is a bounded evidence bundle
+  (no full sharepacks) designed to answer: “What patterns consistently precede doubles/mirror-doubles and how do we
+  convert index/lane hits into box hits without touching analyzers?”
+
+  Start here:
+
+  1. Read README.md at the pack root to understand what’s included.
+  2. Read docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md and docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md to understand
+     RUNS conventions.
+  3. Confirm key semantics:
+      - Predictive “before” lives under sharepacks/_predictive/<D>/... and must be winners-free.
+      - Post-results “after” lives under sharepacks/<D>/... with winners lens.
+      - Mirror scheme for this system is VTRAC-pair (0↔5,1↔6,2↔7,3↔8,4↔9).
+      - Disambiguate vtrac_index (boxed family) vs vstraight_lane/vcode (STR8_8 lane).
+
+  Primary research targets (high leverage):
+
+  - Doubles/mirror-doubles:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.csv
+  - Convergence cases:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md
+  - Prediction artifacts + grading:
+      - sharepacks/_predictive/<D>/<STATE>/candidate_universe.json
+      - sharepacks/_predictive/<D>/<STATE>/play_card.json
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PLAY_CARD_GRADE.md
+      - Rollups: docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.csv and docs/AAT9_KIT/FINAL VALIDATION/
+        RUNS/play_card_rollup.csv
+
+  Per-case evidence to use (for each selected case):
+
+  - Winners lens (environment): sharepacks/<D>/<STATE>/winners/<STATE>/*.html and *.json
+  - Aux evidence dump: sharepacks/<D>/<STATE>/aux/<STATE>/summary.md
+  - Digit Reduction overlay subset (how reduction formed): sharepacks/<D>/<STATE>/digit_reduction/<STATE>/analyzer_v2/
+    winners/*_winner_overlay.html (+ map/hits/flags)
+
+  Deliverables (write one cohesive report):
+
+  1. Executive synthesis: the top 5–10 repeatable “superbrain primitives” you see (esp. doubles/mirror-double
+     precursors).
+  2. Lane-hit vs box-hit decomposition: summarize how often we get index/lane hits but miss box, and what the common
+     failure modes are.
+  3. Bounded closure recommendations (no analyzer changes): propose 3–7 additive, measurable closure packs/rules
+     that would most likely convert lane hits into box hits (e.g., “if index hit and doubles pressure, close these
+     canonicals…”). Keep each rule explicit and budget-aware (B6/B12 style).
+  4. Method/pack effectiveness: from the rollups + grades, identify which pack sources are most predictive (and in which
+     environments).
+  5. Next experiment plan: propose a 3–5 day “before→after” experiment schedule and what metrics to track; include how
+     you’d evaluate success without overfitting.
+
+  Constraints:
+
+  - Do NOT propose changing core analyzers (Stable/DR/VTRAC/Hot Zones) yet.
+  - Treat “Profit Alerts” as out of scope unless explicitly present in the pack; focus on tool evidence + Aux + bounded
+    closure.
+  - When making claims, reference the exact file paths you used.
+
+  Output format:
+
+  - Short sections with bullets and a final prioritized TODO list.
+
+  If you want me to prep a Git commit/push after you’re happy with the changes, tell me “commit code/docs only (no
+  sharepacks/data)” and I’ll stage a safe set.
+
+
+› YES THIS IS AMAZING IF YOU CAN DO WHATEVER PUSH ETC. OF DOCS , CODE ETC, IS NECESSARY SO THAT I CAN RUN TEH DEEP
+  RESEARCH WITH CHAT GPT PRO PLEASE DO THAT NOW
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Pushed ✅
+
+  - Committed + pushed to origin/checkpoint/gold-days-2025-12-30_to_2026-01-04 (commit b3a2d0f7) including the new
+    exporter scripts/tools/export_chatgpt_research_pack.py and docs updates.
+  - Fixed the Codex alert by adding sharepacks/_scratch/ to .gitignore so these big scratch exports won’t slow
+    snapshots.
+
+  What to upload to ChatGPT Pro
+
+  - sharepacks/_scratch/chatgpt_research_pack_20260113_234519.zip
+
+  Prompt to paste into ChatGPT Pro
+  You are reviewing an offline “ChatGPT Research Pack (Export)” from the AAT9 repo. Your job is to extract the most
+  actionable, evidence-backed insights for doubles + mirror-doubles and to propose additive (non-analyzer) closure packs
+  that convert index/lane hits into box hits.
+
+  1. Start by reading the pack root README.md and MANIFEST.csv.
+  2. Read RUNS navigation: docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md and docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+     INDEX.md.
+  3. Focus on:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.csv
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md
+      - Predictive artifacts per case: sharepacks/_predictive/<D>/<STATE>/candidate_universe.json and play_card.json
+      - Post-results evidence per case: winners lens under sharepacks/<D>/<STATE>/winners/<STATE>/ + Aux sharepacks/<D>/
+        <STATE>/aux/<STATE>/summary.md + DR overlays under sharepacks/<D>/<STATE>/digit_reduction/<STATE>/analyzer_v2/
+        winners/
+  4. Constraints:
+      - Do NOT recommend changing core analyzers yet (Stable/DR/VTRAC/Hot Zones).
+      - Treat “mirror” as VTRAC-pair mapping 0↔5,1↔6,2↔7,3↔8,4↔9.
+      - Disambiguate vtrac_index (boxed family) vs vstraight_lane/vcode (STR8_8 lane).
+  5. Deliverables:
+      - Top 5–10 repeatable “superbrain primitives” you see (especially doubles/mirror-double precursors).
+      - A decomposition of failures into index_hit vs box_hit.
+      - 3–7 additive, budgeted closure pack rules (B6/B12 style) that would likely convert lane hits → box hits; each
+        rule must be explicit and measurable.
+      - A short next-experiment plan (3–5 days) + metrics to track.
+        Use exact file paths when citing evidence.
+
+
+› OK THERES A FEW THINGS I FEEL LIKE COULD BE MISSING UNLESS IM MISUNDERSTANDING, I DONT SEE MENTION FOR CHAT GPT PRO
+  TO REVIEW THE ACTUALLY COMPREHSIVE STATE RUNS FILE LIKE THE ACTUAL TEMPLATES IN THE RUNS FOLDER, ALSO WHAT ABOUT THE
+  CORPUS WHATEVER STUFF ALL THE OTHER DOCUMENTS IN THE RUNS FOLDER? AND IS THEIR ONLY THE SINGLE CONVERGENCE CASES
+  DOCUMENT FOR THAT ONE PERIOD OF RUNS? (05-09 ONLY?) I UNDERSTAND WHY THE PREDICTIVE STUFF INCLUDED+ UNVIERSE
+  CANDAIATE WHICH IM OK WITH BUT REMEMBER ALOT OF THE ACTUAL PREDITIVTION I THINK ARE GOING TO BE TAMPERED BY PROFIT
+  ALERTS POTENTIALLY? IM MORE CONCERNED WITH THEM READING THE FILLED TEMPLATES THAT ARE CONPMREEHISVE AND EVERYTHING
+  ELS EIN RUNS FOLDER AND THEN THE ADDITIONAL ITEMS I MENTION DEFINITELY NEED TO READ THOSE AND THEN IF CAN ALSO
+  REAOSNBLY FIT IN THE PREDICTIVE STUFF THAT CAN BE ADDED, CAN YOU CLAIRFY IF IM MISUNDERSTANDING?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• You’re not misunderstanding — the zip already contains the comprehensive Master Validation state run reports and the
+  window/corpus docs. My earlier prompt was just “high‑leverage-first”; I can make it explicit.
+
+  What’s actually in the exported zip (relevant to your concerns)
+
+  - Full filled state run reports for the window: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__<STATE>.md through
+    2026-01-09__<STATE>.md (these are the “templates filled out”).
+  - Day-level docs per day: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__WINNERS_DIGEST.md, <D>__DAY_SYNTHESIS.md,
+    <D>__CONTROL_CENTER.md.
+  - Window/corpus docs for 2026-01-05→2026-01-09: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-
+    01-09__CORPUS_SYNTHESIS.md, __CORPUS_DASHBOARD.md, __CODEX_DEEP_ANALYSIS.md, __DR_LENS_REPORT.md,
+    __CROSS_VARIANT_REPORT.md, __RESULTS_HORIZON.md, and yes __CONVERGENCE_CASES.md/.csv.
+  - Profit Alerts concern: the export was built with include_profit_alerts=False, so profit_alerts* files were not
+    copied into the export control_center folders. If any predictive JSON references Profit Alerts packs, tell Pro to
+    ignore those pack entries.
+
+  Answer on convergence docs
+
+  - There are multiple convergence-case docs across windows (e.g. also 2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md),
+    but this export is scoped to 2026-01-05→2026-01-09, so it includes that window’s convergence cases.
+
+  ## Updated ChatGPT Pro prompt (copy/paste)
+
+  You are reviewing an offline AAT9 “ChatGPT Research Pack (Export)” zip. Your job is to extract evidence-backed
+  insights from Master Validation run reports + winners lens + Aux + Digit Reduction overlays, focusing on doubles/
+  mirror-doubles and how to convert index/lane hits into box hits. Do not propose analyzer changes yet.
+
+  0. Scope + semantics
+
+  - Read the pack root README.md and MANIFEST.csv to understand what’s included.
+  - Read docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md and docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md.
+  - Mirror scheme for this system is VTRAC-pair mapping: 0↔5, 1↔6, 2↔7, 3↔8, 4↔9.
+  - Disambiguate: vtrac_index (boxed family) vs vstraight_lane/vcode (STR8_8).
+
+  1. Read the “global/window” synthesis docs first (so you don’t drown in 70+ state files)
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CORPUS_SYNTHESIS.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CODEX_DEEP_ANALYSIS.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__DR_LENS_REPORT.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CROSS_VARIANT_REPORT.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__MIRROR_DOUBLE_FREQUENCY.md
+  - Rollups: docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.csv and docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    play_card_rollup.csv
+
+  2. Doubles/mirror-doubles deep dive (primary)
+
+  - Start from the queue: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md
+  - Use the deep dive: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md
+    For the top ~10 cases in the study queue, open these per case:
+    A) Full Master Validation report (the comprehensive filled template):
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md
+        B) Winners lens (environment; shows string-table progression + overlays):
+      - sharepacks/<D>/<STATE>/winners/<STATE>/*.html and *.json
+        C) Aux evidence dump (audit + “how due was double?”):
+      - sharepacks/<D>/<STATE>/aux/<STATE>/summary.md
+        D) Digit Reduction overlay subset (how reduction formed; maps/hits/flags):
+      - sharepacks/<D>/<STATE>/digit_reduction/<STATE>/analyzer_v2/winners/*_winner_overlay.html (+ *_map.json,
+        *_hits.csv, *_flags.csv)
+
+  3. Predictive artifacts (secondary; must not dominate)
+
+  - Use predictive artifacts only to answer “what did we select pre-results?” and to compare to actual winners:
+      - sharepacks/_predictive/<D>/<STATE>/candidate_universe.json
+      - sharepacks/_predictive/<D>/<STATE>/play_card.json
+        Important: Ignore any candidate universe/play card pack entries that reference Profit Alerts or control_center/
+        profit_alerts*. Treat Profit Alerts as quarantined/out-of-scope unless explicitly asked.
+
+  4. Deliverables (single cohesive report)
+
+  - Top 5–10 repeatable “superbrain primitives” you see for doubles/mirror-doubles (with file path citations).
+  - A failure decomposition: how often do we get index_hit / lane_hit without box_hit, and what are the repeatable
+    failure modes?
+  - 3–7 additive, budgeted closure pack rules (B6/B12 style) that convert lane hits → box hits; each rule must be
+    explicit + measurable and must cite at least 2 concrete examples from the pack.
+  - Next 3–5 day experiment plan (before→after loop) and what metrics to track.
+    Constraints: no analyzer changes proposed yet.
+
+  If you want, I can also regenerate a second export zip that only contains tool-first predictive artifacts (no Profit
+  Alerts referenced) — but the current zip is already safe as long as Pro ignores Profit Alerts packs.
+
+
+› let just go with that for now what you just gave me is there anything else you need to do for it or can i proceed
+  with the research?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• You can proceed now.
+
+  Nothing else is required on my side; the export zip is already built and the repo changes are pushed.
+
+  - Upload: sharepacks/_scratch/chatgpt_research_pack_20260113_234519.zip
+  - Use the updated prompt you just approved.
+
+  If you want a “tool-only” export (to completely avoid any Profit Alerts references inside predictive artifacts), tell
+  me the date window and I’ll generate a second zip with only --profile tool_only outputs.
+
+
+› sure please proceed with that optimally
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Built a Profit-Alerts-quarantined tool-only ChatGPT Pro pack:
+
+  - Zip: sharepacks/_scratch/chatgpt_research_pack_20260114_003733.zip
+  - Guarantees:
+      - No profit_alerts* files inside the zip
+      - Predictive artifacts are candidate_universe__tool_only.json + play_card__tool_only.json (no mixed versions under
+        _predictive/)
+      - RUNS includes only __tool_only grades/rollups + 2026-01-05..09__PREDICTIVE_PORTFOLIO__tool_only.md (excludes
+        per-state __PREDICTIVE.md to avoid mixed references)
+
+  Also updated & pushed the exporter so you can reproduce this any time:
+
+  - scripts/tools/export_chatgpt_research_pack.py now supports --profile {mixed,tool_only,profit_only} (pushed to
+    checkpoint/gold-days-2025-12-30_to_2026-01-04)
+  - Repro command: python3 scripts/tools/export_chatgpt_research_pack.py --start-date 2026-01-05 --end-date 2026-01-09
+    --mode curated --include-predictive --include-control-center --profile tool_only --zip
+
+
+› READ "PLAN" IN TASKS HOW MUCH DID YOU COMPLETE OF THIS? JUST TRIYNG TO FIGURE OUT HOW TO OPTIMALLY PROCEED PLEASE
+  READ AND CONSIDER WHAT YOU COMPLETED PRIOR TO BUILDING THE SHAREPACKS FOR CHAT GPT AND PROVIDE COMPREHSIVE THOUGHTS
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Read tasks/PLAN.txt:1 — it’s the “Synthesis Sprint / Superbrain v0 Realignment” plan. Status vs that plan:
+
+  - Phase 0 (Freeze corpus / stop new runs): Effectively done for the v0 windows; we now have the 3 corpus windows
+    called out in tasks/PLAN.txt:6 and the Jan window is fully rollup-able. You can treat v0 as frozen and stop adding
+    days until v0.2 rules are decided.
+  - Phase 1 (Gold Extraction Ledger): Done at a strong “v0 draft” level in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0__GOLD_EXTRACTION.md:1 (it already includes the key posture decisions and measured findings); remaining
+    work is iterative refinement (adding more “gold” bullets as we read specific cases).
+  - Phase 2 (Profit Alerts quarantine via ablation, not deletion): Completed. --profile {mixed,tool_only,profit_only}
+    exists across Candidate Universe / Play Cards / grading / rollups / portfolio, and the sprint spec is captured in
+    docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1. The rollups already validate your instinct
+    (profit-only is extremely weak).
+  - Phase 3 (Tool-first “Brain‑2” ranking): Implemented in practice via tool-only portfolio reports (now regenerated for
+    2026‑01‑05→09) and tool-only rollups (docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__tool_only.md:1,
+    docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md:1). Remaining work is deciding what you want as
+    the “official” v0.2 state-strength score (that’s a design choice, not missing plumbing).
+  - Phase 4 (Version v0.2, then resume runs): Not done yet (by design); it should happen after you’re satisfied with the
+    synthesis + ablation conclusions.
+
+  What I completed before the ChatGPT research-pack work: the ablation plumbing + the v0 synthesis docs/rollups were
+  already in place; the exporter work just created an upload-friendly, Profit-Alerts-quarantined bundle.
+
+  For your ChatGPT Pro deep research, you now have a clean tool-only zip: sharepacks/_scratch/
+  chatgpt_research_pack_20260114_003733.zip (built with exporter scripts/tools/export_chatgpt_research_pack.py:1 using
+  --profile tool_only).
+
+
+› CAN YOU FINISH THE WORKFLOWS FOR JAN 12TH I INCLUDED THE RESULTS NOW SO YOU CAN PERFORM THE REST OF PREDCITIVE AND
+  FULL VALIDATION WORKFLOW I GUESS PLEASE PAUSE CURRENT PLAN TO DO THIS AS INTERMISSION TASKS
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I can’t safely finish the Jan 12 workflows yet because the required preflight gates fail for data/history/
+  Pick3StatsC4_2026-01-12.xlsm.
+
+  - Quick sanity mismatch: the workbook’s New York Midday head is 992, but data/results/2026-01-12.txt (and data/
+    results/2026-01-13.txt) says New York Midday is 924.
+  - Stop-the-line failure: PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2026-01-12
+    --regen-aux-draws fails tables↔Aux alignment across states (tables are still the 2026-01-08 snapshot while workbook-
+    derived draws are newer).
+
+  I wrote a persistent diagnosis + exact remediation options in tasks/JAN12_BLOCKER_REPORT.md:1.
+
+  To proceed, I need one of these:
+
+  - A “fresh” Pick3StatsC4_2026-01-12.xlsm where the string tables are updated to match the draw history (then the
+    preflight will pass), or
+  - The correct results files for whatever date the workbook actually represents (right now data/results/2026-01-12.txt
+    and data/results/2026-01-13.txt are identical, and neither matches the workbook’s newest draws).
+
+  Once that’s fixed, I’ll run the normal loop end-to-end: preflight (run_history_and_results) → predictive pack →
+  Candidate Universe/Play Cards → full SSOT sharepack + RUNS.
+
+
+› OK SORRY I THINK I FIXED IT I DONT KNOW HOW THIS WASNT CAUGHT FROM THE START MAYBE BECAUSE THERE ISNT THE SAME
+  RIGORIOUSNESS FOR MASTER VALIDATION BUT THAT PICK3STATSC4 YESTERDAY WAS ACTUALLY 01-11 REMEMBER ITS ONE DAY BEHIND
+  RESULTS SO I MADE SOME SORT OF ERROR SOMEWHERE MAYBE BUT IVE PROVIDED BOTH THE EDITED PICK3STATSC4 JAN 11 AND RESULTS
+  12TH TO DO WAHTEVER WORKFLOW ASSOCIATES WITH THAT SHOULD BE CORRECT
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I pulled the new data/history/Pick3StatsC4_2026-01-11.xlsm + data/results/2026-01-12.txt and re-ran the required
+  preflight, but it’s still not consistent, so I can’t safely proceed to predictive/full‑validation for D=2026-01-
+  12 yet.
+
+  What I see (hard evidence):
+
+  - PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2026-01-11 --regen-aux-draws still
+    fails tables↔Aux alignment (CT/FL sentinel check).
+  - Workbook draw-history proves it’s not the “Jan 12 winners” world:
+      - Workbook New York Midday head = 992 (and NY Evening head = 091)
+      - data/results/2026-01-12.txt says New York Midday = 924, Evening = 586
+      - There is no data/results/*.txt in the repo that contains NY Midday 992 or NY Evening 091, so we don’t have the
+        matching results day for this workbook.
+  - Even after forcing a full tables rebuild, the string tables are still the older snapshot (e.g., Florida table
+    latest5 is 596,429,963,434,160 while workbook-derived Aux latest5 is 089,522,006,301,093).
+
+  This means the workbook’s draw-history is ahead of its string tables (or it’s simply a later workbook than its
+  filename), so building sharepacks/RUNS from it would contaminate measurements.
+
+  I captured the exact diagnosis + next steps in tasks/JAN12_BLOCKER_REPORT.md:1. The shortest path to “unblock and
+  proceed” is:
+
+  1. Provide the correct results file(s) for the actual workbook date (the day where NY Midday is 992 and NY Evening is
+     091), or
+  2. Replace Pick3StatsC4_2026-01-11.xlsm with the correct workbook whose newest draws align with your intended D=2026-
+     01-12 results, then we re-run preflight and proceed end-to-end.
+
+  If you tell me which of those you’re doing (and you drop in the matching data/results/<date>.txt if needed), I’ll
+  immediately run the full predictive + full validation workflow.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I tried to run the “Jan 12” workflows (H=2026-01-11 → D=2026-01-12) and it’s still blocked by the stop‑the‑line
+  tables↔Aux alignment guard.
+
+  - The workbook’s draw-history (Aux) is newer (e.g. NY Midday starts 992,052,989,199,916…; CT starts
+    601,512,249,084,513…; FL starts 089,522,006,301,093…).
+  - But the extracted string tables in data/outputs/tables/* are still “stuck” at the older snapshot where CT/FL/NY
+    newest are 331/596/199 etc (the same world as the earlier 2026-01-08 snapshot).
+  - That means the workbook’s string tables are stale vs its draw-history, so building predictive packs or Master
+    Validation for 2026-01-12 would be measurement-corrupt.
+
+  Details + exact evidence are written here: tasks/JAN12_BLOCKER_REPORT.md:1.
+
+  What you need to do so I can proceed
+
+  - Re-save/export data/history/Pick3StatsC4_2026-01-11.xlsm from Excel after running whatever “refresh/update tables”
+    action updates the string tables (so tables match the newest draws), then I’ll rerun:
+      - PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date 2026-01-11 --regen-aux-draws
+  - Once that passes, I’ll run the full predictive + full-day Master Validation build for D=2026-01-12 (CT/ON/VA/NC/NJ
+    subset if you want).
+
+
+› IM GETTING ABIT CONFUSED NOW WITH EVERYTHING GETTING MESSY I THINK MAYBE WE SHOULD STOP WITH THE WORKFLOWS FOR ABIT
+  AND GET BACK TO THE MISSION WE WERE ON INVESTIGATING..I THINK WE WERE AT THIS POINT...
+      frozen and stop adding days until v0.2 rules are decided.
+    - Phase 1 (Gold Extraction Ledger): Done at a strong “v0 draft” level in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+  SUPERBRAIN_V0__GOLD_EXTRACTION.md:1 (it already includes the key posture decisions and measured
+      findings); remaining work is iterative refinement (adding more “gold” bullets as we read specific cases).
+    - Phase 2 (Profit Alerts quarantine via ablation, not deletion): Completed. --profile {mixed,tool_only,profit_only}
+  exists across Candidate Universe / Play Cards / grading / rollups / portfolio, and the
+      sprint spec is captured in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1. The rollups
+  already validate your instinct (profit-only is extremely weak).
+    - Phase 3 (Tool-first “Brain‑2” ranking): Implemented in practice via tool-only portfolio reports (now regenerated
+  for 2026‑01‑05→09) and tool-only rollups (docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+      candidate_universe_rollup__tool_only.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md:1).
+  Remaining work is deciding what you want as the “official” v0.2 state-strength score
+      (that’s a design choice, not missing plumbing).
+    - Phase 4 (Version v0.2, then resume runs): Not done yet (by design); it should happen after you’re satisfied with
+  the synthesis + ablation conclusions.
+
+    What I completed before the ChatGPT research-pack work: the ablation plumbing + the v0 synthesis docs/rollups were
+  already in place; the exporter work just created an upload-friendly, Profit-Alerts-
+    quarantined bundle.
+  ...I WANT TO FEEL LIKE THIS ISNT A COMPLETE MESS AND IM STARTING TO GET ABIT WORRIED THAT ITS TURNING INTO THAT..IM
+  ALSO STARTING TO WONDER IF YOUR A BETTER ANALYZER THE CHAT GPT PRO..IM GOING TO SHARE SOME DIFFERENT INSIGHTS
+  GATHERED I WANT YOUR INPUT ON...IM STARTING TO WONDER IF IM GOING TO HAVE TO MANUALLY GO THROUGH EXAMPLE ONE BY ONE
+  FROM EACH LIKE SHAREPACK BECAUSE IM NOT SURE IF WE ARE CAPTURING THINGS AS IF I WERE DOING THAT I THINK WHEE YOU HAD
+  STOPPED SUGGESTED YOU DID DO THIS IN SOME WAY? BUT IM STILL WONDERING IF WE BE BETTER OFF WITH ME DOING IT I THOUGHT
+  THIS WOULD BE MUCH MORE STRAIGHTFORWARD AND EASY WITH THE DETAILED TEMPLATES COMPLETED...I THINK THE PREDICTIVE STUFF
+  IS AGIAN TRIPPING ME UP ABIT I TOTALLY UNDERSTAND THE POINT OF IT BUT IT ALMOST SEEMS LIKE OPTIMAL PREDICTING SHOULD
+  COME OUT OF THE DATA, MAYBE ITS JUST THE PROFIT ALERTS CREATED A NIGHTMARE I THINK ITS BEEN DEEPLY ESTABLISHED BY
+  THIS POINT EVERYTHING WORKS BETTER WITHOUT THEM...HERE I HAVE 4 DOCUMENTS THAT I THINK CAN HELP US REVIEW
+  EVERYTHING--IM WONDERING IF YOU CAN PROVIDE COMPREHSIVE FEEDBACK ON EACH AND RELATE TO THE WORK YOU ALREADY COMPLETED
+  AND IM HOPING THIS IS LOGGED SOMEWHERE..THE 4 DOCUMENTS ARE IN TASKS..RESEARCH,DR_RESEARCH, DR_RESEARCH1,
+  RESEARCH_2 ...ALOT OF THE FEEDBACK SEEMS TO SUGGEST THE VALUE OF COMPLETING THE "RUNS" WHICH WE HAVE TONS COMPLETED
+  THIS IS WHY IM SAYING LETS STOP AND REIGN THINGS IN ..THINGS THAT STAND OUT TO ME ATLEAST -- 1) DR IS NOT EXTRACTING
+  PROPERLY THIS TOOL NEEDS A DEEP AUDIT  2) WE WANT TO COLLECT OPTIMAL INSIGHTS FROM ALL OUR RUNS ETC. AND MAKE THEM
+  ACTIONABLE IN A SENSE OR HAVE SOME FORM OF BEGINNER BRAIN? IN A SENSE IF YOU GET WHAT I MEAN   3) THERE IS SOME
+  MENTION OF A AUX AUDIT OR SOMETHING?  I FEEL LIEK THERE IS MORE THAT YOU ALREADY STARTED AND DEALT WITH I THINK IN
+  "PLAN" (ALSO IN TASKS) I FROOZE WHERE WE LEFT OFF MAYBE  4)MAKE SURE PROFIT ALERTS ARE QUARANTINED AND NO  LONGER
+  HAVE INFLUENCE I WOULD LIKE THEM TO BE DELETED AT SOME POINT PROPERLY AS ITS CREATING ALOT OF POLLUTION EVEN IN MY
+  UNDERSTANDING OF BRAIN1 AND BRAIN 2 OR SEE ANY CONCEPT OF THE SYSTEM BEING ABLE TO BRING TOGETHER  OR RANK THINGS IN
+  A WAY I CAN UNDERSTAND, WE WILL DETERMIN "PROFIT ALERTS" IN A SENSE OR A "PROFITABLE GATEWAY OR THRESHOLD" THROUGH
+  THE DATA IF THIS MAKES SENSE ...IF YOU CAN PLEASE PERFORM A DEEP INVESTIGATION INTO WHAT IM SUGGESTING PLEASE
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• You’re not in a mess — you’re exactly at the “stop runs, synthesize, decide v0.2 rules” point, and the repo already
+  contains the structure to do that without rereading 70+ things blindly.
+
+  What I found in the 4 task docs
+
+  - tasks/RESEARCH.txt is empty (0 lines), so it can’t be driving anything right now. If you meant a “research” writeup,
+    you likely meant tasks/RESEARCH_1.txt (it’s substantial and doubles-focused).
+  - tasks/RESEARCH_2.txt is basically the correct mental model: sharepacks are SSOT evidence; RUNS are extracted
+    analysis; predictive is the “before” measurement harness so Master Validation insights become testable instead of
+    post‑hoc only.
+  - tasks/DR_RESEARCH.txt is a good brief for what you want: a methodology audit of DR (LS1/LS2 value, terminal timing,
+    redundancy vs Stable/VTRAC/HZ, what fields should feed Superbrain). It explicitly says: understanding only, no
+    tuning yet.
+  - tasks/DR_RESEARCH1.txt clarifies the “where is the DR audit?” confusion: the current DR audit surface is every
+    Master Validation RUN (Part 2 “Digit Reduction”), and the missing thing is a dedicated cross-day DR deep dive (which
+    is consistent with your instinct).
+
+  How this relates to what’s already completed (and logged)
+
+  - The “stop runs + extract gold” posture is already formalized in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0__GOLD_EXTRACTION.md.
+  - Profit Alerts are already quarantined by measurement, not vibes: docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0__SYNTHESIS_SPRINT.md + the rollups show profit_only is extremely weak (e.g. hit_any=0.0145) while
+    tool_only matches mixed for Play Cards.
+      - Concrete proof: docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__profit_only.md vs docs/AAT9_KIT/FINAL
+        VALIDATION/RUNS/play_card_rollup__tool_only.md.
+
+  The right “reign it in” move (what to do next)
+
+  1. Freeze corpus (no new days) and treat the three windows as v0: the sprint doc already lists them.
+  2. Work from study queues instead of “read everything”:
+      - Convergence cases: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md (and the
+        12‑30→01‑04 one).
+      - Doubles/mirror-doubles queue: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md.
+      - For each picked case: extract 3–5 “gold” bullets into docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+        SUPERBRAIN_V0__GOLD_EXTRACTION.md (that’s the “big document” you asked for).
+  3. Do the DR deep audit as a synthesis artifact (no tuning yet): treat tasks/DR_RESEARCH.txt as the checklist; output
+     should be one cross-day DR report + decisions about “how to consume DR” (envelope lens vs top-caller).
+  4. Decide v0.2 rules: default --profile tool_only everywhere (so Profit Alerts stop “polluting attention”), define
+     your official state-strength score, then resume runs.
+
+  If you want, I can now (a) point you to the exact “best 10 cases” to read first (from convergence + doubles queues),
+  and (b) start drafting the DR deep-audit report from the existing RUNS/sharepacks without running any new workflows.
+
+
+› OK I LIKE YOUR PLAN LOCK THAT IN ALSO I FIXED "RESEARCH" CAN YOU REIVEW THAT AGAIN PLEASE AS WELL IF THERE IS
+  ANYTHING FURTHER TO ADD FROM IT? OR WROTHWHILE INSIGHTS?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Re-checked tasks/RESEARCH.txt: it’s now populated and is byte-identical to tasks/RESEARCH_1.txt (so no “missing extra
+  version” to chase).
+
+  Worthwhile insights to carry into the v0 synthesis sprint
+
+  - Primary measurable objective: convert index_hit → box_hit with bounded closure packs, and track the cost delta (this
+    matches how we’re already grading/rolling up).
+  - Best trigger stack for doubles/mirror-doubles: double-pressure (same digit due in 2 positions) + Due Doubles
+    alignment + XVAR consensus (same position/digit across variants) + “mirror-echo” as a supporting cue.
+  - Stable “R-consensus tails” (e.g. “44” tail across R2/R4/R6/R8) as a repeated-digit precursor; treat it as a digit-
+    weighting primitive, not a standalone predictor.
+  - Aux pairs / BA remaining-pair logic as a “two slots claimed” signal; combine with double-pressure to decide whether
+    to spend budget on doubles closure.
+  - A/B experiment framing is correct: baseline tool_only vs tool_only + closures, measuring hit lift vs added combos
+    (this plugs directly into docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1).
+
+  One thing I’d add (not in RESEARCH, but important)
+
+  - Make every closure rule explicitly bounded (max added combos) and logged as a transform_chain so we can tell which
+    rule actually improved outcomes in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:1 and the
+    rollups.
+
+
+› OK THAT MAKES SENSE I WANT TO MAKE SURE WE CAN CAPTURE ALL THIS PROPERLY THATS WHAT MAKES ME NERVOUS I ALREADY SEE
+  REFERENCE TO ITEMS THAT GET LSOT IN PAST DOCS..I THNK THIS IS APRT OF THE FRUSTRATION BUT YES WE WANT TO CAPTURE ALL
+  OF THAT SOMEHOW
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Totally fair concern — so I made the capture process explicit and durable (so it won’t “live in chat” and get lost).
+
+  - Added a “how we capture gold” section + a strict entry template (stable IDs + required evidence links) in docs/
+    AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+  - Started populating real entries from the study queue so you can see the format in action: GOLD-0001 → GOLD-0003 are
+    now in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:179 (each links to the deep-dive line,
+    run report, predictive CU/play card, and winners digest).
+  - Going forward, every time we process a queue row we will:
+      - Add a GOLD-#### entry here (with file pointers + bounded action).
+      - Promote any reusable rule into docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md.
+      - If it’s a pipeline issue, log it to docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md or docs/AAT9_KIT/FINAL
+        VALIDATION/RUNS/FIX_LATER_INDEX.md (and reference it from the gold entry).
+
+
+› HOW DOES WHAT YOU DID RELATE TO READ TASKS "PLAN" IM JUST TRYING TO KEEP AN UNDERSTANDING OF EVERYTHING
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• tasks/PLAN.txt is the meta plan for the “Superbrain v0 synthesis sprint” (freeze runs → extract gold → quarantine
+  Profit Alerts via ablation → define v0.2 rules). It’s not meant to hold all the detailed insights itself.
+
+  What I just did maps directly to Phase 1 in tasks/PLAN.txt (“Gold Extraction Ledger”):
+
+  - tasks/PLAN.txt says: create/maintain a single “big doc” where we extract the repeatable, hit-linked insights from
+    the messy corpus so they don’t get lost.
+  - I strengthened that exact deliverable by adding a strict capture format + stable IDs + required evidence pointers
+    inside docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+  - Then I started populating it with real cases mined from the doubles/mirror-doubles study queue, which is exactly the
+    “mine the special doubles report” instruction in tasks/PLAN.txt:
+      - New entries GOLD-0001..0003 live in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:179,
+        and each one links back to:
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md (line pointer),
+          - the Master Validation run report,
+          - the predictive candidate_universe.json / play_card.json,
+          - and the day winners digest.
+
+  So: PLAN = the roadmap, and the Gold Extraction Ledger = the “nothing gets lost” notebook that executes Phase 1. The
+  next work (still per tasks/PLAN.txt) is to keep converting the study queues + convergence cases into more GOLD-####
+  entries, then move on to the DR audit, then lock v0.2 defaults.
+
+
+› OK THAT ALL SOUNDS GOOD HERE IS SOME OF MY BIGGER PICTURE CONCERN SO I HAD A BUNCH OF PROFITABLE METHODOLOGY WHICH
+  LED ME TO DEISGN TOOLS THAT I THOUGHT COULKD HELP OPTIMALLY EXTRACT WHAT MY METHODOLOGY COULD DO IN AN AUTOMATED
+  SYSTEM, NOW IM STARTING TO GET NERVOUS THAT I DIDNT DESIGN ANY OF THIS RIGHT MAYBE IM JSUT GETTING DISCOURAGED I KNOW
+  I REALYL MESSED UP WITH THE PROFIT ALERTS WHICH DIDNT FIT WITHIN MY DEISGN I TOOK KINDA RANDOMLY FROM CCHAT GPT ( I
+  WANT THERE INVOLVEMENT GONE) SEE THE THINGS IS EVEN WHEN I FINALLY FEEL LIKE I HAVE ALL THESE TOOLS TUNED PROPERLY
+  AND AGGREGRGATING OPTIMALLY THERE IS STILL GOING TO BE A TONS OF NAUNCE TYPE METHODLOGY I WILL HAVE TO ADD AFTERWARDS
+  TO GET IT DOING EXACTLY WHAT ITS CAPABLE OF DOING..I DONT KNWO ITS JSUT KINDA OVERWHELMING AT A VERTAIN POINT
+  SMETIMES I FEEL LIKE IM GOING IN CIRCLES IM TRYING NOT TO GET  DISCOURAGED ...ESSSENTIALLY THE THOUGHT WAS REGISTER
+  HOW THE TOOLS ARE SCORING OR TOOL OUTPUTS ARE PROVIDING THEN COMPARE WITH THE POWERFUL WIIINER OUTPUTS WE HAVE WHICH
+  SHOULD SHOW US HOW THEY SHOULDVE SCORED TO WIN =REVERSE ENGINEER WINS TYPE DEAL THEN TUNE TOWARDS THIS OR OPTIMAL
+  SCORING THEN EVENTUALLY GET TO LIKE PROFITABILITY ETC. I CANT TELL IF WE ARE STILL ON TRACK HONESTLY UGHH
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• You’re still on track, and the fact you feel the “design tension” is actually a good sign: you’re finally separating
+  evidence, prediction artifacts, and measurement instead of mixing them.
+
+  What’s true right now (so you don’t spiral)
+
+  - The Master Validation workflow is still the core “reverse engineer wins” engine: sharepacks/<D>/… + docs/AAT9_KIT/
+    FINAL VALIDATION/RUNS/<D>__<STATE>.md.
+  - The predictive workflow didn’t replace that; it added the missing “what did we actually predict pre-results?”
+    bridge: sharepacks/_predictive/<D>/… + candidate_universe.json + play_card.json + grades in RUNS.
+  - Your profitable methodology isn’t being “lost”; we’re converting it into measurable primitives + bounded closures
+    (so we can prove which nuances help, instead of encoding everything at once and guessing).
+
+  Profit Alerts didn’t “pollute the system” — they polluted attention
+
+  - The underlying sharepack evidence never changed.
+  - The problem was that surfaces (portfolio/play cards) were anchored to Profit Alerts.
+  - That’s why we quarantined them via profiles (ablation), not by gut-feel deletion. The rollups already show
+    profit_only is extremely weak, so you can safely treat “ChatGPT-made Profit Alerts” as non-authoritative going
+    forward.
+
+  What I just did to address your “things get lost” fear
+
+  - I made the capture mechanism explicit and durable inside the Phase‑1 deliverable: docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+  - Added a strict Gold Entry template (stable IDs + required evidence pointers).
+  - Started real entries (GOLD-0001..0003) directly from the doubles/mirror-doubles study queue, each linked to deep-
+    dive lines + run reports + predictive artifacts.
+
+  Why this keeps you aligned with your original intent
+
+  - Your intent = “how should tools have scored to extract the win?” → that’s exactly what Master Validation + winners
+    lens + the doubles deep-dive + the Gold Ledger are for.
+  - Then we only change consumption/aggregation first (Candidate Universe / Play Cards / bounded closure rules) until we
+    have enough graded days to justify touching analyzers.
+
+  The simplest way to know you’re not “designing it wrong”
+
+  - If we can repeatedly turn “lane/index hit but box miss” into “box hit” using small bounded closures without breaking
+    non-double days, we’re progressing correctly.
+  - That’s exactly what docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md is designed to test,
+    and what the Gold Ledger now records as actionable rules.
+
+  If you want one concrete “next step” that reduces overwhelm: we keep mining 10–20 rows from docs/AAT9_KIT/
+  FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md into docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+  SUPERBRAIN_V0__GOLD_EXTRACTION.md, then we do the DR audit, then we lock v0.2 defaults (likely tool_only) and only
+  then resume new runs.
+
+
+› OK THERE ARE A FEW OTHER THINGS I WANTED TO INSPECT AS WELL BUT MAYBE WE DO THING IN STAGES I LIKE WHAT YOUR
+  SUGGESTING CAN YOU SHOW ME WHAT YOU HAD IN MIND FOR THE DR AUDIT?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• The DR audit is Step 3 in the v0 synthesis plan, and it’s meant to answer one question cleanly:
+
+  “Is Digit Reduction a primary caller, a supporting corroborator, or an environment/envelope lens — and which DR
+  outputs should feed Candidate Universe / Play Cards (without changing the DR analyzer yet)?”
+
+  Here’s exactly what I have in mind (aligned with tasks/DR_RESEARCH.txt + tasks/DR_RESEARCH1.txt):
+
+  ## DR v0 Deep Audit (methodology-level, no tuning)
+
+  ### 0) Scope + guardrails
+
+  - Use only frozen evidence: sharepacks/<D>/... + sharepacks/_predictive/<D>/... + RUNS reports.
+  - No algorithm/weight changes to DR; only evaluate and decide how to consume DR outputs in the superbrain layers.
+  - Use --profile tool_only as baseline so Profit Alerts can’t distort conclusions.
+
+  ### 1) “What exists already” vs “what we’re adding”
+
+  - Already exists per-day/per-state: Master Validation DR section in each RUN (Part 2.Digit Reduction).
+  - What we add now: cross-day/cross-state audit that turns that evidence into decisions.
+
+  ### 2) Quantitative audit (fast, objective)
+
+  Using existing grade CSVs (e.g. docs/.../RUNS/2026-01-09__CANDIDATE_UNIVERSE_GRADE.csv) we compute:
+
+  - DR pack hit rates by method_id (any/box/straight/index) vs Stable/HZ/VTRAC/Aux packs.
+  - “Unique vs corroborative vs redundant” DR value:
+      - Unique = DR hits when no other method hits.
+      - Corroborative = DR hits alongside others.
+      - Redundant = DR rarely hits or never changes union outcome.
+  - Split by variant (Midday/Evening) and by outcome type (double/mirror-double vs non-double using the doubles
+    inventory).
+
+  Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md (+ a CSV table).
+
+  ### 3) Qualitative audit (small number of high-signal cases)
+
+  Pick ~10–20 cases:
+
+  - Top cases from docs/.../RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md where we had lane/index structure but missed
+    box.
+  - A few “DR-hit” cases (where DR actually got a box/straight) if any exist.
+    For each case, read:
+  - DR stacked HTML + analyzer_v2 top/per_item + training steps/logs (sharepack DR folder),
+  - the Master Validation RUN (DR section + cross-tool context),
+    and answer:
+  - Did DR surface the winner as a 3-value terminal or only as a 4-digit envelope/lingering digit set?
+  - Did LS2 help uniquely or add noise?
+  - Did DR’s “drop_vtrac / family_vtrac / exact” signals contribute anything independently?
+
+  Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md.
+
+  ### 4) Decision table → v0.2 consumption rules (still no analyzer tuning)
+
+  Create a single “Keep / Demote / Remove” table for DR features as inputs to superbrain layers:
+
+  - analyzer_v2_top_candidates (as primary? likely demote)
+  - long-string remnants / envelopes (likely keep)
+  - LS2 (keep but gate?)
+  - drop_vtrac (likely “aggregator-only” unless proven)
+  - any “winner flags/hits/maps” (keep as evaluation-only)
+
+  Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md.
+
+  ### 5) Capture so nothing gets lost
+
+  - Add the final DR posture decisions into:
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md
+      - and 3–5 GOLD-#### entries in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md (with
+        evidence links).
+
+  If you want, I can start the quantitative pass first (it’s the fastest way to confirm “DR is behaving like envelope
+  lens vs caller”) and then use that to select the best 10–20 qualitative cases.
+
+
+› YEAH HERES ANOTHER THING TO CONSIDER...LOCK IN EVERYTHING YOU SAID AND ADD THE FOLLOWING INSIGHTS FOR YOUR PPLAN--I
+  STILL WANT YOU TO VIEW THE HTML/JSON WINNERS OUTPUT HIGHLIGHTING THE BOXES RELATED TO DIGIT REDUCTION ALLOWS YOU TO
+  SEE THE ACTUAL WINNING PATTERN FORM AND WHAT BOXES ARE INVOVLED + VIEW THE WINNERS OVERLAY OUTPUT HAS TEH HIGHLIGHTED
+  WINNER WITHIN THE DIFFERENT REDUCTION VARIAITION SHOULLD HELP WITH DEEPLY UNDERSTAND "HOW THE TOOL SHOULD SCORE +
+  VIEW THE "RUNS" PART 2 OF EACH STATE TO PAIR WITH ..THERE ARE A FEW DOCUMENTS I WANT YOU TO VIEW AS WELL, I WANT A
+  DEEP DIVE INTO TEH ANALYTICS SO W UNDERSTAND WHAT EXTRACTED WINNERS AND MAYBE WHAT WAS LEFT OR WE FORGOT ABOUT OR NOT
+  BEING WIRED PROPERLY..."REDUCTION_THOUGHTS", "AGGREGATE_OUTPUTS", "DIGIT_FIX", "CALRIFY_TABLES" I THINK THERE IS
+  AALOT OF GOLD IN THESE DOCUMENTS THAT CAN HELP..PART OF TEH CONFUSION IS UNDERSTANDING THE MIX-UP I THINK THAT
+  HAPPENED IN TERMS OF TOOLS WERE SELF-OPTIMZIED AT A POINT AND THAT AT OTHER POINTS WERE AGGREGRATED/SUPERBRAIN
+  FOCUSED AND I WAS HOPING THE "RUNS" WOULD JSUT EXTRACT THINGS OPTIMALLY BUT I THINK THERE WAS ALOT OF DEEP NAUANCE OR
+  SOME METHODOLOGYY TO WHAT WWAS SUPPOSE TO BE EXTRACTED AND HOW FROM SOME OF THESE TOOLS WHICH COULD UNLOCK THEIR
+  POWER...ALSO HERE IS ANOTHER THING THERE IS SOME REFERENCE TO THE "VTRAC BOXED INDEX" AND HOW WE HAD THINGS WITH THE
+  BADGES RED,BLUE, AND SPECIFIC THINS WITH THAT PROGRAMMED BOXED VTRAC TABLE I THINK THERE WAS SOME AUDIT SUPPOSE TO
+  HAPPEN WITH THIS MIGHTVE GOT MISSED THE INDEX REDUCE COMBINATIONS TO ONLY 8 COMBINATIONS BOXED AND EVEN LESS FOR
+  DOUBLES AND MIRROR DOUBLES! I THINK IT MIGHT BE LESS THAT THEY ARENT PROGRAMMED AS TO MAYBE NOT BEING CAPTURED
+  PROPERLY? OR I DONT KNOW WE SHOUDL FIND A WAY TO INVESTIGATE THEIR EFFECTIVENESS ESPECIALLY LETS SAY IF INDEX HAVE
+  MULTIPLE COMBINATIONS WITH RED (VERY LAE) AND BLUE (LATE) AND IAMGINE THEM COMPOUNDING ACROSS VARIANTS M/E/C WITHINA
+  SINGLE STATE SEEMS THAT BE PWOERFUL WE SHOULD ATLEAST BE REGISTERING THIS IN SOME WAY I THINK IT WAS MENTIONED VIA
+  New SSOT doc explaining Aux coverage and the Due Doubles board semantics:
+    - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md`
+  - Key clarification: the Control Center Due Doubles board is grouped by **VTRAC double families** (e.g. `0/5-1/6`),
+  not `vtrac_index` (1–35).
+  IT WAS A BIG PART OF THE WINDOWS APP VERSION, I DONT EVEN KNOW IF WE ARE REGISTERING OR QUANTIFY IN AUX AS COPOND
+  FEATURES COMBINATIONS RED AND BLUE BADEGE BUT WE SHOULD I KNOW THAT WE ARE FOR THE DUE DOUBLES TABLE BUT I THOGUHT
+  THERE WAS A DISCUSSION ABOUT EXPANDING OUTSIDE OF JSUT DOUBLES PROBABLY GOT MISSSED AND THIS RELATES TO THE WHOLE
+  "BOXED VTRAC INDEX STUFF AND BADGGED COMBINATIONS ETC."...IS THERE SOMEWAY YOU CAN ADD ALL THIS OPTIMALLY TO YOUR
+  COMPREHSIVE PLAN IN SOME OPTIMAL WAY?
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Locked — and yes, those additions fit cleanly without derailing anything.
+
+  What you added maps to two places in the plan:
+
+  ## 1) DR audit (Step “Deep-audit Digit Reduction signals”)
+
+  I’ll treat DR as a methodology + wiring + consumption audit, not “did it hit”.
+
+  Concrete additions you asked for (now explicit in scope):
+
+  - Winners lens HTML/JSON (col1/2 + DR-highlighted boxes): use it to see how the winning pattern formed and what DR-
+    highlighted regions actually contained (environment + formation, not just “hit/miss”).
+  - DR winners overlay outputs: use the overlay to see which reduction variant actually captured the winner (and whether
+    we failed in scoring vs failed in extraction vs failed in consumption).
+  - RUNS Part 2 (Digit Reduction section): use it as the structured per-day/per-state audit surface (what outputs were
+    reviewed, what was surfaced, what was missed).
+  - Read and mine the design/nuance docs you named (to recover “what we meant DR to do”):
+      - tasks/REDUCTION_THOUGHTS*
+      - tasks/AGGREGATE_OUTPUTS*
+      - tasks/DIGIT_FIX*
+      - tasks/CALRIFY_TABLES* / tasks/CLARIFY_TABLES* (I’ll search both spellings)
+  - Output: a DR v0 audit that ends in a Keep/Demote/Remove-as-input table (consumption rules), without changing the
+    analyzer yet.
+
+  ## 2) Aux boxed VTRAC “badged combos” audit (Step “Audit Aux VTRAC badge matrix”)
+
+  This is separate from DR and is exactly the right way to handle your Windows-app concern.
+
+  What we’ll do:
+
+  - Confirm what we currently capture (and what we don’t) relative to the old UI:
+      - We already clarified: Control Center Due Doubles is grouped by double families (e.g. 0/5-1/6), not vtrac_index
+        1–35 (docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md:1).
+  - Audit whether we are missing the non-double “late/very-late combo” badge matrix by:
+      - Inspecting Aux outputs + Control Center boards + any existing validators.
+      - If missing, write a design note + proposed additive board (not a pipeline refactor): a “boxed vtrac_index ×
+        badge density × variant compounding” surface (so you can see “this index has 3 red combos in 2 variants” like
+        the old app).
+
+  This stays additive and measurable (same philosophy as the doubles work): we don’t replace anything; we add a surfaced
+  artifact so it can be graded/rolled into v0.2 later.
+
+  If you want, paste the exact filenames for those four task docs (or just confirm they’re in tasks/) and I’ll start by
+  locating them and folding their “gold” back into the DR audit + v0 ledger.
+
+
+› I THINK YOU HAD THE NAMES tasks/REDUCTION_THOUGHTS*
+        - tasks/AGGREGATE_OUTPUTS*
+        - tasks/DIGIT_FIX*
+        - tasks/CALRIFY_TABLES* / tasks/CLARIFY_TABLES* (I’ll search both spellings) SO HERES THE THING I HAVE TO GO TO
+  BED, I WANT TOIMAGINE WE CAN GET BACK ON TRACK THE WAY WE BEEN DISCUSSING AND EXTRACTING EVERYTHING WE DISCUSSED IS
+  THEIR SOMEWAY YOU COULD BUILD OUT SOME SUPER COMPREHSIVE,DETAILED, OPTIMAL, STATE OF THE ART PLAN WHERE I CAN LET YOU
+  WORK INDEPENDETLY FOR HOURS ON ALL THIS AND WHEN I WAKE UP TOMORROW WE ARE CLOSER TO V0.2 TO RESUME NEW RUNS? I WOULD
+  WANT IT TO INCLUDE ALL OF...Totally fair concern — so I made the capture process explicit and durable (so it won’t
+  “live in chat” and get lost).
+
+    - Added a “how we capture gold” section + a strict entry template (stable IDs + required evidence links) in docs/
+  AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+    - Started populating real entries from the study queue so you can see the format in action: GOLD-0001 → GOLD-0003
+  are now in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:179 (each
+      links to the deep-dive line, run report, predictive CU/play card, and winners digest).
+    - Going forward, every time we process a queue row we will:
+        - Add a GOLD-#### entry here (with file pointers + bounded action).
+        - Promote any reusable rule into docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md.
+        - If it’s a pipeline issue, log it to docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md or docs/AAT9_KIT/
+  FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md (and reference it from the gold entry).
+
+
+  › HOW DOES WHAT YOU DID RELATE TO READ TASKS "PLAN" IM JUST TRYING TO KEEP AN UNDERSTANDING OF EVERYTHING
+
+
+  • Explored
+    └ List tasks
+      Search ^PLAN(\.|$)|plan
+      Read PLAN.txt
+
+  ─ Worked for 58s
+  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ──────────────────────────────────────────────────────────────────────────
+
+  • tasks/PLAN.txt is the meta plan for the “Superbrain v0 synthesis sprint” (freeze runs → extract gold → quarantine
+  Profit Alerts via ablation → define v0.2 rules). It’s not meant to hold all the detailed
+    insights itself.
+
+    What I just did maps directly to Phase 1 in tasks/PLAN.txt (“Gold Extraction Ledger”):
+
+    - tasks/PLAN.txt says: create/maintain a single “big doc” where we extract the repeatable, hit-linked insights from
+  the messy corpus so they don’t get lost.
+    - I strengthened that exact deliverable by adding a strict capture format + stable IDs + required evidence pointers
+  inside docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+    - Then I started populating it with real cases mined from the doubles/mirror-doubles study queue, which is exactly
+  the “mine the special doubles report” instruction in tasks/PLAN.txt:
+        - New entries GOLD-0001..0003 live in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+  SUPERBRAIN_V0__GOLD_EXTRACTION.md:179, and each one links back to:
+            - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md (line pointer),
+            - the Master Validation run report,
+            - the predictive candidate_universe.json / play_card.json,
+            - and the day winners digest.
+
+    So: PLAN = the roadmap, and the Gold Extraction Ledger = the “nothing gets lost” notebook that executes Phase 1.
+  The next work (still per tasks/PLAN.txt) is to keep converting the study queues + convergence
+    cases into more GOLD-#### entries, then move on to the DR audit, then lock v0.2 defaults.
+
+
+  › OK THAT ALL SOUNDS GOOD HERE IS SOME OF MY BIGGER PICTURE CONCERN SO I HAD A BUNCH OF PROFITABLE METHODOLOGY WHICH
+  LED ME TO DEISGN TOOLS THAT I THOUGHT COULKD HELP OPTIMALLY EXTRACT WHAT MY METHODOLOGY
+    COULD DO IN AN AUTOMATED SYSTEM, NOW IM STARTING TO GET NERVOUS THAT I DIDNT DESIGN ANY OF THIS RIGHT MAYBE IM JSUT
+  GETTING DISCOURAGED I KNOW I REALYL MESSED UP WITH THE PROFIT ALERTS WHICH DIDNT FIT
+    WITHIN MY DEISGN I TOOK KINDA RANDOMLY FROM CCHAT GPT ( I WANT THERE INVOLVEMENT GONE) SEE THE THINGS IS EVEN WHEN
+  I FINALLY FEEL LIKE I HAVE ALL THESE TOOLS TUNED PROPERLY AND AGGREGRGATING OPTIMALLY
+    THERE IS STILL GOING TO BE A TONS OF NAUNCE TYPE METHODLOGY I WILL HAVE TO ADD AFTERWARDS TO GET IT DOING EXACTLY
+  WHAT ITS CAPABLE OF DOING..I DONT KNWO ITS JSUT KINDA OVERWHELMING AT A VERTAIN POINT
+    SMETIMES I FEEL LIKE IM GOING IN CIRCLES IM TRYING NOT TO GET  DISCOURAGED ...ESSSENTIALLY THE THOUGHT WAS REGISTER
+  HOW THE TOOLS ARE SCORING OR TOOL OUTPUTS ARE PROVIDING THEN COMPARE WITH THE POWERFUL
+    WIIINER OUTPUTS WE HAVE WHICH SHOULD SHOW US HOW THEY SHOULDVE SCORED TO WIN =REVERSE ENGINEER WINS TYPE DEAL THEN
+  TUNE TOWARDS THIS OR OPTIMAL SCORING THEN EVENTUALLY GET TO LIKE PROFITABILITY ETC. I CANT
+    TELL IF WE ARE STILL ON TRACK HONESTLY UGHH
+
+
+  • You’re still on track, and the fact you feel the “design tension” is actually a good sign: you’re finally
+  separating evidence, prediction artifacts, and measurement instead of mixing them.
+
+    What’s true right now (so you don’t spiral)
+
+    - The Master Validation workflow is still the core “reverse engineer wins” engine: sharepacks/<D>/… + docs/
+  AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md.
+    - The predictive workflow didn’t replace that; it added the missing “what did we actually predict pre-results?”
+  bridge: sharepacks/_predictive/<D>/… + candidate_universe.json + play_card.json + grades in
+      RUNS.
+    - Your profitable methodology isn’t being “lost”; we’re converting it into measurable primitives + bounded closures
+  (so we can prove which nuances help, instead of encoding everything at once and guessing).
+
+    Profit Alerts didn’t “pollute the system” — they polluted attention
+
+    - The underlying sharepack evidence never changed.
+    - The problem was that surfaces (portfolio/play cards) were anchored to Profit Alerts.
+    - That’s why we quarantined them via profiles (ablation), not by gut-feel deletion. The rollups already show
+  profit_only is extremely weak, so you can safely treat “ChatGPT-made Profit Alerts” as non-
+      authoritative going forward.
+
+    What I just did to address your “things get lost” fear
+
+    - I made the capture mechanism explicit and durable inside the Phase‑1 deliverable: docs/AAT9_KIT/FINAL VALIDATION/
+  RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:116.
+    - Added a strict Gold Entry template (stable IDs + required evidence pointers).
+    - Started real entries (GOLD-0001..0003) directly from the doubles/mirror-doubles study queue, each linked to deep-
+  dive lines + run reports + predictive artifacts.
+  › OK THERE ARE A FEW OTHER THINGS I WANTED TO INSPECT AS WELL BUT MAYBE WE DO THING IN STAGES I LIKE WHAT YOUR
+  SUGGESTING CAN YOU SHOW ME WHAT YOU HAD IN MIND FOR THE DR AUDIT?
+
+
+  • Explored
+    └ List tasks
+      Search DR_RESEARCH
+      Read DR_RESEARCH.txt, DR_RESEARCH1.txt
+
+  • Ran python3 - <<'PY'
+    │ import csv
+    │ from pathlib import Path
+    │ … +7 lines
+    └ cols ['results_date', 'sharepacks_root', 'candidate_universe_path', 'state_key', 'history_date', 'winner_label',
+  'winner', 'winner_canonical', 'winner_vtrac_index', 'winner_missing', 'pack_id',
+      'method_id', 'pack_variant', 'play_mode', 'combos_count', 'cost_units', 'contains_winners_artifacts', 'hit_any',
+  'straight_hit', 'box_hit', 'vtrac_index_hit', 'vtrac_index_hit_only']
+      … +7 lines
+      'state_key': 'Connecticut4', 'history_date': '2026-01-08', 'winner_label': 'Evening', 'winner': '513',
+  'winner_canonical': '135', 'winner_vtrac_index': '8', 'winner_missing': '0', 'pack_id':
+      'aux_vtrac_index_overdue:Combined:idx=16', 'method_id': 'aux_vtrac_index_overdue', 'pack_variant': 'Combined',
+  'play_mode': 'STRAIGHT', 'combos_count': '6'}
+
+  ─ Worked for 1m 53s
+  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ───────────────────────────────────────────────────────────────────────
+
+  • The DR audit is Step 3 in the v0 synthesis plan, and it’s meant to answer one question cleanly:
+
+    “Is Digit Reduction a primary caller, a supporting corroborator, or an environment/envelope lens — and which DR
+  outputs should feed Candidate Universe / Play Cards (without changing the DR analyzer yet)?”
+
+    Here’s exactly what I have in mind (aligned with tasks/DR_RESEARCH.txt + tasks/DR_RESEARCH1.txt):
+
+    ## DR v0 Deep Audit (methodology-level, no tuning)
+
+    ### 0) Scope + guardrails
+
+    - Use only frozen evidence: sharepacks/<D>/... + sharepacks/_predictive/<D>/... + RUNS reports.
+    - No algorithm/weight changes to DR; only evaluate and decide how to consume DR outputs in the superbrain layers.
+    - Use --profile tool_only as baseline so Profit Alerts can’t distort conclusions.
+
+    ### 1) “What exists already” vs “what we’re adding”
+
+    - Already exists per-day/per-state: Master Validation DR section in each RUN (Part 2.Digit Reduction).
+    - What we add now: cross-day/cross-state audit that turns that evidence into decisions.
+
+    ### 2) Quantitative audit (fast, objective)
+
+    Using existing grade CSVs (e.g. docs/.../RUNS/2026-01-09__CANDIDATE_UNIVERSE_GRADE.csv) we compute:
+
+    - DR pack hit rates by method_id (any/box/straight/index) vs Stable/HZ/VTRAC/Aux packs.
+    - “Unique vs corroborative vs redundant” DR value:
+        - Unique = DR hits when no other method hits.
+        - Corroborative = DR hits alongside others.
+        - Redundant = DR rarely hits or never changes union outcome.
+    - Split by variant (Midday/Evening) and by outcome type (double/mirror-double vs non-double using the doubles
+  inventory).
+
+    Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md (+ a CSV table).
+
+    ### 3) Qualitative audit (small number of high-signal cases)
+      For each case, read:
+    - DR stacked HTML + analyzer_v2 top/per_item + training steps/logs (sharepack DR folder),
+    - the Master Validation RUN (DR section + cross-tool context),
+      and answer:
+    - Did DR surface the winner as a 3-value terminal or only as a 4-digit envelope/lingering digit set?
+    - Did LS2 help uniquely or add noise?
+    - Did DR’s “drop_vtrac / family_vtrac / exact” signals contribute anything independently?
+
+    Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md.
+
+    ### 4) Decision table → v0.2 consumption rules (still no analyzer tuning)
+
+    Create a single “Keep / Demote / Remove” table for DR features as inputs to superbrain layers:
+
+    - analyzer_v2_top_candidates (as primary? likely demote)
+    - long-string remnants / envelopes (likely keep)
+    - LS2 (keep but gate?)
+    - drop_vtrac (likely “aggregator-only” unless proven)
+    - any “winner flags/hits/maps” (keep as evaluation-only)
+
+    Deliverable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md.
+
+    ### 5) Capture so nothing gets lost
+
+    - Add the final DR posture decisions into:
+        - docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md
+        - and 3–5 GOLD-#### entries in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md (with
+  evidence links).
+
+    If you want, I can start the quantitative pass first (it’s the fastest way to confirm “DR is behaving like envelope
+  lens vs caller”) and then use that to select the best 10–20 qualitative cases.
+
+
+  › YEAH HERES ANOTHER THING TO CONSIDER...LOCK IN EVERYTHING YOU SAID AND ADD THE FOLLOWING INSIGHTS FOR YOUR PPLAN--I
+  STILL WANT YOU TO VIEW THE HTML/JSON WINNERS OUTPUT HIGHLIGHTING THE BOXES RELATED TO
+    DIGIT REDUCTION ALLOWS YOU TO SEE THE ACTUAL WINNING PATTERN FORM AND WHAT BOXES ARE INVOVLED + VIEW THE WINNERS
+  OVERLAY OUTPUT HAS TEH HIGHLIGHTED WINNER WITHIN THE DIFFERENT REDUCTION VARIAITION SHOULLD
+    HELP WITH DEEPLY UNDERSTAND "HOW THE TOOL SHOULD SCORE + VIEW THE "RUNS" PART 2 OF EACH STATE TO PAIR WITH ..THERE
+  ARE A FEW DOCUMENTS I WANT YOU TO VIEW AS WELL, I WANT A DEEP DIVE INTO TEH ANALYTICS SO W
+    UNDERSTAND WHAT EXTRACTED WINNERS AND MAYBE WHAT WAS LEFT OR WE FORGOT ABOUT OR NOT BEING WIRED
+  PROPERLY..."REDUCTION_THOUGHTS", "AGGREGATE_OUTPUTS", "DIGIT_FIX", "CALRIFY_TABLES" I THINK THERE IS AALOT OF
+    GOLD IN THESE DOCUMENTS THAT CAN HELP..PART OF TEH CONFUSION IS UNDERSTANDING THE MIX-UP I THINK THAT HAPPENED IN
+  TERMS OF TOOLS WERE SELF-OPTIMZIED AT A POINT AND THAT AT OTHER POINTS WERE AGGREGRATED/
+    SUPERBRAIN FOCUSED AND I WAS HOPING THE "RUNS" WOULD JSUT EXTRACT THINGS OPTIMALLY BUT I THINK THERE WAS ALOT OF
+  DEEP NAUANCE OR SOME METHODOLOGYY TO WHAT WWAS SUPPOSE TO BE EXTRACTED AND HOW FROM SOME OF
+    THESE TOOLS WHICH COULD UNLOCK THEIR POWER...ALSO HERE IS ANOTHER THING THERE IS SOME REFERENCE TO THE "VTRAC BOXED
+  INDEX" AND HOW WE HAD THINGS WITH THE BADGES RED,BLUE, AND SPECIFIC THINS WITH THAT
+    PROGRAMMED BOXED VTRAC TABLE I THINK THERE WAS SOME AUDIT SUPPOSE TO HAPPEN WITH THIS MIGHTVE GOT MISSED THE INDEX
+  REDUCE COMBINATIONS TO ONLY 8 COMBINATIONS BOXED AND EVEN LESS FOR DOUBLES AND MIRROR
+    DOUBLES! I THINK IT MIGHT BE LESS THAT THEY ARENT PROGRAMMED AS TO MAYBE NOT BEING CAPTURED PROPERLY? OR I DONT
+  KNOW WE SHOUDL FIND A WAY TO INVESTIGATE THEIR EFFECTIVENESS ESPECIALLY LETS SAY IF INDEX
+    HAVE MULTIPLE COMBINATIONS WITH RED (VERY LAE) AND BLUE (LATE) AND IAMGINE THEM COMPOUNDING ACROSS VARIANTS M/E/C
+  WITHINA  SINGLE STATE SEEMS THAT BE PWOERFUL WE SHOULD ATLEAST BE REGISTERING THIS IN SOME
+    WAY I THINK IT WAS MENTIONED VIA New SSOT doc explaining Aux coverage and the Due Doubles board semantics:
+      - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md`
+    - Key clarification: the Control Center Due Doubles board is grouped by **VTRAC double families** (e.g. `0/5-1/6`),
+  not `vtrac_index` (1–35).
+    IT WAS A BIG PART OF THE WINDOWS APP VERSION, I DONT EVEN KNOW IF WE ARE REGISTERING OR QUANTIFY IN AUX AS COPOND
+  FEATURES COMBINATIONS RED AND BLUE BADEGE BUT WE SHOULD I KNOW THAT WE ARE FOR THE DUE
+    DOUBLES TABLE BUT I THOGUHT THERE WAS A DISCUSSION ABOUT EXPANDING OUTSIDE OF JSUT DOUBLES PROBABLY GOT MISSSED AND
+  THIS RELATES TO THE WHOLE "BOXED VTRAC INDEX STUFF AND BADGGED COMBINATIONS ETC."...IS
+    THERE SOMEWAY YOU CAN ADD ALL THIS OPTIMALLY TO YOUR COMPREHSIVE PLAN IN SOME OPTIMAL WAY?
+
+
+  • Updated Plan
+    └ Expanded the v0 synthesis sprint plan to explicitly include (a) winners-lens/DR-overlay review, (b) the extra DR
+  design docs you named, and (c) an audit of the old Windows-style boxed VTRAC badge matrix
+      (late/very-late combos across variants) as a separate, additive step.
+      ✔ Review v0 docs + research notes
+      □ Mine doubles/convergence study queues
+      □ Deep-audit Digit Reduction signals
+      □ Audit Aux VTRAC badge matrix
+      □ Lock v0.2 defaults and scoring
+      □ Resume runs under v0.2 rules
+
+  ─ Worked for 55s
+  ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ──────────────────────────────────────────────────────────────────────────
+
+  • Locked — and yes, those additions fit cleanly without derailing anything.
+
+    What you added maps to two places in the plan:
+
+    ## 1) DR audit (Step “Deep-audit Digit Reduction signals”)
+
+    I’ll treat DR as a methodology + wiring + consumption audit, not “did it hit”.
+
+    Concrete additions you asked for (now explicit in scope):
+
+    - Winners lens HTML/JSON (col1/2 + DR-highlighted boxes): use it to see how the winning pattern formed and what DR-
+  highlighted regions actually contained (environment + formation, not just “hit/miss”).
+    - DR winners overlay outputs: use the overlay to see which reduction variant actually captured the winner (and
+  whether we failed in scoring vs failed in extraction vs failed in consumption).
+    - RUNS Part 2 (Digit Reduction section): use it as the structured per-day/per-state audit surface (what outputs
+  were reviewed, what was surfaced, what was missed).
+    - Read and mine the design/nuance docs you named (to recover “what we meant DR to do”):
+        - tasks/REDUCTION_THOUGHTS*
+        - tasks/AGGREGATE_OUTPUTS*
+        - tasks/DIGIT_FIX*
+        - tasks/CALRIFY_TABLES* / tasks/CLARIFY_TABLES* (I’ll search both spellings)
+    - Output: a DR v0 audit that ends in a Keep/Demote/Remove-as-input table (consumption rules), without changing the
+  analyzer yet.
+
+    ## 2) Aux boxed VTRAC “badged combos” audit (Step “Audit Aux VTRAC badge matrix”)
+
+    This is separate from DR and is exactly the right way to handle your Windows-app concern.
+
+    What we’ll do:
+
+    - Confirm what we currently capture (and what we don’t) relative to the old UI:
+        - We already clarified: Control Center Due Doubles is grouped by double families (e.g. 0/5-1/6), not
+  vtrac_index 1–35 (docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md:1).
+    - Audit whether we are missing the non-double “late/very-late combo” badge matrix by:
+        - Inspecting Aux outputs + Control Center boards + any existing validators.
+        - If missing, write a design note + proposed additive board (not a pipeline refactor): a “boxed vtrac_index ×
+  badge density × variant compounding” surface (so you can see “this index has 3 red combos in
+          2 variants” like the old app).
+
+    This stays additive and measurable (same philosophy as the doubles work): we don’t replace anything; we add a
+  surfaced artifact so it can be graded/rolled into v0.2 later.
+
+    If you want, paste the exact filenames for those four task docs (or just confirm they’re in tasks/) and I’ll start
+  by locating them and folding their “gold” back into the DR audit + v0 ledger. ..IS THERE SOMEWAY TO QUANTIFY
+  LITERALLY ALL OF THAT IN DETAIL EVEN IF YOU HAVE TO BUILD INTO A GUIDE THAT CODEX CAN WORK THROUGH IN STATE OF TEH
+  ART QUALITY DETAIL AND QUALITY OF INTEGRATIONS WHILE ALLOWING YOU TO WORK INDEPENDETLY AND CONTEXT RESETS TO KEEP
+  GOING AND WORK SAFELY?..THINK ABOUT THIS DEEEPLY , EVEN VIEW MULTIPLE TIMES IF NEEDED BUT I BASICALLY WOUDL HAVE TO
+  SEE YOU LAY THIS OUT FOR ME TO APPROVE BEFORE I GO TO BED SO PLEASE REASON DEEPLY ABOUT THIS AND SHOW ME THIS
+  COMPREHSIVE PLAN OR HOWEVER YOU WANT TO ORGANIZE THIS FOR ME TO APPROVE
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Overnight v0 → v0.2 Synthesis Sprint Plan (no check-ins needed)
+
+  Guardrails (hard)
+
+  - No new sharepacks/runs; no analyzer changes (Stable/DR/VTRAC/HZ); no combined-table extraction/reader edits.
+  - Profit Alerts stay quarantined (all synthesis uses --profile tool_only unless explicitly stated).
+  - Everything “must survive a reset”: every finding becomes either a GOLD-#### entry, a SUPERBRAIN_PRIMITIVES
+    primitive, or a FIX_NOW/FIX_LATER item with file pointers.
+
+  ———
+
+  ## Phase 0 — Reset-proof execution scaffolding (30–45m)
+
+  Goal: context resets can’t derail progress.
+
+  - Create/update a single “resume in 2 minutes” runbook: tasks/CODEX_RUNBOOK__V0_SYNTHESIS.md containing:
+      - Current plan (phases + deliverables)
+      - Last processed queue row + next row
+      - Last gold ID used (GOLD-0003 currently)
+      - Commands to regenerate rollups (tool_only) if needed
+      - “If reset: open these 5 files” list
+  - Append a short timestamped checkpoint to tasks/CODEX_HANDOFF__V0_SYNTHESIS_STATUS.md:
+      - what changed tonight
+      - what’s next
+      - which files were touched
+
+  Done when: I can restart a fresh chat and continue from a single file without rereading logs.
+
+  ———
+
+  ## Phase 1 — Mine queues → “Gold” entries (2–3h)
+
+  Goal: convert the messy corpus into explicit, actionable, evidence-linked entries.
+
+  Inputs
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md
+  - For each case:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md:<line>
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__WINNERS_DIGEST.md
+      - sharepacks/_predictive/<D>/<STATE>/candidate_universe*.json
+      - sharepacks/_predictive/<D>/<STATE>/play_card*.json
+
+  Work
+
+  - Add 15–25 new GOLD-#### entries into docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md using the
+    template you approved.
+  - For each entry, explicitly label:
+      - index_hit vs box_hit (what kind of miss)
+      - which primitive fired (double-pressure, mirror-echo, R-consensus tail, due-doubles family, etc.)
+      - the bounded action that would convert it (selection/closure/consumption rule)
+
+  Output
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md grows into the “gold notebook” you want.
+
+  ———
+
+  ## Phase 2 — DR deep audit (3–4h)
+
+  Goal: decide what DR is in the system (caller vs envelope vs corroborator), and what we’re possibly failing to
+  extract/consume.
+
+  ### 2A) Recover “intended DR nuance” from your design docs (45–90m)
+
+  - Locate + read, then summarize into a single “design intent” section:
+      - tasks/REDUCTION_THOUGHTS*
+      - tasks/AGGREGATE_OUTPUTS*
+      - tasks/DIGIT_FIX*
+      - tasks/CALRIFY_TABLES* / tasks/CLARIFY_TABLES* (both spellings)
+
+  Deliverable:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md (short, sharp bullets: “what DR was supposed to
+    surface”, “what must be fed to aggregator”, “what must not be treated as final picks”).
+
+  ### 2B) Quant audit (objective) (60–90m)
+
+  - Compute DR pack performance vs other methods from existing grade CSVs (tool_only baseline), including:
+      - per-method_id hit rates
+      - “unique vs corroborative vs redundant” contribution
+
+  Deliverable:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md (+ a CSV table)
+
+  ### 2C) Qual audit with winners lens + DR overlays (90–120m)
+
+  For ~10 high-signal cases (mix of double/mirror-double + non-double):
+
+  - Open winners HTML/JSON (especially Set1 col1/2) to see formation.
+  - Open DR overlay outputs to see which reduction path actually captures the winner.
+  - Cross-check against RUNS Part 2.Digit Reduction to see what was/wasn’t extracted.
+
+  Deliverable:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md
+
+  ### 2D) Decision table → v0.2 DR consumption rules (30–60m)
+
+  Deliverable:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md (Keep/Demote/Remove-as-input)
+  - 3–5 new DR-related GOLD-#### entries + 1–2 new primitives in docs/AAT9_KIT/FINAL VALIDATION/final docs/
+    SUPERBRAIN_PRIMITIVES.md
+
+  ———
+
+  ## Phase 3 — Aux “boxed VTRAC badge matrix” audit (1–2h)
+
+  Goal: determine whether the Windows-style “late/very-late badged combos by boxed vtrac_index (compounded across
+  variants)” exists today, and if not, define the smallest additive artifact to restore it.
+
+  - Confirm current captured semantics:
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Aux_Coverage_And_Legend.md
+      - due doubles = double-family, not vtrac_index
+  - Search current Aux outputs for combo-level lateness beyond doubles/pairs (and whether it’s variant-specific).
+  - If missing: write a gap analysis + propose an additive board (no analyzer refactor), with a minimal schema that can
+    be generated from sharepack-local Aux snapshots.
+
+  Deliverable:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md
+
+  ———
+
+  ## Phase 4 — v0.2 lock (1–2h)
+
+  Goal: you wake up with a crisp “what v0.2 is” and what defaults we’ll use before resuming runs.
+
+  Deliverables:
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md containing:
+      - default profile (tool_only)
+      - default budgets (Play Card B12/B24 policy)
+      - which bounded closures are allowed by default (and the logging/transform_chain requirement)
+      - state-strength ranking definition (Brain‑2 triage) that is tool-first and measurable
+  - Update docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md with final conclusions + “next run
+    protocol”.
+
+  ———
+
+  What you’ll have tomorrow
+
+  - A much larger, evidence-linked “Gold Ledger” (not scattered notes).
+  - A real DR verdict: what’s wrong (extraction vs scoring vs consumption), what to do in v0.2 without touching the
+    analyzer yet, and what would require a future analyzer refactor.
+  - A clear answer on the Windows-style boxed vtrac badge matrix: present vs missing, and the smallest safe way to
+    restore it.
+  - A written v0.2 defaults doc so resuming runs is no longer ambiguous.
+
+  If this plan is approved, just reply APPROVED and I’ll start Phase 0 immediately and run through Phase 4 overnight.
+
+
+› APPROVED
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Done (v0 sprint → v0.2 ready)
+
+  - Added Aux “boxed VTRAC badge matrix” export (Windows-style parity surface): scripts/tools/
+    create_aux_vtrac_badge_matrix_report.py, audit/spec in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    AUX_VTRAC_BADGE_MATRIX__AUDIT.md.
+  - Generated v0-window badge-matrix exports into RUNS for 2026-01-05 → 2026-01-09: docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/2026-01-0X__AUX_VTRAC_BADGE_MATRIX.md + .csv.
+  - Locked v0.2 defaults + “tool-first” triage scoring in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0_2__DEFAULTS.md (baseline: --profile tool_only --top-n-dr 0).
+  - Improved portfolio triage to be more “superbrain-like” without Profit Alerts: scripts/tools/
+    create_predictive_portfolio_report.py now includes CU top support (pack convergence proxy) and ranks tool-first
+    by that; regenerated docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__PREDICTIVE_PORTFOLIO__tool_only.md → 2026-01-
+    09__PREDICTIVE_PORTFOLIO__tool_only.md.
+  - Updated navigation: docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md, and
+    appended a durable status note in tasks/CODEX_HANDOFF__V0_SYNTHESIS_STATUS.md.
+
+  Where to look
+
+  - “Special doubles report”: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md (+
+    DOUBLES_MIRROR_DOUBLES__INVENTORY.md).
+  - New Aux parity exports: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__AUX_VTRAC_BADGE_MATRIX.md (and same filename
+    pattern for 2026-01-05..09).
+  - v0.2 defaults/runbook: docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md.
+
+  Next (when you’re ready to resume days under v0.2)
+
+  - Run the sequence in docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md (predictive pack →
+    create_candidate_universe.py --profile tool_only --top-n-dr 0 → play cards → tool-first portfolio).
+
+
+› OK IS THERE ANYTHING ELSE WE CAN DO TO OPTIMIZE AND MAKE THINGS BETTER? THAT DEEP AUDIT IN DIGIT REDUCTION TOOL
+  SEEMED TO REVEAL ALOT WE COULD POTENTIALLY ALTER WITHIN THE TOOL TO MAKE STRONGER I KNOW THE GENERAL IDEA IS (DONT
+  TOUCH ANALYZERS) BUT IM HONESTLY OPEN TO ASSUMING WE HAVE THE EVIDENCE FOR IT WOULD IT POSSSIBLE MAKE SENSE TO DO
+  THAT TYPE OF AUDIT ON SOME OF THE OTHER TOOLS LIKE HOT ZONES, STABEL PATTERN EXTRACTOR, VTRAC ANALYZER AND THEN
+  DECIDE? HOW MUCH OF THE FIX NOW VS FIX LATER DID WE ADDRESS? WHY SHOULD I FEEEL THIS IS STRONGER OR THAT WERE CLOSER
+  TO SME FORM OF SUPERBRAIN? CAN YOU PROVIDE OCOMPREHENSIVE THOUGHTS AND SUGGEST ANOTHER COMPREHENSIVE OVERNIGHT PLAN
+  OR WERE YOU NOT DONE AND THER WERE MORE STAGES IN THE SYNTHESIS STUFF OR EXTRACTING OPTIMAL INSIGHTS FROM ALLL THE
+  DETAILED TEMPLATES + RUNS? WHAT ABOUT UNDERSTANDING OPTMAL WAYS AUX FEATURES SCORE TOGETHER JSUT TRYING TO UNDERSTAND
+  OPTIMAL WAY FORWARD TO MAKE THINGS BETTER OR PLEASE INFORM ME OPTIMAL STATE OF THE ART PATH FORWARD BESIDES MORE GOLD
+  DAYS RUNS? ARE WE DONE SYNTHESIZING OR THE BIG PLAN THAT WAS BUILT? HOW ELSE CAN WE IMPROVE THINGS? REASON DEEPLY
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• You’re not “done” synthesizing (gold extraction is inherently iterative), but the v0 synthesis sprint is done enough
+  to safely resume runs under v0.2 defaults—and it’s measurably stronger than before.
+
+  What’s actually stronger now (why this is closer to a “superbrain”)
+
+  - Pipeline integrity is mostly stabilized: docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md:1 is almost entirely
+    Closed, meaning we’re no longer optimizing against lying/contaminated measurements.
+  - We now have a measurable “before → after” loop (predictive artifacts + grades + rollups) and Profit
+    Alerts are quarantined by default via --profile tool_only: docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0__SYNTHESIS_SPRINT.md:1.
+  - DR is no longer “mysteriously bad”: we proved it’s useful as trace/envelope evidence but its current “top-
+    caller” surface is weak, so v0.2 demotes it without touching the analyzer: docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    DR_V0__FEATURE_DECISIONS.md:1.
+  - Aux now has Windows-style parity visibility (boxed VTRAC badge matrix) as a reporting-only export, so it can be
+    mined/graded instead of argued about: docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md:1 + docs/
+    AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__AUX_VTRAC_BADGE_MATRIX.md:1.
+
+  Fix‑Now vs Fix‑Later
+
+  - Fix‑Now: basically handled (FN‑001..FN‑007 are Closed): docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md:1.
+  - Fix‑Later: huge by design (it’s hypotheses, not defects): docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md:1.
+    v0.2 is about turning the best of these into bounded, gradeable selection-layer rules.
+
+  Should we “audit other tools” like we did DR? Yes—but do it as a v0.2 consumption audit first
+  Before touching analyzers, the highest-leverage move is: prove whether the weakness is (a) tool behavior, (b) how we
+  ingest/translate it into Candidate Universe/Play Cards, or (c) budget allocation. DR was a perfect example: the trace
+  often contains the winner, but the “caller surface” was the problem.
+
+  I recommend the same 3-doc pattern for each tool (Stable / Hot Zones / VTRAC):
+
+  - *_V0__AUDIT__QUANT.md: hit/index-hit/box-hit by method_id + unique vs corroborative contribution (from grade CSVs)
+  - *_V0__AUDIT__CASES.md: ~10–20 curated “should-have-hit” cases using winners lens + RUNS Part 2 + tool summaries
+  - *_V0__FEATURE_DECISIONS.md: keep/demote/eval-only as predictive inputs (no analyzer edits)
+
+  Only after that, if we find a true correctness bug (not “it missed”), that’s Fix‑Now. If we find a repeatable
+  improvement across multiple windows, that becomes v0.3 analyzer tuning.
+
+  What’s left in the “big plan”
+
+  - v0 sprint infrastructure + v0.2 defaults are now explicitly locked in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    SUPERBRAIN_V0_2__DEFAULTS.md:1.
+  - What’s not “finished” is mining every template; instead, we should mine by triage surfaces (convergence queue,
+    doubles queue, badge-matrix pressure) and keep appending GOLD entries.
+
+  State‑of‑the‑art overnight plan (safe, independent, no analyzer edits)
+
+  1. Tool audits (Stable/HZ/VTRAC) as v0 consumption audits (quant + cases + decisions docs).
+  2. Index-hit → box-hit conversion focus: identify which bounded closure packs actually convert lane hits (using
+     existing grade columns like vtrac_index_hit_only).
+  3. Aux compounding: mine the new badge-matrix exports (2026-01-05..09__AUX_VTRAC_BADGE_MATRIX.*) into GOLD entries and
+     decide whether “badge density across variants” becomes a v0.2/v0.3 scoring feature.
+  4. Update docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md:1 only if the audits justify changing
+     defaults (still additive; no analyzer changes).
+  5. Regenerate tool-only predictive surfaces + rollups for the v0 window to confirm nothing regressed.
+
+  If you want me to proceed overnight on that plan, tell me whether to keep the scope selection/reporting only
+  (recommended) or also allow analyzer edits (I’d treat that as v0.3 and require a regression check across all three
+  corpus windows).
+
+
+› I LIKE ALL THAT BUT I STIL THINK MINIING RUNS SHOULD BE HELPFUL AS WELL TOO NO LIKE I LIKE THE BADGE MATRIX AND ALL
+  THAT BUT DONT WE WANT TO SEE HOW ALL THE VALUABLE AUUX FEATURES COULD HELP BE COMPOUDING SCORING AND ISNT THAT
+  QUANTIFIED IN THE STATE RUNS? ISNT ALOT OF STUFF FOR OPTIMIZING TOOLS WITHIN THERE? IN ADDITION TO EVERYTHING
+  METNIONED? I LIKE WHAAT YOU MENTIONED FOR OVERNIGHT PLAN I GET THE WHOLE NOT NEEDING TO ENCESSAIRLY MIND EVERY
+  TEMPLATE CAUSE OF THE GOOD REASONS YOU PROVIDE BUT ISNT THERE POSSIBLE MORE TRIAGE SURFACES? YOU EVEN SAY SOMETHING
+  LIKE KEEP APPENDING GOLD ENTRIES ARENT THOSE MORE BASED ON "BECAUSE THOSE WERE YOUR ASSIGNED TASKS?" LIKE WONT THE
+  OTHER TOOL AUDITS BRING ABOUT INSIGTS? ARENT WITHIN THE TEMPLAES THERE ARE SPECIFIC SECTION THAT ARE WRITTEN TO
+  QAUNTIFY ALOT OF THESE THINGS AS ELL HAVE THEY EVEN BEEN REVIEWED EVER IN DEPTH? I DONT KNOW MAYBE IM MISUNDERSTADING
+  I JUST WANT TO GET TO THE MOST POWERFUL VERSION OF THIS SYSTEM/BRAIN ETC. I APPROVE YOUR OVERNIGHT PLAN  BUT CAN YOU
+  PROVIDE FEEDBACK ON SOME I METNIONED?? I DO LIKE ALOT OF WHAT YOU SHARED AND PLAN FOR OVERNIGHT IM JUST BRINGING UP
+  QUESTION THAT COME TO MIND I GUESS... Fix‑Now vs Fix‑Later
+
+    - Fix‑Now: basically handled (FN‑001..FN‑007 are Closed): docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md:1.
+    - Fix‑Later: huge by design (it’s hypotheses, not defects): docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+  FIX_LATER_INDEX.md:1. v0.2 is about turning the best of these into bounded, gradeable selection-layer rules.
+
+    Should we “audit other tools” like we did DR? Yes—but do it as a v0.2 consumption audit first
+    Before touching analyzers, the highest-leverage move is: prove whether the weakness is (a) tool behavior, (b) how
+  we ingest/translate it into Candidate Universe/Play Cards, or (c) budget allocation. DR was a perfect example: the
+  trace often contains the winner, but the “caller surface” was the problem.
+
+    I recommend the same 3-doc pattern for each tool (Stable / Hot Zones / VTRAC):
+
+    - *_V0__AUDIT__QUANT.md: hit/index-hit/box-hit by method_id + unique vs corroborative contribution (from grade
+  CSVs)
+    - *_V0__AUDIT__CASES.md: ~10–20 curated “should-have-hit” cases using winners lens + RUNS Part 2 + tool summaries
+    - *_V0__FEATURE_DECISIONS.md: keep/demote/eval-only as predictive inputs (no analyzer edits)
+
+    Only after that, if we find a true correctness bug (not “it missed”), that’s Fix‑Now. If we find a repeatable
+  improvement across multiple windows, that becomes v0.3 analyzer tuning.
+
+    What’s left in the “big plan”
+
+    - v0 sprint infrastructure + v0.2 defaults are now explicitly locked in docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+  SUPERBRAIN_V0_2__DEFAULTS.md:1.
+    - What’s not “finished” is mining every template; instead, we should mine by triage surfaces (convergence queue,
+  doubles queue, badge-matrix pressure) and keep appending GOLD entries.
+
+    State‑of‑the‑art overnight plan (safe, independent, no analyzer edits)
+
+    1. Tool audits (Stable/HZ/VTRAC) as v0 consumption audits (quant + cases + decisions docs).
+    2. Index-hit → box-hit conversion focus: identify which bounded closure packs actually convert lane hits (using
+  existing grade columns like vtrac_index_hit_only).
+    3. Aux compounding: mine the new badge-matrix exports (2026-01-05..09__AUX_VTRAC_BADGE_MATRIX.*) into GOLD entries
+  and decide whether “badge density across variants” becomes a v0.2/v0.3 scoring feature.
+    4. Update docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md:1 only if the audits justify changing
+  defaults (still additive; no analyzer changes).
+    5. Regenerate tool-only predictive surfaces + rollups for the v0 window to confirm nothing regressed.
+
+    If you want me to proceed overnight on that plan, tell me whether to keep the scope selection/reporting only
+  (recommended) or also allow analyzer edits (I’d treat that as v0.3 and require a regression check across all three
+  corpus windows).
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report
+the issue.
+
+
+› ONE FINAL THING TO ADD FOR YOUR COMPREHNSIVE OVERNIGHT PLAN IT SEEEMS YOUR WORKING ON THE TEMPLATES HELP WITH
+  UNDERSTANDING HOW OUTPUTS SCORE TO WINNERS OF TEH TOOLS MIGHT BE RELVANT FOR AUDITING I  WOULD THINK WHILE ALSO
+  INCLUDING DETAILS FOR SCORING TOGETHER I THINK, ALSO IN AAT9_KIT YOU CAN FIND THE TOOLS "SELF OPTIMIZATION" LOG FOR
+  EACH TOOL IF YOU EVER NEED SOME BACKGROUND KNWOLEDGE FRUTHER ON HOW THINGS SHOULD SCORE OR THEIR PURPOSE OR EVEN
+  WITHIN FOLDER MASTER VALIDATION "FINAL_1" THROUGH "FINAL_7" HAS SOME DEEP INSIGHTS INTO THIS AND FINAL_CONTEXT1 ,2 ,3
+  I THINK ALL OF THEM HAVE VALUABLE BACKGROUND DATA FOR TOOL AUDTING IN ADDITION TO EVERYTHING YOU AVE PLANNED , DONT
+  DISREGARD YOUR PLAN THIS IS JUST TO HELP ENHANCE WIH TIPS, I RUST YOU TO PERFORM STATE OF THE ART COMPREHSIVE JOB TO
+  GET US CLOSER TO STRONGEST VERSION OF THE SYSTEM/BRAINS ETC. IM FULLY APPROVING AN OVERNIGHT PLAN MAKING UP YOUR PLAN
+  AND ANYTHING ELSE YUOU WANT TO ADD SO YOU CAN WORK COMPREHSINESIVELY AND INDEPENDENTLY IM GOING TO BED NOW HERE IS
+  WAHT YOU WERE WORKING ON BEFORE I INTERUPPTED  Updated Plan
+    └ Proceeding with the approved v0.2 synthesis block: mine RUNS via triage surfaces (not every template), produce
+  Stable/Hot Zones/VTRAC consumption audits (quant+cased+decisions), and update the gold ledger + portals so progress
+  is durable across resets.
+      □ Snapshot repo + scope gates
+      □ Write Stable audit docs
+      □ Write Hot Zones audit docs
+      □ Write VTRAC audit docs
+      □ Update gold ledger and portals PROCEED OPTIMALLY AND COMPRENEHSIVELY
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• - Added 3 new GOLD entries capturing “canonical-only conversion” (Hot Zones/VTRAC often surface the right canonical/
+    box even when the exact straight misses): docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:443
+    (GOLD-0019→GOLD-0021).
+  - Wired the completed v0 tool audits into navigation so they’re easy to find during synthesis: docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/PORTAL.md:36, docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md:32.
+  - Updated the reset-proof sprint handoff with “what’s done + where to look” (including the new GOLD entries + audit
+    docs): tasks/CODEX_HANDOFF__V0_SYNTHESIS_STATUS.md:65.
+  - Next highest-leverage synthesis work: mine the “index-hit → box-miss” queues in docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/HOT_ZONES_V0__AUDIT__CASES.md:1 and docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md:1 into more
+    GOLD entries, then decide whether to prototype the research-only “STRAIGHT→canonical→BOX” derived pack (no analyzer
+    edits).

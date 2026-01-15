@@ -80,7 +80,13 @@ Today, sharepacks capture:
 - **double-family** due-doubles groupings,
 - and a bounded **positional shortlist** (top candidates + tags).
 
-We do **not** currently export a full “all-combos-in-each-index with symbol overlays” chart into sharepacks. If we decide it’s needed, it should be added as a **new reporting-only export** (reads sharepack Aux draws, writes a sharepack-local table) so we keep analyzers untouched.
+We still do **not** export a full “all-combos-in-each-index with symbol overlays” chart *into sharepacks* (to keep sharepacks focused on frozen evidence).
+
+However, we **do** export a sharepack-derived version into RUNS (reporting-only) via:
+- `python3 scripts/tools/create_aux_vtrac_badge_matrix_report.py --date <D> [--sharepacks-root sharepacks/_predictive]`
+  - Outputs:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__AUX_VTRAC_BADGE_MATRIX.md`
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__AUX_VTRAC_BADGE_MATRIX.csv`
 
 ---
 
@@ -96,7 +102,4 @@ This ensures the string tables and Aux draw snapshots describe the same “world
 ## 6) Fix-later ideas (do not implement during pipeline hardening)
 
 - Candidate Universe “horizon grading” (carryover / N-draw window scoring) once the baseline corpus is stable.
-- Optional “boxed VTRAC combo symbol table” export (reporting-only) if we want to compound:
-  - pair colors + index-level status + positional tags,
-  - across Combined/Midday/Evening variants.
-
+- Optional: compound the boxed VTRAC badge-matrix export into v0.2 scoring once we’ve mined enough gold entries to justify it.

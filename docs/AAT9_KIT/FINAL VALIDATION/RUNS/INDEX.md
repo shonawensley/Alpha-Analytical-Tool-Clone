@@ -28,6 +28,24 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
 - Doubles / mirror-doubles deep dive: `DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md`
 - Candidate Universe rollup: `candidate_universe_rollup.md`
 - Play Card rollup: `play_card_rollup.md`
+- Aux VTRAC badge matrix (Windows parity export): `AUX_VTRAC_BADGE_MATRIX__AUDIT.md` + per-day `YYYY-MM-DD__AUX_VTRAC_BADGE_MATRIX.md`
+- Tool v0 consumption audits (quant → cases → feature decisions):
+  - Digit Reduction:
+    - `DR_V0__AUDIT__QUANT.md`
+    - `DR_V0__AUDIT__CASES.md`
+    - `DR_V0__FEATURE_DECISIONS.md`
+  - Stable:
+    - `STABLE_V0__AUDIT__QUANT.md`
+    - `STABLE_V0__AUDIT__CASES.md`
+    - `STABLE_V0__FEATURE_DECISIONS.md`
+  - Hot Zones:
+    - `HOT_ZONES_V0__AUDIT__QUANT.md`
+    - `HOT_ZONES_V0__AUDIT__CASES.md`
+    - `HOT_ZONES_V0__FEATURE_DECISIONS.md`
+  - VTRAC enhanced:
+    - `VTRAC_V0__AUDIT__QUANT.md`
+    - `VTRAC_V0__AUDIT__CASES.md`
+    - `VTRAC_V0__FEATURE_DECISIONS.md`
 
 ## D=2025-06-21 (H=2025-06-20)
 

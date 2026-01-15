@@ -14,7 +14,10 @@ data/original/**
 data/cleaned/**
 data/archive/**
 data/historical_files/**
+data/history/*.xlsm
+data/history/_legacy/
 data/ai_exports/**
+data/results/_legacy/
 
 # Optional whitelists (uncomment if you want to version specific outputs)
 # !data/outputs/tables/**
@@ -67,11 +70,16 @@ CLAUDE.local.md
 # Codex scratch outputs (never commit)
 .codex/tmp_*/
 .codex/smokes/
+.codex/_scratch/
 # Local sharepack archives (keep day folders canonical under sharepacks/<D>/)
 sharepacks/_legacy/
 sharepacks/_scratch/
+sharepacks/_predictive/
 # Local scratch analysis
 analysis_2/
+
+# Local documentation scratch (not SSOT)
+docs/AAT9_KIT/FINAL VALIDATION/POST RUNS/
 
 # Windows Mark-of-the-Web artifacts (when copying files from Windows)
 *:Zone.Identifier*

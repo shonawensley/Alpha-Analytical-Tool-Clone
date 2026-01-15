@@ -1,0 +1,1725 @@
+Done (reporting-only; no analyzer changes)
+
+  - Added numeric corpus export: scripts/tools/export_tool_metrics_corpus.py:1 → docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv:1
+  - Added Combined/cross-variant quantification: scripts/tools/create_cross_variant_report.py:1 → docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md:1
+  - Added mirror-double frequency lens: scripts/tools/create_mirror_double_frequency_report.py:1 → docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md:1
+  - Converted GOLD_RUNS_2 into SSOT-safe actions: docs/AAT9_KIT/FINAL VALIDATION/RUNS/GOLD_RUNS_2_TRIAGE.md:1
+  - Wired all of the above into the deep-research pack scope: docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md:1, docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-
+    12-30_to_2026-01-04/README.md:1, docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md:1
+
+  Key quantified answers to your “Combined matters” concern
+
+  - Stable evidence origin across the 6-day corpus: same-period 33.7%, opposite-period bounce 38.0%, Combined 25.2% (docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md:1)
+  - Mirror-double-ish outcomes are common: VTRAC-signature repeats 46.0% overall; “mirror-repeat but literal single” 20.2% (includes the 489-type case) (docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-
+    01-04__MIRROR_DOUBLE_FREQUENCY.md:1)
+
+  Validation + publish
+
+  - Re-audited the 6 days: PASS=825 WARN=3 FAIL=0 SKIP=6 (local: reports/audit/sharepacks_audit_20251230_to_20260104.md:1)
+  - Pushed to GitHub branch checkpoint/gold-days-2025-12-30_to_2026-01-04 at commit fbbdeaee (extends the earlier 49f1ad59)
+
+  Rerun commands (if needed)
+
+  - python3 scripts/tools/export_tool_metrics_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+  - python3 scripts/tools/create_cross_variant_report.py --start 2025-12-30 --end 2026-01-04
+  - python3 scripts/tools/create_mirror_double_frequency_report.py --start 2025-12-30 --end 2026-01-04
+
+
+› AS MENTIONWD IM HEADED TO BED , CAN YOU BUILD OUT AAN OPTIMAL AND STATE OF THE ART OCCOMPEHENSIVE PATH OR PLAN FORWARD I CAN APPROVE FOR YOU TO WORK OPTIMALLY AND SAFELY NEXT COUPLE OR FEW HOURS WITHOUT MY
+  ASSISTANCE? FORM THAT COMPREHSNIVE PLAN NOW FOR ME TO APPROVE PLEASE
+
+
+• Explored
+  └ Read FIX_LATER_INDEX.md
+
+• Updated Plan
+  └ Queued next work block: extend the 6-day gold-days package with corpus-level rollups (profit alerts + control center + convergence dashboard) while keeping changes strictly in reporting/docs and avoiding
+    any large artifact commits.
+    □ Confirm scope and safety gates
+    □ Roll up Profit Alerts episodes
+    □ Build corpus dashboard & convergence
+    □ Roll up Control Center boards
+    □ Wire outputs into package docs
+    □ Audit, checkpoint commit, push
+
+• Here’s the overnight plan I’ll execute (all workflow/reporting layer only; no analyzer changes to Stable/DR/VTRAC/Hot Zones, and no touching combined-table extraction/readers).
+
+  Safety Gates (non‑negotiable)
+
+  - Stay on branch checkpoint/gold-days-2025-12-30_to_2026-01-04.
+  - No deletions/moves of sharepacks or history files.
+  - Do not commit any large/untracked artifacts (sharepacks/<D>/** raw CSV/HTML/JSON dumps, data/history/*.xlsm, _legacy/, docs/.../POST RUNS/).
+  - If any audit/validator produces FAIL>0, stop and log a new entry in docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md (no “guess fixes”).
+
+  Plan (2–4 hours)
+
+  1. Profit Alerts rollup (6-day corpus)
+      - Build scripts/tools/rollup_profit_alerts_corpus.py to aggregate from sharepacks/<D>/control_center/profit_alerts_eval.csv + profit_alerts_eval_merged.csv.
+      - Outputs (small, Git-friendly):
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.csv
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md
+      - Metrics: fires, HIT(decay), HIT<=7, HIT<=14, CENSORED rate, time-to-hit stats (per AlertId + merged episodes).
+  2. Corpus dashboard + convergence cases
+      - Build scripts/tools/create_corpus_dashboard.py reading:
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv
+      - Outputs:
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md
+          - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md
+      - This makes “environment classes” measurable (without tuning): cross-tool support counts, Stable exact-hit rates, HZ rank distributions, VTRAC top-index inclusion, DR stamp coverage, etc.
+  3. Control Center boards rollup
+      - Build scripts/tools/rollup_control_center_boards.py to aggregate:
+          - sharepacks/<D>/control_center/blackapple_alerts.csv
+          - sharepacks/<D>/control_center/due_doubles.csv
+          - sharepacks/<D>/control_center/vtrac_repeat_watch.csv
+  4. Wire into the research pack (SSOT pointers only)
+      - Update:
+          - docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md
+          - docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md
+          - docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md
+      - So ChatGPT Pro can use the rollups without opening huge raw artifacts.
+  5. Validate + checkpoint push
+      - Run: python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04 (must stay FAIL=0).
+      - py_compile new scripts.
+      - Commit/push only the new scripts + new small .md/.csv outputs to the same checkpoint branch.
+
+  If you reply GO, I’ll start immediately and leave you a concise “what changed / where to read first” note when finished.
+
+
+› CAN YOU QUICKLY EXPLAIN WHY THIS PLAN IS VALUABLE? SHOULD WE ALSO BE CONSIDERING ADDRESSING FIX NOW AAND FIX LATER ITEMS THAT CAN IMPROVE PEROFRMANCE AS WELL?  PLEASE PROVIDE COMPREHSIVE FEEDBACK
+
+
+• This plan is valuable because it turns the 6‑day corpus from “lots of beautiful artifacts” into measurable, comparable evidence you can actually optimize against without guessing.
+
+  Why it’s high‑leverage (and safe)
+
+  - It compresses ~6 days × ~14 states × 2 draws into a few corpus‑level truth tables (CSV/MD) so you can see patterns across days/states instead of anecdotal reads.
+  - It directly addresses your “Combined/cross‑variant influence” worry by quantifying it (instead of relying on narrative mentions).
+  - It converts “superbrain ideas” into testable hypotheses (lift, hit‑within‑window, cost_units) so we don’t overfit by tuning on vibes.
+  - It stays in the reporting/evaluation layer, so it can’t “destroy the system” the way analyzer changes could.
+
+  Fix‑Now vs Fix‑Later (yes, we consider both—but in the right order)
+
+  - Fix‑Now (correctness/semantics) should always be handled immediately if it appears, because it corrupts evaluation. Right now the 6‑day audit is FAIL=0, so there’s no active Fix‑Now blocker—but the plan
+    still runs the audit and stops if a FAIL appears.
+  - Fix‑Later (performance/tuning) is absolutely on the roadmap, but the correct move is: measure first → tune second. Most Fix‑Later items (gating rules, weights, candidate expansion like “mirror‑double
+    closure”, etc.) should not be implemented until we can quantify their lift/cost on the corpus.
+
+  What this unlocks next (performance improvements, evidence‑driven)
+
+  - After the rollups exist, we can rank Fix‑Later items by “does it actually improve hit‑within‑window and reduce cost_units?” and then implement only the winners (still preferably behind a flag /
+    reversible).
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Context compacted
+
+  Why it matters (practically)
+
+  - It answers your biggest anxiety questions with data, not vibes: “Are Combined/cross-variant effects real?” “Are mirror‑double/VTRAC-family effects frequent enough to matter?” “Are we seeing tool misses vs
+    workflow corruption?”
+  - It prevents overfitting-by-accident: you get a baseline corpus summary first, then you tune only what the corpus shows is worth tuning.
+  - It makes the “superbrain” step possible: you can’t intelligently aggregate until you have a consistent, numeric view of how each lens behaves across many outcomes.
+
+  Fix‑Now vs Fix‑Later (yes, both matter — but differently)
+  - Fix‑Later = performance/tuning/strategy ideas. These absolutely can improve performance, but they should be treated as hypotheses until the corpus shows they’re consistently helpful. The safest sequence
+    is: measure → pick 1–2 high‑ROI Fix‑Later items → implement with explicit before/after metrics → repeat.
+
+  The “best of both worlds” approach
+
+
+
+› OK PERFECT SOUNDS GOOD I RTRUST YOU TO PROCEED OPTIMALLY YOU ARE FULLY APPROVED   TO WORK OPTIMALLY GOODNIGHT
+
+
+• Updated Plan
+  └ Create small, Git-friendly corpus rollups for the 6-day gold pack (profit alerts, control-center boards, dashboard/convergence cases), then wire into the research manifest/prompt and checkpoint the
+    changes (no analyzer edits, no large artifact commits).
+    □ Checkpoint commit to branch
+
+• Ran git status -sb
+  └ ## checkpoint/gold-days-2025-12-30_to_2026-01-04...origin/checkpoint/gold-days-2025-12-30_to_2026-01-04
+    ?? data/history/Pick3StatsC4_2025-12-29.xlsm
+    … +2207 lines
+    ?? tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+    ?? tasks/profit_discuss.txt
+
+• Explored
+  └ List gold_days_2025-12-30_to_2026-01-04
+    List RUNS
+    List tools
+
+• Updated Plan
+  └ ✔ Inspect repo + existing corpus outputs
+    □ Add Profit Alerts rollup script
+    □ Add corpus dashboard reports
+    □ Add Control Center boards rollup
+    □ Wire pack docs + rerun audit
+    □ Checkpoint commit to branch
+
+• Ran python3 -c "import pandas as pd; import pathlib; p=pathlib.Path('sharepacks/2025-12-30/control_center/profit_alerts_eval_merged.csv'); print(p.exists()); df=pd.read_csv(p); print(df.columns.tolist());
+  │ print(df.head(2).to_string(index=False))"
+  └ True
+    ['results_date', 'state', 'state_key', 'variant', 'implied_set_size', 'implied_set', 'alert_ids', 'suggested_kinds', 'strength_max', 'decay_min', 'decay_max', 'promoters', 'status', 'time_to_hit_steps',
+    … +5 lines
+      2025-12-30 Connecticut Connecticut4 Combined                 6 ["689","698","869","896","968","986"]       A11             BOX             5          2          2       A08 EXPIRED                NaN
+    NaN       NaN            N             ?                    N           NaN           NaN                N                 ?
+
+• Explored
+  └ List control_center
+
+• Ran python3 -c "import pandas as pd; import pathlib; p=pathlib.Path('sharepacks/2025-12-30/control_center/profit_alerts_eval.csv'); print(p.exists()); df=pd.read_csv(p); print(df.columns.tolist());
+  │ print(df.head(2).to_string(index=False))"
+  └ True
+    ['row_num', 'results_date', 'start_when', 'expiry_when', 'state', 'state_key', 'variant', 'alert_id', 'strength', 'suggested', 'row_type', 'implied_set_size', 'a11_star_level', 'a11_star_score',
+    … +9 lines
+    CONS/3V/BA           056       56.0                         Y           Y             NaN          N              NaN              NaN EXPIRED                NaN       NaN       NaN                N
+    N             ?                    N           NaN           NaN                N                 ?
+
+• Explored
+  └ Read create_cross_variant_report.py
+
+• Ran python3 - <<'PY'
+  │ import pandas as pd
+  │ from pathlib import Path
+  │ … +6 lines
+  └ rows 44
+    suggested_kinds unique ['BOX', 'STR8_3', 'STR8_4of8', 'STR8_8']
+    alert_ids unique sample ['A01', 'A02', 'A02,A05', 'A04', 'A04,A11', 'A05', 'A09', 'A10', 'A11', 'A12']
+
+• Added scripts/tools/rollup_profit_alerts_corpus.py (+537 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Roll up Profit Alerts evaluation outputs across a date range.
+      4 +
+      5 +This is intentionally evaluation/reporting-only:
+      6 +  - It does not change analyzers.
+      7 +  - It reads existing sharepack Brain-2 artifacts under sharepacks/<D>/control_center/.
+      8 +
+      9 +Outputs (small, Git-friendly):
+     10 +  - __PROFIT_ALERTS_ROLLUP_ROWS.csv   (per AlertId; profit_alerts_eval.csv)
+     11 +  - __PROFIT_ALERTS_ROLLUP_MERGED.csv (per suggested_kinds + per alert_ids group; profit_alerts_eval_merged.csv)
+     12 +  - __PROFIT_ALERTS_ROLLUP.md         (human summary)
+     13 +
+     14 +Usage:
+     15 +  python3 scripts/tools/rollup_profit_alerts_corpus.py --start 2025-12-30 --end 2026-01-04
+     16 +"""
+     17 +
+     18 +from __future__ import annotations
+     19 +
+     20 +import argparse
+     21 +import csv
+     22 +import datetime as dt
+     23 +import math
+     24 +from collections import Counter, defaultdict
+     25 +from dataclasses import dataclass, field
+     26 +from pathlib import Path
+     27 +from statistics import mean, median
+     28 +from typing import Dict, List, Optional, Sequence, Tuple
+     29 +
+     30 +
+     31 +ROOT = Path(__file__).resolve().parents[2]
+     32 +
+     33 +
+     34 +def parse_date(value: str) -> dt.date:
+     35 +    return dt.date.fromisoformat(value)
+     36 +
+     37 +
+     38 +def daterange(start: str, end: str) -> List[str]:
+     39 +    s = parse_date(start)
+     40 +    e = parse_date(end)
+     41 +    if e < s:
+     42 +        raise SystemExit("--end must be >= --start")
+     43 +    out: List[str] = []
+     44 +    cur = s
+     45 +    while cur <= e:
+     46 +        out.append(cur.isoformat())
+     47 +        cur += dt.timedelta(days=1)
+     48 +    return out
+     49 +
+     50 +
+     51 +def safe_int(value: str) -> Optional[int]:
+     52 +    v = (value or "").strip()
+     53 +    if not v:
+     54 +        return None
+     55 +    try:
+     56 +        return int(float(v))
+     57 +    except Exception:
+     58 +        return None
+     59 +
+     60 +
+     61 +def pct(n: int, d: int) -> str:
+     62 +    return "0.0%" if d == 0 else f"{(100.0 * n / d):.1f}%"
+     63 +
+     64 +
+     65 +def rate(n: int, d: int) -> str:
+     66 +    return "" if d == 0 else f"{(n / d):.4f}"
+     67 +
+     68 +
+     69 +def p90(values: Sequence[int]) -> Optional[int]:
+     70 +    if not values:
+     71 +        return None
+     72 +    xs = sorted(values)
+     73 +    idx = max(0, math.ceil(0.9 * len(xs)) - 1)
+     74 +    return xs[idx]
+     75 +
+     76 +
+     77 +def ynq_bucket(value: str) -> str:
+     78 +    v = (value or "").strip().upper()
+     79 +    if v in {"Y", "N", "?"}:
+     80 +        return v
+     81 +    return ""
+     82 +
+     83 +
+     84 +@dataclass
+     85 +class HitCounters:
+     86 +    measured: int = 0
+     87 +    hits: int = 0
+     88 +    unknown: int = 0
+     89 +
+     90 +    def add(self, value: str) -> None:
+     91 +        b = ynq_bucket(value)
+     92 +        if b == "Y":
+     93 +            self.measured += 1
+     94 +            self.hits += 1
+     95 +        elif b == "N":
+     96 +            self.measured += 1
+     97 +        elif b == "?":
+     98 +            self.unknown += 1
+     99 +
+    100 +
+    101 +@dataclass
+    102 +class RowAgg:
+    103 +    rows_total: int = 0
+    104 +    rows_candidates: int = 0
+    105 +    rows_promoters: int = 0
+    106 +    status_counts: Counter[str] = field(default_factory=Counter)
+    107 +
+    108 +    hit_decay: HitCounters = field(default_factory=HitCounters)
+    109 +    hit_any_decay: HitCounters = field(default_factory=HitCounters)
+    110 +    hit_7: HitCounters = field(default_factory=HitCounters)
+    111 +    hit_any_7: HitCounters = field(default_factory=HitCounters)
+    112 +    hit_14: HitCounters = field(default_factory=HitCounters)
+    113 +    hit_any_14: HitCounters = field(default_factory=HitCounters)
+    114 +
+    115 +    time_to_hit_steps: List[int] = field(default_factory=list)
+    116 +    implied_set_sizes: List[int] = field(default_factory=list)
+    117 +    strengths: List[int] = field(default_factory=list)
+    118 +
+    119 +    def add_row(self, row: Dict[str, str]) -> None:
+    120 +        self.rows_total += 1
+    121 +        row_type = (row.get("row_type") or "").strip().upper()
+    122 +        if row_type == "CANDIDATE":
+    123 +            self.rows_candidates += 1
+    124 +        elif row_type == "PROMOTER":
+    125 +            self.rows_promoters += 1
+    126 +
+    127 +        status = (row.get("status") or "").strip().upper()
+    128 +        if status:
+    129 +            self.status_counts[status] += 1
+    130 +
+    131 +        if row_type == "CANDIDATE":
+    132 +            self.hit_decay.add(row.get("hit_within_decay", ""))
+    133 +            self.hit_any_decay.add(row.get("hit_any_within_decay", ""))
+    134 +            self.hit_7.add(row.get("hit_within_7", ""))
+    135 +            self.hit_any_7.add(row.get("hit_any_within_7", ""))
+    136 +            self.hit_14.add(row.get("hit_within_14", ""))
+    137 +            self.hit_any_14.add(row.get("hit_any_within_14", ""))
+    138 +
+    139 +            t = safe_int(row.get("time_to_hit_steps") or "")
+    140 +            if status == "HIT" and t is not None:
+    141 +                self.time_to_hit_steps.append(t)
+    142 +
+    143 +            ss = safe_int(row.get("implied_set_size") or "")
+    144 +            if ss is not None:
+    145 +                self.implied_set_sizes.append(ss)
+    146 +
+    147 +            st = safe_int(row.get("strength") or "")
+    148 +            if st is not None:
+    149 +                self.strengths.append(st)
+    150 +
+    151 +
+    152 +@dataclass
+    153 +class MergedAgg:
+    154 +    rows_total: int = 0
+    155 +    status_counts: Counter[str] = field(default_factory=Counter)
+    156 +    hit_any_decay: HitCounters = field(default_factory=HitCounters)
+    157 +    hit_any_7: HitCounters = field(default_factory=HitCounters)
+    158 +    hit_any_14: HitCounters = field(default_factory=HitCounters)
+    159 +    time_to_hit_steps: List[int] = field(default_factory=list)
+    160 +    implied_set_sizes: List[int] = field(default_factory=list)
+    161 +
+    162 +    def add_row(self, row: Dict[str, str]) -> None:
+    163 +        self.rows_total += 1
+    164 +        status = (row.get("status") or "").strip().upper()
+    165 +        if status:
+    166 +            self.status_counts[status] += 1
+    167 +
+    168 +        self.hit_any_decay.add(row.get("hit_any_within_decay", ""))
+    169 +        self.hit_any_7.add(row.get("hit_any_within_7", ""))
+    170 +        self.hit_any_14.add(row.get("hit_any_within_14", ""))
+    171 +
+    172 +        t = safe_int(row.get("time_to_hit_steps") or "")
+    173 +        if status == "HIT" and t is not None:
+    174 +            self.time_to_hit_steps.append(t)
+    175 +
+    176 +        ss = safe_int(row.get("implied_set_size") or "")
+    177 +        if ss is not None:
+    178 +            self.implied_set_sizes.append(ss)
+    179 +
+    180 +
+    181 +def load_csv_rows(path: Path) -> List[Dict[str, str]]:
+    182 +    with path.open(encoding="utf-8", errors="replace", newline="") as f:
+    183 +        dr = csv.DictReader(f)
+    184 +        return list(dr)
+    185 +
+    186 +
+    187 +def write_csv(path: Path, fieldnames: List[str], rows: List[Dict[str, object]]) -> None:
+    188 +    path.parent.mkdir(parents=True, exist_ok=True)
+    189 +    with path.open("w", encoding="utf-8", newline="") as f:
+    190 +        dw = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+    191 +        dw.writeheader()
+    192 +        for row in rows:
+    193 +            dw.writerow(row)
+    194 +
+    195 +
+    196 +def fmt_float(v: Optional[float]) -> str:
+    197 +    return "" if v is None else f"{v:.3f}"
+    198 +
+    199 +
+    200 +def fmt_int(v: Optional[int]) -> str:
+    201 +    return "" if v is None else str(v)
+    202 +
+    203 +
+    204 +def hit_summary(h: HitCounters) -> Tuple[int, int, int, str]:
+    205 +    return (h.hits, h.measured, h.unknown, rate(h.hits, h.measured))
+    206 +
+    207 +
+    208 +def main() -> None:
+    209 +    ap = argparse.ArgumentParser()
+    210 +    ap.add_argument("--start", required=True, help="Start results date D (YYYY-MM-DD)")
+    211 +    ap.add_argument("--end", required=True, help="End results date D (YYYY-MM-DD)")
+    212 +    ap.add_argument(
+    213 +        "--out-dir",
+    214 +        default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"),
+    215 +        help="Output directory for rollups",
+    216 +    )
+    217 +    ap.add_argument(
+    218 +        "--sharepacks-dir",
+    219 +        default=str(ROOT / "sharepacks"),
+    220 +        help="Sharepacks root directory",
+    221 +    )
+    222 +    args = ap.parse_args()
+    223 +
+    224 +    dates = daterange(args.start, args.end)
+    225 +    sharepacks_root = Path(args.sharepacks_dir)
+    226 +    out_dir = Path(args.out_dir)
+    227 +    out_dir.mkdir(parents=True, exist_ok=True)
+    228 +
+    229 +    by_alert: Dict[str, RowAgg] = defaultdict(RowAgg)
+    230 +    overall_rows = RowAgg()
+    231 +
+    232 +    merged_by_suggested: Dict[str, MergedAgg] = defaultdict(MergedAgg)
+    233 +    merged_by_alert_ids: Dict[str, MergedAgg] = defaultdict(MergedAgg)
+    234 +    overall_merged = MergedAgg()
+    235 +
+    236 +    missing_eval: List[str] = []
+    237 +    missing_merged: List[str] = []
+    238 +
+    239 +    for d in dates:
+    240 +        eval_path = sharepacks_root / d / "control_center" / "profit_alerts_eval.csv"
+    241 +        merged_path = sharepacks_root / d / "control_center" / "profit_alerts_eval_merged.csv"
+    242 +
+    243 +        if eval_path.exists():
+    244 +            for row in load_csv_rows(eval_path):
+    245 +                aid = (row.get("alert_id") or "").strip().upper() or "UNKNOWN"
+    246 +                by_alert[aid].add_row(row)
+    247 +                overall_rows.add_row(row)
+    248 +        else:
+    249 +            missing_eval.append(d)
+    250 +
+    251 +        if merged_path.exists():
+    252 +            for row in load_csv_rows(merged_path):
+    253 +                suggested = (row.get("suggested_kinds") or "").strip() or "UNKNOWN"
+    254 +                alert_ids = (row.get("alert_ids") or "").strip() or "UNKNOWN"
+    255 +                merged_by_suggested[suggested].add_row(row)
+    256 +                merged_by_alert_ids[alert_ids].add_row(row)
+    257 +                overall_merged.add_row(row)
+    258 +        else:
+    259 +            missing_merged.append(d)
+    260 +
+    261 +    stem = f"{args.start}_to_{args.end}__PROFIT_ALERTS_ROLLUP"
+    262 +    rows_csv = out_dir / f"{stem}_ROWS.csv"
+    263 +    merged_csv = out_dir / f"{stem}_MERGED.csv"
+    264 +    md_path = out_dir / f"{stem}.md"
+    265 +
+    266 +    # Per-AlertId rows CSV
+    267 +    rows_out: List[Dict[str, object]] = []
+    268 +    for aid in sorted(by_alert.keys()):
+    269 +        agg = by_alert[aid]
+    270 +        d_hit, d_meas, d_unk, d_rate = hit_summary(agg.hit_decay)
+    271 +        a_hit, a_meas, a_unk, a_rate = hit_summary(agg.hit_any_decay)
+    272 +        h7_hit, h7_meas, h7_unk, h7_rate = hit_summary(agg.hit_7)
+    273 +        a7_hit, a7_meas, a7_unk, a7_rate = hit_summary(agg.hit_any_7)
+    274 +        h14_hit, h14_meas, h14_unk, h14_rate = hit_summary(agg.hit_14)
+    275 +        a14_hit, a14_meas, a14_unk, a14_rate = hit_summary(agg.hit_any_14)
+    276 +
+    277 +        t_mean = mean(agg.time_to_hit_steps) if agg.time_to_hit_steps else None
+    278 +        t_med = median(agg.time_to_hit_steps) if agg.time_to_hit_steps else None
+    279 +        t_p90 = p90(agg.time_to_hit_steps)
+    280 +        ss_mean = mean(agg.implied_set_sizes) if agg.implied_set_sizes else None
+    281 +        st_mean = mean(agg.strengths) if agg.strengths else None
+    282 +
+    283 +        rows_out.append(
+    284 +            {
+    285 +                "alert_id": aid,
+    286 +                "rows_total": agg.rows_total,
+    287 +                "rows_candidates": agg.rows_candidates,
+    288 +                "rows_promoters": agg.rows_promoters,
+    289 +                "status_HIT": agg.status_counts.get("HIT", 0),
+    290 +                "status_EXPIRED": agg.status_counts.get("EXPIRED", 0),
+    291 +                "status_CENSORED": agg.status_counts.get("CENSORED", 0),
+    292 +                "status_ACTIVE": agg.status_counts.get("ACTIVE", 0),
+    293 +                "hit_decay_hits": d_hit,
+    294 +                "hit_decay_measured": d_meas,
+    295 +                "hit_decay_unknown": d_unk,
+    296 +                "hit_decay_rate": d_rate,
+    297 +                "hit_any_decay_hits": a_hit,
+    298 +                "hit_any_decay_measured": a_meas,
+    299 +                "hit_any_decay_unknown": a_unk,
+    300 +                "hit_any_decay_rate": a_rate,
+    301 +                "hit_7_hits": h7_hit,
+    302 +                "hit_7_measured": h7_meas,
+    303 +                "hit_7_unknown": h7_unk,
+    304 +                "hit_7_rate": h7_rate,
+    305 +                "hit_any_7_hits": a7_hit,
+    306 +                "hit_any_7_measured": a7_meas,
+    307 +                "hit_any_7_unknown": a7_unk,
+    308 +                "hit_any_7_rate": a7_rate,
+    309 +                "hit_14_hits": h14_hit,
+    310 +                "hit_14_measured": h14_meas,
+    311 +                "hit_14_unknown": h14_unk,
+    312 +                "hit_14_rate": h14_rate,
+    313 +                "hit_any_14_hits": a14_hit,
+    314 +                "hit_any_14_measured": a14_meas,
+    315 +                "hit_any_14_unknown": a14_unk,
+    316 +                "hit_any_14_rate": a14_rate,
+    317 +                "time_to_hit_mean_steps": fmt_float(t_mean),
+    318 +                "time_to_hit_median_steps": fmt_float(t_med),
+    319 +                "time_to_hit_p90_steps": fmt_int(t_p90),
+    320 +                "implied_set_size_mean": fmt_float(ss_mean),
+    321 +                "strength_mean": fmt_float(st_mean),
+    322 +            }
+    323 +        )
+    324 +
+    325 +    rows_fields = [
+    326 +        "alert_id",
+    327 +        "rows_total",
+    328 +        "rows_candidates",
+    329 +        "rows_promoters",
+    330 +        "status_HIT",
+    331 +        "status_EXPIRED",
+    332 +        "status_CENSORED",
+    333 +        "status_ACTIVE",
+    334 +        "hit_decay_hits",
+    335 +        "hit_decay_measured",
+    336 +        "hit_decay_unknown",
+    337 +        "hit_decay_rate",
+    338 +        "hit_any_decay_hits",
+    339 +        "hit_any_decay_measured",
+    340 +        "hit_any_decay_unknown",
+    341 +        "hit_any_decay_rate",
+    342 +        "hit_7_hits",
+    343 +        "hit_7_measured",
+    344 +        "hit_7_unknown",
+    345 +        "hit_7_rate",
+    346 +        "hit_any_7_hits",
+    347 +        "hit_any_7_measured",
+    348 +        "hit_any_7_unknown",
+    349 +        "hit_any_7_rate",
+    350 +        "hit_14_hits",
+    351 +        "hit_14_measured",
+    352 +        "hit_14_unknown",
+    353 +        "hit_14_rate",
+    354 +        "hit_any_14_hits",
+    355 +        "hit_any_14_measured",
+    356 +        "hit_any_14_unknown",
+    357 +        "hit_any_14_rate",
+    358 +        "time_to_hit_mean_steps",
+    359 +        "time_to_hit_median_steps",
+    360 +        "time_to_hit_p90_steps",
+    361 +        "implied_set_size_mean",
+    362 +        "strength_mean",
+    363 +    ]
+    364 +    write_csv(rows_csv, rows_fields, rows_out)
+    365 +
+    366 +    # Merged CSV (two views: suggested_kinds + alert_ids)
+    367 +    merged_out: List[Dict[str, object]] = []
+    368 +
+    369 +    def emit_merged(view: str, key: str, agg: MergedAgg) -> None:
+    370 +        d_hit, d_meas, d_unk, d_rate = hit_summary(agg.hit_any_decay)
+    371 +        h7_hit, h7_meas, h7_unk, h7_rate = hit_summary(agg.hit_any_7)
+    372 +        h14_hit, h14_meas, h14_unk, h14_rate = hit_summary(agg.hit_any_14)
+    373 +        t_mean = mean(agg.time_to_hit_steps) if agg.time_to_hit_steps else None
+    374 +        t_med = median(agg.time_to_hit_steps) if agg.time_to_hit_steps else None
+    375 +        t_p90 = p90(agg.time_to_hit_steps)
+    376 +        ss_mean = mean(agg.implied_set_sizes) if agg.implied_set_sizes else None
+    377 +        merged_out.append(
+    378 +            {
+    379 +                "view": view,
+    380 +                "key": key,
+    381 +                "rows_total": agg.rows_total,
+    382 +                "status_HIT": agg.status_counts.get("HIT", 0),
+    383 +                "status_EXPIRED": agg.status_counts.get("EXPIRED", 0),
+    384 +                "status_CENSORED": agg.status_counts.get("CENSORED", 0),
+    385 +                "status_ACTIVE": agg.status_counts.get("ACTIVE", 0),
+    386 +                "hit_any_decay_hits": d_hit,
+    387 +                "hit_any_decay_measured": d_meas,
+    388 +                "hit_any_decay_unknown": d_unk,
+    389 +                "hit_any_decay_rate": d_rate,
+    390 +                "hit_any_7_hits": h7_hit,
+    391 +                "hit_any_7_measured": h7_meas,
+    392 +                "hit_any_7_unknown": h7_unk,
+    393 +                "hit_any_7_rate": h7_rate,
+    394 +                "hit_any_14_hits": h14_hit,
+    395 +                "hit_any_14_measured": h14_meas,
+    396 +                "hit_any_14_unknown": h14_unk,
+    397 +                "hit_any_14_rate": h14_rate,
+    398 +                "time_to_hit_mean_steps": fmt_float(t_mean),
+    399 +                "time_to_hit_median_steps": fmt_float(t_med),
+    400 +                "time_to_hit_p90_steps": fmt_int(t_p90),
+    401 +                "implied_set_size_mean": fmt_float(ss_mean),
+    402 +            }
+    403 +        )
+    404 +
+    405 +    for k in sorted(merged_by_suggested.keys()):
+    406 +        emit_merged("suggested_kinds", k, merged_by_suggested[k])
+    407 +    for k in sorted(merged_by_alert_ids.keys()):
+    408 +        emit_merged("alert_ids", k, merged_by_alert_ids[k])
+    409 +
+    410 +    merged_fields = [
+    411 +        "view",
+    412 +        "key",
+    413 +        "rows_total",
+    414 +        "status_HIT",
+    415 +        "status_EXPIRED",
+    416 +        "status_CENSORED",
+    417 +        "status_ACTIVE",
+    418 +        "hit_any_decay_hits",
+    419 +        "hit_any_decay_measured",
+    420 +        "hit_any_decay_unknown",
+    421 +        "hit_any_decay_rate",
+    422 +        "hit_any_7_hits",
+    423 +        "hit_any_7_measured",
+    424 +        "hit_any_7_unknown",
+    425 +        "hit_any_7_rate",
+    426 +        "hit_any_14_hits",
+    427 +        "hit_any_14_measured",
+    428 +        "hit_any_14_unknown",
+    429 +        "hit_any_14_rate",
+    430 +        "time_to_hit_mean_steps",
+    431 +        "time_to_hit_median_steps",
+    432 +        "time_to_hit_p90_steps",
+    433 +        "implied_set_size_mean",
+    434 +    ]
+    435 +    write_csv(merged_csv, merged_fields, merged_out)
+    436 +
+    437 +    # Markdown
+    438 +    lines: List[str] = []
+    439 +    lines.append(f"# Profit Alerts Rollup — {args.start} → {args.end}")
+    440 +    lines.append("")
+    441 +    lines.append("Small, corpus-level summary of Profit Alerts evaluation outputs (row-level and merged play-sets).")
+    442 +    lines.append("")
+    443 +    lines.append("Inputs (per day):")
+    444 +    lines.append("- `sharepacks/<D>/control_center/profit_alerts_eval.csv`")
+    445 +    lines.append("- `sharepacks/<D>/control_center/profit_alerts_eval_merged.csv`")
+    446 +    lines.append("")
+    447 +    lines.append("Outputs:")
+    448 +    try:
+    449 +        lines.append(f"- `{rows_csv.relative_to(ROOT)}`")
+    450 +    except Exception:
+    451 +        lines.append(f"- `{rows_csv}`")
+    452 +    try:
+    453 +        lines.append(f"- `{merged_csv.relative_to(ROOT)}`")
+    454 +    except Exception:
+    455 +        lines.append(f"- `{merged_csv}`")
+    456 +    lines.append("")
+    457 +
+    458 +    if missing_eval or missing_merged:
+    459 +        lines.append("## Missing inputs (skipped days)")
+    460 +        lines.append("")
+    461 +        if missing_eval:
+    462 +            lines.append(f"- Missing `profit_alerts_eval.csv`: {', '.join(missing_eval)}")
+    463 +        if missing_merged:
+    464 +            lines.append(f"- Missing `profit_alerts_eval_merged.csv`: {', '.join(missing_merged)}")
+    465 +        lines.append("")
+    466 +
+    467 +    lines.append("## Overall (row-level)")
+    468 +    lines.append("")
+    469 +    lines.append(f"- Total alert rows: **{overall_rows.rows_total}**")
+    470 +    lines.append(f"- Candidate rows: **{overall_rows.rows_candidates}**")
+    471 +    lines.append(f"- Promoter rows: **{overall_rows.rows_promoters}**")
+    472 +    lines.append("")
+    473 +    for st in ["HIT", "EXPIRED", "CENSORED", "ACTIVE"]:
+    474 +        n = overall_rows.status_counts.get(st, 0)
+    475 +        if n:
+    476 +            lines.append(f"- Status {st}: **{n}/{overall_rows.rows_total}** ({pct(n, overall_rows.rows_total)})")
+    477 +    lines.append("")
+    478 +
+    479 +    lines.append("## Overall (merged play-sets)")
+    480 +    lines.append("")
+    481 +    lines.append(f"- Merged sets: **{overall_merged.rows_total}**")
+    482 +    for st in ["HIT", "EXPIRED", "CENSORED", "ACTIVE"]:
+    483 +        n = overall_merged.status_counts.get(st, 0)
+    484 +        if n:
+    485 +            lines.append(f"- Status {st}: **{n}/{overall_merged.rows_total}** ({pct(n, overall_merged.rows_total)})")
+    486 +    lines.append("")
+    487 +
+    488 +    # Candidate-only table, sorted by cross-variant decay hit-rate
+    489 +    lines.append("## Candidate rows: hits within window (rollup by AlertId)")
+    490 +    lines.append("")
+    491 +    lines.append("| alert_id | rows | hit_decay | hit_any_decay | hit_any<=7 | hit_any<=14 |")
+    492 +    lines.append("|---|---:|---:|---:|---:|---:|")
+    493 +
+    496 +        denom = agg.hit_any_decay.measured
+    497 +        r = (agg.hit_any_decay.hits / denom) if denom else -1.0
+    498 +        sortable.append((r, agg.rows_candidates, aid))
+    499 +    sortable.sort(reverse=True)
+    500 +    for _, _, aid in sortable:
+    501 +        agg = by_alert[aid]
+    502 +        if agg.rows_candidates == 0:
+    503 +            continue
+    504 +
+    505 +        def _fmt(h: HitCounters) -> str:
+    506 +            return f"{h.hits}/{h.measured}" if h.measured else "-"
+    512 +
+    513 +    lines.append("## Merged play-sets: by suggested kind")
+    514 +    lines.append("")
+    515 +    lines.append("| suggested_kinds | sets | hit_any_decay | hit_any<=7 | hit_any<=14 |")
+    516 +    lines.append("|---|---:|---:|---:|---:|")
+    517 +    for sk in sorted(merged_by_suggested.keys()):
+    518 +        agg = merged_by_suggested[sk]
+    519 +        lines.append(f"| {sk} | {agg.rows_total} | {agg.hit_any_decay.hits}/{agg.hit_any_decay.measured or 0} | {agg.hit_any_7.hits}/{agg.hit_any_7.measured or 0} | {agg.hit_any_14.hits}/{agg.hit_any
+    524 +    lines.append("- `hit_decay` is variant-faithful (Midday rows grade Midday-only; Evening rows grade Evening-only; Combined rows grade Midday→Evening→…).")
+    525 +    lines.append("- `hit_any_*` is the cross-variant diagnostic lens (Midday alerts can be credited if the hit lands on Evening within the same time span, etc.).")
+    526 +    lines.append("- Use `CENSORED` and `?` counts (in the CSVs) to see where results coverage is insufficient for the requested windows.")
+    527 +
+    528 +    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    529 +
+    530 +    print(f"Wrote: {rows_csv}")
+    531 +    print(f"Wrote: {merged_csv}")
+    532 +    print(f"Wrote: {md_path}")
+    533 +
+    534 +
+    535 +if __name__ == "__main__":
+    536 +    main()
+    537 +
+
+• Ran python3 scripts/tools/rollup_profit_alerts_corpus.py --start 2025-12-30 --end 2026-01-04
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_ROWS.csv
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_MERGED.csv
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md
+
+• Updated Plan
+  └ ✔ Inspect repo + existing corpus outputs
+    ✔ Add Profit Alerts rollup script
+    □ Add corpus dashboard reports
+    □ Add Control Center boards rollup
+    □ Wire pack docs + rerun audit
+    □ Checkpoint commit to branch
+
+• Explored
+  └ Search CORPUS_DASHBOARD|CONVERGENCE_CASES|create_corpus_dashboard in .
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +10 lines
+  └ exists True
+    cols 43
+    … +20 lines
+    'vtrac_top10_sections': '', 'vtrac_top10_mirror_supported': '', 'aux_repeat_current_index': '1', 'aux_repeat_current_streak': '1', 'aux_repeat_last_repeat_gap': '7', 'blackapple_top_contains_winner': '0',
+    'blackapple_winner_rank': ''}
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +9 lines
+  └ exists True
+    cols 11
+    … +2 lines
+    'drivers': 'Midday winner was driven by true cross-tool convergence on `059/idx5`.', 'cross_variant_mentioned': '1', 'fix_later': 'Fix-later: consider a rule for “dominant family but low triple rank” days
+    (cheap box probes vs skip).', 'source_run_report': 'docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21__Connecticut4.md'}
+
+• Added scripts/tools/create_corpus_dashboard.py (+411 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Create a small "dashboard" view over the numeric corpus exports.
+      4 +
+      5 +This is intentionally reporting-only:
+      6 +  - It does not change analyzers.
+      7 +  - It reads:
+      8 +      - RUNS/corpus_tool_metrics.csv (sharepack-derived tool metrics)
+      9 +      - RUNS/corpus_summary.csv (run-report derived synthesis fields)
+     10 +
+     11 +Outputs (small, Git-friendly):
+     12 +  - __CORPUS_DASHBOARD.md
+     13 +  - __CONVERGENCE_CASES.md
+     14 +  - __CONVERGENCE_CASES.csv
+     15 +
+     16 +Usage:
+     17 +  python3 scripts/tools/create_corpus_dashboard.py --start 2025-12-30 --end 2026-01-04
+     18 +"""
+     19 +
+     20 +from __future__ import annotations
+     21 +
+     22 +import argparse
+     23 +import csv
+     24 +import datetime as dt
+     25 +from collections import Counter
+     26 +from pathlib import Path
+     27 +from statistics import mean, median
+     28 +from typing import Dict, List, Optional, Sequence, Tuple
+     29 +
+     30 +
+     31 +ROOT = Path(__file__).resolve().parents[2]
+     32 +
+     33 +
+     34 +def parse_date(value: str) -> dt.date:
+     35 +    return dt.date.fromisoformat(value)
+     36 +
+     37 +
+     38 +def daterange(start: str, end: str) -> List[str]:
+     39 +    s = parse_date(start)
+     40 +    e = parse_date(end)
+     41 +    if e < s:
+     42 +        raise SystemExit("--end must be >= --start")
+     43 +    out: List[str] = []
+     44 +    cur = s
+     45 +    while cur <= e:
+     46 +        out.append(cur.isoformat())
+     47 +        cur += dt.timedelta(days=1)
+     48 +    return out
+     49 +
+     50 +
+     51 +def safe_int(value: str) -> Optional[int]:
+     52 +    v = (value or "").strip()
+     53 +    if not v:
+     54 +        return None
+     55 +    try:
+     56 +        return int(float(v))
+     57 +    except Exception:
+     58 +        return None
+     59 +
+     60 +
+     61 +def safe_float(value: str) -> Optional[float]:
+     62 +    v = (value or "").strip()
+     63 +    if not v:
+     64 +        return None
+     65 +    try:
+     66 +        return float(v)
+     67 +    except Exception:
+     68 +        return None
+     69 +
+     70 +
+     71 +def pct(n: int, d: int) -> str:
+     72 +    return "0.0%" if d == 0 else f"{(100.0 * n / d):.1f}%"
+     73 +
+     74 +
+     75 +def pctl(values: Sequence[float], q: float) -> Optional[float]:
+     76 +    if not values:
+     77 +        return None
+     78 +    xs = sorted(values)
+     79 +    idx = max(0, min(len(xs) - 1, int(round((len(xs) - 1) * q))))
+     80 +    return xs[idx]
+     81 +
+     82 +
+     83 +def load_csv(path: Path) -> List[Dict[str, str]]:
+     84 +    with path.open(encoding="utf-8", errors="replace", newline="") as f:
+     85 +        dr = csv.DictReader(f)
+     86 +        return list(dr)
+     87 +
+     88 +
+     89 +def fmt_float(v: Optional[float]) -> str:
+     90 +    return "" if v is None else f"{v:.4f}"
+     91 +
+     92 +
+     93 +def fmt_int(v: Optional[int]) -> str:
+     94 +    return "" if v is None else str(v)
+     95 +
+     96 +
+     97 +def write_csv(path: Path, fieldnames: List[str], rows: List[Dict[str, object]]) -> None:
+     98 +    path.parent.mkdir(parents=True, exist_ok=True)
+     99 +    with path.open("w", encoding="utf-8", newline="") as f:
+    100 +        dw = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+    101 +        dw.writeheader()
+    102 +        for row in rows:
+    103 +            dw.writerow(row)
+    104 +
+    105 +
+    106 +def convergence_score(row: Dict[str, str]) -> Tuple[int, List[str]]:
+    107 +    reasons: List[str] = []
+    108 +    score = 0
+    109 +
+    110 +    stable_present = (row.get("stable_families_present") or "") == "1"
+    111 +    stable_rf = safe_float(row.get("stable_families_rank_fraction") or "")
+    112 +    if stable_present and stable_rf is not None and stable_rf <= 0.10:
+    113 +        score += 1
+    114 +        reasons.append("stable_top10pct")
+    115 +
+    116 +    hz_present = (row.get("hz_top_lanes_present") or "") == "1"
+    117 +    hz_rf = safe_float(row.get("hz_top_lanes_rank_fraction") or "")
+    118 +    if hz_present and hz_rf is not None and hz_rf <= 0.20:
+    119 +        score += 1
+    120 +        reasons.append("hz_top20pct")
+    121 +
+    122 +    vtrac_top10 = (row.get("vtrac_top10_rank") or "").strip()
+    123 +    if vtrac_top10:
+    124 +        score += 1
+    125 +        reasons.append("vtrac_top10")
+    126 +
+    127 +    dr_best = safe_int(row.get("dr_best_area_rank_vtrac_any") or "")
+    128 +    if dr_best is not None and dr_best <= 3:
+    129 +        score += 1
+    130 +        reasons.append("dr_best_area<=3")
+    131 +
+    132 +    return score, reasons
+    133 +
+    134 +
+    135 +def main() -> None:
+    136 +    ap = argparse.ArgumentParser()
+    137 +    ap.add_argument("--start", required=True, help="Start results date D (YYYY-MM-DD)")
+    138 +    ap.add_argument("--end", required=True, help="End results date D (YYYY-MM-DD)")
+    139 +    ap.add_argument(
+    140 +        "--metrics-csv",
+    141 +        default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS" / "corpus_tool_metrics.csv"),
+    142 +        help="Path to corpus_tool_metrics.csv",
+    143 +    )
+    144 +    ap.add_argument(
+    145 +        "--summary-csv",
+    146 +        default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS" / "corpus_summary.csv"),
+    147 +        help="Path to corpus_summary.csv",
+    148 +    )
+    149 +    ap.add_argument(
+    150 +        "--out-dir",
+    151 +        default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"),
+    152 +        help="Output directory",
+    153 +    )
+    154 +    args = ap.parse_args()
+    155 +
+    156 +    dates = set(daterange(args.start, args.end))
+    157 +    out_dir = Path(args.out_dir)
+    158 +    out_dir.mkdir(parents=True, exist_ok=True)
+    159 +
+    160 +    metrics_path = Path(args.metrics_csv)
+    161 +    summary_path = Path(args.summary_csv)
+    162 +    if not metrics_path.exists():
+    163 +        raise SystemExit(f"metrics file not found: {metrics_path}")
+    164 +    if not summary_path.exists():
+    165 +        raise SystemExit(f"summary file not found: {summary_path}")
+    166 +
+    167 +    metrics_rows = [r for r in load_csv(metrics_path) if r.get("date") in dates and (r.get("winner_literal") or "").strip()]
+    168 +    total = len(metrics_rows)
+    169 +
+    170 +    by_period = Counter(r.get("period") or "Unknown" for r in metrics_rows)
+    171 +    stable_present = sum(1 for r in metrics_rows if (r.get("stable_families_present") or "") == "1")
+    172 +    stable_exact_boxed = sum(1 for r in metrics_rows if (r.get("stable_exact_boxed") or "") == "1")
+    173 +    stable_exact_straight = sum(1 for r in metrics_rows if (r.get("stable_exact_straight") or "") == "1")
+    174 +
+    175 +    stable_sections = Counter((r.get("stable_families_section") or "").strip() or "missing" for r in metrics_rows)
+    176 +
+    177 +    hz_present = sum(1 for r in metrics_rows if (r.get("hz_top_lanes_present") or "") == "1")
+    178 +    vtrac_top10 = sum(1 for r in metrics_rows if (r.get("vtrac_top10_rank") or "").strip())
+    179 +    vtrac_top10_combined = sum(
+    180 +        1
+    181 +        for r in metrics_rows
+    182 +        if (r.get("vtrac_top10_rank") or "").strip() and "Combined" in (r.get("vtrac_top10_sections") or "")
+    183 +    )
+    184 +    dr_top_present = sum(1 for r in metrics_rows if (r.get("dr_top_winner_present") or "") == "1")
+    185 +    ba_contains = sum(1 for r in metrics_rows if (r.get("blackapple_top_contains_winner") or "") == "1")
+    186 +    mirror_sig_repeat = sum(1 for r in metrics_rows if (r.get("winner_vtrac_signature_has_repeat") or "") == "1")
+    187 +
+    188 +    stable_rank_fracs: List[float] = []
+    189 +    hz_rank_fracs: List[float] = []
+    190 +    vtrac_rank_fracs: List[float] = []
+    191 +    for r in metrics_rows:
+    192 +        if (r.get("stable_families_present") or "") == "1":
+    193 +            x = safe_float(r.get("stable_families_rank_fraction") or "")
+    194 +            if x is not None:
+    195 +                stable_rank_fracs.append(x)
+    196 +        if (r.get("hz_top_lanes_present") or "") == "1":
+    197 +            x = safe_float(r.get("hz_top_lanes_rank_fraction") or "")
+    198 +            if x is not None:
+    199 +                hz_rank_fracs.append(x)
+    200 +        x = safe_float(r.get("vtrac_index_rank_fraction") or "")
+    201 +        if x is not None:
+    202 +            vtrac_rank_fracs.append(x)
+    203 +
+    204 +    # Run-report corpus (environment verdicts / cross-variant mentions)
+    205 +    summary_rows = [r for r in load_csv(summary_path) if r.get("date") in dates and (r.get("winner_missing") or "0") != "1"]
+    206 +    env_verdicts = Counter((r.get("env_verdict") or "").strip() or "missing" for r in summary_rows)
+    207 +    cross_variant_mentions = sum(1 for r in summary_rows if (r.get("cross_variant_mentioned") or "") == "1")
+    208 +
+    209 +    # Convergence cases (heuristic scoring for "study these examples")
+    210 +    case_rows: List[Tuple[int, float, Dict[str, str], List[str]]] = []
+    211 +    score_counts: Counter[int] = Counter()
+    212 +    for r in metrics_rows:
+    213 +        score, reasons = convergence_score(r)
+    214 +        score_counts[score] += 1
+    215 +        stable_rf = safe_float(r.get("stable_families_rank_fraction") or "")
+    216 +        stable_key = stable_rf if stable_rf is not None else 9e9
+    217 +        case_rows.append((score, stable_key, r, reasons))
+    218 +
+    219 +    case_rows.sort(key=lambda t: (-t[0], t[1]))
+    220 +    top_cases = [t for t in case_rows if t[0] >= 3][:100]
+    221 +
+    222 +    # Write convergence CSV
+    223 +    cases_csv = out_dir / f"{args.start}_to_{args.end}__CONVERGENCE_CASES.csv"
+    224 +    cases_csv_rows: List[Dict[str, object]] = []
+    225 +    for score, _, r, reasons in top_cases:
+    226 +        cases_csv_rows.append(
+    227 +            {
+    228 +                "date": r.get("date"),
+    229 +                "history_date": r.get("history_date"),
+    230 +                "state": r.get("state"),
+    231 +                "period": r.get("period"),
+    232 +                "winner_literal": r.get("winner_literal"),
+    233 +                "winner_canonical": r.get("winner_canonical"),
+    234 +                "winner_vtrac_index": r.get("winner_vtrac_index"),
+    235 +                "mirror_sig_repeat": r.get("winner_vtrac_signature_has_repeat"),
+    236 +                "stable_rank_fraction": r.get("stable_families_rank_fraction"),
+    237 +                "stable_section": r.get("stable_families_section"),
+    238 +                "hz_rank_fraction": r.get("hz_top_lanes_rank_fraction"),
+    239 +                "vtrac_top10_rank": r.get("vtrac_top10_rank"),
+    240 +                "vtrac_top10_sections": r.get("vtrac_top10_sections"),
+    241 +                "dr_best_area_rank_vtrac_any": r.get("dr_best_area_rank_vtrac_any"),
+    242 +                "blackapple_top_contains_winner": r.get("blackapple_top_contains_winner"),
+    243 +                "convergence_score": score,
+    244 +                "convergence_reasons": "|".join(reasons),
+    245 +            }
+    246 +        )
+    247 +    cases_fields = [
+    248 +        "date",
+    249 +        "history_date",
+    250 +        "state",
+    251 +        "period",
+    252 +        "winner_literal",
+    253 +        "winner_canonical",
+    254 +        "winner_vtrac_index",
+    255 +        "mirror_sig_repeat",
+    256 +        "stable_rank_fraction",
+    257 +        "stable_section",
+    258 +        "hz_rank_fraction",
+    259 +        "vtrac_top10_rank",
+    260 +        "vtrac_top10_sections",
+    261 +        "dr_best_area_rank_vtrac_any",
+    262 +        "blackapple_top_contains_winner",
+    263 +        "convergence_score",
+    264 +        "convergence_reasons",
+    265 +    ]
+    266 +    write_csv(cases_csv, cases_fields, cases_csv_rows)
+    267 +
+    268 +    # Write dashboard markdown
+    269 +    dash_md = out_dir / f"{args.start}_to_{args.end}__CORPUS_DASHBOARD.md"
+    270 +    lines: List[str] = []
+    271 +    lines.append(f"# Corpus Dashboard — {args.start} → {args.end}")
+    272 +    lines.append("")
+    273 +    try:
+    274 +        lines.append(f"- tool metrics: `{metrics_path.relative_to(ROOT)}`")
+    275 +        lines.append(f"- run-report corpus: `{summary_path.relative_to(ROOT)}`")
+    276 +    except Exception:
+    277 +        lines.append(f"- tool metrics: `{metrics_path}`")
+    278 +        lines.append(f"- run-report corpus: `{summary_path}`")
+    279 +    lines.append("")
+    280 +    lines.append(f"Total graded outcomes (state×period): **{total}**")
+    281 +    lines.append("")
+    282 +
+    283 +    lines.append("## Outcome mix")
+    284 +    lines.append("")
+    285 +    lines.append("| period | n | % |")
+    286 +    lines.append("|---|---:|---:|")
+    287 +    for p in ["Midday", "Evening", "Combined", "Unknown"]:
+    288 +        n = by_period.get(p, 0)
+    289 +        if n:
+    290 +            lines.append(f"| {p} | {n} | {pct(n, total)} |")
+    291 +    lines.append("")
+    292 +
+    293 +    lines.append("## Tool presence / exactness (not performance claims)")
+    294 +    lines.append("")
+    295 +    lines.append(f"- Stable families present: **{stable_present}/{total}** ({pct(stable_present, total)})")
+    296 +    lines.append(f"- Hot Zones top lanes present: **{hz_present}/{total}** ({pct(hz_present, total)})")
+    297 +    lines.append(f"- VTRAC winner index in top10: **{vtrac_top10}/{total}** ({pct(vtrac_top10, total)})")
+    298 +    if vtrac_top10:
+    299 +        lines.append(f"- …with Combined among supporting sections: **{vtrac_top10_combined}/{vtrac_top10}** ({pct(vtrac_top10_combined, vtrac_top10)})")
+    300 +    lines.append(f"- DR top-candidates contain winner: **{dr_top_present}/{total}** ({pct(dr_top_present, total)})")
+    301 +    lines.append(f"- Blackapple top list contains winner: **{ba_contains}/{total}** ({pct(ba_contains, total)})")
+    302 +    lines.append(f"- Winner VTRAC signature has repeat (mirror/double-space): **{mirror_sig_repeat}/{total}** ({pct(mirror_sig_repeat, total)})")
+    303 +    lines.append("")
+    304 +
+    305 +    lines.append("## Stable evidence origin (section labels)")
+    306 +    lines.append("")
+    307 +    lines.append("| stable_section | n | % |")
+    308 +    lines.append("|---|---:|---:|")
+    309 +    for sec, n in stable_sections.most_common():
+    310 +        lines.append(f"| {sec} | {n} | {pct(n, total)} |")
+    311 +    lines.append("")
+    312 +
+    313 +    def _dist(name: str, vals: List[float]) -> None:
+    314 +        if not vals:
+    315 +            lines.append(f"- {name}: <none>")
+    316 +            return
+    317 +        lines.append(
+    318 +            f"- {name}: n={len(vals)} median={fmt_float(median(vals))} p10={fmt_float(pctl(vals,0.10))} p25={fmt_float(pctl(vals,0.25))} p75={fmt_float(pctl(vals,0.75))}"
+    319 +        )
+    320 +
+    321 +    lines.append("## Rank-fraction distributions (lower is better)")
+    322 +    lines.append("")
+    323 +    _dist("Stable family rank_fraction", stable_rank_fracs)
+    324 +    _dist("Hot Zones top_lanes rank_fraction", hz_rank_fracs)
+    325 +    _dist("VTRAC index rank_fraction", vtrac_rank_fracs)
+    326 +    lines.append("")
+    327 +
+    328 +    lines.append("## Run-report synthesis (from completed RUNS)")
+    329 +    lines.append("")
+    330 +    if summary_rows:
+    331 +        denom = len(summary_rows)
+    332 +        lines.append(f"- Run-report rows: **{denom}**")
+    333 +        lines.append(f"- Cross-variant mentioned: **{cross_variant_mentions}/{denom}** ({pct(cross_variant_mentions, denom)})")
+    334 +        lines.append("")
+    335 +        lines.append("| env_verdict | n | % |")
+    336 +        lines.append("|---|---:|---:|")
+    337 +        for k, n in env_verdicts.most_common():
+    338 +            lines.append(f"| {k} | {n} | {pct(n, denom)} |")
+    339 +        lines.append("")
+    340 +    else:
+    341 +        lines.append("- No run-report rows found for this date range in corpus_summary.csv.")
+    342 +        lines.append("")
+    343 +
+    344 +    lines.append("## Convergence score (heuristic; used to pick study examples)")
+    345 +    lines.append("")
+    346 +    lines.append("| score | n | % | meaning |")
+    347 +    lines.append("|---:|---:|---:|---|")
+    348 +    for s in sorted(score_counts.keys(), reverse=True):
+    349 +        n = score_counts[s]
+    350 +        meaning = {
+    351 +            4: "Stable(top10%) + HotZones(top20%) + VTRAC top10 + DR best_area<=3",
+    352 +            3: "3 of the 4 convergence lenses present",
+    353 +            2: "2 lenses",
+    354 +            1: "1 lens",
+    355 +            0: "no convergence lenses",
+    356 +        }.get(s, "")
+    357 +        lines.append(f"| {s} | {n} | {pct(n, total)} | {meaning} |")
+    358 +    lines.append("")
+    359 +    try:
+    360 +        lines.append(f"Top convergence cases CSV: `{cases_csv.relative_to(ROOT)}`")
+    361 +    except Exception:
+    362 +        lines.append(f"Top convergence cases CSV: `{cases_csv}`")
+    363 +    lines.append("")
+    364 +    dash_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    365 +
+    366 +    # Convergence cases markdown (short)
+    369 +    cl.append(f"# Convergence Cases — {args.start} → {args.end}")
+    370 +    cl.append("")
+    371 +    cl.append("These are *study targets* (not rules): outcomes where multiple lenses strongly supported the winner.")
+    372 +    cl.append("")
+    373 +    try:
+    374 +        cl.append(f"CSV: `{cases_csv.relative_to(ROOT)}`")
+    375 +    except Exception:
+    376 +        cl.append(f"CSV: `{cases_csv}`")
+    377 +    cl.append("")
+    378 +    cl.append("| date | state | period | winner | score | reasons | stable_rf | stable_sec | hz_rf | vtrac_top10 | dr_best_area | BA_contains |")
+    379 +    cl.append("|---|---|---|---|---:|---|---:|---|---:|---:|---:|---:|")
+    385 +                    r.get("date") or "",
+    386 +                    r.get("state") or "",
+    387 +                    r.get("period") or "",
+    388 +                    r.get("winner_literal") or "",
+    389 +                    str(score),
+    395 +                    (r.get("dr_best_area_rank_vtrac_any") or ""),
+    396 +                    (r.get("blackapple_top_contains_winner") or ""),
+    397 +                ]
+    398 +            )
+    399 +            + " |"
+    405 +    print(f"Wrote: {cases_md}")
+    406 +    print(f"Wrote: {cases_csv}")
+    407 +
+    408 +
+    409 +if __name__ == "__main__":
+• Ran python3 scripts/tools/create_corpus_dashboard.py --start 2025-12-30 --end 2026-01-04
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.csv
+
+• Updated Plan
+  └ ✔ Inspect repo + existing corpus outputs
+    ✔ Add Profit Alerts rollup script
+    ✔ Add corpus dashboard reports
+    □ Add Control Center boards rollup
+    □ Wire pack docs + rerun audit
+    □ Checkpoint commit to branch
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +7 lines
+  └ repeat_watch cols ['State', 'StateKey', 'Variant', 'Current Index', 'Current Streak', 'Heat Index', 'Heat Hazard', 'Heat Avg Gap', 'Last Repeat (draws)', 'Last Repeat Index', 'Max Streak', 'Window',
+    'Winner', 'Winner VTRAC', 'Current==WinnerVTRAC']
+    … +4 lines
+    {'State': 'Virginia', 'StateKey': 'Virginia4', 'Variant': 'Midday', 'Current Index': '14', 'Current Streak': '1', 'Heat Index': '12', 'Heat Hazard': '0.058', 'Heat Avg Gap': '17.2', 'Last Repeat (draws)':
+    '3', 'Last Repeat Index': '30', 'Max Streak': '3', 'Window': '1000', 'Winner': '888', 'Winner VTRAC': '-', 'Current==WinnerVTRAC': 'False'}
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +7 lines
+  └ blackapple cols ['State', 'StateKey', 'Variant', 'BA-Score', 'Status', 'Triggers', '#Candidates', 'Examples', 'Winner Midday', 'Winner Evening', 'Midday Hits', 'Evening Hits']
+    {'State': 'North Carolina', 'StateKey': 'NorthCarolina4', 'Variant': 'Evening', 'BA-Score': '4', 'Status': 'ALERT', 'Triggers': 'Mirror, Root 7, SSS/TTT, Float 057, Pairs 0', '#Candidates': '12',
+    'Examples': '016 025 034', 'Winner Midday': '455', 'Winner Evening': '879', 'Midday Hits': '-', 'Evening Hits': '-'}
+    {'State': 'Indiana', 'StateKey': 'Indiana4', 'Variant': 'Combined', 'BA-Score': '3', 'Status': 'ALERT', 'Triggers': 'Mirror, Root 1, Float 27, Pairs 0', '#Candidates': '12', 'Examples': '127 028 037',
+    'Winner Midday': '585', 'Winner Evening': '512', 'Midday Hits': '-', 'Evening Hits': '-'}
+
+• Ran python3 - <<'PY'
+  │ import csv
+  │ from pathlib import Path
+  │ … +7 lines
+  └ due_doubles cols ['State', 'StateKey', 'Variant', 'Draws Since Double', 'Family 1', 'Family 2', 'Family 3', 'Family 4', 'Family 5', 'Winner Midday', 'Winner Evening', 'Midday Winner In Family', 'Evening
+    Winner In Family']
+    … +10 lines
+    'Family 4': '3/8-4/9: 334(RC:1000) 399(RC:1000) 334(RM:1000) 448(BE:989) 889(BM:712)', 'Family 5': '0/5-2/7: 022(RE:1000) 077(BM:925) 225(BM:681) 577(BC:669)', 'Winner Midday': '098', 'Winner Evening':
+    '643', 'Midday Winner In Family': 'False', 'Evening Winner In Family': 'False'}
+
+• Explored
+  └ Search BOX|VT|True|Y in blackapple_alerts.csv
+
+• Added scripts/tools/rollup_control_center_boards.py (+266 -0)
+      1 +#!/usr/bin/env python3
+      2 +"""
+      3 +Roll up Brain-2 Control Center "boards" across a date range.
+      4 +
+      5 +This is intentionally reporting-only:
+      6 +  - It does not change analyzers.
+      7 +  - It reads existing sharepack Brain-2 artifacts under sharepacks/<D>/control_center/.
+      8 +
+      9 +Boards:
+     10 +  - blackapple_alerts.csv
+     11 +  - due_doubles.csv
+     12 +  - vtrac_repeat_watch.csv
+     13 +
+     14 +Outputs (small, Git-friendly):
+     15 +  - __CONTROL_CENTER_ROLLUP.csv  (per-day metrics)
+     16 +  - __CONTROL_CENTER_ROLLUP.md   (human summary)
+     17 +
+     18 +Usage:
+     19 +  python3 scripts/tools/rollup_control_center_boards.py --start 2025-12-30 --end 2026-01-04
+     20 +"""
+     21 +
+     22 +from __future__ import annotations
+     23 +
+     24 +import argparse
+     25 +import csv
+     26 +import datetime as dt
+     27 +from collections import Counter
+     28 +from pathlib import Path
+     29 +from statistics import mean
+     30 +from typing import Dict, List, Optional
+     31 +
+     32 +
+     33 +ROOT = Path(__file__).resolve().parents[2]
+     34 +
+     35 +
+     36 +def parse_date(value: str) -> dt.date:
+     37 +    return dt.date.fromisoformat(value)
+     38 +
+     39 +
+     40 +def daterange(start: str, end: str) -> List[str]:
+     41 +    s = parse_date(start)
+     42 +    e = parse_date(end)
+     43 +    if e < s:
+     44 +        raise SystemExit("--end must be >= --start")
+     45 +    out: List[str] = []
+     46 +    cur = s
+     47 +    while cur <= e:
+     48 +        out.append(cur.isoformat())
+     49 +        cur += dt.timedelta(days=1)
+     50 +    return out
+     51 +
+     52 +
+     53 +def safe_int(value: str) -> Optional[int]:
+     54 +    v = (value or "").strip()
+     55 +    if not v:
+     56 +        return None
+     57 +    try:
+     58 +        return int(float(v))
+     59 +    except Exception:
+     60 +        return None
+     61 +
+     62 +
+     63 +def load_csv_rows(path: Path) -> List[Dict[str, str]]:
+     64 +    with path.open(encoding="utf-8", errors="replace", newline="") as f:
+     65 +        dr = csv.DictReader(f)
+     66 +        return list(dr)
+     67 +
+     68 +
+     69 +def write_csv(path: Path, fieldnames: List[str], rows: List[Dict[str, object]]) -> None:
+     70 +    path.parent.mkdir(parents=True, exist_ok=True)
+     71 +    with path.open("w", encoding="utf-8", newline="") as f:
+     72 +        dw = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+     73 +        dw.writeheader()
+     74 +        for row in rows:
+     75 +            dw.writerow(row)
+     76 +
+     77 +
+     78 +def pct(n: int, d: int) -> str:
+     79 +    return "0.0%" if d == 0 else f"{(100.0 * n / d):.1f}%"
+     80 +
+     81 +
+     82 +def main() -> None:
+     83 +    ap = argparse.ArgumentParser()
+     84 +    ap.add_argument("--start", required=True, help="Start results date D (YYYY-MM-DD)")
+     85 +    ap.add_argument("--end", required=True, help="End results date D (YYYY-MM-DD)")
+     86 +    ap.add_argument(
+     87 +        "--out-dir",
+     88 +        default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"),
+     89 +        help="Output directory",
+     90 +    )
+     91 +    ap.add_argument(
+     92 +        "--sharepacks-dir",
+     93 +        default=str(ROOT / "sharepacks"),
+     94 +        help="Sharepacks root directory",
+     95 +    )
+     96 +    args = ap.parse_args()
+     97 +
+     98 +    dates = daterange(args.start, args.end)
+     99 +    sharepacks_root = Path(args.sharepacks_dir)
+    100 +    out_dir = Path(args.out_dir)
+    101 +    out_dir.mkdir(parents=True, exist_ok=True)
+    102 +
+    103 +    per_day_rows: List[Dict[str, object]] = []
+    104 +
+    105 +    # Aggregate summaries
+    106 +    ba_status_counts: Counter[str] = Counter()
+    107 +    ba_midday_hits_total = 0
+    108 +    ba_evening_hits_total = 0
+    109 +    ba_rows_total = 0
+    110 +    ba_scores: List[int] = []
+    111 +
+    112 +    dd_midday_in_family_total = 0
+    113 +    dd_evening_in_family_total = 0
+    114 +    dd_rows_total = 0
+    115 +    dd_draws_since: List[int] = []
+    116 +
+    117 +    rw_eq_winner_total = 0
+    118 +    rw_rows_total = 0
+    119 +    rw_streaks: List[int] = []
+    120 +
+    121 +    missing_days: List[str] = []
+    122 +
+    123 +    for d in dates:
+    124 +        cc_dir = sharepacks_root / d / "control_center"
+    125 +        ba_path = cc_dir / "blackapple_alerts.csv"
+    126 +        dd_path = cc_dir / "due_doubles.csv"
+    127 +        rw_path = cc_dir / "vtrac_repeat_watch.csv"
+    128 +
+    129 +        if not (ba_path.exists() and dd_path.exists() and rw_path.exists()):
+    130 +            missing_days.append(d)
+    131 +            continue
+    132 +
+    133 +        # Blackapple
+    134 +        ba_rows = load_csv_rows(ba_path)
+    135 +        ba_rows_total += len(ba_rows)
+    136 +        per_status = Counter((r.get("Status") or "").strip() or "missing" for r in ba_rows)
+    137 +        ba_status_counts.update(per_status)
+    138 +        ba_midday_hits = sum(1 for r in ba_rows if (r.get("Midday Hits") or "").strip() not in {"", "-"})
+    139 +        ba_evening_hits = sum(1 for r in ba_rows if (r.get("Evening Hits") or "").strip() not in {"", "-"})
+    140 +        ba_midday_hits_total += ba_midday_hits
+    141 +        ba_evening_hits_total += ba_evening_hits
+    142 +        for r in ba_rows:
+    143 +            s = safe_int(r.get("BA-Score") or "")
+    144 +            if s is not None:
+    145 +                ba_scores.append(s)
+    146 +
+    147 +        # Due doubles
+    148 +        dd_rows = load_csv_rows(dd_path)
+    149 +        dd_rows_total += len(dd_rows)
+    150 +        dd_midday_in = sum(1 for r in dd_rows if (r.get("Midday Winner In Family") or "").strip() == "True")
+    151 +        dd_evening_in = sum(1 for r in dd_rows if (r.get("Evening Winner In Family") or "").strip() == "True")
+    152 +        dd_midday_in_family_total += dd_midday_in
+    153 +        dd_evening_in_family_total += dd_evening_in
+    154 +        for r in dd_rows:
+    155 +            x = safe_int(r.get("Draws Since Double") or "")
+    156 +            if x is not None:
+    157 +                dd_draws_since.append(x)
+    158 +
+    159 +        # VTRAC repeat watch
+    160 +        rw_rows = load_csv_rows(rw_path)
+    161 +        rw_rows_total += len(rw_rows)
+    162 +        rw_eq = sum(1 for r in rw_rows if (r.get("Current==WinnerVTRAC") or "").strip() == "True")
+    163 +        rw_eq_winner_total += rw_eq
+    164 +        for r in rw_rows:
+    165 +            x = safe_int(r.get("Current Streak") or "")
+    166 +            if x is not None:
+    167 +                rw_streaks.append(x)
+    168 +
+    169 +        per_day_rows.append(
+    170 +            {
+    171 +                "date": d,
+    172 +                "blackapple_rows": len(ba_rows),
+    173 +                "blackapple_ALERT": per_status.get("ALERT", 0),
+    174 +                "blackapple_WATCH": per_status.get("WATCH", 0),
+    175 +                "blackapple_OFF": per_status.get("OFF", 0),
+    176 +                "blackapple_midday_hits": ba_midday_hits,
+    177 +                "blackapple_evening_hits": ba_evening_hits,
+    178 +                "due_doubles_rows": len(dd_rows),
+    179 +                "due_doubles_midday_in_family": dd_midday_in,
+    180 +                "due_doubles_evening_in_family": dd_evening_in,
+    181 +                "repeat_watch_rows": len(rw_rows),
+    182 +                "repeat_watch_current_eq_winner": rw_eq,
+    183 +            }
+    184 +        )
+    185 +
+    186 +    stem = f"{args.start}_to_{args.end}__CONTROL_CENTER_ROLLUP"
+    187 +    csv_path = out_dir / f"{stem}.csv"
+    188 +    md_path = out_dir / f"{stem}.md"
+    189 +
+    190 +    fields = [
+    191 +        "date",
+    192 +        "blackapple_rows",
+    193 +        "blackapple_ALERT",
+    194 +        "blackapple_WATCH",
+    195 +        "blackapple_OFF",
+    196 +        "blackapple_midday_hits",
+    197 +        "blackapple_evening_hits",
+    198 +        "due_doubles_rows",
+    199 +        "due_doubles_midday_in_family",
+    200 +        "due_doubles_evening_in_family",
+    201 +        "repeat_watch_rows",
+    202 +        "repeat_watch_current_eq_winner",
+    203 +    ]
+    204 +    write_csv(csv_path, fields, per_day_rows)
+    205 +
+    206 +    lines: List[str] = []
+    207 +    lines.append(f"# Control Center Boards Rollup — {args.start} → {args.end}")
+    208 +    lines.append("")
+    209 +    lines.append("This summarizes the Brain-2 Control Center board exports across a date range.")
+    210 +    lines.append("")
+    211 +    lines.append("Inputs (per day):")
+    212 +    lines.append("- `sharepacks/<D>/control_center/blackapple_alerts.csv`")
+    213 +    lines.append("- `sharepacks/<D>/control_center/due_doubles.csv`")
+    214 +    lines.append("- `sharepacks/<D>/control_center/vtrac_repeat_watch.csv`")
+    215 +    lines.append("")
+    216 +    try:
+    217 +        lines.append(f"Per-day CSV: `{csv_path.relative_to(ROOT)}`")
+    218 +    except Exception:
+    219 +        lines.append(f"Per-day CSV: `{csv_path}`")
+    220 +    lines.append("")
+    221 +
+    224 +        lines.append("")
+    225 +        lines.append("- " + ", ".join(missing_days))
+    226 +        lines.append("")
+    227 +
+    228 +    lines.append("## Blackapple Alerts (board-level)")
+    229 +    lines.append("")
+    230 +    lines.append(f"- Rows: **{ba_rows_total}**")
+    231 +    for k in ["ALERT", "WATCH", "OFF", "missing"]:
+    232 +        n = ba_status_counts.get(k, 0)
+    233 +        if n:
+    237 +    if ba_scores:
+    238 +        lines.append(f"- BA-Score mean: **{mean(ba_scores):.2f}** (n={len(ba_scores)})")
+    239 +    lines.append("")
+    240 +
+    241 +    lines.append("## Due Doubles (board-level)")
+    242 +    lines.append("")
+    243 +    lines.append(f"- Rows: **{dd_rows_total}**")
+    244 +    lines.append(f"- Midday winner in any family: **{dd_midday_in_family_total}/{dd_rows_total}** ({pct(dd_midday_in_family_total, dd_rows_total)})")
+    245 +    lines.append(f"- Evening winner in any family: **{dd_evening_in_family_total}/{dd_rows_total}** ({pct(dd_evening_in_family_total, dd_rows_total)})")
+    246 +    if dd_draws_since:
+    247 +        lines.append(f"- Draws-since-double mean: **{mean(dd_draws_since):.2f}** (n={len(dd_draws_since)})")
+    248 +    lines.append("")
+    249 +
+    250 +    lines.append("## VTRAC Repeat Watch (board-level)")
+    251 +    lines.append("")
+    252 +    lines.append(f"- Rows: **{rw_rows_total}**")
+    253 +    lines.append(f"- Current index == winner VTRAC: **{rw_eq_winner_total}/{rw_rows_total}** ({pct(rw_eq_winner_total, rw_rows_total)})")
+    254 +    if rw_streaks:
+    255 +        lines.append(f"- Current streak mean: **{mean(rw_streaks):.2f}** (n={len(rw_streaks)})")
+    256 +    lines.append("")
+    257 +
+    258 +    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    259 +
+    260 +    print(f"Wrote: {csv_path}")
+    261 +    print(f"Wrote: {md_path}")
+    262 +
+    263 +
+    264 +if __name__ == "__main__":
+    265 +    main()
+    266 +
+
+• Ran python3 scripts/tools/rollup_control_center_boards.py --start 2025-12-30 --end 2026-01-04
+  └ Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.csv
+    Wrote: /home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.md
+
+• Updated Plan
+  └ ✔ Inspect repo + existing corpus outputs
+    ✔ Add Profit Alerts rollup script
+    ✔ Add corpus dashboard reports
+    ✔ Add Control Center boards rollup
+    □ Wire pack docs + rerun audit
+    □ Checkpoint commit to branch
+
+• Explored
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --help | sed -n '1,120p'
+  └ usage: audit_sharepacks_corpus.py [-h] [--dates [DATES ...]] [--out OUT]
+                                      [--no-validators]
+    … +9 lines
+      --no-validators      Skip running validators (only provenance + cross-day
+    43 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md` (study targets; not rules)
+    44 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.csv` (machine-readable convergence examples)
+    47  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md` (literal doubles vs VTRAC-space mirror repeats)
+    48 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.md` (Brain‑2 boards rollup across days)
+    49 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONTROL_CENTER_ROLLUP.csv`
+    50 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP.md` (A01–A12 evaluation rollup)
+    51 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_ROWS.csv`
+    52 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PROFIT_ALERTS_ROLLUP_MERGED.csv`
+    53  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md` (Codex deep analysis; parallel reviewer output)
+• Edited docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/README.md (+5 -0)
+    20  - Numeric tool evidence (machine-readable): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv`
+    21 +- Corpus dashboard (fast “where are we”): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md`
+    22 +- Convergence study targets: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md`
+    23  - Combined / cross-variant quantification: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CROSS_VARIANT_REPORT.md`
+    24  - Mirror-double frequency (VTRAC-space repeats): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__MIRROR_DOUBLE_FREQUENCY.md`
+    25 +- Brain‑2 rollups:
+    28  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md (+5 -0)
+    27  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv` (numeric evidence; prefer this for quantification)
+    28 +- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md`
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04 --out reports/audit/sharepacks_audit_20251230_to_20260104.md
+  └ (no output)
+
+
+• Explored
+  └ Read 2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md
+    List tools
+    Search (rollup_profit_alerts_corpus|create_corpus_dashboard|rollup_control_center_boards|audit_sharepacks_corpus)
+
+• Ran git status -sb
+  └ ## checkpoint/gold-days-2025-12-30_to_2026-01-04...origin/checkpoint/gold-days-2025-12-30_to_2026-01-04
+     M "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md"
+    … +2221 lines
+    ?? tasks/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md
+    ?? tasks/profit_discuss.txt
+
+
+• Ran ls -la reports/audit 2>/dev/null | sed -n '1,200p' || echo 'no reports/audit dir'
+  └ total 68
+    drwxr-xr-x 2 ser ser  4096 Jan  6 03:50 .
+    … +11 lines
+    -rw-r--r-- 1 ser ser  2748 Jan  5 07:57 sharepacks_audit_20260105_125553.md
+    -rw-r--r-- 1 ser ser  1802 Jan  4 23:22 sharepacks_audit_gold_days.md
+  └ usage: audit_sharepacks_corpus.py [-h] [--dates [DATES ...]] [--out OUT]
+                                      [--no-validators]
+    … +9 lines
+      --no-validators      Skip running validators (only provenance + cross-day
+                           freshness).
+
+• Explored
+  └ Read sharepacks_audit_20251230_to_20260104.md, README.md, MANIFEST.md, CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md
+    List RUNS
+    Search GOLD_RUNS_2_TRIAGE|POST_RUNS_TRIAGE|2025-12-30_to_2026-01-04__CORPUS_SYNTHESIS|__CROSS_VARIANT_REPORT|__MIRROR_DOUBLE_FREQUENCY
+    Read README.md, INDEX.md
+    Search rollup_profit_alerts_corpus|create_corpus_dashboard|rollup_control_center_boards in .
+    Read AAT9_Master_Validation_Analysis_Navigator.md, AAT9_Master_Validation_Evaluate_Only_Quickstart.md
+
+• Ran python3 -m py_compile scripts/tools/rollup_profit_alerts_corpus.py scripts/tools/create_corpus_dashboard.py scripts/tools/rollup_control_center_boards.py
+  └ (no output)
+
+• Explored
+  └ Read create_corpus_dashboard.py
+
+• Updated Plan
+  └ Syncing the new 6‑day corpus rollups into SSOT docs and confirming the corpus audit is green, without touching analyzer logic or committing large artifacts.
+    □ Verify corpus audit and outputs
+    □ Update SSOT docs and pointers
+    □ Re-run 6-day corpus audit
+    □ Summarize status and next steps
+
+• Updated Plan
+  └ ✔ Verify corpus audit and outputs
+    □ Update SSOT docs and pointers
+    □ Re-run 6-day corpus audit
+    □ Summarize status and next steps
+
+• Explored
+  └ List tools
+    Search export_master_validation_corpus|corpus
+
+• Ran python3 scripts/tools/export_master_validation_corpus.py --help | sed -n '1,200p'
+  └ usage: export_master_validation_corpus.py [-h] [--date DATES]
+                                              [--out-csv OUT_CSV]
+    … +10 lines
+                            Output Fix-Later index path (default:
+                            RUNS/FIX_LATER_INDEX.md)
+
+• Ran python3 scripts/tools/export_tool_metrics_corpus.py --help | sed -n '1,220p'
+  └ usage: export_tool_metrics_corpus.py [-h] [--dates [DATES ...]] [--out OUT]
+
+    … +3 lines
+                           sharepacks/*).
+      --out OUT            Output CSV path (default: RUNS/corpus_tool_metrics.csv)
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md (+47 -0)
+    137  > We are analyzing results date D=`YYYY-MM-DD`. Do not rebuild tools or touch analyzers. Only read from `sharepacks/<D>/...` and the run reports under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`. Follow t
+         he Analysis Navigator review order, then either (a) fill the next `<D>__<STATE>.md` run report, or (b) extend `<D>__DAY_SYNTHESIS.md`. Log fix‑later items to `docs/AAT9_KIT/FINAL VALIDATION/final doc
+         s/WORKFLOW_CHANGELOG.md`.
+    138 +
+    139 +---
+    140 +
+    141 +## 5) Multi‑day corpus review (optional, recommended once you have 3+ days)
+    142 +
+    143 +When you have multiple days filled (e.g., a “gold corpus”), you can review the work *without opening hundreds of state reports* by using the corpus exports + rollups.
+    144 +
+    145 +### 5.1 Read order (fastest way to get oriented)
+    146 +
+    147 +1) The package README/manifest (defines scope + prevents spelunking)
+    148 +2) Corpus synthesis + dashboard (distributions + “where are we”)
+    149 +3) Cross‑variant + mirror‑double lenses (Combined influence + VTRAC‑space repeats)
+    150 +4) Control Center rollups + Profit Alerts rollups (Brain‑2 across days)
+    151 +5) Only then drill into a few per‑day portals and 3–5 per‑state run reports
+    152 +
+    153 +### 5.2 Regenerating corpus exports (SSOT, small outputs)
+    154 +
+    155 +These write Git‑friendly summaries under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` and do not change analyzers.
+    156 +
+    157 +1) Run-report corpus (one row per state×period):
+    158 +```bash
+    161 +
+    162 +2) Tool metrics corpus (reads `sharepacks/<D>/.../summary.json` files; one row per state×period):
+    163 +```bash
+    164 +python3 scripts/tools/export_tool_metrics_corpus.py
+    165 +```
+    166 +
+    167 +### 5.3 Multi‑day rollups (SSOT, small outputs)
+    168 +
+    173 +python3 scripts/tools/rollup_profit_alerts_corpus.py --start YYYY-MM-DD --end YYYY-MM-DD
+    174 +
+    175 +# Control Center boards rollup across a date range (BA/Due Doubles/Repeat Watch)
+    178 +# Corpus dashboard + convergence study cases (heuristic “study targets”, not rules)
+    179 +python3 scripts/tools/create_corpus_dashboard.py --start YYYY-MM-DD --end YYYY-MM-DD
+    180 +```
+    181 +
+    182 +Interpretation reminder:
+• Edited docs/AAT9_KIT/FINAL VALIDATION/RUNS/README.md (+9 -0)
+     8  - Optional cross-day corpus synthesis (aggregates multiple day syntheses): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CORPUS_SYNTHESIS.md`
+     9 +- Optional cross-day corpus dashboard + study cases (fast orientation; not tuning rules):
+    10 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CORPUS_DASHBOARD.md`
+    11 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CONVERGENCE_CASES.md` (+ `.csv`)
+    14 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__MIRROR_DOUBLE_FREQUENCY.md`
+    17 +  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__PROFIT_ALERTS_ROLLUP.md` (+ `.csv`)
+    18  - Optional cross-day Codex deep analysis (parallel reviewer output): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CODEX_DEEP_ANALYSIS.md`
+
+• Updated Plan
+  └ ✔ Verify corpus audit and outputs
+    □ Summarize status and next steps
+
+• Ran python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04 --out reports/audit/sharepacks_audit_20251230_to_20260104_rerun.md
+  └ [audit] wrote reports/audit/sharepacks_audit_20251230_to_20260104_rerun.md
+    [audit] Summary: PASS=825 WARN=3 FAIL=0 SKIP=6
+  └ ✔ Verify corpus audit and outputs
+    ✔ Update SSOT docs and pointers
+    ✔ Re-run 6-day corpus audit
+    □ Summarize status and next steps
+
+• Ran git status -sb --untracked-files=all | rg -n "^(\s*[AM?D]{1,2}\s+)(scripts/tools/(rollup_profit_alerts_corpus|create_corpus_dashboard|rollup_control_center_boards)\.py|docs/AAT9_KIT/FINAL VALIDATION/
+  │ RUNS/2025-12-30_to_2026-01-04__|docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/(MANIFEST|README|CHATGPT_PRO_DEEP_RESEARCH_PROMPT)\.md|docs/AAT9_KIT/FINAL VALIDATION/final
+  │ docs/AAT9_Master_Validation_Analysis_Navigator\.md|docs/AAT9_KIT/FINAL VALIDATION/RUNS/README\.md|reports/audit/sharepacks_audit_20251230_to_20260104_rerun\.md)" || true
+  └ 50:?? scripts/tools/create_corpus_dashboard.py
+    51:?? scripts/tools/rollup_control_center_boards.py
+    52:?? scripts/tools/rollup_profit_alerts_corpus.py
+
+an git status -sb --untracked-files=no
+  └ ## checkpoint/gold-days-2025-12-30_to_2026-01-04...origin/checkpoint/gold-days-2025-12-30_to_2026-01-04
+     M "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md"
+    … +2 lines
+     M "docs/AAT9_KIT/FINAL VALIDATION/RUNS/README.md"
+     M "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md"
+
+• Ran git status -sb --untracked-files=all | rg -n "2025-12-30_to_2026-01-04__|rollup_profit_alerts_corpus|create_corpus_dashboard|rollup_control_center_boards|sharepacks_audit_20251230_to_20260104_rerun|
+  │ AAT9_Master_Validation_Analysis_Navigator\.md|FINAL VALIDATION/RUNS/README\.md|PACKAGES/gold_days_2025-12-30_to_2026-01-04" || true
+  └ 2: M "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md"
+    3: M "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md"
+    … +12 lines
+    51:?? scripts/tools/rollup_control_center_boards.py
+    52:?? scripts/tools/rollup_profit_alerts_corpus.py
+
+• Ran git check-ignore -v sharepacks/2025-12-30/README.md || echo 'not ignored'
+  └ not ignored
+
+• Ran git ls-files "sharepacks/2025-06-21" | head -n 40
+  └ sharepacks/2025-06-21/Connecticut4/README.md
+    sharepacks/2025-06-21/Connecticut4/aux/Connecticut4/summary.json
+    … +36 lines
+    sharepacks/2025-06-21/Connecticut4/hot_zones/Connecticut4/Connecticut4_hot_zones_top_lanes.csv
+    sharepacks/2025-06-21/Connecticut4/hot_zones/Connecticut4/summary.json
+
+• Ran git ls-files "sharepacks/2025-12-30" | head -n 20
+  └ sharepacks/2025-12-30/Connecticut4/aux/Connecticut4/summary.json
+    sharepacks/2025-12-30/Connecticut4/aux/Connecticut4/summary.md
+    … +16 lines
+    sharepacks/2025-12-30/Delaware4/vtrac/Delaware4/summary.json
+    sharepacks/2025-12-30/Delaware4/vtrac/Delaware4/summary.md
+
+• Ran git ls-files "reports/audit/sharepacks_audit_20251230_to_20260104.md" && git ls-files "reports/audit/sharepacks_audit_20251230_to_20260104_rerun.md" || true
+  └ (no output)
+
+• Added docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__AUDIT_SUMMARY.md (+44 -0)
+     1 +# Sharepacks Audit Summary — 2025‑12‑30 → 2026‑01‑04
+     2 +
+     3 +This is a **pipeline health** snapshot (sharepacks provenance + validator sanity), not a tool‑performance judgment.
+     4 +
+     5 +## Command (repo root)
+     6 +
+     7 +```bash
+     8 +python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+     9 +```
+    10 +
+    11 +## Result
+    12 +
+    13 +- Summary: **PASS=825 WARN=3 FAIL=0 SKIP=6**
+    14 +
+    15 +Interpretation:
+    16 +- **FAIL=0** means the day snapshots are internally coherent for this 6‑day corpus.
+    17 +- **SKIP** items below are expected when a state has no winners line in `data/results/<D>.txt` (e.g., Puerto Rico on some days).
+    18 +
+    19 +## WARNINGS (3)
+    20 +
+    21 +- `2026-01-01->2026-01-02:PuertoRico4:midday_shift` — shift inference fallback (no expected winners available)
+    22 +- `2026-01-01->2026-01-02:PuertoRico4:evening_shift` — shift inference fallback (no expected winners available)
+    23 +- `2026-01-01->2026-01-02:PuertoRico4:combined_shift` — shift inference fallback (no expected winners available)
+    24 +
+    25 +These are not corruption indicators; they mean freshness‑shift inference can’t be validated via winners for that state across that boundary.
+    26 +
+    27 +## SKIPS (6)
+    34 +- `2026-01-04:PuertoRico4:validate_stable_winners`
+    42 +   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md`
+    43 +3) Re‑run the audit after the fix and ensure FAIL returns to 0.
+    44 +
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/MANIFEST.md (+1 -0)
+    43  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CORPUS_DASHBOARD.md` (fast “where are we” dashboard + distributions)
+
+• Edited docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md (+1 -0)
+
+• Updated Plan
+  └ ✔ Verify corpus audit and outputs
+    ✔ Update SSOT docs and pointers
+    ✔ Re-run 6-day corpus audit
+    ✔ Summarize status and next steps
+
+• - Nothing got deleted on my side; git status shows only doc edits + new small scripts/rollups (plus lots of untracked sharepack/workbook artifacts).
+  - 6‑day corpus audit is green: reports/audit/sharepacks_audit_20251230_to_20260104_rerun.md → PASS=825 WARN=3 FAIL=0 SKIP=6 (the WARN/SKIP are PuertoRico4 missing winners on some days).
+  - Added a Git-friendly audit snapshot for the research pack: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__AUDIT_SUMMARY.md and linked it in docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/
+    gold_days_2025-12-30_to_2026-01-04/MANIFEST.md + docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-12-30_to_2026-01-04/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md.
+  - Documented the multi‑day rollup workflow (including regeneration commands) in docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md, and listed the new cross‑day rollups
+    health gate.
+
+
