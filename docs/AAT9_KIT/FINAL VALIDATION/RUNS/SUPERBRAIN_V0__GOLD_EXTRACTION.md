@@ -484,3 +484,67 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
     general property of how these lane tools behave, not a one-off “033→33” dtype issue.
   - Action (bounded): treat “canonical-only conversion” as a first-class measured primitive (track it in tool audits + gold ledger) and evaluate a small BOX-equivalent derived pack under `--profile
     tool_only` before making any analyzer edits.
+
+- **GOLD-0022** — `2026-01-08 Delaware4 Midday` — winner `820` (canon `028`, idx `11`, mirrorpair ``)
+  - Type: `index_hit_only`
+  - Baseline (profile=`tool_only`): CU union `index_hit=True box_hit=False`; PlayCard (play_box_first B12) `index_hit=False box_hit=False`
+  - Evidence:
+    - Convergence case: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md:17`
+    - Cross-variant bounce: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CROSS_VARIANT_REPORT.md:49`
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__Delaware4.md`
+    - Predictive CU: `sharepacks/_predictive/2026-01-08/Delaware4/candidate_universe__tool_only.json`
+    - Predictive Play Card: `sharepacks/_predictive/2026-01-08/Delaware4/play_card__tool_only.json`
+    - Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__WINNERS_DIGEST.md`
+  - Primitives (tags): `hz_topN`, `canonicalization(028)`, `leading_zero`, `vtrac_idx11`, `cross_variant_bounce(stable_section=Evening)`
+  - Hypothesis: Hot Zones correctly called the **winner’s VTRAC index** (idx11) but did not carry the winning canonical `028` into the bounded play cut, and Stable’s strongest evidence was from the opposite
+    period section (bounce). This is a textbook “index hit → box miss” failure mode on a leading-zero canonical.
+  - Action (bounded): prioritize the already-identified conversion experiments for this failure mode:
+    - `hot_zones_top_triads → canonical → BOX` (GOLD-0019)
+    - and a small “pick 1 canonical inside each top-hit index” closure rule (from the VTRAC reference) when `union.index_hit=True` but `union.box_hit=False`.
+
+- **GOLD-0023** — `2026-01-09 Florida4 Evening` — winner `093` (canon `039`, idx `14`, mirrorpair ``)
+  - Type: `index_hit_only`
+  - Baseline (profile=`tool_only`): CU union `index_hit=True box_hit=False`; PlayCard (play_box_first B12) `index_hit=False box_hit=False`
+  - Evidence:
+    - Convergence case: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md:15`
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__Florida4.md`
+    - Predictive CU: `sharepacks/_predictive/2026-01-09/Florida4/candidate_universe__tool_only.json`
+    - Predictive Play Card: `sharepacks/_predictive/2026-01-09/Florida4/play_card__tool_only.json`
+    - Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__WINNERS_DIGEST.md`
+  - Primitives (tags): `vtrac_topN`, `canonicalization(039)`, `leading_zero`, `vtrac_idx14`
+  - Hypothesis: VTRAC top straights called the correct **index 14 rail**, but none of the bounded canonicals inside that rail matched the winner’s canonical `039`. This is the same “rail correct, box
+    incorrect” pattern as GOLD-0020, but now as an index-hit-only miss (not a canonical hit).
+  - Action (bounded): treat this as an index-closure candidate:
+    - keep the research-only `vtrac_top_straights → canonical → BOX` derived pack (GOLD-0020), and
+    - add a small within-index closure (pick 1–2 canonicals inside the hit index) when `union.index_hit=True` but `union.box_hit=False`.
+
+- **GOLD-0024** — `2026-01-06 Michigan4 Evening` — winner `578` (canon `578`, idx `11`, mirrorpair ``)
+  - Type: `stable_families_only`
+  - Baseline (profile=`tool_only`): CU union `index_hit=True box_hit=False`; PlayCard (play_box_first B12) `index_hit=False box_hit=False`
+  - Evidence:
+    - Cross-variant combined-driven example (Stable families best_rank=1): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CROSS_VARIANT_REPORT.md:75`
+    - Stable summary shows the key gap: `sharepacks/2026-01-06/Michigan4/stable/Michigan4/summary.json` (Evening: `families.best_rank=1`, gaps include `missing_from_scores`, `missing_from_compound`)
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Michigan4.md`
+    - Predictive CU: `sharepacks/_predictive/2026-01-06/Michigan4/candidate_universe__tool_only.json`
+    - Predictive Play Card: `sharepacks/_predictive/2026-01-06/Michigan4/play_card__tool_only.json`
+    - Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__WINNERS_DIGEST.md`
+  - Primitives (tags): `stable_families`, `stable_missing_from_scores`, `stable_missing_from_compound`, `combined_lens`, `vtrac_idx11`
+  - Hypothesis: This is the cleanest proof (in our current window) that **Stable families can isolate the winner even when Stable scores/compound do not contain it**. Our Candidate Universe `stable_top`
+    consumption is therefore incomplete: it should ingest the top Stable families surface, not only the scores/compound surfaces.
+  - Action (bounded): extend the Candidate Universe Stable ingestion to include bounded top-N canonicals from Stable families (per variant + combined), and measure whether this converts “families-only” cases
+    into CU box hits (before any analyzer changes).
+
+- **GOLD-0025** — `2026-01-08 NewJersey4 Evening` — winner `055` (canon `055`, idx `1`, mirrorpair ``)
+  - Type: `budget_sensitivity (doubles)`
+  - Baseline (profile=`tool_only`): CU union `hit_any=True box_hit=True`; PlayCard (play_box_first B12) `hit_any=False box_hit=False`
+  - Evidence:
+    - Cross-variant bounce: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CROSS_VARIANT_REPORT.md:58`
+    - Predictive Play Card shows the budget boundary: `sharepacks/_predictive/2026-01-08/NewJersey4/play_card__tool_only.json`
+      - `play_box_first/B12` excludes `055`, while `play_box_first/B24` includes `055`
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__NewJersey4.md`
+    - Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-08__WINNERS_DIGEST.md`
+  - Primitives (tags): `double_winner`, `budget_sensitivity`, `cross_variant_bounce(stable_section=Midday)`, `vtrac_idx1`
+  - Hypothesis: Even when the Candidate Universe contains the exact winning double, a tight B12 play card can still miss if the selection policy prioritizes other closures first. This supports using
+    multiple budget “cuts” as experiments (B12/B24/B36) instead of treating a single small card as authoritative.
+  - Action (bounded): keep B12 as a strict experiment, but treat B24 as the default competition card for doubles-heavy states (until rollups show otherwise), or explicitly reserve 1 “doubles slot” at B12
+    when due-doubles + multi-variant double-pressure is high.

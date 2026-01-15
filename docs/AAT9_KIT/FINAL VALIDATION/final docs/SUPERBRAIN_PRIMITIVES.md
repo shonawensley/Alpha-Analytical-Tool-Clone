@@ -66,6 +66,10 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
   - Evidence: `sharepacks/_predictive/<D>/<STATE>/stable/<STATE>/<STATE>_stable_patterns_scores.csv`
   - Candidate Universe: `method_id=stable_top` (packs per section: Midday/Evening/Combined when present)
   - Transform: `box_expand_unique_perms` (unique permutations of the canonical)
+  - Known limitation (important):
+    - Stable can sometimes isolate the winner via **families** even when the winner is missing from `patterns_scores.csv` / `patterns_compound.csv`.
+    - Example: `2026-01-06 Michigan4 Evening` (Stable families best_rank=1, but gaps include `missing_from_scores`, `missing_from_compound`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md` (see GOLD-0024).
+    - Implication: Candidate Universe may need a future bounded pack sourced from Stable families (selection-layer change, not analyzer tuning).
 
 ### Digit Reduction primitives
 
@@ -80,6 +84,8 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
   - Evidence: `sharepacks/_predictive/<D>/<STATE>/vtrac/<STATE>/<STATE>_vtrac_enhanced_*.json`
   - Candidate Universe: `method_id=vtrac_enhanced_top`
   - Transform: “take top-N `straights_ranked`”
+  - Note: these packs frequently produce `vtrac_index_hit_only` (rail correct, canonical wrong). Candidate Universe currently records this via grading; converting it into box hits is a v0.2 selection-layer
+    research target (see GOLD-0020, GOLD-0023 in `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`).
 
 ### Hot Zones primitives
 
@@ -88,6 +94,8 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
   - Evidence (fallback): `sharepacks/_predictive/<D>/<STATE>/hot_zones/<STATE>/<STATE>_hot_zones_top_lanes.csv`
   - Candidate Universe: `method_id=hot_zones_top`
   - Note: the “winner_map” filename is legacy terminology; in predictive mode it is **not** a winners lens.
+  - Note: Hot Zones often surfaces the correct **index rail** without the winning canonical (another `vtrac_index_hit_only` driver). Converting this into box hits is a v0.2 selection-layer research target
+    (see GOLD-0019, GOLD-0022 in `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`).
 
 ### Aux primitives
 
@@ -177,6 +185,9 @@ Important: grading outputs must **never** be written into predictive sharepacks.
   - Strategies:
     - `play_box_first` (prefers full canonical closures)
     - `analysis_prefix` (strict ranked prefix)
+  - Budgets are experiments, not “truth”:
+    - B12 is intentionally strict and will miss cases that B24/B36 capture.
+    - Doubles-heavy days can be especially budget-sensitive (see GOLD-0025 in `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`).
 - Grader: `scripts/tools/grade_play_card.py`
   - Output (RUNS only): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PLAY_CARD_GRADE.*`
 
