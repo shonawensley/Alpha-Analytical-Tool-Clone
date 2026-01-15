@@ -102,12 +102,14 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
 - **Aux positional shortlist (cross-variant tags, double-pressure, mirror-echo)**
   - Evidence: `sharepacks/_predictive/<D>/<STATE>/aux/<STATE>/summary.json`
   - Candidate Universe: `method_id=aux_positional`
-  - Notes: Aux is a “structure/pressure” lens; it’s most valuable for narrowing to small, high-pressure sets.
+  - Notes:
+    - Aux is a “structure/pressure” lens; treat it as corroboration / envelope input, not a primary STRAIGHT caller.
+    - v0 evidence + decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__FEATURE_DECISIONS.md`
 
 - **Aux VTRAC overdue index closure (boxed-family `vtrac_index`)**
   - Evidence: `sharepacks/_predictive/<D>/<STATE>/aux/<STATE>/summary.json` → `vtrac.overlay_top` (per variant)
   - Candidate Universe: `method_id=aux_vtrac_index_overdue`
-  - Transform: take top-N overdue indices per variant and expand each index to its full boxed set (`modules.vtrac_reference.get_index_set`) so the cost is explicit (48 combos per index).
+  - Transform: take top-N overdue indices per variant and expand to the full unique-permutation closure of the index’s canonical set (cost varies by index size; commonly ~24–48 combos).
 
 ---
 

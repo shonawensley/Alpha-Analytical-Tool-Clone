@@ -14,6 +14,7 @@ Read first:
 - v0 sprint + ablation results: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md`
 - Gold capture ledger: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
 - DR consumption decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+- Aux consumption decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__FEATURE_DECISIONS.md`
 - Aux badge-matrix audit/export: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md`
 
 ---
@@ -109,4 +110,3 @@ Current v0.2 portfolio sort order:
 - Profit Alerts are not used as default selection signal (they remain measurable via `--profile mixed/profit_only`).
 - Aux boxed VTRAC badge-matrix density is not yet compounded into the score (export exists; mining it into “gold” is the next step).
 - Any analyzer tuning (Stable/DR/VTRAC/HZ) is deferred until we have a larger graded corpus.
-

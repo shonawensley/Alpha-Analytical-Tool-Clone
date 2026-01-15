@@ -548,3 +548,36 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
     multiple budget “cuts” as experiments (B12/B24/B36) instead of treating a single small card as authoritative.
   - Action (bounded): keep B12 as a strict experiment, but treat B24 as the default competition card for doubles-heavy states (until rollups show otherwise), or explicitly reserve 1 “doubles slot” at B12
     when due-doubles + multi-variant double-pressure is high.
+
+- **GOLD-0026** — `2026-01-05 Florida4 Evening` — winner `994` (canon `499`, idx `35`, mirrorpair ``)
+  - Type: `aux_only (aux_vtrac_index_overdue)`
+  - Baseline (profile=`tool_only`):
+    - CU has the winner via `aux_vtrac_index_overdue` (as-consumed hit is present in the Aux closure pack).
+    - PlayCard (play_box_first B12) still misses (budget allocation failure).
+  - Evidence:
+    - Aux quant + cases: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__CASES.md`
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__Florida4.md`
+    - Predictive CU: `sharepacks/_predictive/2026-01-05/Florida4/candidate_universe__tool_only.json` (pack `aux_vtrac_index_overdue:Evening:idx=35`)
+    - Predictive Play Card: `sharepacks/_predictive/2026-01-05/Florida4/play_card__tool_only.json`
+    - PlayCard grade: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__PLAY_CARD_GRADE__tool_only.csv`
+  - Primitives (tags): `aux_vtrac_index_overdue`, `aux_only`, `idx:35`, `doubles_index`, `budget_allocation`
+  - Hypothesis: Aux can uniquely surface an index closure that contains the winner, but our budgeted cut is not allocating any “slots” to that closure reliably. This is a selection-layer issue, not an analyzer
+    issue.
+  - Action (bounded): add a v0.2 play-card policy knob: reserve 1 “aux index closure” boxed canonical when `aux_vtrac_index_overdue` fires with high DS and no other packs agree (keep measurable; do not touch
+    analyzers).
+
+- **GOLD-0027** — `2026-01-06 Delaware4 Midday` — winner `165` (canon `156`, idx `6`, mirrorpair `1/6`)
+  - Type: `aux_only (mirror_pair_closure)`
+  - Baseline (profile=`tool_only`):
+    - CU contains the winner via `mirror_pair_closure` (bounded BOX pack).
+    - PlayCard (play_box_first B12) misses despite the pack being compact (n≈18).
+  - Evidence:
+    - Aux cases: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__CASES.md`
+    - Run report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__Delaware4.md`
+    - Predictive CU: `sharepacks/_predictive/2026-01-06/Delaware4/candidate_universe__tool_only.json` (pack `mirror_pair_closure:pair=1/6`)
+    - Predictive Play Card: `sharepacks/_predictive/2026-01-06/Delaware4/play_card__tool_only.json`
+    - PlayCard grade: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-06__PLAY_CARD_GRADE__tool_only.csv`
+  - Primitives (tags): `mirror_pair(1/6)`, `mirror_pair_closure`, `aux_only`, `budget_allocation`
+  - Hypothesis: mirror-pair closure is a compact “index→box conversion” mechanism, but it can be starved by the budget allocation policy in small cards.
+  - Action (bounded): reserve 1 “conversion slot” for `mirror_pair_closure` when present (especially on mirror-double days), and measure whether this converts `vtrac_index_hit_only` into `box_hit` without
+    inflating spend.

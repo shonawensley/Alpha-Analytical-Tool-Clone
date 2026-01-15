@@ -34,6 +34,10 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
     - `DR_V0__AUDIT__QUANT.md`
     - `DR_V0__AUDIT__CASES.md`
     - `DR_V0__FEATURE_DECISIONS.md`
+  - Aux:
+    - `AUX_V0__AUDIT__QUANT.md`
+    - `AUX_V0__AUDIT__CASES.md`
+    - `AUX_V0__FEATURE_DECISIONS.md`
   - Stable:
     - `STABLE_V0__AUDIT__QUANT.md`
     - `STABLE_V0__AUDIT__CASES.md`
