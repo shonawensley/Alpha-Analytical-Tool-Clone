@@ -53,9 +53,9 @@ Generate a predictive portfolio triage report (cross-state):
 ```bash
 python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
 ```
-(Optional) Quarantine Profit Alerts via ablation profiles:
+(Optional) Include Profit Alerts (mixed profile):
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed
 ```
 
 Generate a Candidate Universe (gradeable predictions) inside a predictive sharepack:
@@ -64,7 +64,7 @@ python3 scripts/tools/create_candidate_universe.py --date YYYY-MM-DD --sharepack
 ```
 (Optional) Profile variants (additive, measured; does not delete anything):
 ```bash
-python3 scripts/tools/create_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed
 python3 scripts/tools/create_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile profit_only
 ```
 
@@ -73,10 +73,10 @@ Generate budgeted Play Cards (e.g., 12/24/36 combos) from Candidate Universe:
 python3 scripts/tools/create_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --budgets 12,24,36
 ```
 (Add `--write-md` to also write `play_card.md`.)
-Play Cards include multiple strategies for controlled experiments: `play_box_first`, `analysis_prefix`, `convergence_box_first`.
+Play Cards include multiple strategies for controlled experiments: `play_box_first`, `analysis_prefix`, `convergence_box_first`, `conversion_box_first`.
 (Optional) Generate Play Cards for a profile:
 ```bash
-python3 scripts/tools/create_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only --budgets 12,24,36
+python3 scripts/tools/create_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed --budgets 12,24,36
 ```
 
 Grade Candidate Universe once results exist (writes only to RUNS):
@@ -85,7 +85,7 @@ python3 scripts/tools/grade_candidate_universe.py --date YYYY-MM-DD --sharepacks
 ```
 (Optional) Grade a profile:
 ```bash
-python3 scripts/tools/grade_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/grade_candidate_universe.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed
 ```
 
 Grade Play Cards once results exist (writes only to RUNS):
@@ -94,7 +94,7 @@ python3 scripts/tools/grade_play_card.py --date YYYY-MM-DD --sharepacks-root sha
 ```
 (Optional) Grade a profile:
 ```bash
-python3 scripts/tools/grade_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/grade_play_card.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed
 ```
 
 Roll up grades across all available days (RUNS):
@@ -104,8 +104,8 @@ python3 scripts/tools/rollup_play_card_corpus.py
 ```
 (Optional) Roll up a profile variant:
 ```bash
-python3 scripts/tools/rollup_candidate_universe_corpus.py --profile tool_only
-python3 scripts/tools/rollup_play_card_corpus.py --profile tool_only
+python3 scripts/tools/rollup_candidate_universe_corpus.py --profile mixed
+python3 scripts/tools/rollup_play_card_corpus.py --profile mixed
 ```
 
 Generate a Control Center daily run report scaffold:

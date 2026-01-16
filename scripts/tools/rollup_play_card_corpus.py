@@ -125,8 +125,8 @@ def main() -> None:
     ap.add_argument(
         "--profile",
         choices=["mixed", "tool_only", "profit_only"],
-        default="mixed",
-        help="Ablation profile to roll up (default: mixed).",
+        default="tool_only",
+        help="Ablation profile to roll up (default: tool_only).",
     )
     ap.add_argument("--out-csv", default=None, help="Override output CSV path")
     ap.add_argument("--out-md", default=None, help="Override output Markdown path")

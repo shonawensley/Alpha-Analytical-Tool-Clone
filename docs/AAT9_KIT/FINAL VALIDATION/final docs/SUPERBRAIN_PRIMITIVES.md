@@ -33,7 +33,9 @@ The Candidate Universe generator is implemented in:
 - `scripts/tools/create_candidate_universe.py`
 
 It emits packs under:
-- `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
+- `sharepacks/_predictive/<D>/<STATE>/candidate_universe{__profile}.json`
+  - Default posture is `tool_only`, so the default filename is `candidate_universe__tool_only.json`.
+  - `mixed` (includes Profit Alerts) uses the unsuffixed `candidate_universe.json`.
 
 Each pack must include a `transform_chain` so we can later attribute hits to the actual transforms used.
 
@@ -42,7 +44,9 @@ Each pack must include a `transform_chain` so we can later attribute hits to the
 - **Profit Alerts implied set**
   - Evidence: `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
   - Candidate Universe: `method_id=profit_alerts`
-  - Notes: this is the “bet-ready” layer (bounded by CapLines/ImpliedSet). Treat it as a first-class pack.
+  - Notes:
+    - This is the “bet-ready” layer (bounded by CapLines/ImpliedSet).
+    - It is excluded by default in the tool-first posture (`profile=tool_only`) and only included in `mixed` / `profit_only`.
 
 - **Due Doubles (VTRAC double families)**
   - Evidence: `sharepacks/_predictive/<D>/control_center/due_doubles.csv`
@@ -182,8 +186,9 @@ Important: grading outputs must **never** be written into predictive sharepacks.
 ### Play Cards (budgeted cuts)
 
 - Generator: `scripts/tools/create_play_card.py`
-  - Input: `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
-  - Output (predictive SSOT): `sharepacks/_predictive/<D>/<STATE>/play_card.json`
+  - Input: `sharepacks/_predictive/<D>/<STATE>/candidate_universe{__profile}.json`
+  - Output (predictive SSOT): `sharepacks/_predictive/<D>/<STATE>/play_card{__profile}.json`
+    - Default posture is `tool_only`, so the default filename is `play_card__tool_only.json`.
   - Strategies:
     - `play_box_first` (prefers full canonical closures)
     - `analysis_prefix` (strict ranked prefix)

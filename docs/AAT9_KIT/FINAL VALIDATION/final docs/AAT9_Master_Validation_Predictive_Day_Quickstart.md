@@ -68,13 +68,15 @@ After the predictive sharepack exists, generate the **Candidate Universe** (the 
 python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive
 ```
 
-Optional: Profit Alerts quarantine (ablation profiles; additive, does not delete anything):
-- `mixed` (default): current behavior (includes Profit Alerts packs)
-- `tool_only`: excludes Profit Alerts packs
-- `profit_only`: Profit Alerts packs only
+Notes:
+- Candidate Universe is **profiled** (Profit Alerts quarantine is expressed via `--profile`).
+- Default generation posture is `tool_only` (Profit Alerts excluded), so the default output is:
+  - `sharepacks/_predictive/<D>/<STATE>/candidate_universe__tool_only.json`
+- The `mixed` profile (includes Profit Alerts) writes the unsuffixed file:
+  - `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
 
 ```bash
-python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile mixed
 python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile profit_only
 ```
 
@@ -95,7 +97,7 @@ python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepack
 
 Optional: generate Play Cards for an ablation profile:
 ```bash
-python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --budgets 12,24,36
+python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --profile mixed --budgets 12,24,36
 ```
 
 Optional: also write a small human-readable Play Card summary next to the JSON:
@@ -106,7 +108,7 @@ python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepack
 Optional: create a per-state predictive run report scaffold (for human notes):
 
 ```bash
-python3 scripts/tools/create_predictive_run_report.py --date <D> --state <STATE> --sharepacks-root sharepacks/_predictive
+python3 scripts/tools/create_predictive_run_report.py --date <D> --state <STATE> --sharepacks-root sharepacks/_predictive --profile tool_only
 ```
 
 Optional: create a cross-state predictive portfolio triage report (fast “what to review/play” surface):
@@ -117,7 +119,7 @@ python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepa
 
 Optional: portfolio report for an ablation profile:
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile mixed
 ```
 
 ---

@@ -175,8 +175,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--profile",
         choices=["mixed", "tool_only", "profit_only"],
-        default="mixed",
-        help="Ablation profile (default: mixed). Selects play_card filename and grade output suffix.",
+        default="tool_only",
+        help="Ablation profile (default: tool_only). Selects play_card filename and grade output suffix.",
     )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys to grade.")
     ap.add_argument(

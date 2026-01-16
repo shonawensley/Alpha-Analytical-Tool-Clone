@@ -33,17 +33,17 @@ Primary navigation:
 We do not delete Profit Alerts during synthesis. We measure them.
 
 Profiles (CLI `--profile`):
-- `mixed` (default): current behavior (Candidate Universe includes Profit Alerts packs + non-profit packs).
-- `tool_only`: excludes Profit Alerts packs from Candidate Universe and Play Cards.
+- `tool_only` (default): excludes Profit Alerts packs from Candidate Universe and Play Cards.
+- `mixed`: includes Profit Alerts packs + non-profit packs (explicit; use only for ablation comparison).
 - `profit_only`: includes Profit Alerts packs only (no other packs; no derived combo packs).
 
 File naming convention (inside sharepacks):
 - Candidate Universe:
-  - `candidate_universe.json` (mixed)
+  - `candidate_universe.json` (mixed; legacy filename)
   - `candidate_universe__tool_only.json`
   - `candidate_universe__profit_only.json`
 - Play Cards:
-  - `play_card.json` (mixed)
+  - `play_card.json` (mixed; legacy filename)
   - `play_card__tool_only.json`
   - `play_card__profit_only.json`
 

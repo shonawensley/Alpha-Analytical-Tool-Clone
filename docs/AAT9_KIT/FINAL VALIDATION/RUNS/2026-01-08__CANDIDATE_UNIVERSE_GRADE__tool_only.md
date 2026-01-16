@@ -1,7 +1,7 @@
 # Candidate Universe Grade — D=2026-01-08
 
 Provenance
-- Generated: `2026-01-13T23:10:47.455960+00:00`
+- Generated: `2026-01-16T21:16:36.946266+00:00`
 - Candidate Universe root: `sharepacks/_predictive/2026-01-08`
 - Results file: `data/results/2026-01-08.txt` (present)
 

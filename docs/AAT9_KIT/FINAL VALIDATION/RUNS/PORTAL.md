@@ -99,16 +99,18 @@ Then drill into a specific state:
 ## 3) The 3 “most important” predictive docs (BEFORE)
 
 For any predictive date `D`, start here:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO.md` (cross-state triage; fastest competition surface)
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.md` (once results exist; grading is in RUNS only)
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PLAY_CARD_GRADE.md` (once results exist; budgeted selection grading)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO__tool_only.md` (cross-state triage; fastest competition surface; tool-first default)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE__tool_only.md` (once results exist; grading is in RUNS only)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PLAY_CARD_GRADE__tool_only.md` (once results exist; budgeted selection grading)
 
 Then drill into a state:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>__PREDICTIVE.md` (pack inventory + evidence pointers)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>__PREDICTIVE__tool_only.md` (pack inventory + evidence pointers; tool-first default)
 - Predictive evidence (canonical “what to play now” boards):
-  - Default (includes Profit Alerts): `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
-  - If you want to quarantine Profit Alerts (recommended during synthesis): generate `__tool_only` artifacts (see `SUPERBRAIN_V0__SYNTHESIS_SPRINT.md`) and use:
-    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO__tool_only.md`
+  - Tool-first (recommended; Profit Alerts excluded):
+    - `sharepacks/_predictive/<D>/<STATE>/candidate_universe__tool_only.json`
+    - `sharepacks/_predictive/<D>/<STATE>/play_card__tool_only.json`
+  - Profit Alerts are still exported in the predictive sharepack’s Control Center (for measurement/ablation), but are not used by default:
+    - `sharepacks/_predictive/<D>/control_center/profit_alerts.csv` (use only if you intentionally run `--profile mixed` / `profit_only`)
 
 ---
 

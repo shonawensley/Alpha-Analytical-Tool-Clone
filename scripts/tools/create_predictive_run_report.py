@@ -4,7 +4,7 @@ Create a per-date/per-state Predictive Run Report Markdown file.
 
 This is a workflow bridge between:
 - frozen predictive sharepacks (pre-results): sharepacks/_predictive/<D>/...
-- gradeable predictions: sharepacks/_predictive/<D>/<STATE>/candidate_universe.json
+- gradeable predictions: sharepacks/_predictive/<D>/<STATE>/candidate_universe*.json
 
 It does NOT run analyzers, rebuild tables, or generate winners. It only reads
 sharepack artifacts and writes a Markdown scaffold into RUNS.
@@ -13,6 +13,7 @@ Usage
 -----
 python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4
 python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --sharepacks-root sharepacks/_predictive
+python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --profile mixed
 """
 
 from __future__ import annotations
@@ -69,13 +70,13 @@ def load_history_date(day_dir: Path, *, results_date: str) -> str:
 def summarize_candidate_universe(path: Path) -> List[str]:
     if not path.exists():
         return [
-            "- (missing) `candidate_universe.json`",
-            f"  - Generate: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --states <STATE>`",
+            f"- (missing) `{path.name}`",
+            f"  - Generate: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --profile <PROFILE> --states <STATE>`",
         ]
 
     raw = read_json(path)
     if not isinstance(raw, dict):
-        return ["- (unreadable) `candidate_universe.json`"]
+        return [f"- (unreadable) `{path.name}`"]
 
     packs = raw.get("packs")
     packs_list = packs if isinstance(packs, list) else []
@@ -113,11 +114,20 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--date", required=True, help="Predictive sharepack results date D (YYYY-MM-DD)")
     ap.add_argument("--state", required=True, help="State key (e.g., NewJersey4)")
     ap.add_argument(
+        "--profile",
+        default="tool_only",
+        help="Ablation profile to reference (default: tool_only). Determines candidate_universe/play_card filenames.",
+    )
+    ap.add_argument(
         "--sharepacks-root",
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
-    ap.add_argument("--out", default=None, help="Override output path (default: RUNS/<D>__<STATE>__PREDICTIVE.md)")
+    ap.add_argument(
+        "--out",
+        default=None,
+        help="Override output path (default: RUNS/<D>__<STATE>__PREDICTIVE{__profile}.md; mixed is unsuffixed)",
+    )
     ap.add_argument("--force", action="store_true", help="Overwrite an existing file (default: refuse).")
     return ap.parse_args()
 
@@ -125,6 +135,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     results_date = parse_iso_date(args.date).isoformat()
+    profile = str(args.profile or "mixed").strip()
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
 
     sharepacks_root = Path(args.sharepacks_root)
     if not sharepacks_root.is_absolute():
@@ -139,7 +151,7 @@ def main() -> None:
 
     runs_dir = _runs_dir()
     runs_dir.mkdir(parents=True, exist_ok=True)
-    default_out = runs_dir / f"{results_date}__{args.state}__PREDICTIVE.md"
+    default_out = runs_dir / f"{results_date}__{args.state}__PREDICTIVE{out_suffix}.md"
     out_path = Path(args.out) if args.out else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not args.force:
@@ -147,15 +159,17 @@ def main() -> None:
 
     history_date = load_history_date(day_dir, results_date=results_date)
 
-    candidate_universe = state_dir / "candidate_universe.json"
+    candidate_universe = state_dir / f"candidate_universe{out_suffix}.json"
+    play_card = state_dir / f"play_card{out_suffix}.json"
     cc_dir = day_dir / "control_center"
 
     # Common evidence pointers (best-effort; may be missing).
     evidence_paths: Dict[str, str] = {
         "Sharepack state README": safe_rel(state_dir / "README.md"),
         "Candidate Universe": safe_rel(candidate_universe),
+        "Play Card": safe_rel(play_card),
         "Control Center portal dir": safe_rel(cc_dir),
-        "Profit Alerts": safe_rel(cc_dir / "profit_alerts.csv"),
+        "Profit Alerts (optional)": safe_rel(cc_dir / "profit_alerts.csv"),
         "Due Doubles": safe_rel(cc_dir / "due_doubles.csv"),
         "VTRAC Repeat Watch": safe_rel(cc_dir / "vtrac_repeat_watch.csv"),
         "Stable scores": safe_rel(state_dir / "stable" / args.state / f"{args.state}_stable_patterns_scores.csv"),
@@ -177,13 +191,14 @@ def main() -> None:
     lines.append("")
     lines.append("Purpose")
     lines.append("- Capture a **pre-results** snapshot analysis for one state/day.")
-    lines.append("- Keep predictions gradeable via `candidate_universe.json` (do not mix in winners artifacts).")
+    lines.append(f"- Keep predictions gradeable via `candidate_universe{out_suffix}.json` (do not mix in winners artifacts).")
     lines.append("")
     lines.append("Scope")
     lines.append(f"- Results date (D): `{results_date}`")
     lines.append(f"- History workbook date (H): `{history_date}` (usually D-1)")
     lines.append(f"- Predictive sharepack root: `{safe_rel(sharepacks_root)}`")
     lines.append(f"- Sharepack state dir: `{safe_rel(state_dir)}`")
+    lines.append(f"- Profile: `{profile}`")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -210,4 +225,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

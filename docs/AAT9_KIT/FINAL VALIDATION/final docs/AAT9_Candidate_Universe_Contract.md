@@ -41,12 +41,20 @@ Snapshot roots:
 ## Output locations (SSOT contract)
 
 Per state/day (predictive “before” snapshot):
-- `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
-- Optional human view: `sharepacks/_predictive/<D>/<STATE>/candidate_universe.md`
+- Candidate Universe is **profiled** (Profit Alerts quarantine is expressed via `--profile`).
+- Files follow the convention: `candidate_universe{__profile}.json` where `__profile` is omitted for `mixed`.
+- Current default generation posture is `tool_only`, so the default filename is suffix-named.
+
+Profiled outputs (common cases):
+- Default (recommended; Profit Alerts excluded): `sharepacks/_predictive/<D>/<STATE>/candidate_universe__tool_only.json`
+- Mixed (includes Profit Alerts): `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json` (`--profile mixed`)
+- Profit only (Profit Alerts only): `sharepacks/_predictive/<D>/<STATE>/candidate_universe__profit_only.json` (`--profile profit_only`)
+- Optional human view (if `--write-md`): `candidate_universe{__profile}.md`
 
 Post‑results grading outputs (do **not** write into predictive sharepacks):
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.csv`
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.md`
+- Grading is also **profiled** and follows the convention: `<D>__CANDIDATE_UNIVERSE_GRADE{__profile}.*` where `__profile` is omitted for `mixed`.
+- Default (recommended; tool-first): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE__tool_only.csv` and `.md`
+- Mixed (includes Profit Alerts): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CANDIDATE_UNIVERSE_GRADE.csv` and `.md` (`--profile mixed`)
 
 ---
 
@@ -124,4 +132,3 @@ python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root s
   - an immutable “before” snapshot (`sharepacks/_predictive/<D>/...`)
   - a deterministic, sharepack‑local Candidate Universe artifact
   - grading that happens later, outside the predictive snapshot
-

@@ -187,7 +187,10 @@ Coverage modes (counts, for planning only):
    - Part 2B: cross-tool synthesis (shared clusters + conflicts)  
    - Part 3.9: Aux convergence table (signals per variant)  
    - VTRAC reference mapping (index members + VSTRAIGHTS)
-   - (Optional, if available) Predictive baseline: `sharepacks/_predictive/<RESULTS_DATE>/<STATE>/candidate_universe.json` + `play_card.json` (pre-results; do not edit; use as a starting candidate list and for “before → after” comparison).
+   - (Optional, if available) Predictive baseline (profiled):
+     - `sharepacks/_predictive/<RESULTS_DATE>/<STATE>/candidate_universe{__profile}.json`
+     - `sharepacks/_predictive/<RESULTS_DATE>/<STATE>/play_card{__profile}.json`
+     - Default tool-first posture is `__tool_only` (Profit Alerts excluded). `mixed` (includes Profit Alerts) is unsuffixed.
 1) Candidate universe (per draw)  
    - Midday: list the top N (5–10) triads you would carry forward, with 1-line rationale each (evidence vector count + variant correctness).  
    - Evening: list the top N (5–10) triads you would carry forward, with 1-line rationale each.  

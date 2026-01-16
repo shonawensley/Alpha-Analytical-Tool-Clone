@@ -488,6 +488,229 @@ You’re not in a mess — you’re exactly at the “stop runs, synthesize, dec
   └ List tasks
     Search DR_RESEARCH
 
+
+
+
+
+
+Tool audits status (completed)
+
+  - Yes — all four string-table tools have full v0 consumption audits (quant + cases + feature decisions):
+      - Stable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+        STABLE_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__FEATURE_DECISIONS.md:1
+      - Digit Reduction: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/
+        RUNS/DR_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md:1
+      - Hot Zones: docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/
+        RUNS/HOT_ZONES_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__FEATURE_DECISIONS.md:1
+      - VTRAC enhanced: docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/
+        RUNS/VTRAC_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md:1
+
+  Are the Master Validation templates involved?
+
+  - Yes, but we use them selectively:
+      - The case audits explicitly reference specific filled run reports (docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+        <D>__<STATE>.md) which are the Master Validation template filled with tool summaries + winners lens.
+      - The quant audits use the exported corpus/grade tables derived from sharepacks + run-report structure (e.g.,
+        docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv:1 and the __CANDIDATE_UNIVERSE_GRADE__tool_only.csv
+        files).
+      - We do not read “all 70 templates in order” because the triage surfaces already tell us which ones are high-
+        leverage to read first (convergence cases, doubles queue, cross-variant bounce).
+
+  Aux audit status (partly done; more to do)
+
+  - We did do Aux-specific work already:
+      - Semantics/legend (“what are we capturing?”): docs/AAT9_KIT/FINAL VALIDATION/final docs/
+        AAT9_Aux_Coverage_And_Legend.md:1
+      - Windows-style “badged boxed VTRAC matrix” surfaced + audited:
+          - Audit: docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md:1
+          - Per-day outputs (already generated for the v0 window): docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-
+            01-05__AUX_VTRAC_BADGE_MATRIX.md:1 … through docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-
+            09__AUX_VTRAC_BADGE_MATRIX.md:1
+  - What we have not done yet is a full Aux “consumption audit” across all Aux signals (positional shortlist + vtrac
+    overlays + pairs + sums + BA) in the same 3-doc pattern as the other tools. I agree that’s the clean next step if
+    your goal is “how do Aux signals compound (within Aux and with other tools)”.
+
+  How we’re getting the “best gold” (and not losing it)
+
+  - We’re using triage surfaces to pick the highest-leverage examples first, then capturing them with stable IDs:
+      - Convergence targets: docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CONVERGENCE_CASES.md:1
+      - Doubles/mirror-double conversion targets: docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:1
+  - Reusable patterns get promoted into the shared taxonomy:
+      - docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md:1
+  - v0.2 defaults lock what “the system” does by default (tool-only, Profit Alerts quarantined, DR top candidates
+    demoted) so you don’t have to remember it in chat:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md:1
+
+  - I’d do it exactly like the other tools: AUX_V0__AUDIT__QUANT.md/csv + AUX_V0__AUDIT__CASES.md +
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• I’m going to do a quick read‑only inventory (git log + RUNS file list) so I can answer precisely which audits exist
+  and what’s still missing.
+
+• Explored
+  └ List RUNS
+    Search ^AUX_V0__AUDIT__
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Updated Plan
+  └ ✔ Confirm repo status clean
+    ✔ Mine triage docs into GOLD
+    ✔ Promote rules into primitives
+    ✔ Summarize status and next steps
+
+─ Worked for 30m 52s ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+• What I just did (synthesis-only, no new day builds)
+
+  - Deleted the ad‑hoc test run artifacts you wanted gone: sharepacks/_predictive/2026-01-13/ and docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/2026-01-13__*.
+  - Mined triage surfaces into the durable gold ledger:
+      - Added GOLD-0022..GOLD-0025 to docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:1
+        (cross‑variant bounce + index-hit-only misses, Stable “families-only” case, and a doubles budget-sensitivity
+        case).
+  - Promoted the key takeaways into the taxonomy so they won’t get lost:
+      - Updated docs/AAT9_KIT/FINAL VALIDATION/final docs/SUPERBRAIN_PRIMITIVES.md:1 with:
+          - the new Stable families vs scores/compound limitation (GOLD-0024),
+          - explicit emphasis that vtrac_index_hit_only is the core “rail correct, box wrong” primitive,
+          - budget guidance (B12 vs B24) from the doubles case (GOLD-0025).
+  - We’re turning the “messy colleague of insights” into stable, referenced decisions:
+      - Every new “gold” insight now has an ID + evidence pointers + a bounded action.
+  - We strengthened the “superbrain” posture without touching analyzers:
+      - The biggest new unlock is GOLD-0024: Stable can isolate winners in patterns_families.csv even when the winner
+        is missing from patterns_scores.csv/patterns_compound.csv. That means some “Stable is failing” feelings are
+        actually consumption-layer gaps, not analyzer gaps.
+      - Add bounded “index→box closure” experiments for the recurring vtrac_index_hit_only pattern (GOLD-0022/0023).
+      - Treat B12 as an experiment and consider B24 as the default “competition card” for doubles-heavy states (GOLD-
+        0025), until rollups say otherwise.
+
+  If you want, I’ll draft the exact v0.2 decision options as a short checklist (“implement now vs keep as research-only
+  tools like i thnk i sa w for digit reduction? are the tempaltes involved in the audits? which tools have gone through
+  this full audit? should we also run audit like on aux features like from the templates type deal in adddition to all
+  the tools to understand abit deeper how our valuable aux features might optimal compound score together (like high
+  scoring scenarios?) or how they fit within compounding other tool scoring or optimal convergence with them or
+  something as compound scoring? still kinda somewhat not sure i fully understand how all this works and how we are
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_________________________________________________________________________________
+
+
+
+ Explored
+  └ List RUNS
+    Search (STABLE_V0__AUDIT__|DR_V0__AUDIT__|HOT_ZONES_V0__AUDIT__|VTRAC_V0__AUDIT__|_V0__FEATURE_DECISIONS|
+           AUX_VTRAC_BADGE_MATRIX__AUDIT|__AUX_VTRAC_BADGE_MATRIX\.md|SUPERBRAIN_V0__GOLD_EXTRACTION|
+           SUPERBRAIN_V0__SYNTHESIS_SPRINT|SUPERBRAIN_V0_2__DEFAULTS|CONVERGENCE_CASES|CROSS_VARIANT_REPORT|
+           DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Yes — we’ve audited all four string-table tools in the same “v0 consumption audit” format (not just Stable + DR):
+
+  - Stable: docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    STABLE_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__FEATURE_DECISIONS.md:1
+  - Digit Reduction: docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    DR_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md:1
+  - Hot Zones: docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/
+    HOT_ZONES_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__FEATURE_DECISIONS.md:1
+  - VTRAC enhanced: docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md:1, docs/AAT9_KIT/FINAL VALIDATION/
+    RUNS/VTRAC_V0__AUDIT__CASES.md:1, docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md:1
+
+  How templates/RUNS are involved:
+
+  - We’re not “reading 70 templates in order”.
+  - We use RUNS selectively as evidence for curated cases: each audit’s *_CASES.md pulls from the relevant docs/
+    AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md plus winners artifacts to answer “was this a tool problem or an
+    ingestion/translation problem?”.
+
+  What triage surfaces we mine (instead of brute-force reading everything):
+
+  - docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md:1
+  - The “gold notebook” where we store what we learn so it doesn’t get lost across resets: docs/AAT9_KIT/FINAL
+    VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md:1
+
+  Aux: partially audited, not fully (yet)
+
+  - We did complete the boxed VTRAC badge matrix audit + daily reports:
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md:1
+      - docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05__AUX_VTRAC_BADGE_MATRIX.md:1 (and 01-06/07/08/09)
+  - We have not yet done the full Aux “v0 consumption audit” across positional/pairs/sums/vtrac overlay/BA (the
+    equivalent of AUX_V0__AUDIT__QUANT/CASES/FEATURE_DECISIONS). That’s the right next step if you want to quantify “Aux
+    compounding across variants” cleanly.
+
+  Why this is the “best gold” path (and not missing gold)
+
+
+  If you want, I’ll do Aux next in the same 3-doc pattern (quant+cased+feature-decisions), then we update docs/AAT9_KIT/
+  FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md:1 and you’ll have a coherent v0.2 you can run new days with.
+
+
+
+• Updated Plan
+  └ Proceeding with the approved next step: a full Aux v0 consumption audit (quant + cases + feature decisions) using
+    the existing graded v0 window, then promoting durable conclusions into the gold ledger/primitives and (if justified)
+    □ Promote findings to ledgers/docs
+    □ Sanity-check outputs and git status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ________
 
 

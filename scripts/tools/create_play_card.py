@@ -17,11 +17,12 @@ This tool:
 Notes
 -----
 - Budget units are "combo lines" (length of the final combos list).
-- Two built-in strategy variants:
+- Built-in strategy variants:
   - play_box_first: prefers full canonical closures (all perms) when available.
   - analysis_prefix: strict prefix cut of the ranked combo list (for comparability).
   - convergence_box_first: prefers full canonical closures, but ranks candidates by
     cross-method + cross-variant convergence (support-count first).
+  - conversion_box_first: box-first plus a small lane-closure slot (aimed at converting rail hits into straight hits).
 """
 
 from __future__ import annotations
@@ -392,6 +393,130 @@ def _card_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int) -> Dict[st
     }
 
 
+def _card_conversion_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int) -> Dict[str, Any]:
+    """
+    Box-first with a small "conversion slot" reserved for lane-closure methods.
+
+    Motivation: in many misses we have `vtrac_index_hit_only` (rail correct, combo wrong).
+    This strategy keeps the box-first behavior, but ensures we always allocate a
+    few lines to VTRAC/lane-derived candidates so we have a chance to convert
+    "rail hits" into straight hits under tight budgets.
+
+    Notes:
+    - This remains selection-layer only: it does NOT invent combos outside Candidate Universe.
+    - It is deterministic and additive (use for grading/experimentation first).
+    """
+    # canonical -> combos in ranked list
+    canon_to_combos: Dict[str, set[str]] = {}
+    canon_score: Dict[str, float] = {}
+    for row in ranked:
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        canon = _canon(combo)
+        if not canon:
+            continue
+        canon_to_combos.setdefault(canon, set()).add(combo)
+        canon_score[canon] = max(canon_score.get(canon, float("-inf")), float(row.get("score") or 0.0))
+
+    # Only treat canonicals as "boxable" if the candidate set contains the full perm closure.
+    boxable: List[Tuple[str, float, List[str]]] = []
+    for canon, seen in canon_to_combos.items():
+        perms = sorted(set(_unique_perms(canon)))
+        if perms and set(perms).issubset(seen):
+            boxable.append((canon, canon_score.get(canon, 0.0), perms))
+
+    boxable.sort(key=lambda t: (-t[1], t[0]))
+
+    # Reserve up to 25% of the budget (bounded) for lane-closure methods.
+    conversion_budget = max(0, min(6, budget // 4))
+    main_budget = max(0, int(budget) - int(conversion_budget))
+    lane_methods = {
+        "vtrac_enhanced_top",
+        "vtrac_top",
+        "hot_zones_top",
+        "aux_vtrac_index_overdue",
+        "mirror_pair_closure",
+        "mirror_pair_closure_due_doubles",
+    }
+
+    selected: List[str] = []
+    selected_set: set[str] = set()
+
+    # 1) Add full closures first.
+    for canon, _, perms in boxable:
+        if len(selected) >= main_budget:
+            break
+        needed = [c for c in perms if c not in selected_set]
+        if not needed:
+            continue
+        if len(selected) + len(needed) > main_budget:
+            continue
+        selected.extend(needed)
+        selected_set.update(needed)
+
+    # 2) Conversion slot: add a few lane-method-supported combos.
+    if conversion_budget:
+        lane_rows: List[Dict[str, Any]] = []
+        for r in ranked:
+            methods = r.get("support_methods") or []
+            if not isinstance(methods, list):
+                methods = []
+            if any((str(m) in lane_methods) for m in methods):
+                lane_rows.append(r)
+        # Prefer high-scoring lane candidates, but diversify by canonical where possible.
+        lane_rows.sort(key=lambda r: (-float(r.get("score") or 0.0), str(r.get("combo") or "")))
+        used_canon: set[str] = set(_canon(c) for c in selected_set if _canon(c))
+        added = 0
+        for row in lane_rows:
+            if added >= conversion_budget or len(selected) >= budget:
+                break
+            combo = _normalize_pick3_literal(row.get("combo") or "")
+            if not combo or combo in selected_set:
+                continue
+            canon = _canon(combo)
+            # Prefer adding new canonicals first, then allow repeats if budget remains.
+            if canon and canon in used_canon and added < max(1, conversion_budget // 2):
+                continue
+            selected.append(combo)
+            selected_set.add(combo)
+            if canon:
+                used_canon.add(canon)
+            added += 1
+
+        # If we couldn't fill the conversion slot with unique canonicals, top up with best lane rows.
+        for row in lane_rows:
+            if added >= conversion_budget or len(selected) >= budget:
+                break
+            combo = _normalize_pick3_literal(row.get("combo") or "")
+            if not combo or combo in selected_set:
+                continue
+            selected.append(combo)
+            selected_set.add(combo)
+            added += 1
+
+    # 3) Fill remaining with top-ranked combos.
+    for row in ranked:
+        if len(selected) >= budget:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:budget]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(budget),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "conversion_budget": int(conversion_budget),
+        "conversion_methods": sorted(lane_methods),
+    }
+
+
 def _convergence_stats(row: Dict[str, Any]) -> Tuple[int, int, int, int, float]:
     """
     Convergence priority for discovery mode (support-count based).
@@ -497,8 +622,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--profile",
         choices=["mixed", "tool_only", "profit_only"],
-        default="mixed",
-        help="Ablation profile (default: mixed). Determines input candidate_universe filename and output play_card filename.",
+        default="tool_only",
+        help="Ablation profile (default: tool_only). Determines input candidate_universe filename and output play_card filename.",
     )
     ap.add_argument("--states", nargs="*", help="Optional subset of states (default: auto-discover).")
     ap.add_argument(
@@ -590,11 +715,13 @@ def main() -> None:
             "play_box_first": {},
             "analysis_prefix": {},
             "convergence_box_first": {},
+            "conversion_box_first": {},
         }
         for b in budgets:
             strategy_cards["play_box_first"][f"B{b}"] = _card_box_first(ranked=ranked, budget=b)
             strategy_cards["analysis_prefix"][f"B{b}"] = _card_from_ranked(ranked=ranked, budget=b)
             strategy_cards["convergence_box_first"][f"B{b}"] = _card_convergence_box_first(ranked=ranked, budget=b)
+            strategy_cards["conversion_box_first"][f"B{b}"] = _card_conversion_box_first(ranked=ranked, budget=b)
 
         payload = {
             "schema_version": SCHEMA_VERSION,

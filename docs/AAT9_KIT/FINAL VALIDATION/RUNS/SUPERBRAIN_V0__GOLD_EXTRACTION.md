@@ -581,3 +581,13 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
   - Hypothesis: mirror-pair closure is a compact “index→box conversion” mechanism, but it can be starved by the budget allocation policy in small cards.
   - Action (bounded): reserve 1 “conversion slot” for `mirror_pair_closure` when present (especially on mirror-double days), and measure whether this converts `vtrac_index_hit_only` into `box_hit` without
     inflating spend.
+
+- **GOLD-0028** — `v0 Jan window (2026-01-05 → 2026-01-09)` — Play Card selection experiment (`conversion_box_first`)
+  - Type: `selection_policy_experiment`
+  - Baseline (profile=`tool_only`): `play_box_first` outperforms `conversion_box_first` for hit_any in this window (conversion increases `vtrac_hit` but decreases `hit_any`).
+  - Evidence:
+    - Rollup: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md` (see `conversion_box_first` rows)
+    - Source: `scripts/tools/create_play_card.py` (`strategy=conversion_box_first`)
+  - Primitives (tags): `budget_allocation`, `conversion_slot`, `vtrac_index_hit_only`, `rail_conversion`
+  - Hypothesis: stealing lines from boxed closures to reserve a lane slot increases index coverage, but starves the strongest BOX-derived hits under tight budgets.
+  - Action (bounded): keep `conversion_box_first` as a research-only strategy; if we re-attempt “conversion slots”, gate them conditionally (e.g., only when no boxable closure exists, or only at B24+).

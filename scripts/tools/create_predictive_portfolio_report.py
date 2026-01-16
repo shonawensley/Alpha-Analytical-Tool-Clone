@@ -4,8 +4,10 @@ Create a cross-state Predictive Portfolio Markdown summary for a day D.
 
 This is a reporting-only tool:
 - Reads ONLY existing predictive sharepack artifacts (no analyzer runs).
-- Aggregates the "bet-ready" Control Center signals (Profit Alerts) plus the
-  per-state Candidate Universe summary so you can triage states quickly.
+- Summarizes the per-state Candidate Universe + Play Card closures so you can
+  triage states quickly.
+- Profit Alerts are available as an optional column-set (controlled by
+  `--profile` / `--rank-by`), but are not required for the tool-first posture.
 
 Usage
 -----
@@ -236,8 +238,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--profile",
         choices=["mixed", "tool_only", "profit_only"],
-        default="mixed",
-        help="Ablation profile to summarize (default: mixed). Uses candidate_universe*.json and play_card*.json for that profile.",
+        default="tool_only",
+        help="Ablation profile to summarize (default: tool_only). Uses candidate_universe*.json and play_card*.json for that profile.",
     )
     ap.add_argument(
         "--rank-by",
@@ -271,7 +273,8 @@ def main() -> None:
         raise SystemExit(f"No states found under: {_safe_rel(day_dir)}")
 
     profile = str(args.profile or "mixed").strip()
-    rank_by = str(args.rank_by or ("profit_alerts" if profile == "mixed" else "tool_first")).strip()
+    rank_by = str(args.rank_by or ("profit_alerts" if profile in {"mixed", "profit_only"} else "tool_first")).strip()
+    show_profit_alerts = profile in {"mixed", "profit_only"}
 
     out_suffix = "" if profile == "mixed" else f"__{profile}"
 
@@ -286,7 +289,7 @@ def main() -> None:
     table_rows: List[Dict[str, Any]] = []
     for state_key in states:
         state_dir = day_dir / state_key
-        alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key)
+        alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key) if show_profit_alerts else []
         packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary(
             state_dir, profile=profile
         )
@@ -359,20 +362,34 @@ def main() -> None:
     lines.append("")
     lines.append("Evidence roots")
     lines.append(f"- Predictive sharepacks root: `{_safe_rel(sharepacks_root)}`")
-    lines.append(f"- Control Center Profit Alerts: `{_safe_rel(pa_path)}`")
+    if show_profit_alerts:
+        lines.append(f"- Control Center Profit Alerts: `{_safe_rel(pa_path)}`")
+    else:
+        lines.append(f"- Control Center Profit Alerts (excluded by profile): `{_safe_rel(pa_path)}`")
     lines.append(f"- Candidate Universe file: `candidate_universe{_profile_suffix(profile)}.json`")
     lines.append(f"- Play Card file: `play_card{_profile_suffix(profile)}.json`")
     lines.append("")
     lines.append("## Portfolio table (ranked)")
     lines.append("")
-    lines.append("| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed |")
-    lines.append("|---|---:|---:|---|---:|---:|---|---|---|")
+    if show_profit_alerts:
+        lines.append("| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed |")
+        lines.append("|---|---:|---:|---|---:|---:|---|---|---|")
+    else:
+        lines.append("| State | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed |")
+        lines.append("|---|---:|---:|---|---|---|")
     for r in table_rows:
-        lines.append(
-            "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} |".format(
-                **r
+        if show_profit_alerts:
+            lines.append(
+                "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} |".format(
+                    **r
+                )
             )
-        )
+        else:
+            lines.append(
+                "| {StateKey} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} |".format(
+                    **r
+                )
+            )
     lines.append("")
     lines.append("## Play cards (B12, play_box_first)")
     lines.append("")
@@ -388,7 +405,7 @@ def main() -> None:
     lines.append("")
     lines.append("- This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.")
     lines.append("- For any state, the canonical evidence remains the frozen predictive sharepack artifacts:")
-    lines.append(f"  - `{_safe_rel(cc_dir / 'profit_alerts.csv')}` (bet-ready implied sets; may be excluded by profile)")
+    lines.append(f"  - `{_safe_rel(cc_dir / 'profit_alerts.csv')}` (bet-ready implied sets; included only for mixed/profit_only)")
     lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/candidate_universe{_profile_suffix(profile)}.json` (gradeable playset)")
     lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/play_card{_profile_suffix(profile)}.json` (budgeted cuts)")
     lines.append("")

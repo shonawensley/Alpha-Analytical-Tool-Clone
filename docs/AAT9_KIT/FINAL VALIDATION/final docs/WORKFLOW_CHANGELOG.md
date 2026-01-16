@@ -6,6 +6,27 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-01-16
+
+### Tool-first predictive defaults (Profit Alerts quarantined by default)
+
+- Updated the prediction-layer helpers so “doing the obvious thing” produces tool-first artifacts by default:
+  - Default `--profile` is now `tool_only` for:
+    - `scripts/tools/create_candidate_universe.py`
+    - `scripts/tools/create_play_card.py`
+    - `scripts/tools/create_predictive_portfolio_report.py`
+    - `scripts/tools/grade_candidate_universe.py`
+    - `scripts/tools/grade_play_card.py`
+    - `scripts/tools/create_predictive_run_report.py` (references the profiled `candidate_universe{__profile}.json`)
+    - `scripts/tools/rollup_candidate_universe_corpus.py`
+    - `scripts/tools/rollup_play_card_corpus.py`
+  - Default `--top-n-dr` is now `0` for `create_candidate_universe.py` (DR “top candidates” demoted in v0.2 posture).
+- Reminder: file naming remains profile-based:
+  - `mixed` uses unsuffixed filenames (e.g., `candidate_universe.json`, `RUNS/*__CANDIDATE_UNIVERSE_GRADE.md`).
+  - Non-`mixed` profiles are suffix-named (e.g., `candidate_universe__tool_only.json`, `RUNS/*__CANDIDATE_UNIVERSE_GRADE__tool_only.md`).
+- Added a new Play Card strategy to support “rail conversion” experiments under tight budgets:
+  - `conversion_box_first` (box-first + small reserved lane-closure slot; selection-layer only).
+
 ## 2026-01-13
 
 ### Candidate Universe: experimental mirror-pair closure (due-doubles seeded)
@@ -25,7 +46,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - Graders: `scripts/tools/grade_candidate_universe.py`, `scripts/tools/grade_play_card.py`
   - Rollups: `scripts/tools/rollup_candidate_universe_corpus.py`, `scripts/tools/rollup_play_card_corpus.py`
   - Predictive portfolio triage: `scripts/tools/create_predictive_portfolio_report.py`
-- Output files are suffix-named (e.g., `candidate_universe__tool_only.json`, `RUNS/*__PLAY_CARD_GRADE__profit_only.*`) so they do not overwrite the default mixed view.
+- Output files are suffix-named (e.g., `candidate_universe__tool_only.json`, `RUNS/*__PLAY_CARD_GRADE__profit_only.*`) so they do not overwrite the mixed view.
 
 ## 2026-01-08
 
@@ -33,7 +54,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 - Added a first-class, gradeable predictions artifact (“Candidate Universe / Playset”) to bridge predictive snapshots → measurable performance:
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
-  - Output (predictive SSOT): `sharepacks/_predictive/<D>/<STATE>/candidate_universe.json`
+  - Output (predictive SSOT): `sharepacks/_predictive/<D>/<STATE>/candidate_universe{__profile}.json`
 - Added Candidate Universe generator (reads sharepacks only; deterministic; anti-leakage gate for predictive roots):
   - Command: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
   - File: `scripts/tools/create_candidate_universe.py`
@@ -57,7 +78,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - File: `scripts/tools/create_predictive_portfolio_report.py`
 - Added deterministic budgeted “Play Cards” (e.g., 12/24/36 combo cuts) derived from Candidate Universe (useful for live-style competitions + controlled selection experiments):
   - Command: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --budgets 12,24,36`
-  - Output: `sharepacks/_predictive/<D>/<STATE>/play_card.json`
+  - Output: `sharepacks/_predictive/<D>/<STATE>/play_card{__profile}.json`
   - File: `scripts/tools/create_play_card.py`
   - Built-in strategies: `play_box_first`, `analysis_prefix`, `convergence_box_first`
 - Added Play Card grader (writes only to RUNS):

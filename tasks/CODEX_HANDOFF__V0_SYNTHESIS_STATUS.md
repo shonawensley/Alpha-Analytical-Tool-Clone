@@ -85,3 +85,24 @@ Ledger/portal updates:
 - Updated RUNS navigation to include the tool audit docs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+
+---
+
+## 2026-01-16
+
+### Tool-only defaults (anti-pollution hardening)
+
+- Prediction-layer tooling now defaults to `--profile tool_only` so Profit Alerts have **zero influence** unless explicitly requested:
+  - Candidate Universe / Play Cards / predictive portfolio / grading / rollups.
+- The v0 sprint doc remains the “how to run ablation”; `mixed` and `profit_only` are still available for measurement, but not the default posture.
+
+### Predictive RUNS completeness (tool_only)
+
+- Generated per-state predictive run reports for the v0 Jan window (all tracked states × `D=2026-01-05` → `2026-01-09`):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>__PREDICTIVE__tool_only.md`
+
+### Selection experiment: conversion slots (negative result)
+
+- Added a Play Card strategy experiment (`conversion_box_first`) intended to convert `vtrac_index_hit_only` into actual hits under a fixed budget.
+- Result on v0 Jan window: improved `vtrac_index_hit`, but reduced `hit_any` vs `play_box_first`.
+- Logged as a negative-result “gold” entry (research-only; do not promote to default): `GOLD-0028` in `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`.

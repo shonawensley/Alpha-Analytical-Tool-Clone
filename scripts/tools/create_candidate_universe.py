@@ -1653,8 +1653,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--profile",
         choices=["mixed", "tool_only", "profit_only"],
-        default="mixed",
-        help="Ablation profile for pack sources (default: mixed). tool_only = skip profit_alerts packs; profit_only = profit_alerts packs only.",
+        default="tool_only",
+        help="Ablation profile for pack sources (default: tool_only). tool_only = skip profit_alerts packs; profit_only = profit_alerts packs only.",
     )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys (default: auto-discover from day dir)")
     ap.add_argument(
@@ -1668,7 +1668,7 @@ def parse_args() -> argparse.Namespace:
         help="Allow running even if winners-dependent artifacts are detected (NOT recommended for predictive packs).",
     )
     ap.add_argument("--top-n-stable", type=int, default=3, help="Top N stable canonicals per section (default: 3)")
-    ap.add_argument("--top-n-dr", type=int, default=3, help="Top N DR analyzer patterns per variant (default: 3)")
+    ap.add_argument("--top-n-dr", type=int, default=0, help="Top N DR analyzer patterns per variant (default: 0)")
     ap.add_argument("--top-n-vtrac", type=int, default=8, help="Top N VTRAC straights (default: 8)")
     ap.add_argument("--top-n-hot", type=int, default=8, help="Top N Hot Zones triads (default: 8)")
     ap.add_argument("--top-n-aux", type=int, default=10, help="Top N Aux positional shortlist combos (default: 10)")
