@@ -591,3 +591,31 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
   - Primitives (tags): `budget_allocation`, `conversion_slot`, `vtrac_index_hit_only`, `rail_conversion`
   - Hypothesis: stealing lines from boxed closures to reserve a lane slot increases index coverage, but starves the strongest BOX-derived hits under tight budgets.
   - Action (bounded): keep `conversion_box_first` as a research-only strategy; if we re-attempt “conversion slots”, gate them conditionally (e.g., only when no boxable closure exists, or only at B24+).
+
+---
+
+## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16
+
+Purpose: confirm we did not miss “universal gold” by doing an exhaustive scan of:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` (all docs)
+- `docs/AAT9_KIT/FINAL VALIDATION/POST RUNS/CODEX_ANALYSIS8.txt`
+
+Receipt (what was actually reviewed):
+- RUNS sweep: scanned **544 files** (MD/CSV/TXT/etc.) and machine-extracted **3319** “candidate insight lines” from **427** docs to triage what needed re-reading.
+- CODEX_ANALYSIS8: scanned **1479 lines** and extracted **79** candidate lines for dedupe against the current v0 ledgers.
+
+Net-new “gold” found:
+- None. The sweep reinforced that the actionable, repeatable insights are already represented in:
+  - this gold ledger (`GOLD-0001` → `GOLD-0028`),
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md` (tool-first defaults),
+  - tool consumption audits (`*_V0__AUDIT__*` + `*_V0__FEATURE_DECISIONS.md`),
+  - and the change ledgers (`FIX_NOW_LEDGER.md`, `FIX_LATER_INDEX.md`).
+
+Notable reinforcements (no new actions; pointers only):
+- Hot Zones remains a near-universal **containment** lens (high “winner present”), but not a tight rank caller: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.md`.
+- Digit Reduction “top candidates contain winner” remains a misleading grading lens (DR works better as envelope/constraint): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`.
+- Budget sensitivity (B12 vs larger cuts) and “index_hit_only → box miss” are selection-layer phenomena, not analyzer defects: see `GOLD-0025` → `GOLD-0028`.
+- Convergence cases are already mined into gold entries; the older window’s convergence table is also a valid study surface: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERGENCE_CASES.md`.
+
+Sanity note:
+- `CODEX_ANALYSIS8.txt` includes a historical “Fix‑Later index” excerpt; the authoritative live index is: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`.
