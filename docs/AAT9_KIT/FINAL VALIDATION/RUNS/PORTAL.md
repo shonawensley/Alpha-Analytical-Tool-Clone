@@ -11,6 +11,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1) This portal:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
 
+1.5) Macro roadmap (how the whole workflow fits together):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_ROADMAP.md`
+
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
 
