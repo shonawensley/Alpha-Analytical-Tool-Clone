@@ -124,10 +124,17 @@ Primary references:
 
 ### STABLE-002 — Reconcile draw-chain / persistence metrics with compound aggregation
 - **Type**: scoring correctness / feature plumbing
-- **Problem**: compound rollup can collapse row-level chain signals, weakening Set1 col3→col2 cascades.
-- **Evidence**: `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md` (compound writer collapses draw chain; reconcile row-level chain metrics)
-- **Expected delta**: improved ranking for “column-cascade” winners without broad cost expansion.
-- **Status**: Proposed (Needs Repro on a small set of cases)
+- **Problem**:
+  - Compound aggregation historically ignored some row-level signals due to dtype/flag parsing (e.g., `hidden3v` exported as boolean but compound expected `"Y"`), and used a naive `Draw.nunique()` proxy instead of the row-level persistence metrics.
+  - Net effect: row-level “chains” can be present in `*_stable_patterns_scores.csv` but under-credited or missing from `*_stable_patterns_compound.csv` features.
+- **Evidence**:
+  - `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md` (multiple examples of chain/cascade under-crediting)
+  - Repro: in v0 window sharepacks, `hidden3v` appears frequently in scores but `hidden3v_hits` was always 0 in compound.
+- **Fix (implemented)**:
+  - `alpha_analytical/stable/compound.py` now treats Stable flags as boolean-like (`True/False`, `0/1`, `"Y"`) and uses `persistence_draw_run` / `persistence_set_count` when available.
+  - Regression test: `tests/test_stable_compound.py` (boolean flags + persistence fields).
+- **Expected delta**: compound leaderboard reflects already-computed chain + hidden-core evidence (no new signals; just correct aggregation).
+- **Status**: Implemented + tested; remaining open work is tuning/selection-policy around “column-cascade” conversion (not part of this correctness fix).
 
 ### STABLE-003 — Increase “VT-straight mid-column” contribution (cols 3–5)
 - **Type**: scoring/weights

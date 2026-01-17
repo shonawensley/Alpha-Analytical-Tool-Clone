@@ -85,3 +85,65 @@ def test_compound_bonus_and_sorting():
     assert record["hot2_count"] == 1
     assert "set_chain" in record["compound_why"]
     assert record["compound_score"] > record["base_max_score"]
+
+
+def test_compound_handles_boolean_flags_and_persistence_fields():
+    rows = pd.DataFrame(
+        [
+            dict(
+                section="Combined",
+                Set="Set1",
+                Draw="Draw1",
+                Column=1,
+                Canonical="017",
+                family_id=1,
+                score=10.0,
+                hot=2,
+                score_cons=4.0,
+                hidden3v=True,
+                score_hidden=0.5,
+                score_vtrac_straight=2.0,
+                score_double_mirror=1.0,
+                why="row A",
+                cons_full=True,
+                cons_3v=True,
+                cons_stub=False,
+                double_mirror=True,
+                persistence_set_count=2,
+                persistence_draw_run=5,
+            ),
+            dict(
+                section="Combined",
+                Set="Set1",
+                Draw="Draw4",
+                Column=2,
+                Canonical="017",
+                family_id=1,
+                score=9.0,
+                hot=1,
+                score_cons=0.0,
+                hidden3v=False,
+                score_hidden=0.0,
+                score_vtrac_straight=0.0,
+                score_double_mirror=0.0,
+                why="row B",
+                cons_full=False,
+                cons_3v=False,
+                cons_stub=False,
+                double_mirror=False,
+                persistence_set_count=2,
+                persistence_draw_run=5,
+            ),
+        ]
+    )
+
+    compound_df = compute_compound_scores(rows, {})
+    assert not compound_df.empty
+    record = compound_df.iloc[0]
+    assert record["Canonical"] == "017"
+    assert record["set_chain_depth"] == 2
+    assert record["draw_chain_depth"] == 5
+    assert record["hidden3v_hits"] >= 1
+    assert record["consensus_hits"] >= 1
+    assert record["vtrac_straight_hits"] >= 1
+    assert record["double_mirror_hits"] >= 1

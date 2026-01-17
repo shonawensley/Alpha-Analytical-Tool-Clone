@@ -51,21 +51,42 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
     cfg = feature_cfg or {}
     df = rows.copy()
 
+    def _truthy(series: pd.Series) -> pd.Series:
+        numeric = pd.to_numeric(series, errors="coerce")
+        truthy_numeric = numeric.fillna(0).ne(0)
+        truthy_text = series.astype(str).str.strip().str.lower().isin({"y", "yes", "true", "t"})
+        return truthy_numeric | truthy_text
+
+    def _truthy_col(name: str) -> pd.Series:
+        if name not in df.columns:
+            return pd.Series(False, index=df.index)
+        return _truthy(df[name])
+
+    def _num_col(name: str) -> pd.Series:
+        if name not in df.columns:
+            return pd.Series(0.0, index=df.index)
+        return pd.to_numeric(df[name], errors="coerce").fillna(0).astype(float)
+
     # Normalize helper flags
-    df["hot_level"] = df.get("hot", 0).fillna(0).astype(int)
+    df["_set_norm"] = df.get("Set", "").astype(str).str.replace(" ", "").str.strip()
+    df["_col_norm"] = df.get("Column", "").astype(str).str.strip()
+    df["hot_level"] = pd.to_numeric(df.get("hot", 0), errors="coerce").fillna(0).astype(int)
     df["is_hot1"] = df["hot_level"].eq(1)
     df["is_hot2"] = df["hot_level"].eq(2)
+    score_cons = _num_col("score_cons")
+    score_hidden = _num_col("score_hidden")
+    score_vtrac = _num_col("score_vtrac_straight")
+    score_double_mirror = _num_col("score_double_mirror")
+
     df["is_consensus"] = (
-        df.get("score_cons", 0).fillna(0).astype(float).gt(0)
-        | df.get("cons_full", "").astype(str).str.upper().eq("Y")
-        | df.get("cons_3v", "").astype(str).str.upper().eq("Y")
+        score_cons.gt(0)
+        | _truthy_col("cons_full")
+        | _truthy_col("cons_3v")
+        | _truthy_col("cons_stub")
     )
-    df["is_hidden3v"] = df.get("hidden3v", "").astype(str).str.upper().eq("Y")
-    df["is_vtrac_straight"] = df.get("score_vtrac_straight", 0).fillna(0).astype(float).gt(0)
-    df["is_double_mirror"] = (
-        df.get("score_double_mirror", 0).fillna(0).astype(float).gt(0)
-        | df.get("double_mirror", "").astype(str).str.upper().eq("Y")
-    )
+    df["is_hidden3v"] = score_hidden.gt(0) | _truthy_col("hidden3v")
+    df["is_vtrac_straight"] = score_vtrac.gt(0)
+    df["is_double_mirror"] = score_double_mirror.gt(0) | _truthy_col("double_mirror")
     df["_draw_idx"] = (
         df.get("Draw", "").astype(str).str.extract(r"(\d+)").fillna(-1).astype(int)
     )
@@ -74,18 +95,26 @@ def compute_compound_scores(rows: pd.DataFrame, feature_cfg: Dict[str, float] | 
     grouped = df.groupby(["section", "Canonical"], sort=False)
     for (section, canonical), group in grouped:
         base_max = float(group["score"].max())
-        sets = group["Set"].dropna().unique().tolist()
+        sets = group["_set_norm"].dropna().unique().tolist()
         set_chain = len(sets)
-        set1_group = group[group["Set"].astype(str) == "Set1"]
-        draw_chain = int(set1_group["Draw"].nunique()) if not set1_group.empty else 0
-        col1_mask = group["Column"].astype(str) == "1"
+        if "persistence_set_count" in group.columns:
+            set_chain = max(
+                set_chain,
+                int(pd.to_numeric(group["persistence_set_count"], errors="coerce").fillna(0).max()),
+            )
+        set1_group = group[group["_set_norm"] == "Set1"]
+        if not set1_group.empty and "persistence_draw_run" in set1_group.columns:
+            draw_chain = int(pd.to_numeric(set1_group["persistence_draw_run"], errors="coerce").fillna(0).max())
+        else:
+            draw_chain = int(set1_group["Draw"].nunique()) if not set1_group.empty else 0
+        col1_mask = group["_col_norm"] == "1"
         col1_hits = int(col1_mask.sum())
         funnel_precol1 = 0
         if col1_hits > 0 and not set1_group.empty:
             col2_hot2 = set1_group[
-                (set1_group["Column"].astype(str) == "2") & set1_group["hot_level"].eq(2)
+                (set1_group["_col_norm"] == "2") & set1_group["hot_level"].eq(2)
             ]
-            col1_rows = set1_group[set1_group["Column"].astype(str) == "1"]
+            col1_rows = set1_group[set1_group["_col_norm"] == "1"]
             if not col2_hot2.empty and not col1_rows.empty:
                 if col2_hot2["_draw_idx"].max() < col1_rows["_draw_idx"].min():
                     funnel_precol1 = 1

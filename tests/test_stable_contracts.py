@@ -23,6 +23,10 @@ REQUIRED_ROW_COLUMNS = {
     "score_dom",
     "score_len",
     "score_hidden",
+    "score_vtrac_straight",
+    "score_persistence_set",
+    "score_persistence_draw",
+    "score_double_mirror",
     "family_id",
     "hidden3v",
 }
@@ -37,10 +41,18 @@ REQUIRED_FAMILY_COLUMNS = {
     "fam_straight2",
     "fam_straight3",
     "fam_doubles",
+    "fam_vtrac",
+    "fam_hidden",
+    "fam_double_mirror",
+    "fam_persistence",
     "fam_section_bonus",
     "fam_progression_bonus",
     "fam_last_remaining_bonus",
     "any_doubles_support",
+    "any_vtrac_straight",
+    "any_hidden3v",
+    "max_persistence_set",
+    "max_persistence_draw",
     "section_count",
     "progression_flag",
     "last_remaining_3v",
@@ -64,6 +76,11 @@ REQUIRED_YAML_KEYS = {
     "dominant_pair_bonus",
     "dominant_double3_bonus",
     "min_score_to_highlight",
+    "persistence_set_bonus",
+    "persistence_draw_bonus",
+    "vtrac_straight_bonus",
+    "double_mirror_bonus",
+    "consensus_tail_bonus",
     "perm_density_per_extra",
     "repeat_count_per_extra",
     "vtrac_family_presence",
@@ -74,6 +91,22 @@ REQUIRED_YAML_KEYS = {
     "hotzone_family_bonus",
     "doubles_trigger_bonus",
     "hidden3v_bonus",
+    "persistence_family_set_bonus",
+    "persistence_family_draw_bonus",
+    "compound.set_chain_bonus",
+    "compound.draw_chain_bonus",
+    "compound.col1_bonus",
+    "compound.hot1_bonus",
+    "compound.hot2_bonus",
+    "compound.consensus_bonus",
+    "compound.hidden_core_bonus",
+    "compound.vtrac_straight_bonus",
+    "compound.double_mirror_bonus",
+    "compound.col2_funnel_bonus",
+    "compound.vt_only_threshold",
+    "compound.vt_only_bonus",
+    "compound.hot2_cap",
+    "compound.double_mirror_cap",
 }
 
 
@@ -150,6 +183,10 @@ def test_golden_snapshot():
         + best["score_dom"]
         + best["score_len"]
         + best["score_hidden"]
+        + best["score_double_mirror"]
+        + best["score_vtrac_straight"]
+        + best["score_persistence_set"]
+        + best["score_persistence_draw"]
     )
 
 
@@ -166,6 +203,10 @@ def test_family_score_parts_sum():
         "fam_straight2",
         "fam_straight3",
         "fam_doubles",
+        "fam_vtrac",
+        "fam_hidden",
+        "fam_double_mirror",
+        "fam_persistence",
         "fam_section_bonus",
         "fam_progression_bonus",
         "fam_last_remaining_bonus",
