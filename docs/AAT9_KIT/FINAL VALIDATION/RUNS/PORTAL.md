@@ -27,6 +27,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/POST_RUNS_TRIAGE.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+- v0.3 analyzer edits backlog (“nothing gets missed” inventory):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ANALYZER_CHANGE_BACKLOG.md`
 
 6) The fast “are we improving?” rollups (cross-day):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.md`

@@ -145,7 +145,8 @@ Mechanism:
   - regression plan (which windows must not regress),
   - status (proposed / approved / implemented / validated).
 
-Until that backlog exists, don’t tune analyzers.
+Backlog (current inventory):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ANALYZER_CHANGE_BACKLOG.md`
 
 ---
 
@@ -155,4 +156,3 @@ Until that backlog exists, don’t tune analyzers.
 2) `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
 3) `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
 4) `tasks/CODEX_HANDOFF__V0_SYNTHESIS_STATUS.md`
-
