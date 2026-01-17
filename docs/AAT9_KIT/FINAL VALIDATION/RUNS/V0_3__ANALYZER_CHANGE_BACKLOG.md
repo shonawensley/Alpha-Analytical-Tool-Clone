@@ -220,7 +220,7 @@ Primary references:
 - **Fix (implemented)**:
   - Top-lane sorting uses: `(-score_max, -guard_hits, -literal_hits, -score_mean)` in `alpha_analytical/hot_zones/scanner.py`.
   - Regression test: `tests/test_hot_zones_scanner.py` (`test_hot_zones_top_sort_tiebreaks_are_deterministic`).
-- **Status**: Implemented + tested (commit: TBD)
+- **Status**: Implemented + tested
 
 ### HOTZ-003 — VT-only lane weighting calibration (bounded)
 - **Type**: weights
