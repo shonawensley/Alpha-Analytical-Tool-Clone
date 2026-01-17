@@ -115,9 +115,12 @@ Primary references:
 ### STABLE-001 — Preserve literal permutations + exact-hit flags in spotlight/export
 - **Type**: output/schema improvement (supports evaluation + future training)
 - **Problem**: evaluation can lose literal winners when only the canonical is logged (e.g., “858 vs 588”).
-- **Evidence**: `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md` (spotlight should include raw rows + exact flags; literal winners in CSV outputs)
+- **Evidence**:
+  - Implemented in spotlight export: `alpha_analytical/stable/winner_family_spotlight.py`
+  - Example output (shows literal winners + exact/VT hit flags): `sharepacks/2026-01-09/NewJersey4/stable/NewJersey4/NewJersey4_winner_family_spotlight_raw.csv`
+  - Validator: `scripts/tools/validate_stable_winners.py` (checks spotlight ↔ metrics coherence)
 - **Expected measurable delta**: none directly (selection unaffected), but major reduction in audit ambiguity and better feature learning later.
-- **Status**: Proposed
+- **Status**: Implemented + validated (treat as a regression gate, not a new feature request)
 
 ### STABLE-002 — Reconcile draw-chain / persistence metrics with compound aggregation
 - **Type**: scoring correctness / feature plumbing
