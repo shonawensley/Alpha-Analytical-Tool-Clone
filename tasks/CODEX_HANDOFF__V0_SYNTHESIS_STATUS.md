@@ -128,3 +128,8 @@ Ledger/portal updates:
   - `tests/test_stable_compound.py` (boolean flags + persistence fields)
   - `tests/test_stable_contracts.py` updated to reflect the current Stable score contract (row + family parts).
 - Note: existing frozen sharepacks already on disk still contain the old `patterns_compound.csv` outputs from before this fix; we do not rewrite historical SSOT snapshots in place. The fix applies to future sharepack builds (or explicit day rebuilds into a new folder).
+
+### HOTZ-002 (top-lane tie-break determinism) — closed
+
+- Regression test added to lock the documented top-lane sorting tie-breaks (prevents future “tie drift”): `a954b752`.
+- Backlog status updated: `0ea0f89f`.
