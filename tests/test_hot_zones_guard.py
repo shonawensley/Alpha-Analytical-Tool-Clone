@@ -1,16 +1,26 @@
 from alpha_analytical.hot_zones.scanner import (
     _generate_guard_triads,
+    mine_evidence,
     BoxData,
     BoxRef,
+    HotScanConfig,
     TopCandidateRow,
 )
 from alpha_analytical.hot_zones.writer import write_winner_map
 
-def make_box(section: str, column: int, col_value: str, hot_count: int) -> BoxData:
+def make_box(
+    section: str,
+    column: int,
+    col_value: str,
+    hot_count: int,
+    *,
+    set_name: str = "Set1",
+    draw_name: str = "Draw1",
+) -> BoxData:
     ref = BoxRef(
         section=section,
-        set_name="Set1",
-        draw_name="Draw1",
+        set_name=set_name,
+        draw_name=draw_name,
         row_name="R2",
         column_index=column,
         is_starred=True,
@@ -37,6 +47,28 @@ def test_guard_triads_include_canonical_and_mirror_for_fl_733():
     row_boxes = [make_box("Combined", 1, "733", 20)]
     triads = _generate_guard_triads(row_boxes)
     assert triads == {"288", "337"}
+
+def test_guard_triads_are_gated_by_section_set_draw_column_and_hot_count():
+    assert _generate_guard_triads([make_box("Midday", 1, "494", 20)]) == set()
+    assert _generate_guard_triads([make_box("Combined", 1, "494", 20, set_name="Set2")]) == set()
+    assert _generate_guard_triads([make_box("Combined", 1, "494", 20, draw_name="Draw2")]) == set()
+    assert _generate_guard_triads([make_box("Combined", 3, "494", 20)]) == set()
+    assert _generate_guard_triads([make_box("Combined", 1, "494", 19)]) == set()
+
+def test_guard_triads_require_exactly_three_digits_in_column_value():
+    assert _generate_guard_triads([make_box("Combined", 1, "49", 20)]) == set()
+    assert _generate_guard_triads([make_box("Combined", 1, "4949", 20)]) == set()
+    assert _generate_guard_triads([make_box("Combined", 1, "49X", 20)]) == set()
+
+def test_mine_evidence_clears_guard_injected_when_no_vt_support():
+    boxes = [make_box("Combined", 1, "494", 20)]
+    triad_to_evs = mine_evidence(boxes, HotScanConfig(use_metadata_hot_flags=False))
+
+    assert "449" in triad_to_evs
+    assert "499" in triad_to_evs  # mirror triad from guard injection
+
+    assert any(e.guard_injected for e in triad_to_evs["449"])
+    assert all(not e.guard_injected for e in triad_to_evs["499"])
 
 def test_winner_map_includes_guard_rows(tmp_path):
     non_guard = TopCandidateRow(

@@ -210,7 +210,17 @@ Primary references:
 - **Problem**: broad guards can bloat pools so winners land rank 40–50 and disappear from top maps.
 - **Evidence**: `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` (guard too broad; “stop weight fiddling until guard is selective”; “design Set1 column guard”)
 - **Expected delta**: preserve EB/VB coverage while keeping pool size bounded; improve top‑20 visibility.
-- **Status**: Needs Repro (define narrow guard and verify across a small window)
+- **Fix (implemented)**:
+  - Guard injection is intentionally narrow: only `Combined/Set1/Draw1`, columns `1–2`, and only when `hot_zone_count >= 20`.
+    - Injects: `{primary_canonical, mirror_canonical}` derived from the literal Set1 col value.
+    - Code: `alpha_analytical/hot_zones/scanner.py` (`_generate_guard_triads`)
+  - Guard-injected mirror candidates are auto-cleared unless there is VT support for that triad in the evidence set.
+    - Code: `alpha_analytical/hot_zones/scanner.py` (`mine_evidence` vt-supported gate)
+  - Regression tests:
+    - `tests/test_hot_zones_guard.py` (`test_guard_triads_are_gated_by_section_set_draw_column_and_hot_count`)
+    - `tests/test_hot_zones_guard.py` (`test_guard_triads_require_exactly_three_digits_in_column_value`)
+    - `tests/test_hot_zones_guard.py` (`test_mine_evidence_clears_guard_injected_when_no_vt_support`)
+- **Status**: Implemented + tested
 
 ### HOTZ-002 — Deterministic tie-break using guard/literal signals
 - **Type**: scoring determinism

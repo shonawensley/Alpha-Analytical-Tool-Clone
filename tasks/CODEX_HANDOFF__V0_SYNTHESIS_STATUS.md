@@ -133,3 +133,12 @@ Ledger/portal updates:
 
 - Regression test added to lock the documented top-lane sorting tie-breaks (prevents future “tie drift”): `a954b752`.
 - Backlog status updated: `0ea0f89f`.
+
+### HOTZ-001 (guard/selective injection policy) — closed
+
+- Regression tests added to lock the intended guard selectivity gates + VT-support clearing:
+  - `tests/test_hot_zones_guard.py` (`test_guard_triads_are_gated_by_section_set_draw_column_and_hot_count`)
+  - `tests/test_hot_zones_guard.py` (`test_guard_triads_require_exactly_three_digits_in_column_value`)
+  - `tests/test_hot_zones_guard.py` (`test_mine_evidence_clears_guard_injected_when_no_vt_support`)
+- Backlog updated: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ANALYZER_CHANGE_BACKLOG.md` (HOTZ-001 now “Implemented + tested”).
+- Commit: TBD
