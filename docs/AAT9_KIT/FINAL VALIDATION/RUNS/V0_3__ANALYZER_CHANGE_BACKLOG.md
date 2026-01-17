@@ -46,6 +46,47 @@ Non‑negotiables:
 
 ---
 
+## Coverage + traceability rules (so nothing gets missed)
+
+This backlog is intentionally **bounded**: we do not reread 70+ state templates to “hunt ideas.” We treat the following as the canonical, high-signal extraction surfaces and require explicit traceability.
+
+### Sources scanned (authoritative → supplementary)
+
+Authoritative (RUNS / SSOT conclusions):
+- Fix-now defects: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md`
+- Fix-later hypotheses: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
+- Tool audits (quant → cases → feature decisions):
+  - Stable: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__CASES.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__FEATURE_DECISIONS.md`
+  - Digit Reduction: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+  - Hot Zones: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__CASES.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__FEATURE_DECISIONS.md`
+  - VTRAC: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md`
+- Gold ledger (selection-layer actions; only feeds v0.3 if it implies a true analyzer edit): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
+
+Supplementary (design intent / historical tuning notes; never authoritative alone):
+- Stable: `docs/AAT9_KIT/AAT9_Stable_Analysis_Log.md`
+- Digit Reduction: `docs/AAT9_KIT/AAT9_Digit_Analysis_Log.md`, `docs/AAT9_KIT/AAT9_Digit_Analysis_Log_Part2.md`
+- Hot Zones: `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md`
+- VTRAC: `docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md`
+- DR intent notes: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md` + supporting `tasks/*` notes when needed
+
+### Item inclusion rule (strict)
+
+Every backlog item MUST include at least one “evidence pointer” to one of:
+- a Fix‑Now ledger row,
+- a Fix‑Later index entry,
+- a tool audit case row (from `*_V0__AUDIT__CASES.md`),
+- or a specific Master Validation state report that contains a concrete “tool should change” note.
+
+If an item only exists in a historical/self-optimization log:
+- Keep it, but set status to **Needs Repro**, and add a “Repro plan” that points to which RUNS window/date/state will be used to validate it.
+
+### Non-goals (keep us sane)
+
+- Do not treat “ideas inside state templates” as analyzer edits by default. Most of those are **selection-layer** and belong in v0.2 (Gold + Defaults).
+- Do not add Profit Alerts-driven changes here. Profit Alerts are quarantined by default and evaluated only via ablation profiles.
+
+---
+
 ## Cross-cutting correctness gates (pre-reqs for safe tuning)
 
 ### X-001 — Canonicalization & dtype invariants (Pick-3 as strings)
@@ -203,4 +244,3 @@ Primary references:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
 - Profit Alerts quarantine/removal is handled via profiles/ablation and is not an analyzer edit.
-
