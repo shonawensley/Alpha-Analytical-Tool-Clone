@@ -5,6 +5,7 @@ Validate the Stable Pattern extractor schema/feature contract.
 Usage:
     python3 scripts/checks/validate_stable_schema.py
     python3 scripts/checks/validate_stable_schema.py --states Connecticut4 Delaware4
+    python3 scripts/checks/validate_stable_schema.py --all
 
 The script checks that each state's scores/families CSVs still export the
 expected columns, that boolean/star fields stay within valid ranges, and
@@ -26,6 +27,23 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from alpha_analytical import stable as stable_module
 
+
+DEFAULT_TRACKED_STATES = [
+    "Connecticut4",
+    "Delaware4",
+    "Florida4",
+    "Indiana4",
+    "Michigan4",
+    "NewJersey4",
+    "NewYork4",
+    "NorthCarolina4",
+    "Ohio4",
+    "OntarioCanada4",
+    "Pennsylvania4",
+    "PuertoRico4",
+    "SouthCarolina4",
+    "Virginia4",
+]
 
 REQUIRED_ROW_COLS = [
     "section",
@@ -197,13 +215,19 @@ def _bool_column_ok(series: pd.Series) -> bool:
         return True
     return series.dropna().map(lambda v: v in VALID_BOOL_VALUES).all()
 
+def _nonempty_column_ok(series: pd.Series) -> bool:
+    if series.empty:
+        return True
+    values = series.fillna("").astype(str).str.strip()
+    return (values != "").all()
+
 
 def validate_scores(path: Path) -> list[str]:
     errors: list[str] = []
     if not path.exists():
         return [f"{path} is missing"]
 
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, dtype={"Canonical": str})
 
     missing = [col for col in REQUIRED_ROW_COLS if col not in df.columns]
     if missing:
@@ -222,6 +246,25 @@ def validate_scores(path: Path) -> list[str]:
         invalid_sections = set(df["section"].dropna().unique()) - VALID_SECTIONS
         if invalid_sections:
             errors.append(f"{path.name}: unexpected sections {sorted(invalid_sections)}")
+
+    for col in ("section", "Set", "Draw", "Column"):
+        if col in df.columns and not _nonempty_column_ok(df[col]):
+            errors.append(f"{path.name}: column '{col}' contains blank values (traceability gate)")
+
+    if "Canonical" in df.columns and not df["Canonical"].empty:
+        canons = df["Canonical"].fillna("").astype(str).str.strip()
+        bad_format = canons[(canons != "") & (~canons.str.fullmatch(r"\d+"))]
+        if not bad_format.empty:
+            errors.append(f"{path.name}: Canonical has non-digit values (example: {bad_format.iloc[0]!r})")
+        else:
+            noncanonical = canons[
+                (canons != "")
+                & (
+                    canons.apply(lambda c: stable_module.canon(stable_module.digits_only(c)) != c)
+                )
+            ]
+            if not noncanonical.empty:
+                errors.append(f"{path.name}: Canonical has non-canonical values (example: {noncanonical.iloc[0]!r})")
 
     return errors
 
@@ -253,7 +296,7 @@ def validate_compound(path: Path) -> list[str]:
     errors: list[str] = []
     if not path.exists():
         return [f"{path} is missing"]
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, dtype={"Canonical": str})
     missing = [col for col in REQUIRED_COMPOUND_COLS if col not in df.columns]
     if missing:
         errors.append(f"{path.name}: missing columns {missing}")
@@ -330,12 +373,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Validate Stable Pattern schema/feature contract.")
     parser.add_argument(
         "--states",
-        nargs="+",
-        help="Specific states to validate (default: all directories under data/outputs/analysis/patterns)",
+        nargs="*",
+        help="Specific states to validate (default: tracked Stable states).",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Validate all state directories under data/outputs/analysis/patterns (includes GA/TX/WV if present).",
     )
     args = parser.parse_args()
 
-    states = iter_states(args.states)
+    if args.states:
+        states = iter_states(args.states)
+    elif args.all:
+        states = iter_states(None)
+    else:
+        states = iter_states(DEFAULT_TRACKED_STATES)
     if not states:
         print("No states found under data/outputs/analysis/patterns", file=sys.stderr)
         sys.exit(1)
