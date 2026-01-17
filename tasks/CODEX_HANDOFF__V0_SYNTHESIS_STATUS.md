@@ -115,3 +115,16 @@ Ledger/portal updates:
   - RUNS: scanned 544 files (MD/CSV/TXT/etc.).
   - CODEX_ANALYSIS8: scanned 1479 lines.
   - Summary is appended as “FINAL REVIEW SWEEP” in `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`.
+
+---
+
+## 2026-01-17
+
+### STABLE-002 (compound aggregation correctness) — closed
+
+- Fix landed (commit): `b7a42db3` (“Fix Stable compound flag parsing and update score contracts”).
+- What it fixes: Stable compound aggregation now correctly treats Stable flags as boolean-like and uses `persistence_set_count` / `persistence_draw_run` when available (prevents silent under-crediting in `*_stable_patterns_compound.csv`).
+- Regression coverage:
+  - `tests/test_stable_compound.py` (boolean flags + persistence fields)
+  - `tests/test_stable_contracts.py` updated to reflect the current Stable score contract (row + family parts).
+- Note: existing frozen sharepacks already on disk still contain the old `patterns_compound.csv` outputs from before this fix; we do not rewrite historical SSOT snapshots in place. The fix applies to future sharepack builds (or explicit day rebuilds into a new folder).

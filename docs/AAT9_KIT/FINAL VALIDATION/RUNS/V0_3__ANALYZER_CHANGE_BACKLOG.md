@@ -134,7 +134,7 @@ Primary references:
   - `alpha_analytical/stable/compound.py` now treats Stable flags as boolean-like (`True/False`, `0/1`, `"Y"`) and uses `persistence_draw_run` / `persistence_set_count` when available.
   - Regression test: `tests/test_stable_compound.py` (boolean flags + persistence fields).
 - **Expected delta**: compound leaderboard reflects already-computed chain + hidden-core evidence (no new signals; just correct aggregation).
-- **Status**: Implemented + tested; remaining open work is tuning/selection-policy around “column-cascade” conversion (not part of this correctness fix).
+- **Status**: Implemented + tested (commit: `b7a42db3`); remaining open work is tuning/selection-policy around “column-cascade” conversion (not part of this correctness fix).
 
 ### STABLE-003 — Increase “VT-straight mid-column” contribution (cols 3–5)
 - **Type**: scoring/weights
@@ -217,7 +217,10 @@ Primary references:
 - **Problem**: tie-heavy scores make weight tweaks unstable; tie-break should use guard_hits/literal_hits.
 - **Evidence**: `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` (sort by -score_max, -guard_hits, -literal_hits, -score_mean)
 - **Expected delta**: stable ranks across runs; less temptation to over-tune weights.
-- **Status**: Proposed
+- **Fix (implemented)**:
+  - Top-lane sorting uses: `(-score_max, -guard_hits, -literal_hits, -score_mean)` in `alpha_analytical/hot_zones/scanner.py`.
+  - Regression test: `tests/test_hot_zones_scanner.py` (`test_hot_zones_top_sort_tiebreaks_are_deterministic`).
+- **Status**: Implemented + tested (commit: TBD)
 
 ### HOTZ-003 — VT-only lane weighting calibration (bounded)
 - **Type**: weights
