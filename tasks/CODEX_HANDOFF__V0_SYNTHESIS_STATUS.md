@@ -141,4 +141,4 @@ Ledger/portal updates:
   - `tests/test_hot_zones_guard.py` (`test_guard_triads_require_exactly_three_digits_in_column_value`)
   - `tests/test_hot_zones_guard.py` (`test_mine_evidence_clears_guard_injected_when_no_vt_support`)
 - Backlog updated: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ANALYZER_CHANGE_BACKLOG.md` (HOTZ-001 now “Implemented + tested”).
-- Commit: TBD
+- Commit: `973d67d7`
