@@ -143,6 +143,15 @@ Primary references:
 - **Expected delta**: improved ranking of stealth wins with minimal widening.
 - **Status**: Proposed
 
+### STABLE-005 — Clamp extra-digit length bonus to non-negative
+- **Type**: scoring correctness (tail/pair patterns should not be penalized by a “bonus” term)
+- **Problem**: the extra-digit length term can go negative when only 1–2 digit patterns are present for a row; the intent is “boost longer-than-3”, not “penalize shorter-than-3”.
+- **Evidence**:
+  - Scorer: `alpha_analytical/stable/__init__.py` (`extra_len_bonus`)
+  - Regression gate: `scripts/checks/validate_stable_schema.py` (enforces `score_len >= 0`)
+- **Expected delta**: prevents future ranking distortions in tail/pair edge-cases (should be no change when no negative values exist).
+- **Status**: Implemented + gated
+
 ---
 
 ## Digit Reduction — analyzer backlog

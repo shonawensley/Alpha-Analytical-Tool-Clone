@@ -360,7 +360,7 @@ def analyse(df: pd.DataFrame, section: str):
         score_persistence_draw = max(0, draw_run_len - 1) * CFG.get('persistence_draw_bonus', 0)
 
         col_factor = 2 if col == '1' else 1
-        extra_len_bonus = ((max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char']) if info['patterns'] else 0
+        extra_len_bonus = (max(0, max(len(p) for p in info['patterns']) - 3) * CFG['extra_digit_per_char']) if info['patterns'] else 0
 
         # === AAT9-SCORE-CONTRACT: BEGIN (ROW) ===
         score_cov = rowcov * CFG['vertical_coverage_per_row']

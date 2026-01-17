@@ -251,6 +251,14 @@ def validate_scores(path: Path) -> list[str]:
         if col in df.columns and not _nonempty_column_ok(df[col]):
             errors.append(f"{path.name}: column '{col}' contains blank values (traceability gate)")
 
+    if "score_len" in df.columns:
+        try:
+            numeric = pd.to_numeric(df["score_len"], errors="coerce")
+            if (numeric.dropna() < 0).any():
+                errors.append(f"{path.name}: score_len contains negative values (min={numeric.min()})")
+        except Exception as exc:
+            errors.append(f"{path.name}: unable to validate score_len non-negativity ({exc})")
+
     if "Canonical" in df.columns and not df["Canonical"].empty:
         canons = df["Canonical"].fillna("").astype(str).str.strip()
         bad_format = canons[(canons != "") & (~canons.str.fullmatch(r"\d+"))]
