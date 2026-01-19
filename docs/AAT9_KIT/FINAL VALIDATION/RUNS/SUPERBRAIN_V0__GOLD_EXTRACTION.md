@@ -609,6 +609,26 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
     - Keep HOTZ weights unchanged in v0.2; treat HOTZ‑003 as measured + deferred.
     - Attempt rail→box conversion primarily via existing bounded closure primitives (mirror-pair closure, due-doubles), and only adopt new Hot-Zones-specific closure packs if they show non-regression lift across windows.
 
+- **GOLD-0030** — `v0 windows` — VTRAC Enhanced “gateway lens” harness (doubles included; triples index-missing by design)
+  - Type: `measurement + selection-layer`
+  - Baseline (profile=`tool_only`):
+    - VTRAC Enhanced as a top‑8 straight caller is weak, but its **index-hit** visibility is materially higher (often “rail correct, box miss”).
+    - Doubles are a first-class part of `vtrac_index` (indices 1–35); only triples are index-missing by design.
+  - Evidence:
+    - Harness: `scripts/tools/vtrac_enhanced_harness.py`
+    - Outputs (3 windows):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Cases (harness-selected, cross-window): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md`
+    - Consumption decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md`
+  - Primitives (tags): `vtrac_index_gateway`, `index_hit_only`, `lane_to_box`, `double_winner`
+  - Hypothesis: VTRAC Enhanced is often “right about the index neighborhood” but not the exact canonical/straight; small top‑N changes mostly widen without reliably converting to box hits.
+  - Action (bounded):
+    - Keep VTRAC Enhanced as an evidence/gateway lens in v0.2 (do not treat it as a standalone straight oracle).
+    - Prefer **bounded conversion** rules (1–2 boxed canonicals) over full index closure (48 straight lines) when leveraging index correctness.
+    - Use the harness as the regression gate for any future VTRAC tuning: improve index-hit and/or reduce `index_hit_only` without uncontrolled pool widening.
+
 ---
 
 ## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16
