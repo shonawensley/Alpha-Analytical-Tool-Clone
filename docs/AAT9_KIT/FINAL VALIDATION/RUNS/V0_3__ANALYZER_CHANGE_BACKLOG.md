@@ -194,6 +194,12 @@ Primary references:
 - **Type**: new deterministic transform
 - **Problem**: “best_pattern top candidates” is a weak caller; DR’s value is in digit pools + convergence.
 - **Evidence**: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md`; `tasks/REDUCTION_THOUGHTS.txt` (digit pools, repetition, cross-variant convergence)
+- **Measured support (reporting-only harness from `*_digit_reduction_steps.csv`)**:
+  - Script: `scripts/tools/dr_envelope_harness.py`
+  - Outputs (3 windows):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
 - **Expected delta**: DR becomes useful input for bounded combination packs (measurable via CU/PlayCard).
 - **Status**: Proposed (v0.3 feature; careful anti-leakage)
 

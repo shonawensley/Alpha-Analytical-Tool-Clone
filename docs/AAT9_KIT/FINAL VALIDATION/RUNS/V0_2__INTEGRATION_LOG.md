@@ -344,11 +344,20 @@ Interpretation:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
   - Wired into the DR case-audit doc:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`
+- Added reporting-only “envelope harness” (digit-pool scoring from `*_digit_reduction_steps.csv` + gateway metrics):
+  - Script: `scripts/tools/dr_envelope_harness.py`
+  - Outputs (3 windows):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+  - Interpretation notes:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__ANALYSIS.md`
 
 ### Why this improves the tool/system (in v0.2 terms)
 
 - It separates a recurring confusion source:
   - DR often “sees” the winner in the trace/overlay (high `exact_any` / `vtrac_any`), even when the **best_pattern top-candidates** list does not.
+- It measures DR in the same “gateway” language used elsewhere (canonical-hit vs `vtrac_index` hit), and shows DR’s envelope scoring is far better at index-hit than at tight canonical Top‑K.
 - It makes the next work deterministic and bounded:
   - we can now review DR with a harness-driven queue (instead of browsing random days), using the winners HTML + DR overlay as the ground-truth lens.
 - It keeps v0.2 additive and measurable:

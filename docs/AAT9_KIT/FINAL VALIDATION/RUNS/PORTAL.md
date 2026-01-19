@@ -25,6 +25,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 
 4) What exists / what’s filled:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+- Portal coverage sanity check (legacy/unprofiled docs inventory):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL_COVERAGE_CHECK.md`
 
 5) “Are we broken?” triage:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_NOW_LEDGER.md`
@@ -41,11 +43,16 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__profit_only.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__profit_only.md`
-- Tool v0 consumption audits (quant → cases → feature decisions):
+  - Tool v0 consumption audits (quant → cases → feature decisions):
   - Digit Reduction:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+    - DR envelope harness (reporting-only; digit-pool scoring from `*_digit_reduction_steps.csv` + gateway metrics):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+      - Analysis notes: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__ANALYSIS.md`
     - Harness-driven DR study queue (bounded “what to read next” list):
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
     - Design intent (provenance; helps interpret DR outputs):

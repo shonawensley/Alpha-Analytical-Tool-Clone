@@ -629,6 +629,25 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
     - Prefer **bounded conversion** rules (1–2 boxed canonicals) over full index closure (48 straight lines) when leveraging index correctness.
     - Use the harness as the regression gate for any future VTRAC tuning: improve index-hit and/or reduce `index_hit_only` without uncontrolled pool widening.
 
+- **GOLD-0031** — `v0 windows` — Digit Reduction “envelope harness” validates DR as index-gateway evidence (not a top‑N caller)
+  - Type: `measurement + v0.3 prework`
+  - Baseline (profile=`tool_only`):
+    - DR’s envelope scoring from the reduction trace yields **materially higher `vtrac_index` hit rates** than canonical top‑K hit rates (similar “rail correct, box miss” profile as HOTZ/VTRAC).
+    - Tight canonical top‑K rates remain low; treating DR as a standalone caller is not justified (supports `--top-n-dr 0` in v0.2).
+  - Evidence:
+    - Harness: `scripts/tools/dr_envelope_harness.py`
+    - Outputs (3 windows):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Consumption posture: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+    - Design intent: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md`
+  - Primitives (tags): `digit_pool`, `envelope`, `early_arrival`, `vtrac_index_gateway`, `index_hit_only`
+  - Hypothesis: DR’s predictive value is in **digit pools + early-arrival/persistence**, which should be converted into bounded closure packs (v0.3), not “top 3 best_pattern”.
+  - Action (bounded):
+    - Keep v0.2 defaults unchanged (`--top-n-dr 0` tool-only).
+    - Use the harness as the regression gate for DR‑004 (envelope extractor): improve gateway metrics and/or reduce `index_hit_only` without uncontrolled pool widening.
+
 ---
 
 ## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16
