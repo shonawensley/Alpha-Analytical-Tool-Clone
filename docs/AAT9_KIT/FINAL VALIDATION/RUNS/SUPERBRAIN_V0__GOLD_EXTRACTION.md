@@ -648,6 +648,18 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
     - Keep v0.2 defaults unchanged (`--top-n-dr 0` tool-only).
     - Use the harness as the regression gate for DR‑004 (envelope extractor): improve gateway metrics and/or reduce `index_hit_only` without uncontrolled pool widening.
 
+- **GOLD-0032** — `v0 windows` — DR envelope packs (Top2) provide modest union lift as an additive research knob
+  - Type: `selection-layer experiment`
+  - Evidence:
+    - Implementation knob (default-off): `scripts/tools/create_candidate_universe.py --dr-envelope-boxed-canonicals 2`
+    - Cross-window summary: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
+  - Primitives (tags): `digit_pool`, `envelope`, `vtrac_index_gateway`, `lane_to_box`
+  - Interpretation:
+    - The DR envelope packs are low-cost (~8 lines/pack avg) and slightly increase union hit rates in multiple windows, but they also widen the union pool and can increase `index_hit_only`.
+    - They are intentionally excluded from the pooled digit envelope (so they remain additive and don’t silently perturb combo packs while we’re measuring).
+  - Action (bounded):
+    - Keep OFF by default (v0.2); use only as an explicit experiment knob until it proves stable lift without unacceptable widening.
+
 ---
 
 ## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16

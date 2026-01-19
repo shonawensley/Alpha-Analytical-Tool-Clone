@@ -362,3 +362,16 @@ Interpretation:
   - we can now review DR with a harness-driven queue (instead of browsing random days), using the winners HTML + DR overlay as the ground-truth lens.
 - It keeps v0.2 additive and measurable:
   - no analyzer tuning yet; we measure and decide what DR evidence should be consumed in selection layers, and only then propose v0.3 analyzer edits with acceptance thresholds.
+
+### Optional selection-layer experiment (v0.3 prework): DR envelope packs from steps CSV (Top2)
+
+- Implemented an **additive** Candidate Universe pack source that converts DR trace evidence (`*_digit_reduction_steps.csv`) into bounded BOX packs:
+  - `scripts/tools/create_candidate_universe.py` (`--dr-envelope-boxed-canonicals 2`)
+  - New `method_id=digit_reduction_envelope_steps` packs:
+    - `digit_reduction_envelope:Combined:top2`
+    - `digit_reduction_envelope:Midday:top2`
+    - `digit_reduction_envelope:Evening:top2`
+- Important containment rule: these DR envelope packs are **excluded** from the pooled digit envelope (so they don’t silently perturb combo packs while we’re still measuring).
+- Experiment summary (baseline tool_only union vs +DR envelope Top2 across all three windows):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
+- Decision (current): **keep off by default** (v0.2) and treat as a measured research knob until we see a stable, non-regressing lift without unacceptable pool widening.

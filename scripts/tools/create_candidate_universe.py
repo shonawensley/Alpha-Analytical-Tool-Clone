@@ -670,6 +670,222 @@ def _parse_dr_top(*, state_dir: Path, state_key: str, top_n: int = 3) -> Tuple[L
     return packs, [path]
 
 
+@dataclass(frozen=True)
+class _DrStepRow:
+    step: int
+    unique_digits: int
+    digits: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _DrCandidateSets:
+    singles: Tuple[str, ...]
+    doubles: Tuple[str, ...]
+    triples: Tuple[str, ...]
+
+
+def _boxed_cost_units(canon: str) -> int:
+    """
+    Box closure cost proxy: number of unique permutations.
+
+    - triple: 1
+    - double: 3
+    - all distinct: 6
+    """
+    canon = _canon(canon)
+    if not canon:
+        return 0
+    a, b, c = canon
+    if a == b == c:
+        return 1
+    if a == b or b == c:
+        return 3
+    return 6
+
+
+def _dr_candidate_sets_for_digits(digits: Tuple[str, ...]) -> _DrCandidateSets:
+    if not digits:
+        return _DrCandidateSets((), (), ())
+    if len(digits) == 1:
+        d = digits[0]
+        return _DrCandidateSets((), (), (d + d + d,))
+
+    doubles: List[str] = []
+    for i in range(len(digits)):
+        for j in range(i + 1, len(digits)):
+            a, b = digits[i], digits[j]
+            doubles.append("".join(sorted(a + a + b)))
+            doubles.append("".join(sorted(a + b + b)))
+
+    singles: List[str] = []
+    if len(digits) >= 3:
+        for i in range(len(digits)):
+            for j in range(i + 1, len(digits)):
+                for k in range(j + 1, len(digits)):
+                    singles.append(digits[i] + digits[j] + digits[k])
+
+    return _DrCandidateSets(tuple(sorted(set(singles))), tuple(sorted(set(doubles))), ())
+
+
+def _load_dr_step_rows(*, steps_csv: Path, section: str) -> List[_DrStepRow]:
+    rows: List[_DrStepRow] = []
+    with steps_csv.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            if (row.get("section") or "").strip() != section:
+                continue
+            val = "".join(ch for ch in (row.get("value") or "") if ch.isdigit())
+            if not val:
+                continue
+            digits = tuple(sorted(set(val)))
+            try:
+                step = int((row.get("step") or "0").strip() or 0)
+            except Exception:
+                step = 0
+            try:
+                unique_digits = int((row.get("unique_digits") or "0").strip() or 0)
+            except Exception:
+                unique_digits = 0
+            if unique_digits <= 0:
+                unique_digits = len(digits)
+            rows.append(_DrStepRow(step=step, unique_digits=unique_digits, digits=digits))
+    return rows
+
+
+def _rank_dr_envelope_candidates(
+    *,
+    rows: Sequence[_DrStepRow],
+    candidate_cache: Dict[Tuple[str, ...], _DrCandidateSets],
+    max_unique_digits: int,
+    step_power: float,
+    unique_power: float,
+    double_weight: float,
+    split_weight: bool,
+) -> List[Tuple[str, float]]:
+    scores: Dict[str, float] = {}
+    for r in rows:
+        if r.unique_digits <= 0 or r.unique_digits > max_unique_digits:
+            continue
+        step_w = 1.0 / ((1 + r.step) ** step_power) if step_power else 1.0
+        uniq_w = 1.0 / (r.unique_digits**unique_power) if unique_power else 1.0
+        base = step_w * uniq_w
+
+        sets = candidate_cache.get(r.digits)
+        if sets is None:
+            sets = _dr_candidate_sets_for_digits(r.digits)
+            candidate_cache[r.digits] = sets
+
+        if sets.singles:
+            w = base / len(sets.singles) if split_weight else base
+            for c in sets.singles:
+                scores[c] = scores.get(c, 0.0) + w
+
+        if double_weight > 0 and sets.doubles:
+            w = (base * double_weight) / len(sets.doubles) if split_weight else (base * double_weight)
+            for c in sets.doubles:
+                scores[c] = scores.get(c, 0.0) + w
+
+        if sets.triples:
+            w = base / len(sets.triples) if split_weight else base
+            for c in sets.triples:
+                scores[c] = scores.get(c, 0.0) + w
+
+    return sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def _parse_dr_envelope_steps(
+    *,
+    state_dir: Path,
+    state_key: str,
+    boxed_canonicals: int,
+    max_unique_digits: int = 7,
+    step_power: float = 2.0,
+    unique_power: float = 1.0,
+    double_weight: float = 0.25,
+    split_weight: bool = True,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Optional Digit Reduction envelope pack (v0.3 prework).
+
+    Reads only sharepack-local DR trace evidence:
+      digit_reduction/<STATE>/training/<STATE>_digit_reduction_steps.csv
+
+    Emits bounded BOX packs per section (Combined/Midday/Evening) by ranking canonicals derived
+    from digit pools (early steps + smaller pools weighted higher).
+    """
+    if boxed_canonicals <= 0:
+        return [], []
+
+    steps_csv = (
+        state_dir
+        / "digit_reduction"
+        / state_key
+        / "training"
+        / f"{state_key}_digit_reduction_steps.csv"
+    )
+    if not steps_csv.exists():
+        return [], []
+
+    packs: List[dict] = []
+    candidate_cache: Dict[Tuple[str, ...], _DrCandidateSets] = {}
+    for section in ("Combined", "Midday", "Evening"):
+        step_rows = _load_dr_step_rows(steps_csv=steps_csv, section=section)
+        if not step_rows:
+            continue
+        ranked = _rank_dr_envelope_candidates(
+            rows=step_rows,
+            candidate_cache=candidate_cache,
+            max_unique_digits=max_unique_digits,
+            step_power=step_power,
+            unique_power=unique_power,
+            double_weight=double_weight,
+            split_weight=split_weight,
+        )
+        picked = [_canon(c) for c, _ in ranked if _canon(c)][: int(boxed_canonicals)]
+        picked = [c for c in picked if c]
+        if not picked:
+            continue
+        combos: set[str] = set()
+        for canon in picked:
+            combos.update(_unique_perms(canon))
+        combos_list = sorted(combos)
+        if not combos_list:
+            continue
+        packs.append(
+            {
+                "pack_id": f"digit_reduction_envelope:{section}:top{int(boxed_canonicals)}",
+                "method_id": "digit_reduction_envelope_steps",
+                "variant": section,
+                "play_mode": "BOX",
+                "canonicals": sorted(set(picked)),
+                "combos": combos_list,
+                "combos_count": len(combos_list),
+                "cost_units": len(combos_list),
+                "why_tags": [
+                    "digit_reduction",
+                    "envelope",
+                    "steps_csv",
+                    f"boxed_canonicals:{int(boxed_canonicals)}",
+                    f"max_unique_digits:{int(max_unique_digits)}",
+                    f"step_power:{step_power:g}",
+                    f"unique_power:{unique_power:g}",
+                    f"double_weight:{double_weight:g}",
+                    "split_weight" if split_weight else "no_split_weight",
+                ],
+                "transform_chain": [
+                    f"dr_steps_csv:{section}",
+                    f"dr_envelope_rank:u{int(max_unique_digits)}_sp{step_power:g}_up{unique_power:g}_dw{double_weight:g}{'_split' if split_weight else ''}",
+                    f"seed_top{int(boxed_canonicals)}",
+                    "box_expand_unique_perms",
+                ],
+                "evidence_paths": [_safe_rel(steps_csv)],
+            }
+        )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [steps_csv]
+
+
 def _parse_vtrac_top(*, state_dir: Path, state_key: str, top_n: int = 8) -> Tuple[List[dict], List[Path]]:
     vtrac_dir = state_dir / "vtrac" / state_key
     if not vtrac_dir.exists():
@@ -1570,6 +1786,11 @@ def _build_digit_envelope(*, packs: Sequence[dict]) -> dict:
     digits: List[str] = []
     sources: List[str] = []
     for p in packs:
+        # Keep the pooled digit envelope stable across optional v0.3 research packs.
+        # Those packs should be additive, not perturb the derived combo packs unless
+        # explicitly promoted into defaults later.
+        if (p.get("method_id") or "") in {"digit_reduction_envelope_steps"}:
+            continue
         pack_id = p.get("pack_id", "?")
         for c in p.get("canonicals", []) or []:
             c = _canon(c)
@@ -2047,6 +2268,12 @@ def parse_args() -> argparse.Namespace:
     )
     ap.add_argument("--top-n-stable", type=int, default=3, help="Top N stable canonicals per section (default: 3)")
     ap.add_argument("--top-n-dr", type=int, default=0, help="Top N DR analyzer patterns per variant (default: 0)")
+    ap.add_argument(
+        "--dr-envelope-boxed-canonicals",
+        type=int,
+        default=0,
+        help="Optional DR envelope packs: BOX-expand top N envelope-derived canonicals per section from DR steps CSV (default: 0 disables).",
+    )
     ap.add_argument("--top-n-vtrac", type=int, default=8, help="Top N VTRAC straights (default: 8)")
     ap.add_argument("--top-n-hot", type=int, default=8, help="Top N Hot Zones triads (default: 8)")
     ap.add_argument(
@@ -2215,6 +2442,15 @@ def main() -> None:
             )
             packs.extend(dr_packs)
             inputs.extend(dr_inputs)
+
+            # 3b) Digit Reduction envelope packs (optional; v0.3 prework)
+            dr_env_packs, dr_env_inputs = _parse_dr_envelope_steps(
+                state_dir=state_dir,
+                state_key=state_key,
+                boxed_canonicals=int(args.dr_envelope_boxed_canonicals),
+            )
+            packs.extend(dr_env_packs)
+            inputs.extend(dr_env_inputs)
 
             # 4) VTRAC enhanced (top straights)
             vt_packs, vt_inputs = _parse_vtrac_top(

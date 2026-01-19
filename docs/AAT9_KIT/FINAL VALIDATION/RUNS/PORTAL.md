@@ -53,6 +53,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
       - Analysis notes: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__ANALYSIS.md`
+    - Optional selection-layer experiment (additive DR envelope BOX packs; research-only):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
     - Harness-driven DR study queue (bounded “what to read next” list):
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
     - Design intent (provenance; helps interpret DR outputs):

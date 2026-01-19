@@ -52,6 +52,10 @@ Optional (research-only; not part of v0.2 defaults):
   - `--hot-zones-index-closure --hot-zones-index-closure-boxed-canonicals 2`
   - Current measured result in the Jan window shows no lift; keep it off unless you are explicitly experimenting:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_INDEX_CLOSURE__EXPERIMENT__2026-01-05_to_2026-01-09.md`
+- Digit Reduction envelope packs (bounded BOX packs from DR steps trace; v0.3 prework):
+  - `--dr-envelope-boxed-canonicals 2`
+  - Measured summary across v0 windows:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
 
 ### 1.3 Play Cards (budgeted cuts) — tool‑first baseline
 

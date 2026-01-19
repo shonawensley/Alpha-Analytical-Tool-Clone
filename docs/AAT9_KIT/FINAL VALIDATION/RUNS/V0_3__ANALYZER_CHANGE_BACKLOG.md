@@ -200,6 +200,9 @@ Primary references:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- **Measured support (selection-layer prework; additive CU packs, default-off)**:
+  - Implemented optional CU packs: `scripts/tools/create_candidate_universe.py --dr-envelope-boxed-canonicals 2`
+  - Summary across v0 windows: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
 - **Expected delta**: DR becomes useful input for bounded combination packs (measurable via CU/PlayCard).
 - **Status**: Proposed (v0.3 feature; careful anti-leakage)
 
