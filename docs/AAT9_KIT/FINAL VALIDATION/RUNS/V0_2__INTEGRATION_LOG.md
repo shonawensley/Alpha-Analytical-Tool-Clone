@@ -282,7 +282,7 @@ Interpretation:
 
 ---
 
-## 2026‑01‑19 — VTRAC Enhanced block started
+## 2026‑01‑19 — VTRAC Enhanced block completed (gateway harness + semantics)
 
 - Goal: measure VTRAC Enhanced as a **gateway lens** (index-hit / lane-hit / box-hit decomposition), not a standalone “top‑K straight caller”.
 - Terminology guardrail (prevents the “doubles are excluded” confusion):
@@ -294,7 +294,7 @@ Interpretation:
   - v0.2 selection-layer consumption changes (only if measured lift)
   - v0.3 analyzer tuning backlog (if it looks promising but is not yet proven)
 
-### Status (so far)
+### Status (done)
 
 - Added reporting-only harness + outputs (3 windows):
   - Script: `scripts/tools/vtrac_enhanced_harness.py`
@@ -304,3 +304,21 @@ Interpretation:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
 - Expanded the v0 cases doc to be harness-driven across all three windows:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md`
+- Updated the v0 audits/decisions to reflect the clarified semantics and measured harness outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md`
+  - (guardrail wording): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.md`, `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.md`
+- Updated navigation + backlog so the tool-by-tool process stays unified:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ANALYZER_CHANGE_BACKLOG.md`
+- Captured the repeatable “why it matters” as a bounded Gold entry:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md` (`GOLD-0030`)
+
+### Why this improves the tool/system (in v0.2 terms)
+
+- It measures VTRAC Enhanced in the same **gateway language** you actually reason with in Master Validation (box/canonical and index-hit), instead of judging it as “top‑K straight only”.
+- It removes a major recurring confusion source by explicitly disambiguating:
+  - “8 boxed canonicals per index” (UI view) vs
+  - “straight-line closure size” (48/24/6 lines depending the index composition),
+  - and “doubles have an index; triples don’t”.
+- It creates a stable, repeatable harness across three windows, so any future v0.3 tuning proposals are evidence-gated (measured deltas + regression expectations), not vibes.

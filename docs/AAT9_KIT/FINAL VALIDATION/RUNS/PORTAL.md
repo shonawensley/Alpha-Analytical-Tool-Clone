@@ -46,10 +46,14 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+    - Design intent (provenance; helps interpret DR outputs):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md`
   - Aux:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__QUANT.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__CASES.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__FEATURE_DECISIONS.md`
+    - Aux signals table (CSV; evidence inventory used by the audit):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__SIGNALS__QUANT.csv`
   - Stable:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__CASES.md`
@@ -83,8 +87,15 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- CSV companions (general rule of thumb):
+  - If a `.md` exists for a rollup/harness/audit, there is usually a `.csv` with the same basename next to it (for sorting/pivoting).
+  - Examples: `*_V0__AUDIT__QUANT.csv`, `candidate_universe_rollup.csv`, `play_card_rollup.csv`.
+- Corpus exports (power user; large tables):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_tool_metrics.csv`
 - Doubles / mirror-doubles research (reverse-engineering lens):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.md`
+    - (CSV companion): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__INVENTORY.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md` (includes winners-lens Set1 col1/2 ladder metrics + samples)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md` (top “index hit → box miss” cases to study first)
 - Aux boxed VTRAC badge matrix (Windows parity signal; reporting-only export):
@@ -96,6 +107,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
 - v0.2 defaults (resume runs without drift):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
+- Legacy window analysis (keep for provenance; most conclusions are folded into the v0 audits/ledgers):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/GOLD_RUNS_2_TRIAGE.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/POST RUNS/GOLD_RUNS_2_REPORT.txt`
 
 ---
 
@@ -151,6 +165,13 @@ Range packs are the fastest way to find study cases without opening dozens of st
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__PROFIT_ALERTS_ROLLUP.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__CONTROL_CENTER_ROLLUP.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__CODEX_DEEP_ANALYSIS.md`
+Optional (when present for a window):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__CORPUS_SYNTHESIS.md` (narrative summary of the window)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__DR_LENS_REPORT.md` (digit reduction lens / patterns)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__CROSS_VARIANT_REPORT.md` (M/E/C interactions)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__MIRROR_DOUBLE_FREQUENCY.md` (doubles/mirror frequency surface)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__RESULTS_HORIZON.md` (when generated)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__AUDIT_SUMMARY.md` (when generated)
 
 ---
 
