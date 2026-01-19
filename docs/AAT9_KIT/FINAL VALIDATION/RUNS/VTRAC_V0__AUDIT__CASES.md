@@ -1,31 +1,41 @@
 # VTRAC Enhanced — v0 Audit (Cases)
 
 Purpose: pick a small number of **high-signal VTRAC cases** to understand:
-- why VTRAC’s top‑N straights often miss as a direct caller, and
-- how often VTRAC is “right about the index” (lane hit) even when it misses the canonical/straight.
+- why VTRAC Enhanced top‑N straights often miss as a direct caller, and
+- how often VTRAC Enhanced is “right about the index” (lane hit) even when it misses the canonical/straight.
 
 Scope guardrails:
 - No analyzer changes (Stable/DR/VTRAC/HZ).
 - Profit Alerts quarantined (use `--profile tool_only` as baseline).
 
 Companion quant:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md`
+- v0 audit narrative: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.md`
+- harness outputs (case selection SSOT):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md`
+
+Winner type note:
+- **Doubles are included** in `vtrac_index` metrics (indices 1–35).
+- **Triples intentionally have no** `vtrac_index` (legacy behavior; `modules.vtrac_reference.get_vtrac_index()` returns `None`).
 
 ---
 
 ## How to review one case (repeatable checklist)
 
 For each case below:
-1) Open the Master Validation run report:
+1) Winners lens (environment truth):
+   - `sharepacks/<D>/<STATE>/winners/<STATE>/*.html` (+ `.json` twin if present)
+2) Master Validation run report (structured extraction of tool evidence):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
-2) VTRAC post-results summary (winner index placement):
+3) VTRAC Enhanced bundle (the thing we measure):
+   - `sharepacks/<D>/<STATE>/vtrac/<STATE>/<STATE>_vtrac_enhanced_*.json`
+4) VTRAC sharepack summary (if present; index placement / context):
    - `sharepacks/<D>/<STATE>/vtrac/<STATE>/summary.json`
-3) Predictive enhanced bundle (what `vtrac_enhanced_top` ingests):
-   - `sharepacks/_predictive/<D>/<STATE>/vtrac/<STATE>/<STATE>_vtrac_enhanced_*.json`
-4) Predictive artifacts (so we can compare “before” → “after”):
+5) Predictive artifacts (optional, when available; before→after comparison):
    - `sharepacks/_predictive/<D>/<STATE>/candidate_universe__tool_only.json`
    - `sharepacks/_predictive/<D>/<STATE>/play_card__tool_only.json`
-5) Winners quick scan:
+6) Winners digest (optional quick scan):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__WINNERS_DIGEST.md`
 
 Key questions:
@@ -35,55 +45,96 @@ Key questions:
 
 ---
 
-## A) Direct hits (VTRAC top‑8 straights)
+## Harness-selected case pool (three regression windows)
 
-These are the only cases in the v0 window where the literal winner appears in VTRAC’s top‑8 ranked straights (straight hit).
+Definitions used below (from the harness CSVs):
+- **Direct hit**: `straight_hit_top8=1`
+- **Canonical-only hit**: `canonical_hit_top8=1` and `straight_hit_top8=0`
+- **Index-hit-only queue**: `index_hit_top12=1` while `canonical_hit_top12=0` and `straight_hit_top12=0`
 
-| D | State | Outcome | Winner | Canon | Winner straight rank |
-|---|---|---|---:|---:|---:|
-| 2026-01-07 | Florida4 | Evening | 963 | 369 | 4 |
+### Window: 2025-06-21 → 2025-06-23
 
----
+**Direct hits (top‑8)**: _none_
 
-## B) Near misses (winner in top‑20 straights, not top‑8)
+**Canonical-only hits (top‑8)**
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2025-06-21|Connecticut4|Midday|950|059|unique|5|
+|2025-06-23|NorthCarolina4|Evening|145|145|unique|9|
+|2025-06-23|Ohio4|Evening|368|368|unique|23|
+|2025-06-23|SouthCarolina4|Evening|314|134|unique|24|
 
-| D | State | Outcome | Winner | Canon | Winner straight rank |
-|---|---|---|---:|---:|---:|
-| 2026-01-06 | NewJersey4 | Midday | 865 | 568 | 18 |
+**Index-hit-only queue (top‑12)** (first 12; see harness CSV for full list)
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2025-06-21|NewJersey4|Midday|182|128|unique|21|
+|2025-06-21|Ohio4|Midday|069|069|unique|9|
+|2025-06-21|OntarioCanada4|Midday|678|678|unique|21|
+|2025-06-21|SouthCarolina4|Midday|069|069|unique|9|
+|2025-06-22|Florida4|Midday|330|033|double|13|
+|2025-06-22|NewYork4|Evening|968|689|unique|24|
+|2025-06-23|Florida4|Evening|465|456|unique|9|
+|2025-06-23|Florida4|Midday|665|566|double|6|
+|2025-06-23|Michigan4|Midday|392|239|unique|30|
+|2025-06-23|SouthCarolina4|Midday|958|589|unique|14|
+|2025-06-23|Virginia4|Midday|579|579|unique|12|
 
----
+### Window: 2025-12-30 → 2026-01-04
 
-## C) Canonical-only hits (BOX-equivalent would have hit)
+**Direct hits (top‑8)**
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2026-01-01|NorthCarolina4|Evening|053|035|unique|4|
+|2026-01-04|Indiana4|Midday|813|138|unique|23|
 
-In these cases, VTRAC surfaced a straight that shares the winner’s canonical, but not the literal permutation.
+**Canonical-only hits (top‑8)**
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2025-12-30|Connecticut4|Midday|095|059|unique|5|
+|2026-01-01|Delaware4|Midday|149|149|unique|25|
+|2026-01-02|OntarioCanada4|Evening|816|168|unique|18|
+|2026-01-03|SouthCarolina4|Midday|189|189|unique|24|
 
-| D | State | Outcome | Winner | Canon | VTRAC top‑8 straight(s) |
-|---|---|---|---:|---:|---|
-| 2026-01-08 | Delaware4 | Evening | 031 | 013 | 013 |
+**Index-hit-only queue (top‑12)** (first 12; see harness CSV for full list)
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2025-12-30|Delaware4|Evening|563|356|unique|8|
+|2025-12-30|Indiana4|Evening|512|125|unique|7|
+|2025-12-30|NorthCarolina4|Midday|455|455|double|5|
+|2025-12-30|PuertoRico4|Evening|643|346|unique|24|
+|2025-12-30|PuertoRico4|Midday|098|089|unique|14|
+|2025-12-31|NewJersey4|Midday|366|366|double|18|
+|2025-12-31|OntarioCanada4|Evening|932|239|unique|30|
+|2025-12-31|PuertoRico4|Evening|913|139|unique|24|
+|2025-12-31|SouthCarolina4|Midday|653|356|unique|8|
+|2025-12-31|Virginia4|Evening|636|366|double|18|
+|2025-12-31|Virginia4|Midday|686|668|double|18|
+|2026-01-02|NorthCarolina4|Midday|033|033|double|13|
 
----
+### Window: 2026-01-05 → 2026-01-09
 
-## D) Index-hit → box-miss queue (top‑12 straights)
+**Direct hits (top‑8)**
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2026-01-07|Florida4|Evening|963|369|unique|24|
 
-These are “lane correctness” cases: the winner’s VTRAC index is present among the indices implied by VTRAC’s top‑12 straights, but the winner canonical is not.
+**Canonical-only hits (top‑8)**
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2026-01-08|Delaware4|Evening|031|013|unique|8|
 
-Start with these (first 10 from the v0 window):
-
-| D | State | Outcome | Winner | Canon | VTRAC idx |
-|---|---|---|---:|---:|---:|
-| 2026-01-05 | OntarioCanada4 | Evening | 797 | 779 | 28 |
-| 2026-01-05 | Pennsylvania4 | Evening | 600 | 006 | 2 |
-| 2026-01-05 | SouthCarolina4 | Evening | 712 | 127 | 20 |
-| 2026-01-06 | SouthCarolina4 | Evening | 412 | 124 | 22 |
-| 2026-01-06 | Virginia4 | Evening | 958 | 589 | 14 |
-| 2026-01-07 | Florida4 | Midday | 434 | 344 | 34 |
-| 2026-01-07 | Indiana4 | Evening | 290 | 029 | 12 |
-| 2026-01-07 | Ohio4 | Evening | 204 | 024 | 12 |
-| 2026-01-07 | Pennsylvania4 | Evening | 263 | 236 | 21 |
-| 2026-01-08 | Delaware4 | Evening | 031 | 013 | 8 |
-
-Next step: for each row, compare:
-- winner index placement (`summary.json`) vs the pack’s implied index set (lane correctness),
-- cross-pack convergence votes in Candidate Universe,
-- whether a bounded closure rule (v0.2/v0.3) would have converted this into a box hit.
-
+**Index-hit-only queue (top‑12)** (first 12; see harness CSV for full list)
+|results_date|state|outcome|winner|winner_canonical|winner_kind|winner_index|
+|---|---|---|---|---|---|---|
+|2026-01-05|OntarioCanada4|Evening|797|779|double|28|
+|2026-01-05|Pennsylvania4|Evening|600|006|double|2|
+|2026-01-05|SouthCarolina4|Evening|712|127|unique|20|
+|2026-01-06|NewJersey4|Midday|865|568|unique|8|
+|2026-01-06|SouthCarolina4|Evening|412|124|unique|22|
+|2026-01-06|Virginia4|Evening|958|589|unique|14|
+|2026-01-07|Florida4|Midday|434|344|double|34|
+|2026-01-07|Indiana4|Evening|290|029|unique|12|
+|2026-01-07|Ohio4|Evening|204|024|unique|12|
+|2026-01-07|Pennsylvania4|Evening|263|236|unique|21|
+|2026-01-08|SouthCarolina4|Evening|910|019|unique|9|
+|2026-01-08|Virginia4|Midday|286|268|unique|21|

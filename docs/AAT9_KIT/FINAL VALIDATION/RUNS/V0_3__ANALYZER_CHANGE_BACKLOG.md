@@ -275,6 +275,24 @@ Primary references:
 - `docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md`
 
+Measured harness (reporting-only; replay from frozen sharepacks):
+- Script: `scripts/tools/vtrac_enhanced_harness.py`
+- Outputs (3 regression windows):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- Winner type handling:
+  - Doubles are included in `vtrac_index` (indices 1–35).
+  - Triples intentionally have no `vtrac_index` (legacy behavior).
+
+Measured snapshot (Jan v0 window; results-date opportunities):
+- Top‑8 straights: straight hit `1/138`, BOX‑equiv canonical hit `2/138`
+- Gateway lens:
+  - index hit via top‑8 straights: `16/138` (index-defined opps exclude triples only)
+  - winner index in `indices_ranked` top‑5: `17/138`
+- Conclusion: VTRAC Enhanced is measurably stronger as a lane/index lens than as a top‑8 straight caller. Analyzer edits must be
+  justified as “increases index correctness and/or converts index-hit-only into canonical/box hits” without uncontrolled widening.
+
 ### VTRAC-001 — Cross-variant echo + persistence weighting (superhot repeats)
 - **Type**: weights
 - **Problem**: cross-variant superhot repeats and right-column persistence are repeatedly cited as underweighted.

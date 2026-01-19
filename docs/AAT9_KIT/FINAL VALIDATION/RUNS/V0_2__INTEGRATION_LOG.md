@@ -293,3 +293,14 @@ Interpretation:
   - Fix‑Now (if correctness/schema issues exist)
   - v0.2 selection-layer consumption changes (only if measured lift)
   - v0.3 analyzer tuning backlog (if it looks promising but is not yet proven)
+
+### Status (so far)
+
+- Added reporting-only harness + outputs (3 windows):
+  - Script: `scripts/tools/vtrac_enhanced_harness.py`
+  - Outputs:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- Expanded the v0 cases doc to be harness-driven across all three windows:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md`

@@ -23,6 +23,15 @@ In the v0 Jan window (`2026-01-05..2026-01-09`), VTRAC Enhanced as currently con
 So the v0.2 posture is:
 - keep VTRAC Enhanced as a **predictive input**, but treat it as **support/lane evidence**, not a primary caller.
 
+Winner type handling note (important):
+- Doubles are included in `vtrac_index` metrics (indices 1–35).
+- Triples intentionally have no `vtrac_index` (legacy behavior).
+
+Measured harness outputs (cross-window; reporting-only):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-06-21_to_2025-06-23.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2025-12-30_to_2026-01-04.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_ENHANCED_V0__HARNESS__2026-01-05_to_2026-01-09.md`
+
 ---
 
 ## Decision table (v0.2 consumption)
@@ -64,4 +73,3 @@ After we mine more “index-hit → box-hit conversion” gold entries, revisit:
 - Any change to VSTRAIGHTS lane generation.
 
 Those are v0.3+ items once v0.2 defaults are stable.
-
