@@ -76,7 +76,7 @@ Selection performance for `method_id=stable_top` depends heavily on `top_n`.
 
 See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.csv`
 
-| top_n | opps | hit_any | hit_any_rate | index_hit_rate (non-double opps) | avg_total_cost (3 sections) |
+| top_n | opps | hit_any | hit_any_rate | index_hit_rate (index-defined opps) | avg_total_cost (3 sections) |
 |---:|---:|---:|---:|---:|---:|
 | 3 | 140 | 2 | 0.0143 | 0.1618 | 30.49 |
 | 5 | 140 | 3 | 0.0214 | 0.2500 | 52.94 |
@@ -85,7 +85,7 @@ See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__QUANT.csv`
 
 Notes:
 - `hit_any` here is “winner canonical appears in top‑N canonicals in at least one section”, BOX-expanded.
-- `index_hit_rate` excludes doubles/triples (no `vtrac_index`).
+- `index_hit_rate` excludes triples only (legacy behavior: no `vtrac_index` for triples); doubles are included.
 - `avg_total_cost` is the sum of BOX-expanded unique perms per section (Combined+Midday+Evening) for a typical state/day.
 
 Interpretation:
@@ -105,4 +105,3 @@ Interpretation:
 Next:
 - Case audit (near misses + “should-have-hit” evidence): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__AUDIT__CASES.md`
 - Feature decisions (what Stable outputs should feed v0.2 surfaces): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/STABLE_V0__FEATURE_DECISIONS.md`
-

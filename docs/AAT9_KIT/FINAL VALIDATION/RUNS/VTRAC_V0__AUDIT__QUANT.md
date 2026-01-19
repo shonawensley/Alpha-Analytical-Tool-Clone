@@ -58,7 +58,7 @@ This captures “was VTRAC right about the rail?” even when the top‑N straig
 
 ### A) Evidence-level (winner index placement)
 
-Across non-double opportunities (n=136):
+Across index-defined opportunities (n=136; excludes triples):
 - Winner index ranked in top‑3: `12/136` (0.0882)
 - Winner index ranked in top‑10: `35/136` (0.2574)
 - Median winner index rank fraction: `0.5143`
@@ -70,7 +70,7 @@ Interpretation:
 
 See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.csv`
 
-| top_n | opps | straight_hit | straight_hit_rate | canonical_hit_rate (BOX‑equiv) | index_hit_rate (non-double opps) | avg_cost_straight | avg_cost_box |
+| top_n | opps | straight_hit | straight_hit_rate | canonical_hit_rate (BOX‑equiv) | index_hit_rate (index-defined opps) | avg_cost_straight | avg_cost_box |
 |---:|---:|---:|---:|---:|---:|---:|---:|
 | 8 | 138 | 1 | 0.0072 | 0.0145 | 0.1176 | 8.0 | 27.304 |
 | 12 | 138 | 1 | 0.0072 | 0.0290 | 0.1618 | 12.0 | 39.043 |
@@ -78,7 +78,7 @@ See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__QUANT.csv`
 
 Notes:
 - `canonical_hit_rate (BOX‑equiv)` is counterfactual: “if we treated the top straights’ canonicals as boxed”.
-- `index_hit_rate` excludes doubles/triples (no `vtrac_index`).
+- `index_hit_rate` excludes triples only (legacy behavior: no `vtrac_index` for triples); doubles are included.
 
 Interpretation:
 - As a strict straight caller, VTRAC Enhanced is weak at low `top_n`.
@@ -98,4 +98,3 @@ not raw straight hit rate.
 Next:
 - Case audit: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__AUDIT__CASES.md`
 - Feature decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/VTRAC_V0__FEATURE_DECISIONS.md`
-

@@ -71,7 +71,7 @@ Interpretation:
 
 See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.csv`
 
-| top_n | opps | straight_hit | straight_hit_rate | canonical_hit_rate (BOX‑equiv) | index_hit_rate (non-double opps) | avg_cost_straight | avg_cost_box |
+| top_n | opps | straight_hit | straight_hit_rate | canonical_hit_rate (BOX‑equiv) | index_hit_rate (index-defined opps) | avg_cost_straight | avg_cost_box |
 |---:|---:|---:|---:|---:|---:|---:|---:|
 | 8 | 138 | 1 | 0.0072 | 0.0290 | 0.1691 | 8.0 | 36.899 |
 | 12 | 138 | 2 | 0.0145 | 0.0580 | 0.2500 | 12.0 | 55.986 |
@@ -79,7 +79,7 @@ See: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__QUANT.csv`
 
 Notes:
 - `canonical_hit_rate (BOX‑equiv)` is a counterfactual: “if we treated top triads as boxed canonicals”.
-- `index_hit_rate` excludes doubles/triples (no `vtrac_index`).
+- `index_hit_rate` excludes triples only (legacy behavior: no `vtrac_index` for triples); doubles are included.
 
 Interpretation:
 - As a strict straight caller, Hot Zones is very weak at small `top_n`.
@@ -98,4 +98,3 @@ Interpretation:
 Next:
 - Case audit: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__AUDIT__CASES.md`
 - Feature decisions: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__FEATURE_DECISIONS.md`
-

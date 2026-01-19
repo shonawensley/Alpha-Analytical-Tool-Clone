@@ -279,3 +279,17 @@ Interpretation:
 3) Only then: consider true analyzer tuning (v0.3)
 - Anything that is “correctness bug” becomes Fix‑Now.
 - Anything else becomes a v0.3 backlog item with measured deltas + regression plan.
+
+---
+
+## 2026‑01‑19 — VTRAC Enhanced block started
+
+- Goal: measure VTRAC Enhanced as a **gateway lens** (index-hit / lane-hit / box-hit decomposition), not a standalone “top‑K straight caller”.
+- Terminology guardrail (prevents the “doubles are excluded” confusion):
+  - `vtrac_index` is defined for **unique** and **double** winners (1–35). **Triples** intentionally have no `vtrac_index` (legacy behavior).
+  - `modules.vtrac_reference.VTRAC_DISPLAY` is a **boxed/canonical UI view**: it lists the 8 boxed members (canonicals) per index (and the smaller double-only members for double-heavy indices).
+  - `modules.vtrac_reference.get_index_set(index)` returns the full **straight-line** closure for an index (explicit 3-digit permutations), so sizes are typically **48** (8 canonicals × 6 perms), **24** (mixed singles+doubles), or **6** (pure double indices like index 1).
+- Actions (planned): harness across the three regression windows + a small curated winners-lens review set, then explicit feature decisions:
+  - Fix‑Now (if correctness/schema issues exist)
+  - v0.2 selection-layer consumption changes (only if measured lift)
+  - v0.3 analyzer tuning backlog (if it looks promising but is not yet proven)

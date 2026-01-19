@@ -38,7 +38,7 @@ Legend:
 
 | Stable output / signal | Current role | v0 evidence | v0.2 decision | Notes / implementation hook |
 |---|---|---|---|---|
-| Stable “top canonicals” from `*_stable_patterns_scores.csv` | Candidate Universe pack (`method_id=stable_top`, BOX) | `top_n=3` hit_any `2/140` but index-hit (non-double opps) `22/136`; increasing `top_n` increases hits but explodes cost | **Keep** | Keep in tool-only baseline, but treat as a lane/index lens. Default stays `--top-n-stable=3` unless explicitly testing higher `top_n`. |
+| Stable “top canonicals” from `*_stable_patterns_scores.csv` | Candidate Universe pack (`method_id=stable_top`, BOX) | `top_n=3` hit_any `2/140` but index-hit (index-defined opps; excludes triples) `22/136`; increasing `top_n` increases hits but explodes cost | **Keep** | Keep in tool-only baseline, but treat as a lane/index lens. Default stays `--top-n-stable=3` unless explicitly testing higher `top_n`. |
 | Stable compound leaderboard (`*_stable_patterns_compound.csv`) | Not used as packs | Evidence-level `compound.present=90/140`; median `compound.winner_rank_fraction≈0.133` | **Demote** | v0.3 candidate pack idea: mine *bounded* digit pools / index votes from compound (not “top 20 boxed canonicals”). Defer until after HZ/VTRAC audits. |
 | Stable families leaderboard (`*_stable_patterns_families.csv`) | Not used as packs | Evidence-level `families.present=134/140`; median `families.winner_rank_fraction≈0.162` | **Demote** | High-value evidence for “index correctness” even when canonical misses. v0.3 idea: family→index vote (bounded) to support index-hit → box-hit conversion. |
 | Stable metrics (`*_metrics.json`) | Not used as predictive input | Useful for tool health + winner placement diagnostics | **Eval-only** | Keep for auditing and for “why it missed” explanations; do not translate directly into picks yet. |
@@ -71,4 +71,3 @@ After Hot Zones + VTRAC audits are complete, we can revisit:
 - Any horizon/carryover grading semantics.
 
 Those are v0.3+ items once v0.2 defaults are stable and other tool audits are complete.
-
