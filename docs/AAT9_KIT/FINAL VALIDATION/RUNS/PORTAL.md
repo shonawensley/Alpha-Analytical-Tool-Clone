@@ -46,6 +46,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
+    - Harness-driven DR study queue (bounded “what to read next” list):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
     - Design intent (provenance; helps interpret DR outputs):
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md`
   - Aux:

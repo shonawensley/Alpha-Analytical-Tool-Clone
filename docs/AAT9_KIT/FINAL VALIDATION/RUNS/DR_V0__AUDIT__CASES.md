@@ -12,6 +12,9 @@ Read first:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__DESIGN_INTENT.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__QUANT.md`
 
+Harness-driven study queue (bounded “what to read next” list):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
+
 ---
 
 ## How these cases were inspected
@@ -177,4 +180,3 @@ This supports a v0.2 posture decision:
 
 The explicit v0.2 “Keep/Demote/Remove-as-input” table lives here:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__FEATURE_DECISIONS.md`
-

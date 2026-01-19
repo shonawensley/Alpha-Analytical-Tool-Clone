@@ -322,3 +322,34 @@ Interpretation:
   - “straight-line closure size” (48/24/6 lines depending the index composition),
   - and “doubles have an index; triples don’t”.
 - It creates a stable, repeatable harness across three windows, so any future v0.3 tuning proposals are evidence-gated (measured deltas + regression expectations), not vibes.
+
+---
+
+## 2026‑01‑19 — Digit Reduction block completed (correctness validation + harness-driven study queue)
+
+- Goal: treat DR as a **trace/envelope lens** (as per design intent), and stop mistaking “top candidates” for the right predictive surface.
+- Baseline posture is already locked in v0.2 defaults: DR “top candidates” are **off** by default (`--top-n-dr 0`) in tool-first mode.
+
+### Status (done)
+
+- Correctness validation (frozen sharepacks): DR winners artifacts are internally consistent (stamp ↔ flags ↔ hits) on a multi-window sentinel set:
+  - `scripts/tools/validate_dr_winners.py` (run in warn-only mode on representative sharepacks)
+- Cross-window DR lens reports (activation + trace visibility):
+  - Added the missing early-window lens report:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__DR_LENS_REPORT.md`
+  - Existing window lens reports (already present and referenced via range-pack patterns):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__DR_LENS_REPORT.md`
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__DR_LENS_REPORT.md`
+- Harness-driven DR study queue (bounded, high-signal “buried-but-present” + “empty lens” cases):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
+  - Wired into the DR case-audit doc:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__AUDIT__CASES.md`
+
+### Why this improves the tool/system (in v0.2 terms)
+
+- It separates a recurring confusion source:
+  - DR often “sees” the winner in the trace/overlay (high `exact_any` / `vtrac_any`), even when the **best_pattern top-candidates** list does not.
+- It makes the next work deterministic and bounded:
+  - we can now review DR with a harness-driven queue (instead of browsing random days), using the winners HTML + DR overlay as the ground-truth lens.
+- It keeps v0.2 additive and measurable:
+  - no analyzer tuning yet; we measure and decide what DR evidence should be consumed in selection layers, and only then propose v0.3 analyzer edits with acceptance thresholds.
