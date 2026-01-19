@@ -592,6 +592,23 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
   - Hypothesis: stealing lines from boxed closures to reserve a lane slot increases index coverage, but starves the strongest BOX-derived hits under tight budgets.
   - Action (bounded): keep `conversion_box_first` as a research-only strategy; if we re-attempt “conversion slots”, gate them conditionally (e.g., only when no boxable closure exists, or only at B24+).
 
+- **GOLD-0029** — `v0 windows` — Hot Zones “gateway lens” upgrade (VTRAC index hit, not just canonical top‑K)
+  - Type: `measurement + selection-layer`
+  - Baseline (profile=`tool_only`):
+    - Hot Zones canonical Top‑K visibility remains low (does not behave like a top‑8 straight oracle).
+    - Hot Zones VTRAC **index-hit** visibility is materially higher, and a large fraction is `index_hit_only` (“rail correct, box miss”).
+  - Evidence:
+    - HOTZ‑003 harness: `scripts/tools/hot_zones_weight_sweep.py`
+    - Sweep v3 analysis (adds index gateway metrics): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__ANALYSIS.md`
+    - Sweep v3 outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Optional conversion experiment (selection-layer): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_INDEX_CLOSURE__EXPERIMENT__2026-01-05_to_2026-01-09.md`
+  - Primitives (tags): `hotzones_star`, `vt_only_lane`, `vtrac_index_gateway`, `index_hit_only`, `lane_to_box`
+  - Hypothesis: Hot Zones is often “right about the rail” but not the exact canonical; small weight changes don’t reliably fix that.
+  - Action (bounded):
+    - Measure Hot Zones in “gateway” language (index-hit metrics), not only canonical top‑K.
+    - Keep HOTZ weights unchanged in v0.2; treat HOTZ‑003 as measured + deferred.
+    - Attempt rail→box conversion primarily via existing bounded closure primitives (mirror-pair closure, due-doubles), and only adopt new Hot-Zones-specific closure packs if they show non-regression lift across windows.
+
 ---
 
 ## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16

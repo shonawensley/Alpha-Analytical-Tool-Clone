@@ -219,6 +219,8 @@ def _method_weight(method_id: str) -> float:
         return 35.0
     if m == "hot_zones_top":
         return 30.0
+    if m == "hot_zones_index_closure":
+        return 28.0
     if m == "aux_vtrac_index_overdue":
         return 25.0
     if m in {"R-perm-4", "PackA_vt8", "PackB_mirror3rd"}:
@@ -433,6 +435,7 @@ def _card_conversion_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int)
         "vtrac_enhanced_top",
         "vtrac_top",
         "hot_zones_top",
+        "hot_zones_index_closure",
         "aux_vtrac_index_overdue",
         "mirror_pair_closure",
         "mirror_pair_closure_due_doubles",

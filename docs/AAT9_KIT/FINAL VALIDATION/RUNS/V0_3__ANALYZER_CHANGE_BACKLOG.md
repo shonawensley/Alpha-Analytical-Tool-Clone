@@ -235,9 +235,37 @@ Primary references:
 ### HOTZ-003 — VT-only lane weighting calibration (bounded)
 - **Type**: weights
 - **Problem**: VB-only group suggests VT-only lanes need more weight, but must avoid regressions.
-- **Evidence**: `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` (VB-only list; tune w_vt_only_lane, rebalance w_col1_arrival)
+- **Evidence**:
+  - Design intent: `docs/AAT9_KIT/AAT9_Hot_Zones_Validation_Log.md` (VB-only list; tune `w_vt_only_lane_bonus`, rebalance `w_col1_arrival`)
+  - Measured harness (reporting-only; replay from frozen sharepack JSON):
+    - Script: `scripts/tools/hot_zones_weight_sweep.py`
+    - Outputs (3 regression windows):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Follow-up sweep (adds `w_col1_arrival`):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP2__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP2__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP2__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Measurement upgrade (adds VTRAC index gateway metrics):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__2025-06-21_to_2025-06-23.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__2025-12-30_to_2026-01-04.md` (and `.csv`)
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__2026-01-05_to_2026-01-09.md` (and `.csv`)
+      - Analysis notes: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_V0__WEIGHT_SWEEP3__ANALYSIS.md`
 - **Expected delta**: more VT-heavy winners rise into top lanes without broad pool inflation.
-- **Status**: Proposed
+- **Measured result (bounded sweep of `w_vt_only_lane_bonus` = 0.8→1.1)**:
+  - No material lift in winner-in-top‑K rates (Top8/Top12/Top20) across the v0 windows.
+  - Some average-rank improvement for “vt_only_visible” winners, but not enough to move into top‑K reliably.
+- **Measured result (2‑parameter follow-up: add `w_col1_arrival` = 2.1/2.4/2.7/3.0)**:
+  - Small, inconsistent Top8 changes (typically a borderline winner moving rank 9→8).
+  - No stable lift in Top12/Top20 across windows.
+- **Measured result (gateway lens via sweep v3)**:
+  - Index-hit rates are materially higher than canonical-hit rates, and a large fraction is **index-hit-only** (lane correct, box miss).
+  - Weight tuning still does not create stable lift (even when evaluated by index-hit metrics).
+- **Decision**:
+  - Do **not** change Hot Zones weights in v0.2 based on these bounded sweeps (no stable top‑K lift).
+  - If we revisit HOTZ‑003 further, expand sweeps only with explicit non-regression gates and pool-tightness reporting (and treat it as v0.3 tuning work, not v0.2 defaults).
+- **Status**: Deferred (Measured: no stable top‑K lift on v0 windows)
 
 ---
 

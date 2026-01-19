@@ -40,8 +40,10 @@ if str(REPO_ROOT) not in sys.path:
 
 try:
     from modules.vtrac_reference import get_index_set as _vtrac_get_index_set  # type: ignore
+    from modules.vtrac_reference import get_vtrac_index as _vtrac_get_index  # type: ignore
 except Exception:  # pragma: no cover - may fail in partial environments
     _vtrac_get_index_set = None  # type: ignore
+    _vtrac_get_index = None  # type: ignore
 
 
 SCHEMA_VERSION = "1.0"
@@ -785,6 +787,143 @@ def _parse_hot_zones_top(*, state_dir: Path, state_key: str, date: str, top_n: i
         "cost_units": len(combos),
         "why_tags": ["hot_zones", f"top_n:{top_n}", *sorted(set(why_tags))],
         "transform_chain": [f"hot_zones:top_triads:top{top_n}"],
+        "evidence_paths": [_safe_rel(p) for p in inputs],
+    }
+    return [pack], inputs
+
+
+def _parse_hot_zones_index_closure(
+    *,
+    state_dir: Path,
+    state_key: str,
+    date: str,
+    seed_top_n: int,
+    top_box_canonicals: int,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Optional Hot Zones "index-hit → box-hit" conversion helper.
+
+    Idea:
+    - Hot Zones often has a meaningful VTRAC index signal even when it misses the exact winner canonical.
+    - Under tight budgets, closing an entire index is too expensive (often 24–48 straight lines).
+    - This pack instead:
+        1) votes a *dominant* VTRAC index from the top Hot Zones triads
+        2) box-expands a small number of seed canonicals within that index (bounded).
+
+    This is intentionally:
+    - additive (does not remove/replace Hot Zones top triads),
+    - bounded (default ~12 lines),
+    - selection-layer (derived from tool evidence; no analyzer changes).
+    """
+    if seed_top_n <= 0 or top_box_canonicals <= 0:
+        return [], []
+    if not _vtrac_get_index:
+        return [], []
+
+    hz_dir = state_dir / "hot_zones" / state_key
+    if not hz_dir.exists():
+        return [], []
+
+    inputs: List[Path] = []
+    ordered: List[Tuple[str, float]] = []
+
+    # Prefer winner_map.json (compact triad list + evidence tags), fall back to top lanes CSV.
+    wm = hz_dir / f"{date}_hot_zones_winner_map.json"
+    if wm.exists():
+        inputs.append(wm)
+        raw = _read_json(wm)
+        if isinstance(raw, list):
+            for r in raw:
+                if not isinstance(r, dict):
+                    continue
+                triad = _normalize_pick3_literal(r.get("triad") or "")
+                if not triad:
+                    continue
+                try:
+                    score = float(r.get("score_mean") or 0.0)
+                except Exception:
+                    score = 0.0
+                ordered.append((triad, score))
+            ordered.sort(key=lambda t: (-t[1], t[0]))
+    else:
+        top_csv = hz_dir / f"{state_key}_hot_zones_top_lanes.csv"
+        if top_csv.exists():
+            inputs.append(top_csv)
+            rows = _load_csv_dict_rows(top_csv)
+            for r in rows:
+                triad = _normalize_pick3_literal(r.get("triad") or r.get("Triad") or "")
+                if not triad:
+                    continue
+                # tolerate different column names
+                score_val = r.get("score_mean") or r.get("score_max") or r.get("ScoreMean") or r.get("ScoreMax") or 0.0
+                try:
+                    score = float(score_val or 0.0)
+                except Exception:
+                    score = 0.0
+                ordered.append((triad, score))
+            ordered.sort(key=lambda t: (-t[1], t[0]))
+
+    seed = ordered[:seed_top_n]
+    if not seed:
+        return [], inputs
+
+    # Vote a dominant index from the seed triads (count first, then score sum).
+    idx_count: Dict[int, int] = {}
+    idx_score: Dict[int, float] = {}
+    for triad, score in seed:
+        idx = _vtrac_get_index(triad)
+        if idx is None:
+            continue
+        idx_count[idx] = idx_count.get(idx, 0) + 1
+        idx_score[idx] = idx_score.get(idx, 0.0) + float(score or 0.0)
+    if not idx_count:
+        return [], inputs
+
+    best_idx = sorted(idx_count.keys(), key=lambda i: (-idx_count[i], -idx_score.get(i, 0.0), i))[0]
+
+    # Choose a small number of seed canonicals within that index, then BOX-expand.
+    canonicals: List[str] = []
+    for triad, _ in seed:
+        idx = _vtrac_get_index(triad)
+        if idx != best_idx:
+            continue
+        canon = _canon(triad)
+        if not canon or canon in canonicals:
+            continue
+        canonicals.append(canon)
+        if len(canonicals) >= top_box_canonicals:
+            break
+    if not canonicals:
+        return [], inputs
+
+    combos: List[str] = []
+    for canon in canonicals:
+        combos.extend(_unique_perms(canon))
+    combos = sorted(set(combos))
+    if not combos:
+        return [], inputs
+
+    pack = {
+        "pack_id": f"hot_zones_index_closure:idx={best_idx}:top_box={len(canonicals)}:seed_top={seed_top_n}",
+        "method_id": "hot_zones_index_closure",
+        "variant": "Unknown",
+        "play_mode": "STRAIGHT",
+        "canonicals": sorted(set(canonicals)),
+        "combos": combos,
+        "combos_count": len(combos),
+        "cost_units": len(combos),
+        "why_tags": [
+            "hot_zones",
+            "index_closure",
+            f"idx:{best_idx}",
+            f"seed_top_n:{seed_top_n}",
+            f"top_box_canonicals:{len(canonicals)}",
+        ],
+        "transform_chain": [
+            f"hot_zones:top_triads:top{seed_top_n}",
+            f"vtrac_index_vote:idx={best_idx}",
+            f"box_expand:top{len(canonicals)}",
+        ],
         "evidence_paths": [_safe_rel(p) for p in inputs],
     }
     return [pack], inputs
@@ -1642,6 +1781,245 @@ def _write_candidate_universe_md(*, out_path: Path, payload: Dict[str, Any]) -> 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def _pack_source_class(method_id: str) -> str:
+    """
+    Classify packs for "evidence-only" exports.
+
+    This is intentionally coarse: it's meant to disambiguate
+    (a) direct tool evidence, (b) Control Center boards, and
+    (c) derived/transform packs.
+    """
+    m = (method_id or "").strip()
+    if m in {
+        "stable_top",
+        "digit_reduction_analyzer_v2",
+        "vtrac_enhanced_top",
+        "hot_zones_top",
+        "aux_positional",
+        "aux_vtrac_index_overdue",
+    }:
+        return "tool"
+    if m in {"due_doubles", "profit_alerts"}:
+        return "control_center"
+    if m in {
+        "due_doubles_mirror_single",
+        "due_doubles_mirror_double",
+        "hot_zones_index_closure",
+        "consensus_double_9",
+        "R-perm-4",
+        "PackA_vt8",
+        "PackB_mirror3rd",
+        "doubles_mirror_single",
+        "doubles_mirror_double",
+    }:
+        return "derived"
+    return "other"
+
+
+def _write_candidate_universe_evidence_csv(*, out_path: Path, payload: Dict[str, Any]) -> None:
+    """
+    Write an evidence-focused CSV that makes CU provenance explicit.
+
+    It is NOT a "pick list" and does not apply budgets.
+    It is a view over CU packs so you can see exactly what came from:
+      - direct tool outputs
+      - Control Center boards
+      - derived/transform packs
+    """
+    packs = payload.get("packs") or []
+    if not isinstance(packs, list):
+        packs = []
+
+    rows: List[Dict[str, str]] = []
+    for p in packs:
+        if not isinstance(p, dict):
+            continue
+        pack_id = str(p.get("pack_id") or "")
+        method_id = str(p.get("method_id") or "")
+        variant = str(p.get("variant") or "Unknown")
+        play_mode = str(p.get("play_mode") or "Unknown")
+        combos_count = str(int(p.get("combos_count") or 0))
+        cost_units = str(int(p.get("cost_units") or 0))
+        why_tags = "|".join(sorted({str(x) for x in (p.get("why_tags") or []) if str(x)}))
+        evidence_paths = "|".join(sorted({str(x) for x in (p.get("evidence_paths") or []) if str(x)}))
+        transform_chain = "|".join([str(x) for x in (p.get("transform_chain") or []) if str(x)])
+
+        canonicals = p.get("canonicals") or []
+        if not isinstance(canonicals, list):
+            canonicals = []
+        canonicals_norm = sorted({_canon(str(c)) for c in canonicals if _canon(str(c))})
+        for canonical in canonicals_norm:
+            rows.append(
+                {
+                    "results_date": str(payload.get("results_date") or ""),
+                    "history_date": str(payload.get("history_date") or ""),
+                    "profile": str(payload.get("profile") or ""),
+                    "state_key": str(payload.get("state_key") or ""),
+                    "canonical": canonical,
+                    "source_class": _pack_source_class(method_id),
+                    "method_id": method_id,
+                    "variant": variant,
+                    "play_mode": play_mode,
+                    "pack_id": pack_id,
+                    "combos_count": combos_count,
+                    "cost_units": cost_units,
+                    "why_tags": why_tags,
+                    "evidence_paths": evidence_paths,
+                    "transform_chain": transform_chain,
+                }
+            )
+
+    # Stable ordering for diffs and reproducibility.
+    rows.sort(
+        key=lambda r: (
+            r.get("state_key", ""),
+            r.get("canonical", ""),
+            r.get("source_class", ""),
+            r.get("method_id", ""),
+            r.get("variant", ""),
+            r.get("pack_id", ""),
+        )
+    )
+
+    fieldnames = [
+        "results_date",
+        "history_date",
+        "profile",
+        "state_key",
+        "canonical",
+        "source_class",
+        "method_id",
+        "variant",
+        "play_mode",
+        "pack_id",
+        "combos_count",
+        "cost_units",
+        "why_tags",
+        "evidence_paths",
+        "transform_chain",
+    ]
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: (r.get(k) or "") for k in fieldnames})
+
+
+def _write_candidate_universe_evidence_md(*, out_path: Path, payload: Dict[str, Any]) -> None:
+    packs = payload.get("packs") or []
+    if not isinstance(packs, list):
+        packs = []
+
+    # Aggregate by canonical across all packs.
+    agg: Dict[str, Dict[str, Any]] = {}
+    for p in packs:
+        if not isinstance(p, dict):
+            continue
+        pack_id = str(p.get("pack_id") or "")
+        method_id = str(p.get("method_id") or "")
+        variant = str(p.get("variant") or "Unknown")
+        source_class = _pack_source_class(method_id)
+        canonicals = p.get("canonicals") or []
+        if not isinstance(canonicals, list):
+            continue
+        for c in canonicals:
+            canon = _canon(str(c))
+            if not canon:
+                continue
+            entry = agg.setdefault(
+                canon,
+                {
+                    "tool_methods": set(),
+                    "cc_methods": set(),
+                    "derived_methods": set(),
+                    "other_methods": set(),
+                    "variants": set(),
+                    "packs": [],
+                },
+            )
+            entry["variants"].add(variant)
+            entry["packs"].append(f"{source_class}:{method_id}:{pack_id}")
+            if source_class == "tool":
+                entry["tool_methods"].add(method_id)
+            elif source_class == "control_center":
+                entry["cc_methods"].add(method_id)
+            elif source_class == "derived":
+                entry["derived_methods"].add(method_id)
+            else:
+                entry["other_methods"].add(method_id)
+
+    # Summaries to reduce anxiety: what's truly "direct evidence" vs "derived only".
+    canonicals = sorted(agg.keys())
+    direct = [c for c in canonicals if agg[c]["tool_methods"] or agg[c]["cc_methods"]]
+    derived_only = [c for c in canonicals if c not in direct]
+
+    lines: List[str] = []
+    state_key = str(payload.get("state_key") or "?")
+    results_date = str(payload.get("results_date") or "?")
+    profile = str(payload.get("profile") or "?")
+    inputs_hash = str(payload.get("inputs_hash") or "-")
+    lines.append(f"# Candidate Universe — Evidence View — {state_key} — D={results_date} ({profile})")
+    lines.append("")
+    lines.append("Purpose: make Candidate Universe provenance explicit (what came from tools/boards vs what is derived).")
+    lines.append("This file is additive: it does not change CU packs, budgets, or grading.")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- inputs_hash: `{inputs_hash}`")
+    lines.append(f"- unique_canonicals_total: `{len(canonicals)}`")
+    lines.append(f"- canonicals_with_direct_evidence (tool or Control Center): `{len(direct)}`")
+    lines.append(f"- canonicals_derived_only: `{len(derived_only)}`")
+    lines.append("")
+    lines.append("Legend:")
+    lines.append("- source_class `tool` = Stable/DR/VTRAC/HZ/Aux outputs")
+    lines.append("- source_class `control_center` = boards like Due Doubles / Profit Alerts")
+    lines.append("- source_class `derived` = combo/closure packs produced from the digit envelope / seeds")
+    lines.append("")
+    lines.append("## Canonical Evidence (top by support)")
+    lines.append("")
+    lines.append("| Canonical | Tool methods | CC methods | Derived methods | Variants | Packs |")
+    lines.append("|---:|---:|---:|---:|---:|---|")
+
+    def support_key(c: str) -> Tuple[int, int, int, int, str]:
+        e = agg[c]
+        return (
+            -len(e["tool_methods"]),
+            -len(e["cc_methods"]),
+            -len(e["derived_methods"]),
+            -len(e["packs"]),
+            c,
+        )
+
+    for canon in sorted(canonicals, key=support_key)[:60]:
+        e = agg[canon]
+        variants = ",".join(sorted(e["variants"]))
+        packs = ", ".join(sorted(e["packs"])[:6])
+        if len(e["packs"]) > 6:
+            packs += f", …(+{len(e['packs']) - 6})"
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    canon,
+                    str(len(e["tool_methods"])),
+                    str(len(e["cc_methods"])),
+                    str(len(e["derived_methods"])),
+                    variants or "-",
+                    packs or "-",
+                ]
+            )
+            + " |"
+        )
+
+    if len(canonicals) > 60:
+        lines.append("")
+        lines.append(f"(Top 60 shown; total canonicals = {len(canonicals)}.)")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Create per-state candidate_universe.json inside a frozen sharepack day.")
     ap.add_argument("--date", required=True, help="Sharepack day date D (YYYY-MM-DD)")
@@ -1671,6 +2049,17 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--top-n-dr", type=int, default=0, help="Top N DR analyzer patterns per variant (default: 0)")
     ap.add_argument("--top-n-vtrac", type=int, default=8, help="Top N VTRAC straights (default: 8)")
     ap.add_argument("--top-n-hot", type=int, default=8, help="Top N Hot Zones triads (default: 8)")
+    ap.add_argument(
+        "--hot-zones-index-closure",
+        action="store_true",
+        help="Add an optional Hot Zones VTRAC-index closure pack (bounded box-expansion from dominant index; default: off).",
+    )
+    ap.add_argument(
+        "--hot-zones-index-closure-boxed-canonicals",
+        type=int,
+        default=2,
+        help="BOX-expand this many Hot Zones seed canonicals from the dominant index (default: 2 => ~12 lines).",
+    )
     ap.add_argument("--top-n-aux", type=int, default=10, help="Top N Aux positional shortlist combos (default: 10)")
     ap.add_argument(
         "--top-n-aux-vtrac-indices",
@@ -1734,6 +2123,11 @@ def parse_args() -> argparse.Namespace:
         "--write-md",
         action="store_true",
         help="Also write candidate_universe.md next to candidate_universe.json (default: off).",
+    )
+    ap.add_argument(
+        "--write-evidence",
+        action="store_true",
+        help="Also write candidate_universe_evidence.csv/.md next to candidate_universe.json (default: off).",
     )
     return ap.parse_args()
 
@@ -1835,6 +2229,18 @@ def main() -> None:
             )
             packs.extend(hz_packs)
             inputs.extend(hz_inputs)
+
+            # 5b) Hot Zones (optional index-closure conversion pack; bounded)
+            if args.hot_zones_index_closure:
+                hzic_packs, hzic_inputs = _parse_hot_zones_index_closure(
+                    state_dir=state_dir,
+                    state_key=state_key,
+                    date=args.date,
+                    seed_top_n=int(args.top_n_hot),
+                    top_box_canonicals=int(args.hot_zones_index_closure_boxed_canonicals),
+                )
+                packs.extend(hzic_packs)
+                inputs.extend(hzic_inputs)
 
             # 6) Aux (positional shortlist)
             aux_packs, aux_inputs = _parse_aux_top(
@@ -1943,6 +2349,13 @@ def main() -> None:
             md_path = state_dir / f"candidate_universe{out_suffix}.md"
             _write_candidate_universe_md(out_path=md_path, payload=payload)
             print(f"Wrote: {_safe_rel(md_path)}")
+        if args.write_evidence:
+            ev_csv = state_dir / f"candidate_universe_evidence{out_suffix}.csv"
+            ev_md = state_dir / f"candidate_universe_evidence{out_suffix}.md"
+            _write_candidate_universe_evidence_csv(out_path=ev_csv, payload=payload)
+            _write_candidate_universe_evidence_md(out_path=ev_md, payload=payload)
+            print(f"Wrote: {_safe_rel(ev_csv)}")
+            print(f"Wrote: {_safe_rel(ev_md)}")
         print(f"Wrote: {_safe_rel(out_path)} (packs={len(packs)} union={union_count})")
 
 

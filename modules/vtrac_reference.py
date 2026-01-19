@@ -490,7 +490,13 @@ def get_vtrac_index(draw: str) -> Optional[int]:
 
 def get_index_set(index: int) -> Set[str]:
     """
-    All boxed combos (singles + doubles) for an index as canonical 3‑char strings.
+    Return the full **straight-line** closure for a VTRAC index (union of Singles + Doubles).
+
+    Note:
+    - `BOXED_VTRAC_REFERENCE` stores each index as a list of 3-digit permutations (e.g. a BOX member like 013
+      appears as 013/031/103/130/301/310).
+    - This helper therefore returns the explicit 3-digit STRAIGHT lines for the index (sizes are typically 48, 24, or 6).
+    - If you want the 8 BOX members for UI/boxing decisions, use `VTRAC_DISPLAY` (or de-dup by digit-sorting).
     """
     for entry in BOXED_VTRAC_REFERENCE:
         if int(entry["Index"]) == int(index):
@@ -510,5 +516,4 @@ __all__ = [
     "get_vtrac_index", "get_index_set", "get_index_straights",
     "normalize_draw",
 ]
-
 

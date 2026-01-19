@@ -2,6 +2,14 @@
 
 Purpose: read the 3-variant winners output (HTML + JSON) *before* any tool scoring. Use it as the environment lens to characterize the winning pattern and its family/VT context. Then answer the questions below to extract maximal analytical value.
 
+## Important: this is the “training loop” artifact (not a predictions feed)
+
+- This template (and its filled run reports) is a **post-results analysis surface**: the winner is known and is used as a label to reverse-engineer what mattered and what should be improved.
+- It is not intended to answer “what do we play pre-results?” by itself.
+- The gradeable pre-results predictions feed is the **Candidate Universe / Playset** generated from predictive sharepacks:
+  - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
+  - Predictive day quickstart: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Predictive_Day_Quickstart.md`
+
 Execution note (recommended):
 - Do not write answers into this template file. Generate a per-run report and fill answers there:
   - `python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4`

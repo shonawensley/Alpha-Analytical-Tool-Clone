@@ -47,6 +47,12 @@ python3 scripts/tools/create_candidate_universe.py \
   --force
 ```
 
+Optional (research-only; not part of v0.2 defaults):
+- Hot Zones index-closure pack (bounded BOX expansion from dominant Hot Zones index votes):
+  - `--hot-zones-index-closure --hot-zones-index-closure-boxed-canonicals 2`
+  - Current measured result in the Jan window shows no lift; keep it off unless you are explicitly experimenting:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/HOT_ZONES_INDEX_CLOSURE__EXPERIMENT__2026-01-05_to_2026-01-09.md`
+
 ### 1.3 Play Cards (budgeted cuts) — tool‑first baseline
 
 ```bash

@@ -90,6 +90,12 @@ Optional: also write a small human-readable summary next to the JSON:
 python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --write-md
 ```
 
+Optional (recommended for audit/debug): also write an “evidence view” next to Candidate Universe
+(makes it explicit what came from tools/boards vs what is derived):
+```bash
+python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive --write-evidence
+```
+
 Optional: generate budgeted “Play Cards” (e.g., 12/24/36 combos) from Candidate Universe (what to play now):
 ```bash
 python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --budgets 12,24,36
