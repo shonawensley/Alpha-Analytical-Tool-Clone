@@ -30,8 +30,10 @@ import json
 import re
 import sys
 import textwrap
+from contextlib import redirect_stdout
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -927,6 +929,62 @@ def _find_sharepack_draws_csv(*, state_dir: Path, state_key: str) -> Optional[Pa
         if wanted and wanted in p.name.lower():
             return p
     return candidates[0]
+
+
+def _find_sharepack_draws_csv_for_variant(*, state_dir: Path, state_key: str, variant: str) -> Optional[Path]:
+    draws_dir = state_dir / "aux" / "draws"
+    if not draws_dir.exists():
+        return None
+    candidates = sorted(draws_dir.glob("*_draws.csv"))
+    if not candidates:
+        return None
+    v = (variant or "").strip().lower()
+    if v in {"combined", "c"}:
+        # Prefer matching state name and excluding Midday/Evening files.
+        wanted = re.sub(r"\d+$", "", (state_key or "").strip()).lower()
+        for p in candidates:
+            name = p.name.lower()
+            if "_midday_" in name or "_evening_" in name:
+                continue
+            if wanted and name == f"{wanted}_draws.csv":
+                return p
+        for p in candidates:
+            name = p.name.lower()
+            if "_midday_" in name or "_evening_" in name:
+                continue
+            if wanted and wanted in name:
+                return p
+        for p in candidates:
+            name = p.name.lower()
+            if "_midday_" not in name and "_evening_" not in name:
+                return p
+        return candidates[0]
+    if v in {"midday", "m"}:
+        for p in candidates:
+            if "_midday_" in p.name.lower():
+                return p
+        return None
+    if v in {"evening", "e"}:
+        for p in candidates:
+            if "_evening_" in p.name.lower():
+                return p
+        return None
+    return None
+
+
+def _read_draws_list(*, draws_csv: Path, max_n: int = 1000) -> List[str]:
+    if not draws_csv.exists():
+        return []
+    out: List[str] = []
+    with draws_csv.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            draw = _normalize_pick3_literal(row.get("Draw") or row.get("draw") or "")
+            if draw:
+                out.append(draw)
+            if len(out) >= max_n:
+                break
+    return out
 
 
 def _load_recent_draw_digits(*, draws_csv: Path, recent_draws: int) -> set[str]:
@@ -2072,6 +2130,115 @@ def _extract_aux_signals(*, state_dir: Path, state_key: str, top_shortlist: int,
             "vtrac_overlay_top": vtrac_overlay_top,
         },
         [aux_path],
+    )
+
+
+def _extract_aux_badge_pressure_signals(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_k: int = 5,
+) -> Tuple[Dict[str, Any], List[Path]]:
+    """
+    Predictive-safe signals export: derive a compact "index pressure" surface from Aux draw snapshots.
+
+    This mirrors the intent of the RUNS badge-matrix export, but produces only the top-K indices per variant
+    (and the Midday∩Evening intersection) so the signal can be consumed without exploding artifacts.
+    """
+    if top_k <= 0:
+        return {"available": False, "by_variant": {}, "midday_evening_intersection": []}, []
+    draws_dir = state_dir / "aux" / "draws"
+    if not draws_dir.exists():
+        return {"available": False, "by_variant": {}, "midday_evening_intersection": []}, []
+
+    try:
+        from modules.analyze_pairs import get_vtrac_statuses  # type: ignore
+        from modules.vtrac_reference import VTRAC_DISPLAY  # type: ignore
+    except Exception:
+        return {"available": False, "by_variant": {}, "midday_evening_intersection": []}, []
+
+    def _color_weight(color: str) -> int:
+        c = (color or "").strip().lower()
+        if c == "red":
+            return 3
+        if c == "blue":
+            return 2
+        if c == "purple":
+            return 1
+        return 0
+
+    def _shape_weight(status: dict) -> int:
+        if status.get("shape_red_circle"):
+            return 2
+        if status.get("shape_blue_square"):
+            return 1
+        return 0
+
+    by_variant: Dict[str, Any] = {}
+    inputs: List[Path] = []
+
+    for variant in ("combined", "midday", "evening"):
+        p = _find_sharepack_draws_csv_for_variant(state_dir=state_dir, state_key=state_key, variant=variant)
+        if not p:
+            continue
+        draws = _read_draws_list(draws_csv=p, max_n=1000)
+        if not draws:
+            continue
+        inputs.append(p)
+        with redirect_stdout(StringIO()):
+            vstat = get_vtrac_statuses(draws[:100], draws[:1000])
+        if not isinstance(vstat, dict):
+            continue
+
+        ranked: List[Tuple[int, float, int]] = []
+        for entry in VTRAC_DISPLAY:
+            try:
+                idx = int(entry.get("Index"))
+            except Exception:
+                continue
+            payload = vstat.get(idx, {})
+            if not isinstance(payload, dict):
+                continue
+            singles_status = payload.get("singles_status") if isinstance(payload.get("singles_status"), dict) else {}
+            doubles_status = payload.get("doubles_status") if isinstance(payload.get("doubles_status"), dict) else {}
+            singles = str(entry.get("Singles") or "").split()
+            doubles = str(entry.get("Doubles") or "").split()
+            canon_count = len(singles) + len(doubles)
+            raw_score = 0
+            for combo in singles:
+                st = singles_status.get(combo, {}) if isinstance(singles_status, dict) else {}
+                if not isinstance(st, dict):
+                    continue
+                raw_score += _color_weight(str(st.get("color") or "")) + _shape_weight(st)
+            for combo in doubles:
+                st = doubles_status.get(combo, {}) if isinstance(doubles_status, dict) else {}
+                if not isinstance(st, dict):
+                    continue
+                raw_score += _color_weight(str(st.get("color") or "")) + _shape_weight(st)
+            density = (raw_score / canon_count) if canon_count else 0.0
+            ranked.append((idx, density, raw_score))
+
+        ranked.sort(key=lambda t: (t[1], t[2], -t[0]), reverse=True)
+        top = [{"index": idx, "pressure_density": round(dens, 6), "pressure_raw": raw} for idx, dens, raw in ranked[: int(top_k)]]
+        by_variant[variant] = {
+            "top_k": int(top_k),
+            "rank_by": "pressure_density",
+            "weights": {"color": {"red": 3, "blue": 2, "purple": 1}, "shape": {"RC": 2, "BS": 1}},
+            "top_indices": top,
+        }
+
+    midday = {int(r.get("index")) for r in (by_variant.get("midday") or {}).get("top_indices", []) if isinstance(r, dict) and str(r.get("index", "")).isdigit()}
+    evening = {int(r.get("index")) for r in (by_variant.get("evening") or {}).get("top_indices", []) if isinstance(r, dict) and str(r.get("index", "")).isdigit()}
+    intersection = sorted(midday.intersection(evening))
+
+    return (
+        {
+            "available": bool(by_variant),
+            "evidence_paths": [_safe_rel(p) for p in inputs],
+            "by_variant": by_variant,
+            "midday_evening_intersection": intersection,
+        },
+        inputs,
     )
 
 
@@ -3884,6 +4051,7 @@ def main() -> None:
                 top_shortlist=int(args.top_n_aux),
                 top_overdue=int(args.top_n_aux_vtrac_indices),
             )
+            aux_badge_sig, _ = _extract_aux_badge_pressure_signals(state_dir=state_dir, state_key=state_key, top_k=5)
             bundle_payload: Dict[str, Any] = {
                 "schema": "signals_bundle_v1",
                 "generated_at": _now_iso(),
@@ -3903,6 +4071,7 @@ def main() -> None:
                     "hot_zones": hz_sig,
                     "vtrac_enhanced": vt_sig,
                     "aux": aux_sig,
+                    "aux_badge_pressure": aux_badge_sig,
                 },
             }
             _write_json(bundle_path, bundle_payload)

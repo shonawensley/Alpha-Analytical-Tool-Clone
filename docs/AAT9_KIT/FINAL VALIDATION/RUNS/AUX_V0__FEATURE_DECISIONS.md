@@ -59,6 +59,7 @@ The portfolio already displays:
 v0.2 stance:
 - Keep ranking tool-first (see `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`).
 - Do not add more raw Aux signals into the ranking yet; mine the badge matrix first.
+  - Badge pressure harness (TopK pressure vs TopK overdue): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
 
 ---
 
@@ -76,4 +77,3 @@ These are “reasonable v0.2 defaults” to keep behavior stable while we collec
 - If Aux-only canon hit rates remain meaningful but Play Card conversion stays low: adjust budget allocation policy (selection layer), not analyzers.
 - If we discover a correctness bug in Aux data wiring (tables↔draw alignment): Fix‑Now, but only if validated by the existing validators.
 - After the badge matrix mining is complete, decide whether “badge density across variants” becomes a scored feature in portfolio ranking.
-

@@ -121,5 +121,7 @@ Current v0.2 portfolio sort order:
 ## 3) What is explicitly *not* in v0.2 scoring yet
 
 - Profit Alerts are not used as default selection signal (they remain measurable via `--profile mixed/profit_only`).
-- Aux boxed VTRAC badge-matrix density is not yet compounded into the score (export exists; mining it into “gold” is the next step).
+- Aux boxed VTRAC badge-matrix density is not yet compounded into the score (export + harness exist; compounding it into portfolio/play-card policy is the next step):
+  - Badge pressure harness (TopK pressure vs TopK overdue): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
+  - Due Doubles parity audit (keeps “broken math” worries honest): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md`
 - Any analyzer tuning (Stable/DR/VTRAC/HZ) is deferred until we have a larger graded corpus.

@@ -129,6 +129,18 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_VTRAC_BADGE_MATRIX__AUDIT.md`
   - v0 window exports (per-day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__AUX_VTRAC_BADGE_MATRIX.md` (and `.csv`) for `D=2026-01-05` → `2026-01-09`
     - Regenerate: `python3 scripts/tools/create_aux_vtrac_badge_matrix_report.py --date <D> --sharepacks-root sharepacks --force`
+- Aux + Control Center integrity + pressure harnesses (v0.2; reporting-only):
+  - Due Doubles parity audit (recompute DS from Aux draws; validate family tokens; report conditional hit rates):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Regenerate: `python3 scripts/tools/due_doubles_parity_audit.py --start-date <A> --end-date <B> --force`
+  - Aux badge pressure harness (Index Pressure Contract; topK pressure vs topK overdue; cross-variant intersection):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - (Index stats, large CSV): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__INDEX_STATS__<A>_to_<B>.csv`
+    - Regenerate: `python3 scripts/tools/aux_badge_pressure_harness.py --start-date <A> --end-date <B> --force`
 7) v0 “stop running, extract gold” (synthesis sprint):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__SYNTHESIS_SPRINT.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`

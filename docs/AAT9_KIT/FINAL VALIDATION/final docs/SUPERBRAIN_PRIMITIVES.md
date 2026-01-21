@@ -39,6 +39,11 @@ It emits packs under:
 
 Each pack must include a `transform_chain` so we can later attribute hits to the actual transforms used.
 
+Optional (predictive-safe) evidence bundle:
+- `sharepacks/_predictive/<D>/<STATE>/signals_bundle{__profile}{__tag}.json` (written when `create_candidate_universe.py` is run with `--write-signals-bundle`)
+  - Purpose: preserve “strong environment” signals even when budgets/fusion don’t fire (evidence-only; winners-free).
+  - Current tool keys include: `digit_reduction_dr004`, `stable`, `hot_zones`, `vtrac_enhanced`, `aux`, `aux_badge_pressure`.
+
 ### Control Center primitives
 
 - **Profit Alerts implied set**

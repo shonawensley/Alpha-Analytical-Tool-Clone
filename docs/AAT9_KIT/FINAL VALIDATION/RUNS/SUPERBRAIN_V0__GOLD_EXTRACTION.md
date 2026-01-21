@@ -660,6 +660,24 @@ These are the first “concrete gold” entries extracted from the doubles/mirro
   - Action (bounded):
     - Keep OFF by default (v0.2); use only as an explicit experiment knob until it proves stable lift without unacceptable widening.
 
+- **GOLD-0033** — `v0 windows` — Aux badge density (“boxed matrix pressure”) outperforms overdue-only index ranking
+  - Type: `measurement + v0.2 scoring prework`
+  - Baseline confusion this resolves:
+    - “Aux overlay DS top indices” is a useful lane lens, but it does not capture the **within-index badge density** you used in the legacy boxed chart.
+  - Evidence:
+    - Harness: `scripts/tools/aux_badge_pressure_harness.py`
+    - Outputs (3 windows):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-06-21_to_2025-06-23.md`
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-12-30_to_2026-01-04.md`
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
+  - Primitives (tags): `aux_badges`, `boxed_vtrac`, `index_pressure`, `cross_variant`, `lane_to_box`
+  - Interpretation:
+    - Across multiple windows, TopK indices by badge pressure (pair colors + RC/BS badges) improves the “winner index is in TopK” rate versus TopK indices by overdue DS alone (largest lift observed in Evening).
+    - The strict Midday∩Evening intersection is low-coverage; treat it as a high-precision candidate for **gating**, not as a universal filter.
+  - Action (bounded):
+    - v0.2: treat badge pressure as a scored **triage signal** (portfolio / state ranking), not as a candidate expansion.
+    - v0.3: if it stays stable out-of-sample, allow badge pressure to influence Play Card budget allocation (reserve 1 conversion slot only when pressure is high and no strong boxable closure exists).
+
 ---
 
 ## FINAL REVIEW SWEEP (RUNS + CODEX_ANALYSIS8) — 2026-01-16

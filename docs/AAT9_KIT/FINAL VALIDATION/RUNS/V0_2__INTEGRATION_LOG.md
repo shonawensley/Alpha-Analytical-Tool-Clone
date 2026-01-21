@@ -407,3 +407,59 @@ Key takeaways (what DR is actually good at; how to consume it without “circles
 - Measured on the 3 v0 windows (baseline tag `baseline_ref_20260121` → experiment `dr004_fusion_v2_u2u4`):
   - Incremental report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__from_baseline_ref_20260121__to_dr004_fusion_v2_u2u4.md`
   - Current result: +1 incremental union hit, 0 regressions, +~8.8 avg union cost → keep fusion gate off by default.
+
+---
+
+## 2026‑01‑21 — Aux + Control Center: Due Doubles parity + Badge Pressure harness (implemented)
+
+Motivation:
+- Doubles/mirror-doubles are a major “environment class” in the corpus, so it’s easy to misread low raw Due Doubles board hit counts as a data bug.
+- The missing superbrain lever on the Aux side is not “more raw candidates”; it’s turning the boxed badge-matrix density into a **compact, compoundable index pressure signal**.
+
+### A) Due Doubles parity audit (reporting-only; correctness + interpretation)
+
+What we checked:
+- Recompute `Draws Since Double` directly from the sharepack-local Aux draw snapshots and compare to Control Center exports.
+- Validate family cell token parsing and combo membership (only known VTRAC double combos; severity thresholds consistent).
+- Report **conditional** performance (only meaningful on double/triple winners) and a “most due DS → next-day double event” diagnostic.
+
+Script:
+- `scripts/tools/due_doubles_parity_audit.py`
+
+Outputs (v0 windows):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md` (and `.csv`)
+
+Key result:
+- Parity is clean on the audited windows (DS mismatches = 0; token/label/threshold issues = 0). The board is not “broken”; the low unconditional hit rate is an interpretation/conditioning issue.
+
+### B) Aux badge pressure harness (Index Pressure Contract; reporting-only)
+
+What we built:
+- A compact per-index contract from the Aux badge-matrix logic (pair colors + RC/BS combo badges), aggregated to:
+  - `(state_key, variant, vtrac_index)` → pressure counts + `pressure_score` and `pressure_density`.
+- A window harness that compares:
+  - TopK indices by “overdue DS” (baseline) vs TopK by “badge pressure” (new signal),
+  - plus a strict cross-variant intersection (Midday ∩ Evening).
+
+Script:
+- `scripts/tools/aux_badge_pressure_harness.py`
+
+Outputs (v0 windows):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- Index contract (large CSV, for pivoting): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__INDEX_STATS__<A>_to_<B>.csv`
+
+Key result:
+- Badge pressure TopK meaningfully outperforms “overdue DS” TopK on multiple windows (especially Evening), which justifies treating badge density as the next compounding signal in v0.2 scoring.
+
+### C) Predictive-safe signals export (no defaults changed)
+
+Change:
+- Extended the `signals_bundle_v1` export to include `tools.aux_badge_pressure` (topK indices per variant + Midday∩Evening intersection), sourced only from sharepack-local `aux/draws/*_draws.csv`.
+- This does **not** change Candidate Universe packs or Play Cards by default; it only enriches the per-state evidence bundle when `--write-signals-bundle` is enabled.
+
+Code:
+- `scripts/tools/create_candidate_universe.py` (`--write-signals-bundle`)
