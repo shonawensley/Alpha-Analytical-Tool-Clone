@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
@@ -44,6 +45,18 @@ def _safe_int(value: str) -> Optional[int]:
 
 def _truthy(value: str) -> bool:
     return str(value).strip() == "1"
+
+
+def _normalize_experiment_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
+    cleaned = cleaned.strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid --experiment-tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
 
 
 def _rate(n: int, d: int) -> str:
@@ -88,15 +101,15 @@ class Agg:
         return sum(self.combos_count) / len(self.combos_count) if self.combos_count else None
 
 
-def _iter_grade_csvs(runs_dir: Path) -> List[Path]:
-    return sorted(runs_dir.glob("*__CANDIDATE_UNIVERSE_GRADE.csv"))
+def _iter_grade_csvs(runs_dir: Path, *, tag_suffix: str = "") -> List[Path]:
+    return sorted(runs_dir.glob(f"*__CANDIDATE_UNIVERSE_GRADE{tag_suffix}.csv"))
 
 
-def _iter_grade_csvs_profile(runs_dir: Path, *, profile: str) -> List[Path]:
+def _iter_grade_csvs_profile(runs_dir: Path, *, profile: str, tag_suffix: str = "") -> List[Path]:
     p = (profile or "mixed").strip()
     if p == "mixed":
-        return _iter_grade_csvs(runs_dir)
-    return sorted(runs_dir.glob(f"*__CANDIDATE_UNIVERSE_GRADE__{p}.csv"))
+        return _iter_grade_csvs(runs_dir, tag_suffix=tag_suffix)
+    return sorted(runs_dir.glob(f"*__CANDIDATE_UNIVERSE_GRADE__{p}{tag_suffix}.csv"))
 
 
 def _load_csv_rows(path: Path) -> List[Dict[str, str]]:
@@ -130,6 +143,11 @@ def main() -> None:
         default="tool_only",
         help="Ablation profile to roll up (default: tool_only).",
     )
+    ap.add_argument(
+        "--experiment-tag",
+        default="",
+        help="Optional experiment tag suffix selecting grade files + rollup outputs (default: none).",
+    )
     ap.add_argument("--out-csv", default=None, help="Override output CSV path")
     ap.add_argument("--out-md", default=None, help="Override output Markdown path")
     args = ap.parse_args()
@@ -141,10 +159,14 @@ def main() -> None:
 
     profile = str(args.profile or "mixed").strip()
     out_suffix = "" if profile == "mixed" else f"__{profile}"
+    exp_tag = _normalize_experiment_tag(args.experiment_tag)
+    tag_suffix = f"__{exp_tag}" if exp_tag else ""
 
-    grade_csvs = _iter_grade_csvs_profile(runs_dir, profile=profile)
+    grade_csvs = _iter_grade_csvs_profile(runs_dir, profile=profile, tag_suffix=tag_suffix)
     if not grade_csvs:
-        raise SystemExit(f"No Candidate Universe grade CSVs found under: {_safe_rel(runs_dir)} (profile={profile})")
+        raise SystemExit(
+            f"No Candidate Universe grade CSVs found under: {_safe_rel(runs_dir)} (profile={profile}, tag={exp_tag or '—'})"
+        )
 
     by_key: Dict[Tuple[str, str, str], Agg] = {}
     all_dates: Set[str] = set()
@@ -161,8 +183,8 @@ def main() -> None:
             agg.add(row)
             all_dates.update(agg.dates)
 
-    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"candidate_universe_rollup{out_suffix}.csv"
-    out_md = Path(args.out_md) if args.out_md else runs_dir / f"candidate_universe_rollup{out_suffix}.md"
+    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"candidate_universe_rollup{out_suffix}{tag_suffix}.csv"
+    out_md = Path(args.out_md) if args.out_md else runs_dir / f"candidate_universe_rollup{out_suffix}{tag_suffix}.md"
 
     out_rows: List[Dict[str, object]] = []
     for (method_id, winner_label, play_mode), agg in by_key.items():
@@ -230,6 +252,7 @@ def main() -> None:
         "",
         f"- Grade files: `{len(grade_csvs)}`",
         f"- Rows scanned: `{rows_total}`",
+        f"- experiment_tag: `{exp_tag}`" if exp_tag else "- experiment_tag: —",
         f"- Dates covered: `{len(dates_sorted)}`",
         f"- Date range: `{dates_sorted[0]}` → `{dates_sorted[-1]}`" if dates_sorted else "- Date range: —",
         "",

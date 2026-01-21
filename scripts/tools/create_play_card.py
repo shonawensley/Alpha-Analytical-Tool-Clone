@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -175,6 +176,18 @@ def _is_predictive_root(root: Path) -> bool:
     return root.name == "_predictive" or "/_predictive" in str(root).replace("\\", "/")
 
 
+def _normalize_experiment_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
+    cleaned = cleaned.strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid --experiment-tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
+
+
 def _parse_budgets(value: str) -> List[int]:
     out: List[int] = []
     for part in (value or "").split(","):
@@ -215,6 +228,8 @@ def _method_weight(method_id: str) -> float:
         return 45.0
     if m == "digit_reduction_analyzer_v2":
         return 40.0
+    if m in {"digit_reduction_envelope_steps", "digit_reduction_dr004", "digit_reduction_dr004_index"}:
+        return 33.0
     if m in {"vtrac_enhanced_top", "vtrac_top"}:
         return 35.0
     if m == "hot_zones_top":
@@ -628,6 +643,11 @@ def parse_args() -> argparse.Namespace:
         default="tool_only",
         help="Ablation profile (default: tool_only). Determines input candidate_universe filename and output play_card filename.",
     )
+    ap.add_argument(
+        "--experiment-tag",
+        default="",
+        help="Optional experiment tag appended to input/output filenames (default: none).",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of states (default: auto-discover).")
     ap.add_argument(
         "--budgets",
@@ -676,18 +696,20 @@ def main() -> None:
 
     profile = str(args.profile or "mixed").strip()
     out_suffix = "" if profile == "mixed" else f"__{profile}"
+    exp_tag = _normalize_experiment_tag(args.experiment_tag)
+    tag_suffix = f"__{exp_tag}" if exp_tag else ""
 
     for state_key in states:
         state_dir = day_dir / state_key
-        cu_path = state_dir / f"candidate_universe{out_suffix}.json"
+        cu_path = state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
         if not cu_path.exists():
             raise SystemExit(f"Missing candidate universe: {_safe_rel(cu_path)}")
 
-        out_path = state_dir / f"play_card{out_suffix}.json"
+        out_path = state_dir / f"play_card{out_suffix}{tag_suffix}.json"
         if out_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card (use --force): {_safe_rel(out_path)}")
 
-        md_path = state_dir / f"play_card{out_suffix}.md"
+        md_path = state_dir / f"play_card{out_suffix}{tag_suffix}.md"
         if args.write_md and md_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card markdown (use --force): {_safe_rel(md_path)}")
 
@@ -731,6 +753,7 @@ def main() -> None:
             "generated_at": _now_iso(),
             "results_date": args.date,
             "profile": profile,
+            "experiment_tag": exp_tag,
             "state_key": state_key,
             "sharepack_root": _safe_rel(sharepacks_root),
             "candidate_universe_path": _safe_rel(cu_path),

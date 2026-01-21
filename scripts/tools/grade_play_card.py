@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -59,6 +60,18 @@ def _normalize_pick3_literal(value: str) -> str:
 def _canon(draw: str) -> str:
     d = _normalize_pick3_literal(draw)
     return "".join(sorted(d)) if d else ""
+
+
+def _normalize_experiment_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
+    cleaned = cleaned.strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid --experiment-tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
 
 
 def _unique_perms(triad: str) -> set[str]:
@@ -178,6 +191,11 @@ def parse_args() -> argparse.Namespace:
         default="tool_only",
         help="Ablation profile (default: tool_only). Selects play_card filename and grade output suffix.",
     )
+    ap.add_argument(
+        "--experiment-tag",
+        default="",
+        help="Optional experiment tag appended to play_card filename and grade outputs (default: none).",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys to grade.")
     ap.add_argument(
         "--results-file",
@@ -205,9 +223,19 @@ def main() -> None:
 
     profile = str(args.profile or "mixed").strip()
     out_suffix = "" if profile == "mixed" else f"__{profile}"
+    exp_tag = _normalize_experiment_tag(args.experiment_tag)
+    tag_suffix = f"__{exp_tag}" if exp_tag else ""
 
-    out_csv = Path(args.out_csv) if args.out_csv else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}.csv"
-    out_md = Path(args.out_md) if args.out_md else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}.md"
+    out_csv = (
+        Path(args.out_csv)
+        if args.out_csv
+        else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}{tag_suffix}.csv"
+    )
+    out_md = (
+        Path(args.out_md)
+        if args.out_md
+        else runs_dir / f"{args.date}__PLAY_CARD_GRADE{out_suffix}{tag_suffix}.md"
+    )
     if (out_csv.exists() or out_md.exists()) and not args.force:
         raise SystemExit(f"Refusing to overwrite existing outputs (use --force): {_safe_rel(out_csv)} / {_safe_rel(out_md)}")
 
@@ -244,7 +272,7 @@ def main() -> None:
 
     for state_dir in state_dirs:
         state_key = state_dir.name
-        pc_path = state_dir / f"play_card{out_suffix}.json"
+        pc_path = state_dir / f"play_card{out_suffix}{tag_suffix}.json"
         if not pc_path.exists():
             continue
         raw = _read_json(pc_path)

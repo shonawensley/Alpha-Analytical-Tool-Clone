@@ -29,7 +29,8 @@ import itertools
 import json
 import re
 import sys
-from dataclasses import dataclass
+import textwrap
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -68,6 +69,18 @@ _DUE_DOUBLES_TOKEN_RE = re.compile(r"(?P<combo>\d{3})\((?P<severity>[RB])(?P<bad
 
 def _is_predictive_root(root: Path) -> bool:
     return root.name == "_predictive" or "/_predictive" in str(root).replace("\\", "/")
+
+
+def _normalize_experiment_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
+    cleaned = cleaned.strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid --experiment-tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
 
 
 def _read_text(path: Path) -> str:
@@ -684,6 +697,16 @@ class _DrCandidateSets:
     triples: Tuple[str, ...]
 
 
+@dataclass
+class _Dr004PoolAgg:
+    score_raw: float = 0.0
+    lanes: set[str] = field(default_factory=set)
+    earliest_step: Optional[int] = None
+    span_max: int = 0
+    span_sum: int = 0
+    segments: int = 0
+
+
 def _boxed_cost_units(canon: str) -> int:
     """
     Box closure cost proxy: number of unique permutations.
@@ -884,6 +907,487 @@ def _parse_dr_envelope_steps(
 
     packs.sort(key=lambda p: p.get("pack_id", ""))
     return packs, [steps_csv]
+
+
+def _find_sharepack_draws_csv(*, state_dir: Path, state_key: str) -> Optional[Path]:
+    draws_dir = state_dir / "aux" / "draws"
+    if not draws_dir.exists():
+        return None
+    candidates = sorted(draws_dir.glob("*_draws.csv"))
+    if not candidates:
+        return None
+    # Prefer matching the state name (e.g., Florida4 -> Florida_draws.csv).
+    wanted = re.sub(r"\d+$", "", (state_key or "").strip()).lower()
+    if wanted:
+        exact = f"{wanted}_draws.csv"
+        for p in candidates:
+            if p.name.lower() == exact:
+                return p
+    for p in candidates:
+        if wanted and wanted in p.name.lower():
+            return p
+    return candidates[0]
+
+
+def _load_recent_draw_digits(*, draws_csv: Path, recent_draws: int) -> set[str]:
+    if recent_draws <= 0 or not draws_csv.exists():
+        return set()
+    digits: set[str] = set()
+    with draws_csv.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        r = csv.DictReader(f)
+        for i, row in enumerate(r):
+            if i >= recent_draws:
+                break
+            draw = _normalize_pick3_literal(row.get("Draw") or row.get("draw") or "")
+            if not draw:
+                continue
+            digits.update(draw)
+    return digits
+
+
+def _parse_dr004_steps(
+    *,
+    state_dir: Path,
+    state_key: str,
+    boxed_canonicals: int,
+    index_boxed_canonicals: int,
+    recent_draws: int,
+    max_cost_units: int,
+    min_unique_digits: int = 1,
+    max_unique_digits: int = 3,
+    signals_out: Optional[Dict[str, Any]] = None,
+    signals_top_pools: int = 12,
+    signals_top_canonicals: int = 25,
+    signals_top_indices: int = 12,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Optional Digit Reduction DR-004 packs (selection-layer transform; default-off).
+
+    Reads only:
+      - digit_reduction/<STATE>/training/<STATE>_digit_reduction_steps.csv
+      - aux/draws/*_draws.csv (optional; recency penalty)
+
+    Emits bounded BOX packs per section (Combined/Midday/Evening) using:
+      - early-arrival (step) + persistence (segment span)
+      - breadth (repeat across lanes/locations)
+      - cross-variant convergence (Midday+Evening boost; Combined mild boost)
+      - optional recent-digit overlap penalty (negative filter)
+    """
+    creating_packs = boxed_canonicals > 0 or index_boxed_canonicals > 0
+    if not creating_packs and signals_out is None:
+        return [], []
+    if int(min_unique_digits) < 1:
+        min_unique_digits = 1
+    if int(max_unique_digits) < int(min_unique_digits):
+        max_unique_digits = int(min_unique_digits)
+
+    steps_csv = (
+        state_dir
+        / "digit_reduction"
+        / state_key
+        / "training"
+        / f"{state_key}_digit_reduction_steps.csv"
+    )
+    if not steps_csv.exists():
+        return [], []
+
+    draws_csv = _find_sharepack_draws_csv(state_dir=state_dir, state_key=state_key)
+    recent_digits = _load_recent_draw_digits(draws_csv=draws_csv, recent_draws=int(recent_draws)) if draws_csv else set()
+
+    # Tunables (kept internal for v1; expose later only if evidence-gated).
+    step_power = 2.0
+    unique_power = 1.0
+    persistence_power = 1.0
+    breadth_bonus = 0.10
+    breadth_cap = 5
+    cross_me_bonus = 0.15  # Midday+Evening convergence
+    cross_combined_bonus = 0.05  # Combined present (mild)
+    recency_penalty = 0.08  # per overlapping digit (0..3)
+    split_weight = True
+    singles_weight = 1.0
+    doubles_weight = 0.35
+    triples_weight = 0.50
+
+    lanes_by_section: Dict[str, Dict[str, List[Tuple[int, Tuple[str, ...]]]]] = {
+        "Combined": {},
+        "Midday": {},
+        "Evening": {},
+    }
+
+    with steps_csv.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            section = (row.get("section") or "").strip()
+            if section not in lanes_by_section:
+                continue
+            val = "".join(ch for ch in (row.get("value") or "") if ch.isdigit())
+            if not val:
+                continue
+            digits = tuple(sorted(set(val)))
+            if not digits:
+                continue
+            try:
+                step = int((row.get("step") or "0").strip() or 0)
+            except Exception:
+                step = 0
+            area = (row.get("area") or "").strip()
+            location = (row.get("location") or "").strip()
+            method = (row.get("method") or "").strip()
+            mode = (row.get("mode") or "").strip()
+            lane_key = "|".join(x for x in (area, location, method, mode) if x)
+            if not lane_key:
+                lane_key = f"lane:{section}"
+            lanes_by_section[section].setdefault(lane_key, []).append((step, digits))
+
+    pools_by_section: Dict[str, Dict[Tuple[str, ...], _Dr004PoolAgg]] = {}
+    presence: Dict[Tuple[str, ...], set[str]] = {}
+
+    for section, lanes in lanes_by_section.items():
+        sec_pools: Dict[Tuple[str, ...], _Dr004PoolAgg] = {}
+        for lane_key, entries in lanes.items():
+            entries.sort(key=lambda t: t[0])
+            dedup: List[Tuple[int, Tuple[str, ...]]] = []
+            seen_steps: set[int] = set()
+            for step, digits in entries:
+                if step in seen_steps:
+                    continue
+                seen_steps.add(step)
+                dedup.append((step, digits))
+            if not dedup:
+                continue
+
+            prev_digits: Optional[Tuple[str, ...]] = None
+            seg_start_step = 0
+            seg_len = 0
+
+            def flush() -> None:
+                nonlocal prev_digits, seg_start_step, seg_len
+                if not prev_digits or seg_len <= 0:
+                    return
+                if len(prev_digits) < int(min_unique_digits) or len(prev_digits) > int(max_unique_digits):
+                    return
+                step_w = 1.0 / ((1 + seg_start_step) ** step_power) if step_power else 1.0
+                uniq_w = 1.0 / ((len(prev_digits) ** unique_power) if unique_power else 1.0)
+                persist_w = (seg_len**persistence_power) if persistence_power else 1.0
+                base = step_w * uniq_w * persist_w
+                agg = sec_pools.setdefault(prev_digits, _Dr004PoolAgg())
+                agg.score_raw += base
+                agg.lanes.add(lane_key)
+                if agg.earliest_step is None or seg_start_step < agg.earliest_step:
+                    agg.earliest_step = seg_start_step
+                agg.span_sum += int(seg_len)
+                agg.span_max = max(agg.span_max, int(seg_len))
+                agg.segments += 1
+
+            for step, digits in dedup:
+                if prev_digits is None:
+                    prev_digits = digits
+                    seg_start_step = step
+                    seg_len = 1
+                    continue
+                if digits == prev_digits:
+                    seg_len += 1
+                    continue
+                flush()
+                prev_digits = digits
+                seg_start_step = step
+                seg_len = 1
+            flush()
+
+        pools_by_section[section] = sec_pools
+        for digits, agg in sec_pools.items():
+            if agg.score_raw > 0:
+                presence.setdefault(digits, set()).add(section)
+
+    def cross_bonus(sections_present: set[str]) -> float:
+        b = 1.0
+        if "Midday" in sections_present and "Evening" in sections_present:
+            b *= 1.0 + cross_me_bonus
+        if "Combined" in sections_present:
+            b *= 1.0 + cross_combined_bonus
+        return b
+
+    candidate_cache: Dict[Tuple[str, ...], _DrCandidateSets] = {}
+    packs: List[dict] = []
+
+    # Only count DR-004 inputs as Candidate Universe inputs if DR-004 packs are actually emitted.
+    signals_inputs: List[Path] = [steps_csv]
+    if draws_csv:
+        signals_inputs.append(draws_csv)
+    inputs: List[Path] = list(signals_inputs) if creating_packs else []
+
+    canon_scores_by_section: Dict[str, Dict[str, float]] = {}
+    pool_signals_by_section: Dict[str, List[Dict[str, Any]]] = {}
+    selected_boxed_by_section: Dict[str, List[str]] = {}
+    selected_index_boxed_by_section: Dict[str, List[str]] = {}
+
+    for section, pools in pools_by_section.items():
+        canon_scores: Dict[str, float] = {}
+        pool_rows: List[Dict[str, Any]] = []
+        for digits, agg in pools.items():
+            sections_present = presence.get(digits, set())
+            cross_mult = cross_bonus(sections_present)
+            score = agg.score_raw * cross_mult
+            lane_count = len(agg.lanes)
+            breadth_mult = 1.0
+            if lane_count > 1:
+                breadth_mult = 1.0 + (breadth_bonus * min(lane_count - 1, breadth_cap))
+                score *= breadth_mult
+            overlap = 0
+            recency_mult = 1.0
+            if recent_digits:
+                overlap = len(set(digits) & recent_digits)
+                if overlap > 0:
+                    recency_mult = max(0.05, 1.0 - (recency_penalty * overlap))
+                    score *= recency_mult
+
+            if signals_out is not None:
+                pool_rows.append(
+                    {
+                        "digits": "".join(digits),
+                        "unique_digits": len(digits),
+                        "score_raw": round(float(agg.score_raw), 8),
+                        "score": round(float(score), 8),
+                        "sections_present": sorted(sections_present),
+                        "cross_mult": round(float(cross_mult), 6),
+                        "lane_count": lane_count,
+                        "lanes_sample": sorted(agg.lanes)[:6],
+                        "earliest_step": agg.earliest_step,
+                        "segments": int(agg.segments),
+                        "span_max": int(agg.span_max),
+                        "span_sum": int(agg.span_sum),
+                        "breadth_mult": round(float(breadth_mult), 6),
+                        "recent_digits_n": len(recent_digits),
+                        "recent_overlap": int(overlap),
+                        "recency_mult": round(float(recency_mult), 6),
+                    }
+                )
+
+            sets = candidate_cache.get(digits)
+            if sets is None:
+                sets = _dr_candidate_sets_for_digits(digits)
+                candidate_cache[digits] = sets
+
+            if sets.singles:
+                w = (score * singles_weight) / len(sets.singles) if split_weight else (score * singles_weight)
+                for c in sets.singles:
+                    canon = _canon(c)
+                    if canon:
+                        canon_scores[canon] = canon_scores.get(canon, 0.0) + w
+            if sets.doubles:
+                w = (score * doubles_weight) / len(sets.doubles) if split_weight else (score * doubles_weight)
+                for c in sets.doubles:
+                    canon = _canon(c)
+                    if canon:
+                        canon_scores[canon] = canon_scores.get(canon, 0.0) + w
+            if sets.triples:
+                w = (score * triples_weight) / len(sets.triples) if split_weight else (score * triples_weight)
+                for c in sets.triples:
+                    canon = _canon(c)
+                    if canon:
+                        canon_scores[canon] = canon_scores.get(canon, 0.0) + w
+
+        canon_scores_by_section[section] = canon_scores
+        if signals_out is not None:
+            pool_rows.sort(key=lambda r: (-float(r["score"]), str(r["digits"])))
+            pool_signals_by_section[section] = pool_rows[: max(0, int(signals_top_pools))]
+
+        ranked = sorted(canon_scores.items(), key=lambda kv: (-kv[1], kv[0]))
+        if boxed_canonicals > 0 and ranked:
+            picked: List[str] = []
+            combos: set[str] = set()
+            cost = 0
+            for canon, _ in ranked:
+                if len(picked) >= int(boxed_canonicals):
+                    break
+                cu = _boxed_cost_units(canon)
+                if cu <= 0:
+                    continue
+                if max_cost_units > 0 and (cost + cu) > int(max_cost_units):
+                    continue
+                picked.append(canon)
+                cost += cu
+                combos.update(_unique_perms(canon))
+
+            combos_list = sorted(combos)
+            if picked and combos_list:
+                selected_boxed_by_section[section] = list(sorted(set(picked)))
+                packs.append(
+                    {
+                        "pack_id": f"digit_reduction_dr004:{section}:top{int(boxed_canonicals)}",
+                        "method_id": "digit_reduction_dr004",
+                        "variant": section,
+                        "play_mode": "BOX",
+                        "canonicals": sorted(set(picked)),
+                        "combos": combos_list,
+                        "combos_count": len(combos_list),
+                        "cost_units": len(combos_list),
+                        "why_tags": [
+                            "digit_reduction",
+                            "dr004",
+                            "steps_csv",
+                            f"boxed_canonicals:{int(boxed_canonicals)}",
+                            f"max_cost_units:{int(max_cost_units)}" if max_cost_units else "max_cost_units:off",
+                            f"recent_draws:{int(recent_draws)}" if recent_draws else "recent_draws:off",
+                            "cross_variant_bonus",
+                            "breadth_bonus",
+                        ],
+                        "transform_chain": [
+                            f"dr_steps_csv:{section}",
+                            "segment_pools:u<=3",
+                            "score:early_arrival+persistence+breadth+cross_variant",
+                            "expand:canonicals_from_pools",
+                            f"seed_top{int(boxed_canonicals)}",
+                            "box_expand_unique_perms",
+                        ],
+                        "evidence_paths": sorted({_safe_rel(steps_csv), *([_safe_rel(draws_csv)] if draws_csv else [])}),
+                    }
+                )
+
+    # Optional index-gateway packs: choose at most one canonical per index (bounded).
+    if index_boxed_canonicals > 0 and _vtrac_get_index is not None:
+        for section, canon_scores in canon_scores_by_section.items():
+            if not canon_scores:
+                continue
+            by_idx: Dict[int, List[Tuple[str, float]]] = {}
+            idx_scores: Dict[int, float] = {}
+            for canon, s in canon_scores.items():
+                idx = _vtrac_get_index(canon)
+                if not isinstance(idx, int):
+                    continue
+                by_idx.setdefault(idx, []).append((canon, s))
+                idx_scores[idx] = idx_scores.get(idx, 0.0) + float(s)
+
+            ranked_indices = sorted(idx_scores.items(), key=lambda kv: (-kv[1], kv[0]))
+            picked: List[str] = []
+            combos: set[str] = set()
+            cost = 0
+            for idx, _ in ranked_indices:
+                if len(picked) >= int(index_boxed_canonicals):
+                    break
+                members = sorted(by_idx.get(idx, []), key=lambda kv: (-kv[1], kv[0]))
+                if not members:
+                    continue
+                canon = members[0][0]
+                cu = _boxed_cost_units(canon)
+                if cu <= 0:
+                    continue
+                if max_cost_units > 0 and (cost + cu) > int(max_cost_units):
+                    continue
+                picked.append(canon)
+                cost += cu
+                combos.update(_unique_perms(canon))
+
+            combos_list = sorted(combos)
+            if picked and combos_list:
+                selected_index_boxed_by_section[section] = list(sorted(set(picked)))
+                packs.append(
+                    {
+                        "pack_id": f"digit_reduction_dr004_index:{section}:top{int(index_boxed_canonicals)}",
+                        "method_id": "digit_reduction_dr004_index",
+                        "variant": section,
+                        "play_mode": "BOX",
+                        "canonicals": sorted(set(picked)),
+                        "combos": combos_list,
+                        "combos_count": len(combos_list),
+                        "cost_units": len(combos_list),
+                        "why_tags": [
+                            "digit_reduction",
+                            "dr004",
+                            "index_gateway",
+                            f"boxed_canonicals:{int(index_boxed_canonicals)}",
+                            f"max_cost_units:{int(max_cost_units)}" if max_cost_units else "max_cost_units:off",
+                        ],
+                        "transform_chain": [
+                            f"dr004_scores:{section}",
+                            "group_by:vtrac_index",
+                            "pick_top_index_members:1_each",
+                            "box_expand_unique_perms",
+                        ],
+                        "evidence_paths": sorted({_safe_rel(steps_csv), *([_safe_rel(draws_csv)] if draws_csv else [])}),
+                    }
+                )
+
+    if signals_out is not None:
+        canon_signals_by_section: Dict[str, List[Dict[str, Any]]] = {}
+        index_signals_by_section: Dict[str, List[Dict[str, Any]]] = {}
+
+        top_n_canon = max(0, int(signals_top_canonicals))
+        top_n_idx = max(0, int(signals_top_indices))
+
+        for section, canon_scores in canon_scores_by_section.items():
+            ranked_canon = sorted(canon_scores.items(), key=lambda kv: (-kv[1], kv[0]))[:top_n_canon]
+            canon_signals_by_section[section] = [
+                {
+                    "canonical": canon,
+                    "score": round(float(score), 8),
+                    "cost_units": _boxed_cost_units(canon),
+                    "vtrac_index": (_vtrac_get_index(canon) if _vtrac_get_index is not None else None),
+                }
+                for canon, score in ranked_canon
+            ]
+
+            if _vtrac_get_index is None or top_n_idx <= 0:
+                continue
+            by_idx: Dict[int, List[Tuple[str, float]]] = {}
+            idx_scores: Dict[int, float] = {}
+            for canon, s in canon_scores.items():
+                idx = _vtrac_get_index(canon)
+                if not isinstance(idx, int):
+                    continue
+                by_idx.setdefault(idx, []).append((canon, float(s)))
+                idx_scores[idx] = idx_scores.get(idx, 0.0) + float(s)
+
+            ranked_indices = sorted(idx_scores.items(), key=lambda kv: (-kv[1], kv[0]))[:top_n_idx]
+            idx_rows: List[Dict[str, Any]] = []
+            for idx, score in ranked_indices:
+                members = sorted(by_idx.get(idx, []), key=lambda kv: (-kv[1], kv[0]))[:5]
+                idx_rows.append(
+                    {
+                        "vtrac_index": int(idx),
+                        "score": round(float(score), 8),
+                        "top_canonicals": [c for c, _ in members],
+                    }
+                )
+            index_signals_by_section[section] = idx_rows
+
+        signals_out.clear()
+        signals_out.update(
+            {
+                "schema": "dr004_signals_v1",
+                "method_id": "digit_reduction_dr004",
+                "state_key": state_key,
+                "inputs": {
+                    "steps_csv": _safe_rel(steps_csv),
+                    "draws_csv": _safe_rel(draws_csv) if draws_csv else "",
+                    "recent_draws": int(recent_draws),
+                    "recent_digits": sorted(recent_digits),
+                },
+                "config": {
+                    "boxed_canonicals": int(boxed_canonicals),
+                    "index_boxed_canonicals": int(index_boxed_canonicals),
+                    "max_cost_units": int(max_cost_units),
+                    "min_unique_digits": int(min_unique_digits),
+                    "max_unique_digits": int(max_unique_digits),
+                    "signals_top_pools": int(signals_top_pools),
+                    "signals_top_canonicals": int(signals_top_canonicals),
+                    "signals_top_indices": int(signals_top_indices),
+                },
+                "sections": {
+                    section: {
+                        "top_pools": pool_signals_by_section.get(section, []),
+                        "top_canonicals": canon_signals_by_section.get(section, []),
+                        "top_indices": index_signals_by_section.get(section, []),
+                        "selected_boxed_canonicals": selected_boxed_by_section.get(section, []),
+                        "selected_index_boxed_canonicals": selected_index_boxed_by_section.get(section, []),
+                    }
+                    for section in ("Combined", "Midday", "Evening")
+                },
+            }
+        )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, inputs
 
 
 def _parse_vtrac_top(*, state_dir: Path, state_key: str, top_n: int = 8) -> Tuple[List[dict], List[Path]]:
@@ -1266,6 +1770,619 @@ def _parse_aux_vtrac_indices(*, state_dir: Path, state_key: str, top_n: int = 2)
 
     packs.sort(key=lambda p: p.get("pack_id", ""))
     return packs, [aux_path]
+
+
+def _extract_stable_signals(*, state_dir: Path, state_key: str, top_n: int) -> Tuple[Dict[str, Any], List[Path]]:
+    if top_n <= 0:
+        return {"available": False, "sections": {}}, []
+    stable_scores = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_scores.csv"
+    if not stable_scores.exists():
+        return {"available": False, "sections": {}}, []
+
+    rows = _load_csv_dict_rows(stable_scores)
+    if not rows:
+        return {"available": False, "sections": {}}, [stable_scores]
+
+    best: Dict[Tuple[str, str], Tuple[float, str]] = {}
+    for r in rows:
+        section = (r.get("section") or "").strip() or "Unknown"
+        canon = _normalize_pick3_literal(r.get("Canonical") or "")
+        if canon:
+            canon = canon.zfill(3)
+        else:
+            canon = _normalize_pick3_literal(str(r.get("Canonical") or ""))
+        if not canon:
+            continue
+        score_raw = (r.get("score") or "").strip()
+        try:
+            score = float(score_raw)
+        except Exception:
+            continue
+        why = (r.get("why") or "").strip()
+        key = (section, canon)
+        prev = best.get(key)
+        if prev is None or score > prev[0]:
+            best[key] = (score, why)
+
+    sections: Dict[str, List[Dict[str, Any]]] = {}
+    for section in sorted({s for s, _ in best.keys()}):
+        ranked: List[Tuple[str, float, str]] = []
+        for (sec, canon), (score, why) in best.items():
+            if sec != section:
+                continue
+            ranked.append((canon, float(score), str(why or "")))
+        ranked.sort(key=lambda t: (-t[1], t[0]))
+        sections[section] = [
+            {
+                "canonical": canon,
+                "vtrac_index": (_vtrac_get_index(canon) if _vtrac_get_index is not None else None),
+                "score": score,
+                "why": why,
+            }
+            for canon, score, why in ranked[:top_n]
+        ]
+
+    return {"available": True, "evidence_paths": [_safe_rel(stable_scores)], "sections": sections}, [stable_scores]
+
+
+def _extract_hot_zones_signals(
+    *,
+    state_dir: Path,
+    state_key: str,
+    date: str,
+    top_n: int,
+) -> Tuple[Dict[str, Any], List[Path]]:
+    if top_n <= 0:
+        return {"available": False, "triads": []}, []
+    hz_dir = state_dir / "hot_zones" / state_key
+    if not hz_dir.exists():
+        return {"available": False, "triads": []}, []
+
+    wm = hz_dir / f"{date}_hot_zones_winner_map.json"
+    inputs: List[Path] = []
+    triads: List[Dict[str, Any]] = []
+
+    if wm.exists():
+        inputs.append(wm)
+        raw = _read_json(wm)
+        if isinstance(raw, list):
+            ordered: List[Dict[str, Any]] = []
+            for r in raw:
+                if not isinstance(r, dict):
+                    continue
+                triad = _normalize_pick3_literal(r.get("triad") or "")
+                if not triad:
+                    continue
+                try:
+                    score_mean = float(r.get("score_mean") or 0.0)
+                except Exception:
+                    score_mean = 0.0
+                ordered.append({"triad": triad, "row": r, "score_mean": score_mean})
+            ordered.sort(key=lambda x: (-x["score_mean"], x["triad"]))
+            for it in ordered[:top_n]:
+                r = it["row"]
+                triad = it["triad"]
+                canon = _canon(triad)
+                score_max_val = None
+                score_max_raw = str(r.get("score_max") or "").strip()
+                if score_max_raw:
+                    try:
+                        score_max_val = float(score_max_raw)
+                    except Exception:
+                        score_max_val = None
+                support_count_val = None
+                support_count_raw = str(r.get("support_count") or "").strip()
+                if support_count_raw:
+                    try:
+                        support_count_val = int(float(support_count_raw))
+                    except Exception:
+                        support_count_val = None
+                triads.append(
+                    {
+                        "triad": triad,
+                        "canonical": canon,
+                        "vtrac_index": (_vtrac_get_index(triad) if _vtrac_get_index is not None else None),
+                        "vt_triad": (str(r.get("vt_triad") or "").strip() or None),
+                        "score_mean": float(it["score_mean"]),
+                        "score_max": score_max_val,
+                        "evidence_tags": (str(r.get("evidence_tags") or "").strip() or None),
+                        "support_count": support_count_val,
+                    }
+                )
+    else:
+        top_csv = hz_dir / f"{state_key}_hot_zones_top_lanes.csv"
+        if top_csv.exists():
+            inputs.append(top_csv)
+            rows = _load_csv_dict_rows(top_csv)
+            for r in rows:
+                if len(triads) >= top_n:
+                    break
+                triad = _normalize_pick3_literal(r.get("triad") or r.get("Triad") or "")
+                if not triad:
+                    continue
+                score_val = r.get("score_mean") or r.get("score_max") or r.get("ScoreMean") or r.get("ScoreMax") or 0.0
+                try:
+                    score_mean = float(score_val or 0.0)
+                except Exception:
+                    score_mean = 0.0
+                canon = _canon(triad)
+                triads.append(
+                    {
+                        "triad": triad,
+                        "canonical": canon,
+                        "vtrac_index": (_vtrac_get_index(triad) if _vtrac_get_index is not None else None),
+                        "vt_triad": (str(r.get("vt_triad") or "").strip() or None),
+                        "score_mean": score_mean,
+                        "score_max": None,
+                        "evidence_tags": None,
+                        "support_count": None,
+                    }
+                )
+
+    triads.sort(key=lambda t: (-(t.get("score_mean") or 0.0), str(t.get("triad") or "")))
+    return (
+        {"available": bool(triads), "evidence_paths": [_safe_rel(p) for p in inputs], "triads": triads[:top_n]},
+        inputs,
+    )
+
+
+def _extract_vtrac_enhanced_signals(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_indices: int,
+    top_straights: int,
+) -> Tuple[Dict[str, Any], List[Path]]:
+    vtrac_dir = state_dir / "vtrac" / state_key
+    if not vtrac_dir.exists():
+        return {"available": False, "top_indices": [], "top_straights": []}, []
+    candidates = sorted(vtrac_dir.glob(f"{state_key}_vtrac_enhanced_*.json"))
+    if not candidates:
+        return {"available": False, "top_indices": [], "top_straights": []}, []
+    path = candidates[-1]
+    raw = _read_json(path)
+    if not isinstance(raw, dict):
+        return {"available": False, "top_indices": [], "top_straights": []}, [path]
+
+    indices: List[Dict[str, Any]] = []
+    if top_indices > 0:
+        ranked = raw.get("indices_ranked")
+        if isinstance(ranked, list):
+            for r in ranked:
+                if len(indices) >= int(top_indices):
+                    break
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("index"))
+                except Exception:
+                    continue
+                try:
+                    score = float(r.get("score") or 0.0)
+                except Exception:
+                    score = 0.0
+                indices.append({"index": idx, "score": score})
+            indices.sort(key=lambda x: (-float(x.get("score") or 0.0), int(x.get("index") or 0)))
+
+    straights: List[Dict[str, Any]] = []
+    if top_straights > 0:
+        ranked = raw.get("straights_ranked")
+        if isinstance(ranked, list):
+            for r in ranked:
+                if len(straights) >= int(top_straights):
+                    break
+                if not isinstance(r, dict):
+                    continue
+                straight = _normalize_pick3_literal(r.get("straight") or "")
+                if not straight:
+                    continue
+                try:
+                    score = float(r.get("score") or 0.0)
+                except Exception:
+                    score = 0.0
+                reasons = r.get("reasons")
+                straights.append(
+                    {
+                        "straight": straight,
+                        "canonical": _canon(straight),
+                        "index": (int(r.get("index")) if str(r.get("index") or "").strip() else None),
+                        "score": score,
+                        "reasons": ([str(x) for x in reasons if x] if isinstance(reasons, list) else []),
+                    }
+                )
+            straights.sort(key=lambda x: (-float(x.get("score") or 0.0), str(x.get("straight") or "")))
+
+    return (
+        {
+            "available": bool(indices or straights),
+            "evidence_paths": [_safe_rel(path)],
+            "top_indices": indices[: int(top_indices)] if top_indices > 0 else [],
+            "top_straights": straights[: int(top_straights)] if top_straights > 0 else [],
+        },
+        [path],
+    )
+
+
+def _extract_aux_signals(*, state_dir: Path, state_key: str, top_shortlist: int, top_overdue: int) -> Tuple[Dict[str, Any], List[Path]]:
+    aux_path = state_dir / "aux" / state_key / "summary.json"
+    if not aux_path.exists():
+        return {"available": False, "positional_shortlist": [], "vtrac_overlay_top": {}}, []
+    raw = _read_json(aux_path)
+    if not isinstance(raw, dict):
+        return {"available": False, "positional_shortlist": [], "vtrac_overlay_top": {}}, [aux_path]
+
+    positional_shortlist: List[Dict[str, Any]] = []
+    if top_shortlist > 0:
+        candidates = (((raw.get("positional") or {}).get("shortlist_report") or {}).get("candidates") or [])
+        if isinstance(candidates, list):
+            ordered: List[Dict[str, Any]] = []
+            for r in candidates:
+                if not isinstance(r, dict):
+                    continue
+                combo = _normalize_pick3_literal(r.get("combo") or "")
+                if not combo:
+                    continue
+                try:
+                    score = float(r.get("score") or 0.0)
+                except Exception:
+                    score = 0.0
+                ordered.append({"combo": combo, "score": score, "tags": r.get("tags"), "source": r.get("source")})
+            ordered.sort(key=lambda x: (-float(x.get("score") or 0.0), str(x.get("combo") or "")))
+            for r in ordered[: int(top_shortlist)]:
+                tags = r.get("tags")
+                positional_shortlist.append(
+                    {
+                        "combo": r.get("combo"),
+                        "canonical": _canon(str(r.get("combo") or "")),
+                        "vtrac_index": (_vtrac_get_index(str(r.get("combo") or "")) if _vtrac_get_index is not None else None),
+                        "score": float(r.get("score") or 0.0),
+                        "tags": ([str(t) for t in tags if t] if isinstance(tags, list) else []),
+                        "source": (str(r.get("source") or "").strip() or None),
+                    }
+                )
+
+    overlay_top = ((raw.get("vtrac") or {}).get("overlay_top") or {})
+    vtrac_overlay_top: Dict[str, List[Dict[str, Any]]] = {}
+    if top_overdue > 0 and isinstance(overlay_top, dict):
+        for variant, rows in overlay_top.items():
+            if not isinstance(rows, list):
+                continue
+            picked: List[Dict[str, Any]] = []
+            for r in rows[: int(top_overdue)]:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("index"))
+                except Exception:
+                    continue
+                try:
+                    ds = int(r.get("draws_since") or 0)
+                except Exception:
+                    ds = 0
+                picked.append({"index": idx, "draws_since": ds})
+            if picked:
+                picked.sort(key=lambda x: (-int(x.get("draws_since") or 0), int(x.get("index") or 0)))
+                vtrac_overlay_top[str(variant)] = picked
+
+    return (
+        {
+            "available": bool(positional_shortlist or vtrac_overlay_top),
+            "evidence_paths": [_safe_rel(aux_path)],
+            "positional_shortlist": positional_shortlist,
+            "vtrac_overlay_top": vtrac_overlay_top,
+        },
+        [aux_path],
+    )
+
+
+def _build_fusion_gate_dr004_packs(
+    *,
+    state_key: str,
+    dr004_signals: Dict[str, Any],
+    stable_signals: Dict[str, Any],
+    hot_zones_signals: Dict[str, Any],
+    vtrac_signals: Dict[str, Any],
+    aux_signals: Dict[str, Any],
+    boxed_canonicals: int,
+    min_sources: int,
+) -> List[dict]:
+    """
+    Build small BOX packs when DR-004 index signals converge with other tool signals.
+
+    This is a selection-layer helper only (default-off):
+    - It does NOT replace DR-004 signals export.
+    - It does NOT widen the universe aggressively (small N canonicals per section).
+    - It prefers cross-tool overlap at the VTRAC index level.
+    """
+    if boxed_canonicals <= 0 or min_sources <= 1:
+        return []
+    if not _vtrac_get_index:
+        return []
+
+    sections = dr004_signals.get("sections") if isinstance(dr004_signals, dict) else None
+    if not isinstance(sections, dict):
+        return []
+
+    # Normalize inputs (safe_rel strings only).
+    evidence_paths: List[str] = []
+    for key in ("inputs", "evidence_paths"):
+        items = dr004_signals.get(key) if isinstance(dr004_signals, dict) else None
+        if isinstance(items, list):
+            evidence_paths.extend([str(x) for x in items if str(x)])
+    for sig in (stable_signals, hot_zones_signals, vtrac_signals, aux_signals):
+        items = sig.get("evidence_paths") if isinstance(sig, dict) else None
+        if isinstance(items, list):
+            evidence_paths.extend([str(x) for x in items if str(x)])
+    evidence_paths = sorted(set(evidence_paths))
+
+    stable_sections = stable_signals.get("sections") if isinstance(stable_signals, dict) else {}
+    hot_triads = hot_zones_signals.get("triads") if isinstance(hot_zones_signals, dict) else []
+    vt_top_indices = vtrac_signals.get("top_indices") if isinstance(vtrac_signals, dict) else []
+    vt_top_straights = vtrac_signals.get("top_straights") if isinstance(vtrac_signals, dict) else []
+    aux_overlay = aux_signals.get("vtrac_overlay_top") if isinstance(aux_signals, dict) else {}
+
+    vtrac_index_scores: Dict[int, float] = {}
+    if isinstance(vt_top_indices, list):
+        for r in vt_top_indices:
+            if not isinstance(r, dict):
+                continue
+            try:
+                idx = int(r.get("index"))
+            except Exception:
+                continue
+            try:
+                score = float(r.get("score") or 0.0)
+            except Exception:
+                score = 0.0
+            vtrac_index_scores[idx] = max(vtrac_index_scores.get(idx, float("-inf")), score)
+
+    packs: List[dict] = []
+    for section in ("Combined", "Midday", "Evening"):
+        sec = sections.get(section)
+        if not isinstance(sec, dict):
+            continue
+
+        dr_top_indices = sec.get("top_indices") or []
+        if not isinstance(dr_top_indices, list) or not dr_top_indices:
+            continue
+
+        dr_index_scores: Dict[int, float] = {}
+        for r in dr_top_indices:
+            if not isinstance(r, dict):
+                continue
+            try:
+                idx = int(r.get("vtrac_index"))
+            except Exception:
+                continue
+            try:
+                score = float(r.get("score") or 0.0)
+            except Exception:
+                score = 0.0
+            dr_index_scores[idx] = max(dr_index_scores.get(idx, float("-inf")), score)
+
+        sources_by_index: Dict[int, set[str]] = {}
+
+        def add_source(idx: Optional[int], source: str) -> None:
+            if idx is None:
+                return
+            try:
+                idx_int = int(idx)
+            except Exception:
+                return
+            sources_by_index.setdefault(idx_int, set()).add(source)
+
+        for idx in dr_index_scores:
+            add_source(idx, "dr004")
+
+        # Stable section votes (canonical -> index).
+        if isinstance(stable_sections, dict):
+            for r in stable_sections.get(section, []) if isinstance(stable_sections.get(section), list) else []:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("vtrac_index")) if r.get("vtrac_index") is not None else None
+                except Exception:
+                    idx = None
+                add_source(idx, "stable")
+
+        # Hot Zones votes (variant-agnostic).
+        if isinstance(hot_triads, list):
+            for r in hot_triads:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("vtrac_index")) if r.get("vtrac_index") is not None else None
+                except Exception:
+                    idx = None
+                add_source(idx, "hot_zones")
+
+        # VTRAC enhanced votes.
+        if isinstance(vt_top_indices, list):
+            for r in vt_top_indices:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("index"))
+                except Exception:
+                    continue
+                add_source(idx, "vtrac_enhanced")
+        if isinstance(vt_top_straights, list):
+            for r in vt_top_straights:
+                if not isinstance(r, dict):
+                    continue
+                idx = r.get("index")
+                add_source(idx if idx is not None else None, "vtrac_enhanced")
+
+        # Aux overdue overlay votes (variant-matched).
+        aux_variant = section.lower()
+        if aux_variant == "combined":
+            aux_variant = "combined"
+        if isinstance(aux_overlay, dict) and isinstance(aux_overlay.get(aux_variant), list):
+            for r in aux_overlay.get(aux_variant)[:]:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("index"))
+                except Exception:
+                    continue
+                add_source(idx, "aux_overdue")
+
+        # Find convergent indices (must include DR-004).
+        fused: List[Tuple[int, set[str]]] = []
+        for idx, srcs in sources_by_index.items():
+            if "dr004" not in srcs:
+                continue
+            if len(srcs) < int(min_sources):
+                continue
+            fused.append((idx, srcs))
+        if not fused:
+            continue
+
+        fused.sort(
+            key=lambda t: (
+                -len(t[1]),
+                -float(dr_index_scores.get(t[0], 0.0) or 0.0),
+                -float(vtrac_index_scores.get(t[0], 0.0) or 0.0),
+                t[0],
+            )
+        )
+        best_idx, best_srcs = fused[0]
+
+        # Collect canonical votes within the best index.
+        dr_top_canon_rows = sec.get("top_canonicals") or []
+        dr_canon_score: Dict[str, float] = {}
+        dr_canon_set: set[str] = set()
+        if isinstance(dr_top_canon_rows, list):
+            for r in dr_top_canon_rows:
+                if not isinstance(r, dict):
+                    continue
+                canon = _canon(r.get("canonical") or "")
+                if not canon:
+                    continue
+                dr_canon_set.add(canon)
+                try:
+                    dr_canon_score[canon] = float(r.get("score") or 0.0)
+                except Exception:
+                    dr_canon_score[canon] = 0.0
+
+        stable_canon_set: set[str] = set()
+        if isinstance(stable_sections, dict) and isinstance(stable_sections.get(section), list):
+            for r in stable_sections.get(section, []):
+                if not isinstance(r, dict):
+                    continue
+                canon = _canon(r.get("canonical") or "")
+                if canon:
+                    stable_canon_set.add(canon)
+
+        hot_canon_set: set[str] = set()
+        if isinstance(hot_triads, list):
+            for r in hot_triads:
+                if not isinstance(r, dict):
+                    continue
+                canon = _canon(r.get("canonical") or r.get("triad") or "")
+                if canon:
+                    hot_canon_set.add(canon)
+
+        vt_canon_set: set[str] = set()
+        if isinstance(vt_top_straights, list):
+            for r in vt_top_straights:
+                if not isinstance(r, dict):
+                    continue
+                canon = _canon(r.get("canonical") or r.get("straight") or "")
+                if canon:
+                    vt_canon_set.add(canon)
+
+        aux_canon_set: set[str] = set()
+        aux_shortlist = aux_signals.get("positional_shortlist") if isinstance(aux_signals, dict) else []
+        if isinstance(aux_shortlist, list):
+            for r in aux_shortlist:
+                if not isinstance(r, dict):
+                    continue
+                canon = _canon(r.get("canonical") or r.get("combo") or "")
+                if canon:
+                    aux_canon_set.add(canon)
+
+        union_canons = sorted(set().union(dr_canon_set, stable_canon_set, hot_canon_set, vt_canon_set, aux_canon_set))
+        scored: List[Tuple[int, float, int, str]] = []
+        for canon in union_canons:
+            idx = _vtrac_get_index(canon)
+            if idx != best_idx:
+                continue
+            votes = 0
+            votes += 1 if canon in dr_canon_set else 0
+            votes += 1 if canon in stable_canon_set else 0
+            votes += 1 if canon in hot_canon_set else 0
+            votes += 1 if canon in vt_canon_set else 0
+            votes += 1 if canon in aux_canon_set else 0
+            scored.append((votes, float(dr_canon_score.get(canon, 0.0) or 0.0), _boxed_cost_units(canon), canon))
+
+        picked_canons: List[str] = []
+        if scored:
+            scored.sort(key=lambda t: (-t[0], -t[1], t[2], t[3]))
+            picked_canons = [canon for _, _, _, canon in scored[: int(boxed_canonicals)]]
+
+        if not picked_canons:
+            # Fallback to DR-004's best canonicals within the chosen index.
+            for r in dr_top_indices:
+                if not isinstance(r, dict):
+                    continue
+                try:
+                    idx = int(r.get("vtrac_index"))
+                except Exception:
+                    continue
+                if idx != best_idx:
+                    continue
+                tops = r.get("top_canonicals") or []
+                if isinstance(tops, list):
+                    for c in tops:
+                        canon = _canon(str(c))
+                        if not canon or canon in picked_canons:
+                            continue
+                        picked_canons.append(canon)
+                        if len(picked_canons) >= int(boxed_canonicals):
+                            break
+                break
+
+        picked_canons = [c for c in picked_canons if c][: int(boxed_canonicals)]
+        if not picked_canons:
+            continue
+
+        combos: set[str] = set()
+        for canon in picked_canons:
+            combos.update(_unique_perms(canon))
+        combos_sorted = sorted(combos)
+        if not combos_sorted:
+            continue
+
+        packs.append(
+            {
+                "pack_id": f"fusion_gate_dr004:{section}:idx={best_idx}:box{len(picked_canons)}",
+                "method_id": "fusion_gate_dr004",
+                "variant": section,
+                "play_mode": "BOX",
+                "canonicals": sorted(set(picked_canons)),
+                "combos": combos_sorted,
+                "combos_count": len(combos_sorted),
+                "cost_units": len(combos_sorted),
+                "why_tags": [
+                    "fusion_gate",
+                    "dr004",
+                    f"idx:{best_idx}",
+                    f"min_sources:{int(min_sources)}",
+                    f"sources:{','.join(sorted(best_srcs))}",
+                    f"state:{state_key}",
+                ],
+                "transform_chain": [
+                    "fusion_gate:dr004_index_convergence",
+                    f"vtrac_index:{best_idx}",
+                    f"box_expand_unique_perms:top{len(picked_canons)}",
+                ],
+                "evidence_paths": evidence_paths,
+            }
+        )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs
 
 
 def _rank_aux_aggregated_digits(*, state_dir: Path, state_key: str) -> Tuple[List[str], List[Path]]:
@@ -1789,7 +2906,12 @@ def _build_digit_envelope(*, packs: Sequence[dict]) -> dict:
         # Keep the pooled digit envelope stable across optional v0.3 research packs.
         # Those packs should be additive, not perturb the derived combo packs unless
         # explicitly promoted into defaults later.
-        if (p.get("method_id") or "") in {"digit_reduction_envelope_steps"}:
+        if (p.get("method_id") or "") in {
+            "digit_reduction_envelope_steps",
+            "digit_reduction_dr004",
+            "digit_reduction_dr004_index",
+            "fusion_gate_dr004",
+        }:
             continue
         pack_id = p.get("pack_id", "?")
         for c in p.get("canonicals", []) or []:
@@ -2255,6 +3377,16 @@ def parse_args() -> argparse.Namespace:
         default="tool_only",
         help="Ablation profile for pack sources (default: tool_only). tool_only = skip profit_alerts packs; profit_only = profit_alerts packs only.",
     )
+    ap.add_argument(
+        "--experiment-tag",
+        default="",
+        help=textwrap.dedent(
+            """\
+            Optional experiment tag appended to output filenames (default: none).
+            Example: --experiment-tag dr004_v1 writes candidate_universe__tool_only__dr004_v1.json.
+            """
+        ).strip(),
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of state keys (default: auto-discover from day dir)")
     ap.add_argument(
         "--force",
@@ -2274,7 +3406,84 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="Optional DR envelope packs: BOX-expand top N envelope-derived canonicals per section from DR steps CSV (default: 0 disables).",
     )
+    ap.add_argument(
+        "--dr004-boxed-canonicals",
+        type=int,
+        default=0,
+        help="Optional DR-004 packs: BOX-expand top N DR-004 canonicals per section from DR steps CSV (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--dr004-index-boxed-canonicals",
+        type=int,
+        default=0,
+        help="Optional DR-004 index-gateway packs: pick up to N boxed canonicals (1 per index) per section (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--dr004-recent-draws",
+        type=int,
+        default=0,
+        help="Optional DR-004 recency penalty: count digits from N most recent draws (sharepack-local aux/draws) (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--dr004-max-cost-units",
+        type=int,
+        default=0,
+        help="Optional DR-004 hard cap on boxed cost units per pack (default: 0 = no cap).",
+    )
+    ap.add_argument(
+        "--dr004-min-unique-digits",
+        type=int,
+        default=1,
+        help="DR-004 pool filter: minimum unique digits per segment (default: 1).",
+    )
+    ap.add_argument(
+        "--dr004-max-unique-digits",
+        type=int,
+        default=3,
+        help="DR-004 pool filter: maximum unique digits per segment (default: 3; set to 4 to enable envelope4).",
+    )
+    ap.add_argument(
+        "--dr004-write-signals",
+        action="store_true",
+        help="Write dr004_signals*.json next to candidate_universe.json (predictive-safe; default: off).",
+    )
+    ap.add_argument(
+        "--dr004-signals-top-pools",
+        type=int,
+        default=12,
+        help="When writing DR-004 signals, record this many top digit pools per section (default: 12).",
+    )
+    ap.add_argument(
+        "--dr004-signals-top-canonicals",
+        type=int,
+        default=25,
+        help="When writing DR-004 signals, record this many top canonicals per section (default: 25).",
+    )
+    ap.add_argument(
+        "--dr004-signals-top-indices",
+        type=int,
+        default=12,
+        help="When writing DR-004 signals, record this many top VTRAC indices per section (default: 12).",
+    )
+    ap.add_argument(
+        "--write-signals-bundle",
+        action="store_true",
+        help="Write signals_bundle*.json next to candidate_universe.json (predictive-safe; default: off).",
+    )
+    ap.add_argument(
+        "--fusion-gate-boxed-canonicals",
+        type=int,
+        default=0,
+        help="Optional fusion-gate packs: BOX-expand up to N canonicals per section when DR-004 converges with other tool signals (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--fusion-gate-min-sources",
+        type=int,
+        default=2,
+        help="Fusion-gate threshold: require this many supporting signal sources including DR-004 (default: 2).",
+    )
     ap.add_argument("--top-n-vtrac", type=int, default=8, help="Top N VTRAC straights (default: 8)")
+    ap.add_argument("--top-n-vtrac-indices", type=int, default=12, help="Top N VTRAC indices (signals bundle; default: 12)")
     ap.add_argument("--top-n-hot", type=int, default=8, help="Top N Hot Zones triads (default: 8)")
     ap.add_argument(
         "--hot-zones-index-closure",
@@ -2381,6 +3590,8 @@ def main() -> None:
 
     profile = str(args.profile or "mixed").strip()
     out_suffix = "" if profile == "mixed" else f"__{profile}"
+    exp_tag = _normalize_experiment_tag(args.experiment_tag)
+    tag_suffix = f"__{exp_tag}" if exp_tag else ""
     include_profit_alerts = profile in {"mixed", "profit_only"}
     include_non_profit = profile in {"mixed", "tool_only"}
 
@@ -2389,7 +3600,7 @@ def main() -> None:
         if not state_dir.exists():
             raise SystemExit(f"Missing state dir: {_safe_rel(state_dir)}")
 
-        out_path = state_dir / f"candidate_universe{out_suffix}.json"
+        out_path = state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
         if out_path.exists() and not args.force:
             raise SystemExit(
                 f"Refusing to overwrite existing candidate universe: {_safe_rel(out_path)} (use --force)"
@@ -2452,6 +3663,42 @@ def main() -> None:
             packs.extend(dr_env_packs)
             inputs.extend(dr_env_inputs)
 
+            # 3c) Digit Reduction DR-004 packs (optional; default-off)
+            want_dr004_signals = bool(
+                args.dr004_write_signals or args.write_signals_bundle or int(args.fusion_gate_boxed_canonicals) > 0
+            )
+            dr004_signals: Optional[Dict[str, Any]] = {} if want_dr004_signals else None
+            dr004_packs, dr004_inputs = _parse_dr004_steps(
+                state_dir=state_dir,
+                state_key=state_key,
+                boxed_canonicals=int(args.dr004_boxed_canonicals),
+                index_boxed_canonicals=int(args.dr004_index_boxed_canonicals),
+                recent_draws=int(args.dr004_recent_draws),
+                max_cost_units=int(args.dr004_max_cost_units),
+                min_unique_digits=int(args.dr004_min_unique_digits),
+                max_unique_digits=int(args.dr004_max_unique_digits),
+                signals_out=dr004_signals,
+                signals_top_pools=int(args.dr004_signals_top_pools),
+                signals_top_canonicals=int(args.dr004_signals_top_canonicals),
+                signals_top_indices=int(args.dr004_signals_top_indices),
+            )
+            packs.extend(dr004_packs)
+            inputs.extend(dr004_inputs)
+            if args.dr004_write_signals and dr004_signals:
+                sig_path = state_dir / f"dr004_signals{out_suffix}{tag_suffix}.json"
+                sig_payload: Dict[str, Any] = {
+                    **dr004_signals,
+                    "results_date": args.date,
+                    "history_date": cc_meta.history_date,
+                    "profile": profile,
+                    "experiment_tag": exp_tag,
+                    "sharepacks_root": _safe_rel(sharepacks_root),
+                    "sharepack_state_dir": _safe_rel(state_dir),
+                    "contains_winners_artifacts": bool(leakage),
+                }
+                _write_json(sig_path, sig_payload)
+                print(f"Wrote: {_safe_rel(sig_path)}")
+
             # 4) VTRAC enhanced (top straights)
             vt_packs, vt_inputs = _parse_vtrac_top(
                 state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_vtrac)
@@ -2491,6 +3738,38 @@ def main() -> None:
             )
             packs.extend(aux_vt_packs)
             inputs.extend(aux_vt_inputs)
+
+            # 6c) Fusion gate (optional; bounded; derived from tool signals + DR-004)
+            if int(args.fusion_gate_boxed_canonicals) > 0:
+                st_sig, _ = _extract_stable_signals(
+                    state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_stable)
+                )
+                hz_sig, _ = _extract_hot_zones_signals(
+                    state_dir=state_dir, state_key=state_key, date=args.date, top_n=int(args.top_n_hot)
+                )
+                vt_sig, _ = _extract_vtrac_enhanced_signals(
+                    state_dir=state_dir,
+                    state_key=state_key,
+                    top_indices=int(args.top_n_vtrac_indices),
+                    top_straights=int(args.top_n_vtrac),
+                )
+                aux_sig, _ = _extract_aux_signals(
+                    state_dir=state_dir,
+                    state_key=state_key,
+                    top_shortlist=int(args.top_n_aux),
+                    top_overdue=int(args.top_n_aux_vtrac_indices),
+                )
+                fg_packs = _build_fusion_gate_dr004_packs(
+                    state_key=state_key,
+                    dr004_signals=dr004_signals or {},
+                    stable_signals=st_sig,
+                    hot_zones_signals=hz_sig,
+                    vtrac_signals=vt_sig,
+                    aux_signals=aux_sig,
+                    boxed_canonicals=int(args.fusion_gate_boxed_canonicals),
+                    min_sources=int(args.fusion_gate_min_sources),
+                )
+                packs.extend(fg_packs)
 
         # 7) Digit envelope (always recorded; derived packs only for non-profit_only profiles)
         digit_envelopes: List[dict] = []
@@ -2556,6 +3835,7 @@ def main() -> None:
             "results_date": args.date,
             "history_date": cc_meta.history_date,
             "profile": profile,
+            "experiment_tag": exp_tag,
             "state_key": state_key,
             "sharepack_root": _safe_rel(sharepacks_root),
             "sharepack_state_dir": _safe_rel(state_dir),
@@ -2580,14 +3860,62 @@ def main() -> None:
             },
         }
 
+        if args.write_signals_bundle and include_non_profit:
+            bundle_path = state_dir / f"signals_bundle{out_suffix}{tag_suffix}.json"
+            if bundle_path.exists() and not args.force:
+                raise SystemExit(
+                    f"Refusing to overwrite existing signals bundle: {_safe_rel(bundle_path)} (use --force)"
+                )
+            st_sig, _ = _extract_stable_signals(
+                state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_stable)
+            )
+            hz_sig, _ = _extract_hot_zones_signals(
+                state_dir=state_dir, state_key=state_key, date=args.date, top_n=int(args.top_n_hot)
+            )
+            vt_sig, _ = _extract_vtrac_enhanced_signals(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_indices=int(args.top_n_vtrac_indices),
+                top_straights=int(args.top_n_vtrac),
+            )
+            aux_sig, _ = _extract_aux_signals(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_shortlist=int(args.top_n_aux),
+                top_overdue=int(args.top_n_aux_vtrac_indices),
+            )
+            bundle_payload: Dict[str, Any] = {
+                "schema": "signals_bundle_v1",
+                "generated_at": _now_iso(),
+                "results_date": args.date,
+                "history_date": cc_meta.history_date,
+                "profile": profile,
+                "experiment_tag": exp_tag,
+                "state_key": state_key,
+                "sharepack_root": _safe_rel(sharepacks_root),
+                "sharepack_state_dir": _safe_rel(state_dir),
+                "contains_winners_artifacts": bool(leakage),
+                "candidate_universe_path": _safe_rel(out_path),
+                "candidate_universe_inputs_hash": inputs_hash,
+                "tools": {
+                    "digit_reduction_dr004": dr004_signals or {"available": False},
+                    "stable": st_sig,
+                    "hot_zones": hz_sig,
+                    "vtrac_enhanced": vt_sig,
+                    "aux": aux_sig,
+                },
+            }
+            _write_json(bundle_path, bundle_payload)
+            print(f"Wrote: {_safe_rel(bundle_path)}")
+
         _write_json(out_path, payload)
         if args.write_md:
-            md_path = state_dir / f"candidate_universe{out_suffix}.md"
+            md_path = state_dir / f"candidate_universe{out_suffix}{tag_suffix}.md"
             _write_candidate_universe_md(out_path=md_path, payload=payload)
             print(f"Wrote: {_safe_rel(md_path)}")
         if args.write_evidence:
-            ev_csv = state_dir / f"candidate_universe_evidence{out_suffix}.csv"
-            ev_md = state_dir / f"candidate_universe_evidence{out_suffix}.md"
+            ev_csv = state_dir / f"candidate_universe_evidence{out_suffix}{tag_suffix}.csv"
+            ev_md = state_dir / f"candidate_universe_evidence{out_suffix}{tag_suffix}.md"
             _write_candidate_universe_evidence_csv(out_path=ev_csv, payload=payload)
             _write_candidate_universe_evidence_md(out_path=ev_md, payload=payload)
             print(f"Wrote: {_safe_rel(ev_csv)}")
