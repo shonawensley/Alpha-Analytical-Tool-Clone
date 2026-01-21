@@ -203,8 +203,12 @@ Primary references:
 - **Measured support (selection-layer prework; additive CU packs, default-off)**:
   - Implemented optional CU packs: `scripts/tools/create_candidate_universe.py --dr-envelope-boxed-canonicals 2`
   - Summary across v0 windows: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
+- **Implemented (selection-layer DR-004; additive, default-off)**:
+  - Spec: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__SPEC.md`
+  - Implementation: `scripts/tools/create_candidate_universe.py` (`--dr004-*` flags; reads only steps CSV + sharepack-local `aux/draws`)
+  - Results: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__EXPERIMENT__RESULTS.md`
 - **Expected delta**: DR becomes useful input for bounded combination packs (measurable via CU/PlayCard).
-- **Status**: Proposed (v0.3 feature; careful anti-leakage)
+- **Status**: Implemented + measured (keep off-by-default until Play Card policy is stabilized)
 
 ---
 

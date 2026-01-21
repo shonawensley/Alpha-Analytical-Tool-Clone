@@ -375,3 +375,35 @@ Interpretation:
 - Experiment summary (baseline tool_only union vs +DR envelope Top2 across all three windows):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
 - Decision (current): **keep off by default** (v0.2) and treat as a measured research knob until we see a stable, non-regressing lift without unacceptable pool widening.
+
+### Optional selection-layer experiment (v0.3 prework): DR‑004 trace → bounded BOX packs
+
+- Spec (inputs + non-negotiables + acceptance gates): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__SPEC.md`
+- Implementation (default-off flags): `scripts/tools/create_candidate_universe.py` (`--dr004-*`)
+- Results across the three regression windows (tagged runs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__EXPERIMENT__RESULTS.md`
+- Decision (current): **keep off by default** (v0.2) until Play Card policy is stabilized (DR‑004 can improve union, but may reshuffle top‑budget play cards).
+
+Key takeaways (what DR is actually good at; how to consume it without “circles”):
+- DR’s repeatable value is **digit-pool / envelope convergence**, not “best_pattern top‑3” calling (winners often show up in trace/overlay while top candidates miss).
+- Strong pools tend to show **repeat support across multiple trace lanes** (boxes/cols/sets), plus **early arrival + persistence** in the reduction steps.
+- **Cross‑variant convergence** (Midday + Evening) is a high-signal differentiator; treat Combined as a mild boost, not a requirement.
+- **VTRAC index compression** is useful as a bounded gateway lens, but can raise `index_only`; treat index packs as *corroboration*, not “box it all”.
+- Recency overlap penalty did not show clear lift in the v0 windows; keep it optional until evidence shows otherwise.
+- If DR‑004 is allowed to directly compete in Play Card budgets, it can reshuffle ranks; a safer next step is “consume DR‑004 only when corroborated” (or when incremental lift is demonstrated).
+- Next work is measurement-first: incremental contribution report + per-day “signals export” + 10-case alignment report, then only ship new DR‑004 features that pass gates.
+- v3 pool-filter knobs (`unique_digits=2→4`) materially improve the **10-case signal alignment** (cluster visibility), but did not beat `dr004_v1` on Candidate Universe union lift; treat as **signals-lens** until it earns selection-layer gates:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__ALIGNMENT_REPORT__u2u4.md`
+
+### Follow-up (v0.2 additive; default-off): bulk signals export + DR‑004 fusion gate
+
+- Implemented a predictive-safe **signals bundle** export (so DR-only strong environments are never “lost” just because budgets/fusion don’t fire):
+  - `scripts/tools/create_candidate_universe.py` (`--write-signals-bundle`)
+  - Output: `sharepacks/<root>/<D>/<STATE>/signals_bundle__<profile>__<tag>.json`
+  - Contents (all evidence-only / no winners leakage): DR‑004 trace pools + canonicals + indices, Stable top canonicals, Hot Zones top triads, VTRAC Enhanced top indices/straights, Aux shortlist + overdue indices.
+- Implemented a bounded, additive **fusion gate** micro-pack that fires only on DR‑004 index convergence with other tool signals:
+  - `scripts/tools/create_candidate_universe.py` (`--fusion-gate-boxed-canonicals`, `--fusion-gate-min-sources`)
+  - New `method_id=fusion_gate_dr004` packs (one per section; small BOX expansion).
+  - Containment: excluded from pooled digit envelope (prevents silent perturbation of derived combo packs while measuring).
+- Measured on the 3 v0 windows (baseline tag `baseline_ref_20260121` → experiment `dr004_fusion_v2_u2u4`):
+  - Incremental report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__from_baseline_ref_20260121__to_dr004_fusion_v2_u2u4.md`
+  - Current result: +1 incremental union hit, 0 regressions, +~8.8 avg union cost → keep fusion gate off by default.

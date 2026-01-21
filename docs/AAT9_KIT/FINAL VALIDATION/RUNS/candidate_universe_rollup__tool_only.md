@@ -2,6 +2,7 @@
 
 - Grade files: `14`
 - Rows scanned: `10976`
+- experiment_tag: —
 - Dates covered: `14`
 - Date range: `2025-06-21` → `2026-01-09`
 

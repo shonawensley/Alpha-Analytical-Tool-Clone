@@ -55,6 +55,22 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
       - Analysis notes: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__ENVELOPE_HARNESS__ANALYSIS.md`
     - Optional selection-layer experiment (additive DR envelope BOX packs; research-only):
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_ENVELOPE_PACK__EXPERIMENT__TOP2.md`
+    - DR‑004 selection-layer transform (additive DR trace → bounded BOX packs; research-only):
+      - Spec: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__SPEC.md`
+      - Results (multi-window): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__EXPERIMENT__RESULTS.md`
+      - 10-case alignment reports:
+        - Baseline lens: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__ALIGNMENT_REPORT.md`
+        - envelope4 lens (`unique_digits=2→4`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_004__ALIGNMENT_REPORT__u2u4.md`
+      - Incremental union reports (baseline vs tag):
+        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__dr004_v1.md`
+        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__dr004_v2_idx2.md`
+        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__dr004_v3_min2.md`
+        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__dr004_v3_u2u4.md`
+      - Signals bundle export (predictive-safe; per-state JSON for Superbrain consumption):
+        - Written by: `scripts/tools/create_candidate_universe.py` (`--write-signals-bundle`)
+        - Output path pattern: `sharepacks/<root>/<D>/<STATE>/signals_bundle__<profile>__<tag>.json`
+      - DR‑004 fusion gate experiment (default-off; bounded BOX packs on multi-tool convergence):
+        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_incremental__tool_only__from_baseline_ref_20260121__to_dr004_fusion_v2_u2u4.md`
     - Harness-driven DR study queue (bounded “what to read next” list):
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DR_V0__STUDY_QUEUE.md`
     - Design intent (provenance; helps interpret DR outputs):
