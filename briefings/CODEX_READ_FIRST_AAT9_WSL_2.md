@@ -52,6 +52,12 @@ Master Validation (frozen day snapshot):
 - Candidate Universe (gradeable pre-results playset): `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
   - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
+- v0.2 “don’t get lost” SSOTs (start here after any context reset):
+  - RUNS Portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
+  - v0.2 integration log: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
+  - v0.2 coverage ledger (generated): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
+  - Predictive workflow addendum: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Predictive_Workflow_V0_2_Addendum.md`
+  - Master Validation template addendum: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Template_V0_2.md`
 - Brain‑2 Control Center export (drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <D>` → `sharepacks/<D>/control_center/`
   - Includes Profit Alerts board (A01–A12): `sharepacks/<D>/control_center/profit_alerts.*`
 - Profit Alerts windowed evaluation (episodes): `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
@@ -62,6 +68,7 @@ Master Validation (frozen day snapshot):
 - Pattern progression primer (concept lens; survives context resets): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
 - Run report progress index (avoid “where are we?” drift): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
+- Brain‑2 policy harness (Top‑N triage; tracks `hit_any` + `box_hit`): `python3 scripts/tools/superbrain_config_harness.py --start-date <A> --end-date <B> ...`
 - Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
 - If you add new `data/history/Pick3StatsC4_*.xlsm` files: do a 60‑second sanity check that the workbook is truly “H” (not misdated) by extracting 1 state’s newest draw and comparing to `data/results/<H>.txt` before building `sharepacks/<D=H+1>/`.
 - Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`

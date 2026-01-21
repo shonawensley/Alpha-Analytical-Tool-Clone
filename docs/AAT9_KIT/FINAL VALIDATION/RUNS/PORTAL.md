@@ -17,6 +17,12 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.6) v0.2 integration log (what changed, why, what remains):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
 
+1.7) v0.2 coverage ledger (generated; proves what’s covered):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
+
+1.8) Portal link audit (generated; prevents “missing file” loops):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__PORTAL_LINK_AUDIT.md`
+
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
 
@@ -38,6 +44,11 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 6) The fast “are we improving?” rollups (cross-day):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
+- Superbrain config harness (Brain‑2 ranking policy comparison; Top‑N triage; tracks `hit_any` + `box_hit`):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+  - Regenerate: `python3 scripts/tools/superbrain_config_harness.py --start-date <A> --end-date <B> ...`
 - Profit Alerts quarantine (ablation profiles; compare without deleting):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__tool_only.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__profit_only.md`

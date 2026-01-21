@@ -463,3 +463,55 @@ Change:
 
 Code:
 - `scripts/tools/create_candidate_universe.py` (`--write-signals-bundle`)
+
+---
+
+## 2026‑01‑21 — v0.2 Closeout: coverage ledger + portal link audit + superbrain config harness (implemented + measured)
+
+Motivation:
+- Context resets were repeatedly causing “did we miss something?” loops.
+- We needed a mechanical way to (a) prove v0.2 coverage and (b) measure triage/ranking policies using both `hit_any` and `box_hit` without touching analyzers.
+
+### A) v0.2 coverage ledger (generated; completeness proof)
+
+What it does:
+- Enumerates every `GOLD-####` entry + every dated v0.2 integration-log block.
+- Extracts evidence refs and reports whether referenced repo artifacts exist.
+
+Script:
+- `scripts/tools/build_v0_2_coverage_ledger.py`
+
+Output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
+
+### B) Portal link audit (generated; navigation integrity)
+
+What it does:
+- Audits the RUNS portal + v0.2 integration log for broken repo-local links (docs/scripts/sharepacks/data paths).
+- Ignores placeholders (e.g., `<D>`, wildcards) to avoid false positives.
+
+Script:
+- `scripts/tools/audit_v0_2_portal_links.py`
+
+Output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__PORTAL_LINK_AUDIT.md`
+
+### C) Superbrain config harness (Brain‑2 triage/ranking policies)
+
+What it does:
+- Compares cross-state Top‑N ranking policies across a window (baseline tool-first vs “pressure tiebreak”).
+- Grades the Top‑N set using:
+  - Candidate Universe union `hit_any` and `box_hit` (lane visibility),
+  - Play Card `hit_any`/`box_hit` for a chosen strategy (default: `play_box_first/B12`).
+- Uses Aux badge pressure index stats as the pressure signal source (predictive-safe; winners used only for grading).
+
+Script:
+- `scripts/tools/superbrain_config_harness.py`
+
+Outputs (v0 windows):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2026-01-05_to_2026-01-09.md` (and `.csv`)
+
+Key result:
+- Badge pressure as a **tie-breaker** can help in some windows and hurt in others. That’s the desired outcome of v0.2: we can now measure the trade-off explicitly and decide whether pressure becomes a default ranking lever or remains a research-only knob.

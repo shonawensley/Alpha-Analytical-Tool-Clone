@@ -124,4 +124,5 @@ Current v0.2 portfolio sort order:
 - Aux boxed VTRAC badge-matrix density is not yet compounded into the score (export + harness exist; compounding it into portfolio/play-card policy is the next step):
   - Badge pressure harness (TopK pressure vs TopK overdue): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
   - Due Doubles parity audit (keeps “broken math” worries honest): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md`
+  - Brain‑2 policy comparison harness (Top‑N triage; tracks `hit_any` + `box_hit`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2026-01-05_to_2026-01-09.md`
 - Any analyzer tuning (Stable/DR/VTRAC/HZ) is deferred until we have a larger graded corpus.
