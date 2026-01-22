@@ -73,6 +73,7 @@ v0.2 default posture (budget‑split):
 
 Notes:
 - `create_play_card.py` emits multiple strategies into the same `play_card*.json` artifact. “Defaults” above means: which strategy we treat as the canonical cut per budget in portfolio triage + review.
+- Convenience strategy: `v0_2_default` encodes the same budget-split posture directly in the Play Card artifact (B12 `analysis_prefix`, B24/B36 `vtrac_pack_boxed_first`).
 - Evidence + grading (3 windows, N=5): see `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md:640`
 
 ### 1.4 Portfolio (cross‑state triage) — tool‑first ranking

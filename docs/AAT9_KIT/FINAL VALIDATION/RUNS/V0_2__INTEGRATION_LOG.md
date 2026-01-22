@@ -745,3 +745,47 @@ Key findings:
 Decision (v0.2 posture):
 - Keep lane-only chooser as a **research knob** for study queues / diagnostics.
 - Continue to treat `vtrac_pack_boxed_first` (v1 chooser) as the leading B24/B36 conversion-friendly policy.
+
+---
+
+## 2026‑01‑22 — Play Card: encode v0.2 budget‑split defaults as a single strategy + B12 pack-gate ablation (v0_2_default_v1) (implemented + measured)
+
+Motivation:
+- The v0.2 posture is explicitly **budget-split** (B12 conservative, B24/B36 conversion-friendly), but the Play Card artifact emits multiple strategies and requires a manual mapping.
+- Encode the posture as a single named strategy to reduce drift and make “what to play” review simpler.
+- Also test (and then either adopt or discard) the tempting idea: “at B12, insert a boxed-member VTRAC pack only when the chosen index looks dominant.”
+
+### A) New strategies emitted in `play_card*.json`
+
+Change:
+- Add three convenience strategies:
+  - `v0_2_default`: `B12=analysis_prefix`, `B24/B36=vtrac_pack_boxed_first`
+  - `v0_2_default_b12pack_lenient`: same as `v0_2_default`, but B12 *may* insert a VTRAC pack under a lenient dominance gate
+  - `v0_2_default_b12pack_strict`: same as above, but stricter gate
+
+Code:
+- `scripts/tools/create_play_card.py`
+
+### B) Measurement (3 windows, N=5; mixed sharepacks roots)
+
+Notes:
+- Windows 1–2 used `sharepacks/` (Candidate Universe present in those day sharepacks).
+- Window 3 used `sharepacks/_predictive/` (those predictive packs contain Candidate Universe + Play Cards).
+
+Artifacts:
+- Same-day rollup:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__v0_2_default_v1.md`
+- Windowed rollups (N=5):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-06-21_to_2025-06-23.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-12-30_to_2026-01-04.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2026-01-05_to_2026-01-09.md`
+
+Key findings (windowed N=5; “hit_any_inclusive”):
+- `v0_2_default` exactly reproduces the intended posture:
+  - B12 matches `analysis_prefix`
+  - B24/B36 match `vtrac_pack_boxed_first` (material lift vs `analysis_prefix` in the first two windows; see the rollups above).
+- The B12 pack-gated variants **do not** improve `hit_any_inclusive_window` consistently (they usually regress it vs `analysis_prefix`), because they concentrate coverage into one lane under a tight budget.
+
+Decision (v0.2 posture):
+- Keep `v0_2_default` as a convenience strategy (reduces policy drift).
+- Keep `v0_2_default_b12pack_*` as research-only; do not adopt as B12 default.

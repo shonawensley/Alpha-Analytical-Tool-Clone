@@ -1148,6 +1148,165 @@ def _card_vtrac_pack_boxed_first(
     }
 
 
+def _should_fire_vtrac_pack_gate(
+    *,
+    chooser_snapshot: Dict[str, Any],
+    pack_size: int,
+    budget: int,
+    gate_preset: str,
+) -> bool:
+    """
+    Conservative gate for inserting a boxed-member VTRAC pack at tight budgets.
+
+    This is intentionally simple:
+    - We only spend B12 lines on a pack when the chosen VTRAC index looks dominant and multi-evidence.
+    - We require enough remaining budget after the pack to still carry some non-pack coverage.
+    """
+    b = int(budget)
+    psize = int(pack_size)
+    if b <= 0 or psize <= 0:
+        return False
+    if b - psize < 4:
+        return False
+
+    top5 = chooser_snapshot.get("top5")
+    if not isinstance(top5, list) or not top5:
+        return False
+    top = top5[0] if isinstance(top5[0], dict) else {}
+    second = top5[1] if len(top5) > 1 and isinstance(top5[1], dict) else {}
+
+    def _int(v: Any) -> int:
+        try:
+            return int(v)
+        except Exception:
+            return 0
+
+    def _float(v: Any) -> float:
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
+
+    m1 = _int(top.get("methods_count"))
+    v1 = _int(top.get("variants_non_unknown"))
+    s1 = _float(top.get("score_total"))
+
+    m2 = _int(second.get("methods_count")) if second else 0
+    v2 = _int(second.get("variants_non_unknown")) if second else 0
+    s2 = _float(second.get("score_total")) if second else 0.0
+
+    if gate_preset == "strict":
+        strong = (m1 >= 4) and (v1 >= 2)
+        ratio = 1.15
+    else:
+        strong = (m1 >= 3) and (v1 >= 1)
+        ratio = 1.05
+
+    dominant = True
+    if second:
+        dominant = (m1 > m2) or (v1 > v2)
+        if s2 > 0.0:
+            dominant = bool(dominant or (s1 >= (s2 * ratio)))
+
+    return bool(strong and dominant)
+
+
+def _card_v0_2_default(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture (budget-split), encoded as a single strategy for convenience:
+    - B12: analysis_prefix
+    - B24/B36: vtrac_pack_boxed_first
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    return _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+
+
+def _card_v0_2_default_b12pack(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    gate_preset: str,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture + an optional B12-only conservative pack insertion gate (research knob).
+    - For budgets > 12: behave like vtrac_pack_boxed_first.
+    - For budgets <= 12:
+        - Choose the top VTRAC index.
+        - Only insert its boxed-member pack when the index looks dominant.
+        - Otherwise fall back to analysis_prefix (preserves budget discipline).
+    """
+    b = int(budget)
+    if b > 12:
+        return _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+
+    chosen_index, chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=None)
+    candidate_pack: List[str] = _vtrac_display_pack(index=int(chosen_index)) if chosen_index is not None else []
+    if chosen_index is None or not candidate_pack:
+        card = _card_from_ranked(ranked=ranked, budget=b)
+        card["vtrac_pack"] = {
+            "index": int(chosen_index) if chosen_index is not None else None,
+            "pack_combos": [],
+            "pack_combos_candidate": list(candidate_pack),
+            "chooser": chooser,
+            "gate": {"fired": False, "preset": gate_preset, "reason": "no_pack"},
+            "fallback": "analysis_prefix",
+        }
+        return card
+
+    fired = _should_fire_vtrac_pack_gate(
+        chooser_snapshot=chooser,
+        pack_size=len(candidate_pack),
+        budget=b,
+        gate_preset=gate_preset,
+    )
+    if not fired:
+        card = _card_from_ranked(ranked=ranked, budget=b)
+        card["vtrac_pack"] = {
+            "index": int(chosen_index),
+            "pack_combos": [],
+            "pack_combos_candidate": list(candidate_pack),
+            "chooser": chooser,
+            "gate": {"fired": False, "preset": gate_preset, "reason": "gate_off"},
+            "fallback": "analysis_prefix",
+        }
+        return card
+
+    selected: List[str] = list(candidate_pack)
+    selected_set: set[str] = set(selected)
+    for row in ranked:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(chosen_index),
+            "pack_combos": list(candidate_pack),
+            "pack_combos_candidate": list(candidate_pack),
+            "chooser": chooser,
+            "gate": {"fired": True, "preset": gate_preset, "reason": "gate_on"},
+        },
+    }
+
+
 def _card_convergence_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int) -> Dict[str, Any]:
     """
     Box-first, but prefers candidates with higher cross-method + cross-variant support.
@@ -1336,6 +1495,9 @@ def main() -> None:
         strategy_cards: Dict[str, Dict[str, Any]] = {
             "play_box_first": {},
             "analysis_prefix": {},
+            "v0_2_default": {},
+            "v0_2_default_b12pack_lenient": {},
+            "v0_2_default_b12pack_strict": {},
             "convergence_box_first": {},
             "conversion_box_first": {},
             "vtrac_pack_boxed_only": {},
@@ -1351,6 +1513,13 @@ def main() -> None:
         for b in budgets:
             strategy_cards["play_box_first"][f"B{b}"] = _card_box_first(ranked=ranked, budget=b)
             strategy_cards["analysis_prefix"][f"B{b}"] = _card_from_ranked(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default"][f"B{b}"] = _card_v0_2_default(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default_b12pack_lenient"][f"B{b}"] = _card_v0_2_default_b12pack(
+                ranked=ranked, budget=b, gate_preset="lenient"
+            )
+            strategy_cards["v0_2_default_b12pack_strict"][f"B{b}"] = _card_v0_2_default_b12pack(
+                ranked=ranked, budget=b, gate_preset="strict"
+            )
             strategy_cards["convergence_box_first"][f"B{b}"] = _card_convergence_box_first(ranked=ranked, budget=b)
             strategy_cards["conversion_box_first"][f"B{b}"] = _card_conversion_box_first(ranked=ranked, budget=b)
             strategy_cards["vtrac_pack_boxed_only"][f"B{b}"] = _card_vtrac_pack_boxed_only(ranked=ranked, budget=b)
