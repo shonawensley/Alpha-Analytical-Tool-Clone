@@ -19,6 +19,9 @@ This writes a bounded export under `sharepacks/_scratch/` (and includes `README.
 
 ## Available packs
 
+- v0.2 closeout (selection + grading alignment; VTRAC pack strategy + windowed grading):
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/v0_2_closeout_play_card_windowed_vtracpack/README.md`
+
 - 2025‑06‑21 → 2025‑06‑23 (3-day starter corpus):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/README.md`
 

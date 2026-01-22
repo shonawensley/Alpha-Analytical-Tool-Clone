@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -70,6 +71,18 @@ def _canon(value: str) -> str:
 def _profile_suffix(profile: str) -> str:
     p = (profile or "mixed").strip()
     return "" if p == "mixed" else f"__{p}"
+
+
+def _normalize_experiment_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
+    cleaned = cleaned.strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid experiment tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
 
 
 @dataclass(frozen=True)
@@ -291,6 +304,15 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--force", action="store_true", help="Overwrite an existing report (default: refuse).")
     ap.add_argument("--top-n-alerts", type=int, default=3, help="Top N Profit Alerts rows to list per state (default: 3)")
     ap.add_argument("--top-n-due-doubles", type=int, default=6, help="Top N Due Doubles canonicals to show per state (default: 6)")
+    ap.add_argument(
+        "--prefer-experiment-tags",
+        default=None,
+        help=(
+            "Optional comma-separated experiment tags to prefer when selecting play_card*.json files. "
+            "Example: --prefer-experiment-tags v0_2_default_v1,,vtracpack_v1. "
+            "Default: prefer untagged first, then vtracpack_v1."
+        ),
+    )
     return ap.parse_args()
 
 
@@ -316,6 +338,24 @@ def main() -> None:
     rank_by = str(args.rank_by or ("profit_alerts" if profile in {"mixed", "profit_only"} else "tool_first")).strip()
     show_profit_alerts = profile in {"mixed", "profit_only"}
 
+    prefer_tags: Sequence[str] = ("", "vtracpack_v1")
+    raw_prefer = str(args.prefer_experiment_tags or "").strip()
+    if raw_prefer:
+        tags: List[str] = []
+        for part in raw_prefer.split(","):
+            part = part.strip()
+            if not part or part.lower() in {"-", "none", "null"}:
+                tag = ""
+            else:
+                tag = _normalize_experiment_tag(part)
+            if tag not in tags:
+                tags.append(tag)
+        if "" not in tags:
+            tags.append("")
+        if "vtracpack_v1" not in tags:
+            tags.append("vtracpack_v1")
+        prefer_tags = tags
+
     out_suffix = "" if profile == "mixed" else f"__{profile}"
 
     runs_dir = _runs_dir()
@@ -334,13 +374,25 @@ def main() -> None:
             state_dir, profile=profile
         )
         b12_boxed_count, b12_boxed, b12_combos, _, _, _ = _load_play_card_cut(
-            state_dir, profile=profile, strategy="analysis_prefix", budget=12
+            state_dir,
+            profile=profile,
+            strategy="analysis_prefix",
+            budget=12,
+            prefer_experiment_tags=prefer_tags,
         )
         b24_boxed_count, b24_boxed, b24_combos, b24_pack_index, b24_pack_combos, b24_src = _load_play_card_cut(
-            state_dir, profile=profile, strategy="vtrac_pack_boxed_first", budget=24
+            state_dir,
+            profile=profile,
+            strategy="vtrac_pack_boxed_first",
+            budget=24,
+            prefer_experiment_tags=prefer_tags,
         )
         b36_boxed_count, b36_boxed, b36_combos, b36_pack_index, b36_pack_combos, b36_src = _load_play_card_cut(
-            state_dir, profile=profile, strategy="vtrac_pack_boxed_first", budget=36
+            state_dir,
+            profile=profile,
+            strategy="vtrac_pack_boxed_first",
+            budget=36,
+            prefer_experiment_tags=prefer_tags,
         )
 
         top_alerts = alerts[: max(0, int(args.top_n_alerts))]

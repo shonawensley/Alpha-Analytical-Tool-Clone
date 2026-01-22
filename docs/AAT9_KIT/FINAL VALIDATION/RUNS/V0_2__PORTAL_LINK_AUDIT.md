@@ -8,6 +8,6 @@ Inputs:
 
 Output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__PORTAL_LINK_AUDIT.md`
 
-Refs (existing/total): **158/158**
+Refs (existing/total): **197/197**
 
 No broken refs found (for checkable repo paths).

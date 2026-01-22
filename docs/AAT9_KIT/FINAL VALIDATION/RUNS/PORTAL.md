@@ -44,6 +44,17 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 6) The fast “are we improving?” rollups (cross-day):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
+- v0.3 daily cadence wrapper (runs predictive build → CU → play cards → portfolio, then post-results grading):
+  - `scripts/tools/run_v0_3_cycle.py` (`pre` / `post`; writes lightweight receipts to RUNS)
+- Training-aligned Play Card grading (hit within 2–5 draw-slots, N=5 default):
+  - Windowed grader: `scripts/tools/grade_play_card_windowed.py`
+  - Key semantics (strict vs lane vs inclusive): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
+  - Windowed rollups (N=5; compare strategies):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-12-30_to_2026-01-04.md`
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2026-01-05_to_2026-01-09.md`
+    - v0.2 default posture encoded as a single strategy (budget-split; B12 conservative, B24/B36 conversion-friendly):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-12-30_to_2026-01-04.md`
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2026-01-05_to_2026-01-09.md`
 - Superbrain config harness (Brain‑2 ranking policy comparison; Top‑N triage; tracks `hit_any` + `box_hit`):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
@@ -157,6 +168,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
 - v0.2 defaults (resume runs without drift):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
+- Curated research packs (for ChatGPT Pro / external review):
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
 - Legacy window analysis (keep for provenance; most conclusions are folded into the v0 audits/ledgers):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/GOLD_RUNS_2_TRIAGE.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/POST RUNS/GOLD_RUNS_2_REPORT.txt`

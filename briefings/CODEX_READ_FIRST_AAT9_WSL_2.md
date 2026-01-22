@@ -49,6 +49,7 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 Master Validation (frozen day snapshot):
 - Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
 - Predictive (no results) sharepacks: `sharepacks/_predictive/<D>/...` via `python3 scripts/tools/run_predictive_day.py --history-date <H>`
+- v0.3 cadence wrapper (preferred; logs a RUNS receipt): `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force`
 - Candidate Universe (gradeable pre-results playset): `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
   - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`

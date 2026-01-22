@@ -22,6 +22,20 @@ Default ablation posture:
 
 ---
 
+## v0.3 cadence wrapper (recommended to reduce drift)
+
+Instead of manually running 4 separate commands, you can use the wrapper (logs a RUNS receipt):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+```
+
+After results exist for `D`:
+```bash
+python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --force
+```
+
+---
+
 ## What we added during v0.2 (so you can actually debug/iterate)
 
 ### 1) Candidate Universe “evidence view” (audit/debug)
@@ -66,4 +80,3 @@ Notes:
 - Portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
 - Coverage proof: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
 - v0.2 defaults: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
-

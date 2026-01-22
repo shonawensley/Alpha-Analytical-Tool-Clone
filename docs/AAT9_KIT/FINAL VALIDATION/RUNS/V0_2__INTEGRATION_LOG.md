@@ -789,3 +789,23 @@ Key findings (windowed N=5; “hit_any_inclusive”):
 Decision (v0.2 posture):
 - Keep `v0_2_default` as a convenience strategy (reduces policy drift).
 - Keep `v0_2_default_b12pack_*` as research-only; do not adopt as B12 default.
+
+---
+
+## 2026‑01‑22 — v0.3 cadence wrapper + portfolio tag preference (implemented)
+
+Motivation:
+- Reduce drift/cognitive load: encode the “predictive day → candidate universe → play cards → portfolio” cadence into one wrapper.
+- Preserve auditability: write a lightweight RUNS receipt so a run can be reproduced without chat history.
+- Enable experiments: allow the portfolio report to prefer a tagged `play_card*.json` when running strategy experiments.
+
+Changes:
+- Add cadence wrapper (pre + post):
+  - `scripts/tools/run_v0_3_cycle.py`
+- Add portfolio option to prefer tagged play cards:
+  - `scripts/tools/create_predictive_portfolio_report.py` (`--prefer-experiment-tags`)
+
+Docs:
+- Defaults + workflow pointers:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Predictive_Workflow_V0_2_Addendum.md`

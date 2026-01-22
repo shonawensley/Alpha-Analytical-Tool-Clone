@@ -32,6 +32,11 @@ export PYTHONPATH=.:src
 python3 scripts/tools/run_predictive_day.py --history-date <H>
 ```
 
+Optional convenience (v0.3 cadence wrapper; runs 1.1→1.4 and writes a RUNS receipt):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+```
+
 ### 1.2 Candidate Universe (gradeable playset) — tool‑first baseline
 
 Default posture:
@@ -85,6 +90,11 @@ python3 scripts/tools/create_predictive_portfolio_report.py \
   --profile tool_only \
   --rank-by tool_first \
   --force
+```
+
+Optional convenience (post-results grading once `data/results/<D>.txt` exists):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --force
 ```
 
 Optional (research-only): generate `mixed` and `profit_only` artifacts to keep the ablation honest.
