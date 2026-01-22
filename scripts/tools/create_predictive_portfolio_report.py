@@ -490,6 +490,30 @@ def main() -> None:
                 f"B36 `idx(size)={b36_pack}` pack=`{b36_pack_combos or '-'}` (src: `{b36_src}`)"
             )
     lines.append("")
+    lines.append("### B24 (vtrac_pack_boxed_first)")
+    lines.append("")
+    found_b24 = False
+    for r in table_rows:
+        combos = str(r.get("play_b24_combos") or "").strip()
+        if not combos:
+            continue
+        found_b24 = True
+        lines.append(f"- **{r['StateKey']}**: `{combos}`")
+    if not found_b24:
+        lines.append("- (not available for this profile/day)")
+    lines.append("")
+    lines.append("### B36 (vtrac_pack_boxed_first)")
+    lines.append("")
+    found_b36 = False
+    for r in table_rows:
+        combos = str(r.get("play_b36_combos") or "").strip()
+        if not combos:
+            continue
+        found_b36 = True
+        lines.append(f"- **{r['StateKey']}**: `{combos}`")
+    if not found_b36:
+        lines.append("- (not available for this profile/day)")
+    lines.append("")
     lines.append("## Notes")
     lines.append("")
     lines.append("- This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.")

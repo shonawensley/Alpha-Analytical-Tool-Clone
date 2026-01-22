@@ -59,6 +59,14 @@ v0.2 posture (budget-split):
 Shows the inserted boxed-member VTRAC pack (usually 8 combos; fewer for doubles/triples) and which play_card file it came from.
 
 
+### B24 (vtrac_pack_boxed_first)
+
+- (not available for this profile/day)
+
+### B36 (vtrac_pack_boxed_first)
+
+- (not available for this profile/day)
+
 ## Notes
 
 - This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.
