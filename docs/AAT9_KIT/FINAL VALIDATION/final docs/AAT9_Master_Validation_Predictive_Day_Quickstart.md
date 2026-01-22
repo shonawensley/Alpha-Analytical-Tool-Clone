@@ -31,6 +31,11 @@ Important: this workflow **mutates live output folders** while it runs (tables/J
 
 ## 1) Build the predictive pack (one command)
 
+Recommended (v0.3 cadence wrapper; logs a RUNS receipt and runs the whole pre-results chain):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+```
+
 Run:
 ```bash
 PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H>
@@ -136,6 +141,11 @@ Once `data/results/<D>.txt` exists, run the normal full‑day workflow (Brain‑
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
 
 You can still keep the predictive pack as the “what we knew pre-results” snapshot for later comparison.
+
+Recommended (v0.3 cadence wrapper; grades + rollups; writes only to RUNS):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --force
+```
 
 Then grade Candidate Universe (writes only to RUNS; keeps predictive sharepacks immutable):
 

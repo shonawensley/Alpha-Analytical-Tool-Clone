@@ -291,3 +291,8 @@
 
 - Impact: Scorer frozen for Aggregator v1; no further engine/schema changes planned. Consumers should use `data/outputs/analysis/vtrac_validation/vtrac_compact_report.{csv,json}` + summary.{md,csv} and winners HTML under `data/outputs/analysis/winners/<STATE>/` and `data/outputs/winners/<DATE>/vtrac_reports/<STATE>/`.
 - Files: docs/AAT9_KIT/AAT9_VTRAC_Analyzer_Analysis_Log.md (shipping note); TOOLS/vtrac_score_and_export.py; configs/vtrac_score_config.json.
+
+## 2026-01-22 — v0.3 cadence wrapper + portfolio experiment preference
+
+- Impact: Added `scripts/tools/run_v0_3_cycle.py` to run the predictive day cadence (`pre`) and post-results grading (`post`) with RUNS receipts for reproducibility; added `--prefer-experiment-tags` to `scripts/tools/create_predictive_portfolio_report.py` for play_card experiment summaries.
+- Files: scripts/tools/run_v0_3_cycle.py, scripts/tools/create_predictive_portfolio_report.py, docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md.
