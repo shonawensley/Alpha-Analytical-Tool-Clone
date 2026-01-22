@@ -67,6 +67,14 @@ python3 scripts/tools/create_play_card.py \
   --force
 ```
 
+v0.2 default posture (budget‑split):
+- `B12`: `analysis_prefix` (conservative / diagnostic-first; preserves lane visibility without forcing closures)
+- `B24/B36`: `vtrac_pack_boxed_first` (conversion-friendly; boxed-member VTRAC pack insertion)
+
+Notes:
+- `create_play_card.py` emits multiple strategies into the same `play_card*.json` artifact. “Defaults” above means: which strategy we treat as the canonical cut per budget in portfolio triage + review.
+- Evidence + grading (3 windows, N=5): see `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md:640`
+
 ### 1.4 Portfolio (cross‑state triage) — tool‑first ranking
 
 ```bash

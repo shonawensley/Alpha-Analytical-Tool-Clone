@@ -262,10 +262,24 @@ def main() -> None:
         "combos_count",
         "boxed_canonicals_count",
         "hit_any",
+        "hit_any_box",
+        "hit_any_inclusive",
         "straight_hit",
         "box_hit",
+        "canon_hit_any_perm",
         "vtrac_index_hit",
         "vtrac_index_hit_only",
+        "vtrac_pack_index",
+        "vtrac_pack_size",
+        "filler_size",
+        "pack_straight_hit",
+        "pack_canon_hit_any_perm",
+        "pack_vtrac_index_hit",
+        "pack_hit_any_inclusive",
+        "filler_hit_any_inclusive",
+        "pack_only_hit_any_inclusive",
+        "filler_only_hit_any_inclusive",
+        "pack_and_filler_hit_any_inclusive",
     ]
 
     rows_out: List[Dict[str, str]] = []
@@ -301,13 +315,51 @@ def main() -> None:
                     combos = [_normalize_pick3_literal(c) for c in (card.get("combos") or [])]
                     combos = [c for c in combos if c]
                     combos_set = set(combos)
+                    canonicals_any_perm = {c for c in (_canon(x) for x in combos_set) if c}
                     boxed = _boxed_canonicals(combos)
                     indices = _pack_vtrac_indices(combos)
+
+                    vtrac_pack = card.get("vtrac_pack") if isinstance(card, dict) else None
+                    pack_index: Optional[int] = None
+                    pack_raw = []
+                    if isinstance(vtrac_pack, dict):
+                        idx = vtrac_pack.get("index")
+                        if isinstance(idx, int):
+                            pack_index = int(idx)
+                        pack_raw = vtrac_pack.get("pack_combos") or []
+                    pack_norm = [_normalize_pick3_literal(c) for c in pack_raw] if isinstance(pack_raw, list) else []
+                    pack_norm = [c for c in pack_norm if c]
+                    pack_set = set(pack_norm) & combos_set
+                    filler_set = combos_set - pack_set
+
+                    pack_canonicals = {c for c in (_canon(x) for x in pack_set) if c}
+                    pack_indices = _pack_vtrac_indices(list(pack_set))
+                    filler_canonicals = {c for c in (_canon(x) for x in filler_set) if c}
+                    filler_indices = _pack_vtrac_indices(list(filler_set))
 
                     straight_hit = bool(w and w in combos_set)
                     box_hit = bool(wcanon and wcanon in boxed)
                     hit_any = bool((straight_hit or box_hit) and not missing)
+                    canon_hit_any_perm = bool(wcanon and wcanon in canonicals_any_perm and not missing)
                     vtrac_hit = bool(wvt is not None and wvt in indices)
+                    hit_any_box = bool((straight_hit or canon_hit_any_perm) and not missing)
+                    hit_any_inclusive = bool((straight_hit or canon_hit_any_perm or vtrac_hit) and not missing)
+
+                    pack_straight_hit = bool(w and w in pack_set)
+                    pack_perm_hit = bool(wcanon and wcanon in pack_canonicals and not missing)
+                    pack_vtrac_hit = bool(wvt is not None and wvt in pack_indices)
+                    pack_hit_any_inclusive = bool((pack_straight_hit or pack_perm_hit or pack_vtrac_hit) and not missing)
+
+                    filler_straight_hit = bool(w and w in filler_set)
+                    filler_perm_hit = bool(wcanon and wcanon in filler_canonicals and not missing)
+                    filler_vtrac_hit = bool(wvt is not None and wvt in filler_indices)
+                    filler_hit_any_inclusive = bool(
+                        (filler_straight_hit or filler_perm_hit or filler_vtrac_hit) and not missing
+                    )
+
+                    pack_only_hit_any_inclusive = bool(pack_hit_any_inclusive and not filler_hit_any_inclusive)
+                    filler_only_hit_any_inclusive = bool(filler_hit_any_inclusive and not pack_hit_any_inclusive)
+                    pack_and_filler_hit_any_inclusive = bool(pack_hit_any_inclusive and filler_hit_any_inclusive)
 
                     rows_out.append(
                         {
@@ -326,10 +378,24 @@ def main() -> None:
                             "combos_count": str(len(combos)),
                             "boxed_canonicals_count": str(len(boxed)),
                             "hit_any": "1" if hit_any else "0",
+                            "hit_any_box": "1" if hit_any_box else "0",
+                            "hit_any_inclusive": "1" if hit_any_inclusive else "0",
                             "straight_hit": "1" if straight_hit else "0",
                             "box_hit": "1" if box_hit else "0",
+                            "canon_hit_any_perm": "1" if canon_hit_any_perm else "0",
                             "vtrac_index_hit": "1" if (vtrac_hit and not missing) else "0",
                             "vtrac_index_hit_only": "1" if (vtrac_hit and not hit_any and not missing) else "0",
+                            "vtrac_pack_index": str(pack_index) if pack_index is not None else "",
+                            "vtrac_pack_size": str(len(pack_set)),
+                            "filler_size": str(len(filler_set)),
+                            "pack_straight_hit": "1" if pack_straight_hit else "0",
+                            "pack_canon_hit_any_perm": "1" if pack_perm_hit else "0",
+                            "pack_vtrac_index_hit": "1" if (pack_vtrac_hit and not missing) else "0",
+                            "pack_hit_any_inclusive": "1" if pack_hit_any_inclusive else "0",
+                            "filler_hit_any_inclusive": "1" if filler_hit_any_inclusive else "0",
+                            "pack_only_hit_any_inclusive": "1" if pack_only_hit_any_inclusive else "0",
+                            "filler_only_hit_any_inclusive": "1" if filler_only_hit_any_inclusive else "0",
+                            "pack_and_filler_hit_any_inclusive": "1" if pack_and_filler_hit_any_inclusive else "0",
                         }
                     )
 
@@ -344,6 +410,8 @@ def main() -> None:
     # Minimal Markdown summary (top-line counts).
     total = len(rows_out)
     hits = sum(1 for r in rows_out if r.get("hit_any") == "1")
+    hits_box = sum(1 for r in rows_out if r.get("hit_any_box") == "1")
+    hits_inclusive = sum(1 for r in rows_out if r.get("hit_any_inclusive") == "1")
     lines = [
         f"# Play Card Grade — {args.date}",
         "",
@@ -351,6 +419,8 @@ def main() -> None:
         f"- results_file: `{_safe_rel(results_file)}`",
         f"- rows: `{total}`",
         f"- hit_any: `{hits}`",
+        f"- hit_any_box: `{hits_box}`",
+        f"- hit_any_inclusive: `{hits_inclusive}`",
         "",
         f"- CSV: `{_safe_rel(out_csv)}`",
     ]

@@ -515,3 +515,233 @@ Outputs (v0 windows):
 
 Key result:
 - Badge pressure as a **tie-breaker** can help in some windows and hurt in others. That’s the desired outcome of v0.2: we can now measure the trade-off explicitly and decide whether pressure becomes a default ranking lever or remains a research-only knob.
+
+---
+
+## 2026‑01‑22 — Play Card: “perm-hit” metric + bounded conditional conversion (implemented + measured)
+
+Motivation:
+- We repeatedly saw “lane is present, but B12 doesn’t convert” frustration.
+- The missing measurement was: *did we at least include the winner’s canonical (any permutation), even when we didn’t include the exact straight?*
+- The missing selection lever was: *a bounded (1–2 lines at B12) conversion policy that can compete with box-first without the blunt always-on reservation of `conversion_box_first`.*
+
+### A) New grading metric: `canon_hit_any_perm` (“perm-hit”)
+
+Change:
+- Added `canon_hit_any_perm` to Play Card grading output (reported as `perm_hit` in rollups).
+- Rollups now display: `hit_any` (straight), `perm_hit` (canonical present), `closure_hit` (box hit), `vtrac_hit`.
+
+Code:
+- `scripts/tools/grade_play_card.py`
+- `scripts/tools/rollup_play_card_corpus.py`
+
+Baseline rollup (updated columns):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only.md`
+
+### B) New Play Card strategies: conditional conversion (lenient/strict) + lane presets (A/B)
+
+Change:
+- Added 4 strategies (emitted directly as strategies, not CLI flags):
+  - `conversion_box_first_conditional_lenient_presetA`
+  - `conversion_box_first_conditional_lenient_presetB`
+  - `conversion_box_first_conditional_strict_presetA`
+  - `conversion_box_first_conditional_strict_presetB`
+- Presets:
+  - `presetA`: existing “lane methods”
+  - `presetB`: `presetA` + `{R-perm-4, PackA_vt8, PackB_mirror3rd}` (conversion fuel ablation)
+- Bounded conversion reservation (only from Candidate Universe; no new combos invented):
+  - lenient: `B12=1`, `B24=2`, `B36=4`
+  - strict: `B12=2`, `B24=4`, `B36=6`
+
+Code:
+- `scripts/tools/create_play_card.py`
+
+Diagnostics:
+- Each conditional card records a `conversion_gate` snapshot (top convergence stats + closure strength).
+
+### C) Measurement (3 windows, `tool_only`, experiment-tagged)
+
+Artifacts:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__condconv_v2.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__condconv_v3.md`
+
+Key results:
+- `condconv_v2`: gate never fired (closure test too strict), so conditional strategies collapsed to `convergence_box_first`.
+- `condconv_v3`: gate fires in most environments and produces measurable deltas:
+  - B12 (overall): `conversion_box_first_conditional_lenient_*` matched `play_box_first` on `hit_any`, while materially increasing `perm_hit` (lane visibility).
+  - Strict variants tended to regress `hit_any` at B12 and are not recommended as defaults.
+
+Current posture (v0.2):
+- Keep these conditional-conversion strategies as experiment-tagged levers (default-off).
+- Portfolio/default selection is now budget-split (see `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`):
+  - B12: `analysis_prefix`
+  - B24/B36: `vtrac_pack_boxed_first`
+
+---
+
+## 2026‑01‑22 — “0% hit” incident: clarify semantics + add windowed grading (aligned to training’s 2–5 draws)
+
+Observed issue:
+- A “0% hit rate” report triggered a crisis review.
+
+Root cause:
+- The “0%” was **not** Play Card hit rate — it was the `condconv_v2` **conversion gate fire rate**, which was 0% because the gate was too strict.
+- Separately, training docs explicitly frame success as “hit within 2–5 draws”, so same-draw grading alone can look “dead” even when the lane is present.
+
+### A) Add two explicit “hit-any” semantics (strict vs box vs inclusive)
+
+Change:
+- Extend Play Card grading to compute two additional derived hit metrics:
+  - `hit_any_box`: (`straight_hit` OR `canon_hit_any_perm`)
+  - `hit_any_inclusive`: (`straight_hit` OR `canon_hit_any_perm` OR `vtrac_index_hit`)
+- Keep existing `hit_any` as “strict”: (`straight_hit` OR `closure_hit`).
+
+Code:
+- `scripts/tools/grade_play_card.py`
+- `scripts/tools/rollup_play_card_corpus.py`
+
+Why it matters:
+- This makes the “lane present vs closure purchased vs straight hit” distinction explicit, so we stop talking past each other when reviewing rollups.
+
+### B) New harness: Play Card windowed grading (N draws)
+
+Change:
+- Add a windowed grader to evaluate: “if we replayed the Play Card across the next N draw-slots (Midday/Evening), did it hit?”
+- Default is `N=5` to match training’s “2–5 draws” framing.
+
+Code:
+- `scripts/tools/grade_play_card_windowed.py`
+
+Outputs (examples):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__PLAY_CARD_WINDOWED_GRADE__tool_only__condconv_v3__N5.md` (+ `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__PLAY_CARD_WINDOWED_GRADE__tool_only__condconv_v3__N5.md` (+ `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__PLAY_CARD_WINDOWED_GRADE__tool_only__condconv_v3__N5.md` (+ `.csv`)
+
+Key observation:
+- Windowed `hit_any_inclusive` is **~0.66–0.80** in the gold windows, which is far closer to the training expectation (high hit probability within 5 draws) than same-draw `hit_any`.
+- Windowed strict/box conversion still lags — reinforcing that the tools are often right about the **lane**, and the remaining lift is in **bounded conversion policies** that don’t explode cost.
+
+### C) Retune conditional conversion gate (condconv_v4) + decouple input CU from output tag
+
+Change:
+- Add `--input-experiment-tag` to `create_play_card.py` so selection-only experiments can read baseline Candidate Universe while writing tagged Play Cards.
+- Retune the conditional conversion gate to **not** be “always-on” (lower fire rate vs `condconv_v3`).
+
+Code:
+- `scripts/tools/create_play_card.py`
+
+Artifacts:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__condconv_v4.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__condconv_v4__N5__2025-12-30_to_2026-01-04.md` (and other windows)
+
+Conclusion:
+- `condconv_v4` successfully lowers gate fire rate, but does **not** consistently improve conversion metrics over `condconv_v3` yet.
+- Next likely lever (training-aligned): add a Play Card strategy that explicitly targets the “8 VTRAC combinations” set (v‑code 8‑pack) as a bounded conversion pack, rather than relying on closure-first heuristics.
+
+---
+
+## 2026‑01‑22 — Play Card: VTRAC boxed-member pack strategies (vtracpack_v1) (implemented + measured)
+
+Motivation:
+- Training repeatedly frames a “small boxed VTRAC pack” as a high-leverage conversion move (usually 8 for singles; fewer for doubles/triples-like groups).
+- We want to convert a lane/index signal into the **exact boxed-member pack** (not the full straight closure) without touching analyzers.
+
+### A) New Play Card strategies: `vtrac_pack_boxed_only` + `vtrac_pack_boxed_first`
+
+Change:
+- Added two experiment-only strategies:
+  - `vtrac_pack_boxed_only`: play the chosen boxed-member pack, then fill remaining lines from score-ranked candidates.
+  - `vtrac_pack_boxed_first`: play the chosen boxed-member pack, then fill remaining lines by convergence ranking.
+
+How it works (key semantics):
+- Chooses exactly one VTRAC numeric index (“lane”) by aggregating Candidate Universe evidence across top-ranked candidates (union support across methods/variants + strength).
+- Emits the boxed-member pack from `modules.vtrac_reference.VTRAC_DISPLAY`:
+  - This is the **boxed-member pack** (≤8 lines; often fewer for doubles), not the straight-line closure returned by `get_index_set`.
+- Each Play Card stores a `vtrac_pack` diagnostics blob (chosen index + pack combos + chooser snapshot), and `play_card.md` prints it for audit.
+
+Code:
+- `scripts/tools/create_play_card.py`
+
+### B) Measurement (3 windows, `tool_only`, `--input-experiment-tag -`)
+
+Artifacts:
+- Same-day rollup:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__vtracpack_v1.md` (+ `.csv`)
+- Windowed rollups (N=5):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-06-21_to_2025-06-23.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-12-30_to_2026-01-04.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2026-01-05_to_2026-01-09.md`
+
+Key results (windowed N=5; “hit_any_inclusive”):
+- `vtrac_pack_boxed_first` materially improves conversion at higher budgets without exploding cost:
+  - 2025‑12‑30→2026‑01‑04: `B36` inclusive ≈ `0.8810` (vs `analysis_prefix` ≈ `0.7976`)
+  - 2025‑06‑21→2025‑06‑23: `B36` inclusive ≈ `0.8810` (vs `analysis_prefix` ≈ `0.6667`)
+- At `B12`, inclusive rates are comparable to `analysis_prefix`, but `hit_any_box` improves in both post-results windows (more canonical “lane present” capture).
+
+Interpretation:
+- This is the first selection-layer change that directly implements the training’s “boxed-member pack” move and shows a strong, repeatable lift in windowed outcomes (especially B24/B36).
+
+### C) Winners-linked study queues (post-results windows only)
+
+Script:
+- `scripts/tools/build_play_card_vtrac_pack_study_queue.py`
+
+Outputs:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__VTRAC_PACK_STUDY_QUEUE__vtracpack_v1__N5.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__VTRAC_PACK_STUDY_QUEUE__vtracpack_v1__N5.md`
+
+Next iteration lever (if needed):
+- If we want the pack to be a **purer** “one-lane bet” (less influenced by non-lane fill lines), consider a stricter `vtrac_pack_*` variant that constrains filler to the chosen index (or logs “hit came from pack vs hit came from filler” as a separate diagnostic metric).
+
+### D) Pack vs filler diagnostics (implemented; reduces “did we win via filler luck?” ambiguity)
+
+Change:
+- Extend Play Card grading + windowed grading to report whether the *pack subset* itself hit vs the *filler subset*.
+- This is emitted as additional columns in the grade CSVs and surfaced in the rollups.
+
+Code:
+- `scripts/tools/grade_play_card.py` (adds `pack_hit_any_inclusive`, `pack_only_hit_any_inclusive`, etc.)
+- `scripts/tools/rollup_play_card_corpus.py` (adds rollup columns: `pack_hit`, `pack_only`, `filler_hit`, `pack_idx_hit`, `avg_pack`)
+- `scripts/tools/grade_play_card_windowed.py` (adds windowed rollup columns: `pack_hit`, `pack_only`, `filler_hit`)
+
+Where to look:
+- Same-day: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__vtracpack_v1.md`
+- Windowed N=5 (per window):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-06-21_to_2025-06-23.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-12-30_to_2026-01-04.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2026-01-05_to_2026-01-09.md`
+
+Interpretation (quick):
+- `pack_hit`: pack hits at least once (within the grading horizon).
+- `pack_only`: pack hits in cases where filler does **not** (unique pack contribution).
+
+---
+
+## 2026‑01‑22 — VTRAC pack chooser ablation: lane‑methods‑only (vtracpack_v2) (implemented + measured)
+
+Motivation:
+- We observed that the v1 index chooser aggregates evidence across *all* supporting methods, which can bias the chosen lane toward high-volume “non-lane” sources.
+- Hypothesis: choosing the VTRAC index using *lane-method-only evidence* increases `pack_hit` / `pack_only` and makes the pack more “real”, even under tight budgets.
+
+Change:
+- Add two ablation strategies that select the index using only the lane-method presetB set (`vtrac_top/hot_zones/aux overdue/mirror closure + {R-perm-4, PackA_vt8, PackB_mirror3rd}`):
+  - `vtrac_pack_boxed_first_laneonly_presetB`
+  - `vtrac_pack_boxed_only_laneonly_presetB`
+
+Code:
+- `scripts/tools/create_play_card.py`
+
+Artifacts:
+- Same-day rollup: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup__tool_only__vtracpack_v2.md`
+- Windowed rollups (N=5):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v2__N5__2025-06-21_to_2025-06-23.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v2__N5__2025-12-30_to_2026-01-04.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v2__N5__2026-01-05_to_2026-01-09.md`
+
+Key findings:
+- Lane-only chooser increases `pack_hit` / `pack_only` in some windows (the pack becomes more directly responsible for hits),
+  but it does **not** improve `hit_any_inclusive_window` consistently; in the 2025‑12‑30→2026‑01‑04 window it regresses B12/B24.
+
+Decision (v0.2 posture):
+- Keep lane-only chooser as a **research knob** for study queues / diagnostics.
+- Continue to treat `vtrac_pack_boxed_first` (v1 chooser) as the leading B24/B36 conversion-friendly policy.

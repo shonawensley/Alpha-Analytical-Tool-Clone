@@ -23,6 +23,8 @@ Notes
   - convergence_box_first: prefers full canonical closures, but ranks candidates by
     cross-method + cross-variant convergence (support-count first).
   - conversion_box_first: box-first plus a small lane-closure slot (aimed at converting rail hits into straight hits).
+  - vtrac_pack_boxed_*: chooses a single VTRAC numeric index “lane” and emits its boxed-member pack
+    (from modules.vtrac_reference.VTRAC_DISPLAY) as a bounded conversion pack.
 """
 
 from __future__ import annotations
@@ -116,6 +118,38 @@ def _write_md(path: Path, payload: Dict[str, Any]) -> None:
             if not isinstance(boxed, list):
                 boxed = []
             out.append(f"#### {budget_id} ({len(combos)} lines; boxed canonicals: {len(boxed)})")
+            gate = card.get("conversion_gate")
+            if isinstance(gate, dict):
+                fired = bool(gate.get("fired"))
+                preset = str(gate.get("preset") or "")
+                lane_preset = str(gate.get("lane_preset") or "")
+                conv_budget = card.get("conversion_budget")
+                closure_lines = card.get("closure_lines")
+                conversion_lines = card.get("conversion_lines")
+                fill_lines = card.get("fill_lines")
+                out.append(
+                    f"- Conversion gate: `{'ON' if fired else 'OFF'}` preset=`{preset}` lane_preset=`{lane_preset}` reserved=`{conv_budget}`"
+                )
+                out.append(f"- Lines: closure=`{closure_lines}` conversion=`{conversion_lines}` fill=`{fill_lines}`")
+                top_combo = str(gate.get("top_combo") or "")
+                top = gate.get("top_convergence") if isinstance(gate.get("top_convergence"), dict) else {}
+                closure = gate.get("closure_strength") if isinstance(gate.get("closure_strength"), dict) else {}
+                if top_combo:
+                    out.append(
+                        "- Gate snapshot: "
+                        + f"top_combo=`{top_combo}` "
+                        + f"methods={top.get('methods_count')} "
+                        + f"variants_nn={top.get('variants_non_unknown')} "
+                        + f"pack_refs={top.get('pack_refs_count')} "
+                        + f"closures_full={closure.get('closures_added_full_budget')}"
+                    )
+            vtrac_pack = card.get("vtrac_pack")
+            if isinstance(vtrac_pack, dict):
+                idx = vtrac_pack.get("index")
+                pack = vtrac_pack.get("pack_combos") or []
+                if not isinstance(pack, list):
+                    pack = []
+                out.append(f"- VTRAC pack: index=`{idx}` size=`{len(pack)}` pack=`{' '.join(str(x) for x in pack)}`")
             if boxed:
                 out.append(f"- Boxed canonicals: `{', '.join(str(b) for b in boxed)}`")
             if combos:
@@ -535,6 +569,287 @@ def _card_conversion_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int)
     }
 
 
+def _lane_methods_for_preset(*, preset: str) -> set[str]:
+    base = {
+        "vtrac_enhanced_top",
+        "vtrac_top",
+        "hot_zones_top",
+        "hot_zones_index_closure",
+        "aux_vtrac_index_overdue",
+        "mirror_pair_closure",
+        "mirror_pair_closure_due_doubles",
+    }
+    if preset == "presetB":
+        base.update({"R-perm-4", "PackA_vt8", "PackB_mirror3rd"})
+    return base
+
+
+def _should_fire_conversion_gate(
+    *,
+    top_convergence: Tuple[int, int, int, int, float],
+    closures_added_full_budget: int,
+    closure_fill_ratio_full_budget: float,
+    gate_preset: str,
+) -> bool:
+    m, v_nn, _v_all, p, _s = top_convergence
+    # In practice, boxable closures are almost always available to fill the full budget.
+    # The more meaningful discriminator is *how expensive* those closures are:
+    # - closures_added_full_budget == 2 implies two 6-line closures (singles) consumed the budget
+    # - closures_added_full_budget == 4 implies four 3-line closures (doubles) consumed the budget
+    # When closures are expensive, reserving a small conversion slot is more defensible.
+    expensive_closures = int(closures_added_full_budget) <= 3
+    if gate_preset == "strict":
+        strong = (m >= 5) and (v_nn >= 2) and (p >= 5)
+        closures_saturate_budget = closure_fill_ratio_full_budget >= 0.999
+        return bool(strong and expensive_closures and closures_saturate_budget)
+
+    # lenient
+    strong = (m >= 4) and (v_nn >= 2) and (p >= 4)
+    closures_saturate_budget = closure_fill_ratio_full_budget >= 0.999
+    return bool(strong and expensive_closures and closures_saturate_budget)
+
+
+def _reserved_conversion_budget(*, budget: int, gate_preset: str) -> int:
+    b = int(budget)
+    if b <= 0:
+        return 0
+    if gate_preset == "strict":
+        return max(0, min(6, b // 6))
+    # lenient
+    return max(0, min(6, b // 9))
+
+
+def _card_conversion_box_first_conditional(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    gate_preset: str,
+    lane_preset: str,
+) -> Dict[str, Any]:
+    """
+    Conditional conversion (experiment):
+    - Gate conversion on BOTH strong convergence evidence AND weak closure availability.
+    - When the gate is OFF: behave exactly like convergence_box_first.
+    - When the gate is ON: reserve a small conversion slot and fill it with lane-supported candidates.
+    """
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    top_row = ranked_conv[0] if ranked_conv else {}
+    top_combo = _normalize_pick3_literal(top_row.get("combo") or "") if isinstance(top_row, dict) else ""
+    top_stats = _convergence_stats(top_row) if isinstance(top_row, dict) else (0, 0, 0, 0, 0.0)
+
+    # canonical -> combos in ranked list
+    canon_to_combos: Dict[str, set[str]] = {}
+    canon_best: Dict[str, Tuple[int, int, int, int, float]] = {}
+    for row in ranked:
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        canon = _canon(combo)
+        if not canon:
+            continue
+        canon_to_combos.setdefault(canon, set()).add(combo)
+        canon_best[canon] = max(canon_best.get(canon, (0, 0, 0, 0, float("-inf"))), _convergence_stats(row))
+
+    # Only treat canonicals as "boxable" if the candidate set contains the full perm closure.
+    boxable: List[Tuple[str, Tuple[int, int, int, int, float], List[str]]] = []
+    for canon, seen in canon_to_combos.items():
+        perms = sorted(set(_unique_perms(canon)))
+        if perms and set(perms).issubset(seen):
+            boxable.append((canon, canon_best.get(canon, (0, 0, 0, 0, 0.0)), perms))
+    boxable.sort(key=lambda t: (-t[1][0], -t[1][1], -t[1][2], -t[1][3], -t[1][4], t[0]))
+
+    # How many closures could we buy if we spent the full budget on box-first?
+    closures_added_full = 0
+    selected_full: set[str] = set()
+    for _canon_id, _stats, perms in boxable:
+        if len(selected_full) >= int(budget):
+            break
+        needed = [c for c in perms if c not in selected_full]
+        if not needed:
+            continue
+        if len(selected_full) + len(needed) > int(budget):
+            continue
+        selected_full.update(needed)
+        closures_added_full += 1
+
+    closure_lines_full_budget = len(selected_full)
+    closure_fill_ratio_full_budget = (closure_lines_full_budget / float(budget)) if int(budget) else 0.0
+
+    gate_fired = _should_fire_conversion_gate(
+        top_convergence=top_stats,
+        closures_added_full_budget=closures_added_full,
+        closure_fill_ratio_full_budget=closure_fill_ratio_full_budget,
+        gate_preset=gate_preset,
+    )
+
+    if not gate_fired:
+        selected_gate_off: List[str] = []
+        selected_set_gate_off: set[str] = set()
+
+        closure_lines_gate_off = 0
+        for _canon_id, _stats, perms in boxable:
+            if len(selected_gate_off) >= int(budget):
+                break
+            needed = [c for c in perms if c not in selected_set_gate_off]
+            if not needed:
+                continue
+            if len(selected_gate_off) + len(needed) > int(budget):
+                continue
+            selected_gate_off.extend(needed)
+            selected_set_gate_off.update(needed)
+            closure_lines_gate_off += len(needed)
+
+        fill_lines_gate_off = 0
+        for row in ranked_conv:
+            if len(selected_gate_off) >= int(budget):
+                break
+            combo = _normalize_pick3_literal(row.get("combo") or "")
+            if not combo or combo in selected_set_gate_off:
+                continue
+            selected_gate_off.append(combo)
+            selected_set_gate_off.add(combo)
+            fill_lines_gate_off += 1
+
+        selected_gate_off = selected_gate_off[: int(budget)]
+        boxed_gate_off = _boxed_canonicals(selected_gate_off)
+        card = {
+            "budget": int(budget),
+            "combos": selected_gate_off,
+            "combos_count": len(selected_gate_off),
+            "cost_units": len(selected_gate_off),
+            "boxed_canonicals": boxed_gate_off,
+            "boxed_canonicals_count": len(boxed_gate_off),
+            "closure_lines": int(closure_lines_gate_off),
+            "conversion_lines": 0,
+            "fill_lines": int(fill_lines_gate_off),
+            "conversion_budget": 0,
+            "conversion_methods": sorted(_lane_methods_for_preset(preset=lane_preset)),
+        }
+        card["conversion_gate"] = {
+            "fired": False,
+            "preset": gate_preset,
+            "lane_preset": lane_preset,
+            "top_combo": top_combo,
+            "top_convergence": {
+                "methods_count": int(top_stats[0]),
+                "variants_non_unknown": int(top_stats[1]),
+                "variants_total": int(top_stats[2]),
+                "pack_refs_count": int(top_stats[3]),
+                "base_score": float(top_stats[4]),
+            },
+            "closure_strength": {
+                "closures_added_full_budget": int(closures_added_full),
+                "closure_lines_full_budget": int(closure_lines_full_budget),
+                "closure_fill_ratio_full_budget": float(closure_fill_ratio_full_budget),
+            },
+        }
+        return card
+
+    conversion_budget = _reserved_conversion_budget(budget=budget, gate_preset=gate_preset)
+    main_budget = max(0, int(budget) - int(conversion_budget))
+    lane_methods = _lane_methods_for_preset(preset=lane_preset)
+
+    selected: List[str] = []
+    selected_set: set[str] = set()
+
+    closure_lines = 0
+    closures_added_main = 0
+    for _canon_id, _stats, perms in boxable:
+        if len(selected) >= main_budget:
+            break
+        needed = [c for c in perms if c not in selected_set]
+        if not needed:
+            continue
+        if len(selected) + len(needed) > main_budget:
+            continue
+        selected.extend(needed)
+        selected_set.update(needed)
+        closure_lines += len(needed)
+        closures_added_main += 1
+
+    conversion_lines = 0
+    if conversion_budget:
+        lane_rows: List[Dict[str, Any]] = []
+        for r in ranked:
+            methods = r.get("support_methods") or []
+            if not isinstance(methods, list):
+                methods = []
+            if any((str(m) in lane_methods) for m in methods):
+                lane_rows.append(r)
+        lane_rows.sort(key=_convergence_sort_key)
+
+        used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+        for row in lane_rows:
+            if conversion_lines >= conversion_budget or len(selected) >= budget:
+                break
+            combo = _normalize_pick3_literal(row.get("combo") or "")
+            if not combo or combo in selected_set:
+                continue
+            canon = _canon(combo)
+            if canon and canon in used_canon and conversion_lines < max(1, conversion_budget // 2):
+                continue
+            selected.append(combo)
+            selected_set.add(combo)
+            if canon:
+                used_canon.add(canon)
+            conversion_lines += 1
+
+        # Top-up if we couldn't diversify canonicals enough.
+        for row in lane_rows:
+            if conversion_lines >= conversion_budget or len(selected) >= budget:
+                break
+            combo = _normalize_pick3_literal(row.get("combo") or "")
+            if not combo or combo in selected_set:
+                continue
+            selected.append(combo)
+            selected_set.add(combo)
+            conversion_lines += 1
+
+    fill_lines = 0
+    for row in ranked_conv:
+        if len(selected) >= budget:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        fill_lines += 1
+
+    selected = selected[:budget]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(budget),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "conversion_budget": int(conversion_budget),
+        "conversion_methods": sorted(lane_methods),
+        "closure_lines": int(closure_lines),
+        "conversion_lines": int(conversion_lines),
+        "fill_lines": int(fill_lines),
+        "conversion_gate": {
+            "fired": True,
+            "preset": gate_preset,
+            "lane_preset": lane_preset,
+            "top_combo": top_combo,
+            "top_convergence": {
+                "methods_count": int(top_stats[0]),
+                "variants_non_unknown": int(top_stats[1]),
+                "variants_total": int(top_stats[2]),
+                "pack_refs_count": int(top_stats[3]),
+                "base_score": float(top_stats[4]),
+            },
+            "closure_strength": {
+                "closures_added_full_budget": int(closures_added_full),
+                "closure_lines_full_budget": int(closure_lines_full_budget),
+                "closure_fill_ratio_full_budget": float(closure_fill_ratio_full_budget),
+                "closures_added_main_budget": int(closures_added_main),
+            },
+        },
+    }
+
+
 def _convergence_stats(row: Dict[str, Any]) -> Tuple[int, int, int, int, float]:
     """
     Convergence priority for discovery mode (support-count based).
@@ -562,6 +877,275 @@ def _convergence_sort_key(row: Dict[str, Any]) -> Tuple[int, int, int, int, floa
     m, v_nn, v_all, p, s = _convergence_stats(row)
     combo = _normalize_pick3_literal(row.get("combo") or "")
     return (-m, -v_nn, -v_all, -p, -s, combo)
+
+
+def _vtrac_display_pack(*, index: int) -> List[str]:
+    """
+    Return the boxed-member pack for a VTRAC numeric index using `modules.vtrac_reference.VTRAC_DISPLAY`.
+
+    This is the "boxed-member pack" (often 8 for singles; fewer for doubles/triples-like indices),
+    not the full straight-line closure returned by `get_index_set`.
+    """
+    import modules.vtrac_reference as vr
+
+    want = int(index)
+    for row in vr.VTRAC_DISPLAY:
+        try:
+            if int(row.get("Index")) != want:
+                continue
+        except Exception:
+            continue
+        combos: List[str] = []
+        seen: set[str] = set()
+        for key in ("Singles", "Doubles"):
+            raw = str(row.get(key) or "").strip()
+            if not raw:
+                continue
+            for token in raw.split():
+                c = _normalize_pick3_literal(token)
+                if not c or c in seen:
+                    continue
+                combos.append(c)
+                seen.add(c)
+        return combos
+    return []
+
+
+def _choose_top_vtrac_index(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    scan_limit: int = 350,
+    allowed_methods: Optional[set[str]] = None,
+) -> Tuple[Optional[int], Dict[str, Any]]:
+    """
+    Choose a single VTRAC numeric index ("lane") based on Candidate Universe evidence.
+
+    Deterministic: aggregates convergence evidence for combos that map to the same index,
+    then selects the best index by union support (methods/variants) + strength.
+    """
+    import modules.vtrac_reference as vr
+
+    evidence: Dict[int, Dict[str, Any]] = {}
+    for row in list(ranked)[: int(scan_limit)]:
+        if not isinstance(row, dict):
+            continue
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo:
+            continue
+        idx = vr.get_vtrac_index(combo)
+        if idx is None:
+            continue
+
+        methods = row.get("support_methods") or []
+        methods_norm = [str(m) for m in methods] if isinstance(methods, list) else []
+        if allowed_methods is not None and not any(m in allowed_methods for m in methods_norm):
+            continue
+
+        ev = evidence.setdefault(
+            int(idx),
+            {
+                "rows_count": 0,
+                "score_total": 0.0,
+                "packs_total": 0,
+                "methods": set(),
+                "variants": set(),
+                "best_combo": "",
+                "best_score": float("-inf"),
+                "best_convergence": (0, 0, 0, 0, float("-inf")),
+            },
+        )
+
+        ev["rows_count"] += 1
+        ev["score_total"] += float(row.get("score") or 0.0)
+        ev["packs_total"] += int(row.get("support_packs_count") or 0)
+        ev["best_score"] = max(ev["best_score"], float(row.get("score") or 0.0))
+
+        if methods_norm:
+            ev["methods"].update(methods_norm)
+        variants = row.get("support_variants") or []
+        if isinstance(variants, list):
+            ev["variants"].update(str(v or "Unknown") for v in variants)
+
+        conv = _convergence_stats(row)
+        if conv > ev["best_convergence"]:
+            ev["best_convergence"] = conv
+            ev["best_combo"] = combo
+
+    scored: List[Dict[str, Any]] = []
+    for idx, ev in evidence.items():
+        methods_count = len(ev["methods"])
+        variants_set = set(ev["variants"])
+        variants_non_unknown = len({v for v in variants_set if v != "Unknown"})
+        variants_total = len(variants_set)
+        bm, bv_nn, bv_all, bp, bs = ev["best_convergence"]
+        scored.append(
+            {
+                "index": int(idx),
+                "rows_count": int(ev["rows_count"]),
+                "methods_count": int(methods_count),
+                "variants_non_unknown": int(variants_non_unknown),
+                "variants_total": int(variants_total),
+                "packs_total": int(ev["packs_total"]),
+                "score_total": round(float(ev["score_total"]), 4),
+                "best_combo": str(ev["best_combo"] or ""),
+                "best_score": round(float(ev["best_score"]), 4),
+                "best_convergence": {
+                    "methods_count": int(bm),
+                    "variants_non_unknown": int(bv_nn),
+                    "variants_total": int(bv_all),
+                    "pack_refs_count": int(bp),
+                    "base_score": float(bs),
+                },
+            }
+        )
+
+    scored.sort(
+        key=lambda r: (
+            -int(r["methods_count"]),
+            -int(r["variants_non_unknown"]),
+            -int(r["variants_total"]),
+            -int(r["packs_total"]),
+            -float(r["score_total"]),
+            int(r["index"]),
+        )
+    )
+
+    chosen_index: Optional[int] = scored[0]["index"] if scored else None
+    snapshot = {
+        "scan_limit": int(scan_limit),
+        "allowed_methods": sorted(list(allowed_methods)) if allowed_methods else [],
+        "candidates_found": int(len(scored)),
+        "chosen_index": int(chosen_index) if chosen_index is not None else None,
+        "top5": scored[:5],
+    }
+    return chosen_index, snapshot
+
+
+def _card_vtrac_pack_boxed_only(
+    *, ranked: Sequence[Dict[str, Any]], budget: int, allowed_methods: Optional[set[str]] = None
+) -> Dict[str, Any]:
+    """
+    Play the single best boxed-member VTRAC pack, then fill remaining lines from score-ranked candidates.
+
+    This avoids expensive full-closure spending, and targets "lane present → convert" behavior.
+    """
+    chosen_index, chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=allowed_methods)
+    if chosen_index is None and allowed_methods is not None:
+        fallback_index, fallback_chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=None)
+        chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
+        chosen_index = fallback_index
+    pack: List[str] = _vtrac_display_pack(index=int(chosen_index)) if chosen_index is not None else []
+
+    if chosen_index is None or not pack:
+        card = _card_from_ranked(ranked=ranked, budget=budget)
+        card["vtrac_pack"] = {
+            "index": int(chosen_index) if chosen_index is not None else None,
+            "pack_combos": pack,
+            "chooser": chooser,
+            "fallback": "analysis_prefix",
+        }
+        return card
+
+    selected: List[str] = list(pack)
+    selected_set: set[str] = set(selected)
+
+    for row in ranked:
+        if len(selected) >= int(budget):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[: int(budget)]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(budget),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(chosen_index),
+            "pack_combos": list(pack),
+            "chooser": chooser,
+        },
+    }
+
+
+def _card_vtrac_pack_boxed_first(
+    *, ranked: Sequence[Dict[str, Any]], budget: int, allowed_methods: Optional[set[str]] = None
+) -> Dict[str, Any]:
+    """
+    Play the single best boxed-member VTRAC pack, then fill remaining lines by convergence ranking.
+    """
+    chosen_index, chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=allowed_methods)
+    if chosen_index is None and allowed_methods is not None:
+        fallback_index, fallback_chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=None)
+        chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
+        chosen_index = fallback_index
+    pack: List[str] = _vtrac_display_pack(index=int(chosen_index)) if chosen_index is not None else []
+
+    if chosen_index is None or not pack:
+        card = _card_convergence_box_first(ranked=ranked, budget=budget)
+        card["vtrac_pack"] = {
+            "index": int(chosen_index) if chosen_index is not None else None,
+            "pack_combos": pack,
+            "chooser": chooser,
+            "fallback": "convergence_box_first",
+        }
+        return card
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    selected: List[str] = list(pack)
+    selected_set: set[str] = set(selected)
+    used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+    prefer_unique = max(1, (int(budget) - len(selected)) // 2) if int(budget) > len(selected) else 0
+
+    added = 0
+    for row in ranked_conv:
+        if len(selected) >= int(budget):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+
+    # Top up if we were too strict about canonical diversity.
+    for row in ranked_conv:
+        if len(selected) >= int(budget):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[: int(budget)]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(budget),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(chosen_index),
+            "pack_combos": list(pack),
+            "chooser": chooser,
+        },
+    }
 
 
 def _card_convergence_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int) -> Dict[str, Any]:
@@ -648,6 +1232,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional experiment tag appended to input/output filenames (default: none).",
     )
+    ap.add_argument(
+        "--input-experiment-tag",
+        default="",
+        help="Optional experiment tag used ONLY for the input candidate_universe filename (default: same as --experiment-tag).",
+    )
     ap.add_argument("--states", nargs="*", help="Optional subset of states (default: auto-discover).")
     ap.add_argument(
         "--budgets",
@@ -697,19 +1286,27 @@ def main() -> None:
     profile = str(args.profile or "mixed").strip()
     out_suffix = "" if profile == "mixed" else f"__{profile}"
     exp_tag = _normalize_experiment_tag(args.experiment_tag)
-    tag_suffix = f"__{exp_tag}" if exp_tag else ""
+    input_tag_raw = str(args.input_experiment_tag or "").strip()
+    if input_tag_raw.lower() in {"-", "none", "null"}:
+        input_exp_tag = ""
+    elif input_tag_raw:
+        input_exp_tag = _normalize_experiment_tag(input_tag_raw)
+    else:
+        input_exp_tag = exp_tag
+    input_tag_suffix = f"__{input_exp_tag}" if input_exp_tag else ""
+    out_tag_suffix = f"__{exp_tag}" if exp_tag else ""
 
     for state_key in states:
         state_dir = day_dir / state_key
-        cu_path = state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
+        cu_path = state_dir / f"candidate_universe{out_suffix}{input_tag_suffix}.json"
         if not cu_path.exists():
             raise SystemExit(f"Missing candidate universe: {_safe_rel(cu_path)}")
 
-        out_path = state_dir / f"play_card{out_suffix}{tag_suffix}.json"
+        out_path = state_dir / f"play_card{out_suffix}{out_tag_suffix}.json"
         if out_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card (use --force): {_safe_rel(out_path)}")
 
-        md_path = state_dir / f"play_card{out_suffix}{tag_suffix}.md"
+        md_path = state_dir / f"play_card{out_suffix}{out_tag_suffix}.md"
         if args.write_md and md_path.exists() and not args.force:
             raise SystemExit(f"Refusing to overwrite existing play card markdown (use --force): {_safe_rel(md_path)}")
 
@@ -741,12 +1338,41 @@ def main() -> None:
             "analysis_prefix": {},
             "convergence_box_first": {},
             "conversion_box_first": {},
+            "vtrac_pack_boxed_only": {},
+            "vtrac_pack_boxed_first": {},
+            "vtrac_pack_boxed_only_laneonly_presetB": {},
+            "vtrac_pack_boxed_first_laneonly_presetB": {},
+            "conversion_box_first_conditional_lenient_presetA": {},
+            "conversion_box_first_conditional_lenient_presetB": {},
+            "conversion_box_first_conditional_strict_presetA": {},
+            "conversion_box_first_conditional_strict_presetB": {},
         }
+        lane_methods_presetB = _lane_methods_for_preset(preset="presetB")
         for b in budgets:
             strategy_cards["play_box_first"][f"B{b}"] = _card_box_first(ranked=ranked, budget=b)
             strategy_cards["analysis_prefix"][f"B{b}"] = _card_from_ranked(ranked=ranked, budget=b)
             strategy_cards["convergence_box_first"][f"B{b}"] = _card_convergence_box_first(ranked=ranked, budget=b)
             strategy_cards["conversion_box_first"][f"B{b}"] = _card_conversion_box_first(ranked=ranked, budget=b)
+            strategy_cards["vtrac_pack_boxed_only"][f"B{b}"] = _card_vtrac_pack_boxed_only(ranked=ranked, budget=b)
+            strategy_cards["vtrac_pack_boxed_first"][f"B{b}"] = _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+            strategy_cards["vtrac_pack_boxed_only_laneonly_presetB"][f"B{b}"] = _card_vtrac_pack_boxed_only(
+                ranked=ranked, budget=b, allowed_methods=lane_methods_presetB
+            )
+            strategy_cards["vtrac_pack_boxed_first_laneonly_presetB"][f"B{b}"] = _card_vtrac_pack_boxed_first(
+                ranked=ranked, budget=b, allowed_methods=lane_methods_presetB
+            )
+            strategy_cards["conversion_box_first_conditional_lenient_presetA"][f"B{b}"] = _card_conversion_box_first_conditional(
+                ranked=ranked, budget=b, gate_preset="lenient", lane_preset="presetA"
+            )
+            strategy_cards["conversion_box_first_conditional_lenient_presetB"][f"B{b}"] = _card_conversion_box_first_conditional(
+                ranked=ranked, budget=b, gate_preset="lenient", lane_preset="presetB"
+            )
+            strategy_cards["conversion_box_first_conditional_strict_presetA"][f"B{b}"] = _card_conversion_box_first_conditional(
+                ranked=ranked, budget=b, gate_preset="strict", lane_preset="presetA"
+            )
+            strategy_cards["conversion_box_first_conditional_strict_presetB"][f"B{b}"] = _card_conversion_box_first_conditional(
+                ranked=ranked, budget=b, gate_preset="strict", lane_preset="presetB"
+            )
 
         payload = {
             "schema_version": SCHEMA_VERSION,
