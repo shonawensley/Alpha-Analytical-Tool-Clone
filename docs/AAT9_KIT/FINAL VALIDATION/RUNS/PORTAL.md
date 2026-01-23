@@ -46,15 +46,27 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
 - v0.3 daily cadence wrapper (runs predictive build → CU → play cards → portfolio, then post-results grading):
   - `scripts/tools/run_v0_3_cycle.py` (`pre` / `post`; writes lightweight receipts to RUNS)
-- Training-aligned Play Card grading (hit within 2–5 draw-slots, N=5 default):
+  - Training-aligned Play Card grading (hit within 2–5 draw-slots, N=5 default):
   - Windowed grader: `scripts/tools/grade_play_card_windowed.py`
   - Key semantics (strict vs lane vs inclusive): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
   - Windowed rollups (N=5; compare strategies):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-06-21_to_2025-06-23.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2025-12-30_to_2026-01-04.md`
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__vtracpack_v1__N5__2026-01-05_to_2026-01-09.md`
     - v0.2 default posture encoded as a single strategy (budget-split; B12 conservative, B24/B36 conversion-friendly):
+      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-06-21_to_2025-06-23.md`
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-12-30_to_2026-01-04.md`
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2026-01-05_to_2026-01-09.md`
+    - Blackapple pack + reserve experiment (ALERT-only candidates from Aux; bounded B24/B36 reserve; research-only):
+      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-06-21_to_2025-06-23.md`
+      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-12-30_to_2026-01-04.md`
+      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2026-01-05_to_2026-01-09.md`
+      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-06-21_to_2025-06-23.md`
+      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-12-30_to_2026-01-04.md`
+      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2026-01-05_to_2026-01-09.md`
+      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-06-21_to_2025-06-23.md`
+      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-12-30_to_2026-01-04.md`
+      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2026-01-05_to_2026-01-09.md`
 - Superbrain config harness (Brain‑2 ranking policy comparison; Top‑N triage; tracks `hit_any` + `box_hit`):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)
@@ -152,11 +164,21 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
   - v0 window exports (per-day): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__AUX_VTRAC_BADGE_MATRIX.md` (and `.csv`) for `D=2026-01-05` → `2026-01-09`
     - Regenerate: `python3 scripts/tools/create_aux_vtrac_badge_matrix_report.py --date <D> --sharepacks-root sharepacks --force`
 - Aux + Control Center integrity + pressure harnesses (v0.2; reporting-only):
-  - Due Doubles parity audit (recompute DS from Aux draws; validate family tokens; report conditional hit rates):
+  - Due Doubles parity audit (recompute DS from Aux draws; validate family tokens; report conditional hit rates + mirror-double / VTRAC-lane credit):
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-06-21_to_2025-06-23.md` (and `.csv`)
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-12-30_to_2026-01-04.md` (and `.csv`)
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md` (and `.csv`)
     - Regenerate: `python3 scripts/tools/due_doubles_parity_audit.py --start-date <A> --end-date <B> --force`
+  - Blackapple grading harness (candidates from sharepack-local Aux summaries; same-day + windowed N=5 inclusive hit semantics):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Regenerate: `python3 scripts/tools/grade_blackapple_alerts.py --start-date <A> --end-date <B> --sharepacks-root <ROOT> --window-draws 5 --force`
+  - VTRAC Repeat Watch grading harness (board current-index → same-day + windowed N=5 winner VTRAC):
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2025-06-21_to_2025-06-23.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2025-12-30_to_2026-01-04.md` (and `.csv`)
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2026-01-05_to_2026-01-09.md` (and `.csv`)
+    - Regenerate: `python3 scripts/tools/grade_vtrac_repeat_watch.py --start-date <A> --end-date <B> --sharepacks-root <ROOT> --window-draws 5 --force`
   - Aux badge pressure harness (Index Pressure Contract; topK pressure vs topK overdue; cross-variant intersection):
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)

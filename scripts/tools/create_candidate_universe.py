@@ -1830,6 +1830,96 @@ def _parse_aux_vtrac_indices(*, state_dir: Path, state_key: str, top_n: int = 2)
     return packs, [aux_path]
 
 
+def _parse_blackapple_alert_packs(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_n: int,
+    min_score: int,
+) -> Tuple[List[dict], List[Path]]:
+    """
+    Parse Blackapple candidates from Aux `summary.json` into bounded STRAIGHT packs.
+
+    Design:
+    - Default-off (controlled by CLI flags).
+    - ALERT-only by default (`min_score=3`), to avoid widening Candidate Universe on OFF/WATCH days.
+    - Uses sharepack-local Aux summary (draws-only; predictive-safe).
+    """
+    if int(top_n) <= 0:
+        return [], []
+    aux_path = state_dir / "aux" / state_key / "summary.json"
+    if not aux_path.exists():
+        return [], []
+    raw = _read_json(aux_path)
+    if not isinstance(raw, dict):
+        return [], [aux_path]
+    ba = raw.get("blackapple") or {}
+    if not isinstance(ba, dict):
+        return [], [aux_path]
+    by_variant = ba.get("by_variant") or {}
+    if not isinstance(by_variant, dict):
+        return [], [aux_path]
+
+    packs: List[dict] = []
+    for variant_key, analysis in by_variant.items():
+        if not isinstance(analysis, dict):
+            continue
+        try:
+            score = int(analysis.get("score") or 0)
+        except Exception:
+            score = 0
+        if score < int(min_score):
+            continue
+        candidates = analysis.get("candidates") or []
+        if not isinstance(candidates, list):
+            continue
+        combos: List[str] = []
+        why: List[str] = []
+        triggers = analysis.get("triggers") or {}
+        if isinstance(triggers, dict):
+            # Keep this intentionally shallow (avoid exploding tag space).
+            if triggers.get("mirror"):
+                why.append("mirror")
+            if triggers.get("root_due"):
+                why.append("root_due")
+            if triggers.get("floating"):
+                why.append("floating")
+            if triggers.get("pattern"):
+                why.append("pattern")
+            if triggers.get("pairs"):
+                why.append("pairs")
+
+        for entry in candidates[: int(top_n)]:
+            if not isinstance(entry, dict):
+                continue
+            combo = _normalize_pick3_literal(entry.get("combo") or "")
+            if combo:
+                combos.append(combo)
+        combos = sorted(set(combos))
+        if not combos:
+            continue
+
+        variant_title = _variant_title(str(variant_key))
+        packs.append(
+            {
+                "pack_id": f"blackapple:{variant_title}:score>={int(min_score)}:top{int(top_n)}",
+                "method_id": "blackapple",
+                "variant": variant_title,
+                "play_mode": "STRAIGHT",
+                "canonicals": sorted({_canon(c) for c in combos if _canon(c)}),
+                "combos": combos,
+                "combos_count": len(combos),
+                "cost_units": len(combos),
+                "why_tags": ["blackapple", f"score:{score}", f"min_score:{int(min_score)}", f"top_n:{int(top_n)}", *sorted(set(why))],
+                "transform_chain": [f"blackapple:{variant_title}:score>={int(min_score)}:top{int(top_n)}"],
+                "evidence_paths": [_safe_rel(aux_path)],
+            }
+        )
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [aux_path]
+
+
 def _extract_stable_signals(*, state_dir: Path, state_key: str, top_n: int) -> Tuple[Dict[str, Any], List[Path]]:
     if top_n <= 0:
         return {"available": False, "sections": {}}, []
@@ -3311,6 +3401,8 @@ def _pack_source_class(method_id: str) -> str:
         return "tool"
     if m in {"due_doubles", "profit_alerts"}:
         return "control_center"
+    if m == "blackapple":
+        return "control_center"
     if m in {
         "due_doubles_mirror_single",
         "due_doubles_mirror_double",
@@ -3671,6 +3763,18 @@ def parse_args() -> argparse.Namespace:
         help="Top N Aux overdue VTRAC indices per variant to include as index-closure packs (default: 2; 0 disables).",
     )
     ap.add_argument(
+        "--top-n-blackapple",
+        type=int,
+        default=0,
+        help="Top N Blackapple candidates per ALERT variant to include as STRAIGHT packs (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--blackapple-min-score",
+        type=int,
+        default=3,
+        help="Minimum Blackapple score to include a pack (default: 3 => ALERT).",
+    )
+    ap.add_argument(
         "--top-n-due-doubles",
         type=int,
         default=4,
@@ -3906,7 +4010,17 @@ def main() -> None:
             packs.extend(aux_vt_packs)
             inputs.extend(aux_vt_inputs)
 
-            # 6c) Fusion gate (optional; bounded; derived from tool signals + DR-004)
+            # 6c) Blackapple (ALERT-only; optional; bounded STRAIGHT packs)
+            ba_packs, ba_inputs = _parse_blackapple_alert_packs(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_n=int(args.top_n_blackapple),
+                min_score=int(args.blackapple_min_score),
+            )
+            packs.extend(ba_packs)
+            inputs.extend(ba_inputs)
+
+            # 6d) Fusion gate (optional; bounded; derived from tool signals + DR-004)
             if int(args.fusion_gate_boxed_canonicals) > 0:
                 st_sig, _ = _extract_stable_signals(
                     state_dir=state_dir, state_key=state_key, top_n=int(args.top_n_stable)

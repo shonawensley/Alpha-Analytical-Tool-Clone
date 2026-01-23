@@ -25,6 +25,8 @@ Notes
   - conversion_box_first: box-first plus a small lane-closure slot (aimed at converting rail hits into straight hits).
   - vtrac_pack_boxed_*: chooses a single VTRAC numeric index “lane” and emits its boxed-member pack
     (from modules.vtrac_reference.VTRAC_DISPLAY) as a bounded conversion pack.
+  - v0_2_default_blackapple_reserve_*: v0.2 budget-split posture, with an optional (default-off) B24/B36
+    reservation for Blackapple ALERT candidates when top convergence is tied.
 """
 
 from __future__ import annotations
@@ -150,6 +152,19 @@ def _write_md(path: Path, payload: Dict[str, Any]) -> None:
                 if not isinstance(pack, list):
                     pack = []
                 out.append(f"- VTRAC pack: index=`{idx}` size=`{len(pack)}` pack=`{' '.join(str(x) for x in pack)}`")
+            ba_reserve = card.get("blackapple_reserve")
+            if isinstance(ba_reserve, dict):
+                fired = bool(ba_reserve.get("fired"))
+                preset = str(ba_reserve.get("preset") or "")
+                reserved = ba_reserve.get("reserve_budget")
+                inserted = ba_reserve.get("inserted_count")
+                out.append(
+                    f"- Blackapple reserve: `{'ON' if fired else 'OFF'}` preset=`{preset}` reserved=`{reserved}` inserted=`{inserted}`"
+                )
+                if fired:
+                    ins = ba_reserve.get("inserted") or []
+                    if isinstance(ins, list) and ins:
+                        out.append(f"- Blackapple inserted: `{' '.join(str(x) for x in ins)}`")
             if boxed:
                 out.append(f"- Boxed canonicals: `{', '.join(str(b) for b in boxed)}`")
             if combos:
@@ -246,6 +261,8 @@ def _method_weight(method_id: str) -> float:
     m = (method_id or "").strip()
     if m == "profit_alerts":
         return 100.0
+    if m == "blackapple":
+        return 0.0
     if m == "due_doubles":
         return 85.0
     if m in {"due_doubles_mirror_single", "due_doubles_mirror_double"}:
@@ -619,6 +636,58 @@ def _reserved_conversion_budget(*, budget: int, gate_preset: str) -> int:
     return max(0, min(6, b // 9))
 
 
+def _reserved_blackapple_budget(*, budget: int) -> int:
+    """
+    Reserve a tiny number of lines for Blackapple candidates (bounded conversion fuel).
+
+    Defaults:
+    - B24 => 2
+    - B36 => 3
+    """
+    b = int(budget)
+    if b <= 12:
+        return 0
+    return max(0, min(4, b // 12))
+
+
+def _top_convergence_tied_snapshot(
+    *, ranked: Sequence[Dict[str, Any]], tie_preset: str
+) -> Tuple[bool, Dict[str, Any]]:
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    top = ranked_conv[0] if ranked_conv else {}
+    second = ranked_conv[1] if len(ranked_conv) > 1 else {}
+    top_stats = _convergence_stats(top) if isinstance(top, dict) else (0, 0, 0, 0, 0.0)
+    second_stats = _convergence_stats(second) if isinstance(second, dict) else (0, 0, 0, 0, 0.0)
+    tied = False
+    if len(ranked_conv) >= 2:
+        if tie_preset == "strict":
+            tied = bool(top_stats[:4] == second_stats[:4])
+        else:
+            # lenient: tie on the two strongest convergence axes
+            tied = bool((top_stats[0] == second_stats[0]) and (top_stats[1] == second_stats[1]))
+    snap = {
+        "preset": tie_preset,
+        "top_combo": _normalize_pick3_literal(top.get("combo") or "") if isinstance(top, dict) else "",
+        "second_combo": _normalize_pick3_literal(second.get("combo") or "") if isinstance(second, dict) else "",
+        "top_convergence": {
+            "methods_count": int(top_stats[0]),
+            "variants_non_unknown": int(top_stats[1]),
+            "variants_total": int(top_stats[2]),
+            "pack_refs_count": int(top_stats[3]),
+            "base_score": float(top_stats[4]),
+        },
+        "second_convergence": {
+            "methods_count": int(second_stats[0]),
+            "variants_non_unknown": int(second_stats[1]),
+            "variants_total": int(second_stats[2]),
+            "pack_refs_count": int(second_stats[3]),
+            "base_score": float(second_stats[4]),
+        },
+        "tied": bool(tied),
+    }
+    return bool(tied), snap
+
+
 def _card_conversion_box_first_conditional(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -859,7 +928,7 @@ def _convergence_stats(row: Dict[str, Any]) -> Tuple[int, int, int, int, float]:
     methods = row.get("support_methods") or []
     if not isinstance(methods, list):
         methods = []
-    methods_count = len({str(m) for m in methods})
+    methods_count = len({str(m) for m in methods if str(m) != "blackapple"})
 
     variants = row.get("support_variants") or []
     if not isinstance(variants, list):
@@ -938,6 +1007,7 @@ def _choose_top_vtrac_index(
 
         methods = row.get("support_methods") or []
         methods_norm = [str(m) for m in methods] if isinstance(methods, list) else []
+        methods_norm = [m for m in methods_norm if m != "blackapple"]
         if allowed_methods is not None and not any(m in allowed_methods for m in methods_norm):
             continue
 
@@ -1307,6 +1377,264 @@ def _card_v0_2_default_b12pack(
     }
 
 
+def _card_v0_2_default_blackapple_reserve(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    tie_preset: str,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture with an optional Blackapple reserve gate (research-only):
+    - B12: analysis_prefix
+    - B24/B36: vtrac_pack_boxed_first + BA reserve
+
+    Gate:
+    - Candidate Universe must contain Blackapple ALERT pack(s) (so BA rows exist).
+    - Top convergence must be tied (strict/lenient presets).
+
+    Selection:
+    - Reserve a tiny tail slot (B24=2, B36=3 by default).
+    - Prefer BA combos corroborated by another method (support_methods_count >= 2).
+    - Keep budget constant by replacing tail filler lines (never remove the VTRAC pack head).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+
+    base = _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+    base_combos = list(base.get("combos") or [])
+    base_combos = [_normalize_pick3_literal(x) for x in base_combos if _normalize_pick3_literal(x)]
+    reserve_budget = _reserved_blackapple_budget(budget=b)
+
+    tied, tie_snapshot = _top_convergence_tied_snapshot(ranked=ranked, tie_preset=tie_preset)
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    ba_rows: List[Dict[str, Any]] = []
+    for row in ranked_conv:
+        methods = row.get("support_methods") or []
+        if not isinstance(methods, list):
+            methods = []
+        if any(str(m) == "blackapple" for m in methods):
+            ba_rows.append(row)
+
+    fired = bool(reserve_budget > 0 and tied and ba_rows and len(base_combos) >= reserve_budget)
+    if not fired:
+        base["blackapple_reserve"] = {
+            "fired": False,
+            "preset": tie_preset,
+            "reserve_budget": int(reserve_budget),
+            "reason": "no_ba_rows" if not ba_rows else ("tie_gate_off" if not tied else "no_budget"),
+            "tie_snapshot": tie_snapshot,
+            "ba_candidates_count": int(len(ba_rows)),
+        }
+        return base
+
+    keep = base_combos[:-reserve_budget]
+    removed = base_combos[-reserve_budget:]
+    selected_set: set[str] = set(keep)
+    inserted: List[str] = []
+
+    def _methods_count(r: Dict[str, Any]) -> int:
+        methods = r.get("support_methods") or []
+        if not isinstance(methods, list):
+            methods = []
+        return len({str(m) for m in methods})
+
+    preferred = [r for r in ba_rows if _methods_count(r) >= 2]
+    fallback = [r for r in ba_rows if r not in preferred]
+
+    def _add(rows: Sequence[Dict[str, Any]]) -> None:
+        nonlocal inserted
+        for r in rows:
+            if len(inserted) >= reserve_budget:
+                break
+            combo = _normalize_pick3_literal(r.get("combo") or "")
+            if not combo or combo in selected_set or combo in inserted:
+                continue
+            inserted.append(combo)
+            selected_set.add(combo)
+
+    _add(preferred)
+    _add(fallback)
+
+    # Backfill if we couldn't insert enough BA candidates.
+    for c in removed:
+        if len(inserted) >= reserve_budget:
+            break
+        if c and c not in selected_set:
+            inserted.append(c)
+            selected_set.add(c)
+
+    new_combos = (keep + inserted)[:b]
+    base["combos"] = new_combos
+    base["combos_count"] = len(new_combos)
+    base["cost_units"] = len(new_combos)
+    base["boxed_canonicals"] = _boxed_canonicals(new_combos)
+    base["boxed_canonicals_count"] = len(base.get("boxed_canonicals") or [])
+    base["blackapple_reserve"] = {
+        "fired": True,
+        "preset": tie_preset,
+        "reserve_budget": int(reserve_budget),
+        "inserted_count": int(len(inserted)),
+        "inserted": list(inserted),
+        "preferred_inserted_count": int(
+            sum(
+                1
+                for c in inserted
+                if any(_normalize_pick3_literal(r.get("combo") or "") == c for r in preferred)
+            )
+        ),
+        "ba_candidates_count": int(len(ba_rows)),
+        "tie_snapshot": tie_snapshot,
+    }
+    return base
+
+
+def _card_v0_2_default_blackapple_reserve_conditional(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    tie_preset: str,
+) -> Dict[str, Any]:
+    """
+    Tighter Blackapple reserve gate (research-only):
+    - Only insert BA combos when:
+        - BA rows exist, and
+        - Top convergence is tied (same tie gate as v1), and
+        - Base card's boxed_canonicals_count is low (don't steal closure-rich tails), and
+        - At least one BA candidate is corroborated by another method (BA-only isn't enough).
+
+    This is designed to reduce "cute but noisy" BA swaps and focus on the environments
+    where BA is more likely to add *incremental* conversion value.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+
+    base = _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+    base_combos = list(base.get("combos") or [])
+    base_combos = [_normalize_pick3_literal(x) for x in base_combos if _normalize_pick3_literal(x)]
+    reserve_budget = _reserved_blackapple_budget(budget=b)
+
+    tied, tie_snapshot = _top_convergence_tied_snapshot(ranked=ranked, tie_preset=tie_preset)
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    ba_rows: List[Dict[str, Any]] = []
+    for row in ranked_conv:
+        methods = row.get("support_methods") or []
+        if not isinstance(methods, list):
+            methods = []
+        if any(str(m) == "blackapple" for m in methods):
+            ba_rows.append(row)
+
+    if not (reserve_budget > 0 and tied and ba_rows and len(base_combos) >= reserve_budget):
+        base["blackapple_reserve"] = {
+            "version": "v2_conditional",
+            "fired": False,
+            "preset": tie_preset,
+            "reserve_budget": int(reserve_budget),
+            "reason": "no_ba_rows"
+            if not ba_rows
+            else ("tie_gate_off" if not tied else "no_budget"),
+            "tie_snapshot": tie_snapshot,
+            "ba_candidates_count": int(len(ba_rows)),
+        }
+        return base
+
+    base_boxed = int(base.get("boxed_canonicals_count") or 0)
+    max_boxed = (b // 12) if tie_preset != "strict" else max(0, (b // 12) - 1)
+    if base_boxed > max_boxed:
+        base["blackapple_reserve"] = {
+            "version": "v2_conditional",
+            "fired": False,
+            "preset": tie_preset,
+            "reserve_budget": int(reserve_budget),
+            "reason": "boxed_too_strong",
+            "tie_snapshot": tie_snapshot,
+            "ba_candidates_count": int(len(ba_rows)),
+            "boxed_canonicals_count": int(base_boxed),
+            "max_boxed_allowed": int(max_boxed),
+        }
+        return base
+
+    def _other_methods_count(r: Dict[str, Any]) -> int:
+        methods = r.get("support_methods") or []
+        if not isinstance(methods, list):
+            methods = []
+        # Count non-BA methods (BA must be present in `ba_rows` already).
+        return len({str(m) for m in methods if str(m) != "blackapple"})
+
+    preferred = [r for r in ba_rows if _other_methods_count(r) >= 1]
+    if not preferred:
+        base["blackapple_reserve"] = {
+            "version": "v2_conditional",
+            "fired": False,
+            "preset": tie_preset,
+            "reserve_budget": int(reserve_budget),
+            "reason": "no_corroborated_ba",
+            "tie_snapshot": tie_snapshot,
+            "ba_candidates_count": int(len(ba_rows)),
+        }
+        return base
+
+    keep = base_combos[:-reserve_budget]
+    removed = base_combos[-reserve_budget:]
+    selected_set: set[str] = set(keep)
+    inserted: List[str] = []
+
+    for r in preferred:
+        if len(inserted) >= reserve_budget:
+            break
+        combo = _normalize_pick3_literal(r.get("combo") or "")
+        if not combo or combo in selected_set or combo in inserted:
+            continue
+        inserted.append(combo)
+        selected_set.add(combo)
+
+    if not inserted:
+        base["blackapple_reserve"] = {
+            "version": "v2_conditional",
+            "fired": False,
+            "preset": tie_preset,
+            "reserve_budget": int(reserve_budget),
+            "reason": "no_incremental_ba",
+            "tie_snapshot": tie_snapshot,
+            "ba_candidates_count": int(len(ba_rows)),
+            "corroborated_ba_count": int(len(preferred)),
+        }
+        return base
+
+    # Backfill any unused reserve slots with removed filler lines (never insert BA-only).
+    for c in removed:
+        if len(inserted) >= reserve_budget:
+            break
+        if c and c not in selected_set:
+            inserted.append(c)
+            selected_set.add(c)
+
+    new_combos = (keep + inserted)[:b]
+    base["combos"] = new_combos
+    base["combos_count"] = len(new_combos)
+    base["cost_units"] = len(new_combos)
+    base["boxed_canonicals"] = _boxed_canonicals(new_combos)
+    base["boxed_canonicals_count"] = len(base.get("boxed_canonicals") or [])
+    base["blackapple_reserve"] = {
+        "version": "v2_conditional",
+        "fired": True,
+        "preset": tie_preset,
+        "reserve_budget": int(reserve_budget),
+        "inserted_count": int(len(inserted)),
+        "inserted": list(inserted),
+        "corroborated_inserted_count": int(len(inserted) - sum(1 for c in inserted if c in removed)),
+        "ba_candidates_count": int(len(ba_rows)),
+        "corroborated_ba_count": int(len(preferred)),
+        "boxed_canonicals_count": int(base_boxed),
+        "max_boxed_allowed": int(max_boxed),
+        "tie_snapshot": tie_snapshot,
+    }
+    return base
+
+
 def _card_convergence_box_first(*, ranked: Sequence[Dict[str, Any]], budget: int) -> Dict[str, Any]:
     """
     Box-first, but prefers candidates with higher cross-method + cross-variant support.
@@ -1498,6 +1826,10 @@ def main() -> None:
             "v0_2_default": {},
             "v0_2_default_b12pack_lenient": {},
             "v0_2_default_b12pack_strict": {},
+            "v0_2_default_blackapple_reserve_lenient": {},
+            "v0_2_default_blackapple_reserve_strict": {},
+            "v0_2_default_blackapple_reserve_conditional_lenient": {},
+            "v0_2_default_blackapple_reserve_conditional_strict": {},
             "convergence_box_first": {},
             "conversion_box_first": {},
             "vtrac_pack_boxed_only": {},
@@ -1519,6 +1851,18 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_b12pack_strict"][f"B{b}"] = _card_v0_2_default_b12pack(
                 ranked=ranked, budget=b, gate_preset="strict"
+            )
+            strategy_cards["v0_2_default_blackapple_reserve_lenient"][f"B{b}"] = _card_v0_2_default_blackapple_reserve(
+                ranked=ranked, budget=b, tie_preset="lenient"
+            )
+            strategy_cards["v0_2_default_blackapple_reserve_strict"][f"B{b}"] = _card_v0_2_default_blackapple_reserve(
+                ranked=ranked, budget=b, tie_preset="strict"
+            )
+            strategy_cards["v0_2_default_blackapple_reserve_conditional_lenient"][f"B{b}"] = (
+                _card_v0_2_default_blackapple_reserve_conditional(ranked=ranked, budget=b, tie_preset="lenient")
+            )
+            strategy_cards["v0_2_default_blackapple_reserve_conditional_strict"][f"B{b}"] = (
+                _card_v0_2_default_blackapple_reserve_conditional(ranked=ranked, budget=b, tie_preset="strict")
             )
             strategy_cards["convergence_box_first"][f"B{b}"] = _card_convergence_box_first(ranked=ranked, budget=b)
             strategy_cards["conversion_box_first"][f"B{b}"] = _card_conversion_box_first(ranked=ranked, budget=b)

@@ -36,6 +36,11 @@ Recommended (v0.3 cadence wrapper; logs a RUNS receipt and runs the whole pre-re
 python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force
 ```
 
+Optional: run multiple history days in one go (writes a range receipt; per-day receipts by default):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py pre-range --start-history-date <H0> --end-history-date <H1> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+```
+
 Run:
 ```bash
 PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H>
@@ -145,6 +150,11 @@ You can still keep the predictive pack as the “what we knew pre-results” sna
 Recommended (v0.3 cadence wrapper; grades + rollups; writes only to RUNS):
 ```bash
 python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --force
+```
+
+Optional: grade a date range (writes a range receipt; per-day receipts by default). If you add `--windowed-auto`, it will only run N=5 grading when enough contiguous results files exist (avoids partial windows):
+```bash
+python3 scripts/tools/run_v0_3_cycle.py post-range --start-date <D0> --end-date <D1> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --windowed-auto --force
 ```
 
 Then grade Candidate Universe (writes only to RUNS; keeps predictive sharepacks immutable):

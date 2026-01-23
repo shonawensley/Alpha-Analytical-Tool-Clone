@@ -144,4 +144,6 @@ Current v0.2 portfolio sort order:
   - Badge pressure harness (TopK pressure vs TopK overdue): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
   - Due Doubles parity audit (keeps “broken math” worries honest): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md`
   - Brain‑2 policy comparison harness (Top‑N triage; tracks `hit_any` + `box_hit`): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2026-01-05_to_2026-01-09.md`
+- Control Center “pressure surfaces” (Blackapple ALERT, VTRAC repeat watch, etc.) are **research-only** and are intentionally excluded from v0.2 Play Card convergence evidence (weight=0, not counted toward method support) until they show stable lift out-of-sample:
+  - Evidence + ablations: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
 - Any analyzer tuning (Stable/DR/VTRAC/HZ) is deferred until we have a larger graded corpus.

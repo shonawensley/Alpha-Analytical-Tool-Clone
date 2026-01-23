@@ -116,6 +116,16 @@ def _winner_type(draw: str) -> str:
     return "single"
 
 
+def _vtrac_index(draw: str) -> Optional[int]:
+    d = _normalize_pick3_literal(draw)
+    if not d:
+        return None
+    from modules.vtrac_reference import get_vtrac_index
+
+    idx = get_vtrac_index(d)
+    return idx if isinstance(idx, int) else None
+
+
 @dataclass(frozen=True)
 class Winners:
     midday: str
@@ -340,12 +350,24 @@ def main() -> int:
         "evening_outcomes": 0,
         "midday_double_events": 0,
         "evening_double_events": 0,
+        "midday_mirror_events": 0,
+        "evening_mirror_events": 0,
+        "midday_doubleish_events": 0,
+        "evening_doubleish_events": 0,
         "midday_double_in_family": 0,
         "evening_double_in_family": 0,
         "midday_any_in_family": 0,
         "evening_any_in_family": 0,
+        "midday_any_vtrac_in_family": 0,
+        "evening_any_vtrac_in_family": 0,
+        "midday_mirror_vtrac_in_family": 0,
+        "evening_mirror_vtrac_in_family": 0,
+        "midday_doubleish_vtrac_in_family": 0,
+        "evening_doubleish_vtrac_in_family": 0,
         "midday_topk_double_events": 0,
         "evening_topk_double_events": 0,
+        "midday_topk_doubleish_events": 0,
+        "evening_topk_doubleish_events": 0,
         "midday_topk_outcomes": 0,
         "evening_topk_outcomes": 0,
     }
@@ -504,6 +526,9 @@ def main() -> int:
             wt_evening = _winner_type(winner_evening) if winner_evening else ""
             in_family_midday = bool(winner_midday and _canon(winner_midday) in family_stats.unique_combos)
             in_family_evening = bool(winner_evening and _canon(winner_evening) in family_stats.unique_combos)
+            family_vtrac = {i for i in (_vtrac_index(c) for c in family_stats.unique_combos) if i is not None}
+            in_family_vtrac_midday = bool(winner_midday and _vtrac_index(winner_midday) in family_vtrac)
+            in_family_vtrac_evening = bool(winner_evening and _vtrac_index(winner_evening) in family_vtrac)
 
             per_row.append(
                 {
@@ -528,9 +553,11 @@ def main() -> int:
                     "winner_midday": winner_midday or "",
                     "winner_midday_type": wt_midday or "",
                     "winner_midday_in_family": in_family_midday,
+                    "winner_midday_vtrac_in_family": in_family_vtrac_midday,
                     "winner_evening": winner_evening or "",
                     "winner_evening_type": wt_evening or "",
                     "winner_evening_in_family": in_family_evening,
+                    "winner_evening_vtrac_in_family": in_family_vtrac_evening,
                 }
             )
 
@@ -562,7 +589,19 @@ def main() -> int:
                 in_family = bool(_canon(w.midday) in fam)
                 if in_family:
                     eval_totals["midday_any_in_family"] += 1
+                fam_vtrac = {i for i in (_vtrac_index(c) for c in fam) if i is not None}
+                in_family_vtrac = bool(_vtrac_index(w.midday) in fam_vtrac)
+                if in_family_vtrac:
+                    eval_totals["midday_any_vtrac_in_family"] += 1
                 wt = _winner_type(w.midday)
+                if wt == "mirror_double":
+                    eval_totals["midday_mirror_events"] += 1
+                    if in_family_vtrac:
+                        eval_totals["midday_mirror_vtrac_in_family"] += 1
+                if wt in {"double", "triple", "mirror_double"}:
+                    eval_totals["midday_doubleish_events"] += 1
+                    if in_family_vtrac:
+                        eval_totals["midday_doubleish_vtrac_in_family"] += 1
                 if wt in {"double", "triple"}:
                     eval_totals["midday_double_events"] += 1
                     if in_family:
@@ -572,7 +611,19 @@ def main() -> int:
                 in_family = bool(_canon(w.evening) in fam)
                 if in_family:
                     eval_totals["evening_any_in_family"] += 1
+                fam_vtrac = {i for i in (_vtrac_index(c) for c in fam) if i is not None}
+                in_family_vtrac = bool(_vtrac_index(w.evening) in fam_vtrac)
+                if in_family_vtrac:
+                    eval_totals["evening_any_vtrac_in_family"] += 1
                 wt = _winner_type(w.evening)
+                if wt == "mirror_double":
+                    eval_totals["evening_mirror_events"] += 1
+                    if in_family_vtrac:
+                        eval_totals["evening_mirror_vtrac_in_family"] += 1
+                if wt in {"double", "triple", "mirror_double"}:
+                    eval_totals["evening_doubleish_events"] += 1
+                    if in_family_vtrac:
+                        eval_totals["evening_doubleish_vtrac_in_family"] += 1
                 if wt in {"double", "triple"}:
                     eval_totals["evening_double_events"] += 1
                     if in_family:
@@ -585,16 +636,22 @@ def main() -> int:
                 w = winners_by_state.get(state_key)
                 if not w or not w.midday:
                     continue
-                if _winner_type(w.midday) in {"double", "triple"}:
+                wt = _winner_type(w.midday)
+                if wt in {"double", "triple"}:
                     eval_totals["midday_topk_double_events"] += 1
+                if wt in {"double", "triple", "mirror_double"}:
+                    eval_totals["midday_topk_doubleish_events"] += 1
         if topk_evening:
             eval_totals["evening_topk_outcomes"] += len(topk_evening)
             for state_key in topk_evening:
                 w = winners_by_state.get(state_key)
                 if not w or not w.evening:
                     continue
-                if _winner_type(w.evening) in {"double", "triple"}:
+                wt = _winner_type(w.evening)
+                if wt in {"double", "triple"}:
                     eval_totals["evening_topk_double_events"] += 1
+                if wt in {"double", "triple", "mirror_double"}:
+                    eval_totals["evening_topk_doubleish_events"] += 1
 
     _write_csv(out_csv, per_row)
 
@@ -641,6 +698,14 @@ def main() -> int:
     md_lines.append(f"- Evening outcomes: **{eval_totals['evening_outcomes']}**")
     md_lines.append(f"- Midday double+triple events: **{eval_totals['midday_double_events']}** (rate={_rate(eval_totals['midday_double_events'], eval_totals['midday_outcomes'])})")
     md_lines.append(f"- Evening double+triple events: **{eval_totals['evening_double_events']}** (rate={_rate(eval_totals['evening_double_events'], eval_totals['evening_outcomes'])})")
+    md_lines.append(f"- Midday mirror-double events: **{eval_totals['midday_mirror_events']}** (rate={_rate(eval_totals['midday_mirror_events'], eval_totals['midday_outcomes'])})")
+    md_lines.append(f"- Evening mirror-double events: **{eval_totals['evening_mirror_events']}** (rate={_rate(eval_totals['evening_mirror_events'], eval_totals['evening_outcomes'])})")
+    md_lines.append(
+        f"- Midday doubleish (double/triple/mirror) events: **{eval_totals['midday_doubleish_events']}** (rate={_rate(eval_totals['midday_doubleish_events'], eval_totals['midday_outcomes'])})"
+    )
+    md_lines.append(
+        f"- Evening doubleish (double/triple/mirror) events: **{eval_totals['evening_doubleish_events']}** (rate={_rate(eval_totals['evening_doubleish_events'], eval_totals['evening_outcomes'])})"
+    )
     md_lines.append("")
     md_lines.append("### 2.2 'Winner in due-doubles family' (strict membership)")
     md_lines.append("")
@@ -658,7 +723,30 @@ def main() -> int:
         f"- Evening double-only in-family: **{eval_totals['evening_double_in_family']}** / {eval_totals['evening_double_events']} (rate={_rate(eval_totals['evening_double_in_family'], eval_totals['evening_double_events'])})"
     )
     md_lines.append("")
-    md_lines.append("### 2.3 'Most due' evaluation (DS ranking → next-day double events)")
+    md_lines.append("### 2.3 VTRAC-lane credit (includes mirror-double conversions)")
+    md_lines.append("")
+    md_lines.append(
+        f"- Midday any-type VTRAC-in-family: **{eval_totals['midday_any_vtrac_in_family']}** / {eval_totals['midday_outcomes']} (rate={_rate(eval_totals['midday_any_vtrac_in_family'], eval_totals['midday_outcomes'])})"
+    )
+    md_lines.append(
+        f"- Evening any-type VTRAC-in-family: **{eval_totals['evening_any_vtrac_in_family']}** / {eval_totals['evening_outcomes']} (rate={_rate(eval_totals['evening_any_vtrac_in_family'], eval_totals['evening_outcomes'])})"
+    )
+    md_lines.append("")
+    md_lines.append(
+        f"- Midday mirror-double VTRAC-in-family: **{eval_totals['midday_mirror_vtrac_in_family']}** / {eval_totals['midday_mirror_events']} (rate={_rate(eval_totals['midday_mirror_vtrac_in_family'], eval_totals['midday_mirror_events'])})"
+    )
+    md_lines.append(
+        f"- Evening mirror-double VTRAC-in-family: **{eval_totals['evening_mirror_vtrac_in_family']}** / {eval_totals['evening_mirror_events']} (rate={_rate(eval_totals['evening_mirror_vtrac_in_family'], eval_totals['evening_mirror_events'])})"
+    )
+    md_lines.append("")
+    md_lines.append(
+        f"- Midday doubleish VTRAC-in-family: **{eval_totals['midday_doubleish_vtrac_in_family']}** / {eval_totals['midday_doubleish_events']} (rate={_rate(eval_totals['midday_doubleish_vtrac_in_family'], eval_totals['midday_doubleish_events'])})"
+    )
+    md_lines.append(
+        f"- Evening doubleish VTRAC-in-family: **{eval_totals['evening_doubleish_vtrac_in_family']}** / {eval_totals['evening_doubleish_events']} (rate={_rate(eval_totals['evening_doubleish_vtrac_in_family'], eval_totals['evening_doubleish_events'])})"
+    )
+    md_lines.append("")
+    md_lines.append("### 2.4 'Most due' evaluation (DS ranking → next-day double events)")
     md_lines.append("")
     md_lines.append(f"- TopK used: **{int(args.topk_due)}** states per day/period (ranked by `Draws Since Double`).")
     md_lines.append(
@@ -667,10 +755,17 @@ def main() -> int:
     md_lines.append(
         f"- Evening topK double events: **{eval_totals['evening_topk_double_events']}** / {eval_totals['evening_topk_outcomes']} (rate={_rate(eval_totals['evening_topk_double_events'], eval_totals['evening_topk_outcomes'])})"
     )
+    md_lines.append(
+        f"- Midday topK doubleish events: **{eval_totals['midday_topk_doubleish_events']}** / {eval_totals['midday_topk_outcomes']} (rate={_rate(eval_totals['midday_topk_doubleish_events'], eval_totals['midday_topk_outcomes'])})"
+    )
+    md_lines.append(
+        f"- Evening topK doubleish events: **{eval_totals['evening_topk_doubleish_events']}** / {eval_totals['evening_topk_outcomes']} (rate={_rate(eval_totals['evening_topk_doubleish_events'], eval_totals['evening_topk_outcomes'])})"
+    )
     md_lines.append("")
     md_lines.append("Interpretation:")
     md_lines.append("- DS is a 'state due for any double' indicator; family membership is a stricter 'which double' indicator.")
     md_lines.append("- Family membership should be interpreted mainly on double/triple winners (conditional rate above).")
+    md_lines.append("- If you treat mirror-double outcomes as 'due-doubles conversions', use the doubleish and VTRAC-lane sections.")
     md_lines.append("")
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_md.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")

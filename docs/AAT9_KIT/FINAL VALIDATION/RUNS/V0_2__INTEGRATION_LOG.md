@@ -809,3 +809,149 @@ Docs:
 - Defaults + workflow pointers:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Predictive_Workflow_V0_2_Addendum.md`
+
+---
+
+## 2026‑01‑23 — Control Center trackers: Blackapple + Repeat Watch grading harnesses (windowed N=5) (implemented + measured)
+
+Motivation:
+- Control Center trackers are Brain‑2 “pressure / lane” surfaces; same‑day straight/boxed rates can look weak even when the lane is visible and converts over a short horizon.
+- Add windowed, inclusive grading harnesses so these boards can be treated as either proven signals or explicitly research‑only knobs.
+- Explicitly capture the “mirror‑double conversion” nuance in Due Doubles interpretation (e.g., due‑double family → mirror‑double winner via VTRAC).
+
+### A) Blackapple grading harness (same‑day + windowed; inclusive hit semantics)
+
+What we built:
+- A grading harness that reads Blackapple candidates from sharepack‑local Aux summaries and grades them vs posted winners:
+  - Same‑day: boxed (includes straight) OR VTRAC lane hit.
+  - Windowed: first hit offset over D..D+(N‑1) per period (default N=5).
+- It also cross‑checks the Control Center board for stable fields (`BA‑Score`, `#Candidates`, `Examples`) to prevent “board vs JSON” drift.
+
+Script:
+- `scripts/tools/grade_blackapple_alerts.py`
+
+Outputs (N=5):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/blackapple_rollup__N5__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- (Detailed rows): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__BLACKAPPLE_GRADE__N5.csv` (and `.md`)
+
+Key finding:
+- Windowed “hit_any_inclusive” rates are high even for low BA scores (expected for a bounded lane list); interpret BA primarily as a **triage / pressure** signal unless/until we implement a bounded conversion policy that proves incremental lift.
+
+### B) Due Doubles parity audit: mirror‑double + VTRAC‑lane credit (updated + re‑measured)
+
+Change:
+- Extended the existing audit to report:
+  - mirror‑double base rates,
+  - VTRAC‑lane “in family” credit (captures mirror‑double conversions),
+  - and DS TopK “doubleish” (double/triple/mirror) event rates.
+
+Code:
+- `scripts/tools/due_doubles_parity_audit.py`
+
+Outputs (same basenames as before; overwritten with the extended metrics):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md` (and `.csv`)
+
+Key finding:
+- Strict “winner in family” remains a low‑rate signal, but mirror‑double + VTRAC‑lane metrics materially change the interpretation: Due Doubles is better treated as “doubleish pressure + lane” than as a strict combo caller.
+
+### C) VTRAC Repeat Watch grading harness (same‑day + windowed)
+
+What we built:
+- A grading harness that evaluates whether the board’s `Current Index` equals the winner’s VTRAC index:
+  - Same‑day and N‑day windowed (default N=5).
+- Keeps Control Center parity checks strictly to rows that already include winner fields (predictive sharepacks intentionally omit them).
+
+Script:
+- `scripts/tools/grade_vtrac_repeat_watch.py`
+
+Outputs (N=5):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2025-06-21_to_2025-06-23.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2025-12-30_to_2026-01-04.md` (and `.csv`)
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/vtrac_repeat_watch_rollup__N5__2026-01-05_to_2026-01-09.md` (and `.csv`)
+- (Detailed rows): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<A>_to_<B>__VTRAC_REPEAT_WATCH_GRADE__N5.csv` (and `.md`)
+
+Key finding:
+- Repeat Watch behaves like a narrow, baseline‑rate lane indicator (as expected for a single VTRAC index). Keep as a research/triage surface unless we find a conditional rule where it improves selection (e.g., only when cross‑variant corroboration is high).
+
+---
+
+## 2026‑01‑23 — Blackapple packs → bounded reserve Play Cards (research-only) (implemented + measured)
+
+Motivation:
+- Blackapple (Control Center / Brain‑2) shows strong *windowed* lane visibility (`hit_any_inclusive_window`) even when same‑day straight/boxed looks weak.
+- We need a safe way to test whether Blackapple can improve *conversion* (Play Cards) without widening Candidate Universe or distorting the main convergence ranking.
+
+### A) Candidate Universe: optional Blackapple packs (ALERT-only; bounded STRAIGHT)
+
+What we built:
+- Add an optional CU pack source that reads sharepack‑local Aux `summary.json` and emits bounded STRAIGHT packs from the Blackapple candidate list.
+- Default‑off (controlled by CLI flags), so it never affects normal runs.
+
+Code:
+- `scripts/tools/create_candidate_universe.py` (`--top-n-blackapple`, `--blackapple-min-score`)
+
+### B) Play Card: bounded Blackapple “reserve” strategies (B24/B36 only)
+
+What we built:
+- New Play Card strategies that reserve a tiny tail slot only when:
+  - Blackapple candidates exist in CU (ALERT packs exist), and
+  - The top convergence evidence is *tied* (lenient/strict presets).
+- B12 remains conservative and unchanged (`analysis_prefix`) to avoid budget fragility.
+
+Code:
+- `scripts/tools/create_play_card.py`:
+  - `v0_2_default_blackapple_reserve_lenient`
+  - `v0_2_default_blackapple_reserve_strict`
+
+Safety / separation (Brain‑2 should not distort Brain‑1 selection):
+- Treat `blackapple` as **reserve-only evidence** (no rank lift):
+  - `blackapple` weight is `0.0`
+  - `blackapple` is excluded from convergence method-count and VTRAC-index chooser evidence
+
+### C) Windowed evaluation (N=5) across the 3 regression windows
+
+We ran a clean ablation:
+- Control (no BA packs): `experiment_tag=ba_pack_control_v1`
+- BA packs + reserve strategies: `experiment_tag=ba_pack_v2`
+
+Outputs (N=5; compare strategies):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-06-21_to_2025-06-23.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-12-30_to_2026-01-04.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2026-01-05_to_2026-01-09.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-06-21_to_2025-06-23.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-12-30_to_2026-01-04.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2026-01-05_to_2026-01-09.md`
+
+Key finding:
+- Adding Blackapple packs does **not** materially change `hit_any_inclusive_window` for the v0.2 default posture (good: no disruption).
+- The bounded reserve strategies show only small, window‑specific lifts (not yet strong enough to adopt as a default).
+
+Follow-up (tighter conditional gate; still research-only):
+- Added `v0_2_default_blackapple_reserve_conditional_lenient` / `..._strict`, which only reserves lines when:
+  - top convergence is tied, AND
+  - the base card is not closure-heavy (`boxed_canonicals_count` below a budget-scaled threshold), AND
+  - at least one Blackapple candidate is corroborated by another method (no BA-only swaps).
+- Experiment tag: `ba_pack_v3` (Play Cards only; input CU remains `ba_pack_v1`).
+
+Outputs (N=5):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-06-21_to_2025-06-23.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-12-30_to_2026-01-04.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2026-01-05_to_2026-01-09.md`
+
+Finding:
+- The tighter gate reduces firing frequency materially and does not improve windowed `hit_any_inclusive` consistently vs the looser reserve.
+  Treat this as evidence we should **stop tuning BA gates** until we have more gold windows (otherwise we risk overfitting).
+
+Decision:
+- Keep Blackapple packs + reserve strategies as **research-only** knobs until we find a stronger conditional rule (e.g., “reserve only when BA‑ALERT AND cross‑variant intersection is high AND CU top dominance is weak”).
+
+Reproduce (per day):
+- Control CU: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_control_v1`
+- BA CU: `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_v1 --top-n-blackapple 12 --blackapple-min-score 3`
+- Control Play Cards: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_control_v1`
+- BA Play Cards: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_v2 --input-experiment-tag ba_pack_v1`
+- Windowed grade: `python3 scripts/tools/grade_play_card_windowed.py --start-date <A> --end-date <B> --sharepacks-root <ROOT> --profile tool_only --experiment-tag <TAG> --window-draws 5 --force`

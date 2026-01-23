@@ -22,6 +22,9 @@ This writes a bounded export under `sharepacks/_scratch/` (and includes `README.
 - v0.2 closeout (selection + grading alignment; VTRAC pack strategy + windowed grading):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/v0_2_closeout_play_card_windowed_vtracpack/README.md`
 
+- v0.3 fresh days run pack (how to run + what to review; receipt-based cadence):
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/v0_3_fresh_days_run_pack/README.md`
+
 - Play Cards + budgets + combo packs (selection/grading design review):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/play_cards_budget_system_review/README.md`
 
