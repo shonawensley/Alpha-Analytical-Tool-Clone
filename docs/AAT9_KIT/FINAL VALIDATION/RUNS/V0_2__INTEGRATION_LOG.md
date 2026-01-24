@@ -999,6 +999,11 @@ Key finding:
 - The recency tie‑break is **safe** (bounded, posture‑preserving; B12 unaffected), but the lift is **small and window‑specific** (no consistent improvement across all 3 windows yet).
   Treat as a **research knob** until out‑of‑sample days validate that “absence‑boost” reliably helps conversion rather than just shuffling pack vs filler hits.
 
+Deferred follow-ups (do not implement until out-of-sample days justify it):
+- Structure + recency gate: only apply absence-boost when cross-variant structural support is high (e.g., badge-pressure intersection / strong multi-variant evidence), not as a standalone recency rule.
+- Variant-aware absence: compute “absent” only against the variants where the lane is supported (avoid blunt M/E/C counting when a lane is clearly variant-local).
+- Bounded diversity ablation: instead of swapping the top lane, reserve a tiny tail slot (B36-only) to include the runner-up lane pack when ambiguity is high (keeps the primary lane intact).
+
 Reproduce:
 - Generate play cards:
   - `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag recency_m2e2c4_v2 --input-experiment-tag none --force`
