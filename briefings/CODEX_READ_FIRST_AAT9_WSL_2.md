@@ -55,6 +55,7 @@ Master Validation (frozen day snapshot):
   - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
 - v0.2 “don’t get lost” SSOTs (start here after any context reset):
   - RUNS Portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
+  - v0.2 defaults/posture: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
   - v0.2 integration log: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
   - v0.2 coverage ledger (generated): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
   - Predictive workflow addendum: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Predictive_Workflow_V0_2_Addendum.md`

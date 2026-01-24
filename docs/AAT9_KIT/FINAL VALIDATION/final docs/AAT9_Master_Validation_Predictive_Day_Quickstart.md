@@ -29,16 +29,31 @@ Important: this workflow **mutates live output folders** while it runs (tables/J
 
 ---
 
-## 1) Build the predictive pack (one command)
+## 1) Fast path vs deep path (choose one)
+
+### Fast path (recommended; ~10–15 minutes)
+Run the v0.3 cadence wrapper end-to-end and write a RUNS receipt under `RUNS/V0_3/`:
+```bash
+python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --runs-subdir V0_3 --write-audit-evidence --play-card-write-md --force
+```
+
+What you get:
+- Predictive sharepack snapshot: `sharepacks/_predictive/<D>/...` (winners-free)
+- Receipt (reproducibility without chat logs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3/`
+
+### Deep path (step-by-step; slower but flexible)
+Follow sections 2–5 below if you want manual control (profiles, per-step runs, etc.).
+
+## 2) Build the predictive pack (deep path; granular commands)
 
 Recommended (v0.3 cadence wrapper; logs a RUNS receipt and runs the whole pre-results chain):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --runs-subdir V0_3 --force
 ```
 
 Optional: run multiple history days in one go (writes a range receipt; per-day receipts by default):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py pre-range --start-history-date <H0> --end-history-date <H1> --sharepacks-root sharepacks/_predictive --profile tool_only --force
+python3 scripts/tools/run_v0_3_cycle.py pre-range --start-history-date <H0> --end-history-date <H1> --sharepacks-root sharepacks/_predictive --profile tool_only --runs-subdir V0_3 --force
 ```
 
 Run:
@@ -62,7 +77,7 @@ Notes:
 
 ---
 
-## 2) Optional: subset states (faster)
+## 3) Optional: subset states (faster)
 
 ```bash
 PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H> --states Florida4 NewYork4
@@ -70,7 +85,7 @@ PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H> 
 
 ---
 
-## 3) Generate gradeable predictions (Candidate Universe) + a predictive run report
+## 4) Generate gradeable predictions (Candidate Universe) + a predictive run report
 
 After the predictive sharepack exists, generate the **Candidate Universe** (the explicit, gradeable “playset”):
 
@@ -140,7 +155,7 @@ python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepa
 
 ---
 
-## 4) How to “upgrade” a predictive pack once results exist
+## 5) How to “upgrade” a predictive pack once results exist
 
 Once `data/results/<D>.txt` exists, run the normal full‑day workflow (Brain‑1 + winners lens + Brain‑2 + windowed Profit Alerts evaluation) using:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
@@ -149,12 +164,12 @@ You can still keep the predictive pack as the “what we knew pre-results” sna
 
 Recommended (v0.3 cadence wrapper; grades + rollups; writes only to RUNS):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --force
+python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --runs-subdir V0_3 --rollup --force
 ```
 
 Optional: grade a date range (writes a range receipt; per-day receipts by default). If you add `--windowed-auto`, it will only run N=5 grading when enough contiguous results files exist (avoids partial windows):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py post-range --start-date <D0> --end-date <D1> --sharepacks-root sharepacks/_predictive --profile tool_only --rollup --windowed-auto --force
+python3 scripts/tools/run_v0_3_cycle.py post-range --start-date <D0> --end-date <D1> --sharepacks-root sharepacks/_predictive --profile tool_only --runs-subdir V0_3 --rollup --windowed-auto --force
 ```
 
 Then grade Candidate Universe (writes only to RUNS; keeps predictive sharepacks immutable):

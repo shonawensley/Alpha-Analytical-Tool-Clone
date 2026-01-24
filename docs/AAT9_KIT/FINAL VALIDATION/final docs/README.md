@@ -29,6 +29,11 @@ There are 3 “classes” of docs in this workflow:
 - Control Center / Brain 2 reference (keep for later): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
 - Control Center daily template (Brain-2, per day): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
 
+## v0.2 / v0.3 posture SSOT (avoid drift)
+- RUNS portal (what to open next): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
+- v0.2 defaults/posture (what to run): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
+- v0.2 integration log (why it changed): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
+
 Optional (brainstorm / historical templates; not SSOT):
 - `docs/AAT9_KIT/FINAL VALIDATION/FINAL_VALIDATION_TEMPC.md`
 

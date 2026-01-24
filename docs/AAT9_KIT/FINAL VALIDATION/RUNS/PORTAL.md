@@ -23,6 +23,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.8) Portal link audit (generated; prevents “missing file” loops):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__PORTAL_LINK_AUDIT.md`
 
+1.9) v0.3 out-of-sample receipts (new days live here):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3/README.md`
+
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
 
@@ -46,6 +49,7 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_rollup.md`
 - v0.3 daily cadence wrapper (runs predictive build → CU → play cards → portfolio, then post-results grading):
   - `scripts/tools/run_v0_3_cycle.py` (`pre` / `post`; writes lightweight receipts to RUNS)
+    - Prefer: `--runs-subdir V0_3` (keeps new-day receipts under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3/`)
   - Training-aligned Play Card grading (hit within 2–5 draw-slots, N=5 default):
   - Windowed grader: `scripts/tools/grade_play_card_windowed.py`
   - Key semantics (strict vs lane vs inclusive): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`

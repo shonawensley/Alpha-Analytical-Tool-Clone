@@ -27,6 +27,15 @@ from typing import List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
 
+def _runs_dir_from_arg(value: str) -> Path:
+    raw = str(value or "").strip()
+    if not raw:
+        return RUNS_DIR
+    sub = Path(raw)
+    if sub.is_absolute() or any(part == ".." for part in sub.parts):
+        raise SystemExit(f"Invalid --runs-subdir: {value!r} (must be a relative subdir under RUNS/)")
+    return RUNS_DIR / sub
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -94,14 +103,14 @@ def _write_receipt(path: Path, lines: List[str], *, dry_run: bool) -> None:
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
-def _pre_receipt_path(*, results_date: str, profile: str, experiment_tag: str) -> Path:
+def _pre_receipt_path(*, runs_dir: Path, results_date: str, profile: str, experiment_tag: str) -> Path:
     suffix = f"__{experiment_tag}" if experiment_tag else ""
-    return RUNS_DIR / f"V0_3__CYCLE__PRE__{results_date}__{profile}{suffix}.md"
+    return runs_dir / f"V0_3__CYCLE__PRE__{results_date}__{profile}{suffix}.md"
 
 
-def _post_receipt_path(*, results_date: str, profile: str, experiment_tag: str) -> Path:
+def _post_receipt_path(*, runs_dir: Path, results_date: str, profile: str, experiment_tag: str) -> Path:
     suffix = f"__{experiment_tag}" if experiment_tag else ""
-    return RUNS_DIR / f"V0_3__CYCLE__POST__{results_date}__{profile}{suffix}.md"
+    return runs_dir / f"V0_3__CYCLE__POST__{results_date}__{profile}{suffix}.md"
 
 
 def _add_common_sharepack_args(p: argparse.ArgumentParser) -> None:
@@ -120,6 +129,11 @@ def _add_common_sharepack_args(p: argparse.ArgumentParser) -> None:
         "--experiment-tag",
         default="",
         help="Optional experiment tag applied to candidate_universe/play_card files (default: none).",
+    )
+    p.add_argument(
+        "--runs-subdir",
+        default="",
+        help="Optional subdir under RUNS/ to write receipts (default: RUNS root).",
     )
     p.add_argument("--states", nargs="*", help="Optional subset of states to run.")
     p.add_argument("--force", action="store_true", help="Pass --force to downstream tools (overwrite outputs).")
@@ -157,6 +171,7 @@ def _cmd_create_candidate_universe(
     states: Sequence[str],
     force: bool,
     write_signals_bundle: bool,
+    write_evidence: bool,
 ) -> List[str]:
     cmd: List[str] = [
         "python3",
@@ -176,6 +191,8 @@ def _cmd_create_candidate_universe(
         cmd += ["--states", *states]
     if write_signals_bundle:
         cmd += ["--write-signals-bundle"]
+    if write_evidence:
+        cmd += ["--write-evidence"]
     if force:
         cmd += ["--force"]
     return cmd
@@ -434,6 +451,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also write signals_bundle*.json during Candidate Universe creation (default: off).",
     )
+    pre.add_argument(
+        "--write-audit-evidence",
+        action="store_true",
+        help="Convenience: also write candidate_universe_evidence.* and signals_bundle*.json (default: off).",
+    )
     pre.add_argument("--play-card-write-md", action="store_true", help="Also write play_card*.md (default: off).")
     pre.add_argument(
         "--rank-by",
@@ -464,6 +486,11 @@ def _parse_args() -> argparse.Namespace:
         "--write-signals-bundle",
         action="store_true",
         help="Also write signals_bundle*.json during Candidate Universe creation (default: off).",
+    )
+    pre_range.add_argument(
+        "--write-audit-evidence",
+        action="store_true",
+        help="Convenience: also write candidate_universe_evidence.* and signals_bundle*.json (default: off).",
     )
     pre_range.add_argument("--play-card-write-md", action="store_true", help="Also write play_card*.md (default: off).")
     pre_range.add_argument(
@@ -537,6 +564,8 @@ def _normalize_sharepacks_root(value: str) -> str:
 
 def main() -> None:
     args = _parse_args()
+    runs_subdir = str(getattr(args, "runs_subdir", "") or "").strip()
+    runs_dir = _runs_dir_from_arg(runs_subdir)
 
     if args.cmd == "pre":
         history_date = (args.history_date or "").strip() or None
@@ -550,6 +579,8 @@ def main() -> None:
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "").strip()
         states = list(args.states or [])
+        write_signals_bundle = bool(args.write_signals_bundle) or bool(args.write_audit_evidence)
+        write_evidence = bool(args.write_audit_evidence)
 
         receipt_lines: List[str] = []
         receipt_lines.append(f"# v0.3 cycle — PRE — D={results_date}")
@@ -563,6 +594,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
         receipt_lines.append(f"- dry_run: `{bool(args.dry_run)}`")
@@ -590,7 +622,8 @@ def main() -> None:
                     experiment_tag=experiment_tag,
                     states=states,
                     force=bool(args.force),
-                    write_signals_bundle=bool(args.write_signals_bundle),
+                    write_signals_bundle=write_signals_bundle,
+                    write_evidence=write_evidence,
                 )
             )
         if not args.skip_play_card:
@@ -632,7 +665,7 @@ def main() -> None:
             _run(cmd, dry_run=bool(args.dry_run))
 
         if not args.no_receipt:
-            receipt_path = _pre_receipt_path(results_date=results_date, profile=profile, experiment_tag=experiment_tag)
+            receipt_path = _pre_receipt_path(runs_dir=runs_dir, results_date=results_date, profile=profile, experiment_tag=experiment_tag)
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
@@ -661,6 +694,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
         receipt_lines.append(f"- dry_run: `{bool(args.dry_run)}`")
@@ -687,6 +721,8 @@ def main() -> None:
         ]
         if experiment_tag:
             base_cmd += ["--experiment-tag", experiment_tag]
+        if runs_subdir:
+            base_cmd += ["--runs-subdir", runs_subdir]
         if states:
             base_cmd += ["--states", *states]
         if bool(args.force):
@@ -701,7 +737,9 @@ def main() -> None:
             base_cmd += ["--skip-play-card"]
         if bool(args.skip_portfolio):
             base_cmd += ["--skip-portfolio"]
-        if bool(args.write_signals_bundle):
+        if bool(args.write_audit_evidence):
+            base_cmd += ["--write-audit-evidence"]
+        elif bool(args.write_signals_bundle):
             base_cmd += ["--write-signals-bundle"]
         if bool(args.play_card_write_md):
             base_cmd += ["--play-card-write-md"]
@@ -737,7 +775,7 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             suffix = f"__{experiment_tag}" if experiment_tag else ""
-            receipt_path = RUNS_DIR / f"V0_3__CYCLE__PRE_RANGE__{start_h.isoformat()}_to_{end_h.isoformat()}__{profile}{suffix}.md"
+            receipt_path = runs_dir / f"V0_3__CYCLE__PRE_RANGE__{start_h.isoformat()}_to_{end_h.isoformat()}__{profile}{suffix}.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
@@ -764,6 +802,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- results_file: `{results_file or 'data/results/<D>.txt'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
@@ -851,7 +890,7 @@ def main() -> None:
             _run(cmd, dry_run=bool(args.dry_run))
 
         if not args.no_receipt:
-            receipt_path = _post_receipt_path(results_date=results_date, profile=profile, experiment_tag=experiment_tag)
+            receipt_path = _post_receipt_path(runs_dir=runs_dir, results_date=results_date, profile=profile, experiment_tag=experiment_tag)
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
@@ -880,6 +919,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
         receipt_lines.append(f"- dry_run: `{bool(args.dry_run)}`")
@@ -907,6 +947,8 @@ def main() -> None:
         ]
         if experiment_tag:
             base_cmd += ["--experiment-tag", experiment_tag]
+        if runs_subdir:
+            base_cmd += ["--runs-subdir", runs_subdir]
         if states:
             base_cmd += ["--states", *states]
         if bool(args.force):
@@ -992,7 +1034,7 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             suffix = f"__{experiment_tag}" if experiment_tag else ""
-            receipt_path = RUNS_DIR / f"V0_3__CYCLE__POST_RANGE__{start_d.isoformat()}_to_{end_d.isoformat()}__{profile}{suffix}.md"
+            receipt_path = runs_dir / f"V0_3__CYCLE__POST_RANGE__{start_d.isoformat()}_to_{end_d.isoformat()}__{profile}{suffix}.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
