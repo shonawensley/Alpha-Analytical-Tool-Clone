@@ -980,6 +980,236 @@ def _vtrac_display_pack(*, index: int) -> List[str]:
     return []
 
 
+def _state_draws_prefix(*, state_key: str) -> str:
+    """
+    Map sharepack state folder names like "Florida4" to their aux/draws CSV prefix ("Florida").
+    """
+    return re.sub(r"\d+$", "", str(state_key or "").strip())
+
+
+def _read_draws_csv_head(*, path: Path, n: int) -> List[str]:
+    want = max(0, int(n))
+    if want <= 0:
+        return []
+    try:
+        raw = _read_text(path).splitlines()
+    except Exception:
+        return []
+    out: List[str] = []
+    for line in raw:
+        s = str(line or "").strip()
+        if not s or s.lower() == "draw":
+            continue
+        s = "".join(ch for ch in s if ch.isdigit())
+        if not s:
+            continue
+        if len(s) < 3:
+            s = s.zfill(3)
+        if len(s) != 3:
+            continue
+        out.append(s)
+        if len(out) >= want:
+            break
+    return out
+
+
+def _recent_vtrac_indices_from_draws(*, draws: Sequence[str]) -> List[int]:
+    import modules.vtrac_reference as vr
+
+    out: List[int] = []
+    for d in draws:
+        combo = _normalize_pick3_literal(d or "")
+        if not combo:
+            continue
+        idx = vr.get_vtrac_index(combo)
+        if idx is None:
+            continue
+        out.append(int(idx))
+    return out
+
+
+def _recent_indices_snapshot(
+    *,
+    state_dir: Path,
+    state_key: str,
+    midday_draws: int,
+    evening_draws: int,
+    combined_draws: int,
+) -> Dict[str, Any]:
+    """
+    Predictive-safe recency snapshot:
+    - Reads sharepack-local `aux/draws/*_draws.csv` (newest-first).
+    - Computes VTRAC numeric indices for the most recent N draws per variant.
+    """
+    prefix = _state_draws_prefix(state_key=state_key)
+    draws_dir = state_dir / "aux" / "draws"
+    out: Dict[str, Any] = {
+        "spec": {
+            "midday_draws": int(midday_draws),
+            "evening_draws": int(evening_draws),
+            "combined_draws": int(combined_draws),
+        },
+        "prefix": prefix,
+        "paths": {},
+        "draws": {},
+        "vtrac_indices": {},
+    }
+    if not prefix or not draws_dir.exists():
+        out["error"] = "missing_draws_dir"
+        return out
+
+    paths = {
+        "Midday": draws_dir / f"{prefix}_Midday_draws.csv",
+        "Evening": draws_dir / f"{prefix}_Evening_draws.csv",
+        "Combined": draws_dir / f"{prefix}_draws.csv",
+    }
+    out["paths"] = {k: _safe_rel(p) for k, p in paths.items()}
+
+    want = {"Midday": int(midday_draws), "Evening": int(evening_draws), "Combined": int(combined_draws)}
+    for k, p in paths.items():
+        if not p.exists():
+            out["draws"][k] = []
+            out["vtrac_indices"][k] = []
+            continue
+        head = _read_draws_csv_head(path=p, n=want.get(k, 0))
+        out["draws"][k] = head
+        out["vtrac_indices"][k] = _recent_vtrac_indices_from_draws(draws=head)
+    return out
+
+
+def _vtrac_recency_absence_score(*, index: int, snap: Dict[str, Any]) -> int:
+    idx = int(index)
+    score = 0
+    vt = snap.get("vtrac_indices") if isinstance(snap, dict) else None
+    if not isinstance(vt, dict):
+        return 0
+    for key in ("Midday", "Evening", "Combined"):
+        vals = vt.get(key) or []
+        if isinstance(vals, list) and vals and idx not in {int(x) for x in vals if isinstance(x, int)}:
+            score += 1
+    return int(score)
+
+
+def _choose_top_vtrac_index_recency_tiebreak(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    state_dir: Path,
+    state_key: str,
+    tie_preset: str,
+    midday_draws: int = 2,
+    evening_draws: int = 2,
+    combined_draws: int = 4,
+    allowed_methods: Optional[set[str]] = None,
+) -> Tuple[Optional[int], Dict[str, Any]]:
+    """
+    Choose the top VTRAC index with an optional short-horizon recency tie-break.
+
+    Intended behavior:
+    - Use Candidate Universe evidence as the primary selector.
+    - Only apply recency as a bounded tie-break between top-2 indices.
+    - Recency is measured as "index absent from the last N posted draws" (per variant).
+    """
+    chosen, chooser = _choose_top_vtrac_index(ranked=ranked, allowed_methods=allowed_methods)
+
+    recency = _recent_indices_snapshot(
+        state_dir=state_dir,
+        state_key=state_key,
+        midday_draws=midday_draws,
+        evening_draws=evening_draws,
+        combined_draws=combined_draws,
+    )
+
+    top5 = chooser.get("top5") if isinstance(chooser, dict) else None
+    if not isinstance(top5, list) or len(top5) < 2:
+        return chosen, {"chooser": chooser, "recency": recency, "tiebreak": {"applied": False, "reason": "no_runner_up"}}
+
+    top = top5[0] if isinstance(top5[0], dict) else {}
+    second = top5[1] if isinstance(top5[1], dict) else {}
+    top_idx = top.get("index")
+    second_idx = second.get("index")
+    if not isinstance(top_idx, int) or not isinstance(second_idx, int):
+        return chosen, {"chooser": chooser, "recency": recency, "tiebreak": {"applied": False, "reason": "bad_top_indices"}}
+
+    strict = str(tie_preset or "").strip().lower() == "strict"
+    top_key = (
+        int(top.get("methods_count") or 0),
+        int(top.get("variants_non_unknown") or 0),
+        int(top.get("variants_total") or 0),
+        int(top.get("packs_total") or 0),
+    )
+    second_key = (
+        int(second.get("methods_count") or 0),
+        int(second.get("variants_non_unknown") or 0),
+        int(second.get("variants_total") or 0),
+        int(second.get("packs_total") or 0),
+    )
+    methods_diff = int(top_key[0] - second_key[0])
+    variants_diff = int(top_key[1] - second_key[1])
+    eligible = bool(methods_diff == 0) if strict else bool(methods_diff <= 1)
+    if not eligible:
+        return chosen, {
+            "chooser": chooser,
+            "recency": recency,
+            "tiebreak": {
+                "applied": False,
+                "reason": "not_eligible",
+                "preset": tie_preset,
+                "methods_diff": int(methods_diff),
+                "variants_diff": int(variants_diff),
+            },
+        }
+
+    top_abs = _vtrac_recency_absence_score(index=top_idx, snap=recency)
+    second_abs = _vtrac_recency_absence_score(index=second_idx, snap=recency)
+    if top_abs == second_abs:
+        return chosen, {
+            "chooser": chooser,
+            "recency": recency,
+            "tiebreak": {
+                "applied": False,
+                "reason": "no_absence_diff",
+                "preset": tie_preset,
+                "top_absence": int(top_abs),
+                "second_absence": int(second_abs),
+                "methods_diff": int(methods_diff),
+                "variants_diff": int(variants_diff),
+            },
+        }
+
+    prefer = int(top_idx) if top_abs > second_abs else int(second_idx)
+    candidate_pack = _vtrac_display_pack(index=int(prefer))
+    if not candidate_pack:
+        return chosen, {
+            "chooser": chooser,
+            "recency": recency,
+            "tiebreak": {
+                "applied": False,
+                "reason": "no_pack_for_preferred",
+                "preset": tie_preset,
+                "preferred_index": int(prefer),
+                "top_absence": int(top_abs),
+                "second_absence": int(second_abs),
+            },
+        }
+
+    return int(prefer), {
+        "chooser": chooser,
+        "recency": recency,
+        "tiebreak": {
+            "applied": True,
+            "preset": tie_preset,
+            "base_chosen_index": int(chosen) if chosen is not None else None,
+            "top_index": int(top_idx),
+            "second_index": int(second_idx),
+            "top_absence": int(top_abs),
+            "second_absence": int(second_abs),
+            "methods_diff": int(methods_diff),
+            "variants_diff": int(variants_diff),
+            "chosen_index": int(prefer),
+        },
+    }
+
+
 def _choose_top_vtrac_index(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -1218,6 +1448,102 @@ def _card_vtrac_pack_boxed_first(
     }
 
 
+def _card_vtrac_pack_boxed_first_recency_tiebreak(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    state_dir: Path,
+    state_key: str,
+    tie_preset: str,
+    allowed_methods: Optional[set[str]] = None,
+) -> Dict[str, Any]:
+    """
+    vtrac_pack_boxed_first + a short-horizon recency tie-break on index choice.
+
+    This is a bounded *tie-break*, not a global penalization of repeats:
+    - We only intervene when the top-2 indices are effectively tied on evidence.
+    - We then prefer the index that has been absent from recent draw results.
+    """
+    chosen_index, chooser = _choose_top_vtrac_index_recency_tiebreak(
+        ranked=ranked,
+        state_dir=state_dir,
+        state_key=state_key,
+        tie_preset=tie_preset,
+        allowed_methods=allowed_methods,
+    )
+    if chosen_index is None and allowed_methods is not None:
+        fallback_index, fallback_chooser = _choose_top_vtrac_index_recency_tiebreak(
+            ranked=ranked,
+            state_dir=state_dir,
+            state_key=state_key,
+            tie_preset=tie_preset,
+            allowed_methods=None,
+        )
+        chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
+        chosen_index = fallback_index
+    pack: List[str] = _vtrac_display_pack(index=int(chosen_index)) if chosen_index is not None else []
+
+    if chosen_index is None or not pack:
+        card = _card_convergence_box_first(ranked=ranked, budget=budget)
+        card["vtrac_pack"] = {
+            "index": int(chosen_index) if chosen_index is not None else None,
+            "pack_combos": pack,
+            "chooser": chooser,
+            "fallback": "convergence_box_first",
+        }
+        return card
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    selected: List[str] = list(pack)
+    selected_set: set[str] = set(selected)
+    used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+    prefer_unique = max(1, (int(budget) - len(selected)) // 2) if int(budget) > len(selected) else 0
+
+    added = 0
+    for row in ranked_conv:
+        if len(selected) >= int(budget):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+
+    # Top up if we were too strict about canonical diversity.
+    for row in ranked_conv:
+        if len(selected) >= int(budget):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[: int(budget)]
+    boxed = _boxed_canonicals(selected)
+    return {
+        "budget": int(budget),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(chosen_index),
+            "pack_combos": list(pack),
+            "chooser": chooser,
+            "recency_tiebreak": {"preset": str(tie_preset), "spec": {"midday_draws": 2, "evening_draws": 2, "combined_draws": 4}},
+        },
+    }
+
+
 def _should_fire_vtrac_pack_gate(
     *,
     chooser_snapshot: Dict[str, Any],
@@ -1296,6 +1622,27 @@ def _card_v0_2_default(
         return _card_from_ranked(ranked=ranked, budget=b)
     return _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
 
+
+def _card_v0_2_default_recency_tiebreak(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    state_dir: Path,
+    state_key: str,
+    tie_preset: str,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture (budget-split) + recency tie-break for B24/B36 lane choice.
+
+    - B12: analysis_prefix
+    - B24/B36: vtrac_pack_boxed_first + recency tie-break (default-off experiment)
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    return _card_vtrac_pack_boxed_first_recency_tiebreak(
+        ranked=ranked, budget=b, state_dir=state_dir, state_key=state_key, tie_preset=tie_preset
+    )
 
 def _card_v0_2_default_b12pack(
     *,
@@ -1824,6 +2171,8 @@ def main() -> None:
             "play_box_first": {},
             "analysis_prefix": {},
             "v0_2_default": {},
+            "v0_2_default_recency_lenient": {},
+            "v0_2_default_recency_strict": {},
             "v0_2_default_b12pack_lenient": {},
             "v0_2_default_b12pack_strict": {},
             "v0_2_default_blackapple_reserve_lenient": {},
@@ -1846,6 +2195,12 @@ def main() -> None:
             strategy_cards["play_box_first"][f"B{b}"] = _card_box_first(ranked=ranked, budget=b)
             strategy_cards["analysis_prefix"][f"B{b}"] = _card_from_ranked(ranked=ranked, budget=b)
             strategy_cards["v0_2_default"][f"B{b}"] = _card_v0_2_default(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default_recency_lenient"][f"B{b}"] = _card_v0_2_default_recency_tiebreak(
+                ranked=ranked, budget=b, state_dir=state_dir, state_key=state_key, tie_preset="lenient"
+            )
+            strategy_cards["v0_2_default_recency_strict"][f"B{b}"] = _card_v0_2_default_recency_tiebreak(
+                ranked=ranked, budget=b, state_dir=state_dir, state_key=state_key, tie_preset="strict"
+            )
             strategy_cards["v0_2_default_b12pack_lenient"][f"B{b}"] = _card_v0_2_default_b12pack(
                 ranked=ranked, budget=b, gate_preset="lenient"
             )

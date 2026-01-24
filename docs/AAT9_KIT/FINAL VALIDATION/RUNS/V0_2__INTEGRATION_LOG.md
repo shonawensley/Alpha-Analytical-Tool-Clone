@@ -955,3 +955,54 @@ Reproduce (per day):
 - Control Play Cards: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_control_v1`
 - BA Play Cards: `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag ba_pack_v2 --input-experiment-tag ba_pack_v1`
 - Windowed grade: `python3 scripts/tools/grade_play_card_windowed.py --start-date <A> --end-date <B> --sharepacks-root <ROOT> --profile tool_only --experiment-tag <TAG> --window-draws 5 --force`
+
+---
+
+## 2026‑01‑24 — Short‑horizon “recency / pendingness” tie‑break for VTRAC lane choice (research-only) (implemented + measured)
+
+Motivation (training-aligned hypothesis):
+- When multiple VTRAC lanes are strong, prefer the lane that is **more absent from the most recent results** (short horizon), as a bounded “pendingness” boost.
+- Keep this **selection-layer only** (Play Cards), default‑off, and prove it via the same 3 regression windows.
+
+What we built:
+- New Play Card strategies (posture-preserving; B12 stays conservative):
+  - `v0_2_default_recency_lenient`
+  - `v0_2_default_recency_strict`
+- The only change vs `v0_2_default` is **how the B24/B36 VTRAC pack index is chosen**:
+  - base chooser: Candidate Universe evidence (methods/variants/packs/score totals)
+  - tie‑break: read sharepack‑local Aux draws (predictive‑safe) and prefer the index that is more absent from:
+    - last 2 Midday draws
+    - last 2 Evening draws
+    - last 4 Combined draws (E,M interleaved)
+
+Code:
+- `scripts/tools/create_play_card.py`
+  - Reads `aux/draws/*_{Midday,Evening,draws}.csv` (newest-first) for recency snapshots.
+  - Applies recency only as a bounded selector between the top 2 indices:
+    - `strict`: only when `methods_diff == 0` AND absence differs
+    - `lenient`: only when `methods_diff <= 1` AND absence differs
+
+Evaluation (windowed N=5):
+- v1 (too strict; rarely fired): `experiment_tag=recency_m2e2c4_v1`
+- v2 (near‑tie; actually fires in ~7–9% of B24/B36 cards): `experiment_tag=recency_m2e2c4_v2`
+
+Outputs (N=5; compare strategies):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2025-06-21_to_2025-06-23.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2025-12-30_to_2026-01-04.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2026-01-05_to_2026-01-09.md`
+
+Winners-linked study queues (pack changes):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__VTRAC_PACK_STUDY_QUEUE__recency_m2e2c4_v2__N5.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__VTRAC_PACK_STUDY_QUEUE__recency_m2e2c4_v2__N5.md`
+
+Key finding:
+- The recency tie‑break is **safe** (bounded, posture‑preserving; B12 unaffected), but the lift is **small and window‑specific** (no consistent improvement across all 3 windows yet).
+  Treat as a **research knob** until out‑of‑sample days validate that “absence‑boost” reliably helps conversion rather than just shuffling pack vs filler hits.
+
+Reproduce:
+- Generate play cards:
+  - `python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root <ROOT> --profile tool_only --experiment-tag recency_m2e2c4_v2 --input-experiment-tag none --force`
+- Windowed grade:
+  - `python3 scripts/tools/grade_play_card_windowed.py --start-date <A> --end-date <B> --sharepacks-root <ROOT> --profile tool_only --experiment-tag recency_m2e2c4_v2 --window-draws 5 --force`
+- Study queue (pack diffs, winners-linked):
+  - `python3 scripts/tools/build_play_card_vtrac_pack_study_queue.py --start-date <A> --end-date <B> --experiment-tag recency_m2e2c4_v2 --budget B24 --baseline-strategy v0_2_default --test-strategy v0_2_default_recency_lenient --mode packdiffs`

@@ -57,16 +57,23 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-06-21_to_2025-06-23.md`
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2025-12-30_to_2026-01-04.md`
       - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__v0_2_default_v1__N5__2026-01-05_to_2026-01-09.md`
-    - Blackapple pack + reserve experiment (ALERT-only candidates from Aux; bounded B24/B36 reserve; research-only):
-      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-06-21_to_2025-06-23.md`
-      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-12-30_to_2026-01-04.md`
-      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2026-01-05_to_2026-01-09.md`
-      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-06-21_to_2025-06-23.md`
-      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-12-30_to_2026-01-04.md`
-      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2026-01-05_to_2026-01-09.md`
-      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-06-21_to_2025-06-23.md`
-      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-12-30_to_2026-01-04.md`
-      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2026-01-05_to_2026-01-09.md`
+	    - Blackapple pack + reserve experiment (ALERT-only candidates from Aux; bounded B24/B36 reserve; research-only):
+	      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-06-21_to_2025-06-23.md`
+	      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2025-12-30_to_2026-01-04.md`
+	      - Control (no BA packs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_control_v1__N5__2026-01-05_to_2026-01-09.md`
+	      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-06-21_to_2025-06-23.md`
+	      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2025-12-30_to_2026-01-04.md`
+	      - BA packs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v2__N5__2026-01-05_to_2026-01-09.md`
+	      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-06-21_to_2025-06-23.md`
+	      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2025-12-30_to_2026-01-04.md`
+	      - BA packs (tighter conditional reserve gate): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__ba_pack_v3__N5__2026-01-05_to_2026-01-09.md`
+	    - Recency/pendingness tie-break (short-horizon “absence boost” for VTRAC lane choice; research-only):
+	      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2025-06-21_to_2025-06-23.md`
+	      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2025-12-30_to_2026-01-04.md`
+	      - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/play_card_windowed_rollup__tool_only__recency_m2e2c4_v2__N5__2026-01-05_to_2026-01-09.md`
+	      - Study queue (pack diffs, winners-linked):
+	        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__VTRAC_PACK_STUDY_QUEUE__recency_m2e2c4_v2__N5.md`
+	        - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__VTRAC_PACK_STUDY_QUEUE__recency_m2e2c4_v2__N5.md`
 - Superbrain config harness (Brain‑2 ranking policy comparison; Top‑N triage; tracks `hit_any` + `box_hit`):
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-06-21_to_2025-06-23.md` (and `.csv`)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_CONFIG__HARNESS__2025-12-30_to_2026-01-04.md` (and `.csv`)

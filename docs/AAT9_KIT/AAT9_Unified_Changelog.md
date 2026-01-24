@@ -301,3 +301,9 @@
 
 - Impact: Added `scripts/tools/run_v0_3_cycle.py` to run the predictive day cadence (`pre`) and post-results grading (`post`) with RUNS receipts for reproducibility; added `--prefer-experiment-tags` to `scripts/tools/create_predictive_portfolio_report.py` for play_card experiment summaries.
 - Files: scripts/tools/run_v0_3_cycle.py, scripts/tools/create_predictive_portfolio_report.py, docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md.
+
+## 2026-01-24 — Play Cards: recency/pendingness tie-break for VTRAC lane choice (research-only)
+
+- Impact: Added default-off Play Card strategies `v0_2_default_recency_lenient` / `v0_2_default_recency_strict` that keep B12 conservative but allow a short-horizon “absence boost” when choosing the B24/B36 VTRAC boxed-member pack lane (based on sharepack-local Aux draws).
+- Impact: Extended `scripts/tools/build_play_card_vtrac_pack_study_queue.py` to support separate play-cards vs winners roots and a `packdiffs` mode for reviewing when lane/pack choice changes, linked to winners artifacts.
+- Files: scripts/tools/create_play_card.py, scripts/tools/build_play_card_vtrac_pack_study_queue.py, docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md.

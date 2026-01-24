@@ -209,7 +209,21 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--start-date", required=True, help="Start date (YYYY-MM-DD), inclusive")
     ap.add_argument("--end-date", required=True, help="End date (YYYY-MM-DD), inclusive")
     ap.add_argument("--experiment-tag", required=True, help="Play card experiment tag (e.g., vtracpack_v1)")
-    ap.add_argument("--sharepacks-root", default="sharepacks", help="Sharepacks root (default: sharepacks)")
+    ap.add_argument(
+        "--sharepacks-root",
+        default="sharepacks",
+        help="Default root for both play cards and winners artifacts (default: sharepacks)",
+    )
+    ap.add_argument(
+        "--play-cards-root",
+        default="",
+        help="Optional root for play_card artifacts (default: same as --sharepacks-root)",
+    )
+    ap.add_argument(
+        "--winners-root",
+        default="",
+        help="Optional root for winners artifacts (default: same as --sharepacks-root)",
+    )
     ap.add_argument("--window-draws", type=int, default=5, help="Window draw slots (default: 5)")
     ap.add_argument("--budget", default="B12", help="Budget label (default: B12)")
     ap.add_argument("--baseline-strategy", default="analysis_prefix", help="Baseline strategy (default: analysis_prefix)")
@@ -220,9 +234,9 @@ def parse_args() -> argparse.Namespace:
     )
     ap.add_argument(
         "--mode",
-        choices=["diffs", "misses", "all"],
+        choices=["diffs", "misses", "packdiffs", "all"],
         default="diffs",
-        help="Which cases to include: diffs (baseline != test), misses (test miss only), all (default: diffs)",
+        help="Which cases to include: diffs (baseline != test), misses (test miss only), packdiffs (baseline pack != test pack), all (default: diffs)",
     )
     ap.add_argument("--out-md", default=None, help="Override output path")
     return ap.parse_args()
@@ -239,6 +253,12 @@ def main() -> None:
     sharepacks_root = Path(args.sharepacks_root)
     if not sharepacks_root.is_absolute():
         sharepacks_root = (REPO_ROOT / sharepacks_root).resolve()
+    play_cards_root = Path(args.play_cards_root) if str(args.play_cards_root or "").strip() else sharepacks_root
+    if not play_cards_root.is_absolute():
+        play_cards_root = (REPO_ROOT / play_cards_root).resolve()
+    winners_root = Path(args.winners_root) if str(args.winners_root or "").strip() else sharepacks_root
+    if not winners_root.is_absolute():
+        winners_root = (REPO_ROOT / winners_root).resolve()
 
     grade_csv = _windowed_grade_csv_path(start=args.start_date, end=args.end_date, tag=tag, n=window_draws)
     if not grade_csv.exists():
@@ -259,19 +279,30 @@ def main() -> None:
 
             base_hit = base.get("hit_any_inclusive_window") == "1"
             tst_hit = tst.get("hit_any_inclusive_window") == "1"
-            if args.mode == "diffs" and base_hit == tst_hit:
-                continue
-            if args.mode == "misses" and tst_hit:
-                continue
 
-            chosen_idx, pack = _chosen_vtrac_pack_index(
-                sharepacks_root=sharepacks_root,
+            base_idx, base_pack = _chosen_vtrac_pack_index(
+                sharepacks_root=play_cards_root,
+                start_date=start_date,
+                state_key=state_key,
+                tag=tag,
+                strategy=baseline,
+                budget=budget,
+            )
+            tst_idx, tst_pack = _chosen_vtrac_pack_index(
+                sharepacks_root=play_cards_root,
                 start_date=start_date,
                 state_key=state_key,
                 tag=tag,
                 strategy=test,
                 budget=budget,
             )
+
+            if args.mode == "diffs" and base_hit == tst_hit:
+                continue
+            if args.mode == "misses" and tst_hit:
+                continue
+            if args.mode == "packdiffs" and (base_idx == tst_idx and base_pack == tst_pack):
+                continue
 
             first_hit_n = int(tst.get("first_hit_any_inclusive_draw") or "0")
             slots = _draw_slots_for_state(start_date=start_date, window_draws=window_draws, state_key=state_key)
@@ -281,7 +312,7 @@ def main() -> None:
 
             hit_idx = _winner_vtrac_index(hit_winner) if hit_winner else None
             wj, wh = _find_winners_artifacts(
-                sharepacks_root=sharepacks_root, results_date=hit_date or start_date, state_key=state_key, winner=hit_winner
+                sharepacks_root=winners_root, results_date=hit_date or start_date, state_key=state_key, winner=hit_winner
             )
 
             out_rows.append(
@@ -295,12 +326,15 @@ def main() -> None:
                     "hit_label": hit_label,
                     "hit_winner": hit_winner,
                     "hit_winner_index": str(hit_idx) if hit_idx is not None else "",
-                    "chosen_index": str(chosen_idx) if chosen_idx is not None else "",
-                    "chosen_eq_hit_index": "1" if (chosen_idx is not None and hit_idx is not None and chosen_idx == hit_idx) else "0",
-                    "pack": " ".join(pack),
+                    "baseline_index": str(base_idx) if base_idx is not None else "",
+                    "test_index": str(tst_idx) if tst_idx is not None else "",
+                    "baseline_eq_hit_index": "1" if (base_idx is not None and hit_idx is not None and base_idx == hit_idx) else "0",
+                    "test_eq_hit_index": "1" if (tst_idx is not None and hit_idx is not None and tst_idx == hit_idx) else "0",
+                    "baseline_pack": " ".join(base_pack),
+                    "test_pack": " ".join(tst_pack),
                     "winners_json": _safe_rel(wj) if wj else "",
                     "winners_html": _safe_rel(wh) if wh else "",
-                    "play_card": _safe_rel(sharepacks_root / start_date / state_key / f"play_card__tool_only__{tag}.json"),
+                    "play_card": _safe_rel(play_cards_root / start_date / state_key / f"play_card__tool_only__{tag}.json"),
                 }
             )
 
@@ -314,6 +348,8 @@ def main() -> None:
         "",
         f"- generated_at: `{_now_iso()}`",
         f"- sharepacks_root: `{_safe_rel(sharepacks_root)}`",
+        f"- play_cards_root: `{_safe_rel(play_cards_root)}`",
+        f"- winners_root: `{_safe_rel(winners_root)}`",
         f"- experiment_tag: `{tag}`",
         f"- window_draws: `{window_draws}` (Midday/Evening slots)",
         f"- budget: `{budget}`",
@@ -323,8 +359,8 @@ def main() -> None:
         "",
         "## Cases",
         "",
-        "| start_date | state | base_hit | test_hit | first_hit | hit_date | hit_label | winner | idx | chosen | eq | pack | winners_html | play_card |",
-        "|---|---|---:|---:|---:|---|---|---|---:|---:|---:|---|---|---|",
+        "| start_date | state | base_hit | test_hit | first_hit | hit_date | hit_label | winner | idx | base_idx | test_idx | base_eq | test_eq | test_pack | winners_html | play_card |",
+        "|---|---|---:|---:|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---|",
     ]
 
     for r in out_rows:
@@ -341,9 +377,11 @@ def main() -> None:
                     r["hit_label"],
                     r["hit_winner"],
                     r["hit_winner_index"],
-                    r["chosen_index"],
-                    r["chosen_eq_hit_index"],
-                    r["pack"],
+                    r["baseline_index"],
+                    r["test_index"],
+                    r["baseline_eq_hit_index"],
+                    r["test_eq_hit_index"],
+                    r["test_pack"],
                     f"`{r['winners_html']}`" if r["winners_html"] else "",
                     f"`{r['play_card']}`" if r["play_card"] else "",
                 ]
@@ -357,4 +395,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
