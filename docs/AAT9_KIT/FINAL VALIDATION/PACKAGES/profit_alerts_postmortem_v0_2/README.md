@@ -44,6 +44,7 @@ If you want ChatGPT Pro to inspect the **string tables** and the winners lens al
 python3 scripts/tools/export_chatgpt_research_pack.py \
   --start-date 2025-12-30 --end-date 2026-01-04 \
   --mode curated \
+  --max-profit-alerts-cases 50 \
   --include-control-center --include-profit-alerts \
   --include-tables \
   --include-predictive --profile mixed \
@@ -53,4 +54,3 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
 Notes:
 - This exports `sharepacks/<D>/control_center/profit_alerts*.csv` and `profit_alerts_eval*.csv` (all states), plus a bounded set of per-state winners/tables evidence for context.
 - Output lands under `sharepacks/_scratch/` and is gitignored.
-

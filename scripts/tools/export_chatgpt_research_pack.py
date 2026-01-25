@@ -116,6 +116,15 @@ def _parse_args() -> argparse.Namespace:
         help="Curated mode: include up to N entries from Doubles study queue (default: 30).",
     )
     p.add_argument(
+        "--max-profit-alerts-cases",
+        type=int,
+        default=0,
+        help=(
+            "Curated mode: include up to N Profit Alerts cases (HIT rows first, then higher strength). "
+            "Default: 0 (disabled)."
+        ),
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would be copied (no filesystem writes).",
@@ -238,6 +247,58 @@ def _read_doubles_study_queue(path: Path, *, max_rows: int) -> List[Case]:
     return cases
 
 
+def _profit_alerts_status_priority(status: str) -> int:
+    s = (status or "").strip().upper()
+    if s == "HIT":
+        return 0
+    if s == "EXPIRED":
+        return 1
+    if s == "CENSORED":
+        return 2
+    if s == "ACTIVE":
+        return 3
+    return 9
+
+
+def _read_profit_alerts_cases_for_dates(*, dates: List[str], max_rows: int) -> List[Case]:
+    if max_rows <= 0 or not dates:
+        return []
+    rows: List[Tuple[int, float, Case]] = []
+    for d in dates:
+        eval_path = REPO_ROOT / "sharepacks" / d / "control_center" / "profit_alerts_eval.csv"
+        if not eval_path.exists():
+            continue
+        try:
+            with eval_path.open(newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    state_key = (row.get("state_key") or "").strip()
+                    if not state_key:
+                        continue
+                    status = (row.get("status") or "").strip()
+                    try:
+                        strength = float(row.get("strength") or 0.0)
+                    except ValueError:
+                        strength = 0.0
+                    rows.append(
+                        (_profit_alerts_status_priority(status), -strength, Case(date=d, state=state_key))
+                    )
+        except Exception:
+            continue
+
+    rows.sort(key=lambda t: (t[0], t[1]))
+    cases: List[Case] = []
+    seen: Set[Tuple[str, str]] = set()
+    for _, __, c in rows:
+        key = (c.date, c.state)
+        if key in seen:
+            continue
+        seen.add(key)
+        cases.append(c)
+        if len(cases) >= max_rows:
+            break
+    return cases
+
+
 def _select_cases(args: argparse.Namespace, dates: List[str], *, states_filter: Optional[Set[str]]) -> Dict[str, Set[str]]:
     if args.mode == "window":
         mapping: Dict[str, Set[str]] = {}
@@ -247,6 +308,14 @@ def _select_cases(args: argparse.Namespace, dates: List[str], *, states_filter: 
 
     # curated
     selected: Set[Tuple[str, str]] = set()
+
+    # Profit Alerts HIT/high-strength cases (optional; disabled by default)
+    for c in _read_profit_alerts_cases_for_dates(dates=dates, max_rows=int(args.max_profit_alerts_cases or 0)):
+        if c.date not in dates:
+            continue
+        if states_filter and c.state not in states_filter:
+            continue
+        selected.add((c.date, c.state))
 
     # Doubles/Mirror-doubles queue
     for c in _read_doubles_study_queue(
