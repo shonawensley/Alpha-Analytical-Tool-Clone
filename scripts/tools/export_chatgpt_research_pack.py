@@ -91,6 +91,11 @@ def _parse_args() -> argparse.Namespace:
         help="Include Profit Alerts files when exporting control_center (default: excluded).",
     )
     p.add_argument(
+        "--include-tables",
+        action="store_true",
+        help="Also copy tables/ and json/*_tables.json snapshots for selected cases (default: off; can be large).",
+    )
+    p.add_argument(
         "--include-final-docs",
         action="store_true",
         default=True,
@@ -314,7 +319,7 @@ def _copy_runs_docs(
         window_prefix = f"{dates[0]}_to_{dates[-1]}__"
         for path in sorted(RUNS_DIR.glob(f"{window_prefix}*")):
             if path.is_file():
-                if profile != "mixed" and "profit_alert" in path.name.lower():
+                if profile == "tool_only" and "profit_alert" in path.name.lower():
                     continue
                 _copy_file(path, dest_runs / path.name, dry_run=dry_run, manifest_rows=manifest_rows)
 
@@ -325,7 +330,7 @@ def _copy_runs_docs(
                 if profile != "mixed":
                     name = path.name
                     lower = name.lower()
-                    if "profit_alert" in lower:
+                    if profile == "tool_only" and "profit_alert" in lower:
                         continue
                     if name.endswith("__CONTROL_CENTER.md"):
                         continue
@@ -364,6 +369,7 @@ def _copy_sharepack_state_evidence(
     src_state_dir: Path,
     dest_state_dir: Path,
     *,
+    include_tables: bool,
     dry_run: bool,
     manifest_rows: List[Dict[str, object]],
 ) -> None:
@@ -382,6 +388,27 @@ def _copy_sharepack_state_evidence(
         manifest_rows=manifest_rows,
         allow_empty=True,
     )
+
+    if include_tables:
+        # Tables snapshots (CSV + JSON) (can be large; copy only when explicitly requested)
+        tables_dir = src_state_dir / "tables"
+        _copy_glob(
+            tables_dir,
+            dest_state_dir / "tables",
+            patterns=("*.csv",),
+            dry_run=dry_run,
+            manifest_rows=manifest_rows,
+            allow_empty=True,
+        )
+        json_dir = src_state_dir / "json"
+        _copy_glob(
+            json_dir,
+            dest_state_dir / "json",
+            patterns=(f"{state}_tables.json",),
+            dry_run=dry_run,
+            manifest_rows=manifest_rows,
+            allow_empty=True,
+        )
 
     # Aux (summary only; draw CSVs are intentionally excluded to keep size down)
     aux_dir = src_state_dir / "aux" / state
@@ -498,6 +525,8 @@ def _write_readme(
     lines.append("")
     lines.append("- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` (navigation + state/day reports + rollups)")
     lines.append("- `sharepacks/<D>/<STATE>/winners/` (HTML+JSON environment lens)")
+    if args.include_tables:
+        lines.append("- `sharepacks/<D>/<STATE>/tables/*.csv` + `sharepacks/<D>/<STATE>/json/*_tables.json` (string tables snapshots)")
     lines.append("- `sharepacks/<D>/<STATE>/aux/<STATE>/summary.md` (Aux evidence dump)")
     lines.append("- `sharepacks/<D>/<STATE>/digit_reduction/<STATE>/analyzer_v2/winners/*_overlay.html` (DR overlay subset)")
     lines.append("")
@@ -515,6 +544,7 @@ def _write_readme(
     lines.append(f"- profile: `{args.profile}`")
     lines.append(f"- include_control_center: `{bool(args.include_control_center)}`")
     lines.append(f"- include_profit_alerts: `{bool(args.include_profit_alerts)}`")
+    lines.append(f"- include_tables: `{bool(args.include_tables)}`")
     lines.append("")
     lines.append("## Selected cases")
     lines.append("")
@@ -609,6 +639,7 @@ def main() -> None:
             _copy_sharepack_state_evidence(
                 src_day / state,
                 dest_day / state,
+                include_tables=bool(args.include_tables),
                 dry_run=args.dry_run,
                 manifest_rows=manifest_rows,
             )

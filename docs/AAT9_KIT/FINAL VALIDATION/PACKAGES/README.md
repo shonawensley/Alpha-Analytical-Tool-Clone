@@ -28,6 +28,9 @@ This writes a bounded export under `sharepacks/_scratch/` (and includes `README.
 - Play Cards + budgets + combo packs (selection/grading design review):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/play_cards_budget_system_review/README.md`
 
+- Profit Alerts postmortem (v0.2 quarantine; wiring/semantics audit scope):
+  - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_postmortem_v0_2/README.md`
+
 - 2025‑06‑21 → 2025‑06‑23 (3-day starter corpus):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/gold_days_2025-06-21_to_2025-06-23/README.md`
 
