@@ -73,6 +73,12 @@ Master Validation (frozen day snapshot):
 - Brain‑2 policy harness (Top‑N triage; tracks `hit_any` + `box_hit`): `python3 scripts/tools/superbrain_config_harness.py --start-date <A> --end-date <B> ...`
 - Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`
 - If you add new `data/history/Pick3StatsC4_*.xlsm` files: do a 60‑second sanity check that the workbook is truly “H” (not misdated) by extracting 1 state’s newest draw and comparing to `data/results/<H>.txt` before building `sharepacks/<D=H+1>/`.
+- **HARD STOP (workbook swaps): avoid stale tables/winners**
+  - Never assume `data/original/Pick3StatsC4.xlsm`, `data/outputs/**`, or any cached “winners” directory still matches the new workbook.
+  - For full-day builds (results exist): regenerate the world snapshot via `PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date <H> --regen-aux-draws` (this rebuilds tables + JSON + date-scoped winners lens).
+  - For predictive builds (no results yet): use `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> ...` (activates workbook + regenerates tables/JSON + freezes `sharepacks/_predictive/<D>/...`).
+  - Winners lens must be date-scoped: prefer `reports/stable/winners_by_date/<D>/...` and `sharepacks/<D>/<STATE>/winners/...` (do not rely on any legacy `data/outputs/winners/` cache).
+  - Validate one state after any workbook swap: `python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict` and stop if it fails.
 - Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 - Quickstarts (zero-context):
   - Build + freeze a new day: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
