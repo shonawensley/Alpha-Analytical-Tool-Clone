@@ -124,12 +124,16 @@ Evidence block (recommended):
     - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE> --excel data/history/Pick3StatsC4_<HISTORY_D-1>.xlsm`
   - Fallback (copies from current live `data/cleaned/draws`; use only if you don’t have the history workbook snapshot):
     - `python3 scripts/tools/aux_sharepack_summary.py --date <DATE> --state <STATE>`
+- Optional: export the “boxed VTRAC badge matrix” into RUNS (late/super‑late combo badges + pair badges, inside index packs):
+  - `python3 scripts/tools/create_aux_vtrac_badge_matrix_report.py --date <DATE> [--sharepacks-root sharepacks/_predictive]`
+  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<DATE>__AUX_VTRAC_BADGE_MATRIX.{md,csv}`
 - Paste the generated `summary.md` under 0) before answering Q1–Q10.
 
 ## 3.Aux — [State] [Date]
 0) Outputs reviewed  
    - Draw CSV snapshot: `sharepacks/<DATE>/<STATE>/aux/draws/` (Combined/Midday/Evening)  
    - Aux evidence dump: `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` (all facts labeled by source)  
+   - (Optional) Badge matrix export: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<DATE>__AUX_VTRAC_BADGE_MATRIX.md`
    - (Optional) UI cross-check: Aux page screenshots / captions (only if needed)
 1) Aux input validation (V)  
    - Confirm the draw CSV paths used (original + snapshot), draw counts, and newest two draws per variant.  
@@ -165,6 +169,8 @@ Evidence block (recommended):
      - `idxTop`: candidate VTRAC index is in the variant’s top‑overdue overlay list
      - `sum`: candidate sum has a strong flag (red or blue)
      - `pair`: candidate contains a pending pair (red/blue/purple)
+     - `badgeCombo`: candidate triad is flagged late/super‑late in the badge matrix (R/B)
+     - `badgePair`: candidate contains a badge-colored pair in the badge matrix (R/B/P)
      - `BA`: candidate is a top Blackapple pick (if enabled)
 10) How to apply Aux (design implications + expense lever)  
    - Should the strongest Aux signals here be used as state-level gating (“play day / pass day”), candidate-level boosts, or both?  

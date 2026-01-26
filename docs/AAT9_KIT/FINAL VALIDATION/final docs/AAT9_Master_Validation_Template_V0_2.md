@@ -61,6 +61,9 @@ Aux pressure is an index/lane signal, not a straight caller. In v0.2 we keep it 
 Primary references:
 - Badge pressure harness: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_BADGE_PRESSURE__HARNESS__2026-01-05_to_2026-01-09.md`
 - Due Doubles parity audit: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DUE_DOUBLES__PARITY_AUDIT__2026-01-05_to_2026-01-09.md`
+- Badge matrix export (late/super‑late combo badges + pair badges; RUNS-only):
+  - `python3 scripts/tools/create_aux_vtrac_badge_matrix_report.py --date <D> [--sharepacks-root sharepacks/_predictive]`
+  - Outputs: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__AUX_VTRAC_BADGE_MATRIX.{md,csv}`
 
 ---
 
@@ -68,4 +71,3 @@ Primary references:
 
 - Coverage ledger: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__COVERAGE_LEDGER.md`
 - Portal link audit: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__PORTAL_LINK_AUDIT.md`
-
