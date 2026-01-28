@@ -46,6 +46,13 @@ Why: in the Jan gold window, CU union recall is strong:
 Reference:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/candidate_universe_rollup__tool_only__stable10.md`
 
+If the stable10 rollups are missing, generate them:
+
+```bash
+python3 scripts/tools/rollup_candidate_universe_corpus.py --profile tool_only --experiment-tag stable10
+python3 scripts/tools/rollup_play_card_corpus.py --profile tool_only --experiment-tag stable10
+```
+
 ### Play Card defaults by budget
 
 We do **not** try to optimize “strict hits” and “lane coverage” with the same budget posture.
