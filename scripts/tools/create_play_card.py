@@ -1775,6 +1775,139 @@ def _card_vtrac_packs_boxed_first(
     }
 
 
+def _card_vtrac_packs_boxed_first_lane_diverse_filler(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    packs_target: int,
+    allowed_methods: Optional[set[str]] = None,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Hybrid selection policy:
+    - Keep the same multi-pack "boxed-member packs first" behavior,
+    - But use the small remaining filler budget to intentionally cover *additional* VTRAC indices
+      (not already represented by the chosen packs).
+
+    Motivation:
+    - `CU_LANE_BUT_PLAY_MISS` indicates CU touched the winner lane, but the card failed to retain it.
+    - Baseline packheavy often relies on filler to retain lanes; this makes filler lane-aware instead
+      of duplicating pack lanes.
+    """
+    import modules.vtrac_reference as vr
+
+    base = _card_vtrac_packs_boxed_first(
+        ranked=ranked,
+        budget=budget,
+        packs_target=packs_target,
+        allowed_methods=allowed_methods,
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+    if not isinstance(base, dict):
+        return base
+    b = int(base.get("budget") or budget)
+    vtrac_pack = base.get("vtrac_pack")
+    if not isinstance(vtrac_pack, dict):
+        return base
+
+    pack_combos = vtrac_pack.get("pack_combos")
+    pack_indices = vtrac_pack.get("indices")
+    if not isinstance(pack_combos, list) or not pack_combos:
+        return base
+    if not isinstance(pack_indices, list) or not pack_indices:
+        return base
+
+    pack_index_set: set[int] = set()
+    for raw in pack_indices:
+        try:
+            pack_index_set.add(int(raw))
+        except Exception:
+            continue
+
+    # Start with pack combos (as-is), then re-fill using a lane-aware filler policy.
+    selected: List[str] = []
+    selected_set: set[str] = set()
+    for token in pack_combos:
+        c = _normalize_pick3_literal(token)
+        if not c or c in selected_set:
+            continue
+        if len(selected) >= b:
+            break
+        selected.append(c)
+        selected_set.add(c)
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+    prefer_unique = max(1, (b - len(selected)) // 2) if b > len(selected) else 0
+
+    filler_slots = max(0, b - len(selected))
+    outside_quota = filler_slots  # prefer outside-pack lanes for all filler slots when possible
+    outside_added = 0
+    added = 0
+
+    # Phase A: fill from lanes NOT already represented by the chosen packs.
+    for row in ranked_conv:
+        if len(selected) >= b or outside_added >= outside_quota:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        idx = vr.get_vtrac_index(combo)
+        try:
+            if idx is None or int(idx) in pack_index_set:
+                continue
+        except Exception:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+        outside_added += 1
+
+    # Phase B: normal convergence fill (canonical-diverse first).
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+
+    # Top up if we were too strict about canonical diversity.
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    base["combos"] = selected
+    base["combos_count"] = len(selected)
+    base["cost_units"] = len(selected)
+    base["boxed_canonicals"] = boxed
+    base["boxed_canonicals_count"] = len(boxed)
+    base["vtrac_pack"] = {**vtrac_pack, "filler_policy": "lane_diverse"}
+    return base
+
+
 def _card_vtrac_packs_boxed_then_box_first(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -2280,6 +2413,23 @@ def _card_v0_2_default_multi_pack_packheavy(
         return _card_from_ranked(ranked=ranked, budget=b)
     packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
     return _card_vtrac_packs_boxed_first(ranked=ranked, budget=b, packs_target=packs_target)
+
+
+def _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): packheavy at B36, but allocate the small filler tail
+    to cover additional lanes (outside the chosen packs).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy(ranked=ranked, budget=b)
+    return _card_vtrac_packs_boxed_first_lane_diverse_filler(ranked=ranked, budget=b, packs_target=4)
 
 
 def _card_v0_2_default_multi_pack_packheavy_diverse(
@@ -3000,6 +3150,7 @@ def main() -> None:
             "v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000": {},
             "v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000": {},
             "v0_2_default_multi_pack_packheavy": {},
+            "v0_2_default_multi_pack_packheavy_lane_diverse_filler": {},
             "v0_2_default_multi_pack_packheavy_diverse": {},
             "v0_2_default_multi_pack_stablepluslane_packheavy": {},
             "v0_2_default_stable_lane": {},
@@ -3042,6 +3193,9 @@ def main() -> None:
                 _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000(ranked=ranked, budget=b)
             )
             strategy_cards["v0_2_default_multi_pack_packheavy"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_lane_diverse_filler"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(
                 ranked=ranked, budget=b
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_diverse"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy_diverse(

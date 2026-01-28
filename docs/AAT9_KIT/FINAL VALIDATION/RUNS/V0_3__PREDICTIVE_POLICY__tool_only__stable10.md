@@ -67,16 +67,16 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy`
+- Strategy: `v0_2_default_multi_pack_packheavy_lane_diverse_filler`
 - Goal metric: lift strict `hit_any` while keeping `pack_any_correct` measurable and improving
 - Jan gold window (known winners, stable10):
   - `hit_any` **5.7%**
-  - `hit_any_inclusive` **34.7%**
+  - `hit_any_inclusive` **35.2%**
   - `pack_any_correct` **15.0%**
 
 Reference:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy__stable10.md`
-- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy__stable10__B36.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_lane_diverse_filler__stable10.md`
+- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_lane_diverse_filler__stable10__B36.md`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
