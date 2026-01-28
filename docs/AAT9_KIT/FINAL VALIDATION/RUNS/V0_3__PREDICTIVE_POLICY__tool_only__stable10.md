@@ -104,6 +104,8 @@ This is not an analyzer failure; it is a **conversion policy failure**.
 
 If you feel “we’re broken / nothing converts”, stop and do this in order:
 
+0) Open the single scoreboard (side-by-side truth page):
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10.md`
 1) Results coverage (do we have enough future results to grade what we’re claiming?):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__RESULTS_HORIZON.md`
 2) Always filter `winner_missing=1` (censored ≠ miss).
@@ -116,7 +118,7 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
    - `pack_any_correct` (multi-pack correctness)
 5) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
-   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_laneonly_presetB_packheavy__stable10__B36.md`
+   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy__stable10__B36.md`
 
 ---
 
