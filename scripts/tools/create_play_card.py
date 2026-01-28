@@ -1397,6 +1397,205 @@ def _choose_top_vtrac_indices(
     return indices, chooser2
 
 
+def _choose_top_vtrac_indices_diverse(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    count: int,
+    scan_limit: int = 350,
+    allowed_methods: Optional[set[str]] = None,
+) -> Tuple[List[int], Dict[str, Any]]:
+    """
+    Choose top-N indices, but intentionally diversify ranking lenses.
+
+    Motivation:
+    - The system is a multi-hypothesis environment: the "winner lane" is often present in CU,
+      but not necessarily #1 under a single chooser lens.
+    - This strategy reduces over-commitment by mixing top candidates from multiple sort presets.
+
+    Implementation:
+    - Take ~half of N from `methods_first` (corroboration),
+    - Fill remaining from `packs_first` (pack-referenced strength),
+    - Then `score_total_first` (aggregate strength) as a final backstop.
+    """
+    n = max(0, int(count))
+    if n <= 0:
+        return [], {"candidates_found": 0, "chosen_indices": [], "top5": []}
+
+    # Pull small ranked lists under multiple lenses (each returns a top5).
+    _, chooser_methods = _choose_top_vtrac_index(
+        ranked=ranked,
+        scan_limit=int(scan_limit),
+        allowed_methods=allowed_methods,
+        sort_preset="methods_first",
+    )
+    _, chooser_packs = _choose_top_vtrac_index(
+        ranked=ranked,
+        scan_limit=int(scan_limit),
+        allowed_methods=allowed_methods,
+        sort_preset="packs_first",
+    )
+    _, chooser_score = _choose_top_vtrac_index(
+        ranked=ranked,
+        scan_limit=int(scan_limit),
+        allowed_methods=allowed_methods,
+        sort_preset="score_total_first",
+    )
+
+    def _top5(chooser: Dict[str, Any]) -> List[Dict[str, Any]]:
+        top = chooser.get("top5")
+        return top if isinstance(top, list) else []
+
+    indices: List[int] = []
+    seen: set[int] = set()
+
+    def _add(rows: List[Dict[str, Any]], *, limit: Optional[int] = None) -> None:
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            idx = row.get("index")
+            try:
+                val = int(idx)
+            except Exception:
+                continue
+            if val in seen:
+                continue
+            indices.append(val)
+            seen.add(val)
+            if limit is not None and len(indices) >= limit:
+                return
+            if len(indices) >= n:
+                return
+
+    # First pass: corroboration-heavy (methods/variants).
+    first_quota = (n + 1) // 2 if n > 1 else 1
+    _add(_top5(chooser_methods), limit=first_quota)
+    if len(indices) < n:
+        _add(_top5(chooser_packs))
+    if len(indices) < n:
+        _add(_top5(chooser_score))
+
+    chooser = {
+        "scan_limit": int(scan_limit),
+        "allowed_methods": sorted(list(allowed_methods)) if allowed_methods else [],
+        "mix": {
+            "methods_first": chooser_methods,
+            "packs_first": chooser_packs,
+            "score_total_first": chooser_score,
+        },
+        "chosen_indices": list(indices),
+    }
+    return indices, chooser
+
+
+def _card_vtrac_packs_boxed_first_from_indices(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    packs_target: int,
+    indices: Sequence[int],
+    chooser: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Like `_card_vtrac_packs_boxed_first`, but uses a precomputed list of indices.
+    """
+    b = int(budget)
+    want = max(1, int(packs_target))
+    chosen: List[int] = []
+    for raw in list(indices)[:want]:
+        try:
+            chosen.append(int(raw))
+        except Exception:
+            continue
+
+    pack_combos: List[str] = []
+    pack_combos_by_index: Dict[int, List[str]] = {}
+    seen: set[str] = set()
+    for idx in chosen:
+        full = _vtrac_display_pack(index=int(idx))
+        if not full:
+            continue
+        included: List[str] = []
+        for token in full:
+            c = _normalize_pick3_literal(token)
+            if not c or c in seen:
+                continue
+            if len(pack_combos) >= b:
+                break
+            pack_combos.append(c)
+            seen.add(c)
+            included.append(c)
+        if included:
+            pack_combos_by_index[int(idx)] = included
+        if len(pack_combos) >= b:
+            break
+
+    if not pack_combos:
+        card = _card_convergence_box_first(ranked=ranked, budget=b)
+        card["vtrac_pack"] = {
+            "index": None,
+            "indices": [],
+            "packs_target": int(want),
+            "pack_combos": [],
+            "pack_combos_by_index": {},
+            "chooser": chooser,
+            "fallback": "convergence_box_first",
+        }
+        return card
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    selected: List[str] = list(pack_combos)
+    selected_set: set[str] = set(selected)
+    used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+    prefer_unique = max(1, (b - len(selected)) // 2) if b > len(selected) else 0
+
+    added = 0
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+
+    # Top up if we were too strict about canonical diversity.
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    used_indices = list(pack_combos_by_index.keys())
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(used_indices[0]) if used_indices else None,
+            "indices": list(used_indices),
+            "packs_target": int(want),
+            "pack_combos": list(pack_combos),
+            "pack_combos_by_index": {int(k): list(v) for k, v in pack_combos_by_index.items()},
+            "chooser": chooser,
+        },
+    }
+
+
 def _card_vtrac_pack_boxed_only(
     *, ranked: Sequence[Dict[str, Any]], budget: int, allowed_methods: Optional[set[str]] = None
 ) -> Dict[str, Any]:
@@ -2081,6 +2280,34 @@ def _card_v0_2_default_multi_pack_packheavy(
         return _card_from_ranked(ranked=ranked, budget=b)
     packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
     return _card_vtrac_packs_boxed_first(ranked=ranked, budget=b, packs_target=packs_target)
+
+
+def _card_v0_2_default_multi_pack_packheavy_diverse(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): B36-only variant that diversifies lane selection.
+
+    Goal: reduce CU_LANE_BUT_PLAY_MISS without touching analyzers by avoiding "single-lens"
+    over-commitment when choosing VTRAC indices.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy(ranked=ranked, budget=b)
+
+    packs_target = 4
+    indices, chooser = _choose_top_vtrac_indices_diverse(ranked=ranked, count=packs_target)
+    return _card_vtrac_packs_boxed_first_from_indices(
+        ranked=ranked,
+        budget=b,
+        packs_target=packs_target,
+        indices=indices,
+        chooser=chooser,
+    )
 
 
 def _card_v0_2_default_multi_pack_stablepluslane_packheavy(
@@ -2773,6 +3000,7 @@ def main() -> None:
             "v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000": {},
             "v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000": {},
             "v0_2_default_multi_pack_packheavy": {},
+            "v0_2_default_multi_pack_packheavy_diverse": {},
             "v0_2_default_multi_pack_stablepluslane_packheavy": {},
             "v0_2_default_stable_lane": {},
             "v0_2_default_hybrid_box_lane": {},
@@ -2814,6 +3042,9 @@ def main() -> None:
                 _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000(ranked=ranked, budget=b)
             )
             strategy_cards["v0_2_default_multi_pack_packheavy"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_diverse"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy_diverse(
                 ranked=ranked, budget=b
             )
             strategy_cards["v0_2_default_multi_pack_stablepluslane_packheavy"][f"B{b}"] = (
