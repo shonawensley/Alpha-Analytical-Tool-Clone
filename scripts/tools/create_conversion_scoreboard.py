@@ -197,7 +197,13 @@ def main() -> None:
     cu_hit_any = _rate(cu_rows, "cu_union_hit_any")
     cu_vtrac = _rate(cu_rows, "cu_union_vtrac_index_hit")
 
-    out_path = Path(args.out) if args.out else _scoreboard_path(date_from=date_from, date_to=date_to, profile=profile, experiment_tag=exp_tag)
+    out_path = (
+        Path(args.out)
+        if args.out
+        else _scoreboard_path(date_from=date_from, date_to=date_to, profile=profile, experiment_tag=exp_tag)
+    )
+    if not out_path.is_absolute():
+        out_path = (REPO_ROOT / out_path).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     lines: List[str] = []
@@ -246,7 +252,10 @@ def main() -> None:
     lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    print(f"Wrote: {out_path.relative_to(REPO_ROOT)}")
+    try:
+        print(f"Wrote: {out_path.relative_to(REPO_ROOT)}")
+    except ValueError:
+        print(f"Wrote: {out_path}")
 
 
 if __name__ == "__main__":
