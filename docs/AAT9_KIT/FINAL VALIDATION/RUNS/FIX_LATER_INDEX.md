@@ -425,3 +425,189 @@ Source folder: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
   - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__SouthCarolina4.md`
 - `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
   - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-09__Virginia4.md`
+
+## D=2026-01-15
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__Virginia4.md`
+
+## D=2026-01-16
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__Virginia4.md`
+
+## D=2026-01-17
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-17__Virginia4.md`
+
+## D=2026-01-18
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-18__Virginia4.md`
+
+## D=2026-01-20
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-20__Virginia4.md`
+
+## D=2026-01-21
+
+- `Connecticut4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Connecticut4.md`
+- `Delaware4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Delaware4.md`
+- `Florida4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Florida4.md`
+- `Indiana4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Indiana4.md`
+- `Michigan4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Michigan4.md`
+- `NewJersey4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__NewJersey4.md`
+- `NewYork4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__NewYork4.md`
+- `NorthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__NorthCarolina4.md`
+- `Ohio4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Ohio4.md`
+- `OntarioCanada4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__OntarioCanada4.md`
+- `Pennsylvania4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Pennsylvania4.md`
+- `PuertoRico4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__PuertoRico4.md`
+- `SouthCarolina4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__SouthCarolina4.md`
+- `Virginia4`: Fix-later: tune gates/decays only after larger corpus; consider mirror-double/VTRAC-family closure as a pack-builder rule.
+  - Source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-21__Virginia4.md`
