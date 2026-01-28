@@ -84,6 +84,11 @@ Use the template below per tool (copy/paste for each: Stable, DR, VTRAC, Hot Zon
      - V-TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
      - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
    - Reminder: consult both the lean outputs doc and the tool-specific analysis log for this tool (self-contained optimizations, final outputs, insights). This helps decide what to extract/label and confirms you’re covering all final outputs.
+0b) v0.2 Integration Log aligned interpretation (posture + reading rules)  
+   - What posture does the v0.2 integration log recommend for this tool (what to prioritize first)?
+   - What are common misreads / what should we explicitly ignore?
+   - What concrete selection hooks are recommended to carry forward into aggregation (superbrain / cross-tool synthesis)?
+   - Delta check: does this run’s output look aligned with the integration intent? If not, what’s the likely cause?
 1) Winners evidence vs brain outputs  
    - Where does the winning triple/family appear in the brain outputs (scores/compound/families/metrics/spotlight or tool-equivalent)? Cite rank/score and key why-tags. If absent, note “not present.”
 2) 4 hit criteria mapping  

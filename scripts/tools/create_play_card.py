@@ -1321,6 +1321,47 @@ def _choose_top_vtrac_index(
     return chosen_index, snapshot
 
 
+def _choose_top_vtrac_indices(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    count: int,
+    scan_limit: int = 350,
+    allowed_methods: Optional[set[str]] = None,
+) -> Tuple[List[int], Dict[str, Any]]:
+    """
+    Choose the top-N VTRAC indices using the same evidence ranking as `_choose_top_vtrac_index`.
+
+    Intended for multi-pack strategies (e.g., B24 can spend 3 boxed-member packs of ~8 lines each).
+    """
+    n = max(0, int(count))
+    if n <= 0:
+        return [], {"candidates_found": 0, "chosen_indices": [], "top5": []}
+
+    _, chooser = _choose_top_vtrac_index(ranked=ranked, scan_limit=scan_limit, allowed_methods=allowed_methods)
+    top5 = chooser.get("top5") if isinstance(chooser, dict) else None
+    if not isinstance(top5, list):
+        top5 = []
+
+    indices: List[int] = []
+    for row in top5:
+        if not isinstance(row, dict):
+            continue
+        idx = row.get("index")
+        if isinstance(idx, int):
+            indices.append(int(idx))
+        else:
+            try:
+                indices.append(int(idx))
+            except Exception:
+                continue
+        if len(indices) >= n:
+            break
+
+    chooser2 = dict(chooser) if isinstance(chooser, dict) else {}
+    chooser2["chosen_indices"] = list(indices)
+    return indices, chooser2
+
+
 def _card_vtrac_pack_boxed_only(
     *, ranked: Sequence[Dict[str, Any]], budget: int, allowed_methods: Optional[set[str]] = None
 ) -> Dict[str, Any]:
@@ -1370,6 +1411,238 @@ def _card_vtrac_pack_boxed_only(
         "vtrac_pack": {
             "index": int(chosen_index),
             "pack_combos": list(pack),
+            "chooser": chooser,
+        },
+    }
+
+
+def _card_vtrac_packs_boxed_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    packs_target: int,
+    allowed_methods: Optional[set[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Like `_card_vtrac_pack_boxed_first`, but inserts multiple boxed-member packs (top-N indices).
+
+    Motivation: the single-index chooser can miss the winner index even when CU evidence contains it.
+    For Pick3, boxed-member packs are often ~8 lines, so B24 can represent ~3 indices directly.
+    """
+    b = int(budget)
+    want = max(1, int(packs_target))
+
+    indices, chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=allowed_methods)
+    if not indices and allowed_methods is not None:
+        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=None)
+        chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
+        indices = fallback_indices
+
+    pack_combos: List[str] = []
+    pack_combos_by_index: Dict[int, List[str]] = {}
+    seen: set[str] = set()
+    for idx in indices:
+        full = _vtrac_display_pack(index=int(idx))
+        if not full:
+            continue
+        included: List[str] = []
+        for token in full:
+            c = _normalize_pick3_literal(token)
+            if not c or c in seen:
+                continue
+            if len(pack_combos) >= b:
+                break
+            pack_combos.append(c)
+            seen.add(c)
+            included.append(c)
+        if included:
+            pack_combos_by_index[int(idx)] = included
+        if len(pack_combos) >= b:
+            break
+
+    if not pack_combos:
+        card = _card_convergence_box_first(ranked=ranked, budget=b)
+        card["vtrac_pack"] = {
+            "index": None,
+            "indices": [],
+            "packs_target": int(want),
+            "pack_combos": [],
+            "pack_combos_by_index": {},
+            "chooser": chooser,
+            "fallback": "convergence_box_first",
+        }
+        return card
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+
+    selected: List[str] = list(pack_combos)
+    selected_set: set[str] = set(selected)
+    used_canon: set[str] = {c for c in (_canon(x) for x in selected_set) if c}
+    prefer_unique = max(1, (b - len(selected)) // 2) if b > len(selected) else 0
+
+    added = 0
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        canon = _canon(combo)
+        if canon and canon in used_canon and added < prefer_unique:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+        if canon:
+            used_canon.add(canon)
+        added += 1
+
+    # Top up if we were too strict about canonical diversity.
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    used_indices = list(pack_combos_by_index.keys())
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(used_indices[0]) if used_indices else None,
+            "indices": list(used_indices),
+            "packs_target": int(want),
+            "pack_combos": list(pack_combos),
+            "pack_combos_by_index": {int(k): list(v) for k, v in pack_combos_by_index.items()},
+            "chooser": chooser,
+        },
+    }
+
+
+def _card_vtrac_packs_boxed_then_box_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    packs_target: int,
+    allowed_methods: Optional[set[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Hybrid conversion policy:
+    1) Insert top-N boxed-member VTRAC packs (lane anchoring),
+    2) Complete any high-scoring full BOX closures that fit (precision),
+    3) Fill remaining lines by convergence ranking.
+
+    This is selection-layer only and remains predictive-safe.
+    """
+    b = int(budget)
+    want = max(1, int(packs_target))
+
+    indices, chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=allowed_methods)
+    if not indices and allowed_methods is not None:
+        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=None)
+        chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
+        indices = fallback_indices
+
+    pack_combos: List[str] = []
+    pack_combos_by_index: Dict[int, List[str]] = {}
+    seen: set[str] = set()
+    for idx in indices:
+        full = _vtrac_display_pack(index=int(idx))
+        if not full:
+            continue
+        included: List[str] = []
+        for token in full:
+            c = _normalize_pick3_literal(token)
+            if not c or c in seen:
+                continue
+            if len(pack_combos) >= b:
+                break
+            pack_combos.append(c)
+            seen.add(c)
+            included.append(c)
+        if included:
+            pack_combos_by_index[int(idx)] = included
+        if len(pack_combos) >= b:
+            break
+
+    if not pack_combos:
+        card = _card_convergence_box_first(ranked=ranked, budget=b)
+        card["vtrac_pack"] = {
+            "index": None,
+            "indices": [],
+            "packs_target": int(want),
+            "pack_combos": [],
+            "pack_combos_by_index": {},
+            "chooser": chooser,
+            "fallback": "convergence_box_first",
+        }
+        return card
+
+    selected: List[str] = list(pack_combos)
+    selected_set: set[str] = set(selected)
+
+    canon_to_combos: Dict[str, set[str]] = {}
+    canon_score: Dict[str, float] = {}
+    for row in ranked:
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        canon = _canon(combo)
+        if not canon:
+            continue
+        canon_to_combos.setdefault(canon, set()).add(combo)
+        canon_score[canon] = max(canon_score.get(canon, float("-inf")), float(row.get("score") or 0.0))
+
+    boxable: List[Tuple[str, float, List[str]]] = []
+    for canon, seen_combos in canon_to_combos.items():
+        perms = sorted(set(_unique_perms(canon)))
+        if perms and set(perms).issubset(seen_combos):
+            boxable.append((canon, canon_score.get(canon, 0.0), perms))
+
+    boxable.sort(key=lambda t: (-t[1], t[0]))
+    for canon, _, perms in boxable:
+        if len(selected) >= b:
+            break
+        needed = [c for c in perms if c not in selected_set]
+        if not needed:
+            continue
+        if len(selected) + len(needed) > b:
+            continue
+        selected.extend(needed)
+        selected_set.update(needed)
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    used_indices = list(pack_combos_by_index.keys())
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(used_indices[0]) if used_indices else None,
+            "indices": list(used_indices),
+            "packs_target": int(want),
+            "pack_combos": list(pack_combos),
+            "pack_combos_by_index": {int(k): list(v) for k, v in pack_combos_by_index.items()},
             "chooser": chooser,
         },
     }
@@ -1621,6 +1894,183 @@ def _card_v0_2_default(
     if b <= 12:
         return _card_from_ranked(ranked=ranked, budget=b)
     return _card_vtrac_pack_boxed_first(ranked=ranked, budget=b)
+
+
+def _card_v0_2_default_multi_pack(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture variant: for B24/B36, insert multiple VTRAC boxed-member packs (top indices),
+    then fill remaining lines by convergence ranking.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    # Balanced default: keep meaningful filler so we don't collapse lane diversity.
+    # (Pick3 boxed-member packs are often ~8 lines.)
+    packs_target = max(1, min(5, b // 12))
+    return _card_vtrac_packs_boxed_first(ranked=ranked, budget=b, packs_target=packs_target)
+
+
+def _card_v0_2_default_multi_pack_laneonly_presetB(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture variant: multi-pack, but choose lanes using only "lane evidence" methods (presetB).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    packs_target = max(1, min(5, b // 12))
+    lane_methods_presetB = _lane_methods_for_preset(preset="presetB")
+    return _card_vtrac_packs_boxed_first(
+        ranked=ranked, budget=b, packs_target=packs_target, allowed_methods=lane_methods_presetB
+    )
+
+def _card_v0_2_default_multi_pack_laneonly_presetB_packheavy(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only):
+    - Choose lanes using only "lane evidence" methods (presetB),
+    - Spend more of B36 on boxed-member VTRAC packs (4 indices when possible),
+    - Keep B24 behavior unchanged (so we don't re-optimize coverage mid-experiment).
+
+    Goal: improve B36 `pack_any_correct` / pack-attribution without touching analyzers.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    # Default pack targets (B24->2, B36->3), but pack-heavy at B36.
+    packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
+    lane_methods_presetB = _lane_methods_for_preset(preset="presetB")
+    return _card_vtrac_packs_boxed_first(
+        ranked=ranked, budget=b, packs_target=packs_target, allowed_methods=lane_methods_presetB
+    )
+
+
+def _card_v0_2_default_stable_lane(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture variant: choose the B24/B36 VTRAC lane using only stable-family evidence.
+
+    Goal: increase `pack_correct` without collapsing overall card diversity (keeps the original
+    v0.2 fill behavior after inserting the chosen boxed-member pack).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    return _card_vtrac_pack_boxed_first(ranked=ranked, budget=b, allowed_methods={"stable_top"})
+
+
+def _card_v0_2_default_hybrid_box_lane(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    v0.2 posture hybrid:
+    - B12: analysis_prefix
+    - B24/B36: start from v0.2 pack posture, reserve a few slots to *complete* full BOX closures cheaply,
+      then fill remaining with convergence ranking.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+
+    reserved = 2 if b <= 24 else 3
+    base_budget = max(0, int(b) - int(reserved))
+
+    base: Dict[str, Any]
+    if b <= 24:
+        base = _card_vtrac_pack_boxed_first(ranked=ranked, budget=base_budget)
+    else:
+        packs_target = max(1, min(5, base_budget // 12))
+        base = _card_vtrac_packs_boxed_first(ranked=ranked, budget=base_budget, packs_target=packs_target)
+
+    selected: List[str] = [_normalize_pick3_literal(x) for x in (base.get("combos") or [])]
+    selected = [x for x in selected if x]
+    selected_set: set[str] = set(selected)
+    slots_left = int(b) - len(selected)
+
+    # Identify closures we can complete cheaply (missing few perms) within reserved slots.
+    canon_to_combos: Dict[str, set[str]] = {}
+    canon_score: Dict[str, float] = {}
+    for row in ranked:
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        canon = _canon(combo)
+        if not canon:
+            continue
+        canon_to_combos.setdefault(canon, set()).add(combo)
+        canon_score[canon] = max(canon_score.get(canon, float("-inf")), float(row.get("score") or 0.0))
+
+    candidates: List[Tuple[int, int, float, str, List[str]]] = []
+    for canon, seen_combos in canon_to_combos.items():
+        perms = sorted(set(_unique_perms(canon)))
+        if not perms or not set(perms).issubset(seen_combos):
+            continue
+        missing = [p for p in perms if p not in selected_set]
+        have_count = len(perms) - len(missing)
+        if not missing:
+            continue
+        candidates.append((len(missing), -have_count, -float(canon_score.get(canon, 0.0)), canon, missing))
+
+    candidates.sort(key=lambda t: (t[0], t[1], t[2], t[3]))
+    used_canons: set[str] = set()
+    while slots_left > 0:
+        picked: Optional[Tuple[int, int, float, str, List[str]]] = None
+        for cand in candidates:
+            miss_n, _have_neg, _score_neg, canon, missing = cand
+            if canon in used_canons:
+                continue
+            if miss_n <= slots_left:
+                picked = cand
+                break
+        if picked is None:
+            break
+        miss_n, _have_neg, _score_neg, canon, missing = picked
+        for combo in missing:
+            if slots_left <= 0:
+                break
+            c = _normalize_pick3_literal(combo)
+            if not c or c in selected_set:
+                continue
+            selected.append(c)
+            selected_set.add(c)
+            slots_left -= 1
+        used_canons.add(canon)
+
+    # Fill remaining with convergence-ranked candidates.
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    for row in ranked_conv:
+        if len(selected) >= int(b):
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[: int(b)]
+    boxed = _boxed_canonicals(selected)
+
+    out = dict(base)
+    out["budget"] = int(b)
+    out["combos"] = selected
+    out["combos_count"] = len(selected)
+    out["cost_units"] = len(selected)
+    out["boxed_canonicals"] = boxed
+    out["boxed_canonicals_count"] = len(boxed)
+    return out
 
 
 def _card_v0_2_default_recency_tiebreak(
@@ -2171,6 +2621,11 @@ def main() -> None:
             "play_box_first": {},
             "analysis_prefix": {},
             "v0_2_default": {},
+            "v0_2_default_multi_pack": {},
+            "v0_2_default_multi_pack_laneonly_presetB": {},
+            "v0_2_default_multi_pack_laneonly_presetB_packheavy": {},
+            "v0_2_default_stable_lane": {},
+            "v0_2_default_hybrid_box_lane": {},
             "v0_2_default_recency_lenient": {},
             "v0_2_default_recency_strict": {},
             "v0_2_default_b12pack_lenient": {},
@@ -2195,6 +2650,17 @@ def main() -> None:
             strategy_cards["play_box_first"][f"B{b}"] = _card_box_first(ranked=ranked, budget=b)
             strategy_cards["analysis_prefix"][f"B{b}"] = _card_from_ranked(ranked=ranked, budget=b)
             strategy_cards["v0_2_default"][f"B{b}"] = _card_v0_2_default(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default_multi_pack"][f"B{b}"] = _card_v0_2_default_multi_pack(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default_multi_pack_laneonly_presetB"][f"B{b}"] = _card_v0_2_default_multi_pack_laneonly_presetB(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_2_default_multi_pack_laneonly_presetB_packheavy"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_laneonly_presetB_packheavy(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_stable_lane"][f"B{b}"] = _card_v0_2_default_stable_lane(ranked=ranked, budget=b)
+            strategy_cards["v0_2_default_hybrid_box_lane"][f"B{b}"] = _card_v0_2_default_hybrid_box_lane(
+                ranked=ranked, budget=b
+            )
             strategy_cards["v0_2_default_recency_lenient"][f"B{b}"] = _card_v0_2_default_recency_tiebreak(
                 ranked=ranked, budget=b, state_dir=state_dir, state_key=state_key, tie_preset="lenient"
             )

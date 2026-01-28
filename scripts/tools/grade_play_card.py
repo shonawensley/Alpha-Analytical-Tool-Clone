@@ -270,6 +270,9 @@ def main() -> None:
         "vtrac_index_hit",
         "vtrac_index_hit_only",
         "vtrac_pack_index",
+        "vtrac_pack_indices",
+        "vtrac_pack_indices_count",
+        "pack_any_correct",
         "vtrac_pack_size",
         "filler_size",
         "pack_straight_hit",
@@ -321,12 +324,22 @@ def main() -> None:
 
                     vtrac_pack = card.get("vtrac_pack") if isinstance(card, dict) else None
                     pack_index: Optional[int] = None
+                    pack_indices: List[int] = []
                     pack_raw = []
                     if isinstance(vtrac_pack, dict):
                         idx = vtrac_pack.get("index")
                         if isinstance(idx, int):
                             pack_index = int(idx)
+                        indices_raw = vtrac_pack.get("indices")
+                        if isinstance(indices_raw, list):
+                            for x in indices_raw:
+                                try:
+                                    pack_indices.append(int(x))
+                                except Exception:
+                                    continue
                         pack_raw = vtrac_pack.get("pack_combos") or []
+                    if not pack_indices and pack_index is not None:
+                        pack_indices = [int(pack_index)]
                     pack_norm = [_normalize_pick3_literal(c) for c in pack_raw] if isinstance(pack_raw, list) else []
                     pack_norm = [c for c in pack_norm if c]
                     pack_set = set(pack_norm) & combos_set
@@ -361,6 +374,10 @@ def main() -> None:
                     filler_only_hit_any_inclusive = bool(filler_hit_any_inclusive and not pack_hit_any_inclusive)
                     pack_and_filler_hit_any_inclusive = bool(pack_hit_any_inclusive and filler_hit_any_inclusive)
 
+                    pack_any_correct: str = ""
+                    if not missing and pack_indices:
+                        pack_any_correct = "1" if (wvt is not None and int(wvt) in set(pack_indices)) else "0"
+
                     rows_out.append(
                         {
                             "results_date": args.date,
@@ -386,6 +403,9 @@ def main() -> None:
                             "vtrac_index_hit": "1" if (vtrac_hit and not missing) else "0",
                             "vtrac_index_hit_only": "1" if (vtrac_hit and not hit_any and not missing) else "0",
                             "vtrac_pack_index": str(pack_index) if pack_index is not None else "",
+                            "vtrac_pack_indices": ",".join(str(x) for x in pack_indices) if pack_indices else "",
+                            "vtrac_pack_indices_count": str(len(pack_indices)) if pack_indices else "",
+                            "pack_any_correct": pack_any_correct,
                             "vtrac_pack_size": str(len(pack_set)),
                             "filler_size": str(len(filler_set)),
                             "pack_straight_hit": "1" if pack_straight_hit else "0",

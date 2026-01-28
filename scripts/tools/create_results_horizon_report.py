@@ -43,15 +43,19 @@ def daterange(start: str, end: str) -> List[str]:
     return out
 
 
-def list_results_dates(root: Path) -> List[str]:
+def list_results_dates(root: Path) -> Tuple[List[str], List[str]]:
     results_dir = root / "data" / "results"
-    out: List[str] = []
+    non_empty: List[str] = []
+    empty: List[str] = []
     if not results_dir.exists():
-        return out
+        return non_empty, empty
     for p in results_dir.glob("*.txt"):
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.txt", p.name):
-            out.append(p.stem)
-    return sorted(out)
+            if p.stat().st_size > 0:
+                non_empty.append(p.stem)
+            else:
+                empty.append(p.stem)
+    return sorted(non_empty), sorted(empty)
 
 
 def consecutive_horizon_days(*, available: set[str], start_date: str) -> int:
@@ -85,13 +89,14 @@ def main() -> None:
     args = ap.parse_args()
 
     window_dates = daterange(args.start, args.end)
-    all_dates = list_results_dates(ROOT)
-    available = set(all_dates)
+    non_empty_dates, empty_dates = list_results_dates(ROOT)
+    non_empty = set(non_empty_dates)
+    exists_any = non_empty | set(empty_dates)
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    max_date = all_dates[-1] if all_dates else None
+    max_date = non_empty_dates[-1] if non_empty_dates else None
 
     lines: List[str] = []
     lines.append(f"# Results Horizon — {args.start} → {args.end}")
@@ -103,35 +108,45 @@ def main() -> None:
     lines.append("- Missing future results files produce **CENSORED** episodes (unknown, not failed).")
     lines.append("")
     if max_date:
-        lines.append(f"- Latest results file present in `data/results/`: **{max_date}.txt**")
+        lines.append(f"- Latest *non-empty* results file present in `data/results/`: **{max_date}.txt**")
     else:
-        lines.append("- No results files found under `data/results/`.")
+        lines.append("- No *non-empty* results files found under `data/results/`.")
     lines.append("")
 
     lines.append("## Window coverage")
     lines.append("")
-    lines.append("| D | results file exists | consecutive days available from D | approx max steps (Combined) | approx max steps (Midday/Evening) |")
-    lines.append("|---|---:|---:|---:|---:|")
+    lines.append("| D | file exists | non-empty | consecutive days available from D (non-empty) | approx max steps (Combined) | approx max steps (Midday/Evening) |")
+    lines.append("|---|---:|---:|---:|---:|---:|")
     for d in window_dates:
-        exists = d in available
-        consec = consecutive_horizon_days(available=available, start_date=d) if exists else 0
+        exists = d in exists_any
+        ok = d in non_empty
+        consec = consecutive_horizon_days(available=non_empty, start_date=d) if ok else 0
         # Approximate upper bounds (actual gradeable steps can be lower if a state has blank Midday/Evening).
         max_steps_combined = 2 * consec
         max_steps_single = consec
-        lines.append(f"| {d} | {'yes' if exists else 'no'} | {consec} | {max_steps_combined} | {max_steps_single} |")
+        lines.append(
+            f"| {d} | {'yes' if exists else 'no'} | {'yes' if ok else 'no'} | {consec} | {max_steps_combined} | {max_steps_single} |"
+        )
     lines.append("")
 
     lines.append("## Notes")
     lines.append("")
     lines.append("- `consecutive days` counts include D itself.")
+    lines.append("- Empty results files are treated as **missing** for horizon calculations.")
     lines.append("- `max steps (Combined)` assumes two outcomes per day (Midday+Evening). Some states/days have blanks, which reduces actual gradeable steps.")
     lines.append("- `max steps (Midday/Evening)` is a conservative bound for period-faithful grading (one outcome per day).")
     lines.append("")
 
-    if all_dates:
+    if empty_dates:
+        lines.append("## Empty results files (exist but treated as missing)")
+        lines.append("")
+        lines.extend([f"- `{d}.txt`" for d in empty_dates])
+        lines.append("")
+
+    if non_empty_dates:
         lines.append("## Latest results dates (tail)")
         lines.append("")
-        lines.extend([f"- `{d}.txt`" for d in safe_tail(all_dates, 14)])
+        lines.extend([f"- `{d}.txt`" for d in safe_tail(non_empty_dates, 14)])
         lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
@@ -139,4 +154,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

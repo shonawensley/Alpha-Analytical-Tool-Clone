@@ -168,6 +168,7 @@ def _cmd_create_candidate_universe(
     sharepacks_root: str,
     profile: str,
     experiment_tag: str,
+    top_n_stable: Optional[int],
     states: Sequence[str],
     force: bool,
     write_signals_bundle: bool,
@@ -182,9 +183,12 @@ def _cmd_create_candidate_universe(
         sharepacks_root,
         "--profile",
         profile,
+        # Candidate Universe policy: DR is demoted by default for v0.3 runs.
         "--top-n-dr",
         "0",
     ]
+    if top_n_stable is not None:
+        cmd += ["--top-n-stable", str(int(top_n_stable))]
     if experiment_tag:
         cmd += ["--experiment-tag", experiment_tag]
     if states:
@@ -447,6 +451,17 @@ def _parse_args() -> argparse.Namespace:
     pre.add_argument("--skip-play-card", action="store_true", help="Skip creating play_card*.json.")
     pre.add_argument("--skip-portfolio", action="store_true", help="Skip creating predictive portfolio markdown.")
     pre.add_argument(
+        "--stable10",
+        action="store_true",
+        help="Convenience: set --experiment-tag stable10 and pass --top-n-stable 10 to Candidate Universe (default: off).",
+    )
+    pre.add_argument(
+        "--top-n-stable",
+        type=int,
+        default=None,
+        help="Override --top-n-stable passed to create_candidate_universe.py (default: tool default; recommended: 10 for stable10).",
+    )
+    pre.add_argument(
         "--write-signals-bundle",
         action="store_true",
         help="Also write signals_bundle*.json during Candidate Universe creation (default: off).",
@@ -483,6 +498,17 @@ def _parse_args() -> argparse.Namespace:
     pre_range.add_argument("--skip-play-card", action="store_true", help="Skip creating play_card*.json.")
     pre_range.add_argument("--skip-portfolio", action="store_true", help="Skip creating predictive portfolio markdown.")
     pre_range.add_argument(
+        "--stable10",
+        action="store_true",
+        help="Convenience: set --experiment-tag stable10 and pass --top-n-stable 10 to Candidate Universe (default: off).",
+    )
+    pre_range.add_argument(
+        "--top-n-stable",
+        type=int,
+        default=None,
+        help="Override --top-n-stable passed to create_candidate_universe.py (default: tool default; recommended: 10 for stable10).",
+    )
+    pre_range.add_argument(
         "--write-signals-bundle",
         action="store_true",
         help="Also write signals_bundle*.json during Candidate Universe creation (default: off).",
@@ -514,6 +540,11 @@ def _parse_args() -> argparse.Namespace:
     post.add_argument("--date", required=True, help="Results date D to grade (YYYY-MM-DD)")
     _add_common_sharepack_args(post)
     post.add_argument(
+        "--stable10",
+        action="store_true",
+        help="Convenience: set --experiment-tag stable10 (default: off).",
+    )
+    post.add_argument(
         "--results-file",
         default=None,
         help="Override results file (default: data/results/<D>.txt).",
@@ -536,6 +567,11 @@ def _parse_args() -> argparse.Namespace:
     post_range.add_argument("--start-date", required=True, help="Start results date D0 (YYYY-MM-DD)")
     post_range.add_argument("--end-date", required=True, help="End results date D1 (YYYY-MM-DD)")
     _add_common_sharepack_args(post_range)
+    post_range.add_argument(
+        "--stable10",
+        action="store_true",
+        help="Convenience: set --experiment-tag stable10 (default: off).",
+    )
     post_range.add_argument("--skip-missing-results", action="store_true", help="Skip days with missing data/results/<D>.txt (default: fail).")
     post_range.add_argument("--skip-candidate-universe-grade", action="store_true", help="Skip Candidate Universe grading.")
     post_range.add_argument("--skip-play-card-grade", action="store_true", help="Skip Play Card grading.")
@@ -578,6 +614,11 @@ def main() -> None:
         sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "").strip()
+        top_n_stable = args.top_n_stable
+        if bool(args.stable10) and not experiment_tag:
+            experiment_tag = "stable10"
+        if experiment_tag == "stable10" and top_n_stable is None:
+            top_n_stable = 10
         states = list(args.states or [])
         write_signals_bundle = bool(args.write_signals_bundle) or bool(args.write_audit_evidence)
         write_evidence = bool(args.write_audit_evidence)
@@ -594,6 +635,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- top_n_stable: `{top_n_stable if top_n_stable is not None else '-'} `")
         receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
@@ -620,6 +662,7 @@ def main() -> None:
                     sharepacks_root=sharepacks_root,
                     profile=profile,
                     experiment_tag=experiment_tag,
+                    top_n_stable=top_n_stable,
                     states=states,
                     force=bool(args.force),
                     write_signals_bundle=write_signals_bundle,
@@ -683,6 +726,11 @@ def main() -> None:
         sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "").strip()
+        top_n_stable = args.top_n_stable
+        if bool(args.stable10) and not experiment_tag:
+            experiment_tag = "stable10"
+        if experiment_tag == "stable10" and top_n_stable is None:
+            top_n_stable = 10
         states = list(args.states or [])
 
         receipt_lines: List[str] = []
@@ -694,6 +742,7 @@ def main() -> None:
         receipt_lines.append(f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`")
         receipt_lines.append(f"- profile: `{profile}`")
         receipt_lines.append(f"- experiment_tag: `{experiment_tag or '-'} `")
+        receipt_lines.append(f"- top_n_stable: `{top_n_stable if top_n_stable is not None else '-'} `")
         receipt_lines.append(f"- runs_subdir: `{runs_subdir or '-'} `")
         receipt_lines.append(f"- states: `{', '.join(states) if states else 'ALL'}`")
         receipt_lines.append(f"- force: `{bool(args.force)}`")
@@ -721,6 +770,10 @@ def main() -> None:
         ]
         if experiment_tag:
             base_cmd += ["--experiment-tag", experiment_tag]
+        if top_n_stable is not None:
+            base_cmd += ["--top-n-stable", str(int(top_n_stable))]
+        if bool(args.stable10):
+            base_cmd += ["--stable10"]
         if runs_subdir:
             base_cmd += ["--runs-subdir", runs_subdir]
         if states:
@@ -789,6 +842,8 @@ def main() -> None:
         sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "").strip()
+        if bool(args.stable10) and not experiment_tag:
+            experiment_tag = "stable10"
         states = list(args.states or [])
         results_file = str(args.results_file).strip() if args.results_file else None
 
@@ -908,6 +963,8 @@ def main() -> None:
         sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "").strip()
+        if bool(args.stable10) and not experiment_tag:
+            experiment_tag = "stable10"
         states = list(args.states or [])
 
         receipt_lines: List[str] = []

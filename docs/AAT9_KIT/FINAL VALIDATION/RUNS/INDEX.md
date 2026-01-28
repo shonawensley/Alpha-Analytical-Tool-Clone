@@ -28,6 +28,7 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
 - Doubles / mirror-doubles deep dive: `DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md`
 - Candidate Universe rollup: `candidate_universe_rollup.md`
 - Play Card rollup: `play_card_rollup.md`
+- Predictive policy (v0.3, stable10 defaults): `V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`
 - Aux VTRAC badge matrix (Windows parity export): `AUX_VTRAC_BADGE_MATRIX__AUDIT.md` + per-day `YYYY-MM-DD__AUX_VTRAC_BADGE_MATRIX.md`
 - Tool v0 consumption audits (quant → cases → feature decisions):
   - Digit Reduction:
@@ -303,3 +304,111 @@ sed -n '1,40p' "sharepacks/2025-06-22/README.md"
 - DONE `2026-01-09__PuertoRico4.md`
 - DONE `2026-01-09__SouthCarolina4.md`
 - DONE `2026-01-09__Virginia4.md`
+
+## D=2026-01-15 (H=2026-01-14)
+
+- DONE `2026-01-15__CONTROL_CENTER.md`
+- DONE `2026-01-15__Connecticut4.md`
+- DONE `2026-01-15__Delaware4.md`
+- DONE `2026-01-15__Florida4.md`
+- DONE `2026-01-15__Indiana4.md`
+- DONE `2026-01-15__Michigan4.md`
+- DONE `2026-01-15__NewJersey4.md`
+- DONE `2026-01-15__NewYork4.md`
+- DONE `2026-01-15__NorthCarolina4.md`
+- DONE `2026-01-15__Ohio4.md`
+- DONE `2026-01-15__OntarioCanada4.md`
+- DONE `2026-01-15__Pennsylvania4.md`
+- DONE `2026-01-15__PuertoRico4.md`
+- DONE `2026-01-15__SouthCarolina4.md`
+- DONE `2026-01-15__Virginia4.md`
+
+## D=2026-01-16 (H=2026-01-15)
+
+- DONE `2026-01-16__CONTROL_CENTER.md`
+- DONE `2026-01-16__Connecticut4.md`
+- DONE `2026-01-16__Delaware4.md`
+- DONE `2026-01-16__Florida4.md`
+- DONE `2026-01-16__Indiana4.md`
+- DONE `2026-01-16__Michigan4.md`
+- DONE `2026-01-16__NewJersey4.md`
+- DONE `2026-01-16__NewYork4.md`
+- DONE `2026-01-16__NorthCarolina4.md`
+- DONE `2026-01-16__Ohio4.md`
+- DONE `2026-01-16__OntarioCanada4.md`
+- DONE `2026-01-16__Pennsylvania4.md`
+- DONE `2026-01-16__PuertoRico4.md`
+- DONE `2026-01-16__SouthCarolina4.md`
+- DONE `2026-01-16__Virginia4.md`
+
+## D=2026-01-17 (H=2026-01-16)
+
+- DONE `2026-01-17__CONTROL_CENTER.md`
+- DONE `2026-01-17__Connecticut4.md`
+- DONE `2026-01-17__Delaware4.md`
+- DONE `2026-01-17__Florida4.md`
+- DONE `2026-01-17__Indiana4.md`
+- DONE `2026-01-17__Michigan4.md`
+- DONE `2026-01-17__NewJersey4.md`
+- DONE `2026-01-17__NewYork4.md`
+- DONE `2026-01-17__NorthCarolina4.md`
+- DONE `2026-01-17__Ohio4.md`
+- DONE `2026-01-17__OntarioCanada4.md`
+- DONE `2026-01-17__Pennsylvania4.md`
+- DONE `2026-01-17__PuertoRico4.md`
+- DONE `2026-01-17__SouthCarolina4.md`
+- DONE `2026-01-17__Virginia4.md`
+
+## D=2026-01-18 (H=2026-01-17)
+
+- DONE `2026-01-18__CONTROL_CENTER.md`
+- DONE `2026-01-18__Connecticut4.md`
+- DONE `2026-01-18__Delaware4.md`
+- DONE `2026-01-18__Florida4.md`
+- DONE `2026-01-18__Indiana4.md`
+- DONE `2026-01-18__Michigan4.md`
+- DONE `2026-01-18__NewJersey4.md`
+- DONE `2026-01-18__NewYork4.md`
+- DONE `2026-01-18__NorthCarolina4.md`
+- DONE `2026-01-18__Ohio4.md`
+- DONE `2026-01-18__OntarioCanada4.md`
+- DONE `2026-01-18__Pennsylvania4.md`
+- DONE `2026-01-18__PuertoRico4.md`
+- DONE `2026-01-18__SouthCarolina4.md`
+- DONE `2026-01-18__Virginia4.md`
+
+## D=2026-01-20 (H=2026-01-19)
+
+- DONE `2026-01-20__CONTROL_CENTER.md`
+- DONE `2026-01-20__Connecticut4.md`
+- DONE `2026-01-20__Delaware4.md`
+- DONE `2026-01-20__Florida4.md`
+- DONE `2026-01-20__Indiana4.md`
+- DONE `2026-01-20__Michigan4.md`
+- DONE `2026-01-20__NewJersey4.md`
+- DONE `2026-01-20__NewYork4.md`
+- DONE `2026-01-20__NorthCarolina4.md`
+- DONE `2026-01-20__Ohio4.md`
+- DONE `2026-01-20__OntarioCanada4.md`
+- DONE `2026-01-20__Pennsylvania4.md`
+- DONE `2026-01-20__PuertoRico4.md`
+- DONE `2026-01-20__SouthCarolina4.md`
+- DONE `2026-01-20__Virginia4.md`
+
+## D=2026-01-21 (H=2026-01-20)
+
+- DONE `2026-01-21__CONTROL_CENTER.md`
+- DONE `2026-01-21__Connecticut4.md`
+- DONE `2026-01-21__Delaware4.md`
+- DONE `2026-01-21__Florida4.md`
+- DONE `2026-01-21__Indiana4.md`
+- DONE `2026-01-21__Michigan4.md`
+- DONE `2026-01-21__NewJersey4.md`
+- DONE `2026-01-21__NewYork4.md`
+- DONE `2026-01-21__NorthCarolina4.md`
+- DONE `2026-01-21__Ohio4.md`
+- DONE `2026-01-21__OntarioCanada4.md`
+- DONE `2026-01-21__Pennsylvania4.md`
+- DONE `2026-01-21__PuertoRico4.md`
+- DONE `2026-01-21__SouthCarolina4.md`
+- DONE `2026-01-21__Virginia4.md`

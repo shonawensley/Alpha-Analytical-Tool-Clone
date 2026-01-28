@@ -19,6 +19,7 @@ This folder stores **filled, per‑example** master validation reports so we don
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CONTROL_CENTER_ROLLUP.md` (+ `.csv`)
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__PROFIT_ALERTS_ROLLUP.md` (+ `.csv`)
 - Optional cross-day Codex deep analysis (parallel reviewer output): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/YYYY-MM-DD_to_YYYY-MM-DD__CODEX_DEEP_ANALYSIS.md`
+- Predictive policy (locks “coverage vs conversion” posture): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`
 - Auto-exported corpus summary (one row per day/state/period): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/corpus_summary.csv`
 - Auto-extracted Fix-later index (from filled run reports): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/FIX_LATER_INDEX.md`
 - Post-runs triage (claims → fixed vs misframed vs fix-later): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/POST_RUNS_TRIAGE.md`

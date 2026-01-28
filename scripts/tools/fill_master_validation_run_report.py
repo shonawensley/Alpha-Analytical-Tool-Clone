@@ -176,6 +176,139 @@ def _pick_env_verdict(stable_summary: dict[str, Any] | None, hz_summary: dict[st
     return "weak/noisy (no exact Stable hit; rely on cross-tool/Aux)"
 
 
+def build_v0_2_alignment_answers(tool: str) -> dict[str, str]:
+    """
+    v0.2 Integration Log aligned interpretation helpers.
+
+    These are intentionally "posture + reading rules" (not performance claims).
+    They exist to keep run reports aligned with v0.2 (selection/measurement integrity)
+    so template fills generate durable, comparable evidence across days.
+    """
+    stable = {
+        "posture": (
+            "Stable is treated as the **contract/evidence oracle** (not a guaranteed straight caller). "
+            "Combined is an evidence lens (not a third outcome). Avoid one-day tuning; log patterns + hypotheses instead."
+        ),
+        "prioritize": (
+            "Prioritize `winner_rank_fraction` + `winner_score_ratio_to_top` and the `section` where the best evidence appears "
+            "(same-period vs cross-variant bounce vs Combined lens). Use exact_boxed/exact_straight as “conversion-ready” signals."
+        ),
+        "misreads": (
+            "Don’t treat ‘no exact triple’ as a pipeline bug if artifacts are present; it’s often a lane/canonical-only day. "
+            "Avoid leading-zero/coercion issues; don’t over-read Combined as an outcome; don’t overfit from isolated wins/misses."
+        ),
+        "selection": (
+            "If Stable has strong evidence (e.g., rank_frac ≤ ~0.10 and/or exact_boxed), Candidate Universe should include boxed perms "
+            "for that canonical. If evidence is weaker/diffuse, treat it as lane context and defer coverage decisions to VTRAC index + Hot Zones lane."
+        ),
+        "hooks": (
+            "Across the window, track cross-variant bounce frequency + dominance/noise (rank_frac distributions). "
+            "Use convergence cases + rollups before proposing any analyzer edits; log potential changes to the v0.3 backlog only."
+        ),
+    }
+
+    dr = {
+        "posture": (
+            "Digit Reduction is primarily a **conversion hedge** (exact/VT boxed/straight paths) with explicit **any vs final** semantics. "
+            "Treat it as a lane→coverage tool, not a strict top‑K straight oracle."
+        ),
+        "prioritize": (
+            "Use the winner stamp counts (`exact_any`, `vtrac_any`, etc.) plus top-candidates presence/ranks and per-item `area_rank` evidence. "
+            "Missing training/analyzer outputs is Fix‑Now; low hit counts with valid artifacts is performance signal."
+        ),
+        "misreads": (
+            "Do not conflate `any` (flags) vs `final` (hits) semantics; don’t interpret global ranks without variant-local context; "
+            "don’t treat ‘miss’ as corruption unless validators fail."
+        ),
+        "selection": (
+            "Feed DR candidates into Candidate Universe union as bounded box/VT hedges, then let Play Cards (budgets) control spend. "
+            "Index-hit-only days are conversion-policy opportunities (selection-layer), not immediate DR tuning."
+        ),
+        "hooks": (
+            "Flag recurring patterns where DR shows VT visibility but low playable conversion. Study convergence cases to design bounded conversion packs "
+            "(selection-layer experiments) before touching analyzer scoring."
+        ),
+    }
+
+    vtrac = {
+        "posture": (
+            "VTRAC Enhanced is a **gateway/index lens**: judge it by winner index placement + lane visibility, not only by ‘straight in top‑K’. "
+            "Ensure winners lens inputs are date-scoped to avoid stale-cache drift."
+        ),
+        "prioritize": (
+            "Prioritize winner index `rank_fraction` and `score_ratio_to_top`, and whether the winner’s index is in top10. "
+            "Treat ‘index visible but canonical missing’ as a conversion problem to be solved in selection."
+        ),
+        "misreads": (
+            "Don’t expect a single straight-caller; don’t mix winners caches; beware doubles/index semantics confusion; "
+            "and don’t interpret results without verifying validator artifacts exist and are non-empty."
+        ),
+        "selection": (
+            "When the winner index is high, prefer bounded index coverage (VT boxed) or VSTRAIGHTS lane coverage rather than wide open sets. "
+            "Candidate Universe/Play Cards are the place to express these policies safely and measure deltas."
+        ),
+        "hooks": (
+            "Use the Superbrain config harness to compare cross-state triage policies. "
+            "If index-hit rates are consistently high but conversion is low, prioritize selection-layer conversion experiments (not analyzer weight sweeps)."
+        ),
+    }
+
+    hot_zones = {
+        "posture": (
+            "Hot Zones is treated as a **lane/index evidence lens**. v0.2 evidence suggests weight tweaks don’t produce stable canonical top‑K lift, "
+            "so use it for corroboration and lane visibility rather than expecting an 8‑straight oracle."
+        ),
+        "prioritize": (
+            "Prioritize winner rank_fraction in `top_lanes`, `has_vt_straight` in per-lane evidence, and the evidence tags on top lanes. "
+            "Index/lane correctness is valuable even when the exact triad is not top‑ranked."
+        ),
+        "misreads": (
+            "Don’t judge Hot Zones only by ‘winner in top8’; don’t treat low canonical top‑K as a bug if artifacts exist; "
+            "and don’t forget Combined is a lens that can supply the strongest evidence."
+        ),
+        "selection": (
+            "Use Hot Zones to support lane selection (which VT lanes/indices deserve coverage) and to justify cheap conversion policies "
+            "(perm-only vs boxed vs VT-box/VSTRAIGHTS)."
+        ),
+        "hooks": (
+            "Mine convergence cases (Stable+HZ+VTRAC+DR agreement) as study targets. "
+            "If Hot Zones is consistently index-correct but not box-correct, treat it as another conversion-policy input (selection layer)."
+        ),
+    }
+
+    aux = {
+        "posture": (
+            "Aux is a draw-based **pressure/gating** system. It must be sharepack-aligned (same workbook snapshot) before it’s interpreted. "
+            "Treat it as an index/lane and positional pressure input, not a guaranteed straight caller."
+        ),
+        "prioritize": (
+            "Prioritize cross-variant consensus (positional digits, index overlays/heatboard, pairs/doubles/sums) and whether Aux reinforces "
+            "the same VT lanes seen in Part 2. Badge pressure is a key v0.2 measurement surface."
+        ),
+        "misreads": (
+            "Never compare Aux signals generated from a different workbook (swap drift). "
+            "Avoid treating Combined as an outcome; avoid reading ‘pressure’ as same-day certainty without a bounded playset/budget."
+        ),
+        "selection": (
+            "Use Aux as (a) state-level gate/tie-breaker and/or (b) candidate-level boost within Candidate Universe evidence, then let Play Cards "
+            "express cost control. Keep Profit Alerts quarantined unless explicitly running an ablation."
+        ),
+        "hooks": (
+            "Run the Aux badge pressure harness + Control Center rollups across the window to see whether pressure signals are stable. "
+            "Promote only measured, bounded transforms into defaults; keep the rest as Fix‑Later hypotheses."
+        ),
+    }
+
+    mapping = {
+        "Stable": stable,
+        "Digit Reduction": dr,
+        "VTRAC Analyzer": vtrac,
+        "Hot Zones": hot_zones,
+        "Aux": aux,
+    }
+    return mapping.get(tool, {})
+
+
 def build_part_a_answers(
     *,
     date: str,
@@ -551,6 +684,8 @@ def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
         m_tool = re.match(r"^###\s+2\.(.+?)\s+—", line)
         if m_tool:
             current_tool = m_tool.group(1).strip()
+        if line.startswith("## Part 3 — Aux Features"):
+            current_tool = "Aux"
 
         # Part A Qs
         if "Part A answers" in line:
@@ -577,6 +712,29 @@ def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
                 else:
                     out_lines.append(lines[i])
                 i += 1
+            continue
+
+        # v0.2 alignment prompts (tool-by-tool + Aux)
+        v02 = build_v0_2_alignment_answers(current_tool or "")
+        if line.strip().startswith("- v0.2 posture:") and (ELLIPSIS in line or "..." in line):
+            out_lines.append(f"- v0.2 posture: {v02.get('posture', '(no v0.2 guidance)')}")
+            i += 1
+            continue
+        if line.strip().startswith("- What to prioritize (data-backed):") and (ELLIPSIS in line or "..." in line):
+            out_lines.append(f"- What to prioritize (data-backed): {v02.get('prioritize', '(no v0.2 guidance)')}")
+            i += 1
+            continue
+        if line.strip().startswith("- Common misreads to avoid:") and (ELLIPSIS in line or "..." in line):
+            out_lines.append(f"- Common misreads to avoid: {v02.get('misreads', '(no v0.2 guidance)')}")
+            i += 1
+            continue
+        if line.strip().startswith("- Selection implications (Candidate Universe / Play Cards):") and (ELLIPSIS in line or "..." in line):
+            out_lines.append(f"- Selection implications (Candidate Universe / Play Cards): {v02.get('selection', '(no v0.2 guidance)')}")
+            i += 1
+            continue
+        if line.strip().startswith("- Backlog/harness hooks:") and (ELLIPSIS in line or "..." in line):
+            out_lines.append(f"- Backlog/harness hooks: {v02.get('hooks', '(no v0.2 guidance)')}")
+            i += 1
             continue
 
         # Cross-tool synthesis placeholders

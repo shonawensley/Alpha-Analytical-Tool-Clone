@@ -49,7 +49,7 @@ V‑TRAC / Stable / Digit Reduction → combined tables via utils.path_handler
 Master Validation (frozen day snapshot):
 - Brain‑1 per-state sharepacks: `sharepacks/<D>/<STATE>/...`
 - Predictive (no results) sharepacks: `sharepacks/_predictive/<D>/...` via `python3 scripts/tools/run_predictive_day.py --history-date <H>`
-- v0.3 cadence wrapper (preferred; logs a RUNS receipt): `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --force`
+- v0.3 cadence wrapper (preferred; logs a RUNS receipt): `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --force`
 - Candidate Universe (gradeable pre-results playset): `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
   - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
@@ -76,7 +76,7 @@ Master Validation (frozen day snapshot):
 - **HARD STOP (workbook swaps): avoid stale tables/winners**
   - Never assume `data/original/Pick3StatsC4.xlsm`, `data/outputs/**`, or any cached “winners” directory still matches the new workbook.
   - For full-day builds (results exist): regenerate the world snapshot via `PYTHONPATH=.:src python3 scripts/tools/run_history_and_results.py --history-date <H> --regen-aux-draws` (this rebuilds tables + JSON + date-scoped winners lens).
-  - For predictive builds (no results yet): use `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> ...` (activates workbook + regenerates tables/JSON + freezes `sharepacks/_predictive/<D>/...`).
+  - For predictive builds (no results yet): use `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> ...` (activates workbook + regenerates tables/JSON + freezes `sharepacks/_predictive/<D>/...`). Recommended posture: `--stable10`.
   - Winners lens must be date-scoped: prefer `reports/stable/winners_by_date/<D>/...` and `sharepacks/<D>/<STATE>/winners/...` (do not rely on any legacy `data/outputs/winners/` cache).
   - Validate one state after any workbook swap: `python3 scripts/tools/validate_tables_aux_alignment.py --date <D> --state <STATE> --strict` and stop if it fails.
 - Optional (Part A helper): winners JSON digest (paste-friendly): `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`

@@ -72,6 +72,8 @@ class Agg:
     canon_hit_any_perm: int = 0
     vtrac_index_hit: int = 0
     vtrac_index_hit_only: int = 0
+    pack_correct: int = 0
+    pack_any_correct: int = 0
     pack_hit_any_inclusive: int = 0
     filler_hit_any_inclusive: int = 0
     pack_only_hit_any_inclusive: int = 0
@@ -97,6 +99,10 @@ class Agg:
         self.canon_hit_any_perm += 1 if _truthy(row.get("canon_hit_any_perm", "")) else 0
         self.vtrac_index_hit += 1 if _truthy(row.get("vtrac_index_hit", "")) else 0
         self.vtrac_index_hit_only += 1 if _truthy(row.get("vtrac_index_hit_only", "")) else 0
+        winner_idx = _safe_int(row.get("winner_vtrac_index", "") or "")
+        pack_idx = _safe_int(row.get("vtrac_pack_index", "") or "")
+        self.pack_correct += 1 if (winner_idx is not None and pack_idx is not None and winner_idx == pack_idx) else 0
+        self.pack_any_correct += 1 if _truthy(row.get("pack_any_correct", "")) else 0
         self.pack_hit_any_inclusive += 1 if _truthy(row.get("pack_hit_any_inclusive", "")) else 0
         self.filler_hit_any_inclusive += 1 if _truthy(row.get("filler_hit_any_inclusive", "")) else 0
         self.pack_only_hit_any_inclusive += 1 if _truthy(row.get("pack_only_hit_any_inclusive", "")) else 0
@@ -235,6 +241,8 @@ def main() -> None:
                 "box_hit_rate": _rate(agg.box_hit, d),
                 "vtrac_index_hit_rate": _rate(agg.vtrac_index_hit, d),
                 "vtrac_index_hit_only_rate": _rate(agg.vtrac_index_hit_only, d),
+                "pack_correct_rate": _rate(agg.pack_correct, d),
+                "pack_any_correct_rate": _rate(agg.pack_any_correct, d),
                 "pack_hit_any_inclusive_rate": _rate(agg.pack_hit_any_inclusive, d),
                 "filler_hit_any_inclusive_rate": _rate(agg.filler_hit_any_inclusive, d),
                 "pack_only_hit_any_inclusive_rate": _rate(agg.pack_only_hit_any_inclusive, d),
@@ -275,6 +283,8 @@ def main() -> None:
             "box_hit_rate",
             "vtrac_index_hit_rate",
             "vtrac_index_hit_only_rate",
+            "pack_correct_rate",
+            "pack_any_correct_rate",
             "pack_hit_any_inclusive_rate",
             "filler_hit_any_inclusive_rate",
             "pack_only_hit_any_inclusive_rate",
@@ -302,8 +312,8 @@ def main() -> None:
         "",
         "## By strategy + budget (winner_label)",
         "",
-        "| winner_label | strategy | budget | rows | hit_any_strict | hit_any_box | hit_any_inclusive | perm_hit | closure_hit | straight_hit | vtrac_hit | pack_hit | pack_only | filler_hit | pack_idx_hit | avg_pack |",
-        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| winner_label | strategy | budget | rows | hit_any_strict | hit_any_box | hit_any_inclusive | perm_hit | closure_hit | straight_hit | vtrac_hit | pack_correct | pack_any_correct | pack_hit | pack_only | filler_hit | pack_idx_hit | avg_pack |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in out_rows:
         lines.append(
@@ -321,6 +331,8 @@ def main() -> None:
                     str(r["box_hit_rate"]),
                     str(r["straight_hit_rate"]),
                     str(r["vtrac_index_hit_rate"]),
+                    str(r["pack_correct_rate"]),
+                    str(r["pack_any_correct_rate"]),
                     str(r["pack_hit_any_inclusive_rate"]),
                     str(r["pack_only_hit_any_inclusive_rate"]),
                     str(r["filler_hit_any_inclusive_rate"]),

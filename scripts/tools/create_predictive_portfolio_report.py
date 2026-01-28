@@ -159,8 +159,28 @@ def _load_candidate_universe_summary(state_dir: Path, *, profile: str) -> Tuple[
     - "Support" is computed as a per-pack vote over that pack's `canonicals` list.
     - This is intended as a lightweight convergence proxy for tool-first ranking.
     """
-    cu = state_dir / f"candidate_universe{_profile_suffix(profile)}.json"
-    if not cu.exists():
+    return _load_candidate_universe_summary_tagged(state_dir, profile=profile, prefer_experiment_tags=("",))
+
+
+def _candidate_universe_path(state_dir: Path, *, profile: str, experiment_tag: str) -> Path:
+    out_suffix = _profile_suffix(profile)
+    tag_suffix = f"__{experiment_tag.strip()}" if (experiment_tag or "").strip() else ""
+    return state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
+
+
+def _load_candidate_universe_summary_tagged(
+    state_dir: Path,
+    *,
+    profile: str,
+    prefer_experiment_tags: Sequence[str],
+) -> Tuple[int, int, List[str], int, List[str]]:
+    cu: Optional[Path] = None
+    for tag in prefer_experiment_tags:
+        cand = _candidate_universe_path(state_dir, profile=profile, experiment_tag=tag)
+        if cand.exists():
+            cu = cand
+            break
+    if cu is None:
         return 0, 0, [], 0, []
     raw = _read_json(cu)
     if not isinstance(raw, dict):
@@ -216,7 +236,7 @@ def _load_play_card_cut(
     strategy: str,
     budget: int,
     prefer_experiment_tags: Sequence[str] = ("", "vtracpack_v1"),
-) -> Tuple[int, List[str], List[str], Optional[int], List[str], Optional[Path]]:
+) -> Tuple[int, List[str], List[str], List[int], List[str], Optional[Path]]:
     """
     Returns:
       (boxed_canonicals_count, boxed_canonicals, combos, vtrac_pack_index, vtrac_pack_combos, source_path)
@@ -256,28 +276,42 @@ def _load_play_card_cut(
         except Exception:
             boxed_count = len(boxed)
 
-        vtrac_pack_index: Optional[int] = None
+        vtrac_pack_indices: List[int] = []
         vtrac_pack_combos: List[str] = []
         vtrac_pack = card.get("vtrac_pack")
         if isinstance(vtrac_pack, dict):
+            indices_raw = vtrac_pack.get("indices")
+            if isinstance(indices_raw, list):
+                for x in indices_raw:
+                    try:
+                        vtrac_pack_indices.append(int(x))
+                    except Exception:
+                        continue
             try:
-                vtrac_pack_index = int(vtrac_pack.get("index"))
+                idx = int(vtrac_pack.get("index"))
             except Exception:
-                vtrac_pack_index = None
+                idx = None
+            if idx is not None and idx not in vtrac_pack_indices:
+                vtrac_pack_indices.append(idx)
             pack_raw = vtrac_pack.get("pack_combos") or []
             if isinstance(pack_raw, list):
                 vtrac_pack_combos = [_normalize_pick3(x) for x in pack_raw if _normalize_pick3(x)]
 
-        return boxed_count, boxed, combos, vtrac_pack_index, vtrac_pack_combos, pc
+        return boxed_count, boxed, combos, sorted(set(vtrac_pack_indices)), vtrac_pack_combos, pc
 
-    return 0, [], [], None, [], None
+    return 0, [], [], [], [], None
 
 
-def _pack_label(pack_index: Optional[int], pack_combos: Sequence[str]) -> str:
-    if pack_index is None:
+def _pack_label(pack_indices: Sequence[int], pack_combos: Sequence[str]) -> str:
+    uniq = sorted({int(x) for x in (pack_indices or []) if isinstance(x, int) or str(x).strip().isdigit()})
+    if not uniq:
         return "-"
     size = len(list(pack_combos or []))
-    return f"{pack_index}({size})" if size else str(pack_index)
+    if len(uniq) == 1:
+        return f"{uniq[0]}({size})" if size else str(uniq[0])
+    head = ",".join(str(x) for x in uniq[:4])
+    suffix = "…" if len(uniq) > 4 else ""
+    return f"idx[{len(uniq)}]:{head}{suffix}({size})" if size else f"idx[{len(uniq)}]:{head}{suffix}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -305,12 +339,27 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--top-n-alerts", type=int, default=3, help="Top N Profit Alerts rows to list per state (default: 3)")
     ap.add_argument("--top-n-due-doubles", type=int, default=6, help="Top N Due Doubles canonicals to show per state (default: 6)")
     ap.add_argument(
+        "--play-strategy-b12",
+        default="analysis_prefix",
+        help="Play card strategy to display for B12 (default: analysis_prefix).",
+    )
+    ap.add_argument(
+        "--play-strategy-b24",
+        default="vtrac_pack_boxed_first_laneonly_presetB",
+        help="Play card strategy to display for B24 (default: vtrac_pack_boxed_first_laneonly_presetB).",
+    )
+    ap.add_argument(
+        "--play-strategy-b36",
+        default="v0_2_default_multi_pack_laneonly_presetB_packheavy",
+        help="Play card strategy to display for B36 (default: v0_2_default_multi_pack_laneonly_presetB_packheavy).",
+    )
+    ap.add_argument(
         "--prefer-experiment-tags",
         default=None,
         help=(
             "Optional comma-separated experiment tags to prefer when selecting play_card*.json files. "
             "Example: --prefer-experiment-tags v0_2_default_v1,,vtracpack_v1. "
-            "Default: prefer untagged first, then vtracpack_v1."
+            "Default: prefer stable10 first (if present), then untagged, then vtracpack_v1."
         ),
     )
     return ap.parse_args()
@@ -338,7 +387,7 @@ def main() -> None:
     rank_by = str(args.rank_by or ("profit_alerts" if profile in {"mixed", "profit_only"} else "tool_first")).strip()
     show_profit_alerts = profile in {"mixed", "profit_only"}
 
-    prefer_tags: Sequence[str] = ("", "vtracpack_v1")
+    prefer_tags: Sequence[str] = ("stable10", "", "vtracpack_v1")
     raw_prefer = str(args.prefer_experiment_tags or "").strip()
     if raw_prefer:
         tags: List[str] = []
@@ -356,6 +405,10 @@ def main() -> None:
             tags.append("vtracpack_v1")
         prefer_tags = tags
 
+    b12_strategy = str(args.play_strategy_b12).strip() or "analysis_prefix"
+    b24_strategy = str(args.play_strategy_b24).strip() or "vtrac_pack_boxed_first_laneonly_presetB"
+    b36_strategy = str(args.play_strategy_b36).strip() or "v0_2_default_multi_pack_laneonly_presetB_packheavy"
+
     out_suffix = "" if profile == "mixed" else f"__{profile}"
 
     runs_dir = _runs_dir()
@@ -370,27 +423,27 @@ def main() -> None:
     for state_key in states:
         state_dir = day_dir / state_key
         alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key) if show_profit_alerts else []
-        packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary(
-            state_dir, profile=profile
+        packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary_tagged(
+            state_dir, profile=profile, prefer_experiment_tags=prefer_tags
         )
         b12_boxed_count, b12_boxed, b12_combos, _, _, _ = _load_play_card_cut(
             state_dir,
             profile=profile,
-            strategy="analysis_prefix",
+            strategy=b12_strategy,
             budget=12,
             prefer_experiment_tags=prefer_tags,
         )
-        b24_boxed_count, b24_boxed, b24_combos, b24_pack_index, b24_pack_combos, b24_src = _load_play_card_cut(
+        b24_boxed_count, b24_boxed, b24_combos, b24_pack_indices, b24_pack_combos, b24_src = _load_play_card_cut(
             state_dir,
             profile=profile,
-            strategy="vtrac_pack_boxed_first",
+            strategy=b24_strategy,
             budget=24,
             prefer_experiment_tags=prefer_tags,
         )
-        b36_boxed_count, b36_boxed, b36_combos, b36_pack_index, b36_pack_combos, b36_src = _load_play_card_cut(
+        b36_boxed_count, b36_boxed, b36_combos, b36_pack_indices, b36_pack_combos, b36_src = _load_play_card_cut(
             state_dir,
             profile=profile,
-            strategy="vtrac_pack_boxed_first",
+            strategy=b36_strategy,
             budget=36,
             prefer_experiment_tags=prefer_tags,
         )
@@ -426,8 +479,8 @@ def main() -> None:
                     f"{b12_boxed_count}:{' '.join(b12_boxed_show)}" if b12_boxed_count else ("0" if b12_combos else "-")
                 ),
                 "play_b12_combos": " ".join(b12_combos),
-                "play_b24_pack": _pack_label(b24_pack_index, b24_pack_combos),
-                "play_b36_pack": _pack_label(b36_pack_index, b36_pack_combos),
+                "play_b24_pack": _pack_label(b24_pack_indices, b24_pack_combos),
+                "play_b36_pack": _pack_label(b36_pack_indices, b36_pack_combos),
                 "play_b24_pack_combos": " ".join(b24_pack_combos) if b24_pack_combos else "-",
                 "play_b36_pack_combos": " ".join(b36_pack_combos) if b36_pack_combos else "-",
                 "play_b24_combos": " ".join(b24_combos),
@@ -476,7 +529,7 @@ def main() -> None:
         lines.append(f"- Control Center Profit Alerts: `{_safe_rel(pa_path)}`")
     else:
         lines.append(f"- Control Center Profit Alerts (excluded by profile): `{_safe_rel(pa_path)}`")
-    lines.append(f"- Candidate Universe file: `candidate_universe{_profile_suffix(profile)}.json`")
+    lines.append(f"- Candidate Universe file: `candidate_universe{_profile_suffix(profile)}*.json`")
     lines.append(f"- Play Card file(s): `play_card{_profile_suffix(profile)}*.json`")
     lines.append("")
     lines.append("## Portfolio table (ranked)")
@@ -509,11 +562,12 @@ def main() -> None:
     lines.append("")
     lines.append("These are the budgeted “what to play now” cuts derived from Candidate Universe (pre-results).")
     lines.append("")
-    lines.append("v0.2 posture (budget-split):")
-    lines.append("- B12 uses `analysis_prefix` (conservative / diagnostic-first).")
-    lines.append("- B24/B36 use `vtrac_pack_boxed_first` (conversion-friendly; boxed-member VTRAC pack + filler).")
+    lines.append("Play strategy defaults (configurable):")
+    lines.append(f"- B12: `{b12_strategy}`")
+    lines.append(f"- B24: `{b24_strategy}`")
+    lines.append(f"- B36: `{b36_strategy}`")
     lines.append("")
-    lines.append("### B12 (analysis_prefix)")
+    lines.append(f"### B12 (`{b12_strategy}`)")
     for r in table_rows:
         combos = str(r.get("play_b12_combos") or "").strip()
         if not combos:
@@ -522,7 +576,7 @@ def main() -> None:
     lines.append("")
     lines.append("### B24/B36 VTRAC pack picks")
     lines.append("")
-    lines.append("Shows the inserted boxed-member VTRAC pack (usually 8 combos; fewer for doubles/triples) and which play_card file it came from.")
+    lines.append("Shows the inserted boxed-member VTRAC pack (sometimes multi-index) and which play_card file it came from.")
     lines.append("")
     for r in table_rows:
         b24_pack = str(r.get("play_b24_pack") or "").strip()
@@ -542,7 +596,7 @@ def main() -> None:
                 f"B36 `idx(size)={b36_pack}` pack=`{b36_pack_combos or '-'}` (src: `{b36_src}`)"
             )
     lines.append("")
-    lines.append("### B24 (vtrac_pack_boxed_first)")
+    lines.append(f"### B24 (`{b24_strategy}`)")
     lines.append("")
     found_b24 = False
     for r in table_rows:
@@ -554,7 +608,7 @@ def main() -> None:
     if not found_b24:
         lines.append("- (not available for this profile/day)")
     lines.append("")
-    lines.append("### B36 (vtrac_pack_boxed_first)")
+    lines.append(f"### B36 (`{b36_strategy}`)")
     lines.append("")
     found_b36 = False
     for r in table_rows:
@@ -571,7 +625,7 @@ def main() -> None:
     lines.append("- This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.")
     lines.append("- For any state, the canonical evidence remains the frozen predictive sharepack artifacts:")
     lines.append(f"  - `{_safe_rel(cc_dir / 'profit_alerts.csv')}` (bet-ready implied sets; included only for mixed/profit_only)")
-    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/candidate_universe{_profile_suffix(profile)}.json` (gradeable playset)")
+    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/candidate_universe{_profile_suffix(profile)}*.json` (gradeable playset)")
     lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/play_card{_profile_suffix(profile)}*.json` (budgeted cuts)")
     lines.append("")
 
