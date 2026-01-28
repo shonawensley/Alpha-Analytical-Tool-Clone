@@ -411,6 +411,10 @@ def main() -> None:
                     "vtrac_pack_size": r.get("vtrac_pack_size", ""),
                     "filler_size": r.get("filler_size", ""),
                     "pack_vtrac_index_hit": r.get("pack_vtrac_index_hit", ""),
+                    # Pack-only strict hits (VTRAC semantics; helps align to the 4-criteria mental model).
+                    # Note: play-card grade exports `pack_canon_hit_any_perm` (boxed membership by canonical perm).
+                    "pack_box_hit": r.get("pack_canon_hit_any_perm", ""),
+                    "pack_straight_hit": r.get("pack_straight_hit", ""),
                     "pack_hit_any_inclusive": r.get("pack_hit_any_inclusive", ""),
                     "filler_hit_any_inclusive": r.get("filler_hit_any_inclusive", ""),
                     "pack_correct": pack_correct,
@@ -456,6 +460,8 @@ def main() -> None:
         "vtrac_pack_size",
         "filler_size",
         "pack_vtrac_index_hit",
+        "pack_box_hit",
+        "pack_straight_hit",
         "pack_hit_any_inclusive",
         "filler_hit_any_inclusive",
         "pack_correct",
@@ -495,8 +501,10 @@ def main() -> None:
     summary_lines.append(f"- CU union vtrac_index_hit: `{fmt_pct(rate(rows=cu_rows, key='cu_union_vtrac_index_hit'))}`")
     summary_lines.append("")
     summary_lines.append(f"### Play Card conversion (per budget; `{strategy}`)")
-    summary_lines.append("| Budget | rows | hit_any | hit_any_inclusive | box_hit | straight_hit | vtrac_index_hit | pack_correct | pack_any_correct |")
-    summary_lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    summary_lines.append(
+        "| Budget | rows | hit_any | hit_any_inclusive | box_hit | straight_hit | vtrac_index_hit | pack_box_hit | pack_straight_hit | pack_correct | pack_any_correct |"
+    )
+    summary_lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for b in budgets:
         rows_b = by_budget.get(b, [])
         pack_correct_vals = [bool01(r.get("pack_correct")) for r in rows_b if (r.get("pack_correct") or "").strip() != ""]
@@ -516,6 +524,8 @@ def main() -> None:
                     fmt_pct(rate(rows=rows_b, key="play_box_hit")),
                     fmt_pct(rate(rows=rows_b, key="play_straight_hit")),
                     fmt_pct(rate(rows=rows_b, key="play_vtrac_index_hit")),
+                    fmt_pct(rate(rows=rows_b, key="pack_box_hit")),
+                    fmt_pct(rate(rows=rows_b, key="pack_straight_hit")),
                     (fmt_pct(pack_correct_rate) if pack_correct_rate is not None else "NA"),
                     (fmt_pct(pack_any_correct_rate) if pack_any_correct_rate is not None else "NA"),
                 ]

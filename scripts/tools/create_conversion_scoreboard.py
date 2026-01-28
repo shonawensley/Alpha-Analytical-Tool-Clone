@@ -99,6 +99,8 @@ class BudgetSummary:
     rows: int
     hit_any: Optional[float]
     hit_any_inclusive: Optional[float]
+    pack_box_hit: Optional[float]
+    pack_straight_hit: Optional[float]
     pack_correct: Optional[float]
     pack_any_correct: Optional[float]
     pack_share_inclusive: str
@@ -110,6 +112,8 @@ def summarize_strategy(*, rows: List[Dict[str, str]], budget_label: str) -> Budg
     focus = [r for r in rows if (r.get("budget_label") or "") == budget_label and bool01(r.get("winner_missing")) == 0]
     hit_any = _rate(focus, "play_hit_any")
     hit_any_inclusive = _rate(focus, "play_hit_any_inclusive")
+    pack_box_hit = _rate(focus, "pack_box_hit")
+    pack_straight_hit = _rate(focus, "pack_straight_hit")
     pack_correct = _rate(focus, "pack_correct")
     pack_any_correct = _rate(focus, "pack_any_correct")
 
@@ -127,6 +131,8 @@ def summarize_strategy(*, rows: List[Dict[str, str]], budget_label: str) -> Budg
         rows=len(focus),
         hit_any=hit_any,
         hit_any_inclusive=hit_any_inclusive,
+        pack_box_hit=pack_box_hit,
+        pack_straight_hit=pack_straight_hit,
         pack_correct=pack_correct,
         pack_any_correct=pack_any_correct,
         pack_share_inclusive=pack_share,
@@ -221,9 +227,9 @@ def main() -> None:
         lines.append(f"## {budget}")
         lines.append("")
         lines.append(
-            "| strategy | rows | hit_any | hit_any_inclusive | pack_any_correct | pack_correct | pack_share(inclusive) | CU_LANE_BUT_PLAY_MISS | CU_EXACT_BUT_PLAY_MISS |"
+            "| strategy | rows | hit_any | hit_any_inclusive | pack_any_correct | pack_box_hit | pack_straight_hit | pack_correct | pack_share(inclusive) | CU_LANE_BUT_PLAY_MISS | CU_EXACT_BUT_PLAY_MISS |"
         )
-        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
         for strat in strategies:
             summary = summarize_strategy(rows=rows_by_strategy[strat], budget_label=budget)
             lines.append(
@@ -235,6 +241,8 @@ def main() -> None:
                         _fmt_pct(summary.hit_any),
                         _fmt_pct(summary.hit_any_inclusive),
                         _fmt_pct(summary.pack_any_correct),
+                        _fmt_pct(summary.pack_box_hit),
+                        _fmt_pct(summary.pack_straight_hit),
                         _fmt_pct(summary.pack_correct),
                         summary.pack_share_inclusive,
                         summary.bucket_lane_miss,
@@ -249,6 +257,7 @@ def main() -> None:
     lines.append("- `hit_any_inclusive` is the coverage contract (lane retained or better).")
     lines.append("- `hit_any` is the strict contract (exact membership in the budgeted list).")
     lines.append("- `pack_any_correct` is the key bridge metric for multi-pack strategies.")
+    lines.append("- `pack_box_hit` / `pack_straight_hit` are pack-only VTRAC hits (boxed/straight).")
     lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
