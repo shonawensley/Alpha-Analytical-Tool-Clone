@@ -30,6 +30,8 @@ import shutil
 from pathlib import Path
 from typing import Iterable, List
 
+from datetime import datetime, timezone
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -61,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         help="Sharepacks root directory (default: sharepacks/)",
     )
     p.add_argument(
+        "--force",
+        action="store_true",
+        help="If sharepacks/<D>/ exists and is non-empty, move it to sharepacks/_rebuild_backup/ and rebuild (default: refuse).",
+    )
+    p.add_argument(
         "--skip-global-vtrac",
         action="store_true",
         help="Skip copying VTRAC validation artifacts (validation_report.*, summary.*, vtrac_compact_report.*, payload zips).",
@@ -73,9 +80,18 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _abort_if_nonempty(path: Path) -> None:
+def _now_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%SZ")
+
+
+def _backup_and_reset_dir(path: Path, *, backup_root: Path, force: bool) -> None:
     if path.exists() and any(path.iterdir()):
-        raise SystemExit(f"[ABORT] {path} exists and is non-empty; refusing to overwrite")
+        if not force:
+            raise SystemExit(f"[ABORT] {path} exists and is non-empty; refusing to overwrite (use --force to rebuild safely)")
+        backup_root.mkdir(parents=True, exist_ok=True)
+        moved = backup_root / f"{path.name}__moved_{_now_stamp()}"
+        shutil.move(str(path), str(moved))
+        print(f"[INFO] Moved existing sharepack day to: {moved}")
 
 
 def _copy_file(src: Path, dst: Path) -> None:
@@ -231,7 +247,7 @@ def main() -> None:
         sharepacks_root = (ROOT / sharepacks_root).resolve()
 
     share_day = sharepacks_root / date
-    _abort_if_nonempty(share_day)
+    _backup_and_reset_dir(share_day, backup_root=sharepacks_root / "_rebuild_backup", force=bool(args.force))
     share_day.mkdir(parents=True, exist_ok=True)
 
     tables_dir = ROOT / "data" / "outputs" / "tables"

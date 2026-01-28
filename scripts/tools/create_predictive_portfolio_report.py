@@ -350,8 +350,8 @@ def parse_args() -> argparse.Namespace:
     )
     ap.add_argument(
         "--play-strategy-b36",
-        default="v0_2_default_multi_pack_laneonly_presetB_packheavy",
-        help="Play card strategy to display for B36 (default: v0_2_default_multi_pack_laneonly_presetB_packheavy).",
+        default="v0_2_default_multi_pack_packheavy",
+        help="Play card strategy to display for B36 (default: v0_2_default_multi_pack_packheavy).",
     )
     ap.add_argument(
         "--prefer-experiment-tags",
@@ -407,7 +407,7 @@ def main() -> None:
 
     b12_strategy = str(args.play_strategy_b12).strip() or "analysis_prefix"
     b24_strategy = str(args.play_strategy_b24).strip() or "vtrac_pack_boxed_first_laneonly_presetB"
-    b36_strategy = str(args.play_strategy_b36).strip() or "v0_2_default_multi_pack_laneonly_presetB_packheavy"
+    b36_strategy = str(args.play_strategy_b36).strip() or "v0_2_default_multi_pack_packheavy"
 
     out_suffix = "" if profile == "mixed" else f"__{profile}"
 

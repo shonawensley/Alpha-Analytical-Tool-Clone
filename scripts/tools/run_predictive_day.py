@@ -177,6 +177,11 @@ def parse_args() -> argparse.Namespace:
         help="Skip freezing to sharepacks (runs tools only).",
     )
     p.add_argument(
+        "--force",
+        action="store_true",
+        help="If the sharepack day exists and is non-empty, rebuild it safely (moves existing to _rebuild_backup/).",
+    )
+    p.add_argument(
         "--skip-aux",
         action="store_true",
         help="Skip Aux draw snapshot + summary generation into the sharepack.",
@@ -239,6 +244,8 @@ def main() -> None:
         "--skip-global-vtrac",
         "--skip-winners",
     ]
+    if bool(args.force):
+        freeze_cmd.append("--force")
     if states and states != DEFAULT_STATES:
         freeze_cmd.extend(["--states", *states])
     subprocess.run(freeze_cmd, check=True)

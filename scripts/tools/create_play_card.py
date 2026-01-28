@@ -1215,6 +1215,7 @@ def _choose_top_vtrac_index(
     ranked: Sequence[Dict[str, Any]],
     scan_limit: int = 350,
     allowed_methods: Optional[set[str]] = None,
+    sort_preset: str = "methods_first",
 ) -> Tuple[Optional[int], Dict[str, Any]]:
     """
     Choose a single VTRAC numeric index ("lane") based on Candidate Universe evidence.
@@ -1299,20 +1300,48 @@ def _choose_top_vtrac_index(
             }
         )
 
-    scored.sort(
-        key=lambda r: (
-            -int(r["methods_count"]),
-            -int(r["variants_non_unknown"]),
-            -int(r["variants_total"]),
-            -int(r["packs_total"]),
-            -float(r["score_total"]),
-            int(r["index"]),
+    preset = str(sort_preset or "methods_first").strip().lower()
+    if preset not in {"methods_first", "score_total_first", "packs_first"}:
+        raise SystemExit(f"Invalid sort_preset: {sort_preset!r} (expected methods_first|score_total_first|packs_first)")
+
+    if preset == "score_total_first":
+        scored.sort(
+            key=lambda r: (
+                -float(r["score_total"]),
+                -int(r["packs_total"]),
+                -int(r["methods_count"]),
+                -int(r["variants_non_unknown"]),
+                -int(r["variants_total"]),
+                int(r["index"]),
+            )
         )
-    )
+    elif preset == "packs_first":
+        scored.sort(
+            key=lambda r: (
+                -int(r["packs_total"]),
+                -int(r["methods_count"]),
+                -int(r["variants_non_unknown"]),
+                -int(r["variants_total"]),
+                -float(r["score_total"]),
+                int(r["index"]),
+            )
+        )
+    else:
+        scored.sort(
+            key=lambda r: (
+                -int(r["methods_count"]),
+                -int(r["variants_non_unknown"]),
+                -int(r["variants_total"]),
+                -int(r["packs_total"]),
+                -float(r["score_total"]),
+                int(r["index"]),
+            )
+        )
 
     chosen_index: Optional[int] = scored[0]["index"] if scored else None
     snapshot = {
         "scan_limit": int(scan_limit),
+        "sort_preset": preset,
         "allowed_methods": sorted(list(allowed_methods)) if allowed_methods else [],
         "candidates_found": int(len(scored)),
         "chosen_index": int(chosen_index) if chosen_index is not None else None,
@@ -1327,6 +1356,7 @@ def _choose_top_vtrac_indices(
     count: int,
     scan_limit: int = 350,
     allowed_methods: Optional[set[str]] = None,
+    sort_preset: str = "methods_first",
 ) -> Tuple[List[int], Dict[str, Any]]:
     """
     Choose the top-N VTRAC indices using the same evidence ranking as `_choose_top_vtrac_index`.
@@ -1337,7 +1367,12 @@ def _choose_top_vtrac_indices(
     if n <= 0:
         return [], {"candidates_found": 0, "chosen_indices": [], "top5": []}
 
-    _, chooser = _choose_top_vtrac_index(ranked=ranked, scan_limit=scan_limit, allowed_methods=allowed_methods)
+    _, chooser = _choose_top_vtrac_index(
+        ranked=ranked,
+        scan_limit=scan_limit,
+        allowed_methods=allowed_methods,
+        sort_preset=sort_preset,
+    )
     top5 = chooser.get("top5") if isinstance(chooser, dict) else None
     if not isinstance(top5, list):
         top5 = []
@@ -1422,6 +1457,8 @@ def _card_vtrac_packs_boxed_first(
     budget: int,
     packs_target: int,
     allowed_methods: Optional[set[str]] = None,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
 ) -> Dict[str, Any]:
     """
     Like `_card_vtrac_pack_boxed_first`, but inserts multiple boxed-member packs (top-N indices).
@@ -1432,9 +1469,21 @@ def _card_vtrac_packs_boxed_first(
     b = int(budget)
     want = max(1, int(packs_target))
 
-    indices, chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=allowed_methods)
+    indices, chooser = _choose_top_vtrac_indices(
+        ranked=ranked,
+        count=want,
+        allowed_methods=allowed_methods,
+        scan_limit=int(scan_limit),
+        sort_preset=sort_preset,
+    )
     if not indices and allowed_methods is not None:
-        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=None)
+        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(
+            ranked=ranked,
+            count=want,
+            allowed_methods=None,
+            scan_limit=int(scan_limit),
+            sort_preset=sort_preset,
+        )
         chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
         indices = fallback_indices
 
@@ -1533,6 +1582,8 @@ def _card_vtrac_packs_boxed_then_box_first(
     budget: int,
     packs_target: int,
     allowed_methods: Optional[set[str]] = None,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
 ) -> Dict[str, Any]:
     """
     Hybrid conversion policy:
@@ -1545,9 +1596,21 @@ def _card_vtrac_packs_boxed_then_box_first(
     b = int(budget)
     want = max(1, int(packs_target))
 
-    indices, chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=allowed_methods)
+    indices, chooser = _choose_top_vtrac_indices(
+        ranked=ranked,
+        count=want,
+        allowed_methods=allowed_methods,
+        scan_limit=int(scan_limit),
+        sort_preset=sort_preset,
+    )
     if not indices and allowed_methods is not None:
-        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(ranked=ranked, count=want, allowed_methods=None)
+        fallback_indices, fallback_chooser = _choose_top_vtrac_indices(
+            ranked=ranked,
+            count=want,
+            allowed_methods=None,
+            scan_limit=int(scan_limit),
+            sort_preset=sort_preset,
+        )
         chooser = {"filtered": chooser, "fallback_unfiltered": fallback_chooser}
         indices = fallback_indices
 
@@ -1953,6 +2016,89 @@ def _card_v0_2_default_multi_pack_laneonly_presetB_packheavy(
     return _card_vtrac_packs_boxed_first(
         ranked=ranked, budget=b, packs_target=packs_target, allowed_methods=lane_methods_presetB
     )
+
+
+def _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): same as packheavy, but scan deeper into ranked candidates
+    when choosing VTRAC indices so we don't miss winner lanes that show up below the top-350.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
+    lane_methods_presetB = _lane_methods_for_preset(preset="presetB")
+    return _card_vtrac_packs_boxed_first(
+        ranked=ranked,
+        budget=b,
+        packs_target=packs_target,
+        allowed_methods=lane_methods_presetB,
+        scan_limit=2000,
+        sort_preset="methods_first",
+    )
+
+
+def _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): packheavy + deeper scan + different lane chooser ordering.
+
+    Chooser change: prioritize indices with higher `score_total` first, then corroboration.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
+    lane_methods_presetB = _lane_methods_for_preset(preset="presetB")
+    return _card_vtrac_packs_boxed_first(
+        ranked=ranked,
+        budget=b,
+        packs_target=packs_target,
+        allowed_methods=lane_methods_presetB,
+        scan_limit=2000,
+        sort_preset="score_total_first",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): increase B36 pack count (4 indices), without restricting
+    lane selection to presetB methods.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
+    return _card_vtrac_packs_boxed_first(ranked=ranked, budget=b, packs_target=packs_target)
+
+
+def _card_v0_2_default_multi_pack_stablepluslane_packheavy(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Conversion experiment (selection-only): packheavy, but allow stable-family evidence to participate
+    in lane choice (stable_top + presetB lane methods).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    packs_target = 4 if b >= 36 else max(1, min(5, b // 12))
+    allowed = set(_lane_methods_for_preset(preset="presetB"))
+    allowed.add("stable_top")
+    return _card_vtrac_packs_boxed_first(ranked=ranked, budget=b, packs_target=packs_target, allowed_methods=allowed)
 
 
 def _card_v0_2_default_stable_lane(
@@ -2624,6 +2770,10 @@ def main() -> None:
             "v0_2_default_multi_pack": {},
             "v0_2_default_multi_pack_laneonly_presetB": {},
             "v0_2_default_multi_pack_laneonly_presetB_packheavy": {},
+            "v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000": {},
+            "v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000": {},
+            "v0_2_default_multi_pack_packheavy": {},
+            "v0_2_default_multi_pack_stablepluslane_packheavy": {},
             "v0_2_default_stable_lane": {},
             "v0_2_default_hybrid_box_lane": {},
             "v0_2_default_recency_lenient": {},
@@ -2656,6 +2806,18 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_laneonly_presetB_packheavy"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_laneonly_presetB_packheavy(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scan2000(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_laneonly_presetB_packheavy_scorefirst_scan2000(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_2_default_multi_pack_stablepluslane_packheavy"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_stablepluslane_packheavy(ranked=ranked, budget=b)
             )
             strategy_cards["v0_2_default_stable_lane"][f"B{b}"] = _card_v0_2_default_stable_lane(ranked=ranked, budget=b)
             strategy_cards["v0_2_default_hybrid_box_lane"][f"B{b}"] = _card_v0_2_default_hybrid_box_lane(

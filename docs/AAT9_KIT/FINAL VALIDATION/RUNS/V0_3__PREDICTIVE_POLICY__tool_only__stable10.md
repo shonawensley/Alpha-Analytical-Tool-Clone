@@ -67,17 +67,16 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_laneonly_presetB_packheavy`
+- Strategy: `v0_2_default_multi_pack_packheavy`
 - Goal metric: lift strict `hit_any` while keeping `pack_any_correct` measurable and improving
 - Jan gold window (known winners, stable10):
-  - `hit_any` **5.2%**
-  - `hit_any_inclusive` **31.1%**
-  - `pack_any_correct` **11.4%**
+  - `hit_any` **5.7%**
+  - `hit_any_inclusive` **34.7%**
+  - `pack_any_correct` **15.0%**
 
 Reference:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack__stable10.md`
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_laneonly_presetB_packheavy__stable10.md`
-- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_laneonly_presetB_packheavy__stable10__B36.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy__stable10.md`
+- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy__stable10__B36.md`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -137,7 +136,7 @@ python3 scripts/tools/create_conversion_ladder_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_laneonly_presetB_packheavy \
+  --strategy v0_2_default_multi_pack_packheavy \
   --write-casebook --casebook-budget B36 --casebook-n 5
 ```
 

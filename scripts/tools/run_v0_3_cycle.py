@@ -147,6 +147,7 @@ def _cmd_run_predictive_day(
     results_date: str,
     sharepacks_root: str,
     states: Sequence[str],
+    force: bool,
 ) -> List[str]:
     cmd: List[str] = ["python3", "scripts/tools/run_predictive_day.py"]
     if history_date:
@@ -159,6 +160,8 @@ def _cmd_run_predictive_day(
     cmd += ["--sharepacks-root", sharepacks_root]
     if states:
         cmd += ["--states", *states]
+    if force:
+        cmd.append("--force")
     return cmd
 
 
@@ -653,6 +656,7 @@ def main() -> None:
                     results_date=results_date,
                     sharepacks_root=sharepacks_root,
                     states=states,
+                    force=bool(args.force),
                 )
             )
         if not args.skip_candidate_universe:
