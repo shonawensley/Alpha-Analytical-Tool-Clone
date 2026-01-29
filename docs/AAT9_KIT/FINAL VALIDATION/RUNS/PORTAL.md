@@ -27,6 +27,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3/README.md`
 1.10) v0.3 predictive policy (locks “coverage vs conversion” posture; stable10):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`
+1.11) v0.3 predictive glossary (one-page semantics map; strict vs lane vs inclusive):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md`
 
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`

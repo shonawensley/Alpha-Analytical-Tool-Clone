@@ -126,7 +126,9 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
    - `pack_any_correct` (multi-pack correctness)
 5) Check lane ranking vs selection (this ends “is it lane ranking or pack conversion?” arguments):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36.md`
-6) Open the casebook buckets (concrete examples to debug policy, not analyzers):
+6) Check lane *depth* (this ends “we retained the lane but why didn’t strict lift?” arguments):
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+7) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
    - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
 
@@ -154,6 +156,21 @@ python3 scripts/tools/create_conversion_ladder_report.py \
 
 ---
 
+## Lane allocation report (new)
+
+Use this when you want to quantify “how many lanes did we touch?” and “how many lines did the winner lane get?”
+
+```bash
+python3 scripts/tools/create_lane_allocation_report.py \
+  --date-from 2026-01-15 --date-to 2026-01-22 \
+  --profile tool_only \
+  --experiment-tag stable10 \
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail \
+  --budget B36 --label SPINE4_INDEX_TAIL
+```
+
+---
+
 ## Results coverage (avoid “censored” confusion)
 
 Before reading any rates, confirm horizon coverage:
@@ -171,3 +188,16 @@ Current result: **not promoted** (does not beat the B36 default cleanly across b
 Where to inspect:
 - In-sample (Jan gold window): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__MOP.md`
 - OOS window: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__MOP.md`
+
+---
+
+## Tail-depth experiments (B36; not promoted)
+
+These are kept for research/provenance. Defaults remain unchanged.
+
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2`: regresses lane retention (touches ~10 indices vs ~15), so inclusive drops.
+  - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANON2.md`
+  - Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANON2.md`
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote`: no measurable difference vs the baseline tail selection in current windows.
+  - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
+  - Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
