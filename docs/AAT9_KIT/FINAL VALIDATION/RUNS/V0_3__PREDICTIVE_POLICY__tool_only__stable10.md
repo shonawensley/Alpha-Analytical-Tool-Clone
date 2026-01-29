@@ -116,7 +116,9 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
 4) Check the bridge metrics:
    - `pack_correct` (single-pack selection correctness)
    - `pack_any_correct` (multi-pack correctness)
-5) Open the casebook buckets (concrete examples to debug policy, not analyzers):
+5) Check lane ranking vs selection (this ends “is it lane ranking or pack conversion?” arguments):
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36.md`
+6) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
    - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy__stable10__B36.md`
 
@@ -148,3 +150,16 @@ python3 scripts/tools/create_conversion_ladder_report.py \
 
 Before reading any rates, confirm horizon coverage:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__RESULTS_HORIZON.md`
+
+---
+
+## MoP (Mixture-of-Policies) status (experimental)
+
+We experimented with a MoP B36 strategy:
+- `v0_2_default_multi_pack_mop_24_12`
+
+Current result: **not promoted** (does not beat the B36 default cleanly across both harness windows).
+
+Where to inspect:
+- In-sample (Jan gold window): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__MOP.md`
+- OOS window: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__MOP.md`

@@ -2432,6 +2432,163 @@ def _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(
     return _card_vtrac_packs_boxed_first_lane_diverse_filler(ranked=ranked, budget=b, packs_target=4)
 
 
+def _card_v0_2_default_multi_pack_mop_24_12(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+) -> Dict[str, Any]:
+    """
+    Mixture-of-Policies (selection-only): B36-only deterministic blend (24/12).
+
+    Motivation: treat B36 as a multi-hypothesis environment. Rather than committing the entire
+    budget to one policy, allocate a fixed split across two complementary micro-policies and merge.
+
+    A (24): pack semantics baseline (packheavy + lane-diverse filler) — truncated to 24 lines.
+    B (12): strict hedge via convergence ranking (no pack semantics).
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy(ranked=ranked, budget=b)
+
+    a_budget = 24
+    b_budget = 12
+    a_full = _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=36)
+    b_card = _card_convergence_box_first(ranked=ranked, budget=b_budget)
+
+    a_full_combos = [_normalize_pick3_literal(x) for x in (a_full.get("combos") or [])]
+    a_full_combos = [x for x in a_full_combos if x]
+
+    # IMPORTANT: preserve some lane-diverse filler inside the A slice; a naive prefix truncation would
+    # often become "pack-only", collapsing `hit_any_inclusive` (lane retention).
+    a_list: List[str] = []
+    vtrac_pack_raw = a_full.get("vtrac_pack")
+    if isinstance(vtrac_pack_raw, dict) and isinstance(vtrac_pack_raw.get("pack_combos"), list):
+        pack_raw = [_normalize_pick3_literal(x) for x in (vtrac_pack_raw.get("pack_combos") or [])]
+        pack_raw = [x for x in pack_raw if x]
+        pack_set = set(pack_raw)
+        filler = [c for c in a_full_combos if c not in pack_set]
+
+        filler_keep = min(len(filler), a_budget)
+        pack_keep = max(0, a_budget - filler_keep)
+        pack_take: List[str] = []
+        seen: set[str] = set()
+        for c in pack_raw:
+            if c in seen:
+                continue
+            pack_take.append(c)
+            seen.add(c)
+            if len(pack_take) >= pack_keep:
+                break
+
+        a_list = list(pack_take) + list(filler[:filler_keep])
+
+        # Top up deterministically if we couldn't reach a_budget (rare).
+        for c in a_full_combos:
+            if len(a_list) >= a_budget:
+                break
+            if c in set(a_list):
+                continue
+            a_list.append(c)
+    else:
+        a_list = list(a_full_combos[:a_budget])
+
+    a_list = a_list[:a_budget]
+    b_list = [_normalize_pick3_literal(x) for x in (b_card.get("combos") or [])]
+    b_list = [x for x in b_list if x][:b_budget]
+
+    selected: List[str] = []
+    selected_set: set[str] = set()
+    combo_source: Dict[str, str] = {}
+
+    def _add(combo: str, source: str) -> bool:
+        c = _normalize_pick3_literal(combo)
+        if not c or c in selected_set:
+            return False
+        if len(selected) >= b:
+            return False
+        selected.append(c)
+        selected_set.add(c)
+        combo_source[c] = source
+        return True
+
+    for c in a_list:
+        _add(c, "A")
+
+    overlap = 0
+    for c in b_list:
+        if _normalize_pick3_literal(c) in selected_set:
+            overlap += 1
+        _add(c, "B")
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    topup_added = 0
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if _add(combo, "topup"):
+            topup_added += 1
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+
+    vtrac_pack: Optional[Dict[str, Any]] = None
+    if isinstance(vtrac_pack_raw, dict):
+        pack_combos = vtrac_pack_raw.get("pack_combos")
+        pack_by_idx = vtrac_pack_raw.get("pack_combos_by_index")
+        if isinstance(pack_combos, list) and isinstance(pack_by_idx, dict):
+            pack_combos_filtered = [
+                _normalize_pick3_literal(x) for x in pack_combos if _normalize_pick3_literal(x) in selected_set
+            ]
+            pack_combos_filtered = [x for x in pack_combos_filtered if x]
+
+            pack_by_idx_filtered: Dict[int, List[str]] = {}
+            for k, v in pack_by_idx.items():
+                try:
+                    idx = int(k)
+                except Exception:
+                    continue
+                if not isinstance(v, list):
+                    continue
+                included = [
+                    _normalize_pick3_literal(x) for x in v if _normalize_pick3_literal(x) in selected_set
+                ]
+                included = [x for x in included if x]
+                if included:
+                    pack_by_idx_filtered[idx] = included
+
+            indices = [int(x) for x in vtrac_pack_raw.get("indices") or [] if str(x).lstrip("-").isdigit()]
+            indices = [i for i in indices if i in set(pack_by_idx_filtered.keys())]
+
+            vtrac_pack = {
+                **vtrac_pack_raw,
+                "indices": indices,
+                "pack_combos": pack_combos_filtered,
+                "pack_combos_by_index": {int(k): list(v) for k, v in pack_by_idx_filtered.items()},
+                "filler_policy": "mop_24_12",
+            }
+
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": vtrac_pack,
+        "mop": {
+            "split": {"A": int(a_budget), "B": int(b_budget)},
+            "A_policy": "v0_2_default_multi_pack_packheavy_lane_diverse_filler",
+            "B_policy": "convergence_box_first",
+            "overlap_count": int(overlap),
+            "topup_count": int(topup_added),
+            "combo_source": combo_source,
+        },
+    }
+
+
 def _card_v0_2_default_multi_pack_packheavy_diverse(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -3152,6 +3309,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy": {},
             "v0_2_default_multi_pack_packheavy_lane_diverse_filler": {},
             "v0_2_default_multi_pack_packheavy_diverse": {},
+            "v0_2_default_multi_pack_mop_24_12": {},
             "v0_2_default_multi_pack_stablepluslane_packheavy": {},
             "v0_2_default_stable_lane": {},
             "v0_2_default_hybrid_box_lane": {},
@@ -3199,6 +3357,9 @@ def main() -> None:
                 ranked=ranked, budget=b
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_diverse"][f"B{b}"] = _card_v0_2_default_multi_pack_packheavy_diverse(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_2_default_multi_pack_mop_24_12"][f"B{b}"] = _card_v0_2_default_multi_pack_mop_24_12(
                 ranked=ranked, budget=b
             )
             strategy_cards["v0_2_default_multi_pack_stablepluslane_packheavy"][f"B{b}"] = (
