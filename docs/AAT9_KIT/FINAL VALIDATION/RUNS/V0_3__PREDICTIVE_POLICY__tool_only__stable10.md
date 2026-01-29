@@ -67,16 +67,24 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_lane_diverse_filler`
-- Goal metric: lift strict `hit_any` while keeping `pack_any_correct` measurable and improving
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail`
+- Goal metric: preserve strict `hit_any` from a deep spine pack, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail)
 - Jan gold window (known winners, stable10):
   - `hit_any` **5.7%**
-  - `hit_any_inclusive` **35.2%**
-  - `pack_any_correct` **15.0%**
+  - `hit_any_inclusive` **47.2%**
+  - `pack_any_correct` **47.2%**
+  - `pack_box_hit` **21.8%**
+
+- OOS window (stable10):
+  - `hit_any` **4.1%**
+  - `hit_any_inclusive` **42.0%**
+  - `pack_any_correct` **42.0%**
 
 Reference:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_lane_diverse_filler__stable10.md`
-- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_lane_diverse_filler__stable10__B36.md`
+- Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+- Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10.md`
+- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -105,7 +113,7 @@ This is not an analyzer failure; it is a **conversion policy failure**.
 If you feel “we’re broken / nothing converts”, stop and do this in order:
 
 0) Open the single scoreboard (side-by-side truth page):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
 1) Results coverage (do we have enough future results to grade what we’re claiming?):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__RESULTS_HORIZON.md`
 2) Always filter `winner_missing=1` (censored ≠ miss).
@@ -120,7 +128,7 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36.md`
 6) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
-   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy__stable10__B36.md`
+   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
 
 ---
 
@@ -140,7 +148,7 @@ python3 scripts/tools/create_conversion_ladder_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_packheavy \
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail \
   --write-casebook --casebook-budget B36 --casebook-n 5
 ```
 
