@@ -3028,6 +3028,238 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail(
     }
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Shoulder-depth conversion (selection-only):
+    - Keep the deep packheavy spine (full boxed-member packs) for the top 4 ranked indices.
+    - Reallocate tail budget with depth on the next-ranked "shoulder" indices:
+        - ranks 5–8: 2 canonical-diverse lines per index (when possible)
+        - ranks 9–16: 1 line per index (when possible)
+      Any shortage is absorbed by dropping the lowest tail ranks first.
+
+    Goal: lift within-lane conversion (pack_box_hit / strict hits) without collapsing the lane
+    retention gains from the spine+tail geometry.
+    """
+    import modules.vtrac_reference as vr
+
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+    indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset=sort_preset,
+    )
+    if not indices_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    lane_rows: Dict[int, List[Dict[str, Any]]] = {}
+    for row in ranked_conv:
+        if not isinstance(row, dict):
+            continue
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo:
+            continue
+        idx = vr.get_vtrac_index(combo)
+        if not isinstance(idx, int):
+            continue
+        lane_rows.setdefault(int(idx), []).append(row)
+
+    selected: List[str] = []
+    selected_set: set[str] = set()
+    pack_combos: List[str] = []
+    pack_combos_by_index: Dict[int, List[str]] = {}
+    canons_by_index: Dict[int, set[str]] = {}
+
+    def _add_pack(idx: int, combo: str) -> bool:
+        c = _normalize_pick3_literal(combo)
+        if not c or c in selected_set:
+            return False
+        if len(selected) >= b:
+            return False
+        selected.append(c)
+        selected_set.add(c)
+        pack_combos.append(c)
+        pack_combos_by_index.setdefault(int(idx), []).append(c)
+        canon = _canon(c)
+        if canon:
+            canons_by_index.setdefault(int(idx), set()).add(canon)
+        return True
+
+    def _pick_canon_diverse(*, idx: int, want: int, avoid_canons: set[str]) -> List[str]:
+        """
+        Pick up to `want` combos within `idx`, preferring CU lane rows (best evidence), and
+        maintaining canonical diversity against `avoid_canons`.
+        """
+        chosen: List[str] = []
+        chosen_canons: set[str] = set(avoid_canons or set())
+
+        for row in lane_rows.get(int(idx), []):
+            if len(chosen) >= want:
+                break
+            c = _normalize_pick3_literal(row.get("combo") or "")
+            if not c or c in selected_set:
+                continue
+            canon = _canon(c)
+            if canon and canon in chosen_canons:
+                continue
+            chosen.append(c)
+            if canon:
+                chosen_canons.add(canon)
+
+        if len(chosen) < want:
+            for token in _vtrac_display_pack(index=int(idx)):
+                if len(chosen) >= want:
+                    break
+                c = _normalize_pick3_literal(token)
+                if not c or c in selected_set or c in chosen:
+                    continue
+                canon = _canon(c)
+                if canon and canon in chosen_canons:
+                    continue
+                chosen.append(c)
+                if canon:
+                    chosen_canons.add(canon)
+
+        return chosen
+
+    spine_used: set[int] = set()
+
+    # Spine: insert full boxed-member packs for the top-N ranked indices.
+    for raw in indices_ranked[:spine_packs_target]:
+        idx = int(raw)
+        if idx in spine_used:
+            continue
+        for token in _vtrac_display_pack(index=idx):
+            if len(selected) >= b:
+                break
+            _add_pack(idx, token)
+        spine_used.add(idx)
+        if len(selected) >= b:
+            break
+
+    # Tail: shoulder depth.
+    tail_ranked: List[int] = []
+    for raw in indices_ranked[spine_packs_target:]:
+        idx = int(raw)
+        if idx in spine_used:
+            continue
+        tail_ranked.append(idx)
+
+    shoulder_count = 4  # ranks 5–8
+    mid_count = 8  # ranks 9–16
+    shoulder = tail_ranked[:shoulder_count]
+    mid = tail_ranked[shoulder_count : shoulder_count + mid_count]
+    rest = tail_ranked[shoulder_count + mid_count :]
+
+    tail_touched: set[int] = set()
+    shoulder_first_lines = 0
+    shoulder_second_lines = 0
+    mid_lines = 0
+    rest_lines = 0
+
+    # Pass 1: ensure we touch shoulder indices at least once when possible.
+    for idx in shoulder:
+        if len(selected) >= b:
+            break
+        picks = _pick_canon_diverse(idx=idx, want=1, avoid_canons=set())
+        for c in picks:
+            if _add_pack(idx, c):
+                tail_touched.add(int(idx))
+                shoulder_first_lines += 1
+
+    # Pass 2: allocate a second canonical-diverse line to shoulder indices (when possible).
+    for idx in shoulder:
+        if len(selected) >= b:
+            break
+        picks = _pick_canon_diverse(idx=idx, want=1, avoid_canons=canons_by_index.get(int(idx), set()))
+        for c in picks:
+            if _add_pack(idx, c):
+                tail_touched.add(int(idx))
+                shoulder_second_lines += 1
+
+    # Pass 3: allocate 1 line for mid tail indices (ranks 9–16).
+    for idx in mid:
+        if len(selected) >= b:
+            break
+        picks = _pick_canon_diverse(idx=idx, want=1, avoid_canons=set())
+        for c in picks:
+            if _add_pack(idx, c):
+                tail_touched.add(int(idx))
+                mid_lines += 1
+
+    # Pass 4: if budget remains, continue touching ranked indices (baseline-style) 1-per-index.
+    for idx in rest:
+        if len(selected) >= b:
+            break
+        picks = _pick_canon_diverse(idx=idx, want=1, avoid_canons=set())
+        for c in picks:
+            if _add_pack(idx, c):
+                tail_touched.add(int(idx))
+                rest_lines += 1
+
+    # Safety top-up: if we couldn't fill due to duplicates/empty packs, fill remaining from convergence.
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    used_indices_list = list(pack_combos_by_index.keys())
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(used_indices_list[0]) if used_indices_list else None,
+            "indices": list(used_indices_list),
+            "packs_target": int(spine_packs_target),
+            "pack_combos": list(pack_combos),
+            "pack_combos_by_index": {int(k): list(v) for k, v in pack_combos_by_index.items()},
+            "chooser": {
+                "ranked_indices": chooser_ranked,
+                "spine_packs_target": int(spine_packs_target),
+                "rank_count": int(rank_count),
+                "shoulder_count": int(shoulder_count),
+                "mid_count": int(mid_count),
+            },
+            "filler_policy": "spine4_index_tail_shoulder_depth",
+            "allocation": {
+                "scan_limit": int(scan_limit),
+                "sort_preset": str(sort_preset),
+                "spine_packs_target": int(spine_packs_target),
+                "tail_touched_indices": int(len(tail_touched)),
+                "shoulder_first_lines": int(shoulder_first_lines),
+                "shoulder_second_lines": int(shoulder_second_lines),
+                "mid_lines": int(mid_lines),
+                "rest_lines": int(rest_lines),
+            },
+        },
+    }
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -4110,6 +4342,7 @@ def main() -> None:
             "v0_2_default_multi_pack_mop_24_12": {},
             "v0_2_default_multi_pack_index_alloc_top12_4_3_2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote": {},
             "v0_2_default_multi_pack_stablepluslane_packheavy": {},
@@ -4169,6 +4402,9 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth(ranked=ranked, budget=b)
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2(ranked=ranked, budget=b)

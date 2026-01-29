@@ -201,3 +201,7 @@ These are kept for research/provenance. Defaults remain unchanged.
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote`: no measurable difference vs the baseline tail selection in current windows.
   - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
   - Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth`: “shoulder depth” (ranks 5–8 get 2 lines, ranks 9–16 get 1) regresses lane retention without lifting strict in current windows.
+  - Scoreboard (Jan + OOS, side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SHOULDER_DEPTH.md`
+  - Lane allocation (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
+  - Lane allocation (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
