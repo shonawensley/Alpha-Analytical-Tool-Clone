@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import shutil
 import sys
@@ -235,6 +236,102 @@ def _copy_tree(src_dir: Path, dest_dir: Path, *, dry_run: bool, manifest_rows: L
             continue
         rel = src.relative_to(src_dir)
         _copy_file(src, dest_dir / rel, dry_run=dry_run, manifest_rows=manifest_rows)
+
+
+def _write_candidate_universe_md_from_payload(*, out_path: Path, payload: Dict[str, object]) -> None:
+    def short_list(items: Sequence[object], limit: int = 8) -> str:
+        xs = [str(x) for x in items if str(x)]
+        if len(xs) <= limit:
+            return ", ".join(xs)
+        return ", ".join(xs[:limit]) + f", …(+{len(xs) - limit})"
+
+    state_key = str(payload.get("state_key") or "?")
+    results_date = str(payload.get("results_date") or "?")
+    history_date = str(payload.get("history_date") or "-")
+    generated_at = str(payload.get("generated_at") or "-")
+    inputs_hash = str(payload.get("inputs_hash") or "-")
+    packs = payload.get("packs") or []
+    union_count = int(payload.get("union_combos_count") or 0)
+    leakage = bool(payload.get("contains_winners_artifacts"))
+    leakage_issues = payload.get("leakage_issues") or []
+
+    lines: List[str] = []
+    lines.append(f"# Candidate Universe — {state_key} — D={results_date}")
+    lines.append("")
+    lines.append("This is a **pre-results** playset artifact (gradeable later).")
+    lines.append("")
+    lines.append("## Meta")
+    lines.append("")
+    lines.append(f"- generated_at: `{generated_at}`")
+    lines.append(f"- history_date (H): `{history_date}`")
+    lines.append(f"- results_date (D): `{results_date}`")
+    lines.append(f"- inputs_hash: `{inputs_hash}`")
+    lines.append(f"- packs: `{len(packs) if isinstance(packs, list) else 0}`")
+    lines.append(f"- union_combos_count: `{union_count}`")
+    lines.append("")
+    lines.append("## Leakage")
+    lines.append("")
+    lines.append(f"- contains_winners_artifacts: `{str(leakage).lower()}`")
+    if leakage_issues:
+        for issue in leakage_issues:
+            lines.append(f"- issue: `{issue}`")
+    else:
+        lines.append("- issues: none")
+    lines.append("")
+    lines.append("## Packs")
+    lines.append("")
+
+    if isinstance(packs, list):
+        for p in packs:
+            if not isinstance(p, dict):
+                continue
+            pack_id = str(p.get("pack_id") or "?")
+            method_id = str(p.get("method_id") or "?")
+            variant = str(p.get("variant") or "Unknown")
+            play_mode = str(p.get("play_mode") or "Unknown")
+            combos = p.get("combos") or []
+            canonicals = p.get("canonicals") or []
+            why_tags = p.get("why_tags") or []
+            evidence_paths = p.get("evidence_paths") or []
+            lines.append(f"### `{pack_id}`")
+            lines.append("")
+            lines.append(f"- method_id: `{method_id}`")
+            lines.append(f"- variant: `{variant}`")
+            lines.append(f"- play_mode: `{play_mode}`")
+            lines.append(f"- combos_count: `{int(p.get('combos_count') or 0)}`")
+            lines.append(f"- cost_units: `{int(p.get('cost_units') or 0)}`")
+            if canonicals:
+                lines.append(f"- canonicals: {short_list(canonicals, limit=12)}")
+            if why_tags:
+                lines.append(f"- why_tags: {short_list(why_tags, limit=12)}")
+            if evidence_paths:
+                lines.append(f"- evidence_paths: {short_list(evidence_paths, limit=8)}")
+            if combos:
+                lines.append(f"- combos(sample): {short_list(combos, limit=18)}")
+            lines.append("")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
+def _generate_candidate_universe_md(
+    src_json: Path,
+    dest_md: Path,
+    *,
+    dry_run: bool,
+    manifest_rows: List[Dict[str, object]],
+) -> None:
+    if not src_json.exists() or not src_json.is_file():
+        manifest_rows.append({"status": "missing", "src": str(src_json), "dest": str(dest_md), "bytes": 0})
+        return
+    if dry_run:
+        manifest_rows.append({"status": "would_generate", "src": str(src_json), "dest": str(dest_md), "bytes": 0})
+        return
+    payload = json.loads(src_json.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit(f"Unexpected candidate_universe payload type: {type(payload)} ({src_json})")
+    _write_candidate_universe_md_from_payload(out_path=dest_md, payload=payload)
+    manifest_rows.append({"status": "generated", "src": str(src_json), "dest": str(dest_md), "bytes": dest_md.stat().st_size})
 
 
 def _read_convergence_cases_csv(path: Path, *, max_rows: int) -> List[Case]:
@@ -591,16 +688,30 @@ def _copy_predictive_state_artifacts(
     profile = str(profile or "mixed").strip()
     suffix = "" if profile == "mixed" else f"__{profile}"
     tag_suffix = f"__{experiment_tag}" if experiment_tag else ""
-    for fname in (
-        f"candidate_universe{suffix}{tag_suffix}.json",
-        f"candidate_universe{suffix}{tag_suffix}.md",
-        f"candidate_universe_evidence{suffix}{tag_suffix}.csv",
-        f"candidate_universe_evidence{suffix}{tag_suffix}.md",
-        f"signals_bundle{suffix}{tag_suffix}.json",
-        f"play_card{suffix}{tag_suffix}.json",
-        f"play_card{suffix}{tag_suffix}.md",
-    ):
+
+    cu_json_name = f"candidate_universe{suffix}{tag_suffix}.json"
+    cu_md_name = f"candidate_universe{suffix}{tag_suffix}.md"
+    cu_evidence_csv = f"candidate_universe_evidence{suffix}{tag_suffix}.csv"
+    cu_evidence_md = f"candidate_universe_evidence{suffix}{tag_suffix}.md"
+    signals_name = f"signals_bundle{suffix}{tag_suffix}.json"
+    play_card_json = f"play_card{suffix}{tag_suffix}.json"
+    play_card_md = f"play_card{suffix}{tag_suffix}.md"
+
+    # Always copy the gradeable JSON + evidence surfaces.
+    for fname in (cu_json_name, cu_evidence_csv, cu_evidence_md, signals_name, play_card_json, play_card_md):
         _copy_file(src_state_dir / fname, dest_state_dir / fname, dry_run=dry_run, manifest_rows=manifest_rows)
+
+    # candidate_universe.md is optional in the pipeline; generate it from the JSON if missing.
+    src_md = src_state_dir / cu_md_name
+    if src_md.exists() and src_md.is_file():
+        _copy_file(src_md, dest_state_dir / cu_md_name, dry_run=dry_run, manifest_rows=manifest_rows)
+    else:
+        _generate_candidate_universe_md(
+            src_state_dir / cu_json_name,
+            dest_state_dir / cu_md_name,
+            dry_run=dry_run,
+            manifest_rows=manifest_rows,
+        )
 
     state = src_state_dir.name
     for tool in ("stable", "vtrac", "hot_zones", "digit_reduction", "aux"):
@@ -645,8 +756,10 @@ def _write_readme(
     manifest_rows: List[Dict[str, object]],
     dry_run: bool,
 ) -> None:
-    total_bytes = sum(int(r.get("bytes") or 0) for r in manifest_rows if r.get("status") in ("copied", "would_copy"))
-    copied = sum(1 for r in manifest_rows if r.get("status") == ("would_copy" if dry_run else "copied"))
+    byte_statuses = {"copied", "would_copy", "generated", "would_generate"}
+    copied_statuses = {"copied", "generated"} if not dry_run else {"would_copy", "would_generate"}
+    total_bytes = sum(int(r.get("bytes") or 0) for r in manifest_rows if r.get("status") in byte_statuses)
+    copied = sum(1 for r in manifest_rows if r.get("status") in copied_statuses)
     missing = sum(1 for r in manifest_rows if r.get("status") == "missing")
 
     lines: List[str] = []
