@@ -1,40 +1,77 @@
-# CODEX HANDOFF (Power-off safe) — v0.2 Synthesis Status
+# CODEX HANDOFF (Power-off safe) — Crossroads “Glass-Box” Savepoint
 
-Timestamp: 2026-01-16
+Timestamp: 2026-02-13
 
-## Repo state
+Goal of this savepoint:
+- Preserve the **Crossroads Pack v1** (D=2026-01-15, stable10, tool_only, B36-only).
+- Ensure ChatGPT Pro Deep Research can open the actual artifacts (via an upload zip).
+- Leave a clean “resume map” so we don’t re-enter spiral loops after a reset.
+
+## Repo state (tracked; safe)
 
 - Repo root: `/home/ser/code/Alpha-Analytical-Tool-Clone`
-- Branch: `checkpoint/gold-days-2025-12-30_to_2026-01-04`
-- Latest commits (already pushed to `origin/`):
-  - `f85b3146` — Link v0.2 defaults to tool audit decisions
-  - `e8f2830c` — Add Aux v0 consumption audit and promote v0.2 posture
-  - Prior context commits: `bb9bc425`, `34d6520f`, `5bbda21b`
+- Branch: `checkpoint/v0_3-stable10-shoulder-depth`
+- HEAD: `0d127e7d` (`Crossroads: add case matrix + Codex deep research mirror`)
+- Remote: `origin` (branch pushed and up to date)
+- Working tree: clean (`git status -s` empty)
 
-## Uncommitted work since the above commits
+## The one file to upload to ChatGPT Pro Deep Research (untracked; regeneratable)
 
-- Enforced “tool_only by default” across prediction/rollup scripts (Profit Alerts quarantined unless explicitly requested).
-- Regenerated tool_only grading/rollups for the v0 Jan window (`2026-01-05` → `2026-01-09`) and produced per-state predictive RUNS (`__PREDICTIVE__tool_only.md`) for all tracked states/days.
-- Added a new Play Card strategy experiment (`conversion_box_first`) and logged the negative result (helps vtrac_index_hit but hurts hit_any in v0 window).
+- Upload zip: `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK.zip`
+  - Size: ~2.8MB
+  - SHA256: `2d53bf4664842eebc665fb0f92511ac586ca240538b92ec3170e74f9c78065e2`
 
-## What changed (high level)
+This zip is **not** committed by design (it includes `sharepacks/` + dated `RUNS/` outputs).
+If it goes missing, regenerate it from repo root:
 
-- Added Aux v0 consumption audit docs (quant + cases + feature decisions) and wired them into RUNS navigation + v0.2 defaults.
-- v0.2 defaults now link to **all** tool audit decision docs (DR/Aux/Stable/Hot Zones/VTRAC).
+```bash
+python3 scripts/tools/export_chatgpt_research_pack.py \
+  --mode window --dates 2026-01-15 2026-01-16 \
+  --states OntarioCanada4 NewYork4 NorthCarolina4 Delaware4 \
+  --profile tool_only --experiment-tag stable10 --include-predictive --include-control-center \
+  --extra-window 2026-01-15:2026-01-22 \
+  --extra-window 2026-01-01:2026-01-09 \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_SYNTHESIS__2026-01-15.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv" \
+  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK" \
+  --zip
+```
 
-## Key files to open first (map)
+## “Resume in 60 seconds” (no hunting)
 
-- RUNS portal (navigation): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
-- v0.2 defaults (what “the system” does by default): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
-- Gold capture ledger: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0__GOLD_EXTRACTION.md`
+1) Open the pack index + prompt:
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/README.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
 
-## Aux audit outputs (new)
+2) Open the two new “clarity” artifacts:
+- Codex deep research mirror memo: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md`
+- Crossroads case matrix (5 cases, one table): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv`
 
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__QUANT.md`
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__AUDIT__CASES.md`
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AUX_V0__FEATURE_DECISIONS.md`
+3) If you feel lost, use the SSOT map:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
 
-## Working tree note
+## What we locked (so we don’t re-open old debates)
 
-- Tracked files have **uncommitted** changes (scripts + docs + RUNS outputs); `git status -sb` also shows lots of **untracked** artifacts (sharepacks, scratch tasks, and extra `data/results/*.txt`).
-- No sharepacks are intended to be committed in this sprint; keep any future commit strictly `scripts/` + `docs/` (+ RUNS markdown/csv as desired).
+- Gold anchor: `D=2026-01-15`
+- Posture: `tool_only` + `stable10`
+- Budget: **B36 only** (Crossroads Pack v1)
+- Objective: **isolation-first** (reduce `CU_LANE_BUT_PLAY_MISS`)
+- Guardrail: **OOS strict B36 must not regress**
+- No analyzer edits in this phase; selection-layer only.
+
+## What changed since the older (Jan) power-off handoff (high level)
+
+- Deep Research access issue resolved via an upload zip (no more “repo access can’t open sharepacks” confusion).
+- Winner lane rank reports regenerated to include the Crossroads baseline strategy.
+- Added:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv`
+  - `scripts/tools/create_crossroads_case_matrix.py`
+
+---
+
+## Archive note
+
+This file replaces an older v0.2-era “power-off” snapshot (2026-01-16). The new project state is Crossroads Pack v1 + stable10 truth-layer instrumentation + upload-pack workflow.
