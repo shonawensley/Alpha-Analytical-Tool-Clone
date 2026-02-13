@@ -11,7 +11,7 @@ Goal of this savepoint:
 
 - Repo root: `/home/ser/code/Alpha-Analytical-Tool-Clone`
 - Branch: `checkpoint/v0_3-stable10-shoulder-depth`
-- HEAD: `0d127e7d` (`Crossroads: add case matrix + Codex deep research mirror`)
+- HEAD: `a9da24a9` (`Crossroads: add tracked savepoint resume doc`)
 - Remote: `origin` (branch pushed and up to date)
 - Working tree: clean (`git status -s` empty)
 

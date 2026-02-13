@@ -10,7 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-shoulder-depth`
-- HEAD: `0d127e7d` (`Crossroads: add case matrix + Codex deep research mirror`)
+- HEAD: `a9da24a9` (`Crossroads: add tracked savepoint resume doc`)
 
 Quick resume commands:
 
@@ -84,4 +84,3 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
 
 Upload the zip to ChatGPT Pro Deep Research and paste:
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
-
