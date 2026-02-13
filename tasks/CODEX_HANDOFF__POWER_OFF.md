@@ -11,7 +11,7 @@ Goal of this savepoint:
 
 - Repo root: `/home/ser/code/Alpha-Analytical-Tool-Clone`
 - Branch: `checkpoint/v0_3-stable10-shoulder-depth`
-- HEAD: `a9da24a9` (`Crossroads: add tracked savepoint resume doc`)
+- Tip: run `git log -1 --oneline` to confirm the current branch tip
 - Remote: `origin` (branch pushed and up to date)
 - Working tree: clean (`git status -s` empty)
 

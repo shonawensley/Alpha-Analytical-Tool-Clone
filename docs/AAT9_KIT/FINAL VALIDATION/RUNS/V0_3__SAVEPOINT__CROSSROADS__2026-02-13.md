@@ -10,7 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-shoulder-depth`
-- HEAD: `a9da24a9` (`Crossroads: add tracked savepoint resume doc`)
+- Tip: run `git log -1 --oneline` to confirm the current branch tip
 
 Quick resume commands:
 
