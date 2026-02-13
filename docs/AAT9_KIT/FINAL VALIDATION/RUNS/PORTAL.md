@@ -29,6 +29,22 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`
 1.11) v0.3 predictive glossary (one-page semantics map; strict vs lane vs inclusive):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md`
+1.12) v0.3 glass-box flow (end-to-end map; evidence → CU → Play Card → grades):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`
+1.13) v0.3 glass-box example (Ontario; “one real example” walkthrough):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLASS_BOX_TRACE__ONTARIOCANADA4__2026-01-15.md`
+1.14) v0.3 glass-box trace bundles (multi-state; casebook-driven):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__GLASS_BOX_TRACE_BUNDLE__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__GLASS_BOX_TRACE_BUNDLE__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
+
+1.15) Crossroads synthesis memo (one gold day anchor; B36-only):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_SYNTHESIS__2026-01-15.md`
+
+1.16) Crossroads deep research pack (pointer-only; ChatGPT Pro ready):
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/README.md`
+
+1.17) Deep Analysis — Codex Valuable Insights (SSOT synthesis; selection-layer focus):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DEEP_ANALYSIS_CODEX_VALUABLE_INSIGHTS.md`
 
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
@@ -287,3 +303,5 @@ Existing Codex analyses:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CODEX_DEEP_ANALYSIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CODEX_DEEP_ANALYSIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CODEX_DEEP_ANALYSIS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-21__CODEX_DEEP_ANALYSIS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CODEX_DEEP_ANALYSIS.md`

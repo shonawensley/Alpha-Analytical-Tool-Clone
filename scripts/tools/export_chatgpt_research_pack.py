@@ -20,6 +20,11 @@ Examples:
   # Full window pack (all states; can be big)
   python3 scripts/tools/export_chatgpt_research_pack.py \\
     --start-date 2026-01-05 --end-date 2026-01-09 --mode window --zip
+
+Notes:
+  - Some predictive artifacts are experiment-tagged (e.g. stable10):
+      sharepacks/_predictive/<D>/<STATE>/candidate_universe__tool_only__stable10.json
+    Use --experiment-tag stable10 to copy those files into the export.
 """
 
 from __future__ import annotations
@@ -51,6 +56,32 @@ def _parse_args() -> argparse.Namespace:
     )
 
     p.add_argument("--mode", choices=("curated", "window"), default="curated")
+    p.add_argument(
+        "--experiment-tag",
+        default=None,
+        help=(
+            "Optional experiment tag for predictive artifacts (e.g. stable10). "
+            "When set, the exporter will prefer candidate_universe/play_card filenames that include the tag."
+        ),
+    )
+    p.add_argument(
+        "--extra-window",
+        action="append",
+        default=[],
+        help=(
+            "Also copy window-level RUNS docs for these start:end date ranges (YYYY-MM-DD:YYYY-MM-DD). "
+            "Repeatable. Useful when your pack needs an OOS guardrail window in addition to the main dates."
+        ),
+    )
+    p.add_argument(
+        "--include-path",
+        action="append",
+        default=[],
+        help=(
+            "Additional repo-relative file or directory to copy into the export (repeatable). "
+            "Useful to include a PACKAGES/* prompt bundle alongside the exported RUNS/sharepacks artifacts."
+        ),
+    )
 
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--dates", nargs="+", help="Explicit results dates D (YYYY-MM-DD)")
@@ -191,6 +222,17 @@ def _copy_glob(
         manifest_rows.append({"status": "missing_dir_or_pattern", "src": str(src_dir), "dest": str(dest_dir), "bytes": 0})
         return
     for src in matched:
+        rel = src.relative_to(src_dir)
+        _copy_file(src, dest_dir / rel, dry_run=dry_run, manifest_rows=manifest_rows)
+
+
+def _copy_tree(src_dir: Path, dest_dir: Path, *, dry_run: bool, manifest_rows: List[Dict[str, object]]) -> None:
+    if not src_dir.exists() or not src_dir.is_dir():
+        manifest_rows.append({"status": "missing", "src": str(src_dir), "dest": str(dest_dir), "bytes": 0})
+        return
+    for src in sorted(src_dir.rglob("*")):
+        if not src.is_file():
+            continue
         rel = src.relative_to(src_dir)
         _copy_file(src, dest_dir / rel, dry_run=dry_run, manifest_rows=manifest_rows)
 
@@ -357,6 +399,7 @@ def _copy_runs_docs(
     export_root: Path,
     *,
     profile: str,
+    extra_windows: Sequence[Tuple[str, str]],
     dry_run: bool,
     manifest_rows: List[Dict[str, object]],
 ) -> None:
@@ -369,6 +412,13 @@ def _copy_runs_docs(
         "PORTAL.md",
         "INDEX.md",
         "FIX_LATER_INDEX.md",
+        "SUPERBRAIN_ROADMAP.md",
+        "SUPERBRAIN_V0_2__DEFAULTS.md",
+        "V0_2__INTEGRATION_LOG.md",
+        "V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md",
+        "V0_3__PIPELINE_FLOW__GLASS_BOX.md",
+        "V0_3__PREDICTIVE_POLICY__tool_only__stable10.md",
+        "DEEP_ANALYSIS_CODEX_VALUABLE_INSIGHTS.md",
         "SUPERBRAIN_V0__SYNTHESIS_SPRINT.md",
         "SUPERBRAIN_V0__GOLD_EXTRACTION.md",
         "DOUBLES_MIRROR_DOUBLES__INVENTORY.md",
@@ -386,6 +436,15 @@ def _copy_runs_docs(
     # Window-level corpus docs that match the requested date range(s)
     if dates:
         window_prefix = f"{dates[0]}_to_{dates[-1]}__"
+        for path in sorted(RUNS_DIR.glob(f"{window_prefix}*")):
+            if path.is_file():
+                if profile == "tool_only" and "profit_alert" in path.name.lower():
+                    continue
+                _copy_file(path, dest_runs / path.name, dry_run=dry_run, manifest_rows=manifest_rows)
+
+    # Optional extra windows (e.g., an OOS guardrail window)
+    for start, end in extra_windows:
+        window_prefix = f"{start}_to_{end}__"
         for path in sorted(RUNS_DIR.glob(f"{window_prefix}*")):
             if path.is_file():
                 if profile == "tool_only" and "profit_alert" in path.name.lower():
@@ -525,16 +584,21 @@ def _copy_predictive_state_artifacts(
     dest_state_dir: Path,
     *,
     profile: str,
+    experiment_tag: Optional[str],
     dry_run: bool,
     manifest_rows: List[Dict[str, object]],
 ) -> None:
     profile = str(profile or "mixed").strip()
     suffix = "" if profile == "mixed" else f"__{profile}"
+    tag_suffix = f"__{experiment_tag}" if experiment_tag else ""
     for fname in (
-        f"candidate_universe{suffix}.json",
-        f"candidate_universe{suffix}.md",
-        f"play_card{suffix}.json",
-        f"play_card{suffix}.md",
+        f"candidate_universe{suffix}{tag_suffix}.json",
+        f"candidate_universe{suffix}{tag_suffix}.md",
+        f"candidate_universe_evidence{suffix}{tag_suffix}.csv",
+        f"candidate_universe_evidence{suffix}{tag_suffix}.md",
+        f"signals_bundle{suffix}{tag_suffix}.json",
+        f"play_card{suffix}{tag_suffix}.json",
+        f"play_card{suffix}{tag_suffix}.md",
     ):
         _copy_file(src_state_dir / fname, dest_state_dir / fname, dry_run=dry_run, manifest_rows=manifest_rows)
 
@@ -601,13 +665,15 @@ def _write_readme(
     lines.append("")
     if args.include_predictive:
         suffix = "" if args.profile == "mixed" else f"__{args.profile}"
+        tag_suffix = f"__{args.experiment_tag}" if args.experiment_tag else ""
         lines.append(
-            f"- `sharepacks/_predictive/<D>/<STATE>/candidate_universe{suffix}.json` + `play_card{suffix}.json` (pre-results artifacts)"
+            f"- `sharepacks/_predictive/<D>/<STATE>/candidate_universe{suffix}{tag_suffix}.json` + `play_card{suffix}{tag_suffix}.json` (pre-results artifacts)"
         )
         lines.append("")
     lines.append("## Export parameters")
     lines.append("")
     lines.append(f"- mode: `{args.mode}`")
+    lines.append(f"- experiment_tag: `{args.experiment_tag or ''}`")
     lines.append(f"- dates: `{dates[0] if dates else ''}` → `{dates[-1] if dates else ''}` ({len(dates)} days)")
     lines.append(f"- include_predictive: `{bool(args.include_predictive)}`")
     lines.append(f"- profile: `{args.profile}`")
@@ -681,6 +747,19 @@ def main() -> None:
     states_filter = set(args.states) if args.states else None
     selected = _select_cases(args, dates, states_filter=states_filter)
 
+    extra_windows: List[Tuple[str, str]] = []
+    for raw in args.extra_window or []:
+        s = str(raw or "").strip()
+        if not s:
+            continue
+        if ":" not in s:
+            raise SystemExit(f"--extra-window must be YYYY-MM-DD:YYYY-MM-DD (got {raw!r})")
+        start, end = (p.strip() for p in s.split(":", 1))
+        # Validate parse.
+        datetime.strptime(start, "%Y-%m-%d")
+        datetime.strptime(end, "%Y-%m-%d")
+        extra_windows.append((start, end))
+
     manifest_rows: List[Dict[str, object]] = []
 
     if not args.dry_run:
@@ -689,8 +768,29 @@ def main() -> None:
     if args.include_final_docs:
         _copy_context_docs(out_dir, dry_run=args.dry_run, manifest_rows=manifest_rows)
 
+    # Optional extra files/dirs (e.g., a pointer-only PACKAGES bundle with a prompt/manifest)
+    for raw in args.include_path or []:
+        s = str(raw or "").strip()
+        if not s:
+            continue
+        src = (REPO_ROOT / s).resolve()
+        dest = (out_dir / s).resolve()
+        if src.is_file():
+            _copy_file(src, dest, dry_run=args.dry_run, manifest_rows=manifest_rows)
+        elif src.is_dir():
+            _copy_tree(src, dest, dry_run=args.dry_run, manifest_rows=manifest_rows)
+        else:
+            manifest_rows.append({"status": "missing", "src": str(src), "dest": str(dest), "bytes": 0})
+
     # RUNS (always copy; small, and anchors navigation)
-    _copy_runs_docs(dates, out_dir, profile=args.profile, dry_run=args.dry_run, manifest_rows=manifest_rows)
+    _copy_runs_docs(
+        dates,
+        out_dir,
+        profile=args.profile,
+        extra_windows=extra_windows,
+        dry_run=args.dry_run,
+        manifest_rows=manifest_rows,
+    )
 
     # Post-results sharepacks (winners lens lives here)
     for date in dates:
@@ -738,6 +838,7 @@ def main() -> None:
                     src_day / state,
                     dest_day / state,
                     profile=args.profile,
+                    experiment_tag=args.experiment_tag,
                     dry_run=args.dry_run,
                     manifest_rows=manifest_rows,
                 )

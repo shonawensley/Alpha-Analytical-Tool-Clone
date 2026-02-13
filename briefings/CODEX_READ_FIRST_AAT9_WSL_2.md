@@ -69,6 +69,11 @@ Master Validation (frozen day snapshot):
 - Analysis navigator (how to review a day without drifting): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
 - Pattern progression primer (concept lens; survives context resets): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+- Deep Research / external reviewers (important):
+  - Most `sharepacks/<D>/` and `sharepacks/_predictive/<D>/` folders are gitignored (large, local snapshots).
+  - Most `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<date>__*.{md,csv}` and `<date0>_to_<date1>__*.{md,csv}` outputs are also gitignored (regenerable).
+  - Therefore: “repo access” alone usually cannot open a pointer-only pack; use a bounded upload export:
+    - `python3 scripts/tools/export_chatgpt_research_pack.py ... --zip` (see `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`).
 - Run report progress index (avoid “where are we?” drift): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
 - Brain‑2 policy harness (Top‑N triage; tracks `hit_any` + `box_hit`): `python3 scripts/tools/superbrain_config_harness.py --start-date <A> --end-date <B> ...`
 - Optional sharepacks corpus audit (confidence/drift guard across multiple days): `python3 scripts/tools/audit_sharepacks_corpus.py --dates 2025-06-21 2025-06-22 2025-06-23`

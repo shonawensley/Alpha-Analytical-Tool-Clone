@@ -14,6 +14,8 @@ Usage
 python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4
 python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --sharepacks-root sharepacks/_predictive
 python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --profile mixed
+python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --experiment-tag stable10
+python3 scripts/tools/create_predictive_run_report.py --date 2026-01-07 --state NewJersey4 --experiment-tag none
 """
 
 from __future__ import annotations
@@ -53,6 +55,13 @@ def safe_rel(path: Path) -> str:
         return str(path.relative_to(REPO_ROOT))
     except ValueError:
         return str(path)
+
+
+def normalize_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if raw.lower() in {"", "-", "none", "null"}:
+        return ""
+    return raw.replace(" ", "_")
 
 
 def load_history_date(day_dir: Path, *, results_date: str) -> str:
@@ -119,6 +128,11 @@ def parse_args() -> argparse.Namespace:
         help="Ablation profile to reference (default: tool_only). Determines candidate_universe/play_card filenames.",
     )
     ap.add_argument(
+        "--experiment-tag",
+        default="stable10",
+        help="Experiment tag suffix used in sharepack filenames (default: stable10). Use 'none' for untagged artifacts.",
+    )
+    ap.add_argument(
         "--sharepacks-root",
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
@@ -136,7 +150,9 @@ def main() -> None:
     args = parse_args()
     results_date = parse_iso_date(args.date).isoformat()
     profile = str(args.profile or "mixed").strip()
+    experiment_tag = normalize_tag(args.experiment_tag)
     out_suffix = "" if profile == "mixed" else f"__{profile}"
+    tag_suffix = f"__{experiment_tag}" if experiment_tag else ""
 
     sharepacks_root = Path(args.sharepacks_root)
     if not sharepacks_root.is_absolute():
@@ -159,8 +175,21 @@ def main() -> None:
 
     history_date = load_history_date(day_dir, results_date=results_date)
 
-    candidate_universe = state_dir / f"candidate_universe{out_suffix}.json"
-    play_card = state_dir / f"play_card{out_suffix}.json"
+    candidate_universe = state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
+    play_card = state_dir / f"play_card{out_suffix}{tag_suffix}.json"
+    fallback_note: Optional[str] = None
+    if experiment_tag and (not candidate_universe.exists() or not play_card.exists()):
+        cu_fallback = state_dir / f"candidate_universe{out_suffix}.json"
+        pc_fallback = state_dir / f"play_card{out_suffix}.json"
+        if (not candidate_universe.exists()) and cu_fallback.exists():
+            candidate_universe = cu_fallback
+            fallback_note = (
+                f"Experiment tag `{experiment_tag}` not found; fell back to untagged `{Path(candidate_universe).name}`."
+            )
+        if (not play_card.exists()) and pc_fallback.exists():
+            play_card = pc_fallback
+            msg = f"Experiment tag `{experiment_tag}` not found; fell back to untagged `{Path(play_card).name}`."
+            fallback_note = f"{fallback_note} {msg}".strip() if fallback_note else msg
     cc_dir = day_dir / "control_center"
 
     # Common evidence pointers (best-effort; may be missing).
@@ -191,7 +220,7 @@ def main() -> None:
     lines.append("")
     lines.append("Purpose")
     lines.append("- Capture a **pre-results** snapshot analysis for one state/day.")
-    lines.append(f"- Keep predictions gradeable via `candidate_universe{out_suffix}.json` (do not mix in winners artifacts).")
+    lines.append(f"- Keep predictions gradeable via `{candidate_universe.name}` (do not mix in winners artifacts).")
     lines.append("")
     lines.append("Scope")
     lines.append(f"- Results date (D): `{results_date}`")
@@ -199,6 +228,20 @@ def main() -> None:
     lines.append(f"- Predictive sharepack root: `{safe_rel(sharepacks_root)}`")
     lines.append(f"- Sharepack state dir: `{safe_rel(state_dir)}`")
     lines.append(f"- Profile: `{profile}`")
+    if experiment_tag:
+        lines.append(f"- Experiment tag: `{experiment_tag}`")
+    lines.append("")
+    if fallback_note:
+        lines.append("Note")
+        lines.append(f"- {fallback_note}")
+    lines.append("")
+    lines.append("SSOT posture (winners‑free; read first)")
+    lines.append("- Portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`")
+    lines.append("- Roadmap (macro map): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_ROADMAP.md`")
+    lines.append("- Defaults (what we run by default): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`")
+    lines.append("- v0.3 policy (coverage vs conversion): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`")
+    lines.append("- Glossary (strict vs lane vs inclusive): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md`")
+    lines.append("- Glass‑box flow (evidence → CU → Play Card → grades): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`")
     lines.append("")
     lines.append("---")
     lines.append("")
