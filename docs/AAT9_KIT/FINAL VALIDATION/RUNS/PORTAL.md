@@ -46,6 +46,12 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.17) Deep Analysis — Codex Valuable Insights (SSOT synthesis; selection-layer focus):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/DEEP_ANALYSIS_CODEX_VALUABLE_INSIGHTS.md`
 
+1.18) Codex “deep research mirror” memo (Crossroads; B36-only; action-focused):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md`
+
+1.19) Crossroads case matrix (single table; 5 teaching cases):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv`
+
 2) What the whole system is (SSOT portal):
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
 

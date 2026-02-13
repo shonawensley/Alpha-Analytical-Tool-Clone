@@ -5,6 +5,9 @@
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/README.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CASES.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
+- Codex mirror + quick table:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv`
 
 ## SSOT (read first)
 
@@ -59,4 +62,3 @@ Winners HTML (open directly; exact filenames referenced in `CASES.md`):
 - `sharepacks/2026-01-15/NewYork4/winners/NewYork4/`
 - `sharepacks/2026-01-15/NorthCarolina4/winners/NorthCarolina4/`
 - `sharepacks/2026-01-16/Delaware4/winners/Delaware4/`
-
