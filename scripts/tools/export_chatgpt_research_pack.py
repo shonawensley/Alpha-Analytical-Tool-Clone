@@ -690,6 +690,22 @@ def _write_readme(
             states = ", ".join(sorted(selected_cases[date]))
             lines.append(f"- `{date}`: {states}")
     lines.append("")
+    if args.include_path:
+        lines.append("## Included extra paths")
+        lines.append("")
+        for p in args.include_path:
+            s = str(p or "").strip()
+            if s:
+                lines.append(f"- `{s}`")
+        lines.append("")
+    lines.append("## How to use this pack (ChatGPT Pro Deep Research)")
+    lines.append("")
+    lines.append("1) Upload the `.zip` produced alongside this folder.")
+    lines.append("2) In ChatGPT Pro, open this file first: `README.md` (zip root).")
+    lines.append("3) If a pack prompt was included (recommended), open and follow it:")
+    lines.append("   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/*/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`")
+    lines.append("4) Use `MANIFEST.csv` for a mechanical access check (missing rows are explicitly labeled).")
+    lines.append("")
     lines.append("## Key entrypoints")
     lines.append("")
     lines.append("- RUNS portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`")
