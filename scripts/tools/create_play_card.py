@@ -3033,6 +3033,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     ranked: Sequence[Dict[str, Any]],
     budget: int,
     spine_max_lines_per_index: int,
+    spine_pick_mode: str = "display",
     scan_limit: int = 350,
     sort_preset: str = "methods_first",
 ) -> Dict[str, Any]:
@@ -3076,6 +3077,10 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             continue
         lane_rows.setdefault(int(idx), []).append(row)
 
+    spine_mode = str(spine_pick_mode or "display").strip().lower()
+    if spine_mode not in {"display", "evidence", "display_ranked"}:
+        spine_mode = "display"
+
     selected: List[str] = []
     selected_set: set[str] = set()
     pack_combos: List[str] = []
@@ -3102,13 +3107,62 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
         if idx in used_indices:
             continue
         added = 0
-        for token in _vtrac_display_pack(index=idx):
-            if len(selected) >= b:
-                break
-            if spine_max and added >= spine_max:
-                break
-            if _add_pack(idx, token):
-                added += 1
+        if spine_mode == "evidence":
+            # Prefer evidence-backed combos inside the lane, then fall back to display members.
+            lane_list = list(lane_rows.get(idx, []))
+            lane_list.sort(key=_convergence_sort_key)
+            for row in lane_list:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                token = _normalize_pick3_literal(row.get("combo") or "")
+                if _add_pack(idx, token):
+                    added += 1
+            if not spine_max or added < spine_max:
+                for token in _vtrac_display_pack(index=idx):
+                    if len(selected) >= b:
+                        break
+                    if spine_max and added >= spine_max:
+                        break
+                    if _add_pack(idx, token):
+                        added += 1
+        elif spine_mode == "display_ranked":
+            # Still use the display pack, but take the members with strongest evidence first.
+            row_by_combo: Dict[str, Dict[str, Any]] = {}
+            for row in ranked_conv:
+                c = _normalize_pick3_literal(row.get("combo") or "")
+                if c and c not in row_by_combo:
+                    row_by_combo[c] = row
+
+            scored: List[Tuple[Tuple[int, int, int, int, float, str], str]] = []
+            for token in _vtrac_display_pack(index=idx):
+                c = _normalize_pick3_literal(token)
+                if not c:
+                    continue
+                row = row_by_combo.get(c)
+                if row:
+                    key = _convergence_sort_key(row)
+                else:
+                    key = (999, 999, 999, 999, 999.0, c)
+                scored.append((key, c))
+            scored.sort(key=lambda t: t[0])
+            for _, token in scored:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
+        else:
+            # Baseline behavior: fixed display order.
+            for token in _vtrac_display_pack(index=idx):
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
         used_indices.add(idx)
         if len(selected) >= b:
             break
@@ -3178,6 +3232,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 "sort_preset": str(sort_preset),
                 "spine_packs_target": int(spine_packs_target),
                 "spine_max_lines_per_index": int(spine_max),
+                "spine_pick_mode": str(spine_mode),
                 "tail_added": int(tail_added),
             },
         },
@@ -3195,6 +3250,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6(
         ranked=ranked,
         budget=budget,
         spine_max_lines_per_index=6,
+        spine_pick_mode="display",
         scan_limit=scan_limit,
         sort_preset=sort_preset,
     )
@@ -3211,6 +3267,41 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7(
         ranked=ranked,
         budget=budget,
         spine_max_lines_per_index=7,
+        spine_pick_mode="display",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_pick_mode="evidence",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_pick_mode="display_ranked",
         scan_limit=scan_limit,
         sort_preset=sort_preset,
     )
@@ -4532,6 +4623,8 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote": {},
@@ -4598,6 +4691,14 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked(
+                    ranked=ranked, budget=b
+                )
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth(ranked=ranked, budget=b)

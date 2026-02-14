@@ -209,3 +209,19 @@ These are kept for research/provenance. Defaults remain `...spinecap6` (see B36 
   - Scoreboard (Jan + OOS, side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SHOULDER_DEPTH.md`
   - Lane allocation (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
   - Lane allocation (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
+
+---
+
+## Spine chooser experiments (B36; not promoted)
+
+These test “within-lane conversion” levers on top of `...spinecap6` by changing how the **6 spine lines per index** are selected.
+
+Current result: **not promoted** (no clean win vs baseline under the Crossroads promotion gates).
+
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence`: OOS strict lifts, but coverage regresses; Jan strict regresses.
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked`: no measurable change vs baseline in current windows.
+
+Where to inspect:
+- Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md:1`
+- Jan sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_SPINECHOOSER_SWEEP.md`
+- OOS sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_SPINECHOOSER_SWEEP.md`
