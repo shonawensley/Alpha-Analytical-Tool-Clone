@@ -26,8 +26,8 @@ git pull
 Deep Research cannot reliably open `sharepacks/` + dated `RUNS/` outputs via “repo access”, so we use an export zip.
 
 - Upload this file:
-  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK.zip`
-  - SHA256: `2d53bf4664842eebc665fb0f92511ac586ca240538b92ec3170e74f9c78065e2`
+  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v2.zip`
+  - SHA256: `adda644314dca55b9af428b7dca688bbc408f77883e2eb558bb946dcc2392afe`
 
 If it’s missing, regenerate (repo root):
 
@@ -42,7 +42,13 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_SYNTHESIS__2026-01-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv" \
-  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP_SWEEP__2026-02-14.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/DEEP_ANALYSIS_CODEX_VALUABLE_INSIGHTS.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md" \
+  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v2" \
   --zip
 ```
 
