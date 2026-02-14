@@ -31,6 +31,8 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md`
 1.12) v0.3 glass-box flow (end-to-end map; evidence → CU → Play Card → grades):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`
+1.12.5) Delta (1-page): “Classic Codex Deep Analysis” → Crossroads truth layer:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md`
 1.13) v0.3 glass-box example (Ontario; “one real example” walkthrough):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLASS_BOX_TRACE__ONTARIOCANADA4__2026-01-15.md`
 1.14) v0.3 glass-box trace bundles (multi-state; casebook-driven):
@@ -311,3 +313,6 @@ Existing Codex analyses:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-05_to_2026-01-09__CODEX_DEEP_ANALYSIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-21__CODEX_DEEP_ANALYSIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CODEX_DEEP_ANALYSIS.md`
+
+If you’re confused why there are “two kinds” of Codex analysis now, read:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md`

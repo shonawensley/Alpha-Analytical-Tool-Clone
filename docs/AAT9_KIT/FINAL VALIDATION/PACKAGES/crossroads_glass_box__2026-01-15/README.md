@@ -40,6 +40,11 @@ This pack is pointer‑only (it links to existing RUNS + sharepacks artifacts; i
 
 Deep Research typically cannot open `sharepacks/` and dated `RUNS/` outputs via “repo access” because they are gitignored by default. Use an upload export zip instead (command is included at the top of the prompt).
 
+If Deep Research still can’t open zip contents reliably, fall back to the “7-file minimal truth layer” upload described in:
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CHATGPT_PRO_DEEP_RESEARCH_PROMPT.md`
+You can generate a ready-to-upload mini bundle with:
+- `python3 scripts/tools/export_crossroads_truth_layer_mini_pack.py --force`
+
 ## What “done” looks like
 
 - We can explain, for each bucket case, **where the miss happens** (CU miss vs lane dropped vs exact dropped).

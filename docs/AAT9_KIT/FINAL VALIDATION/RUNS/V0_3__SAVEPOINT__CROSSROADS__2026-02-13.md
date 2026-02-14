@@ -46,6 +46,16 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --zip
 ```
 
+If Deep Research can’t open zip contents (or can’t access the checkpoint branch), use the **7-file minimal truth layer** instead:
+
+```bash
+python3 scripts/tools/export_crossroads_truth_layer_mini_pack.py --force
+```
+
+Then upload either:
+- `sharepacks/_scratch/crossroads_truth_layer_mini__2026-01-15/BUNDLE.md` (1 file), plus
+- `sharepacks/_scratch/crossroads_truth_layer_mini__2026-01-15/PROMPT.md` (copy/paste prompt).
+
 ---
 
 ## What’s locked (do not reopen during Crossroads v1)
@@ -72,6 +82,7 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
 
 3) SSOT semantics (prevents spirals):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__GLOSSARY__PREDICTIVE_SEMANTICS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_POLICY__tool_only__stable10.md`
 

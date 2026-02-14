@@ -11,6 +11,8 @@ Resolve the “Crossroads” question with evidence, not vibes:
 
 This prompt requires the actual Crossroads artifacts (traces/scoreboards/sharepacks). If you only have “repo access”, you may not be able to open them because many `sharepacks/` and dated `RUNS/` outputs are not versioned by default.
 
+Important: the Crossroads pack docs were developed on a checkpoint branch (not `main`). If your GitHub connector only reads the default branch, you will not be able to open the required files via “repo access”.
+
 Minimum files you must be able to open:
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CASES.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__GLASS_BOX_TRACE__OntarioCanada4__Midday__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
@@ -32,6 +34,16 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --zip
 ```
 
+If your environment cannot open zip contents reliably, request the **7-file minimal truth-layer upload** instead (these are tiny markdown files):
+
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__GLASS_BOX_TRACE__OntarioCanada4__Midday__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__GLASS_BOX_TRACE__OntarioCanada4__Evening__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__GLASS_BOX_TRACE__NewYork4__Midday__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-16__GLASS_BOX_TRACE__Delaware4__Evening__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15__GLASS_BOX_TRACE__NorthCarolina4__Midday__v0_2_default_multi_pack_packheavy_spine4_index_tail__B36__stable10.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+
 ## Locked constraints (do not violate)
 
 - **No analyzer edits** (Stable/DR/VTRAC/Hot Zones). Assume analyzers are evidence producers.
@@ -48,6 +60,9 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
 1) Pack index:
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/CASES.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/MANIFEST.md`
+If you’re working from an export pack zip, also open:
+- `README.md` (zip root)
+- `MANIFEST.csv` (zip root; mechanical access check)
 
 2) SSOT semantics:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`
