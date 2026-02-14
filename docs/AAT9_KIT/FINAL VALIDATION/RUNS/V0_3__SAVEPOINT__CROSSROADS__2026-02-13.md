@@ -10,7 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-spinecap6`
-- Tip: `2402e082` (run `git log -1 --oneline` to confirm)
+- Tip: `f5c710f1` (run `git log -1 --oneline` to confirm)
 
 Quick resume commands:
 
