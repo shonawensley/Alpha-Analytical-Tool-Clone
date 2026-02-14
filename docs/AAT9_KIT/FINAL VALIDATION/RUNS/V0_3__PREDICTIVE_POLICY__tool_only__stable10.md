@@ -67,24 +67,28 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail`
-- Goal metric: preserve strict `hit_any` from a deep spine pack, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail)
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6`
+- Goal metric: preserve strict `hit_any` from a deep spine pack, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail), **without “8-line spine spikes” collapsing breadth**
 - Jan gold window (known winners, stable10):
-  - `hit_any` **5.7%**
-  - `hit_any_inclusive` **47.2%**
-  - `pack_any_correct` **47.2%**
-  - `pack_box_hit` **21.8%**
+  - `hit_any` **5.2%**
+  - `hit_any_inclusive` **49.7%**
+  - `pack_any_correct` **49.7%**
+  - `CU_LANE_BUT_PLAY_MISS` **25.9%**
+  - `CU_EXACT_BUT_PLAY_MISS` **3.1%**
 
 - OOS window (stable10):
   - `hit_any` **4.1%**
-  - `hit_any_inclusive` **42.0%**
-  - `pack_any_correct` **42.0%**
+  - `hit_any_inclusive` **44.9%**
+  - `pack_any_correct` **44.9%**
+  - `CU_LANE_BUT_PLAY_MISS` **22.4%**
+  - `CU_EXACT_BUT_PLAY_MISS` **3.7%**
 
 Reference:
-- Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
-- Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10.md`
-- Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
+- Spinecap sweep scoreboards (Jan + OOS):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP_SWEEP.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP_SWEEP.md`
+- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10.md`
+- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10__B36.md`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -125,12 +129,12 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
    - `pack_correct` (single-pack selection correctness)
    - `pack_any_correct` (multi-pack correctness)
 5) Check lane ranking vs selection (this ends “is it lane ranking or pack conversion?” arguments):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36__SPINECAP_SWEEP.md`
 6) Check lane *depth* (this ends “we retained the lane but why didn’t strict lift?” arguments):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SPINECAP6.md`
 7) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
-   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
+   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10__B36.md`
 
 ---
 
@@ -150,7 +154,7 @@ python3 scripts/tools/create_conversion_ladder_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail \
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6 \
   --write-casebook --casebook-budget B36 --casebook-n 5
 ```
 
@@ -165,8 +169,8 @@ python3 scripts/tools/create_lane_allocation_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail \
-  --budget B36 --label SPINE4_INDEX_TAIL
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6 \
+  --budget B36 --label SPINECAP6
 ```
 
 ---
@@ -193,7 +197,7 @@ Where to inspect:
 
 ## Tail-depth experiments (B36; not promoted)
 
-These are kept for research/provenance. Defaults remain unchanged.
+These are kept for research/provenance. Defaults remain `...spinecap6` (see B36 section above).
 
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2`: regresses lane retention (touches ~10 indices vs ~15), so inclusive drops.
   - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANON2.md`

@@ -67,6 +67,8 @@ Then upload either:
 - Objective: **isolation-first** (reduce `CU_LANE_BUT_PLAY_MISS`)
 - Guardrail: **OOS strict B36 must not regress**
 - **No analyzer edits** in this phase (selection-layer only).
+- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6`
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md`
 
 ---
 
@@ -79,6 +81,7 @@ Then upload either:
 2) “One table / one memo” clarity shortcuts:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_CASE_MATRIX__2026-01-15.csv`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CODEX_DEEP_RESEARCH__CROSSROADS__2026-01-15.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md`
 
 3) SSOT semantics (prevents spirals):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`

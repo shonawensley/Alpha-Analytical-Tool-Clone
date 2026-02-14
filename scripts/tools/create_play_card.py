@@ -3028,6 +3028,194 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail(
     }
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    spine_max_lines_per_index: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Anti-spike variant (selection-only):
+    - Keep the same spine+tail geometry as `...spine4_index_tail`,
+    - but cap the per-index spend in the 4-pack spine, then reallocate freed lines to tail breadth.
+
+    Goal: reduce CU_LANE_BUT_PLAY_MISS by preventing "8-line spine spikes" from collapsing lane breadth.
+    """
+    import modules.vtrac_reference as vr
+
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+    indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset=sort_preset,
+    )
+    if not indices_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    ranked_conv = sorted(list(ranked), key=_convergence_sort_key)
+    lane_rows: Dict[int, List[Dict[str, Any]]] = {}
+    for row in ranked_conv:
+        if not isinstance(row, dict):
+            continue
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo:
+            continue
+        idx = vr.get_vtrac_index(combo)
+        if not isinstance(idx, int):
+            continue
+        lane_rows.setdefault(int(idx), []).append(row)
+
+    selected: List[str] = []
+    selected_set: set[str] = set()
+    pack_combos: List[str] = []
+    pack_combos_by_index: Dict[int, List[str]] = {}
+
+    def _add_pack(idx: int, combo: str) -> bool:
+        c = _normalize_pick3_literal(combo)
+        if not c or c in selected_set:
+            return False
+        if len(selected) >= b:
+            return False
+        selected.append(c)
+        selected_set.add(c)
+        pack_combos.append(c)
+        pack_combos_by_index.setdefault(int(idx), []).append(c)
+        return True
+
+    used_indices: set[int] = set()
+    spine_max = max(0, int(spine_max_lines_per_index))
+
+    # Spine: insert capped boxed-member packs for the top-N ranked indices.
+    for raw in indices_ranked[:spine_packs_target]:
+        idx = int(raw)
+        if idx in used_indices:
+            continue
+        added = 0
+        for token in _vtrac_display_pack(index=idx):
+            if len(selected) >= b:
+                break
+            if spine_max and added >= spine_max:
+                break
+            if _add_pack(idx, token):
+                added += 1
+        used_indices.add(idx)
+        if len(selected) >= b:
+            break
+
+    # Tail: touch additional ranked indices (1 evidence-backed combo per index, else display fallback).
+    tail_added = 0
+    for raw in indices_ranked[spine_packs_target:]:
+        if len(selected) >= b:
+            break
+        idx = int(raw)
+        if idx in used_indices:
+            continue
+
+        chosen = ""
+        for row in lane_rows.get(idx, []):
+            c = _normalize_pick3_literal(row.get("combo") or "")
+            if c and c not in selected_set:
+                chosen = c
+                break
+        if not chosen:
+            for token in _vtrac_display_pack(index=idx):
+                c = _normalize_pick3_literal(token)
+                if c and c not in selected_set:
+                    chosen = c
+                    break
+        if not chosen:
+            continue
+
+        if _add_pack(idx, chosen):
+            used_indices.add(idx)
+            tail_added += 1
+
+    # Safety top-up: if we couldn't fill due to duplicates/empty packs, fill remaining from convergence.
+    for row in ranked_conv:
+        if len(selected) >= b:
+            break
+        combo = _normalize_pick3_literal(row.get("combo") or "")
+        if not combo or combo in selected_set:
+            continue
+        selected.append(combo)
+        selected_set.add(combo)
+
+    selected = selected[:b]
+    boxed = _boxed_canonicals(selected)
+    used_indices_list = list(pack_combos_by_index.keys())
+    return {
+        "budget": int(b),
+        "combos": selected,
+        "combos_count": len(selected),
+        "cost_units": len(selected),
+        "boxed_canonicals": boxed,
+        "boxed_canonicals_count": len(boxed),
+        "vtrac_pack": {
+            "index": int(used_indices_list[0]) if used_indices_list else None,
+            "indices": list(used_indices_list),
+            "packs_target": int(spine_packs_target),
+            "pack_combos": list(pack_combos),
+            "pack_combos_by_index": {int(k): list(v) for k, v in pack_combos_by_index.items()},
+            "chooser": {
+                "ranked_indices": chooser_ranked,
+                "spine_packs_target": int(spine_packs_target),
+                "rank_count": int(rank_count),
+            },
+            "filler_policy": f"spine4_index_tail_spinecap{spine_max or '0'}",
+            "allocation": {
+                "scan_limit": int(scan_limit),
+                "sort_preset": str(sort_preset),
+                "spine_packs_target": int(spine_packs_target),
+                "spine_max_lines_per_index": int(spine_max),
+                "tail_added": int(tail_added),
+            },
+        },
+    }
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=7,
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -4342,6 +4530,8 @@ def main() -> None:
             "v0_2_default_multi_pack_mop_24_12": {},
             "v0_2_default_multi_pack_index_alloc_top12_4_3_2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote": {},
@@ -4402,6 +4592,12 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6(ranked=ranked, budget=b)
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7(ranked=ranked, budget=b)
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth(ranked=ranked, budget=b)
