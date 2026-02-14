@@ -9,13 +9,13 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 
 ## Repo state (tracked)
 
-- Branch: `checkpoint/v0_3-stable10-shoulder-depth`
-- Tip: run `git log -1 --oneline` to confirm the current branch tip
+- Branch: `checkpoint/v0_3-stable10-spinecap6`
+- Tip: `0840626f` (run `git log -1 --oneline` to confirm)
 
 Quick resume commands:
 
 ```bash
-git checkout checkpoint/v0_3-stable10-shoulder-depth
+git checkout checkpoint/v0_3-stable10-spinecap6
 git pull
 ```
 
