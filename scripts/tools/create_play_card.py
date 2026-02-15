@@ -3080,7 +3080,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     spine_mode = str(spine_pick_mode or "display").strip().lower()
     if spine_mode.startswith("hybrid"):
         pass
-    elif spine_mode not in {"display", "evidence", "display_ranked"}:
+    elif spine_mode not in {"display", "evidence", "display_ranked", "display_canon_ranked"}:
         spine_mode = "display"
 
     selected: List[str] = []
@@ -3150,6 +3150,42 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 scored.append((key, c))
             scored.sort(key=lambda t: t[0])
             for _, token in scored:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
+        elif spine_mode == "display_canon_ranked":
+            # Still use the display pack, but rank members by canonical/permutation evidence:
+            # if any permutation of a display member's canonical appears in lane evidence, prefer
+            # that canonical's strongest-evidence row.
+            display_tokens = list(_vtrac_display_pack(index=idx))
+            base_pos = {c: i for i, c in enumerate(display_tokens)}
+
+            best_key_by_canon: Dict[str, Tuple[int, int, int, int, float]] = {}
+            for row in lane_rows.get(idx, []):
+                c = _normalize_pick3_literal(row.get("combo") or "")
+                if not c:
+                    continue
+                canon = _canon(c)
+                if not canon:
+                    continue
+                key5 = _convergence_sort_key(row)[:-1]
+                prev = best_key_by_canon.get(canon)
+                if prev is None or key5 < prev:
+                    best_key_by_canon[canon] = key5
+
+            scored2: List[Tuple[Tuple[int, int, int, int, float, int], str]] = []
+            for token in display_tokens:
+                c = _normalize_pick3_literal(token)
+                if not c:
+                    continue
+                canon = _canon(c)
+                key5 = best_key_by_canon.get(canon) or (999, 999, 999, 999, 999.0)
+                scored2.append(((*key5, int(base_pos.get(c, 999))), c))
+            scored2.sort(key=lambda t: t[0])
+            for _, token in scored2:
                 if len(selected) >= b:
                     break
                 if spine_max and added >= spine_max:
@@ -3364,6 +3400,23 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_di
         budget=budget,
         spine_max_lines_per_index=6,
         spine_pick_mode="display_ranked",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_pick_mode="display_canon_ranked",
         scan_limit=scan_limit,
         sort_preset=sort_preset,
     )
@@ -4704,6 +4757,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
@@ -4777,6 +4831,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked(
                     ranked=ranked, budget=b
                 )
             )
