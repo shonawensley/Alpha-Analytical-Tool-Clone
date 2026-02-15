@@ -203,6 +203,9 @@ These test “more breadth” by tapering spine ranks 3–4 below the promoted `
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633`: lifts inclusive and reduces lane/exact misses, but **regresses OOS strict** (`4.1% → 3.7%`), so it fails the guardrail.
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6633_EVAL__2026-02-15.md:1`
   - Jan/OOS scoreboards: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6633_SWEEP.md:1` and `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6633_SWEEP.md:1`
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643`: milder taper (free +1 tail line) still **regresses OOS strict** (`4.1% → 3.7%`), so it fails the guardrail.
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6643_EVAL__2026-02-15.md:1`
+  - Jan/OOS scoreboards: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6643_SWEEP.md:1` and `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6643_SWEEP.md:1`
 
 ---
 
