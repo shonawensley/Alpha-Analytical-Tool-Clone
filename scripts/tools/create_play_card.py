@@ -3033,6 +3033,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     ranked: Sequence[Dict[str, Any]],
     budget: int,
     spine_max_lines_per_index: int,
+    spine_taper_caps: Optional[Sequence[int]] = None,
     spine_pick_mode: str = "display",
     scan_limit: int = 350,
     sort_preset: str = "methods_first",
@@ -3102,12 +3103,17 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
 
     used_indices: set[int] = set()
     spine_max = max(0, int(spine_max_lines_per_index))
+    taper_raw = [int(x) for x in spine_taper_caps] if spine_taper_caps else []
+    taper_caps = [max(0, min(int(x), int(spine_max))) for x in taper_raw]
 
     # Spine: insert capped boxed-member packs for the top-N ranked indices.
-    for raw in indices_ranked[:spine_packs_target]:
+    for i, raw in enumerate(indices_ranked[:spine_packs_target]):
         idx = int(raw)
         if idx in used_indices:
             continue
+        idx_cap = int(spine_max)
+        if taper_caps and i < len(taper_caps):
+            idx_cap = int(taper_caps[i])
         added = 0
         if spine_mode == "evidence":
             # Prefer evidence-backed combos inside the lane, then fall back to display members.
@@ -3116,16 +3122,16 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for row in lane_list:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 token = _normalize_pick3_literal(row.get("combo") or "")
                 if _add_pack(idx, token):
                     added += 1
-            if not spine_max or added < spine_max:
+            if not idx_cap or added < idx_cap:
                 for token in _vtrac_display_pack(index=idx):
                     if len(selected) >= b:
                         break
-                    if spine_max and added >= spine_max:
+                    if idx_cap and added >= idx_cap:
                         break
                     if _add_pack(idx, token):
                         added += 1
@@ -3152,7 +3158,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for _, token in scored:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if _add_pack(idx, token):
                     added += 1
@@ -3188,7 +3194,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for _, token in scored2:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if _add_pack(idx, token):
                     added += 1
@@ -3206,9 +3212,9 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 if m.group("e"):
                     evidence_max = int(m.group("e"))
 
-            if spine_max > 0:
-                display_min = max(0, min(int(display_min), int(spine_max)))
-                evidence_max = max(0, min(int(evidence_max), int(spine_max) - int(display_min)))
+            if idx_cap > 0:
+                display_min = max(0, min(int(display_min), int(idx_cap)))
+                evidence_max = max(0, min(int(evidence_max), int(idx_cap) - int(display_min)))
             else:
                 display_min = max(0, int(display_min))
                 evidence_max = max(0, int(evidence_max))
@@ -3220,7 +3226,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for token in display_tokens:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if added_display >= display_min:
                     break
@@ -3235,7 +3241,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for row in lane_list:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if added_evidence >= evidence_max:
                     break
@@ -3248,7 +3254,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for token in display_tokens:
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if _add_pack(idx, token):
                     added += 1
@@ -3257,7 +3263,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             for token in _vtrac_display_pack(index=idx):
                 if len(selected) >= b:
                     break
-                if spine_max and added >= spine_max:
+                if idx_cap and added >= idx_cap:
                     break
                 if _add_pack(idx, token):
                     added += 1
@@ -3306,6 +3312,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     selected = selected[:b]
     boxed = _boxed_canonicals(selected)
     used_indices_list = list(pack_combos_by_index.keys())
+    taper_label = "_taper" + "".join(str(x) for x in taper_caps[:spine_packs_target]) if taper_caps else ""
     return {
         "budget": int(b),
         "combos": selected,
@@ -3324,12 +3331,13 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 "spine_packs_target": int(spine_packs_target),
                 "rank_count": int(rank_count),
             },
-            "filler_policy": f"spine4_index_tail_spinecap{spine_max or '0'}",
+            "filler_policy": f"spine4_index_tail_spinecap{spine_max or '0'}{taper_label}",
             "allocation": {
                 "scan_limit": int(scan_limit),
                 "sort_preset": str(sort_preset),
                 "spine_packs_target": int(spine_packs_target),
                 "spine_max_lines_per_index": int(spine_max),
+                "spine_taper_caps": ",".join(str(x) for x in taper_caps) if taper_caps else "",
                 "spine_pick_mode": str(spine_mode),
                 "tail_added": int(tail_added),
             },
@@ -3417,6 +3425,34 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_di
         budget=budget,
         spine_max_lines_per_index=6,
         spine_pick_mode="display_canon_ranked",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Allocation-level lever (selection-only): keep `spinecap6` semantics, but taper the 4 spine
+    indices as:
+      - rank 1: 6 lines
+      - rank 2: 6 lines
+      - rank 3: 4 lines
+      - rank 4: 4 lines
+
+    Frees 4 lines to extend tail breadth under the same B36 budget.
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
         scan_limit=scan_limit,
         sort_preset=sort_preset,
     )
@@ -4758,6 +4794,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
@@ -4836,6 +4873,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644(
                     ranked=ranked, budget=b
                 )
             )

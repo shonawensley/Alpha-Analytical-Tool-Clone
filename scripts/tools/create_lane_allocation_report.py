@@ -13,6 +13,10 @@ This is reporting-only (selection layer):
 - Reads: RUNS/*__CONVERSION_LADDER__*.csv (grade-output driven)
 - Reads: Play Card JSONs referenced by ladder rows
 - Writes: RUNS/*__LANE_ALLOCATION__*.{csv,md}
+
+Safety note:
+- The default output filename encodes `strategy` to prevent accidental overwrites when generating
+  multiple lane-allocation reports in a sweep.
 """
 
 from __future__ import annotations
@@ -100,17 +104,19 @@ def _out_base_path(
     date_from: str,
     date_to: str,
     profile: str,
+    strategy: str,
     experiment_tag: str,
     budget_label: str,
     label: str,
 ) -> Path:
     tag = _normalize_tag(experiment_tag)
     suffix = f"__{tag}" if tag else ""
+    strat = _normalize_label(strategy)
     lbl = _normalize_label(label)
     extra = f"__{budget_label}"
     if lbl:
         extra += f"__{lbl}"
-    return RUNS_DIR / f"{date_from}_to_{date_to}__LANE_ALLOCATION__{profile}{suffix}{extra}"
+    return RUNS_DIR / f"{date_from}_to_{date_to}__LANE_ALLOCATION__{profile}__{strat}{suffix}{extra}"
 
 
 def pct(values: List[int], p: float) -> Optional[float]:
@@ -190,6 +196,7 @@ def main() -> None:
             date_from=date_from,
             date_to=date_to,
             profile=profile,
+            strategy=strategy,
             experiment_tag=exp_tag,
             budget_label=budget_label,
             label=label,

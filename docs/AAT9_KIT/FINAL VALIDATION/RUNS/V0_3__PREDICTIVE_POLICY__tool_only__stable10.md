@@ -67,28 +67,29 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6`
-- Goal metric: preserve strict `hit_any` from a deep spine pack, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail), **without “8-line spine spikes” collapsing breadth**
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644`
+- Goal metric: preserve strict `hit_any` as an **OOS guardrail**, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail) through a tighter spine allocation.
 - Jan gold window (known winners, stable10):
-  - `hit_any` **5.2%**
-  - `hit_any_inclusive` **49.7%**
-  - `pack_any_correct` **49.7%**
-  - `CU_LANE_BUT_PLAY_MISS` **25.9%**
-  - `CU_EXACT_BUT_PLAY_MISS` **3.1%**
+  - strict `hit_any` **4.7%**
+  - `hit_any_inclusive` **57.0%**
+  - `pack_any_correct` **57.0%**
+  - `CU_LANE_BUT_PLAY_MISS` **19.7%**
+  - `CU_EXACT_BUT_PLAY_MISS` **2.1%**
 
 - OOS window (stable10):
-  - `hit_any` **4.1%**
-  - `hit_any_inclusive` **44.9%**
-  - `pack_any_correct` **44.9%**
-  - `CU_LANE_BUT_PLAY_MISS` **22.4%**
-  - `CU_EXACT_BUT_PLAY_MISS` **3.7%**
+  - strict `hit_any` **4.1%**
+  - `hit_any_inclusive` **51.8%**
+  - `pack_any_correct` **51.8%**
+  - `CU_LANE_BUT_PLAY_MISS` **16.7%**
+  - `CU_EXACT_BUT_PLAY_MISS` **2.4%**
 
 Reference:
-- Spinecap sweep scoreboards (Jan + OOS):
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP_SWEEP.md`
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP_SWEEP.md`
-- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10.md`
-- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10__B36.md`
+- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md:1`
+- Taper sweep scoreboards (Jan + OOS):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
+- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__stable10.md:1`
+- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__stable10__B36.md:1`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -117,7 +118,7 @@ This is not an analyzer failure; it is a **conversion policy failure**.
 If you feel “we’re broken / nothing converts”, stop and do this in order:
 
 0) Open the single scoreboard (side-by-side truth page):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
 1) Results coverage (do we have enough future results to grade what we’re claiming?):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__RESULTS_HORIZON.md`
 2) Always filter `winner_missing=1` (censored ≠ miss).
@@ -197,7 +198,7 @@ Where to inspect:
 
 ## Tail-depth experiments (B36; not promoted)
 
-These are kept for research/provenance. Defaults remain `...spinecap6` (see B36 section above).
+These are kept for research/provenance. Defaults remain `...spine_taper_6644` (see B36 section above).
 
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2`: regresses lane retention (touches ~10 indices vs ~15), so inclusive drops.
   - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANON2.md`
@@ -214,7 +215,9 @@ These are kept for research/provenance. Defaults remain `...spinecap6` (see B36 
 
 ## Spine chooser experiments (B36; not promoted)
 
-These test “within-lane conversion” levers on top of `...spinecap6` by changing how the **6 spine lines per index** are selected.
+These test “within-lane conversion” levers on top of the pre-taper baseline `...spinecap6` by changing how the **6 spine lines per index** are selected.
+
+Note: since the current B36 default is `...spine_taper_6644`, any future within-lane chooser iteration should be re-run on top of taper (these results are still useful provenance, but not directly promotable now).
 
 Current result: **not promoted** (no clean win vs baseline under the Crossroads promotion gates).
 

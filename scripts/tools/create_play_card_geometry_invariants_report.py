@@ -213,16 +213,18 @@ def _spine_indices(obj: Dict[str, Any]) -> List[int]:
     return indices[:packs_target]
 
 
-def _spine_alloc_meta(obj: Dict[str, Any]) -> Tuple[int, str]:
+def _spine_alloc_meta(obj: Dict[str, Any]) -> Tuple[int, str, str]:
     vtrac_pack = obj.get("vtrac_pack")
     if not isinstance(vtrac_pack, dict):
-        return 0, ""
+        return 0, "", ""
     allocation = vtrac_pack.get("allocation")
     if not isinstance(allocation, dict):
-        return 0, ""
+        return 0, "", ""
     cap = safe_int(allocation.get("spine_max_lines_per_index")) or 0
     mode = str(allocation.get("spine_pick_mode") or "").strip()
-    return cap, mode
+    taper = str(allocation.get("spine_taper_caps") or "").strip()
+    taper = taper.replace(" ", "")
+    return cap, mode, taper
 
 
 @dataclass(frozen=True)
@@ -239,10 +241,13 @@ class RowOut:
     spine_indices: str
     spine_cap: int
     spine_pick_mode: str
+    spine_taper_caps: str
     spine_pack_counts: str
     spine_total_counts: str
     spine_cap_violations_pack: int
     spine_cap_violations_total: int
+    spine_taper_violations_pack: int
+    spine_taper_violations_total: int
     spine_pack_display_lines: int
     spine_pack_evidence_lines: int
     spine_pack_display_share: float
@@ -360,7 +365,7 @@ def main() -> None:
 
             spine_idxs = _spine_indices(obj)
             spine_idxs_str = ",".join(str(i) for i in spine_idxs)
-            spine_cap, spine_mode = _spine_alloc_meta(obj)
+            spine_cap, spine_mode, taper_str = _spine_alloc_meta(obj)
             pack_by_idx = _pack_combos_by_index(obj)
             spine_pack_counts: Dict[int, int] = {i: len(pack_by_idx.get(int(i), [])) for i in spine_idxs}
             spine_total_counts: Dict[int, int] = {i: int(counts.get(int(i), 0)) for i in spine_idxs}
@@ -370,6 +375,23 @@ def main() -> None:
             if spine_cap > 0:
                 viol_pack = sum(1 for i in spine_idxs if spine_pack_counts.get(int(i), 0) > spine_cap)
                 viol_total = sum(1 for i in spine_idxs if spine_total_counts.get(int(i), 0) > spine_cap)
+
+            taper_caps: List[int] = []
+            if taper_str:
+                for part in taper_str.split(","):
+                    n = safe_int(part.strip())
+                    if isinstance(n, int):
+                        taper_caps.append(int(n))
+
+            taper_viol_pack = 0
+            taper_viol_total = 0
+            if taper_caps:
+                for i, lane_idx in enumerate(spine_idxs):
+                    cap_i = taper_caps[i] if i < len(taper_caps) else spine_cap
+                    if cap_i > 0 and spine_pack_counts.get(int(lane_idx), 0) > cap_i:
+                        taper_viol_pack += 1
+                    if cap_i > 0 and spine_total_counts.get(int(lane_idx), 0) > cap_i:
+                        taper_viol_total += 1
 
             spine_pack_display = 0
             spine_pack_total = 0
@@ -401,10 +423,13 @@ def main() -> None:
                     spine_indices=spine_idxs_str,
                     spine_cap=spine_cap,
                     spine_pick_mode=spine_mode,
+                    spine_taper_caps=taper_str,
                     spine_pack_counts=" ".join(f"{k}:{v}" for k, v in spine_pack_counts.items()),
                     spine_total_counts=" ".join(f"{k}:{v}" for k, v in spine_total_counts.items()),
                     spine_cap_violations_pack=int(viol_pack),
                     spine_cap_violations_total=int(viol_total),
+                    spine_taper_violations_pack=int(taper_viol_pack),
+                    spine_taper_violations_total=int(taper_viol_total),
                     spine_pack_display_lines=int(spine_pack_display),
                     spine_pack_evidence_lines=int(spine_pack_evidence),
                     spine_pack_display_share=round(display_share, 4),
@@ -465,6 +490,8 @@ def main() -> None:
         diff_drop = [r.diff_dropped_lines for r in rows]
         viol_pack = [r.spine_cap_violations_pack for r in rows]
         viol_total = [r.spine_cap_violations_total for r in rows]
+        taper_viol_pack = [r.spine_taper_violations_pack for r in rows]
+        taper_viol_total = [r.spine_taper_violations_total for r in rows]
         display_share = [r.spine_pack_display_share for r in rows]
         max_lines = [r.max_lines_single_index for r in rows]
         touched = [r.indices_touched_count for r in rows]
@@ -479,6 +506,10 @@ def main() -> None:
             f"- diff_dropped_lines (mean/p50/p90): `{round(statistics.mean(diff_drop), 3)}` / `{_pct(diff_drop, 0.5)}` / `{_pct(diff_drop, 0.9)}`"
         )
         lines.append(f"- spine_cap_violations_pack (sum): `{sum(viol_pack)}` | spine_cap_violations_total (sum): `{sum(viol_total)}`")
+        if sum(taper_viol_pack) or sum(taper_viol_total):
+            lines.append(
+                f"- spine_taper_violations_pack (sum): `{sum(taper_viol_pack)}` | spine_taper_violations_total (sum): `{sum(taper_viol_total)}`"
+            )
         lines.append(
             f"- spine_pack_display_share (mean/p50/p90): `{round(statistics.mean(display_share), 3)}` / `{_pct(display_share, 0.5)}` / `{_pct(display_share, 0.9)}`"
         )
@@ -504,4 +535,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
