@@ -52,6 +52,8 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_CANON_RANK_SPINECHOOSER__2026-02-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6633_EVAL__2026-02-15.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6633_EVAL__2026-02-15.md" \
   --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3" \
   --zip
 ```
@@ -77,8 +79,8 @@ Then upload either:
 - Objective: **isolation-first** (reduce `CU_LANE_BUT_PLAY_MISS`)
 - Guardrail: **OOS strict B36 must not regress**
 - **No analyzer edits** in this phase (selection-layer only).
-- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6`
-  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md`
+- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644`
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
 
 ---
 
@@ -100,6 +102,8 @@ Then upload either:
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_CANON_RANK_SPINECHOOSER__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6633_EVAL__2026-02-15.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6633_EVAL__2026-02-15.md`
 
 3) SSOT semantics (prevents spirals):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`

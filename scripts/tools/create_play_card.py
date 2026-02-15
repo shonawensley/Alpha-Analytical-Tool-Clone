@@ -3458,6 +3458,34 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Allocation-level lever (selection-only): keep `spinecap6` semantics, but taper the 4 spine
+    indices as:
+      - rank 1: 6 lines
+      - rank 2: 6 lines
+      - rank 3: 3 lines
+      - rank 4: 3 lines
+
+    Frees 2 additional lines to extend tail breadth under the same B36 budget.
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 3, 3),
+        spine_pick_mode="display",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -4795,6 +4823,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
@@ -4878,6 +4907,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633(
                     ranked=ranked, budget=b
                 )
             )
