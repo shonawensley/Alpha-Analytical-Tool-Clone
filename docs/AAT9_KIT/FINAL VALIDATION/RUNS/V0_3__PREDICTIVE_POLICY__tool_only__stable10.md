@@ -249,3 +249,7 @@ Where to inspect:
 - OOS sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_SPINECHOOSER_SWEEP.md`
 - OOS hybrid sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_HYBRID_SWEEP.md`
 - OOS canon-ranked sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_CANON_RANK_SWEEP.md`
+
+Also tested on top of taper6644 (same geometry; different spine display ordering):
+- Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPINE_RANKED_SWEEP__2026-02-15.md:1`
+- Result: not promoted (no measurable change OOS; Jan strict regressed).

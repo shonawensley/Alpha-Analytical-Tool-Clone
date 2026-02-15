@@ -3458,6 +3458,52 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_ranked(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Within-spine conversion lever (selection-only): keep taper6644 geometry, but choose the spine
+    display members in evidence-ranked order (important when the taper drops spine ranks 3–4 to 4
+    lines).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display_ranked",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    """
+    Within-spine conversion lever (selection-only): keep taper6644 geometry, but choose the spine
+    display members using canonical/permutation evidence ranking (a more stable variant of
+    display_ranked).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display_canon_ranked",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -4851,6 +4897,8 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_ranked": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
@@ -4936,6 +4984,16 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_ranked"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_ranked(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked(
                     ranked=ranked, budget=b
                 )
             )
