@@ -33,7 +33,9 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md" \
-  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v2" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md" \
+  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3" \
   --zip
 ```
 

@@ -3078,7 +3078,9 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
         lane_rows.setdefault(int(idx), []).append(row)
 
     spine_mode = str(spine_pick_mode or "display").strip().lower()
-    if spine_mode not in {"display", "evidence", "display_ranked"}:
+    if spine_mode.startswith("hybrid"):
+        pass
+    elif spine_mode not in {"display", "evidence", "display_ranked"}:
         spine_mode = "display"
 
     selected: List[str] = []
@@ -3148,6 +3150,66 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 scored.append((key, c))
             scored.sort(key=lambda t: t[0])
             for _, token in scored:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
+        elif spine_mode.startswith("hybrid"):
+            # Hybrid: preserve bounded display coverage first, then add a small number of evidence
+            # rows, then fill remaining capacity with display.
+            #
+            # Mode format: `hybrid_d<min_display>_e<max_evidence>` (e.g., `hybrid_d4_e2`).
+            display_min = 4
+            evidence_max = 2
+            m = re.match(r"^hybrid(?:_d(?P<d>\\d+))?(?:_e(?P<e>\\d+))?$", spine_mode)
+            if m:
+                if m.group("d"):
+                    display_min = int(m.group("d"))
+                if m.group("e"):
+                    evidence_max = int(m.group("e"))
+
+            if spine_max > 0:
+                display_min = max(0, min(int(display_min), int(spine_max)))
+                evidence_max = max(0, min(int(evidence_max), int(spine_max) - int(display_min)))
+            else:
+                display_min = max(0, int(display_min))
+                evidence_max = max(0, int(evidence_max))
+
+            display_tokens = list(_vtrac_display_pack(index=idx))
+
+            # 1) Display anchor (baseline order).
+            added_display = 0
+            for token in display_tokens:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if added_display >= display_min:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
+                    added_display += 1
+
+            # 2) Evidence add-ons (highest convergence first; may include non-display).
+            added_evidence = 0
+            lane_list = list(lane_rows.get(idx, []))
+            lane_list.sort(key=_convergence_sort_key)
+            for row in lane_list:
+                if len(selected) >= b:
+                    break
+                if spine_max and added >= spine_max:
+                    break
+                if added_evidence >= evidence_max:
+                    break
+                token = _normalize_pick3_literal(row.get("combo") or "")
+                if _add_pack(idx, token):
+                    added += 1
+                    added_evidence += 1
+
+            # 3) Fill remaining capacity with display.
+            for token in display_tokens:
                 if len(selected) >= b:
                     break
                 if spine_max and added >= spine_max:
@@ -3302,6 +3364,23 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_di
         budget=budget,
         spine_max_lines_per_index=6,
         spine_pick_mode="display_ranked",
+        scan_limit=scan_limit,
+        sort_preset=sort_preset,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+    sort_preset: str = "methods_first",
+) -> Dict[str, Any]:
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_pick_mode="hybrid_d4_e2",
         scan_limit=scan_limit,
         sort_preset=sort_preset,
     )
@@ -4625,6 +4704,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap7": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canon2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote": {},
@@ -4697,6 +4777,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2(
                     ranked=ranked, budget=b
                 )
             )

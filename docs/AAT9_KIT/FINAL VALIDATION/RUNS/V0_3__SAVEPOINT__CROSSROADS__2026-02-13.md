@@ -26,8 +26,8 @@ git pull
 Deep Research cannot reliably open `sharepacks/` + dated `RUNS/` outputs via “repo access”, so we use an export zip.
 
 - Upload this file:
-  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v2.zip`
-  - SHA256: `adda644314dca55b9af428b7dca688bbc408f77883e2eb558bb946dcc2392afe`
+  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3.zip`
+  - SHA256: `edc355a78d223b529efeabeb2e24830bd1c9480b75fb3b6782bad7d2939e411f`
 
 If it’s missing, regenerate (repo root):
 
@@ -48,7 +48,7 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP_SWEEP__2026-02-14.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/DEEP_ANALYSIS_CODEX_VALUABLE_INSIGHTS.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md" \
-  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v2" \
+  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3" \
   --zip
 ```
 
@@ -90,6 +90,8 @@ Then upload either:
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_PROMOTION__2026-02-14.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md`
 
 3) SSOT semantics (prevents spirals):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`

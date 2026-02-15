@@ -220,8 +220,12 @@ Current result: **not promoted** (no clean win vs baseline under the Crossroads 
 
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_evidence`: OOS strict lifts, but coverage regresses; Jan strict regresses.
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_display_ranked`: no measurable change vs baseline in current windows.
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2`: constrained hybrid (min 4 display + max 2 evidence inside the spine) still regresses OOS coverage/bridge and Jan strict.
 
 Where to inspect:
 - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md:1`
+- Hybrid brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md:1`
 - Jan sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_SPINECHOOSER_SWEEP.md`
+- Jan hybrid sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_HYBRID_SWEEP.md`
 - OOS sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_SPINECHOOSER_SWEEP.md`
+- OOS hybrid sweep: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_HYBRID_SWEEP.md`

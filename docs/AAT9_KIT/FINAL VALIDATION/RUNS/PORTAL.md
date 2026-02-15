@@ -54,6 +54,12 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.15.8) Crossroads follow-up worklog (within-lane lever sweep; repro + outputs):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_SPINECHOOSER_SWEEP__2026-02-14.md`
 
+1.15.9) Crossroads follow-up brief (hybrid within-lane lever; not promoted):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md`
+
+1.15.10) Crossroads follow-up worklog (hybrid within-lane lever; repro + outputs):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_HYBRID_SPINECHOOSER__2026-02-15.md`
+
 1.16) Crossroads deep research pack (pointer-only; ChatGPT Pro ready):
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/README.md`
 
