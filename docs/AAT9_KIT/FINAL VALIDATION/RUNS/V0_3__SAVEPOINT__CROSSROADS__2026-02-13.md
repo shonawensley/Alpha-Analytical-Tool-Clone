@@ -10,7 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-spinecap6`
-- Latest: `4ae84ce3` (tail representative sweep; not promoted)
+- Latest: `ec040fa8` (robustness windows baseline + split chooser eval; split chooser not promoted)
 - Tip: run `git log -1 --oneline` to confirm
 
 Quick resume commands:
@@ -61,6 +61,10 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_SPINE_RANKED_SWEEP__2026-02-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md" \
   --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v4" \
   --zip
 ```
@@ -90,6 +94,10 @@ Then upload either:
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
 - Latest evaluation (tail representative quality; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md`
+- Robustness baselines (adds Holdout A/B windows; baseline-only truth):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md`
+- Latest evaluation (split chooser; not promoted):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
 
 ---
 
