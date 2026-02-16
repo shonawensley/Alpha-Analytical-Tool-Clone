@@ -67,29 +67,30 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644`
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
 - Goal metric: preserve strict `hit_any` as an **OOS guardrail**, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail) through a tighter spine allocation.
+- This is the taper6644 geometry with an index chooser sort preset of `score_total_first`.
 - Jan gold window (known winners, stable10):
   - strict `hit_any` **4.7%**
-  - `hit_any_inclusive` **57.0%**
-  - `pack_any_correct` **57.0%**
-  - `CU_LANE_BUT_PLAY_MISS` **19.7%**
-  - `CU_EXACT_BUT_PLAY_MISS` **2.1%**
+  - `hit_any_inclusive` **58.0%**
+  - `pack_any_correct` **58.0%**
+  - `CU_LANE_BUT_PLAY_MISS` **18.1%**
+  - `CU_EXACT_BUT_PLAY_MISS` **2.6%**
 
 - OOS window (stable10):
   - strict `hit_any` **4.1%**
-  - `hit_any_inclusive` **51.8%**
-  - `pack_any_correct` **51.8%**
-  - `CU_LANE_BUT_PLAY_MISS` **16.7%**
-  - `CU_EXACT_BUT_PLAY_MISS` **2.4%**
+  - `hit_any_inclusive` **53.1%**
+  - `pack_any_correct` **53.1%**
+  - `CU_LANE_BUT_PLAY_MISS` **14.7%**
+  - `CU_EXACT_BUT_PLAY_MISS` **3.3%**
 
 Reference:
-- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md:1`
-- Taper sweep scoreboards (Jan + OOS):
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
-- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__stable10.md:1`
-- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__stable10__B36.md:1`
+- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md:1`
+- Sort preset sweep scoreboards (Jan + OOS):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
+- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10.md:1`
+- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10__B36.md:1`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -118,7 +119,7 @@ This is not an analyzer failure; it is a **conversion policy failure**.
 If you feel “we’re broken / nothing converts”, stop and do this in order:
 
 0) Open the single scoreboard (side-by-side truth page):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINECAP6_TAPER6644_SWEEP.md:1`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
 1) Results coverage (do we have enough future results to grade what we’re claiming?):
    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__RESULTS_HORIZON.md`
 2) Always filter `winner_missing=1` (censored ≠ miss).
@@ -130,12 +131,12 @@ If you feel “we’re broken / nothing converts”, stop and do this in order:
    - `pack_correct` (single-pack selection correctness)
    - `pack_any_correct` (multi-pack correctness)
 5) Check lane ranking vs selection (this ends “is it lane ranking or pack conversion?” arguments):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36__SPINECAP_SWEEP.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__WINNER_LANE_RANK__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
 6) Check lane *depth* (this ends “we retained the lane but why didn’t strict lift?” arguments):
-   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SPINECAP6.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
 7) Open the casebook buckets (concrete examples to debug policy, not analyzers):
    - Coverage (B24): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
-   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__stable10__B36.md`
+   - Conversion (B36): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10__B36.md:1`
 
 ---
 
@@ -155,7 +156,7 @@ python3 scripts/tools/create_conversion_ladder_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6 \
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first \
   --write-casebook --casebook-budget B36 --casebook-n 5
 ```
 
@@ -170,8 +171,8 @@ python3 scripts/tools/create_lane_allocation_report.py \
   --date-from 2026-01-15 --date-to 2026-01-22 \
   --profile tool_only \
   --experiment-tag stable10 \
-  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6 \
-  --budget B36 --label SPINECAP6
+  --strategy v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first \
+  --budget B36 --label TAPER6644_SCORE_TOTAL_FIRST
 ```
 
 ---

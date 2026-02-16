@@ -26,8 +26,8 @@ git pull
 Deep Research cannot reliably open `sharepacks/` + dated `RUNS/` outputs via “repo access”, so we use an export zip.
 
 - Upload this file:
-  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3.zip`
-  - SHA256: `edc355a78d223b529efeabeb2e24830bd1c9480b75fb3b6782bad7d2939e411f`
+  - `sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v4.zip`
+  - SHA256: `4a768eeddef3b87fb6bf8da41a2ab6fdd6634f1980cd2af8294c9ebbbfa1067d`
 
 If it’s missing, regenerate (repo root):
 
@@ -58,7 +58,9 @@ python3 scripts/tools/export_chatgpt_research_pack.py \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6643_EVAL__2026-02-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPINE_RANKED_SWEEP__2026-02-15.md" \
   --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_SPINE_RANKED_SWEEP__2026-02-15.md" \
-  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v3" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md" \
+  --include-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md" \
+  --out "sharepacks/_scratch/crossroads_glass_box__2026-01-15__UPLOAD_PACK_v4" \
   --zip
 ```
 
@@ -83,8 +85,8 @@ Then upload either:
 - Objective: **isolation-first** (reduce `CU_LANE_BUT_PLAY_MISS`)
 - Guardrail: **OOS strict B36 must not regress**
 - **No analyzer edits** in this phase (selection-layer only).
-- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644`
-  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
+- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
 
 ---
 
@@ -106,6 +108,8 @@ Then upload either:
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_CANON_RANK_SPINECHOOSER__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6644_PROMOTION__2026-02-15.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
+ - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6633_EVAL__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__SPINECAP6_TAPER6633_EVAL__2026-02-15.md`
  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINECAP6_TAPER6643_EVAL__2026-02-15.md`

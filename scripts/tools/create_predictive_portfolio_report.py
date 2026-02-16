@@ -350,10 +350,10 @@ def parse_args() -> argparse.Namespace:
     )
     ap.add_argument(
         "--play-strategy-b36",
-        default="v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644",
+        default="v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first",
         help=(
             "Play card strategy to display for B36 (default: "
-            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644)."
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first)."
         ),
     )
     ap.add_argument(
@@ -412,7 +412,7 @@ def main() -> None:
     b24_strategy = str(args.play_strategy_b24).strip() or "vtrac_pack_boxed_first_laneonly_presetB"
     b36_strategy = (
         str(args.play_strategy_b36).strip()
-        or "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644"
+        or "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first"
     )
 
     out_suffix = "" if profile == "mixed" else f"__{profile}"
