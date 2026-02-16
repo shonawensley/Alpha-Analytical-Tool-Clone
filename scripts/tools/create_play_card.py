@@ -3050,6 +3050,8 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     tail_pick_mode: str = "convergence",
     scan_limit: int = 350,
     sort_preset: str = "methods_first",
+    spine_sort_preset: Optional[str] = None,
+    tail_sort_preset: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Anti-spike variant (selection-only):
@@ -3068,13 +3070,55 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
 
     spine_packs_target = 4
     rank_count = 35  # max known display indices is ~35; safe ceiling
-    indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
-        ranked=ranked,
-        count=rank_count,
-        scan_limit=int(scan_limit),
-        allowed_methods=None,
-        sort_preset=sort_preset,
-    )
+    spine_sort = str(spine_sort_preset or sort_preset).strip()
+    tail_sort = str(tail_sort_preset or sort_preset).strip()
+    if spine_sort == tail_sort:
+        indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
+            ranked=ranked,
+            count=rank_count,
+            scan_limit=int(scan_limit),
+            allowed_methods=None,
+            sort_preset=spine_sort,
+        )
+    else:
+        spine_ranked, spine_snapshot = _choose_top_vtrac_indices_full(
+            ranked=ranked,
+            count=rank_count,
+            scan_limit=int(scan_limit),
+            allowed_methods=None,
+            sort_preset=spine_sort,
+        )
+        tail_ranked, tail_snapshot = _choose_top_vtrac_indices_full(
+            ranked=ranked,
+            count=rank_count,
+            scan_limit=int(scan_limit),
+            allowed_methods=None,
+            sort_preset=tail_sort,
+        )
+        spine_indices: List[int] = []
+        for raw in spine_ranked:
+            idx = int(raw)
+            if idx not in spine_indices:
+                spine_indices.append(idx)
+            if len(spine_indices) >= int(spine_packs_target):
+                break
+        used = set(spine_indices)
+        tail_only: List[int] = []
+        for raw in tail_ranked:
+            idx = int(raw)
+            if idx in used:
+                continue
+            tail_only.append(idx)
+            used.add(idx)
+        indices_ranked = list(spine_indices) + list(tail_only)
+
+        chooser_ranked = dict(tail_snapshot)
+        chooser_ranked["sort_preset"] = f"split_spine_{spine_sort}__tail_{tail_sort}"
+        chooser_ranked["spine_sort_preset"] = spine_sort
+        chooser_ranked["tail_sort_preset"] = tail_sort
+        chooser_ranked["spine_chosen_indices"] = list(spine_indices)
+        chooser_ranked["chosen_indices"] = indices_ranked[: int(rank_count)]
+        chooser_ranked["topN_spine"] = spine_snapshot.get("topN") if isinstance(spine_snapshot, dict) else []
     if not indices_ranked:
         return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
 
@@ -3356,6 +3400,8 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             "allocation": {
                 "scan_limit": int(scan_limit),
                 "sort_preset": str(sort_preset),
+                "spine_sort_preset": str(spine_sort_preset or ""),
+                "tail_sort_preset": str(tail_sort_preset or ""),
                 "spine_packs_target": int(spine_packs_target),
                 "spine_max_lines_per_index": int(spine_max),
                 "spine_taper_caps": ",".join(str(x) for x in taper_caps) if taper_caps else "",
@@ -3565,6 +3611,30 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         spine_pick_mode="display",
         scan_limit=scan_limit,
         sort_preset="score_total_first",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Index-chooser lever (selection-only): keep taper6644 allocation geometry and display-only spine membership,
+    but choose the top-4 spine indices by `methods_first` ordering and the remaining tail indices by
+    `score_total_first` ordering.
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        scan_limit=scan_limit,
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
     )
 
 
@@ -4988,6 +5058,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643": {},
@@ -5094,6 +5165,13 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
                     ranked=ranked, budget=b
                 )
             )

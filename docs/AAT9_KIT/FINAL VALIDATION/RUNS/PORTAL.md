@@ -102,6 +102,12 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.15.24) Crossroads follow-up worklog (tail representative quality; repro + outputs):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__WORKLOG__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md`
 
+1.15.25) Crossroads robustness baselines (adds Holdout A/B windows; baseline-only truth):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md`
+
+1.15.26) Crossroads follow-up brief (split chooser; not promoted):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
+
 1.16) Crossroads deep research pack (pointer-only; ChatGPT Pro ready):
 - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/crossroads_glass_box__2026-01-15/README.md`
 

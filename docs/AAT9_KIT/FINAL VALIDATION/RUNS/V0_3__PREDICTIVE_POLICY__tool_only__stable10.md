@@ -101,6 +101,39 @@ Reference:
 
 ---
 
+## Crossroads promotion gates (B36; stable10; selection-layer only)
+
+These gates exist to prevent “pretty in-sample stories” from becoming default without surviving OOS.
+
+**Locked invariants (do not change in this phase)**
+- Posture: `profile=tool_only`, `experiment_tag=stable10`, budget `B36`
+- Analyzers: unchanged (**no analyzer edits**)
+- Geometry: `taper6644` (spine ranks 1–4 must allocate at least **6/6/4/4** lines)
+- Baseline strategy (current default): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
+
+**Global safety rules (no footguns)**
+- Do not overwrite outputs: always pass an explicit unique `--out` and/or `--label` when running sweeps/reports.
+- Build date rosters from what exists: derive window date lists from directories under the chosen sharepacks root (`sharepacks/_predictive/` or `sharepacks/`) and skip missing days automatically.
+
+**Material regression threshold**
+- Unless stated otherwise: “material regress” means worse by more than **0.5pp absolute** on a rate.
+
+**Hard gates (must pass)**
+- OOS strict guardrail: OOS `hit_any` must be **≥ baseline**.
+- OOS coverage guardrail: OOS `hit_any_inclusive` must be **≥ baseline**.
+- Robustness (all other windows): strict `hit_any` and `hit_any_inclusive` must not materially regress vs baseline for that window.
+
+**Semi-hard gates (in-sample / Jan)**
+- Must improve at least one isolation metric vs baseline:
+  - Jan `CU_LANE_BUT_PLAY_MISS` improves (lower), or
+  - Jan `hit_any_inclusive` improves (higher).
+- Neither of those two should materially regress.
+
+**Soft gate (watch exact-miss tradeoffs)**
+- OOS `CU_EXACT_BUT_PLAY_MISS` may worsen by **≤ +0.5pp** only if:
+  - OOS `hit_any_inclusive` improves by **≥ +0.5pp**, or
+  - OOS strict `hit_any` improves by **≥ +0.2pp**.
+
 ## “If the tools are strong, why is prediction still bad?”
 
 Because “tools strong” is usually **lane signal** (placement/coverage), not “winner in a tiny Top‑K list”.
@@ -228,6 +261,23 @@ These are kept for research/provenance. Defaults remain `...spine_taper_6644` (s
   - Scoreboard (Jan + OOS, side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SHOULDER_DEPTH.md`
   - Lane allocation (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
   - Lane allocation (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`
+
+---
+
+## Split chooser experiment (B36; not promoted)
+
+This is an index-chooser lever on top of the promoted taper6644 baseline:
+- Candidate strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first`
+- Meaning: choose top-4 spine indices by `methods_first`, but choose remaining tail indices by `score_total_first`.
+
+Result: **not promoted**.
+- Jan improves isolation slightly (inclusive +2 outcomes; lane miss -1 outcome).
+- OOS is unchanged.
+- Fails the robustness strict gate on Holdout B (strict drops by 1 hit on `n=81`).
+
+Reference:
+- Robustness baselines: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md:1`
+- Eval brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md:1`
 
 ---
 
