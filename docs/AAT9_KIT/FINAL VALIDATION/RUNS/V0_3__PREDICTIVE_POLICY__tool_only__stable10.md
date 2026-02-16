@@ -220,6 +220,10 @@ These are kept for research/provenance. Defaults remain `...spine_taper_6644` (s
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_canonvote`: no measurable difference vs the baseline tail selection in current windows.
   - Scoreboard (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
   - Scoreboard (OOS): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPINE4_INDEX_TAIL_CANONVOTE.md`
+- `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first`: tail 1-line/index representative chosen by score-first ordering (vs convergence ordering).
+  - Result: not promoted (no in-sample lift; OOS strict +1 hit is not robust enough alone).
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md:1`
+  - Scoreboard (Jan + OOS, side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_TAIL_SCORE_FIRST_SWEEP.md:1` and `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_TAIL_SCORE_FIRST_SWEEP.md:1`
 - `v0_2_default_multi_pack_packheavy_spine4_index_tail_shoulder_depth`: “shoulder depth” (ranks 5–8 get 2 lines, ranks 9–16 get 1) regresses lane retention without lifting strict in current windows.
   - Scoreboard (Jan + OOS, side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SHOULDER_DEPTH.md`
   - Lane allocation (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__LANE_ALLOCATION__tool_only__stable10__B36__SHOULDER_DEPTH.md`

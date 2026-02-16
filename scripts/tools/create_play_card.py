@@ -948,6 +948,18 @@ def _convergence_sort_key(row: Dict[str, Any]) -> Tuple[int, int, int, int, floa
     return (-m, -v_nn, -v_all, -p, -s, combo)
 
 
+def _score_first_sort_key(row: Dict[str, Any]) -> Tuple[float, int, int, int, int, str]:
+    """
+    Like `_convergence_sort_key`, but prioritize the numeric score first.
+
+    Used for within-lane/tail representative selection experiments where we want the single tail line
+    to be the highest-score candidate, not necessarily the highest method/variant corroboration row.
+    """
+    m, v_nn, v_all, p, s = _convergence_stats(row)
+    combo = _normalize_pick3_literal(row.get("combo") or "")
+    return (-float(s), -int(m), -int(v_nn), -int(v_all), -int(p), combo)
+
+
 def _vtrac_display_pack(*, index: int) -> List[str]:
     """
     Return the boxed-member pack for a VTRAC numeric index using `modules.vtrac_reference.VTRAC_DISPLAY`.
@@ -3035,6 +3047,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     spine_max_lines_per_index: int,
     spine_taper_caps: Optional[Sequence[int]] = None,
     spine_pick_mode: str = "display",
+    tail_pick_mode: str = "convergence",
     scan_limit: int = 350,
     sort_preset: str = "methods_first",
 ) -> Dict[str, Any]:
@@ -3083,6 +3096,10 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
         pass
     elif spine_mode not in {"display", "evidence", "display_ranked", "display_canon_ranked"}:
         spine_mode = "display"
+
+    tail_mode = str(tail_pick_mode or "convergence").strip().lower()
+    if tail_mode not in {"convergence", "score_first"}:
+        tail_mode = "convergence"
 
     selected: List[str] = []
     selected_set: set[str] = set()
@@ -3281,7 +3298,11 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
             continue
 
         chosen = ""
-        for row in lane_rows.get(idx, []):
+        lane_list = list(lane_rows.get(idx, []))
+        if tail_mode == "score_first":
+            lane_list.sort(key=_score_first_sort_key)
+        # else: lane_rows are already populated in `_convergence_sort_key` order via ranked_conv
+        for row in lane_list:
             c = _normalize_pick3_literal(row.get("combo") or "")
             if c and c not in selected_set:
                 chosen = c
@@ -3339,6 +3360,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 "spine_max_lines_per_index": int(spine_max),
                 "spine_taper_caps": ",".join(str(x) for x in taper_caps) if taper_caps else "",
                 "spine_pick_mode": str(spine_mode),
+                "tail_pick_mode": str(tail_mode),
                 "tail_added": int(tail_added),
             },
         },
@@ -3541,6 +3563,29 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         spine_max_lines_per_index=6,
         spine_taper_caps=(6, 6, 4, 4),
         spine_pick_mode="display",
+        scan_limit=scan_limit,
+        sort_preset="score_total_first",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail representative quality lever (selection-only): keep taper6644 allocation geometry and
+    `score_total_first` index ordering, but choose the *tail* 1-line/index representative by
+    highest score first (instead of pure convergence counts).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        tail_pick_mode="score_first",
         scan_limit=scan_limit,
         sort_preset="score_total_first",
     )
@@ -4943,6 +4988,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_hybrid_d4_e2": {},
@@ -5048,6 +5094,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first(
                     ranked=ranked, budget=b
                 )
             )
