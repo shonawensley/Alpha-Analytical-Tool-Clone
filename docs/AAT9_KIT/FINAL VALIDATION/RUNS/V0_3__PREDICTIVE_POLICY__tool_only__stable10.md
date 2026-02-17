@@ -118,10 +118,17 @@ These gates exist to prevent “pretty in-sample stories” from becoming defaul
 **Material regression threshold**
 - Unless stated otherwise: “material regress” means worse by more than **0.5pp absolute** on a rate.
 
+**Robustness strict gate (FEB17 onward)**
+- For robustness windows only (i.e., not the OOS hard-gate window), strict `hit_any` uses a **count-based** material-regress check to avoid small‑N false vetoes:
+  - Let `n = outcomes_n` (after filtering `winner_missing=1`).
+  - Let `allowed_drop_hits = max(1, ceil(0.005 * n))`.
+  - Strict `hit_any` is considered a material regress only if the candidate has **more than** `allowed_drop_hits` fewer strict hits than baseline on that window.
+- OOS strict remains a **hard** gate (`>= baseline`) and is not count-relaxed.
+
 **Hard gates (must pass)**
 - OOS strict guardrail: OOS `hit_any` must be **≥ baseline**.
 - OOS coverage guardrail: OOS `hit_any_inclusive` must be **≥ baseline**.
-- Robustness (all other windows): strict `hit_any` and `hit_any_inclusive` must not materially regress vs baseline for that window.
+- Robustness (all other windows): `hit_any_inclusive` must not materially regress vs baseline for that window, and strict `hit_any` must not materially regress under the **count-based** rule above.
 
 **Semi-hard gates (in-sample / Jan)**
 - Must improve at least one isolation metric vs baseline:
@@ -278,6 +285,25 @@ Result: **not promoted**.
 Reference:
 - Robustness baselines: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md:1`
 - Eval brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md:1`
+
+---
+
+## Constraint chooser experiment (B36; not promoted)
+
+This is an index-chooser lever on top of the promoted taper6644 baseline:
+- Candidate strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first`
+- Meaning: keep `score_total_first` ordering, but constrain the **top‑4 spine indices** to lanes with corroboration (`methods_count>=2 OR variants_non_unknown>=1`), falling back to the unconstrained ranking if needed.
+
+Result: **not promoted** (no measurable lift under the Crossroads gates).
+- Jan/OOS/robustness metrics are unchanged vs baseline; the lever is mostly a no‑op in practice under `score_total_first`.
+
+Reference:
+- Eval brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md:1`
+- Scoreboards (Jan/OOS/holdouts):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__CONSTRAINT_CHOOSER.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__CONSTRAINT_CHOOSER.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-12-30_to_2026-01-04__CONVERSION_SCOREBOARD__tool_only__stable10__B36__CONSTRAINT_CHOOSER.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2025-06-21_to_2025-06-23__CONVERSION_SCOREBOARD__tool_only__stable10__B36__CONSTRAINT_CHOOSER.md:1`
 
 ---
 

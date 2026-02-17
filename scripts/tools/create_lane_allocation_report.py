@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import re
@@ -57,7 +58,12 @@ def _normalize_label(value: str) -> str:
         return ""
     raw = raw.replace(" ", "_")
     cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw).strip("_-")
-    return cleaned[:80]
+    limit = 80
+    if len(cleaned) <= limit:
+        return cleaned
+    digest = hashlib.sha1(cleaned.encode("utf-8")).hexdigest()[:8]
+    head_len = max(0, limit - 2 - len(digest))
+    return f"{cleaned[:head_len]}__{digest}"
 
 
 def bool01(value: object) -> int:

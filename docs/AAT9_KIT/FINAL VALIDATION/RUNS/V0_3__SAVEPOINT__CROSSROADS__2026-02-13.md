@@ -1,4 +1,4 @@
-# Savepoint — Crossroads Pack v1 (stable10 • tool_only • B36) — 2026‑02‑13
+# Savepoint — Crossroads Pack v1 (stable10 • tool_only • B36) — 2026‑02‑13 (updated 2026‑02‑17)
 
 Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-open the repo, and immediately know:
 - what branch/commit contains the Crossroads work,
@@ -10,8 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-spinecap6`
-- Latest: `ec040fa8` (robustness windows baseline + split chooser eval; split chooser not promoted)
-- Tip: run `git log -1 --oneline` to confirm
+- Latest: (run `git log -1 --oneline` to confirm; this savepoint was updated 2026‑02‑17 to include the constraint chooser eval + robustness strict gate v2 + lane-allocation collision fix)
 
 Quick resume commands:
 
@@ -90,6 +89,7 @@ Then upload either:
 - Objective: **isolation-first** (reduce `CU_LANE_BUT_PLAY_MISS`)
 - Guardrail: **OOS strict B36 must not regress**
 - **No analyzer edits** in this phase (selection-layer only).
+- Robustness strict gate (FEB17 onward): count-based material regress for strict hits on small‑N robustness windows (see SSOT policy).
 - Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
 - Latest evaluation (tail representative quality; not promoted):
@@ -98,6 +98,8 @@ Then upload either:
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md`
 - Latest evaluation (split chooser; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
+- Latest evaluation (constraint chooser; not promoted):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
 
 ---
 

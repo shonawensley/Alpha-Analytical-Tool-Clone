@@ -3052,6 +3052,8 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     sort_preset: str = "methods_first",
     spine_sort_preset: Optional[str] = None,
     tail_sort_preset: Optional[str] = None,
+    indices_ranked_override: Optional[Sequence[int]] = None,
+    chooser_ranked_override: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Anti-spike variant (selection-only):
@@ -3072,7 +3074,14 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     rank_count = 35  # max known display indices is ~35; safe ceiling
     spine_sort = str(spine_sort_preset or sort_preset).strip()
     tail_sort = str(tail_sort_preset or sort_preset).strip()
-    if spine_sort == tail_sort:
+    if indices_ranked_override is not None:
+        indices_ranked = [int(x) for x in indices_ranked_override]
+        chooser_ranked = dict(chooser_ranked_override or {})
+        chooser_ranked.setdefault("scan_limit", int(scan_limit))
+        chooser_ranked.setdefault("sort_preset", str(sort_preset or ""))
+        chooser_ranked.setdefault("chosen_indices", indices_ranked[: int(rank_count)])
+        chooser_ranked.setdefault("candidates_found", int(len(indices_ranked)))
+    elif spine_sort == tail_sort:
         indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
             ranked=ranked,
             count=rank_count,
@@ -3635,6 +3644,87 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         sort_preset="score_total_first",
         spine_sort_preset="methods_first",
         tail_sort_preset="score_total_first",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Index-chooser lever (selection-only): keep taper6644 allocation geometry and display-only spine membership,
+    but constrain the top-4 spine indices to "corroborated" lanes:
+      - `methods_count >= 2` OR `variants_non_unknown >= 1`
+
+    Tail ordering remains `score_total_first`.
+    """
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+    indices_ranked, chooser_ranked = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="score_total_first",
+    )
+    if not indices_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=int(budget))
+
+    top_rows = chooser_ranked.get("topN")
+    ranked_rows = top_rows if isinstance(top_rows, list) else []
+
+    constrained_spine: List[int] = []
+    seen: set[int] = set()
+    for row in ranked_rows:
+        if not isinstance(row, dict):
+            continue
+        raw_idx = row.get("index")
+        try:
+            idx = int(raw_idx)  # type: ignore[arg-type]
+        except Exception:
+            continue
+        if idx in seen:
+            continue
+        seen.add(idx)
+
+        methods_count = int(row.get("methods_count") or 0)
+        variants_non_unknown = int(row.get("variants_non_unknown") or 0)
+        if methods_count >= 2 or variants_non_unknown >= 1:
+            constrained_spine.append(idx)
+        if len(constrained_spine) >= int(spine_packs_target):
+            break
+
+    # Fallback: if corroboration is too sparse, fill remaining spine slots from the unconstrained ranking.
+    for idx in indices_ranked:
+        if len(constrained_spine) >= int(spine_packs_target):
+            break
+        if idx in constrained_spine:
+            continue
+        constrained_spine.append(int(idx))
+
+    used = set(constrained_spine[: int(spine_packs_target)])
+    tail_only = [int(idx) for idx in indices_ranked if int(idx) not in used]
+    indices_ranked_constrained = list(constrained_spine[: int(spine_packs_target)]) + tail_only
+
+    chooser_override = dict(chooser_ranked)
+    chooser_override["sort_preset"] = "score_total_first__constraint_spine_methods2_or_var1"
+    chooser_override["spine_constraint"] = "methods_count>=2 OR variants_non_unknown>=1"
+    chooser_override["spine_unconstrained_top4"] = [int(x) for x in indices_ranked[: int(spine_packs_target)]]
+    chooser_override["spine_chosen_indices"] = list(indices_ranked_constrained[: int(spine_packs_target)])
+    chooser_override["chosen_indices"] = list(indices_ranked_constrained[: int(rank_count)])
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        scan_limit=scan_limit,
+        sort_preset="score_total_first",
+        indices_ranked_override=indices_ranked_constrained,
+        chooser_ranked_override=chooser_override,
     )
 
 
@@ -5059,6 +5149,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643": {},
@@ -5172,6 +5263,13 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first(
                     ranked=ranked, budget=b
                 )
             )
