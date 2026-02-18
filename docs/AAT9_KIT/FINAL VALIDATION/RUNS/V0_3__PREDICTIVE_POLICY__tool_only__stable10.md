@@ -99,6 +99,7 @@ Recent B36 levers (evaluated; not promoted):
 - Within-spine canon-ranked (keep split chooser + taper6644; change `spine_pick_mode` only) failed Jan precheck: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__SPINE_CANON_PRECHECK__2026-02-18.md:1`
 - Tail score-first (keep split chooser + taper6644; change `tail_pick_mode` only) failed Jan precheck: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_SCORE_FIRST_SPLIT_PRECHECK__2026-02-18.md:1`
 - Tail rank5 depth2 (keep split chooser + taper6644; buy 1 extra tail depth line) failed Jan precheck: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_RANK5_DEPTH2_PRECHECK__2026-02-18.md:1`
+- Spine hybrid d4/e2 (keep split chooser + taper6644; change `spine_pick_mode` only) failed Jan precheck: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPINE_HYBRID_D4_E2_PRECHECK__2026-02-18.md:1`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`

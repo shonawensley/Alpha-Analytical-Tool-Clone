@@ -3761,6 +3761,32 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_hybrid_d4_e2(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Within-spine conversion lever (selection-only): keep the promoted split chooser index ordering
+    and taper6644 geometry, but choose spine members in a *hybrid* way:
+      - Anchor with 4 display members (baseline order),
+      - then add up to 2 evidence-backed rows inside the lane,
+      - then fill remaining capacity with display.
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="hybrid_d4_e2",
+        scan_limit=scan_limit,
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_rank5_depth2(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -5560,14 +5586,15 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_spine_display_canon_ranked": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_rank5_depth2": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_display_canon_ranked": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643_split_spine_methods_tail_score_total_first": {},
-        "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_packs_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_hybrid_d4_e2": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_rank5_depth2": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_display_canon_ranked": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_packs_tail_score_total_first": {},
         "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total": {},
@@ -5685,6 +5712,13 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_hybrid_d4_e2"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_hybrid_d4_e2(
                     ranked=ranked, budget=b
                 )
             )
