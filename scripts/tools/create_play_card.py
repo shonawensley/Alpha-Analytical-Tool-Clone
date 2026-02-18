@@ -3761,19 +3761,23 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
-def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22(
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
     *,
     ranked: Sequence[Dict[str, Any]],
     budget: int,
     scan_limit: int = 350,
+    keep_top: int,
+    inject_positions: Sequence[int],
+    schedule_id: str,
 ) -> Dict[str, Any]:
     """
     Tail index selection lever (selection-only): keep the promoted split chooser (spine=methods_first,
     tail=score_total_first) and taper6644 geometry, but *spread* the tail index set to cover more
     shoulder ranks without buying depth.
 
-    Implementation: after choosing spine indices, take the first 14 tail indices, then inject tail
-    indices at ranked positions 18 and 22 (0-based) before filling with the remaining ordering.
+    Implementation: after choosing spine indices, take the first N tail indices (`keep_top`), then
+    inject tail indices at ranked positions (`inject_positions`, 0-based) before filling with the
+    remaining ordering.
     """
     b = int(budget)
     if b <= 12:
@@ -3818,9 +3822,8 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         tail_ranked_excl.append(idx)
         used.add(idx)
 
-    # Spread schedule: keep top14, then inject positions 18 and 22.
-    keep_top = 14
-    inject_positions = (18, 22)
+    keep_n = max(0, int(keep_top))
+    inject = [int(x) for x in inject_positions]
     tail_ordered: List[int] = []
     seen_tail: set[int] = set()
 
@@ -3830,21 +3833,22 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         tail_ordered.append(idx)
         seen_tail.add(idx)
 
-    for idx in tail_ranked_excl[:keep_top]:
+    for idx in tail_ranked_excl[:keep_n]:
         _add_tail(int(idx))
-    for pos in inject_positions:
+    for pos in inject:
         if 0 <= int(pos) < len(tail_ranked_excl):
             _add_tail(int(tail_ranked_excl[int(pos)]))
     for idx in tail_ranked_excl:
         _add_tail(int(idx))
 
     merged = list(spine_indices) + list(tail_ordered)
+    schedule_tag = str(schedule_id or "").strip() or f"tail_spread_top{keep_n}_pos" + "_".join(str(x) for x in inject)
     chooser_override: Dict[str, Any] = {
         "scan_limit": int(scan_limit),
-        "sort_preset": "split_spine_methods_first__tail_score_total_first_spread_top14_pos18_22",
+        "sort_preset": f"split_spine_methods_first__tail_score_total_first__{schedule_tag}",
         "spine_sort_preset": "methods_first",
         "tail_sort_preset": "score_total_first",
-        "tail_spread_policy": {"keep_top": int(keep_top), "inject_positions": [int(x) for x in inject_positions]},
+        "tail_spread_policy": {"keep_top": int(keep_n), "inject_positions": [int(x) for x in inject]},
         "spine_packs_target": int(spine_packs_target),
         "rank_count": int(rank_count),
         "spine_chosen_indices": list(spine_indices),
@@ -3872,6 +3876,126 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         tail_sort_preset="score_total_first",
         indices_ranked_override=merged,
         chooser_ranked_override=chooser_override,
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top14, then inject positions 18 and 22 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=14,
+        inject_positions=(18, 22),
+        schedule_id="tail_spread_top14_pos18_22",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top12_pos16_20(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top12, then inject positions 16 and 20 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=12,
+        inject_positions=(16, 20),
+        schedule_id="tail_spread_top12_pos16_20",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos16_20(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top14, then inject positions 16 and 20 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=14,
+        inject_positions=(16, 20),
+        schedule_id="tail_spread_top14_pos16_20",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_24(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top14, then inject positions 18 and 24 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=14,
+        inject_positions=(18, 24),
+        schedule_id="tail_spread_top14_pos18_24",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos20_26(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top14, then inject positions 20 and 26 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=14,
+        inject_positions=(20, 26),
+        schedule_id="tail_spread_top14_pos20_26",
+    )
+
+
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail index selection lever (selection-only): schedule preset.
+    Keep top16, then inject positions 18 and 24 (0-based).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_schedule(
+        ranked=ranked,
+        budget=budget,
+        scan_limit=scan_limit,
+        keep_top=16,
+        inject_positions=(18, 24),
+        schedule_id="tail_spread_top16_pos18_24",
     )
 
 
@@ -5704,6 +5828,11 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top12_pos16_20": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos16_20": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_24": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos20_26": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_hybrid_d4_e2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_rank5_depth2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first": {},
@@ -5834,6 +5963,41 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top12_pos16_20"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top12_pos16_20(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos16_20"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos16_20(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_24"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_24(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos20_26"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos20_26(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24(
                     ranked=ranked, budget=b
                 )
             )
