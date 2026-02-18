@@ -1623,6 +1623,100 @@ def _choose_top_vtrac_indices_diverse(
     return indices, chooser
 
 
+def _choose_top_vtrac_indices_round_robin_mix(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    count: int,
+    scan_limit: int = 350,
+    allowed_methods: Optional[set[str]] = None,
+    snapshot_top_k: int = 12,
+) -> Tuple[List[int], Dict[str, Any]]:
+    """
+    Choose top-N indices by mixing multiple sort presets deterministically.
+
+    Why:
+    - Under fixed posture (tool_only + stable10), many "filters" are near-no-ops because
+      the top-ranked indices already satisfy them.
+    - This lever is intended to *materially change the touched index set* while keeping
+      the allocation geometry constant.
+
+    How:
+    - Build three ranked lists under different lenses:
+        - methods_first (corroboration)
+        - packs_first (pack-referenced strength)
+        - score_total_first (aggregate strength)
+    - Merge them with a deterministic round-robin interleave, skipping duplicates.
+    - Backstop-fill with the score_total_first list to ensure we reach N.
+    """
+    n = max(0, int(count))
+    if n <= 0:
+        return [], {"candidates_found": 0, "chosen_indices": []}
+
+    presets = ("methods_first", "packs_first", "score_total_first")
+    ranked_lists: Dict[str, List[int]] = {}
+    snapshots: Dict[str, Dict[str, Any]] = {}
+    for preset in presets:
+        indices, snapshot = _choose_top_vtrac_indices_full(
+            ranked=ranked,
+            count=n,
+            scan_limit=int(scan_limit),
+            allowed_methods=allowed_methods,
+            sort_preset=preset,
+        )
+        ranked_lists[preset] = [int(x) for x in indices]
+        snapshots[preset] = snapshot
+
+    lists = [ranked_lists[p] for p in presets]
+    merged: List[int] = []
+    seen: set[int] = set()
+
+    i = 0
+    while len(merged) < n and any(i < len(lst) for lst in lists):
+        for lst in lists:
+            if i >= len(lst):
+                continue
+            idx = int(lst[i])
+            if idx in seen:
+                continue
+            merged.append(idx)
+            seen.add(idx)
+            if len(merged) >= n:
+                break
+        i += 1
+
+    if len(merged) < n:
+        # Backstop fill: keep determinism and ensure rank_count is satisfied.
+        for idx in ranked_lists["score_total_first"] + ranked_lists["methods_first"] + ranked_lists["packs_first"]:
+            val = int(idx)
+            if val in seen:
+                continue
+            merged.append(val)
+            seen.add(val)
+            if len(merged) >= n:
+                break
+
+    top_k = max(0, int(snapshot_top_k))
+    def _cand_found(name: str) -> int:
+        snap = snapshots.get(name) or {}
+        try:
+            return int(snap.get("candidates_found") or 0)
+        except Exception:
+            return 0
+    chooser = {
+        "scan_limit": int(scan_limit),
+        "allowed_methods": sorted(list(allowed_methods)) if allowed_methods else [],
+        "sort_preset": "round_robin_mix_methods_packs_score_total",
+        "candidates_found": int(max(_cand_found("methods_first"), _cand_found("packs_first"), _cand_found("score_total_first"))),
+        "mix": {
+            "presets": list(presets),
+            "source_indices": {p: ranked_lists[p][:top_k] for p in presets},
+            "merged_indices": list(merged),
+        },
+        "chosen_indices": list(merged),
+    }
+    return list(merged), chooser
+
+
 def _card_vtrac_packs_boxed_first_from_indices(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -3647,6 +3741,57 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Index-chooser lever (selection-only): keep taper6644 allocation geometry and display-only spine
+    membership, but choose ranked indices by a deterministic round-robin mix of multiple lenses
+    (methods_first / packs_first / score_total_first).
+
+    Goal: materially change the touched index set (reduce CU_LANE_BUT_PLAY_MISS) without altering
+    analyzers, CU posture, or within-lane selection.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+    indices_ranked, chooser_ranked = _choose_top_vtrac_indices_round_robin_mix(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        snapshot_top_k=12,
+    )
+    if not indices_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    chooser_override = dict(chooser_ranked)
+    chooser_override["spine_packs_target"] = int(spine_packs_target)
+    chooser_override["rank_count"] = int(rank_count)
+    chooser_override["spine_chosen_indices"] = [int(x) for x in indices_ranked[: int(spine_packs_target)]]
+    chooser_override["chosen_indices"] = [int(x) for x in indices_ranked[: int(rank_count)]]
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=b,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        scan_limit=int(scan_limit),
+        sort_preset="score_total_first",
+        indices_ranked_override=indices_ranked,
+        chooser_ranked_override=chooser_override,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -5149,6 +5294,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6633": {},
@@ -5263,6 +5409,13 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total(
                     ranked=ranked, budget=b
                 )
             )
