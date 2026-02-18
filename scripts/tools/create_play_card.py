@@ -3741,6 +3741,31 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail representative quality lever (selection-only): keep the promoted split chooser index ordering
+    and taper6644 geometry, but choose the *tail* 1-line/index representative by highest score first
+    (instead of pure convergence ordering).
+    """
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=budget,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        tail_pick_mode="score_first",
+        scan_limit=scan_limit,
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_display_canon_ranked(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -5493,6 +5518,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_spine_display_canon_ranked": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6643_split_spine_methods_tail_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_packs_tail_score_total_first": {},
@@ -5613,6 +5639,13 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_score_first(
                     ranked=ranked, budget=b
                 )
             )
