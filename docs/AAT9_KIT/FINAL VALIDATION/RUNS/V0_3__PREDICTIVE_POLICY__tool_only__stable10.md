@@ -67,15 +67,17 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first`
 - Goal metric: preserve strict `hit_any` as an **OOS guardrail**, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail) through a tighter spine allocation.
-- This is the taper6644 geometry with an index chooser sort preset of `score_total_first`.
+- This is taper6644 geometry with a **split** index chooser:
+  - spine indices by `methods_first`
+  - tail indices by `score_total_first`
 - Jan gold window (known winners, stable10):
   - strict `hit_any` **4.7%**
-  - `hit_any_inclusive` **58.0%**
-  - `pack_any_correct` **58.0%**
-  - `CU_LANE_BUT_PLAY_MISS` **18.1%**
-  - `CU_EXACT_BUT_PLAY_MISS` **2.6%**
+  - `hit_any_inclusive` **59.1%**
+  - `pack_any_correct` **59.1%**
+  - `CU_LANE_BUT_PLAY_MISS` **17.6%**
+  - `CU_EXACT_BUT_PLAY_MISS` **2.1%**
 
 - OOS window (stable10):
   - strict `hit_any` **4.1%**
@@ -85,12 +87,12 @@ Reference:
   - `CU_EXACT_BUT_PLAY_MISS` **3.3%**
 
 Reference:
-- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md:1`
-- Sort preset sweep scoreboards (Jan + OOS):
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAPER6644_SORT_PRESET_SWEEP.md:1`
-- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10.md:1`
-- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first__stable10__B36.md:1`
+- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_PROMOTION__2026-02-18.md:1`
+- Split chooser scoreboards (Jan + OOS):
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPLIT_CHOOSER.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__SPLIT_CHOOSER.md:1`
+- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first__stable10.md:1`
+- Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first__stable10__B36.md:1`
 
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
@@ -109,7 +111,7 @@ These gates exist to prevent “pretty in-sample stories” from becoming defaul
 - Posture: `profile=tool_only`, `experiment_tag=stable10`, budget `B36`
 - Analyzers: unchanged (**no analyzer edits**)
 - Geometry: `taper6644` (spine ranks 1–4 must allocate at least **6/6/4/4** lines)
-- Baseline strategy (current default): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
+- Baseline strategy (current default): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first`
 
 **Global safety rules (no footguns)**
 - Do not overwrite outputs: always pass an explicit unique `--out` and/or `--label` when running sweeps/reports.
@@ -271,20 +273,16 @@ These are kept for research/provenance. Defaults remain `...spine_taper_6644` (s
 
 ---
 
-## Split chooser experiment (B36; not promoted)
+## Split chooser (B36; promoted)
 
 This is an index-chooser lever on top of the promoted taper6644 baseline:
 - Candidate strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first`
 - Meaning: choose top-4 spine indices by `methods_first`, but choose remaining tail indices by `score_total_first`.
 
-Result: **not promoted**.
-- Jan improves isolation slightly (inclusive +2 outcomes; lane miss -1 outcome).
-- OOS is unchanged.
-- Fails the robustness strict gate on Holdout B (strict drops by 1 hit on `n=81`).
-
 Reference:
 - Robustness baselines: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md:1`
-- Eval brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md:1`
+- Prior eval brief (rejected under old robustness strict): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md:1`
+- Promotion brief (under count-based robustness strict): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_PROMOTION__2026-02-18.md:1`
 
 ---
 

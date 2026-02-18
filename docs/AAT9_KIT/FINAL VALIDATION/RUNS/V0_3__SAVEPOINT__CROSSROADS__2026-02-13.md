@@ -90,14 +90,15 @@ Then upload either:
 - Guardrail: **OOS strict B36 must not regress**
 - **No analyzer edits** in this phase (selection-layer only).
 - Robustness strict gate (FEB17 onward): count-based material regress for strict hits on small‑N robustness windows (see SSOT policy).
-- Current promoted B36 geometry (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first`
-  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SORT_PRESET_PROMOTION__2026-02-16.md`
+- Current promoted B36 strategy (isolation-first): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first`
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_PROMOTION__2026-02-18.md`
 - Latest evaluation (tail representative quality; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_SCORE_FIRST_SWEEP__2026-02-16.md`
 - Robustness baselines (adds Holdout A/B windows; baseline-only truth):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md`
-- Latest evaluation (split chooser; not promoted):
-  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
+- Split chooser evaluation history:
+  - Prior eval (rejected under old robustness strict): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
+  - Promotion (count-based robustness strict): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_PROMOTION__2026-02-18.md`
 - Latest evaluation (constraint chooser; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
 - Latest evaluation (round-robin mix chooser; Jan precheck; not promoted):

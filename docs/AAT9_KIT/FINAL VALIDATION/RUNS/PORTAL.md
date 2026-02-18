@@ -107,8 +107,11 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.15.25) Crossroads robustness baselines (adds Holdout A/B windows; baseline-only truth):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__ROBUSTNESS_WINDOWS__2026-02-16.md`
 
-1.15.26) Crossroads follow-up brief (split chooser; not promoted):
+1.15.26) Crossroads follow-up brief (split chooser eval; not promoted under the old robustness strict rule):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
+
+1.15.26.1) Crossroads promotion brief (split chooser; promoted under count-based robustness strict):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_PROMOTION__2026-02-18.md`
 
 1.15.27) Crossroads follow-up brief (constraint chooser; not promoted):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
