@@ -67,31 +67,32 @@ Reference:
 - Casebook (debug examples): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__vtrac_pack_boxed_first_laneonly_presetB__stable10__B24.md`
 
 **B36 = Conversion mode**
-- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22`
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22`
 - Goal metric: preserve strict `hit_any` as an **OOS guardrail**, while lifting `hit_any_inclusive` by widening lane coverage (ranked index tail) through a tighter spine allocation.
-- This is taper6644 geometry with a **split** index chooser plus a **tail spread** policy:
+- This is taper6644 geometry with a **split** index chooser plus a **tail spread** + **cross-lens injection** policy:
   - spine indices by `methods_first`
-  - tail indices based on `score_total_first`, but spread to cover shoulder ranks (see promotion brief)
+  - tail indices based on `score_total_first`, but spread to cover shoulder ranks (top14 + inject pos18/22)
+  - injected shoulder picks sourced from other lenses (methods@18 + packs@22; see promotion brief)
 - Jan gold window (known winners, stable10):
   - strict `hit_any` **4.7%**
-  - `hit_any_inclusive` **62.2%**
-  - `pack_any_correct` **62.2%**
-  - `CU_LANE_BUT_PLAY_MISS` **15.0%**
+  - `hit_any_inclusive` **63.7%**
+  - `pack_any_correct` **63.7%**
+  - `CU_LANE_BUT_PLAY_MISS` **13.5%**
   - `CU_EXACT_BUT_PLAY_MISS` **1.6%**
 
 - OOS window (stable10):
   - strict `hit_any` **4.5%**
-  - `hit_any_inclusive` **53.9%**
-  - `pack_any_correct` **53.9%**
-  - `CU_LANE_BUT_PLAY_MISS` **15.1%**
+  - `hit_any_inclusive` **55.1%**
+  - `pack_any_correct` **55.1%**
+  - `CU_LANE_BUT_PLAY_MISS` **13.9%**
   - `CU_EXACT_BUT_PLAY_MISS` **2.0%**
 
 Reference:
-- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAIL_SPREAD_TOP14_POS18_22_PROMOTION__2026-02-18.md:1`
+- Promotion brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAIL_XLENS_INJECT_METHODS18_PACKS22_PROMOTION__2026-02-18.md:1`
 - Promotion scoreboards (Jan + OOS):
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAIL_SPREAD_TOP14_POS18_22_PRECHECK.md:1`
-  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAIL_SPREAD_TOP14_POS18_22_GATE.md:1`
-- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22__stable10.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAIL_XLENS_INJECT_GATE.md:1`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__CONVERSION_SCOREBOARD__tool_only__stable10__B36__TAIL_XLENS_INJECT_GATE.md:1`
+- Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22__stable10.md:1`
 
 Recent B36 levers (evaluated; not promoted):
 - Taper6643 (free +1 tail lane) failed OOS strict guardrail: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6643_SPLIT_EVAL__2026-02-18.md:1`
@@ -118,7 +119,7 @@ These gates exist to prevent “pretty in-sample stories” from becoming defaul
 - Posture: `profile=tool_only`, `experiment_tag=stable10`, budget `B36`
 - Analyzers: unchanged (**no analyzer edits**)
 - Geometry: `taper6644` (spine ranks 1–4 must allocate at least **6/6/4/4** lines)
-- Baseline strategy (current default): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22`
+- Baseline strategy (current default): `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22`
 
 **Global safety rules (no footguns)**
 - Do not overwrite outputs: always pass an explicit unique `--out` and/or `--label` when running sweeps/reports.
