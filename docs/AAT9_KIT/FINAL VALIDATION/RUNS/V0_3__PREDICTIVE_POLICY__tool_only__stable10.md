@@ -307,6 +307,24 @@ Reference:
 
 ---
 
+## Round-robin mix chooser experiment (B36; not promoted)
+
+This is an index-chooser lever on top of the promoted taper6644 baseline:
+- Candidate strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total`
+- Meaning: keep taper6644 geometry + display-only spine membership, but choose the ranked index list by a deterministic round-robin mix of three lenses:
+  - `methods_first`
+  - `packs_first`
+  - `score_total_first` (with backstop fill to reach rank_count)
+
+Result: **not promoted** (fails the Jan precheck; strict regresses and lane miss worsens without lifting inclusive).
+
+Reference:
+- Eval brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_RRMIX_CHOOSER_EVAL__2026-02-18.md:1`
+- Geometry precheck (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__PLAY_CARD_GEOMETRY__tool_only__stable10__B36__RRMIX_PRECHECK.md:1`
+- Scoreboard precheck (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_SCOREBOARD__tool_only__stable10__B36__RRMIX_PRECHECK.md:1`
+
+---
+
 ## Spine chooser experiments (B36; not promoted)
 
 These test “within-lane conversion” levers on top of the pre-taper baseline `...spinecap6` by changing how the **6 spine lines per index** are selected.

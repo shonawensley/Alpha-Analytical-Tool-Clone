@@ -1,4 +1,4 @@
-# Savepoint — Crossroads Pack v1 (stable10 • tool_only • B36) — 2026‑02‑13 (updated 2026‑02‑17)
+# Savepoint — Crossroads Pack v1 (stable10 • tool_only • B36) — 2026‑02‑13 (updated 2026‑02‑18)
 
 Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-open the repo, and immediately know:
 - what branch/commit contains the Crossroads work,
@@ -10,7 +10,7 @@ Purpose: a power-off safe, **tracked** “resume card” so you can reboot, re-o
 ## Repo state (tracked)
 
 - Branch: `checkpoint/v0_3-stable10-spinecap6`
-- Latest: (run `git log -1 --oneline` to confirm; this savepoint was updated 2026‑02‑17 to include the constraint chooser eval + robustness strict gate v2 + lane-allocation collision fix)
+- Latest: (run `git log -1 --oneline` to confirm; this savepoint was updated 2026‑02‑18 to include the rrmix chooser eval + post-range missing-day skip + Side Review Guide)
 
 Quick resume commands:
 
@@ -100,6 +100,8 @@ Then upload either:
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPLIT_CHOOSER_EVAL__2026-02-16.md`
 - Latest evaluation (constraint chooser; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
+- Latest evaluation (round-robin mix chooser; Jan precheck; not promoted):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_RRMIX_CHOOSER_EVAL__2026-02-18.md`
 
 ---
 
