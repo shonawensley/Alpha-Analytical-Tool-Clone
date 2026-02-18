@@ -349,6 +349,19 @@ Reference:
 
 ---
 
+## Spine packs-first experiment (B36; not promoted)
+
+This is a spine index-chooser lever on top of taper6644:
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_packs_tail_score_total_first`
+- Meaning: choose the top-4 spine indices by `packs_first` ordering, keep tail indices by `score_total_first`.
+
+Result: **not promoted** (fails the OOS strict guardrail).
+
+Reference:
+- Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPINE_PACKS_PRECHECK__2026-02-18.md:1`
+
+---
+
 ## Spine chooser experiments (B36; not promoted)
 
 These test “within-lane conversion” levers on top of the pre-taper baseline `...spinecap6` by changing how the **6 spine lines per index** are selected.

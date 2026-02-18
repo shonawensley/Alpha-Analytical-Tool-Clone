@@ -107,6 +107,8 @@ Then upload either:
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_RRMIX_PRECHECK__2026-02-18.md`
 - Latest evaluation (tail packs-first; Jan precheck; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_PACKS_PRECHECK__2026-02-18.md`
+- Latest evaluation (spine packs-first; OOS guardrail failed; not promoted):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_SPINE_PACKS_PRECHECK__2026-02-18.md`
 
 ---
 
