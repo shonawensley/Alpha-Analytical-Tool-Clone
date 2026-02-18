@@ -576,6 +576,11 @@ def _parse_args() -> argparse.Namespace:
         help="Convenience: set --experiment-tag stable10 (default: off).",
     )
     post_range.add_argument("--skip-missing-results", action="store_true", help="Skip days with missing data/results/<D>.txt (default: fail).")
+    post_range.add_argument(
+        "--fail-on-missing-sharepacks",
+        action="store_true",
+        help="Fail if sharepacks_root/<D>/ is missing (default: skip with warning).",
+    )
     post_range.add_argument("--skip-candidate-universe-grade", action="store_true", help="Skip Candidate Universe grading.")
     post_range.add_argument("--skip-play-card-grade", action="store_true", help="Skip Play Card grading.")
     post_range.add_argument("--rollup", action="store_true", help="Also run corpus rollups (default: off).")
@@ -987,6 +992,7 @@ def main() -> None:
         receipt_lines.append(f"- rollup: `{bool(args.rollup)}`")
         receipt_lines.append(f"- windowed_auto: `{bool(args.windowed_auto)}`")
         receipt_lines.append(f"- skip_missing_results: `{bool(args.skip_missing_results)}`")
+        receipt_lines.append(f"- fail_on_missing_sharepacks: `{bool(args.fail_on_missing_sharepacks)}`")
         receipt_lines.append(f"- no_per_day_receipts: `{bool(args.no_per_day_receipts)}`")
         receipt_lines.append("")
         receipt_lines.append("## Days")
@@ -1073,7 +1079,15 @@ def main() -> None:
                     receipt_lines.append(f"- `{(' '.join(windowed_cmd))}`")
         receipt_lines.append("")
 
+        skipped_sharepack_days: List[str] = []
         for d in _iter_dates(start_d, end_d):
+            day_dir = Path(sharepacks_root) / d
+            if not day_dir.exists():
+                if bool(args.fail_on_missing_sharepacks):
+                    raise SystemExit(f"Missing sharepack day dir for D={d}: {_safe_rel(day_dir)}")
+                print(f"[SKIP] Missing sharepack day dir for D={d}: {_safe_rel(day_dir)}")
+                skipped_sharepack_days.append(d)
+                continue
             if bool(args.skip_missing_results) and not _results_file_path(d).exists():
                 print(f"[SKIP] Missing results for D={d}: {_safe_rel(_results_file_path(d))}")
                 continue
@@ -1096,6 +1110,11 @@ def main() -> None:
         if not bool(args.no_receipt):
             suffix = f"__{experiment_tag}" if experiment_tag else ""
             receipt_path = runs_dir / f"V0_3__CYCLE__POST_RANGE__{start_d.isoformat()}_to_{end_d.isoformat()}__{profile}{suffix}.md"
+            if skipped_sharepack_days:
+                receipt_lines.append("## Skipped days (missing sharepack dir)")
+                receipt_lines.append("")
+                receipt_lines.append(f"- {', '.join(skipped_sharepack_days)}")
+                receipt_lines.append("")
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
