@@ -105,6 +105,8 @@ Then upload either:
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_RRMIX_CHOOSER_EVAL__2026-02-18.md`
 - Latest evaluation (tail-only rrmix; Jan precheck; not promoted):
   - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_RRMIX_PRECHECK__2026-02-18.md`
+- Latest evaluation (tail packs-first; Jan precheck; not promoted):
+  - Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_PACKS_PRECHECK__2026-02-18.md`
 
 ---
 
