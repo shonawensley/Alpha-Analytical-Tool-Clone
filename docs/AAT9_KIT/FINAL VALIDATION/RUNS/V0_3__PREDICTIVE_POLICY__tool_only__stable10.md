@@ -323,6 +323,19 @@ Reference:
 
 ---
 
+## Tail-only rrmix experiment (B36; not promoted)
+
+This is a constrained follow-up to the full rrmix chooser:
+- Strategy: `v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total`
+- Meaning: keep the promoted split chooser spine (`methods_first`), but apply rrmix ordering only to the tail.
+
+Result: **not promoted** (fails Jan precheck; inclusive regresses and lane miss worsens).
+
+Reference:
+- Brief: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_TAIL_RRMIX_PRECHECK__2026-02-18.md:1`
+
+---
+
 ## Spine chooser experiments (B36; not promoted)
 
 These test “within-lane conversion” levers on top of the pre-taper baseline `...spinecap6` by changing how the **6 spine lines per index** are selected.

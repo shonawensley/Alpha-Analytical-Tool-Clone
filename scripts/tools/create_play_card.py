@@ -3792,6 +3792,109 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Tail-only index ordering lever (selection-only):
+    - Freeze the top-4 spine indices to `methods_first` (same as the promoted split chooser).
+    - Re-rank only the tail indices using the deterministic round-robin mix chooser
+      (methods_first / packs_first / score_total_first).
+
+    Goal: improve shoulder lane retention without destabilizing strict conversion via spine churn.
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+
+    spine_ranked, spine_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_ranked, tail_snapshot = _choose_top_vtrac_indices_round_robin_mix(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        snapshot_top_k=12,
+    )
+    if not spine_ranked or not tail_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_indices: List[int] = []
+    for raw in spine_ranked:
+        idx = int(raw)
+        if idx not in spine_indices:
+            spine_indices.append(idx)
+        if len(spine_indices) >= int(spine_packs_target):
+            break
+
+    used = set(spine_indices)
+    merged: List[int] = list(spine_indices)
+    for raw in tail_ranked:
+        idx = int(raw)
+        if idx in used:
+            continue
+        merged.append(idx)
+        used.add(idx)
+        if len(merged) >= int(rank_count):
+            break
+
+    if len(merged) < int(rank_count):
+        for raw in spine_ranked:
+            idx = int(raw)
+            if idx in used:
+                continue
+            merged.append(idx)
+            used.add(idx)
+            if len(merged) >= int(rank_count):
+                break
+
+    chooser_override: Dict[str, Any] = {
+        "scan_limit": int(scan_limit),
+        "sort_preset": "split_spine_methods_first__tail_round_robin_mix_methods_packs_score_total",
+        "spine_sort_preset": "methods_first",
+        "tail_sort_preset": "round_robin_mix_methods_packs_score_total",
+        "spine_packs_target": int(spine_packs_target),
+        "rank_count": int(rank_count),
+        "spine_chosen_indices": list(spine_indices),
+        "topN_spine": spine_snapshot.get("topN") if isinstance(spine_snapshot, dict) else [],
+        "mix": (tail_snapshot.get("mix") if isinstance(tail_snapshot, dict) else {}) or {},
+        "chosen_indices": [int(x) for x in merged[: int(rank_count)]],
+        "candidates_found": int(
+            max(
+                int(spine_snapshot.get("candidates_found") or 0) if isinstance(spine_snapshot, dict) else 0,
+                int(tail_snapshot.get("candidates_found") or 0) if isinstance(tail_snapshot, dict) else 0,
+            )
+        ),
+    }
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=b,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="display",
+        scan_limit=int(scan_limit),
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="round_robin_mix_methods_packs_score_total",
+        indices_ranked_override=merged,
+        chooser_ranked_override=chooser_override,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -5294,6 +5397,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_packs_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_rrmix_methods_packs_score_total": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_constraint_spine_methods2_or_var1_sort_score_total_first": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first_tail_score_first": {},
@@ -5409,6 +5513,13 @@ def main() -> None:
                 "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first"
             ][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards[
+                "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total"
+            ][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_rrmix_methods_packs_score_total(
                     ranked=ranked, budget=b
                 )
             )
