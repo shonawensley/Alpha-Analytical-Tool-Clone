@@ -94,6 +94,9 @@ Reference:
 - Ladder (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_LADDER__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first__stable10.md:1`
 - Casebook (Jan): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__CONVERSION_CASEBOOK__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first__stable10__B36.md:1`
 
+Recent B36 levers (evaluated; not promoted):
+- Taper6643 (free +1 tail lane) failed OOS strict guardrail: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6643_SPLIT_EVAL__2026-02-18.md:1`
+
 **Optional: strict-max baseline (research-only)**
 - Strategy: `convergence_box_first`
 - This maximizes strict hits, but sacrifices lane/pack semantics (everything is effectively “filler coverage”).
