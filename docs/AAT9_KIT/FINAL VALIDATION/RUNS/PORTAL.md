@@ -41,6 +41,10 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__GLASS_BOX_TRACE_BUNDLE__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__GLASS_BOX_TRACE_BUNDLE__tool_only__v0_2_default_multi_pack_packheavy_spine4_index_tail__stable10__B36.md`
 
+1.14.5) Strict miss anatomy (answers: “strict misses are lane drops vs within-lane misses?”):
+- Jan: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__STRICT_MISS_ANATOMY__tool_only__stable10__B36.md`
+- OOS: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__STRICT_MISS_ANATOMY__tool_only__stable10__B36.md`
+
 1.15) Crossroads synthesis memo (one gold day anchor; B36-only):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_SYNTHESIS__2026-01-15.md`
 
