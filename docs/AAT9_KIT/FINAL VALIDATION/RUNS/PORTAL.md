@@ -129,6 +129,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.15.26.5) Crossroads follow-up brief (tail cross-lens injection source sweep; not promoted):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAIL_XLENS_SOURCE_SWEEP__2026-02-19.md`
 
+1.15.26.6) Crossroads follow-up brief (tail XLens3 precheck; no movement; not promoted):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAIL_XLENS3_PRECHECK__2026-02-19.md`
+
 1.15.27) Crossroads follow-up brief (constraint chooser; not promoted):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_RRMIX_CHOOSER_EVAL__2026-02-18.md`
