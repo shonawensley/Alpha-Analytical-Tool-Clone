@@ -4190,6 +4190,172 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
     )
 
 
+def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__taper6444__xlens_m18_p22(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Geometry-width lever (selection-only): keep the promoted tail touched-set policy, but buy two
+    extra tail lanes by reducing the #2 spine index cap from 6→4 (taper 6/4/4/4).
+
+    Invariants:
+    - posture: tool_only + stable10 (selection-layer only)
+    - B36 only behavior (B12/B24 fall back)
+    - tail touched-set policy: same as the promoted methods@18 + packs@22 injection
+    - spine indices: methods_first
+    - tail base ordering: score_total_first
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+
+    spine_ranked, spine_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_score_ranked, tail_score_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="score_total_first",
+    )
+    tail_methods_ranked, tail_methods_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_packs_ranked, tail_packs_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="packs_first",
+    )
+    if not spine_ranked or not tail_score_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_indices: List[int] = []
+    for raw in spine_ranked:
+        idx = int(raw)
+        if idx not in spine_indices:
+            spine_indices.append(idx)
+        if len(spine_indices) >= int(spine_packs_target):
+            break
+    spine_set = set(spine_indices)
+
+    tail_score_excl = [int(x) for x in tail_score_ranked if int(x) not in spine_set]
+    tail_methods_excl = [int(x) for x in tail_methods_ranked if int(x) not in spine_set]
+    tail_packs_excl = [int(x) for x in tail_packs_ranked if int(x) not in spine_set]
+
+    keep_top = 14
+    inject_methods_pos = 18
+    inject_packs_pos = 22
+
+    tail_ordered: List[int] = []
+    seen_tail: set[int] = set()
+
+    def _add_tail(idx: int) -> None:
+        if idx in seen_tail:
+            return
+        tail_ordered.append(idx)
+        seen_tail.add(idx)
+
+    for idx in tail_score_excl[: max(0, int(keep_top))]:
+        _add_tail(int(idx))
+
+    def _inject_from(source: Sequence[int], pos: int) -> Optional[int]:
+        if not source:
+            return None
+        p = int(pos)
+        if p < 0:
+            return None
+        if p >= len(source):
+            return None
+        for i in range(p, len(source)):
+            idx = int(source[i])
+            if idx in seen_tail:
+                continue
+            return idx
+        return None
+
+    injected_methods = _inject_from(tail_methods_excl, inject_methods_pos)
+    if injected_methods is not None:
+        _add_tail(int(injected_methods))
+
+    injected_packs = _inject_from(tail_packs_excl, inject_packs_pos)
+    if injected_packs is not None:
+        _add_tail(int(injected_packs))
+
+    for idx in tail_score_excl:
+        _add_tail(int(idx))
+
+    # Backstop fill: if score_total_first couldn’t supply enough unique tail indices, top up from the other lenses.
+    if len(tail_ordered) < (int(rank_count) - int(spine_packs_target)):
+        for idx in tail_methods_excl + tail_packs_excl:
+            if len(tail_ordered) >= (int(rank_count) - int(spine_packs_target)):
+                break
+            _add_tail(int(idx))
+
+    merged = list(spine_indices) + list(tail_ordered)
+    chooser_override: Dict[str, Any] = {
+        "scan_limit": int(scan_limit),
+        "sort_preset": "taper6444__split_spine_methods_first__tail_score_total_first__tail_spread_top14_pos18_22__xlens_methods18_packs22",
+        "spine_sort_preset": "methods_first",
+        "tail_sort_preset": "score_total_first",
+        "tail_spread_policy": {
+            "keep_top": int(keep_top),
+            "inject_sources": {
+                "methods_first": {"pos": int(inject_methods_pos), "chosen": int(injected_methods) if injected_methods is not None else None},
+                "packs_first": {"pos": int(inject_packs_pos), "chosen": int(injected_packs) if injected_packs is not None else None},
+            },
+        },
+        "spine_packs_target": int(spine_packs_target),
+        "rank_count": int(rank_count),
+        "spine_chosen_indices": list(spine_indices),
+        "tail_chosen_indices_first16": [int(x) for x in tail_ordered[:16]],
+        "topN_spine": spine_snapshot.get("topN") if isinstance(spine_snapshot, dict) else [],
+        "topN_tail_score_total": tail_score_snapshot.get("topN") if isinstance(tail_score_snapshot, dict) else [],
+        "topN_tail_methods": tail_methods_snapshot.get("topN") if isinstance(tail_methods_snapshot, dict) else [],
+        "topN_tail_packs": tail_packs_snapshot.get("topN") if isinstance(tail_packs_snapshot, dict) else [],
+        "chosen_indices": [int(x) for x in merged[: int(rank_count)]],
+        "candidates_found": int(
+            max(
+                int(spine_snapshot.get("candidates_found") or 0) if isinstance(spine_snapshot, dict) else 0,
+                int(tail_score_snapshot.get("candidates_found") or 0) if isinstance(tail_score_snapshot, dict) else 0,
+                int(tail_methods_snapshot.get("candidates_found") or 0) if isinstance(tail_methods_snapshot, dict) else 0,
+                int(tail_packs_snapshot.get("candidates_found") or 0) if isinstance(tail_packs_snapshot, dict) else 0,
+            )
+        ),
+    }
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=b,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 4, 4, 4),
+        spine_pick_mode="display",
+        scan_limit=int(scan_limit),
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
+        indices_ranked_override=merged,
+        chooser_ranked_override=chooser_override,
+    )
+
+
 def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_methods22(
     *,
     ranked: Sequence[Dict[str, Any]],
@@ -6801,6 +6967,7 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__xlens_m18_p22_sc800": {},
+            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__taper6444__xlens_m18_p22": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top13_pos18_22__xlens3": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top13_pos18_22__xlens3_m18_p22_s26": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22__xlens_m18_m22": {},
@@ -6983,6 +7150,11 @@ def main() -> None:
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__xlens_m18_p22_sc800"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22_scan800(
+                    ranked=ranked, budget=b
+                )
+            )
+            strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__taper6444__xlens_m18_p22"][f"B{b}"] = (
+                _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__taper6444__xlens_m18_p22(
                     ranked=ranked, budget=b
                 )
             )

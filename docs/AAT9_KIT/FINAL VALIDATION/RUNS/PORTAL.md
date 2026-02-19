@@ -138,6 +138,9 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.15.26.8) Crossroads follow-up brief (scan depth lever; no-op under stable10; not promoted):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__XLENS_M18_P22_SC800_PRECHECK__2026-02-19.md`
 
+1.15.26.9) Crossroads exploratory brief (out-of-invariants geometry width; taper6444; not promotable in this phase):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6444_XLENS_M18_P22_PRECHECK__2026-02-19.md`
+
 1.15.27) Crossroads follow-up brief (constraint chooser; not promoted):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_CONSTRAINT_CHOOSER_EVAL__2026-02-17.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__TAPER6644_RRMIX_CHOOSER_EVAL__2026-02-18.md`
