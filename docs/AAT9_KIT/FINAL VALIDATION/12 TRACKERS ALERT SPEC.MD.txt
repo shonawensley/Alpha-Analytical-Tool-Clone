@@ -1,0 +1,365 @@
+12 TRACKERS ALERT SPEC.MD
+
+
+
+You got it. I’m going to lock in a single, copy‑paste ready spec you can drop straight into the repo:
+docs/alerts_spec.md — “AAT9 Alerts Spec v1.0 (Profit‑First)”.
+
+Heads‑up: some older uploads you shared in past sessions may have expired from the working cache. It doesn’t block this work; the spec below is self‑sufficient. If you want specific legacy excerpts wired in later, just re‑upload those files and I’ll tie them in.
+
+Below is the full spec (ready to paste). It tells Codex exactly what to detect, why it’s profitable, what to play, caps/decay, fields to add, unit tests, config, and Control Center wiring. It also lets you start capturing value now, without waiting for the Aggregator/ML.
+
+# AAT9 **Alerts Spec** v1.0 — Profit‑First (Brain‑1/Brain‑2)
+
+**Goal**  
+Convert high‑conviction pattern situations into **cheap, testable, spend‑capped plays** that modules can emit **now**, that the **Control Center** can rank, and that the **Aggregator/ML** can learn from later. This spec is standalone and can be implemented tool‑by‑tool.
+
+---
+
+## 0) Architecture (where Alerts live)
+
+- **Brain‑1 (Per‑State Engines)**: Stable Pattern Extractor, Digit‑Reduction, Hot‑Zones (new), V‑TRAC Analyzer.  
+  These detect alerts and write daily alert rows.
+- **Brain‑2 (Control Center + Aggregator/ML)**: Cross‑state panels (BA alerts, due‑doubles, consensus states, index repeats) that **rank alerts** and (later) create a spend‑disciplined plan.
+
+```mermaid
+flowchart LR
+  subgraph Brain1[Per‑State Engines]
+    SP[Stable Extractor\n(cons_*, rowcov, perm, hot)] -->|emit alerts| ALERTS
+    DR[Digit Reduction\n(survivors, double_bias)] -->|emit alerts| ALERTS
+    HZ[Hot‑Zones (new)\n(hot×cons overlap, lingering)] -->|emit alerts| ALERTS
+    VT[V‑TRAC Analyzer\n(index ranks, repeat risk)] -->|emit alerts| ALERTS
+  end
+  BA[Blackapple\n(27–29 foundation, mirror, root due, floats)] --> ALERTS
+  ALERTS[per‑state alerts CSVs] --> CC[Control Center Alerts Panel]
+  CC --> OPS[Operator Plan (box/straight sets w/ caps & decay)]
+
+
+______________________________________
+
+1) Shared Daily Alerts Schema
+
+Every module writes to a per‑state daily file:
+
+data/outputs/alerts/<STATE>/<YYYY-MM-DD>.csv
+
+columns:
+  alert_id            # "A01".."A12"
+  state               # "ON", "NY", ...
+  section             # Midday / Evening / Combined (or "")
+  set                 # Set1 / Set2 / Set3 (or "")
+  draw                # draw key/date
+  col                 # 1..N (tail logic uses 1..2)
+  canonical           # "479" etc. when relevant
+  strength            # 1..5 (see §2.2)
+  suggested_kind      # BOX | STR8_8 | STR8_3 | STR8_4of8 | SKIP
+  cap_lines           # integer max lines for this alert
+  decay_in_draws      # #draws before auto‑expiry (unless reinforced)
+  venue_default       # store | online
+  evidence_json       # compact JSON of flags used
+  created_at          # ISO timestamp
+
+Simple writer helper:
+
+Simple writer helper:
+
+def write_alert(row: dict): 
+    # append to csv; create dirs as needed
+    ...
+
+___________
+
+2) Global Profit Constants & Strength
+2.1 Payout & Timeframe constants
+
+(used later by Aggregator; alerts just set caps + venue_default
+
+payouts:
+  store:   { BOXED: 100, STRAIGHT: 500 }
+  online:  { BOXED: 160, STRAIGHT: 900 }
+
+timeframes:
+  store_boxed:   1/100
+  online_boxed:  1/160
+  store_str8:    1/500
+  online_str8:   1/900
+2.2 Alert strength (1..5)
+
+Start with:
+
+strength = base
+         + bonus(consensus grade)
+         + bonus(rowcov / hz_rowcov)
+         + bonus(perm==1 OR low order entropy)
+         + bonus(BA triggers: foundation/root/mirror/float)
+         + bonus(VTRAC index align or repeat_risk)
+         - penalty(age beyond hazard median)
+
+Map: 1–2 watch / 3–4 actionable / 5 “green‑light”.
+
+
+________________________________
+
+3) The Twelve “Can’t‑Skip” Alerts (A01..A12)
+
+Each: Detect → Why → Play → Caps/Decay → Module → Evidence → Unit tests
+
+A01 — Dual‑Tail Consensus + 3‑Value Support
+
+Detect: cons_tail_2d==1 (Col‑1 or Col‑2) and a top 3‑value includes those two digits with rowcov≥3.
+Why: 2‑digit tail collapses permutations; 3‑value confirms structure.
+Play:
+
+BOX: singles whose 3 internal pairs are inside BA 27–29 foundation.
+
+STR8 overlay (V‑TRAC 8) if any: perm==1 OR cons_dualcol==1 OR cons_cross_sections≥2 OR BA.ALERT.
+Caps/Decay: cap ≤ 12; decay 3 draws (reset on reinforcement).
+Module: Stable + BA (+ Aggregator later).
+Evidence: {"cons_tail_2d":1,"rowcov":>=3,"perm":0/1,"cons_dualcol":0/1,"cons_cross_sections":0..3,"ba_foundation_ok":1}
+Tests: 2‑digit tail + rowcov=3 ⇒ BOX; add perm==1 ⇒ STR8_8 overlay.
+
+A02 — Single‑Tail Consensus + Doubles Bias
+
+Detect: cons_tail_1d==1 and double (or mirror‑double) evident in Col‑1/2 or dr_double_bias==1.
+Why: doubles straight costs 3 lines (cheapest straight).
+Play: STR8 (3): 1–2 doubles families (+ mirror double). Optional tiny BOX hedge if BA OFF.
+Caps/Decay: cap ≤ 6; decay 2 draws unless BA ALERT.
+Module: Stable + DR + Control Center (due‑doubles) + Aggregator.
+Evidence: {"cons_tail_1d":1,"double_bias":1,"due_doubles_rank":1..17}
+Tests: tails 7/7/7/7 + DR “aab” ⇒ STR8_3, cap≤6.
+
+A03 — Cross‑Variant Consensus (≥2 of Mid/Even/Comb)
+
+Detect: cons_cross_sections ≥ 2.
+Why: agreement across sections = finishing; safe for overlay.
+Play: apply A01/A02 with auto straight overlay if not already suggested.
+Caps/Decay: overlay cap ≤ 8; decay 2 draws.
+Module: Stable + Aggregator.
+Evidence: {"cons_cross_sections":2|3}
+Tests: Mid+Even share tail ⇒ overlay even if perm>1.
+
+A04 — Set‑Persistence Carry (Set2→Set1) on a 3‑Value
+
+Detect: cons_set_persist==1 OR linger_across_sets≥2.
+Why: “pending” patterns hit often; boxed guardrail is cheap.
+Play: BOX only (≤12) via BA foundation; escalate only if A01/A03/A05 fire.
+Caps/Decay: cap ≤ 12; decay 3 draws.
+Module: Stable + BA.
+Evidence: {"cons_set_persist":1,"rowcov":2|3,"ba_foundation_ok":1}
+Tests: carry Set2→Set1 ⇒ BOX only.
+
+A05 — Horizontal Straight Drift (perm=1 across columns)
+
+Detect: perm==1 persists across adjacent columns for same canonical.
+Why: direct order evidence; combine with consensus to justify straight.
+Play: STR8 8 (single) / STR8 3 (double). BOX only if BA needs it.
+Caps/Decay: cap ≤ 8 / 3; decay when perm breaks.
+Module: Stable + Aggregator.
+Evidence: {"perm":1,"horiz_span":2|3}
+Tests: identical ordering across Col‑3→Col‑1 ⇒ STR8 suggested.
+
+A06 — Long‑String DR Survivor → 3‑Value
+
+Detect: DR (T/A/C) reduces a long R2 to the same 3‑value across ≥2 sets or Mid/Even.
+Why: early peek; cheap to box; upgrade later.
+Play: BOX (≤12) now; add overlay if A01/A03/A05 later.
+Caps/Decay: cap ≤ 12; decay 2 draws if survivor breaks.
+Module: DR + Aggregator.
+Evidence: {"dr_survivor_3v":1,"dr_methods":["T","A"]}
+Tests: survivor Set3→Set2 ⇒ BOX with cap 12.
+
+A07 — Mirror Echo (last‑draw mirror in R2 tails)
+
+Detect: last draw’s mirror appears in R2 tail boxes and overlaps leading 3‑value.
+Why: timing cue that concentrates boxes; straight if reinforced.
+Play: BOX via BA foundation; overlay straight if A01/A03/A05.
+Caps/Decay: cap ≤ 12; decay 2 draws.
+Module: BA (mirror) + Stable + Aggregator.
+Evidence: {"ba_mirror_latest":1,"cons_tail_1d|2d":1,"rowcov":>=2}
+Tests: mirror injected ⇒ BOX; perm==1 next ⇒ overlay.
+
+A08 — Remaining‑Pairs (BA 27–29) Full‑Foundation Box
+
+Detect: a canonical’s 3 internal pairs all inside BA 27–29.
+Why: smallest clean BOX universe.
+Play: BOX only; overlay straight only with A01/A03/A05.
+Caps/Decay: cap ≤ 12; decay when pairs consumed.
+Module: BA + Aggregator.
+Evidence: {"ba_foundation_ok":1}
+Tests: triple‑pair in foundation ⇒ BOX cap 12.
+
+A09 — Top V‑TRAC Index Repeat Risk
+
+Detect: today’s top V‑TRAC index == yesterday’s (v0) or repeat_risk≥T (v1). Candidate maps to that index.
+Why: collapses straight to 8 (single) / 3 (double).
+Play: STR8 8/3; tiny BOX hedge only if BA OFF.
+Caps/Decay: cap ≤ 8/3; decay after 1 miss or rank drop.
+Module: V‑TRAC + Control Center + Aggregator.
+Evidence: {"vtrac_repeat_risk":1,"index_id":"v5"}
+Tests: yday==today top index ⇒ STR8_x.
+
+A10 — State‑Level Due‑Doubles (Top‑3)
+
+Detect: rank states by draws since last double; flag Top‑3.
+Why: 3‑perm straight; combine with A02/A07 for strong EV at tiny spend.
+Play: STR8 (3) on doubles families that meet A02; minimal BOX hedge.
+Caps/Decay: cap ≤ 6; clear on double hit or when leaving Top‑3.
+Module: Control Center + Aggregator.
+Evidence: {"due_doubles_rank":1..3}
+Tests: fabricate ranks; only Top‑3 emit alerts.
+
+A11 — Hot‑Zone × Consensus Overlap
+
+Detect: a starred box (hot) in Col‑2/Col‑1 also has cons_tail_1d/2d==1, and a 3‑value with rowcov≥3 sits inside/recently entered.
+Why: “finishing now”; safest box‑first, straight‑soon.
+Play: BOX immediately; overlay straight if A05 or A03.
+Caps/Decay: cap ≤ 12; decay 2 draws.
+Module: Hot‑Zones + Stable + Aggregator.
+Evidence: {"hz_hot_level":1|2,"cons_tail_*":1,"rowcov":>=3}
+Tests: hot+consensus+rowcov≥3 ⇒ BOX; add overlay on perm==1.
+
+A12 — Permutation Clamp (low order entropy across R‑rows)
+
+Detect: order dominance ≥ 0.75 across R2/R4/R6/R8 (1–2 orders dominate).
+Why: even if perm>1, “preferred orders” allow partial straights.
+Play: STR8 4–5 of 8 (single) / 2–3 of 3 (double); optional tiny BOX.
+Caps/Decay: cap ≤ 5 (single) / 3 (double); decay if dominance < 0.6.
+Module: Stable + Aggregator.
+Evidence: {"order_dominance":0.78,"perm_options":2}
+Tests: supply order counts ⇒ filtered STR8 with cap 4–5.
+
+
+
+_________________
+
+
+4) Module‑Level Field Additions
+
+Stable (per canonical row)
+cons_tail_1d, cons_tail_2d, cons_dualcol, cons_cross_sections, cons_set_persist, cons_vtrac_tail_1d, cons_vtrac_tail_2d, rowcov, perm, hot, horiz_span, linger_across_sets, order_counts_json
+
+Digit‑Reduction
+dr_survivor_3v (0/1), dr_double_bias (0/1), dr_methods_used: ["T","A",...]
+
+Hot‑Zones (new)
+hz_hot_level (0/1/2), hz_rowcov, hz_perm, hz_lingering_sets, hz_cons_link (0/1), hz_vtrac_index, hz_score
+
+V‑TRAC
+vtrac_index_rank_today, vtrac_index_rank_yday, vtrac_repeat_risk (0/1 v0), candidate_index_id
+
+BA / Control Center
+ba_status (0/1/2), ba_foundation_ok (0/1), ba_mirror_latest (0/1), ba_root_due (0/1), ba_floats (0/1), due_doubles_rank (1..17)
+
+5) Control Center “Alerts” Panel (UI)
+
+Columns: State | Alert (A01..A12) | Strength | Suggested | Cap | Decay T‑ | Why (badges: CONS/DR/HOT/BA/VTRAC/PERM) | Evidence (hover JSON) | Open (module links)
+Ranking: Strength desc, then Cap asc (cheapest first).
+Filters: by Alert id, BA status, due‑doubles Top‑3, V‑TRAC repeat.
+Action: multi‑select → “Build Draft Plan” (CSV/JSON).
+
+
+____________
+
+
+6) Config Files
+
+config/alerts.yml (starter)
+
+defaults:
+  venue_default: online
+  decay_draws: 2
+caps:
+  A01: 12; A02: 6; A03: 8; A04: 12; A05: 8; A06: 12; A07: 12; A08: 12; A09: 8; A10: 6; A11: 12; A12: 5
+
+strength_weights:
+  consensus_full_2d: 3
+  consensus_1d: 2
+  rowcov: 1
+  perm1: 1
+  horiz_span2: 1
+  ba_foundation: 2
+  ba_triggers_each: 1
+  vtrac_repeat: 2
+  dr_survivor: 1
+  order_dominance: 2
+  decay_penalty_per_draw: -1
+
+
+______________
+
+
+7) Unit Test Scaffolding
+
+Fixtures in tests/fixtures/alerts/:
+
+consensus_2d_col1.csv → A01 (BOX), then with perm==1 ⇒ overlay.
+
+consensus_1d_double.csv → A02 STR8_3.
+
+cross_variant.csv → A03 overlay.
+
+set_persist.csv → A04 boxed.
+
+horiz_perm.csv → A05 straight.
+
+dr_survivor.json → A06 boxed.
+
+mirror_echo.csv → A07 boxed.
+
+ba_foundation.json → A08 boxed.
+
+vtrac_repeat.json → A09 straight.
+
+due_doubles.json → A10 straight.
+
+hot_cons_overlap.csv → A11 boxed.
+
+order_entropy.json → A12 filtered straight.
+
+Assert: rows emitted with correct alert_id, suggested_kind, cap_lines, decay_in_draws.
+
+8) Rollout Checklist
+
+Stable: add cons_*, order_counts_json; unit tests.
+
+Digit‑Reduction: add dr_survivor_3v, dr_double_bias.
+
+Hot‑Zones: implement; output ranked rows; link to consensus.
+
+V‑TRAC: add vtrac_repeat_risk (v0: today==yday).
+
+BA/Control Center: ensure due‑doubles Top‑3; expose foundation.
+
+Alerts writer: per‑state CSVs; Control Center Alerts panel.
+
+Winners logs: include alert_ids_used in daily runs.
+
+Docs: add this spec to KIT; update diagrams.
+
+9) Future ML (optional)
+
+Fit simple logistic/GBM for P_box, P_straight per alert row using evidence features.
+
+Learn decay windows (hazard) and caps empirically per alert id.
+
+Improve V‑TRAC repeat beyond today==yday with rolling features.
+
+
+_____________
+
+10) Notes on Legacy Files
+
+If an older reference is missing, re‑upload it under /mnt/data/ (same filename preferred). This spec doesn’t depend on them.
+
+
+
+---
+
+## What I recommend you do next
+
+1) **Create the file** `docs/alerts_spec.md` with the content above.  
+2) **Implement the Alerts writer** in each tool (Stable, DR, Hot‑Zones, V‑TRAC, BA/Control Center) and start emitting per‑state CSVs today.  
+3) Add the simple **Control Center Alerts** panel that reads those CSVs, ranks by strength and caps, and lets you export a draft plan.  
+4) As soon as winners are logged, tag the day with **`alert_ids_used`** so we can learn decay windows and caps empirically.
+
+If you’d like, I can also produce the **starter code stubs** (writer helper, strength calculator, sample tests) in a follow‑up, but you can proceed right now by pasting the spec into your repo and wiring the 12 alerts one by one.

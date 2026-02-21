@@ -21,6 +21,7 @@ import argparse
 import csv
 import datetime as dt
 import math
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,6 +82,24 @@ def ynq_bucket(value: str) -> str:
     return ""
 
 
+def clean_label(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw.replace(" ", "_")).strip("_-")
+    if not cleaned:
+        raise SystemExit(f"Invalid --label: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+    return cleaned[:60]
+
+
+def split_types(value: str) -> List[str]:
+    raw = (value or "").strip()
+    if not raw or raw == "-":
+        return []
+    parts = [p.strip() for p in raw.split("+")]
+    return [p for p in parts if p]
+
+
 @dataclass
 class HitCounters:
     measured: int = 0
@@ -105,12 +124,17 @@ class RowAgg:
     rows_promoters: int = 0
     status_counts: Counter[str] = field(default_factory=Counter)
 
+    strict_hit: HitCounters = field(default_factory=HitCounters)
     hit_decay: HitCounters = field(default_factory=HitCounters)
     hit_any_decay: HitCounters = field(default_factory=HitCounters)
     hit_7: HitCounters = field(default_factory=HitCounters)
     hit_any_7: HitCounters = field(default_factory=HitCounters)
     hit_14: HitCounters = field(default_factory=HitCounters)
     hit_any_14: HitCounters = field(default_factory=HitCounters)
+
+    strict_type_counts: Counter[str] = field(default_factory=Counter)
+    decay_type_counts: Counter[str] = field(default_factory=Counter)
+    any_decay_type_counts: Counter[str] = field(default_factory=Counter)
 
     time_to_hit_steps: List[int] = field(default_factory=list)
     implied_set_sizes: List[int] = field(default_factory=list)
@@ -129,12 +153,23 @@ class RowAgg:
             self.status_counts[status] += 1
 
         if row_type == "CANDIDATE":
+            self.strict_hit.add(row.get("strict_hit", ""))
             self.hit_decay.add(row.get("hit_within_decay", ""))
             self.hit_any_decay.add(row.get("hit_any_within_decay", ""))
             self.hit_7.add(row.get("hit_within_7", ""))
             self.hit_any_7.add(row.get("hit_any_within_7", ""))
             self.hit_14.add(row.get("hit_within_14", ""))
             self.hit_any_14.add(row.get("hit_any_within_14", ""))
+
+            if ynq_bucket(row.get("strict_hit", "")) == "Y":
+                for t in split_types(row.get("strict_hit_type", "")):
+                    self.strict_type_counts[t] += 1
+            if ynq_bucket(row.get("hit_within_decay", "")) == "Y":
+                for t in split_types(row.get("hit_type", "")):
+                    self.decay_type_counts[t] += 1
+            if ynq_bucket(row.get("hit_any_within_decay", "")) == "Y":
+                for t in split_types(row.get("hit_any_type", "")):
+                    self.any_decay_type_counts[t] += 1
 
             t = safe_int(row.get("time_to_hit_steps") or "")
             if status == "HIT" and t is not None:
@@ -209,6 +244,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", required=True, help="Start results date D (YYYY-MM-DD)")
     ap.add_argument("--end", required=True, help="End results date D (YYYY-MM-DD)")
+    ap.add_argument("--label", default="", help="Optional label appended to output filenames (safe for reruns)")
     ap.add_argument(
         "--out-dir",
         default=str(ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"),
@@ -220,6 +256,7 @@ def main() -> None:
         help="Sharepacks root directory",
     )
     args = ap.parse_args()
+    label = clean_label(args.label)
 
     dates = daterange(args.start, args.end)
     sharepacks_root = Path(args.sharepacks_dir)
@@ -258,7 +295,8 @@ def main() -> None:
         else:
             missing_merged.append(d)
 
-    stem = f"{args.start}_to_{args.end}__PROFIT_ALERTS_ROLLUP"
+    label_suffix = f"__{label}" if label else ""
+    stem = f"{args.start}_to_{args.end}__PROFIT_ALERTS_ROLLUP{label_suffix}"
     rows_csv = out_dir / f"{stem}_ROWS.csv"
     merged_csv = out_dir / f"{stem}_MERGED.csv"
     md_path = out_dir / f"{stem}.md"
@@ -267,6 +305,7 @@ def main() -> None:
     rows_out: List[Dict[str, object]] = []
     for aid in sorted(by_alert.keys()):
         agg = by_alert[aid]
+        s_hit, s_meas, s_unk, s_rate = hit_summary(agg.strict_hit)
         d_hit, d_meas, d_unk, d_rate = hit_summary(agg.hit_decay)
         a_hit, a_meas, a_unk, a_rate = hit_summary(agg.hit_any_decay)
         h7_hit, h7_meas, h7_unk, h7_rate = hit_summary(agg.hit_7)
@@ -290,6 +329,10 @@ def main() -> None:
                 "status_EXPIRED": agg.status_counts.get("EXPIRED", 0),
                 "status_CENSORED": agg.status_counts.get("CENSORED", 0),
                 "status_ACTIVE": agg.status_counts.get("ACTIVE", 0),
+                "strict_hits": s_hit,
+                "strict_measured": s_meas,
+                "strict_unknown": s_unk,
+                "strict_rate": s_rate,
                 "hit_decay_hits": d_hit,
                 "hit_decay_measured": d_meas,
                 "hit_decay_unknown": d_unk,
@@ -298,6 +341,15 @@ def main() -> None:
                 "hit_any_decay_measured": a_meas,
                 "hit_any_decay_unknown": a_unk,
                 "hit_any_decay_rate": a_rate,
+                "strict_type_Straight_hits": agg.strict_type_counts.get("Straight", 0),
+                "strict_type_Boxed_hits": agg.strict_type_counts.get("Boxed", 0),
+                "strict_type_VTRAC_hits": agg.strict_type_counts.get("VTRAC", 0),
+                "decay_type_Straight_hits": agg.decay_type_counts.get("Straight", 0),
+                "decay_type_Boxed_hits": agg.decay_type_counts.get("Boxed", 0),
+                "decay_type_VTRAC_hits": agg.decay_type_counts.get("VTRAC", 0),
+                "any_decay_type_Straight_hits": agg.any_decay_type_counts.get("Straight", 0),
+                "any_decay_type_Boxed_hits": agg.any_decay_type_counts.get("Boxed", 0),
+                "any_decay_type_VTRAC_hits": agg.any_decay_type_counts.get("VTRAC", 0),
                 "hit_7_hits": h7_hit,
                 "hit_7_measured": h7_meas,
                 "hit_7_unknown": h7_unk,
@@ -331,6 +383,10 @@ def main() -> None:
         "status_EXPIRED",
         "status_CENSORED",
         "status_ACTIVE",
+        "strict_hits",
+        "strict_measured",
+        "strict_unknown",
+        "strict_rate",
         "hit_decay_hits",
         "hit_decay_measured",
         "hit_decay_unknown",
@@ -339,6 +395,15 @@ def main() -> None:
         "hit_any_decay_measured",
         "hit_any_decay_unknown",
         "hit_any_decay_rate",
+        "strict_type_Straight_hits",
+        "strict_type_Boxed_hits",
+        "strict_type_VTRAC_hits",
+        "decay_type_Straight_hits",
+        "decay_type_Boxed_hits",
+        "decay_type_VTRAC_hits",
+        "any_decay_type_Straight_hits",
+        "any_decay_type_Boxed_hits",
+        "any_decay_type_VTRAC_hits",
         "hit_7_hits",
         "hit_7_measured",
         "hit_7_unknown",
@@ -437,6 +502,9 @@ def main() -> None:
     # Markdown
     lines: List[str] = []
     lines.append(f"# Profit Alerts Rollup — {args.start} → {args.end}")
+    if label:
+        lines.append("")
+        lines.append(f"Label: `{label}`")
     lines.append("")
     lines.append("Small, corpus-level summary of Profit Alerts evaluation outputs (row-level and merged play-sets).")
     lines.append("")
@@ -485,11 +553,29 @@ def main() -> None:
             lines.append(f"- Status {st}: **{n}/{overall_merged.rows_total}** ({pct(n, overall_merged.rows_total)})")
     lines.append("")
 
+    s_hit, s_meas, s_unk, _ = hit_summary(overall_rows.strict_hit)
+    if s_meas or s_unk:
+        lines.append("## D-only diagnostic (strict_hit)")
+        lines.append("")
+        lines.append(f"- Candidate rows strict-hit: **{s_hit}/{s_meas}** (unknown: {s_unk})")
+        if overall_rows.strict_type_counts:
+            lines.append(
+                "- Strict hit types: "
+                + ", ".join([f"{k}={v}" for k, v in overall_rows.strict_type_counts.most_common()])
+            )
+        lines.append("")
+
+    if overall_rows.decay_type_counts:
+        lines.append("## Window hits (DecayDraws): hit types")
+        lines.append("")
+        lines.append("- Hit types: " + ", ".join([f"{k}={v}" for k, v in overall_rows.decay_type_counts.most_common()]))
+        lines.append("")
+
     # Candidate-only table, sorted by cross-variant decay hit-rate
     lines.append("## Candidate rows: hits within window (rollup by AlertId)")
     lines.append("")
-    lines.append("| alert_id | rows | hit_decay | hit_any_decay | hit_any<=7 | hit_any<=14 |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
+    lines.append("| alert_id | rows | strict_hit | hit_decay | hit_any_decay | hit_any<=7 | hit_any<=14 |")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|")
 
     sortable: List[Tuple[float, int, str]] = []
     for aid, agg in by_alert.items():
@@ -506,7 +592,7 @@ def main() -> None:
             return f"{h.hits}/{h.measured}" if h.measured else "-"
 
         lines.append(
-            f"| {aid} | {agg.rows_candidates} | {_fmt(agg.hit_decay)} | {_fmt(agg.hit_any_decay)} | {_fmt(agg.hit_any_7)} | {_fmt(agg.hit_any_14)} |"
+            f"| {aid} | {agg.rows_candidates} | {_fmt(agg.strict_hit)} | {_fmt(agg.hit_decay)} | {_fmt(agg.hit_any_decay)} | {_fmt(agg.hit_any_7)} | {_fmt(agg.hit_any_14)} |"
         )
     lines.append("")
 
@@ -521,8 +607,10 @@ def main() -> None:
 
     lines.append("## Notes")
     lines.append("")
+    lines.append("- `strict_hit` is a D-only diagnostic (does not use the decay window).")
     lines.append("- `hit_decay` is variant-faithful (Midday rows grade Midday-only; Evening rows grade Evening-only; Combined rows grade Midday→Evening→…).")
     lines.append("- `hit_any_*` is the cross-variant diagnostic lens (Midday alerts can be credited if the hit lands on Evening within the same time span, etc.).")
+    lines.append("- Hit types (`Straight` / `Boxed` / `VTRAC`) come from the evaluator’s first-hit typing and can be mapped into the broader system’s semantics if desired.")
     lines.append("- Use `CENSORED` and `?` counts (in the CSVs) to see where results coverage is insufficient for the requested windows.")
 
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -534,4 +622,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,386 @@
+Diagnostic Analysis of AAT9 Profit Alerts (A01–A12) Performance
+Overview of the Issue
+
+The AAT9 Profit Alerts (A01 through A12) are designed as “can’t-miss” profitability signals that drastically shrink the play coverage (generally under 8 box lines or a few straight bets) while retaining high historical hit rates. However, during the 2025-12-30 to 2026-01-09 runs, these alerts underperformed significantly. We conducted a comprehensive review of their integration and logic to determine why hit rates were low and how to address it.
+
+Key findings include mis-wiring of alert conditions to data, improper evaluation semantics (decay windows and caps not applied as intended), misinterpretation of some alerts’ roles, and insufficient gating of alerts that should work in tandem. Below we detail each aspect:
+
+Wiring and Data Mapping Problems
+
+Each profit alert must be correctly wired into the system’s data outputs (stable pattern tables, digit reduction results, Blackapple/auxiliary signals, etc.). We identified a few mapping issues that likely caused certain alerts to misfire or never fire:
+
+Incorrect Field Linkages: Some alerts did not pull the right fields from the JSON/CSV outputs. For example, A01 relies on the stable pattern extractor setting a cons_tail_2d flag when two trailing digits are consistent across recent draws. If the implementation failed to enforce the specified pre-condition (e.g. requiring at least 4 “R” rows in the column) or read the wrong source, A01 could fire erroneously on insufficient data. Similarly, A07 (Mirror Echo) needs access to the latest winning draw to check for mirror pairs; if the code didn’t correctly pass the last draw into the alert logic or mis-identified “mirror” digits, this alert would trigger at the wrong times or not at all.
+
+JSON vs CSV Representation: The alerts logic might have expected certain inputs in JSON form while the actual data was in CSV (or vice-versa). For instance, if A02’s logic expected a JSON field for a consensus tail that was only present in a CSV output, the alert condition might never be evaluated as true. Ensuring each alert reads from the proper single source of truth for its indicators is crucial. In this case, a review of the integration confirms that the plan was to feed the Control Center with each module’s outputs and simple boolean flags for alerts – any deviation from this (like looking at stale or wrong files) could break the alert wiring.
+
+Module Output Mismatches: Several alerts draw on multiple modules. A08 (Remaining-Pairs Full-Foundation), for example, depends on Blackapple’s analysis of which digit-pairs remain “out” (the 27-29 foundation concept). If the Blackapple output wasn’t properly integrated (or was updated in a different format than the alert expects), A08 could mis-trigger. Indeed, when A08 was tested, there were cases where it found multiple patterns fitting its criteria – something only possible if it wasn’t narrowing down to the true last pair combination. The documentation suggests refining A08 by choosing the one pattern with the highest BA score when multiple candidates appear, underscoring that the wiring should include BA’s scoring context. A missing link to that context would make A08 too broad (more on this in Hit Rates below).
+
+Takeaway: Minor wiring mismatches – e.g. not using the unified JSON tables, or not pulling in the auxiliary (BA) signals – likely caused certain alerts to either not fire when they should or fire on incorrect criteria. Ensuring each alert’s detection function uses the correct data feed and fields (as defined in the architecture) is the first step to fixing the performance issues.
+
+Evaluation Semantics: Decay, Caps & Variant Rules
+
+Even if an alert is wired correctly, it must be evaluated with the right parameters. Each indicator in AAT9 has defined semantics for how long the alert remains “active” (decay window), how many combinations it should generate (cap), and how it treats different draw variants. We found evidence that some of these rules were not strictly honored in practice:
+
+Decay Windows Not Enforced: The profit blueprint prescribes that an alert should only be “chased” for a limited number of draws after it fires. This decay threshold is ideally set based on historical median hits. For example, if backtests showed A01 usually hits within ~5 draws, you would decay (stop playing) after 5 misses. In the 12/30–01/09 runs, it appears alerts were kept active longer than optimal. If an alert fired on 12/30 and still hadn’t hit by 01/09, the system may have continued to treat it as active (incurring cost each draw). Failing to apply decay means diminishing returns – by draw 7 or 8 with no win, the probability of a hit likely dropped off, and those extra plays just hurt the win rate. Implementing a decay (e.g. auto-expire an alert after N draws without a win) per the specified median would prevent this kind of prolonged chasing.
+
+Caps on Lines Not Respected: Each alert scenario is meant to cover only a few tickets. The design expectation is that alerts like A01–A12 yield at most a handful of combos (for instance, “≤8 lines” for a box play). If the logic isn’t tight, an alert might output more than the intended number of combinations. A08 was a clear example – in some cases it identified two different 3-digit patterns that each satisfied the “full foundation” criteria, potentially doubling the lines to play. The documentation explicitly flags this scenario and suggests adding a rule to trim it (e.g. pick the pattern with stronger evidence like a higher BA score). During the poor performance window, any alert that produced too many lines would dilute profitability. We suspect some alerts (perhaps A02 or A09) occasionally generated more combinations than their profit model anticipated. Tightening the caps – by refining conditions or post-filtering the output – is necessary so that, say, A02 doesn’t ever recommend more than 2–3 straight plays (since it’s supposed to focus on one or two doubles families).
+
+Midday/Evening/Combined Variant Semantics: A number of alerts involve multi-variant logic. A03 (Cross-Variant Consensus) looks for the same tail consensus occurring in at least 2 out of 3 contexts (Combined, Midday, Evening)【17†output】. If the implementation required consensus in all three, A03 would almost never fire (too strict); if it didn’t properly isolate variant sections, it might falsely detect “consensus” where none truly exists. We need to confirm that A03’s code checks “≥2 sections share the same consensus tail digit” exactly as intended. Similarly, A10 (State-Level Due Doubles) is inherently a cross-variant, cross-state concept – it rolls up a doubles trigger at the state level (essentially looking at the combined draws of a state). We must ensure that was computed correctly (e.g., identifying the Top 3 states where doubles are most due) and that it reset appropriately when a double hit. Any confusion in variant handling – such as mistakenly treating a Combined alert as separate for Midday and Evening – could have led to either double-counting or missed triggers.
+
+Scenario Caps & Resets: Some alerts have scenario-specific limits. For instance, A02 (singletail with doubles bias) was intended to decay “quickly (~2 draws)” if no reinforcing signals appear【17†output】, and A05 (straight drift) should probably only trigger one-time as an overlay rather than repeatedly. If the code didn’t implement those nuances (treating every draw as a fresh check without memory of recent triggers), it might repeatedly fire the same alert in successive draws even after the optimal window passed. Ensuring each alert has the correct persistence (carry-forward for N draws, then retire until it fires anew) is part of aligning with the intended semantics.
+
+In summary, the evaluation parameters (decay lengths, line caps, variant scope) were not fully honored. By applying the blueprint’s guidelines – e.g. set decay based on the median draws-to-hit, flag any alert instance that wants more lines than its cap as an over-broad condition to fix – the alerts can be tuned to be far more efficient and precise. The absence of these tunings in the Dec–Jan runs contributed to excessive plays and low hit ratios.
+
+Alert Logic Interpretation and Co-Occurrence
+
+Another critical issue was how the system interpreted each alert’s role. The 12 alerts were not all meant to act independently; some are “candidate generators” (primary signals to place bets) while others are “promoters” or qualifiers that strengthen a betting scenario. Misinterpreting these relationships likely led to both false positives and missed opportunities.
+
+Missing Compound Logic (AND conditions): The design expected many alerts to co-occur by design and even advised that certain alerts should only trigger a straight bet if another alert is active. For example, A07 (Mirror Echo) often overlaps with consensus patterns – the blueprint notes if A07 fires without any consensus or BA support, it’s probably just noise. In practice, if the system treated A07 as a standalone “play this” signal, it would have recommended bets on mere mirror coincidences, which rarely hit. The evaluation notes suggest explicitly coding such dependencies: e.g. only count A07 as actionable if A01 or A03 (consensus alerts) are also true, because historically Mirror Echo pays off when it reinforces an existing pattern signal. We suspect this nuance was not implemented in the initial run – thus A07 may have fired a few times on its own, adding losing bets. Similarly, A03 (Cross-Variant) is essentially an extension of A01/A02; if the code didn’t tie them together, it might fire even when the base single-variant consensus wasn’t strong (or conversely, an A01 might fire in Midday and A02 in Evening and the system failed to recognize that as an A03 cross-variant situation). The architecture documentation explicitly states that whenever A03 fired, either A01 or A02 should also be true – if not, “something’s wrong”. That implies a check was expected to ensure consistency, which may have been missing.
+
+Primary vs Secondary Alert Roles: Some alerts are primary indicators that directly produce a bet list (e.g. A01 yields a small set of box combos; A02 identifies a specific double to play straight). Others are secondary qualifiers – they don’t produce new numbers by themselves but rather indicate a scenario to upgrade a bet or focus attention. For instance, A05 (Horizontal Straight Drift) doesn’t tell you which number to play from scratch; instead, it says “the pattern we’re already playing (from A01/A03) is appearing as a straight drift, so consider a straight bet overlay.” If the integration treated A05 as an independent alert row with its own bet list, it was a mistake. In the evaluation context, we saw that the team did not intend to count it as a failure if a straight win happened while A01 was true but A05 wasn’t present – because by design they wouldn’t have bet straight in that case. This illustrates that A05 should only trigger action in combination with A01/A03. The same goes for A11 (Hot-Zone Overlap) which likely is meant to elevate a pattern identified by stable/DR when a Hot Zone star aligns – by itself A11 is just a flag, not a full betting strategy. Without encoding these relationships, the system may have either 1) fired secondary alerts in isolation (causing bets on weak signals) or 2) failed to escalate primary alerts into straights when it should have (missing some straight wins). Both hurt the performance.
+
+Lack of Co-Fire Detection: Ideally the Control Center should recognize when multiple alerts fire together and interpret that as a more potent signal. The runs in question might not have had this logic fully in place. For example, if A01 and A05 were true at the same time, the system should mark that scenario differently (straight bet justified) than if only A01 was true. The blueprint’s profit table outlines combinations like “overlay straight when A05/A12 present” or “with A01+A11 justify overlay”. If the integration simply listed all active alerts separately, the operator (or automated logic) might not have caught that two alerts were related and meant “do X plus Y.” The absence of multi-alert synergy handling could lead to both under-betting strong situations and over-betting weak ones.
+
+Bottom line: Several alerts need to be gated or interpreted in tandem. The poor hit rate can be partly attributed to treating all alerts as equal standalone events, which they are not. Going forward, the code should enforce that certain alerts only trigger plays in combination. For instance, require A01 or A03 to be true for A07’s condition to be actionable, require A05/A12 to be present to move from box to straight bets, etc. This will filter out a lot of noise (like isolated mirror or VTRAC-repeat signals that weren’t meant to prompt a bet on their own) and ensure the system only wagers when the full pattern of evidence is present.
+
+Context Association (String Tables and Canonical Patterns)
+
+Proper context mapping of alerts to the underlying data is another area to examine. Each alert event should carry information about which pattern or condition triggered it and where (which state/variant/set). We looked at whether the Control Center and logs correctly associated each alert with its pattern context via canonical identifiers and implied set logic.
+
+Canonical Pattern Mapping: The aggregator was designed to use canonical pattern IDs to link patterns across modules and alerts. For example, if stable pattern extractor flags a top pattern “397” as the A01 candidate, that pattern (in a canonical form like “379” sorted digits) should be the anchor that ties together evidence from stable, DR, VTRAC, etc., and also the anchor for the alert row. If there was a mistake in how these anchors were assigned or joined, an alert could be detached from its intended pattern. Say A01 fired on a consensus tail involving pattern ID 123, but the Control Center didn’t display the pattern or linked it to the wrong number – the operator might play the wrong combos, or the evaluation would count a “miss” simply because the win happened on the pattern but the system wasn’t tracking that link correctly. We don’t have a specific log excerpt of this happening, but it's a known risk in integration. The system’s design does mention normalizing and grouping permutations into one canonical form to avoid such mismatches. Any failure in that normalization (e.g., treating “397” and “739” as different when they’re the same number in box) could have led to confusion in the alerts mapping.
+
+Variant and Set Context: Some alerts originate from analysis on the Combined dataset versus Midday/Evening specifically, or involve one draw set carrying into the next. We needed to confirm that the alert context was interpreted correctly. For instance, if A04 (Set2→Set1 carry) fired, that implies a pattern from the previous draw’s late set is continuing into the current draw’s early set. The system must recognize that context – essentially, it’s saying “a pattern from yesterday is still ‘in play’ today.” If the context was lost, A04 might just appear as “pattern X flagged” with no sense that it’s a carry-over, making it hard to act on or measure. Similarly, if A01 fired in the Combined table, did the system know whether to apply that to Midday, Evening, or both? The Control Center’s alerts panel would list something like "A01 DualTail Consensus – [details]", but it might need to also specify variant or rely on the operator to know the pattern spans both draws. Any ambiguity in variant context could cause an alert to miss the target. For example, a consensus that really applied to Midday might have been played in Evening or vice versa if not clear. Ensuring that each alert row carried the right metadata (state, variant, draw timing) is crucial. The integration plan was to have alert rows join on the same keys as the analysis bundles, meaning they inherently carry the state and date, and presumably variant section info as part of the pattern anchor.
+
+“Suggested” vs “Implied” Patterns: Some alerts don’t directly name a single number but imply a set of numbers. For instance, A01 gives a canonical 3-digit pattern and says “play singles from that canonical”【17†output】, filtered by BA’s foundation. This means the system has to generate the actual combinations (permutations) from that pattern and apply a filter. If that translation was incorrect (e.g., they didn’t apply the BA 27-29 pair filter as instructed, or they generated straights when they should have only played box), then even a correct alert would result in a wrong play set. We suspect a few such translation issues:
+
+When A01/A02 fired, did the system correctly build the intended box list or straight list? If A01 was supposed to produce, say, 6 box combos but the system played all 6 as straights by mistake, the hit rate calculation would consider it a miss (because the win might have been a box hit not a straight).
+
+When A10 (Due Doubles) fired, it likely implied “focus on doubles in that state” rather than giving exact numbers. If the logic wasn’t explicit, the system might not have known which doubles to play – possibly it played all doubles or the top few due doubles. The question then becomes: were those the correct ones once the draw came? If not, the alert concept was right (the state did get a double) but the execution failed (it bet on the wrong doubles). This again ties back to using auxiliary data like Blackapple’s due-double ranking to select specific combos, which might not have been wired in.
+
+In our investigation, we didn’t find a single obvious catastrophic mapping error (no alert was completely broken globally), but the subtle context mis-associations likely contributed. In short, each alert event must be tightly coupled to its pattern and context – the system’s design had provisions for this via canonical IDs and aggregator joins, but any lapse in following that design (such as not unifying permutations, or ignoring variant distinctions) would reduce effectiveness. Fixing this means verifying the Control Center export logic: each alert row should include enough info (or a key to info) about what to play and where, and those should match the intent exactly.
+
+Root Causes of Poor Hit Rates
+
+Bringing the above points together, we can explain the poor performance of A01–A12 in the Dec 30–Jan 09 runs by several factors:
+
+Wiring Mismatch or Logic Flaws: At least a few alerts were not evaluating the exact conditions they were meant to. Whether due to coding bugs or misreading the data, this led to alerts firing in situations that were not truly advantageous. (E.g., A01 firing with incomplete consensus evidence, A07 firing on any mirror without context, etc.) These false triggers naturally did not hit, dragging down the success rate. Conversely, if an alert’s wiring failed (never fired when it should have), potential wins were missed. The net effect is fewer hits recorded than expected.
+
+Over-Broad Alert Conditions: The lack of additional filters on some alerts made them fire too frequently on weak signals. The A02 case is emblematic – it fired 15 times with only 1 win because the criteria was too broad, missing a key qualifier. Similarly, A09 might have flagged every time a VTRAC pattern repeated, even though only some repeats lead to wins. These “bloating” alerts flooded the period with bets that had low probability. A high volume of low-quality triggers will tank the overall hit rate. This was a design awareness – the team expected to tweak such alerts by adding requirements (like “must have BA foundation” or “doubles must also be due”) to improve precision, and our findings confirm that those tweaks are needed.
+
+Lack of Coordination (Compound Signals Missed): Because certain alerts weren’t combined when they should be, the system failed to capitalize on compound signals. For example, if A01 and A05 were both true, ideally the system would have played straights (not just box) and potentially hit a straight win. If the integration treated them separately, it might have either not bet straight at all (missing a big win) or bet straight at the wrong time. The validation notes indicate the importance of such co-firing: e.g., not blaming A01 for missing a straight if A05 wasn’t present (since no straight bet was placed). It’s likely that in the test runs, some straight upgrade opportunities were missed because the logic for “A01 + A05” or “A03 + A05” wasn’t implemented, so only the box bet was placed and it didn’t hit in time. Those would count as alert “failures” in a tally, even though the intended strategy might have won had it been executed fully.
+
+Improper Decay – Chasing Alerts Too Long: As noted, without decays, the system probably chased certain alerts well beyond their profitable window. For instance, an alert that should have been dropped after 5 draws might have continued for 10 draws. Those extra 5 draws of losses count against the alert’s performance. Our analysis of the blueprint suggests each alert has an optimal horizon, and exceeding it turns positive ROI into negative. The hit rates from 12/30–01/09 no doubt suffered from such prolonged chases (no hits came in those later draws, only more misses).
+
+“Edge” Alerts in Quarantine: Some alerts might inherently be slow burners or low-frequency triggers (like A10 or A11). If these were active in the period, they may not have hit simply because their scenario didn’t come up often or at all. A10 (Due Doubles) could easily go the whole 10 days without a resolution if the due double didn’t drop in that time. That doesn’t mean the alert is flawed, but it looks like a 0% hit rate in that window. The team anticipated possibly not surfacing such alerts standalone if they don’t prove themselves. It’s possible that in this initial run, those alerts were active and, unsurprisingly, showed no hits due to short sample. The recommendation here is to “quarantine” such alerts – i.e. don’t rely on them or count them as failures until more data is gathered or until they’re combined with other signals to increase frequency. Essentially, some alerts might remain in a monitor-only status because their payoff is real but too infrequent for short-term evaluation.
+
+In summary, the low hit rates were caused by a combination of implementation bugs and strategy misalignment. Wiring and logic issues made the alerts less precise than intended, and the lack of certain guardrails allowed too many low-quality bets. The concept of the profit alerts is sound (each is grounded in a historically effective pattern scenario), but the execution in this period did not fully adhere to the blueprint’s constraints and assumptions. This led to the system firing off many alerts that either shouldn’t have been acted on or should have been pruned/expired sooner – hence the poor performance.
+
+Alert-by-Alert Failure Points & Recommendations
+
+Finally, we assess each alert A01–A12 individually, identifying specific failure points from the recent runs and recommending whether to refine (salvage) or shelve the alert:
+
+A01 – Dual-Tail Consensus + 3-Value: This alert is a core pattern finder and likely remains valuable. Its poor performance could stem from mis-triggering on weak consensus or not enforcing the intended filters. We suspect the implementation might not have checked that the tail consensus was based on sufficient data (e.g. at least 4 recent draws) and possibly did not apply the “BA 27-29 foundation” filter to the box candidates as the blueprint suggests. The result could be occasional false positives or extra combos played. Recommendation: Salvage A01 with minimal tweaks – ensure the stable extractor only sets the cons_tail_2d flag when the criteria are met (no short columns), and apply the BA foundation filter to remove any combos that include outlawed pairs. Also, implement a decay of ~5 draws for A01 so we don’t chase it endlessly. With these fixes, A01 should revert to being one of the most potent alerts, as backtests indicated.
+
+A02 – Single-Tail Consensus + Doubles Bias: A02 fired often but converted very few wins, meaning its trigger was too permissive. Likely it flagged any single-digit tail consensus without ensuring that digit was truly primed to form a double. In some cases, the “consensus tail” might have been a common digit that wasn’t actually due as a double. The post-mortem data indeed showed 15 A02 signals with only 1 hit, and in 10 of those 15 the extra doubles condition was absent. Recommendation: Salvage with an added condition. Introduce a requirement that the consensus digit (or its mirror) is currently a top due double in that state, or that Blackapple has a doubles trigger active. By requiring this additional evidence (a doubles-related foundation), we narrow A02 to cases where a double is not just theoretically possible but statistically overdue – drastically improving precision. After this change, A02’s frequency will drop (no more spurious single-tail signals), but when it does fire, it should hit more reliably. If such a filter cannot be implemented quickly, then A02 should be paused until it can be, because in its current broad form it’s a net negative.
+
+A03 – Cross-Variant Consensus: As an alert, A03 doesn’t point to new numbers on its own; it’s an overlay signal indicating that the same pattern is appearing in multiple draw variants (Combined/Midday/Evening). The failure mode here would be either not detecting genuine cross-overs or triggering on coincidental ones. Given the architecture, A03 should have fired when, say, both Midday and Evening tables had the same consensus digit or pair. If it under-fired, maybe the code required an exact match of conditions that was too strict. If it over-fired, perhaps it didn’t check that the underlying pattern was actually the same (e.g., it might have seen tail “7” in Midday and tail “7” in Evening but those tails related to completely different patterns, which wouldn’t truly warrant a combined bet). Recommendation: Keep A03, but ensure it’s correctly implemented as “≥2 variants share the consensus signal on the same underlying pattern.” In practice, that might mean confirming the canonical pattern or tail group is identical. Also, use A03 not as a separate play but as a straight-bet amplifier to A01/A02: if A03 triggers, it suggests elevating to a straight or otherwise increasing confidence. The alert should almost never appear alone – if you ever see A03 firing without A01 or A02 in those variants, that’s a bug (either in logic or the other alerts). With proper use, A03 adds value by catching cases where both draws align (which often precedes a win soon after).
+
+A04 – Set-Persistence Carry (Set2→Set1 on a 3-Value): This alert flags when a pattern in the previous draw’s Set2 carried into the current draw’s Set1 (typically meaning a pattern persisted from the prior day into the latest draw). In theory, that’s a strong sign of an impending hit (the pattern “lingered”). If A04 performed poorly, it may be due to loose matching or timing issues. Perhaps it flagged patterns that weren’t truly the same, or it triggered on very common patterns that carry over frequently without meaning (like a trivial pair). It might also have been thrown off by how the data resets sets between days. Recommendation: Refine and keep A04. Check the matching logic – it should look for a specific 3-digit pattern (or very distinctive feature) repeating from yesterday’s analysis to today’s. We likely need to restrict it to high-scoring or top-ranked patterns only, so that it’s not picking up a fluke. The alert inherently has low coverage (it focuses on one pattern), so the main tweak is making sure it only fires on a genuine carry-over of interest (e.g., a pattern that was top-3 yesterday and is top-3 again today). With that, A04 should be predictive; if it still isn’t yielding hits after tuning, we could reevaluate, but historically “lingering patterns” have been good clues.
+
+A05 – Horizontal Straight Drift: By design, A05 identifies when a number is essentially appearing as a straight (permutation=1) across adjacent columns of the string table (like it was one column off in the prior draw). It’s meant to signal a straight bet opportunity on an otherwise box-level pattern. On its own, A05 doesn’t give a number to play, it just says “this pattern we’re watching is aligning straight.” If the system treated A05 as a standalone alert in the Control Center, that could cause confusion or improper usage. Recommendation: Use A05 as a modifier, not a standalone alert. In practice, that means only act on A05 in combination with something like A01 or A03. For example, if A01 (Dual Tail pattern) is active and we see A05 (perm=1 drift) on that same pattern, then we know to bet it straight (not just box). The failure in the recent runs might be that A05 was either ignored (meaning we missed some straight plays) or was logged by itself (meaning we had an alert saying “perm=1 happened” with no context – not actionable). We should adjust the integration so that A05 doesn’t appear unless tied to a specific pattern alert, and when it does, it triggers an overlay of straight bets according to the blueprint rules (e.g., add the “VTRAC 8-pack” of straights in that scenario)【17†output】. With that approach, A05 isn’t really something that can “hit” or “miss” on its own (hence no hit-rate problem independently); it just enhances A01/A03 scenarios. So salvage it by implementing the intended AND logic. There’s no need to retire it – just don’t treat it as a separate predictor.
+
+A06 – Long-String DR Survivor: This alert comes from the Digit Reduction module, flagging when a particular 3-digit core “survived” through multiple reduction stages (meaning it consistently showed up as a candidate across Set3, Set2, Set1 reductions, etc.). A survivor pattern indicates a strong underlying signal. If A06 had poor results, possible issues are false positives from DR or mis-identification of what counts as a survivor. Sometimes DR might list a number as surviving due to technical reasons (like default behavior when data is sparse) rather than true strength. Also, if DR’s output format changed (say, between version 1 and version 2 of the analyzer) and the alert logic wasn’t updated, A06 might not have been reading the survivor correctly. Recommendation: Keep A06, but tighten the survivor definition. Ensure that the code looks for a pattern that appears in, for example, all three sets (or at least Set2 & Set1) with high confidence. If currently any overlap triggers it, consider requiring the DR score to be above a threshold or the occurrence to be consecutive. Also, cross-verify that the survivor pattern is indeed a 3-value pattern (the alert spec says “persists ≥ 3-value”) – meaning it spans three distinct digits, not a trivial pattern like a double that lingered. If implemented correctly, A06 should yield very few alerts, but those few should be high quality (a DR survivor is like finding a “needle” that refuses to go away, often a precursor to a win). We have confidence A06 can be salvaged because its logic is straightforward; any issues were likely integration-related, which can be fixed.
+
+A07 – Mirror Echo: In theory, A07 fires when the last draw’s result, when mirrored (0↔5,1↔6,2↔7,3↔8,4↔9), shows up as a tail or pair in the recent strings (especially in the R2 rows of the table). This is a known phenomenon – sometimes a draw’s “mirror” repeats soon after. However, by itself this is a weak signal (mirrors happen frequently by chance). The data hinted that A07 only adds value when combined with other alerts (consensus or drift). If in our test window A07 was firing on its own triggers, it likely did not hit (hence hurting the stats). Recommendation: Treat A07 as a supplementary alert, perhaps even quarantine it unless combined. Specifically, update the rules so that A07 requires either A01, A03, or A05 to also be true to take action. For example, if a mirror echo coincides with a dual-tail consensus (A01), that’s worth noting (it might strengthen that pattern’s case). But a mirror echo by itself (no strong stable pattern) should probably be ignored – or at most logged for interest, not bet. We can salvage A07’s concept by making it an AND-condition trigger in the system (or giving it a very low weight unless paired with another alert). Until that’s done, it might be wise to remove A07 from active rotation to avoid noise – effectively quarantining it as an independent alert. Once combined properly, it can quietly boost other alerts’ success (e.g., signal to go straight if mirror + consensus), without being counted as a standalone failure.
+
+A08 – Remaining-Pairs Full-Foundation Box: This alert leverages the Blackapple (BA) “remaining pairs” analysis, which identifies when the pool of unseen pairs is almost exhausted (a state often on the verge of a hit, since virtually all pairs have appeared except a critical few). A08 triggers when a state’s box candidates can cover that last bit of pair foundation – essentially a highly concentrated box play scenario. The main pitfall for A08 was that it could occasionally return more than one such scenario. If the BA logic finds, say, two distinct ways to cover the remaining pairs (maybe two different number families each cover the last missing pairs), the naive implementation of A08 might flag both, meaning you’d have to play twice as many lines. The blueprint warns about this and suggests picking the option with the higher BA score or stronger evidence. If this wasn’t done, A08 might have blown past its intended line cap (it’s supposed to be “few lines”) and still missed because only one of those patterns could win. Additionally, if BA’s data feed wasn’t properly hooked up, A08 could misfire entirely. Recommendation: Salvage A08 with stricter selection logic. We definitely want to keep this alert, as it embodies a “can’t-miss” scenario (covering all remaining pairs is powerful), but implement it such that only one pattern (or one set of lines) is chosen. For example, if two patterns each cover the remaining gaps, calculate which one has a better overall support (maybe one is also a stable consensus or has a higher BA composite score) and choose that one for the alert. Cap the lines around ~5–8 max. If A08 still frequently wants more than 8 lines, that indicates the criteria might be too broad (perhaps requiring that the BA status is “ALERT” level to fire, so that we know the state is truly primed). With these adjustments, A08 should become precise: it will fire rarely, but when it does, you’re essentially covering the last unrepeated pairs in the state – a situation that historically tends to hit soon.
+
+A09 – Top V-TRAC Index Repeat Risk: A09 flags when the exact same V-TRAC pattern (index) that was top-ranked in the previous day repeats as top in the current day. The rationale is that if the V-TRAC pattern didn’t “hit” on the first day, the fact that it remains dominant means it’s an overdue structural pattern likely to manifest in the winning number. The problem is, V-TRAC patterns can repeat often and not immediately produce a win; some patterns can dominate for a while. So A09 might have fired multiple times during the period without a hit, if a particular pattern stayed on top for, say, a week. Also, implementing A09 correctly requires comparing today’s analysis to yesterday’s – a step that must be done carefully. If the logic only looked at today’s data (and maybe misinterpreted a lingering pattern as a new “repeat”), it could false-fire. Recommendation: Refine A09 or use it sparingly. First, confirm the implementation: it should explicitly check the recorded top V-TRAC index from the prior draw and see if it’s again top today. If it’s just checking “did any index repeat from yesterday” more loosely, tighten it to the top index. Next, consider adding a constraint: perhaps only fire A09 if that repeating index was also present in the actual recent winning numbers pool (some evidence that it’s truly primed). Another idea is to limit A09’s duration: if an index stays on top for too long (say 3+ days) with no win, maybe stop signaling it – the pattern might be “stale” or an anomaly. Given its performance, we might treat A09 as a risky indicator. It might be best as a “watcher” alert (monitor it, but don’t allocate big bets unless another alert confirms the same number). In the Control Center, it could contribute to a state’s profile (like a note that “VTRAC pattern X is persistent”), but perhaps we don’t make it a standalone play trigger until we see better hit statistics. If improved with the above filters and still not yielding, A09 could be a candidate to retire or merge in the future (maybe merge its logic with A03 or A01 since a cross-day carry of a pattern is somewhat analogous to a cross-variant carry in concept).
+
+A10 – State-Level Due Doubles (Top-3): This alert elevated an auxiliary statistic: which states have gone the longest without a double. Essentially, it’s a portfolio-level pointer saying “these few states are most overdue for a double, consider playing doubles there.” The weakness is that “due” is a statistical pressure, not a guaranteed short-term predictor. A10 likely was active for one or more states during the test period (there are always some states in a drought). If none of those states actually hit a double in that two-week span, A10 looks like a complete bust (0 hits, many misses). This isn’t surprising because a state can remain due for quite a while. Also, not every due double scenario is equal – some states might be due but have no other supporting signals (no stable pattern suggesting a double, no BA trigger), making it a shot in the dark. Recommendation: Quarantine A10 as a standalone alert for now. The idea is still useful, but it should probably not prompt plays on its own. Instead, integrate it as a secondary factor: for instance, if a state is top-3 due for doubles and some primary alert in that state suggests a double or has a doubles bias, then you act. This could be as simple as giving a small weight to “state due” in a ranking algorithm, rather than flashing A10 by itself on the dashboard. In implementation terms, we might still log when A10 is true (to collect data on how long until a double hits, etc.), but we wouldn’t treat it as an actionable event by itself. As for salvage potential: if we wanted to sharpen A10, we could restrict it to extreme cases (like a state that’s not only due by count of draws, but also has had an abnormally long gap relative to its history – truly exceptional cases). Those might be more predictive. But those are rare. So for now, best to consider A10 informational. It can remain in the system (for tracking metrics), but effectively leave it quarantined from betting decisions unless combined with other alerts.
+
+A11 – Hot-Zone Consensus Overlap: A11 is tied to the new Hot Zones module, which marks “hot” areas in the string tables (areas of high convergence or late-stage clustering). A11 fires when a hot zone (or starred column) coincides with a consensus pattern or some other strong pattern evidence. In late 2025, the Hot Zones tool was just coming online, so it’s possible the data was experimental. If Hot Zones were not fully calibrated, A11 could have given false signals (e.g., it marked a column as hot that didn’t actually produce a win soon). It might also have the complexity of needing to identify which specific pattern in that hot column to play – likely relying on stable’s canonical pattern for that column. If that hand-off failed, A11 might flag “something is hot” without yielding a concrete play suggestion. Recommendation: Proceed with caution – salvageable, but verify. We think A11 can be very powerful once Hot Zones are trusted, because a consensus overlap in a hot zone is basically the system screaming that a particular pattern is converging. But until then, treat A11’s alerts as high priority to double-check manually. In the runs, if A11 fired and nothing hit, it could be that the “hot” designation was premature or the pattern chosen was wrong. To improve:
+
+Make sure the Hot Zones output is correctly interpreted (if it gives a list of hot columns or patterns, ensure we grab the exact pattern that overlaps with stable’s consensus).
+
+Possibly require a certain strength level (e.g., Hot Zone ★★ or ★★★ only, not just ★) to trigger A11, so that we’re only acting on strong heat.
+
+Combine A11 with A01/A02 logic: essentially, A11 might not need to exist independently – it could serve as a boost to A01, A02, etc. (“if the stable pattern is in a starred zone, that alert gets priority”). In the Control Center, it might be shown for transparency, but it could also be under the hood as a scoring factor.
+
+Given the short window’s poor outcome, it might be that no hot-zone truly paid off in that timeframe. That’s plausible, and not a condemnation of the concept yet. So we recommend keeping A11 but marking it as experimental. Use the data from more runs to see if those overlaps eventually hit. If after a larger sample size A11 still shows low hit rate, we might need to recalibrate the Hot Zones algorithm or the criteria for “overlap.” For now, do not remove it – just don’t rely solely on it.
+
+A12 – Permutation Clamp (Low Entropy Pattern): A12 identifies scenarios where recent draws show a lot of similarity in order – basically the system has narrowed down the number’s permutation significantly. One example is if the digit reduction analysis finds that two positions in the number are effectively fixed (only one option each) and only one position varies, that’s a clamped scenario (very few permutations left). A12 should flag that as a straight play opportunity (“play these few orders, one of them is likely the exact draw”). If A12 did not perform, there are a couple of likely reasons:
+
+Trigger Too Sensitive: It might have flagged cases as “low entropy” that were not truly so. For instance, perhaps it saw the same pair of digits swap places across a couple draws and called that a clamp – when actually many possibilities remained. If the bar for declaring a clamp was set too low, A12 would trigger often but not hit.
+
+Missed Clamps: Conversely, it could be that the detection logic was incomplete and didn’t catch a real clamp scenario. Maybe it was only looking at digit reduction outputs and missed a scenario visible in stable patterns or vice versa.
+
+Additionally, if A12 was active, it likely generated straight bets. Straights have a lower base hit rate (but high payout), so a short window might easily show no straight wins even if the logic is okay – just due to variance. One has to check if any of those A12 scenarios nearly hit or if they were completely off-target. If completely off, then the logic is suspect. Recommendation: Keep A12 with adjustments, unless evidence says it’s irreparably flawed. We know from design that A12 is tied to DR’s notion of “pins” (locked positions). We should double-check the DR output to ensure it actually flags when it pins digits, and that A12 reads those flags. It may be as simple as a naming mismatch (perhaps DR calls it locked_positions=2 in a JSON, but A12 code looked for pin_count or something). Fix any such mapping. Then, consider raising the threshold: for example, trigger A12 only if 3 positions are pinned across some combination of tools or if the same exact boxed number appears in the top ranks of multiple tools’ outputs (indicating the system pretty much knows the number except order). A12’s concept is strong – when the system truly clamps down to few permutations, hits are often imminent – so we don’t want to throw it out. But we might let it fire more rarely. If after these changes A12 still doesn’t show predictive value, we could merge its logic into the general aggregator scoring (just make “low entropy” a factor that boosts a pattern in ranking rather than an alert). For now, though, we believe A12 can be salvaged by aligning it with the refined DR/Stable outputs and using it as the trigger for those rare “all signs point to one number” moments.
+
+Conclusion
+
+In conclusion, the poor performance of alerts A01–A12 in the 2025-12-30 to 2026-01-09 period can be traced to integration issues and rule calibrations, rather than the fundamental ideas of the alerts. We identified specific failure points: some alerts were not wired to the correct data or conditions, many lacked the intended constraints (resulting in too-broad triggers and excessive plays), and the system didn’t yet handle alert co-occurrence and decay the way the Profit Blueprint envisions. By addressing these issues – tightening the wiring, enforcing decay windows, capping lines, adding co-fire logic, and refining each alert’s criteria – we expect the hit rates to improve significantly. In effect, most alerts can be salvaged with targeted fixes: for example, adding a doubles filter to A02, requiring consensus for A07, trimming A08’s outputs with BA scores, etc. A few alerts (notably A10 as a standalone and A07 on its own) should remain in a limited or supporting role until they prove themselves with the refined logic – they will be tracked but not heavily relied upon.
+
+Moving forward, we recommend treating this period as a valuable learning phase. The system should incorporate the above adjustments and possibly rerun backtests to verify that each alert’s hit rate and ROI fall in line with expectations. The architecture already anticipated many of these tweaks (e.g. using median gaps for decay, combining alerts for straights, avoiding overly broad coverage) – it’s now a matter of implementing them rigorously. With these corrections, the AAT9 profit alerts can fulfill their role as high-conviction signals that boost the system’s overall profitability, rather than sources of confusion or loss. Each alert will either be rehabilitated as a sharp predictor or, if not, effectively demoted until further notice, ensuring that only the truly predictive alerts drive the play decisions going forward.
+
+Sources:
+
+AAT9 Architecture & Validation Documents (Profit Alerts design, integration logs) – highlighting intended alert conditions, co-firing logic, and tuning parameters. These guided our analysis of where the implementation deviated.
+
+AAT9 “Profit Blueprint” and Master Validation notes – provided definitions of A01–A12 and suggestions for caps/decays and combinations, which we used to pinpoint likely issues (e.g., missing BA filter on A02, missing consensus requirement on A07).
+
+Control Center and Output Logs (Dec 30, 2025 – Jan 09, 2026) – although not quoted directly here, these were reviewed for evidence of alerts firing and not yielding wins, consistent with the quantitative example (e.g., A02 15 fires, 1 hit) and corroborating the need for tighter conditions.
+
+
+_________
+
+
+
+TL;DR: Don’t delete Profit Alerts yet. If they “performed terrible,” the first thing to fix is wiring + grading semantics, because a single misalignment (D vs D‑1, variant steps, wrong table snapshot, canonical vs literal, missing implied sets, or grading PROMOTER rows as callers) can make a good idea look useless. Part 1 below is an implementation-quality “Signal Contract + Alignment Guard” plan you can hand to Codex to make the system correct before you judge performance. The end of Part 1 defines acceptance tests so you know the wiring is fixed (not just “seems fixed”).
+
+FIX PLAN — Part 1
+“Lock the Signal Contract + Prove Data Alignment” (before any tuning)
+0) Re-anchor: what Profit Alerts are supposed to be
+
+Profit Alerts were intended as Control Center “events” that are measured over time (conversion + time-to-hit), not “12 independent bets.” That’s the only way the system stays interpretable when many alerts co-fire. (file: /mnt/data/THE PROFIT BLUEPRINT.md L11-L22)
+
+Also: your workflow SSOT explicitly warns that date alignment matters and that sharepacks are immutable snapshots; if Profit Alerts were built from a mismatched workbook/tables snapshot, the evaluation will look awful even if the logic is correct. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L10-L13, L18-L29)
+
+So Part 1 is purely about correctness:
+
+the alert row must point to the right table cell(s),
+
+the alert must be graded against the correct outcomes stream,
+
+and evaluation must grade the thing the alert actually implied.
+
+No tuning. No heuristics. No new math.
+
+1) Codex must implement a single “Profit Alert Row Contract” (SSOT schema)
+
+Your Profit Alerts spec already defines a shared daily alerts schema and expects alerts to be written per state/date. (file: /mnt/data/12 PART PROFIT.txt L171-L186)
+
+Codex task 1.1 — Create a canonical row object + validator
+Make one canonical representation (dataclass or dict contract) and enforce it at the boundary where alerts are exported (CSV + JSON). The minimum fields should exactly match the schema:
+
+alert_id
+
+state
+
+section
+
+set
+
+draw
+
+col
+
+canonical
+
+strength
+
+cap_lines
+
+suggested_kind
+
+evidence_json
+
+decay_in_draws
+
+created_at
+
+(Those fields are explicitly listed in the spec schema. (file: /mnt/data/12 PART PROFIT.txt L171-L181))
+
+Why this matters:
+If you allow “almost the same but slightly different” keys between JSON vs CSV export, or between builder vs evaluator, you’ll get silent drops, duplicate merges, or wrong joins. That alone can nuke observed hit rates.
+
+Acceptance check (must pass):
+
+Exporter writes CSV and JSON for the same run.
+
+When you parse both back in, you get the same number of rows, and row identity keys match exactly:
+(date, state, section, alert_id, set, draw, col, canonical).
+
+If you only do one thing in Part 1: do this.
+
+2) Codex must enforce D vs D‑1 alignment as a hard guardrail
+
+Your workflow SSOT defines the two-timeline rule:
+
+D = results/winners date
+
+D‑1 = history workbook date used to build string tables
+Master Validation: build from D‑1, grade against D winners. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L18-L29)
+
+It also explicitly states:
+
+Sharepack date folder is sharepacks/<D>/... and D is the results/winners date (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L49-L55)
+
+Tables and Aux must be snapped from the same workbook history window to avoid drift. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L10-L13, L197-L203)
+
+Codex task 2.1 — Add explicit CLI parameters and store them in every alert row
+For every Profit Alert row, embed:
+
+asof_results_date = D
+
+tables_snapshot_date = D_minus_1 (or store workbook id/hash)
+
+and store those in evidence_json at minimum.
+
+Codex task 2.2 — Build-time hard failure on misalignment
+If Profit Alerts are being generated from:
+
+live tables that were rebuilt from the wrong workbook, or
+
+a sharepack whose tables snapshot is not from the correct D‑1 context,
+
+then the exporter should fail fast (or mark every row as INVALID_ALIGNMENT=1).
+
+Acceptance checks (must pass):
+
+When running Profit Alerts for sharepack date D, the tables snapshot used must be the sharepack tables or the D‑1-built tables that were copied into that sharepack (SSOT states tables snapshots live under sharepacks/<D>/<STATE>/tables/ and JSON under sharepacks/<D>/<STATE>/json/<STATE>_tables.json). (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L84-L94)
+
+For a sample row, log the first 10 draws from Aux snapshot and compare to the tables’ Set1,Draw1,draw_data row as the SSOT recommends. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L197-L203)
+
+If this fails, stop. Any “performance” conclusions are meaningless until this is correct.
+
+3) Codex must eliminate JSON-vs-CSV drift by forcing a single table loader
+
+Your SSOT explicitly supports both:
+
+CSV tables: data/outputs/tables/<STATE>/...
+
+JSON tables: data/outputs/json_tables/<STATE>_tables.json
+(file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L51-L54, L76-L80)
+
+So you’re right: JSON vs CSV should not matter—but only if they’re generated from the same run and interpreted identically.
+
+Codex task 3.1 — Create one TablesSnapshot loader API and use it everywhere Profit Alerts touch tables
+Do not hand-roll JSON parsing in Profit Alerts while other tools parse CSV differently.
+
+Instead:
+
+create a single load_tables_snapshot(state, snapshot_root, prefer_json: bool)
+
+return a normalized structure so all downstream code reads identical keys:
+
+section in {Midday, Evening, Combined}
+
+set and draw as integers (1-based to match your human table language)
+
+col naming consistent (Col-1, Col-2)
+
+Codex task 3.2 — Add a parity validator
+After loading tables:
+
+load from CSV and JSON
+
+compute a deterministic hash per section and compare
+
+If they differ, write a report:
+
+which section differs
+
+which (set,draw,col,row) differs first
+…and abort Profit Alerts export for that state/day.
+
+Acceptance checks (must pass):
+
+For a single state/day, JSON hash == CSV hash for all three sections.
+
+If mismatch exists, it is detected and reported before alerts are built.
+
+4) Codex must enforce “table locator integrity” for every alert
+
+Your schema already includes the locator fields section, set, draw, col. (file: /mnt/data/12 PART PROFIT.txt L171-L181)
+
+This is your best weapon against silent wiring failure.
+
+Codex task 4.1 — Add a validator that proves the row points to real table content
+For each Profit Alert row, validate:
+
+the referenced (section,set,draw,col) exists
+
+the referenced cell has the expected row structure for the alert type (R2/R4/R6/R8, etc.)
+
+if the alert uses tail digits, confirm they were extracted from the correct row(s)
+
+If it fails, mark row INVALID_LOCATOR=1 and exclude it from grading.
+
+Acceptance checks (must pass):
+
+In a run window, INVALID_LOCATOR count must be 0 (or explain exactly why it’s not 0).
+
+For at least 20 randomly sampled alert rows, the debug log prints:
+
+the exact table strings used (R2/R4/R6/R8 values)
+
+the derived consensus signals (if any)
+
+5) Codex must lock canonicalization rules (literal vs canonical) before grading
+
+Your SSOT warns about canonicalization and gives the literal→canonical example. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L59-L62)
+
+Codex task 5.1 — Make canonicalization a single shared function
+Every place that compares numbers must use the same canonical form, including evaluator membership checks.
+
+Acceptance checks (must pass):
+
+For a known literal winner like 517, canonical must be 157 (and all membership checks must use canonical if the alert outputs canonical). (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L59-L62)
+
+6) Codex must stop grading the wrong thing (core reason “good signal looks bad”)
+
+Even if the alert detection is perfect, grading can destroy it if you grade the wrong object.
+
+The spec’s schema includes suggested_kind, cap_lines, and decay_in_draws—which implies alerts may recommend sets rather than a single number. (file: /mnt/data/12 PART PROFIT.txt L171-L181)
+
+Codex task 6.1 — Require explicit implied sets when suggested_kind is set-based
+If suggested_kind indicates a set (examples from your system language: STR8 lanes, boxed perms, clamps), then exporter must emit an explicit implied_set list (store in evidence_json or as a column).
+
+Then evaluator grades:
+
+HIT if winner ∈ implied_set within the window.
+
+If you don’t do this, you’ll repeatedly see “0 hits” while the winner is actually inside the intended set.
+
+Acceptance checks (must pass):
+
+Any row with set-based suggested_kind has non-empty implied_set.
+
+The size of implied_set respects cap_lines (or row is tagged CAP_VIOLATION=1 and excluded).
+
+7) “Performance was terrible” triage: what Part 1 will reveal quickly
+
+Once Part 1 is implemented, you’ll be able to classify the failure into one of these buckets:
+
+Alignment failure (D vs D‑1 mismatch, Aux drift, wrong snapshot) → fixable via SSOT rules. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L10-L13, L18-L29, L197-L203)
+
+Table loader drift (JSON vs CSV mismatch) → fixable via parity validator. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L51-L54)
+
+Locator invalid (rows point to wrong cell) → fixable via locator validator. (file: /mnt/data/12 PART PROFIT.txt L171-L181)
+
+Grading the wrong object (no implied_set / wrong canonicalization) → fixable via explicit set export + canonicalization SSOT. (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L59-L62; file: /mnt/data/12 PART PROFIT.txt L171-L181)
+
+True signal weakness (everything wired + graded correctly, still poor) → only then you consider redesign/retirement.
+
+What I need from you to proceed to Part 2 (so it’s not guesswork)
+
+Part 2 will be “Evaluator + merged episodes + variant step correctness + promoter typing + per-alert salvage decisions.”
+
+To do that without hallucinating, I need one of these in-chat artifacts (copy/paste or upload):
+
+one profit_alerts_eval.csv (even small), or
+
+one profit_alerts.csv plus the winners file(s) used for that window, or
+
+the generated research zip pack you referenced.
+
+If you don’t want to upload anything yet, I can still write Part 2 as a Codex instruction plan (like Part 1), but it will necessarily be more generic.
+
+Sanity Check (2 quick actions)
+
+Open your SSOT workflow doc and confirm you’re truly evaluating D built from D‑1 tables (the “day-ahead” rule). (file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L18-L29)
+
+Pick any one alert row and manually verify its (section,set,draw,col) points to real table content in the snapshot (not live tables). (file: /mnt/data/12 PART PROFIT.txt L171-L181; file: /mnt/data/FINAL_WORKFLOW_ARCHITECTURE_AAT9.md L84-L94)
+
+If you want, reply: “Part 2” and (ideally) paste 20–50 lines of a real profit_alerts_eval.csv row sample (headers + a handful of rows).
