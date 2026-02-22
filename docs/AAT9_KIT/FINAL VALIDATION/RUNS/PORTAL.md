@@ -230,6 +230,7 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
   - Profit Alerts revamp (quarantined; truth layer + portable evidence packs):
     - Stage 2 report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PROFIT_ALERTS__REVAMP_STAGE2_REPORT__2026-02-21.md`
     - Stage 3 report: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PROFIT_ALERTS__REVAMP_STAGE3_REPORT__2026-02-22.md`
+    - Stage 4 audit roster (what to inspect next): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PROFIT_ALERTS__REVAMP_STAGE4_AUDIT_ROSTER__2026-02-22.md`
     - Evidence packs (GitHub-visible mirrors for Deep Research):
       - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/`
       - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-12-30_to_2026-01-09__2026-02-22__provloc_v1/`
