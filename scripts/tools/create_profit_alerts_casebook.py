@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass
@@ -80,6 +81,41 @@ def load_csv_rows(path: Path) -> Iterable[Dict[str, str]]:
 
 def write_md(path: Path, lines: List[str]) -> None:
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
+def safe_int(value: str) -> Optional[int]:
+    v = (value or "").strip()
+    if not v:
+        return None
+    try:
+        return int(float(v))
+    except Exception:
+        return None
+
+
+def parse_evidence(value: str) -> Dict[str, object]:
+    raw = (value or "").strip()
+    if not raw or raw == "-":
+        return {}
+    try:
+        obj = json.loads(raw)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def load_board_row_by_row_num(board_csv: Path, row_num: str) -> Optional[Dict[str, str]]:
+    idx = safe_int(row_num)
+    if idx is None or idx <= 0:
+        return None
+    if not board_csv.exists():
+        return None
+    with board_csv.open(newline="") as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader, start=1):
+            if i == idx:
+                return {k: (v or "") for k, v in row.items()}
+    return None
 
 
 @dataclass(frozen=True)
@@ -279,6 +315,123 @@ def main() -> None:
         except Exception:
             return p.as_posix()
 
+    # Write CASES.csv (machine-readable; used for evidence packs)
+    cases_csv_path = package_dir / "CASES.csv"
+    with cases_csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "case_num",
+                "kind",
+                "results_date",
+                "state_key",
+                "variant",
+                "alert_id",
+                "row_num",
+                "status",
+                "strength",
+                "suggested",
+                "canonical",
+                "implied_set_size",
+                "decay_draws",
+                "badges",
+                "strict_hit",
+                "hit_within_decay",
+                "hit_any_within_decay",
+                "hit_within_7",
+                "hit_within_14",
+                "hit_type",
+                "hit_any_type",
+                "stable_scores_relpath",
+                "stable_section",
+                "stable_set",
+                "stable_draw",
+                "stable_column",
+                "stable_family_id",
+                "stable_why",
+                "stub_section",
+                "stub_set",
+                "stub_draw",
+                "stub_column",
+                "stub_canonical",
+                "vtrac_index",
+                "board_csv",
+                "board_md",
+                "eval_csv",
+                "eval_merged_csv",
+                "winners_digest",
+                "winners_dir",
+                "stable_scores_csv",
+                "json_tables",
+            ],
+        )
+        writer.writeheader()
+
+        for idx, c in enumerate(picked, start=1):
+            d = c.results_date
+            state_key = c.state_key
+
+            cc_dir = sharepacks_root / d / "control_center"
+            eval_path = cc_dir / "profit_alerts_eval.csv"
+            board_md = cc_dir / "profit_alerts.md"
+            board_csv = cc_dir / "profit_alerts.csv"
+            merged_path = cc_dir / "profit_alerts_eval_merged.csv"
+
+            winners_digest = sharepacks_root / d / state_key / "winners" / state_key / "digest.md"
+            winners_dir = winners_digest.parent
+            stable_scores = sharepacks_root / d / state_key / "stable" / state_key / f"{state_key}_stable_patterns_scores.csv"
+            json_tables = sharepacks_root / d / state_key / "json" / f"{state_key}_tables.json"
+
+            board_row = load_board_row_by_row_num(board_csv, c.row_num)
+            evidence = parse_evidence((board_row or {}).get("Evidence", ""))
+
+            writer.writerow(
+                {
+                    "case_num": idx,
+                    "kind": c.kind,
+                    "results_date": d,
+                    "state_key": state_key,
+                    "variant": c.variant,
+                    "alert_id": c.alert_id,
+                    "row_num": c.row_num,
+                    "status": c.status,
+                    "strength": f"{c.strength:g}",
+                    "suggested": c.suggested,
+                    "canonical": c.canonical,
+                    "implied_set_size": c.implied_set_size,
+                    "decay_draws": c.decay_draws,
+                    "badges": c.badges,
+                    "strict_hit": c.strict_hit,
+                    "hit_within_decay": c.hit_within_decay,
+                    "hit_any_within_decay": c.hit_any_within_decay,
+                    "hit_within_7": c.hit_within_7,
+                    "hit_within_14": c.hit_within_14,
+                    "hit_type": c.hit_type,
+                    "hit_any_type": c.hit_any_type,
+                    "stable_scores_relpath": str(evidence.get("stable_scores_relpath") or ""),
+                    "stable_section": str(evidence.get("stable_section") or ""),
+                    "stable_set": str(evidence.get("stable_set") or ""),
+                    "stable_draw": str(evidence.get("stable_draw") or ""),
+                    "stable_column": str(evidence.get("stable_column") or ""),
+                    "stable_family_id": str(evidence.get("stable_family_id") or ""),
+                    "stable_why": str(evidence.get("stable_why") or ""),
+                    "stub_section": str(evidence.get("stub_section") or ""),
+                    "stub_set": str(evidence.get("stub_set") or ""),
+                    "stub_draw": str(evidence.get("stub_draw") or ""),
+                    "stub_column": str(evidence.get("stub_column") or ""),
+                    "stub_canonical": str(evidence.get("stub_canonical") or ""),
+                    "vtrac_index": str(evidence.get("vtrac_index") or evidence.get("current_index") or ""),
+                    "board_csv": fmt_path(board_csv),
+                    "board_md": fmt_path(board_md),
+                    "eval_csv": fmt_path(eval_path),
+                    "eval_merged_csv": fmt_path(merged_path),
+                    "winners_digest": fmt_path(winners_digest),
+                    "winners_dir": fmt_path(winners_dir),
+                    "stable_scores_csv": fmt_path(stable_scores),
+                    "json_tables": fmt_path(json_tables),
+                }
+            )
+
     for idx, c in enumerate(picked, start=1):
         d = c.results_date
         state_key = c.state_key
@@ -293,6 +446,8 @@ def main() -> None:
         winners_dir = winners_digest.parent
         stable_scores = sharepacks_root / d / state_key / "stable" / state_key / f"{state_key}_stable_patterns_scores.csv"
         json_tables = sharepacks_root / d / state_key / "json" / f"{state_key}_tables.json"
+        board_row = load_board_row_by_row_num(board_csv, c.row_num)
+        evidence = parse_evidence((board_row or {}).get("Evidence", ""))
 
         casebook.append(f"### Case {idx} — {c.kind} — {c.alert_id} — {state_key} — {c.variant} — D=`{d}`")
         casebook.append("")
@@ -300,6 +455,18 @@ def main() -> None:
         casebook.append(f"- Eval: strict_hit=`{c.strict_hit}` hit_decay=`{c.hit_within_decay}` hit_any_decay=`{c.hit_any_within_decay}` hit_any<=7=`{c.hit_within_7}` hit_any<=14=`{c.hit_within_14}`")
         if c.hit_type or c.hit_any_type:
             casebook.append(f"- Hit typing: hit_type=`{c.hit_type or '-'}` hit_any_type=`{c.hit_any_type or '-'}`")
+        stable_section = str(evidence.get("stable_section") or "")
+        stable_set = str(evidence.get("stable_set") or "")
+        stable_draw = str(evidence.get("stable_draw") or "")
+        stable_col = str(evidence.get("stable_column") or "")
+        if stable_section or stable_set or stable_draw or stable_col:
+            casebook.append(f"- Stable locator: section=`{stable_section or '-'}` set=`{stable_set or '-'}` draw=`{stable_draw or '-'}` col=`{stable_col or '-'}` family_id=`{(evidence.get('stable_family_id') or '-')}`")
+        stub_section = str(evidence.get("stub_section") or "")
+        stub_set = str(evidence.get("stub_set") or "")
+        stub_draw = str(evidence.get("stub_draw") or "")
+        stub_col = str(evidence.get("stub_column") or "")
+        if stub_section or stub_set or stub_draw or stub_col:
+            casebook.append(f"- Consensus stub: section=`{stub_section or '-'}` set=`{stub_set or '-'}` draw=`{stub_draw or '-'}` col=`{stub_col or '-'}` canonical=`{(evidence.get('stub_canonical') or '-')}`")
         casebook.append("")
         casebook.append("Files:")
         casebook.append(f"- Eval row source: `{fmt_path(eval_path)}` (row_num={c.row_num})")
@@ -319,6 +486,7 @@ def main() -> None:
 
     print(f"Wrote: {package_dir / 'MANIFEST.md'}")
     print(f"Wrote: {package_dir / 'CASEBOOK.md'}")
+    print(f"Wrote: {cases_csv_path}")
 
 
 if __name__ == "__main__":

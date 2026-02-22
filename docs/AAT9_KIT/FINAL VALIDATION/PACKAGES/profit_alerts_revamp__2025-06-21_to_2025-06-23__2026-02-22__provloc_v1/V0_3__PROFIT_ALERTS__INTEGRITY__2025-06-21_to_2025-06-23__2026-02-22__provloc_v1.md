@@ -1,0 +1,58 @@
+# Profit Alerts Integrity — 2025-06-21 → 2025-06-23
+
+Label: `provloc_v1`
+
+Purpose: summarize evaluation integrity signals (coverage + evidence wiring) before any tuning.
+
+## Coverage
+
+- Dates in range: **3**
+- Dates with `profit_alerts_eval.csv`: **3**
+- Missing eval dates: **0**
+
+## Totals
+
+- Total rows: **257**
+- Candidate rows: **182**
+- Promoter rows: **55**
+
+- Evidence OK (all rows): Y=257, N=0 (Y rate: 100.0%)
+- Stable contains canonical (candidates): Y=171, N=0, ?=0, -=11 (measured: 171/182, Y rate: 100.0%)
+- Candidate canonical invalid (canonical-required alerts only): **0/180** (0.0%)
+- Candidate implied_set_size missing: **0/182** (0.0%)
+- Candidate implied_set_size mismatches (vs expected for suggested kind): **0/182** (0.0%)
+
+## Per-day quick stats
+
+| date | rows | candidates | promoters | evidence_ok_Y | evidence_ok_N | stable_contains_Y | stable_contains_N |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2025-06-21 | 84 | 61 | 19 | 84 | 0 | 58 | 0 |
+| 2025-06-22 | 85 | 61 | 15 | 85 | 0 | 57 | 0 |
+| 2025-06-23 | 88 | 60 | 21 | 88 | 0 | 56 | 0 |
+
+## Evidence errors (top)
+
+- None.
+
+## Candidate set-size mismatches (by suggested kind)
+
+- None.
+
+## Stable containment misses (by alert_id)
+
+| alert_id | stable_contains_Y | stable_contains_N | N_rate |
+|---|---:|---:|---:|
+| A01 | 41 | 0 | 0.0% |
+| A02 | 31 | 0 | 0.0% |
+| A04 | 42 | 0 | 0.0% |
+| A05 | 42 | 0 | 0.0% |
+| A12 | 15 | 0 | 0.0% |
+
+## Notes
+
+- `evidence_ok=N` means the evaluator could not load the required evidence row(s) to grade the alert row; inspect `evidence_error` for the reason.
+- `stable_contains_canonical=N` means the canonical 3-digit did not appear in Stable’s exported scored rows for that state/day/variant; this can be legitimate (signal disagreement) or a wiring issue.
+- `implied_set_size` is sanity-checked against suggested kinds:
+  - BOX expects full perms (6/3/1 depending on unique digits in canonical).
+  - STR8_3 expects min(3, perms) (so triples can legitimately be 1).
+  - STR8_8 expects 8, STR8_4of8 expects 4, OVERLAY/SKIP expect 0.
