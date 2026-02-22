@@ -17,6 +17,16 @@ Entry points (portable, GitHub-visible):
 - Reported-bad window evidence pack:
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-12-30_to_2026-01-09__2026-02-22__provloc_v1/CASEBOOK.md`
 
+## Important clarification (JSON vs Stable)
+
+- Profit Alerts are primarily built from **Stable scores** (`*_stable_patterns_scores.csv`) plus a few other frozen sharepack artifacts (BA, due doubles, repeat watch, hot zones).
+- The Profit Alerts exporter does **not** “read the JSON tables” as its source of truth.
+- The `*_tables.json` snapshot exists so humans (and Deep Research) can inspect the same environment in a machine-readable “string-table mirror” form.
+
+So in the audit:
+- **Stable excerpt + stable locator** is the most direct proof of “why the alert fired”.
+- HTML winners + JSON tables are the best “environment cross-check” (your R2/R4/R6/R8 style reading).
+
 ## How to audit a case (repeatable checklist)
 
 For any case in an evidence pack `CASEBOOK.md`:
@@ -30,6 +40,29 @@ For any case in an evidence pack `CASEBOOK.md`:
    - **Correct** (matches intent + evidence)
    - **Unclear** (needs more context)
    - **Wrong** (mapping bug, rule mismatch, or evaluation expectation mismatch)
+
+## Collaborative “we audit together” workflow (recommended)
+
+We’ll run each case as a small, repeatable “micro-session”:
+
+1) **Codex selects the next case** from the tier list below.
+2) **Codex posts a 1-page case briefing in chat**, including:
+   - what the alert is supposed to mean (intent),
+   - exactly what fired (board row fields + `Evidence` keys),
+   - what the Stable locator points to (and what we expect to see there),
+   - which winners HTML/JSON file(s) to open (if multiple),
+   - and 2–4 “yes/no” audit questions that decide Correct vs Wrong.
+3) **You open the winners HTML and the JSON tables** (your preferred “R2/R4/R6/R8 environment read” view) and tell me what you see.
+4) **Codex cross-checks the Stable excerpt + evidence fields** and reconciles any disagreement between HTML vs JSON vs Stable.
+5) **We assign a verdict + next action**:
+   - Correct → proceed to next case.
+   - Unclear → note what extra evidence we would need (often an evidence-json enhancement).
+   - Wrong → classify the failure:
+     - Mapping bug (wrong pointer),
+     - Rule mismatch (logic doesn’t match intent),
+     - Evaluation expectation mismatch (grading the wrong object).
+
+This keeps the review slow-and-thorough without drifting into “talking loops”.
 
 ## Tiered audit roster (do in order)
 
@@ -103,4 +136,3 @@ Stage 4 is primarily about **confirming intent**. If (and only if) audits show t
 After Tier 1 + Tier 2:
 - If you find **true mapping/intent mismatch**, do **targeted tuning/fix** next (one alert at a time, re-grade with the same rollups/casebooks).
 - If alerts look **conceptually correct** but rare, do **corpus expansion** next to stabilize per-alert behavior.
-
