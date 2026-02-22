@@ -19,7 +19,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/json/Michigan4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/stable/Michigan4/Michigan4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -37,7 +37,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Florida4/winners/Florida4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Florida4/winners/Florida4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Florida4/winners/Florida4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Florida4/json/Florida4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Florida4/stable/Florida4/Florida4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -54,7 +54,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewYork4/winners/NewYork4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewYork4/winners/NewYork4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewYork4/winners/NewYork4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewYork4/json/NewYork4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewYork4/stable/NewYork4/NewYork4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -70,7 +70,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/winners/Michigan4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/json/Michigan4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Michigan4/stable/Michigan4/Michigan4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -87,7 +87,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewJersey4/winners/NewJersey4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewJersey4/winners/NewJersey4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewJersey4/winners/NewJersey4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewJersey4/json/NewJersey4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/NewJersey4/stable/NewJersey4/NewJersey4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -103,7 +103,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/NewYork4/winners/NewYork4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/NewYork4/winners/NewYork4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/NewYork4/winners/NewYork4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/NewYork4/json/NewYork4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-23/NewYork4/stable/NewYork4/NewYork4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -118,7 +118,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NewYork4/winners/NewYork4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NewYork4/winners/NewYork4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NewYork4/winners/NewYork4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NewYork4/json/NewYork4_tables.json`
 
@@ -132,7 +132,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Connecticut4/winners/Connecticut4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Connecticut4/winners/Connecticut4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Connecticut4/winners/Connecticut4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Connecticut4/json/Connecticut4_tables.json`
 
@@ -147,7 +147,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NorthCarolina4/winners/NorthCarolina4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NorthCarolina4/winners/NorthCarolina4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NorthCarolina4/winners/NorthCarolina4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NorthCarolina4/json/NorthCarolina4_tables.json`
 - Stable excerpt: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-22/NorthCarolina4/stable/NorthCarolina4/NorthCarolina4_stable_patterns_scores__profit_alerts_excerpt.csv`
@@ -162,7 +162,7 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Pennsylvania4/winners/Pennsylvania4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Pennsylvania4/json/Pennsylvania4_tables.json`
 
@@ -176,6 +176,6 @@ Files (mirrored inside this pack):
 - Profit board (md): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.md`
 - Profit board (csv): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts.csv`
 - Eval merged sets: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/control_center/profit_alerts_eval_merged.csv`
-- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Delaware4/winners/Delaware4/digest.md`
+- Winners digest: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Delaware4/winners/Delaware4/digest.md` (missing)
 - Winners HTML/JSON dir: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Delaware4/winners/Delaware4`
 - JSON tables: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/profit_alerts_evidence_pack__2025-06-21_to_2025-06-23__2026-02-22__provloc_v1/sharepacks/2025-06-21/Delaware4/json/Delaware4_tables.json`

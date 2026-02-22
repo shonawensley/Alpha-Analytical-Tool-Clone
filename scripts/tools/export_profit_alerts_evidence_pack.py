@@ -323,6 +323,7 @@ def main() -> None:
     for c in cases:
         d = c.results_date
         state_key = c.state_key
+        mirror_state = mirror_root / d / state_key
         lines.append(f"### Case {c.case_num} — {c.kind} — {c.alert_id} — {state_key} — {c.variant} — D=`{d}`")
         lines.append("")
         lines.append(f"- Status: `{c.status}` | Strength: `{c.strength}` | Suggested: `{c.suggested}` | Canonical: `{c.canonical or '-'}` | DecayDraws: `{c.decay_draws}` | Badges: `{c.badges}`")
@@ -343,13 +344,17 @@ def main() -> None:
         lines.append(f"- Profit board (md): `{pack_rel}/sharepacks/{d}/control_center/profit_alerts.md`")
         lines.append(f"- Profit board (csv): `{pack_rel}/sharepacks/{d}/control_center/profit_alerts.csv`")
         lines.append(f"- Eval merged sets: `{pack_rel}/sharepacks/{d}/control_center/profit_alerts_eval_merged.csv`")
-        lines.append(f"- Winners digest: `{pack_rel}/sharepacks/{d}/{state_key}/winners/{state_key}/digest.md`")
+        digest_rel = f"{pack_rel}/sharepacks/{d}/{state_key}/winners/{state_key}/digest.md"
+        digest_exists = (mirror_state / "winners" / state_key / "digest.md").exists()
+        lines.append(f"- Winners digest: `{digest_rel}`" + (" (missing)" if not digest_exists else ""))
         lines.append(f"- Winners HTML/JSON dir: `{pack_rel}/sharepacks/{d}/{state_key}/winners/{state_key}`")
         lines.append(f"- JSON tables: `{pack_rel}/sharepacks/{d}/{state_key}/json/{state_key}_tables.json`")
         if c.stable_section or c.stable_set or c.stable_draw or c.stable_column:
-            lines.append(
-                f"- Stable excerpt: `{pack_rel}/sharepacks/{d}/{state_key}/stable/{state_key}/{state_key}_stable_patterns_scores__profit_alerts_excerpt.csv`"
-            )
+            excerpt_rel = f"{pack_rel}/sharepacks/{d}/{state_key}/stable/{state_key}/{state_key}_stable_patterns_scores__profit_alerts_excerpt.csv"
+            excerpt_exists = (
+                mirror_state / "stable" / state_key / f"{state_key}_stable_patterns_scores__profit_alerts_excerpt.csv"
+            ).exists()
+            lines.append(f"- Stable excerpt: `{excerpt_rel}`" + (" (missing)" if not excerpt_exists else ""))
         lines.append("")
 
     write_text(pack_dir / "CASEBOOK.md", "\n".join(lines))

@@ -1,6 +1,6 @@
 # Profit Alerts Evaluation — 2025-12-30
 
-- Generated: `2026-02-22T05:02:58.850031+00:00`
+- Generated: `2026-02-22T05:18:22.249452+00:00`
 - Inputs:
   - `sharepacks/2025-12-30/control_center/profit_alerts.csv`
   - `data/results/*.txt` (local only)
