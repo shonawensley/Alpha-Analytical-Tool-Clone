@@ -40,6 +40,20 @@ def _training_steps_path(state: str, analysis_root: Path) -> Optional[Path]:
     return target if target.exists() else None
 
 
+def _training_logs_path(state: str, analysis_root: Path) -> Optional[Path]:
+    training_dir = _state_root(state, analysis_root) / "training"
+    if not training_dir.exists():
+        return None
+    candidates = (
+        training_dir / f"{state}_digit_reduction_logs.json",
+        training_dir / f"{state}_digit_reduction_log.json",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _collect_available_stamps(winners_dir: Path) -> Dict[str, List[str]]:
     stamp_variants: Dict[str, List[str]] = {}
     if not winners_dir.exists():
@@ -112,6 +126,9 @@ def package_training_bundle(
     training_steps = _training_steps_path(state, root)
     if training_steps is not None:
         copied.append(_copy_file(training_steps, bundle_root))
+    training_logs = _training_logs_path(state, root)
+    if training_logs is not None:
+        copied.append(_copy_file(training_logs, bundle_root))
 
     per_item = analyzer_dir / f"{state}_analyzer_v2_per_item.csv"
     top_candidates = analyzer_dir / f"{state}_analyzer_v2_top_candidates.csv"
@@ -131,7 +148,7 @@ def package_training_bundle(
 
     for variant in packaged_variants:
         stem = f"{stamp}_{variant}"
-        for artifact in ("winner_map.json", "winner_flags.csv"):
+        for artifact in ("winner_map.json", "winner_flags.csv", "winner_stamp.json"):
             path_obj = winners_dir / f"{stem}_{artifact}"
             if not path_obj.exists():
                 raise TrainingBundleError(f"Missing winner artifact: {path_obj.name}")

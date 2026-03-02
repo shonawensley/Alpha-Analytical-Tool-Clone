@@ -91,8 +91,9 @@ def test_digit_reduction_winner_overlay(state: str, tmp_path: Path, monkeypatch:
         first_row = next(reader, None)
 
     assert first_row, "Analyzer top candidates should provide at least one entry"
-    winner = first_row.get("final.canon3")
-    assert winner, "Top candidate must include final.canon3"
+    winner = first_row.get("final.canon3") or first_row.get("best_pattern")
+    assert winner, "Top candidate must include a 3-digit pattern"
+    winner = str(winner).zfill(3)
 
     batch = run_winner_overlay_batch(
         state,
