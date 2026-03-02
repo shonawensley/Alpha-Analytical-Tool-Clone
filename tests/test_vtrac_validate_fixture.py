@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,8 +17,8 @@ def test_validator_fixture_parity(state, tmp_path):
     assert analyzer_json.exists(), f"Analyzer fixture missing for {state}"
 
     cmd = [
-        "python",
-        "tools/vtrac_validate.py",
+        sys.executable,
+        str(Path("TOOLS") / "vtrac_validate.py"),
         "--state",
         state,
         "--winners-dir",

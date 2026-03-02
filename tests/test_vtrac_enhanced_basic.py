@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -54,8 +55,8 @@ def test_mask_digit_suggestion():
 
 def test_cli_smoke(tmp_path, monkeypatch):
     cmd = [
-        "python",
-        "tools/vtrac_enhanced_cli.py",
+        sys.executable,
+        "TOOLS/vtrac_enhanced_cli.py",
         "--state",
         FIXTURE_STATE,
         "--tables-root",

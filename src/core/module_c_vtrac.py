@@ -521,12 +521,8 @@ WINNER_STYLE_BLOCK = """
   .hit-winner-gap { background-color:#f1fde7; color:#23690c; border-style:dashed; border-color:#74c476; }
   .hit-vt-straight { color:#0d47a1; background:#e6f0ff; border:1px solid #0d47a1; }
   .hit-vt-straight-gap { color:#1565c0; background:#f0f6ff; border:1px dashed #1565c0; }
-  .ls-box { background-color:#fff7bf; }
+  .ls-box { background-color:#fff7bf; color:#111; }
   .ls-box-edge { box-shadow: inset 0 0 0 1px #e6c94f; }
-  @media (prefers-color-scheme: dark) {
-    .ls-box { background-color:#3b3616; }
-    .ls-box-edge { box-shadow: inset 0 0 0 1px #c5a93a; }
-  }
   .hit-family { background-color:#ede3ff; color:#4b0082; border-color:#b39ddb; }
   .hit-family-gap { background-color:#f2ecff; color:#4b0082; border-style:dashed; border-color:#b39ddb; }
   td .hit-winner, td .hit-winner-gap, td .hit-vt-straight, td .hit-vt-straight-gap, td .hit-family, td .hit-family-gap { padding:0 2px; border-radius:2px; }
@@ -2046,7 +2042,6 @@ def render(state: str) -> None:
 
 if __name__ == "__main__":
     main()
-
 
 
 
