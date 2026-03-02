@@ -24,6 +24,19 @@ Useful flags (common)
 
 ## Available packs
 
+### Case packs (single-example teaching cases)
+
+Purpose: fast, human-first example review without chasing artifacts. These are **manifest-only** packs (pointer bundles).
+
+Standard structure inside each `MANIFEST.md`:
+- Broad context: predictive portfolio(s) + posted results + graded truth rows
+- Post-draw receipts: MV run report + Winners HTML/JSON (frozen evidence)
+- Pre-draw receipts: predictive `aux_summary` + predictive Candidate Universe + predictive Play Card(s)
+
+Case packs:
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/casepack__C035__NewYork4__2026-01-06/MANIFEST.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/casepack__C036__Delaware4__2026-01-02/MANIFEST.md`
+
 - v0.2 closeout (selection + grading alignment; VTRAC pack strategy + windowed grading):
   - `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/v0_2_closeout_play_card_windowed_vtracpack/README.md`
 

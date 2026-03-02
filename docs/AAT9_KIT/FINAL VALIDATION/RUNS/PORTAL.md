@@ -6,6 +6,50 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 
 ---
 
+## Quick Start (open these 5)
+
+If you want the most efficient “deep dive without drowning” path, open in this order:
+
+0) Morning brief (what changed + what to open next):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MORNING_BRIEF__EVIDENCE_EXTRACTION__2026-03-01.md`
+
+0.5) Bookmark (pause/resume example review fast):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__BOOKMARK__CASEPACK_EXAMPLE_REVIEW.md`
+
+1) Daily checklist (what to open for any day):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DAILY_TRIAGE_CARD__PREDICTIVE.md`
+
+2) Decision table (what it *means* + what to do next):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__OPERATOR_DECISION_TABLE__PREDICTIVE.md`
+
+3) SSOT evidence ledger (claims + receipts + regime tags + posture anchors):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MASTER_EVIDENCE_EXTRACTION__WINS.md`
+
+3.5) Predictive days index (what dates exist + matching results):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PREDICTIVE_DAYS_INDEX__tool_only.md`
+
+4) Pick one day’s portfolio (baseline):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO__tool_only.md`
+  - Optional (dc1 B36 closure v2 side-by-side): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__PREDICTIVE_PORTFOLIO__tool_only__dc1__B36__closure_v2.md`
+
+5) Use one window scoreboard (broad reality check):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__PORTFOLIO_VS_RESULTS__tool_only.md`
+  - Optional (posture buckets; tight vs noisy): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ENV_VERDICT_SCOREBOARD__B36__tool_only__baseline_vs_dc1.md`
+  - Bottleneck dashboard (lane drop vs within-lane): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__BOTTLENECK_DASHBOARD__tool_only__stable10__B36.md`
+
+---
+
+## Case Packs (example review; manifest-only bundles)
+
+Purpose: 1-click “open these files” bundles so you can review examples without chasing artifacts.
+
+Start here:
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+
+Teaching cases:
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/casepack__C035__NewYork4__2026-01-06/MANIFEST.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/casepack__C036__Delaware4__2026-01-02/MANIFEST.md`
+
 ## 0) If you feel lost (read these in order)
 
 1) This portal:
@@ -33,6 +77,13 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__PIPELINE_FLOW__GLASS_BOX.md`
 1.12.1) Side-review guide (what to open when; lets Codex iterate while you browse):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__SIDE_REVIEW_GUIDE__ARTIFACTS.md`
+1.12.2) Master evidence ledger (claims + receipts; “squeeze the orange” SSOT):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__MASTER_EVIDENCE_EXTRACTION__WINS.md`
+  - Includes Phase 3 regime tags + posture anchors (press vs skip) for de-biasing.
+1.12.3) Daily triage card (fast “one day” review path):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DAILY_TRIAGE_CARD__PREDICTIVE.md`
+1.12.4) Operator decision table (“what to do when you see X”):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__OPERATOR_DECISION_TABLE__PREDICTIVE.md`
 1.12.5) Delta (1-page): “Classic Codex Deep Analysis” → Crossroads truth layer:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__DELTA__CLASSIC_DEEP_ANALYSIS__TO__CROSSROADS_TRUTH_LAYER.md`
 1.13) v0.3 glass-box example (Ontario; “one real example” walkthrough):
@@ -44,6 +95,10 @@ Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/sca
 1.14.5) Strict miss anatomy (answers: “strict misses are lane drops vs within-lane misses?”):
 - Jan: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-15_to_2026-01-22__STRICT_MISS_ANATOMY__tool_only__stable10__B36.md`
 - OOS: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-01-01_to_2026-01-09__STRICT_MISS_ANATOMY__tool_only__stable10__B36.md`
+
+1.14.6) Posture bucket scoreboard (tight vs noisy; baseline vs dc1):
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ENV_VERDICT_SCOREBOARD__B36__tool_only__baseline_vs_dc1.md`
+- Label gaps (why `UNLABELED` exists; what to fill): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__ENV_VERDICT_LABEL_GAPS__B36__tool_only.md`
 
 1.15) Crossroads synthesis memo (one gold day anchor; B36-only):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__CROSSROADS_SYNTHESIS__2026-01-15.md`
