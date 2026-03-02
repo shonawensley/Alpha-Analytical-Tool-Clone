@@ -47,6 +47,19 @@ if str(REPO_ROOT) not in sys.path:
 
 SCHEMA_VERSION = "1.0"
 
+MIRROR_DIGIT_MAP: Dict[str, str] = {
+    "0": "5",
+    "1": "6",
+    "2": "7",
+    "3": "8",
+    "4": "9",
+    "5": "0",
+    "6": "1",
+    "7": "2",
+    "8": "3",
+    "9": "4",
+}
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -990,6 +1003,48 @@ def _vtrac_display_pack(*, index: int) -> List[str]:
                 seen.add(c)
         return combos
     return []
+
+
+def _vtrac_display_members(*, index: int) -> Tuple[List[str], List[str]]:
+    """
+    Return (singles, doubles) members for a VTRAC numeric index using `modules.vtrac_reference.VTRAC_DISPLAY`.
+
+    Note: these are *boxed-member canonicals* (UI display rows), not the full permutation reference.
+    """
+    import modules.vtrac_reference as vr
+
+    want = int(index)
+    for row in vr.VTRAC_DISPLAY:
+        try:
+            if int(row.get("Index")) != want:
+                continue
+        except Exception:
+            continue
+
+        singles: List[str] = []
+        doubles: List[str] = []
+        for key, out in (("Singles", singles), ("Doubles", doubles)):
+            raw = str(row.get(key) or "").strip()
+            if not raw:
+                continue
+            for token in raw.split():
+                c = _normalize_pick3_literal(token)
+                if not c or c in out:
+                    continue
+                out.append(c)
+        return singles, doubles
+    return [], []
+
+
+def _mirror_canon(value: str) -> str:
+    """
+    Mirror digits using the project mapping (0↔5, 1↔6, 2↔7, 3↔8, 4↔9), then canonicalize.
+    """
+    triad = _normalize_pick3_literal(value)
+    if not triad:
+        return ""
+    mirrored = "".join(MIRROR_DIGIT_MAP.get(d, d) for d in triad)
+    return _canon(mirrored)
 
 
 def _state_draws_prefix(*, state_key: str) -> str:
@@ -3242,17 +3297,25 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
     spine_mode = str(spine_pick_mode or "display").strip().lower()
     if spine_mode.startswith("hybrid"):
         pass
-    elif spine_mode not in {"display", "evidence", "display_ranked", "display_canon_ranked"}:
+    elif spine_mode not in {
+        "display",
+        "evidence",
+        "display_ranked",
+        "display_canon_ranked",
+        "closure_doubles_first",
+        "closure_doubles_mixed",
+    }:
         spine_mode = "display"
 
     tail_mode = str(tail_pick_mode or "convergence").strip().lower()
-    if tail_mode not in {"convergence", "score_first"}:
+    if tail_mode not in {"convergence", "score_first", "closure_doubles_first", "closure_doubles_mixed"}:
         tail_mode = "convergence"
 
     selected: List[str] = []
     selected_set: set[str] = set()
     pack_combos: List[str] = []
     pack_combos_by_index: Dict[int, List[str]] = {}
+    closure_trace: List[Dict[str, Any]] = []
 
     def _add_pack(idx: int, combo: str) -> bool:
         c = _normalize_pick3_literal(combo)
@@ -3280,7 +3343,121 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
         if taper_caps and i < len(taper_caps):
             idx_cap = int(taper_caps[i])
         added = 0
-        if spine_mode == "evidence":
+        if spine_mode in {"closure_doubles_first", "closure_doubles_mixed"}:
+            # Conversion-aware within-lane spend:
+            # - doubles-bearing lanes: buy doubles first, then best-supported singles
+            # - no-doubles lanes: buy mirror-pairs (bounded subset) before other singles
+            singles, doubles = _vtrac_display_members(index=idx)
+            default_key = (999, 999, 999, 999, 999.0)
+            best_key_by_canon: Dict[str, Tuple[int, int, int, int, float]] = {}
+            for row in lane_rows.get(idx, []):
+                c = _normalize_pick3_literal(row.get("combo") or "")
+                if not c:
+                    continue
+                canon = _canon(c)
+                if not canon:
+                    continue
+                key5 = _convergence_sort_key(row)[:-1]
+                prev = best_key_by_canon.get(canon)
+                if prev is None or key5 < prev:
+                    best_key_by_canon[canon] = key5
+
+            trace: Dict[str, Any] = {
+                "phase": "spine",
+                "index": int(idx),
+                "want": int(idx_cap),
+                "mode": str(spine_mode),
+                "has_doubles": bool(doubles),
+                "chosen": [],
+                "chosen_reasons": [],
+            }
+
+            def _token_key(token: str) -> Tuple[Tuple[int, int, int, int, float], str]:
+                canon = _canon(token)
+                return (best_key_by_canon.get(canon) or default_key), token
+
+            ordered: List[Tuple[str, str]] = []  # (token, reason)
+            if doubles:
+                doubles_sorted = sorted([t for t in doubles if _normalize_pick3_literal(t)], key=_token_key)
+                singles_sorted = sorted([t for t in singles if _normalize_pick3_literal(t)], key=_token_key)
+                if spine_mode == "closure_doubles_mixed":
+                    if int(idx_cap) <= 1:
+                        # Tail-like (1 line): pick the best-evidence member overall (tie-break: prefer doubles).
+                        scored_all: List[Tuple[Tuple[Tuple[int, int, int, int, float], int, str], Tuple[str, str]]] = []
+                        for t in doubles_sorted:
+                            key5, token = _token_key(t)
+                            scored_all.append(((key5, 0, token), (t, "double")))
+                        for t in singles_sorted:
+                            key5, token = _token_key(t)
+                            scored_all.append(((key5, 1, token), (t, "single")))
+                        scored_all.sort(key=lambda x: x[0])
+                        for _, (t, reason) in scored_all:
+                            ordered.append((t, reason))
+                    else:
+                        # Depth (>=4 lines): preserve singles coverage, then add doubles.
+                        for t in singles_sorted:
+                            ordered.append((t, "single"))
+                        for t in doubles_sorted:
+                            ordered.append((t, "double"))
+                else:
+                    # v1: doubles-first closure (aggressive).
+                    for t in doubles_sorted:
+                        ordered.append((t, "double"))
+                    for t in singles_sorted:
+                        ordered.append((t, "single"))
+            else:
+                singles_norm = [_normalize_pick3_literal(t) for t in singles if _normalize_pick3_literal(t)]
+                singles_set = set(singles_norm)
+
+                # Build mirror pairs.
+                pairs: List[
+                    Tuple[Tuple[Tuple[int, int, int, int, float], Tuple[int, int, int, int, float], str], Tuple[str, str]]
+                ] = []
+                seen_pairs: set[Tuple[str, str]] = set()
+                for t in singles_norm:
+                    partner = _mirror_canon(t)
+                    if not partner or partner not in singles_set:
+                        continue
+                    a, b2 = (t, partner) if t <= partner else (partner, t)
+                    if (a, b2) in seen_pairs:
+                        continue
+                    seen_pairs.add((a, b2))
+                    ka = best_key_by_canon.get(_canon(a)) or default_key
+                    kb = best_key_by_canon.get(_canon(b2)) or default_key
+                    pair_key = (min(ka, kb), max(ka, kb), f"{a}-{b2}")
+                    pairs.append((pair_key, (a, b2)))
+                pairs.sort(key=lambda x: x[0])
+
+                # Take as many full pairs as the cap allows.
+                used: set[str] = set()
+                for _, (a, b2) in pairs:
+                    if idx_cap and len(ordered) + 2 > int(idx_cap):
+                        break
+                    if a in used or b2 in used:
+                        continue
+                    ordered.append((a, "mirror_pair"))
+                    ordered.append((b2, "mirror_pair"))
+                    used.add(a)
+                    used.add(b2)
+
+                # Fill remaining capacity (evidence-ranked singles).
+                remaining = [t for t in singles_norm if t not in used]
+                for t in sorted(remaining, key=_token_key):
+                    if idx_cap and len(ordered) >= int(idx_cap):
+                        break
+                    ordered.append((t, "single"))
+
+            for token, reason in ordered:
+                if len(selected) >= b:
+                    break
+                if idx_cap and added >= idx_cap:
+                    break
+                if _add_pack(idx, token):
+                    added += 1
+                    trace["chosen"].append(_normalize_pick3_literal(token))
+                    trace["chosen_reasons"].append(str(reason))
+            closure_trace.append(trace)
+        elif spine_mode == "evidence":
             # Prefer evidence-backed combos inside the lane, then fall back to display members.
             lane_list = list(lane_rows.get(idx, []))
             lane_list.sort(key=_convergence_sort_key)
@@ -3455,37 +3632,146 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
         tail_rank_pos += 1
 
         chosen: List[str] = []
-        lane_list = list(lane_rows.get(idx, []))
-        if tail_mode == "score_first":
-            lane_list.sort(key=_score_first_sort_key)
-        # else: lane_rows are already populated in `_convergence_sort_key` order via ranked_conv
-        for row in lane_list:
-            c = _normalize_pick3_literal(row.get("combo") or "")
-            if not c or c in selected_set or c in chosen:
-                continue
-            chosen.append(c)
-            if len(chosen) >= want:
-                break
-        if len(chosen) < want:
-            for token in _vtrac_display_pack(index=idx):
+        chosen_reasons: List[str] = []
+        if tail_mode in {"closure_doubles_first", "closure_doubles_mixed"}:
+            singles, doubles = _vtrac_display_members(index=idx)
+            default_key = (999, 999, 999, 999, 999.0)
+            best_key_by_canon: Dict[str, Tuple[int, int, int, int, float]] = {}
+            for row in lane_rows.get(idx, []):
+                c = _normalize_pick3_literal(row.get("combo") or "")
+                if not c:
+                    continue
+                canon = _canon(c)
+                if not canon:
+                    continue
+                key5 = _convergence_sort_key(row)[:-1]
+                prev = best_key_by_canon.get(canon)
+                if prev is None or key5 < prev:
+                    best_key_by_canon[canon] = key5
+
+            def _token_key(token: str) -> Tuple[Tuple[int, int, int, int, float], str]:
+                canon = _canon(token)
+                return (best_key_by_canon.get(canon) or default_key), token
+
+            ordered: List[Tuple[str, str]] = []  # (token, reason)
+            if doubles:
+                doubles_sorted = sorted([t for t in doubles if _normalize_pick3_literal(t)], key=_token_key)
+                singles_sorted = sorted([t for t in singles if _normalize_pick3_literal(t)], key=_token_key)
+                if tail_mode == "closure_doubles_mixed":
+                    if int(want) <= 1:
+                        scored_all: List[Tuple[Tuple[Tuple[int, int, int, int, float], int, str], Tuple[str, str]]] = []
+                        for t in doubles_sorted:
+                            key5, token = _token_key(t)
+                            scored_all.append(((key5, 0, token), (t, "double")))
+                        for t in singles_sorted:
+                            key5, token = _token_key(t)
+                            scored_all.append(((key5, 1, token), (t, "single")))
+                        scored_all.sort(key=lambda x: x[0])
+                        for _, (t, reason) in scored_all:
+                            ordered.append((t, reason))
+                    else:
+                        for t in singles_sorted:
+                            ordered.append((t, "single"))
+                        for t in doubles_sorted:
+                            ordered.append((t, "double"))
+                else:
+                    for t in doubles_sorted:
+                        ordered.append((t, "double"))
+                    for t in singles_sorted:
+                        ordered.append((t, "single"))
+            else:
+                singles_norm = [_normalize_pick3_literal(t) for t in singles if _normalize_pick3_literal(t)]
+                singles_set = set(singles_norm)
+
+                pairs: List[
+                    Tuple[Tuple[Tuple[int, int, int, int, float], Tuple[int, int, int, int, float], str], Tuple[str, str]]
+                ] = []
+                seen_pairs: set[Tuple[str, str]] = set()
+                for t in singles_norm:
+                    partner = _mirror_canon(t)
+                    if not partner or partner not in singles_set:
+                        continue
+                    a, b2 = (t, partner) if t <= partner else (partner, t)
+                    if (a, b2) in seen_pairs:
+                        continue
+                    seen_pairs.add((a, b2))
+                    ka = best_key_by_canon.get(_canon(a)) or default_key
+                    kb = best_key_by_canon.get(_canon(b2)) or default_key
+                    pair_key = (min(ka, kb), max(ka, kb), f"{a}-{b2}")
+                    pairs.append((pair_key, (a, b2)))
+                pairs.sort(key=lambda x: x[0])
+
+                used: set[str] = set()
+                for _, (a, b2) in pairs:
+                    if len(ordered) + 2 > int(want):
+                        break
+                    if a in used or b2 in used:
+                        continue
+                    ordered.append((a, "mirror_pair"))
+                    ordered.append((b2, "mirror_pair"))
+                    used.add(a)
+                    used.add(b2)
+
+                remaining = [t for t in singles_norm if t not in used]
+                for t in sorted(remaining, key=_token_key):
+                    if len(ordered) >= int(want):
+                        break
+                    ordered.append((t, "single"))
+
+            for token, reason in ordered:
                 c = _normalize_pick3_literal(token)
                 if not c or c in selected_set or c in chosen:
                     continue
                 chosen.append(c)
+                chosen_reasons.append(str(reason))
                 if len(chosen) >= want:
                     break
+        else:
+            lane_list = list(lane_rows.get(idx, []))
+            if tail_mode == "score_first":
+                lane_list.sort(key=_score_first_sort_key)
+            # else: lane_rows are already populated in `_convergence_sort_key` order via ranked_conv
+            for row in lane_list:
+                c = _normalize_pick3_literal(row.get("combo") or "")
+                if not c or c in selected_set or c in chosen:
+                    continue
+                chosen.append(c)
+                chosen_reasons.append("evidence")
+                if len(chosen) >= want:
+                    break
+            if len(chosen) < want:
+                for token in _vtrac_display_pack(index=idx):
+                    c = _normalize_pick3_literal(token)
+                    if not c or c in selected_set or c in chosen:
+                        continue
+                    chosen.append(c)
+                    chosen_reasons.append("display")
+                    if len(chosen) >= want:
+                        break
         if not chosen:
             continue
 
         added_any = False
-        for c in chosen:
+        trace_tail: Dict[str, Any] = {
+            "phase": "tail",
+            "index": int(idx),
+            "want": int(want),
+            "mode": str(tail_mode),
+            "chosen": [],
+            "chosen_reasons": [],
+        }
+        for c, reason in zip(chosen, chosen_reasons or ([""] * len(chosen))):
             if len(selected) >= b:
                 break
             if _add_pack(idx, c):
                 added_any = True
+                trace_tail["chosen"].append(_normalize_pick3_literal(c))
+                trace_tail["chosen_reasons"].append(str(reason))
         if added_any:
             used_indices.add(idx)
             tail_added += 1
+            if tail_mode in {"closure_doubles_first", "closure_doubles_mixed"}:
+                closure_trace.append(trace_tail)
 
     # Safety top-up: if we couldn't fill due to duplicates/empty packs, fill remaining from convergence.
     for row in ranked_conv:
@@ -3532,6 +3818,7 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
                 "tail_pick_mode": str(tail_mode),
                 "tail_added": int(tail_added),
             },
+            **({"closure_trace": closure_trace} if closure_trace else {}),
         },
     }
 
@@ -4164,6 +4451,334 @@ def _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_ta
         spine_max_lines_per_index=6,
         spine_taper_caps=(6, 6, 4, 4),
         spine_pick_mode="display",
+        scan_limit=int(scan_limit),
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
+        indices_ranked_override=merged,
+        chooser_ranked_override=chooser_override,
+    )
+
+
+def _card_v0_3_b36_doubles_closure_v1(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    Additive conversion policy (selection-only): preserve the promoted v0.3 B36 lane chooser +
+    geometry, but change within-lane spend to bounded closure:
+    - doubles-bearing indices: buy doubles first, then evidence-backed singles
+    - no-doubles indices: buy mirror pairs (bounded subset) before other singles
+
+    Invariants (v1):
+    - lane chooser: identical to the promoted tail XLens injection policy (methods@18, packs@22)
+    - geometry: spinecap6 + taper6644 (6/6/4/4 spine; 1-line/index tail)
+    - tail depth: stays 1 line (do not buy depth by dropping lanes)
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+
+    spine_ranked, spine_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_score_ranked, tail_score_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="score_total_first",
+    )
+    tail_methods_ranked, tail_methods_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_packs_ranked, tail_packs_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="packs_first",
+    )
+    if not spine_ranked or not tail_score_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_indices: List[int] = []
+    for raw in spine_ranked:
+        idx = int(raw)
+        if idx not in spine_indices:
+            spine_indices.append(idx)
+        if len(spine_indices) >= int(spine_packs_target):
+            break
+    spine_set = set(spine_indices)
+
+    tail_score_excl = [int(x) for x in tail_score_ranked if int(x) not in spine_set]
+    tail_methods_excl = [int(x) for x in tail_methods_ranked if int(x) not in spine_set]
+    tail_packs_excl = [int(x) for x in tail_packs_ranked if int(x) not in spine_set]
+
+    keep_top = 14
+    inject_methods_pos = 18
+    inject_packs_pos = 22
+
+    tail_ordered: List[int] = []
+    seen_tail: set[int] = set()
+
+    def _add_tail(idx: int) -> None:
+        if idx in seen_tail:
+            return
+        tail_ordered.append(idx)
+        seen_tail.add(idx)
+
+    for idx in tail_score_excl[: max(0, int(keep_top))]:
+        _add_tail(int(idx))
+
+    def _inject_from(source: Sequence[int], pos: int) -> Optional[int]:
+        if not source:
+            return None
+        p = int(pos)
+        if p < 0:
+            return None
+        if p >= len(source):
+            return None
+        for i in range(p, len(source)):
+            idx = int(source[i])
+            if idx in seen_tail:
+                continue
+            return idx
+        return None
+
+    injected_methods = _inject_from(tail_methods_excl, inject_methods_pos)
+    if injected_methods is not None:
+        _add_tail(int(injected_methods))
+
+    injected_packs = _inject_from(tail_packs_excl, inject_packs_pos)
+    if injected_packs is not None:
+        _add_tail(int(injected_packs))
+
+    for idx in tail_score_excl:
+        _add_tail(int(idx))
+
+    if len(tail_ordered) < (int(rank_count) - int(spine_packs_target)):
+        for idx in tail_methods_excl + tail_packs_excl:
+            if len(tail_ordered) >= (int(rank_count) - int(spine_packs_target)):
+                break
+            _add_tail(int(idx))
+
+    merged = list(spine_indices) + list(tail_ordered)
+    chooser_override: Dict[str, Any] = {
+        "scan_limit": int(scan_limit),
+        "sort_preset": "split_spine_methods_first__tail_score_total_first__tail_spread_top14_pos18_22__xlens_methods18_packs22__doubles_closure_v1",
+        "spine_sort_preset": "methods_first",
+        "tail_sort_preset": "score_total_first",
+        "tail_spread_policy": {
+            "keep_top": int(keep_top),
+            "inject_sources": {
+                "methods_first": {"pos": int(inject_methods_pos), "chosen": int(injected_methods) if injected_methods is not None else None},
+                "packs_first": {"pos": int(inject_packs_pos), "chosen": int(injected_packs) if injected_packs is not None else None},
+            },
+        },
+        "spine_packs_target": int(spine_packs_target),
+        "rank_count": int(rank_count),
+        "spine_chosen_indices": list(spine_indices),
+        "tail_chosen_indices_first16": [int(x) for x in tail_ordered[:16]],
+        "topN_spine": spine_snapshot.get("topN") if isinstance(spine_snapshot, dict) else [],
+        "topN_tail_score_total": tail_score_snapshot.get("topN") if isinstance(tail_score_snapshot, dict) else [],
+        "topN_tail_methods": tail_methods_snapshot.get("topN") if isinstance(tail_methods_snapshot, dict) else [],
+        "topN_tail_packs": tail_packs_snapshot.get("topN") if isinstance(tail_packs_snapshot, dict) else [],
+        "chosen_indices": [int(x) for x in merged[: int(rank_count)]],
+        "candidates_found": int(
+            max(
+                int(spine_snapshot.get("candidates_found") or 0) if isinstance(spine_snapshot, dict) else 0,
+                int(tail_score_snapshot.get("candidates_found") or 0) if isinstance(tail_score_snapshot, dict) else 0,
+                int(tail_methods_snapshot.get("candidates_found") or 0) if isinstance(tail_methods_snapshot, dict) else 0,
+                int(tail_packs_snapshot.get("candidates_found") or 0) if isinstance(tail_packs_snapshot, dict) else 0,
+            )
+        ),
+    }
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=b,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="closure_doubles_first",
+        tail_pick_mode="closure_doubles_first",
+        scan_limit=int(scan_limit),
+        sort_preset="score_total_first",
+        spine_sort_preset="methods_first",
+        tail_sort_preset="score_total_first",
+        indices_ranked_override=merged,
+        chooser_ranked_override=chooser_override,
+    )
+
+
+def _card_v0_3_b36_doubles_closure_v2(
+    *,
+    ranked: Sequence[Dict[str, Any]],
+    budget: int,
+    scan_limit: int = 350,
+) -> Dict[str, Any]:
+    """
+    v2 (additive) variant of doubles/mirror-doubles closure:
+    - keeps the exact same lane chooser + geometry as v1
+    - uses a *mixed* within-lane rule for doubles-bearing indices:
+        - when depth is 4+: preserve singles coverage first, then add doubles
+        - when depth is 1: pick best-evidence member overall (tie-break: prefer doubles)
+    """
+    b = int(budget)
+    if b <= 12:
+        return _card_from_ranked(ranked=ranked, budget=b)
+    if b < 36:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_packs_target = 4
+    rank_count = 35  # max known display indices is ~35; safe ceiling
+
+    spine_ranked, spine_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_score_ranked, tail_score_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="score_total_first",
+    )
+    tail_methods_ranked, tail_methods_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="methods_first",
+    )
+    tail_packs_ranked, tail_packs_snapshot = _choose_top_vtrac_indices_full(
+        ranked=ranked,
+        count=rank_count,
+        scan_limit=int(scan_limit),
+        allowed_methods=None,
+        sort_preset="packs_first",
+    )
+    if not spine_ranked or not tail_score_ranked:
+        return _card_v0_2_default_multi_pack_packheavy_lane_diverse_filler(ranked=ranked, budget=b)
+
+    spine_indices: List[int] = []
+    for raw in spine_ranked:
+        idx = int(raw)
+        if idx not in spine_indices:
+            spine_indices.append(idx)
+        if len(spine_indices) >= int(spine_packs_target):
+            break
+    spine_set = set(spine_indices)
+
+    tail_score_excl = [int(x) for x in tail_score_ranked if int(x) not in spine_set]
+    tail_methods_excl = [int(x) for x in tail_methods_ranked if int(x) not in spine_set]
+    tail_packs_excl = [int(x) for x in tail_packs_ranked if int(x) not in spine_set]
+
+    keep_top = 14
+    inject_methods_pos = 18
+    inject_packs_pos = 22
+
+    tail_ordered: List[int] = []
+    seen_tail: set[int] = set()
+
+    def _add_tail(idx: int) -> None:
+        if idx in seen_tail:
+            return
+        tail_ordered.append(idx)
+        seen_tail.add(idx)
+
+    for idx in tail_score_excl[: max(0, int(keep_top))]:
+        _add_tail(int(idx))
+
+    def _inject_from(source: Sequence[int], pos: int) -> Optional[int]:
+        if not source:
+            return None
+        p = int(pos)
+        if p < 0:
+            return None
+        if p >= len(source):
+            return None
+        for i in range(p, len(source)):
+            idx = int(source[i])
+            if idx in seen_tail:
+                continue
+            return idx
+        return None
+
+    injected_methods = _inject_from(tail_methods_excl, inject_methods_pos)
+    if injected_methods is not None:
+        _add_tail(int(injected_methods))
+
+    injected_packs = _inject_from(tail_packs_excl, inject_packs_pos)
+    if injected_packs is not None:
+        _add_tail(int(injected_packs))
+
+    for idx in tail_score_excl:
+        _add_tail(int(idx))
+
+    if len(tail_ordered) < (int(rank_count) - int(spine_packs_target)):
+        for idx in tail_methods_excl + tail_packs_excl:
+            if len(tail_ordered) >= (int(rank_count) - int(spine_packs_target)):
+                break
+            _add_tail(int(idx))
+
+    merged = list(spine_indices) + list(tail_ordered)
+    chooser_override: Dict[str, Any] = {
+        "scan_limit": int(scan_limit),
+        "sort_preset": "split_spine_methods_first__tail_score_total_first__tail_spread_top14_pos18_22__xlens_methods18_packs22__doubles_closure_v2",
+        "spine_sort_preset": "methods_first",
+        "tail_sort_preset": "score_total_first",
+        "tail_spread_policy": {
+            "keep_top": int(keep_top),
+            "inject_sources": {
+                "methods_first": {"pos": int(inject_methods_pos), "chosen": int(injected_methods) if injected_methods is not None else None},
+                "packs_first": {"pos": int(inject_packs_pos), "chosen": int(injected_packs) if injected_packs is not None else None},
+            },
+        },
+        "spine_packs_target": int(spine_packs_target),
+        "rank_count": int(rank_count),
+        "spine_chosen_indices": list(spine_indices),
+        "tail_chosen_indices_first16": [int(x) for x in tail_ordered[:16]],
+        "topN_spine": spine_snapshot.get("topN") if isinstance(spine_snapshot, dict) else [],
+        "topN_tail_score_total": tail_score_snapshot.get("topN") if isinstance(tail_score_snapshot, dict) else [],
+        "topN_tail_methods": tail_methods_snapshot.get("topN") if isinstance(tail_methods_snapshot, dict) else [],
+        "topN_tail_packs": tail_packs_snapshot.get("topN") if isinstance(tail_packs_snapshot, dict) else [],
+        "chosen_indices": [int(x) for x in merged[: int(rank_count)]],
+        "candidates_found": int(
+            max(
+                int(spine_snapshot.get("candidates_found") or 0) if isinstance(spine_snapshot, dict) else 0,
+                int(tail_score_snapshot.get("candidates_found") or 0) if isinstance(tail_score_snapshot, dict) else 0,
+                int(tail_methods_snapshot.get("candidates_found") or 0) if isinstance(tail_methods_snapshot, dict) else 0,
+                int(tail_packs_snapshot.get("candidates_found") or 0) if isinstance(tail_packs_snapshot, dict) else 0,
+            )
+        ),
+    }
+
+    return _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap(
+        ranked=ranked,
+        budget=b,
+        spine_max_lines_per_index=6,
+        spine_taper_caps=(6, 6, 4, 4),
+        spine_pick_mode="closure_doubles_mixed",
+        tail_pick_mode="closure_doubles_mixed",
         scan_limit=int(scan_limit),
         sort_preset="score_total_first",
         spine_sort_preset="methods_first",
@@ -6966,6 +7581,8 @@ def main() -> None:
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos20_26": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top16_pos18_24": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22": {},
+            "v0_3_b36_doubles_closure_v1": {},
+            "v0_3_b36_doubles_closure_v2": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__xlens_m18_p22_sc800": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6__taper6444__xlens_m18_p22": {},
             "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top13_pos18_22__xlens3": {},
@@ -7147,6 +7764,12 @@ def main() -> None:
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22(
                     ranked=ranked, budget=b
                 )
+            )
+            strategy_cards["v0_3_b36_doubles_closure_v1"][f"B{b}"] = _card_v0_3_b36_doubles_closure_v1(
+                ranked=ranked, budget=b
+            )
+            strategy_cards["v0_3_b36_doubles_closure_v2"][f"B{b}"] = _card_v0_3_b36_doubles_closure_v2(
+                ranked=ranked, budget=b
             )
             strategy_cards["v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644__xlens_m18_p22_sc800"][f"B{b}"] = (
                 _card_v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22_scan800(

@@ -227,7 +227,7 @@ def main() -> None:
         lines.append(f"## {budget}")
         lines.append("")
         lines.append(
-            "| strategy | rows | hit_any | hit_any_inclusive | pack_any_correct | pack_box_hit | pack_straight_hit | pack_correct | pack_share(inclusive) | CU_LANE_BUT_PLAY_MISS | CU_EXACT_BUT_PLAY_MISS |"
+            "| strategy | rows | hit_any | hit_any_inclusive | index_hit (pack_any_correct) | canonical_hit (pack_box_hit) | pack_straight_hit | pack_correct | pack_share(inclusive) | CU_LANE_BUT_PLAY_MISS | CU_EXACT_BUT_PLAY_MISS |"
         )
         lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
         for strat in strategies:
@@ -256,8 +256,9 @@ def main() -> None:
     lines.append("## Notes")
     lines.append("- `hit_any_inclusive` is the coverage contract (lane retained or better).")
     lines.append("- `hit_any` is the strict contract (exact membership in the budgeted list).")
-    lines.append("- `pack_any_correct` is the key bridge metric for multi-pack strategies.")
-    lines.append("- `pack_box_hit` / `pack_straight_hit` are pack-only VTRAC hits (boxed/straight).")
+    lines.append("- `index_hit` is `pack_any_correct`: winner VTRAC index is inside the chosen pack indices.")
+    lines.append("- `canonical_hit` is `pack_box_hit`: winner canonical is present (as any perm) inside the chosen pack.")
+    lines.append("- `pack_straight_hit` is exact membership inside the chosen pack.")
     lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
