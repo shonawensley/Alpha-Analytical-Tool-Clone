@@ -1,6 +1,6 @@
 # Profit Alerts Evaluation — 2025-06-23
 
-- Generated: `2026-01-03T10:05:40.422210+00:00`
+- Generated: `2026-03-03T08:01:09.889395+00:00`
 - Inputs:
   - `sharepacks/2025-06-23/control_center/profit_alerts.csv`
   - `data/results/*.txt` (local only)
@@ -23,7 +23,7 @@
 | A05 | 14 | 0 | 14 | 0 | 1 | 1 | - |
 | A09 | 1 | 0 | 1 | 0 | 0 | 0 | - |
 | A10 | 3 | 0 | 3 | 0 | 0 | 0 | - |
-| A11:S2 | 7 | 0 | 7 | 0 | 0 | 0 | - |
+| A11:S2 | 7 | 0 | 7 | 0 | 1 | 1 | - |
 | A12 | 5 | 0 | 5 | 0 | 0 | 0 | - |
 
 Promoters fired (not gradeable as winner hits):
@@ -42,23 +42,24 @@ For `Midday` / `Evening` variant rows, this counts a hit if the episode resolves
 | A05 | 14 | 0 | 14 | 0 | 1 | 2 |
 | A09 | 1 | 0 | 1 | 0 | 0 | 1 |
 | A10 | 3 | 0 | 3 | 0 | 0 | 0 |
-| A11:S2 | 7 | 0 | 7 | 0 | 0 | 0 |
+| A11:S2 | 7 | 0 | 7 | 0 | 1 | 1 |
 | A12 | 5 | 0 | 5 | 0 | 0 | 0 |
 
 ## Merged episodes (deduped play-sets)
 
 This view dedupes rows that imply the same concrete play-set (same `StateKey × Variant × implied_set`) so co-firing alerts do not get double-counted.
 
-- merged_rows_total: `54`
+- merged_rows_total: `55`
 
 | StateKey | Variant | Strength | Alerts | Promoters | DecayMax | Status | t_hit | HitWhen | HitType | Hit<=7 | Hit<=14 | Any(decay) | AnyWhen |
 |---|---|---:|---|---|---:|---|---:|---|---|---|---|---|---|
-| Connecticut4 | Combined | 5 | A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Connecticut4 | Combined | 5 | A02,A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Indiana4 | Combined | 5 | A11 | A03 | 2 | EXPIRED | - | - | - | N | N | N | - |
-| Michigan4 | Combined | 5 | A04,A11 | A03,A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
-| Pennsylvania4 | Combined | 5 | A01,A11 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
+| Michigan4 | Combined | 5 | A11 | A03,A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Ohio4 | Combined | 5 | A02,A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Pennsylvania4 | Combined | 5 | A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | PuertoRico4 | Combined | 5 | A01,A04,A11 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
-| SouthCarolina4 | Combined | 5 | A11 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
+| SouthCarolina4 | Combined | 5 | A11 | - | 2 | EXPIRED | - | - | - | Y | Y | N | - |
 | Connecticut4 | Evening | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Delaware4 | Midday | 4 | A02,A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Florida4 | Evening | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
@@ -66,6 +67,7 @@ This view dedupes rows that imply the same concrete play-set (same `StateKey × 
 | Indiana4 | Evening | 4 | A05 | A03 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Indiana4 | Evening | 4 | A01,A04 | A03 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Indiana4 | Midday | 4 | A01 | A03 | 3 | EXPIRED | - | - | - | N | N | N | - |
+| Michigan4 | Combined | 4 | A04 | A03,A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Michigan4 | Midday | 4 | A02,A05 | A03,A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NewJersey4 | Evening | 4 | A05 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NewYork4 | Combined | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | Y | Y | N | - |
@@ -76,8 +78,6 @@ This view dedupes rows that imply the same concrete play-set (same `StateKey × 
 | Ohio4 | Midday | 4 | A01 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Ohio4 | Midday | 4 | A01,A04 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
 | OntarioCanada4 | Evening | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
-| OntarioCanada4 | Midday | 4 | A01,A04 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
-| Pennsylvania4 | Evening | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 
 Full merged evaluation:
 - `sharepacks/2025-06-23/control_center/profit_alerts_eval_merged.csv`
@@ -92,7 +92,7 @@ Full merged evaluation:
 | 80 | Ohio4 | Combined | A11 | 5 | BOX | 2 | EXPIRED | - | - | - | N | N | N | - | N |
 | 81 | Pennsylvania4 | Combined | A11 | 5 | BOX | 2 | EXPIRED | - | - | - | N | N | N | - | N |
 | 82 | PuertoRico4 | Combined | A11 | 5 | BOX | 2 | EXPIRED | - | - | - | N | N | N | - | N |
-| 83 | SouthCarolina4 | Combined | A11 | 5 | BOX | 2 | EXPIRED | - | - | - | N | N | N | - | N |
+| 83 | SouthCarolina4 | Combined | A11 | 5 | BOX | 2 | EXPIRED | - | - | - | Y | Y | N | - | N |
 | 1 | Indiana4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 2 | Indiana4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 3 | NorthCarolina4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
@@ -102,8 +102,8 @@ Full merged evaluation:
 | 7 | Pennsylvania4 | Combined | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 8 | Pennsylvania4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 9 | PuertoRico4 | Combined | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
-| 10 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | ? | N | - | N |
-| 11 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | ? | N | - | N |
+| 10 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
+| 11 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 12 | SouthCarolina4 | Combined | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 13 | SouthCarolina4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 14 | SouthCarolina4 | Evening | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | N | N | N | - | N |

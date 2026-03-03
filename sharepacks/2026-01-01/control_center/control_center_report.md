@@ -1,6 +1,6 @@
 # Control Center Export — 2026-01-01
 
-- Generated: `2026-01-05T12:31:53.548206+00:00`
+- Generated: `2026-03-03T08:01:14.002441+00:00`
 - Results date (D): `2026-01-01`
 - Results file: `data/results/2026-01-01.txt`
 - History workbook (D-1): `data/history/Pick3StatsC4_2025_12_31.xlsm`
@@ -18,6 +18,8 @@
 - meta.json: `sharepacks/2026-01-01/control_center/meta.json`
 - README.md: `sharepacks/2026-01-01/control_center/README.md`
 - control_center_report.md: `sharepacks/2026-01-01/control_center/control_center_report.md`
+- profit_compound_events.csv: `sharepacks/2026-01-01/control_center/profit_compound_events.csv`
+- profit_compound_events.md: `sharepacks/2026-01-01/control_center/profit_compound_events.md`
 
 ## Notes
 - This export is sharepack-aligned: it reads frozen Aux snapshots under `sharepacks/<D>/<STATE>/aux/...`.

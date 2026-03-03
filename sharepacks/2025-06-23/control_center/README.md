@@ -15,6 +15,7 @@ This folder is the **Brain-2 / Control Center** export for the frozen day sharep
 - `due_doubles.csv` / `.md`
 - `vtrac_repeat_watch.csv` / `.md`
 - `profit_alerts.csv` / `.md`
+- `profit_compound_events.csv` / `.md` (shadow; compound co-fire watchlist)
 - `profit_alerts_eval.csv` / `.md` (optional; windowed evaluation harness)
 - `profit_alerts_eval_merged.csv` (optional; deduped play-sets)
 - `control_center_report.md`

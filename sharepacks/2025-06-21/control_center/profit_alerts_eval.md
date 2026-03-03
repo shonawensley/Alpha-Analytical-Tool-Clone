@@ -1,6 +1,6 @@
 # Profit Alerts Evaluation — 2025-06-21
 
-- Generated: `2026-01-03T10:05:40.811615+00:00`
+- Generated: `2026-03-03T08:01:06.893974+00:00`
 - Inputs:
   - `sharepacks/2025-06-21/control_center/profit_alerts.csv`
   - `data/results/*.txt` (local only)
@@ -53,28 +53,28 @@ This view dedupes rows that imply the same concrete play-set (same `StateKey × 
 |---|---|---:|---|---|---:|---|---:|---|---|---|---|---|---|
 | NewJersey4 | Evening | 4 | A05 | - | 2 | HIT | 1 | 2025-06-22 Evening | Straight | Y | Y | Y | 2025-06-22 Evening |
 | Florida4 | Midday | 3 | A02 | A08 | 2 | HIT | 1 | 2025-06-22 Midday | Straight | Y | Y | Y | 2025-06-22 Midday |
-| Indiana4 | Combined | 5 | A01,A11 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
-| NewYork4 | Combined | 5 | A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Indiana4 | Combined | 5 | A05,A11 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
+| NewYork4 | Combined | 5 | A02,A05,A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NewYork4 | Evening | 5 | A02 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
-| OntarioCanada4 | Combined | 5 | A01,A11 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
-| Pennsylvania4 | Combined | 5 | A01,A04,A11 | A03,A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
+| OntarioCanada4 | Combined | 5 | A11 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Pennsylvania4 | Combined | 5 | A05,A11 | A03,A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Connecticut4 | Combined | 4 | A10 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Connecticut4 | Combined | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Delaware4 | Combined | 4 | A04 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Delaware4 | Midday | 4 | A02,A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Florida4 | Evening | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
-| Indiana4 | Combined | 4 | A05 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
+| Indiana4 | Combined | 4 | A01 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
 | Indiana4 | Midday | 4 | A02 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Michigan4 | Evening | 4 | A01,A04 | A08 | 3 | EXPIRED | - | - | - | N | Y | N | - |
 | Michigan4 | Midday | 4 | A02,A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NewYork4 | Combined | 4 | A01 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
-| NewYork4 | Combined | 4 | A02,A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NewYork4 | Evening | 4 | A04 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | NewYork4 | Midday | 4 | A02 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | NorthCarolina4 | Combined | 4 | A04 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | NorthCarolina4 | Midday | 4 | A05 | A08 | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Ohio4 | Midday | 4 | A05 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
 | Ohio4 | Midday | 4 | A01 | - | 3 | EXPIRED | - | - | - | N | N | N | - |
+| OntarioCanada4 | Combined | 4 | A01 | A08 | 3 | EXPIRED | - | - | - | N | N | N | - |
 | OntarioCanada4 | Evening | 4 | A05 | - | 2 | EXPIRED | - | - | - | N | N | N | - |
 
 Full merged evaluation:
@@ -102,8 +102,8 @@ Full merged evaluation:
 | 8 | Pennsylvania4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 9 | Pennsylvania4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 10 | Pennsylvania4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
-| 11 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | ? | N | - | N |
-| 12 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | ? | N | - | N |
+| 11 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
+| 12 | PuertoRico4 | Midday | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 13 | SouthCarolina4 | Evening | A01 | 4 | BOX | 3 | EXPIRED | - | - | - | N | N | N | - | N |
 | 15 | Delaware4 | Midday | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | N | N | N | - | N |
 | 16 | Indiana4 | Midday | A02 | 4 | STR8_3 | 2 | EXPIRED | - | - | - | N | N | N | - | N |

@@ -1,6 +1,6 @@
 # Blackapple Alerts
 
-- Generated: `2026-01-05T12:31:56.426583+00:00`
+- Generated: `2026-03-03T08:01:16.849755+00:00`
 
 ```
          State       StateKey  Variant  BA-Score Status                                   Triggers  #Candidates    Examples Winner Midday Winner Evening Midday Hits Evening Hits
