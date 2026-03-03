@@ -3,6 +3,7 @@
 Entry points:
 - `AUDIT_SHEET.csv`
 - `SUMMARY.md`
+- `CODEX_SECOND_PASS_REVIEW.md`
 - `CHATGPT_PRO_PROMPT.md`
 - `case_packets/`
 - `ssot/` (Charter + Grading Matrix + roster copy)
