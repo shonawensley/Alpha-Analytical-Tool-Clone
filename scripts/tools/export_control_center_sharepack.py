@@ -424,6 +424,23 @@ def _permutations3(value: Any) -> set[str]:
     return {"".join(p) for p in set(permutations(digits, 3))}
 
 
+def _box_family_from_seed(seed: Any) -> Tuple[str, List[str], str]:
+    """
+    Return (canonical_box_label, implied_box_set, seed_perm).
+
+    - canonical_box_label: sorted digits label for the BOX family (e.g., 592 -> 259).
+    - implied_box_set: all unique permutations of that family (6/3/1 depending on repeats).
+    - seed_perm: the original 3-digit order if it differs from canonical_box_label, else "".
+    """
+    digits = _digits_only(seed)
+    if len(digits) != 3:
+        return ("", [], "")
+    canon_box = _canon_draw(digits)
+    implied = sorted(_permutations3(canon_box))
+    seed_perm = digits if digits != canon_box else ""
+    return (canon_box, implied, seed_perm)
+
+
 def _vstraights_for_index(index: Any) -> List[str]:
     try:
         idx = int(index)
@@ -694,7 +711,7 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                     if best is not None:
                         ba = ba_score.get(section_name, 0)
                         strength = 4 + (1 if ba >= 3 else 0)
-                        implied_box = sorted(_permutations3(best.get("Canonical") or ""))
+                        canon_box, implied_box, seed_perm = _box_family_from_seed(best.get("Canonical") or "")
                         evidence = {
                             "tail": tail,
                             "col": col,
@@ -702,6 +719,8 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                             "perm": int(best.get("_perm") or 0),
                             "ba_score": ba,
                         }
+                        if seed_perm:
+                            evidence["seed_perm"] = seed_perm
                         evidence.update(stub_locator_by_variant_col.get((section_name, col)) or {})
                         evidence.update(_stable_provenance(best))
                         rows_out.append(
@@ -715,13 +734,13 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                                 "CapLines": 12,
                                 "DecayDraws": 3,
                                 "Badges": "CONS/3V" + ("/BA" if ba >= 2 else ""),
-                                "Canonical": best.get("Canonical") or "-",
-                                "ImpliedSet": json.dumps(implied_box, separators=(",", ":")) if implied_box else "",
+                                "Canonical": canon_box or "-",
+                                "ImpliedSet": json.dumps(implied_box, separators=(",", ":")),
                                 "Evidence": json.dumps(evidence, separators=(",", ":")),
                                 "Winner Midday": st.winners.get("Midday", "-") or "-",
                                 "Winner Evening": st.winners.get("Evening", "-") or "-",
-                                "Midday Hits": "Boxed" if _canon_draw(st.winners.get("Midday", "")) == _canon_draw(best.get("Canonical")) else "-",
-                                "Evening Hits": "Boxed" if _canon_draw(st.winners.get("Evening", "")) == _canon_draw(best.get("Canonical")) else "-",
+                                "Midday Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Midday", "")) == canon_box) else "-",
+                                "Evening Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Evening", "")) == canon_box) else "-",
                             }
                         )
                 else:
@@ -778,12 +797,14 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
         if best_a04 is not None:
             sec = str(best_a04.get("section") or "Combined")
             ba = ba_score.get(sec, 0)
-            implied_box = sorted(_permutations3(best_a04.get("Canonical") or ""))
+            canon_box, implied_box, seed_perm = _box_family_from_seed(best_a04.get("Canonical") or "")
             evidence = {
                 "persistence_set_count": int(best_a04.get("_set_persist") or 0),
                 "rowcov": int(best_a04.get("_rowcov") or 0),
                 "ba_score": ba,
             }
+            if seed_perm:
+                evidence["seed_perm"] = seed_perm
             evidence.update(_stable_provenance(best_a04))
             rows_out.append(
                 {
@@ -796,13 +817,13 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                     "CapLines": 12,
                     "DecayDraws": 3,
                     "Badges": "PERSIST" + ("/BA" if ba >= 2 else ""),
-                    "Canonical": best_a04.get("Canonical") or "-",
-                    "ImpliedSet": json.dumps(implied_box, separators=(",", ":")) if implied_box else "",
+                    "Canonical": canon_box or "-",
+                    "ImpliedSet": json.dumps(implied_box, separators=(",", ":")),
                     "Evidence": json.dumps(evidence, separators=(",", ":")),
                     "Winner Midday": st.winners.get("Midday", "-") or "-",
                     "Winner Evening": st.winners.get("Evening", "-") or "-",
-                    "Midday Hits": "Boxed" if _canon_draw(st.winners.get("Midday", "")) == _canon_draw(best_a04.get("Canonical")) else "-",
-                    "Evening Hits": "Boxed" if _canon_draw(st.winners.get("Evening", "")) == _canon_draw(best_a04.get("Canonical")) else "-",
+                    "Midday Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Midday", "")) == canon_box) else "-",
+                    "Evening Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Evening", "")) == canon_box) else "-",
                 }
             )
 
@@ -1026,7 +1047,10 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                             if candidates:
                                 candidates.sort(key=lambda t: (-t[0], t[1], t[2]))
                                 vcount, best_rank, pattern, variants = candidates[0]
-                                implied_box = sorted(_permutations3(pattern))
+                                canon_box, implied_box, seed_perm = _box_family_from_seed(pattern)
+                                evidence = {"dr_survivor_3v": 1, "variants": variants, "best_rank": best_rank}
+                                if seed_perm:
+                                    evidence["seed_perm"] = seed_perm
                                 rows_out.append(
                                     {
                                         "State": st.aux_state_label,
@@ -1038,13 +1062,13 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                                         "CapLines": 12,
                                         "DecayDraws": 2,
                                         "Badges": "DR/3V",
-                                        "Canonical": pattern,
-                                        "ImpliedSet": json.dumps(implied_box, separators=(",", ":")) if implied_box else "",
-                                        "Evidence": json.dumps({"dr_survivor_3v": 1, "variants": variants, "best_rank": best_rank}, separators=(",", ":")),
+                                        "Canonical": canon_box or "-",
+                                        "ImpliedSet": json.dumps(implied_box, separators=(",", ":")),
+                                        "Evidence": json.dumps(evidence, separators=(",", ":")),
                                         "Winner Midday": st.winners.get("Midday", "-") or "-",
                                         "Winner Evening": st.winners.get("Evening", "-") or "-",
-                                        "Midday Hits": "Boxed" if _canon_draw(st.winners.get("Midday", "")) == _canon_draw(pattern) else "-",
-                                        "Evening Hits": "Boxed" if _canon_draw(st.winners.get("Evening", "")) == _canon_draw(pattern) else "-",
+                                        "Midday Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Midday", "")) == canon_box) else "-",
+                                        "Evening Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Evening", "")) == canon_box) else "-",
                                 }
                             )
             except Exception:
@@ -1073,8 +1097,9 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                         & (cand["_rowcov"] >= 2)
                         & (cand["_canon_digits"].map(lambda s, td=mirror_tail_key: _contains_all_digits(s, td)))
                     )
-                    canon = best.get("Canonical") if best is not None else "-"
-                    implied_box = sorted(_permutations3(canon or ""))
+                    if best is None:
+                        continue
+                    canon_box, implied_box, seed_perm = _box_family_from_seed(best.get("Canonical") or "")
                     evidence = {
                         "ba_mirror_latest": 1,
                         "last_draw": last_draw,
@@ -1082,9 +1107,10 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                         "tail": tail,
                         "col": col,
                     }
+                    if seed_perm:
+                        evidence["seed_perm"] = seed_perm
                     evidence.update(stub_locator_by_variant_col.get((section_name, col)) or {})
-                    if best is not None:
-                        evidence.update(_stable_provenance(best))
+                    evidence.update(_stable_provenance(best))
                     rows_out.append(
                         {
                             "State": st.aux_state_label,
@@ -1096,13 +1122,13 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                             "CapLines": 12,
                             "DecayDraws": 2,
                             "Badges": "BA/MIRROR",
-                            "Canonical": canon or "-",
-                            "ImpliedSet": json.dumps(implied_box, separators=(",", ":")) if implied_box else "",
+                            "Canonical": canon_box or "-",
+                            "ImpliedSet": json.dumps(implied_box, separators=(",", ":")),
                             "Evidence": json.dumps(evidence, separators=(",", ":")),
                             "Winner Midday": st.winners.get("Midday", "-") or "-",
                             "Winner Evening": st.winners.get("Evening", "-") or "-",
-                            "Midday Hits": "Boxed" if canon and _canon_draw(st.winners.get("Midday", "")) == _canon_draw(canon) else "-",
-                            "Evening Hits": "Boxed" if canon and _canon_draw(st.winners.get("Evening", "")) == _canon_draw(canon) else "-",
+                            "Midday Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Midday", "")) == canon_box) else "-",
+                            "Evening Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Evening", "")) == canon_box) else "-",
                         }
                     )
 
@@ -1121,17 +1147,30 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                     star_score = float(score_max) if pd.notna(score_max) else 0.0
                     col = "2" if "col2" in tags else ("1" if "col1" in tags else None)
                     if col and tail_by_variant_col.get(("Combined", col)):
-                        best = _best_row((cand["section"] == "Combined") & (cand["Column"] == col) & (cand["_is_3v"]) & (cand["_rowcov"] >= 3))
-                        canon = best.get("Canonical") if best is not None else "-"
                         triad = _digits_only(top.get("triad")).zfill(3)
-                        implied_box = sorted(_permutations3(canon or ""))
+                        best: Optional[pd.Series] = None
+                        subset = cand[
+                            (cand["section"] == "Combined")
+                            & (cand["Column"] == col)
+                            & (cand["_is_pick3"])
+                            & (cand["_rowcov"] >= 3)
+                        ].copy()
+                        if not subset.empty:
+                            subset.sort_values(["_rowcov", "_score", "_canon_digits"], ascending=[False, False, True], inplace=True, ignore_index=True)
+                            best = subset.iloc[0]
+
+                        seed = (best.get("Canonical") if best is not None else triad) or ""
+                        canon_box, implied_box, seed_perm = _box_family_from_seed(seed)
                         evidence = {
                             "triad": triad,
                             "col": col,
                             "evidence_tags": tags,
                             "star_level": star_level,
                             "a11_star_score": round(star_score, 3),
+                            "canon_source": "stable_attach" if best is not None else "triad_fallback",
                         }
+                        if seed_perm:
+                            evidence["seed_perm"] = seed_perm
                         evidence.update(stub_locator_by_variant_col.get(("Combined", col)) or {})
                         if best is not None:
                             evidence.update(_stable_provenance(best))
@@ -1146,17 +1185,61 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                                 "CapLines": 12,
                                 "DecayDraws": 2,
                                 "Badges": "HOT/CONS",
-                                "Canonical": canon or "-",
-                                "ImpliedSet": json.dumps(implied_box, separators=(",", ":")) if implied_box else "",
+                                "Canonical": canon_box or "-",
+                                "ImpliedSet": json.dumps(implied_box, separators=(",", ":")),
                                 "Evidence": json.dumps(evidence, separators=(",", ":")),
                                 "Winner Midday": st.winners.get("Midday", "-") or "-",
                                 "Winner Evening": st.winners.get("Evening", "-") or "-",
-                                "Midday Hits": "Boxed" if canon and _canon_draw(st.winners.get("Midday", "")) == _canon_draw(canon) else "-",
-                                "Evening Hits": "Boxed" if canon and _canon_draw(st.winners.get("Evening", "")) == _canon_draw(canon) else "-",
+                                "Midday Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Midday", "")) == canon_box) else "-",
+                                "Evening Hits": "Boxed" if (canon_box and _canon_draw(st.winners.get("Evening", "")) == canon_box) else "-",
                             }
                         )
             except Exception:
                 pass
+
+    # A08 evidence enrichment: identify which base BOX candidates (same variant) the promoter is boosting.
+    # This makes A08 self-auditing under the Profit Alerts grading matrix.
+    boxes_by_state_variant: Dict[Tuple[str, str], List[Dict[str, str]]] = {}
+    for row in rows_out:
+        if str(row.get("Suggested") or "").strip().upper() != "BOX":
+            continue
+        canon = str(row.get("Canonical") or "").strip()
+        if not canon or canon == "-":
+            continue
+        key = (str(row.get("StateKey") or "").strip(), str(row.get("Variant") or "").strip())
+        boxes_by_state_variant.setdefault(key, []).append(
+            {
+                "alert_id": str(row.get("AlertId") or "").strip().upper(),
+                "variant": key[1],
+                "canonical": canon,
+            }
+        )
+    for key, items in list(boxes_by_state_variant.items()):
+        seen: set[Tuple[str, str]] = set()
+        out: List[Dict[str, str]] = []
+        for item in sorted(items, key=lambda d: (d.get("alert_id") or "", d.get("canonical") or "")):
+            sig = (item.get("alert_id") or "", item.get("canonical") or "")
+            if sig in seen:
+                continue
+            seen.add(sig)
+            out.append(item)
+        boxes_by_state_variant[key] = out
+
+    for row in rows_out:
+        if str(row.get("AlertId") or "").strip().upper() != "A08":
+            continue
+        state_key = str(row.get("StateKey") or "").strip()
+        variant = str(row.get("Variant") or "").strip()
+        base = boxes_by_state_variant.get((state_key, variant), [])
+        try:
+            evidence_obj = json.loads(str(row.get("Evidence") or "") or "{}")
+            if not isinstance(evidence_obj, dict):
+                evidence_obj = {}
+        except Exception:
+            evidence_obj = {}
+        evidence_obj["base_candidates"] = base
+        evidence_obj["base_candidate_present"] = 1 if base else 0
+        row["Evidence"] = json.dumps(evidence_obj, separators=(",", ":"))
 
     df = pd.DataFrame(rows_out)
     if df.empty:
@@ -1275,6 +1358,17 @@ def main() -> None:
         title="Profit Alerts (A01–A12)",
     )
 
+    # Shadow-only: export compound co-fire watchlist derived from Profit Alerts.
+    try:
+        from scripts.tools.export_profit_compound_events import export_day as export_profit_compounds_day  # type: ignore
+
+        res = export_profit_compounds_day(date=results_date, sharepacks_root=sharepacks_root, include_all=False)
+        if res:
+            artifacts["profit_compound_events.csv"] = _safe_rel(res[0])
+            artifacts["profit_compound_events.md"] = _safe_rel(res[1])
+    except Exception:
+        pass
+
     history_date = None
     match = re.search(r"Pick3StatsC4_(\d{4})[-_](\d{2})[-_](\d{2})", history_excel_path or "")
     if match:
@@ -1320,6 +1414,7 @@ def main() -> None:
         "- `due_doubles.csv` / `.md`",
         "- `vtrac_repeat_watch.csv` / `.md`",
         "- `profit_alerts.csv` / `.md`",
+        "- `profit_compound_events.csv` / `.md` (shadow; compound co-fire watchlist)",
         "- `profit_alerts_eval.csv` / `.md` (optional; windowed evaluation harness)",
         "- `profit_alerts_eval_merged.csv` (optional; deduped play-sets)",
         "- `control_center_report.md`",

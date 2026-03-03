@@ -85,6 +85,9 @@ Artifacts:
 - Board:
   - `sharepacks/<D>/control_center/profit_alerts.md`
   - `sharepacks/<D>/control_center/profit_alerts.csv`
+- Shadow-only derived triage:
+  - `sharepacks/<D>/control_center/profit_compound_events.md`
+  - `sharepacks/<D>/control_center/profit_compound_events.csv`
 - Evaluation (windowed episodes):
   - `sharepacks/<D>/control_center/profit_alerts_eval.md`
   - `sharepacks/<D>/control_center/profit_alerts_eval.csv`

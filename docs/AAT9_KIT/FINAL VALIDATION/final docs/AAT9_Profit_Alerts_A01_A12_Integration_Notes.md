@@ -108,8 +108,21 @@ For Master Validation / sharepack evaluation, treat profit alerts as **Brain‑2
 - Write under `sharepacks/<D>/control_center/` alongside existing Brain‑2 exports:
   - `profit_alerts.csv`
   - `profit_alerts.md`
+  - `profit_compound_events.csv` (shadow-only derived triage; “watchlist co-fire environments”)
+  - `profit_compound_events.md`
   - (optional) `profit_alerts.json` (machine‑readable list of rows)
 - Keep Control Center’s existing snapshot schema stable (`reports/control_center/alert_schema.json`). Profit alerts do not need to change that schema; they can be exported as a separate board first, then (optionally) promoted into a unified alerts feed later.
+
+Watchlist SSOT:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Compound_Events_Watchlist.md`
+
+### Revamp v2 contract notes (important)
+
+- For `Suggested=BOX` candidate/governor rows, exports are now strictly membership-based:
+  - `Canonical` is the **sorted** 3-digit family label (e.g., `259`).
+  - `ImpliedSet` is always exported as the explicit permutation list (so the evaluator never “derives perms”).
+- A08 (promoter) rows now include base-candidate pointers in `Evidence` (so audits can see what it is promoting).
+- A11 (governor) rows are always gradeable and include star fields in `Evidence` (e.g., `star_level`, `a11_star_score`).
 
 ## Using sharepacks to mine examples (high‑leverage)
 
@@ -120,6 +133,13 @@ Use that to:
 - Find at least one **positive** and one **near‑miss negative** example for each A01–A12.
 - Turn those into test fixtures / regression checks (so future changes don’t drift).
 - Sanity‑check that alert rates are not “state‑specific weirdness” by looking across states on the same day, then confirm across multiple days to avoid overfitting.
+
+## Regression guard (recommended)
+
+After any Profit Alerts change, validate the sharepack contract:
+```bash
+python3 scripts/tools/validate_profit_alerts_contract.py --start <D1> --end <D2>
+```
 
 ---
 

@@ -35,6 +35,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.vtrac_reference import get_vtrac_index
+from scripts.tools.export_profit_compound_events import export_day as export_profit_compounds_day
 
 
 RESULTS_NAME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.txt$")
@@ -1241,6 +1242,10 @@ def main() -> None:
     _write_eval_csv(csv_out, rows)
     _write_merged_csv(merged_out, merged)
     _write_eval_md(md_out, rows=rows, merged=merged, integrity=integrity)
+    try:
+        export_profit_compounds_day(date=results_date, sharepacks_root=sharepacks_dir, include_all=False)
+    except Exception:
+        pass
     print(f"Wrote: {csv_out}")
     print(f"Wrote: {merged_out}")
     print(f"Wrote: {md_out}")

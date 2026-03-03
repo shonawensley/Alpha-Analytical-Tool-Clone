@@ -38,6 +38,9 @@ python3 scripts/checks/test_cc_snapshot_schema.py
 - A01–A12 are now exported as a sharepack-aligned Brain‑2 board:
   - `sharepacks/<D>/control_center/profit_alerts.csv`
   - `sharepacks/<D>/control_center/profit_alerts.md`
+- Shadow-only derived triage (compound co-fire watchlist):
+  - `sharepacks/<D>/control_center/profit_compound_events.csv`
+  - `sharepacks/<D>/control_center/profit_compound_events.md`
 - These are **detectors + evidence** intended for Master Validation evaluation (no wagering engine).
 
 ## Profit Alerts evaluation (windowed “episode” scoring)

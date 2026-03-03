@@ -179,6 +179,17 @@ def digits_only(value: str) -> str:
     return "".join(re.findall(r"\d", value or ""))
 
 
+def canon_box_label(value: str) -> str:
+    """
+    BOX canonical label (Pick-3): sorted digits, preserving repeats.
+    Examples: 592 -> 259, 199 -> 199, 777 -> 777.
+    """
+    digits = digits_only(value)
+    if len(digits) != 3:
+        return ""
+    return "".join(sorted(digits))
+
+
 @dataclass(frozen=True)
 class JsonEnvSnapshot:
     ok: bool
@@ -471,10 +482,16 @@ def main() -> None:
             eval_row = load_eval_row_by_row_num(eval_csv, row_num) if eval_csv_rel else None
 
             evidence = parse_json_obj(board_row.get("Evidence", "") if board_row else "")
+            board_canonical = (board_row.get("Canonical", "") if board_row else "") or ""
             implied_set_raw = (board_row.get("ImpliedSet", "") if board_row else "") or ""
             implied_set, implied_set_err = parse_json_list(implied_set_raw)
 
-            expected_row_type = "PROMOTER" if (alert_id in PROMOTER_ALERT_IDS or status == "PROMOTER") else "CANDIDATE"
+            if alert_id in PROMOTER_ALERT_IDS or status == "PROMOTER":
+                expected_row_type = "PROMOTER"
+            elif alert_id == "A11":
+                expected_row_type = "GOVERNOR"
+            else:
+                expected_row_type = "CANDIDATE"
             eval_row_type = (eval_row.get("row_type") or "").strip().upper() if eval_row else ""
 
             # Stable locator fields (from CASES.csv; evidence JSON should match).
@@ -550,7 +567,9 @@ def main() -> None:
                     fail("PROMOTER_MISGRADED")
 
             suggested_u = suggested.strip().upper()
-            implied_set_required = suggested_u.startswith(SET_BASED_SUGGESTED_PREFIXES)
+            implied_set_required = suggested_u.startswith(SET_BASED_SUGGESTED_PREFIXES) or (
+                suggested_u == "BOX" and expected_row_type != "PROMOTER"
+            )
             if implied_set_required:
                 if implied_set_err is not None:
                     fail("IMPLIED_SET_PARSE_ERROR")
@@ -560,6 +579,51 @@ def main() -> None:
                     implied_set_size = safe_int(case.get("implied_set_size") or "")
                     if implied_set_size is not None and implied_set_size != len(implied_set):
                         fail("IMPLIED_SET_SIZE_MISMATCH")
+
+            # BOX contract (v2): for any BOX row that is not a PROMOTER, require a sorted 3-digit canonical label
+            # and implied_set members all in the same boxed family.
+            box_canonical_ok = "NA"
+            box_family_ok = "NA"
+            board_canon_box = canon_box_label(board_canonical)
+            if suggested_u == "BOX" and expected_row_type != "PROMOTER":
+                if not board_canon_box or board_canonical.strip() in {"", "-"}:
+                    box_canonical_ok = "N"
+                    fail("BOX_CANONICAL_MISSING")
+                elif board_canonical.strip() != board_canon_box:
+                    box_canonical_ok = "N"
+                    fail("BOX_CANONICAL_NOT_SORTED")
+                else:
+                    box_canonical_ok = "Y"
+                if implied_set:
+                    ok = all(canon_box_label(item) == board_canon_box for item in implied_set)
+                    box_family_ok = "Y" if ok else "N"
+                    if not ok:
+                        fail("BOX_FAMILY_MISMATCH")
+                else:
+                    box_family_ok = "N" if implied_set_required else "NA"
+            else:
+                box_canonical_ok = "NA"
+                box_family_ok = "NA"
+
+            # A08 promoter contract: must identify base candidate context (even if empty).
+            a08_base_pointer_ok = "NA"
+            if alert_id == "A08":
+                base_candidates = evidence.get("base_candidates")
+                base_present = evidence.get("base_candidate_present")
+                ok = isinstance(base_candidates, list) and base_present in {0, 1, True, False}
+                if ok:
+                    ok = (1 if base_candidates else 0) == (1 if base_present else 0)
+                a08_base_pointer_ok = "Y" if ok else "N"
+                if not ok:
+                    fail("A08_BASE_POINTER_MISSING")
+
+            # A11 governor contract: require star fields.
+            a11_star_ok = "NA"
+            if alert_id == "A11":
+                ok = ("star_level" in evidence) and ("a11_star_score" in evidence)
+                a11_star_ok = "Y" if ok else "N"
+                if not ok:
+                    fail("A11_STAR_FIELDS_MISSING")
 
             # Stable locator must be resolvable when present.
             if stable_loc_present:
@@ -798,6 +862,10 @@ def main() -> None:
             checks.append(("implied_set_required", yn(implied_set_required)))
             checks.append(("implied_set_parse_error", implied_set_err or ""))
             checks.append(("implied_set_size", str(len(implied_set)) if implied_set else "0"))
+            checks.append(("box_canonical_ok", box_canonical_ok))
+            checks.append(("box_family_ok", box_family_ok))
+            checks.append(("a08_base_pointer_ok", a08_base_pointer_ok))
+            checks.append(("a11_star_fields_ok", a11_star_ok))
             checks.append(("stable_locator_present", yn(stable_loc_present)))
             checks.append(("stable_excerpt_row_found", "Y" if stable_row else ("N" if stable_loc_present else "NA")))
             checks.append(("json_snapshot_ok", "Y" if (env_snapshot and env_snapshot.ok) else ("N" if stable_loc_present else "NA")))
@@ -854,6 +922,10 @@ def main() -> None:
                     "implied_set_required": yn(implied_set_required),
                     "implied_set_parse_error": implied_set_err or "",
                     "implied_set_size": str(len(implied_set)) if implied_set else "0",
+                    "box_canonical_ok": box_canonical_ok,
+                    "box_family_ok": box_family_ok,
+                    "a08_base_pointer_ok": a08_base_pointer_ok,
+                    "a11_star_fields_ok": a11_star_ok,
                     "stable_locator_present": yn(stable_loc_present),
                     "stable_excerpt_row_found": "Y" if stable_row else ("N" if stable_loc_present else "NA"),
                     "json_snapshot_ok": "Y" if (env_snapshot and env_snapshot.ok) else ("N" if stable_loc_present else "NA"),
@@ -907,6 +979,10 @@ def main() -> None:
         "implied_set_required",
         "implied_set_parse_error",
         "implied_set_size",
+        "box_canonical_ok",
+        "box_family_ok",
+        "a08_base_pointer_ok",
+        "a11_star_fields_ok",
         "stable_locator_present",
         "stable_excerpt_row_found",
         "json_snapshot_ok",

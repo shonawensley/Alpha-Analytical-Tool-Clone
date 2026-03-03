@@ -241,13 +241,13 @@ def main() -> None:
             continue
         all_rows.extend(load_csv_rows(eval_path))
 
-    # Group by alert_id (keep PROMOTER vs CANDIDATE separate)
+    # Group by alert_id (keep PROMOTER separate; include GOVERNOR as candidate-like for audit selection)
     by_alert_candidate: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     by_alert_promoter: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for row in all_rows:
         aid = (row.get("alert_id") or "").strip().upper() or "UNKNOWN"
         rt = (row.get("row_type") or "").strip().upper()
-        if rt == "CANDIDATE":
+        if rt in {"CANDIDATE", "GOVERNOR"}:
             by_alert_candidate[aid].append(row)
         elif rt == "PROMOTER":
             by_alert_promoter[aid].append(row)

@@ -23,7 +23,7 @@ If the alert is a “small coverage” play (BOX/STR8), the evaluator must grade
 > `winner ∈ implied_set` within the window
 
 To make this deterministic:
-- The exporter must include an explicit `implied_set` (JSON list of `"000"` strings) whenever `Suggested` is `STR8_*` (and optionally for `BOX` if you want explicit membership instead of canonical‑derived perms).
+- The exporter must include an explicit `implied_set` (JSON list of `"000"` strings) whenever `Suggested` is `STR8_*` **or** `BOX` (candidate/governor rows).
 - The evaluator must **never guess clamp subsets** (e.g., STR8_4-of-8); it must grade membership against the exported list.
 
 ### 3) A08 is TEMPO/promoter only
@@ -56,17 +56,17 @@ Legend:
 
 | AlertId | Type | Primary graded object | Required export fields | Notes |
 |---:|---|---|---|---|
-| A01 | Candidate (BOX) | Box-set membership | `Canonical` (3-digit), optional `implied_set` | Grade boxed membership; if no `implied_set`, evaluator may derive perms from `Canonical` (safe). |
+| A01 | Candidate (BOX) | Box-set membership | `Canonical` (sorted 3-digit), `implied_set` | Grade boxed membership via `implied_set` (do not derive perms in evaluator). |
 | A02 | Candidate (STR8_3) | Straight-set membership | `Canonical` (double), `implied_set` | `implied_set` should be the 3 perms of the double. |
 | A03 | Promoter/Overlay | Lift/relationship (not winner membership) | `Evidence` must include triggering tail/col/sections | A03 should not be graded as “did canonical hit”. |
-| A04 | Candidate (BOX) | Box-set membership | `Canonical`, optional `implied_set` | Similar to A01 but driven by persistence. |
+| A04 | Candidate (BOX) | Box-set membership | `Canonical` (sorted 3-digit), `implied_set` | Similar to A01 but driven by persistence. |
 | A05 | Candidate (STR8_3 / STR8_8) | Set membership | `Evidence.orders_modal_value`, `implied_set` | STR8_3 = perms of a double. STR8_8 = V-straights lane (8). |
-| A06 | Candidate (BOX) | Box-set membership | `Canonical`, optional `implied_set` | DR survivor-style candidate. |
-| A07 | Candidate (BOX) | Box-set membership | `Canonical`, optional `implied_set` | Mirror timing candidate derived from BA mirror + consensus tail. |
+| A06 | Candidate (BOX) | Box-set membership | `Canonical` (sorted 3-digit), `implied_set` | DR survivor-style candidate. |
+| A07 | Candidate (BOX) | Box-set membership | `Canonical` (sorted 3-digit), `implied_set` | Mirror timing candidate derived from BA mirror + consensus tail. |
 | A08 | Promoter/TEMPO | Lift/relationship | must identify base candidate context | A08 never invents a box; grade as lift when co-firing with candidate episodes. |
 | A09 | Candidate (STR8_8) | Set membership | `Evidence.current_index`, `implied_set` | `implied_set` is V-straights lane for current_index. |
 | A10 | Candidate (STR8_3) | Set membership | `implied_set`, evidence about due-doubles canonical/gap | Primary grade is `winner ∈ implied_set`. Secondary diagnostics can track double-event. |
-| A11 | Candidate + Governor | Box-set membership, stratified by star_level | `Evidence.a11_star_score`, `Evidence.star_level`, `Canonical` | Must report hit/time-to-hit stratified by star_level. |
+| A11 | Candidate + Governor | Box-set membership, stratified by star_level | `Canonical` (sorted 3-digit), `implied_set`, `Evidence.a11_star_score`, `Evidence.star_level` | Must report hit/time-to-hit stratified by star_level. |
 | A12 | Candidate (STR8 clamp) | Set membership | `Evidence.orders_modal_value`, `implied_set` | Clamp subsets must be exported (never guessed by evaluator). |
 
 ---
@@ -78,5 +78,4 @@ The exporter must emit `implied_set` as a JSON list of 3-digit strings when `Sug
 - `STR8_8`: **V‑Straights lane** (8 combos) keyed by the V-code (e.g., `v224`), or derived from `current_index` via the VTRAC index→V-code mapping.
 - `STR8_4of8`: 4-combo clamp subset of the STR8_8 lane (exact rule must be encoded in exporter; evaluator only checks membership).
 - `STR8_3`: 3 permutations of a double (e.g., `005/050/500`).
-- `BOX`: optional to export. If absent, evaluator may derive box perms from `Canonical`.
-
+- `BOX`: required to export (candidate/governor rows) so evaluation is strictly membership-based and human-readable/auditable.
