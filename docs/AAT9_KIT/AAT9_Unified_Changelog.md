@@ -307,3 +307,7 @@
 - Impact: Added default-off Play Card strategies `v0_2_default_recency_lenient` / `v0_2_default_recency_strict` that keep B12 conservative but allow a short-horizon “absence boost” when choosing the B24/B36 VTRAC boxed-member pack lane (based on sharepack-local Aux draws).
 - Impact: Extended `scripts/tools/build_play_card_vtrac_pack_study_queue.py` to support separate play-cards vs winners roots and a `packdiffs` mode for reviewing when lane/pack choice changes, linked to winners artifacts.
 - Files: scripts/tools/create_play_card.py, scripts/tools/build_play_card_vtrac_pack_study_queue.py, docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md, docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md.
+
+## 2026-03-05 — Codex handoff SSOT (context reset safe)
+
+- Impact: Added `briefings/CODEX_HANDOFF__CURRENT_FOCUS.md` so new Codex sessions can resume current priorities (Stable/Aggregator “missing middle”) without re-training drift; updated the one-line boot instruction in `TOOLS/COMMANDS.txt` to read both SSOT docs.

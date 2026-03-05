@@ -55,4 +55,3 @@ Legend:
 - When we build the full gold day for `D=2026-01-06` properly, re-check whether the template-driven packs (post-results reverse engineering) would have included:
   - NJ boxed hit (likely yes),
   - NY/VA lane hits (and whether a bounded index-closure would have converted them into box hits).
-
