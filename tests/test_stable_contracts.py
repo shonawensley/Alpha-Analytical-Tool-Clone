@@ -29,6 +29,7 @@ REQUIRED_ROW_COLUMNS = {
     "score_double_mirror",
     "family_id",
     "hidden3v",
+    "source_literals",
 }
 
 REQUIRED_FAMILY_COLUMNS = {
@@ -154,6 +155,7 @@ def test_why_tokens_and_hidden():
     assert bool(row["hidden3v"]) is True
     assert "hidden3v" in row["why"].split("|")
     assert row["score_hidden"] == pytest.approx(stable.CFG.get("hidden3v_bonus", 0))
+    assert "R2=9449" in str(row["source_literals"])
     if row["straight2"]:
         assert "vstr2" in row["why"]
 

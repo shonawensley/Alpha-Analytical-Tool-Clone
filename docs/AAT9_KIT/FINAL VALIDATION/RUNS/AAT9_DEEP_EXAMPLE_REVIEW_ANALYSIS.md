@@ -7,6 +7,7 @@ This is not meant to replace the casepacks. Casepacks stay the “1‑click rece
 Related:
 - Resume bookmark: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__BOOKMARK__CASEPACK_EXAMPLE_REVIEW.md`
 - Casepacks index: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+- Live integration queue: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ANALYSIS_ARENA_INTEGRATION_QUEUE.md`
 
 ---
 
@@ -142,6 +143,144 @@ From `tasks/GOLDEN_RULES_T.txt`:
 
 - The **ordering** of a surviving cluster (ex: Stable `orders_modal_value`) is a real clue, not noise.
 - It’s one of the main bridges from “boxed family / lane hit” → “straight hit on a low set” (VTRAC straight optimization).
+- Implementation status:
+  - `order_transform_v1` is now wired into Stable Arena as an observability slice.
+  - It preserves bounded transform recipes from modal orders and hidden fragments, including direct perms, VT8, and pair-mirror-third transforms.
+  - Current guardrail: keep it as an inspection surface until calibration across positive and noisy controls shows what transform thresholds are predictive rather than merely descriptive.
+
+### 14) We are optimizing extraction quality, not demanding a winner every draw
+
+- The goal is **optimal extraction and interpretation** of real upstream evidence.
+- We should expect plenty of draws where the environment is too noisy or too expensive to isolate a winner rationally.
+- Success is not “force a winner every day”; success is “surface the strongest, most actionable evidence honestly.”
+
+### 15) State ranking should reflect predictive quality, not just signal volume
+
+- Cross-state ranking should favor states with the **best evidence quality**:
+  - stronger convergence,
+  - tighter / cleaner lanes,
+  - better cost-to-coverage geometry,
+  - more credible conversion potential.
+- This means “top state” should really mean “best current predictive value per unit of risk/expense,” not “most alerts” or “most raw patterns.”
+
+### 16) Long-term profitability comes from selective play and expense control
+
+- The real target is **profitability / token accumulation over time**, not raw hit count.
+- That pushes Superbrain toward:
+  - finding the most favorable environments,
+  - preferring the cheapest rational play mode,
+  - and skipping or downgrading noisy states when the path to conversion is weak.
+
+### 17) Open investigation: hidden winner-family patterns inside clutter digits
+
+- We need to investigate whether the predictive system is truly using the same “hidden pattern behind clutter digits” logic that appears in Winners HTML/JSON.
+- Example teaching case: `2026-01-06 NewYork4 342 / VTRAC 30`
+  - Winners HTML highlights family-30 structure inside long strings like `29688447`, `66877059324`, and related family fragments (`347`, `324`, `243`).
+  - Stable predictive artifacts already preserve some of the downstream family evidence (`family_id=30`, long canonicals like `4788`, `277889`, `447788`), but they do **not** currently preserve the full cell-level “how the hidden family was revealed” explanation.
+- Investigation target:
+  - preserve source cell text / source literal when relevant,
+  - preserve family-fragment hits inside long strings,
+  - and test whether this should become a first-class predictive feature rather than a post-results-only winners artifact.
+- Implementation status:
+  - `hidden_reveal_v1` is now wired into Stable Arena as an observability slice.
+  - It preserves source literals / locators and surfaces row-level hidden-family evidence plus family/pattern rollup summaries.
+  - Current guardrail: keep it as an inspection surface until calibration across positive and noisy controls shows what threshold is predictive rather than merely descriptive.
+
+### 18) Lingering / surviving patterns are a primary predictive evidence class
+
+- The system must explicitly preserve, surface, and score lingering structures before downstream projection or budgeting.
+- Highest-value lingering evidence includes:
+  - repeats,
+  - late/frontier survivors,
+  - VTRAC-related echoes,
+  - cross-variant reinforcement,
+  - and long clusters that keep holding the same structural family.
+
+### 19) Think in winner family / transformation corridor, not only literal winner presence
+
+- Many important cases are not mainly saying “here is the exact winner.”
+- They are saying something closer to:
+  - here is the winner family,
+  - here is the progression corridor,
+  - here are the order / permutation transformations still alive around that family.
+
+### 20) Arena learning comes before serious combination-forming redesign
+
+- Do not let the old rushed combination layer define what evidence the arena should keep.
+- First preserve the best evidence classes.
+- Then learn what should later be scored, forwarded, trapped, or budgeted.
+
+### 21) Ranking must eventually correlate with predictive value over time
+
+- This is a design north star now, not an immediate pass/fail gate for the current Stable-first slice.
+- We should eventually expect stronger-ranked states to trend toward stronger predictive value / hit rates over time.
+- But we should only treat that as a hard validation gate after more arena fields and more tool feeds are in place.
+
+### 22) The analysis arena is an evidence stage, not a hidden play-card prefilter
+
+- The arena should first preserve the strongest evidence classes from each tool.
+- It should not quietly collapse back into an early B12/B24/B36-style narrowing step.
+- The point is to preserve, inspect, compare, and only later decide what deserves forwarding.
+
+### 23) Tool-by-tool arena feeding is the correct build order
+
+- Build the arena one tool at a time:
+  - Stable,
+  - Digit Reduction,
+  - Hot Zones,
+  - VTRAC analyzer,
+  - Aux / Control Center context.
+- For each tool, ask:
+  - what valuable evidence should it add,
+  - what was missing before,
+  - and what should now be preserved or promoted.
+
+### 24) Do not judge downstream profitability before arena fidelity
+
+- Before discussing profitability, final ranking, or final combination-forming for a tool slice, answer:
+  - what did the winners lens show,
+  - what did the arena preserve,
+  - what did the old path lose,
+  - and what exact evidence did this tool now add.
+- Profitability remains the long-term goal, but arena fidelity is the immediate gate.
+
+### 25) Observe compounding before retuning feature weights
+
+- Before changing feature weights, make the compounding ledger visible.
+- We need to be able to see, per pattern and per variant:
+  - how many mini-progressions contributed,
+  - which feature parts contributed,
+  - how totals and peaks were formed,
+  - and which rows / boxes / spans actually created the final score.
+- Otherwise we cannot tell whether a feature is weak, under-consumed, or merely hidden by later projection.
+
+### 26) Top-N is a summary surface, not the system’s truth model
+
+- Top-5 / top-10 displays are useful for human review.
+- They should not be treated as the full truth of what the extractor or arena preserved.
+- The richer underlying evidence must remain available even when the display surface is intentionally small.
+
+### 27) Do not force every new phenomenon into the legacy tool boundaries
+
+- If a new evidence type does not fit cleanly inside Stable, DR, Hot Zones, or the VTRAC analyzer, we should be willing to create a new focused tool for it.
+- The goal is not “tool purity.”
+- The goal is:
+  - clear extraction semantics,
+  - low blast radius,
+  - clean arena inputs,
+  - and easier validation on examples.
+
+### 28) Brain 1 and Brain 2 should stay distinct
+
+- `Brain 1` = the per-state analysis arena:
+  - tools extract the strongest evidence they can from that state’s string-table environment,
+  - the arena preserves and scores that evidence,
+  - and the system learns what the state is really saying.
+- `Brain 2` = the cross-state macro lens:
+  - compare all states,
+  - rank which environments are worth attention or money,
+  - and apply profitability / expense-control logic.
+- They should inform each other, but they should not be collapsed into one rushed layer.
 
 ---
 
@@ -151,6 +290,13 @@ From `tasks/GOLDEN_RULES_T.txt`:
 2) Open its `MANIFEST.md` and follow the “Open order”.
 3) Fill one “Case Entry” below (copy/paste the template).
 4) If we identify a fix: write it as a **hypothesis + smallest test** (so we don’t thrash).
+5) Log every important actionable item to the live integration queue:
+   - `rule`
+   - `tracker`
+   - `tool`
+   - `arena`
+   - `policy`
+   - `test`
 
 ---
 

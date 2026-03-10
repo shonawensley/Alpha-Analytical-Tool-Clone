@@ -136,9 +136,19 @@ def analyse(df: pd.DataFrame, section: str):
             "hot": [],
             "orders_by_row": defaultdict(set),
             "repeat_extras": 0,
+            "source_literals": {},
         }
     )
-    tail_box = defaultdict(lambda: {"rows": set(), "tails": set(), "is_cons": False, "stub_done": False, "tail": ""})
+    tail_box = defaultdict(
+        lambda: {
+            "rows": set(),
+            "tails": set(),
+            "is_cons": False,
+            "stub_done": False,
+            "tail": "",
+            "source_literals": {},
+        }
+    )
 
     for r_i, row in df.iterrows():
         rowtype = row.get('RowType', '')
@@ -162,6 +172,7 @@ def analyse(df: pd.DataFrame, section: str):
             box_key = (section, setv, draw, col)
             box_entry = tail_box[box_key]
             box_entry['rows'].add(rowtype)
+            box_entry['source_literals'][rowtype] = cell_raw
             tail = raw_digits[-2:] if raw_digits else ''
             if 1 <= len(tail) <= 2:
                 box_entry['tails'].add(tail)
@@ -174,6 +185,7 @@ def analyse(df: pd.DataFrame, section: str):
                 info['patterns'].add(subval)
                 info['hot'].append(hot_level)
                 info['orders_by_row'][rowtype].add(subval)
+                info['source_literals'][rowtype] = cell_raw
                 if count > 1:
                     info['repeat_extras'] += count - 1
 
@@ -321,6 +333,11 @@ def analyse(df: pd.DataFrame, section: str):
                     persistence_set_count=1,
                     persistence_draw_run=1,
                     double_mirror=False,
+                    source_literals=';'.join(
+                        f"{row_name}={box_info['source_literals'][row_name]}"
+                        for row_name in sorted(rows_present)
+                        if row_name in box_info['source_literals']
+                    ),
                     why='consensus_stub'
                 ))
                 box_info['stub_done'] = True
@@ -498,6 +515,11 @@ def analyse(df: pd.DataFrame, section: str):
             persistence_draw_run=draw_run_len,
             score_double_mirror=score_double_mirror,
             double_mirror=double_mirror_flag,
+            source_literals=';'.join(
+                f"{row_name}={info['source_literals'][row_name]}"
+                for row_name in sorted(rowset)
+                if row_name in info['source_literals']
+            ),
             why='|'.join(why)
         ))
 
@@ -700,6 +722,7 @@ def main_cli():
       "score_len","score_hidden","score_double_mirror","score_vtrac_straight",
       "score_persistence_set","score_persistence_draw",
       "persistence_set_count","persistence_draw_run",
+      "source_literals",
       "why"
     ]
     with open(args.csv,'w',newline='',encoding='utf-8') as fc:

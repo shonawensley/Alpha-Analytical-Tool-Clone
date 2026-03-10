@@ -288,6 +288,12 @@ def _method_weight(method_id: str) -> float:
         return 60.0
     if m == "stable_top":
         return 55.0
+    if m == "stable_compound_top":
+        return 57.0
+    if m == "stable_last_remaining":
+        return 56.0
+    if m == "stable_family_vote":
+        return 53.0
     if m == "aux_positional":
         return 45.0
     if m == "digit_reduction_analyzer_v2":

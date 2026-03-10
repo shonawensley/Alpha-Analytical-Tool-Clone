@@ -30,6 +30,7 @@ import json
 import re
 import sys
 import textwrap
+from collections import Counter
 from contextlib import redirect_stdout
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -47,6 +48,8 @@ try:
 except Exception:  # pragma: no cover - may fail in partial environments
     _vtrac_get_index_set = None  # type: ignore
     _vtrac_get_index = None  # type: ignore
+
+from scripts.tools.stable_arena import build_stable_arena_payload, write_stable_arena_files
 
 
 SCHEMA_VERSION = "1.0"
@@ -114,6 +117,40 @@ def _canon(draw: str) -> str:
     if not draw:
         return ""
     return "".join(sorted(draw))
+
+
+def _digits_only(value: object) -> str:
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+
+def _to_float(value: object, default: float = 0.0) -> float:
+    try:
+        if value is None or str(value).strip() == "":
+            return float(default)
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _to_int(value: object, default: int = 0) -> int:
+    try:
+        if value is None or str(value).strip() == "":
+            return int(default)
+        return int(float(value))
+    except Exception:
+        return int(default)
+
+
+def _to_bool(value: object) -> bool:
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "t", "yes", "y"}:
+        return True
+    if text in {"0", "false", "f", "no", "n", ""}:
+        return False
+    try:
+        return float(text) != 0.0
+    except Exception:
+        return False
 
 
 def _unique_perms(triad: str) -> List[str]:
@@ -622,6 +659,432 @@ def _parse_stable_top(*, state_dir: Path, state_key: str, top_n: int = 3) -> Tup
 
     packs.sort(key=lambda p: p["pack_id"])
     return packs, [stable_scores]
+
+
+def _stable_parse_counter_blob(value: object) -> Counter[str]:
+    out: Counter[str] = Counter()
+    for chunk in str(value or "").split(";"):
+        part = chunk.strip()
+        if not part:
+            continue
+        if ":" in part:
+            key, raw_count = part.rsplit(":", 1)
+            digits = _digits_only(key)
+            if not digits:
+                continue
+            try:
+                count = int(float(raw_count))
+            except Exception:
+                count = 1
+            out[digits] += count
+        else:
+            digits = _digits_only(part)
+            if digits:
+                out[digits] += 1
+    return out
+
+
+def _stable_top_counter_items(counter: Counter[str], top_n: int = 6) -> List[Dict[str, Any]]:
+    items = sorted(counter.items(), key=lambda kv: (-int(kv[1]), kv[0]))
+    return [{"canonical": canon, "count": int(count)} for canon, count in items[:top_n]]
+
+
+def _stable_select_lane_seed_canonicals(
+    *,
+    family_id: int,
+    support_counter: Counter[str],
+    max_cost_units: int,
+) -> List[str]:
+    if family_id <= 0 or max_cost_units <= 0 or not _vtrac_get_index_set:
+        return []
+    try:
+        lane_combos = sorted(
+            {
+                _normalize_pick3_literal(x)
+                for x in _vtrac_get_index_set(int(family_id))
+                if _normalize_pick3_literal(x)
+            }
+        )
+    except Exception:
+        lane_combos = []
+    lane_canonicals = sorted({_canon(combo) for combo in lane_combos if _canon(combo)})
+    if not lane_canonicals:
+        return []
+
+    def rank_key(canon: str) -> Tuple[int, int, int, str]:
+        support = int(support_counter.get(canon, 0))
+        is_non_double = 1 if len(set(canon)) == 3 else 0
+        return (-support, is_non_double, _boxed_cost_units(canon), canon)
+
+    picked: List[str] = []
+    cost = 0
+    for canon in sorted(lane_canonicals, key=rank_key):
+        units = _boxed_cost_units(canon)
+        if units <= 0:
+            continue
+        if cost and (cost + units) > int(max_cost_units):
+            continue
+        if (cost + units) > int(max_cost_units):
+            continue
+        picked.append(canon)
+        cost += units
+    return picked
+
+
+def _build_stable_lane_vote_pack(
+    *,
+    section: str,
+    family_id: int,
+    selected_canonicals: List[str],
+    method_id: str,
+    pack_id: str,
+    why_tags: List[str],
+    transform_chain: List[str],
+    evidence_paths: List[str],
+    family_score: float,
+    best_compound_score: float,
+    source_counter: Counter[str],
+    long_counter: Counter[str],
+    meta: Dict[str, Any],
+) -> Optional[dict]:
+    if not selected_canonicals:
+        return None
+    combos: set[str] = set()
+    canonicals: List[str] = []
+    for canon in selected_canonicals:
+        triad = _normalize_pick3_literal(canon)
+        if not triad:
+            continue
+        canonicals.append(triad)
+        combos.update(_unique_perms(triad))
+    canonicals = sorted(set(canonicals))
+    combos_list = sorted(combos)
+    if not combos_list:
+        return None
+    return {
+        "pack_id": pack_id,
+        "method_id": method_id,
+        "variant": section,
+        "play_mode": "BOX",
+        "canonicals": canonicals,
+        "combos": combos_list,
+        "combos_count": len(combos_list),
+        "cost_units": len(combos_list),
+        "why_tags": why_tags,
+        "transform_chain": transform_chain,
+        "evidence_paths": evidence_paths,
+        "family_id": int(family_id),
+        "family_score": round(float(family_score), 3),
+        "best_compound_score": round(float(best_compound_score), 3),
+        "source_top_canonicals": _stable_top_counter_items(source_counter, top_n=6),
+        "source_long_canonicals": _stable_top_counter_items(long_counter, top_n=6),
+        **meta,
+    }
+
+
+def _parse_stable_compound_top(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_n: int,
+) -> Tuple[List[dict], List[Path]]:
+    if int(top_n) <= 0:
+        return [], []
+    compound_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_compound.csv"
+    if not compound_path.exists():
+        return [], []
+    rows = _load_csv_dict_rows(compound_path)
+    if not rows:
+        return [], [compound_path]
+
+    by_section: Dict[str, List[Dict[str, str]]] = {}
+    for row in rows:
+        section = (row.get("section") or "").strip() or "Unknown"
+        by_section.setdefault(section, []).append(row)
+
+    packs: List[dict] = []
+    for section, items in sorted(by_section.items(), key=lambda kv: kv[0]):
+        ranked = sorted(
+            items,
+            key=lambda r: (
+                -_to_float(r.get("compound_score") or 0.0),
+                -_to_float(r.get("base_max_score") or 0.0),
+                _digits_only(r.get("Canonical")),
+            ),
+        )
+        emitted = 0
+        for rank_idx, row in enumerate(ranked, start=1):
+            canonical = _normalize_pick3_literal(row.get("Canonical") or "")
+            if not canonical:
+                continue
+            family_id = _to_int(row.get("family_id") or 0)
+            combos = _unique_perms(canonical)
+            if not combos:
+                continue
+            packs.append(
+                {
+                    "pack_id": f"stable_compound_top:{section}:canon={canonical}",
+                    "method_id": "stable_compound_top",
+                    "variant": section,
+                    "play_mode": "BOX",
+                    "canonicals": [canonical],
+                    "combos": combos,
+                    "combos_count": len(combos),
+                    "cost_units": len(combos),
+                    "why_tags": [
+                        "stable_compound_top",
+                        f"compound_rank:{rank_idx}",
+                        f"compound_score:{_to_float(row.get('compound_score')):.3f}",
+                        f"family_id:{family_id}",
+                        f"top_n:{int(top_n)}",
+                    ],
+                    "transform_chain": [
+                        f"stable_compound:{section}:rank{rank_idx}",
+                        "canonical_3digit_direct",
+                        "box_expand_unique_perms",
+                    ],
+                    "evidence_paths": [_safe_rel(compound_path)],
+                    "family_id": family_id or None,
+                    "compound_score": round(_to_float(row.get("compound_score")), 3),
+                    "base_max_score": round(_to_float(row.get("base_max_score")), 3),
+                    "set_chain_depth": _to_int(row.get("set_chain_depth")),
+                    "draw_chain_depth": _to_int(row.get("draw_chain_depth")),
+                    "rows_covered": _to_int(row.get("rows_covered")),
+                    "compound_why": str(row.get("compound_why") or ""),
+                    "compound_examples": [tok for tok in str(row.get("examples") or "").split(";") if tok],
+                }
+            )
+            emitted += 1
+            if emitted >= int(top_n):
+                break
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [compound_path]
+
+
+def _aggregate_stable_family_lanes(rows: Sequence[Dict[str, str]]) -> Dict[str, List[Dict[str, Any]]]:
+    by_key: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    for row in rows:
+        section = (row.get("section") or "").strip() or "Unknown"
+        family_id = _to_int(row.get("family_id") or 0)
+        if family_id <= 0:
+            continue
+        key = (section, family_id)
+        entry = by_key.setdefault(
+            key,
+            {
+                "section": section,
+                "family_id": family_id,
+                "rows_count": 0,
+                "family_score_max": 0.0,
+                "best_compound_score_max": 0.0,
+                "last_remaining_rows": 0,
+                "progression_rows": 0,
+                "dom_last_rows": 0,
+                "source_counter": Counter(),
+                "long_counter": Counter(),
+                "frontier_examples": [],
+            },
+        )
+        entry["rows_count"] += 1
+        entry["family_score_max"] = max(float(entry["family_score_max"]), _to_float(row.get("family_score")))
+        entry["best_compound_score_max"] = max(float(entry["best_compound_score_max"]), _to_float(row.get("best_compound_score")))
+        if _to_bool(row.get("last_remaining_3v")):
+            entry["last_remaining_rows"] += 1
+        if _to_bool(row.get("progression_flag")):
+            entry["progression_rows"] += 1
+        if _to_bool(row.get("any_dom_last")):
+            entry["dom_last_rows"] += 1
+        counter = _stable_parse_counter_blob(row.get("top_canonicals"))
+        for canon, count in counter.items():
+            if len(canon) == 3:
+                entry["source_counter"][canon] += int(count)
+            elif len(canon) > 3:
+                entry["long_counter"][canon] += int(count)
+        entry["frontier_examples"].append(
+            {
+                "set": str(row.get("Set") or ""),
+                "draw": str(row.get("Draw") or ""),
+                "column": str(row.get("Column") or ""),
+                "family_score": round(_to_float(row.get("family_score")), 3),
+                "last_remaining_3v": _to_bool(row.get("last_remaining_3v")),
+                "top_canonicals": str(row.get("top_canonicals") or ""),
+            }
+        )
+
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for (_, _family_id), entry in by_key.items():
+        out.setdefault(entry["section"], []).append(entry)
+    for section, items in out.items():
+        items.sort(
+            key=lambda item: (
+                -float(item["family_score_max"]),
+                -float(item["best_compound_score_max"]),
+                -int(item["last_remaining_rows"]),
+                -int(item["rows_count"]),
+                int(item["family_id"]),
+            )
+        )
+    return out
+
+
+def _parse_stable_family_vote(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_n: int,
+    max_cost_units: int,
+) -> Tuple[List[dict], List[Path]]:
+    if int(top_n) <= 0 or int(max_cost_units) <= 0:
+        return [], []
+    if not _vtrac_get_index_set:
+        return [], []
+    families_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_families.csv"
+    compound_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_compound.csv"
+    if not families_path.exists():
+        return [], []
+    rows = _load_csv_dict_rows(families_path)
+    if not rows:
+        return [], [families_path]
+
+    by_section = _aggregate_stable_family_lanes(rows)
+    evidence_paths = [_safe_rel(families_path)]
+    if compound_path.exists():
+        evidence_paths.append(_safe_rel(compound_path))
+
+    packs: List[dict] = []
+    for section, items in sorted(by_section.items(), key=lambda kv: kv[0]):
+        for rank_idx, item in enumerate(items[: int(top_n)], start=1):
+            selected = _stable_select_lane_seed_canonicals(
+                family_id=int(item["family_id"]),
+                support_counter=item["source_counter"],
+                max_cost_units=int(max_cost_units),
+            )
+            pack = _build_stable_lane_vote_pack(
+                section=section,
+                family_id=int(item["family_id"]),
+                selected_canonicals=selected,
+                method_id="stable_family_vote",
+                pack_id=f"stable_family_vote:{section}:family={int(item['family_id'])}",
+                why_tags=[
+                    "stable_family_vote",
+                    f"family_id:{int(item['family_id'])}",
+                    f"family_rank:{rank_idx}",
+                    f"family_score:{float(item['family_score_max']):.3f}",
+                    f"best_compound:{float(item['best_compound_score_max']):.3f}",
+                    f"top_n:{int(top_n)}",
+                    f"cap:{int(max_cost_units)}",
+                ],
+                transform_chain=[
+                    f"stable_families:{section}:family={int(item['family_id'])}:rank{rank_idx}",
+                    f"stable_lane_vote:cap{int(max_cost_units)}",
+                    "box_expand_unique_perms",
+                ],
+                evidence_paths=evidence_paths,
+                family_score=float(item["family_score_max"]),
+                best_compound_score=float(item["best_compound_score_max"]),
+                source_counter=item["source_counter"],
+                long_counter=item["long_counter"],
+                meta={
+                    "rows_count": int(item["rows_count"]),
+                    "last_remaining_rows": int(item["last_remaining_rows"]),
+                    "progression_rows": int(item["progression_rows"]),
+                    "dom_last_rows": int(item["dom_last_rows"]),
+                    "frontier_examples": sorted(
+                        item["frontier_examples"],
+                        key=lambda row: (-float(row["family_score"]), row["set"], row["draw"], row["column"]),
+                    )[:3],
+                },
+            )
+            if pack is not None:
+                packs.append(pack)
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [families_path] + ([compound_path] if compound_path.exists() else [])
+
+
+def _parse_stable_last_remaining(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_n: int,
+    max_cost_units: int,
+) -> Tuple[List[dict], List[Path]]:
+    if int(top_n) <= 0 or int(max_cost_units) <= 0:
+        return [], []
+    if not _vtrac_get_index_set:
+        return [], []
+    families_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_families.csv"
+    compound_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_compound.csv"
+    if not families_path.exists():
+        return [], []
+    rows = [row for row in _load_csv_dict_rows(families_path) if _to_bool(row.get("last_remaining_3v"))]
+    if not rows:
+        return [], [families_path]
+
+    by_section = _aggregate_stable_family_lanes(rows)
+    evidence_paths = [_safe_rel(families_path)]
+    if compound_path.exists():
+        evidence_paths.append(_safe_rel(compound_path))
+
+    packs: List[dict] = []
+    for section, items in sorted(by_section.items(), key=lambda kv: kv[0]):
+        ranked = sorted(
+            items,
+            key=lambda item: (
+                -int(item["last_remaining_rows"]),
+                -float(item["family_score_max"]),
+                -float(item["best_compound_score_max"]),
+                int(item["family_id"]),
+            ),
+        )
+        for rank_idx, item in enumerate(ranked[: int(top_n)], start=1):
+            selected = _stable_select_lane_seed_canonicals(
+                family_id=int(item["family_id"]),
+                support_counter=item["source_counter"],
+                max_cost_units=int(max_cost_units),
+            )
+            pack = _build_stable_lane_vote_pack(
+                section=section,
+                family_id=int(item["family_id"]),
+                selected_canonicals=selected,
+                method_id="stable_last_remaining",
+                pack_id=f"stable_last_remaining:{section}:family={int(item['family_id'])}",
+                why_tags=[
+                    "stable_last_remaining",
+                    f"family_id:{int(item['family_id'])}",
+                    f"survivor_rank:{rank_idx}",
+                    f"last_remaining_rows:{int(item['last_remaining_rows'])}",
+                    f"family_score:{float(item['family_score_max']):.3f}",
+                    f"top_n:{int(top_n)}",
+                    f"cap:{int(max_cost_units)}",
+                ],
+                transform_chain=[
+                    f"stable_families_last_remaining:{section}:family={int(item['family_id'])}:rank{rank_idx}",
+                    f"stable_lane_vote:cap{int(max_cost_units)}",
+                    "box_expand_unique_perms",
+                ],
+                evidence_paths=evidence_paths,
+                family_score=float(item["family_score_max"]),
+                best_compound_score=float(item["best_compound_score_max"]),
+                source_counter=item["source_counter"],
+                long_counter=item["long_counter"],
+                meta={
+                    "rows_count": int(item["rows_count"]),
+                    "last_remaining_rows": int(item["last_remaining_rows"]),
+                    "progression_rows": int(item["progression_rows"]),
+                    "dom_last_rows": int(item["dom_last_rows"]),
+                    "frontier_examples": sorted(
+                        item["frontier_examples"],
+                        key=lambda row: (-float(row["family_score"]), row["set"], row["draw"], row["column"]),
+                    )[:3],
+                },
+            )
+            if pack is not None:
+                packs.append(pack)
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [families_path] + ([compound_path] if compound_path.exists() else [])
 
 
 def _parse_dr_top(*, state_dir: Path, state_key: str, top_n: int = 3) -> Tuple[List[dict], List[Path]]:
@@ -3392,6 +3855,9 @@ def _pack_source_class(method_id: str) -> str:
     m = (method_id or "").strip()
     if m in {
         "stable_top",
+        "stable_compound_top",
+        "stable_family_vote",
+        "stable_last_remaining",
         "digit_reduction_analyzer_v2",
         "vtrac_enhanced_top",
         "hot_zones_top",
@@ -3658,6 +4124,30 @@ def parse_args() -> argparse.Namespace:
         help="Allow running even if winners-dependent artifacts are detected (NOT recommended for predictive packs).",
     )
     ap.add_argument("--top-n-stable", type=int, default=3, help="Top N stable canonicals per section (default: 3)")
+    ap.add_argument(
+        "--top-n-stable-compound",
+        type=int,
+        default=0,
+        help="Optional Stable compound packs: top N direct 3-digit compound canonicals per section (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--top-n-stable-families",
+        type=int,
+        default=0,
+        help="Optional Stable family-vote packs: top N family/lane closure packs per section (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--top-n-stable-last-remaining",
+        type=int,
+        default=0,
+        help="Optional Stable survivor packs: top N last-remaining family/lane packs per section (default: 0 disables).",
+    )
+    ap.add_argument(
+        "--stable-lane-closure-max-cost-units",
+        type=int,
+        default=12,
+        help="Stable family/lane closure hard cap in boxed cost units (default: 12).",
+    )
     ap.add_argument("--top-n-dr", type=int, default=0, help="Top N DR analyzer patterns per variant (default: 0)")
     ap.add_argument(
         "--dr-envelope-boxed-canonicals",
@@ -3836,6 +4326,35 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also write candidate_universe_evidence.csv/.md next to candidate_universe.json (default: off).",
     )
+    ap.add_argument(
+        "--write-stable-arena",
+        action="store_true",
+        help="Also write analysis/stable_arena*.json/.md from the frozen Stable bundle (default: off).",
+    )
+    ap.add_argument(
+        "--stable-arena-top-rows",
+        type=int,
+        default=25,
+        help="Top N Stable row patterns per variant to keep in the arena (default: 25).",
+    )
+    ap.add_argument(
+        "--stable-arena-top-pattern-ledgers",
+        type=int,
+        default=25,
+        help="Top N Stable variant-level pattern ledgers per variant to keep in the arena (default: 25).",
+    )
+    ap.add_argument(
+        "--stable-arena-top-compound",
+        type=int,
+        default=25,
+        help="Top N Stable compound rows per variant to keep in the arena (default: 25).",
+    )
+    ap.add_argument(
+        "--stable-arena-top-families",
+        type=int,
+        default=10,
+        help="Top N Stable family/lane rollups per variant to keep in the arena (default: 10).",
+    )
     return ap.parse_args()
 
 
@@ -3875,6 +4394,11 @@ def main() -> None:
         if out_path.exists() and not args.force:
             raise SystemExit(
                 f"Refusing to overwrite existing candidate universe: {_safe_rel(out_path)} (use --force)"
+            )
+        arena_path = state_dir / "analysis" / f"stable_arena{out_suffix}{tag_suffix}.json"
+        if args.write_stable_arena and arena_path.exists() and not args.force:
+            raise SystemExit(
+                f"Refusing to overwrite existing stable arena: {_safe_rel(arena_path)} (use --force)"
             )
 
         leakage = _detect_winners_artifacts(day_dir=day_dir, state_dir=state_dir)
@@ -3917,6 +4441,35 @@ def main() -> None:
             )
             packs.extend(st_packs)
             inputs.extend(st_inputs)
+
+            # 2b) Stable compound direct packs (optional; default-off)
+            st_compound_packs, st_compound_inputs = _parse_stable_compound_top(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_n=int(args.top_n_stable_compound),
+            )
+            packs.extend(st_compound_packs)
+            inputs.extend(st_compound_inputs)
+
+            # 2c) Stable family/lane vote packs (optional; default-off)
+            st_family_packs, st_family_inputs = _parse_stable_family_vote(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_n=int(args.top_n_stable_families),
+                max_cost_units=int(args.stable_lane_closure_max_cost_units),
+            )
+            packs.extend(st_family_packs)
+            inputs.extend(st_family_inputs)
+
+            # 2d) Stable last-remaining survivor packs (optional; default-off)
+            st_survivor_packs, st_survivor_inputs = _parse_stable_last_remaining(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_n=int(args.top_n_stable_last_remaining),
+                max_cost_units=int(args.stable_lane_closure_max_cost_units),
+            )
+            packs.extend(st_survivor_packs)
+            inputs.extend(st_survivor_inputs)
 
             # 3) Digit Reduction analyzer v2 (top patterns per variant)
             dr_packs, dr_inputs = _parse_dr_top(
@@ -4203,6 +4756,33 @@ def main() -> None:
             _write_candidate_universe_evidence_md(out_path=ev_md, payload=payload)
             print(f"Wrote: {_safe_rel(ev_csv)}")
             print(f"Wrote: {_safe_rel(ev_md)}")
+        if args.write_stable_arena:
+            arena_payload = build_stable_arena_payload(
+                state_dir=state_dir,
+                state_key=state_key,
+                results_date=args.date,
+                history_date=cc_meta.history_date,
+                profile=profile,
+                experiment_tag=exp_tag,
+                sharepacks_root=sharepacks_root,
+                contains_winners_artifacts=bool(leakage),
+                repo_root=REPO_ROOT,
+                top_rows=max(1, int(args.stable_arena_top_rows)),
+                top_pattern_ledgers=max(1, int(args.stable_arena_top_pattern_ledgers)),
+                top_compound=max(1, int(args.stable_arena_top_compound)),
+                top_families=max(1, int(args.stable_arena_top_families)),
+            )
+            if arena_payload is None:
+                print(f"Skipped stable arena: missing Stable bundle for {_safe_rel(state_dir)}")
+            else:
+                arena_json, arena_md = write_stable_arena_files(
+                    out_json_path=arena_path,
+                    payload=arena_payload,
+                    write_md=True,
+                )
+                print(f"Wrote: {_safe_rel(arena_json)}")
+                if arena_md is not None:
+                    print(f"Wrote: {_safe_rel(arena_md)}")
         print(f"Wrote: {_safe_rel(out_path)} (packs={len(packs)} union={union_count})")
 
 
