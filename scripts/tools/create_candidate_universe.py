@@ -689,6 +689,48 @@ def _stable_top_counter_items(counter: Counter[str], top_n: int = 6) -> List[Dic
     return [{"canonical": canon, "count": int(count)} for canon, count in items[:top_n]]
 
 
+def _stable_counter_from_rollup_items(items: object) -> Counter[str]:
+    out: Counter[str] = Counter()
+    if not isinstance(items, list):
+        return out
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        digits = _digits_only(item.get("canonical") or item.get("value"))
+        if not digits:
+            continue
+        try:
+            count = int(float(item.get("count") or 0))
+        except Exception:
+            count = 0
+        out[digits] += max(1, count)
+    return out
+
+
+def _stable_frontier_counts(examples: object) -> Dict[str, int]:
+    out = {
+        "frontier_rows": 0,
+        "frontier_set1_rows": 0,
+        "frontier_col12_rows": 0,
+        "frontier_set1_col12_rows": 0,
+    }
+    if not isinstance(examples, list):
+        return out
+    for item in examples:
+        if not isinstance(item, dict):
+            continue
+        set_label = str(item.get("set") or "").strip()
+        column = str(item.get("column") or "").strip()
+        out["frontier_rows"] += 1
+        if set_label == "Set1":
+            out["frontier_set1_rows"] += 1
+        if column in {"1", "2"}:
+            out["frontier_col12_rows"] += 1
+        if set_label == "Set1" and column in {"1", "2"}:
+            out["frontier_set1_col12_rows"] += 1
+    return out
+
+
 def _stable_select_lane_seed_canonicals(
     *,
     family_id: int,
@@ -881,6 +923,10 @@ def _aggregate_stable_family_lanes(rows: Sequence[Dict[str, str]]) -> Dict[str, 
                 "last_remaining_rows": 0,
                 "progression_rows": 0,
                 "dom_last_rows": 0,
+                "frontier_rows": 0,
+                "frontier_set1_rows": 0,
+                "frontier_col12_rows": 0,
+                "frontier_set1_col12_rows": 0,
                 "source_counter": Counter(),
                 "long_counter": Counter(),
                 "frontier_examples": [],
@@ -895,6 +941,15 @@ def _aggregate_stable_family_lanes(rows: Sequence[Dict[str, str]]) -> Dict[str, 
             entry["progression_rows"] += 1
         if _to_bool(row.get("any_dom_last")):
             entry["dom_last_rows"] += 1
+        set_label = str(row.get("Set") or "").strip()
+        column = str(row.get("Column") or "").strip()
+        entry["frontier_rows"] += 1
+        if set_label == "Set1":
+            entry["frontier_set1_rows"] += 1
+        if column in {"1", "2"}:
+            entry["frontier_col12_rows"] += 1
+        if set_label == "Set1" and column in {"1", "2"}:
+            entry["frontier_set1_col12_rows"] += 1
         counter = _stable_parse_counter_blob(row.get("top_canonicals"))
         for canon, count in counter.items():
             if len(canon) == 3:
@@ -990,6 +1045,10 @@ def _parse_stable_family_vote(
                     "last_remaining_rows": int(item["last_remaining_rows"]),
                     "progression_rows": int(item["progression_rows"]),
                     "dom_last_rows": int(item["dom_last_rows"]),
+                    "frontier_rows": int(item["frontier_rows"]),
+                    "frontier_set1_rows": int(item["frontier_set1_rows"]),
+                    "frontier_col12_rows": int(item["frontier_col12_rows"]),
+                    "frontier_set1_col12_rows": int(item["frontier_set1_col12_rows"]),
                     "frontier_examples": sorted(
                         item["frontier_examples"],
                         key=lambda row: (-float(row["family_score"]), row["set"], row["draw"], row["column"]),
@@ -1001,6 +1060,267 @@ def _parse_stable_family_vote(
 
     packs.sort(key=lambda p: p.get("pack_id", ""))
     return packs, [families_path] + ([compound_path] if compound_path.exists() else [])
+
+
+def _stable_family_vote_v2_score(
+    *,
+    item: Dict[str, Any],
+    legacy_item: Dict[str, Any],
+    legacy_rank: int,
+    arena_rank: int,
+    leader_total: float,
+    leader_compound: float,
+) -> Optional[Dict[str, Any]]:
+    family_total = _to_float(item.get("family_score_total"))
+    family_max = _to_float(item.get("family_score_max"))
+    best_compound = _to_float(item.get("best_compound_score_max"))
+    progression = max(_to_int(item.get("progression_count")), _to_int(legacy_item.get("progression_rows")))
+    last_remaining = max(_to_int(item.get("last_remaining_count")), _to_int(legacy_item.get("last_remaining_rows")))
+    dom_last = max(_to_int(item.get("dom_last_count")), _to_int(legacy_item.get("dom_last_rows")))
+    frontier_examples = _stable_frontier_counts(item.get("example_boxes"))
+    frontier = {
+        "frontier_rows": max(int(frontier_examples["frontier_rows"]), _to_int(legacy_item.get("frontier_rows"))),
+        "frontier_set1_rows": max(int(frontier_examples["frontier_set1_rows"]), _to_int(legacy_item.get("frontier_set1_rows"))),
+        "frontier_col12_rows": max(int(frontier_examples["frontier_col12_rows"]), _to_int(legacy_item.get("frontier_col12_rows"))),
+        "frontier_set1_col12_rows": max(
+            int(frontier_examples["frontier_set1_col12_rows"]),
+            _to_int(legacy_item.get("frontier_set1_col12_rows")),
+        ),
+    }
+    hidden_summary = item.get("hidden_family_reveal_summary") or {}
+    order_summary = item.get("order_transform_summary") or {}
+    hidden_total = _to_float(hidden_summary.get("reveal_score_total"))
+    hidden_hits = _to_int(hidden_summary.get("row_hits"))
+    order_total = _to_float(order_summary.get("support_score_total"))
+    order_hits = _to_int(order_summary.get("row_hits"))
+    family_total_denom = max(family_total, 1.0)
+    hidden_density = min(hidden_total / family_total_denom, 20.0)
+    order_density = min(order_total / family_total_denom, 20.0)
+    rank_gain = max(0, int(legacy_rank) - int(arena_rank))
+
+    has_primary_signal = any(
+        (
+            progression > 0,
+            last_remaining > 0,
+            dom_last > 0,
+            frontier["frontier_col12_rows"] > 0,
+            frontier["frontier_set1_col12_rows"] > 0,
+        )
+    )
+    strong_enough = (
+        family_total >= max(80.0, float(leader_total) * 0.30)
+        or best_compound >= max(20.0, float(leader_compound) * 0.45)
+        or last_remaining > 0
+    )
+    if not has_primary_signal or not strong_enough:
+        return None
+
+    score = (
+        family_total
+        + family_max
+        + best_compound
+        + (15.0 * progression)
+        + (18.0 * last_remaining)
+        + (6.0 * dom_last)
+        + (8.0 * frontier["frontier_col12_rows"])
+        + (16.0 * frontier["frontier_set1_col12_rows"])
+        + (25.0 * rank_gain)
+        + (6.0 * hidden_density)
+        + (6.0 * order_density)
+    )
+    return {
+        "promotion_score": round(score, 3),
+        "family_score_total": round(family_total, 3),
+        "family_score_max": round(family_max, 3),
+        "best_compound_score_max": round(best_compound, 3),
+        "progression_count": progression,
+        "last_remaining_count": last_remaining,
+        "dom_last_count": dom_last,
+        "frontier_rows": int(frontier["frontier_rows"]),
+        "frontier_set1_rows": int(frontier["frontier_set1_rows"]),
+        "frontier_col12_rows": int(frontier["frontier_col12_rows"]),
+        "frontier_set1_col12_rows": int(frontier["frontier_set1_col12_rows"]),
+        "hidden_reveal_score_total": round(hidden_total, 3),
+        "hidden_reveal_row_hits": hidden_hits,
+        "hidden_reveal_density": round(hidden_density, 3),
+        "order_transform_support_total": round(order_total, 3),
+        "order_transform_row_hits": order_hits,
+        "order_transform_density": round(order_density, 3),
+        "legacy_rank": int(legacy_rank),
+        "rank_gain": int(rank_gain),
+    }
+
+
+def _parse_stable_family_vote_v2(
+    *,
+    state_dir: Path,
+    state_key: str,
+    top_n: int,
+    legacy_top_n: int,
+    max_cost_units: int,
+    arena_payload: Optional[Dict[str, Any]],
+) -> Tuple[List[dict], List[Path]]:
+    if int(top_n) <= 0 or int(max_cost_units) <= 0 or not _vtrac_get_index_set:
+        return [], []
+    families_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_families.csv"
+    compound_path = state_dir / "stable" / state_key / f"{state_key}_stable_patterns_compound.csv"
+    metrics_path = state_dir / "stable" / state_key / f"{state_key}_metrics.json"
+    if not families_path.exists() or arena_payload is None:
+        return [], []
+    rows = _load_csv_dict_rows(families_path)
+    if not rows:
+        return [], [families_path]
+
+    legacy_by_section = _aggregate_stable_family_lanes(rows)
+    sections = arena_payload.get("sections") or {}
+    if not isinstance(sections, dict):
+        return [], [families_path]
+
+    evidence_paths = [_safe_rel(families_path)]
+    if compound_path.exists():
+        evidence_paths.append(_safe_rel(compound_path))
+    if metrics_path.exists():
+        evidence_paths.append(_safe_rel(metrics_path))
+
+    packs: List[dict] = []
+    for section, section_payload in sorted(sections.items(), key=lambda kv: kv[0]):
+        if not isinstance(section_payload, dict):
+            continue
+        family_rollups = section_payload.get("family_rollups_top") or []
+        if not isinstance(family_rollups, list) or not family_rollups:
+            continue
+        legacy_items = legacy_by_section.get(section) or []
+        legacy_map = {int(item["family_id"]): item for item in legacy_items}
+        legacy_rank_map = {int(item["family_id"]): idx for idx, item in enumerate(legacy_items, start=1)}
+        legacy_top_ids = {
+            int(item["family_id"])
+            for item in legacy_items[: max(0, int(legacy_top_n))]
+            if _to_int(item.get("family_id")) > 0
+        }
+        leader_total = max((_to_float(item.get("family_score_total")) for item in family_rollups), default=0.0)
+        leader_compound = max((_to_float(item.get("best_compound_score_max")) for item in family_rollups), default=0.0)
+
+        ranked_candidates: List[Dict[str, Any]] = []
+        for arena_rank, rollup in enumerate(family_rollups, start=1):
+            if not isinstance(rollup, dict):
+                continue
+            family_id = _to_int(rollup.get("family_id"))
+            if family_id <= 0 or family_id in legacy_top_ids:
+                continue
+            legacy_item = legacy_map.get(family_id)
+            if legacy_item is None:
+                continue
+            legacy_rank = int(legacy_rank_map.get(family_id, 999999))
+            score_meta = _stable_family_vote_v2_score(
+                item=rollup,
+                legacy_item=legacy_item,
+                legacy_rank=legacy_rank,
+                arena_rank=arena_rank,
+                leader_total=leader_total,
+                leader_compound=leader_compound,
+            )
+            if score_meta is None:
+                continue
+            support_counter = Counter(legacy_item["source_counter"])
+            support_counter.update(_stable_counter_from_rollup_items(rollup.get("top_canonicals")))
+            long_counter = Counter(legacy_item["long_counter"])
+            for canonical, count in _stable_counter_from_rollup_items(rollup.get("top_canonicals")).items():
+                if len(canonical) > 3:
+                    long_counter[canonical] += int(count)
+            selected = _stable_select_lane_seed_canonicals(
+                family_id=family_id,
+                support_counter=support_counter,
+                max_cost_units=int(max_cost_units),
+            )
+            if not selected:
+                continue
+            ranked_candidates.append(
+                {
+                    "family_id": family_id,
+                    "arena_rank": arena_rank,
+                    "legacy_rank": legacy_rank,
+                    "legacy_item": legacy_item,
+                    "rollup": rollup,
+                    "support_counter": support_counter,
+                    "long_counter": long_counter,
+                    "selected": selected,
+                    **score_meta,
+                }
+            )
+
+        ranked_candidates.sort(
+            key=lambda item: (
+                -float(item["promotion_score"]),
+                -int(item["frontier_set1_col12_rows"]),
+                -int(item["progression_count"]),
+                -float(item["family_score_total"]),
+                int(item["family_id"]),
+            )
+        )
+        for promo_rank, item in enumerate(ranked_candidates[: int(top_n)], start=1):
+            rollup = item["rollup"]
+            pack = _build_stable_lane_vote_pack(
+                section=section,
+                family_id=int(item["family_id"]),
+                selected_canonicals=item["selected"],
+                method_id="stable_family_vote_v2",
+                pack_id=f"stable_family_vote_v2:{section}:family={int(item['family_id'])}",
+                why_tags=[
+                    "stable_family_vote_v2",
+                    f"family_id:{int(item['family_id'])}",
+                    f"promotion_rank:{promo_rank}",
+                    f"arena_rank:{int(item['arena_rank'])}",
+                    f"legacy_rank:{int(item['legacy_rank'])}",
+                    f"rank_gain:{int(item['rank_gain'])}",
+                    f"promotion_score:{float(item['promotion_score']):.3f}",
+                    f"family_score_total:{float(item['family_score_total']):.3f}",
+                    f"best_compound:{float(item['best_compound_score_max']):.3f}",
+                    f"progression_count:{int(item['progression_count'])}",
+                    f"frontier_col12:{int(item['frontier_col12_rows'])}",
+                    f"frontier_set1_col12:{int(item['frontier_set1_col12_rows'])}",
+                    f"cap:{int(max_cost_units)}",
+                    "promotion_reason:v2_richer_family_gate",
+                ],
+                transform_chain=[
+                    f"stable_arena_family_rollup:{section}:family={int(item['family_id'])}:rank{int(item['arena_rank'])}",
+                    f"stable_family_vote_v2:cap{int(max_cost_units)}",
+                    "box_expand_unique_perms",
+                ],
+                evidence_paths=evidence_paths,
+                family_score=float(item["family_score_total"]),
+                best_compound_score=float(item["best_compound_score_max"]),
+                source_counter=item["support_counter"],
+                long_counter=item["long_counter"],
+                meta={
+                    "arena_family_rank": int(item["arena_rank"]),
+                    "legacy_family_rank": int(item["legacy_rank"]),
+                    "rank_gain": int(item["rank_gain"]),
+                    "rows_count": int(item["legacy_item"]["rows_count"]),
+                    "last_remaining_rows": int(item["legacy_item"]["last_remaining_rows"]),
+                    "progression_rows": int(item["legacy_item"]["progression_rows"]),
+                    "dom_last_rows": int(item["legacy_item"]["dom_last_rows"]),
+                    "frontier_rows": int(item["frontier_rows"]),
+                    "frontier_set1_rows": int(item["frontier_set1_rows"]),
+                    "frontier_col12_rows": int(item["frontier_col12_rows"]),
+                    "frontier_set1_col12_rows": int(item["frontier_set1_col12_rows"]),
+                    "promotion_score": float(item["promotion_score"]),
+                    "family_score_total": float(item["family_score_total"]),
+                    "family_score_max": float(item["family_score_max"]),
+                    "hidden_reveal_score_total": float(item["hidden_reveal_score_total"]),
+                    "hidden_reveal_row_hits": int(item["hidden_reveal_row_hits"]),
+                    "hidden_reveal_density": float(item["hidden_reveal_density"]),
+                    "order_transform_support_total": float(item["order_transform_support_total"]),
+                    "order_transform_row_hits": int(item["order_transform_row_hits"]),
+                    "order_transform_density": float(item["order_transform_density"]),
+                    "top_modal_orders": list(rollup.get("top_modal_orders") or [])[:6],
+                    "frontier_examples": list(rollup.get("example_boxes") or [])[:3],
+                },
+            )
+            if pack is not None:
+                packs.append(pack)
+
+    packs.sort(key=lambda p: p.get("pack_id", ""))
+    return packs, [families_path] + ([compound_path] if compound_path.exists() else []) + ([metrics_path] if metrics_path.exists() else [])
 
 
 def _parse_stable_last_remaining(
@@ -1074,6 +1394,10 @@ def _parse_stable_last_remaining(
                     "last_remaining_rows": int(item["last_remaining_rows"]),
                     "progression_rows": int(item["progression_rows"]),
                     "dom_last_rows": int(item["dom_last_rows"]),
+                    "frontier_rows": int(item["frontier_rows"]),
+                    "frontier_set1_rows": int(item["frontier_set1_rows"]),
+                    "frontier_col12_rows": int(item["frontier_col12_rows"]),
+                    "frontier_set1_col12_rows": int(item["frontier_set1_col12_rows"]),
                     "frontier_examples": sorted(
                         item["frontier_examples"],
                         key=lambda row: (-float(row["family_score"]), row["set"], row["draw"], row["column"]),
@@ -3857,6 +4181,7 @@ def _pack_source_class(method_id: str) -> str:
         "stable_top",
         "stable_compound_top",
         "stable_family_vote",
+        "stable_family_vote_v2",
         "stable_last_remaining",
         "digit_reduction_analyzer_v2",
         "vtrac_enhanced_top",
@@ -4137,6 +4462,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional Stable family-vote packs: top N family/lane closure packs per section (default: 0 disables).",
     )
     ap.add_argument(
+        "--top-n-stable-families-v2",
+        type=int,
+        default=0,
+        help="Optional Stable family-vote v2 packs: top N extra bounded family/lane closure packs per section using richer arena evidence (default: 0 disables).",
+    )
+    ap.add_argument(
         "--top-n-stable-last-remaining",
         type=int,
         default=0,
@@ -4413,6 +4744,27 @@ def main() -> None:
 
         packs: List[dict] = []
         inputs: List[Path] = []
+        stable_arena_payload: Optional[Dict[str, Any]] = None
+        if include_non_profit and (int(args.top_n_stable_families_v2) > 0 or args.write_stable_arena):
+            stable_arena_payload = build_stable_arena_payload(
+                state_dir=state_dir,
+                state_key=state_key,
+                results_date=args.date,
+                history_date=cc_meta.history_date,
+                profile=profile,
+                experiment_tag=exp_tag,
+                sharepacks_root=sharepacks_root,
+                contains_winners_artifacts=bool(leakage),
+                repo_root=REPO_ROOT,
+                top_rows=max(1, int(args.stable_arena_top_rows)),
+                top_pattern_ledgers=max(1, int(args.stable_arena_top_pattern_ledgers)),
+                top_compound=max(1, int(args.stable_arena_top_compound)),
+                top_families=max(
+                    1,
+                    int(args.stable_arena_top_families),
+                    int(args.top_n_stable_families) + int(args.top_n_stable_families_v2) + 6,
+                ),
+            )
 
         # 1) Profit Alerts (Control Center)
         if include_profit_alerts:
@@ -4461,7 +4813,19 @@ def main() -> None:
             packs.extend(st_family_packs)
             inputs.extend(st_family_inputs)
 
-            # 2d) Stable last-remaining survivor packs (optional; default-off)
+            # 2d) Stable family/lane vote packs v2 (optional; default-off)
+            st_family_v2_packs, st_family_v2_inputs = _parse_stable_family_vote_v2(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_n=int(args.top_n_stable_families_v2),
+                legacy_top_n=int(args.top_n_stable_families),
+                max_cost_units=int(args.stable_lane_closure_max_cost_units),
+                arena_payload=stable_arena_payload,
+            )
+            packs.extend(st_family_v2_packs)
+            inputs.extend(st_family_v2_inputs)
+
+            # 2e) Stable last-remaining survivor packs (optional; default-off)
             st_survivor_packs, st_survivor_inputs = _parse_stable_last_remaining(
                 state_dir=state_dir,
                 state_key=state_key,
@@ -4757,27 +5121,12 @@ def main() -> None:
             print(f"Wrote: {_safe_rel(ev_csv)}")
             print(f"Wrote: {_safe_rel(ev_md)}")
         if args.write_stable_arena:
-            arena_payload = build_stable_arena_payload(
-                state_dir=state_dir,
-                state_key=state_key,
-                results_date=args.date,
-                history_date=cc_meta.history_date,
-                profile=profile,
-                experiment_tag=exp_tag,
-                sharepacks_root=sharepacks_root,
-                contains_winners_artifacts=bool(leakage),
-                repo_root=REPO_ROOT,
-                top_rows=max(1, int(args.stable_arena_top_rows)),
-                top_pattern_ledgers=max(1, int(args.stable_arena_top_pattern_ledgers)),
-                top_compound=max(1, int(args.stable_arena_top_compound)),
-                top_families=max(1, int(args.stable_arena_top_families)),
-            )
-            if arena_payload is None:
+            if stable_arena_payload is None:
                 print(f"Skipped stable arena: missing Stable bundle for {_safe_rel(state_dir)}")
             else:
                 arena_json, arena_md = write_stable_arena_files(
                     out_json_path=arena_path,
-                    payload=arena_payload,
+                    payload=stable_arena_payload,
                     write_md=True,
                 )
                 print(f"Wrote: {_safe_rel(arena_json)}")

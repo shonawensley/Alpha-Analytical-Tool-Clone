@@ -11,6 +11,7 @@ from alpha_analytical.stable.post_pass_families import build_family_summary
 from scripts.tools.create_candidate_universe import (
     _parse_stable_compound_top,
     _parse_stable_family_vote,
+    _parse_stable_family_vote_v2,
     _parse_stable_last_remaining,
 )
 
@@ -102,6 +103,89 @@ def test_stable_family_vote_emits_bounded_lane_closure_packs(tmp_path: Path):
     assert pack["cost_units"] <= 12
     assert {"227", "277"}.issubset(set(pack["canonicals"]))
     assert pack["source_top_canonicals"]
+
+
+def test_stable_family_vote_v2_promotes_extra_family_from_richer_arena_rollup(tmp_path: Path):
+    state_dir = tmp_path / "2026-03-06" / "TestState"
+    _write_state_bundle(state_dir, include_last_remaining=True)
+
+    arena_payload = {
+        "sections": {
+            "Combined": {
+                "family_rollups_top": [
+                    {
+                        "family_id": 26,
+                        "family_score_total": 500.0,
+                        "family_score_max": 23.0,
+                        "best_compound_score_max": 23.0,
+                        "progression_count": 0,
+                        "last_remaining_count": 1,
+                        "dom_last_count": 0,
+                        "example_boxes": [{"set": "Set1", "draw": "Draw1", "column": "1"}],
+                        "hidden_family_reveal_summary": {"reveal_score_total": 0.0, "row_hits": 0},
+                        "order_transform_summary": {"support_score_total": 0.0, "row_hits": 0},
+                        "top_canonicals": [{"value": "227", "count": 2}, {"value": "277", "count": 2}],
+                        "top_modal_orders": [{"value": "227", "count": 2}],
+                    },
+                    {
+                        "family_id": 35,
+                        "family_score_total": 240.0,
+                        "family_score_max": 21.5,
+                        "best_compound_score_max": 21.5,
+                        "progression_count": 3,
+                        "last_remaining_count": 0,
+                        "dom_last_count": 1,
+                        "example_boxes": [
+                            {"set": "Set1", "draw": "Draw1", "column": "1"},
+                            {"set": "Set1", "draw": "Draw1", "column": "2"},
+                        ],
+                        "hidden_family_reveal_summary": {"reveal_score_total": 4200.0, "row_hits": 42},
+                        "order_transform_summary": {"support_score_total": 6900.0, "row_hits": 51},
+                        "top_canonicals": [{"value": "449", "count": 3}],
+                        "top_modal_orders": [{"value": "449", "count": 4}],
+                    },
+                ]
+            }
+        }
+    }
+
+    packs, inputs = _parse_stable_family_vote_v2(
+        state_dir=state_dir,
+        state_key="TestState",
+        top_n=1,
+        legacy_top_n=1,
+        max_cost_units=12,
+        arena_payload=arena_payload,
+    )
+
+    assert inputs
+    assert len(packs) == 1
+    pack = packs[0]
+    assert pack["method_id"] == "stable_family_vote_v2"
+    assert pack["family_id"] == 35
+    assert pack["arena_family_rank"] == 2
+    assert pack["promotion_score"] > 0
+    assert pack["frontier_set1_col12_rows"] == 2
+    assert pack["hidden_reveal_score_total"] == 4200.0
+    assert pack["order_transform_support_total"] == 6900.0
+    assert "promotion_reason:v2_richer_family_gate" in pack["why_tags"]
+
+
+def test_stable_family_vote_v2_is_zero_safe_without_arena_payload(tmp_path: Path):
+    state_dir = tmp_path / "2026-03-06" / "TestState"
+    _write_state_bundle(state_dir, include_last_remaining=True)
+
+    packs, inputs = _parse_stable_family_vote_v2(
+        state_dir=state_dir,
+        state_key="TestState",
+        top_n=1,
+        legacy_top_n=1,
+        max_cost_units=12,
+        arena_payload=None,
+    )
+
+    assert packs == []
+    assert inputs == []
 
 
 def test_stable_last_remaining_emits_survivor_lane_pack_when_present(tmp_path: Path):

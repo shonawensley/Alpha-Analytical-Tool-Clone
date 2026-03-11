@@ -82,40 +82,63 @@ Reason:
 - Example 1 also proved that modal order / fragment evidence may be one of the cleanest bridges from lane correctness to strict conversion.
 - The slice is now implemented as an arena evidence surface; transform promotion still needs later calibration and bounded policy work.
 
-### Priority 4 — Stable family-lane promotion review [next]
+### Priority 4 — Stable family-lane promotion review [done]
 
 - `TOOL-005`
 - `TEST-002`
 - `TEST-003`
+- `TEST-016`
 
 Reason:
-- The arena is preserving meaningful family-30 evidence, but the current projection logic is still too conservative to carry it into candidate packs.
+- `stable_family_vote_v2` is now implemented and validated as a bounded extra family-lane promotion rule using richer arena evidence.
+- See `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-11__STABLE_FAMILY_VOTE_V2__VALIDATION.md`.
 
-### Priority 5 — Cross-tool arena scaffolding
+### Priority 5 — Pair-anchor / lingering fourth-variable closure
+
+- `RULE-020`
+- `TRACK-014`
+- `TOOL-008`
+- `ARENA-010`
+- `TEST-015`
+
+Reason:
+- After Stable promotion review, the biggest remaining gap is bounded closure around the right structural core, especially pair-anchor and fourth-variable situations that keep appearing in examples and competitions.
+
+### Priority 6 — Cross-tool arena scaffolding
 
 - `TRACK-003`
 - `TRACK-004`
 - `TRACK-009`
 - `TRACK-010`
 - `TRACK-011`
+- `TRACK-012`
+- `TRACK-013`
+- `TRACK-014`
 - `ARENA-003`
 - `ARENA-004`
 - `ARENA-005`
 - `ARENA-007`
 - `ARENA-008`
 - `ARENA-009`
+- `ARENA-010`
 - `POLICY-006`
 - `POLICY-007`
 - `POLICY-008`
 - `POLICY-009`
 - `POLICY-010`
 - `POLICY-011`
+- `POLICY-012`
+- `POLICY-013`
+- `POLICY-014`
 - `TEST-004`
 - `TEST-006`
 - `TEST-007`
 - `TEST-008`
 - `TEST-009`
 - `TEST-010`
+- `TEST-013`
+- `TEST-014`
+- `TEST-015`
 
 Reason:
 - Once Stable’s next evidence upgrades land, the next highest-value move is preparing the arena schema for multi-tool convergence and environment scoring.
@@ -132,6 +155,7 @@ Reason:
 | `FOUND-004` | `arena` | `implemented` | Stable compounding observability slice | Stable Arena compounding ledger v2 now preserves box-level contributors, frontier counts, peak-part provenance, top modal orders, and linked compound context in the section-level pattern ledgers. | Unit tests + smoke reruns on `C035 NewYork4` and `C036 Delaware4` |
 | `FOUND-005` | `arena` | `implemented` | Stable hidden-family slice | Stable Arena hidden-family / clutter-reveal v1 now preserves source literals, source locators, row-level reveal objects, and family/pattern reveal summaries. | Unit tests + 4-case smoke set on `C035 NewYork4`, `C036 Delaware4`, `2026-01-09 Pennsylvania4`, `2026-01-08 NorthCarolina4` |
 | `FOUND-006` | `arena` | `implemented` | Stable order-transform slice | Stable Arena order / VT-straight v1 now preserves row-level transform hints plus canonical/family rollup summaries for modal-order and hidden-fragment seeds. | Unit tests + 4-case smoke set on `C035 NewYork4`, `C036 Delaware4`, `2026-01-09 Pennsylvania4`, `2026-01-08 NorthCarolina4` |
+| `FOUND-007` | `tool` | `validated` | Stable family-lane promotion slice | `stable_family_vote_v2` adds one extra bounded family-lane pack per variant/section using richer Stable Arena evidence and arena-vs-legacy rank lift. | Unit tests + 4-case gate + `2026-01-01..2026-01-09` harness in `2026-03-11__STABLE_FAMILY_VOTE_V2__VALIDATION.md` |
 
 ---
 
@@ -158,6 +182,10 @@ Full running rule language lives in the example-review notebook. This section ke
 | `RULE-015` | `approved` | NUMBER_5 + MESSAGE_8 | Top-N is a summary surface, not the truth model of what the extractor or arena preserved. |
 | `RULE-016` | `approved` | current discussion | Do not force every new phenomenon into the legacy tool boundaries; create a new focused tool when that produces clearer extraction semantics and cleaner arena evidence. |
 | `RULE-017` | `approved` | current discussion | Keep `Brain 1` (per-state arena analysis) distinct from `Brain 2` (cross-state ranking / profitability triage). |
+| `RULE-018` | `approved` | 2026-03-09 competition postmortem | Grade ticket performance separately from arena / candidate-universe preservation so we do not hide real progress inside a missed final ticket. |
+| `RULE-019` | `approved` | 2026-03-09 competition postmortem | Treat doubles / mirror-doubles as a distinct predictive regime rather than mixing them blindly with 6-way single states. |
+| `RULE-020` | `approved` | 2026-03-09 competition postmortem + current discussion | A strong pair-anchor plus one lingering fourth variable is a real closure principle and should be modeled explicitly. |
+| `RULE-021` | `approved` | 2026-03-09 competition postmortem | Same-day midday-to-evening transition is first-class evidence and should be scored explicitly rather than handled ad hoc. |
 
 ---
 
@@ -176,6 +204,9 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TRACK-009` | `approved` | FEEDBACKEX1_2 + MESSAGE2 | ranking / validation | Rank-vs-predictive-value measurement so ranking can later be checked against actual predictive lift over time. |
 | `TRACK-010` | `approved` | FEEDBACKEX1_3 + FEEDBACKEX1_4 | tool-by-tool review | Per-tool arena contribution summary: what exact evidence this tool now adds to the arena that was previously missing. |
 | `TRACK-011` | `implemented` | NUMBER_5 + MESSAGE_8 | compounding / observability | Variant-level compounding ledger: rows, boxes, spans, feature-part totals, peaks, provenance, and what compounding added beyond row-level scores. |
+| `TRACK-012` | `approved` | 2026-03-09 competition postmortem | competition harness / grading | Competition scoreboard with `TicketBoxHit`, `TicketVTRACHit`, `ArenaCanonicalPresent`, `ArenaFamilyPresent`, `CUPresent`, and `MiddayCarryPresent`. |
+| `TRACK-013` | `approved` | 2026-03-09 competition postmortem | ranking / state triage | State-mode / regime classification: doubles regime, single-progression regime, mixed regime, split-rail regime, and transition-sensitive regime. |
+| `TRACK-014` | `approved` | current discussion + 2026-03-09 competition postmortem | closure / conversion | Pair-anchor and lingering-fourth-variable metrics: anchor strength, extra-variable persistence, mirror-pair coverage, and cost-efficient closure size. |
 
 ---
 
@@ -187,9 +218,10 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TOOL-002` | `implemented` | Example 1 / winners HTML | Stable | Detect and surface family fragments inside clutter digits, not just final canonical/family rollups. |
 | `TOOL-003` | `implemented` | Example 1 | Stable | Promote modal order evidence more explicitly so clues like `847 -> 342` can be used predictively. |
 | `TOOL-004` | `implemented` | Example 1 | Stable | Add bounded VT-straight transform candidate generation from modal orders / family fragments / repeated pairs. |
-| `TOOL-005` | `approved` | Example 1 | Stable projections | Revisit family-lane promotion logic so strong family evidence is not lost just because the lane ranks outside the current top family cut. |
+| `TOOL-005` | `validated` | Example 1 | Stable projections | Revisit family-lane promotion logic so strong family evidence is not lost just because the lane ranks outside the current top family cut. Implemented as `stable_family_vote_v2`, using richer arena evidence, current/frontier signals, and arena-vs-legacy rank lift. |
 | `TOOL-006` | `noted` | training + macro discussion | Stable / DR | Quantify long-cluster strength by how much digit structure is still holding inside the cluster. |
 | `TOOL-007` | `implemented` | NUMBER_5 | Stable | Expose how R2/R4/R6/R8 mini-progressions are compounded into total pattern scoring, including totals, peaks, contributing boxes, frontier hits, and compound-row context. |
+| `TOOL-008` | `approved` | current discussion + 2026-03-09 competition postmortem | DR / closure helpers | Detect and preserve the lingering fourth variable around a strong 3-value or pair-anchor core, including digit and mirror-pair variants that yield cheap bounded closure sets. |
 
 ---
 
@@ -206,6 +238,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-007` | `approved` | FEEDBACKEX1_1 + MESSAGE2 | Arena schema | Preserve raw literal, canonical, family, and VTRAC-linked views together for important evidence objects. |
 | `ARENA-008` | `approved` | NUMBER_5 + MESSAGE_8 | Arena schema | Use shared semantic fields across tools for comparison: horizontal persistence, vertical box/straight support, family alignment, survivor status, frontier arrival, VT-straight hint, cluster-size strength. |
 | `ARENA-009` | `approved` | current discussion | Arena architecture | Arena inputs are not limited to the original core analyzers; new focused tools may feed the arena as first-class evidence producers if they follow the shared evidence contract. |
+| `ARENA-010` | `approved` | current discussion + 2026-03-09 competition postmortem | Arena schema | Add `pair_anchor_closure` evidence objects carrying core anchor, mirror-pair space, lingering fourth-variable candidates, bounded closure sets, and cost-to-cover. |
 
 ---
 
@@ -224,6 +257,9 @@ Full running rule language lives in the example-review notebook. This section ke
 | `POLICY-009` | `approved` | NUMBER_5 + MESSAGE_8 | scoring discipline | Retune feature weights only after compounding observability is explicit; instrument first, retune second. |
 | `POLICY-010` | `approved` | current discussion | tool design discipline | If a phenomenon has distinct extraction logic, scoring, or provenance needs, prefer a new focused tool over forcing the logic into an unrelated legacy tool. |
 | `POLICY-011` | `approved` | current discussion | architecture / evaluation | Keep `Brain 1` and `Brain 2` separate in design and testing: validate per-state arena fidelity before leaning on macro ranking or profitability conclusions. |
+| `POLICY-012` | `approved` | 2026-03-09 competition postmortem | grading / development | In competitions and live reviews, always log `ticket result` and `arena result` separately so postmortems preserve development value. |
+| `POLICY-013` | `approved` | current discussion | ranking / conversion | Give doubles / mirror-doubles their own promotion lane and budget logic instead of forcing them through the same thresholds as 6-way singles. |
+| `POLICY-014` | `approved` | 2026-03-09 competition postmortem | live competition workflow | Before evening predictions, score midday results as both carry-forward pressure and reduction pressure. |
 
 ---
 
@@ -232,8 +268,8 @@ Full running rule language lives in the example-review notebook. This section ke
 | ID | Status | Source | Target Layer | Test |
 |---|---|---|---|---|
 | `TEST-001` | `approved` | current workflow agreement | example harness | Every deep-dive case should compare `truth vs baseline vs arena branch`. |
-| `TEST-002` | `approved` | Example 1 / C035 | Stable Arena | Example 1 should continue to verify that family 30 is preserved in the arena even when baseline CU misses it. |
-| `TEST-003` | `approved` | Example 1 | Stable projections | After projection improvements, Example 1 should show stronger family-30 promotion without destructive pack explosion. |
+| `TEST-002` | `validated` | Example 1 / C035 | Stable Arena | Example 1 should continue to verify that family 30 is preserved in the arena even when baseline CU misses it. |
+| `TEST-003` | `validated` | Example 1 | Stable projections | After projection improvements, Example 1 should show stronger family-30 promotion without destructive pack explosion. |
 | `TEST-004` | `approved` | macro discussion | harness / windows | Add window-level arena recall metrics once 2-3 tools have been fed into the arena. |
 | `TEST-005` | `validated` | Example 1 | Stable hidden-family work | Add regression coverage for source literal + clutter-reveal + transform candidate fields once implemented. |
 | `TEST-011` | `approved` | hidden reveal live validation | Stable hidden-family work | Keep hidden-family / clutter-reveal observability-only until positive/noisy controls show a reliable calibration threshold for ranking or promotion. |
@@ -243,6 +279,10 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TEST-008` | `approved` | FEEDBACKEX1_3 + FEEDBACKEX1_4 | case sequence | Keep example coverage across casebook buckets: preservation/lane-drop, within-lane miss, conversion recovery, positive control, and noisy control. |
 | `TEST-009` | `validated` | NUMBER_5 + MESSAGE_8 | compounding / observability | For one example, answer what compounding added beyond row-level scores, what survivor/frontier inventory added, and what remained absent from old CU despite now being visible in the arena. |
 | `TEST-010` | `approved` | current discussion | architecture / tool design | When a new phenomenon is introduced, explicitly decide whether it belongs in an existing tool or a new focused tool, and record why that choice yields the cleaner arena input. |
+| `TEST-013` | `approved` | 2026-03-09 competition postmortem | competition harness | For each live competition, write a postmortem that grades `ticket vs arena vs CU vs midday-transition` rather than ticket-only. |
+| `TEST-014` | `approved` | 2026-03-09 competition postmortem | teaching cases | Keep `Ontario 559` and `Connecticut 019/091` as conversion teaching cases where the arena preserved the winner before the final ticket missed. |
+| `TEST-015` | `approved` | current discussion | closure logic | Before promoting pair-anchor plus fourth-variable closure into production ranking, validate it on multiple examples as a bounded-cost conversion rule rather than a combinatoric expansion. |
+| `TEST-016` | `validated` | Stable family-lane promotion slice | Stable projections | Run a January-window harness comparing `stable10` baseline vs `stable_family_vote_v2` for exact-box-lane rescue without pack explosion. |
 
 ---
 
@@ -257,6 +297,7 @@ What the queue should remember from Example 1 right now:
 - the new Stable Arena preserves that story better than baseline CU
 - hidden-reveal v1 now makes that family story explicit with source literals, fragments, and rollup summaries instead of leaving it implicit inside raw long canonicals
 - current projection logic still does not carry family 30 far enough into candidate packs
+- `stable_family_vote_v2` now promotes family 30 into candidate packs and rescues the evening winner canonical `234` on Example 1
 - order-transform v1 now makes the straight-conversion story explicit too: family 30 in Evening now shows seeds like `847` with bounded recipes `direct_perms`, `vt8_expand_ordered`, and `pair_mirror_third_12`
 - order-fragment evidence like `847` suggests a strong VT-straight conversion opportunity that the current predictive path does not yet exploit
 - the compounding-ledger rerun now makes box-level contributors, frontier counts, and compound-context totals visible without needing to hand-merge `scores.csv` and `compound.csv`
@@ -278,6 +319,7 @@ Primary active items linked to Example 1:
 - `ARENA-002`
 - `TEST-002`
 - `TEST-003`
+- `TEST-016`
 - `TEST-007`
 - `TEST-011`
 - `TEST-012`
@@ -289,5 +331,4 @@ Primary active items linked to Example 1:
 - Should long-cluster reveal logic live first in Stable extraction, in arena post-processing, or in a cross-tool CEG layer?
 - What calibration threshold makes hidden-family / clutter-reveal strong enough to influence ranking or promotion without flooding noisy states?
 - What calibration threshold makes order / VT-straight transform evidence strong enough to influence ranking or promotion without flooding noisy states?
-- What is the smallest safe rule for lane promotion when the family evidence is real but not top-3 by current aggregate rank?
 - Which VT-straight transform recipes deserve first-class support first: pair-anchored, mirror-anchored, full 8-combo index straight, or a bounded hybrid?

@@ -8,6 +8,7 @@ Related:
 - Resume bookmark: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3__BOOKMARK__CASEPACK_EXAMPLE_REVIEW.md`
 - Casepacks index: `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
 - Live integration queue: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ANALYSIS_ARENA_INTEGRATION_QUEUE.md`
+- Competition postmortem: `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-09__COMPETITION_POSTMORTEM__analysis_arena_branch.md`
 
 ---
 
@@ -282,6 +283,96 @@ From `tasks/GOLDEN_RULES_T.txt`:
   - and apply profitability / expense-control logic.
 - They should inform each other, but they should not be collapsed into one rushed layer.
 
+### 29) Grade ticket performance separately from arena performance
+
+- A live ticket can miss even when the arena already preserved the winner meaningfully.
+- For development, we need to track both:
+  - what the ticket hit,
+  - what the arena preserved,
+  - and what the candidate universe already carried pre-results.
+- Otherwise we hide real progress inside a bad final conversion.
+
+### 30) Doubles / mirror-doubles are a distinct predictive regime
+
+- Current evidence suggests the system is often strongest in double-heavy and mirror-double-heavy environments.
+- These states are also cheaper to close because the relevant VTRAC families are smaller.
+- Do not collapse doubles-driven states and 6-way single states into one undifferentiated ranking / promotion policy.
+
+### 31) A strong pair-anchor plus one lingering fourth variable is a real closure principle
+
+- Often the system isolates the right pair / mirror-pair skeleton, but the final winner resolves as:
+  - the double itself,
+  - the mirror-double family,
+  - or that same structural core plus one recurring extra digit / VTRAC-pair digit.
+- This means the predictive object is often not just one canonical; it is a bounded closure set around:
+  - a strong pair-anchor,
+  - mirror-pair space,
+  - and one extra lingering variable.
+
+### 32) Same-day midday-to-evening transition is first-class evidence
+
+- Midday results should not be treated as an afterthought in evening competitions.
+- They can matter in two opposite ways:
+  - `carry-forward / repetition` pressure,
+  - `reduction / elimination` pressure.
+- The system should eventually score both instead of relying on ad hoc manual judgment.
+
+### 33) Family-lane promotion should reward arena rank-lift, not raw family max alone
+
+- The `stable_family_vote_v2` validation made one thing very clear:
+  - the rescue families we care about are often **not** the best `family_score_max` families,
+  - they are the families whose rank improves materially when richer arena evidence is included.
+- That means a good promotion rule should care about:
+  - legacy rank,
+  - arena rank,
+  - and the size of that lift,
+  not just whether a family is generically “strong.”
+- This is what allowed Example 1 / `C035` to promote `Evening family 30` instead of merely promoting another already-strong excluded family.
+
+---
+
+## Stable Family Vote V2 Validation (2026-03-11)
+
+Related:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-11__STABLE_FAMILY_VOTE_V2__VALIDATION.md`
+
+What landed:
+- `stable_family_vote_v2` is now the first bounded Stable family-lane promotion rule that consumes richer arena evidence rather than raw family max alone.
+- It stays additive:
+  - legacy `stable_family_vote` is untouched,
+  - the new rule is default-off,
+  - and it adds only one extra bounded family-lane pack per variant/section.
+
+Most important result:
+- `C035 / 2026-01-06 / NewYork4 / Evening 342` is now a true rescue case.
+  - baseline `stable10` CU missed boxed canonical `234`
+  - `stable_family_vote_v2` promotes `Evening family 30`
+  - the v2 CU now contains boxed `234`
+
+Control read:
+- `C036 / Delaware4` did not get a fake rescue.
+- `2026-01-09 / Pennsylvania4` gained a bounded lane rescue without pretending to solve every closure problem.
+- `2026-01-08 / NorthCarolina4` stayed noisy and was not falsely “fixed.”
+
+January harness headline:
+- On `245` evaluable winner events across `2026-01-01 .. 2026-01-09`, the v2 rule improved:
+  - exact hits from `50 -> 64`
+  - boxed hits from `63 -> 75`
+  - Stable family-lane hits from `0 -> 23`
+- It also produced:
+  - `19` exact rescues
+  - `18` boxed rescues
+  - `13` lane-only rescues
+
+Interpretation:
+- This slice improved preservation/promotion materially.
+- It did not solve within-lane closure completely.
+- That is acceptable, because this slice was meant to rescue strong families that were being cut too narrowly, not finish the entire closure problem.
+
+Development consequence:
+- Stable family-lane promotion is now strong enough to stop being the top open blocker.
+- The next most valuable slice is pair-anchor + lingering fourth-variable closure.
+
 ---
 
 ## How To Use This Doc (simple)
@@ -327,6 +418,36 @@ Use 1 primary label per case (optional secondary labels after).
 - Add/adjust **lane retention** rules? (prevent lane-drop)
 - Add/adjust **within-lane closure / member selection** rules? (prevent within-lane miss)
 - Adjust ranking/triage so we spend attention/budget where conversion is plausible?
+
+---
+
+## Competition 2026-03-09 Distilled Takeaways
+
+Reference:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-09__COMPETITION_POSTMORTEM__analysis_arena_branch.md`
+
+What should remain in durable memory from this competition:
+
+- The ticket missed more than the arena did.
+  - `Ontario 559` and `Connecticut 019/091` were already preserved in the arena / candidate universe pre-results.
+  - Those were conversion / promotion misses, not pure evidence misses.
+- `NewJersey` and `NewYork` were true evening evidence misses.
+  - The favored rails were wrong for the final evening outcome.
+- Midday relevance was real:
+  - `NewJersey` midday `617` was preserved in the arena as canonical `167`.
+  - `Connecticut` midday `917` likely signaled a same-day carry / permutation relationship into evening `091`.
+  - `NorthCarolina` midday `855` matched the selected family-4 corridor by VTRAC, even without an exact boxed hit.
+- The competition reinforced that doubles / mirror-doubles and small family-closure neighborhoods remain one of the system's strongest practical strengths.
+- The competition also surfaced a stronger closure principle:
+  - when the system isolates the right pair-anchor or double-pressure core,
+  - the missing piece is often one lingering fourth variable rather than a totally different lane.
+
+Development meaning:
+
+- preserve `ticket grading` and `arena grading` separately
+- add midday-to-evening transition scoring
+- keep doubles / mirror-doubles as a first-class regime
+- eventually let the arena preserve pair-anchor plus fourth-variable closure objects explicitly
 
 ---
 
