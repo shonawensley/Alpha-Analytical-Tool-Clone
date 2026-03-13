@@ -216,6 +216,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TRACK-013` | `approved` | 2026-03-09 competition postmortem | ranking / state triage | State-mode / regime classification: doubles regime, single-progression regime, mixed regime, split-rail regime, and transition-sensitive regime. |
 | `TRACK-014` | `approved` | current discussion + 2026-03-09 competition postmortem | closure / conversion | Pair-anchor and lingering-fourth-variable metrics: anchor strength, extra-variable persistence, mirror-pair coverage, and cost-efficient closure size. |
 | `TRACK-015` | `in_progress` | DR super-harness planning | DR mapped-box validity ledger: classify mapped windows as core, supportive, experimental, disputed, or dead/N/A based on repeated harness evidence rather than ad hoc edits. After 11 reviewed cases, Group 1 remains strongly justified, `Set2 Draw1 Col3` remains disputed, and `Set1 Draw3 Col6` still stays only a likely dead/N/A candidate rather than a confirmed deletion. |
+| `TRACK-016` | `approved` | DR parity + broad screen | DR arena calibration | Measure false-active vs true-empty DR arena behavior so `dr_empty_lens` can distinguish `true control`, `active but low-trust`, and `positive trace` instead of treating most controls as active. |
 
 ---
 
@@ -250,6 +251,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-009` | `approved` | current discussion | Arena architecture | Arena inputs are not limited to the original core analyzers; new focused tools may feed the arena as first-class evidence producers if they follow the shared evidence contract. |
 | `ARENA-010` | `approved` | current discussion + 2026-03-09 competition postmortem | Arena schema | Add `pair_anchor_closure` evidence objects carrying core anchor, mirror-pair space, lingering fourth-variable candidates, bounded closure sets, and cost-to-cover. |
 | `ARENA-011` | `implemented` | DR super-harness planning | DR Arena v1 now writes predictive-side `analysis/dr_arena*.json/.md` from frozen DR artifacts via `scripts/tools/dr_arena.py` and `create_candidate_universe.py --write-dr-arena`. The preserved v1 surfaces are `dr_trace_strength`, `dr_lane_only_confidence`, `dr_competing_literal_pressure`, `dr_row_repeat_and_final_survival`, `dr_double_pressure`, `dr_empty_lens`, plus supporting ledgers for preclusters, reveals, box validity, and fourth-variable candidates. |
+| `ARENA-012` | `approved` | DR parity + broad screen | DR Arena calibration | Refine `dr_empty_lens` into a stricter negative-control surface that can separate `true empty`, `active but low-trust`, and `positive buried trace` using reveal quality, current-band relevance, and survival strength rather than cold-count alone. |
 
 ---
 
@@ -297,6 +299,8 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TEST-016` | `validated` | Stable family-lane promotion slice | Stable projections | Run a January-window harness comparing `stable10` baseline vs `stable_family_vote_v2` for exact-box-lane rescue without pack explosion. |
 | `TEST-017` | `approved` | DR super-harness planning | Re-test disputed mapped boxes through the DR super-harness before removing them, especially any box that conflicts with prior evidence-led window additions. |
 | `TEST-018` | `validated` | DR Arena v1 implementation | DR arena writer | Validate the additive DR arena writer with synthetic tests and predictive smoke runs so the preserved evidence surfaces match the super-harness classes before any DR retuning or V3 redesign. |
+| `TEST-019` | `validated` | DR parity audit | DR arena validation | Compare the 11 fully filled DR harness cases against `DR Arena v1` outputs and confirm whether the automated arena preserves the same evidence classes before scaling to a broader batch. |
+| `TEST-020` | `validated` | DR broad screen | DR arena validation | Screen an additional 14 behavior-balanced DR cases on top of the 11 filled cases, raising the evidence base to 25 total examples and identifying `dr_empty_lens` as the main weak surface before any DR retuning or V3 decision. |
 
 ---
 
