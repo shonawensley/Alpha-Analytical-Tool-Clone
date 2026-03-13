@@ -100,9 +100,16 @@ Reason:
 - `TOOL-008`
 - `ARENA-010`
 - `TEST-015`
+- `RULE-022`
+- `TRACK-015`
+- `TOOL-009`
+- `ARENA-011`
+- `POLICY-015`
+- `TEST-017`
 
 Reason:
 - After Stable promotion review, the biggest remaining gap is bounded closure around the right structural core, especially pair-anchor and fourth-variable situations that keep appearing in examples and competitions.
+- The immediate next design vehicle for this is the DR super-harness: truth lens + DR canvas + action ledger, before any broad DR rewrites.
 
 ### Priority 6 — Cross-tool arena scaffolding
 
@@ -186,6 +193,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `RULE-019` | `approved` | 2026-03-09 competition postmortem | Treat doubles / mirror-doubles as a distinct predictive regime rather than mixing them blindly with 6-way single states. |
 | `RULE-020` | `approved` | 2026-03-09 competition postmortem + current discussion | A strong pair-anchor plus one lingering fourth variable is a real closure principle and should be modeled explicitly. |
 | `RULE-021` | `approved` | 2026-03-09 competition postmortem | Same-day midday-to-evening transition is first-class evidence and should be scored explicitly rather than handled ad hoc. |
+| `RULE-022` | `approved` | DR super-harness planning | Digit Reduction must be read through two evidence channels: pre-reduction cluster evidence and post-reduction reveal evidence. |
 
 ---
 
@@ -207,6 +215,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TRACK-012` | `approved` | 2026-03-09 competition postmortem | competition harness / grading | Competition scoreboard with `TicketBoxHit`, `TicketVTRACHit`, `ArenaCanonicalPresent`, `ArenaFamilyPresent`, `CUPresent`, and `MiddayCarryPresent`. |
 | `TRACK-013` | `approved` | 2026-03-09 competition postmortem | ranking / state triage | State-mode / regime classification: doubles regime, single-progression regime, mixed regime, split-rail regime, and transition-sensitive regime. |
 | `TRACK-014` | `approved` | current discussion + 2026-03-09 competition postmortem | closure / conversion | Pair-anchor and lingering-fourth-variable metrics: anchor strength, extra-variable persistence, mirror-pair coverage, and cost-efficient closure size. |
+| `TRACK-015` | `in_progress` | DR super-harness planning | DR mapped-box validity ledger: classify mapped windows as core, supportive, experimental, disputed, or dead/N/A based on repeated harness evidence rather than ad hoc edits. Seed round supports Group 1 strongly, keeps `Set2 Draw1 Col3` disputed, and still treats `Set1 Draw3 Col6` as only a likely dead/N/A candidate. |
 
 ---
 
@@ -222,6 +231,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TOOL-006` | `noted` | training + macro discussion | Stable / DR | Quantify long-cluster strength by how much digit structure is still holding inside the cluster. |
 | `TOOL-007` | `implemented` | NUMBER_5 | Stable | Expose how R2/R4/R6/R8 mini-progressions are compounded into total pattern scoring, including totals, peaks, contributing boxes, frontier hits, and compound-row context. |
 | `TOOL-008` | `approved` | current discussion + 2026-03-09 competition postmortem | DR / closure helpers | Detect and preserve the lingering fourth variable around a strong 3-value or pair-anchor core, including digit and mirror-pair variants that yield cheap bounded closure sets. |
+| `TOOL-009` | `implemented` | DR super-harness planning | Build a DR-specific super-harness workflow and case template that compares truth receipts, DR evidence canvas, and Analyzer V2 salvage in one repeatable structure. Seed set and first case docs now live in the RUNS folder. |
 
 ---
 
@@ -239,6 +249,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-008` | `approved` | NUMBER_5 + MESSAGE_8 | Arena schema | Use shared semantic fields across tools for comparison: horizontal persistence, vertical box/straight support, family alignment, survivor status, frontier arrival, VT-straight hint, cluster-size strength. |
 | `ARENA-009` | `approved` | current discussion | Arena architecture | Arena inputs are not limited to the original core analyzers; new focused tools may feed the arena as first-class evidence producers if they follow the shared evidence contract. |
 | `ARENA-010` | `approved` | current discussion + 2026-03-09 competition postmortem | Arena schema | Add `pair_anchor_closure` evidence objects carrying core anchor, mirror-pair space, lingering fourth-variable candidates, bounded closure sets, and cost-to-cover. |
+| `ARENA-011` | `in_progress` | DR super-harness planning | DR Arena v1 should preserve separate ledgers for pre-reduction clusters, reduction reveals, row-downward repeats, VTRAC gateway convergence, and fourth-variable candidates. Seed findings now justify adding `dr_trace_strength`, `dr_lane_only_confidence`, `dr_competing_literal_pressure`, `dr_row_repeat_and_final_survival`, `dr_double_pressure`, and `dr_empty_lens` as concrete sub-surfaces. |
 
 ---
 
@@ -260,6 +271,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `POLICY-012` | `approved` | 2026-03-09 competition postmortem | grading / development | In competitions and live reviews, always log `ticket result` and `arena result` separately so postmortems preserve development value. |
 | `POLICY-013` | `approved` | current discussion | ranking / conversion | Give doubles / mirror-doubles their own promotion lane and budget logic instead of forcing them through the same thresholds as 6-way singles. |
 | `POLICY-014` | `approved` | 2026-03-09 competition postmortem | live competition workflow | Before evening predictions, score midday results as both carry-forward pressure and reduction pressure. |
+| `POLICY-015` | `completed` | DR super-harness planning | Build and shake out the DR super-harness on a small seed set first; reserve live edits for obvious correctness defects and batch broader scoring/policy changes after a coherent review round. First seed set is now filled and summarized before any DR code edits. |
 
 ---
 
@@ -283,6 +295,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TEST-014` | `approved` | 2026-03-09 competition postmortem | teaching cases | Keep `Ontario 559` and `Connecticut 019/091` as conversion teaching cases where the arena preserved the winner before the final ticket missed. |
 | `TEST-015` | `approved` | current discussion | closure logic | Before promoting pair-anchor plus fourth-variable closure into production ranking, validate it on multiple examples as a bounded-cost conversion rule rather than a combinatoric expansion. |
 | `TEST-016` | `validated` | Stable family-lane promotion slice | Stable projections | Run a January-window harness comparing `stable10` baseline vs `stable_family_vote_v2` for exact-box-lane rescue without pack explosion. |
+| `TEST-017` | `approved` | DR super-harness planning | Re-test disputed mapped boxes through the DR super-harness before removing them, especially any box that conflicts with prior evidence-led window additions. |
 
 ---
 
