@@ -249,7 +249,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-008` | `approved` | NUMBER_5 + MESSAGE_8 | Arena schema | Use shared semantic fields across tools for comparison: horizontal persistence, vertical box/straight support, family alignment, survivor status, frontier arrival, VT-straight hint, cluster-size strength. |
 | `ARENA-009` | `approved` | current discussion | Arena architecture | Arena inputs are not limited to the original core analyzers; new focused tools may feed the arena as first-class evidence producers if they follow the shared evidence contract. |
 | `ARENA-010` | `approved` | current discussion + 2026-03-09 competition postmortem | Arena schema | Add `pair_anchor_closure` evidence objects carrying core anchor, mirror-pair space, lingering fourth-variable candidates, bounded closure sets, and cost-to-cover. |
-| `ARENA-011` | `in_progress` | DR super-harness planning | DR Arena v1 should preserve separate ledgers for pre-reduction clusters, reduction reveals, row-downward repeats, VTRAC gateway convergence, and fourth-variable candidates. After the 11-case seed+batch2 pass, the clearest concrete sub-surfaces are `dr_trace_strength`, `dr_lane_only_confidence`, `dr_competing_literal_pressure`, `dr_row_repeat_and_final_survival`, `dr_double_pressure`, and `dr_empty_lens`. The next additive design step is captured in `DR_ARENA_V1__INTEGRATION_PLAN.md`. |
+| `ARENA-011` | `implemented` | DR super-harness planning | DR Arena v1 now writes predictive-side `analysis/dr_arena*.json/.md` from frozen DR artifacts via `scripts/tools/dr_arena.py` and `create_candidate_universe.py --write-dr-arena`. The preserved v1 surfaces are `dr_trace_strength`, `dr_lane_only_confidence`, `dr_competing_literal_pressure`, `dr_row_repeat_and_final_survival`, `dr_double_pressure`, `dr_empty_lens`, plus supporting ledgers for preclusters, reveals, box validity, and fourth-variable candidates. |
 
 ---
 
@@ -296,6 +296,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TEST-015` | `approved` | current discussion | closure logic | Before promoting pair-anchor plus fourth-variable closure into production ranking, validate it on multiple examples as a bounded-cost conversion rule rather than a combinatoric expansion. |
 | `TEST-016` | `validated` | Stable family-lane promotion slice | Stable projections | Run a January-window harness comparing `stable10` baseline vs `stable_family_vote_v2` for exact-box-lane rescue without pack explosion. |
 | `TEST-017` | `approved` | DR super-harness planning | Re-test disputed mapped boxes through the DR super-harness before removing them, especially any box that conflicts with prior evidence-led window additions. |
+| `TEST-018` | `validated` | DR Arena v1 implementation | DR arena writer | Validate the additive DR arena writer with synthetic tests and predictive smoke runs so the preserved evidence surfaces match the super-harness classes before any DR retuning or V3 redesign. |
 
 ---
 

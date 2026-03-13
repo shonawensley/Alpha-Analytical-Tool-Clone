@@ -49,6 +49,7 @@ except Exception:  # pragma: no cover - may fail in partial environments
     _vtrac_get_index_set = None  # type: ignore
     _vtrac_get_index = None  # type: ignore
 
+from scripts.tools.dr_arena import build_dr_arena_payload, write_dr_arena_files
 from scripts.tools.stable_arena import build_stable_arena_payload, write_stable_arena_files
 
 
@@ -4658,6 +4659,59 @@ def parse_args() -> argparse.Namespace:
         help="Also write candidate_universe_evidence.csv/.md next to candidate_universe.json (default: off).",
     )
     ap.add_argument(
+        "--write-dr-arena",
+        action="store_true",
+        help="Also write analysis/dr_arena*.json/.md from the frozen Digit Reduction bundle (default: off).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-trace",
+        type=int,
+        default=10,
+        help="Top N DR trace-strength family rows per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-lane",
+        type=int,
+        default=10,
+        help="Top N DR lane-only confidence family rows per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-competing",
+        type=int,
+        default=10,
+        help="Top N DR competing-literal pressure rows per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-double",
+        type=int,
+        default=10,
+        help="Top N DR double-pressure rows per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-row-repeat",
+        type=int,
+        default=10,
+        help="Top N DR row-repeat / final-survival entries per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-preclusters",
+        type=int,
+        default=12,
+        help="Top N DR pre-reduction cluster entries per variant to keep in the arena (default: 12).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-reveals",
+        type=int,
+        default=12,
+        help="Top N DR reduction-reveal entries per variant to keep in the arena (default: 12).",
+    )
+    ap.add_argument(
+        "--dr-arena-top-fourth",
+        type=int,
+        default=10,
+        help="Top N DR fourth-variable candidates per variant to keep in the arena (default: 10).",
+    )
+    ap.add_argument(
         "--write-stable-arena",
         action="store_true",
         help="Also write analysis/stable_arena*.json/.md from the frozen Stable bundle (default: off).",
@@ -4731,6 +4785,11 @@ def main() -> None:
             raise SystemExit(
                 f"Refusing to overwrite existing stable arena: {_safe_rel(arena_path)} (use --force)"
             )
+        dr_arena_path = state_dir / "analysis" / f"dr_arena{out_suffix}{tag_suffix}.json"
+        if args.write_dr_arena and dr_arena_path.exists() and not args.force:
+            raise SystemExit(
+                f"Refusing to overwrite existing DR arena: {_safe_rel(dr_arena_path)} (use --force)"
+            )
 
         leakage = _detect_winners_artifacts(day_dir=day_dir, state_dir=state_dir)
         if leakage and strict_predictive:
@@ -4745,6 +4804,7 @@ def main() -> None:
         packs: List[dict] = []
         inputs: List[Path] = []
         stable_arena_payload: Optional[Dict[str, Any]] = None
+        dr_arena_payload: Optional[Dict[str, Any]] = None
         if include_non_profit and (int(args.top_n_stable_families_v2) > 0 or args.write_stable_arena):
             stable_arena_payload = build_stable_arena_payload(
                 state_dir=state_dir,
@@ -4764,6 +4824,26 @@ def main() -> None:
                     int(args.stable_arena_top_families),
                     int(args.top_n_stable_families) + int(args.top_n_stable_families_v2) + 6,
                 ),
+            )
+        if include_non_profit and args.write_dr_arena:
+            dr_arena_payload = build_dr_arena_payload(
+                state_dir=state_dir,
+                state_key=state_key,
+                results_date=args.date,
+                history_date=cc_meta.history_date,
+                profile=profile,
+                experiment_tag=exp_tag,
+                sharepacks_root=sharepacks_root,
+                contains_winners_artifacts=bool(leakage),
+                repo_root=REPO_ROOT,
+                top_trace=max(1, int(args.dr_arena_top_trace)),
+                top_lane=max(1, int(args.dr_arena_top_lane)),
+                top_competing=max(1, int(args.dr_arena_top_competing)),
+                top_double=max(1, int(args.dr_arena_top_double)),
+                top_row_repeat=max(1, int(args.dr_arena_top_row_repeat)),
+                top_preclusters=max(1, int(args.dr_arena_top_preclusters)),
+                top_reveals=max(1, int(args.dr_arena_top_reveals)),
+                top_fourth=max(1, int(args.dr_arena_top_fourth)),
             )
 
         # 1) Profit Alerts (Control Center)
@@ -5127,6 +5207,18 @@ def main() -> None:
                 arena_json, arena_md = write_stable_arena_files(
                     out_json_path=arena_path,
                     payload=stable_arena_payload,
+                    write_md=True,
+                )
+                print(f"Wrote: {_safe_rel(arena_json)}")
+                if arena_md is not None:
+                    print(f"Wrote: {_safe_rel(arena_md)}")
+        if args.write_dr_arena:
+            if dr_arena_payload is None:
+                print(f"Skipped DR arena: missing Digit Reduction bundle for {_safe_rel(state_dir)}")
+            else:
+                arena_json, arena_md = write_dr_arena_files(
+                    out_json_path=dr_arena_path,
+                    payload=dr_arena_payload,
                     write_md=True,
                 )
                 print(f"Wrote: {_safe_rel(arena_json)}")

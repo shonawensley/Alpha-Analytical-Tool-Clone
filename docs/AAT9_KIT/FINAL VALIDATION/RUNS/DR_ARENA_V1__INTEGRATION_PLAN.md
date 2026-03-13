@@ -10,6 +10,11 @@ and
 This is **not** a caller-redesign document.
 It is an **evidence contract** document.
 
+Implementation status:
+- Implemented additively on `2026-03-13` in `scripts/tools/dr_arena.py`
+- Wired into `scripts/tools/create_candidate_universe.py` behind `--write-dr-arena`
+- Validated with focused synthetic tests and predictive smoke runs before any DR retuning
+
 ---
 
 ## 1. Why DR Arena v1 exists
