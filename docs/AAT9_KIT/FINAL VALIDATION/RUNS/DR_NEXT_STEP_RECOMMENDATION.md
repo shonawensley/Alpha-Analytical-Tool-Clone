@@ -74,7 +74,7 @@ Recommended set:
 5. `2025-06-23 / Indiana4 / Midday / 110`
 
 Why these:
-- one strong control
+- one false-empty / buried-positive challenge
 - one strong buried positive
 - one false-active control
 - one double-trace case with moderate pressure
@@ -92,6 +92,8 @@ Goal:
   - `true empty / control`
   - `active but low-trust`
   - `positive buried trace`
+
+Virginia `473` is now the anchor example for the second bucket. It should no longer be treated as a clean no-signal control.
 
 This should be an arena-layer calibration, not a DR extractor rewrite.
 

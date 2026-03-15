@@ -216,7 +216,8 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TRACK-013` | `approved` | 2026-03-09 competition postmortem | ranking / state triage | State-mode / regime classification: doubles regime, single-progression regime, mixed regime, split-rail regime, and transition-sensitive regime. |
 | `TRACK-014` | `approved` | current discussion + 2026-03-09 competition postmortem | closure / conversion | Pair-anchor and lingering-fourth-variable metrics: anchor strength, extra-variable persistence, mirror-pair coverage, and cost-efficient closure size. |
 | `TRACK-015` | `in_progress` | DR super-harness planning | DR mapped-box validity ledger: classify mapped windows as core, supportive, experimental, disputed, or dead/N/A based on repeated harness evidence rather than ad hoc edits. After 11 reviewed cases, Group 1 remains strongly justified, `Set2 Draw1 Col3` remains disputed, and `Set1 Draw3 Col6` still stays only a likely dead/N/A candidate rather than a confirmed deletion. |
-| `TRACK-016` | `approved` | DR parity + broad screen | DR arena calibration | Measure false-active vs true-empty DR arena behavior so `dr_empty_lens` can distinguish `true control`, `active but low-trust`, and `positive trace` instead of treating most controls as active. |
+| `TRACK-016` | `approved` | DR parity + broad screen + Virginia4 Midday 473 deep review | DR arena calibration | Measure false-active vs true-empty DR arena behavior so `dr_empty_lens` can distinguish `true control`, `active but low-trust`, and `positive trace` instead of treating most controls as active. Virginia4 Midday `473` now anchors the `false-empty / active but low-trust` bucket rather than the pure-control bucket. |
+| `TRACK-017` | `approved` | Virginia4 Midday 473 deep review | DR overlay audit | Compare DR overlay banner counts against body-level winner/family highlights so summary compression mismatches are measurable before `v1.1` calibration or later `V2`/`V3` decisions. |
 
 ---
 
@@ -233,6 +234,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TOOL-007` | `implemented` | NUMBER_5 | Stable | Expose how R2/R4/R6/R8 mini-progressions are compounded into total pattern scoring, including totals, peaks, contributing boxes, frontier hits, and compound-row context. |
 | `TOOL-008` | `approved` | current discussion + 2026-03-09 competition postmortem | DR / closure helpers | Detect and preserve the lingering fourth variable around a strong 3-value or pair-anchor core, including digit and mirror-pair variants that yield cheap bounded closure sets. |
 | `TOOL-009` | `implemented` | DR super-harness planning | Build a DR-specific super-harness workflow and case template that compares truth receipts, DR evidence canvas, and Analyzer V2 salvage in one repeatable structure. Seed set and first case docs now live in the RUNS folder. |
+| `TOOL-010` | `approved` | Virginia4 Midday 473 deep review | DR experimental reductions | Prototype one guarded `protected_core_reduction` pass that only runs after strong pre-reduction core support is detected, so likely clutter digits can be removed without destroying the live family/permutation neighborhood. |
 
 ---
 
@@ -251,7 +253,8 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-009` | `approved` | current discussion | Arena architecture | Arena inputs are not limited to the original core analyzers; new focused tools may feed the arena as first-class evidence producers if they follow the shared evidence contract. |
 | `ARENA-010` | `approved` | current discussion + 2026-03-09 competition postmortem | Arena schema | Add `pair_anchor_closure` evidence objects carrying core anchor, mirror-pair space, lingering fourth-variable candidates, bounded closure sets, and cost-to-cover. |
 | `ARENA-011` | `implemented` | DR super-harness planning | DR Arena v1 now writes predictive-side `analysis/dr_arena*.json/.md` from frozen DR artifacts via `scripts/tools/dr_arena.py` and `create_candidate_universe.py --write-dr-arena`. The preserved v1 surfaces are `dr_trace_strength`, `dr_lane_only_confidence`, `dr_competing_literal_pressure`, `dr_row_repeat_and_final_survival`, `dr_double_pressure`, `dr_empty_lens`, plus supporting ledgers for preclusters, reveals, box validity, and fourth-variable candidates. |
-| `ARENA-012` | `approved` | DR parity + broad screen | DR Arena calibration | Refine `dr_empty_lens` into a stricter negative-control surface that can separate `true empty`, `active but low-trust`, and `positive buried trace` using reveal quality, current-band relevance, and survival strength rather than cold-count alone. |
+| `ARENA-012` | `approved` | DR parity + broad screen + Virginia4 Midday 473 deep review | DR Arena calibration | Refine `dr_empty_lens` into a stricter negative-control surface that can separate `true empty`, `active but low-trust`, and `positive buried trace` using reveal quality, current-band relevance, survival strength, and false-empty challenge cases like Virginia4 Midday `473` rather than cold-count alone. |
+| `ARENA-013` | `approved` | Virginia4 Midday 473 deep review | DR Arena expansion | Add richer structural DR surfaces for `pre_reduction_cluster_strength`, `permutation_cluster_strength`, `vtrac_cluster_strength`, `reveal_purity`, and `overlay_summary_mismatch` so structurally active false-empty cases are not flattened into no-signal summaries. |
 
 ---
 

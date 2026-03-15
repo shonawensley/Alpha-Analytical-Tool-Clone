@@ -107,7 +107,7 @@ before deciding `V2` vs `V3`.
 If we want the next manual case fills to produce the most leverage, the best candidates are:
 
 1. `2025-06-21 / Virginia4 / Midday / 473`
-- best control for stress-testing `dr_empty_lens`
+- best false-empty challenge for stress-testing `dr_empty_lens`
 
 2. `2025-12-31 / Delaware4 / Evening / 337`
 - strong buried-trace positive from another window
