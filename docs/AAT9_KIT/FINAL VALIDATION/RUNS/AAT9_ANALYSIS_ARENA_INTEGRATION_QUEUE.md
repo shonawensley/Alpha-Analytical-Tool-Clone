@@ -150,6 +150,17 @@ Reason:
 Reason:
 - Once Stable’s next evidence upgrades land, the next highest-value move is preparing the arena schema for multi-tool convergence and environment scoring.
 
+### Priority 7 — Aux / Control Center context broadening
+
+- `TRACK-021`
+- `ARENA-015`
+- `TOOL-023`
+- `POLICY-017`
+- `TEST-022`
+
+Reason:
+- The current predictive Aux / Control Center usage is now explicitly understood as a bounded conversion subset, not the final arena contract. The next high-value move is to preserve broader structured context from existing Aux summaries and Control Center trackers before the aggregated arena phase.
+
 ---
 
 ## Implemented Foundation
@@ -221,6 +232,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TRACK-018` | `implemented` | 2026-03-15 DR winner-promotion lab batch 6 | DR promotion gap anchors | The winner-promotion lab proved that many buried rows are not missing the winner lane entirely; they are missing a surface that reads assigned-box `box_id` / `final_value` windows directly. The new `dr_assigned_box_vtrac_strength` surface surfaced buried cases like `Indiana4 813`, `Virginia4 636`, `Michigan4 618`, `Ohio4 368`, and `Pennsylvania4 811` without any winner-aware inputs, which reframes the buried regime as an assigned-box lane-isolation problem rather than just another attractor-suppression problem. |
 | `TRACK-019` | `implemented` | 2026-03-16 VTRAC + Hot Zones tool review kickoff | tool review method | The `winner-artifact-first` review method is now locked in via `2026-03-16__TOOL_REVIEW_METHOD__WINNER_ARTIFACT_FIRST.md`: inspect winners HTML / JSON / overlays first, classify gaps as tool-vs-arena-vs-conversion, and only keep bounded changes that survive the same frozen gold-day windows. |
 | `TRACK-020` | `implemented` | 2026-03-16 VTRAC + Hot Zones joint assessment | cross-tool arena feed | The joint assessment and arena contract now explicitly treat VTRAC Analyzer and Hot Zones as complementary views of the same winner corridor: VTRAC contributes lane/family semantics, Hot Zones contributes pressure/location/survivorship semantics. |
+| `TRACK-021` | `implemented` | 2026-03-16 Aux + Control Center review | Aux / Control Center arena feed | The Aux + Control Center review established that current predictive ingestion is intentionally narrow and should not be mistaken for the final arena contract. Existing predictive artifacts already carry much richer evidence: Aux `summary.json` contains positional, pairs, doubles, sums, repeat-watch, VTRAC, and Blackapple context; Control Center already emits due doubles, VTRAC repeat watch, Blackapple alerts, profit alerts, and compound events. The next move is broader structured arena preservation, not more narrow top-N trimming. |
 
 ---
 
@@ -250,6 +262,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TOOL-020` | `validated` | 2026-03-16 winner-promotion lab batch 7 | DR promotion surfaces | `dr_vtrac_fusion_strength` is a bounded agreement/rescue layer over `dr_vtrac_lane_gateway`, `dr_vtrac_cluster_strength`, and `dr_assigned_box_vtrac_strength`. It is intentionally not a replacement for assigned-box discovery. Frozen reruns show modest but real visible-band lift: DEV fusion `top3 = 25/244`, `top5 = 39/244`, best-surface `top3 = 46/245`; HOLDOUT fusion `top8 = 28/110`, best-surface `top3 = 25/138`, `top5 = 35/138`. An over-boosted rescue variant was tested and rejected, so the keeper is the first bounded fusion pass only. |
 | `TOOL-021` | `validated` | 2026-03-16 VTRAC + Hot Zones joint assessment | VTRAC contract closeout | VTRAC is now documented as a lane-evidence feed, not a caller. Canonical predictive-side artifacts and winners-lens boundaries are explicit in the handoff docs, and `scripts/tools/validate_vtrac_compact_report.py` smoke-passed on representative gold-day dates (`2025-06-21`, `2025-12-31`). |
 | `TOOL-022` | `validated` | 2026-03-16 VTRAC + Hot Zones joint assessment | Hot Zones contract closeout | Hot Zones is now documented as a deterministic pressure/lane extractor with primary ingest `top_lanes.csv + meta.json` and `per_lane.csv` forensic-only. `scripts/tools/hot_zones_sharepack_summary.py` smoke-passed on representative gold-day artifacts (`Virginia4 2025-06-21`, `Florida4 2026-01-03`), so the remaining finish is contract/digest framing rather than more analyzer tuning. |
+| `TOOL-023` | `approved` | 2026-03-16 Aux + Control Center review | Aux / Control Center export layer | Add one bounded arena-export slice that broadens preservation from existing Aux `summary.json` plus Control Center CSVs into structured arena objects for positional pressure, VTRAC pressure, badge pressure, pair/combo context, due-double family pressure, repeat-watch context, sums context, Blackapple context, profit-alert context, and compound-event context. This is an export/wiring task, not a scorer rewrite. |
 
 ---
 
@@ -271,6 +284,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `ARENA-012` | `implemented` | DR parity + broad screen + Virginia4 Midday 473 deep review | DR Arena calibration | `DR Arena v1.1` refines `dr_empty_lens` into a stricter negative-control surface that separates `true_empty`, `active_low_trust`, and `positive_trace` using reveal quality, current-band relevance, survival strength, and false-empty challenge logic rather than cold-count alone. |
 | `ARENA-013` | `validated` | Virginia4 Midday 473 deep review + Batch 3 lock-in pass + 2026-03-15/16 DR gold-day audit lab | DR Arena expansion | Predictive-side structural DR surfaces now include `pre_reduction_cluster_strength`, `reveal_purity`, `family_neighborhood_saturation`, `family_asymmetry_inside_corridor`, `early_activation_strength`, `consecutive_box_progression`, `neighbor_box_support`, `core_vs_clutter_transit_score`, explicit `raw_exposure_count` vs `path_summary_count`, `dr_vtrac_lane_gateway`, `dr_vtrac_cluster_strength`, `dr_assigned_box_vtrac_strength`, and the bounded `dr_vtrac_fusion_strength` layer. The broadened audit-only `top20` view clarified the remaining gap into `visible_under_promoted` vs `buried` rows; Batch 5 helped the rich visible-under-promoted regime, Batch 6 added the first strong buried-regime keeper by reading assigned-box windows directly, and Batch 7 added a modest but real agreement/rescue fusion surface without flattening the open arena. The artifact-first anchor review in `2026-03-16__DR_ARTIFACT_FIRST_REVIEW__REMAINING_ANCHORS.md` narrowed the remaining true DR-local gap to a small same-index permutation-swarm class (`CT 234`, `FL 377`, `DE 031` style cases), while many previously discouraging anchors are now clearly good-enough arena feeds. DR is now considered wrapped for this phase per `2026-03-16__DR_WRAP_UP__HANDOFF.md`, with only one optional future path left: a tiny permutation-swarm prototype if the aggregated arena later proves it is still worth doing. |
 | `ARENA-014` | `implemented` | 2026-03-16 VTRAC + Hot Zones joint assessment | VTRAC / Hot Zones arena contract | The contract is now explicit in `2026-03-16__VTRAC_HOTZ__ARENA_CONTRACT.md`: VTRAC feeds lane/family semantics (`cross_variant_lane_strength`, `straight_lane_quality`, `vt_only_lane_confidence`, `lane_dominance`, `section_lead_profile`), while Hot Zones feeds pressure/location/survivorship semantics (`late_tail_pressure_strength`, `superhot_echo_strength`, `vertical_repeat_strength`, `precol1_funnel_strength`, `col1_arrival_strength`, `repeat_3value_score`, `consensus_column_signal`). |
+| `ARENA-015` | `implemented` | 2026-03-16 Aux + Control Center review | Aux / Control Center arena contract | The contract is now explicit in `2026-03-16__AUX_CONTROL_CENTER__ARENA_CONTRACT.md`: Aux/CC should feed the arena with structured context objects rather than only current narrow predictive methods. Primary arena objects are `aux_positional_pressure`, `aux_vtrac_pressure`, `aux_badge_pressure`, `aux_pair_band_context`, `aux_due_doubles_family_pressure`, `aux_repeat_watch_context`, `aux_sums_context`, `aux_blackapple_context`, `cc_profit_alert_context`, `cc_compound_event_context`, and `cc_tracker_context`, while full boxed badge tables / pair-status ledgers / detailed evidence JSON stay available as linked heavy truth layers. |
 
 ---
 
@@ -294,6 +308,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `POLICY-014` | `approved` | 2026-03-09 competition postmortem | live competition workflow | Before evening predictions, score midday results as both carry-forward pressure and reduction pressure. |
 | `POLICY-015` | `completed` | DR super-harness planning | Build and shake out the DR super-harness on a small seed set first; reserve live edits for obvious correctness defects and batch broader scoring/policy changes after a coherent review round. First seed set is now filled and summarized before any DR code edits. |
 | `POLICY-016` | `implemented` | 2026-03-16 tool-review process shift | tool review process | Remaining tool passes now default to `winner-artifact-first`: use the winners HTML / JSON / overlay as the truth layer, derive bounded arena-feed or scoring hypotheses from that review, then validate on frozen gold-day windows before keeping anything. |
+| `POLICY-017` | `implemented` | 2026-03-16 Aux + Control Center review | arena preservation discipline | For Aux / Control Center, favor broader structured arena preservation over premature trimming. Keep the bounded predictive conversion subset explicit and separate, preserve heavy truth layers via artifact links instead of silently dropping them, and let the aggregated arena decide which compound/context fields deserve later ranking or conversion weight. |
 
 ---
 
@@ -322,6 +337,7 @@ Full running rule language lives in the example-review notebook. This section ke
 | `TEST-019` | `validated` | DR parity audit | DR arena validation | Compare the 11 fully filled DR harness cases against `DR Arena v1` outputs and confirm whether the automated arena preserves the same evidence classes before scaling to a broader batch. |
 | `TEST-020` | `validated` | DR broad screen | DR arena validation | Screen an additional 14 behavior-balanced DR cases on top of the 11 filled cases, raising the evidence base to 25 total examples and identifying `dr_empty_lens` as the main weak surface before any DR retuning or V3 decision. |
 | `TEST-021` | `implemented` | 2026-03-16 VTRAC + Hot Zones closeout planning | tool handoff discipline | The VTRAC/Hot Zones handoff docs now explicitly answer: what predictive-side artifacts feed the arena, what winner artifacts remain audit-only, and what stop condition ends tool-local tuning for this phase. |
+| `TEST-022` | `approved` | 2026-03-16 Aux + Control Center closeout planning | Aux / Control Center arena validation | When the broader Aux / Control Center export slice lands, validate on frozen gold-day windows and competition postmortems that the new arena objects improve explanation and ranking context without being judged only as same-day direct callers. At minimum, confirm richer coverage for badge pressure, due-double regime context, Blackapple state context, profit-alert clusters, and compound-event reinforcement against winner/VTRAC-family neighborhoods. |
 
 ---
 

@@ -185,6 +185,73 @@ Current repo note:
 
 So the phase-close expectation is to formalize and reuse those validator paths before inventing any new analyzer-side outputs.
 
+## Aux / Control Center Context — Lean Contract (phase-close target)
+
+The current predictive selection usage is intentionally narrow.
+
+That narrowness should be understood as:
+
+- a bounded candidate-universe / conversion choice
+
+not:
+
+- the final analysis-arena contract for `Aux / Control Center`
+
+### Primary predictive-side ingest
+
+- `sharepacks/_predictive/<D>/<STATE>/aux/<STATE>/summary.json`
+- `sharepacks/_predictive/<D>/control_center/due_doubles.csv`
+- `sharepacks/_predictive/<D>/control_center/vtrac_repeat_watch.csv`
+- `sharepacks/_predictive/<D>/control_center/blackapple_alerts.csv`
+- `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
+- `sharepacks/_predictive/<D>/control_center/profit_compound_events.csv`
+- `sharepacks/_predictive/<D>/control_center/meta.json`
+
+### Arena meaning
+
+Primary arena objects should preserve:
+
+- `aux_positional_pressure`
+- `aux_vtrac_pressure`
+- `aux_badge_pressure`
+- `aux_pair_band_context`
+- `aux_due_doubles_family_pressure`
+- `aux_repeat_watch_context`
+- `aux_sums_context`
+- `aux_blackapple_context`
+- `cc_profit_alert_context`
+- `cc_compound_event_context`
+- `cc_tracker_context`
+
+### Heavy truth layers
+
+The arena should preserve structured summaries while keeping drill-down paths to:
+
+- full boxed VTRAC badge tables
+- raw badge rows by pair / combo / variant
+- full pair-status tables
+- Blackapple candidate ledgers
+- detailed profit-alert evidence JSON
+
+### Non-goal
+
+Do not define `Aux / Control Center` by only the current narrow predictive methods:
+
+- `aux_positional`
+- `aux_vtrac_index_overdue`
+- `mirror_pair_closure`
+- `due_doubles`
+
+Those remain bounded conversion surfaces, not the full tool-to-arena contract.
+
+### Finish stance
+
+The correct phase-close for `Aux / Control Center` is:
+
+- broader structured arena preservation from existing summary/control-center artifacts
+- not a new broad scorer rewrite
+- not another attempt to turn the context layer into a tiny direct-caller oracle
+
 ---
 
 ## Applying the Lean Template to Stable / V-TRAC / Hot Zones
