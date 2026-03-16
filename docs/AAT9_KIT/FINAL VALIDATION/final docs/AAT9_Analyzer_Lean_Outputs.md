@@ -252,6 +252,15 @@ The correct phase-close for `Aux / Control Center` is:
 - not a new broad scorer rewrite
 - not another attempt to turn the context layer into a tiny direct-caller oracle
 
+Current repo note:
+
+- `scripts/tools/aux_control_center_arena.py` now builds the broad Aux/CC arena payload
+- `create_candidate_universe.py --write-aux-cc-arena` now writes:
+  - `analysis/aux_control_center_arena*.json`
+  - `analysis/aux_control_center_arena*.md`
+- `signals_bundle*.json` now carries:
+  - `tools.aux_control_center_context`
+
 ---
 
 ## Applying the Lean Template to Stable / V-TRAC / Hot Zones

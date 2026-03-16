@@ -66,7 +66,13 @@ They are **not** the final statement of Aux / Control Center value.
 
 ## One Bounded Finish Still Worth Doing
 
-If a final slice is taken, it should be:
+That slice has now landed:
+
+- `scripts/tools/aux_control_center_arena.py`
+- `create_candidate_universe.py --write-aux-cc-arena`
+- signals bundle `tools.aux_control_center_context`
+
+The bounded finish was:
 
 - one broader export/wiring pass from existing Aux summary + Control Center artifacts into richer arena objects
 
@@ -83,6 +89,10 @@ Freeze `Aux + Control Center` for this phase when:
 2. the current narrow predictive subset is clearly labeled as conversion-only
 3. heavy truth layers are linked rather than silently dropped
 4. one final export/wiring decision is made
+
+Current status:
+
+- criteria `1-4` are now satisfied for this phase
 
 ## Recommended Next Step After Freeze
 

@@ -51,6 +51,11 @@ except Exception:  # pragma: no cover - may fail in partial environments
 
 from scripts.tools.dr_arena import build_dr_arena_payload, write_dr_arena_files
 from scripts.tools.stable_arena import build_stable_arena_payload, write_stable_arena_files
+from scripts.tools.aux_control_center_arena import (
+    build_aux_control_center_arena_payload,
+    build_aux_control_center_signals,
+    write_aux_control_center_files,
+)
 
 
 SCHEMA_VERSION = "1.0"
@@ -4717,6 +4722,17 @@ def parse_args() -> argparse.Namespace:
         help="Also write analysis/stable_arena*.json/.md from the frozen Stable bundle (default: off).",
     )
     ap.add_argument(
+        "--write-aux-cc-arena",
+        action="store_true",
+        help="Also write analysis/aux_control_center_arena*.json/.md from frozen Aux summary + Control Center artifacts (default: off).",
+    )
+    ap.add_argument(
+        "--aux-cc-arena-top-items",
+        type=int,
+        default=8,
+        help="Top N rows/items per Aux / Control Center arena object to keep (default: 8).",
+    )
+    ap.add_argument(
         "--stable-arena-top-rows",
         type=int,
         default=25,
@@ -4790,6 +4806,11 @@ def main() -> None:
             raise SystemExit(
                 f"Refusing to overwrite existing DR arena: {_safe_rel(dr_arena_path)} (use --force)"
             )
+        aux_cc_arena_path = state_dir / "analysis" / f"aux_control_center_arena{out_suffix}{tag_suffix}.json"
+        if args.write_aux_cc_arena and aux_cc_arena_path.exists() and not args.force:
+            raise SystemExit(
+                f"Refusing to overwrite existing Aux/CC arena: {_safe_rel(aux_cc_arena_path)} (use --force)"
+            )
 
         leakage = _detect_winners_artifacts(day_dir=day_dir, state_dir=state_dir)
         if leakage and strict_predictive:
@@ -4805,6 +4826,9 @@ def main() -> None:
         inputs: List[Path] = []
         stable_arena_payload: Optional[Dict[str, Any]] = None
         dr_arena_payload: Optional[Dict[str, Any]] = None
+        aux_cc_arena_payload: Optional[Dict[str, Any]] = None
+        aux_badge_sig_cached: Optional[Dict[str, Any]] = None
+        aux_cc_sig_cached: Optional[Dict[str, Any]] = None
         if include_non_profit and (int(args.top_n_stable_families_v2) > 0 or args.write_stable_arena):
             stable_arena_payload = build_stable_arena_payload(
                 state_dir=state_dir,
@@ -4845,6 +4869,27 @@ def main() -> None:
                 top_reveals=max(1, int(args.dr_arena_top_reveals)),
                 top_fourth=max(1, int(args.dr_arena_top_fourth)),
             )
+        if args.write_aux_cc_arena or (args.write_signals_bundle and include_non_profit):
+            aux_badge_sig_cached, _ = _extract_aux_badge_pressure_signals(
+                state_dir=state_dir,
+                state_key=state_key,
+                top_k=max(5, int(args.aux_cc_arena_top_items)),
+            )
+            aux_cc_arena_payload = build_aux_control_center_arena_payload(
+                day_dir=day_dir,
+                state_dir=state_dir,
+                state_key=state_key,
+                results_date=args.date,
+                history_date=cc_meta.history_date,
+                profile=profile,
+                experiment_tag=exp_tag,
+                sharepacks_root=sharepacks_root,
+                contains_winners_artifacts=bool(leakage),
+                repo_root=REPO_ROOT,
+                badge_pressure=aux_badge_sig_cached,
+                top_items=max(1, int(args.aux_cc_arena_top_items)),
+            )
+            aux_cc_sig_cached = build_aux_control_center_signals(aux_cc_arena_payload)
 
         # 1) Profit Alerts (Control Center)
         if include_profit_alerts:
@@ -5162,7 +5207,12 @@ def main() -> None:
                 top_shortlist=int(args.top_n_aux),
                 top_overdue=int(args.top_n_aux_vtrac_indices),
             )
-            aux_badge_sig, _ = _extract_aux_badge_pressure_signals(state_dir=state_dir, state_key=state_key, top_k=5)
+            aux_badge_sig = aux_badge_sig_cached
+            if aux_badge_sig is None:
+                aux_badge_sig, _ = _extract_aux_badge_pressure_signals(
+                    state_dir=state_dir, state_key=state_key, top_k=max(5, int(args.aux_cc_arena_top_items))
+                )
+            aux_cc_sig = aux_cc_sig_cached or {"available": False, "evidence_paths": [], "arena_objects": {}}
             bundle_payload: Dict[str, Any] = {
                 "schema": "signals_bundle_v1",
                 "generated_at": _now_iso(),
@@ -5183,6 +5233,7 @@ def main() -> None:
                     "vtrac_enhanced": vt_sig,
                     "aux": aux_sig,
                     "aux_badge_pressure": aux_badge_sig,
+                    "aux_control_center_context": aux_cc_sig,
                 },
             }
             _write_json(bundle_path, bundle_payload)
@@ -5219,6 +5270,18 @@ def main() -> None:
                 arena_json, arena_md = write_dr_arena_files(
                     out_json_path=dr_arena_path,
                     payload=dr_arena_payload,
+                    write_md=True,
+                )
+                print(f"Wrote: {_safe_rel(arena_json)}")
+                if arena_md is not None:
+                    print(f"Wrote: {_safe_rel(arena_md)}")
+        if args.write_aux_cc_arena:
+            if aux_cc_arena_payload is None:
+                print(f"Skipped Aux/CC arena: missing Aux / Control Center artifacts for {_safe_rel(state_dir)}")
+            else:
+                arena_json, arena_md = write_aux_control_center_files(
+                    out_json_path=aux_cc_arena_path,
+                    payload=aux_cc_arena_payload,
                     write_md=True,
                 )
                 print(f"Wrote: {_safe_rel(arena_json)}")
