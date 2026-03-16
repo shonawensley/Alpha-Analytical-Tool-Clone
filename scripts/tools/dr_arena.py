@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from modules.vtrac_reference import get_vtrac_index
+
 
 SECTION_ORDER: Tuple[str, ...] = ("Midday", "Evening", "Combined")
 STEP_COUNT_KEYS: Tuple[str, ...] = (
@@ -161,6 +163,20 @@ def _vtrac_signature(pattern: str) -> str:
     return "".join(vals)
 
 
+def _window_tokens(value: object, *, width: int = 3) -> List[str]:
+    digits = _digits_only(value)
+    if len(digits) < width:
+        return []
+    return [digits[idx : idx + width] for idx in range(0, len(digits) - width + 1)]
+
+
+def _vtrac_index_of_token(value: object) -> Optional[int]:
+    digits = _digits_only(value)
+    if len(digits) != 3:
+        return None
+    return get_vtrac_index(digits)
+
+
 def _counter_top(counter: Counter[str], top_n: int = 6) -> List[Dict[str, Any]]:
     items = sorted(counter.items(), key=lambda kv: (-int(kv[1]), kv[0]))
     return [{"value": key, "count": int(count)} for key, count in items[:top_n]]
@@ -175,6 +191,44 @@ def _row_location(row: Dict[str, Any]) -> str:
             f"col{row.get('col') or ''}",
         ]
     )
+
+
+def _parse_row_location(location: str) -> Dict[str, str]:
+    parts = [part.strip() for part in str(location or "").split("|")]
+    section = parts[0] if len(parts) > 0 else ""
+    set_name = parts[1] if len(parts) > 1 else ""
+    draw_name = parts[2] if len(parts) > 2 else ""
+    col_name = parts[3] if len(parts) > 3 else ""
+    return {
+        "section": section,
+        "set": set_name,
+        "draw": draw_name,
+        "col": col_name,
+    }
+
+
+def _label_rank(label: str, prefix: str, default: int) -> int:
+    text = str(label or "").strip()
+    if not text:
+        return int(default)
+    if text.lower().startswith(prefix.lower()):
+        text = text[len(prefix) :]
+    return _to_int(text, default=default)
+
+
+def _max_consecutive_run(values: Iterable[int]) -> int:
+    ordered = sorted({int(v) for v in values})
+    if not ordered:
+        return 0
+    best = 1
+    current = 1
+    for idx in range(1, len(ordered)):
+        if ordered[idx] == ordered[idx - 1] + 1:
+            current += 1
+            best = max(best, current)
+        else:
+            current = 1
+    return best
 
 
 def _load_dr_bundle(state_dir: Path, state_key: str) -> Optional[Dict[str, Any]]:
@@ -567,6 +621,1060 @@ def _derive_double_pressure(patterns: Sequence[Dict[str, Any]], top_n: int) -> L
     return out[:top_n]
 
 
+def _derive_corridors(families: Sequence[Dict[str, Any]], top_n: int) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for item in families:
+        top_patterns = list(item.get("top_patterns") or [])
+        family_total = sum(_to_int(entry.get("count")) for entry in top_patterns)
+        leader_count = _to_int(top_patterns[0].get("count")) if top_patterns else 0
+        neighbor_box_support = 0
+        draw_ranks: List[int] = []
+        col_ranks: List[int] = []
+        for locator in item.get("sample_locators") or []:
+            parsed = _parse_row_location(locator)
+            col_rank = _label_rank(parsed.get("col", ""), "col", default=0)
+            draw_rank = _label_rank(parsed.get("draw", ""), "Draw", default=0)
+            if col_rank in {2, 4}:
+                neighbor_box_support += 1
+            if draw_rank > 0:
+                draw_ranks.append(draw_rank)
+            if col_rank > 0:
+                col_ranks.append(col_rank)
+        draw_progression = _max_consecutive_run(draw_ranks)
+        col_progression = _max_consecutive_run(col_ranks)
+        consecutive_box_progression = max(draw_progression, col_progression)
+
+        if int(item["vt_only_rows"]) >= max(1, int(item["rows"]) // 2) and float(item["vtrac_bias_total"]) > 0.0:
+            scope = "vtrac_corridor"
+        elif int(item["dup_rows"]) >= max(1, int(item["rows"]) // 3):
+            scope = "compact_double_corridor"
+        elif len(top_patterns) >= 2 and family_total >= 3:
+            scope = "family_neighborhood"
+        else:
+            scope = "exact_corridor"
+
+        frontier_rows = int(item["set1_terminal_rows"]) + int(item["funnel_rows"])
+        if frontier_rows >= max(1, int(item["rows"]) // 2):
+            band = "set1_current_day"
+        elif float(item["currentness_max"]) >= 4.5:
+            band = "mixed"
+        else:
+            band = "7_6_5_band"
+
+        family_asymmetry = 0.0
+        if family_total > 0:
+            family_asymmetry = float(leader_count) / float(family_total)
+
+        corridor_strength = (
+            float(item["score_total"])
+            + 0.75 * float(item["rows"])
+            + 0.5 * float(item["box_count"])
+            + 0.45 * float(item["currentness_max"])
+            + 0.35 * float(item["residual_purity_max"])
+            + 0.3 * float(frontier_rows)
+            + 0.25 * float(consecutive_box_progression)
+        )
+
+        out.append(
+            {
+                "family_id": item["family_id"],
+                "corridor_strength_score": round(corridor_strength, 3),
+                "corridor_scope": scope,
+                "corridor_band": band,
+                "corridor_variant_profile": "section_local",
+                "raw_exposure_count": int(item["rows"]),
+                "path_summary_count": int(item["box_count"]),
+                "neighbor_box_support": int(neighbor_box_support),
+                "consecutive_box_progression": int(consecutive_box_progression),
+                "family_neighborhood_saturation": round(float(family_total), 3),
+                "family_asymmetry_inside_corridor": round(family_asymmetry, 3),
+                "currentness_max": item["currentness_max"],
+                "top_patterns": top_patterns,
+                "sample_locators": list(item.get("sample_locators") or []),
+            }
+        )
+    out.sort(
+        key=lambda item: (
+            -float(item["corridor_strength_score"]),
+            -int(item["raw_exposure_count"]),
+            -int(item["path_summary_count"]),
+            item["family_id"],
+        )
+    )
+    return out[:top_n]
+
+
+def _derive_vtrac_lane_gateway(
+    *,
+    families: Sequence[Dict[str, Any]],
+    patterns: Sequence[Dict[str, Any]],
+    candidate_rows: Sequence[Dict[str, Any]],
+    corridors: Sequence[Dict[str, Any]],
+    top_n: int,
+) -> List[Dict[str, Any]]:
+    corridor_by_family = {str(item.get("family_id") or ""): item for item in corridors}
+    grouped: Dict[int, Dict[str, Any]] = {}
+
+    def _bucket_for(idx: int) -> Dict[str, Any]:
+        return grouped.setdefault(
+            idx,
+            {
+                "vtrac_index": idx,
+                "families": Counter(),
+                "patterns": Counter(),
+                "scopes": Counter(),
+                "bands": Counter(),
+                "score_total": 0.0,
+                "rows_total": 0,
+                "box_total": 0,
+                "vt_only_rows": 0,
+                "vtrac_bias_total": 0.0,
+                "currentness_max": 0.0,
+                "corridor_strength_max": 0.0,
+                "corridor_strength_total": 0.0,
+                "candidate_rank_bonus": 0.0,
+                "candidate_count": 0,
+                "member_count": 0,
+            },
+        )
+
+    for item in families:
+        family_id = str(item.get("family_id") or "")
+        idx = _vtrac_index_of_token(family_id)
+        if idx is None:
+            top_patterns = list(item.get("top_patterns") or [])
+            if top_patterns:
+                idx = _vtrac_index_of_token(top_patterns[0].get("value"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["families"][family_id] += 1
+        for pattern_row in item.get("top_patterns") or []:
+            token = _digits_only(pattern_row.get("value"))
+            if token:
+                bucket["patterns"][token] += _to_int(pattern_row.get("count"), 1)
+        bucket["score_total"] += float(item.get("score_total") or 0.0)
+        bucket["rows_total"] += _to_int(item.get("rows"), 0)
+        bucket["box_total"] += _to_int(item.get("box_count"), 0)
+        bucket["vt_only_rows"] += _to_int(item.get("vt_only_rows"), 0)
+        bucket["vtrac_bias_total"] += float(item.get("vtrac_bias_total") or 0.0)
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(item.get("currentness_max") or 0.0))
+        bucket["member_count"] = len(bucket["families"])
+        corridor = corridor_by_family.get(family_id)
+        if corridor:
+            scope = str(corridor.get("corridor_scope") or "")
+            band = str(corridor.get("corridor_band") or "")
+            if scope:
+                bucket["scopes"][scope] += 1
+            if band:
+                bucket["bands"][band] += 1
+            bucket["corridor_strength_max"] = max(
+                bucket["corridor_strength_max"], float(corridor.get("corridor_strength_score") or 0.0)
+            )
+            bucket["corridor_strength_total"] += float(corridor.get("corridor_strength_score") or 0.0)
+
+    for item in patterns:
+        idx = _vtrac_index_of_token(item.get("pattern"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        token = _digits_only(item.get("pattern"))
+        if token:
+            bucket["patterns"][token] += max(1, _to_int(item.get("rows"), 0))
+
+    for row in candidate_rows:
+        idx = _vtrac_index_of_token(row.get("best_pattern"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        rank = _to_int(row.get("rank"), 9999)
+        bonus = max(0.0, 4.0 - float(rank) * 0.35)
+        bucket["candidate_rank_bonus"] += bonus
+        bucket["candidate_count"] += 1
+        token = _digits_only(row.get("best_pattern"))
+        if token:
+            bucket["patterns"][token] += 1
+
+    out: List[Dict[str, Any]] = []
+    for idx, bucket in grouped.items():
+        member_count = max(1, int(bucket["member_count"]))
+        scope_diversity = len([k for k in bucket["scopes"] if k])
+        gateway_score = (
+            float(bucket["score_total"])
+            + 0.85 * float(bucket["rows_total"])
+            + 0.55 * float(bucket["box_total"])
+            + 1.75 * float(member_count)
+            + 1.5 * float(bucket["candidate_rank_bonus"])
+            + 0.85 * float(bucket["vt_only_rows"])
+            + 0.45 * float(bucket["vtrac_bias_total"])
+            + 0.35 * float(bucket["currentness_max"])
+            + 0.16 * float(bucket["corridor_strength_total"])
+            + 0.75 * float(scope_diversity)
+        )
+        out.append(
+            {
+                "vtrac_index": int(idx),
+                "gateway_score": round(gateway_score, 3),
+                "member_count": int(member_count),
+                "rows_total": int(bucket["rows_total"]),
+                "box_total": int(bucket["box_total"]),
+                "candidate_count": int(bucket["candidate_count"]),
+                "candidate_rank_bonus": round(float(bucket["candidate_rank_bonus"]), 3),
+                "vt_only_rows": int(bucket["vt_only_rows"]),
+                "vtrac_bias_total": round(float(bucket["vtrac_bias_total"]), 3),
+                "currentness_max": round(float(bucket["currentness_max"]), 3),
+                "corridor_strength_max": round(float(bucket["corridor_strength_max"]), 3),
+                "top_families": _counter_top(bucket["families"], top_n=4),
+                "top_patterns": _counter_top(bucket["patterns"], top_n=5),
+                "scope_mix": _counter_top(bucket["scopes"], top_n=3),
+                "band_mix": _counter_top(bucket["bands"], top_n=3),
+                "why_tags": [
+                    "vtrac_lane_gateway",
+                    f"members={member_count}",
+                    f"candidate_bonus={float(bucket['candidate_rank_bonus']):.3f}",
+                    f"corridor_total={float(bucket['corridor_strength_total']):.3f}",
+                ],
+            }
+        )
+    out.sort(
+        key=lambda item: (
+            -float(item["gateway_score"]),
+            -int(item["member_count"]),
+            -int(item["rows_total"]),
+            int(item["vtrac_index"]),
+        )
+    )
+    return out[:top_n]
+
+
+def _derive_assigned_box_vtrac_strength(
+    *,
+    variant_rows: Sequence[Dict[str, Any]],
+    top_n: int,
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, Dict[str, Any]] = {}
+
+    def _bucket_for(idx: int) -> Dict[str, Any]:
+        return grouped.setdefault(
+            idx,
+            {
+                "vtrac_index": idx,
+                "score_total": 0.0,
+                "row_hits": 0,
+                "currentness_max": 0.0,
+                "box_pair_agree_max": 0.0,
+                "cluster_echo_max": 0,
+                "variant_echo_max": 0,
+                "windows": Counter(),
+                "boxes": Counter(),
+                "columns": Counter(),
+                "methods": Counter(),
+                "modes": Counter(),
+                "areas": Counter(),
+                "sections": Counter(),
+                "locations": set(),
+            },
+        )
+
+    for row in variant_rows:
+        currentness = _currentness_score(
+            set_rank=_to_int(row.get("set_rank"), 3),
+            draw_rank=_to_int(row.get("draw_rank"), 3),
+            col_rank=_to_int(row.get("col_rank"), 7),
+            area_rank=_to_int(row.get("area_rank"), 3),
+            set1_terminal=_to_bool(row.get("set1_terminal")),
+            funnel_precol1=_to_bool(row.get("funnel_precol1")),
+        )
+        base_score = (
+            1.0
+            + 0.25 * currentness
+            + 0.15 * _to_float(row.get("cluster_echo_count"))
+            + 0.10 * _to_float(row.get("variant_echo_count"))
+            + 0.10 * _to_float(row.get("box_pair_agree"))
+            + 0.05 * _to_float(row.get("box_family_density"))
+        )
+        location = _row_location(row)
+        column = str(row.get("col") or "")
+        method = str(row.get("method") or "")
+        mode = str(row.get("mode") or "")
+        area = str(row.get("area") or "")
+        section = str(row.get("section") or row.get("variant") or "")
+        box_id = _digits_only(row.get("box_id"))
+
+        window_hits: Dict[int, Counter[str]] = defaultdict(Counter)
+        sources = [row.get("box_id"), row.get("final_value")]
+        if not any(_digits_only(source) for source in sources):
+            sources.append(row.get("pattern"))
+        for source in sources:
+            for token in set(_window_tokens(source, width=3)):
+                idx = _vtrac_index_of_token(token)
+                if idx is not None:
+                    window_hits[idx][token] += 1
+
+        for idx, tokens in window_hits.items():
+            bucket = _bucket_for(idx)
+            bucket["score_total"] += base_score
+            bucket["row_hits"] += 1
+            bucket["currentness_max"] = max(bucket["currentness_max"], currentness)
+            bucket["box_pair_agree_max"] = max(bucket["box_pair_agree_max"], _to_float(row.get("box_pair_agree")))
+            bucket["cluster_echo_max"] = max(bucket["cluster_echo_max"], _to_int(row.get("cluster_echo_count")))
+            bucket["variant_echo_max"] = max(bucket["variant_echo_max"], _to_int(row.get("variant_echo_count")))
+            bucket["locations"].add(location)
+            if box_id:
+                bucket["boxes"][box_id] += 1
+            if column:
+                bucket["columns"][column] += 1
+            if method:
+                bucket["methods"][method] += 1
+            if mode:
+                bucket["modes"][mode] += 1
+            if area:
+                bucket["areas"][area] += 1
+            if section:
+                bucket["sections"][section] += 1
+            for token, count in tokens.items():
+                bucket["windows"][token] += int(count)
+
+    out: List[Dict[str, Any]] = []
+    for idx, bucket in grouped.items():
+        row_count = len(bucket["locations"])
+        box_count = len(bucket["boxes"])
+        column_count = len(bucket["columns"])
+        method_count = len(bucket["methods"])
+        window_count = len(bucket["windows"])
+        assigned_box_score = (
+            float(bucket["score_total"])
+            + 0.75 * float(row_count)
+            + 0.35 * float(box_count)
+            + 0.25 * float(column_count)
+            + 0.30 * float(method_count)
+            + 0.15 * float(len(bucket["modes"]))
+            + 0.15 * float(len(bucket["areas"]))
+            + 0.30 * float(bucket["currentness_max"])
+        )
+        out.append(
+            {
+                "vtrac_index": int(idx),
+                "assigned_box_score": round(assigned_box_score, 3),
+                "row_count": int(row_count),
+                "box_count": int(box_count),
+                "column_count": int(column_count),
+                "window_count": int(window_count),
+                "currentness_max": round(float(bucket["currentness_max"]), 3),
+                "box_pair_agree_max": round(float(bucket["box_pair_agree_max"]), 3),
+                "cluster_echo_max": int(bucket["cluster_echo_max"]),
+                "variant_echo_max": int(bucket["variant_echo_max"]),
+                "top_windows": _counter_top(bucket["windows"], top_n=6),
+                "top_boxes": _counter_top(bucket["boxes"], top_n=4),
+                "column_mix": _counter_top(bucket["columns"], top_n=4),
+                "method_mix": _counter_top(bucket["methods"], top_n=4),
+                "mode_mix": _counter_top(bucket["modes"], top_n=3),
+                "why_tags": [
+                    "assigned_box_vtrac_strength",
+                    f"rows={row_count}",
+                    f"boxes={box_count}",
+                    f"windows={window_count}",
+                ],
+            }
+        )
+
+    out.sort(
+        key=lambda item: (
+            -float(item["assigned_box_score"]),
+            -int(item["row_count"]),
+            -int(item["window_count"]),
+            int(item["vtrac_index"]),
+        )
+    )
+    return out[:top_n]
+
+
+def _derive_vtrac_fusion_strength(
+    *,
+    gateway_rows: Sequence[Dict[str, Any]],
+    cluster_rows: Sequence[Dict[str, Any]],
+    assigned_box_rows: Sequence[Dict[str, Any]],
+    structural_signals: Dict[str, Any],
+    top_n: int,
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, Dict[str, Any]] = {}
+
+    def _bucket_for(idx: int) -> Dict[str, Any]:
+        return grouped.setdefault(
+            idx,
+            {
+                "vtrac_index": idx,
+                "gateway_score": 0.0,
+                "gateway_rank": 999,
+                "gateway_members": 0,
+                "cluster_score": 0.0,
+                "cluster_rank": 999,
+                "cluster_supports": 0,
+                "assigned_box_score": 0.0,
+                "assigned_box_rank": 999,
+                "box_rows": 0,
+                "box_count": 0,
+                "column_count": 0,
+                "box_currentness": 0.0,
+                "box_cluster_echo": 0,
+                "box_variant_echo": 0,
+                "top_families": Counter(),
+                "top_patterns": Counter(),
+                "top_windows": Counter(),
+                "why_tags": [],
+            },
+        )
+
+    top_gateway_score = max((float(item.get("gateway_score") or 0.0) for item in gateway_rows), default=0.0)
+    top_cluster_score = max((float(item.get("cluster_score") or 0.0) for item in cluster_rows), default=0.0)
+    top_box_score = max((float(item.get("assigned_box_score") or 0.0) for item in assigned_box_rows), default=0.0)
+
+    for rank, row in enumerate(gateway_rows, start=1):
+        idx = _to_int(row.get("vtrac_index"), -1)
+        if idx < 0:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["gateway_score"] = float(row.get("gateway_score") or 0.0)
+        bucket["gateway_rank"] = rank
+        bucket["gateway_members"] = _to_int(row.get("member_count"), 0)
+        for entry in row.get("top_families") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["top_families"][token] += max(1, _to_int(entry.get("count"), 1))
+        for entry in row.get("top_patterns") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["top_patterns"][token] += max(1, _to_int(entry.get("count"), 1))
+
+    for rank, row in enumerate(cluster_rows, start=1):
+        idx = _to_int(row.get("vtrac_index"), -1)
+        if idx < 0:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["cluster_score"] = float(row.get("cluster_score") or 0.0)
+        bucket["cluster_rank"] = rank
+        bucket["cluster_supports"] = _to_int(row.get("support_class_count"), 0)
+        for entry in row.get("top_families") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["top_families"][token] += max(1, _to_int(entry.get("count"), 1))
+        for entry in row.get("top_patterns") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["top_patterns"][token] += max(1, _to_int(entry.get("count"), 1))
+
+    for rank, row in enumerate(assigned_box_rows, start=1):
+        idx = _to_int(row.get("vtrac_index"), -1)
+        if idx < 0:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["assigned_box_score"] = float(row.get("assigned_box_score") or 0.0)
+        bucket["assigned_box_rank"] = rank
+        bucket["box_rows"] = _to_int(row.get("row_count"), 0)
+        bucket["box_count"] = _to_int(row.get("box_count"), 0)
+        bucket["column_count"] = _to_int(row.get("column_count"), 0)
+        bucket["box_currentness"] = float(row.get("currentness_max") or 0.0)
+        bucket["box_cluster_echo"] = _to_int(row.get("cluster_echo_max"), 0)
+        bucket["box_variant_echo"] = _to_int(row.get("variant_echo_max"), 0)
+        for entry in row.get("top_windows") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["top_windows"][token] += max(1, _to_int(entry.get("count"), 1))
+
+    progression = _to_int(structural_signals.get("consecutive_box_progression"), 0)
+    neighbor_support = _to_int(structural_signals.get("neighbor_box_support"), 0)
+    reveal_purity = _to_int(structural_signals.get("reveal_purity"), 0)
+    precluster_strength = float(structural_signals.get("pre_reduction_cluster_strength") or 0.0)
+    early_activation = float(structural_signals.get("early_activation_strength") or 0.0)
+    section_structural_support = (
+        1.5 * float(max(0, progression - 1))
+        + 0.9 * float(max(0, neighbor_support))
+        + 0.55 * float(max(0, reveal_purity))
+        + 0.45 * float(max(0.0, precluster_strength))
+        + 5.0 * float(max(0.0, early_activation))
+    )
+    structural_ready = (
+        progression >= 2
+        or neighbor_support >= 1
+        or reveal_purity >= 1
+        or precluster_strength >= 1.0
+        or early_activation >= 0.15
+    )
+
+    out: List[Dict[str, Any]] = []
+    for idx, bucket in grouped.items():
+        gateway_rank = int(bucket["gateway_rank"])
+        cluster_rank = int(bucket["cluster_rank"])
+        box_rank = int(bucket["assigned_box_rank"])
+        gateway_visible = gateway_rank <= 20
+        cluster_visible = cluster_rank <= 20
+        box_visible = box_rank <= 20
+
+        gateway_norm = float(bucket["gateway_score"]) / float(top_gateway_score or 1.0)
+        cluster_norm = float(bucket["cluster_score"]) / float(top_cluster_score or 1.0)
+        box_norm = float(bucket["assigned_box_score"]) / float(top_box_score or 1.0)
+
+        gateway_rank_bonus = max(0.0, 10.5 - 0.65 * float(gateway_rank)) if gateway_visible else 0.0
+        cluster_rank_bonus = max(0.0, 11.5 - 0.70 * float(cluster_rank)) if cluster_visible else 0.0
+        box_rank_bonus = max(0.0, 12.0 - 0.62 * float(box_rank)) if box_visible else 0.0
+
+        fusion_score = (
+            11.0 * box_norm
+            + 9.0 * cluster_norm
+            + 7.0 * gateway_norm
+            + 0.85 * box_rank_bonus
+            + 0.75 * cluster_rank_bonus
+            + 0.55 * gateway_rank_bonus
+        )
+
+        agreement_bonus = 0.0
+        rescue_bonus = 0.0
+        penalty = 0.0
+        why_tags = ["vtrac_fusion_strength"]
+
+        if box_visible and cluster_visible:
+            agreement_bonus += 10.0
+            if box_rank <= 10 and cluster_rank <= 10:
+                agreement_bonus += 4.0
+            if box_rank <= 5 and cluster_rank <= 5:
+                agreement_bonus += 6.0
+            why_tags.append("box_cluster_agree")
+        if box_visible and gateway_visible:
+            agreement_bonus += 4.5
+            if box_rank <= 10 and gateway_rank <= 10:
+                agreement_bonus += 2.5
+            why_tags.append("box_gateway_agree")
+        if cluster_visible and gateway_visible:
+            agreement_bonus += 3.0
+            why_tags.append("cluster_gateway_agree")
+
+        rescue_ready = (
+            box_rank <= 10
+            and not cluster_visible
+            and not gateway_visible
+            and int(bucket["box_rows"]) >= 3
+            and int(bucket["box_count"]) >= 2
+            and (
+                int(bucket["box_cluster_echo"]) >= 1
+                or int(bucket["box_variant_echo"]) >= 1
+                or int(bucket["column_count"]) >= 2
+            )
+        )
+        if rescue_ready:
+            rescue_bonus += 8.0
+            if box_rank <= 5:
+                rescue_bonus += 3.5
+            if int(bucket["box_rows"]) >= 5:
+                rescue_bonus += 2.5
+            if structural_ready:
+                rescue_bonus += min(6.0, 0.55 * section_structural_support)
+            why_tags.append("assigned_box_rescue")
+        elif box_visible and not cluster_visible and not gateway_visible:
+            # Keep box-only lanes visible, but avoid over-promoting thin box-only echoes.
+            if int(bucket["box_rows"]) <= 2 or int(bucket["box_count"]) <= 1:
+                penalty += 4.0
+                why_tags.append("thin_box_only_penalty")
+
+        fusion_score += agreement_bonus + rescue_bonus - penalty
+
+        out.append(
+            {
+                "vtrac_index": int(idx),
+                "fusion_score": round(fusion_score, 3),
+                "agreement_bonus": round(agreement_bonus, 3),
+                "rescue_bonus": round(rescue_bonus, 3),
+                "penalty": round(penalty, 3),
+                "gateway_rank": gateway_rank if gateway_visible else None,
+                "cluster_rank": cluster_rank if cluster_visible else None,
+                "assigned_box_rank": box_rank if box_visible else None,
+                "gateway_score_component": round(float(bucket["gateway_score"]), 3),
+                "cluster_score_component": round(float(bucket["cluster_score"]), 3),
+                "assigned_box_score_component": round(float(bucket["assigned_box_score"]), 3),
+                "box_rows": int(bucket["box_rows"]),
+                "box_count": int(bucket["box_count"]),
+                "column_count": int(bucket["column_count"]),
+                "box_currentness_max": round(float(bucket["box_currentness"]), 3),
+                "box_cluster_echo_max": int(bucket["box_cluster_echo"]),
+                "box_variant_echo_max": int(bucket["box_variant_echo"]),
+                "top_families": _counter_top(bucket["top_families"], top_n=5),
+                "top_patterns": _counter_top(bucket["top_patterns"], top_n=6),
+                "top_windows": _counter_top(bucket["top_windows"], top_n=6),
+                "why_tags": why_tags[:8],
+            }
+        )
+
+    out.sort(
+        key=lambda item: (
+            -float(item["fusion_score"]),
+            -float(item["assigned_box_score_component"]),
+            -float(item["cluster_score_component"]),
+            int(item["vtrac_index"]),
+        )
+    )
+    return out[:top_n]
+
+
+def _derive_vtrac_cluster_strength(
+    *,
+    trace_rows: Sequence[Dict[str, Any]],
+    lane_rows: Sequence[Dict[str, Any]],
+    corridor_rows: Sequence[Dict[str, Any]],
+    gateway_rows: Sequence[Dict[str, Any]],
+    double_rows: Sequence[Dict[str, Any]],
+    row_repeat_rows: Sequence[Dict[str, Any]],
+    fourth_rows: Sequence[Dict[str, Any]],
+    top_n: int,
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, Dict[str, Any]] = {}
+
+    def _bucket_for(idx: int) -> Dict[str, Any]:
+        return grouped.setdefault(
+            idx,
+            {
+                "vtrac_index": idx,
+                "support_classes": set(),
+                "families": Counter(),
+                "patterns": Counter(),
+                "bands": Counter(),
+                "scopes": Counter(),
+                "trace_score": 0.0,
+                "lane_score": 0.0,
+                "corridor_score": 0.0,
+                "gateway_score": 0.0,
+                "double_score": 0.0,
+                "row_repeat_score": 0.0,
+                "fourth_score": 0.0,
+                "currentness_max": 0.0,
+                "member_family_count": 0,
+                "member_pattern_count": 0,
+            },
+        )
+
+    def _add_family_rows(
+        rows: Sequence[Dict[str, Any]],
+        *,
+        row_score_key: str,
+        bucket_score_key: str,
+        support_label: str,
+    ) -> None:
+        for row in rows:
+            idx = _vtrac_index_of_token(row.get("family_id"))
+            if idx is None:
+                top_patterns = list(row.get("top_patterns") or [])
+                if top_patterns:
+                    idx = _vtrac_index_of_token(top_patterns[0].get("value"))
+            if idx is None:
+                continue
+            bucket = _bucket_for(idx)
+            bucket["support_classes"].add(support_label)
+            family_id = str(row.get("family_id") or "")
+            if family_id:
+                bucket["families"][family_id] += 1
+            for entry in row.get("top_patterns") or []:
+                token = _digits_only(entry.get("value"))
+                if token:
+                    bucket["patterns"][token] += max(1, _to_int(entry.get("count"), 1))
+            bucket[bucket_score_key] += float(row.get(row_score_key) or 0.0)
+            bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    _add_family_rows(trace_rows, row_score_key="trace_score", bucket_score_key="trace_score", support_label="trace")
+    _add_family_rows(
+        lane_rows,
+        row_score_key="lane_confidence_score",
+        bucket_score_key="lane_score",
+        support_label="lane",
+    )
+
+    for row in corridor_rows:
+        idx = _vtrac_index_of_token(row.get("family_id"))
+        if idx is None:
+            top_patterns = list(row.get("top_patterns") or [])
+            if top_patterns:
+                idx = _vtrac_index_of_token(top_patterns[0].get("value"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["support_classes"].add("corridor")
+        family_id = str(row.get("family_id") or "")
+        if family_id:
+            bucket["families"][family_id] += 1
+        for entry in row.get("top_patterns") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["patterns"][token] += max(1, _to_int(entry.get("count"), 1))
+        scope = str(row.get("corridor_scope") or "")
+        band = str(row.get("corridor_band") or "")
+        if scope:
+            bucket["scopes"][scope] += 1
+        if band:
+            bucket["bands"][band] += 1
+        bucket["corridor_score"] += float(row.get("corridor_strength_score") or 0.0)
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    for row in gateway_rows:
+        idx = _to_int(row.get("vtrac_index"), -1)
+        if idx < 0:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["support_classes"].add("gateway")
+        bucket["gateway_score"] += float(row.get("gateway_score") or 0.0)
+        for entry in row.get("top_families") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["families"][token] += max(1, _to_int(entry.get("count"), 1))
+        for entry in row.get("top_patterns") or []:
+            token = _digits_only(entry.get("value"))
+            if token:
+                bucket["patterns"][token] += max(1, _to_int(entry.get("count"), 1))
+        for entry in row.get("scope_mix") or []:
+            scope = str(entry.get("value") or "")
+            if scope:
+                bucket["scopes"][scope] += max(1, _to_int(entry.get("count"), 1))
+        for entry in row.get("band_mix") or []:
+            band = str(entry.get("value") or "")
+            if band:
+                bucket["bands"][band] += max(1, _to_int(entry.get("count"), 1))
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    for row in double_rows:
+        idx = _vtrac_index_of_token(row.get("pattern"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["support_classes"].add("double")
+        token = _digits_only(row.get("pattern"))
+        if token:
+            bucket["patterns"][token] += max(1, _to_int(row.get("rows"), 1))
+        family_id = str(row.get("family_id") or "")
+        if family_id:
+            bucket["families"][family_id] += 1
+        bucket["double_score"] += float(row.get("double_score") or 0.0)
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    for row in row_repeat_rows:
+        idx = _vtrac_index_of_token(row.get("value"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["support_classes"].add("row_repeat")
+        token = _digits_only(row.get("value"))
+        if token:
+            bucket["patterns"][token] += max(1, _to_int(row.get("rows_repeated"), 1))
+        bucket["row_repeat_score"] += float(row.get("score") or 0.0)
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    for row in fourth_rows:
+        idx = _vtrac_index_of_token(row.get("core_value"))
+        if idx is None:
+            continue
+        bucket = _bucket_for(idx)
+        bucket["support_classes"].add("fourth")
+        token = _digits_only(row.get("core_value"))
+        if token:
+            bucket["patterns"][token] += max(1, _to_int(row.get("support_count"), 1))
+        bucket["fourth_score"] += float(row.get("score") or 0.0)
+        bucket["currentness_max"] = max(bucket["currentness_max"], float(row.get("currentness_max") or 0.0))
+
+    out: List[Dict[str, Any]] = []
+    for idx, bucket in grouped.items():
+        bucket["member_family_count"] = len([k for k in bucket["families"] if k])
+        bucket["member_pattern_count"] = len([k for k in bucket["patterns"] if k])
+        support_class_count = len(bucket["support_classes"])
+
+        cluster_score = (
+            0.9 * (float(bucket["trace_score"]) ** 0.5)
+            + 1.2 * (float(bucket["lane_score"]) ** 0.5)
+            + 0.75 * (float(bucket["corridor_score"]) ** 0.5)
+            + 0.9 * (float(bucket["gateway_score"]) ** 0.5)
+            + 1.1 * (float(bucket["double_score"]) ** 0.5)
+            + 1.0 * (float(bucket["row_repeat_score"]) ** 0.5)
+            + 0.85 * (float(bucket["fourth_score"]) ** 0.5)
+            + 1.8 * float(support_class_count)
+            + 0.9 * float(bucket["member_family_count"])
+            + 0.35 * float(bucket["member_pattern_count"])
+            + 0.6 * float(len([k for k in bucket["scopes"] if k]))
+            + 0.4 * float(len([k for k in bucket["bands"] if k]))
+            + 0.25 * float(bucket["currentness_max"])
+        )
+
+        out.append(
+            {
+                "vtrac_index": int(idx),
+                "cluster_score": round(cluster_score, 3),
+                "raw_cluster_score": round(cluster_score, 3),
+                "cluster_adjustment": 0.0,
+                "support_class_count": int(support_class_count),
+                "support_classes": sorted(bucket["support_classes"]),
+                "member_family_count": int(bucket["member_family_count"]),
+                "member_pattern_count": int(bucket["member_pattern_count"]),
+                "trace_score_component": round(float(bucket["trace_score"]), 3),
+                "lane_score_component": round(float(bucket["lane_score"]), 3),
+                "corridor_score_component": round(float(bucket["corridor_score"]), 3),
+                "gateway_score_component": round(float(bucket["gateway_score"]), 3),
+                "double_score_component": round(float(bucket["double_score"]), 3),
+                "row_repeat_score_component": round(float(bucket["row_repeat_score"]), 3),
+                "fourth_score_component": round(float(bucket["fourth_score"]), 3),
+                "currentness_max": round(float(bucket["currentness_max"]), 3),
+                "top_families": _counter_top(bucket["families"], top_n=5),
+                "top_patterns": _counter_top(bucket["patterns"], top_n=6),
+                "scope_mix": _counter_top(bucket["scopes"], top_n=4),
+                "band_mix": _counter_top(bucket["bands"], top_n=4),
+                "why_tags": [
+                    "vtrac_cluster_strength",
+                    f"supports={support_class_count}",
+                    f"families={bucket['member_family_count']}",
+                    f"patterns={bucket['member_pattern_count']}",
+                ],
+            }
+        )
+
+    if out:
+        # Bounded promotion review:
+        # when a single compact double-driven cluster dominates the raw score,
+        # lightly rebalance toward structurally rich challengers instead of
+        # letting compact attractors monopolize the top surface.
+        top_raw = max(out, key=lambda item: float(item.get("raw_cluster_score") or 0.0))
+        top_support = int(top_raw.get("support_class_count") or 0)
+        top_families = int(top_raw.get("member_family_count") or 0)
+        top_patterns = int(top_raw.get("member_pattern_count") or 0)
+        top_currentness = float(top_raw.get("currentness_max") or 0.0)
+        top_supports = set(top_raw.get("support_classes") or [])
+        compact_monopoly = (
+            top_support >= 5
+            and top_families <= 1
+            and top_patterns <= 1
+            and "double" in top_supports
+        )
+        if compact_monopoly:
+            challengers: List[Dict[str, Any]] = []
+            for item in out:
+                if item is top_raw:
+                    continue
+                support = int(item.get("support_class_count") or 0)
+                families = int(item.get("member_family_count") or 0)
+                patterns = int(item.get("member_pattern_count") or 0)
+                currentness = float(item.get("currentness_max") or 0.0)
+                currentness_gap = top_currentness - currentness
+                if support >= 4 and (
+                    currentness_gap <= 1.25
+                    or families >= 2
+                    or patterns >= 2
+                ):
+                    bonus = (
+                        8.0
+                        + 3.0 * float(max(0, support - 4))
+                        + 3.0 * float(max(0, families - 1))
+                        + 1.5 * float(max(0, patterns - 1))
+                        + 4.0 * max(0.0, 1.25 - currentness_gap)
+                    )
+                    if "double" not in set(item.get("support_classes") or []):
+                        bonus += 2.0
+                    item["cluster_adjustment"] = round(float(item.get("cluster_adjustment") or 0.0) + bonus, 3)
+                    item["cluster_score"] = round(float(item.get("raw_cluster_score") or 0.0) + float(item["cluster_adjustment"]), 3)
+                    item.setdefault("why_tags", []).append("challenger_rebalance")
+                    item["why_tags"].append(f"bonus={bonus:.3f}")
+                    challengers.append(item)
+            if challengers:
+                top_penalty = 8.0
+                top_raw["cluster_adjustment"] = round(float(top_raw.get("cluster_adjustment") or 0.0) - top_penalty, 3)
+                top_raw["cluster_score"] = round(
+                    float(top_raw.get("raw_cluster_score") or 0.0) + float(top_raw["cluster_adjustment"]),
+                    3,
+                )
+                top_raw.setdefault("why_tags", []).append("compact_monopoly_penalty")
+                top_raw["why_tags"].append(f"penalty={top_penalty:.3f}")
+
+    out.sort(
+        key=lambda item: (
+            -float(item["cluster_score"]),
+            -int(item["support_class_count"]),
+            -int(item["member_family_count"]),
+            int(item["vtrac_index"]),
+        )
+    )
+    return out[:top_n]
+
+
+def _derive_structural_signals(
+    *,
+    variant_rows: Sequence[Dict[str, Any]],
+    candidate_rows: Sequence[Dict[str, Any]],
+    training_ledgers: Dict[str, Any],
+    corridors: Sequence[Dict[str, Any]],
+    contains_winners_artifacts: bool,
+) -> Dict[str, Any]:
+    box_rows = list(training_ledgers.get("box_validity_ledger") or [])
+    reveal_rows = list(training_ledgers.get("reduction_reveal_ledger") or [])
+    precluster_rows = list(training_ledgers.get("precluster_ledger") or [])
+    path_summary_count = len(box_rows)
+    raw_exposure_count = len(variant_rows)
+
+    early_hits = 0
+    early_activation = 0.0
+    if path_summary_count:
+        for row in box_rows:
+            if _to_int(row.get("first_3value_step"), -1) in {0, 1}:
+                early_hits += 1
+        early_activation = float(early_hits) / float(path_summary_count)
+
+    grouped_draws: Dict[str, List[int]] = defaultdict(list)
+    grouped_cols: Dict[str, List[int]] = defaultdict(list)
+    neighbor_box_support = 0
+    for row in box_rows:
+        set_name = str(row.get("set") or "")
+        draw_rank = _label_rank(row.get("draw"), "Draw", default=0)
+        col_rank = _to_int(row.get("column"), 0)
+        if draw_rank > 0:
+            grouped_draws[set_name].append(draw_rank)
+        if col_rank > 0:
+            grouped_cols[f"{set_name}|{row.get('draw') or ''}"].append(col_rank)
+        if bool(row.get("has_3value_reveal")) and col_rank in {2, 4}:
+            neighbor_box_support += 1
+
+    consecutive_draw_progression = max((_max_consecutive_run(values) for values in grouped_draws.values()), default=0)
+    consecutive_col_progression = max((_max_consecutive_run(values) for values in grouped_cols.values()), default=0)
+    consecutive_box_progression = max(consecutive_draw_progression, consecutive_col_progression)
+
+    family_neighborhood_saturation = 0.0
+    family_asymmetry = 0.0
+    if corridors:
+        family_neighborhood_saturation = max(float(item.get("family_neighborhood_saturation") or 0.0) for item in corridors)
+        family_asymmetry = max(float(item.get("family_asymmetry_inside_corridor") or 0.0) for item in corridors)
+
+    core_vs_clutter = 0.0
+    if reveal_rows:
+        core_vs_clutter = max(
+            (
+                float(_to_float(row.get("reveal_score")))
+                + 0.75 * float(_to_int(row.get("purity_gain")))
+                + 0.25 * float(_to_float(row.get("currentness_score")))
+            )
+            for row in reveal_rows
+        )
+
+    reveal_purity = max((_to_int(row.get("purity_gain")) for row in reveal_rows), default=0)
+    precluster_strength = max((_to_float(row.get("precluster_score")) for row in precluster_rows), default=0.0)
+    candidate_preview_count = len(candidate_rows)
+
+    return {
+        "raw_exposure_count": int(raw_exposure_count),
+        "path_summary_count": int(path_summary_count),
+        "early_activation_strength": round(float(early_activation), 3),
+        "early_activation_hits": int(early_hits),
+        "consecutive_box_progression": int(consecutive_box_progression),
+        "neighbor_box_support": int(neighbor_box_support),
+        "family_neighborhood_saturation": round(float(family_neighborhood_saturation), 3),
+        "family_asymmetry_inside_corridor": round(float(family_asymmetry), 3),
+        "core_vs_clutter_transit_score": round(float(core_vs_clutter), 3),
+        "reveal_purity": int(reveal_purity),
+        "pre_reduction_cluster_strength": round(float(precluster_strength), 3),
+        "candidate_preview_count": int(candidate_preview_count),
+        "overlay_summary_mismatch": {
+            "available": False,
+            "status": "requires_winner_artifacts",
+            "reason": (
+                "predictive_writer_has_no_winner_overlay_context"
+                if not contains_winners_artifacts
+                else "winner_overlay_audit_not_yet_attached_to_predictive_writer"
+            ),
+        },
+    }
+
+
+def _classify_empty_lens(
+    *,
+    strong_trace: Sequence[Dict[str, Any]],
+    lane_only: Sequence[Dict[str, Any]],
+    doubles: Sequence[Dict[str, Any]],
+    row_repeat: Sequence[Dict[str, Any]],
+    corridors: Sequence[Dict[str, Any]],
+    training_ledgers: Dict[str, Any],
+    structural_signals: Dict[str, Any],
+    log_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    raw_exposure_count = _to_int(structural_signals.get("raw_exposure_count"), 0)
+    path_summary_count = _to_int(structural_signals.get("path_summary_count"), 0)
+    cold_location_count = _to_int(training_ledgers.get("cold_location_count"), 0)
+    cold_ratio = float(cold_location_count) / float(max(1, path_summary_count))
+    trace_score = float(strong_trace[0]["trace_score"]) if strong_trace else 0.0
+    lane_score = float(lane_only[0]["lane_confidence_score"]) if lane_only else 0.0
+    double_score = float(doubles[0]["double_score"]) if doubles else 0.0
+    row_repeat_score = float(row_repeat[0]["score"]) if row_repeat else 0.0
+    corridor_score = float(corridors[0]["corridor_strength_score"]) if corridors else 0.0
+    early_activation = float(structural_signals.get("early_activation_strength") or 0.0)
+    reveal_purity = _to_int(structural_signals.get("reveal_purity"), 0)
+    precluster_strength = float(structural_signals.get("pre_reduction_cluster_strength") or 0.0)
+    core_vs_clutter = float(structural_signals.get("core_vs_clutter_transit_score") or 0.0)
+    neighbor_support = _to_int(structural_signals.get("neighbor_box_support"), 0)
+    progression = _to_int(structural_signals.get("consecutive_box_progression"), 0)
+    candidate_preview_count = _to_int(structural_signals.get("candidate_preview_count"), 0)
+
+    positive_score = (
+        0.22 * trace_score
+        + 0.85 * lane_score
+        + 0.45 * double_score
+        + 0.45 * row_repeat_score
+        + 0.18 * corridor_score
+        + 4.0 * early_activation
+        + 0.7 * precluster_strength
+        + 0.6 * core_vs_clutter
+        + 0.9 * reveal_purity
+        + 0.35 * neighbor_support
+        + 0.3 * progression
+    )
+    positive_score += min(3.0, raw_exposure_count * 0.1)
+
+    reasons: List[str] = []
+    if not strong_trace:
+        reasons.append("no_strong_trace_families")
+    if not training_ledgers["precluster_ledger"]:
+        reasons.append("no_preclusters")
+    if not training_ledgers["reduction_reveal_ledger"]:
+        reasons.append("no_reveals")
+    if cold_ratio >= 0.95 and path_summary_count > 0:
+        reasons.append("all_locations_cold")
+    elif cold_ratio >= 0.65:
+        reasons.append("mostly_cold_locations")
+    if candidate_preview_count == 0:
+        reasons.append("no_candidate_preview")
+
+    if raw_exposure_count == 0 and path_summary_count == 0:
+        classification = "true_empty"
+    elif (
+        not strong_trace
+        and not lane_only
+        and not training_ledgers["reduction_reveal_ledger"]
+        and row_repeat_score <= 1.0
+        and cold_ratio >= 0.9
+    ):
+        classification = "true_empty"
+    elif positive_score >= 9.0 and cold_ratio < 0.9:
+        classification = "positive_trace"
+    elif positive_score >= 5.5 or (trace_score > 0.0 and path_summary_count > 0):
+        classification = "active_low_trust"
+    else:
+        classification = "true_empty"
+
+    if classification == "positive_trace":
+        confidence = min(1.0, 0.45 + positive_score / 22.0)
+    elif classification == "active_low_trust":
+        confidence = min(1.0, 0.35 + positive_score / 18.0)
+    else:
+        confidence = min(1.0, 0.45 + (cold_ratio * 0.35) + (0.2 if raw_exposure_count <= 2 else 0.0))
+
+    return {
+        "classification": classification,
+        "is_sparse": classification == "true_empty",
+        "confidence": round(float(confidence), 3),
+        "positive_signal_score": round(float(positive_score), 3),
+        "reasons": reasons or ["none"],
+        "cold_location_count": int(cold_location_count),
+        "cold_ratio": round(float(cold_ratio), 3),
+        "raw_exposure_count": int(raw_exposure_count),
+        "path_summary_count": int(path_summary_count),
+    }
+
+
 def _build_training_ledgers(
     items: Sequence[Dict[str, Any]],
     *,
@@ -849,6 +1957,10 @@ def build_dr_arena_payload(
     top_lane: int = 10,
     top_competing: int = 10,
     top_double: int = 10,
+    top_vtrac_gateway: int = 10,
+    top_vtrac_cluster: int = 10,
+    top_assigned_box_vtrac: int = 10,
+    top_vtrac_fusion: int = 10,
     top_row_repeat: int = 10,
     top_preclusters: int = 12,
     top_reveals: int = 12,
@@ -873,6 +1985,7 @@ def build_dr_arena_payload(
     payload: Dict[str, Any] = {
         "tool": "digit_reduction_arena",
         "version": 1,
+        "schema_revision": "v1.1",
         "state": state_key,
         "results_date": results_date,
         "history_date": history_date,
@@ -919,20 +2032,58 @@ def build_dr_arena_payload(
         lane_only = _derive_lane_only_confidence(families, top_n=top_lane)
         competing = _derive_competing_literal_pressure(patterns, candidate_rows, top_n=top_competing)
         doubles = _derive_double_pressure(patterns, top_n=top_double)
-
-        sparse_reasons: List[str] = []
-        if not strong_trace:
-            sparse_reasons.append("no_strong_trace_families")
-        if not training_ledgers["precluster_ledger"]:
-            sparse_reasons.append("no_preclusters")
-        if not training_ledgers["reduction_reveal_ledger"]:
-            sparse_reasons.append("no_reveals")
-        if training_ledgers["cold_location_count"] >= max(1, len(log_rows)):
-            sparse_reasons.append("all_locations_cold")
+        corridors = _derive_corridors(families, top_n=top_trace)
+        vtrac_gateway = _derive_vtrac_lane_gateway(
+            families=families,
+            patterns=patterns,
+            candidate_rows=candidate_rows,
+            corridors=corridors,
+            top_n=top_vtrac_gateway,
+        )
+        assigned_box_vtrac = _derive_assigned_box_vtrac_strength(
+            variant_rows=variant_rows,
+            top_n=top_assigned_box_vtrac,
+        )
+        structural_signals = _derive_structural_signals(
+            variant_rows=variant_rows,
+            candidate_rows=candidate_rows,
+            training_ledgers=training_ledgers,
+            corridors=corridors,
+            contains_winners_artifacts=contains_winners_artifacts,
+        )
+        vtrac_clusters = _derive_vtrac_cluster_strength(
+            trace_rows=strong_trace,
+            lane_rows=lane_only,
+            corridor_rows=corridors,
+            gateway_rows=vtrac_gateway,
+            double_rows=doubles,
+            row_repeat_rows=training_ledgers["row_repeat_and_final_survival"],
+            fourth_rows=training_ledgers["fourth_variable_candidates"],
+            top_n=top_vtrac_cluster,
+        )
+        vtrac_fusion = _derive_vtrac_fusion_strength(
+            gateway_rows=vtrac_gateway,
+            cluster_rows=vtrac_clusters,
+            assigned_box_rows=assigned_box_vtrac,
+            structural_signals=structural_signals,
+            top_n=top_vtrac_fusion,
+        )
+        empty_lens = _classify_empty_lens(
+            strong_trace=strong_trace,
+            lane_only=lane_only,
+            doubles=doubles,
+            row_repeat=training_ledgers["row_repeat_and_final_survival"],
+            corridors=corridors,
+            training_ledgers=training_ledgers,
+            structural_signals=structural_signals,
+            log_rows=log_rows,
+        )
 
         payload["sections"][section] = {
             "summary": {
                 "per_item_rows": len(variant_rows),
+                "raw_exposure_count": int(structural_signals["raw_exposure_count"]),
+                "path_summary_count": int(structural_signals["path_summary_count"]),
                 "top_candidate_rows": len(candidate_rows),
                 "training_locations": len(log_rows),
                 "unique_patterns": len(patterns),
@@ -954,12 +2105,14 @@ def build_dr_arena_payload(
             "dr_lane_only_confidence": lane_only,
             "dr_competing_literal_pressure": competing,
             "dr_double_pressure": doubles,
+            "dr_vtrac_lane_gateway": vtrac_gateway,
+            "dr_vtrac_cluster_strength": vtrac_clusters,
+            "dr_assigned_box_vtrac_strength": assigned_box_vtrac,
+            "dr_vtrac_fusion_strength": vtrac_fusion,
             "dr_row_repeat_and_final_survival": training_ledgers["row_repeat_and_final_survival"],
-            "dr_empty_lens": {
-                "is_sparse": bool(sparse_reasons),
-                "reasons": sparse_reasons,
-                "cold_location_count": int(training_ledgers["cold_location_count"]),
-            },
+            "dr_corridor_strength": corridors,
+            "dr_empty_lens": empty_lens,
+            "dr_structural_signals": structural_signals,
             "precluster_ledger": training_ledgers["precluster_ledger"],
             "reduction_reveal_ledger": training_ledgers["reduction_reveal_ledger"],
             "box_validity_ledger": training_ledgers["box_validity_ledger"],
@@ -975,7 +2128,7 @@ def build_dr_arena_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("- Predictive-side DR evidence canvas (winners-free)")
     lines.append(
-        f"- inputs_hash: `{payload.get('inputs_hash', '')[:16]}` | profile: `{payload.get('profile', '')}` | experiment: `{payload.get('experiment_tag') or 'none'}`"
+        f"- inputs_hash: `{payload.get('inputs_hash', '')[:16]}` | profile: `{payload.get('profile', '')}` | experiment: `{payload.get('experiment_tag') or 'none'}` | schema: `{payload.get('schema_revision', 'v1')}`"
     )
     lines.append("")
 
@@ -984,13 +2137,13 @@ def build_dr_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"## {section}")
         lines.append("")
         lines.append(
-            f"- rows={summary.get('per_item_rows', 0)} | top_candidates={summary.get('top_candidate_rows', 0)} | "
+            f"- rows={summary.get('per_item_rows', 0)} | raw_exposure={summary.get('raw_exposure_count', 0)} | path_summary={summary.get('path_summary_count', 0)} | top_candidates={summary.get('top_candidate_rows', 0)} | "
             f"locations={summary.get('training_locations', 0)} | families={summary.get('unique_families', 0)} | "
             f"patterns={summary.get('unique_patterns', 0)} | max_score_v2={summary.get('max_score_v2', 0.0):.3f}"
         )
         empty = dict(section_payload.get("dr_empty_lens") or {})
         lines.append(
-            f"- empty_lens={bool(empty.get('is_sparse'))} | reasons={', '.join(empty.get('reasons') or ['none'])}"
+            f"- empty_lens={empty.get('classification', 'unknown')} | sparse={bool(empty.get('is_sparse'))} | reasons={', '.join(empty.get('reasons') or ['none'])}"
         )
         lines.append("")
 
@@ -1042,6 +2195,17 @@ def build_dr_arena_markdown(payload: Dict[str, Any]) -> str:
             ),
         )
         _emit_table(
+            "Corridor Strength",
+            section_payload.get("dr_corridor_strength", [])[:6],
+            (
+                ("Family", "family_id"),
+                ("Strength", "corridor_strength_score"),
+                ("Scope", "corridor_scope"),
+                ("Band", "corridor_band"),
+                ("Boxes", "path_summary_count"),
+            ),
+        )
+        _emit_table(
             "Competing Literal Pressure",
             section_payload.get("dr_competing_literal_pressure", [])[:6],
             (
@@ -1061,6 +2225,50 @@ def build_dr_arena_markdown(payload: Dict[str, Any]) -> str:
                 ("Rows", "rows"),
                 ("Dup Depth", "duplicate_depth"),
                 ("Mirror", "mirror_pattern"),
+            ),
+        )
+        _emit_table(
+            "VTRAC Lane Gateway",
+            section_payload.get("dr_vtrac_lane_gateway", [])[:6],
+            (
+                ("Index", "vtrac_index"),
+                ("Gateway", "gateway_score"),
+                ("Members", "member_count"),
+                ("Rows", "rows_total"),
+                ("Top Families", "top_families"),
+            ),
+        )
+        _emit_table(
+            "VTRAC Cluster Strength",
+            section_payload.get("dr_vtrac_cluster_strength", [])[:6],
+            (
+                ("Index", "vtrac_index"),
+                ("Cluster", "cluster_score"),
+                ("Supports", "support_class_count"),
+                ("Families", "member_family_count"),
+                ("Top Families", "top_families"),
+            ),
+        )
+        _emit_table(
+            "Assigned-Box VTRAC Strength",
+            section_payload.get("dr_assigned_box_vtrac_strength", [])[:6],
+            (
+                ("Index", "vtrac_index"),
+                ("Assigned Box", "assigned_box_score"),
+                ("Rows", "row_count"),
+                ("Boxes", "box_count"),
+                ("Top Windows", "top_windows"),
+            ),
+        )
+        _emit_table(
+            "VTRAC Fusion Strength",
+            section_payload.get("dr_vtrac_fusion_strength", [])[:6],
+            (
+                ("Index", "vtrac_index"),
+                ("Fusion", "fusion_score"),
+                ("Agree", "agreement_bonus"),
+                ("Rescue", "rescue_bonus"),
+                ("Top Windows", "top_windows"),
             ),
         )
         _emit_table(
@@ -1085,6 +2293,17 @@ def build_dr_arena_markdown(payload: Dict[str, Any]) -> str:
                 ("Score", "score"),
             ),
         )
+        structural = dict(section_payload.get("dr_structural_signals") or {})
+        if structural:
+            lines.append("### Structural Signals")
+            lines.append("")
+            lines.append(f"- early_activation_strength={structural.get('early_activation_strength', 0)}")
+            lines.append(f"- consecutive_box_progression={structural.get('consecutive_box_progression', 0)}")
+            lines.append(f"- neighbor_box_support={structural.get('neighbor_box_support', 0)}")
+            lines.append(f"- family_neighborhood_saturation={structural.get('family_neighborhood_saturation', 0)}")
+            lines.append(f"- family_asymmetry_inside_corridor={structural.get('family_asymmetry_inside_corridor', 0)}")
+            lines.append(f"- core_vs_clutter_transit_score={structural.get('core_vs_clutter_transit_score', 0)}")
+            lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
 

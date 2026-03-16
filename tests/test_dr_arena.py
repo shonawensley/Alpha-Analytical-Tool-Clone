@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 
+from modules.vtrac_reference import get_vtrac_index
 from scripts.tools.dr_arena import build_dr_arena_markdown, build_dr_arena_payload
 
 
@@ -294,6 +295,7 @@ def test_dr_arena_surfaces_predictive_evidence_classes(tmp_path: Path):
     )
 
     assert payload is not None
+    assert payload["schema_revision"] == "v1.1"
     combined = payload["sections"]["Combined"]
     evening = payload["sections"]["Evening"]
 
@@ -317,8 +319,39 @@ def test_dr_arena_surfaces_predictive_evidence_classes(tmp_path: Path):
         item["core_value"] == "028" and item["extra_digits"] == "4"
         for item in combined["fourth_variable_candidates"]
     )
+    assert combined["dr_corridor_strength"]
+    assert combined["dr_corridor_strength"][0]["family_id"] == "20"
+    assert combined["dr_corridor_strength"][0]["corridor_band"] == "set1_current_day"
+    assert combined["dr_corridor_strength"][0]["corridor_scope"] in {"vtrac_corridor", "family_neighborhood", "exact_corridor"}
+    assert combined["dr_vtrac_lane_gateway"]
+    assert combined["dr_vtrac_lane_gateway"][0]["vtrac_index"] == get_vtrac_index("028")
+    assert combined["dr_vtrac_lane_gateway"][0]["member_count"] >= 1
+    assert combined["dr_vtrac_cluster_strength"]
+    assert combined["dr_vtrac_cluster_strength"][0]["vtrac_index"] == get_vtrac_index("028")
+    assert combined["dr_vtrac_cluster_strength"][0]["support_class_count"] >= 2
+    assert "raw_cluster_score" in combined["dr_vtrac_cluster_strength"][0]
+    assert "cluster_adjustment" in combined["dr_vtrac_cluster_strength"][0]
+    assert combined["dr_assigned_box_vtrac_strength"]
+    assert combined["dr_assigned_box_vtrac_strength"][0]["vtrac_index"] == get_vtrac_index("028")
+    assert combined["dr_assigned_box_vtrac_strength"][0]["row_count"] >= 1
+    assert combined["dr_assigned_box_vtrac_strength"][0]["top_windows"]
+    assert combined["dr_vtrac_fusion_strength"]
+    assert combined["dr_vtrac_fusion_strength"][0]["vtrac_index"] == get_vtrac_index("028")
+    assert combined["dr_vtrac_fusion_strength"][0]["fusion_score"] > 0
+    assert "vtrac_fusion_strength" in combined["dr_vtrac_fusion_strength"][0]["why_tags"]
 
-    assert evening["dr_empty_lens"]["is_sparse"] is True
+    structural = combined["dr_structural_signals"]
+    assert structural["raw_exposure_count"] == 4
+    assert structural["path_summary_count"] == 2
+    assert structural["early_activation_strength"] > 0
+    assert structural["neighbor_box_support"] >= 0
+    assert structural["overlay_summary_mismatch"]["available"] is False
+
+    assert combined["dr_empty_lens"]["classification"] == "positive_trace"
+    assert combined["dr_empty_lens"]["is_sparse"] is False
+
+    assert evening["dr_empty_lens"]["is_sparse"] is False
+    assert evening["dr_empty_lens"]["classification"] == "active_low_trust"
     assert "all_locations_cold" in evening["dr_empty_lens"]["reasons"]
 
 
@@ -340,6 +373,10 @@ def test_dr_arena_markdown_is_human_readable(tmp_path: Path):
     md = build_dr_arena_markdown(payload)
     assert "DR Arena" in md
     assert "Trace Strength" in md
+    assert "Corridor Strength" in md
     assert "Competing Literal Pressure" in md
     assert "Double Pressure" in md
+    assert "VTRAC Lane Gateway" in md
+    assert "VTRAC Cluster Strength" in md
     assert "Fourth Variable" in md
+    assert "Structural Signals" in md
