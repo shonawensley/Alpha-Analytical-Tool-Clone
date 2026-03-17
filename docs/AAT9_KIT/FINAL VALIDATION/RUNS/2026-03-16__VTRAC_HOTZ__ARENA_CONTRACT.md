@@ -18,6 +18,16 @@ These tools should feed the arena as:
 
 They should **not** be forced to act like tiny direct-caller oracles.
 
+Important guardrail after the `2026-03-17` artifact-first confirmation:
+
+- the semantic arena objects below should be treated as **rollups over concrete payload families**
+- they should **not** replace the raw count/tag/descriptor fields that already exist in the live artifacts
+
+So for both tools the arena should preserve:
+
+- high-level semantic meaning
+- plus the concrete fields that make those meanings inspectable and scoreable later
+
 ## VTRAC Analyzer Contract
 
 ## Primary predictive-side ingest
@@ -37,6 +47,59 @@ Primary fields to preserve:
 - cross-section echo
 - section profile / section strengths
 
+### Concrete payload families to preserve
+
+From enhanced JSON:
+
+- `indices_ranked[].index`
+- `indices_ranked[].score`
+- `indices_ranked[].evidence`
+- `indices_ranked[].straights`
+- `straights_ranked[].straight`
+- `straights_ranked[].index`
+- `straights_ranked[].score`
+- `straights_ranked[].reasons`
+- `top_straights`
+- `section_summaries.<section>.hot_count`
+- `section_summaries.<section>.superhot_count`
+- `section_summaries.<section>.consensus_col1`
+- `section_summaries.<section>.consensus_col2`
+- `section_summaries.<section>.stable_columns`
+- `section_summaries.<section>.top_box_signatures`
+- `section_summaries.<section>.ring_votes`
+- `section_summaries.<section>.analyzer_metrics.indices_considered`
+- `section_summaries.<section>.analyzer_metrics.mask_drop_count`
+- `section_summaries.<section>.analyzer_metrics.reduction_hits`
+- `section_summaries.<section>.analyzer_metrics.mirror_supported`
+- `section_summaries.<section>.analyzer_metrics.double_hits`
+- `section_summaries.<section>.analyzer_metrics.top_straights`
+- `telemetry.weights`
+- `telemetry.mask_digits`
+
+From compact report:
+
+- `overlap`
+- `stable_cols_count`
+- `stable_cols`
+- `consensus_col1`
+- `consensus_col2`
+- `cross_section_echo`
+- `hot_count`
+- `superhot_count`
+- `mask_drop`
+- `mirror_supported`
+- `double_hits`
+- `confidence_score`
+- `tier`
+- `flags`
+- `top_tokens`
+- `recommended_tokens`
+- `top_straights`
+- `section_prior`
+- `state_prior`
+- `why`
+- `source`
+
 ## VTRAC arena objects to preserve
 
 - `cross_variant_lane_strength`
@@ -48,11 +111,21 @@ Primary fields to preserve:
 - `mask_drop_lane_reveal`
 - `mirror_double_lane_support`
 
+These semantic objects should be backed by the concrete payload families above,
+not substituted for them.
+
 ## VTRAC winners lens
 
 Keep outside predictive mode:
 
 - winners HTML / winners JSON / winner placement diagnostics
+
+Useful audit-only families confirmed by the winner artifacts:
+
+- `pattern_occurrence`
+- `pattern_persistence`
+- `pattern_stability`
+- `straight_counts`
 
 These remain the audit lens, not the predictive feed.
 
@@ -77,9 +150,70 @@ Transitional compatibility source:
 
 - predictive `*_hot_zones_winner_map.json`
 
-Forensic only:
+Secondary deep-drill layer to keep reachable:
 
 - `*_hot_zones_per_lane.csv`
+
+### Concrete payload families to preserve
+
+From `top_lanes.csv`:
+
+- `triad`
+- `vt_triad`
+- `support_count`
+- `hot_hits`
+- `superhot_hits`
+- `vertical_hits`
+- `set1_hits`
+- `col1_hits`
+- `precol1_hits`
+- `vt_straight_hits`
+- `vt_only_lane_hits`
+- `guard_hits`
+- `literal_hits`
+- `variant_span`
+- `set_span`
+- `column_span`
+- `score_mean`
+- `score_max`
+- `evidence_tags`
+
+From `per_lane.csv` (secondary/deep-drill, not the lightweight primary ingest):
+
+- `section`
+- `set_name`
+- `draw_name`
+- `column_index`
+- `triad`
+- `vt_triad`
+- `vertical_support`
+- `horizontal_span`
+- `set_span`
+- `variant_echo`
+- `has_straight`
+- `has_vt_straight`
+- `vt_only_lane`
+- `col1_arrival`
+- `precol1_funnel`
+- `ls_col_42`
+- `ls2_lane`
+- `is_starred`
+- `star_count`
+- `is_superhot_slot`
+- `is_set1`
+- `guard_injected`
+- `score`
+- `reasons`
+
+From `meta.json`:
+
+- `date`
+- `guard_triads_top20`
+- `guard_triads_total`
+- `json_source`
+- `per_item_rows`
+- `top_rows`
+- `state`
 
 ## Hot Zones arena objects to preserve
 
@@ -93,6 +227,9 @@ Forensic only:
 - `repeat_3value_score`
 - `consensus_column_signal`
 - `set1_funnel_density`
+
+These semantic objects should be backed by the concrete count/span/tag families
+above, not substituted for them.
 
 ## Hot Zones digest requirement
 
@@ -127,6 +264,11 @@ Together they describe:
 - its lane correctness
 - its pressure / survivorship profile
 - its cross-variant confirmation
+
+Important refinement after artifact-first confirmation:
+
+- `VTRAC` should carry both the semantic lane objects and the concrete lane descriptors that produced them
+- `Hot Zones` should carry both the semantic pressure objects and the concrete count/span/tag descriptors that produced them
 
 ## Freeze Criteria
 
