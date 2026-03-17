@@ -39,7 +39,7 @@ It is **not**:
 | `Stable Pattern Extractor` | `complete` |
 | `Digit Reduction` | `complete` |
 | `VTRAC Analyzer` | `complete` |
-| `Hot Zones` | `pending next pass` |
+| `Hot Zones` | `complete` |
 
 The intent is to complete this one tool at a time so no important evidence class is lost.
 
@@ -2245,6 +2245,619 @@ Primary references used for this VTRAC section:
 - `scripts/tools/create_candidate_universe.py`
 - `scripts/tools/validate_vtrac_compact_report.py`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC__HANDOFF.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ASSESSMENT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ARENA_CONTRACT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-17__VTRAC_HOTZ__ARTIFACT_FIRST_CONFIRMATION.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ANALYSIS_ARENA_INTEGRATION_QUEUE.md`
+
+---
+
+## Hot Zones
+
+## 1. Current Role
+
+`Hot Zones` should now be understood as:
+
+- a late-tail pressure extractor
+- a vertical-support / survivorship extractor
+- a col1 / pre-col1 funnel extractor
+- a lane / index corroboration tool
+- a hot / superhot pressure lens
+
+It should **not** be judged mainly as:
+
+- a tiny top-k direct straight caller
+- a standalone exact-winner oracle
+- a replacement for later cross-tool aggregation
+
+This is the most important Hot Zones conclusion from the final sweep.
+
+The final Hot Zones read is:
+
+- Hot Zones is strongest when preserving where pressure is surviving and tightening
+- Hot Zones loses value when forced into a tiny direct-caller role
+- therefore the arena must preserve both the semantic rollups and the concrete count/span/tag families that make the pressure environment inspectable
+
+## 2. Canonical Predictive Sources
+
+Hot Zones' canonical predictive-side artifacts are:
+
+- `sharepacks/_predictive/<D>/<STATE>/hot_zones/<STATE>/<STATE>_hot_zones_top_lanes.csv`
+- `sharepacks/_predictive/<D>/<STATE>/hot_zones/<STATE>/<STATE>_hot_zones_meta.json`
+
+Secondary deep-drill predictive artifact:
+
+- `sharepacks/_predictive/<D>/<STATE>/hot_zones/<STATE>/<STATE>_hot_zones_per_lane.csv`
+
+Transitional compact compatibility artifact:
+
+- `sharepacks/_predictive/<D>/<STATE>/hot_zones/<STATE>/<D>_hot_zones_winner_map.json`
+
+Important judgment:
+
+- `top_lanes.csv + meta.json` are the primary predictive ingest contract
+- `per_lane.csv` is a secondary deep-drill / forensic layer that should remain reachable
+- `winner_map.json` is useful compatibility and bounded-consumer material, but it is not sufficient by itself to define the full arena contract
+
+Current downstream bounded helper surfaces in Candidate Universe are:
+
+- `hot_zones_top_triads`
+- `hot_zones_index_closure`
+- `signals_bundle.hot_zones.triads`
+
+These bounded surfaces are useful, but they are **not** the full Hot Zones arena contract.
+
+## 3. Audit-Only / Winners Lens
+
+Hot Zones' truth-layer / audit surfaces should remain available for:
+
+- post-results explanation
+- gold-day review
+- winner-lane confirmation
+- late-tail / vertical support review
+- later aggregated-arena learning
+
+Important Hot Zones truth / audit artifacts:
+
+- Hot Zones winner summaries
+- winner-map hit diagnostics
+- post-results placement summaries
+- `scripts/tools/hot_zones_sharepack_summary.py`
+- winners HTML / overlay review where Hot Zones pressure can be compared to the actual winner corridor
+
+These are not predictive inputs.
+They are the truth lens that justified the final Hot Zones arena design.
+
+## 4. Hot Zones' Final Predictive Meaning
+
+Hot Zones contributes all of the following to the aggregated arena:
+
+- late-tail pressure
+- hot / superhot pressure
+- vertical support
+- variant-span and set-span breadth
+- column-span tightening
+- set1 density and currentness
+- col1 arrival context
+- pre-col1 funnel context
+- VT-straight and VT-only lane support
+- guard / literal / evidence-tag context
+
+The crucial design rule is:
+
+- **preserve first, narrow later**
+
+The old failure mode was collapsing Hot Zones too early into top-triad rank.
+
+## 5. Hot Zones Raw Evidence Families To Preserve
+
+Hot Zones has four main predictive evidence layers:
+
+1. top-lane aggregated pressure evidence
+2. per-lane deep-drill evidence
+3. meta / validator context
+4. transitional compact winner-map compatibility
+
+### 5.1 Top-Lane Aggregated Pressure Evidence
+
+Source:
+
+- `<STATE>_hot_zones_top_lanes.csv`
+
+Primary semantic role:
+
+- the main predictive Hot Zones surface
+- shows which triads / VT triads have meaningful late-tail, vertical, Set1, and funnel pressure
+
+Core top-lane fields that should be preserved or remain reachable:
+
+| Field / family | Meaning in the arena |
+|---|---|
+| `triad` | literal triad identity |
+| `vt_triad` | VTRAC-lane / VT triad identity |
+| `support_count` | total support footprint |
+| `hot_hits` | hot-slot support count |
+| `superhot_hits` | superhot-slot support count |
+| `vertical_hits` | vertical survivorship / repeat support |
+| `set1_hits` | current-day / Set1 concentration |
+| `col1_hits` | direct col1 arrival strength |
+| `precol1_hits` | pre-col1 funnel strength |
+| `vt_straight_hits` | VT-straight corroboration |
+| `vt_only_lane_hits` | lane support stronger than literal support |
+| `guard_hits` | guard-generated presence / stabilization |
+| `literal_hits` | explicit literal support count |
+| `variant_span` | cross-variant breadth |
+| `set_span` | cross-set breadth |
+| `column_span` | how wide the triad survives across columns |
+| `score_mean`, `score_max` | bounded summary of Hot Zones strength |
+| `evidence_tags` | compact semantic tags explaining the pressure shape |
+
+Important judgment:
+
+- this is the main Hot Zones predictive feed
+- rank alone is not enough
+- the arena must preserve the counts, spans, and tags that explain why a row matters even when it is not top-10
+
+### 5.2 Per-Lane Deep-Drill Evidence
+
+Source:
+
+- `<STATE>_hot_zones_per_lane.csv`
+
+Primary semantic role:
+
+- the richer per-location / per-column / per-section drill-down behind the top-lane surface
+- useful for verifying how pressure survives and where it is sitting physically in the table progression
+
+Core per-lane fields that should be preserved or remain reachable:
+
+| Field / family | Meaning in the arena |
+|---|---|
+| `section`, `set_name`, `draw_name`, `column_index` | exact location and currentness context |
+| `triad`, `vt_triad` | literal and VTRAC lane identity |
+| `vertical_support` | vertical repeat strength at that location |
+| `horizontal_span` | lateral span / persistence |
+| `set_span` | set breadth at the row level |
+| `variant_echo` | cross-variant echo |
+| `has_straight`, `has_vt_straight` | literal vs VT-straight witness flags |
+| `vt_only_lane` | lane-led / literal-weaker condition |
+| `col1_arrival` | direct col1 arrival clue |
+| `precol1_funnel` | pre-col1 funnel clue |
+| `ls_col_42`, `ls2_lane` | long-string / lane support context |
+| `is_starred`, `star_count` | starred / emphasized slot context |
+| `is_superhot_slot` | superhot-slot context |
+| `is_set1` | current-day / Set1 flag |
+| `guard_injected` | guard-logic provenance |
+| `score` | per-lane strength |
+| `reasons` | human-readable evidence list |
+
+Important judgment:
+
+- this layer should remain reachable for review and later deep aggregation
+- but it should not be treated as the lightweight primary ingest
+
+### 5.3 Meta / Validator Context
+
+Source:
+
+- `<STATE>_hot_zones_meta.json`
+
+Primary semantic role:
+
+- tool health
+- run provenance
+- row-volume / guard context
+
+Important fields:
+
+| Field | Meaning |
+|---|---|
+| `date` | predictive date / run identity |
+| `guard_triads_top20` | count of guarded triads in the top band |
+| `guard_triads_total` | total guard pressure in the run |
+| `json_source` | provenance / source JSON |
+| `per_item_rows` | size of the deep-drill layer |
+| `top_rows` | size of the compact top-lane layer |
+| `state` | state identity |
+
+This layer is primarily for audit and calibration, not direct promotion.
+
+### 5.4 Transitional Winner-Map Compatibility
+
+Source:
+
+- `<D>_hot_zones_winner_map.json`
+
+Primary semantic role:
+
+- compact triad list / placement compatibility
+- bounded consumer compatibility for current predictive code
+
+Important judgment:
+
+- useful for current bounded consumers and some compact review flows
+- not sufficient as the full predictive arena feed
+- should remain subordinate to `top_lanes.csv + meta.json`
+
+## 6. Hot Zones Arena Objects That Should Feed The Aggregated Arena
+
+Hot Zones does not currently have a dedicated standalone predictive `hot_zones_arena*.json`.
+
+So the aggregated arena should preserve the following semantic objects as rollups
+over the raw evidence families above.
+
+Important guardrail:
+
+- these semantic objects should **not** replace the concrete count/span/tag families
+- they should sit on top of them
+
+### 6.1 `late_tail_pressure_strength`
+
+Primary meaning:
+
+- how strongly a triad or VT triad is surviving in the later string-table columns
+
+Why it matters:
+
+- this is the core Hot Zones contribution
+- it tells the arena where pressure is still alive rather than only what ranks highly
+
+It should be backed by:
+
+- `support_count`
+- `column_span`
+- late-column presence
+- score summaries
+
+### 6.2 `superhot_echo_strength`
+
+Primary meaning:
+
+- how much hot / superhot support is reinforcing the same lane or triad
+
+Why it matters:
+
+- hot and superhot pressure are a major reason a zone is structurally persuasive
+
+It should be backed by:
+
+- `hot_hits`
+- `superhot_hits`
+- `is_superhot_slot`
+- evidence tags
+
+### 6.3 `vertical_repeat_strength`
+
+Primary meaning:
+
+- how strongly a triad is repeating vertically rather than only appearing once
+
+Why it matters:
+
+- vertical support is one of the main Hot Zones truths and a key part of survivorship
+
+It should be backed by:
+
+- `vertical_hits`
+- `vertical_support`
+- `variant_echo`
+- evidence tags
+
+### 6.4 `rowtype_span_support`
+
+Primary meaning:
+
+- how broadly the pressure survives across variants, sets, and columns
+
+Why it matters:
+
+- this is how Hot Zones proves that a zone is not just a tiny local blip
+
+It should be backed by:
+
+- `variant_span`
+- `set_span`
+- `column_span`
+- `horizontal_span`
+
+### 6.5 `precol1_funnel_strength`
+
+Primary meaning:
+
+- how strongly pressure is tightening just before col1
+
+Why it matters:
+
+- the pre-col1 funnel is one of the most predictive location concepts in Hot Zones
+
+It should be backed by:
+
+- `precol1_hits`
+- `precol1_funnel`
+- evidence tags
+
+### 6.6 `col1_arrival_strength`
+
+Primary meaning:
+
+- how strongly the zone has already arrived in col1/current frontier
+
+Why it matters:
+
+- this is the most direct “currentness” signal inside Hot Zones
+
+It should be backed by:
+
+- `col1_hits`
+- `col1_arrival`
+- `set1_hits`
+- `is_set1`
+
+### 6.7 `vt_only_lane_pressure`
+
+Primary meaning:
+
+- how much the zone is stronger as a VT lane than as a literal triad
+
+Why it matters:
+
+- this is the Hot Zones equivalent of “the right lane is alive even if the literal is noisy”
+
+It should be backed by:
+
+- `vt_triad`
+- `vt_only_lane_hits`
+- `vt_only_lane`
+- `vt_straight_hits`
+
+### 6.8 `repeat_3value_score`
+
+Primary meaning:
+
+- repeat-style reinforcement of the same 3-value object across the progression
+
+Why it matters:
+
+- this is one of the key reasons a mid-ranked Hot Zones row can still be structurally strong
+
+It should be backed by:
+
+- `support_count`
+- `vertical_hits`
+- `horizontal_span`
+- repeated appearance across sections / columns
+
+### 6.9 `consensus_column_signal`
+
+Primary meaning:
+
+- whether the zone is clustering in the same important columns / locations
+
+Why it matters:
+
+- later aggregation needs to know whether the pressure is focused or diffuse
+
+It should be backed by:
+
+- `column_span`
+- col1 / pre-col1 indicators
+- evidence tags
+- location-level rows
+
+### 6.10 `set1_funnel_density`
+
+Primary meaning:
+
+- how much the zone is both current-day and funnelling toward the frontier
+
+Why it matters:
+
+- this is one of Hot Zones’ most distinct predictive environment clues
+
+It should be backed by:
+
+- `set1_hits`
+- `precol1_hits`
+- `col1_hits`
+- `is_set1`
+- `precol1_funnel`
+
+## 7. Hot Zones-Specific Advanced Evidence Objects And Final Learnings
+
+These are the most important nuanced Hot Zones conclusions from the final sweep and the artifact-first confirmation.
+
+### 7.1 Top-band under-reading
+
+Status:
+
+- **major keeper**
+- **methodological warning**
+
+Why it matters:
+
+- the winner-artifact review showed that Hot Zones can carry strong pressure objects far outside a naïve top-10 view
+
+Important examples:
+
+- `Virginia4 473`
+- `Florida4 611`
+
+Important guardrail:
+
+- do not judge Hot Zones only by the literal rank of the triad in `top_lanes.csv`
+- preserve the numeric pressure texture behind the row
+
+### 7.2 Concrete count / span / tag preservation
+
+Status:
+
+- **fully preserved in the arena contract**
+- **major keeper**
+
+Why it matters:
+
+- the earlier contract was too abstract
+- the real value of Hot Zones is in the concrete pressure counts, spans, and tags that explain why a zone matters
+
+Important judgment:
+
+- preserve the raw count families and evidence tags
+- do not collapse them into one scalar too early
+
+### 7.3 Per-lane deep-drill accessibility
+
+Status:
+
+- **kept as secondary / deep-drill evidence**
+
+Why it matters:
+
+- later example review and aggregated-arena tuning will sometimes need the precise location-level story
+
+Important guardrail:
+
+- keep `per_lane.csv` reachable
+- do not force it to become the lightweight primary ingest
+
+### 7.4 Winner-artifact-first confirmation
+
+Status:
+
+- **methodological keeper**
+
+Why it matters:
+
+- the `2026-03-17` confirmation pass showed the earlier Hot Zones handoff was directionally right but too compressed
+- the correct fix was broader contract preservation, not another weight or guard loop
+
+This matters because it established:
+
+- no broad retune was justified
+- more concrete payload families needed to be preserved
+- Hot Zones is ready for arena handoff when treated as a pressure / survivorship feed
+
+### 7.5 Digest / validator closeout
+
+Status:
+
+- **still useful as a bounded finish**
+
+Why it matters:
+
+- a digest/ledger layer would make arena review and validation easier without reopening the analyzer itself
+
+Important digest targets:
+
+- `hot_zones_summary_digest.csv`
+- `hot_zones_ledger_all.csv`
+- schema/manifest contract
+
+## 8. Hot Zones Bounded Downstream Helper Surfaces
+
+These are important, but they are **not** the core Hot Zones arena feed.
+
+They belong in the “conversion helper / bounded consumer” category.
+
+| Method | Role | Current judgment |
+|---|---|---|
+| `hot_zones_top_triads` | bounded top-triad pack from `winner_map` or `top_lanes` | keep as a helper, not the full Hot Zones truth |
+| `hot_zones_index_closure` | bounded “index-hit -> box-hit” conversion helper | keep as an additive helper, not the core contract |
+| `signals_bundle.hot_zones.triads` | compact triad signals for later bundle fusion | keep as a bounded bundle surface |
+
+Important judgment:
+
+- these helpers remain useful for downstream experimentation
+- but the aggregated arena should reason from the richer Hot Zones evidence first
+
+## 9. Hot Zones' Final Strengths
+
+Hot Zones is strongest when treated as:
+
+- a late-tail pressure tool
+- a vertical-repeat / survivorship tool
+- a pre-col1 / col1 tightening tool
+- a hot / superhot reinforcement tool
+- a VT-lane corroboration tool
+
+Hot Zones is especially powerful for:
+
+- showing where pressure is physically living in the later columns
+- proving that a zone is repeated vertically and across variants
+- exposing pre-col1 funnel and col1 arrival behavior
+- showing Set1 density and currentness
+- preserving VT-only lane pressure even when literal direct-caller value is weak
+
+## 10. Hot Zones' Final Non-Goals
+
+Do **not** force Hot Zones into:
+
+- “top triads should directly win often”
+- another broad guard loop
+- another broad weight-sweep retune
+- replacement of later cross-tool aggregation
+- using `winner_map` as the entire predictive contract
+
+Those are the wrong targets for this stage.
+
+## 11. Hot Zones -> Aggregated Arena Guidance
+
+Later aggregated arena work should treat Hot Zones as contributing:
+
+- pressure location
+- vertical survivorship
+- late-tail tightening
+- Set1 / current-day density
+- col1 and pre-col1 funnel context
+- VT-only lane corroboration
+- concrete count/span/tag families that make the pressure story interpretable
+
+Good future aggregation questions:
+
+- Does Stable preserve the same family or triad neighborhood Hot Zones is pressurizing?
+- Does DR show the same lane being buried or revealed through assigned boxes?
+- Does VTRAC confirm the same lane neighborhood via index and straight witnesses?
+- Are Aux / Control Center features reinforcing the same zone through badges, doubles, or alerts?
+
+Hot Zones should often be one of the main answers to:
+
+- where is the pressure actually surviving?
+- is it tightening toward col1/current frontier?
+- is the same zone repeating vertically and across variants?
+- is the pressure more literal, more VT-lane, or both?
+
+## 12. Final Hot Zones Judgment
+
+Hot Zones is wrapped for this phase as:
+
+- a strong arena pressure / survivorship producer
+- not a tiny direct-caller oracle
+
+The major Hot Zones work that must remain visible in the aggregated arena is:
+
+- top-lane count / span / tag families
+- per-lane deep-drill evidence
+- meta / guard context
+- late-tail and vertical-support semantics
+- Set1 / col1 / pre-col1 tightening
+- VT-only and VT-straight corroboration
+- audit-only winner correspondence
+
+If these are preserved and later compared/fused correctly, Hot Zones remains one of the main string-tool sources for understanding where the winner corridor is physically surviving in the tables.
+
+The remaining true Hot-Zones-local gap is now narrow:
+
+- digest / validation convenience and later cross-tool use
+
+That is no longer a broad reason to reopen Hot Zones tuning.
+
+## 13. Hot Zones References
+
+Primary references used for this Hot Zones section:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md`
+- `scripts/tools/create_candidate_universe.py`
+- `scripts/tools/hot_zones_sharepack_summary.py`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__HOT_ZONES__HANDOFF.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ASSESSMENT.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ARENA_CONTRACT.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-17__VTRAC_HOTZ__ARTIFACT_FIRST_CONFIRMATION.md`
