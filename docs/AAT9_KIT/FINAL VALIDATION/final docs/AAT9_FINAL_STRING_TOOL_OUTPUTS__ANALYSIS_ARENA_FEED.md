@@ -38,7 +38,7 @@ It is **not**:
 |---|---|
 | `Stable Pattern Extractor` | `complete` |
 | `Digit Reduction` | `complete` |
-| `VTRAC Analyzer` | `pending next pass` |
+| `VTRAC Analyzer` | `complete` |
 | `Hot Zones` | `pending next pass` |
 
 The intent is to complete this one tool at a time so no important evidence class is lost.
@@ -1651,3 +1651,601 @@ Primary references used for this DR section:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-15__DR_GOLD_DAY_AUDIT__SYNTHESIS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__DR_WRAP_UP__HANDOFF.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__DR_ARTIFACT_FIRST_REVIEW__REMAINING_ANCHORS.md`
+
+---
+
+## VTRAC Analyzer
+
+## 1. Current Role
+
+`VTRAC Analyzer` should now be understood as:
+
+- a lane / index evidence tool
+- a straight-neighborhood witness tool
+- a cross-section corroboration tool
+- a right-column / stable-column context tool
+- a mask-drop, mirror, and double-support clue tool
+
+It should **not** be judged mainly as:
+
+- a tiny top-k direct straight caller
+- a standalone exact-winner oracle
+- a substitute for later cross-tool aggregation
+
+This is the most important VTRAC conclusion from the final sweep.
+
+The final VTRAC read is:
+
+- VTRAC is strongest when preserving the correct winner lane / neighborhood
+- VTRAC loses value when forced into a tiny direct-caller role
+- therefore the arena must preserve both the semantic rollups and the concrete descriptor families that make those rollups inspectable
+
+## 2. Canonical Predictive Sources
+
+VTRAC's canonical predictive-side state bundles are:
+
+- `sharepacks/_predictive/<D>/<STATE>/vtrac/<STATE>/<STATE>_vtrac_enhanced_*.json`
+
+VTRAC's canonical global compact layer is:
+
+- `sharepacks/<D>/vtrac_compact_report.json`
+- `sharepacks/<D>/vtrac_compact_report.csv`
+
+Important judgment:
+
+- the enhanced JSON is the state-level predictive SSOT
+- the compact report is the global aggregator-style feed artifact
+- there is **not** currently a dedicated standalone `vtrac_arena*.json`
+- so the aggregated arena should preserve VTRAC by ingesting from these predictive artifacts or future mirrored arena exports, not by narrowing VTRAC to a tiny helper pack
+
+Current downstream bounded helper surfaces in Candidate Universe are:
+
+- `vtrac_top_straights`
+- `signals_bundle.vtrac_enhanced.top_indices`
+- `signals_bundle.vtrac_enhanced.top_straights`
+
+These bounded surfaces are useful, but they are **not** the full VTRAC arena contract.
+
+## 3. Audit-Only / Winners Lens
+
+VTRAC's truth-layer / audit surfaces should remain available for:
+
+- post-results explanation
+- gold-day review
+- winner-lane confirmation
+- same-index neighborhood review
+- later aggregated-arena learning
+
+Important VTRAC truth / audit artifacts:
+
+- winners HTML / analyzer-style winners overlays
+- winners JSON / winner placement diagnostics
+- `scripts/tools/validate_vtrac_compact_report.py`
+- compact-report validation summaries
+- winner-layer pattern families:
+  - `pattern_occurrence`
+  - `pattern_persistence`
+  - `pattern_stability`
+  - `straight_counts`
+
+These are not predictive inputs.
+They are the truth lens that justified the final VTRAC arena design.
+
+## 4. VTRAC's Final Predictive Meaning
+
+VTRAC contributes all of the following to the aggregated arena:
+
+- ranked index / lane evidence
+- ranked straight witnesses inside those lanes
+- cross-section echo
+- hot / superhot lane support
+- consensus-col1 / consensus-col2 rescue context
+- right-column / stable-column context
+- mask-drop reveal clues
+- mirror and double-support clues
+- same-index neighborhood structure
+- section-led vs state-led lane balance
+
+The crucial design rule is:
+
+- **preserve first, compress later**
+
+The old failure mode was collapsing VTRAC too early into small top-straight lists.
+
+## 5. VTRAC Raw Evidence Families To Preserve
+
+VTRAC has five main predictive evidence layers:
+
+1. ranked index / lane evidence
+2. ranked straight-neighborhood evidence
+3. section summary evidence
+4. compact global descriptor evidence
+5. telemetry / validator context
+
+### 5.1 Ranked Index / Lane Evidence
+
+Source:
+
+- `<STATE>_vtrac_enhanced_*.json`
+  - `indices_ranked`
+
+Primary semantic role:
+
+- the most direct predictive VTRAC lane inventory
+- shows which VTRAC indices are alive, how strong they are, and what straight witnesses sit inside them
+
+Core lane fields that should be preserved or remain reachable:
+
+| Field / family | Meaning in the arena |
+|---|---|
+| `indices_ranked[].index` | VTRAC lane identity |
+| `indices_ranked[].score` | lane strength at the state level |
+| `indices_ranked[].evidence` | human-readable lane evidence tags |
+| `indices_ranked[].straights` | example straights supporting the lane |
+
+Important judgment:
+
+- this is lane truth, not a direct pick list
+- the arena should preserve both the ranked index and the evidence families behind it
+
+### 5.2 Ranked Straight-Neighborhood Evidence
+
+Sources:
+
+- `<STATE>_vtrac_enhanced_*.json`
+  - `straights_ranked`
+  - `top_straights`
+
+Primary semantic role:
+
+- bounded straight witnesses living inside the lane environment
+- useful for showing how the lane is expressing itself, including same-index asymmetry and shoulder activity
+
+Core straight fields that should be preserved or remain reachable:
+
+| Field / family | Meaning in the arena |
+|---|---|
+| `straights_ranked[].straight` | literal straight witness |
+| `straights_ranked[].index` | VTRAC lane that straight belongs to |
+| `straights_ranked[].score` | straight witness strength |
+| `straights_ranked[].reasons` | why that straight is being surfaced |
+| `top_straights` | compact straight witness list |
+
+Important judgment:
+
+- the point is not “top-k straights should directly win often”
+- the point is that the straight list exposes the lane neighborhood and the internal shape of the winner lane
+
+### 5.3 Section Summary Evidence
+
+Source:
+
+- `<STATE>_vtrac_enhanced_*.json`
+  - `section_summaries`
+
+Primary semantic role:
+
+- cross-section corroboration
+- right-column and hot/superhot context
+- per-section lane pressure shape
+
+Important fields:
+
+| Field | Meaning |
+|---|---|
+| `section_summaries.<section>.hot_count` | hot pressure in that section |
+| `section_summaries.<section>.superhot_count` | superhot pressure in that section |
+| `section_summaries.<section>.consensus_col1` | current-frontier consensus reinforcement |
+| `section_summaries.<section>.consensus_col2` | pre-frontier consensus reinforcement |
+| `section_summaries.<section>.stable_columns` | stable/right-column footprint |
+| `section_summaries.<section>.top_box_signatures` | dominant box / lane signatures |
+| `section_summaries.<section>.ring_votes` | section-level lane votes |
+| `section_summaries.<section>.analyzer_metrics.indices_considered` | section breadth / lane inventory |
+| `section_summaries.<section>.analyzer_metrics.mask_drop_count` | mask-drop reveal density |
+| `section_summaries.<section>.analyzer_metrics.reduction_hits` | reduction-linked support |
+| `section_summaries.<section>.analyzer_metrics.mirror_supported` | mirror support present |
+| `section_summaries.<section>.analyzer_metrics.double_hits` | double support present |
+| `section_summaries.<section>.analyzer_metrics.top_straights` | strongest straight witnesses inside the section |
+
+These section summaries are one of the main reasons VTRAC should be treated as a cross-variant lane lens instead of a narrow top-straight caller.
+
+### 5.4 Compact Global Descriptor Evidence
+
+Sources:
+
+- `sharepacks/<D>/vtrac_compact_report.json`
+- `sharepacks/<D>/vtrac_compact_report.csv`
+
+Primary semantic role:
+
+- a compact, global, aggregator-style VTRAC descriptor layer across states
+- a very useful bridge between the deeper enhanced JSON bundles and the later aggregated arena
+
+Important fields:
+
+| Field | Meaning |
+|---|---|
+| `overlap` | degree of cross-section overlap behind the lane |
+| `stable_cols_count`, `stable_cols` | right-column / stable-column concentration |
+| `consensus_col1`, `consensus_col2` | frontier and pre-frontier rescue context |
+| `cross_section_echo` | lane repeating across sections |
+| `hot_count`, `superhot_count` | hot / superhot lane support |
+| `mask_drop` | masked / clutter-drop reveal context |
+| `mirror_supported` | mirror corroboration |
+| `double_hits` | double corroboration |
+| `confidence_score` | compact global confidence |
+| `tier`, `flags` | compact classification / interpretation helpers |
+| `top_tokens`, `recommended_tokens` | key lane descriptors / recommended tokens |
+| `top_straights` | compact straight witness list |
+| `section_prior`, `state_prior` | section-led vs state-led pressure hints |
+| `why` | compact human-readable explanation |
+| `source` | provenance / source-path context |
+
+Important judgment:
+
+- this compact layer should be preserved as a concrete descriptor family
+- it is not just a debugging export
+- it is also not a replacement for the deeper enhanced JSON
+
+### 5.5 Telemetry / Validator Context
+
+Sources:
+
+- `<STATE>_vtrac_enhanced_*.json`
+  - `telemetry`
+- `scripts/tools/validate_vtrac_compact_report.py`
+
+Primary semantic role:
+
+- tool health
+- scorer / mask context
+- reproducibility
+- validator-level sanity
+
+Important fields:
+
+| Field | Meaning |
+|---|---|
+| `telemetry.weights` | scoring-weight provenance |
+| `telemetry.mask_digits` | mask / reveal configuration context |
+| compact-report `states`, `sections`, `scorer_version` | non-empty global aggregator-feed validation |
+
+This layer is primarily for audit and calibration, not direct promotion.
+
+## 6. VTRAC Arena Objects That Should Feed The Aggregated Arena
+
+VTRAC does not currently have a dedicated standalone predictive `vtrac_arena*.json`.
+
+So the aggregated arena should preserve the following semantic objects as rollups
+over the raw evidence families above.
+
+Important guardrail:
+
+- these semantic objects should **not** replace the concrete payload families
+- they should sit on top of them
+
+### 6.1 `cross_variant_lane_strength`
+
+Primary meaning:
+
+- how strongly the same VTRAC lane is alive across sections / variants
+
+Why it matters:
+
+- this is the core VTRAC contribution
+- it preserves lane correctness before later aggregation narrows anything
+
+It should be backed by:
+
+- `indices_ranked`
+- `cross_section_echo`
+- `ring_votes`
+- section-level lane summaries
+
+### 6.2 `right_column_lane_stability`
+
+Primary meaning:
+
+- right-column / stable-column support behind a lane
+
+Why it matters:
+
+- winners review repeatedly showed right-column stability is part of why certain lanes deserve attention
+
+It should be backed by:
+
+- `stable_cols_count`
+- `stable_cols`
+- `section_summaries.<section>.stable_columns`
+- consensus-col1 / consensus-col2 context when relevant
+
+### 6.3 `vt_only_lane_confidence`
+
+Primary meaning:
+
+- confidence that the lane is alive even if the literal expression is still noisy
+
+Why it matters:
+
+- this keeps VTRAC in its correct role as a lane-neighborhood lens rather than a literal-only caller
+
+It should be backed by:
+
+- `indices_ranked[].score`
+- `indices_ranked[].evidence`
+- section priors
+- same-index straight neighborhood shape
+
+### 6.4 `straight_lane_quality`
+
+Primary meaning:
+
+- how convincing the bounded straight witnesses are inside the lane
+
+Why it matters:
+
+- the straight list matters, but as witness structure inside the lane, not as a top-k oracle
+
+It should be backed by:
+
+- `straights_ranked`
+- `top_straights`
+- section-summary `top_straights`
+- straight reasons
+
+### 6.5 `lane_dominance`
+
+Primary meaning:
+
+- whether one lane is truly dominating, or whether the environment is flatter / noisier
+
+Why it matters:
+
+- later aggregation needs to know whether VTRAC is speaking clearly or only softly
+
+It should be backed by:
+
+- ranked-index score gaps
+- `overlap`
+- `confidence_score`
+- `tier`, `flags`
+- section/state priors
+
+### 6.6 `section_lead_profile`
+
+Primary meaning:
+
+- whether the lane is Combined-led, Midday-led, Evening-led, or broadly shared
+
+Why it matters:
+
+- this is one of VTRAC’s distinctive environment clues
+- it helps later aggregation understand timing/currentness shape without forcing a narrow caller policy
+
+It should be backed by:
+
+- `section_summaries`
+- `section_prior`
+- `state_prior`
+- `ring_votes`
+
+### 6.7 `mask_drop_lane_reveal`
+
+Primary meaning:
+
+- whether clutter-drop / mask logic is helping reveal the lane
+
+Why it matters:
+
+- this is one of the important “winner was there but partly hidden” clues
+
+It should be backed by:
+
+- `mask_drop`
+- `telemetry.mask_digits`
+- `mask_drop_count`
+- related index / straight evidence
+
+### 6.8 `mirror_double_lane_support`
+
+Primary meaning:
+
+- whether mirror and double behavior are reinforcing the lane
+
+Why it matters:
+
+- mirror/double support is often part of why a lane is structurally persuasive even before a literal surfaces cleanly
+
+It should be backed by:
+
+- `mirror_supported`
+- `double_hits`
+- section analyzer metrics
+- straight witness reasons when present
+
+## 7. VTRAC-Specific Advanced Evidence Objects And Final Learnings
+
+These are the most important nuanced VTRAC conclusions from the final sweep and the artifact-first confirmation.
+
+### 7.1 Same-index neighborhood structure
+
+Status:
+
+- **fully preserved in the arena contract**
+- **not reducible to one lane boolean**
+
+Why it matters:
+
+- winner artifacts showed that strong lanes often contain internal asymmetry
+- one or two same-index straights can dominate while others are only shoulder support
+
+Important examples:
+
+- `Virginia4 473` / index `30`
+- `Florida4 611` / index `16`
+
+Important guardrail:
+
+- keep same-index straight neighborhoods visible
+- do **not** collapse them to “lane alive / lane dead”
+
+### 7.2 Compact descriptor layer
+
+Status:
+
+- **fully preserved in the arena contract**
+- **major keeper**
+
+Why it matters:
+
+- the compact report is the cleanest cross-state/global VTRAC descriptor surface
+- it gives later aggregation a practical bridge without reopening the full analyzer bundle first
+
+Important judgment:
+
+- preserve the compact descriptor families
+- do not demote them to throwaway debug output
+
+### 7.3 Winners-lens correspondence
+
+Status:
+
+- **audit-only**
+- **methodological keeper**
+
+Why it matters:
+
+- winner-layer families like `pattern_occurrence`, `pattern_persistence`, `pattern_stability`, and `straight_counts` were the truth layer that justified the predictive contract
+
+Important guardrail:
+
+- keep those winner families outside predictive mode
+- use them for review, confirmation, and future aggregation learning
+
+### 7.4 Winner-artifact-first confirmation
+
+Status:
+
+- **methodological keeper**
+
+Why it matters:
+
+- the `2026-03-17` confirmation pass showed the earlier VTRAC handoff was directionally right but too compressed
+- the correct fix was broader contract preservation, not another scorer loop
+
+This matters because it established:
+
+- no broad retune was justified
+- more concrete payload families needed to be preserved
+- VTRAC is ready for arena handoff when treated as a semantic lane feed
+
+## 8. VTRAC Bounded Downstream Helper Surfaces
+
+These are important, but they are **not** the core VTRAC arena feed.
+
+They belong in the “conversion helper / bounded consumer” category.
+
+| Method | Role | Current judgment |
+|---|---|---|
+| `vtrac_top_straights` | bounded straight pack from `straights_ranked` | keep as a helper, not the full VTRAC truth |
+| `signals_bundle.vtrac_enhanced.top_indices` | compact top-index signals for later bundle fusion | keep as a bounded bundle surface |
+| `signals_bundle.vtrac_enhanced.top_straights` | compact straight witnesses for later bundle fusion | keep as a bounded bundle surface |
+
+Important judgment:
+
+- these helpers remain useful for downstream experimentation
+- but the aggregated arena should reason from the richer VTRAC evidence first
+
+## 9. VTRAC's Final Strengths
+
+VTRAC is strongest when treated as:
+
+- a lane / index correctness tool
+- a same-index straight-neighborhood tool
+- a cross-section corroboration tool
+- a right-column / hot / superhot descriptor tool
+- a mask-drop / mirror / double support clue tool
+
+VTRAC is especially powerful for:
+
+- preserving the right winner lane even when literal callers stay noisy
+- showing same-index neighborhood asymmetry
+- showing section-led vs state-led lane pressure
+- exposing right-column and hot/superhot reinforcement
+- giving later aggregation a compact but meaningful lane descriptor layer
+
+## 10. VTRAC's Final Non-Goals
+
+Do **not** force VTRAC into:
+
+- “top-k straights should directly win often”
+- another broad overlap-vs-rescue scorer retune loop
+- replacement of later cross-tool aggregation
+- collapsing the compact descriptor layer into one scalar
+- treating winners-layer stats as predictive inputs
+
+Those are the wrong targets for this stage.
+
+## 11. VTRAC -> Aggregated Arena Guidance
+
+Later aggregated arena work should treat VTRAC as contributing:
+
+- lane correctness
+- same-index neighborhood structure
+- right-column stability
+- hot/superhot lane support
+- section-lead timing/currentness shape
+- mask-drop / mirror / double corroboration
+- compact global descriptors that make the lane legible across states
+
+Good future aggregation questions:
+
+- Does Stable agree with the same family/lane neighborhood VTRAC is surfacing?
+- Does DR's buried assigned-box lane story match the VTRAC lane?
+- Does Hot Zones show pressure surviving in the same lane neighborhood?
+- When VTRAC lane quality is high but literal candidates are mixed, which other tools confirm the lane rather than the literal?
+
+VTRAC should often be one of the main answers to:
+
+- what lane / family neighborhood is actually alive?
+- is the lane being reinforced in the right columns and sections?
+- are the strongest straight witnesses clustered coherently inside the lane?
+- is the lane being revealed by mask-drop, mirror, or double support?
+
+## 12. Final VTRAC Judgment
+
+VTRAC is wrapped for this phase as:
+
+- a strong arena lane-semantics producer
+- not a tiny direct-caller oracle
+
+The major VTRAC work that must remain visible in the aggregated arena is:
+
+- ranked indices and ranked straights
+- section summaries
+- compact descriptor families
+- same-index neighborhood structure
+- right-column and hot/superhot context
+- mask-drop, mirror, and double corroboration
+- audit-only winner correspondence
+
+If these are preserved and later compared/fused correctly, VTRAC remains one of the main string-tool sources for understanding the correct winner neighborhood.
+
+The remaining true VTRAC-local gap is now narrow:
+
+- arena consumption and later cross-tool use
+
+That is no longer a broad reason to reopen VTRAC scoring.
+
+## 13. VTRAC References
+
+Primary references used for this VTRAC section:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Analyzer_Lean_Outputs.md`
+- `scripts/tools/create_candidate_universe.py`
+- `scripts/tools/validate_vtrac_compact_report.py`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC__HANDOFF.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ASSESSMENT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-16__VTRAC_HOTZ__ARENA_CONTRACT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/2026-03-17__VTRAC_HOTZ__ARTIFACT_FIRST_CONFIRMATION.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ANALYSIS_ARENA_INTEGRATION_QUEUE.md`
