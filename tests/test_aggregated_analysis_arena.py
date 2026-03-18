@@ -304,11 +304,16 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     dominant_indices = payload["arena_synthesis"]["dominant_vtrac_indices"]
     assert dominant_indices
     assert dominant_indices[0]["value"] == "8"
+    watchlist = payload["arena_synthesis"]["vtrac_literal_watchlist"]
+    assert watchlist
+    assert watchlist[0]["vtrac_index"] == "8"
+    assert "138" in watchlist[0]["candidate_canonicals"]
 
     md = build_aggregated_analysis_arena_markdown(payload)
     assert "Aggregated Analysis Arena" in md
     assert "Dominant Canonicals" in md
     assert "Dominant VTRAC Indices" in md
+    assert "VTRAC Literal Watchlist" in md
 
     out_json = day_dir / "TestState" / "analysis" / "aggregated_analysis_arena__tool_only__arena_v0.json"
     json_path, md_path = write_aggregated_analysis_arena_files(out_json_path=out_json, payload=payload, write_md=True)

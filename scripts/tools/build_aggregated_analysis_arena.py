@@ -979,9 +979,40 @@ def _build_arena_synthesis(
     dominant_canonicals = canonical_consensus[:10]
     dominant_vtrac_indices = vtrac_consensus[:10]
     dominant_families = family_consensus[:8]
+    dominant_canonical_value = str(dominant_canonicals[0]["value"]) if dominant_canonicals else ""
+    dominant_canonical_index = get_vtrac_index(dominant_canonical_value) if dominant_canonical_value else None
+
+    vtrac_literal_watchlist: List[Dict[str, Any]] = []
+    for rank, item in enumerate(dominant_vtrac_indices[:6], start=1):
+        if int(item.get("string_source_count") or 0) <= 0:
+            continue
+        literals = [str(x) for x in (item.get("example_literals") or []) if str(x).strip()]
+        if not literals:
+            continue
+        canonicals: List[str] = []
+        for literal in literals:
+            canonical = _canon(literal)
+            if canonical and canonical not in canonicals:
+                canonicals.append(canonical)
+        vtrac_literal_watchlist.append(
+            {
+                "vtrac_index": str(item.get("value") or ""),
+                "rank": rank,
+                "support_count": int(item.get("support_count") or 0),
+                "score_total": round(float(item.get("score_total") or 0.0), 6),
+                "string_source_count": int(item.get("string_source_count") or 0),
+                "context_source_count": int(item.get("context_source_count") or 0),
+                "example_literals": literals[:10],
+                "candidate_canonicals": canonicals[:10],
+                "is_dominant_vtrac_index": rank == 1,
+                "dominant_canonical_split": (
+                    dominant_canonical_index is not None and str(dominant_canonical_index) != str(item.get("value") or "")
+                ),
+            }
+        )
 
     state_regime = {
-        "dominant_canonical": dominant_canonicals[0]["value"] if dominant_canonicals else None,
+        "dominant_canonical": dominant_canonical_value or None,
         "dominant_vtrac_index": dominant_vtrac_indices[0]["value"] if dominant_vtrac_indices else None,
         "dominant_family": dominant_families[0]["value"] if dominant_families else None,
         "double_heavy": "double_heavy_canonical_surface" in regime_flags,
@@ -994,6 +1025,12 @@ def _build_arena_synthesis(
     if dominant_vtrac_indices:
         top = ", ".join(str(item["value"]) for item in dominant_vtrac_indices[:3])
         review_prompts.append(f"Check winners HTML against dominant VTRAC indices {top} before evaluating literal conversion.")
+    if vtrac_literal_watchlist:
+        top = ", ".join(
+            f"{item['vtrac_index']}:{'/'.join(item['candidate_canonicals'][:2])}"
+            for item in vtrac_literal_watchlist[:3]
+        )
+        review_prompts.append(f"Use VTRAC watchlist {top} to inspect lane-linked literal neighborhoods before downstream conversion decisions.")
     if context_reinforced_canonicals:
         top = ", ".join(str(item["value"]) for item in context_reinforced_canonicals[:3])
         review_prompts.append(f"Check whether context-reinforced canonicals {top} are structurally alive or only alert-driven.")
@@ -1007,6 +1044,7 @@ def _build_arena_synthesis(
         "dominant_canonicals": dominant_canonicals,
         "dominant_vtrac_indices": dominant_vtrac_indices,
         "dominant_families": dominant_families,
+        "vtrac_literal_watchlist": vtrac_literal_watchlist,
         "context_reinforced_canonicals": context_reinforced_canonicals,
         "context_only_pressure": context_only_pressure,
         "state_regime": state_regime,
@@ -1334,6 +1372,21 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(
             f"| {item.get('value')} | {item.get('support_count')} | {item.get('string_source_count')} | {item.get('context_source_count')} | {item.get('score_total')} | {examples} |"
         )
+
+    watchlist = synthesis.get("vtrac_literal_watchlist") if isinstance(synthesis.get("vtrac_literal_watchlist"), list) else []
+    if watchlist:
+        lines.append("")
+        lines.append("## VTRAC Literal Watchlist")
+        lines.append("")
+        lines.append("| Index | Rank | Support | String | Context | Canonicals | Examples | Split |")
+        lines.append("|---|---:|---:|---:|---:|---|---|---|")
+        for item in watchlist[:10]:
+            canonicals = ", ".join(item.get("candidate_canonicals") or []) or "-"
+            examples = ", ".join(item.get("example_literals") or []) or "-"
+            split = "Y" if item.get("dominant_canonical_split") else "N"
+            lines.append(
+                f"| {item.get('vtrac_index')} | {item.get('rank')} | {item.get('support_count')} | {item.get('string_source_count')} | {item.get('context_source_count')} | {canonicals} | {examples} | {split} |"
+            )
 
     lines.append("")
     lines.append("## Dominant Families")
