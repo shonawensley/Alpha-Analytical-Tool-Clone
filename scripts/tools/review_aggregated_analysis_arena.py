@@ -398,6 +398,42 @@ def _gap_class(
     return "arena_missing"
 
 
+def _gap_detail(
+    *,
+    gap_class: str,
+    arena_canon_rank: Optional[int],
+    arena_vtrac_rank: Optional[int],
+    arena_family_rank: Optional[int],
+    context_presence: Dict[str, bool],
+) -> str:
+    context_reinforced = any(bool(context_presence.get(key)) for key in (
+        "winner_canonical_context_reinforced",
+        "winner_vtrac_context_reinforced",
+        "winner_family_context_reinforced",
+    ))
+    if gap_class == "downstream_present":
+        if arena_canon_rank is None and arena_vtrac_rank is not None and arena_vtrac_rank <= 5:
+            return "downstream_closed_from_lane"
+        return "downstream_closed"
+    if gap_class == "arena_present_but_underweighted":
+        if arena_canon_rank is None and arena_vtrac_rank is not None and arena_vtrac_rank <= 3:
+            return "lane_alive_literal_missing_top3"
+        if arena_canon_rank is None and arena_vtrac_rank is not None and arena_vtrac_rank <= 5:
+            return "lane_alive_literal_missing_top5"
+        if arena_canon_rank is None and arena_family_rank is not None and arena_family_rank <= 5:
+            return "family_alive_literal_missing_top5"
+        if context_reinforced:
+            return "context_reinforced_underweighted"
+        return "generic_underweighted"
+    if gap_class == "conversion_gap":
+        if arena_vtrac_rank is not None and arena_vtrac_rank <= 5:
+            return "lane_present_conversion_gap"
+        if arena_family_rank is not None and arena_family_rank <= 5:
+            return "family_present_conversion_gap"
+        return "thin_conversion_gap"
+    return "arena_missing"
+
+
 def _build_rows_for_state(
     *,
     date: str,
@@ -437,6 +473,14 @@ def _build_rows_for_state(
         arena_canon_rank = canonical_rank.get(winner_canon)
         arena_vtrac_rank = vtrac_rank.get(str(winner_idx)) if winner_idx is not None else None
         arena_family_consensus_rank = family_rank.get(str(winner_family_id)) if winner_family_id else None
+        gap_class = _gap_class(
+            play_card=pc,
+            candidate_universe=cu,
+            arena_canon_rank=arena_canon_rank,
+            arena_any=any_presence,
+            arena_vtrac_rank=arena_vtrac_rank,
+            arena_family_rank=arena_family_consensus_rank,
+        )
 
         row = {
             "date": date,
@@ -466,13 +510,13 @@ def _build_rows_for_state(
             "play_card_straight_rank": str(pc.get("straight_rank") or ""),
             "play_card_box_rank": str(pc.get("box_rank") or ""),
             "play_card_vtrac_rank": str(pc.get("vtrac_rank") or ""),
-            "gap_class": _gap_class(
-                play_card=pc,
-                candidate_universe=cu,
+            "gap_class": gap_class,
+            "gap_detail": _gap_detail(
+                gap_class=gap_class,
                 arena_canon_rank=arena_canon_rank,
-                arena_any=any_presence,
                 arena_vtrac_rank=arena_vtrac_rank,
                 arena_family_rank=arena_family_consensus_rank,
+                context_presence=context_presence,
             ),
             "arena_dominant_canonical": dominant_canonical,
             "arena_dominant_vtrac_index": dominant_vtrac,
@@ -515,6 +559,7 @@ def _csv_fieldnames() -> List[str]:
         "play_card_box_rank",
         "play_card_vtrac_rank",
         "gap_class",
+        "gap_detail",
         "arena_dominant_canonical",
         "arena_dominant_vtrac_index",
         "arena_dominant_family",
@@ -535,6 +580,7 @@ def _write_csv(path: Path, rows: List[Dict[str, str]]) -> None:
 
 def _summary_markdown(*, rows: List[Dict[str, str]], score_path: Path, label: str) -> str:
     gap_counts = Counter(row["gap_class"] for row in rows)
+    gap_detail_counts = Counter(row["gap_detail"] for row in rows)
     total = len(rows)
 
     def _truth_count(field: str) -> int:
@@ -574,6 +620,10 @@ def _summary_markdown(*, rows: List[Dict[str, str]], score_path: Path, label: st
     for key, count in sorted(gap_counts.items()):
         lines.append(f"- {key}: `{count}`")
 
+    lines.extend(["", "## Gap Details", ""])
+    for key, count in sorted(gap_detail_counts.items()):
+        lines.append(f"- {key}: `{count}`")
+
     lines.extend(["", "## Notable Rows", "", "| Date | State | Outcome | Winner | Canon Rank | VTRAC Rank | Family Rank | Context Reinforced | CU | Play Card | Gap |", "|---|---|---|---|---:|---:|---:|---|---|---|---|"])
     ranked = sorted(
         rows,
@@ -590,7 +640,7 @@ def _summary_markdown(*, rows: List[Dict[str, str]], score_path: Path, label: st
         cu_flag = "Y" if (row.get("candidate_universe_straight_present") == "1" or row.get("candidate_universe_box_present") == "1") else "N"
         pc_flag = "Y" if (row.get("play_card_straight_present") == "1" or row.get("play_card_box_present") == "1") else "N"
         lines.append(
-            f"| {row['date']} | {row['state_key']} | {row['outcome']} | {row['winner']} | {row['arena_canonical_rank'] or '-'} | {row['arena_vtrac_rank'] or '-'} | {row['arena_family_rank'] or '-'} | {context_flag} | {cu_flag} | {pc_flag} | {row['gap_class']} |"
+            f"| {row['date']} | {row['state_key']} | {row['outcome']} | {row['winner']} | {row['arena_canonical_rank'] or '-'} | {row['arena_vtrac_rank'] or '-'} | {row['arena_family_rank'] or '-'} | {context_flag} | {cu_flag} | {pc_flag} | {row['gap_class']} / {row['gap_detail']} |"
         )
     return "\n".join(lines).rstrip() + "\n"
 

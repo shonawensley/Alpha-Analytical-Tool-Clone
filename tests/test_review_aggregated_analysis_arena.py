@@ -168,3 +168,4 @@ def test_review_rows_capture_arena_and_downstream_presence(tmp_path: Path) -> No
     assert midday["candidate_universe_straight_present"] == "1"
     assert midday["play_card_straight_present"] == "1"
     assert midday["gap_class"] == "downstream_present"
+    assert midday["gap_detail"] == "downstream_closed"
