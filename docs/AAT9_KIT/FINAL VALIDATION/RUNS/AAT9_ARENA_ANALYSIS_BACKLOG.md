@@ -24,7 +24,7 @@ Ground rule:
 | `AAB-005` | `approved` | arena object registry for high-scoring pattern clusters | a formal registry of top canonicals, top lanes, top families, and top watchlist neighborhoods will make decay/carryover review cleaner and support later conversion work | repeated need to compare “what the arena actually trapped” across days |
 | `AAB-006` | `approved` | competition carryover / decay scoreboard | live competitions kept showing strong states converting one or more draws later; this needs to be measured explicitly instead of treated as anecdote | frozen decay harness proves value on gold windows first |
 | `AAB-007` | `approved` | regime-conditioned decay splits | doubles-heavy, split-rail, and lane-clean environments may decay differently; this matters for state ranking and later packaging | decay metrics show materially different behavior by regime |
-| `AAB-008` | `approved` | context source precision rollups | beyond per-row source flags, we want corpus summaries like “profit-alert-backed VTRAC front3 resolves <=3d at X/Y” | enough reviewed windows to avoid overfitting |
+| `AAB-008` | `implemented` | context source precision rollups | the front-band rollup now summarizes repeated source families and source mixes against `D+3` dominant-VTRAC and watchlist-box behavior, turning row-level flags into corpus evidence | keep expanding only if broader windows materially change the current source ordering |
 
 ## Watchlist Items
 
@@ -32,7 +32,7 @@ Ground rule:
 |---|---|---|---|
 | `AAB-009` | `watch` | heavier boxed VTRAC badge matrix export | currently stays as a linked truth/reporting layer; revisit only if arena review keeps needing more combo-level badge semantics than the current structured summaries preserve |
 | `AAB-010` | `watch` | same-day midday-to-evening carry-forward inside decay | keep same-day grading clean, but support draw-offset reporting so midday-to-evening transitions remain first-class evidence |
-| `AAB-011` | `watch` | conversion-side lane-to-literal bridge scoring | the new watchlist is the first step; if repeated anchors still show good lane truth with weak literal closure, promote this into a bounded conversion study rather than a tool rewrite |
+| `AAB-011` | `approved` | conversion-side lane-to-literal bridge scoring | the first front-band source rollup now isolates repeated bridge-ready cohorts (`aux_overdue+aux_badge`, `due_doubles+aux_overdue+aux_badge`, `due_doubles`) where dominant VTRAC stays alive and watchlist boxes often resolve within `D+3` | complete one bounded bridge study on frozen windows before touching downstream packaging |
 
 ## Operating Rule
 
