@@ -32,7 +32,7 @@ Ground rule:
 |---|---|---|---|
 | `AAB-009` | `watch` | heavier boxed VTRAC badge matrix export | currently stays as a linked truth/reporting layer; revisit only if arena review keeps needing more combo-level badge semantics than the current structured summaries preserve |
 | `AAB-010` | `watch` | same-day midday-to-evening carry-forward inside decay | keep same-day grading clean, but support draw-offset reporting so midday-to-evening transitions remain first-class evidence |
-| `AAB-011` | `approved` | conversion-side lane-to-literal bridge scoring | the first front-band source rollup now isolates repeated bridge-ready cohorts (`aux_overdue+aux_badge`, `due_doubles+aux_overdue+aux_badge`, `due_doubles`) where dominant VTRAC stays alive and watchlist boxes often resolve within `D+3` | complete one bounded bridge study on frozen windows before touching downstream packaging |
+| `AAB-011` | `implemented` | conversion-side lane-to-literal bridge scoring | the bounded bridge-study harness now exists and has been run on the first frozen window. It confirms watchlist-based bridge lift on `aux_overdue+aux_badge` and `due_doubles`, but not yet on the heavier `due_doubles+aux_overdue+aux_badge` trio mix | keep in study mode until broader windows confirm the same cohort split |
 
 ## Operating Rule
 
