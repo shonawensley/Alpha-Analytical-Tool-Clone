@@ -323,6 +323,133 @@ def _context_presence_for_winner(payload: Dict[str, Any], winner_canon: str, win
     }
 
 
+def _context_arena_objects(payload: Dict[str, Any]) -> Dict[str, Any]:
+    context_tools = payload.get("context_tools") if isinstance(payload.get("context_tools"), dict) else {}
+    aux_tool = context_tools.get("aux_control_center") if isinstance(context_tools.get("aux_control_center"), dict) else {}
+    arena_objects = aux_tool.get("arena_objects") if isinstance(aux_tool.get("arena_objects"), dict) else {}
+    return arena_objects
+
+
+def _winner_context_source_presence(payload: Dict[str, Any], winner_canon: str, winner_idx: Optional[int]) -> Dict[str, bool]:
+    arena_objects = _context_arena_objects(payload)
+    out = {
+        "winner_canonical_profit_alert_present": False,
+        "winner_vtrac_profit_alert_present": False,
+        "winner_canonical_blackapple_present": False,
+        "winner_vtrac_blackapple_present": False,
+        "winner_canonical_due_doubles_present": False,
+        "winner_vtrac_due_doubles_present": False,
+        "winner_vtrac_repeat_watch_present": False,
+        "winner_vtrac_aux_overdue_present": False,
+        "winner_canonical_aux_badge_present": False,
+        "winner_vtrac_aux_badge_present": False,
+    }
+
+    profit = arena_objects.get("cc_profit_alert_context") if isinstance(arena_objects.get("cc_profit_alert_context"), dict) else {}
+    for row in (profit.get("top_alerts") or []):
+        if not isinstance(row, dict):
+            continue
+        canonical = str(row.get("canonical") or "").strip()
+        if canonical and canonical == winner_canon:
+            out["winner_canonical_profit_alert_present"] = True
+        idx = get_vtrac_index(canonical) if canonical else None
+        if winner_idx is not None and idx == winner_idx:
+            out["winner_vtrac_profit_alert_present"] = True
+
+    blackapple = arena_objects.get("aux_blackapple_context") if isinstance(arena_objects.get("aux_blackapple_context"), dict) else {}
+    for row in (blackapple.get("control_center_top") or []):
+        if not isinstance(row, dict):
+            continue
+        for example in row.get("examples") or []:
+            combo = _normalize_pick3_literal(example)
+            if not combo:
+                continue
+            if _canon(combo) == winner_canon:
+                out["winner_canonical_blackapple_present"] = True
+            idx = get_vtrac_index(combo)
+            if winner_idx is not None and idx == winner_idx:
+                out["winner_vtrac_blackapple_present"] = True
+
+    due_doubles = arena_objects.get("aux_due_doubles_family_pressure") if isinstance(arena_objects.get("aux_due_doubles_family_pressure"), dict) else {}
+    by_variant = due_doubles.get("by_variant") if isinstance(due_doubles.get("by_variant"), dict) else {}
+    for payload in by_variant.values():
+        if not isinstance(payload, dict):
+            continue
+        for family in (payload.get("families") or []):
+            if not isinstance(family, dict):
+                continue
+            for example in family.get("examples") or []:
+                combo = _normalize_pick3_literal(example)
+                if not combo:
+                    continue
+                if _canon(combo) == winner_canon:
+                    out["winner_canonical_due_doubles_present"] = True
+                idx = get_vtrac_index(combo)
+                if winner_idx is not None and idx == winner_idx:
+                    out["winner_vtrac_due_doubles_present"] = True
+
+    repeat_watch = arena_objects.get("aux_repeat_watch_context") if isinstance(arena_objects.get("aux_repeat_watch_context"), dict) else {}
+    aux_by_variant = repeat_watch.get("aux_by_variant") if isinstance(repeat_watch.get("aux_by_variant"), dict) else {}
+    for payload in aux_by_variant.values():
+        if not isinstance(payload, dict):
+            continue
+        for key in ("current_index", "last_repeat_index"):
+            idx = _to_int(payload.get(key), default=-1)
+            if winner_idx is not None and idx >= 0 and idx == winner_idx:
+                out["winner_vtrac_repeat_watch_present"] = True
+    for row in (repeat_watch.get("control_center_top") or []):
+        if not isinstance(row, dict):
+            continue
+        for key in ("current_index", "heat_index"):
+            idx = _to_int(row.get(key), default=-1)
+            if winner_idx is not None and idx >= 0 and idx == winner_idx:
+                out["winner_vtrac_repeat_watch_present"] = True
+
+    aux_vtrac = arena_objects.get("aux_vtrac_pressure") if isinstance(arena_objects.get("aux_vtrac_pressure"), dict) else {}
+    for rows in (aux_vtrac.get("overlay_top") or {}).values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            idx = _to_int(row.get("index"), default=-1)
+            if winner_idx is not None and idx >= 0 and idx == winner_idx:
+                out["winner_vtrac_aux_overdue_present"] = True
+    for rows in (aux_vtrac.get("heatboard_top") or {}).values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            idx = _to_int(row.get("index"), default=-1)
+            if winner_idx is not None and idx >= 0 and idx == winner_idx:
+                out["winner_vtrac_aux_overdue_present"] = True
+
+    badge = arena_objects.get("aux_badge_pressure") if isinstance(arena_objects.get("aux_badge_pressure"), dict) else {}
+    for row in (badge.get("top_combo_alerts") or []):
+        if not isinstance(row, dict):
+            continue
+        combo = _normalize_pick3_literal(row.get("combo"))
+        canonical = str(row.get("canonical") or _canon(combo))
+        if canonical and canonical == winner_canon:
+            out["winner_canonical_aux_badge_present"] = True
+        idx = get_vtrac_index(combo or canonical)
+        if winner_idx is not None and idx == winner_idx:
+            out["winner_vtrac_aux_badge_present"] = True
+    index_pressure = badge.get("index_pressure") if isinstance(badge.get("index_pressure"), dict) else {}
+    for payload in (index_pressure.get("by_variant") or {}).values():
+        if not isinstance(payload, dict):
+            continue
+        for row in (payload.get("top_indices") or []):
+            if not isinstance(row, dict):
+                continue
+            idx = _to_int(row.get("index"), default=-1)
+            if winner_idx is not None and idx >= 0 and idx == winner_idx:
+                out["winner_vtrac_aux_badge_present"] = True
+
+    return out
+
+
 def _load_candidate_universe_presence(state_dir: Path, winner: str, winner_canon: str, winner_idx: Optional[int]) -> Dict[str, Any]:
     path = state_dir / "candidate_universe__tool_only.json"
     if not path.exists():
@@ -467,6 +594,7 @@ def _build_rows_for_state(
 
         any_presence = _winner_presence_any(arena, winner_canon, winner_idx, winner_family_id)
         context_presence = _context_presence_for_winner(arena, winner_canon, winner_idx, winner_family_id)
+        context_sources = _winner_context_source_presence(arena, winner_canon, winner_idx)
         cu = _load_candidate_universe_presence(state_dir, winner, winner_canon, winner_idx)
         pc = _load_play_card_presence(state_dir, winner, winner_canon, winner_idx)
 
@@ -500,6 +628,16 @@ def _build_rows_for_state(
             "winner_vtrac_context_reinforced": "1" if context_presence["winner_vtrac_context_reinforced"] else "0",
             "winner_family_context_reinforced": "1" if context_presence["winner_family_context_reinforced"] else "0",
             "winner_canonical_context_only": "1" if context_presence["winner_canonical_context_only"] else "0",
+            "winner_canonical_profit_alert_present": "1" if context_sources["winner_canonical_profit_alert_present"] else "0",
+            "winner_vtrac_profit_alert_present": "1" if context_sources["winner_vtrac_profit_alert_present"] else "0",
+            "winner_canonical_blackapple_present": "1" if context_sources["winner_canonical_blackapple_present"] else "0",
+            "winner_vtrac_blackapple_present": "1" if context_sources["winner_vtrac_blackapple_present"] else "0",
+            "winner_canonical_due_doubles_present": "1" if context_sources["winner_canonical_due_doubles_present"] else "0",
+            "winner_vtrac_due_doubles_present": "1" if context_sources["winner_vtrac_due_doubles_present"] else "0",
+            "winner_vtrac_repeat_watch_present": "1" if context_sources["winner_vtrac_repeat_watch_present"] else "0",
+            "winner_vtrac_aux_overdue_present": "1" if context_sources["winner_vtrac_aux_overdue_present"] else "0",
+            "winner_canonical_aux_badge_present": "1" if context_sources["winner_canonical_aux_badge_present"] else "0",
+            "winner_vtrac_aux_badge_present": "1" if context_sources["winner_vtrac_aux_badge_present"] else "0",
             "candidate_universe_straight_present": "1" if cu.get("straight_present") else "0",
             "candidate_universe_box_present": "1" if cu.get("box_present") else "0",
             "candidate_universe_vtrac_present": "1" if cu.get("vtrac_present") else "0",
@@ -548,6 +686,16 @@ def _csv_fieldnames() -> List[str]:
         "winner_vtrac_context_reinforced",
         "winner_family_context_reinforced",
         "winner_canonical_context_only",
+        "winner_canonical_profit_alert_present",
+        "winner_vtrac_profit_alert_present",
+        "winner_canonical_blackapple_present",
+        "winner_vtrac_blackapple_present",
+        "winner_canonical_due_doubles_present",
+        "winner_vtrac_due_doubles_present",
+        "winner_vtrac_repeat_watch_present",
+        "winner_vtrac_aux_overdue_present",
+        "winner_canonical_aux_badge_present",
+        "winner_vtrac_aux_badge_present",
         "candidate_universe_straight_present",
         "candidate_universe_box_present",
         "candidate_universe_vtrac_present",
@@ -623,6 +771,22 @@ def _summary_markdown(*, rows: List[Dict[str, str]], score_path: Path, label: st
     lines.extend(["", "## Gap Details", ""])
     for key, count in sorted(gap_detail_counts.items()):
         lines.append(f"- {key}: `{count}`")
+
+    source_fields = [
+        ("profit_alert canonical", "winner_canonical_profit_alert_present"),
+        ("profit_alert VTRAC", "winner_vtrac_profit_alert_present"),
+        ("blackapple canonical", "winner_canonical_blackapple_present"),
+        ("blackapple VTRAC", "winner_vtrac_blackapple_present"),
+        ("due_doubles canonical", "winner_canonical_due_doubles_present"),
+        ("due_doubles VTRAC", "winner_vtrac_due_doubles_present"),
+        ("repeat_watch VTRAC", "winner_vtrac_repeat_watch_present"),
+        ("aux overdue VTRAC", "winner_vtrac_aux_overdue_present"),
+        ("aux badge canonical", "winner_canonical_aux_badge_present"),
+        ("aux badge VTRAC", "winner_vtrac_aux_badge_present"),
+    ]
+    lines.extend(["", "## Context Source Presence", ""])
+    for label_text, field in source_fields:
+        lines.append(f"- {label_text}: `{_truth_count(field)}/{total}`")
 
     lines.extend(["", "## Notable Rows", "", "| Date | State | Outcome | Winner | Canon Rank | VTRAC Rank | Family Rank | Context Reinforced | CU | Play Card | Gap |", "|---|---|---|---|---:|---:|---:|---|---|---|---|"])
     ranked = sorted(

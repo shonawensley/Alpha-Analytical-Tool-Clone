@@ -78,6 +78,22 @@ def _pick_rows(rows: Sequence[Dict[str, str]], *, gap_detail: str, limit: int) -
     return picked[:limit]
 
 
+def _context_sources(row: Dict[str, str]) -> List[str]:
+    sources: List[str] = []
+    mapping = [
+        ("profit_alert", ("winner_canonical_profit_alert_present", "winner_vtrac_profit_alert_present")),
+        ("blackapple", ("winner_canonical_blackapple_present", "winner_vtrac_blackapple_present")),
+        ("due_doubles", ("winner_canonical_due_doubles_present", "winner_vtrac_due_doubles_present")),
+        ("repeat_watch", ("winner_vtrac_repeat_watch_present",)),
+        ("aux_overdue", ("winner_vtrac_aux_overdue_present",)),
+        ("aux_badge", ("winner_canonical_aux_badge_present", "winner_vtrac_aux_badge_present")),
+    ]
+    for label, keys in mapping:
+        if any(str(row.get(key) or "").strip() == "1" for key in keys):
+            sources.append(label)
+    return sources
+
+
 def _emit_section(lines: List[str], *, title: str, rows: Sequence[Dict[str, str]]) -> None:
     lines.append(f"## {title}")
     lines.append("")
@@ -111,6 +127,9 @@ def _emit_section(lines: List[str], *, title: str, rows: Sequence[Dict[str, str]
         lines.append(
             f"- downstream: CU literal `{row.get('candidate_universe_straight_present') or '0'}/{row.get('candidate_universe_box_present') or '0'}` | Play Card literal `{row.get('play_card_straight_present') or '0'}/{row.get('play_card_box_present') or '0'}`"
         )
+        sources = _context_sources(row)
+        if sources:
+            lines.append(f"- context_sources: `{', '.join(sources)}`")
         lines.append(
             f"- dominant regime: canonical `{row.get('arena_dominant_canonical') or '-'}` | vtrac `{row.get('arena_dominant_vtrac_index') or '-'}` | family `{row.get('arena_dominant_family') or '-'}`"
         )

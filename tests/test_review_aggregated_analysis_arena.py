@@ -79,10 +79,20 @@ def _build_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
         "available": True,
         "schema_version": "aux_control_center_arena_v1",
         "arena_objects": {
-            "aux_positional_pressure": {"shortlist_top": [{"combo": "138", "canonical": "138", "score": 11.0, "vtrac_index": 8}]},
-            "aux_badge_pressure": {"top_combo_alerts": [{"combo": "138", "canonical": "138", "draws_since": 55}], "index_pressure": {"by_variant": {}}},
-            "aux_vtrac_pressure": {"overlay_top": {"Combined": [{"index": 8, "draws_since": 88}]}}
-            ,
+            "aux_positional_pressure": {"shortlist_top": [{"combo": "138", "canonical": "138", "score": 11.0, "vtrac_index": 23}]},
+            "aux_badge_pressure": {
+                "top_combo_alerts": [{"combo": "138", "canonical": "138", "draws_since": 55}],
+                "index_pressure": {"by_variant": {"Combined": {"top_indices": [{"index": 23, "pressure_density": 2.0}]}}},
+            },
+            "aux_vtrac_pressure": {"overlay_top": {"Combined": [{"index": 23, "draws_since": 88}]}, "heatboard_top": {}},
+            "aux_due_doubles_family_pressure": {
+                "by_variant": {"Combined": {"draws_since_double": 44, "families": [{"slot": "Family 1", "family": "0/5-1/6", "examples": ["138"]}]}}
+            },
+            "aux_repeat_watch_context": {
+                "aux_by_variant": {"Combined": {"current_index": 23, "current_streak": 2, "last_repeat_gap": 4, "last_repeat_index": 7, "max_streak": 3, "window": 5}},
+                "control_center_top": [{"variant": "Combined", "current_index": 23, "heat_index": 13, "current_streak": 2, "heat_hazard": 0.4, "last_repeat_draws": 4, "max_streak": 3}],
+            },
+            "aux_blackapple_context": {"control_center_top": [{"variant": "Combined", "ba_score": 7, "examples": ["138"]}]},
             "cc_profit_alert_context": {"top_alerts": [{"canonical": "138", "strength": 4, "evidence_summary": {"stable_family_id": "8"}}]},
         },
         "inputs": [],
@@ -95,8 +105,8 @@ def _build_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
     (vtrac_dir / f"{state_key}_vtrac_enhanced_20260318_120000.json").write_text(
         json.dumps(
             {
-                "indices_ranked": [{"index": 8, "score": 10.0}, {"index": 13, "score": 7.0}],
-                "straights_ranked": [{"straight": "138", "index": 8, "score": 8.0}, {"straight": "344", "index": 13, "score": 6.0}],
+                "indices_ranked": [{"index": 23, "score": 10.0}, {"index": 34, "score": 7.0}],
+                "straights_ranked": [{"straight": "138", "index": 23, "score": 8.0}, {"straight": "344", "index": 34, "score": 6.0}],
                 "section_summaries": {},
                 "telemetry": {},
             }
@@ -104,7 +114,7 @@ def _build_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
         encoding="utf-8",
     )
     (day_dir / "vtrac_compact_report.json").write_text(
-        json.dumps({"states": [{"state": state_key, "top_indices_by_state": [{"index": 8, "score": 10.2}], "sections": []}]}),
+        json.dumps({"states": [{"state": state_key, "top_indices_by_state": [{"index": 23, "score": 10.2}], "sections": []}]}),
         encoding="utf-8",
     )
 
@@ -165,6 +175,16 @@ def test_review_rows_capture_arena_and_downstream_presence(tmp_path: Path) -> No
     assert midday["arena_family_rank"] == "1"
     assert midday["arena_canonical_any_present"] == "1"
     assert midday["winner_canonical_context_reinforced"] == "1"
+    assert midday["winner_canonical_profit_alert_present"] == "1"
+    assert midday["winner_vtrac_profit_alert_present"] == "1"
+    assert midday["winner_canonical_blackapple_present"] == "1"
+    assert midday["winner_vtrac_blackapple_present"] == "1"
+    assert midday["winner_canonical_due_doubles_present"] == "1"
+    assert midday["winner_vtrac_due_doubles_present"] == "1"
+    assert midday["winner_vtrac_repeat_watch_present"] == "1"
+    assert midday["winner_vtrac_aux_overdue_present"] == "1"
+    assert midday["winner_canonical_aux_badge_present"] == "1"
+    assert midday["winner_vtrac_aux_badge_present"] == "1"
     assert midday["candidate_universe_straight_present"] == "1"
     assert midday["play_card_straight_present"] == "1"
     assert midday["gap_class"] == "downstream_present"
