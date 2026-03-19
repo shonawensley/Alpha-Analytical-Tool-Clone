@@ -24,7 +24,7 @@ Ground rule:
 | `AAB-005` | `approved` | arena object registry for high-scoring pattern clusters | a formal registry of top canonicals, top lanes, top families, and top watchlist neighborhoods will make decay/carryover review cleaner and support later conversion work | repeated need to compare “what the arena actually trapped” across days |
 | `AAB-006` | `approved` | competition carryover / decay scoreboard | live competitions kept showing strong states converting one or more draws later; this needs to be measured explicitly instead of treated as anecdote | frozen decay harness proves value on gold windows first |
 | `AAB-007` | `approved` | regime-conditioned decay splits | doubles-heavy, split-rail, and lane-clean environments may decay differently; this matters for state ranking and later packaging | decay metrics show materially different behavior by regime |
-| `AAB-008` | `approved` | context source precision rollups | beyond per-row source flags, we want corpus summaries like “profit-alert-backed VTRAC top3 resolves <=3d at X/Y” | enough reviewed windows to avoid overfitting |
+| `AAB-008` | `approved` | context source precision rollups | beyond per-row source flags, we want corpus summaries like “profit-alert-backed VTRAC front3 resolves <=3d at X/Y” | enough reviewed windows to avoid overfitting |
 
 ## Watchlist Items
 

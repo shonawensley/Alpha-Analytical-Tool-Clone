@@ -544,11 +544,11 @@ def _gap_detail(
         return "downstream_closed"
     if gap_class == "arena_present_but_underweighted":
         if arena_canon_rank is None and arena_vtrac_rank is not None and arena_vtrac_rank <= 3:
-            return "lane_alive_literal_missing_top3"
+            return "lane_alive_literal_missing_front3"
         if arena_canon_rank is None and arena_vtrac_rank is not None and arena_vtrac_rank <= 5:
-            return "lane_alive_literal_missing_top5"
+            return "lane_alive_literal_missing_front5"
         if arena_canon_rank is None and arena_family_rank is not None and arena_family_rank <= 5:
-            return "family_alive_literal_missing_top5"
+            return "family_alive_literal_missing_front5"
         if context_reinforced:
             return "context_reinforced_underweighted"
         return "generic_underweighted"
@@ -755,8 +755,8 @@ def _summary_markdown(*, rows: List[Dict[str, str]], score_path: Path, label: st
         f"- arena VTRAC any-present: `{_truth_count('arena_vtrac_any_present')}/{total}`",
         f"- arena family any-present: `{_truth_count('arena_family_any_present')}/{total}`",
         f"- arena context-reinforced any: `{sum(1 for row in rows if row.get('winner_canonical_context_reinforced') == '1' or row.get('winner_vtrac_context_reinforced') == '1' or row.get('winner_family_context_reinforced') == '1')}/{total}`",
-        f"- arena VTRAC top3: `{_rank_hits('arena_vtrac_rank', 3)}/{total}`",
-        f"- arena VTRAC top5: `{_rank_hits('arena_vtrac_rank', 5)}/{total}`",
+        f"- arena VTRAC front3: `{_rank_hits('arena_vtrac_rank', 3)}/{total}`",
+        f"- arena VTRAC front5: `{_rank_hits('arena_vtrac_rank', 5)}/{total}`",
         f"- candidate_universe any present: `{sum(1 for row in rows if row.get('candidate_universe_straight_present') == '1' or row.get('candidate_universe_box_present') == '1' or row.get('candidate_universe_vtrac_present') == '1')}/{total}`",
         f"- candidate_universe straight/box present: `{sum(1 for row in rows if row.get('candidate_universe_straight_present') == '1' or row.get('candidate_universe_box_present') == '1')}/{total}`",
         f"- play_card any present: `{sum(1 for row in rows if row.get('play_card_straight_present') == '1' or row.get('play_card_box_present') == '1' or row.get('play_card_vtrac_present') == '1')}/{total}`",

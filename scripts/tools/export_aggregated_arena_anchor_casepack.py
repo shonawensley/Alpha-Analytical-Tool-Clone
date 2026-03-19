@@ -149,9 +149,9 @@ def _emit_section(lines: List[str], *, title: str, rows: Sequence[Dict[str, str]
 def build_casepack(*, review_csv: Path, out_md: Path, per_section_limit: int) -> None:
     rows = _load_rows(review_csv)
     sections = [
-        ("Lane Alive Literal Missing Top3", _pick_rows(rows, gap_detail="lane_alive_literal_missing_top3", limit=per_section_limit)),
-        ("Lane Alive Literal Missing Top5", _pick_rows(rows, gap_detail="lane_alive_literal_missing_top5", limit=per_section_limit)),
-        ("Family Alive Literal Missing Top5", _pick_rows(rows, gap_detail="family_alive_literal_missing_top5", limit=per_section_limit)),
+        ("Lane Alive Literal Missing Front3", _pick_rows(rows, gap_detail="lane_alive_literal_missing_front3", limit=per_section_limit)),
+        ("Lane Alive Literal Missing Front5", _pick_rows(rows, gap_detail="lane_alive_literal_missing_front5", limit=per_section_limit)),
+        ("Family Alive Literal Missing Front5", _pick_rows(rows, gap_detail="family_alive_literal_missing_front5", limit=per_section_limit)),
         ("Context Reinforced Underweighted", _pick_rows(rows, gap_detail="context_reinforced_underweighted", limit=per_section_limit)),
         ("Thin Conversion Gap", _pick_rows(rows, gap_detail="thin_conversion_gap", limit=per_section_limit)),
     ]
