@@ -210,6 +210,17 @@ def _build_markdown(
     lines.extend(_md_table(_group_counts(focus_rows, key="watchlist_band"), ["watchlist_band", "rows", "same_day", "decay_only", "miss"]))
     lines.extend([
         "",
+        "## Focus Cohort Split By Box Resolution Profile",
+        "",
+    ])
+    lines.extend(
+        _md_table(
+            _group_counts(focus_rows, key="box_resolution_profile"),
+            ["box_resolution_profile", "rows", "same_day", "decay_only", "miss"],
+        )
+    )
+    lines.extend([
+        "",
         "## Focus Cohort Rows",
         "",
     ])
@@ -224,6 +235,7 @@ def _build_markdown(
         "arena_vtrac_rank_band",
         "watchlist_canonical_count",
         "watchlist_band",
+        "box_resolution_profile",
         "same_day_box_hit",
         "within_3d_box_hit",
         "first_box_event",
@@ -323,6 +335,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for row in _group_counts(focus_rows, key="watchlist_band"):
         merged = dict(row)
         merged["group"] = "focus_watchlist_band"
+        summary_rows.append(merged)
+    for row in _group_counts(focus_rows, key="box_resolution_profile"):
+        merged = dict(row)
+        merged["group"] = "focus_box_resolution_profile"
         summary_rows.append(merged)
 
     out_summary_csv = Path(args.out_summary_csv)

@@ -48,6 +48,8 @@ BRIDGE_ROW_FIELDS = [
     "same_day_exact_hit",
     "within_3d_box_hit",
     "within_3d_exact_hit",
+    "box_resolution_profile",
+    "exact_resolution_profile",
     "first_box_event",
     "first_exact_event",
     "candidate_universe_box_present",
@@ -119,6 +121,27 @@ def _matches_gate(row: Dict[str, str], *, gap_details: Sequence[str], max_vtrac_
     return True
 
 
+def _resolution_profile(
+    *,
+    review_date: str,
+    review_outcome: str,
+    same_day_hit: str,
+    event_date: str,
+    event_outcome: str,
+) -> str:
+    if str(same_day_hit or "") == "1":
+        if event_date == review_date and event_outcome == review_outcome:
+            return "direct_same_outcome"
+        if event_date == review_date and event_outcome and event_outcome != review_outcome:
+            return "same_day_precursor_plus_same_day"
+        return "same_day_reviewed"
+    if event_date:
+        if event_date == review_date:
+            return "same_day_carryforward"
+        return "future_day_decay"
+    return "miss"
+
+
 def _build_candidate_sets(watchlist: Sequence[Dict[str, Any]], *, top_n: int) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
     selected = [item for item in watchlist if isinstance(item, dict)][:top_n]
     canonicals: List[str] = []
@@ -184,6 +207,8 @@ def build_bridge_rows(
     out: List[Dict[str, str]] = []
 
     for row in rows:
+        review_date = str(row.get("date") or "")
+        review_outcome = str(row.get("outcome") or "")
         source_mix = str(row.get("source_mix") or "").strip()
         if cohort_set and source_mix not in cohort_set:
             continue
@@ -218,13 +243,27 @@ def build_bridge_rows(
             same_day_exact_hit = "1" if str(row.get("winner") or "") in set(exact_literals) else "0"
             box_date, box_outcome, box_winner = _first_future_box_event(outcomes, candidate_canonicals)
             exact_date, exact_outcome, exact_winner = _first_future_exact_event(outcomes, exact_literals)
+            box_profile = _resolution_profile(
+                review_date=review_date,
+                review_outcome=review_outcome,
+                same_day_hit=same_day_box_hit,
+                event_date=box_date,
+                event_outcome=box_outcome,
+            )
+            exact_profile = _resolution_profile(
+                review_date=review_date,
+                review_outcome=review_outcome,
+                same_day_hit=same_day_exact_hit,
+                event_date=exact_date,
+                event_outcome=exact_outcome,
+            )
 
             out.append(
                 {
                     "rule_name": rule_name,
-                    "date": str(row.get("date") or ""),
+                    "date": review_date,
                     "state_key": str(row.get("state_key") or ""),
-                    "outcome": str(row.get("outcome") or ""),
+                    "outcome": review_outcome,
                     "winner": str(row.get("winner") or ""),
                     "winner_canonical": str(row.get("winner_canonical") or ""),
                     "gap_detail": str(row.get("gap_detail") or ""),
@@ -237,6 +276,8 @@ def build_bridge_rows(
                     "same_day_exact_hit": same_day_exact_hit,
                     "within_3d_box_hit": "1" if box_date else "0",
                     "within_3d_exact_hit": "1" if exact_date else "0",
+                    "box_resolution_profile": box_profile,
+                    "exact_resolution_profile": exact_profile,
                     "first_box_event": f"{box_date} {box_outcome} {box_winner}".strip(),
                     "first_exact_event": f"{exact_date} {exact_outcome} {exact_winner}".strip(),
                     "candidate_universe_box_present": str(row.get("candidate_universe_box_present") or "0"),

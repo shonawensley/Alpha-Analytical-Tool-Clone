@@ -37,6 +37,7 @@ def test_normalize_row_adds_window_and_bands() -> None:
         "source_mix": "aux_overdue+aux_badge",
         "arena_vtrac_rank": "4",
         "watchlist_canonical_count": "13",
+        "box_resolution_profile": "future_day_decay",
         "same_day_box_hit": "0",
         "same_day_exact_hit": "0",
         "within_3d_box_hit": "1",
@@ -47,6 +48,7 @@ def test_normalize_row_adds_window_and_bands() -> None:
     assert out["outcome_class"] == "decay_only"
     assert out["arena_vtrac_rank_band"] == "front5"
     assert out["watchlist_band"] == "medium"
+    assert out["box_resolution_profile"] == "future_day_decay"
 
 
 def test_matches_focus_gate_requires_gap_and_rank() -> None:

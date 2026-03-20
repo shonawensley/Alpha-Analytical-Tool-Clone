@@ -4,7 +4,11 @@ import csv
 import json
 from pathlib import Path
 
-from scripts.tools.study_aggregated_arena_bridge import build_bridge_rows, write_bridge_outputs
+from scripts.tools.study_aggregated_arena_bridge import (
+    _resolution_profile,
+    build_bridge_rows,
+    write_bridge_outputs,
+)
 
 
 def _write_csv(path: Path, rows) -> None:
@@ -127,9 +131,11 @@ def test_bridge_study_measures_same_day_and_future_hits(tmp_path: Path) -> None:
     by_rule = {row["rule_name"]: row for row in rows}
     assert by_rule["top1_perm"]["same_day_box_hit"] == "0"
     assert by_rule["top1_perm"]["within_3d_box_hit"] == "1"
+    assert by_rule["top1_perm"]["box_resolution_profile"] == "future_day_decay"
     assert by_rule["top1_perm"]["first_box_event"] == "2026-01-02 Midday 474"
     assert by_rule["top2_perm"]["same_day_box_hit"] == "1"
     assert by_rule["top2_perm"]["same_day_exact_hit"] == "1"
+    assert by_rule["top2_perm"]["box_resolution_profile"] == "direct_same_outcome"
 
     out_rows = tmp_path / "bridge_rows.csv"
     out_summary = tmp_path / "bridge_summary.csv"
@@ -171,3 +177,26 @@ def test_bridge_outputs_write_headers_when_no_rows(tmp_path: Path) -> None:
     assert out_md.exists()
     assert out_rows.read_text(encoding="utf-8").startswith("rule_name,")
     assert out_summary.read_text(encoding="utf-8").startswith("group_type,")
+
+
+def test_resolution_profile_distinguishes_precursor_and_carryforward() -> None:
+    assert (
+        _resolution_profile(
+            review_date="2026-01-08",
+            review_outcome="Evening",
+            same_day_hit="1",
+            event_date="2026-01-08",
+            event_outcome="Midday",
+        )
+        == "same_day_precursor_plus_same_day"
+    )
+    assert (
+        _resolution_profile(
+            review_date="2026-01-08",
+            review_outcome="Midday",
+            same_day_hit="0",
+            event_date="2026-01-08",
+            event_outcome="Evening",
+        )
+        == "same_day_carryforward"
+    )
