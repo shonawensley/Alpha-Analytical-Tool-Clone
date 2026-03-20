@@ -94,7 +94,22 @@ def test_bridge_study_measures_same_day_and_future_hits(tmp_path: Path) -> None:
                 "candidate_universe_straight_present": "0",
                 "play_card_box_present": "0",
                 "play_card_straight_present": "0",
-            }
+            },
+            {
+                "date": "2026-01-01",
+                "state_key": "StateA",
+                "outcome": "Evening",
+                "winner": "111",
+                "winner_canonical": "111",
+                "gap_detail": "family_alive_literal_missing_front5",
+                "source_mix": "aux_overdue+aux_badge",
+                "arena_vtrac_rank": "9",
+                "arena_path": str(arena_path.relative_to(tmp_path)),
+                "candidate_universe_box_present": "0",
+                "candidate_universe_straight_present": "0",
+                "play_card_box_present": "0",
+                "play_card_straight_present": "0",
+            },
         ],
     )
 
@@ -104,6 +119,8 @@ def test_bridge_study_measures_same_day_and_future_hits(tmp_path: Path) -> None:
         cohort_mixes=["aux_overdue+aux_badge"],
         rules=["top1_perm", "top2_perm"],
         decay_days=3,
+        gap_details=["lane_alive_literal_missing_front3", "lane_alive_literal_missing_front5"],
+        max_vtrac_rank=5,
     )
 
     assert len(rows) == 2
@@ -124,8 +141,33 @@ def test_bridge_study_measures_same_day_and_future_hits(tmp_path: Path) -> None:
         out_md=out_md,
         cohort_mixes=["aux_overdue+aux_badge"],
         rules=["top1_perm", "top2_perm"],
+        gap_details=["lane_alive_literal_missing_front3", "lane_alive_literal_missing_front5"],
+        max_vtrac_rank=5,
     )
 
     assert out_rows.exists()
     assert out_summary.exists()
     assert out_md.exists()
+
+
+def test_bridge_outputs_write_headers_when_no_rows(tmp_path: Path) -> None:
+    out_rows = tmp_path / "bridge_rows.csv"
+    out_summary = tmp_path / "bridge_summary.csv"
+    out_md = tmp_path / "bridge.md"
+
+    write_bridge_outputs(
+        rows=[],
+        out_rows_csv=out_rows,
+        out_summary_csv=out_summary,
+        out_md=out_md,
+        cohort_mixes=["aux_overdue+aux_badge"],
+        rules=["top4_perm"],
+        gap_details=["lane_alive_literal_missing_front3"],
+        max_vtrac_rank=5,
+    )
+
+    assert out_rows.exists()
+    assert out_summary.exists()
+    assert out_md.exists()
+    assert out_rows.read_text(encoding="utf-8").startswith("rule_name,")
+    assert out_summary.read_text(encoding="utf-8").startswith("group_type,")

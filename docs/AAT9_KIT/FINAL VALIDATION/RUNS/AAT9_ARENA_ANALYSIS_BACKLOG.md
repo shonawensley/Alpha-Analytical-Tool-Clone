@@ -32,7 +32,7 @@ Ground rule:
 |---|---|---|---|
 | `AAB-009` | `watch` | heavier boxed VTRAC badge matrix export | currently stays as a linked truth/reporting layer; revisit only if arena review keeps needing more combo-level badge semantics than the current structured summaries preserve |
 | `AAB-010` | `watch` | same-day midday-to-evening carry-forward inside decay | keep same-day grading clean, but support draw-offset reporting so midday-to-evening transitions remain first-class evidence |
-| `AAB-011` | `implemented` | conversion-side lane-to-literal bridge scoring | the bounded bridge-study harness now exists and has been run on two frozen windows. The second January block repeats `aux_overdue+aux_badge` as the cleanest bridge cohort, keeps `due_doubles` promising but not yet repeated in the same way, and still does not justify the heavier trio mix | keep in study mode until a broader corpus confirms whether `due_doubles` repeats or remains a first-window-only effect |
+| `AAB-011` | `implemented` | conversion-side lane-to-literal bridge scoring | the bounded bridge-study harness now exists, has been run across December, January, and June, and now has a direct gated corpus read. `aux_overdue+aux_badge` remains the only repeating bridge cohort, and the first credible structural gate is `lane_alive_literal_missing_front3/front5` with `arena_vtrac_rank <= 5`, which lands at `3/6` same-day, `1/6` decay-only, `2/6` miss. `due_doubles` remains promising but unconfirmed, and the heavier trio mix still does not justify promotion | keep in study mode until the gated cohort repeats on broader windows or a cleaner separator materially improves precision |
 
 ## Operating Rule
 

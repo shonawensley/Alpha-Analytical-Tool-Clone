@@ -31,6 +31,44 @@ DEFAULT_COHORTS = (
     "due_doubles+aux_overdue+aux_badge",
     "due_doubles",
 )
+BRIDGE_ROW_FIELDS = [
+    "rule_name",
+    "date",
+    "state_key",
+    "outcome",
+    "winner",
+    "winner_canonical",
+    "gap_detail",
+    "source_mix",
+    "arena_vtrac_rank",
+    "watch_items_used",
+    "watchlist_canonical_count",
+    "watchlist_exact_count",
+    "same_day_box_hit",
+    "same_day_exact_hit",
+    "within_3d_box_hit",
+    "within_3d_exact_hit",
+    "first_box_event",
+    "first_exact_event",
+    "candidate_universe_box_present",
+    "candidate_universe_straight_present",
+    "play_card_box_present",
+    "play_card_straight_present",
+    "baseline_same_day_literal",
+]
+BRIDGE_SUMMARY_FIELDS = [
+    "group_type",
+    "rule_name",
+    "source_mix",
+    "rows",
+    "avg_watch_items_used",
+    "avg_watchlist_canonical_count",
+    "same_day_box_hit",
+    "same_day_exact_hit",
+    "within_3d_box_hit",
+    "within_3d_exact_hit",
+    "baseline_same_day_literal",
+]
 
 
 def _read_json(path: Path) -> Any:
@@ -59,6 +97,26 @@ def _parse_rule(rule_name: str) -> int:
     if text.startswith("top"):
         return int(text.removeprefix("top"))
     raise ValueError(f"Unsupported bridge rule: {rule_name}")
+
+
+def _to_int(value: object) -> Optional[int]:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def _matches_gate(row: Dict[str, str], *, gap_details: Sequence[str], max_vtrac_rank: Optional[int]) -> bool:
+    if gap_details and str(row.get("gap_detail") or "") not in set(gap_details):
+        return False
+    if max_vtrac_rank is not None:
+        rank = _to_int(row.get("arena_vtrac_rank"))
+        if rank is None or rank > max_vtrac_rank:
+            return False
+    return True
 
 
 def _build_candidate_sets(watchlist: Sequence[Dict[str, Any]], *, top_n: int) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
@@ -118,6 +176,8 @@ def build_bridge_rows(
     cohort_mixes: Sequence[str],
     rules: Sequence[str],
     decay_days: int,
+    gap_details: Sequence[str],
+    max_vtrac_rank: Optional[int],
 ) -> List[Dict[str, str]]:
     cohort_set = {str(x).strip() for x in cohort_mixes if str(x).strip()}
     rows = _load_csv(front_rows_csv)
@@ -126,6 +186,8 @@ def build_bridge_rows(
     for row in rows:
         source_mix = str(row.get("source_mix") or "").strip()
         if cohort_set and source_mix not in cohort_set:
+            continue
+        if not _matches_gate(row, gap_details=gap_details, max_vtrac_rank=max_vtrac_rank):
             continue
         arena_rel = str(row.get("arena_path") or "").strip()
         if not arena_rel:
@@ -227,14 +289,15 @@ def write_bridge_outputs(
     out_md: Path,
     cohort_mixes: Sequence[str],
     rules: Sequence[str],
+    gap_details: Sequence[str],
+    max_vtrac_rank: Optional[int],
 ) -> None:
     out_rows_csv.parent.mkdir(parents=True, exist_ok=True)
-    if rows:
-        with out_rows_csv.open("w", encoding="utf-8", newline="") as fh:
-            writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
-            writer.writeheader()
-            for row in rows:
-                writer.writerow(row)
+    with out_rows_csv.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=BRIDGE_ROW_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
 
     rule_summary = _group_summary(rows, key="rule_name")
     mix_summary = _group_summary(rows, key="source_mix")
@@ -248,25 +311,11 @@ def write_bridge_outputs(
         merged["group_type"] = "source_mix"
         summary_rows.append(merged)
 
-    if summary_rows:
-        fieldnames = [
-            "group_type",
-            "rule_name",
-            "source_mix",
-            "rows",
-            "avg_watch_items_used",
-            "avg_watchlist_canonical_count",
-            "same_day_box_hit",
-            "same_day_exact_hit",
-            "within_3d_box_hit",
-            "within_3d_exact_hit",
-            "baseline_same_day_literal",
-        ]
-        with out_summary_csv.open("w", encoding="utf-8", newline="") as fh:
-            writer = csv.DictWriter(fh, fieldnames=fieldnames)
-            writer.writeheader()
-            for row in summary_rows:
-                writer.writerow(row)
+    with out_summary_csv.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=BRIDGE_SUMMARY_FIELDS)
+        writer.writeheader()
+        for row in summary_rows:
+            writer.writerow(row)
 
     lines: List[str] = []
     lines.append("# Aggregated Arena Bridge Study")
@@ -274,6 +323,8 @@ def write_bridge_outputs(
     lines.append("- Purpose: test bounded watchlist-based lane-to-literal bridge rules on the strongest measured cohorts before any production conversion change.")
     lines.append(f"- Cohort mixes: `{', '.join(cohort_mixes)}`")
     lines.append(f"- Rules: `{', '.join(rules)}`")
+    lines.append(f"- Gap details: `{', '.join(gap_details) if gap_details else '-'}`")
+    lines.append(f"- Max VTRAC rank: `{max_vtrac_rank if max_vtrac_rank is not None else '-'}`")
     lines.append(f"- Row count: `{len(rows)}`")
     lines.append("")
     lines.append("## Rule Summary")
@@ -331,6 +382,8 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         nargs="*",
         default=["top3_perm", "top4_perm"],
     )
+    ap.add_argument("--gap-details", nargs="*", default=[])
+    ap.add_argument("--max-vtrac-rank", type=int, default=0)
     ap.add_argument("--decay-days", type=int, default=3)
     ap.add_argument(
         "--out-rows-csv",
@@ -349,12 +402,15 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
+    max_vtrac_rank = int(args.max_vtrac_rank) if int(args.max_vtrac_rank) > 0 else None
     rows = build_bridge_rows(
         front_rows_csv=Path(args.front_rows_csv),
         sharepacks_root=Path(args.sharepacks_root),
         cohort_mixes=args.cohort_mixes,
         rules=args.rules,
         decay_days=int(args.decay_days),
+        gap_details=args.gap_details,
+        max_vtrac_rank=max_vtrac_rank,
     )
     write_bridge_outputs(
         rows=rows,
@@ -363,6 +419,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         out_md=Path(args.out_md),
         cohort_mixes=args.cohort_mixes,
         rules=args.rules,
+        gap_details=args.gap_details,
+        max_vtrac_rank=max_vtrac_rank,
     )
     print(f"bridge_rows={len(rows)}")
     print(f"summary_csv={args.out_summary_csv}")
