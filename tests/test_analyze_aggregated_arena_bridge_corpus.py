@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts.tools.analyze_aggregated_arena_bridge_corpus import (
+    _group_counts,
     _matches_focus_gate,
     _normalize_row,
     _outcome_class,
@@ -59,3 +60,16 @@ def test_matches_focus_gate_requires_gap_and_rank() -> None:
     assert _matches_focus_gate(row, gap_details=["lane_alive_literal_missing_front3"], max_vtrac_rank=5) is True
     assert _matches_focus_gate(row, gap_details=["family_alive_literal_missing_front5"], max_vtrac_rank=5) is False
     assert _matches_focus_gate(row, gap_details=["lane_alive_literal_missing_front3"], max_vtrac_rank=2) is False
+
+
+def test_group_counts_summarizes_outcome_classes() -> None:
+    rows = [
+        {"outcome": "Midday", "outcome_class": "same_day"},
+        {"outcome": "Midday", "outcome_class": "miss"},
+        {"outcome": "Evening", "outcome_class": "decay_only"},
+    ]
+    grouped = _group_counts(rows, key="outcome")
+    assert grouped == [
+        {"outcome": "Evening", "rows": "1", "same_day": "0/1", "decay_only": "1/1", "miss": "0/1"},
+        {"outcome": "Midday", "rows": "2", "same_day": "1/2", "decay_only": "0/2", "miss": "1/2"},
+    ]

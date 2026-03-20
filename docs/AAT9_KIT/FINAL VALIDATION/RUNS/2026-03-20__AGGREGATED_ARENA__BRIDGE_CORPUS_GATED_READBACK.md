@@ -23,6 +23,13 @@
 | 2025-12-30_to_2026-01-04__AGGREGATED_ANALYSIS_ARENA__BRIDGE_STUDY_GATED_ROWS | 3 | 1/3 | 1/3 | 1/3 |
 | 2026-01-05_to_2026-01-09__AGGREGATED_ANALYSIS_ARENA__BRIDGE_STUDY_GATED_ROWS | 3 | 2/3 | 0/3 | 1/3 |
 
+## Focus Cohort Split By Reviewed Outcome
+
+| outcome | rows | same_day | decay_only | miss |
+|---|---|---|---|---|
+| Evening | 2 | 2/2 | 0/2 | 0/2 |
+| Midday | 4 | 1/4 | 1/4 | 2/4 |
+
 ## Focus Cohort Split By Gap Detail
 
 | gap_detail | rows | same_day | decay_only | miss |

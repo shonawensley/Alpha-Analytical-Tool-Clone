@@ -192,6 +192,12 @@ def _build_markdown(
     lines.extend(_md_table(_group_counts(focus_rows, key="window"), ["window", "rows", "same_day", "decay_only", "miss"]))
     lines.extend([
         "",
+        "## Focus Cohort Split By Reviewed Outcome",
+        "",
+    ])
+    lines.extend(_md_table(_group_counts(focus_rows, key="outcome"), ["outcome", "rows", "same_day", "decay_only", "miss"]))
+    lines.extend([
+        "",
         "## Focus Cohort Split By Gap Detail",
         "",
     ])
@@ -323,6 +329,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for row in _group_counts(focus_rows, key="window"):
         merged = dict(row)
         merged["group"] = "focus_window"
+        summary_rows.append(merged)
+    for row in _group_counts(focus_rows, key="outcome"):
+        merged = dict(row)
+        merged["group"] = "focus_outcome"
         summary_rows.append(merged)
     for row in _group_counts(focus_rows, key="gap_detail"):
         merged = dict(row)
