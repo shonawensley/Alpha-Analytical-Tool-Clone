@@ -249,3 +249,75 @@ That layer should sit between:
 
 - per-state arena synthesis
 - and later combination-forming / final-pack assembly
+
+## Evening Relationship Addendum
+
+Later evening truth added two more useful board-study cases:
+
+- `Connecticut4 -> 394`
+- `NewJersey4 -> 950`
+
+These are important because they strengthen the need for a relationship layer without falsely inflating direct-hit credit.
+
+### Connecticut4 -> `394`
+
+Observed local building blocks:
+
+- `A10 099 DBL/RANK1`
+  - implied set `099 / 909 / 990`
+- `A12 355 PERM/CLAMP`
+  - implied set `503 / 508 / 553 / 558`
+- arena VTRAC watchlists:
+  - `15 => 440 / 044 / 099`
+  - `4 => 355 / 003`
+
+Current judgment:
+
+- `composite`
+
+Why:
+
+- no single pre-result surface directly contained `394`
+- but the board did preserve a plausible doubled-anchor and key-digit chain:
+  - `99`
+  - `55`
+  - plus a live `3`
+  - inside active same-index / shoulder neighborhoods
+
+This is exactly the kind of relation that should be studied later rather than promoted prematurely.
+
+### NewJersey4 -> `950`
+
+Observed local building blocks:
+
+- VTRAC `15`
+  - `049 / 459 / 445 / 044 / 599`
+- VTRAC `5`
+  - `559 / 004 / 455 / 554 / 009`
+- VTRAC `4`
+  - `003 / 355 / 053 / 508 / 805 / 035 / 558`
+- final NJ emphasis already favored:
+  - `455 / 559 / 445 / 499 / 344 / 003`
+
+Current judgment:
+
+- `lane/family-to-composite`
+
+Why:
+
+- this was not a direct literal catch
+- but it does look like a mirror-double / lane-shoulder conversion inside a live New Jersey family environment
+
+## Consequence For Review Method
+
+Competition 8 now supports a stronger review distinction:
+
+- `direct`
+- `lane/family`
+- `lane/family-to-composite`
+- `composite`
+
+That finer separation is useful because:
+
+- it avoids pretending relational cases were direct hits
+- but it also avoids throwing away real structural closeness as if it were random noise

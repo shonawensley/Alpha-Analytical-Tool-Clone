@@ -62,6 +62,43 @@ The new layer should not be placed:
 
 It is a board-level comparative layer.
 
+## Relationship To Combination Forming
+
+This layer is not the same thing as combination forming.
+
+Its job is to preserve and score relationships before combination forming makes pack decisions.
+
+That means:
+
+- analysis discovers what is alive
+- the relationship layer classifies how those live objects relate
+- combination forming decides what to actually do with the strongest findings
+
+This distinction is important because the old system often jumped too quickly from:
+
+- broad findings
+- straight into combination geometry and budgeting
+
+without enough data-driven relationship learning in between.
+
+The arena branch is trying to fix that.
+
+## Relationship To Master Validation
+
+Master Validation should collect evidence for this layer.
+
+In practice that means:
+
+- if a winner was direct, record it
+- if a winner was only lane/family visible, record that separately
+- if a winner was reachable only through doubled anchors, mirror shoulders, key digits, or same-index conversion, record that as `composite`
+
+That review data is what should later shape:
+
+- final findings policy
+- advanced combination forming
+- and profitability thresholds
+
 ## Governing Rules
 
 ### Rule 1

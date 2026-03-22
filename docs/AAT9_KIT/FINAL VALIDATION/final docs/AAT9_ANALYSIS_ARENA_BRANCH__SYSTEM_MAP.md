@@ -33,6 +33,52 @@ The arena branch currently has these major layers:
 6. competition-style board reads
 7. downstream baseline control arm
 
+## Operating Picture
+
+The cleanest way to think about the branch now is:
+
+### Brain 1
+
+Per-state predictive analysis.
+
+This is where the system:
+
+- builds fresh state artifacts
+- preserves rich tool evidence
+- synthesizes the aggregated analysis arena
+- classifies local structure, pressure, and context
+
+### Brain 2
+
+Board-level comparison and decision support.
+
+This is where the system should:
+
+- compare strong states against each other
+- rank states
+- detect spillover and shared family complexes
+- separate spent vs unspent families after Midday
+- preserve final findings before combination forming
+
+### Master Validation
+
+Post-results deep learning and reverse-engineering.
+
+This is where the system should:
+
+- inspect winners truth first
+- compare that truth against the arena and tool evidence
+- learn what deserves later policy or conversion promotion
+- shape future final-findings and combination-forming logic from actual data instead of guesswork
+
+This separation matters:
+
+- Brain 1 is the live per-state predictive runtime
+- Brain 2 is the live board/decision runtime
+- Master Validation is the learning loop that improves both
+
+That is why analysis, final findings, combination forming, and budgeting are related without being the same layer.
+
 ## Layer 1 — Predictive-Day Tool Generation
 
 This is the rebuilt predictive shell that creates fresh state artifacts from a history workbook.
