@@ -2509,9 +2509,523 @@ These are often where Hot Zones' real value lives.
 
 ---
 
-## Part F Placeholder
+## Part F — Aggregated Analysis Arena
+
+Purpose:
+- review the actual Brain-1 synthesis object
+- judge whether the arena integrated the strongest truths from Parts B-E into the right per-state story
+- separate:
+  - what the tools knew
+  - what the arena surfaced
+  - what later layers still have to decide
+
+This part is the first place in the template that directly asks:
+- did the per-state system itself form the correct integrated state thesis?
+
+This part should answer:
+- did the arena preserve the Part A truth coherently?
+- did it synthesize the strongest tool truths correctly?
+- was the state more lane-right, family-right, or canonical-right?
+- did context reinforce the same truth, or create separate pressure?
+- what did the arena make clearer than the individual tool sections alone?
+
+This part should not answer:
+- whether Aux / Control Center was semantically correct in full detail
+- whether Candidate Universe or Play Card closed the win
+- what the final pack geometry should be
+- whether a budget should be raised or lowered
+
+Those belong later.
+
+---
+
+## Part F Inputs
+
+Primary inputs:
+- `sharepacks/_predictive/<D>/<STATE>/analysis/aggregated_analysis_arena__*.json`
+- optional markdown twin:
+  - `sharepacks/_predictive/<D>/<STATE>/analysis/aggregated_analysis_arena__*.md`
+
+If reviewing frozen/results roots:
+- use the same arena artifact under the frozen sharepack root
+- winners links may be present for review, but the arena evidence remains predictive-side in meaning
+
+Recommended companion inputs:
+- Part A notes
+- Part B-E notes
+- arena contract:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_AGGREGATED_ANALYSIS_ARENA_CONTRACT_v0.md`
+- state-level arena review memo / scoreboard if present
+- state-day review scoreboard if present
+
+Use tool-local artifacts only when:
+- the arena summary leaves an ambiguity
+- provenance is unclear
+- a tie between surfaces needs to be resolved
+
+Do not reopen whole raw tool folders by default.
+
+---
+
+## Part F Reading Rules
+
+1. Treat the arena as an integrator, not a final caller.
+2. Read `cross_tool_relations` before `arena_synthesis`.
+3. Judge lane/family truth fairly even when literal canonical concentration is weak.
+4. Treat `context_reinforced` and `context_only_pressure` as different states.
+5. Treat contradiction flags as prompts for diagnosis, not automatic failure labels.
+6. Treat the VTRAC watchlist as a corridor-review surface, not a direct play pack.
+7. Keep downstream handoff in the background only; direct downstream comparison belongs later.
+8. Ask what the arena made clearer than Parts B-E alone, not only what it ranked first.
+
+---
+
+## Part F Output Shape
+
+Part F should end with:
+- one overall arena verdict
+- one dominant state-thesis statement
+- one strongest preserved truth
+- one main aggregation gap
+- one explicit handoff into Part G
+
+Recommended answer style:
+- synthesis first
+- tables and top lists only where they clarify
+- avoid raw payload dumping
+- explicitly separate:
+  - preserved
+  - underweighted
+  - contradicted
+  - only context-driven
+
+---
+
+## F0. Arena File Lock And Review Surface
+
+Purpose:
+- lock the exact aggregated arena artifact used for review
+- make the section auditable before interpretation begins
+
+Record:
+- results date `D`
+- history date `H`
+- state
+- arena JSON path
+- arena markdown path if used
+- profile / experiment tag
+- predictive root or frozen/results root
+- whether winners links are present inside the arena object
+
+Template:
+
+```md
+### F0. Arena File Lock And Review Surface
+
+- Results date: `...`
+- History date: `...`
+- State: `...`
+- Arena JSON:
+  - `...`
+- Arena markdown:
+  - `...`
+- Profile / experiment: `...`
+- Root mode: `predictive / frozen-results`
+- Arena contains winners links: `true/false`
+
+Review surface notes:
+- primary arena object reviewed: `...`
+- any supporting arena review memo used?: `yes/no`
+- reason those supports were needed: `...`
+```
+
+---
+
+## F1. Arena Truth Alignment Summary
+
+Purpose:
+- give the shortest possible answer to whether the arena preserved the Part A truth as an integrated state story
+
+Recommended verdict language:
+- `truth preserved coherently`
+- `lane preserved, literal weak`
+- `family preserved, lane mixed`
+- `truth present but underweighted`
+- `context-reinforced but split`
+- `truth diluted by contradiction`
+- `truth absent`
+
+Template:
+
+```md
+### F1. Arena Truth Alignment Summary
+
+Part A target:
+- `...`
+
+Arena truth-alignment verdict:
+- `truth preserved coherently / lane preserved, literal weak / family preserved, lane mixed / truth present but underweighted / context-reinforced but split / truth diluted by contradiction / truth absent`
+
+Why:
+- `...`
+
+Most important Brain-1 read:
+- `...`
+```
+
+---
+
+## F2. Provenance, Source Status, And Predictive-Safe Boundary
+
+Purpose:
+- verify that the arena object is complete and trustworthy before drawing meaning from it
+
+Focus:
+- `metadata`
+- `provenance`
+- `source_status`
+- `evidence_paths`
+- `contains_winners_artifacts`
+
+Primary questions:
+- were all major tool/context sources present?
+- was anything rebuilt, preloaded, or missing?
+- was the object reviewed under predictive-safe or frozen conditions?
+- are winners links being treated only as review aids rather than predictive meaning?
+
+Template:
+
+```md
+### F2. Provenance, Source Status, And Predictive-Safe Boundary
+
+Source-status read:
+- Stable: `available / missing / degraded`
+- Digit Reduction: `available / missing / degraded`
+- VTRAC: `available / missing / degraded`
+- Hot Zones: `available / missing / degraded`
+- Aux / Control Center: `available / missing / degraded`
+
+Boundary read:
+- Arena mode: `predictive-safe / frozen-review`
+- Winners links role: `none / navigation only / active review aid`
+- Any source ambiguity?: `...`
+
+Trust judgment:
+- `fully reviewable / reviewable with caveats / partially degraded / not safe to interpret strongly`
+```
+
+---
+
+## F3. Cross-Tool Consensus Read
+
+Purpose:
+- review the raw cross-tool agreement layer before judging the arena summary layer
+
+Centered on:
+- `canonical_consensus_top`
+- `vtrac_index_consensus_top`
+- `family_consensus_top`
+
+Primary questions:
+- where did tools actually agree?
+- was literal agreement stronger or weaker than lane agreement?
+- was family agreement the clearest preserved truth?
+- did context overlap with the same objects or point elsewhere?
+
+Template:
+
+```md
+### F3. Cross-Tool Consensus Read
+
+Canonical consensus read:
+- `...`
+
+VTRAC-index consensus read:
+- `...`
+
+Family consensus read:
+- `...`
+
+Cross-tool agreement verdict:
+- strongest agreement surface: `canonical / VTRAC lane / family / mixed`
+- best match to Part A truth: `...`
+- main disagreement or dilution point: `...`
+```
+
+---
+
+## F4. Dominant Arena Synthesis Read
+
+Purpose:
+- judge what story the arena actually surfaced to the reviewer after aggregation
+
+Centered on:
+- `dominant_canonicals`
+- `dominant_vtrac_indices`
+- `dominant_families`
+
+Primary questions:
+- what is the arena saying the state is mainly about?
+- do the dominant canonical, lane, and family stories agree?
+- if they do not agree, which one is most truthful?
+
+Important distinction:
+- this section is not about raw vote existence
+- it is about what the arena elevated to the top surface
+
+Template:
+
+```md
+### F4. Dominant Arena Synthesis Read
+
+Dominant canonical story:
+- `...`
+
+Dominant VTRAC story:
+- `...`
+
+Dominant family story:
+- `...`
+
+Arena surfaced-state thesis:
+- `...`
+
+Synthesis judgment:
+- `coherent / lane-right but literal-split / family-right but lane-soft / context-biased / mixed / underweighted`
+```
+
+---
+
+## F5. VTRAC Literal Watchlist And Split Read
+
+Purpose:
+- evaluate one of the arena’s most valuable distinctive surfaces:
+  - lane-linked literal neighborhoods
+
+Centered on:
+- `vtrac_literal_watchlist`
+- `dominant_canonical_split`
+
+Primary questions:
+- were the right lane-linked literal neighborhoods preserved?
+- did the watchlist tell a truer story than the top canonical table?
+- was the dominant canonical on the same lane or split away?
+
+This section matters because many current arena successes are:
+- VTRAC-right
+- literal-not-yet-promoted enough
+
+Template:
+
+```md
+### F5. VTRAC Literal Watchlist And Split Read
+
+Most relevant watchlist lanes:
+- `...`
+
+Best candidate-canonical neighborhoods:
+- `...`
+
+Split read:
+- dominant canonical split?: `yes/no`
+- if yes, why it matters: `...`
+
+Watchlist judgment:
+- `watchlist clearer than literal summary / watchlist supportive only / watchlist noisy / watchlist not useful here`
+```
+
+---
+
+## F6. Context Reinforcement Versus Context-Only Pressure
+
+Purpose:
+- judge whether the arena used context correctly at the synthesis level
+
+Centered on:
+- `context_reinforced_canonicals`
+- `context_only_pressure`
+
+Primary questions:
+- which canonicals were reinforced by both string and context layers?
+- which canonicals were only context-driven?
+- did that distinction look right relative to Part A?
+
+Important guardrail:
+- do not deep-dive individual Aux / Control Center mechanics yet
+- that belongs in Part G
+
+This section is only about:
+- how the arena synthesized context
+- not full context semantics
+
+Template:
+
+```md
+### F6. Context Reinforcement Versus Context-Only Pressure
+
+Context-reinforced canonicals:
+- `...`
+
+Context-only pressure:
+- `...`
+
+Arena context-use judgment:
+- `reinforcement looked correct / some context-only inflation / mostly clean / heavily mixed / unclear`
+
+Most important implication for Part G:
+- `...`
+```
+
+---
+
+## F7. State Regime And Contradiction Read
+
+Purpose:
+- classify the overall shape of the state according to the arena
+
+Centered on:
+- `regime_flags`
+- `contradiction_flags`
+- `state_regime`
+
+Primary questions:
+- is this a double-heavy state?
+- is context materially reinforcing the same state story?
+- is VTRAC stronger than literal?
+- is the state split, diluted, or contradictory?
+- did the arena correctly describe the shape of the state?
+
+Template:
+
+```md
+### F7. State Regime And Contradiction Read
+
+Regime flags:
+- `...`
+
+Contradiction flags:
+- `...`
+
+State-shape read:
+- dominant canonical: `...`
+- dominant VTRAC index: `...`
+- dominant family: `...`
+- state regime class: `double-heavy / lane-first / family-first / literal-first / split / diluted / mixed`
+
+Judgment:
+- regime labeling was `accurate / partly accurate / too soft / too harsh / misleading`
+```
+
+---
+
+## F8. Arena Added Value Read
+
+Purpose:
+- answer the most important meta-question of Part F:
+  - what did the arena make clearer than the individual tool sections alone?
+
+This is the section that justifies why the arena exists.
+
+Primary questions:
+- what new understanding did aggregation create?
+- did the arena expose a coherent state thesis that was not obvious tool-by-tool?
+- did it clarify a contradiction?
+- did it reveal that lane truth was stronger than literal truth?
+- did it make context overlap legible in a way the raw tools did not?
+
+Template:
+
+```md
+### F8. Arena Added Value Read
+
+What the arena clarified beyond tool-local review:
+- `...`
+
+What was newly legible only after aggregation:
+- `...`
+
+What still stayed unclear even after aggregation:
+- `...`
+
+Added-value verdict:
+- `high / meaningful / moderate / narrow / weak`
+```
+
+---
+
+## F9. Review Prompts, Arena Judgment, And Handoff
+
+Purpose:
+- close the section with a clean arena judgment
+- assess whether the arena’s own review prompts pointed the reviewer in the right direction
+- hand off cleanly into Part G
+
+Centered on:
+- `review_prompts`
+- overall arena verdict
+
+Primary questions:
+- were the prompts useful?
+- did the arena point attention toward the right next review surfaces?
+- what does Part G most need to inspect now?
+
+Template:
+
+```md
+### F9. Review Prompts, Arena Judgment, And Handoff
+
+Most useful arena review prompts:
+- `...`
+
+Prompt quality:
+- `helpful / partly helpful / generic / misleading`
+
+Final Part F judgment:
+- strongest preserved truth: `...`
+- strongest underweighted truth: `...`
+- main aggregation gap: `...`
+- handoff target for Part G: `...`
+```
+
+---
+
+## Part F Analyst Guidance
+
+Good Part F outputs:
+- judge the arena as an integrator, not a final literal caller
+- distinguish raw cross-tool consensus from surfaced synthesis
+- fairly credit lane/family preservation even when literal concentration is weak
+- clearly separate context-reinforced truth from context-only pressure
+- explain what aggregation added beyond Parts B-E
+
+Bad Part F outputs:
+- “top canonical missed, so the arena failed”
+- “the arena is just a bundle of files”
+- “context appeared anywhere, so the state is reinforced”
+- “contradiction flags are present, so the state is unusable”
+- “downstream missed, so the arena must have missed too”
+
+Correct Part F posture:
+- integration quality first
+- lane/family truth second
+- context synthesis discipline third
+- state-shape diagnosis fourth
+- handoff into deeper context review after that
+
+This is especially important for:
+- VTRAC-lane-right / literal-weak states
+- family-first states
+- context-reinforced but split states
+- double-heavy or contradiction-heavy states
+- cases where the arena added clarity even though it did not directly close the winner
+
+These are often where the arena’s real value lives.
+
+---
+
+## Part G Placeholder
 
 Planned next section:
-- `Part F — Aggregated Analysis Arena`
+- `Part G — Aux / Control Center Context`
 
-Future Parts are expected to continue through the aggregated arena, then context layers, then downstream baseline comparison and final synthesis.
+Future Parts are expected to continue through context review, downstream baseline comparison, and final synthesis.
