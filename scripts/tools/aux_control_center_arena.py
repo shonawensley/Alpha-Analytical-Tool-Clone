@@ -112,6 +112,18 @@ def _top_n(items: Sequence[Any], n: int) -> List[Any]:
     return list(items[: max(0, int(n))])
 
 
+def _ordered_unique(values: Iterable[object]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
 def _parse_json_list_size(value: object) -> int:
     raw = str(value or "").strip()
     if not raw.startswith("["):
@@ -193,8 +205,15 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
             top_n,
         )
 
+    consensus_notes = _top_n([str(note) for note in shortlist.get("consensus_notes", []) if str(note)], top_n)
+    double_pressure_notes = _top_n(
+        [str(note) for note in shortlist.get("double_pressure_notes", []) if str(note)], top_n
+    )
+
     return {
         "available": bool(shortlist_top or hard_due),
+        "shortlist_count": len(shortlist_top),
+        "variant_count": len(variant_top_digits),
         "hard_due_by_variant": _sorted_variants(
             {
                 variant: _top_n(
@@ -218,10 +237,9 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
             shortlist.get("aggregated_digits") if isinstance(shortlist.get("aggregated_digits"), dict) else {}, top_n
         ),
         "shortlist_top": _top_n(shortlist_top, top_n),
-        "consensus_notes": _top_n([str(note) for note in shortlist.get("consensus_notes", []) if str(note)], top_n),
-        "double_pressure_notes": _top_n(
-            [str(note) for note in shortlist.get("double_pressure_notes", []) if str(note)], top_n
-        ),
+        "consensus_notes": consensus_notes,
+        "double_pressure_notes": double_pressure_notes,
+        "signal_notes_top": _top_n([*consensus_notes, *double_pressure_notes], top_n),
     }
 
 
@@ -378,10 +396,18 @@ def _summarize_badge_pressure(
 
 def _summarize_due_double_families(rows: List[Dict[str, str]], top_n: int) -> Dict[str, Any]:
     if not rows:
-        return {"available": False, "by_variant": {}, "max_draws_since_double": 0}
+        return {
+            "available": False,
+            "by_variant": {},
+            "max_draws_since_double": 0,
+            "top_example_canonicals": [],
+            "family_count": 0,
+        }
 
     by_variant: Dict[str, Any] = {}
     max_ds = 0
+    all_examples: List[str] = []
+    family_count = 0
     for row in rows:
         variant = _variant_title(row.get("Variant"))
         families: List[Dict[str, Any]] = []
@@ -400,6 +426,8 @@ def _summarize_due_double_families(rows: List[Dict[str, str]], top_n: int) -> Di
                     "raw": family_text,
                 }
             )
+            family_count += 1
+            all_examples.extend(examples)
         draws_since_double = _to_int(row.get("Draws Since Double"), default=0)
         max_ds = max(max_ds, draws_since_double)
         by_variant[variant] = {
@@ -411,6 +439,8 @@ def _summarize_due_double_families(rows: List[Dict[str, str]], top_n: int) -> Di
         "available": bool(by_variant),
         "max_draws_since_double": max_ds,
         "by_variant": _sorted_variants(by_variant),
+        "top_example_canonicals": _top_n(_ordered_unique(all_examples), top_n),
+        "family_count": family_count,
     }
 
 
@@ -502,11 +532,31 @@ def _summarize_blackapple(summary: Dict[str, Any], rows: List[Dict[str, str]], t
     blackapple = summary.get("blackapple") if isinstance(summary.get("blackapple"), dict) else {}
     by_variant = blackapple.get("by_variant") if isinstance(blackapple.get("by_variant"), dict) else {}
     aux_by_variant: Dict[str, Any] = {}
+    recommended_canonicals: List[str] = []
+    best_status_rank = 99
+    best_status = ""
+    best_score = 0
     for variant, payload in by_variant.items():
         if not isinstance(payload, dict):
             continue
         triggers = payload.get("triggers") if isinstance(payload.get("triggers"), dict) else {}
         candidates = payload.get("candidates") if isinstance(payload.get("candidates"), list) else []
+        candidate_rows = _top_n(
+            [
+                {
+                    "combo": _normalize_pick3_literal(item.get("combo")),
+                    "canonical": _canon(item.get("combo")),
+                    "score": _to_int(item.get("score"), default=0),
+                    "tags": [str(tag) for tag in item.get("tags", []) if str(tag)],
+                }
+                for item in candidates
+                if isinstance(item, dict)
+            ],
+            top_n,
+        )
+        recommended_canonicals.extend(
+            [str(item.get("canonical") or "") for item in candidate_rows if str(item.get("canonical") or "")]
+        )
         aux_by_variant[_variant_title(variant)] = {
             "score": _to_int(payload.get("score"), default=0),
             "trigger_flags": {
@@ -519,19 +569,8 @@ def _summarize_blackapple(summary: Dict[str, Any], rows: List[Dict[str, str]], t
                 ),
                 "pattern": triggers.get("pattern") if isinstance(triggers.get("pattern"), dict) else {},
             },
-            "candidates_top": _top_n(
-                [
-                    {
-                        "combo": _normalize_pick3_literal(item.get("combo")),
-                        "canonical": _canon(item.get("combo")),
-                        "score": _to_int(item.get("score"), default=0),
-                        "tags": [str(tag) for tag in item.get("tags", []) if str(tag)],
-                    }
-                    for item in candidates
-                    if isinstance(item, dict)
-                ],
-                top_n,
-            ),
+            "candidates_top": candidate_rows,
+            "candidate_count": len([item for item in candidates if isinstance(item, dict)]),
         }
 
     cc_rows = [
@@ -545,14 +584,27 @@ def _summarize_blackapple(summary: Dict[str, Any], rows: List[Dict[str, str]], t
         }
         for row in rows
     ]
+    status_rank_map = {"ALERT": 0, "WATCH": 1, "OFF": 2}
     cc_rows.sort(
         key=lambda item: (-int(item.get("ba_score") or 0), -int(item.get("candidate_count") or 0), _variant_sort_key(item.get("variant") or ""))
     )
+    for item in cc_rows:
+        status = str(item.get("status") or "").upper()
+        rank = status_rank_map.get(status, 9)
+        score = _to_int(item.get("ba_score"), default=0)
+        if rank < best_status_rank or (rank == best_status_rank and score > best_score):
+            best_status_rank = rank
+            best_status = status
+            best_score = score
+        recommended_canonicals.extend([_canon(example) for example in item.get("examples") or [] if _canon(example)])
 
     return {
         "available": bool(aux_by_variant or cc_rows),
         "aux_by_variant": _sorted_variants(aux_by_variant),
         "control_center_top": _top_n(cc_rows, top_n),
+        "best_status": best_status,
+        "best_score": best_score,
+        "recommended_canonicals_top": _top_n(_ordered_unique(recommended_canonicals), top_n),
     }
 
 
@@ -585,6 +637,8 @@ def _summarize_profit_alerts(rows: List[Dict[str, str]], top_n: int) -> Dict[str
             "alert_id": str(row.get("AlertId") or ""),
             "strength": _to_int(row.get("Strength"), default=0),
             "suggested": str(row.get("Suggested") or ""),
+            "cap_lines": _to_int(row.get("CapLines"), default=0),
+            "decay_draws": _to_int(row.get("DecayDraws"), default=0),
             "badges": [token for token in str(row.get("Badges") or "").split("/") if token],
             "canonical": _canon(row.get("Canonical")),
             "implied_set_size": _parse_json_list_size(row.get("ImpliedSet")),

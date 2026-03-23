@@ -184,11 +184,21 @@ Recent receipts:
 - `2026-03-21__COMPETITION8__CT_ON_VA_NJ_NC.md`
 - `2026-03-21__COMPETITION8__EVENING_RERANK_AFTER_MIDDAY.md`
 - `2026-03-21__COMPETITION8__CROSS_STATE_CROSSOVER_LEDGER.md`
+- `2026-03-21__BOARD_SPILLOVER_OVERLAY__competition8_evening_rerank_after_midday.md`
+
+Current runtime artifact:
+
+- `scripts/tools/build_board_spillover_overlay.py`
+- `scripts/tools/create_board_scoreboard.py`
+- `scripts/tools/create_board_review_bundle.py`
+- `scripts/tools/create_day_arena_board_review.py`
 
 Important new learning from this layer:
 
 - some strong family complexes are board-level, not purely state-local
 - that means a new layer is needed above per-state arena analysis
+- the first reusable board spillover overlay now exists, but its overlap scoring is still intentionally conservative and review-first
+- the Brain 2 runtime now preserves richer context hints from Aux / Control Center, especially Blackapple recommendations, positional notes, compound events, and due-double family examples
 
 ## Layer 7 — Downstream Baseline Control Arm
 
@@ -225,7 +235,7 @@ The branch is not yet final in:
 - arena-native combination forming
 - arena-native budgeting
 - final findings relationship logic
-- board-level spillover / crossover handling
+- refined board-level spillover / crossover scoring and scoreboard integration
 
 ## Immediate Next Structural Layers
 
@@ -236,6 +246,13 @@ Purpose:
 - compare strong states against each other
 - detect shared lanes/families
 - detect spent vs unspent family behavior after Midday
+
+Current status:
+
+- `v0` runtime artifact exists
+- compact scoreboard consumer now exists
+- one-step board review bundle now exists
+- next work is further refinement and stronger Brain-2 handoff discipline
 
 ### 2. Final Findings Relationship Layer
 
@@ -268,6 +285,11 @@ Use these documents to preserve continuity:
 - `AAT9_FINAL_CONTEXT_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md`
 - `AAT9_FINAL_FINDINGS_RELATIONSHIP_LAYER__ARENA_BRANCH.md`
 - `AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- `AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- `scripts/tools/build_board_spillover_overlay.py`
+- `scripts/tools/create_board_scoreboard.py`
+- `scripts/tools/create_board_review_bundle.py`
+- `scripts/tools/create_day_arena_board_review.py`
 
 ### Live trackers
 
