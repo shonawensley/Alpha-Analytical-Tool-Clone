@@ -799,7 +799,9 @@ Purpose:
 
 Primary surfaces:
 - `survivor_frontiers`
+- `survivor_progressions`
 - `last_remaining` / survivor counts
+- `frontier_pattern_summary.hidden_terminal_patterns_*`
 - `hidden_family_reveal`
 - `hidden_family_reveal_summary`
 - `order_transform_hints`
@@ -808,6 +810,7 @@ Primary surfaces:
 
 Primary questions:
 - was this a survivor/frontier case?
+- was the terminal survivor truth literal, family-like, VTRAC-like, or hidden-terminal?
 - was hidden-family reveal important?
 - were transform or modal-order clues important?
 - did Stable preserve something subtle here that is visible but not yet strongly promoted?
@@ -818,6 +821,9 @@ Template:
 ### B5. Survivor, Frontier, Hidden, And Transform Read
 
 Survivor/frontier read:
+- `...`
+
+Last-remaining / hidden-terminal read:
 - `...`
 
 Hidden/clutter-reveal read:
@@ -2763,10 +2769,12 @@ Centered on:
 - `dominant_canonicals`
 - `dominant_vtrac_indices`
 - `dominant_families`
+- `stable_survivor_context`
 
 Primary questions:
 - what is the arena saying the state is mainly about?
 - do the dominant canonical, lane, and family stories agree?
+- did the arena surface a meaningful survivor / last-remaining state thesis?
 - if they do not agree, which one is most truthful?
 
 Important distinction:
@@ -2785,6 +2793,9 @@ Dominant VTRAC story:
 - `...`
 
 Dominant family story:
+- `...`
+
+Survivor-state thesis:
 - `...`
 
 Arena surfaced-state thesis:
@@ -2892,6 +2903,8 @@ Primary questions:
 - is this a double-heavy state?
 - is context materially reinforcing the same state story?
 - is VTRAC stronger than literal?
+- is survivor pressure materially part of the state?
+- is there last-remaining or hidden-terminal support?
 - is the state split, diluted, or contradictory?
 - did the arena correctly describe the shape of the state?
 
@@ -2910,6 +2923,9 @@ State-shape read:
 - dominant canonical: `...`
 - dominant VTRAC index: `...`
 - dominant family: `...`
+- survivor pressure: `true/false`
+- last_remaining: `true/false`
+- hidden_terminal_support: `true/false`
 - state regime class: `double-heavy / lane-first / family-first / literal-first / split / diluted / mixed`
 
 Judgment:
@@ -3023,9 +3039,1639 @@ These are often where the arena’s real value lives.
 
 ---
 
-## Part G Placeholder
+## Part G — Aux / Control Center Context
 
-Planned next section:
+Part G is the per-state context audit.
+
+It is the section where the reviewer should determine:
+
+- which aggregate trackers and context systems actually fired
+- which lists, alerts, and context objects were truly available
+- what those objects meant in relation to the Part A truth and the Part F arena state thesis
+- what was direct, what was reinforcing, and what was only composite / relational
+- what was already preserved by the arena
+- what still lives only in raw context outputs or heavy truth layers
+- what should remain review-only
+- what looks like a real structural follow-up for later Brain 2 / final-findings work
+
+This is not the place to decide final budgets or final packs.
+
+It **is** the place to establish whether the broader context layer:
+
+- materially reinforced the state thesis
+- surfaced hidden value that current bounded consumers underuse
+- or mostly created pressure without enough structural alignment
+
+---
+
+## Part G Inputs
+
+Primary predictive-side context inputs:
+
+- `sharepacks/_predictive/<D>/<STATE>/aux/<STATE>/summary.json`
+- `sharepacks/_predictive/<D>/control_center/due_doubles.csv`
+- `sharepacks/_predictive/<D>/control_center/vtrac_repeat_watch.csv`
+- `sharepacks/_predictive/<D>/control_center/blackapple_alerts.csv`
+- `sharepacks/_predictive/<D>/control_center/profit_alerts.csv`
+- `sharepacks/_predictive/<D>/control_center/profit_compound_events.csv`
+- `sharepacks/_predictive/<D>/control_center/meta.json`
+
+Primary arena bridge inputs:
+
+- `sharepacks/_predictive/<D>/<STATE>/analysis/aux_control_center_arena*.json`
+- `sharepacks/_predictive/<D>/<STATE>/analysis/aux_control_center_arena*.md`
+- `aggregated_analysis_arena__tool_only__arena_v0.json`
+  - especially the context objects and the Part F handoff
+
+Important arena-era context objects to prioritize:
+
+- `aux_positional_pressure`
+- `aux_vtrac_pressure`
+- `aux_badge_pressure`
+- `aux_pair_band_context`
+- `aux_due_doubles_family_pressure`
+- `aux_repeat_watch_context`
+- `aux_sums_context`
+- `aux_blackapple_context`
+- `cc_profit_alert_context`
+- `cc_compound_event_context`
+- `cc_tracker_context`
+
+Important heavy truth / deep-drill layers when needed:
+
+- full Blackapple candidate ledgers inside `summary.json`
+- positional shortlist and advanced note surfaces inside `summary.json`
+- full profit-alert evidence rows / detailed evidence JSON when available
+- boxed VTRAC badge matrix reports and related badge-mining exports
+- raw pair / combo / sum tables when the compact surfaces hide an important relationship
+
+Guardrail:
+- these heavier layers are valid review surfaces
+- they are **not** automatically bounded predictive policy
+
+---
+
+## Part G Reading Rules
+
+1. Start from the Part F handoff, not from a flat list of Aux tables.
+2. Read Aux / Control Center first as a **context reinforcement and pressure layer**, not as a replacement for structural string truth.
+3. Explicitly separate:
+   - direct context support
+   - reinforcing context support
+   - context-only pressure
+   - relational / composite clues
+4. Do not confuse:
+   - “a list exists”
+   with
+   - “that list is already fully surfaced and properly used by the current system”
+5. Treat alert rows as structured episodes when relevant:
+   - current draw
+   - same-day carry
+   - next-draw / short-decay relevance
+6. Keep same-period, opposite-period, and Combined reinforcement explicit when cross-variant context matters.
+7. When a board surface looks too thin, check the underlying context summary or arena object before concluding the signal was absent.
+8. Preserve the distinction between:
+   - review value
+   - arena-preservation value
+   - bounded predictive use
+   - Brain 2 / final-findings value
+9. Do not promote a context signal just because it looks clever in one case.
+10. Do not flatten composite relationships into direct hits.
+
+---
+
+## Part G Output Shape
+
+Part G should end with:
+
+- one overall context-alignment judgment
+- one alert / tracker judgment
+- one shortlist / recommended-list judgment
+- one direct-vs-composite judgment
+- one statement on what is:
+  - already used well
+  - preserved but under-surfaced
+  - preserved but unconsumed
+  - only visible in heavy truth layers
+  - or deserving a future structural follow-up
+
+Recommended answer style:
+
+- context alignment first
+- concrete alert / shortlist specifics second
+- hidden-value assessment third
+- policy / structural-follow-up judgment fourth
+
+---
+
+## G0. Context File Lock And Review Surface
+
+Purpose:
+- lock the exact Aux / Control Center surfaces used in the review
+- prevent drift between compact board outputs, state summary JSON, and arena bridge summaries
+
+Template:
+
+```md
+### G0. Context File Lock And Review Surface
+
+- Aux summary: `...`
+- Due doubles board: `...`
+- VTRAC repeat board: `...`
+- Blackapple board: `...`
+- Profit alerts board: `...`
+- Profit compound-events board: `...`
+- Control Center meta: `...`
+- Aux / CC arena bridge JSON: `...`
+- Aux / CC arena bridge MD used?: `yes/no`
+- Aggregated arena used for Part F handoff: `...`
+
+Deep-drill layers used?:
+- Blackapple full candidate list: `yes/no`
+- Positional shortlist + advanced notes: `yes/no`
+- Badge matrix / heavy badge reports: `yes/no`
+- Raw profit evidence drill-down: `yes/no`
+- Other heavy truth layer: `...`
+
+Missing or degraded context surface?:
+- `yes/no`
+
+If something is missing, classify the issue:
+- `none / review-surface gap / export gap / arena-bridge gap / pipeline gap`
+```
+
+---
+
+## G1. Context Truth Alignment Summary
+
+Purpose:
+- answer immediately whether the context layer materially reinforced the Part A truth and the Part F state thesis
+- stop the section from drifting too early into raw board detail
+
+Primary questions:
+- did context reinforce the live state story?
+- was the strongest context support direct, lane/family, or composite?
+- did the context layer clarify the state, or mainly create background pressure?
+- was this a genuinely context-rich state or only a lightly corroborated one?
+
+Helpful verdict buckets:
+- context strongly reinforcing
+- context reinforcing but still split
+- context-rich but mostly composite
+- context present but underweighted
+- context present but mostly background
+- context weak
+- context absent
+
+Template:
+
+```md
+### G1. Context Truth Alignment Summary
+
+Part A target:
+- `...`
+
+Part F handoff target:
+- `...`
+
+Context alignment verdict:
+- Direct support: `strong / moderate / weak / absent`
+- Reinforcing support: `strong / moderate / weak / absent`
+- Composite / relational value: `high / medium / low / none`
+- Context-only pressure risk: `high / medium / low / none`
+
+Best one-sentence context read:
+- `...`
+
+Most important context-layer contribution:
+- `...`
+```
+
+---
+
+## G2. Profit Alerts And Compound Events
+
+Purpose:
+- audit the strongest explicit alert layer in Control Center
+- determine which alerts fired, what they implied, and whether they behaved as direct, reinforcing, or composite evidence
+- ensure compound-event structure is not lost in flat alert-row reading
+
+Primary surfaces:
+- `cc_profit_alert_context`
+- `cc_compound_event_context`
+- `profit_alerts.csv`
+- `profit_compound_events.csv`
+
+Important alert fields to inspect:
+- `AlertId`
+- `Strength`
+- `Suggested`
+- `CapLines`
+- `DecayDraws`
+- `Badges`
+- `Canonical`
+- `ImpliedSet`
+- parsed `Evidence`
+
+Primary questions:
+- which `A01-A12` fired for this state?
+- which alerts were strongest?
+- what combinations / implied sets were actually being signaled?
+- did multiple alerts co-fire into a meaningful compound event?
+- was the relationship to the winner:
+  - direct
+  - lane/family
+  - composite
+  - or absent?
+- did the alert appear to be a current-draw signal, a same-day carry, or a short-decay episode?
+
+Template:
+
+```md
+### G2. Profit Alerts And Compound Events
+
+Strongest profit alerts:
+- `...`
+
+Key alert details:
+- Alert IDs fired: `...`
+- Strongest canonical / implied set: `...`
+- Badges / suggested mode: `...`
+- Decay / episode posture: `current / same-day / short-decay / unclear`
+
+Compound-event read:
+- Top event: `...`
+- Priority / merged rows / linked alerts: `...`
+- Did co-fire materially strengthen the case?: `yes/no/mixed`
+
+Winner relationship:
+- `direct / lane-family / composite / absent`
+
+Most important profit-alert learning:
+- `...`
+```
+
+---
+
+## G3. Due Doubles, Mirror Doubles, And Family Pressure
+
+Purpose:
+- inspect due-double pressure as a family-pressure and relation-pressure surface, not just a literal overdue list
+- preserve the real value of double and mirror-double regimes without forcing them into flat caller language
+
+Primary surfaces:
+- `aux_due_doubles_family_pressure`
+- `due_doubles.csv`
+- related alert overlap:
+  - `A02`
+  - `A10`
+
+Primary questions:
+- what overdue double families were active?
+- which variants were strongest?
+- did the state show mirror-double or lane-adjacent double pressure?
+- was the relationship direct, family-level, mirror-related, VTRAC-related, or only composite?
+- was the due-double structure part of the true state thesis or just background noise?
+
+Template:
+
+```md
+### G3. Due Doubles, Mirror Doubles, And Family Pressure
+
+Strongest due-double families:
+- `...`
+
+Variant posture:
+- `Midday / Evening / Combined / cross-variant`
+
+Relationship type:
+- `direct / family / mirror-double / VTRAC-related / composite / absent`
+
+Did A02 / A10 materially matter here?:
+- `yes/no/mixed`
+
+Most important due-double pressure clue:
+- `...`
+
+Main limitation of the current due-double surface:
+- `...`
+```
+
+---
+
+## G4. VTRAC Repeat And Tracker Context
+
+Purpose:
+- inspect the repeat-watch and tracker layer as lane-context and regime-context
+- determine whether tracker state aligned with the dominant arena lane or only created background pressure
+
+Primary surfaces:
+- `aux_repeat_watch_context`
+- `cc_tracker_context`
+- `vtrac_repeat_watch.csv`
+- related alert overlap:
+  - `A09`
+
+Primary questions:
+- what was the current index and streak behavior?
+- what did the heatboard / hazard view imply?
+- did repeat-watch align with the arena’s dominant lane or watchlist?
+- was this genuinely useful lane reinforcement, or only a weak tracker-side note?
+
+Template:
+
+```md
+### G4. VTRAC Repeat And Tracker Context
+
+Repeat-watch posture:
+- Current index / streak: `...`
+- Heat / hazard read: `...`
+- Last-repeat posture: `...`
+
+Alignment with arena lane story:
+- `strong / moderate / weak / absent`
+
+Did A09 or tracker context materially matter?:
+- `yes/no/mixed`
+
+Most important repeat / tracker clue:
+- `...`
+```
+
+---
+
+## G5. Blackapple Alert Status, Triggers, And Recommended Lists
+
+Purpose:
+- review Blackapple as an alert-status and recommended-list system, not just a small board caption
+- ensure the full recommended list and variant-level signal state are actually inspected when relevant
+
+Primary surfaces:
+- `aux_blackapple_context`
+- `blackapple_alerts.csv`
+- full `summary.json`
+  - `blackapple.by_variant.<variant>.candidates`
+  - trigger flags
+  - scores
+
+Primary questions:
+- was the state `OFF`, `WATCH`, or `ALERT`?
+- what triggers actually fired?
+- what candidate / recommended combos were being surfaced?
+- were those candidates aligned across variants?
+- did Blackapple reinforce the arena truth, or float independently?
+- did any candidate or related family/lane matter under:
+  - direct
+  - boxed
+  - VT-box
+  - VT-straight
+  review?
+- does this case suggest BA needs episode / decay tracking attention?
+
+Template:
+
+```md
+### G5. Blackapple Alert Status, Triggers, And Recommended Lists
+
+Blackapple status:
+- Score / standing: `OFF / WATCH / ALERT`
+- Trigger flags: `...`
+- Candidate count: `...`
+
+Recommended-list read:
+- Strongest candidate combos: `...`
+- Variant agreement: `strong / moderate / weak / absent`
+- Did the board view hide stronger list detail than the raw summary?: `yes/no`
+
+Winner relationship:
+- `direct / boxed / VT-box / VT-straight / composite / absent`
+
+Decay / episode relevance:
+- `high / medium / low / none`
+
+Most important Blackapple learning:
+- `...`
+```
+
+---
+
+## G6. Positional Pressure, Shortlist, And Advanced Notes
+
+Purpose:
+- review positional as a richer pressure and shortlist system, not just a small helper list
+- preserve the advanced positional surfaces that earlier simplified readings tended to flatten away
+
+Primary surfaces:
+- `aux_positional_pressure`
+- `summary.json`
+  - `hard_due_by_variant`
+  - `shortlist_report.candidates`
+  - `shortlist_report.variant_top_digits`
+  - `shortlist_report.aggregated_digits`
+  - `consensus_notes`
+  - `double_pressure_notes`
+
+Primary questions:
+- what was the shortlist actually saying?
+- what digits / lanes / doubles were most concentrated?
+- did advanced positional notes materially reinforce the state story?
+- was positional pressure direct, reinforcing, or mostly structural background?
+- did the shortlist contain or strongly shoulder the relevant family/VTRAC structure?
+
+Template:
+
+```md
+### G6. Positional Pressure, Shortlist, And Advanced Notes
+
+Shortlist posture:
+- Strongest shortlist items: `...`
+- Aggregated digits / top digits: `...`
+- Hard-due posture by variant: `...`
+
+Advanced-note read:
+- Consensus notes: `...`
+- Double-pressure notes: `...`
+
+Winner / state-story relationship:
+- `direct / reinforcing / lane-family / composite / absent`
+
+Most important positional learning:
+- `...`
+```
+
+---
+
+## G7. Badge, VTRAC Index, Pair, Sums, And Cross-Variant Compound Read
+
+Purpose:
+- inspect the broader Aux compound-pressure layer that often contains hidden value
+- preserve which badge, pair, sum, and VTRAC-index surfaces were actually active
+- force a deliberate read of cross-variant reinforcement when it matters
+
+Primary surfaces:
+- `aux_badge_pressure`
+- `aux_vtrac_pressure`
+- `aux_pair_band_context`
+- `aux_sums_context`
+- heavy badge matrix reports when needed
+
+Primary questions:
+- what badge pressure was active?
+- did badge pressure align across Midday, Evening, and Combined?
+- what VTRAC overlay / heatboard indices were strongest?
+- did pair or sum context materially reinforce the state thesis?
+- did cross-variant compounding appear meaningful or only ambient?
+- is the most important relationship here direct, reinforcing, or composite?
+
+Template:
+
+```md
+### G7. Badge, VTRAC Index, Pair, Sums, And Cross-Variant Compound Read
+
+Badge pressure read:
+- `...`
+
+VTRAC overlay / heatboard read:
+- `...`
+
+Pair / sums / cross-variant compound read:
+- `...`
+
+Most important context family here:
+- `badge / VTRAC index / pair-band / sums / cross-variant compound`
+
+Did this layer look:
+- `direct / reinforcing / composite / background / absent`
+
+Most important compound-pressure insight:
+- `...`
+```
+
+---
+
+## G8. Context Reinforcement Versus Context-Only Pressure
+
+Purpose:
+- explicitly connect Part G back to Part F’s distinction between context-reinforced truth and context-only pressure
+- judge whether the arena’s synthesis-level context reading was semantically correct
+
+Primary surfaces:
+- `context_reinforced_canonicals`
+- `context_only_pressure`
+- relevant Part G findings above
+
+Primary questions:
+- which context objects truly reinforced the state thesis?
+- which objects were real but only pressure-side?
+- did the Part F distinction look correct after deep context review?
+- which context surfaces were semantically strongest even if not yet heavily used?
+
+Template:
+
+```md
+### G8. Context Reinforcement Versus Context-Only Pressure
+
+What truly reinforced the state thesis:
+- `...`
+
+What was mostly context-only pressure:
+- `...`
+
+Did Part F’s reinforcement vs pressure distinction hold up?:
+- `yes/no/mixed`
+
+Most semantically correct context object:
+- `...`
+```
+
+---
+
+## G9. Deep-Drill Truth Layers, Hidden Value, And Measurement Gaps
+
+Purpose:
+- make the hidden-value question explicit
+- identify what is already preserved, what is under-surfaced, and what still needs better measurement
+- stop real value from disappearing just because it is not on a flat board
+
+Primary heavy truth / gap targets:
+- full Blackapple candidate ledgers
+- positional shortlist detail
+- heavy badge-matrix exports
+- raw profit-alert evidence detail
+- compound-event detail
+- shortlist / alert / candidate decay-window behavior
+
+Primary questions:
+- what valuable material was only visible after a deep-drill?
+- what is already preserved in the arena but not surfaced prominently?
+- what is running but effectively under-measured?
+- what needs a future decay / episode / shortlist-performance harness?
+
+Template:
+
+```md
+### G9. Deep-Drill Truth Layers, Hidden Value, And Measurement Gaps
+
+Most important hidden or under-surfaced value:
+- `...`
+
+Current status of that value:
+- `already preserved / partially surfaced / raw-only / not yet modeled`
+
+Most important measurement gap:
+- `...`
+
+Best candidate for future decay / episode / shortlist tracking:
+- `...`
+```
+
+---
+
+## G10. Consumer, Policy, And Structural Follow-Up Relationship
+
+Purpose:
+- separate what the current system already uses from what it merely preserves
+- identify what belongs in bounded predictive policy, what belongs in Brain 2, and what should remain review-only for now
+
+Primary bounded consumers / current usage surfaces:
+- `aux_positional`
+- `aux_vtrac_index_overdue`
+- `due_doubles`
+- `mirror_pair_closure`
+- optional / profile-gated:
+  - `profit_alerts`
+  - `blackapple`
+
+Primary questions:
+- what was already used well by the current system?
+- what was preserved but under-surfaced?
+- what was preserved but not consumed?
+- what needs a richer arena/context bridge?
+- what belongs more naturally in Brain 2 / final findings than in Brain 1 scoring?
+
+Helpful conclusion buckets:
+- already used well
+- preserved and appropriately bounded
+- preserved but under-surfaced
+- preserved but unconsumed
+- needs richer bridge / export
+- Brain 2 candidate
+- review-only for now
+
+Template:
+
+```md
+### G10. Consumer, Policy, And Structural Follow-Up Relationship
+
+What the current system already used well:
+- `...`
+
+What the current system preserved but still underuses:
+- `...`
+
+Best structural follow-up target:
+- `arena/context bridge / Brain 2 overlay / decay harness / shortlist ledger / candidate relationship layer`
+
+Policy / structural verdict:
+- `already used well / preserved and appropriately bounded / preserved but under-surfaced / preserved but unconsumed / needs richer bridge / Brain 2 candidate / review-only for now`
+```
+
+---
+
+## G11. Aux / Control Center Handoff
+
+Purpose:
+- close Part G with the shortest possible context-layer learning statement for later sections
+
+Template:
+
+```md
+### G11. Aux / Control Center Handoff
+
+- Strongest context truth: `...`
+- Strongest direct context signal: `...`
+- Strongest composite / relational context clue: `...`
+- Strongest hidden or under-surfaced value: `...`
+- Best structural follow-up target: `...`
+- Main comparison target for Part H or later Brain 2 work: `...`
+```
+
+---
+
+## Part G Analyst Guidance
+
+Good Part G outputs:
+- separate direct, reinforcing, and composite relationships cleanly
+- inspect recommended lists and shortlists when they matter, not just board captions
+- treat due doubles and BA as richer regimes than literal-only callers
+- use compound events to understand alert co-fire instead of reading alerts in isolation
+- preserve the distinction between review value, arena value, and bounded predictive use
+- clearly identify what belongs in later structural follow-up rather than forcing everything into Brain 1
+
+Bad Part G outputs:
+- “a context table exists, so the system already uses everything important”
+- “an alert fired, so it must be predictive”
+- “the board didn’t show the list, so the list doesn’t exist”
+- “a clever composite relation should immediately become policy”
+- “Aux is noisy, so it does not matter”
+
+Correct Part G posture:
+- context reinforcement first
+- structured alert / shortlist review second
+- hidden-value detection third
+- policy / bridge / Brain 2 separation fourth
+
+This is especially important for:
+- double-heavy or mirror-heavy states
+- states with multiple profit alerts or co-fired compound events
+- BA `WATCH` / `ALERT` states
+- positional-shortlist states with strong advanced notes
+- cases where the context layer was more right relationally than literally
+
+---
+
+## Part H — Downstream Baseline Comparison
+
+Part H judges the current downstream control arm.
+
+This is the section where the reviewer should determine:
+
+- what the existing baseline consumers actually received
+- what Candidate Universe preserved
+- what Play Card retained under budget
+- whether the lane survived
+- whether exact closure was lost later
+- whether the failure was:
+  - upstream truth absence
+  - bounded conversion absence
+  - Candidate Universe compression
+  - Play Card budget squeeze
+  - profile / strategy posture
+  - or some mixed bottleneck
+
+This section is important because the baseline downstream stack still exists in the branch.
+
+But it must be reviewed in the correct role:
+
+- as the current control arm
+- not as the definition of truth
+- not as the definition of what the arena “really knew”
+
+---
+
+## Part H Inputs
+
+Primary downstream artifacts:
+
+- `sharepacks/_predictive/<D>/<STATE>/candidate_universe__*.json`
+- `sharepacks/_predictive/<D>/<STATE>/candidate_universe__*.md`
+- `sharepacks/_predictive/<D>/<STATE>/candidate_universe_evidence__*.csv`
+- `sharepacks/_predictive/<D>/<STATE>/candidate_universe_evidence__*.md`
+- `sharepacks/_predictive/<D>/<STATE>/signals_bundle*.json`
+- `sharepacks/_predictive/<D>/<STATE>/play_card__*.json`
+- `sharepacks/_predictive/<D>/<STATE>/play_card__*.md`
+
+Helpful predictive/report companions:
+
+- predictive run report
+- glass-box trace
+- winners digest
+- Candidate Universe grades
+- Play Card grades
+- lane-allocation / conversion casebook reports
+
+Helpful arena-side bridge surfaces:
+
+- `downstream_handoff`
+- `review_links`
+
+Guardrail:
+- downstream artifacts are decision-layer and selection-layer artifacts
+- they are not the truth layer
+
+---
+
+## Part H Reading Rules
+
+1. Start from Parts A-F and G, not from the downstream ranking alone.
+2. Treat:
+   - Candidate Universe as `what we could play`
+   - Play Card as `what we would play`
+3. Separate these failure modes explicitly:
+   - truth absent before Candidate Universe
+   - truth present in Candidate Universe but not strongly surfaced
+   - lane retained but exact closure lost
+   - Candidate Universe preserved it but Play Card cut it
+   - strategy / profile / budget posture de-emphasized it
+4. Do not blame the arena for a downstream miss unless the arena truth was genuinely absent.
+5. Do not give downstream full credit for truth that only survived accidentally or derived-only.
+6. Use `tool_only / mixed / profit_only` or strategy variants only when they materially change the conclusion.
+7. Preserve the distinction between:
+   - direct evidence
+   - bounded conversion
+   - budget geometry
+   - post-results grading
+8. If the downstream layer did well, say so plainly.
+9. If the downstream layer missed because it is still the older control arm, say that plainly too.
+
+---
+
+## Part H Output Shape
+
+Part H should end with:
+
+- one Candidate Universe judgment
+- one Play Card judgment
+- one lane-retention / exact-closure judgment
+- one bottleneck classification
+- one statement on whether the baseline control arm:
+  - already expresses the state well
+  - partially expresses it
+  - preserves the lane but not the box
+  - compresses away too much truth
+  - or is simply the wrong layer for this case
+
+Recommended answer style:
+
+- Candidate Universe first
+- Play Card and budget squeeze second
+- bottleneck classification third
+- baseline-control-arm judgment fourth
+
+---
+
+## H0. Downstream File Lock And Control-Arm Surface
+
+Purpose:
+- lock the exact downstream artifacts used in the review
+- prevent drift between Candidate Universe, evidence view, Play Card, and grade files
+
+Template:
+
+```md
+### H0. Downstream File Lock And Control-Arm Surface
+
+- Candidate Universe JSON: `...`
+- Candidate Universe MD used?: `yes/no`
+- Candidate Universe evidence CSV: `...`
+- Candidate Universe evidence MD used?: `yes/no`
+- signals_bundle used?: `yes/no`
+- If yes, signals_bundle path: `...`
+- Play Card JSON: `...`
+- Play Card MD used?: `yes/no`
+
+Optional predictive/report companions used:
+- Predictive report: `yes/no`
+- Glass-box trace: `yes/no`
+- Candidate Universe grade: `yes/no`
+- Play Card grade: `yes/no`
+- Lane-allocation / casebook report: `yes/no`
+
+Downstream profile / strategy under review:
+- Profile: `tool_only / mixed / profit_only / other`
+- Strategy: `...`
+- Budget: `...`
+
+Missing or degraded downstream surface?:
+- `yes/no`
+
+If something is missing, classify the issue:
+- `none / review-surface gap / predictive artifact gap / grading gap / pipeline gap`
+```
+
+---
+
+## H1. Downstream Alignment Summary
+
+Purpose:
+- answer immediately how well the current baseline consumers expressed the state truth already established upstream
+
+Primary questions:
+- did Candidate Universe preserve the relevant state truth?
+- did Play Card retain it under budget?
+- was the lane preserved even when exact closure failed?
+- is this a clean downstream success, a partial expression, or a conversion squeeze?
+
+Helpful verdict buckets:
+- downstream expressed the state well
+- Candidate Universe strong, Play Card partial
+- lane preserved, exact closure weak
+- truth preserved but compressed away
+- downstream mostly blind to the real state story
+- not enough evidence to judge
+
+Template:
+
+```md
+### H1. Downstream Alignment Summary
+
+Part F/G handoff target:
+- `...`
+
+Candidate Universe alignment:
+- `strong / moderate / weak / absent`
+
+Play Card alignment:
+- `strong / moderate / weak / absent`
+
+Lane retention:
+- `strong / moderate / weak / absent`
+
+Best one-sentence downstream read:
+- `...`
+
+Most important downstream implication:
+- `...`
+```
+
+---
+
+## H2. Candidate Universe Union And Pack Recall Read
+
+Purpose:
+- determine whether the current baseline unbounded pool actually preserved the relevant literal, lane, family, or canonical story
+
+Primary surfaces:
+- Candidate Universe JSON / MD
+- pack list
+- union size
+- pack methods and canonicals
+
+Primary questions:
+- did Candidate Universe contain the direct winner or winning canonical?
+- did it at least contain the right lane, family, or shoulder?
+- was there a bounded pack that clearly represented the right story?
+- did the pool preserve the truth tightly or only diffusely?
+
+Template:
+
+```md
+### H2. Candidate Universe Union And Pack Recall Read
+
+CU union read:
+- `direct / lane-family / shoulder-only / diffuse / absent`
+
+Most important preserving packs:
+- `...`
+
+Was the state truth preserved tightly or broadly?:
+- `tight / moderate / broad / noisy / absent`
+
+Most important Candidate Universe clue:
+- `...`
+```
+
+---
+
+## H3. Candidate Universe Evidence Provenance And Source-Class Read
+
+Purpose:
+- determine what kind of evidence actually carried the preserved truth into Candidate Universe
+- prevent accidental crediting of derived-only or downstream-only survival as if it were strong direct evidence
+
+Primary surfaces:
+- `candidate_universe_evidence__*.csv`
+- `candidate_universe_evidence__*.md`
+- source classes:
+  - `tool`
+  - `control_center`
+  - `derived`
+  - `other`
+
+Primary questions:
+- was the key preserved truth carried by direct tool evidence, control-center context, derived transforms, or a mix?
+- was the truth direct-evidence-backed or mostly closure-derived?
+- did the provenance match the real upstream explanation of the state?
+
+Template:
+
+```md
+### H3. Candidate Universe Evidence Provenance And Source-Class Read
+
+Key provenance class:
+- `tool / control_center / derived / mixed / unclear`
+
+Was the preserved truth direct-evidence-backed?:
+- `yes/no/mixed`
+
+Most important supporting methods:
+- `...`
+
+Most important provenance insight:
+- `...`
+```
+
+---
+
+## H4. Signals Bundle And Downstream Handoff Adequacy
+
+Purpose:
+- judge whether the arena/context layer handed enough of the right state information forward for downstream consumers to have a fair chance
+
+Primary surfaces:
+- `signals_bundle*.json`
+- arena `downstream_handoff`
+- arena `review_links`
+
+Primary questions:
+- did the key lane/family/context information actually reach the handoff surface?
+- was something important preserved in the arena but not visible to current downstream consumers?
+- did the downstream handoff shape itself contribute to compression or blindness?
+
+Template:
+
+```md
+### H4. Signals Bundle And Downstream Handoff Adequacy
+
+Downstream handoff adequacy:
+- `strong / moderate / weak / absent`
+
+What clearly made it through:
+- `...`
+
+What was preserved upstream but poorly surfaced downstream:
+- `...`
+
+Most important handoff gap:
+- `...`
+```
+
+---
+
+## H5. Play Card Budget Squeeze And Retention Read
+
+Purpose:
+- inspect what happened when the baseline system was forced to spend a finite budget
+- determine whether the key state truth survived the decision-layer squeeze
+
+Primary surfaces:
+- Play Card JSON / MD
+- strategy
+- budget
+- ranked candidates
+- conversion gate
+- VTRAC pack
+- reserve behavior when present
+
+Primary questions:
+- did Play Card retain the most important state truth?
+- did it spend lines in the right lane?
+- did budget geometry favor or distort the state story?
+- was the miss caused by ranking, lane allocation, or line-depth within lane?
+
+Template:
+
+```md
+### H5. Play Card Budget Squeeze And Retention Read
+
+Play Card retention read:
+- `direct / lane retained / partial / weak / absent`
+
+Budget posture:
+- `appropriate / too tight / too diffuse / misallocated / unclear`
+
+Most important decision-layer behavior:
+- `...`
+
+Most important Play Card learning:
+- `...`
+```
+
+---
+
+## H6. Lane Retention, Exact Closure, And Geometry Diagnosis
+
+Purpose:
+- separate “the lane survived” from “the exact box closed”
+- identify the geometry-level reason the downstream baseline did or did not finish the job
+
+Primary surfaces:
+- glass-box trace
+- Candidate Universe grades
+- Play Card grades
+- lane-allocation reports
+- conversion casebooks
+
+Primary questions:
+- was the winner lane retained?
+- was the exact box or canonical still missed?
+- did the downstream layer miss because it lacked:
+  - lane breadth
+  - lane depth
+  - closure conversion
+  - doubles-aware geometry
+  - or the right final ordering?
+
+Template:
+
+```md
+### H6. Lane Retention, Exact Closure, And Geometry Diagnosis
+
+Lane retention:
+- `yes/no/mixed`
+
+Exact closure:
+- `closed / near / missed`
+
+Geometry diagnosis:
+- `lane breadth / lane depth / closure conversion / ordering / mixed / not_applicable`
+
+Most important downstream geometry clue:
+- `...`
+```
+
+---
+
+## H7. Profile, Strategy, And Ablation Read
+
+Purpose:
+- determine whether the downstream result is profile-specific or strategy-specific
+- prevent one control-arm posture from being mistaken for a universal downstream truth
+
+Primary surfaces:
+- profile under review:
+  - `tool_only`
+  - `mixed`
+  - `profit_only`
+- strategy and budget variants when available
+
+Primary questions:
+- did another profile or strategy materially express the state better?
+- did profit-alert quarantine help or hurt here?
+- is this really a downstream structural miss, or mainly a posture choice?
+
+Template:
+
+```md
+### H7. Profile, Strategy, And Ablation Read
+
+Profile effect:
+- `material / modest / none / unknown`
+
+Strategy effect:
+- `material / modest / none / unknown`
+
+Did another posture express the state more honestly?:
+- `yes/no/mixed`
+
+Most important profile / strategy insight:
+- `...`
+```
+
+---
+
+## H8. Bottleneck Classification And Control-Arm Judgment
+
+Purpose:
+- classify the most important bottleneck cleanly
+- stop the section from ending as a vague “downstream missed”
+
+Helpful bottleneck buckets:
+- upstream truth absent
+- bounded conversion absent
+- Candidate Universe compression
+- Play Card squeeze
+- lane retained but box missed
+- profile / strategy posture
+- control arm is simply not expressive enough for this case
+
+Template:
+
+```md
+### H8. Bottleneck Classification And Control-Arm Judgment
+
+Main bottleneck:
+- `upstream truth absent / bounded conversion absent / CU compression / Play Card squeeze / lane-retained-box-missed / profile-strategy posture / control-arm expressiveness gap / mixed`
+
+How fair is the current control arm to this state?:
+- `fair / partly fair / unfair / very limited`
+
+Control-arm judgment:
+- `already expresses the state well / partially expresses it / preserves lane but not box / compresses away too much truth / wrong layer for this case`
+
+Most important bottleneck learning:
+- `...`
+```
+
+---
+
+## H9. Downstream Baseline Handoff
+
+Purpose:
+- close Part H with the shortest possible downstream lesson for final synthesis
+
+Template:
+
+```md
+### H9. Downstream Baseline Handoff
+
+- Strongest downstream success: `...`
+- Strongest downstream miss: `...`
+- Most important bottleneck class: `...`
+- Best explanation for the miss/hit: `...`
+- Main comparison target for Part I: `...`
+```
+
+---
+
+## Part H Analyst Guidance
+
+Good Part H outputs:
+- separate Candidate Universe from Play Card cleanly
+- credit lane retention even when exact closure fails
+- distinguish direct evidence from derived-only survival
+- identify whether the miss belongs to conversion, selection, budget, or posture
+- keep the control arm in its proper role
+
+Bad Part H outputs:
+- “Play Card missed, so the analyzers failed”
+- “Candidate Universe contained it somewhere, so the baseline worked”
+- “derived-only shoulders count the same as direct preservation”
+- “one profile is enough to judge all downstream behavior”
+- “the baseline is final, so the state must be wrong”
+
+Correct Part H posture:
+- control-arm comparison first
+- bottleneck diagnosis second
+- fairness-to-the-state judgment third
+- handoff into final synthesis after that
+
+This is especially important for:
+- lane-right / box-miss states
+- strong arena states that downstream under-expresses
+- states where context is preserved but profit-alert or BA posture is quarantined
+- states where line allocation, not evidence absence, appears to be the real issue
+
+---
+
+## Part I — Final Per-State Synthesis
+
+Part I closes the full per-state review.
+
+This is the section where the reviewer should determine:
+
+- what the state actually taught the system
+- what Brain 1 preserved correctly
+- what the control arm did or did not express
+- what should be handed to Brain 2 later
+- what deserves future bounded promotion study
+- what should explicitly **not** be promoted yet
+- what structural follow-up target is most justified
+
+This is not a generic recap.
+
+It is the place where the reviewer should convert the entire review into:
+
+- a clean state verdict
+- a Brain 1 lesson
+- a Brain 2 handoff
+- a promotion / non-promotion judgment
+- a structural follow-up target
+
+---
+
+## Part I Inputs
+
+Part I should synthesize:
+
+- Part A winners truth
+- Parts B-E tool readings
+- Part F arena synthesis judgment
+- Part G context judgment
+- Part H downstream control-arm judgment
+
+Optional companions:
+
+- bridge / decay readbacks when relevant
+- competition / rerank notes when relevant
+- board-level crossover notes when results suggest them
+
+Guardrail:
+- Part I may infer priorities from earlier sections
+- but it should clearly separate:
+  - observed
+  - interpreted
+  - promotable
+  - not-yet-promotable
+
+---
+
+## Part I Reading Rules
+
+1. Preserve layer boundaries:
+   - winners truth
+   - tool evidence
+   - arena synthesis
+   - context
+   - downstream control arm
+2. Separate:
+   - direct truths
+   - lane/family truths
+   - composite clues
+3. Do not collapse a composite clue into a direct success.
+4. Do not propose policy from one interesting case without saying it is provisional.
+5. Final synthesis should say both:
+   - what the system knew
+   - and what it failed to operationalize
+6. Brain 2 implications belong here only as a handoff, not a full board-level implementation.
+7. Structural follow-up targets should be concrete and sparse, not a dump of every idea.
+
+---
+
+## Part I Output Shape
+
+Part I should end with:
+
+- one final state verdict
+- one strongest direct truth
+- one strongest lane/family truth
+- one strongest composite clue
+- one Brain 1 lesson
+- one Brain 2 handoff
+- one promotion candidate
+- one do-not-promote-yet note
+- one structural follow-up target
+
+Recommended answer style:
+
+- preserved truth first
+- system-layer diagnosis second
+- future action third
+
+---
+
+## I0. Final Synthesis Posture And Evidence Lock
+
+Purpose:
+- identify which earlier sections drove the final state judgment most strongly
+- keep the synthesis tied to evidence instead of impression
+
+Template:
+
+```md
+### I0. Final Synthesis Posture And Evidence Lock
+
+Most important earlier sections:
+- `Part A / Part B / Part C / Part D / Part E / Part F / Part G / Part H`
+
+Most important artifacts:
+- `...`
+
+Confidence in final state synthesis:
+- `high / medium / low`
+
+Main reason for that confidence level:
+- `...`
+```
+
+---
+
+## I1. State Truth Map
+
+Purpose:
+- compress the whole state into one clean truth map before making judgments
+
+Primary questions:
+- what actually happened?
+- what was the strongest structural truth?
+- what was the strongest context truth?
+- what did downstream actually do with it?
+
+Template:
+
+```md
+### I1. State Truth Map
+
+Winner truth:
+- `...`
+
+Strongest structural truth:
+- `...`
+
+Strongest context truth:
+- `...`
+
+Downstream expression of the state:
+- `...`
+
+One-sentence state map:
+- `...`
+```
+
+---
+
+## I2. Preserved Truth Hierarchy
+
+Purpose:
+- explicitly rank the different kinds of truth the system preserved
+
+Primary buckets:
+- direct preserved truth
+- lane/family preserved truth
+- composite / relational clue
+- hidden or under-surfaced value
+
+Template:
+
+```md
+### I2. Preserved Truth Hierarchy
+
+Strongest direct preserved truth:
+- `...`
+
+Strongest lane/family preserved truth:
+- `...`
+
+Strongest composite clue:
+- `...`
+
+Strongest hidden or under-surfaced value:
+- `...`
+```
+
+---
+
+## I3. Brain 1 Judgment
+
+Purpose:
+- state clearly how well the per-state analytical mind performed
+
+Primary questions:
+- did the tools preserve the right structure?
+- did the arena synthesize it correctly?
+- did context reinforce it correctly?
+
+Template:
+
+```md
+### I3. Brain 1 Judgment
+
+Tool-layer judgment:
+- `strong / moderate / weak / absent`
+
+Arena-synthesis judgment:
+- `strong / moderate / weak / absent`
+
+Context-layer judgment:
+- `strong / moderate / weak / absent`
+
+Best one-sentence Brain 1 read:
+- `...`
+```
+
+---
+
+## I4. Downstream Control-Arm Judgment
+
+Purpose:
+- summarize, in the shortest clean form, what the current baseline control arm did with the state
+
+Template:
+
+```md
+### I4. Downstream Control-Arm Judgment
+
+Candidate Universe judgment:
+- `...`
+
+Play Card judgment:
+- `...`
+
+Main control-arm bottleneck:
+- `...`
+
+Best one-sentence control-arm read:
+- `...`
+```
+
+---
+
+## I5. Promotion Candidates And Bounded Policy Opportunities
+
+Purpose:
+- identify what looks strong enough to justify future bounded promotion study
+- keep this distinct from blanket promotion
+
+Primary questions:
+- what feature, object, or relation looked repeatedly useful enough to study as policy?
+- does it belong in:
+  - bounded Brain 1 promotion
+  - richer context bridge
+  - Brain 2 / final findings
+  - or downstream conversion logic?
+
+Template:
+
+```md
+### I5. Promotion Candidates And Bounded Policy Opportunities
+
+Best promotion candidate:
+- `...`
+
+Likely target layer:
+- `Brain 1 bounded promotion / context bridge / Brain 2 / downstream conversion / other`
+
+Why this deserves study:
+- `...`
+
+Promotion confidence:
+- `high / medium / low / exploratory`
+```
+
+---
+
+## I6. Do Not Promote Yet / Residual Risk
+
+Purpose:
+- stop the final synthesis from turning every clever observation into policy
+
+Template:
+
+```md
+### I6. Do Not Promote Yet / Residual Risk
+
+Interesting but not promotable yet:
+- `...`
+
+Why not yet:
+- `sample too thin / too composite / too noisy / too costly / not enough recurrence / other`
+
+Main residual risk in interpretation:
+- `...`
+```
+
+---
+
+## I7. Brain 2 Handoff And Board-Level Implications
+
+Purpose:
+- specify what this state should contribute later to board-level ranking, spillover review, and final findings
+
+Primary questions:
+- should this state be treated as a clean host, a shared host, an echo, or a composite-interest state?
+- is there spillover sensitivity?
+- is the state more important as a ranking clue, a shortlist clue, or a final-findings clue?
+
+Template:
+
+```md
+### I7. Brain 2 Handoff And Board-Level Implications
+
+Brain 2 posture for this state:
+- `clean host / shared host / echo / composite-interest / low-priority`
+
+Spillover / overlap sensitivity:
+- `high / medium / low / none`
+
+Most important board-level carry-forward:
+- `...`
+
+What Brain 2 should watch for:
+- `...`
+```
+
+---
+
+## I8. Structural Follow-Up Target
+
+Purpose:
+- identify the single most justified system-level follow-up that this state suggests
+
+Helpful target buckets:
+- richer arena/context bridge
+- deeper context surfacing
+- shortlist / recommendation ledger
+- decay / episode harness
+- Brain 2 relationship layer
+- downstream conversion policy
+- budget geometry study
+
+Template:
+
+```md
+### I8. Structural Follow-Up Target
+
+Best structural follow-up:
+- `...`
+
+Target layer:
+- `arena/context bridge / heavy-truth surfacing / Brain 2 relationship layer / decay harness / downstream conversion / budget geometry / other`
+
+Why this is the best next follow-up:
+- `...`
+```
+
+---
+
+## I9. Final Per-State Verdict
+
+Purpose:
+- end the review with the shortest, highest-signal conclusion possible
+
+Template:
+
+```md
+### I9. Final Per-State Verdict
+
+Final state verdict:
+- `...`
+
+If the state was a hit, best explanation:
+- `...`
+
+If the state was a miss, best explanation:
+- `...`
+
+Most important lesson from this state:
+- `...`
+```
+
+---
+
+## Part I Analyst Guidance
+
+Good Part I outputs:
+- convert the whole review into a real system lesson
+- keep direct, lane/family, and composite truths separate
+- say what Brain 1 did right even if the control arm failed
+- hand something concrete to future Brain 2 work
+- nominate at most a few real follow-up targets
+
+Bad Part I outputs:
+- “interesting case” with no action
+- “promote everything”
+- “downstream missed, so nothing worked”
+- “Brain 2 should just figure it out later”
+- “the case is too complicated to summarize”
+
+Correct Part I posture:
+- state truth first
+- layer diagnosis second
+- promotion / non-promotion judgment third
+- Brain 2 and structural handoff fourth
+
+This is especially important for:
+- strong Brain 1 / weak control-arm states
+- states with high composite value
+- states that reveal under-surfaced lists or relationship logic
+- states that suggest a real future policy target without proving it completely
+
+---
+
+## Template Status
+
+Current per-state template flow is now:
+
+- `Part A — Winners Environment Lens`
+- `Part B — Stable Pattern Extractor`
+- `Part C — Digit Reduction`
+- `Part D — VTRAC Analyzer`
+- `Part E — Hot Zones`
+- `Part F — Aggregated Analysis Arena`
 - `Part G — Aux / Control Center Context`
+- `Part H — Downstream Baseline Comparison`
+- `Part I — Final Per-State Synthesis`
 
-Future Parts are expected to continue through context review, downstream baseline comparison, and final synthesis.
+Companion workflow:
+- `AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- intended for rankings, scoreboard logic, spillover, final findings, and board-wide decision support

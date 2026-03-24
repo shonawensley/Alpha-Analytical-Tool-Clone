@@ -1,6 +1,6 @@
 # AAT9 Analysis Arena Branch System Map
 
-Date: `2026-03-21`
+Date: `2026-03-23`
 
 ## Why This Document Exists
 
@@ -31,7 +31,8 @@ The arena branch currently has these major layers:
 4. review and scoreboards
 5. bridge / decay / state-day analysis
 6. competition-style board reads
-7. downstream baseline control arm
+7. decision policy and translators
+8. downstream baseline control arm
 
 ## Operating Picture
 
@@ -48,7 +49,19 @@ This is where the system:
 - synthesizes the aggregated analysis arena
 - classifies local structure, pressure, and context
 
-### Brain 2
+### Brain 2A
+
+State-local aggregate context and command-hub inputs.
+
+This is where the system should preserve and organize:
+
+- Control Center alert context
+- profit alerts and compound events
+- due doubles and repeat-watch state
+- Blackapple standing and recommendation context
+- Aux compound evidence that influences posture
+
+### Brain 2B
 
 Board-level comparison and decision support.
 
@@ -59,6 +72,17 @@ This is where the system should:
 - detect spillover and shared family complexes
 - separate spent vs unspent families after Midday
 - preserve final findings before combination forming
+
+### Decision Policy Layer
+
+The first action-taking bridge.
+
+This is where the system should:
+
+- decide `PLAY / WATCH / SKIP`
+- elect the cheapest rational play mode
+- assign a coverage cap class
+- route the state to the correct translator family
 
 ### Master Validation
 
@@ -74,10 +98,12 @@ This is where the system should:
 This separation matters:
 
 - Brain 1 is the live per-state predictive runtime
-- Brain 2 is the live board/decision runtime
-- Master Validation is the learning loop that improves both
+- Brain 2A is the live state-local context/event runtime
+- Brain 2B is the live board/decision runtime
+- the Decision Policy Layer is the live posture/mode bridge
+- Master Validation is the learning loop that improves all of them
 
-That is why analysis, final findings, combination forming, and budgeting are related without being the same layer.
+That is why analysis, final findings, decision policy, combination forming, and budgeting are related without being the same layer.
 
 ## Layer 1 — Predictive-Day Tool Generation
 
@@ -143,6 +169,7 @@ It is more than storage:
 - compares tools
 - surfaces dominant canonicals, families, and lanes
 - exposes watchlists and review prompts
+- now carries `stable_survivor_context` so survivor/frontier, last-remaining, progression, and hidden-terminal truth remain visible in Brain 1 instead of only inside Stable
 
 ## Layer 4 — Review And Scoreboards
 
@@ -174,6 +201,7 @@ Main current finding:
 
 - one universal bridge does not exist yet
 - source-family-specific bridge behavior appears more realistic
+- special-event research harnesses are the right place to study high-value event families before promotion
 
 ## Layer 6 — Competition-Style Board Reads
 
@@ -191,7 +219,26 @@ Current runtime artifact:
 - `scripts/tools/build_board_spillover_overlay.py`
 - `scripts/tools/create_board_scoreboard.py`
 - `scripts/tools/create_board_review_bundle.py`
+
+## Special Research Harnesses
+
+The branch now also carries focused research harnesses for event families that are
+too valuable to ignore but too specialized to promote without direct measurement.
+
+Current examples:
+
+- survivor / frontier audit
+- `R-Consensus` harness prep
+
+These should stay:
+
+- evidence-first
+- review-heavy
+- reverse-engineer driven
+
+until the branch has enough casework to justify operational promotion.
 - `scripts/tools/create_day_arena_board_review.py`
+- `scripts/tools/build_shadow_decision_policy.py`
 
 Important new learning from this layer:
 
@@ -199,8 +246,32 @@ Important new learning from this layer:
 - that means a new layer is needed above per-state arena analysis
 - the first reusable board spillover overlay now exists, but its overlap scoring is still intentionally conservative and review-first
 - the Brain 2 runtime now preserves richer context hints from Aux / Control Center, especially Blackapple recommendations, positional notes, compound events, and due-double family examples
+- the Brain 2 runtime now also carries survivor-aware state hints so survivor-rich / last-remaining-rich states are visible at board-review and shadow-DPL time
 
-## Layer 7 — Downstream Baseline Control Arm
+## Layer 7 — Decision Policy And Translators
+
+This is the next architectural layer after Brain 2.
+
+Primary new branch specs:
+
+- `AAT9_DECISION_POLICY_LAYER__ANALYSIS_ARENA_BRANCH.md`
+- `AAT9_TRANSLATOR_ARCHITECTURE__ANALYSIS_ARENA_BRANCH.md`
+
+Recommended purpose:
+
+- turn evidence into posture
+- separate `PLAY / WATCH / SKIP`
+- elect `perm_only / boxed / vt_box / vt_straight / hybrid`
+- keep boxed and straight translation separate
+- keep coverage logic separate from later economics
+
+Current role:
+
+- shadow runtime + architecture/spec layer
+- current runtime is read-only and review-first
+- it now emits posture/mode/cap-class/route receipts without taking control away from the current downstream control arm
+
+## Layer 8 — Downstream Baseline Control Arm
 
 These remain in place:
 
@@ -232,7 +303,8 @@ The branch is currently strongest at:
 
 The branch is not yet final in:
 
-- arena-native combination forming
+- active decision policy thresholds
+- arena-native split translators
 - arena-native budgeting
 - final findings relationship logic
 - refined board-level spillover / crossover scoring and scoreboard integration
@@ -265,7 +337,38 @@ Primary design note:
 
 - `AAT9_FINAL_FINDINGS_RELATIONSHIP_LAYER__ARENA_BRANCH.md`
 
-### 3. Advanced Combination Forming
+### 3. Decision Policy Layer
+
+Purpose:
+
+- convert Brain 1 truth + Brain 2 opportunity into action posture
+- choose play/watch/skip
+- choose mode
+- choose cap class
+- route states into the correct translator family
+
+Primary design note:
+
+- `AAT9_DECISION_POLICY_LAYER__ANALYSIS_ARENA_BRANCH.md`
+
+### 4. Split Translator Layer
+
+Purpose:
+
+- replace one-size-fits-all downstream compression with bounded mode-specific translation
+
+Primary families:
+
+- boxed translator
+- straight translator
+- VT-box translator
+- later special translators such as consensus-trial translation
+
+Primary design note:
+
+- `AAT9_TRANSLATOR_ARCHITECTURE__ANALYSIS_ARENA_BRANCH.md`
+
+### 5. Advanced Combination Forming
 
 Purpose:
 
@@ -284,6 +387,8 @@ Use these documents to preserve continuity:
 - `AAT9_FINAL_STRING_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md`
 - `AAT9_FINAL_CONTEXT_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md`
 - `AAT9_FINAL_FINDINGS_RELATIONSHIP_LAYER__ARENA_BRANCH.md`
+- `AAT9_DECISION_POLICY_LAYER__ANALYSIS_ARENA_BRANCH.md`
+- `AAT9_TRANSLATOR_ARCHITECTURE__ANALYSIS_ARENA_BRANCH.md`
 - `AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - `AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - `scripts/tools/build_board_spillover_overlay.py`
@@ -310,7 +415,9 @@ The branch should continue to follow this order:
 1. preserve evidence broadly
 2. review it honestly against truth
 3. separate direct findings from hypotheses
-4. promote only bounded ideas that repeat
-5. add board-level relationship logic above the per-state layer, not inside it
+4. add board-level relationship logic above the per-state layer, not inside it
+5. convert truth into posture before translation
+6. translate mode-specifically before economics
+7. promote only bounded ideas that repeat
 
 This is the current stable development doctrine for the analysis-arena branch.

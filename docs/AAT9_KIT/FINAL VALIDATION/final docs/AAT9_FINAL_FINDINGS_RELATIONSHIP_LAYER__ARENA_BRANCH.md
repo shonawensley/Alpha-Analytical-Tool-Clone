@@ -318,6 +318,14 @@ Reusable board spillover overlay
 - top shared lanes/families
 - explicit Evening rerank hints
 
+Current status:
+
+- initial `v0` implemented in `scripts/tools/build_board_spillover_overlay.py`
+- compact board consumer implemented in `scripts/tools/create_board_scoreboard.py`
+- one-step board bundle implemented in `scripts/tools/create_board_review_bundle.py`
+- first live receipt generated for Competition 8
+- still review-first, not yet the final relationship scorer
+
 ### Phase 3
 
 Final findings relationship layer

@@ -44,6 +44,11 @@ from scripts.tools.create_board_scoreboard import (
     build_board_scoreboard_payload,
     write_board_scoreboard_files,
 )
+from scripts.tools.build_shadow_decision_policy import (
+    _default_out_name as _dpl_default_out_name,
+    build_shadow_decision_policy_payload,
+    write_shadow_decision_policy_files,
+)
 
 
 def run_day_arena_board_review(
@@ -126,16 +131,30 @@ def run_day_arena_board_review(
         write_json=True,
     )
 
+    decision_policy_payload = build_shadow_decision_policy_payload(
+        overlay_payload=overlay_payload,
+        scoreboard_payload=scoreboard_payload,
+    )
+    decision_md = out_dir / _dpl_default_out_name(results_date, board_name)
+    decision_md_path, decision_json_path = write_shadow_decision_policy_files(
+        out_md_path=decision_md,
+        payload=decision_policy_payload,
+        write_json=True,
+    )
+
     bundle_payload = build_board_review_bundle_payload(
         results_date=results_date,
         board_name=board_name,
         overlay_payload=overlay_payload,
         scoreboard_payload=scoreboard_payload,
+        decision_policy_payload=decision_policy_payload,
         overlay_json_path=overlay_json_path,
         overlay_md_path=overlay_md_path,
         scoreboard_md_path=scoreboard_md_path,
         scoreboard_csv_path=scoreboard_csv_path,
         scoreboard_json_path=scoreboard_json_path,
+        decision_policy_md_path=decision_md_path,
+        decision_policy_json_path=decision_json_path,
     )
     bundle_md = out_dir / _bundle_out_name(results_date, board_name)
     bundle_md_path, bundle_json_path = write_board_review_bundle_files(
@@ -155,6 +174,8 @@ def run_day_arena_board_review(
         "scoreboard_md": _safe_rel(scoreboard_md_path),
         "scoreboard_csv": _safe_rel(scoreboard_csv_path) if scoreboard_csv_path is not None else None,
         "scoreboard_json": _safe_rel(scoreboard_json_path) if scoreboard_json_path is not None else None,
+        "decision_policy_md": _safe_rel(decision_md_path),
+        "decision_policy_json": _safe_rel(decision_json_path) if decision_json_path is not None else None,
         "bundle_md": _safe_rel(bundle_md_path),
         "bundle_json": _safe_rel(bundle_json_path) if bundle_json_path is not None else None,
     }
@@ -206,6 +227,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"     rebuilt arenas: {len(receipt.get('arena_paths') or [])}")
     print(f"     overlay: {receipt['overlay_json']}")
     print(f"     scoreboard: {receipt['scoreboard_md']}")
+    print(f"     shadow_dpl: {receipt['decision_policy_md']}")
     return 0
 
 

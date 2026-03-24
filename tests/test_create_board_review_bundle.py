@@ -11,6 +11,7 @@ from scripts.tools.create_board_review_bundle import (
 )
 from scripts.tools.build_board_spillover_overlay import build_board_spillover_overlay_payload, write_board_spillover_overlay_files
 from scripts.tools.create_board_scoreboard import build_board_scoreboard_payload, write_board_scoreboard_files
+from scripts.tools.build_shadow_decision_policy import build_shadow_decision_policy_payload, write_shadow_decision_policy_files
 
 
 def _write_csv(path: Path, rows, fieldnames) -> None:
@@ -233,26 +234,44 @@ def test_build_board_review_bundle_payload_and_files(tmp_path: Path) -> None:
         write_json=True,
     )
 
+    decision_payload = build_shadow_decision_policy_payload(
+        overlay_payload=overlay_payload,
+        scoreboard_payload=scoreboard_payload,
+    )
+    decision_md = repo_root / "runs" / "shadow_dpl.md"
+    decision_md_path, decision_json_path = write_shadow_decision_policy_files(
+        out_md_path=decision_md,
+        payload=decision_payload,
+        write_json=True,
+    )
+
     bundle_payload = build_board_review_bundle_payload(
         results_date="2026-03-21",
         board_name="Competition 8",
         overlay_payload=overlay_payload,
         scoreboard_payload=scoreboard_payload,
+        decision_policy_payload=decision_payload,
         overlay_json_path=overlay_json_path,
         overlay_md_path=overlay_md_path,
         scoreboard_md_path=scoreboard_md_path,
         scoreboard_csv_path=scoreboard_csv_path,
         scoreboard_json_path=scoreboard_json_path,
+        decision_policy_md_path=decision_md_path,
+        decision_policy_json_path=decision_json_path,
     )
 
     assert bundle_payload["schema_version"] == "board_review_bundle_v0"
     assert bundle_payload["board_verdict"]["top_primary_target"]
     assert bundle_payload["artifacts"]["overlay_json"].endswith("overlay.json")
+    assert bundle_payload["artifacts"]["shadow_decision_policy_md"].endswith("shadow_dpl.md")
     assert bundle_payload["workflow_manifest"]["brain2_runtime_entrypoint"].endswith("create_board_review_bundle.py")
+    assert bundle_payload["workflow_manifest"]["shadow_decision_policy_builder"].endswith("build_shadow_decision_policy.py")
+    assert bundle_payload["shadow_decision_policy"]["top_play_state"] or bundle_payload["shadow_decision_policy"]["top_watch_state"]
 
     md = build_board_review_bundle_markdown(bundle_payload)
     assert "Board Review Bundle" in md
     assert "Board Verdict" in md
+    assert "Shadow Decision Policy" in md
     assert "Workflow" in md
     assert "overlay_json" in md
 

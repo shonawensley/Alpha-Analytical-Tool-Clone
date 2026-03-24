@@ -1,6 +1,6 @@
 # AAT9 Brain 2 Template — Analysis Arena Branch
 
-Date: `2026-03-22`
+Date: `2026-03-23`
 
 ## Purpose
 
@@ -61,9 +61,9 @@ It provides:
 - context reinforcement
 - state-level Part I verdicts
 
-### Control Center
+### Brain 2A / Control Center
 
-Control Center is best understood as a proto-Brain-2 layer.
+Control Center is best understood as `Brain 2A`.
 
 It already contributes:
 
@@ -71,9 +71,22 @@ It already contributes:
 - alert tables
 - state-local aggregate context
 
-But it is still mostly state-local.
+But it is still mostly state-local and event-oriented.
 
-The fuller Brain 2 layer is the board-level comparative mind above it.
+The fuller Brain 2 layer is `Brain 2B`, the board-level comparative mind above it.
+
+### Decision Policy Layer
+
+Brain 2 does not directly form combinations.
+
+Its outputs should feed a later Decision Policy Layer that decides:
+
+- `PLAY / WATCH / SKIP`
+- `mode`
+- `cap class`
+- `translator route`
+
+That keeps board review separate from later translation and later budgeting.
 
 ### Master Validation
 
@@ -171,6 +184,7 @@ Guardrail:
 8. Do not let composite clues outrank direct local truth without saying so explicitly.
 9. Preserve the distinction between:
    - board analysis
+   - decision policy
    - final findings
    - combination forming
    - budgeting
@@ -248,6 +262,7 @@ Primary questions:
 - which states are strongest on their own local truth?
 - which states deserve serious attention?
 - which states are clearly weak?
+- which states are carrying meaningful survivor / frontier / last-remaining posture?
 - how confident is the board in each rank?
 
 Template:
@@ -330,6 +345,7 @@ Primary questions:
 - which states share a VTRAC lane?
 - which states share a box family?
 - which states share alert-implied sets or context families?
+- which states are echoing the same survivor-rich or hidden-terminal complex?
 - where is the board most duplicated?
 
 Helpful relationship classes:
@@ -375,6 +391,7 @@ Purpose:
 Primary questions:
 - which local cores already fired?
 - which families fired cross-state?
+- which survivor-rich cores still look structurally unspent?
 - which states remain clean hosts for the next draw?
 - which states are mostly echoes after consumption?
 

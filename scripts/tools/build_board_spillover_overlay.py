@@ -460,6 +460,8 @@ def _primary_canonicals(
     *,
     dominant_canonicals: Sequence[str],
     watchlist_canonicals: Sequence[str],
+    survivor_frontier_canonicals: Sequence[str],
+    survivor_last_remaining_canonicals: Sequence[str],
     context_reinforced_canonicals: Sequence[str],
     profit_alert_canonicals: Sequence[str],
 ) -> List[str]:
@@ -467,6 +469,8 @@ def _primary_canonicals(
         [
             *_top_slice(dominant_canonicals, 6),
             *_top_slice(watchlist_canonicals, 6),
+            *_top_slice(survivor_last_remaining_canonicals, 4),
+            *_top_slice(survivor_frontier_canonicals, 4),
             *_top_slice(context_reinforced_canonicals, 4),
             *_top_slice(profit_alert_canonicals, 4),
         ]
@@ -500,12 +504,16 @@ def _primary_vtrac_indices(
     *,
     dominant_vtrac_indices: Sequence[str],
     watchlist_indices: Sequence[str],
+    survivor_frontier_vtrac_indices: Sequence[str],
+    survivor_last_remaining_vtrac_indices: Sequence[str],
     primary_canonicals: Sequence[str],
 ) -> List[str]:
     return _ordered_unique(
         [
             *_top_slice(dominant_vtrac_indices, 5),
             *_top_slice(watchlist_indices, 4),
+            *_top_slice(survivor_last_remaining_vtrac_indices, 4),
+            *_top_slice(survivor_frontier_vtrac_indices, 4),
             *[_vtrac_index_for(value) or "" for value in list(primary_canonicals)[:8] if _vtrac_index_for(value)],
         ]
     )
@@ -564,6 +572,16 @@ def _build_state_summary(
     dominant_canonicals = _top_canonicals(synthesis.get("dominant_canonicals") or [], top_items)
     dominant_vtrac_indices = _top_values(synthesis.get("dominant_vtrac_indices") or [], "value", top_items)
     dominant_families = _top_values(synthesis.get("dominant_families") or [], "value", top_items)
+    stable_survivor_context = synthesis.get("stable_survivor_context") if isinstance(synthesis.get("stable_survivor_context"), dict) else {}
+    survivor_frontier_canonicals = _top_slice(stable_survivor_context.get("top_frontier_canonicals") or [], top_items)
+    survivor_last_remaining_canonicals = _top_slice(stable_survivor_context.get("top_last_remaining_canonicals") or [], top_items)
+    survivor_frontier_vtrac_indices = _top_slice(stable_survivor_context.get("top_frontier_vtrac_indices") or [], top_items)
+    survivor_last_remaining_vtrac_indices = _top_slice(stable_survivor_context.get("top_last_remaining_vtrac_indices") or [], top_items)
+    survivor_terminal_profiles = [
+        str(item.get("profile") or "")
+        for item in (stable_survivor_context.get("last_remaining_examples") or [])[: max(0, int(top_items))]
+        if isinstance(item, dict) and str(item.get("profile") or "").strip()
+    ]
 
     watchlist = synthesis.get("vtrac_literal_watchlist") if isinstance(synthesis.get("vtrac_literal_watchlist"), list) else []
     watchlist_indices: List[str] = []
@@ -595,6 +613,8 @@ def _build_state_summary(
     primary_canonicals = _primary_canonicals(
         dominant_canonicals=dominant_canonicals,
         watchlist_canonicals=watchlist_canonicals,
+        survivor_frontier_canonicals=survivor_frontier_canonicals,
+        survivor_last_remaining_canonicals=survivor_last_remaining_canonicals,
         context_reinforced_canonicals=context_reinforced_canonicals,
         profit_alert_canonicals=profit_alert_canonicals,
     )
@@ -608,6 +628,8 @@ def _build_state_summary(
     primary_vtrac_indices = _primary_vtrac_indices(
         dominant_vtrac_indices=dominant_vtrac_indices,
         watchlist_indices=watchlist_indices,
+        survivor_frontier_vtrac_indices=survivor_frontier_vtrac_indices,
+        survivor_last_remaining_vtrac_indices=survivor_last_remaining_vtrac_indices,
         primary_canonicals=primary_canonicals,
     )
     secondary_vtrac_indices = _secondary_vtrac_indices(
@@ -637,6 +659,12 @@ def _build_state_summary(
         "dominant_canonicals": dominant_canonicals,
         "dominant_vtrac_indices": dominant_vtrac_indices,
         "dominant_families": dominant_families,
+        "stable_survivor_context": stable_survivor_context,
+        "survivor_frontier_canonicals": survivor_frontier_canonicals,
+        "survivor_last_remaining_canonicals": survivor_last_remaining_canonicals,
+        "survivor_frontier_vtrac_indices": survivor_frontier_vtrac_indices,
+        "survivor_last_remaining_vtrac_indices": survivor_last_remaining_vtrac_indices,
+        "survivor_terminal_profiles": _ordered_unique(survivor_terminal_profiles),
         "watchlist_indices": _ordered_unique(watchlist_indices),
         "watchlist_canonicals": _ordered_unique(watchlist_canonicals),
         "context_reinforced_canonicals": context_reinforced_canonicals,
@@ -665,6 +693,13 @@ def _build_state_summary(
             "double_heavy": bool(state_regime.get("double_heavy")),
             "context_reinforced": bool(state_regime.get("context_reinforced")),
             "vtrac_alignment": str(state_regime.get("vtrac_alignment") or ""),
+            "survivor_pressure": bool(state_regime.get("survivor_pressure")),
+            "survivor_progression": bool(state_regime.get("survivor_progression")),
+            "last_remaining": bool(state_regime.get("last_remaining")),
+            "hidden_terminal_support": bool(state_regime.get("hidden_terminal_support")),
+            "survivor_frontier_count": _to_int(state_regime.get("survivor_frontier_count"), 0),
+            "survivor_progression_count": _to_int(state_regime.get("survivor_progression_count"), 0),
+            "last_remaining_rows": _to_int(state_regime.get("last_remaining_rows"), 0),
         },
     }
 

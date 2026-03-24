@@ -201,8 +201,11 @@ def test_run_day_arena_board_review_orchestrates_arenas_and_bundle(tmp_path: Pat
     assert (repo_root / receipt["bundle_md"]).exists()
     assert (repo_root / receipt["overlay_json"]).exists()
     assert (repo_root / receipt["scoreboard_md"]).exists()
+    assert (repo_root / receipt["decision_policy_md"]).exists()
 
     bundle_json = repo_root / str(receipt["bundle_json"])
     payload = json.loads(bundle_json.read_text(encoding="utf-8"))
     assert payload["workflow_manifest"]["brain1_runtime_entrypoint"].endswith("build_aggregated_analysis_arena.py")
+    assert payload["workflow_manifest"]["shadow_decision_policy_builder"].endswith("build_shadow_decision_policy.py")
     assert payload["board_verdict"]["top_primary_target"]
+    assert payload["shadow_decision_policy"]["top_play_state"]

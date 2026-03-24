@@ -149,6 +149,29 @@ def _blackapple_reco_hint(summary: Dict[str, Any]) -> str:
     return ",".join(str(value) for value in values[:3] if str(value).strip()) or "-"
 
 
+def _survivor_hint(summary: Dict[str, Any]) -> str:
+    regime = summary.get("state_regime") if isinstance(summary.get("state_regime"), dict) else {}
+    if not regime:
+        return "-"
+    if not (
+        bool(regime.get("survivor_pressure"))
+        or bool(regime.get("last_remaining"))
+        or bool(regime.get("hidden_terminal_support"))
+    ):
+        return "-"
+    parts: List[str] = []
+    if bool(regime.get("last_remaining")):
+        parts.append(f"LR:{_to_int(regime.get('last_remaining_rows'), 0)}")
+    if bool(regime.get("survivor_progression")):
+        parts.append(f"Prog:{_to_int(regime.get('survivor_progression_count'), 0)}")
+    if bool(regime.get("hidden_terminal_support")):
+        parts.append("Hidden")
+    profiles = summary.get("survivor_terminal_profiles") if isinstance(summary.get("survivor_terminal_profiles"), list) else []
+    if profiles:
+        parts.append(str(profiles[0]))
+    return "|".join(parts) if parts else "Frontier"
+
+
 def _context_signal_score(row: Dict[str, Any]) -> int:
     score = {"tracker-rich": 4, "tracker-strong": 3, "tracker-support": 2, "tracker-light": 0}.get(
         str(row.get("tracker_posture") or ""),
@@ -208,6 +231,7 @@ def build_board_scoreboard_payload(overlay: Dict[str, Any]) -> Dict[str, Any]:
                 "tracker_posture": _tracker_posture(summary),
                 "best_blackapple": _best_ba(summary),
                 "blackapple_reco_hint": _blackapple_reco_hint(summary),
+                "survivor_hint": _survivor_hint(summary),
                 "profit_alert_hint": _profit_alert_hint(summary),
                 "compound_event_hint": _compound_event_hint(summary),
                 "positional_hint": _positional_hint(summary),
@@ -283,13 +307,13 @@ def build_board_scoreboard_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Scoreboard")
     lines.append("")
-    lines.append("| Score Rank | State | Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
-    lines.append("|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| Score Rank | State | Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Survivor | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
+    lines.append("|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         if not isinstance(row, dict):
             continue
         lines.append(
-            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
+            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('survivor_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
         )
 
     if duplicate_pairs:
@@ -342,6 +366,7 @@ def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> Path:
         "tracker_posture",
         "best_blackapple",
         "blackapple_reco_hint",
+        "survivor_hint",
         "profit_alert_hint",
         "compound_event_hint",
         "positional_hint",

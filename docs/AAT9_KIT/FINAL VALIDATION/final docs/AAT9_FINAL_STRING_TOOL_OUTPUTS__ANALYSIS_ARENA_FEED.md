@@ -198,7 +198,7 @@ These flags are distinct evidence classes, not just implementation debris:
 |---|---|
 | `straight2`, `straight3` | straight-style support shape |
 | `single_left` | reduced residue / single-left condition |
-| `cons_full`, `cons_3v`, `cons_stub` | consensus strength variants |
+| `cons_full`, `cons_3v`, `cons_stub` | `R-Consensus` / tail-consensus strength variants from the string tables; do not confuse with positional `XVAR-Cons` or generic convergence |
 | `dom_last`, `dom_pair` | dominant-last / dominant-pair cues |
 | `hidden3v` | hidden 3-value structure present |
 | `double_mirror` | double-mirror relation present |
@@ -464,6 +464,10 @@ Important fields:
 - `frontier_family_count`
 - `is_single_family`
 - `family_ids`
+- `frontier_pattern_summary.exact3digit_patterns_*`
+- `frontier_pattern_summary.three_value_like_patterns_*`
+- `frontier_pattern_summary.hidden_terminal_patterns_*`
+- `frontier_pattern_summary.vtrac_indices_*`
 - `entries`
 
 This object matters a lot for later:
@@ -591,6 +595,8 @@ Stable should remain the main string-tool source for:
 - survivor-frontier inventory
 - frontier-family cleanliness
 - col1/col2 arrival logic
+- hidden-terminal survivor carryover clues
+- last-remaining terminal-profile reconstruction
 
 ## 8. Stable Bounded Conversion Surfaces
 

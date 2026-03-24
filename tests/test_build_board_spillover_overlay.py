@@ -41,6 +41,18 @@ def _arena_fixture(
             "vtrac_literal_watchlist": watchlist,
             "context_reinforced_canonicals": [{"value": top_canonicals[0]}],
             "context_only_pressure": [],
+            "stable_survivor_context": {
+                "available": True,
+                "frontier_count": 3,
+                "progression_count": 2,
+                "last_remaining_rows": 1,
+                "hidden_terminal_frontier_count": 1,
+                "top_frontier_canonicals": [top_canonicals[0], top_canonicals[-1]],
+                "top_last_remaining_canonicals": [top_canonicals[0]],
+                "top_frontier_vtrac_indices": [top_indices[0]],
+                "top_last_remaining_vtrac_indices": [top_indices[0]],
+                "last_remaining_examples": [{"profile": "multi_literal_single_vtrac_family_with_hidden_support"}],
+            },
             "state_regime": {
                 "dominant_canonical": top_canonicals[0],
                 "dominant_vtrac_index": top_indices[0],
@@ -48,6 +60,13 @@ def _arena_fixture(
                 "double_heavy": True,
                 "context_reinforced": True,
                 "vtrac_alignment": "aligned",
+                "survivor_pressure": True,
+                "survivor_progression": True,
+                "last_remaining": True,
+                "hidden_terminal_support": True,
+                "survivor_frontier_count": 3,
+                "survivor_progression_count": 2,
+                "last_remaining_rows": 1,
             },
         },
         "context_tools": {
@@ -255,10 +274,14 @@ def test_build_board_spillover_overlay_payload_and_markdown(tmp_path: Path) -> N
     assert "055" in state_summaries["NewJersey4"]["primary_canonicals"]
     assert "299" in state_summaries["NorthCarolina4"]["primary_canonicals"]
     assert "455" in state_summaries["NewJersey4"]["blackapple_recommended_canonicals"]
+    assert "455" in state_summaries["NewJersey4"]["survivor_frontier_canonicals"]
+    assert "455" in state_summaries["NewJersey4"]["survivor_last_remaining_canonicals"]
+    assert state_summaries["NewJersey4"]["survivor_terminal_profiles"][0] == "multi_literal_single_vtrac_family_with_hidden_support"
     assert state_summaries["NewJersey4"]["positional_signal_notes"][0] == "Mirror-Echo active"
     assert state_summaries["NewJersey4"]["compound_events_top"][0]["top_event"] == "profit_alert_cluster"
     assert "055" in state_summaries["NewJersey4"]["due_double_example_canonicals"]
     assert "055" in state_summaries["NewJersey4"]["secondary_canonicals"]
+    assert state_summaries["NewJersey4"]["state_regime"]["last_remaining"] is True
 
     relationships = payload["relationships"]
     assert any(

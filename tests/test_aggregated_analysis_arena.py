@@ -45,6 +45,37 @@ def _build_fixture(tmp_path: Path) -> tuple[Path, Path]:
                 "top_row_patterns": [{"canonical": "138", "score": 19.5}],
                 "top_compound_patterns": [{"canonical": "344", "compound_score": 17.0}],
                 "family_rollups_top": [{"family_id": 31, "family_score_total": 41.0}],
+                "survivor_frontiers": [
+                    {
+                        "set": "Set1",
+                        "draw": "Draw1",
+                        "frontier_column": 5,
+                        "progression_column_count": 3,
+                        "is_single_family": True,
+                        "frontier_family_count": 1,
+                        "entries": [{"last_remaining_3v": True}],
+                        "frontier_pattern_summary": {
+                            "exact3digit_patterns_all": ["138"],
+                            "exact3digit_patterns_top": [{"value": "138", "count": 2}],
+                            "three_value_like_patterns_all": ["138"],
+                            "vtrac_indices_all": ["8"],
+                            "vtrac_indices_top": [{"value": "8", "count": 2}],
+                            "hidden_terminal_patterns_all": ["1138"],
+                            "hidden_terminal_patterns_top": [{"value": "1138", "count": 1}],
+                            "top_patterns": [{"canonical": "1138"}],
+                        },
+                    }
+                ],
+                "survivor_progressions": [
+                    {
+                        "set": "Set1",
+                        "draw": "Draw1",
+                        "eligible_columns": [3, 4, 5],
+                        "progression_column_count": 3,
+                        "frontier_column": 5,
+                        "has_last_remaining": True,
+                    }
+                ],
             },
             "Evening": {"top_row_patterns": [], "top_compound_patterns": [], "family_rollups_top": []},
             "Midday": {"top_row_patterns": [], "top_compound_patterns": [], "family_rollups_top": []},
@@ -304,16 +335,26 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     dominant_indices = payload["arena_synthesis"]["dominant_vtrac_indices"]
     assert dominant_indices
     assert dominant_indices[0]["value"] == "8"
+    stable_survivor_context = payload["arena_synthesis"]["stable_survivor_context"]
+    assert stable_survivor_context["available"] is True
+    assert stable_survivor_context["top_frontier_canonicals"][0] == "138"
+    assert stable_survivor_context["top_last_remaining_canonicals"][0] == "138"
+    assert stable_survivor_context["top_hidden_terminal_patterns"][0] == "1138"
     watchlist = payload["arena_synthesis"]["vtrac_literal_watchlist"]
     assert watchlist
     assert watchlist[0]["vtrac_index"] == "8"
     assert "138" in watchlist[0]["candidate_canonicals"]
+    assert payload["arena_synthesis"]["state_regime"]["survivor_pressure"] is True
+    assert payload["arena_synthesis"]["state_regime"]["last_remaining"] is True
+    assert payload["arena_synthesis"]["state_regime"]["hidden_terminal_support"] is True
+    assert payload["arena_synthesis"]["state_regime"]["vtrac_alignment"] == "aligned"
 
     md = build_aggregated_analysis_arena_markdown(payload)
     assert "Aggregated Analysis Arena" in md
     assert "Dominant Canonicals" in md
     assert "Dominant VTRAC Indices" in md
     assert "VTRAC Literal Watchlist" in md
+    assert "Stable Survivor Context" in md
 
     out_json = day_dir / "TestState" / "analysis" / "aggregated_analysis_arena__tool_only__arena_v0.json"
     json_path, md_path = write_aggregated_analysis_arena_files(out_json_path=out_json, payload=payload, write_md=True)

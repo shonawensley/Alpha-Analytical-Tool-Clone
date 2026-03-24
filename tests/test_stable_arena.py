@@ -133,8 +133,19 @@ def test_stable_arena_builds_family_rollups_and_survivor_frontiers(tmp_path: Pat
     assert frontiers
     frontier = next(item for item in frontiers if item["set"] == "Set1" and item["draw"] == "Draw1")
     assert frontier["frontier_column"] == 2
+    assert frontier["progression_column_count"] == 2
+    assert frontier["frontier_pattern_summary"]["exact3digit_patterns_top"]
+    assert "hidden_terminal_patterns_top" in frontier["frontier_pattern_summary"]
+    assert frontier["frontier_pattern_summary"]["top_patterns"]
     assert frontier["is_single_family"] is True
     assert frontier["entries"][0]["last_remaining_3v"] is True
+
+    progressions = combined["survivor_progressions"]
+    assert progressions
+    progression = next(item for item in progressions if item["set"] == "Set1" and item["draw"] == "Draw1")
+    assert progression["eligible_columns"] == [1, 2]
+    assert progression["frontier_column"] == 2
+    assert progression["column_summaries"][0]["pattern_summary"]["exact3digit_patterns_top"]
 
 
 def test_stable_arena_ledgers_show_frontier_and_compounding_context(tmp_path: Path):

@@ -756,9 +756,217 @@ def _sorted_votes(store: Dict[str, Dict[str, Any]], *, numeric: bool = False) ->
     return ordered
 
 
+def _top_weighted_keys(counter: Dict[str, float], *, limit: int, numeric: bool = False) -> List[str]:
+    items = sorted(
+        ((str(key), float(value)) for key, value in counter.items() if str(key).strip()),
+        key=lambda kv: (
+            -kv[1],
+            f"{int(kv[0]):03d}" if numeric and str(kv[0]).isdigit() else str(kv[0]),
+        ),
+    )
+    return [key for key, _ in items[: max(0, int(limit))]]
+
+
+def _normalize_counter_values(values: Any, *, pick3_only: bool = False) -> List[str]:
+    out: List[str] = []
+    if not isinstance(values, list):
+        return out
+    for item in values:
+        text = _normalize_pick3_literal(item) if pick3_only else str(item or "").strip()
+        if text:
+            out.append(text)
+    return out
+
+
+def _stable_survivor_profile_from_frontier(frontier: Dict[str, Any]) -> str:
+    entries = frontier.get("entries") if isinstance(frontier.get("entries"), list) else []
+    last_remaining_count = sum(1 for entry in entries if isinstance(entry, dict) and bool(entry.get("last_remaining_3v")))
+    if last_remaining_count <= 0:
+        return ""
+
+    pattern_summary = frontier.get("frontier_pattern_summary") if isinstance(frontier.get("frontier_pattern_summary"), dict) else {}
+    exact_patterns = _normalize_counter_values(pattern_summary.get("exact3digit_patterns_all"), pick3_only=True)
+    three_value_patterns = _normalize_counter_values(pattern_summary.get("three_value_like_patterns_all"), pick3_only=True)
+    hidden_patterns = _normalize_counter_values(pattern_summary.get("hidden_terminal_patterns_all"), pick3_only=False)
+    vtrac_indices = _normalize_counter_values(pattern_summary.get("vtrac_indices_all"), pick3_only=False)
+
+    if len(exact_patterns) == 1:
+        profile = "exact_single_literal"
+    elif len(exact_patterns) > 1 and len(vtrac_indices) == 1:
+        profile = "multi_literal_single_vtrac_family"
+    elif len(exact_patterns) > 1:
+        profile = "multi_literal_mixed_family"
+    elif len(vtrac_indices) == 1 and three_value_patterns:
+        profile = "hidden_single_vtrac_family"
+    else:
+        profile = "unresolved_terminal"
+
+    if hidden_patterns and profile in {"exact_single_literal", "multi_literal_single_vtrac_family", "hidden_single_vtrac_family"}:
+        profile = f"{profile}_with_hidden_support"
+    return profile
+
+
+def _build_stable_survivor_context(stable_tool: Dict[str, Any]) -> Dict[str, Any]:
+    sections = stable_tool.get("sections") if isinstance(stable_tool.get("sections"), dict) else {}
+    if not sections:
+        return {
+            "available": False,
+            "frontier_count": 0,
+            "progression_count": 0,
+            "last_remaining_rows": 0,
+        }
+
+    frontier_canonical_weights: Dict[str, float] = defaultdict(float)
+    frontier_vtrac_weights: Dict[str, float] = defaultdict(float)
+    three_value_weights: Dict[str, float] = defaultdict(float)
+    hidden_terminal_weights: Dict[str, float] = defaultdict(float)
+    last_remaining_canonical_weights: Dict[str, float] = defaultdict(float)
+    last_remaining_vtrac_weights: Dict[str, float] = defaultdict(float)
+    profile_counter: Dict[str, float] = defaultdict(float)
+
+    frontier_examples: List[Dict[str, Any]] = []
+    last_remaining_examples: List[Dict[str, Any]] = []
+    frontier_count = 0
+    frontier_single_family_count = 0
+    frontier_multi_family_count = 0
+    progression_count = 0
+    progression_with_last_remaining_count = 0
+    last_remaining_rows = 0
+    hidden_terminal_frontier_count = 0
+
+    for section, block in sections.items():
+        if not isinstance(block, dict):
+            continue
+        summary = block.get("summary") if isinstance(block.get("summary"), dict) else {}
+        section_last_remaining_rows = _to_int(summary.get("last_remaining_rows"), 0)
+
+        frontiers = block.get("survivor_frontiers") if isinstance(block.get("survivor_frontiers"), list) else []
+        progressions = block.get("survivor_progressions") if isinstance(block.get("survivor_progressions"), list) else []
+        frontier_count += len(frontiers)
+        progression_count += len(progressions)
+        progression_with_last_remaining_count += sum(
+            1 for item in progressions if isinstance(item, dict) and bool(item.get("has_last_remaining"))
+        )
+
+        for frontier in frontiers:
+            if not isinstance(frontier, dict):
+                continue
+            if bool(frontier.get("is_single_family")):
+                frontier_single_family_count += 1
+            else:
+                frontier_multi_family_count += 1
+
+            pattern_summary = frontier.get("frontier_pattern_summary") if isinstance(frontier.get("frontier_pattern_summary"), dict) else {}
+            exact_patterns = _normalize_counter_values(pattern_summary.get("exact3digit_patterns_all"), pick3_only=True)
+            vtrac_indices = _normalize_counter_values(pattern_summary.get("vtrac_indices_all"), pick3_only=False)
+            three_value_patterns = _normalize_counter_values(pattern_summary.get("three_value_like_patterns_all"), pick3_only=True)
+            hidden_patterns = _normalize_counter_values(pattern_summary.get("hidden_terminal_patterns_all"), pick3_only=False)
+            last_remaining_count = sum(
+                1 for entry in (frontier.get("entries") or []) if isinstance(entry, dict) and bool(entry.get("last_remaining_3v"))
+            )
+            section_last_remaining_rows += last_remaining_count
+            progression_cols = _to_int(frontier.get("progression_column_count"), 0)
+            if hidden_patterns:
+                hidden_terminal_frontier_count += 1
+
+            for item in (pattern_summary.get("exact3digit_patterns_top") or [])[:6]:
+                if not isinstance(item, dict):
+                    continue
+                value = _normalize_pick3_literal(item.get("value"))
+                if not value:
+                    continue
+                weight = float(max(1, _to_int(item.get("count"), 1)) + min(3, progression_cols) + (2 if last_remaining_count > 0 else 0))
+                frontier_canonical_weights[value] += weight
+                if last_remaining_count > 0:
+                    last_remaining_canonical_weights[value] += weight
+
+            for item in (pattern_summary.get("vtrac_indices_top") or [])[:6]:
+                if not isinstance(item, dict):
+                    continue
+                value = str(item.get("value") or "").strip()
+                if not value:
+                    continue
+                weight = float(max(1, _to_int(item.get("count"), 1)) + min(3, progression_cols) + (2 if last_remaining_count > 0 else 0))
+                frontier_vtrac_weights[value] += weight
+                if last_remaining_count > 0:
+                    last_remaining_vtrac_weights[value] += weight
+
+            for value in three_value_patterns[:8]:
+                three_value_weights[value] += 1.0 + (1.0 if last_remaining_count > 0 else 0.0)
+            for value in hidden_patterns[:8]:
+                hidden_terminal_weights[value] += 1.0 + (1.0 if last_remaining_count > 0 else 0.0)
+
+            example = {
+                "section": str(section),
+                "set": str(frontier.get("set") or ""),
+                "draw": str(frontier.get("draw") or ""),
+                "frontier_column": _to_int(frontier.get("frontier_column"), 0),
+                "progression_column_count": progression_cols,
+                "is_single_family": bool(frontier.get("is_single_family")),
+                "frontier_family_count": _to_int(frontier.get("frontier_family_count"), 0),
+                "last_remaining_count": last_remaining_count,
+                "exact3digit_patterns": exact_patterns[:8],
+                "three_value_like_patterns": three_value_patterns[:8],
+                "vtrac_indices": vtrac_indices[:8],
+                "hidden_terminal_patterns": hidden_patterns[:6],
+            }
+            frontier_examples.append(example)
+
+            profile = _stable_survivor_profile_from_frontier(frontier)
+            if profile:
+                profile_counter[profile] += 1.0
+                last_remaining_examples.append({**example, "profile": profile})
+        last_remaining_rows += section_last_remaining_rows
+
+    frontier_examples.sort(
+        key=lambda item: (
+            -_to_int(item.get("last_remaining_count"), 0),
+            -_to_int(item.get("progression_column_count"), 0),
+            str(item.get("section") or ""),
+            str(item.get("set") or ""),
+            str(item.get("draw") or ""),
+            _to_int(item.get("frontier_column"), 0),
+        )
+    )
+    last_remaining_examples.sort(
+        key=lambda item: (
+            -_to_int(item.get("last_remaining_count"), 0),
+            -_to_int(item.get("progression_column_count"), 0),
+            str(item.get("profile") or ""),
+            str(item.get("section") or ""),
+            str(item.get("set") or ""),
+            str(item.get("draw") or ""),
+        )
+    )
+
+    return {
+        "available": bool(frontier_count or progression_count or last_remaining_rows),
+        "frontier_count": int(frontier_count),
+        "frontier_single_family_count": int(frontier_single_family_count),
+        "frontier_multi_family_count": int(frontier_multi_family_count),
+        "progression_count": int(progression_count),
+        "progression_with_last_remaining_count": int(progression_with_last_remaining_count),
+        "last_remaining_rows": int(last_remaining_rows),
+        "hidden_terminal_frontier_count": int(hidden_terminal_frontier_count),
+        "top_frontier_canonicals": _top_weighted_keys(frontier_canonical_weights, limit=10),
+        "top_frontier_vtrac_indices": _top_weighted_keys(frontier_vtrac_weights, limit=10, numeric=True),
+        "top_three_value_like_patterns": _top_weighted_keys(three_value_weights, limit=10),
+        "top_hidden_terminal_patterns": _top_weighted_keys(hidden_terminal_weights, limit=10),
+        "top_last_remaining_canonicals": _top_weighted_keys(last_remaining_canonical_weights, limit=10),
+        "top_last_remaining_vtrac_indices": _top_weighted_keys(last_remaining_vtrac_weights, limit=10, numeric=True),
+        "last_remaining_profile_counts": {
+            key: int(value)
+            for key, value in sorted(profile_counter.items(), key=lambda kv: (-kv[1], kv[0]))
+        },
+        "frontier_examples": frontier_examples[:10],
+        "last_remaining_examples": last_remaining_examples[:10],
+    }
+
+
 def _build_cross_tool_relations(
     *,
     stable_tool: Dict[str, Any],
+    stable_survivor_context: Dict[str, Any],
     dr_tool: Dict[str, Any],
     vtrac_tool: Dict[str, Any],
     hot_tool: Dict[str, Any],
@@ -796,6 +1004,23 @@ def _build_cross_tool_relations(
             family_id = str(row.get("family_id") or "").strip()
             score = _to_float(row.get("family_score_total"))
             _register_vote(family_votes, key=family_id, source=f"stable:{section}:family", score=score, metadata={"section": section})
+
+    for value in (stable_survivor_context.get("top_frontier_canonicals") or [])[:8]:
+        canonical = _canon(value)
+        if canonical:
+            _register_vote(canonical_votes, key=canonical, source="stable:survivor_frontier", score=4.0, literal=canonical)
+    for value in (stable_survivor_context.get("top_last_remaining_canonicals") or [])[:8]:
+        canonical = _canon(value)
+        if canonical:
+            _register_vote(canonical_votes, key=canonical, source="stable:last_remaining", score=6.0, literal=canonical)
+    for value in (stable_survivor_context.get("top_frontier_vtrac_indices") or [])[:8]:
+        text = str(value or "").strip()
+        if text:
+            _register_vote(vtrac_votes, key=text, source="stable:survivor_frontier", score=4.0)
+    for value in (stable_survivor_context.get("top_last_remaining_vtrac_indices") or [])[:8]:
+        text = str(value or "").strip()
+        if text:
+            _register_vote(vtrac_votes, key=text, source="stable:last_remaining", score=6.0)
 
     dr_sections = dr_tool.get("sections") if isinstance(dr_tool.get("sections"), dict) else {}
     for section, block in dr_sections.items():
@@ -937,6 +1162,14 @@ def _build_cross_tool_relations(
 
     if any(_is_double(str(item.get("value") or "")) for item in canonical_consensus[:5]):
         regime_flags.append("double_heavy_canonical_surface")
+    if _to_int(stable_survivor_context.get("frontier_count"), 0) > 0:
+        regime_flags.append("stable_survivor_frontier_present")
+    if _to_int(stable_survivor_context.get("progression_count"), 0) > 0:
+        regime_flags.append("stable_survivor_progression_present")
+    if _to_int(stable_survivor_context.get("last_remaining_rows"), 0) > 0:
+        regime_flags.append("stable_last_remaining_present")
+    if _to_int(stable_survivor_context.get("hidden_terminal_frontier_count"), 0) > 0:
+        regime_flags.append("stable_hidden_terminal_present")
     if any(item.get("string_source_count", 0) > 0 and item.get("context_source_count", 0) > 0 for item in canonical_consensus[:8]):
         regime_flags.append("context_reinforced_canonical_overlap")
     if any(item.get("string_source_count", 0) > 0 and item.get("context_source_count", 0) > 0 for item in vtrac_consensus[:8]):
@@ -962,6 +1195,7 @@ def _build_cross_tool_relations(
 def _build_arena_synthesis(
     *,
     cross_tool_relations: Dict[str, Any],
+    stable_survivor_context: Dict[str, Any],
 ) -> Dict[str, Any]:
     canonical_consensus = list(cross_tool_relations.get("canonical_consensus_top") or [])
     vtrac_consensus = list(cross_tool_relations.get("vtrac_index_consensus_top") or [])
@@ -1017,7 +1251,14 @@ def _build_arena_synthesis(
         "dominant_family": dominant_families[0]["value"] if dominant_families else None,
         "double_heavy": "double_heavy_canonical_surface" in regime_flags,
         "context_reinforced": "context_reinforced_canonical_overlap" in regime_flags,
-        "vtrac_alignment": "cross_tool_vtrac_alignment" in regime_flags,
+        "vtrac_alignment": "aligned" if "cross_tool_vtrac_alignment" in regime_flags else "mixed",
+        "survivor_pressure": "stable_survivor_frontier_present" in regime_flags,
+        "survivor_progression": "stable_survivor_progression_present" in regime_flags,
+        "last_remaining": "stable_last_remaining_present" in regime_flags,
+        "hidden_terminal_support": "stable_hidden_terminal_present" in regime_flags,
+        "survivor_frontier_count": _to_int(stable_survivor_context.get("frontier_count"), 0),
+        "survivor_progression_count": _to_int(stable_survivor_context.get("progression_count"), 0),
+        "last_remaining_rows": _to_int(stable_survivor_context.get("last_remaining_rows"), 0),
         "contradiction_count": len(contradiction_flags),
     }
 
@@ -1039,6 +1280,19 @@ def _build_arena_synthesis(
     if dominant_families:
         top = ", ".join(str(item["value"]) for item in dominant_families[:3])
         review_prompts.append(f"Compare family agreement {top} against actual winner family / corridor behavior.")
+    if stable_survivor_context.get("available"):
+        survivor_canonicals = ", ".join(str(value) for value in (stable_survivor_context.get("top_frontier_canonicals") or [])[:3])
+        if survivor_canonicals:
+            review_prompts.append(
+                f"Inspect stable survivor frontiers around {survivor_canonicals} before compressing literal corridor truth."
+            )
+        last_profiles = stable_survivor_context.get("last_remaining_profile_counts") if isinstance(stable_survivor_context.get("last_remaining_profile_counts"), dict) else {}
+        if last_profiles:
+            top_profiles = ", ".join(list(last_profiles.keys())[:3])
+            review_prompts.append(f"Review stable last-remaining terminal profiles: {top_profiles}.")
+        hidden_patterns = ", ".join(str(value) for value in (stable_survivor_context.get("top_hidden_terminal_patterns") or [])[:3])
+        if hidden_patterns:
+            review_prompts.append(f"Check hidden survivor terminals {hidden_patterns} for family/VTRAC carryover value.")
 
     return {
         "dominant_canonicals": dominant_canonicals,
@@ -1047,6 +1301,7 @@ def _build_arena_synthesis(
         "vtrac_literal_watchlist": vtrac_literal_watchlist,
         "context_reinforced_canonicals": context_reinforced_canonicals,
         "context_only_pressure": context_only_pressure,
+        "stable_survivor_context": stable_survivor_context,
         "state_regime": state_regime,
         "review_prompts": review_prompts,
     }
@@ -1238,15 +1493,20 @@ def build_aggregated_analysis_arena_payload(
         top_lanes=max(12, top_items),
         top_per_lane=max(12, top_items),
     )
+    stable_survivor_context = _build_stable_survivor_context(stable_tool)
 
     cross_tool_relations = _build_cross_tool_relations(
         stable_tool=stable_tool,
+        stable_survivor_context=stable_survivor_context,
         dr_tool=dr_tool,
         vtrac_tool=vtrac_tool,
         hot_tool=hot_tool,
         aux_tool=aux_tool,
     )
-    arena_synthesis = _build_arena_synthesis(cross_tool_relations=cross_tool_relations)
+    arena_synthesis = _build_arena_synthesis(
+        cross_tool_relations=cross_tool_relations,
+        stable_survivor_context=stable_survivor_context,
+    )
     downstream_handoff, downstream_inputs = _build_downstream_handoff(state_dir, repo_root)
     review_links, review_inputs = _build_review_links(day_dir=day_dir, state_dir=state_dir, state_key=state_key, repo_root=repo_root)
 
@@ -1409,6 +1669,29 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"- double_heavy: `{state_regime.get('double_heavy')}`")
         lines.append(f"- context_reinforced: `{state_regime.get('context_reinforced')}`")
         lines.append(f"- vtrac_alignment: `{state_regime.get('vtrac_alignment')}`")
+        lines.append(f"- survivor_pressure: `{state_regime.get('survivor_pressure')}`")
+        lines.append(f"- survivor_progression: `{state_regime.get('survivor_progression')}`")
+        lines.append(f"- last_remaining: `{state_regime.get('last_remaining')}`")
+        lines.append(f"- hidden_terminal_support: `{state_regime.get('hidden_terminal_support')}`")
+
+    stable_survivor_context = synthesis.get("stable_survivor_context") if isinstance(synthesis.get("stable_survivor_context"), dict) else {}
+    if stable_survivor_context.get("available"):
+        lines.append("")
+        lines.append("## Stable Survivor Context")
+        lines.append("")
+        lines.append(f"- frontier_count: `{stable_survivor_context.get('frontier_count', 0)}`")
+        lines.append(f"- progression_count: `{stable_survivor_context.get('progression_count', 0)}`")
+        lines.append(f"- last_remaining_rows: `{stable_survivor_context.get('last_remaining_rows', 0)}`")
+        lines.append(f"- hidden_terminal_frontier_count: `{stable_survivor_context.get('hidden_terminal_frontier_count', 0)}`")
+        top_frontier_canonicals = ", ".join(stable_survivor_context.get("top_frontier_canonicals") or []) or "-"
+        top_last_remaining_canonicals = ", ".join(stable_survivor_context.get("top_last_remaining_canonicals") or []) or "-"
+        top_frontier_vtrac = ", ".join(stable_survivor_context.get("top_frontier_vtrac_indices") or []) or "-"
+        lines.append(f"- top_frontier_canonicals: `{top_frontier_canonicals}`")
+        lines.append(f"- top_last_remaining_canonicals: `{top_last_remaining_canonicals}`")
+        lines.append(f"- top_frontier_vtrac_indices: `{top_frontier_vtrac}`")
+        profile_counts = stable_survivor_context.get("last_remaining_profile_counts") if isinstance(stable_survivor_context.get("last_remaining_profile_counts"), dict) else {}
+        if profile_counts:
+            lines.append(f"- last_remaining_profile_counts: `{json.dumps(profile_counts, sort_keys=True)}`")
 
     lines.append("")
     lines.append("## Review Prompts")

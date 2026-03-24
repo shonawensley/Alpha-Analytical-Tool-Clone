@@ -1646,7 +1646,11 @@ def _build_family_rollups(
     return dict(by_section)
 
 
-def _build_survivor_frontiers(rows: Sequence[Dict[str, str]]) -> Dict[str, List[Dict[str, Any]]]:
+def _build_survivor_frontiers(
+    rows: Sequence[Dict[str, str]],
+    *,
+    score_rows_by_box: Optional[Dict[Tuple[str, str, str, str], List[Dict[str, Any]]]] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
     by_group: Dict[Tuple[str, str, str], List[Tuple[int, Dict[str, str]]]] = defaultdict(list)
     for row in rows:
         rows_cov = _to_int(row.get("rows_cov"))
@@ -1670,19 +1674,169 @@ def _build_survivor_frontiers(rows: Sequence[Dict[str, str]]) -> Dict[str, List[
             )
         )
         family_ids = [_to_int(row.get("family_id"), default=0) for row in frontier_rows if _to_int(row.get("family_id"), default=0) > 0]
+        score_summary = _build_survivor_pattern_summary(
+            (score_rows_by_box or {}).get((section, set_name, draw, str(frontier_column)), [])
+        )
         by_section[section].append(
             {
                 "set": set_name,
                 "draw": draw,
                 "frontier_column": int(frontier_column),
                 "stable_box_rows": len(bucket),
+                "eligible_columns": sorted({int(col) for col, _ in bucket}),
+                "progression_column_count": len({int(col) for col, _ in bucket}),
                 "frontier_family_count": len(family_ids),
                 "is_single_family": len(set(family_ids)) == 1 if family_ids else False,
                 "family_ids": sorted(set(int(fid) for fid in family_ids)),
+                "frontier_pattern_summary": score_summary,
                 "entries": [_family_box_payload(row) for row in frontier_rows],
             }
         )
 
+    for section, items in by_section.items():
+        items.sort(key=lambda item: (item["set"], item["draw"], int(item["frontier_column"])))
+    return dict(by_section)
+
+
+def _group_score_rows_by_box(rows: Sequence[Dict[str, Any]]) -> Dict[Tuple[str, str, str, str], List[Dict[str, Any]]]:
+    grouped: Dict[Tuple[str, str, str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        key = (
+            str(row.get("section") or "Unknown").strip() or "Unknown",
+            str(row.get("Set") or "").strip() or "",
+            str(row.get("Draw") or "").strip() or "",
+            str(row.get("Column") or "").strip() or "",
+        )
+        grouped[key].append(row)
+    return grouped
+
+
+def _build_survivor_pattern_summary(rows: Sequence[Dict[str, Any]], *, top_n: int = 10) -> Dict[str, Any]:
+    exact_counter: Counter[str] = Counter()
+    three_value_counter: Counter[str] = Counter()
+    hidden_terminal_counter: Counter[str] = Counter()
+    vtrac_index_counter: Counter[str] = Counter()
+    row_type_counter: Counter[str] = Counter()
+    top_patterns: List[Dict[str, Any]] = []
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            -_to_float(row.get("score")),
+            -len(_digits_only(row.get("Canonical"))),
+            _digits_only(row.get("Canonical")),
+            _row_locator(row),
+        ),
+    )
+    for row in ordered:
+        canonical = _digits_only(row.get("Canonical"))
+        if not canonical:
+            continue
+        if len(canonical) == 3:
+            exact_counter[canonical] += 1
+            try:
+                vtrac_index_counter[str(derive_vtrac_index_for_canonical(canonical, get_vtrac_index))] += 1
+            except Exception:
+                pass
+        elif len(canonical) > 3:
+            hidden_terminal_counter[canonical] += 1
+        if _is_three_value_like(canonical):
+            three_value_counter[canonical] += 1
+        for row_type in [tok for tok in str(row.get("rows") or "").split(",") if tok]:
+            row_type_counter[row_type] += 1
+        if len(top_patterns) < top_n:
+            top_patterns.append(
+                {
+                    "canonical": canonical,
+                    "score": _to_float(row.get("score")),
+                    "rows": [tok for tok in str(row.get("rows") or "").split(",") if tok],
+                    "family_id": _to_int(row.get("family_id"), default=0) or None,
+                    "why_tags": _split_why(row.get("why")),
+                    "vtrac_index": _to_int(derive_vtrac_index_for_canonical(canonical, get_vtrac_index), default=0)
+                    or None
+                    if len(canonical) == 3
+                    else None,
+                }
+            )
+    return {
+        "row_count": len(rows),
+        "row_types": _counter_top(row_type_counter, top_n=6),
+        "exact3digit_patterns_all": sorted(exact_counter.keys()),
+        "exact3digit_patterns_top": _counter_top(exact_counter, top_n=top_n),
+        "three_value_like_patterns_all": sorted(three_value_counter.keys()),
+        "three_value_like_patterns_top": _counter_top(three_value_counter, top_n=top_n),
+        "hidden_terminal_patterns_all": sorted(hidden_terminal_counter.keys()),
+        "hidden_terminal_patterns_top": _counter_top(hidden_terminal_counter, top_n=top_n),
+        "vtrac_indices_all": sorted(vtrac_index_counter.keys(), key=lambda value: int(value)),
+        "vtrac_indices_top": _counter_top(vtrac_index_counter, top_n=8),
+        "top_patterns": top_patterns,
+    }
+
+
+def _build_survivor_progressions(
+    family_rows: Sequence[Dict[str, str]],
+    *,
+    score_rows_by_box: Dict[Tuple[str, str, str, str], List[Dict[str, Any]]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    by_group: Dict[Tuple[str, str, str], List[Tuple[int, Dict[str, str]]]] = defaultdict(list)
+    for row in family_rows:
+        rows_cov = _to_int(row.get("rows_cov"))
+        column_int = _to_int(row.get("Column"), default=-1)
+        if rows_cov < 3 or column_int < 0:
+            continue
+        section = str(row.get("section") or "Unknown").strip() or "Unknown"
+        set_name = str(row.get("Set") or "")
+        draw = str(row.get("Draw") or "")
+        by_group[(section, set_name, draw)].append((column_int, row))
+
+    by_section: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for (section, set_name, draw), bucket in by_group.items():
+        columns = sorted({col for col, _ in bucket})
+        if not columns:
+            continue
+        frontier_column = max(columns)
+        column_summaries: List[Dict[str, Any]] = []
+        for column_int in columns:
+            column_rows = [row for col, row in bucket if col == column_int]
+            family_ids = [
+                _to_int(row.get("family_id"), default=0)
+                for row in column_rows
+                if _to_int(row.get("family_id"), default=0) > 0
+            ]
+            top_counter: Counter[str] = Counter()
+            for row in column_rows:
+                for item in _parse_counter_blob(row.get("top_canonicals")).items():
+                    top_counter[item[0]] += int(item[1])
+            score_summary = _build_survivor_pattern_summary(
+                score_rows_by_box.get((section, set_name, draw, str(column_int)), [])
+            )
+            column_summaries.append(
+                {
+                    "column": int(column_int),
+                    "family_count": len(family_ids),
+                    "family_ids": sorted(set(int(fid) for fid in family_ids)),
+                    "is_single_family": len(set(family_ids)) == 1 if family_ids else False,
+                    "last_remaining_count": sum(1 for row in column_rows if _to_bool(row.get("last_remaining_3v"))),
+                    "progression_family_count": sum(1 for row in column_rows if _to_bool(row.get("progression_flag"))),
+                    "any_vtrac_family_count": sum(1 for row in column_rows if _to_bool(row.get("any_vtrac_straight"))),
+                    "any_consensus_family_count": sum(1 for row in column_rows if _to_bool(row.get("any_consensus"))),
+                    "top_canonicals": _counter_top(top_counter, top_n=8),
+                    "pattern_summary": score_summary,
+                }
+            )
+        frontier_summary = next(item for item in column_summaries if item["column"] == frontier_column)
+        by_section[section].append(
+            {
+                "set": set_name,
+                "draw": draw,
+                "eligible_columns": [int(value) for value in columns],
+                "progression_column_count": len(columns),
+                "frontier_column": int(frontier_column),
+                "frontier_family_ids": list(frontier_summary["family_ids"]),
+                "is_frontier_single_family": bool(frontier_summary["is_single_family"]),
+                "has_last_remaining": bool(frontier_summary["last_remaining_count"] > 0),
+                "column_summaries": column_summaries,
+            }
+        )
     for section, items in by_section.items():
         items.sort(key=lambda item: (item["set"], item["draw"], int(item["frontier_column"])))
     return dict(by_section)
@@ -1729,6 +1883,7 @@ def build_stable_arena_payload(
     metrics = _read_json(metrics_path)
     source_lookup = _load_source_table_lookup(state_dir, state_key)
     enriched_score_rows = _enrich_score_rows(score_rows, source_lookup=source_lookup)
+    score_rows_by_box = _group_score_rows_by_box(enriched_score_rows)
 
     top_rows_by_section: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for row in enriched_score_rows:
@@ -1768,7 +1923,11 @@ def build_stable_arena_payload(
         hidden_family_rollups=hidden_family_rollups,
         order_transform_rollups=order_transform_rollups,
     )
-    survivor_frontiers = _build_survivor_frontiers(family_rows)
+    survivor_frontiers = _build_survivor_frontiers(family_rows, score_rows_by_box=score_rows_by_box)
+    survivor_progressions = _build_survivor_progressions(
+        family_rows,
+        score_rows_by_box=score_rows_by_box,
+    )
 
     all_sections = sorted(
         {
@@ -1793,12 +1952,14 @@ def build_stable_arena_payload(
                 "unique_family_ids": len({_to_int(row.get("family_id"), default=0) for row in section_family_rows if _to_int(row.get("family_id"), default=0) > 0}),
                 "last_remaining_rows": sum(1 for row in section_family_rows if _to_bool(row.get("last_remaining_3v"))),
                 "survivor_frontiers": len(survivor_frontiers.get(section, [])),
+                "survivor_progressions": len(survivor_progressions.get(section, [])),
             },
             "top_row_patterns": top_rows_by_section.get(section, []),
             "pattern_ledgers_top": pattern_ledgers.get(section, []),
             "top_compound_patterns": compound_by_section.get(section, []),
             "family_rollups_top": family_rollups.get(section, []),
             "survivor_frontiers": survivor_frontiers.get(section, []),
+            "survivor_progressions": survivor_progressions.get(section, []),
         }
 
     return {
@@ -1910,6 +2071,7 @@ def build_stable_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"- long_canonical_rows: `{summary.get('long_canonical_rows', 0)}`")
         lines.append(f"- family_box_rows: `{summary.get('family_box_rows', 0)}`")
         lines.append(f"- survivor_frontiers: `{summary.get('survivor_frontiers', 0)}`")
+        lines.append(f"- survivor_progressions: `{summary.get('survivor_progressions', 0)}`")
 
         lines.append("")
         lines.append("Top row patterns:")
@@ -1999,9 +2161,23 @@ def build_stable_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"Survivor frontiers recorded: `{frontier_count}`")
         for frontier in (block.get("survivor_frontiers") or [])[:10]:
             family_ids = ",".join(str(fid) for fid in (frontier.get("family_ids") or []))
+            frontier_patterns = ", ".join(
+                entry.get("value") or "-"
+                for entry in ((frontier.get("frontier_pattern_summary") or {}).get("exact3digit_patterns_top") or [])[:4]
+            )
             lines.append(
                 f"- {frontier.get('set')}/{frontier.get('draw')} -> col {frontier.get('frontier_column')} "
-                f"(families={frontier.get('frontier_family_count')}, single_family={frontier.get('is_single_family')}, ids={family_ids or '-'})"
+                f"(families={frontier.get('frontier_family_count')}, single_family={frontier.get('is_single_family')}, ids={family_ids or '-'}, exact3={frontier_patterns or '-'})"
+            )
+
+        progression_count = len(block.get("survivor_progressions") or [])
+        lines.append("")
+        lines.append(f"Survivor progressions recorded: `{progression_count}`")
+        for progression in (block.get("survivor_progressions") or [])[:10]:
+            cols = ",".join(str(item) for item in (progression.get("eligible_columns") or []))
+            lines.append(
+                f"- {progression.get('set')}/{progression.get('draw')} -> cols [{cols}] "
+                f"(frontier={progression.get('frontier_column')}, single_family={progression.get('is_frontier_single_family')}, last_remaining={progression.get('has_last_remaining')})"
             )
 
     return "\n".join(lines).rstrip() + "\n"

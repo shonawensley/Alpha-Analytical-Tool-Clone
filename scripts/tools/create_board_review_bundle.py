@@ -32,6 +32,11 @@ from scripts.tools.create_board_scoreboard import (
     build_board_scoreboard_payload,
     write_board_scoreboard_files,
 )
+from scripts.tools.build_shadow_decision_policy import (
+    _default_out_name as _dpl_default_out_name,
+    build_shadow_decision_policy_payload,
+    write_shadow_decision_policy_files,
+)
 
 
 def _slugify(value: str) -> str:
@@ -47,16 +52,21 @@ def build_board_review_bundle_payload(
     board_name: str,
     overlay_payload: Dict[str, Any],
     scoreboard_payload: Dict[str, Any],
+    decision_policy_payload: Dict[str, Any],
     overlay_json_path: Path,
     overlay_md_path: Optional[Path],
     scoreboard_md_path: Path,
     scoreboard_csv_path: Optional[Path],
     scoreboard_json_path: Optional[Path],
+    decision_policy_md_path: Path,
+    decision_policy_json_path: Optional[Path],
 ) -> Dict[str, Any]:
     board_verdict = scoreboard_payload.get("board_verdict") if isinstance(scoreboard_payload.get("board_verdict"), dict) else {}
     scoreboard_rows = scoreboard_payload.get("scoreboard_rows") if isinstance(scoreboard_payload.get("scoreboard_rows"), list) else []
     duplicate_pairs = scoreboard_payload.get("duplicate_pairs") if isinstance(scoreboard_payload.get("duplicate_pairs"), list) else []
     direct_cross = board_verdict.get("direct_cross_state_receipts") if isinstance(board_verdict.get("direct_cross_state_receipts"), list) else []
+    shadow_verdict = decision_policy_payload.get("shadow_verdict") if isinstance(decision_policy_payload.get("shadow_verdict"), dict) else {}
+    state_decisions = decision_policy_payload.get("state_decisions") if isinstance(decision_policy_payload.get("state_decisions"), list) else []
 
     return {
         "schema_version": "board_review_bundle_v0",
@@ -70,23 +80,29 @@ def build_board_review_bundle_payload(
             "scoreboard_md": _safe_rel(scoreboard_md_path),
             "scoreboard_csv": _safe_rel(scoreboard_csv_path) if scoreboard_csv_path is not None else None,
             "scoreboard_json": _safe_rel(scoreboard_json_path) if scoreboard_json_path is not None else None,
+            "shadow_decision_policy_md": _safe_rel(decision_policy_md_path),
+            "shadow_decision_policy_json": _safe_rel(decision_policy_json_path) if decision_policy_json_path is not None else None,
         },
         "board_verdict": board_verdict,
+        "shadow_decision_policy": shadow_verdict,
         "highlights": {
             "top_scoreboard_rows": scoreboard_rows[:5],
             "duplicate_pairs": duplicate_pairs[:5],
             "direct_cross_state_receipts": direct_cross[:5],
+            "top_decisions": state_decisions[:5],
         },
         "workflow_manifest": {
             "brain1_runtime_entrypoint": "scripts/tools/build_aggregated_analysis_arena.py",
             "brain2_runtime_entrypoint": "scripts/tools/create_board_review_bundle.py",
             "board_overlay_builder": "scripts/tools/build_board_spillover_overlay.py",
             "board_scoreboard_consumer": "scripts/tools/create_board_scoreboard.py",
+            "shadow_decision_policy_builder": "scripts/tools/build_shadow_decision_policy.py",
             "next_step": "Use this bundle as the canonical board-level review receipt before any later combination-forming or UI display work.",
         },
         "source_refs": {
             "overlay_schema": overlay_payload.get("schema_version"),
             "scoreboard_schema": scoreboard_payload.get("schema_version"),
+            "shadow_decision_policy_schema": decision_policy_payload.get("schema_version"),
         },
     }
 
@@ -95,6 +111,7 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
     metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
     artifacts = payload.get("artifacts") if isinstance(payload.get("artifacts"), dict) else {}
     board_verdict = payload.get("board_verdict") if isinstance(payload.get("board_verdict"), dict) else {}
+    shadow_verdict = payload.get("shadow_decision_policy") if isinstance(payload.get("shadow_decision_policy"), dict) else {}
     highlights = payload.get("highlights") if isinstance(payload.get("highlights"), dict) else {}
     workflow_manifest = payload.get("workflow_manifest") if isinstance(payload.get("workflow_manifest"), dict) else {}
 
@@ -110,6 +127,8 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         f"- scoreboard_md: `{artifacts.get('scoreboard_md') or '-'}`",
         f"- scoreboard_csv: `{artifacts.get('scoreboard_csv') or '-'}`",
         f"- scoreboard_json: `{artifacts.get('scoreboard_json') or '-'}`",
+        f"- shadow_decision_policy_md: `{artifacts.get('shadow_decision_policy_md') or '-'}`",
+        f"- shadow_decision_policy_json: `{artifacts.get('shadow_decision_policy_json') or '-'}`",
         "",
         "## Workflow",
         "",
@@ -117,6 +136,7 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         f"- brain2_runtime_entrypoint: `{workflow_manifest.get('brain2_runtime_entrypoint') or '-'}`",
         f"- board_overlay_builder: `{workflow_manifest.get('board_overlay_builder') or '-'}`",
         f"- board_scoreboard_consumer: `{workflow_manifest.get('board_scoreboard_consumer') or '-'}`",
+        f"- shadow_decision_policy_builder: `{workflow_manifest.get('shadow_decision_policy_builder') or '-'}`",
         f"- next_step: `{workflow_manifest.get('next_step') or '-'}`",
         "",
         "## Board Verdict",
@@ -129,6 +149,14 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         f"- tight_core_states: `{', '.join(board_verdict.get('tight_core_states') or []) or '-'}`",
         f"- small_shoulder_states: `{', '.join(board_verdict.get('small_shoulder_states') or []) or '-'}`",
         f"- watch_only_states: `{', '.join(board_verdict.get('watch_only_states') or []) or '-'}`",
+        "",
+        "## Shadow Decision Policy",
+        "",
+        f"- top_play_state: `{shadow_verdict.get('top_play_state') or '-'}`",
+        f"- top_watch_state: `{shadow_verdict.get('top_watch_state') or '-'}`",
+        f"- play_states: `{', '.join(shadow_verdict.get('play_states') or []) or '-'}`",
+        f"- watch_states: `{', '.join(shadow_verdict.get('watch_states') or []) or '-'}`",
+        f"- skip_states: `{', '.join(shadow_verdict.get('skip_states') or []) or '-'}`",
     ]
 
     top_rows = highlights.get("top_scoreboard_rows") if isinstance(highlights.get("top_scoreboard_rows"), list) else []
@@ -159,6 +187,16 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
                 continue
             lines.append(
                 f"- `{row.get('state_a')} -> {row.get('state_b')}` families=`{', '.join(row.get('canonical_families') or []) or '-'}`"
+            )
+
+    top_decisions = highlights.get("top_decisions") if isinstance(highlights.get("top_decisions"), list) else []
+    if top_decisions:
+        lines.extend(["", "## Top Shadow Decisions", "", "| Rank | State | Posture | Mode | Cap | Route |", "|---:|---|---|---|---|---|"])
+        for row in top_decisions:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('posture')} | {row.get('mode')} | {row.get('cap_class')} | {row.get('translator_route')} |"
             )
 
     return "\n".join(lines).rstrip() + "\n"
@@ -237,16 +275,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         write_json=True,
     )
 
+    decision_policy_payload = build_shadow_decision_policy_payload(
+        overlay_payload=overlay_payload,
+        scoreboard_payload=scoreboard_payload,
+    )
+    decision_md = out_dir / _dpl_default_out_name(args.date, args.board_name)
+    decision_md_path, decision_json_path = write_shadow_decision_policy_files(
+        out_md_path=decision_md,
+        payload=decision_policy_payload,
+        write_json=True,
+    )
+
     bundle_payload = build_board_review_bundle_payload(
         results_date=args.date,
         board_name=args.board_name,
         overlay_payload=overlay_payload,
         scoreboard_payload=scoreboard_payload,
+        decision_policy_payload=decision_policy_payload,
         overlay_json_path=overlay_json_path,
         overlay_md_path=overlay_md_path,
         scoreboard_md_path=scoreboard_md_path,
         scoreboard_csv_path=scoreboard_csv_path,
         scoreboard_json_path=scoreboard_json_path,
+        decision_policy_md_path=decision_md_path,
+        decision_policy_json_path=decision_json_path,
     )
     out_md = out_dir / _bundle_out_name(args.date, args.board_name)
     bundle_md_path, bundle_json_path = write_board_review_bundle_files(
@@ -260,6 +312,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"     json -> {_safe_rel(bundle_json_path)}")
     print(f"     overlay -> {_safe_rel(overlay_json_path)}")
     print(f"     scoreboard -> {_safe_rel(scoreboard_md_path)}")
+    print(f"     shadow_dpl -> {_safe_rel(decision_md_path)}")
     return 0
 
 
