@@ -172,12 +172,36 @@ def _survivor_hint(summary: Dict[str, Any]) -> str:
     return "|".join(parts) if parts else "Frontier"
 
 
+def _r_consensus_hint(summary: Dict[str, Any]) -> str:
+    ctx = summary.get("r_consensus_context") if isinstance(summary.get("r_consensus_context"), dict) else {}
+    if not ctx or not bool(ctx.get("available")):
+        return "-"
+    parts: List[str] = []
+    top_tail = next((str(value) for value in (ctx.get("top_tail_values") or []) if str(value).strip()), "")
+    if top_tail:
+        parts.append(f"tail:{top_tail}")
+    event_count = _to_int(ctx.get("event_count"), 0)
+    two_digit_count = _to_int(ctx.get("two_digit_count"), 0)
+    if event_count > 0:
+        parts.append(f"ev:{event_count}")
+    if two_digit_count > 0:
+        parts.append(f"2d:{two_digit_count}")
+    if ctx.get("cross_variant_tail_values"):
+        parts.append("xvar")
+    if bool(ctx.get("trial_eligible")):
+        parts.append("trial")
+    strength = str(ctx.get("signal_strength_class") or "").strip()
+    if strength and strength != "none":
+        parts.append(strength)
+    return "|".join(parts) if parts else "present"
+
+
 def _context_signal_score(row: Dict[str, Any]) -> int:
     score = {"tracker-rich": 4, "tracker-strong": 3, "tracker-support": 2, "tracker-light": 0}.get(
         str(row.get("tracker_posture") or ""),
         0,
     )
-    for key in ("profit_alert_hint", "compound_event_hint", "positional_hint", "due_double_hint"):
+    for key in ("profit_alert_hint", "compound_event_hint", "positional_hint", "due_double_hint", "r_consensus_hint"):
         if str(row.get(key) or "-") != "-":
             score += 1
     return score
@@ -232,6 +256,7 @@ def build_board_scoreboard_payload(overlay: Dict[str, Any]) -> Dict[str, Any]:
                 "best_blackapple": _best_ba(summary),
                 "blackapple_reco_hint": _blackapple_reco_hint(summary),
                 "survivor_hint": _survivor_hint(summary),
+                "r_consensus_hint": _r_consensus_hint(summary),
                 "profit_alert_hint": _profit_alert_hint(summary),
                 "compound_event_hint": _compound_event_hint(summary),
                 "positional_hint": _positional_hint(summary),
@@ -307,13 +332,13 @@ def build_board_scoreboard_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Scoreboard")
     lines.append("")
-    lines.append("| Score Rank | State | Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Survivor | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
-    lines.append("|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| Score Rank | State | Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Survivor | R-Consensus | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
+    lines.append("|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         if not isinstance(row, dict):
             continue
         lines.append(
-            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('survivor_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
+            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('survivor_hint')} | {row.get('r_consensus_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
         )
 
     if duplicate_pairs:
@@ -367,6 +392,7 @@ def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> Path:
         "best_blackapple",
         "blackapple_reco_hint",
         "survivor_hint",
+        "r_consensus_hint",
         "profit_alert_hint",
         "compound_event_hint",
         "positional_hint",

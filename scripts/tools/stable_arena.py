@@ -97,6 +97,7 @@ SAFE_METRICS_KEYS: Tuple[str, ...] = (
 SECTION_ORDER: Tuple[str, ...] = ("Midday", "Evening", "Combined")
 TABLE_COLS: Tuple[str, ...] = ("7", "6", "5", "4", "3", "2", "1")
 ROW_TYPE_ORDER: Tuple[str, ...] = ("R2", "R4", "R6", "R8", "CONS_STUB")
+R_CONSENSUS_ROW_TYPES: Tuple[str, ...] = ("R2", "R4", "R6", "R8")
 DIGIT_TO_VTRAC_VALUE: Dict[str, int] = {
     "0": 1,
     "5": 1,
@@ -227,6 +228,19 @@ def _canonical(value: object) -> str:
 def _normalize_pick3_literal(value: object) -> str:
     digits = _digits_only(value)
     return digits if len(digits) == 3 else ""
+
+
+def _common_suffix_class(values: Sequence[object]) -> Tuple[str, str]:
+    digits = [_digits_only(value) for value in values]
+    if any(not value for value in digits):
+        return ("", "")
+    tails2 = [value[-2:] if len(value) >= 2 else "" for value in digits]
+    if tails2 and len(set(tails2)) == 1 and tails2[0]:
+        return (tails2[0], "two-digit")
+    tails1 = [value[-1:] for value in digits if value]
+    if tails1 and len(tails1) == len(digits) and len(set(tails1)) == 1 and tails1[0]:
+        return (tails1[0], "single-digit")
+    return ("", "")
 
 
 def _vtrac_values(value: object) -> List[int]:
@@ -1012,6 +1026,13 @@ def _row_payload(row: Dict[str, str]) -> Dict[str, Any]:
         "hidden_family_reveal": row.get("__hidden_family_reveal"),
         "order_transform_hints": row.get("__order_transform_hints"),
     }
+
+
+def _pick3_canonical_from_row(row: Dict[str, Any]) -> str:
+    modal_order = _normalize_pick3_literal(row.get("orders_modal_value"))
+    if modal_order:
+        return _canonical(modal_order)
+    return _canonical(_normalize_pick3_literal(row.get("Canonical")))
 
 
 def _compound_payload(row: Dict[str, str]) -> Dict[str, Any]:
@@ -1842,6 +1863,230 @@ def _build_survivor_progressions(
     return dict(by_section)
 
 
+def _build_r_consensus_context(
+    rows: Sequence[Dict[str, Any]],
+    *,
+    source_lookup: Dict[Tuple[str, str, str, str, str], str],
+) -> Dict[str, Any]:
+    box_rows: Dict[Tuple[str, str, str, str], List[Dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        column = str(row.get("Column") or "").strip()
+        if column not in {"1", "2"}:
+            continue
+        section = str(row.get("section") or "Unknown").strip() or "Unknown"
+        set_name = str(row.get("Set") or "").strip()
+        draw = str(row.get("Draw") or "").strip()
+        box_rows[(section, set_name, draw, column)].append(row)
+
+    if not box_rows:
+        return {
+            "available": False,
+            "event_count": 0,
+            "trial_eligible": False,
+            "signal_strength_class": "none",
+            "section_summaries": {},
+        }
+
+    events: List[Dict[str, Any]] = []
+    tail_counter: Counter[str] = Counter()
+    support_canonical_counter: Counter[str] = Counter()
+    support_vtrac_counter: Counter[str] = Counter()
+    tail_sections: Dict[str, set[str]] = defaultdict(set)
+    section_summaries: Dict[str, Dict[str, Any]] = {}
+
+    for (section, set_name, draw, column), bucket in sorted(
+        box_rows.items(),
+        key=lambda item: (
+            _section_sort_key(item[0][0]),
+            str(item[0][1]),
+            str(item[0][2]),
+            _to_int(item[0][3], default=999),
+        ),
+    ):
+        source_values = [
+            source_lookup.get((section, set_name, draw, row_type, column), "")
+            for row_type in R_CONSENSUS_ROW_TYPES
+        ]
+        tail_value, event_class = _common_suffix_class(source_values)
+
+        cons_full = any(_to_bool(row.get("cons_full")) for row in bucket)
+        cons_3v = any(_to_bool(row.get("cons_3v")) for row in bucket)
+        cons_stub = any(_to_bool(row.get("cons_stub")) for row in bucket)
+        if not tail_value and not any((cons_full, cons_3v, cons_stub)):
+            continue
+
+        if not tail_value:
+            flagged_digits = [
+                _digits_only(row.get("Canonical") or row.get("orders_modal_value"))
+                for row in bucket
+                if _to_bool(row.get("cons_full")) or _to_bool(row.get("cons_3v")) or _to_bool(row.get("cons_stub"))
+            ]
+            flagged_digits = [digits for digits in flagged_digits if digits]
+            tail_value, event_class = _common_suffix_class(flagged_digits)
+            if not tail_value and flagged_digits:
+                flagged_digits.sort(key=lambda value: (len(value), value))
+                shortest = flagged_digits[0]
+                tail_value = shortest[-2:] if len(shortest) >= 2 else shortest[-1:]
+                event_class = "two-digit" if len(tail_value) >= 2 else "single-digit"
+        if not tail_value:
+            continue
+
+        ranked_rows = sorted(
+            [row for row in bucket if str(row.get("type") or "") != "consensus_stub"],
+            key=lambda row: (
+                -_to_float(row.get("score")),
+                -len(_digits_only(row.get("Canonical"))),
+                str(row.get("Canonical") or ""),
+            ),
+        )
+        support_canonicals: List[str] = []
+        support_vtrac_indices: List[str] = []
+        local_examples: List[Dict[str, Any]] = []
+        for row in ranked_rows[:8]:
+            canonical = _pick3_canonical_from_row(row)
+            if canonical and canonical not in support_canonicals:
+                support_canonicals.append(canonical)
+            family_id = str(_to_int(row.get("family_id"), default=0) or "").strip()
+            if family_id and family_id not in support_vtrac_indices:
+                support_vtrac_indices.append(family_id)
+            local_examples.append(
+                {
+                    "canonical": canonical or _digits_only(row.get("Canonical")),
+                    "type": str(row.get("type") or ""),
+                    "score": round(_to_float(row.get("score")), 3),
+                    "family_id": _to_int(row.get("family_id"), default=0) or None,
+                    "why_tags": _split_why(row.get("why"))[:4],
+                }
+            )
+
+        signal_score = (
+            (3 if cons_full else 0)
+            + (2 if cons_3v else 0)
+            + (1 if cons_stub else 0)
+            + (2 if event_class == "two-digit" else 1)
+            + (2 if column == "1" else 1)
+            + min(3, len(support_canonicals))
+        )
+        events.append(
+            {
+                "section": section,
+                "set": set_name,
+                "draw": draw,
+                "column": _to_int(column, default=0),
+                "box_label": _box_label(set_name, draw, column),
+                "tail_value": tail_value,
+                "event_class": event_class,
+                "cons_full": cons_full,
+                "cons_3v": cons_3v,
+                "cons_stub": cons_stub,
+                "top_support_canonicals": support_canonicals[:6],
+                "top_support_vtrac_indices": support_vtrac_indices[:6],
+                "local_examples": local_examples[:4],
+                "signal_score": int(signal_score),
+            }
+        )
+
+        tail_counter[tail_value] += 1
+        tail_sections[tail_value].add(section)
+        for rank, canonical in enumerate(support_canonicals[:6], start=1):
+            support_canonical_counter[canonical] += max(1, signal_score - (rank - 1))
+        for rank, value in enumerate(support_vtrac_indices[:6], start=1):
+            support_vtrac_counter[value] += max(1, signal_score - (rank - 1))
+
+        summary = section_summaries.setdefault(
+            section,
+            {
+                "event_count": 0,
+                "col1_count": 0,
+                "col2_count": 0,
+                "single_digit_count": 0,
+                "two_digit_count": 0,
+                "cons_full_event_count": 0,
+                "cons_3v_event_count": 0,
+                "cons_stub_event_count": 0,
+            },
+        )
+        summary["event_count"] += 1
+        summary[f"col{column}_count"] += 1
+        summary[f"{event_class.replace('-', '_')}_count"] += 1
+        if cons_full:
+            summary["cons_full_event_count"] += 1
+        if cons_3v:
+            summary["cons_3v_event_count"] += 1
+        if cons_stub:
+            summary["cons_stub_event_count"] += 1
+
+    if not events:
+        return {
+            "available": False,
+            "event_count": 0,
+            "trial_eligible": False,
+            "signal_strength_class": "none",
+            "section_summaries": {},
+        }
+
+    section_counts = {section: summary["event_count"] for section, summary in section_summaries.items()}
+    cross_variant_tail_values = sorted(tail for tail, sections in tail_sections.items() if len(sections) >= 2)
+    event_count = len(events)
+    two_digit_count = sum(1 for event in events if event["event_class"] == "two-digit")
+    single_digit_count = sum(1 for event in events if event["event_class"] == "single-digit")
+    col1_count = sum(1 for event in events if int(event["column"]) == 1)
+    col2_count = sum(1 for event in events if int(event["column"]) == 2)
+    cons_full_event_count = sum(1 for event in events if bool(event["cons_full"]))
+    cons_3v_event_count = sum(1 for event in events if bool(event["cons_3v"]))
+    cons_stub_event_count = sum(1 for event in events if bool(event["cons_stub"]))
+
+    if (two_digit_count > 0 and cross_variant_tail_values) or cons_full_event_count >= 2 or event_count >= 4:
+        signal_strength_class = "strong"
+    elif two_digit_count > 0 or cross_variant_tail_values or event_count >= 2:
+        signal_strength_class = "moderate"
+    else:
+        signal_strength_class = "light"
+    trial_eligible = bool(
+        event_count > 0
+        and (
+            signal_strength_class in {"moderate", "strong"}
+            or (cons_full_event_count > 0 and col1_count > 0)
+        )
+    )
+
+    events.sort(
+        key=lambda item: (
+            -int(item["signal_score"]),
+            0 if str(item["section"]) == "Combined" else 1,
+            str(item["section"]),
+            str(item["set"]),
+            str(item["draw"]),
+            int(item["column"]),
+            str(item["tail_value"]),
+        )
+    )
+
+    return {
+        "available": True,
+        "event_count": int(event_count),
+        "single_digit_count": int(single_digit_count),
+        "two_digit_count": int(two_digit_count),
+        "col1_count": int(col1_count),
+        "col2_count": int(col2_count),
+        "cons_full_event_count": int(cons_full_event_count),
+        "cons_3v_event_count": int(cons_3v_event_count),
+        "cons_stub_event_count": int(cons_stub_event_count),
+        "section_counts": dict(sorted(section_counts.items(), key=lambda kv: _section_sort_key(kv[0]))),
+        "section_summaries": {
+            section: section_summaries[section]
+            for section in sorted(section_summaries.keys(), key=_section_sort_key)
+        },
+        "cross_variant_tail_values": cross_variant_tail_values[:10],
+        "top_tail_values": [value for value, _count in tail_counter.most_common(10)],
+        "top_support_canonicals": [value for value, _count in support_canonical_counter.most_common(10)],
+        "top_support_vtrac_indices": [value for value, _count in support_vtrac_counter.most_common(10)],
+        "signal_strength_class": signal_strength_class,
+        "trial_eligible": trial_eligible,
+        "events_top": events[:12],
+    }
+
+
 def _build_metrics_summary(metrics: Dict[str, Any]) -> Dict[str, Any]:
     summary: Dict[str, Any] = {}
     for key in SAFE_METRICS_KEYS:
@@ -1928,6 +2173,7 @@ def build_stable_arena_payload(
         family_rows,
         score_rows_by_box=score_rows_by_box,
     )
+    r_consensus_context = _build_r_consensus_context(enriched_score_rows, source_lookup=source_lookup)
 
     all_sections = sorted(
         {
@@ -1942,6 +2188,11 @@ def build_stable_arena_payload(
     for section in all_sections:
         section_score_rows = [row for row in score_rows if (str(row.get("section") or "").strip() or "Unknown") == section]
         section_family_rows = [row for row in family_rows if (str(row.get("section") or "").strip() or "Unknown") == section]
+        section_consensus = (
+            r_consensus_context.get("section_summaries", {}).get(section)
+            if isinstance(r_consensus_context.get("section_summaries"), dict)
+            else {}
+        )
         sections[section] = {
             "summary": {
                 "row_evidence_count": len(section_score_rows),
@@ -1953,6 +2204,10 @@ def build_stable_arena_payload(
                 "last_remaining_rows": sum(1 for row in section_family_rows if _to_bool(row.get("last_remaining_3v"))),
                 "survivor_frontiers": len(survivor_frontiers.get(section, [])),
                 "survivor_progressions": len(survivor_progressions.get(section, [])),
+                "r_consensus_events": _to_int((section_consensus or {}).get("event_count"), 0),
+                "r_consensus_col1": _to_int((section_consensus or {}).get("col1_count"), 0),
+                "r_consensus_col2": _to_int((section_consensus or {}).get("col2_count"), 0),
+                "r_consensus_two_digit": _to_int((section_consensus or {}).get("two_digit_count"), 0),
             },
             "top_row_patterns": top_rows_by_section.get(section, []),
             "pattern_ledgers_top": pattern_ledgers.get(section, []),
@@ -1976,6 +2231,7 @@ def build_stable_arena_payload(
         "inputs_hash": _hash_inputs(required),
         "evidence_paths": [_safe_rel(path, repo_root) for path in required],
         "metrics_summary": _build_metrics_summary(metrics),
+        "r_consensus_context": r_consensus_context,
         "sections": sections,
     }
 
@@ -2001,6 +2257,13 @@ def build_stable_arena_markdown(payload: Dict[str, Any]) -> str:
             lines.append(f"- total_patterns: `{total_patterns}`")
         if total_families is not None:
             lines.append(f"- total_families: `{total_families}`")
+    r_consensus_context = payload.get("r_consensus_context") if isinstance(payload.get("r_consensus_context"), dict) else {}
+    if r_consensus_context.get("available"):
+        lines.append(f"- r_consensus_events: `{r_consensus_context.get('event_count', 0)}`")
+        lines.append(f"- r_consensus_strength: `{r_consensus_context.get('signal_strength_class', '-')}`")
+        lines.append(f"- r_consensus_trial_eligible: `{r_consensus_context.get('trial_eligible')}`")
+        lines.append(f"- r_consensus_top_tails: `{', '.join(r_consensus_context.get('top_tail_values') or []) or '-'}`")
+        lines.append(f"- r_consensus_cross_variant_tails: `{', '.join(r_consensus_context.get('cross_variant_tail_values') or []) or '-'}`")
 
     def _top_parts_text(item: Dict[str, Any], top_n: int = 3) -> str:
         parts = sorted(
@@ -2072,6 +2335,9 @@ def build_stable_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"- family_box_rows: `{summary.get('family_box_rows', 0)}`")
         lines.append(f"- survivor_frontiers: `{summary.get('survivor_frontiers', 0)}`")
         lines.append(f"- survivor_progressions: `{summary.get('survivor_progressions', 0)}`")
+        lines.append(f"- r_consensus_events: `{summary.get('r_consensus_events', 0)}`")
+        lines.append(f"- r_consensus_col1/col2: `{summary.get('r_consensus_col1', 0)}/{summary.get('r_consensus_col2', 0)}`")
+        lines.append(f"- r_consensus_two_digit: `{summary.get('r_consensus_two_digit', 0)}`")
 
         lines.append("")
         lines.append("Top row patterns:")
@@ -2178,6 +2444,28 @@ def build_stable_arena_markdown(payload: Dict[str, Any]) -> str:
             lines.append(
                 f"- {progression.get('set')}/{progression.get('draw')} -> cols [{cols}] "
                 f"(frontier={progression.get('frontier_column')}, single_family={progression.get('is_frontier_single_family')}, last_remaining={progression.get('has_last_remaining')})"
+            )
+
+    if r_consensus_context.get("available"):
+        lines.append("")
+        lines.append("## R-Consensus Context")
+        lines.append("")
+        lines.append(f"- event_count: `{r_consensus_context.get('event_count', 0)}`")
+        lines.append(f"- single_digit_count: `{r_consensus_context.get('single_digit_count', 0)}`")
+        lines.append(f"- two_digit_count: `{r_consensus_context.get('two_digit_count', 0)}`")
+        lines.append(f"- col1/col2: `{r_consensus_context.get('col1_count', 0)}/{r_consensus_context.get('col2_count', 0)}`")
+        lines.append(f"- signal_strength_class: `{r_consensus_context.get('signal_strength_class', '-')}`")
+        lines.append(f"- trial_eligible: `{r_consensus_context.get('trial_eligible')}`")
+        lines.append(f"- top_tail_values: `{', '.join(r_consensus_context.get('top_tail_values') or []) or '-'}`")
+        lines.append(f"- cross_variant_tail_values: `{', '.join(r_consensus_context.get('cross_variant_tail_values') or []) or '-'}`")
+        lines.append(f"- top_support_canonicals: `{', '.join(r_consensus_context.get('top_support_canonicals') or []) or '-'}`")
+        lines.append(f"- top_support_vtrac_indices: `{', '.join(r_consensus_context.get('top_support_vtrac_indices') or []) or '-'}`")
+        for item in (r_consensus_context.get("events_top") or [])[:10]:
+            lines.append(
+                f"- {item.get('section')}/{item.get('set')}/{item.get('draw')}/Col{item.get('column')} "
+                f"tail={item.get('tail_value')} ({item.get('event_class')}) "
+                f"flags=full:{item.get('cons_full')} 3v:{item.get('cons_3v')} stub:{item.get('cons_stub')} "
+                f"support={','.join(item.get('top_support_canonicals') or []) or '-'}"
             )
 
     return "\n".join(lines).rstrip() + "\n"

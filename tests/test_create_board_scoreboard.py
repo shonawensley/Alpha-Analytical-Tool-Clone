@@ -29,6 +29,15 @@ def _overlay_fixture() -> dict:
                 "due_double_families": [{"variant": "Combined", "draws_since_double": 12, "families": [{"family": "0/5-2/7"}]}],
                 "dominant_canonicals": ["225", "022", "255"],
                 "dominant_vtrac_indices": ["10", "3", "28"],
+                "r_consensus_context": {
+                    "available": True,
+                    "event_count": 2,
+                    "two_digit_count": 2,
+                    "cross_variant_tail_values": ["22"],
+                    "top_tail_values": ["22"],
+                    "signal_strength_class": "strong",
+                    "trial_eligible": True,
+                },
                 "survivor_terminal_profiles": ["multi_literal_single_vtrac_family_with_hidden_support"],
                 "state_regime": {
                     "survivor_pressure": True,
@@ -49,6 +58,15 @@ def _overlay_fixture() -> dict:
                 "due_double_families": [{"variant": "Combined", "draws_since_double": 15, "families": [{"family": "0/5-4/9"}]}],
                 "dominant_canonicals": ["455", "559", "003"],
                 "dominant_vtrac_indices": ["5", "4", "1"],
+                "r_consensus_context": {
+                    "available": True,
+                    "event_count": 1,
+                    "two_digit_count": 1,
+                    "cross_variant_tail_values": [],
+                    "top_tail_values": ["49"],
+                    "signal_strength_class": "moderate",
+                    "trial_eligible": True,
+                },
                 "state_regime": {},
             },
         ],
@@ -118,6 +136,7 @@ def test_build_board_scoreboard_payload_and_files(tmp_path: Path) -> None:
     assert rows[0]["compound_event_hint"].startswith("Combined:profit_alert_cluster")
     assert rows[0]["blackapple_reco_hint"] == "022,225"
     assert rows[0]["survivor_hint"].startswith("LR:1|Prog:2|Hidden|")
+    assert rows[0]["r_consensus_hint"].startswith("tail:22|ev:2|2d:2|xvar|trial|strong")
     assert rows[0]["positional_hint"] == "Mirror-Echo active"
     assert rows[1]["targeting_bucket"] == "tight_core"
 

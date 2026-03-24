@@ -123,6 +123,9 @@ def _has_due_double_pressure(summary: Dict[str, Any]) -> bool:
 
 
 def _consensus_signal(summary: Dict[str, Any]) -> bool:
+    ctx = summary.get("r_consensus_context") if isinstance(summary.get("r_consensus_context"), dict) else {}
+    if bool(ctx.get("available")) and _to_int(ctx.get("event_count"), 0) > 0:
+        return True
     best_alert = _best_alert(summary)
     if isinstance(best_alert, dict):
         badges = [str(badge).upper() for badge in (best_alert.get("badges") or []) if str(badge)]
@@ -181,6 +184,7 @@ def _mode_from_signals(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], 
     straight_signal = _straight_signal(summary)
     vtrac_alignment = str(regime.get("vtrac_alignment") or "").lower()
     watchlist_indices = summary.get("watchlist_indices") if isinstance(summary.get("watchlist_indices"), list) else []
+    r_consensus = summary.get("r_consensus_context") if isinstance(summary.get("r_consensus_context"), dict) else {}
 
     boxed_score = 0
     vt_box_score = 0
@@ -200,6 +204,8 @@ def _mode_from_signals(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], 
         boxed_score += 2
     if survivor["survivor_progression"]:
         boxed_score += 1
+    if bool(r_consensus.get("trial_eligible")) and _to_int(r_consensus.get("two_digit_count"), 0) > 0:
+        boxed_score += 1
 
     if vtrac_alignment == "aligned" and watchlist_indices:
         vt_box_score += 2
@@ -210,6 +216,8 @@ def _mode_from_signals(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], 
     if survivor["hidden_terminal_support"] and vtrac_alignment == "aligned":
         vt_box_score += 1
     if survivor["last_remaining"] and summary.get("survivor_last_remaining_vtrac_indices"):
+        vt_box_score += 1
+    if bool(r_consensus.get("trial_eligible")) and (r_consensus.get("cross_variant_tail_values") or []) and vtrac_alignment == "aligned":
         vt_box_score += 1
 
     if straight_signal:
@@ -325,6 +333,7 @@ def _reason_codes(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], postu
     out: List[str] = []
     regime = summary.get("state_regime") if isinstance(summary.get("state_regime"), dict) else {}
     survivor = _survivor_regime(summary)
+    r_consensus = summary.get("r_consensus_context") if isinstance(summary.get("r_consensus_context"), dict) else {}
     role = str(scoreboard_row.get("role") or "")
     spent_status = str(scoreboard_row.get("spent_status") or "")
     targeting_bucket = str(scoreboard_row.get("targeting_bucket") or "")
@@ -366,6 +375,17 @@ def _reason_codes(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], postu
             out.append("PROFIT_ALERT_STRONG")
         if _consensus_signal(summary):
             out.append("CONSENSUS_EVENT")
+    elif _consensus_signal(summary):
+        out.append("CONSENSUS_EVENT")
+
+    if bool(r_consensus.get("available")) and _to_int(r_consensus.get("event_count"), 0) > 0:
+        out.append("R_CONSENSUS_PRESENT")
+    if _to_int(r_consensus.get("event_count"), 0) > 1:
+        out.append("R_CONSENSUS_MULTI_EVENT")
+    if r_consensus.get("cross_variant_tail_values"):
+        out.append("R_CONSENSUS_CROSS_VARIANT")
+    if bool(r_consensus.get("trial_eligible")):
+        out.append("R_CONSENSUS_TRIAL_ELIGIBLE")
 
     ba_status = _best_blackapple_status(summary)
     if ba_status == "ALERT":
@@ -403,6 +423,7 @@ def _reason_codes(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], postu
 def _environment_object(summary: Dict[str, Any], scoreboard_row: Dict[str, Any]) -> Dict[str, Any]:
     regime = summary.get("state_regime") if isinstance(summary.get("state_regime"), dict) else {}
     survivor = _survivor_regime(summary)
+    r_consensus = summary.get("r_consensus_context") if isinstance(summary.get("r_consensus_context"), dict) else {}
     return {
         "targeting_bucket": str(scoreboard_row.get("targeting_bucket") or ""),
         "role": str(scoreboard_row.get("role") or ""),
@@ -425,6 +446,13 @@ def _environment_object(summary: Dict[str, Any], scoreboard_row: Dict[str, Any])
         "survivor_frontier_count": survivor["survivor_frontier_count"],
         "survivor_progression_count": survivor["survivor_progression_count"],
         "last_remaining_rows": survivor["last_remaining_rows"],
+        "tail_consensus_present": bool(regime.get("tail_consensus_present")),
+        "tail_consensus_value": str(regime.get("tail_consensus_value") or ""),
+        "tail_consensus_column": str(regime.get("tail_consensus_column") or ""),
+        "consensus_strength_class": str(regime.get("consensus_strength_class") or r_consensus.get("signal_strength_class") or ""),
+        "consensus_trial_eligible": bool(regime.get("consensus_trial_eligible") or r_consensus.get("trial_eligible")),
+        "r_consensus_event_count": _to_int(r_consensus.get("event_count"), 0),
+        "r_consensus_cross_variant_tail_count": len(r_consensus.get("cross_variant_tail_values") or []),
         "profit_alert_hint": str(scoreboard_row.get("profit_alert_hint") or "-"),
         "compound_event_hint": str(scoreboard_row.get("compound_event_hint") or "-"),
         "positional_hint": str(scoreboard_row.get("positional_hint") or "-"),
@@ -442,6 +470,7 @@ def _candidate_focus(summary: Dict[str, Any]) -> Dict[str, Any]:
             "context_reinforced_canonicals": _top_slice(summary.get("context_reinforced_canonicals") or [], 4),
             "survivor_frontier_canonicals": _top_slice(summary.get("survivor_frontier_canonicals") or [], 4),
             "survivor_last_remaining_canonicals": _top_slice(summary.get("survivor_last_remaining_canonicals") or [], 4),
+            "r_consensus_support_canonicals": _top_slice(summary.get("r_consensus_support_canonicals") or [], 4),
         },
         "secondary_cluster": {
             "canonicals": _top_slice(summary.get("secondary_canonicals") or [], 6),
@@ -449,6 +478,8 @@ def _candidate_focus(summary: Dict[str, Any]) -> Dict[str, Any]:
             "context_only_pressure": _top_slice(summary.get("context_only_pressure") or [], 4),
             "profit_alert_implied_canonicals": _top_slice(summary.get("profit_alert_implied_canonicals") or [], 6),
             "survivor_terminal_profiles": _top_slice(summary.get("survivor_terminal_profiles") or [], 4),
+            "r_consensus_top_tail_values": _top_slice(summary.get("r_consensus_top_tail_values") or [], 4),
+            "r_consensus_support_vtrac_indices": _top_slice(summary.get("r_consensus_support_vtrac_indices") or [], 4),
         },
     }
 

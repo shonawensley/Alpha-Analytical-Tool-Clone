@@ -125,9 +125,15 @@ def test_stable_arena_preserves_detailed_scores_and_long_patterns(tmp_path: Path
 def test_stable_arena_builds_family_rollups_and_survivor_frontiers(tmp_path: Path):
     payload = _build_payload(tmp_path)
     combined = payload["sections"]["Combined"]
+    r_consensus_context = payload["r_consensus_context"]
 
     assert combined["family_rollups_top"]
     assert "fam_perm" in combined["family_rollups_top"][0]["breakdown_sums"]
+    assert r_consensus_context["available"] is True
+    assert r_consensus_context["event_count"] >= 1
+    assert r_consensus_context["col1_count"] >= 1
+    assert r_consensus_context["top_tail_values"]
+    assert combined["summary"]["r_consensus_events"] >= 1
 
     frontiers = combined["survivor_frontiers"]
     assert frontiers
@@ -146,6 +152,7 @@ def test_stable_arena_builds_family_rollups_and_survivor_frontiers(tmp_path: Pat
     assert progression["eligible_columns"] == [1, 2]
     assert progression["frontier_column"] == 2
     assert progression["column_summaries"][0]["pattern_summary"]["exact3digit_patterns_top"]
+    assert any(item["tail_value"] for item in r_consensus_context["events_top"])
 
 
 def test_stable_arena_ledgers_show_frontier_and_compounding_context(tmp_path: Path):
@@ -256,6 +263,7 @@ def test_stable_arena_markdown_is_human_readable(tmp_path: Path):
     md = build_stable_arena_markdown(payload)
 
     assert "Stable Arena" in md
+    assert "R-Consensus Context" in md
     assert "Top pattern ledgers" in md
     assert "Compound" in md
     assert "Top Parts" in md

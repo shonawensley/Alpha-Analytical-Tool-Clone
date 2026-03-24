@@ -2770,11 +2770,13 @@ Centered on:
 - `dominant_vtrac_indices`
 - `dominant_families`
 - `stable_survivor_context`
+- `r_consensus_context`
 
 Primary questions:
 - what is the arena saying the state is mainly about?
 - do the dominant canonical, lane, and family stories agree?
 - did the arena surface a meaningful survivor / last-remaining state thesis?
+- did the arena preserve a meaningful `R-Consensus` / tail-consensus state condition when one was present?
 - if they do not agree, which one is most truthful?
 
 Important distinction:
@@ -2796,6 +2798,9 @@ Dominant family story:
 - `...`
 
 Survivor-state thesis:
+- `...`
+
+R-Consensus thesis:
 - `...`
 
 Arena surfaced-state thesis:

@@ -232,6 +232,7 @@ def _load_or_build_stable_payload(
             "source_path": None,
             "schema": payload.get("schema"),
             "metrics_summary": payload.get("metrics_summary"),
+            "r_consensus_context": payload.get("r_consensus_context"),
             "sections": payload.get("sections") or {},
         }
         status = {"available": True, "source_mode": "rebuilt_from_raw", "source_path": None}
@@ -248,6 +249,7 @@ def _load_or_build_stable_payload(
                 "source_path": _safe_rel(prebuilt, repo_root),
                 "schema": raw.get("schema"),
                 "metrics_summary": raw.get("metrics_summary"),
+                "r_consensus_context": raw.get("r_consensus_context"),
                 "sections": raw.get("sections") or {},
             }
             status = {"available": True, "source_mode": "loaded_prebuilt", "source_path": _safe_rel(prebuilt, repo_root)}
@@ -963,10 +965,41 @@ def _build_stable_survivor_context(stable_tool: Dict[str, Any]) -> Dict[str, Any
     }
 
 
+def _build_r_consensus_context(stable_tool: Dict[str, Any]) -> Dict[str, Any]:
+    context = stable_tool.get("r_consensus_context") if isinstance(stable_tool.get("r_consensus_context"), dict) else {}
+    if not context:
+        return {
+            "available": False,
+            "event_count": 0,
+            "trial_eligible": False,
+            "signal_strength_class": "none",
+        }
+    return {
+        "available": bool(context.get("available")),
+        "event_count": _to_int(context.get("event_count"), 0),
+        "single_digit_count": _to_int(context.get("single_digit_count"), 0),
+        "two_digit_count": _to_int(context.get("two_digit_count"), 0),
+        "col1_count": _to_int(context.get("col1_count"), 0),
+        "col2_count": _to_int(context.get("col2_count"), 0),
+        "cons_full_event_count": _to_int(context.get("cons_full_event_count"), 0),
+        "cons_3v_event_count": _to_int(context.get("cons_3v_event_count"), 0),
+        "cons_stub_event_count": _to_int(context.get("cons_stub_event_count"), 0),
+        "section_counts": dict(context.get("section_counts") or {}) if isinstance(context.get("section_counts"), dict) else {},
+        "cross_variant_tail_values": [str(value) for value in (context.get("cross_variant_tail_values") or []) if str(value).strip()],
+        "top_tail_values": [str(value) for value in (context.get("top_tail_values") or []) if str(value).strip()],
+        "top_support_canonicals": [_canon(value) for value in (context.get("top_support_canonicals") or []) if _canon(value)],
+        "top_support_vtrac_indices": [str(value) for value in (context.get("top_support_vtrac_indices") or []) if str(value).strip()],
+        "signal_strength_class": str(context.get("signal_strength_class") or "none"),
+        "trial_eligible": bool(context.get("trial_eligible")),
+        "events_top": [item for item in (context.get("events_top") or [])[:10] if isinstance(item, dict)],
+    }
+
+
 def _build_cross_tool_relations(
     *,
     stable_tool: Dict[str, Any],
     stable_survivor_context: Dict[str, Any],
+    r_consensus_context: Dict[str, Any],
     dr_tool: Dict[str, Any],
     vtrac_tool: Dict[str, Any],
     hot_tool: Dict[str, Any],
@@ -1021,6 +1054,31 @@ def _build_cross_tool_relations(
         text = str(value or "").strip()
         if text:
             _register_vote(vtrac_votes, key=text, source="stable:last_remaining", score=6.0)
+    consensus_strength = {
+        "strong": 3.5,
+        "moderate": 2.5,
+        "light": 1.5,
+    }.get(str(r_consensus_context.get("signal_strength_class") or ""), 1.0)
+    if r_consensus_context.get("available"):
+        for rank, value in enumerate((r_consensus_context.get("top_support_canonicals") or [])[:6], start=1):
+            canonical = _canon(value)
+            if canonical:
+                _register_vote(
+                    canonical_votes,
+                    key=canonical,
+                    source="stable:r_consensus",
+                    score=max(0.75, consensus_strength - ((rank - 1) * 0.35)),
+                    literal=canonical,
+                )
+        for rank, value in enumerate((r_consensus_context.get("top_support_vtrac_indices") or [])[:6], start=1):
+            text = str(value or "").strip()
+            if text:
+                _register_vote(
+                    vtrac_votes,
+                    key=text,
+                    source="stable:r_consensus",
+                    score=max(0.75, consensus_strength - ((rank - 1) * 0.35)),
+                )
 
     dr_sections = dr_tool.get("sections") if isinstance(dr_tool.get("sections"), dict) else {}
     for section, block in dr_sections.items():
@@ -1170,6 +1228,14 @@ def _build_cross_tool_relations(
         regime_flags.append("stable_last_remaining_present")
     if _to_int(stable_survivor_context.get("hidden_terminal_frontier_count"), 0) > 0:
         regime_flags.append("stable_hidden_terminal_present")
+    if _to_int(r_consensus_context.get("event_count"), 0) > 0:
+        regime_flags.append("r_consensus_present")
+    if _to_int(r_consensus_context.get("event_count"), 0) > 1:
+        regime_flags.append("r_consensus_multi_event")
+    if r_consensus_context.get("cross_variant_tail_values"):
+        regime_flags.append("r_consensus_cross_variant")
+    if bool(r_consensus_context.get("trial_eligible")):
+        regime_flags.append("r_consensus_trial_eligible")
     if any(item.get("string_source_count", 0) > 0 and item.get("context_source_count", 0) > 0 for item in canonical_consensus[:8]):
         regime_flags.append("context_reinforced_canonical_overlap")
     if any(item.get("string_source_count", 0) > 0 and item.get("context_source_count", 0) > 0 for item in vtrac_consensus[:8]):
@@ -1187,6 +1253,7 @@ def _build_cross_tool_relations(
         "canonical_consensus_top": canonical_consensus[:15],
         "vtrac_index_consensus_top": vtrac_consensus[:15],
         "family_consensus_top": family_consensus[:12],
+        "r_consensus_context": r_consensus_context,
         "regime_flags": regime_flags,
         "contradiction_flags": contradiction_flags,
     }
@@ -1196,6 +1263,7 @@ def _build_arena_synthesis(
     *,
     cross_tool_relations: Dict[str, Any],
     stable_survivor_context: Dict[str, Any],
+    r_consensus_context: Dict[str, Any],
 ) -> Dict[str, Any]:
     canonical_consensus = list(cross_tool_relations.get("canonical_consensus_top") or [])
     vtrac_consensus = list(cross_tool_relations.get("vtrac_index_consensus_top") or [])
@@ -1252,6 +1320,20 @@ def _build_arena_synthesis(
         "double_heavy": "double_heavy_canonical_surface" in regime_flags,
         "context_reinforced": "context_reinforced_canonical_overlap" in regime_flags,
         "vtrac_alignment": "aligned" if "cross_tool_vtrac_alignment" in regime_flags else "mixed",
+        "tail_consensus_present": "r_consensus_present" in regime_flags,
+        "tail_consensus_value": (r_consensus_context.get("top_tail_values") or [None])[0],
+        "tail_consensus_column": (
+            "col1"
+            if _to_int(r_consensus_context.get("col1_count"), 0) >= _to_int(r_consensus_context.get("col2_count"), 0)
+            and _to_int(r_consensus_context.get("col1_count"), 0) > 0
+            else "col2"
+            if _to_int(r_consensus_context.get("col2_count"), 0) > 0
+            else None
+        ),
+        "consensus_strength_class": str(r_consensus_context.get("signal_strength_class") or "none"),
+        "consensus_trial_eligible": bool(r_consensus_context.get("trial_eligible")),
+        "r_consensus_event_count": _to_int(r_consensus_context.get("event_count"), 0),
+        "r_consensus_cross_variant_tail_count": len(r_consensus_context.get("cross_variant_tail_values") or []),
         "survivor_pressure": "stable_survivor_frontier_present" in regime_flags,
         "survivor_progression": "stable_survivor_progression_present" in regime_flags,
         "last_remaining": "stable_last_remaining_present" in regime_flags,
@@ -1293,6 +1375,15 @@ def _build_arena_synthesis(
         hidden_patterns = ", ".join(str(value) for value in (stable_survivor_context.get("top_hidden_terminal_patterns") or [])[:3])
         if hidden_patterns:
             review_prompts.append(f"Check hidden survivor terminals {hidden_patterns} for family/VTRAC carryover value.")
+    if r_consensus_context.get("available"):
+        tail_values = ", ".join(str(value) for value in (r_consensus_context.get("top_tail_values") or [])[:3])
+        support_canonicals = ", ".join(str(value) for value in (r_consensus_context.get("top_support_canonicals") or [])[:3])
+        review_prompts.append(
+            f"Inspect R-Consensus tails {tail_values or '-'} against local support canonicals {support_canonicals or '-'} before any translator-style interpretation."
+        )
+        if r_consensus_context.get("cross_variant_tail_values"):
+            cross_variant_tails = ", ".join(str(value) for value in (r_consensus_context.get("cross_variant_tail_values") or [])[:3])
+            review_prompts.append(f"Check whether cross-variant R-Consensus tails {cross_variant_tails} align with survivor, VTRAC, or alert corridors.")
 
     return {
         "dominant_canonicals": dominant_canonicals,
@@ -1302,6 +1393,7 @@ def _build_arena_synthesis(
         "context_reinforced_canonicals": context_reinforced_canonicals,
         "context_only_pressure": context_only_pressure,
         "stable_survivor_context": stable_survivor_context,
+        "r_consensus_context": r_consensus_context,
         "state_regime": state_regime,
         "review_prompts": review_prompts,
     }
@@ -1494,10 +1586,12 @@ def build_aggregated_analysis_arena_payload(
         top_per_lane=max(12, top_items),
     )
     stable_survivor_context = _build_stable_survivor_context(stable_tool)
+    r_consensus_context = _build_r_consensus_context(stable_tool)
 
     cross_tool_relations = _build_cross_tool_relations(
         stable_tool=stable_tool,
         stable_survivor_context=stable_survivor_context,
+        r_consensus_context=r_consensus_context,
         dr_tool=dr_tool,
         vtrac_tool=vtrac_tool,
         hot_tool=hot_tool,
@@ -1506,6 +1600,7 @@ def build_aggregated_analysis_arena_payload(
     arena_synthesis = _build_arena_synthesis(
         cross_tool_relations=cross_tool_relations,
         stable_survivor_context=stable_survivor_context,
+        r_consensus_context=r_consensus_context,
     )
     downstream_handoff, downstream_inputs = _build_downstream_handoff(state_dir, repo_root)
     review_links, review_inputs = _build_review_links(day_dir=day_dir, state_dir=state_dir, state_key=state_key, repo_root=repo_root)
@@ -1669,6 +1764,11 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"- double_heavy: `{state_regime.get('double_heavy')}`")
         lines.append(f"- context_reinforced: `{state_regime.get('context_reinforced')}`")
         lines.append(f"- vtrac_alignment: `{state_regime.get('vtrac_alignment')}`")
+        lines.append(f"- tail_consensus_present: `{state_regime.get('tail_consensus_present')}`")
+        lines.append(f"- tail_consensus_value: `{state_regime.get('tail_consensus_value') or '-'}`")
+        lines.append(f"- tail_consensus_column: `{state_regime.get('tail_consensus_column') or '-'}`")
+        lines.append(f"- consensus_strength_class: `{state_regime.get('consensus_strength_class') or '-'}`")
+        lines.append(f"- consensus_trial_eligible: `{state_regime.get('consensus_trial_eligible')}`")
         lines.append(f"- survivor_pressure: `{state_regime.get('survivor_pressure')}`")
         lines.append(f"- survivor_progression: `{state_regime.get('survivor_progression')}`")
         lines.append(f"- last_remaining: `{state_regime.get('last_remaining')}`")
@@ -1692,6 +1792,22 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
         profile_counts = stable_survivor_context.get("last_remaining_profile_counts") if isinstance(stable_survivor_context.get("last_remaining_profile_counts"), dict) else {}
         if profile_counts:
             lines.append(f"- last_remaining_profile_counts: `{json.dumps(profile_counts, sort_keys=True)}`")
+
+    r_consensus_context = synthesis.get("r_consensus_context") if isinstance(synthesis.get("r_consensus_context"), dict) else {}
+    if r_consensus_context.get("available"):
+        lines.append("")
+        lines.append("## R-Consensus Context")
+        lines.append("")
+        lines.append(f"- event_count: `{r_consensus_context.get('event_count', 0)}`")
+        lines.append(f"- single_digit_count: `{r_consensus_context.get('single_digit_count', 0)}`")
+        lines.append(f"- two_digit_count: `{r_consensus_context.get('two_digit_count', 0)}`")
+        lines.append(f"- col1/col2: `{r_consensus_context.get('col1_count', 0)}/{r_consensus_context.get('col2_count', 0)}`")
+        lines.append(f"- signal_strength_class: `{r_consensus_context.get('signal_strength_class', '-')}`")
+        lines.append(f"- trial_eligible: `{r_consensus_context.get('trial_eligible')}`")
+        lines.append(f"- top_tail_values: `{', '.join(r_consensus_context.get('top_tail_values') or []) or '-'}`")
+        lines.append(f"- cross_variant_tail_values: `{', '.join(r_consensus_context.get('cross_variant_tail_values') or []) or '-'}`")
+        lines.append(f"- top_support_canonicals: `{', '.join(r_consensus_context.get('top_support_canonicals') or []) or '-'}`")
+        lines.append(f"- top_support_vtrac_indices: `{', '.join(r_consensus_context.get('top_support_vtrac_indices') or []) or '-'}`")
 
     lines.append("")
     lines.append("## Review Prompts")

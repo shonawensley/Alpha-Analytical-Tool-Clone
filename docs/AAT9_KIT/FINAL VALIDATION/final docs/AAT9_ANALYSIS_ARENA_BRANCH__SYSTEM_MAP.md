@@ -170,6 +170,7 @@ It is more than storage:
 - surfaces dominant canonicals, families, and lanes
 - exposes watchlists and review prompts
 - now carries `stable_survivor_context` so survivor/frontier, last-remaining, progression, and hidden-terminal truth remain visible in Brain 1 instead of only inside Stable
+- now also carries bounded `r_consensus_context` so `R-Consensus` / tail-consensus remains preserved as a measured Brain-1 event object instead of living only in reverse-engineer harnesses
 
 ## Layer 4 — Review And Scoreboards
 
@@ -228,7 +229,7 @@ too valuable to ignore but too specialized to promote without direct measurement
 Current examples:
 
 - survivor / frontier audit
-- `R-Consensus` harness prep
+- `R-Consensus` harness and integration memo
 
 These should stay:
 
@@ -239,6 +240,12 @@ These should stay:
 until the branch has enough casework to justify operational promotion.
 - `scripts/tools/create_day_arena_board_review.py`
 - `scripts/tools/build_shadow_decision_policy.py`
+
+Recent promotion boundary:
+
+- `R-Consensus` is now preserved in runtime as `r_consensus_context`
+- it is visible in Brain 1, Brain 2, and shadow DPL
+- it is still shadow/scored only and not active translator logic
 
 Important new learning from this layer:
 

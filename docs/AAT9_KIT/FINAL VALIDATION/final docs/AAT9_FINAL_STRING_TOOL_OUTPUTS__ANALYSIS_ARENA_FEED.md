@@ -203,6 +203,12 @@ These flags are distinct evidence classes, not just implementation debris:
 | `hidden3v` | hidden 3-value structure present |
 | `double_mirror` | double-mirror relation present |
 
+These row-level flags now also support a bounded Stable runtime rollup:
+
+- `r_consensus_context`
+- preserves event counts, tail values, section/column spread, support canonicals, support VTRAC indices, and trial-eligibility posture
+- meant for Brain-1 preservation and shadow policy, not direct production combo logic
+
 #### Row counts
 
 These are useful for later aggregation and should remain preserved:

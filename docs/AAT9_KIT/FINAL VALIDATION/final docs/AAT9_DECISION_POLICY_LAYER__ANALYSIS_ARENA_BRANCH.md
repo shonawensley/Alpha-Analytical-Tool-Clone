@@ -180,6 +180,9 @@ Required fields should include:
 - `context_only_pressure_level`
 - `tail_consensus_present`
 - `tail_consensus_value`
+- `tail_consensus_column`
+- `consensus_strength_class`
+- `consensus_trial_eligible`
 - `decay_status`
 - `carryover_status`
 - `spent_status`

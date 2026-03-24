@@ -30,6 +30,20 @@ def _overlay_fixture() -> dict:
                 "survivor_last_remaining_canonicals": ["225"],
                 "survivor_last_remaining_vtrac_indices": ["10"],
                 "survivor_terminal_profiles": ["multi_literal_single_vtrac_family_with_hidden_support"],
+                "r_consensus_context": {
+                    "available": True,
+                    "event_count": 2,
+                    "two_digit_count": 2,
+                    "cross_variant_tail_values": ["22"],
+                    "top_tail_values": ["22"],
+                    "top_support_canonicals": ["225", "022"],
+                    "top_support_vtrac_indices": ["10"],
+                    "signal_strength_class": "strong",
+                    "trial_eligible": True,
+                },
+                "r_consensus_top_tail_values": ["22"],
+                "r_consensus_support_canonicals": ["225", "022"],
+                "r_consensus_support_vtrac_indices": ["10"],
                 "context_reinforced_canonicals": ["225"],
                 "context_only_pressure": [],
                 "profit_alert_implied_canonicals": ["049"],
@@ -45,6 +59,11 @@ def _overlay_fixture() -> dict:
                     "double_heavy": True,
                     "context_reinforced": True,
                     "vtrac_alignment": "aligned",
+                    "tail_consensus_present": True,
+                    "tail_consensus_value": "22",
+                    "tail_consensus_column": "col1",
+                    "consensus_strength_class": "strong",
+                    "consensus_trial_eligible": True,
                     "survivor_pressure": True,
                     "survivor_progression": True,
                     "last_remaining": True,
@@ -65,6 +84,20 @@ def _overlay_fixture() -> dict:
                 "survivor_last_remaining_canonicals": ["455"],
                 "survivor_last_remaining_vtrac_indices": ["5"],
                 "survivor_terminal_profiles": ["multi_literal_single_vtrac_family_with_hidden_support"],
+                "r_consensus_context": {
+                    "available": True,
+                    "event_count": 1,
+                    "two_digit_count": 1,
+                    "cross_variant_tail_values": [],
+                    "top_tail_values": ["49"],
+                    "top_support_canonicals": ["455", "049"],
+                    "top_support_vtrac_indices": ["5"],
+                    "signal_strength_class": "moderate",
+                    "trial_eligible": True,
+                },
+                "r_consensus_top_tail_values": ["49"],
+                "r_consensus_support_canonicals": ["455", "049"],
+                "r_consensus_support_vtrac_indices": ["5"],
                 "context_reinforced_canonicals": ["455"],
                 "context_only_pressure": [],
                 "profit_alert_implied_canonicals": ["049", "055"],
@@ -80,6 +113,11 @@ def _overlay_fixture() -> dict:
                     "double_heavy": True,
                     "context_reinforced": True,
                     "vtrac_alignment": "aligned",
+                    "tail_consensus_present": True,
+                    "tail_consensus_value": "49",
+                    "tail_consensus_column": "col1",
+                    "consensus_strength_class": "moderate",
+                    "consensus_trial_eligible": True,
                     "survivor_pressure": True,
                     "survivor_progression": True,
                     "last_remaining": True,
@@ -159,8 +197,10 @@ def test_build_shadow_decision_policy_payload_and_files(tmp_path: Path) -> None:
     assert "PLAY_STATE" in decisions["NewJersey4"]["reason_codes"]
     assert "LAST_REMAINING" in decisions["NewJersey4"]["reason_codes"]
     assert "HIDDEN_TERMINAL_SUPPORT" in decisions["NewJersey4"]["reason_codes"]
+    assert "R_CONSENSUS_PRESENT" in decisions["NewJersey4"]["reason_codes"]
     assert decisions["Virginia4"]["posture"] == "WATCH"
     assert "CONSENSUS_EVENT" in decisions["Virginia4"]["reason_codes"]
+    assert "R_CONSENSUS_TRIAL_ELIGIBLE" in decisions["Virginia4"]["reason_codes"]
     assert "SURVIVOR_PROGRESSION" in decisions["Virginia4"]["reason_codes"]
     assert "WATCH_RELATIONSHIP" in decisions["Virginia4"]["blockers"]
 

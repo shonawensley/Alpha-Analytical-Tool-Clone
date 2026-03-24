@@ -41,6 +41,20 @@ def _arena_fixture(
             "vtrac_literal_watchlist": watchlist,
             "context_reinforced_canonicals": [{"value": top_canonicals[0]}],
             "context_only_pressure": [],
+            "r_consensus_context": {
+                "available": True,
+                "event_count": 2,
+                "single_digit_count": 0,
+                "two_digit_count": 2,
+                "col1_count": 1,
+                "col2_count": 1,
+                "top_tail_values": [alert_canonical[-2:]],
+                "cross_variant_tail_values": [alert_canonical[-2:]],
+                "top_support_canonicals": [top_canonicals[0], top_canonicals[-1]],
+                "top_support_vtrac_indices": [top_indices[0]],
+                "signal_strength_class": "strong",
+                "trial_eligible": True,
+            },
             "stable_survivor_context": {
                 "available": True,
                 "frontier_count": 3,
@@ -60,6 +74,11 @@ def _arena_fixture(
                 "double_heavy": True,
                 "context_reinforced": True,
                 "vtrac_alignment": "aligned",
+                "tail_consensus_present": True,
+                "tail_consensus_value": alert_canonical[-2:],
+                "tail_consensus_column": "col1",
+                "consensus_strength_class": "strong",
+                "consensus_trial_eligible": True,
                 "survivor_pressure": True,
                 "survivor_progression": True,
                 "last_remaining": True,
@@ -67,6 +86,8 @@ def _arena_fixture(
                 "survivor_frontier_count": 3,
                 "survivor_progression_count": 2,
                 "last_remaining_rows": 1,
+                "r_consensus_event_count": 2,
+                "r_consensus_cross_variant_tail_count": 1,
             },
         },
         "context_tools": {
@@ -282,6 +303,10 @@ def test_build_board_spillover_overlay_payload_and_markdown(tmp_path: Path) -> N
     assert "055" in state_summaries["NewJersey4"]["due_double_example_canonicals"]
     assert "055" in state_summaries["NewJersey4"]["secondary_canonicals"]
     assert state_summaries["NewJersey4"]["state_regime"]["last_remaining"] is True
+    assert state_summaries["NewJersey4"]["r_consensus_context"]["available"] is True
+    assert state_summaries["NewJersey4"]["r_consensus_top_tail_values"]
+    assert state_summaries["NewJersey4"]["r_consensus_support_canonicals"][0] == "455"
+    assert state_summaries["NewJersey4"]["state_regime"]["tail_consensus_present"] is True
 
     relationships = payload["relationships"]
     assert any(

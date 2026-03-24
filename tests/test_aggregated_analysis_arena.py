@@ -40,6 +40,39 @@ def _build_fixture(tmp_path: Path) -> tuple[Path, Path]:
     stable_payload = {
         "schema": "stable_arena_v1",
         "metrics_summary": {"total_patterns": 10},
+        "r_consensus_context": {
+            "available": True,
+            "event_count": 2,
+            "single_digit_count": 0,
+            "two_digit_count": 2,
+            "col1_count": 1,
+            "col2_count": 1,
+            "cons_full_event_count": 1,
+            "cons_3v_event_count": 1,
+            "cons_stub_event_count": 1,
+            "section_counts": {"Combined": 1, "Midday": 1},
+            "cross_variant_tail_values": ["38"],
+            "top_tail_values": ["38", "44"],
+            "top_support_canonicals": ["138", "344"],
+            "top_support_vtrac_indices": ["8", "13"],
+            "signal_strength_class": "strong",
+            "trial_eligible": True,
+            "events_top": [
+                {
+                    "section": "Combined",
+                    "set": "Set1",
+                    "draw": "Draw1",
+                    "column": 1,
+                    "tail_value": "38",
+                    "event_class": "two-digit",
+                    "cons_full": True,
+                    "cons_3v": True,
+                    "cons_stub": True,
+                    "top_support_canonicals": ["138"],
+                    "top_support_vtrac_indices": ["8"],
+                }
+            ],
+        },
         "sections": {
             "Combined": {
                 "top_row_patterns": [{"canonical": "138", "score": 19.5}],
@@ -348,6 +381,13 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     assert payload["arena_synthesis"]["state_regime"]["last_remaining"] is True
     assert payload["arena_synthesis"]["state_regime"]["hidden_terminal_support"] is True
     assert payload["arena_synthesis"]["state_regime"]["vtrac_alignment"] == "aligned"
+    r_consensus_context = payload["arena_synthesis"]["r_consensus_context"]
+    assert r_consensus_context["available"] is True
+    assert r_consensus_context["event_count"] == 2
+    assert r_consensus_context["top_tail_values"][0] == "38"
+    assert payload["arena_synthesis"]["state_regime"]["tail_consensus_present"] is True
+    assert payload["arena_synthesis"]["state_regime"]["tail_consensus_value"] == "38"
+    assert payload["arena_synthesis"]["state_regime"]["consensus_trial_eligible"] is True
 
     md = build_aggregated_analysis_arena_markdown(payload)
     assert "Aggregated Analysis Arena" in md
@@ -355,6 +395,7 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     assert "Dominant VTRAC Indices" in md
     assert "VTRAC Literal Watchlist" in md
     assert "Stable Survivor Context" in md
+    assert "R-Consensus Context" in md
 
     out_json = day_dir / "TestState" / "analysis" / "aggregated_analysis_arena__tool_only__arena_v0.json"
     json_path, md_path = write_aggregated_analysis_arena_files(out_json_path=out_json, payload=payload, write_md=True)

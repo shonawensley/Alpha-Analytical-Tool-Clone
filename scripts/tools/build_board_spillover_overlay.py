@@ -456,6 +456,31 @@ def _extract_context_only_pressure(synthesis: Dict[str, Any], limit: int) -> Lis
     return _ordered_unique(out)
 
 
+def _extract_r_consensus_context(synthesis: Dict[str, Any]) -> Dict[str, Any]:
+    ctx = synthesis.get("r_consensus_context")
+    if not isinstance(ctx, dict):
+        return {
+            "available": False,
+            "event_count": 0,
+            "trial_eligible": False,
+            "signal_strength_class": "none",
+        }
+    return {
+        "available": bool(ctx.get("available")),
+        "event_count": _to_int(ctx.get("event_count"), 0),
+        "single_digit_count": _to_int(ctx.get("single_digit_count"), 0),
+        "two_digit_count": _to_int(ctx.get("two_digit_count"), 0),
+        "col1_count": _to_int(ctx.get("col1_count"), 0),
+        "col2_count": _to_int(ctx.get("col2_count"), 0),
+        "top_tail_values": [str(value) for value in (ctx.get("top_tail_values") or []) if str(value).strip()],
+        "cross_variant_tail_values": [str(value) for value in (ctx.get("cross_variant_tail_values") or []) if str(value).strip()],
+        "top_support_canonicals": [_canon(value) for value in (ctx.get("top_support_canonicals") or []) if _canon(value)],
+        "top_support_vtrac_indices": [str(value) for value in (ctx.get("top_support_vtrac_indices") or []) if str(value).strip()],
+        "signal_strength_class": str(ctx.get("signal_strength_class") or "none"),
+        "trial_eligible": bool(ctx.get("trial_eligible")),
+    }
+
+
 def _primary_canonicals(
     *,
     dominant_canonicals: Sequence[str],
@@ -573,6 +598,7 @@ def _build_state_summary(
     dominant_vtrac_indices = _top_values(synthesis.get("dominant_vtrac_indices") or [], "value", top_items)
     dominant_families = _top_values(synthesis.get("dominant_families") or [], "value", top_items)
     stable_survivor_context = synthesis.get("stable_survivor_context") if isinstance(synthesis.get("stable_survivor_context"), dict) else {}
+    r_consensus_context = _extract_r_consensus_context(synthesis)
     survivor_frontier_canonicals = _top_slice(stable_survivor_context.get("top_frontier_canonicals") or [], top_items)
     survivor_last_remaining_canonicals = _top_slice(stable_survivor_context.get("top_last_remaining_canonicals") or [], top_items)
     survivor_frontier_vtrac_indices = _top_slice(stable_survivor_context.get("top_frontier_vtrac_indices") or [], top_items)
@@ -665,6 +691,11 @@ def _build_state_summary(
         "survivor_frontier_vtrac_indices": survivor_frontier_vtrac_indices,
         "survivor_last_remaining_vtrac_indices": survivor_last_remaining_vtrac_indices,
         "survivor_terminal_profiles": _ordered_unique(survivor_terminal_profiles),
+        "r_consensus_context": r_consensus_context,
+        "r_consensus_top_tail_values": _top_slice(r_consensus_context.get("top_tail_values") or [], top_items),
+        "r_consensus_cross_variant_tail_values": _top_slice(r_consensus_context.get("cross_variant_tail_values") or [], top_items),
+        "r_consensus_support_canonicals": _top_slice(r_consensus_context.get("top_support_canonicals") or [], top_items),
+        "r_consensus_support_vtrac_indices": _top_slice(r_consensus_context.get("top_support_vtrac_indices") or [], top_items),
         "watchlist_indices": _ordered_unique(watchlist_indices),
         "watchlist_canonicals": _ordered_unique(watchlist_canonicals),
         "context_reinforced_canonicals": context_reinforced_canonicals,
@@ -693,6 +724,11 @@ def _build_state_summary(
             "double_heavy": bool(state_regime.get("double_heavy")),
             "context_reinforced": bool(state_regime.get("context_reinforced")),
             "vtrac_alignment": str(state_regime.get("vtrac_alignment") or ""),
+            "tail_consensus_present": bool(state_regime.get("tail_consensus_present")),
+            "tail_consensus_value": str(state_regime.get("tail_consensus_value") or ""),
+            "tail_consensus_column": str(state_regime.get("tail_consensus_column") or ""),
+            "consensus_strength_class": str(state_regime.get("consensus_strength_class") or ""),
+            "consensus_trial_eligible": bool(state_regime.get("consensus_trial_eligible")),
             "survivor_pressure": bool(state_regime.get("survivor_pressure")),
             "survivor_progression": bool(state_regime.get("survivor_progression")),
             "last_remaining": bool(state_regime.get("last_remaining")),
@@ -700,6 +736,8 @@ def _build_state_summary(
             "survivor_frontier_count": _to_int(state_regime.get("survivor_frontier_count"), 0),
             "survivor_progression_count": _to_int(state_regime.get("survivor_progression_count"), 0),
             "last_remaining_rows": _to_int(state_regime.get("last_remaining_rows"), 0),
+            "r_consensus_event_count": _to_int(state_regime.get("r_consensus_event_count"), 0),
+            "r_consensus_cross_variant_tail_count": _to_int(state_regime.get("r_consensus_cross_variant_tail_count"), 0),
         },
     }
 
