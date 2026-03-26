@@ -19,6 +19,7 @@ Safety / scope
 Usage
 -----
 python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-02 --state NewYork4
+python3 scripts/tools/fill_master_validation_run_report.py --date 2026-01-05 --state NewYork4 --report-path "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/VALIDATION/2026-01-05__NewYork4.md"
 """
 
 from __future__ import annotations
@@ -631,8 +632,8 @@ def build_part5_answers(results: Results, stable_summary: dict[str, Any] | None)
     }
 
 
-def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
-    report_path = (
+def _default_report_path(*, date: str, state: str) -> Path:
+    return (
         REPO_ROOT
         / "docs"
         / "AAT9_KIT"
@@ -640,6 +641,10 @@ def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
         / "RUNS"
         / f"{date}__{state}.md"
     )
+
+
+def fill_report(*, date: str, state: str, normalize_part5: bool, report_path: Path | None = None) -> Path:
+    report_path = report_path or _default_report_path(date=date, state=state)
     if not report_path.exists():
         raise SystemExit(f"Run report not found: {report_path}")
 
@@ -837,12 +842,18 @@ def fill_report(*, date: str, state: str, normalize_part5: bool) -> None:
         i += 1
 
     report_path.write_text("\n".join(out_lines).rstrip() + "\n", encoding="utf-8")
+    return report_path
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True, help="Results/sharepack date D (YYYY-MM-DD)")
     ap.add_argument("--state", required=True, help="State key (e.g., NewYork4)")
+    ap.add_argument(
+        "--report-path",
+        default=None,
+        help="Optional explicit report path to fill (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<DATE>__<STATE>.md).",
+    )
     ap.add_argument(
         "--normalize-part5",
         action="store_true",
@@ -851,8 +862,18 @@ def main() -> None:
     args = ap.parse_args()
 
     parse_iso_date(args.date)
-    fill_report(date=args.date, state=args.state, normalize_part5=bool(args.normalize_part5))
-    print(f"Filled: docs/AAT9_KIT/FINAL VALIDATION/RUNS/{args.date}__{args.state}.md")
+    report_path = Path(args.report_path).resolve() if args.report_path else None
+    filled_path = fill_report(
+        date=args.date,
+        state=args.state,
+        normalize_part5=bool(args.normalize_part5),
+        report_path=report_path,
+    )
+    try:
+        shown = filled_path.relative_to(REPO_ROOT)
+    except ValueError:
+        shown = filled_path
+    print(f"Filled: {shown}")
 
 
 if __name__ == "__main__":
