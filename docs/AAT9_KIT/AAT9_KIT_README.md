@@ -18,6 +18,18 @@ Purpose: A single, current source for AAT9 usage, structure, workflow, and updat
   - docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md
   - docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md
 
+## Analysis Arena Current Path
+
+When the task is about the rebuilt Analysis Arena branch or fresh-run Final Validation, use these as the current-path references:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
+
+Treat `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` as the historical/control-arm comparison layer unless a doc explicitly says otherwise.
+
 ## Canonical Setup (Quick)
 - Launch: `run_app.bat` -> `streamlit run src\app.py` (from repo root)
 - Imports resolve to in-repo files:

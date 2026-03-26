@@ -20,6 +20,23 @@ There are 3 “classes” of docs in this workflow:
 - Brain 1 (state template runs) produces evidence + hypotheses.
 - Any “this seems profitable / trackable across states” ideas should be logged to the **workflow changelog** now, then later promoted into Control Center trackers when you resume Brain 2 work.
 
+## Current Analysis Arena Path (preferred)
+
+If you are working on the rebuilt Analysis Arena branch, start here:
+
+- Arena branch map: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
+- Arena fresh-runs cadence: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+- Arena operating flow / diagram: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+- Arena-era RUNS portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
+- Per-state Master Validation: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Brain 2 operating template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Brain 2 Master Validation companion: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+
+Legacy note:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/` remains valuable for older v0.2 / v0.3 history and control-arm comparison.
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/` is the current home for arena-era fresh runs.
+
 ## Core docs (keep in sync)
 - Master template (questions only): `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
 - Analysis navigator (how to review without getting lost): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
@@ -29,7 +46,7 @@ There are 3 “classes” of docs in this workflow:
 - Control Center / Brain 2 reference (keep for later): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
 - Control Center daily template (Brain-2, per day): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
 
-## v0.2 / v0.3 posture SSOT (avoid drift)
+## Legacy / Control-Arm SSOT (avoid drift)
 - RUNS portal (what to open next): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/PORTAL.md`
 - v0.2 defaults/posture (what to run): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`
 - v0.2 integration log (why it changed): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
@@ -38,6 +55,10 @@ Optional (brainstorm / historical templates; not SSOT):
 - `docs/AAT9_KIT/FINAL VALIDATION/FINAL_VALIDATION_TEMPC.md`
 
 ## Run reports (filled answers live here)
+- Current arena-era runs home:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/`
+  - Arena runtime receipts default to: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA/`
+  - Arena portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
   - Resume/handoff rule (context resets): see `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md` → “Context reset / handoff rule”.
   - Progress tracker (which reports are filled): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
@@ -53,6 +74,16 @@ Generate a predictive run report scaffold (pre-results, no winners):
 ```bash
 python3 scripts/tools/create_predictive_run_report.py --date YYYY-MM-DD --state OntarioCanada4 --sharepacks-root sharepacks/_predictive
 ```
+
+Run the renamed arena-era predictive cadence (recommended current pre-results wrapper):
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py pre --history-date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --top-n-stable 10 --write-audit-evidence --play-card-write-md --force
+```
+This now emits:
+- Brain 1 -> Brain 2 -> shadow DPL receipts
+- translation sandbox seeds
+- Candidate Universe / Play Card control-arm outputs
+- Runtime receipts under `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA/`
 
 Generate a predictive portfolio triage report (cross-state):
 ```bash
@@ -136,6 +167,8 @@ Per-run workflow (high level):
 - Entry (contracts + semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Help.md`
 - Build + freeze (from scratch): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
 - Predictive day (no results yet): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Predictive_Day_Quickstart.md`
+- Analysis Arena fresh-runs cadence: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+- Analysis Arena operating flow: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - Candidate Universe (pre-results, gradeable predictions): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
 - Evaluate-only (sharepacks already built): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md`
 - Preflight / drift guards: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Preflight.md`
@@ -148,4 +181,6 @@ Per-run workflow (high level):
 - Profit alerts (A01–A12) integration notes: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
 - Profit alerts evaluation charter (variants/decay semantics): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
 - Profit alerts grading matrix (per‑AID “what is a hit”): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
+- Translation sandbox companion: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Brain 2 Master Validation companion: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - VTRAC permutations + VSTRAIGHTS reference: `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`

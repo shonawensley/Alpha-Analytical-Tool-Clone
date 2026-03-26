@@ -15,6 +15,12 @@ Purpose: first-stop briefing for operators and Codex before touching the repo. I
 4. Architecture and App Flow addenda (`docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md`, `docs/AAT9_DOCS/AAT9_App_Flow_Addendum_2025-09-06.md`) - canonical layout, launch path, and page data contracts.
 5. Quickstart Cheat Sheet (`docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`) - concise commands, variant policy, Control Center batch notes.
 6. Area-specific primers - read only when relevant (for example Aux or Blackapple work -> `docs/AAT9_DOCS/AAT9_Aux_Tools_Official.md`, `docs/AAT9_DOCS/AAT9_Blackapple_Module.md`; positional pressure -> `docs/AAT9_KIT/important/AAT9_Positional_Pressure.md`).
+7. Analysis Arena / Final Validation current-path references (when working on the rebuilt branch):
+   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
 Skim the Unified Changelog (`docs/AAT9_KIT/AAT9_Unified_Changelog.md`) after the references above to understand recent shifts and which docs were touched.
 

@@ -7,6 +7,12 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
 - Architecture & Dir Layout: `docs/AAT9_DOCS/AAT9_Architecture_Dir_Layout_2025-09-06.md`
 - Quickstart Cheat Sheet: `docs/AAT9_KIT/AAT9_Quickstart_Cheat_Sheet.md`
 - Preflight Reference: `docs/AAT9_KIT/AAT9_Preflight_Reference.md`
+- If the task is Analysis Arena / Final Validation branch work, also read:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
 ## 1) Preflight & Sanity
 - Run: `powershell -NoProfile -File .codex/preflight.ps1 -State "<State>"`
@@ -46,6 +52,7 @@ Purpose: A clear, repeatable process for implementing changes safely, updating d
   - Page wiring/data contracts: update App Flow Addendum; note page names and inputs/outputs.
   - New tool/module: add a short “Data Contracts & Where It Lives” block in a relevant doc; link from KIT README.
   - Preflight behavior: update Preflight Reference with example output.
+  - Arena-era cadence / output-home changes: update the WSL2 startup doc, final-docs README, `RUNS_2/PORTAL.md`, and `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`.
   - Diagrams: follow AAT9_Diagrams_Guide; embed Mermaid blocks in the doc itself.
 
 ## 6) Handoff / PR Notes

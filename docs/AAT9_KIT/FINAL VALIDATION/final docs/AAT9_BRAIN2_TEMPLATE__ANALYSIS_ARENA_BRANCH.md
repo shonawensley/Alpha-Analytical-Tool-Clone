@@ -4,9 +4,15 @@ Date: `2026-03-23`
 
 ## Purpose
 
-This is the companion board-level template for the analysis-arena branch.
+This is the companion board-level operating template for the analysis-arena branch.
 
 Its job is to review the board as a whole after per-state Brain 1 work exists.
+
+This is the runtime/operating Brain 2 shell.
+
+It is not the same document as the post-results aggregate-learning companion:
+
+- `AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 
 Use it to answer:
 
@@ -22,6 +28,7 @@ The clean split is:
 
 - per-state template = `Brain 1 + post-results deep learning per state`
 - Brain 2 template = `board-level comparison, ranking, spillover, and final findings`
+- Brain 2 Master Validation companion = `post-results scoreboard grading, tracker evaluation, and aggregate-learning capture`
 
 ---
 

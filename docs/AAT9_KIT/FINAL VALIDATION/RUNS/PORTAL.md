@@ -1,5 +1,11 @@
 # RUNS Portal (Start Here)
 
+Arena-era note:
+
+- For the rebuilt Analysis Arena fresh-run phase, start at:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
+- This `RUNS/PORTAL.md` now functions mainly as the historical / v0.2-v0.3 / control-arm comparison portal.
+
 Purpose: give you a single “open these files” map so you can review days, predictive packs, grades, and triage without getting lost.
 
 Key idea: **sharepacks are the frozen evidence**, while **RUNS is the review/scaffolding/grades layer**.

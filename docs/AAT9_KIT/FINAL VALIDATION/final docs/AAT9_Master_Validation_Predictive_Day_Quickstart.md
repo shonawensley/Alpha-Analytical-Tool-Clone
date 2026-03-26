@@ -5,6 +5,8 @@ Purpose: run the “day build” workflow against a Pick3StatsC4 history workboo
 This produces a **predictive sharepack** under `sharepacks/_predictive/<D>/...` that contains:
 - Brain‑1 per‑state artifacts (tables/json + Stable/DR/Hot Zones/VTRAC enhanced + Aux snapshot)
 - Brain‑2 Control Center export (boards) using a **placeholder results file**
+- arena-era board review outputs (overlay + scoreboard + shadow DPL + board bundle)
+- translation sandbox seeds for later translator learning
 
 It does **not** produce:
 - Winners HTML/JSON (Part A)
@@ -32,28 +34,34 @@ Important: this workflow **mutates live output folders** while it runs (tables/J
 ## 1) Fast path vs deep path (choose one)
 
 ### Fast path (recommended; ~10–15 minutes)
-Run the v0.3 cadence wrapper end-to-end and write a RUNS receipt under `RUNS/V0_3/`:
+Run the arena-era cadence wrapper end-to-end and write a runtime receipt under `RUNS_2/ANALYSIS_ARENA/`:
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --runs-subdir V0_3 --write-audit-evidence --play-card-write-md --force
+python3 scripts/tools/run_analysis_arena_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --top-n-stable 10 --write-audit-evidence --play-card-write-md --force
 ```
 
 What you get:
 - Predictive sharepack snapshot: `sharepacks/_predictive/<D>/...` (winners-free)
-- Receipt (reproducibility without chat logs): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_3/`
+- Arena board-review receipt family: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA/`
+- Control-arm outputs remain in the predictive sharepack as baseline comparison surfaces
+
+Current arena-era companion references:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
 ### Deep path (step-by-step; slower but flexible)
 Follow sections 2–5 below if you want manual control (profiles, per-step runs, etc.).
 
 ## 2) Build the predictive pack (deep path; granular commands)
 
-Recommended (v0.3 cadence wrapper; logs a RUNS receipt and runs the whole pre-results chain):
+Recommended (analysis-arena cadence wrapper; logs a RUNS receipt and runs the whole pre-results chain):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --runs-subdir V0_3 --force
+python3 scripts/tools/run_analysis_arena_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --top-n-stable 10 --force
 ```
 
 Optional: run multiple history days in one go (writes a range receipt; per-day receipts by default):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py pre-range --start-history-date <H0> --end-history-date <H1> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --runs-subdir V0_3 --force
+python3 scripts/tools/run_analysis_arena_cycle.py pre-range --start-history-date <H0> --end-history-date <H1> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --top-n-stable 10 --force
 ```
 
 Run:
@@ -86,6 +94,15 @@ PYTHONPATH=.:src python3 scripts/tools/run_predictive_day.py --history-date <H> 
 ---
 
 ## 4) Generate gradeable predictions (Candidate Universe) + a predictive run report
+
+Important current posture:
+- the arena-era wrapper already runs:
+  - board review
+  - shadow DPL
+  - Candidate Universe
+  - Play Card
+  - translation sandbox seed capture
+- Candidate Universe and Play Card remain the current downstream **control arm**, not the definition of arena truth
 
 After the predictive sharepack exists, generate the **Candidate Universe** (the explicit, gradeable “playset”):
 
@@ -164,12 +181,12 @@ You can still keep the predictive pack as the “what we knew pre-results” sna
 
 Recommended (v0.3 cadence wrapper; grades + rollups; writes only to RUNS):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --runs-subdir V0_3 --rollup --force
+python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --runs-subdir V0_3 --rollup --force
 ```
 
 Optional: grade a date range (writes a range receipt; per-day receipts by default). If you add `--windowed-auto`, it will only run N=5 grading when enough contiguous results files exist (avoids partial windows):
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py post-range --start-date <D0> --end-date <D1> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --runs-subdir V0_3 --rollup --windowed-auto --force
+python3 scripts/tools/run_v0_3_cycle.py post-range --start-date <D0> --end-date <D1> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --runs-subdir V0_3 --rollup --windowed-auto --force
 ```
 
 Then grade Candidate Universe (writes only to RUNS; keeps predictive sharepacks immutable):

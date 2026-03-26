@@ -193,7 +193,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--midday-results")
     ap.add_argument("--arena-top-items", type=int, default=12)
     ap.add_argument("--board-top-items", type=int, default=8)
-    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS")
+    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA")
     ap.add_argument("--skip-arena-build", action="store_true")
     args = ap.parse_args(argv)
 

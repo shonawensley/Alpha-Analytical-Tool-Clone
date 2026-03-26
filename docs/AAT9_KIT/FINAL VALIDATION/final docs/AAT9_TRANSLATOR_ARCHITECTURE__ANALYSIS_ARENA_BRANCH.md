@@ -43,6 +43,14 @@ They are not:
 - budget managers
 - alert systems
 
+Before active translators exist, the branch now uses a bounded companion:
+
+- `scripts/tools/create_translation_sandbox_seed.py`
+- `AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+
+That companion should be used to collect provisional translator-learning geometry
+from fresh runs without promoting active conversion logic too early.
+
 ---
 
 ## Governing Rules

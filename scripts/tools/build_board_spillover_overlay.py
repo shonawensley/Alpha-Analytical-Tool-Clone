@@ -1295,7 +1295,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--board-name", default="board")
     ap.add_argument("--midday-results")
     ap.add_argument("--top-items", type=int, default=8)
-    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS")
+    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA")
     ap.add_argument("--no-md", action="store_true")
     args = ap.parse_args(argv)
 

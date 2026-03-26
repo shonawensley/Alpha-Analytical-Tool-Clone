@@ -442,7 +442,7 @@ def _default_out_name(overlay_metadata: Dict[str, Any]) -> str:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Create a compact board scoreboard from a board spillover overlay.")
     ap.add_argument("--overlay-json", required=True)
-    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS")
+    ap.add_argument("--out-dir", default="docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA")
     args = ap.parse_args(argv)
 
     overlay_path = Path(args.overlay_json)

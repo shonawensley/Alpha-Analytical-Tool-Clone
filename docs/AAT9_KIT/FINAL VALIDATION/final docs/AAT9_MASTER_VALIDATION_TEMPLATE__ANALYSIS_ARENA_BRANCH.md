@@ -15,6 +15,7 @@ Use alongside:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_AGGREGATED_ANALYSIS_ARENA_CONTRACT_v0.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_FINAL_STRING_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_FINAL_CONTEXT_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ANALYSIS_ARENA_INTEGRATION_QUEUE.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/AAT9_ARENA_ANALYSIS_BACKLOG.md`
@@ -3784,6 +3785,7 @@ Helpful predictive/report companions:
 - Candidate Universe grades
 - Play Card grades
 - lane-allocation / conversion casebook reports
+- translation sandbox seed / companion when provisional translator-learning capture matters
 
 Helpful arena-side bridge surfaces:
 
@@ -4215,6 +4217,8 @@ Template:
 - Most important bottleneck class: `...`
 - Best explanation for the miss/hit: `...`
 - Main comparison target for Part I: `...`
+- Translation Sandbox companion needed?: `yes/no`
+- If yes, main provisional translator-learning target: `...`
 ```
 
 ---
@@ -4290,6 +4294,7 @@ Optional companions:
 - bridge / decay readbacks when relevant
 - competition / rerank notes when relevant
 - board-level crossover notes when results suggest them
+- translation sandbox seed / companion when provisional boxed / straight / vt-box learning is worth freezing separately
 
 Guardrail:
 - Part I may infer priorities from earlier sections

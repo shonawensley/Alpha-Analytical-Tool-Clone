@@ -105,6 +105,18 @@ This separation matters:
 
 That is why analysis, final findings, decision policy, combination forming, and budgeting are related without being the same layer.
 
+Current review shells now split as:
+
+- per-state Master Validation template
+- Brain 2 runtime/operating template
+- Brain 2 Master Validation companion
+
+That means the branch now has:
+
+- one deep state-level reverse-engineer shell
+- one board-level operating shell
+- one board-level post-results grading shell
+
 ## Layer 1 — Predictive-Day Tool Generation
 
 This is the rebuilt predictive shell that creates fresh state artifacts from a history workbook.
@@ -112,6 +124,7 @@ This is the rebuilt predictive shell that creates fresh state artifacts from a h
 Main entry:
 
 - `scripts/tools/run_predictive_day.py`
+- `scripts/tools/run_analysis_arena_cycle.py` (arena-era operator wrapper)
 
 Primary outputs:
 
@@ -217,6 +230,15 @@ Recent receipts:
 
 Current runtime artifact:
 
+- arena-era fresh-run receipts now belong under:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA/`
+- historical/control-arm comparison receipts remain under:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
+
+Companion flow reference:
+
+- `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+
 - `scripts/tools/build_board_spillover_overlay.py`
 - `scripts/tools/create_board_scoreboard.py`
 - `scripts/tools/create_board_review_bundle.py`
@@ -277,6 +299,7 @@ Current role:
 - shadow runtime + architecture/spec layer
 - current runtime is read-only and review-first
 - it now emits posture/mode/cap-class/route receipts without taking control away from the current downstream control arm
+- translation-sandbox seeds now exist as a downstream learning companion so near-final cluster geometry can be collected without pretending active translators already exist
 
 ## Layer 8 — Downstream Baseline Control Arm
 
@@ -295,6 +318,28 @@ Current non-role:
 
 - they are not the definition of arena truth
 - they are not yet the final arena-native end state
+
+## Translation Sandbox Companion
+
+This is a bounded learning layer between:
+
+- shadow DPL
+- future active translators
+
+Primary runtime:
+
+- `scripts/tools/create_translation_sandbox_seed.py`
+
+Primary companion note:
+
+- `AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+
+Purpose:
+
+- collect provisional boxed / straight / vt-box seed geometry
+- preserve shortlist / survivor / `R-Consensus` carry-through
+- compare what the control arm kept vs cut
+- learn from fresh runs without activating live translator logic
 
 ## Current Big Strengths
 
