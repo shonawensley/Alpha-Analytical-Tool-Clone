@@ -31,7 +31,8 @@ The branch now has two different cadence ideas:
 That means:
 
 - `run_analysis_arena_cycle.py` is the current pre-results operator wrapper
-- `run_v0_3_cycle.py post` remains the current post-results control-arm grading path until the full Brain 2 post-results workflow is operationalized and exercised on real days
+- `run_analysis_arena_cycle.py post` is the current post-results operator wrapper
+- `run_v0_3_cycle.py` still runs inside that post flow for control-arm grading only
 
 ## Operator Checklist
 
@@ -127,17 +128,43 @@ Companion references:
 
 ## Post-Results Note
 
-For now, post-results grading still uses:
+Use the aligned post-results wrapper:
 
 ```bash
-python3 scripts/tools/run_v0_3_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --rollup --force
+python3 scripts/tools/run_analysis_arena_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0 --analysis-runs-subdir ANALYSIS_ARENA --runs-subdir VALIDATION --force
 ```
 
-That is intentional.
+This now does both:
 
-The branch is currently:
+- control-arm grading through the retained baseline wrapper
+- arena-native post-results outputs under `RUNS_2/VALIDATION/`
+
+So the branch is now:
 
 - pre-results arena-native
-- post-results still partly control-arm-centric
-- with the Brain 2 Master Validation companion now available as the aggregate-learning shell
-- but with post-results operating cadence still partly flowing through the older control-arm grading wrapper
+- post-results arena-native at the reporting/validation layer
+- still using the control arm only as baseline comparison inside that post flow
+
+## Window Closeout
+
+After a completed window under:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_<...>/`
+
+generate the two end-of-window reports:
+
+```bash
+python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+```
+
+These produce:
+
+- quantitative `arena truth vs control-arm realization vs opportunity gap`
+- broader Codex-style window synthesis
+
+Use them after:
+
+1. `pre-range`
+2. `post-range`
+3. validation shells are generated

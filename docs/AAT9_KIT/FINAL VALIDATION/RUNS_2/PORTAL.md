@@ -88,7 +88,15 @@ Suggested window closeout artifacts:
 - decay/carryover notes
 - control-arm comparison rollups
 - strongest board-level lessons
-- Codex deep analysis at the end of the window
+- `WINDOW_<...>__ANALYSIS_ARENA__PERFORMANCE_GAP.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.*`
+
+Recommended commands:
+
+```bash
+python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+```
 
 ---
 

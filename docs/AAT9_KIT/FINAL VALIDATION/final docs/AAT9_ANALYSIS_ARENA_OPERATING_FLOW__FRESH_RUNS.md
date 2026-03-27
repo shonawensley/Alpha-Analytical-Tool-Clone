@@ -52,7 +52,8 @@ flowchart TD
     H --> M
     L --> N[Window Learning / Decay / Comparison]
     M --> N
-    N --> O[End-of-window Codex Deep Analysis]
+    N --> O[Performance / Opportunity Gap Report]
+    N --> P[Window Deep Analysis / Codex Report]
 ```
 
 ---
@@ -143,8 +144,8 @@ For post-results:
 1. winners truth and per-state Master Validation
 2. Brain 2 Master Validation
 3. control-arm comparison
-4. window rollup
-5. deep analysis
+4. performance / opportunity gap report
+5. window deep analysis / Codex report
 
 ---
 
@@ -168,3 +169,17 @@ What is still deliberately deferred:
 That is intentional.
 
 The branch is designed to let real fresh-run evidence teach those later layers.
+
+## Window-Close Commands
+
+Once a full window is complete, run:
+
+```bash
+python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+```
+
+That gives the branch two different window-close artifacts:
+
+- one quantitative report for arena quality, control-arm realization, and opportunity gap
+- one broader narrative report for repeated structures, carryover, tracker families, and promotions
