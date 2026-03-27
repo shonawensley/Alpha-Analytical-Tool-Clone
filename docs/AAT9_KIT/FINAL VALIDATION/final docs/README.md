@@ -38,7 +38,9 @@ Legacy note:
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/` is the current home for arena-era fresh runs.
 
 ## Core docs (keep in sync)
-- Master template (questions only): `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
+- Arena per-state Master Validation template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Arena Brain 2 operating template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Arena Brain 2 Master Validation template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - Analysis navigator (how to review without getting lost): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
 - Pattern progression primer (concept training; survives context resets): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 - Workflow changelog (“fix later” capture): `docs/AAT9_KIT/FINAL VALIDATION/final docs/WORKFLOW_CHANGELOG.md`
@@ -52,6 +54,7 @@ Legacy note:
 - v0.2 integration log (why it changed): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`
 
 Optional (brainstorm / historical templates; not SSOT):
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/FINAL_VALIDATION_TEMPC.md`
 
 ## Run reports (filled answers live here)
@@ -62,18 +65,26 @@ Optional (brainstorm / historical templates; not SSOT):
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`
   - Resume/handoff rule (context resets): see `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Evaluate_Only_Quickstart.md` → “Context reset / handoff rule”.
   - Progress tracker (which reports are filled): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/INDEX.md`
-  - Per-day Control Center run report (Brain-2): `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
   - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PREDICTIVE/`
+  - Current arena-era predictive state reports + cross-state portfolio reports.
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/VALIDATION/`
+  - Current arena-era daily validation shells such as Control Center, day synthesis, and window-scoped validation artifacts.
 
-Generate a run report scaffold:
+Generate an arena-native per-state Master Validation report scaffold:
 ```bash
 python3 scripts/tools/create_master_validation_run_report.py --date YYYY-MM-DD --state OntarioCanada4
 ```
+Default standalone output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<D>__<STATE>.md`
+- Window runs should usually pass an explicit `--out` under the window `VALIDATION/` folder.
 
-Generate a predictive run report scaffold (pre-results, no winners):
+Generate an arena-native predictive run report (pre-results, no winners):
 ```bash
-python3 scripts/tools/create_predictive_run_report.py --date YYYY-MM-DD --state OntarioCanada4 --sharepacks-root sharepacks/_predictive
+python3 scripts/tools/create_predictive_run_report.py --date YYYY-MM-DD --state OntarioCanada4 --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0
 ```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PREDICTIVE/<D>__<STATE>__PREDICTIVE__tool_only__arena_v0.md`
 
 Run the renamed arena-era predictive cadence (recommended current pre-results wrapper):
 ```bash
@@ -87,12 +98,14 @@ This now emits:
 
 Generate a predictive portfolio triage report (cross-state):
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive
+python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0
 ```
-(Optional) Include Profit Alerts (mixed profile):
+(Optional) Include Profit Alerts in a mixed-profile view:
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed
+python3 scripts/tools/create_predictive_portfolio_report.py --date YYYY-MM-DD --sharepacks-root sharepacks/_predictive --profile mixed --experiment-tag arena_v0
 ```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PREDICTIVE/<D>__PREDICTIVE_PORTFOLIO__<PROFILE>__arena_v0.md`
 
 Generate a Candidate Universe (gradeable predictions) inside a predictive sharepack:
 ```bash
@@ -144,10 +157,12 @@ python3 scripts/tools/rollup_candidate_universe_corpus.py --profile mixed
 python3 scripts/tools/rollup_play_card_corpus.py --profile mixed
 ```
 
-Generate a Control Center daily run report scaffold:
+Generate an arena-native Control Center daily run report:
 ```bash
-python3 scripts/tools/create_control_center_daily_run_report.py --date YYYY-MM-DD
+python3 scripts/tools/create_control_center_daily_run_report.py --date YYYY-MM-DD --predictive-sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0
 ```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/VALIDATION/<D>__CONTROL_CENTER.md`
 
 Per-run workflow (high level):
 1) Generate/verify sharepack artifacts (see help + preflight).
@@ -158,8 +173,14 @@ Per-run workflow (high level):
      - `python3 scripts/tools/evaluate_profit_alerts.py --date <D>`
    - Optional (recommended for Brain-2 day summary): scaffold the Control Center daily run report:
      - `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>`
-2) Generate the run report scaffold (command above).
-3) Fill the run report Parts 1–5 (using embedded `summary.md` evidence blocks).
+2) Generate the arena-native run report scaffold (command above).
+3) Fill the run report Parts A–I using:
+   - winners truth
+   - raw string/context tool artifacts
+   - aggregated analysis arena
+   - translation sandbox
+   - control-arm artifacts
+   Optional per-tool `summary.md` files remain helper surfaces, but they are no longer the primary contract for the per-state report shell.
    - Optional: generate a paste-friendly winners JSON digest for Part A: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
 4) Log “fix later” items to `WORKFLOW_CHANGELOG.md` so they aren’t lost.
 

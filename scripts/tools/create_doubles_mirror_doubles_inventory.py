@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Build an inventory of "double" and "mirror-double" winners across the RUNS corpus.
+Build an inventory of "double" and "mirror-double" winners across a gold-day window.
 
 This is a reporting-only tool:
-- Reads from existing RUNS corpus exports + frozen sharepacks (Aux + Control Center).
+- Enumerates winner events from frozen `data/results/<D>.txt` files.
+- Optionally enriches those events from RUNS corpus exports + frozen sharepacks
+  (Aux + Control Center + predictive grades).
 - Does NOT re-run analyzers or regenerate tables.
 
 Outputs (default, into RUNS/):
@@ -49,6 +51,7 @@ RUNS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
 
 CORPUS_SUMMARY = RUNS_DIR / "corpus_summary.csv"
 CORPUS_TOOL_METRICS = RUNS_DIR / "corpus_tool_metrics.csv"
+RESULTS_DIR = REPO_ROOT / "data" / "results"
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -408,9 +411,112 @@ class _EventKey:
     period: str
 
 
+@dataclass(frozen=True)
+class _Winner:
+    midday: Optional[str]
+    evening: Optional[str]
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _load_results_winners(results_file: Path) -> Dict[str, _Winner]:
+    """
+    Parse data/results/<D>.txt into {StateKey: Winner(midday, evening)} using the
+    project's canonical state mapping.
+    """
+    if not results_file.exists():
+        return {}
+    from alpha_analytical.control_center.batch_runner import (  # type: ignore
+        _PROJECT_STATE_CANDIDATES,
+        parse_winner_sheet,
+    )
+
+    entries = parse_winner_sheet(_read_text(results_file))
+    winners: Dict[str, _Winner] = {}
+    for entry in entries:
+        canonical = getattr(entry, "canonical", None)
+        midday = getattr(entry, "midday", None)
+        evening = getattr(entry, "evening", None)
+        if not canonical:
+            continue
+        candidates = _PROJECT_STATE_CANDIDATES.get(canonical)
+        if not candidates:
+            project_state = getattr(entry, "project_state", None)
+            candidates = (project_state,) if project_state else ()
+        for state_key in candidates:
+            if not state_key:
+                continue
+            winners[state_key] = _Winner(
+                midday=_normalize_pick3_literal(midday or ""),
+                evening=_normalize_pick3_literal(evening or ""),
+            )
+    return winners
+
+
+def _state_has_sharepack(
+    *,
+    date: str,
+    state: str,
+    predictive_sharepacks_root: Path,
+    truth_sharepacks_root: Path,
+) -> bool:
+    return (
+        (predictive_sharepacks_root / date / state).exists()
+        or (truth_sharepacks_root / date / state).exists()
+    )
+
+
+def _iter_result_events(
+    *,
+    results_root: Path,
+    predictive_sharepacks_root: Path,
+    truth_sharepacks_root: Path,
+    start: Optional[str],
+    end: Optional[str],
+) -> List[Dict[str, str]]:
+    rows: List[Dict[str, str]] = []
+    for results_file in sorted(results_root.glob("*.txt")):
+        date = results_file.stem
+        if not _DATE_RE.match(date):
+            continue
+        if not _date_in_range(date, start, end):
+            continue
+        winners = _load_results_winners(results_file)
+        for state, winner in sorted(winners.items()):
+            if not _state_has_sharepack(
+                date=date,
+                state=state,
+                predictive_sharepacks_root=predictive_sharepacks_root,
+                truth_sharepacks_root=truth_sharepacks_root,
+            ):
+                continue
+            for period, literal in (("Midday", winner.midday or ""), ("Evening", winner.evening or "")):
+                literal = _normalize_pick3_literal(literal)
+                if not literal:
+                    continue
+                rows.append(
+                    {
+                        "date": date,
+                        "state": state,
+                        "period": period,
+                        "winner": literal,
+                    }
+                )
+    return rows
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Create doubles + mirror-doubles inventory across gold-day RUNS corpus.")
     p.add_argument("--runs-dir", default=str(RUNS_DIR), help="RUNS directory (default: docs/.../RUNS)")
+    p.add_argument("--grades-runs-dir", default=str(RUNS_DIR), help="RUNS directory holding predictive grade CSVs (default: docs/.../RUNS)")
+    p.add_argument("--results-root", default=str(RESULTS_DIR), help="Root containing data/results/<D>.txt files (default: data/results)")
+    p.add_argument("--predictive-sharepacks-root", default="sharepacks/_predictive", help="Predictive sharepacks root used to filter to active arena states")
+    p.add_argument("--truth-sharepacks-root", default="sharepacks", help="Truth/frozen sharepacks root used to filter to active arena states")
+    p.add_argument("--corpus-summary", default="", help="Optional corpus_summary.csv for legacy MV enrichment")
+    p.add_argument("--corpus-tool-metrics", default="", help="Optional corpus_tool_metrics.csv for tool-metric enrichment")
+    p.add_argument("--run-report-dir", default=None, help="Optional directory containing per-state validation reports to prefer for run_report links")
     p.add_argument("--out-csv", default=None, help="Override CSV output path")
     p.add_argument("--out-md", default=None, help="Override Markdown inventory output path")
     p.add_argument("--out-deep-dive", default=None, help="Override Markdown deep dive output path")
@@ -432,13 +538,20 @@ def _date_in_range(date: str, start: Optional[str], end: Optional[str]) -> bool:
 def main() -> None:
     args = parse_args()
     runs_dir = Path(args.runs_dir)
-    corpus_summary = runs_dir / "corpus_summary.csv"
-    corpus_tool_metrics = runs_dir / "corpus_tool_metrics.csv"
+    grades_runs_dir = Path(args.grades_runs_dir)
+    results_root = Path(args.results_root)
+    predictive_sharepacks_root = Path(args.predictive_sharepacks_root)
+    truth_sharepacks_root = Path(args.truth_sharepacks_root)
+    corpus_summary = Path(args.corpus_summary) if args.corpus_summary else None
+    corpus_tool_metrics = Path(args.corpus_tool_metrics) if args.corpus_tool_metrics else None
+    run_report_dir = Path(args.run_report_dir) if args.run_report_dir else None
 
-    if not corpus_summary.exists():
-        raise SystemExit(f"Missing RUNS corpus: {corpus_summary}")
-    if not corpus_tool_metrics.exists():
-        raise SystemExit(f"Missing tool-metrics corpus: {corpus_tool_metrics}")
+    if not results_root.exists():
+        raise SystemExit(f"Missing results root: {results_root}")
+    if not predictive_sharepacks_root.exists():
+        raise SystemExit(f"Missing predictive sharepacks root: {predictive_sharepacks_root}")
+    if not truth_sharepacks_root.exists():
+        raise SystemExit(f"Missing truth sharepacks root: {truth_sharepacks_root}")
 
     if args.from_date and not _DATE_RE.match(args.from_date.strip()):
         raise SystemExit("--from-date must be YYYY-MM-DD")
@@ -450,8 +563,16 @@ def main() -> None:
     out_deep = Path(args.out_deep_dive) if args.out_deep_dive else runs_dir / "DOUBLES_MIRROR_DOUBLES__DEEP_DIVE.md"
     out_study = Path(args.out_study_queue) if args.out_study_queue else runs_dir / "DOUBLES_MIRROR_DOUBLES__STUDY_QUEUE.md"
 
-    # Index tool metrics by (date,state,period)
-    tool_rows = _read_csv_dicts(corpus_tool_metrics)
+    # Optional legacy MV enrichment by (date,state,period)
+    summary_meta: Dict[_EventKey, Dict[str, str]] = {}
+    if corpus_summary and corpus_summary.exists():
+        for row in _read_csv_dicts(corpus_summary):
+            key = _EventKey(row.get("date", ""), row.get("state", ""), row.get("period", ""))
+            if key.date and key.state and key.period:
+                summary_meta[key] = row
+
+    # Optional tool-metrics enrichment by (date,state,period)
+    tool_rows = _read_csv_dicts(corpus_tool_metrics) if corpus_tool_metrics and corpus_tool_metrics.exists() else []
     tool_by_key: Dict[_EventKey, Dict[str, str]] = {}
     for row in tool_rows:
         key = _EventKey(row.get("date", ""), row.get("state", ""), row.get("period", ""))
@@ -461,21 +582,27 @@ def main() -> None:
     # Candidate Universe + play card grades exist only for some dates.
     cu_grade_by_key: Dict[_EventKey, List[Dict[str, str]]] = defaultdict(list)
     play_grade_by_key: Dict[_EventKey, Dict[str, str]] = {}
-    for grade_path in sorted(runs_dir.glob("*__CANDIDATE_UNIVERSE_GRADE.csv")):
+    for grade_path in sorted(grades_runs_dir.glob("*__CANDIDATE_UNIVERSE_GRADE.csv")):
         date = grade_path.name.split("__", 1)[0]
         for row in _read_csv_dicts(grade_path):
             key = _EventKey(date, row.get("state_key", ""), row.get("winner_label", ""))
             if key.state and key.period:
                 cu_grade_by_key[key].append(row)
-    for grade_path in sorted(runs_dir.glob("*__PLAY_CARD_GRADE.csv")):
+    for grade_path in sorted(grades_runs_dir.glob("*__PLAY_CARD_GRADE.csv")):
         date = grade_path.name.split("__", 1)[0]
         for row in _read_csv_dicts(grade_path):
             key = _EventKey(date, row.get("state_key", ""), row.get("winner_label", ""))
             if key.state and key.period:
                 play_grade_by_key[key] = row
 
-    summary_rows = _read_csv_dicts(corpus_summary)
-    dates = sorted({r.get("date", "") for r in summary_rows if r.get("date", "")})
+    result_rows = _iter_result_events(
+        results_root=results_root,
+        predictive_sharepacks_root=predictive_sharepacks_root,
+        truth_sharepacks_root=truth_sharepacks_root,
+        start=args.from_date,
+        end=args.to_date,
+    )
+    dates = sorted({r.get("date", "") for r in result_rows if r.get("date", "")})
 
     due_by_date: Dict[str, Dict[Tuple[str, str], Dict[str, str]]] = {}
     for d in dates:
@@ -500,7 +627,7 @@ def main() -> None:
         "wl_focus_set1_col12_samples": "",
     }
 
-    for row in summary_rows:
+    for row in result_rows:
         date = row.get("date", "")
         state = row.get("state", "")
         period = row.get("period", "")
@@ -526,6 +653,7 @@ def main() -> None:
 
         key = _EventKey(date, state, period)
         trow = tool_by_key.get(key, {})
+        srow = summary_meta.get(key, {})
 
         due_row = due_by_date.get(date, {}).get((state, period), {})
         due_ds = due_row.get("Draws Since Double", "").strip()
@@ -573,7 +701,12 @@ def main() -> None:
         play_box_hit = _parse_bool(play_row.get("box_hit", "")) if play_row else False
         play_idx_hit = _parse_bool(play_row.get("vtrac_index_hit", "")) if play_row else False
 
-        run_report = Path(row.get("source_run_report", "")) if row.get("source_run_report") else None
+        preferred_run_report = None
+        if run_report_dir:
+            candidate = run_report_dir / f"{date}__{state}.md"
+            if candidate.exists():
+                preferred_run_report = candidate
+        run_report = preferred_run_report or (Path(srow.get("source_run_report", "")) if srow.get("source_run_report") else None)
         winners_dir = REPO_ROOT / "sharepacks" / date / state / "winners" / state
         winners_json = _pick_winners_json(winners_dir, winner_literal=winner)
         aux_summary_json = REPO_ROOT / "sharepacks" / date / state / "aux" / state / "summary.json"
@@ -595,10 +728,10 @@ def main() -> None:
                 "has_mirror_pair": str(win_has_mirror_pair),
                 "mirror_pairs": ",".join(mirror_pairs),
                 "vtrac_group_family": vtrac_family,
-                "env_verdict": row.get("env_verdict", ""),
-                "pack": row.get("pack", ""),
-                "drivers": row.get("drivers", ""),
-                "fix_later": row.get("fix_later", ""),
+                "env_verdict": srow.get("env_verdict", ""),
+                "pack": srow.get("pack", ""),
+                "drivers": srow.get("drivers", ""),
+                "fix_later": srow.get("fix_later", ""),
                 # Control Center due doubles
                 "cc_due_doubles_ds": due_ds,
                 "cc_due_doubles_winner_in_family": str(_parse_bool(due_in_family_flag)) if due_in_family_flag else "",
@@ -674,7 +807,12 @@ def main() -> None:
     lines.append("# Doubles + Mirror-Doubles — Inventory (Gold-Day Corpus)")
     lines.append("")
     lines.append(f"- Generated: `{_now_iso()}`")
-    lines.append(f"- Source corpus: `{_safe_rel(corpus_summary)}`")
+    lines.append(f"- Event source: `{_safe_rel(results_root)}` (`data/results/<D>.txt`)")
+    lines.append(f"- Grade joins source: `{_safe_rel(grades_runs_dir)}`")
+    if corpus_summary and corpus_summary.exists():
+        lines.append(f"- Optional MV enrichment corpus: `{_safe_rel(corpus_summary)}`")
+    if corpus_tool_metrics and corpus_tool_metrics.exists():
+        lines.append(f"- Optional tool-metrics corpus: `{_safe_rel(corpus_tool_metrics)}`")
     lines.append(f"- Rows (filtered): `{len(out_rows)}`")
     lines.append("")
     lines.append("## Breakdown")

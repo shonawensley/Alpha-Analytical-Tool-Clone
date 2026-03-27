@@ -153,21 +153,25 @@ Optional: also write a small human-readable Play Card summary next to the JSON:
 python3 scripts/tools/create_play_card.py --date <D> --sharepacks-root sharepacks/_predictive --budgets 12,24,36 --write-md
 ```
 
-Optional: create a per-state predictive run report scaffold (for human notes):
+Optional: create an arena-native per-state predictive run report (for human notes):
 
 ```bash
-python3 scripts/tools/create_predictive_run_report.py --date <D> --state <STATE> --sharepacks-root sharepacks/_predictive --profile tool_only
+python3 scripts/tools/create_predictive_run_report.py --date <D> --state <STATE> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0
 ```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PREDICTIVE/<D>__<STATE>__PREDICTIVE__tool_only__arena_v0.md`
 
-Optional: create a cross-state predictive portfolio triage report (fast “what to review/play” surface):
+Optional: create an arena-native cross-state predictive portfolio triage report (fast “what to review/play” surface):
 
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive
+python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0
 ```
+Default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PREDICTIVE/<D>__PREDICTIVE_PORTFOLIO__tool_only__arena_v0.md`
 
 Optional: portfolio report for an ablation profile:
 ```bash
-python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile mixed
+python3 scripts/tools/create_predictive_portfolio_report.py --date <D> --sharepacks-root sharepacks/_predictive --profile mixed --experiment-tag arena_v0
 ```
 
 ---

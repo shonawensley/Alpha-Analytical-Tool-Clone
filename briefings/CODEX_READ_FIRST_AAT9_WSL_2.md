@@ -56,7 +56,8 @@ Master Validation (frozen day snapshot):
   - Arena branch system map: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
   - Arena fresh-runs flow map: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
   - Arena-era RUNS portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
-- v0.3 cadence wrapper (legacy pre-results wrapper and current post-results control-arm grading path): `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --force`
+- Analysis Arena post-results wrapper (preferred current post-results path; logs to `RUNS_2/VALIDATION/`): `python3 scripts/tools/run_analysis_arena_cycle.py post --date <D> --sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0 --analysis-runs-subdir ANALYSIS_ARENA --runs-subdir VALIDATION --force`
+- v0.3 cadence wrapper (legacy control-arm wrapper retained for baseline grading/history, not the default operator path): `python3 scripts/tools/run_v0_3_cycle.py pre --history-date <H> --sharepacks-root sharepacks/_predictive --profile tool_only --stable10 --force`
 - Candidate Universe (gradeable pre-results playset): `python3 scripts/tools/create_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Candidate_Universe_Contract.md`
   - Grading (writes only to RUNS): `python3 scripts/tools/grade_candidate_universe.py --date <D> --sharepacks-root sharepacks/_predictive`
@@ -72,7 +73,7 @@ Master Validation (frozen day snapshot):
 - Profit Alerts windowed evaluation (episodes): `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
   - Per‑AID grading matrix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
-- Control Center daily run report (Brain-2, per day): `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+- Control Center daily run report (Brain-2, per day): `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/VALIDATION/<D>__CONTROL_CENTER.md`
 - Analysis navigator (how to review a day without drifting): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Analysis_Navigator.md`
 - Pattern progression primer (concept lens; survives context resets): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
 - Curated “research packs” (for external review / ChatGPT Pro): `docs/AAT9_KIT/FINAL VALIDATION/PACKAGES/README.md`

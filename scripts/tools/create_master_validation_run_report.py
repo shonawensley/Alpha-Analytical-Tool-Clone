@@ -1,36 +1,40 @@
+#!/usr/bin/env python3
 """
-Create a per-date/per-state Master Validation run report Markdown file.
+Create an arena-native per-state Master Validation run report.
 
-Goal
-----
-Provide a single artifact you can share with a second analyst (e.g., ChatGPT Pro)
-WITHOUT pasting raw CSV/JSON outputs:
+This report is the state-level post-results companion for the Analysis Arena
+branch. It intentionally joins:
 
-- It links to the sharepack artifacts (winners + tool outputs).
-- It embeds the per-tool summarizer Markdown blocks (Stable/DR/VTRAC/Hot Zones) if present.
-- It provides placeholders to answer Part A + Part 2 questions in one place.
-- It includes scaffolding for Part 3 (Aux), Part 4 (candidate pack), and Part 5 (final summary).
+- frozen winners truth from `sharepacks/<D>/<STATE>/winners/...`
+- predictive/runtime evidence from `sharepacks/_predictive/<D>/<STATE>/...`
+- arena receipts such as aggregated analysis arena, translation sandbox, and
+  downstream control-arm artifacts
 
-This script DOES NOT run analyzers or rebuild tables. It is purely a reporting/helper
-utility that stitches together already-generated artifacts.
-
-Usage
------
-python3 scripts/tools/create_master_validation_run_report.py \\
-  --date 2025-06-21 \\
-  --state OntarioCanada4
+It does NOT rebuild analyzers or regenerate sharepacks.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import re
 from datetime import date as _date
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Iterable, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+RUNS2_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
+FINAL_DOCS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
+STATE_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
+ARENA_CONTRACT_PATH = FINAL_DOCS_DIR / "AAT9_AGGREGATED_ANALYSIS_ARENA_CONTRACT_v0.md"
+CONTEXT_FEED_PATH = FINAL_DOCS_DIR / "AAT9_FINAL_CONTEXT_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md"
+STRING_FEED_PATH = FINAL_DOCS_DIR / "AAT9_FINAL_STRING_TOOL_OUTPUTS__ANALYSIS_ARENA_FEED.md"
+SYSTEM_MAP_PATH = FINAL_DOCS_DIR / "AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md"
+TRANSLATION_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
+BRAIN2_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
+BRAIN2_MV_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
 
 
 def parse_iso_date(value: str) -> _date:
@@ -44,340 +48,599 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def list_winner_artifacts(winners_dir: Path) -> Tuple[List[str], List[str]]:
-    if not winners_dir.exists():
-        return [], []
-    html = sorted([p.name for p in winners_dir.glob("*.html") if "winner" in p.name.lower()])
-    json = sorted([p.name for p in winners_dir.glob("*.json") if "winner" in p.name.lower()])
-    return html, json
+def safe_rel(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
-def tool_sharepack_paths(history_date: str, state: str) -> Dict[str, Path]:
-    date_root = REPO_ROOT / "sharepacks" / history_date
-    base = date_root / state
-    return {
-        "date_root": date_root,
-        "stable": base / "stable" / state,
-        "digit_reduction": base / "digit_reduction" / state,
-        "vtrac": base / "vtrac" / state,
-        "hot_zones": base / "hot_zones" / state,
-        "winners": base / "winners" / state,
-        "aux": base / "aux" / state,
-        "aux_draws": base / "aux" / "draws",
+def normalize_tag(value: str) -> str:
+    raw = str(value or "").strip()
+    if raw.lower() in {"", "-", "none", "null"}:
+        return ""
+    return raw.replace(" ", "_")
+
+
+def normalize_pick3_literal(value: Any) -> str:
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if not digits:
+        return ""
+    digits = digits.zfill(3) if len(digits) <= 3 else digits
+    return digits if len(digits) == 3 else digits
+
+
+def canonicalize(value: str) -> str:
+    digits = normalize_pick3_literal(value)
+    return "".join(sorted(digits)) if len(digits) == 3 else ""
+
+
+def results_state_name(state: str) -> str:
+    base = re.sub(r"\d+$", "", state)
+    specials = {
+        "NewYork": "New York",
+        "NewJersey": "New Jersey",
+        "NorthCarolina": "North Carolina",
+        "SouthCarolina": "South Carolina",
+        "PuertoRico": "Puerto Rico",
+        "OntarioCanada": "Ontario",
+        "WashingtonDC": "Washington, D.C.",
     }
+    return specials.get(base, base)
 
 
-def expected_files_for_tool(state: str) -> Dict[str, Dict[str, List[str]]]:
-    """
-    Minimal "final outputs" checklist per tool (sharepack-relative).
-    This is not exhaustive, but it matches the lean-output contracts and the
-    sharepack layouts used by the summarizers.
-    """
-    return {
-        "stable": {
-            "brain": [
-                f"{state}_stable_patterns_scores.csv",
-                f"{state}_stable_patterns_families.csv",
-                f"{state}_stable_patterns_compound.csv",
-                f"{state}_metrics.json",
-                f"{state}_stable_patterns_report.html",
-            ],
-            "winners": [
-                f"{state}_winner_family_spotlight_raw.csv",
-                f"{state}_winner_family_spotlight_families.csv",
-            ],
-        },
-        "digit_reduction": {
-            "brain": [
-                f"{state}_digit_reduction_report.html",
-                f"{state}_digit_reduction_report_stacked.html",
-                f"{state}_digit_reduction_scores.csv",
-                "analyzer_v2/" + f"{state}_analyzer_v2_per_item.csv",
-                "analyzer_v2/" + f"{state}_analyzer_v2_top_candidates.csv",
-                "analyzer_v2/" + f"{state}_analyzer_v2_meta.json",
-                "training/" + f"{state}_digit_reduction_logs.json",
-                "training/" + f"{state}_digit_reduction_steps.csv",
-            ],
-            "winners": [
-                "analyzer_v2/winners/*winner_map*.json",
-                "analyzer_v2/winners/*winner_flags*.csv",
-                "analyzer_v2/winners/*winner_hits*.csv",
-            ],
-        },
-        "vtrac": {
-            "brain": [
-                f"{state}_vtrac_enhanced_*.json",
-                "summary.md",
-                "validation_report.json",
-                "validation_report.md",
-            ],
-            "winners": [
-                # Centralized winners lens (not emitted by the VTRAC analyzer itself)
-                "*vtrac*_winner_*.json",
-                "*vtrac*_winner_*.html",
-            ],
-        },
-        "hot_zones": {
-            "brain": [
-                f"{state}_hot_zones_per_lane.csv",
-                f"{state}_hot_zones_top_lanes.csv",
-                f"{state}_hot_zones_meta.json",
-            ],
-            "winners": [
-                "*hot_zones_winner_map.json",
-                "*hot_zones_winner_map.csv",
-            ],
-        },
-    }
+def parse_results(*, date: str, state: str) -> dict[str, str]:
+    path = REPO_ROOT / "data" / "results" / f"{date}.txt"
+    if not path.exists():
+        return {"midday": "", "evening": ""}
+
+    state_label = results_state_name(state)
+    for line in read_text(path).splitlines():
+        if not re.match(rf"^\s*{re.escape(state_label)}(?:\s|\t)", line):
+            continue
+        if "\t" in line:
+            parts = line.split("\t")
+            midday = normalize_pick3_literal(parts[1].strip() if len(parts) > 1 else "")
+            evening = normalize_pick3_literal(parts[2].strip() if len(parts) > 2 else "")
+            return {"midday": midday, "evening": evening}
+
+        nums: list[str] = []
+        for part in line.replace(",", " ").split():
+            lit = normalize_pick3_literal(part)
+            if len(lit) == 3 and lit.isdigit():
+                nums.append(lit)
+        return {
+            "midday": nums[0] if len(nums) >= 1 else "",
+            "evening": nums[1] if len(nums) >= 2 else "",
+        }
+
+    return {"midday": "", "evening": ""}
 
 
-def check_exists(tool_dir: Path, patterns: List[str]) -> List[str]:
-    missing: List[str] = []
-    for pattern in patterns:
-        if "*" in pattern:
-            hits = list(tool_dir.glob(pattern))
-            if not hits:
-                missing.append(pattern)
+def load_json(path: Path) -> Any:
+    return json.loads(read_text(path))
+
+
+def try_load_json(path: Path) -> Any | None:
+    if not path.exists():
+        return None
+    return load_json(path)
+
+
+def list_artifacts(path: Path, pattern: str) -> list[Path]:
+    if not path.exists():
+        return []
+    return sorted(path.glob(pattern))
+
+
+def _ordered_unique(values: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        value = str(value or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _fmt_items(values: Sequence[str], *, empty: str = "_none_") -> str:
+    ordered = _ordered_unique(values)
+    if not ordered:
+        return empty
+    return ", ".join(f"`{value}`" for value in ordered)
+
+
+def _fmt_path(path: Path) -> str:
+    suffix = "" if path.exists() else " (missing)"
+    return f"`{safe_rel(path)}`{suffix}"
+
+
+def _tagged_path(base_dir: Path, stem: str, ext: str, *, profile: str, experiment_tag: str) -> Path:
+    out_suffix = "" if profile == "mixed" else f"__{profile}"
+    tag_suffix = f"__{experiment_tag}" if experiment_tag else ""
+    return base_dir / f"{stem}{out_suffix}{tag_suffix}.{ext}"
+
+
+def _preferred_path(base_dir: Path, stem: str, ext: str, *, profile: str, experiment_tag: str) -> Path:
+    tagged = _tagged_path(base_dir, stem, ext, profile=profile, experiment_tag=experiment_tag)
+    if tagged.exists():
+        return tagged
+    untagged = _tagged_path(base_dir, stem, ext, profile=profile, experiment_tag="")
+    return untagged
+
+
+def _candidate_universe_summary(raw: Mapping[str, Any] | None) -> str:
+    if not isinstance(raw, Mapping):
+        return "Candidate Universe missing."
+    packs = raw.get("packs")
+    packs_count = len(packs) if isinstance(packs, list) else 0
+    union_count = raw.get("union_combos_count")
+    try:
+        union_count = int(union_count)
+    except Exception:
+        union_count = len(raw.get("union_combos") or []) if isinstance(raw.get("union_combos"), list) else 0
+    return f"`packs={packs_count}` | `union_combos={union_count}`"
+
+
+def _play_card_summary(raw: Mapping[str, Any] | None) -> str:
+    if not isinstance(raw, Mapping):
+        return "Play Card missing."
+    strategies = raw.get("strategies")
+    if not isinstance(strategies, Mapping):
+        return "Play Card has no `strategies` map."
+    labels: list[str] = []
+    for strategy_name, strat in list(strategies.items())[:4]:
+        budgets: list[str] = []
+        if isinstance(strat, Mapping):
+            budgets = [key for key, value in strat.items() if isinstance(value, Mapping)]
+        labels.append(f"`{strategy_name}`[{','.join(budgets[:4]) or '-'}]")
+    return ", ".join(labels) if labels else "Play Card strategies unavailable."
+
+
+def _ranked_values(items: Any, *, value_key: str = "value", limit: int = 6) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    out: list[str] = []
+    for item in items[:limit]:
+        if isinstance(item, Mapping):
+            value = item.get(value_key)
         else:
-            if not (tool_dir / pattern).exists():
-                missing.append(pattern)
-    return missing
+            value = item
+        value_s = str(value or "").strip()
+        if value_s:
+            out.append(value_s)
+    return out
 
 
-def maybe_embed_summary(tool_dir: Path) -> str:
-    summary_path = tool_dir / "summary.md"
-    if not summary_path.exists():
-        return "_(summary.md not found — run the tool summarizer first)_\n"
-    return read_text(summary_path).rstrip() + "\n"
+def _state_regime_summary(state_regime: Any) -> list[str]:
+    if not isinstance(state_regime, Mapping):
+        return []
+    out: list[str] = []
+    for key in [
+        "dominant_canonical",
+        "dominant_family",
+        "dominant_vtrac_index",
+        "tracker_posture",
+        "survivor_pressure",
+        "last_remaining",
+        "hidden_terminal_support",
+    ]:
+        if key in state_regime:
+            out.append(f"`{key}={state_regime.get(key)}`")
+    return out
+
+
+def _survivor_summary(data: Any) -> list[str]:
+    if not isinstance(data, Mapping) or not data.get("available"):
+        return ["`available=false`"]
+    return [
+        f"`frontier_rows={data.get('frontier_rows', 0)}`",
+        f"`progressions={data.get('progression_count', 0)}`",
+        f"`last_remaining_rows={data.get('last_remaining_rows', 0)}`",
+        f"`hidden_terminal_frontiers={data.get('hidden_terminal_frontier_count', 0)}`",
+        f"`top_frontier_canonicals={','.join((data.get('top_frontier_canonicals') or [])[:6]) or '-'}`",
+    ]
+
+
+def _r_consensus_summary(data: Any) -> list[str]:
+    if not isinstance(data, Mapping) or not data.get("available"):
+        return ["`available=false`"]
+    return [
+        f"`events={data.get('event_count', 0)}`",
+        f"`signal_class={data.get('signal_strength_class', 'unknown')}`",
+        f"`trial_eligible={data.get('trial_eligible', False)}`",
+        f"`top_tails={','.join((data.get('top_tail_values') or [])[:6]) or '-'}`",
+        f"`top_support={','.join((data.get('top_support_canonicals') or [])[:6]) or '-'}`",
+    ]
+
+
+def _watchlist_summary(items: Any, *, limit: int = 5) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    out: list[str] = []
+    for item in items[:limit]:
+        if not isinstance(item, Mapping):
+            continue
+        idx = str(item.get("vtrac_index") or "").strip()
+        candidates = ",".join(item.get("candidate_canonicals") or [])
+        if idx or candidates:
+            out.append(f"`{idx}` -> `{candidates or '-'}`")
+    return out
+
+
+def _context_summary(arena: Mapping[str, Any] | None, sandbox: Mapping[str, Any] | None) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {
+        "positional": [],
+        "due_doubles": [],
+        "blackapple": [],
+        "profit_alerts": [],
+        "compound_events": [],
+        "scoreboard": [],
+    }
+    arena_objects = (
+        (((arena or {}).get("context_tools") or {}).get("aux_control_center") or {}).get("arena_objects") or {}
+    )
+    if isinstance(arena_objects, Mapping):
+        positional = arena_objects.get("aux_positional_pressure") or {}
+        if isinstance(positional, Mapping):
+            out["positional"] = [
+                f"`shortlist_count={positional.get('shortlist_count', 0)}`",
+                f"`shortlist_top={','.join([str((row or {}).get('canonical') or '') for row in (positional.get('shortlist_top') or [])[:6] if isinstance(row, Mapping)]) or '-'}`",
+            ]
+        due = arena_objects.get("aux_due_doubles_family_pressure") or {}
+        if isinstance(due, Mapping):
+            out["due_doubles"] = [
+                f"`best_draws_since={due.get('best_draws_since_double', 0)}`",
+                f"`families={','.join((due.get('top_families') or [])[:6]) or '-'}`",
+            ]
+        ba = arena_objects.get("aux_blackapple_context") or {}
+        if isinstance(ba, Mapping):
+            out["blackapple"] = [
+                f"`best_status={ba.get('best_status', 'unknown')}`",
+                f"`best_score={ba.get('best_score', 0)}`",
+                f"`recommended={','.join((ba.get('recommended_canonicals_top') or [])[:8]) or '-'}`",
+            ]
+        pa = arena_objects.get("cc_profit_alert_context") or {}
+        if isinstance(pa, Mapping):
+            top_alerts = []
+            for row in (pa.get("top_alerts") or [])[:6]:
+                if not isinstance(row, Mapping):
+                    continue
+                label = ":".join(
+                    part for part in [
+                        str(row.get("variant") or "").strip(),
+                        str(row.get("alert_id") or "").strip(),
+                        str(row.get("canonical") or "").strip(),
+                        str(row.get("suggested") or "").strip(),
+                    ] if part
+                )
+                if label:
+                    top_alerts.append(label)
+            out["profit_alerts"] = [
+                f"`alert_count={pa.get('alert_count', 0)}`",
+                f"`top_alerts={','.join(top_alerts) or '-'}`",
+            ]
+        comp = arena_objects.get("cc_compound_event_context") or {}
+        if isinstance(comp, Mapping):
+            top_events = []
+            for row in (comp.get("top_events") or [])[:4]:
+                if not isinstance(row, Mapping):
+                    continue
+                label = ":".join(
+                    part for part in [
+                        str(row.get("variant") or "").strip(),
+                        str(row.get("top_event") or "").strip(),
+                        f"P{row.get('priority')}" if row.get("priority") is not None else "",
+                    ] if part
+                )
+                if label:
+                    top_events.append(label)
+            out["compound_events"] = [
+                f"`top_events={','.join(top_events) or '-'}`",
+            ]
+    brain2_context = (sandbox or {}).get("brain2_context") or {}
+    if isinstance(brain2_context, Mapping):
+        scoreboard_row = brain2_context.get("scoreboard_row") or {}
+        if isinstance(scoreboard_row, Mapping):
+            out["scoreboard"] = [
+                f"`rank={scoreboard_row.get('score_rank', '-')}`",
+                f"`role={scoreboard_row.get('role', '-')}`",
+                f"`bucket={scoreboard_row.get('targeting_bucket', '-')}`",
+                f"`tracker={scoreboard_row.get('tracker_posture', '-')}`",
+            ]
+    return out
+
+
+def build_master_validation_run_report(
+    *,
+    results_date: str,
+    state: str,
+    profile: str,
+    experiment_tag: str,
+    predictive_sharepacks_root: Path,
+    truth_sharepacks_root: Path,
+) -> str:
+    predictive_day_dir = predictive_sharepacks_root / results_date
+    predictive_state_dir = predictive_day_dir / state
+    truth_state_dir = truth_sharepacks_root / results_date / state
+    truth_winners_dir = truth_state_dir / "winners" / state
+    analysis_dir = predictive_state_dir / "analysis"
+    history_date = (parse_iso_date(results_date) - timedelta(days=1)).isoformat()
+
+    aggregated_json = _preferred_path(
+        analysis_dir,
+        "aggregated_analysis_arena",
+        "json",
+        profile=profile,
+        experiment_tag=experiment_tag,
+    )
+    aggregated_md = aggregated_json.with_suffix(".md")
+    sandbox_json = _preferred_path(
+        analysis_dir,
+        "translation_sandbox_seed",
+        "json",
+        profile=profile,
+        experiment_tag=experiment_tag,
+    )
+    sandbox_md = sandbox_json.with_suffix(".md")
+    candidate_universe_json = _preferred_path(
+        predictive_state_dir,
+        "candidate_universe",
+        "json",
+        profile=profile,
+        experiment_tag=experiment_tag,
+    )
+    play_card_json = _preferred_path(
+        predictive_state_dir,
+        "play_card",
+        "json",
+        profile=profile,
+        experiment_tag=experiment_tag,
+    )
+    play_card_md = play_card_json.with_suffix(".md")
+    signals_bundle_json = _preferred_path(
+        predictive_state_dir,
+        "signals_bundle",
+        "json",
+        profile=profile,
+        experiment_tag=experiment_tag,
+    )
+
+    aggregated = try_load_json(aggregated_json)
+    sandbox = try_load_json(sandbox_json)
+    candidate_universe = try_load_json(candidate_universe_json)
+    play_card = try_load_json(play_card_json)
+    aux_summary = try_load_json(predictive_state_dir / "aux" / state / "summary.json")
+
+    results = parse_results(date=results_date, state=state)
+    winners_html = list_artifacts(truth_winners_dir, "*.html")
+    winners_json = list_artifacts(truth_winners_dir, "*.json")
+
+    arena_synthesis = (aggregated or {}).get("arena_synthesis") or {}
+    context_sections = _context_summary(aggregated, sandbox)
+
+    dominant_canonicals = _ranked_values(arena_synthesis.get("dominant_canonicals"))
+    dominant_families = _ranked_values(arena_synthesis.get("dominant_families"))
+    dominant_vtrac = _ranked_values(arena_synthesis.get("dominant_vtrac_indices"))
+    reinforced_canonicals = _ranked_values(arena_synthesis.get("context_reinforced_canonicals"))
+    context_only_pressure = _ranked_values(arena_synthesis.get("context_only_pressure"))
+    watchlist_summary = _watchlist_summary(arena_synthesis.get("vtrac_literal_watchlist"))
+    state_regime = _state_regime_summary(arena_synthesis.get("state_regime"))
+    survivor_summary = _survivor_summary(arena_synthesis.get("stable_survivor_context"))
+    r_consensus_summary = _r_consensus_summary(arena_synthesis.get("r_consensus_context"))
+
+    metadata = (aggregated or {}).get("metadata") or {}
+    if isinstance(metadata, Mapping) and metadata.get("history_date"):
+        history_date = str(metadata.get("history_date"))
+
+    lines: list[str] = []
+    lines.append(f"# Analysis Arena Master Validation Run Report — {state} — D={results_date} (H={history_date})")
+    lines.append("")
+    lines.append("Purpose")
+    lines.append("- State-level post-results review packet for the Analysis Arena branch.")
+    lines.append("- Locks Part A truth inputs, points Parts B-E at the predictive raw tool evidence, and auto-captures Parts F/G/H from the live arena/runtime objects.")
+    lines.append("- This report is an arena-native working shell. It is not the old summary-driven validation scaffold.")
+    lines.append("")
+    lines.append("Template / SSOT anchors")
+    lines.append(f"- Per-state Master Validation template: {_fmt_path(STATE_TEMPLATE_PATH)}")
+    lines.append(f"- Aggregated arena contract: {_fmt_path(ARENA_CONTRACT_PATH)}")
+    lines.append(f"- String-tool arena feed: {_fmt_path(STRING_FEED_PATH)}")
+    lines.append(f"- Context-tool arena feed: {_fmt_path(CONTEXT_FEED_PATH)}")
+    lines.append(f"- Translation Sandbox companion: {_fmt_path(TRANSLATION_TEMPLATE_PATH)}")
+    lines.append(f"- Brain 2 operating template: {_fmt_path(BRAIN2_TEMPLATE_PATH)}")
+    lines.append(f"- Brain 2 Master Validation template: {_fmt_path(BRAIN2_MV_TEMPLATE_PATH)}")
+    lines.append(f"- Arena system map: {_fmt_path(SYSTEM_MAP_PATH)}")
+    lines.append("")
+    lines.append("Scope")
+    lines.append(f"- Results date `D`: `{results_date}`")
+    lines.append(f"- History date `H`: `{history_date}`")
+    lines.append(f"- State: `{state}`")
+    lines.append(f"- Predictive sharepack root: `{safe_rel(predictive_sharepacks_root)}`")
+    lines.append(f"- Predictive state dir: `{safe_rel(predictive_state_dir)}`")
+    lines.append(f"- Truth/frozen sharepack root: `{safe_rel(truth_sharepacks_root)}`")
+    lines.append(f"- Truth state dir: `{safe_rel(truth_state_dir)}`")
+    lines.append(f"- Profile: `{profile}`")
+    lines.append(f"- Experiment tag: `{experiment_tag or 'untagged'}`")
+    lines.append("")
+    lines.append("## Part A — Winners Environment Lens")
+    lines.append("")
+    lines.append("### A0. File Lock And Truth Inputs")
+    lines.append(f"- Results file: {_fmt_path(REPO_ROOT / 'data' / 'results' / f'{results_date}.txt')}")
+    lines.append(f"- Midday winner: literal `{results.get('midday') or '-'}` | canonical `{canonicalize(results.get('midday') or '') or '-'}`")
+    lines.append(f"- Evening winner: literal `{results.get('evening') or '-'}` | canonical `{canonicalize(results.get('evening') or '') or '-'}`")
+    lines.append(f"- Truth winners dir: {_fmt_path(truth_winners_dir)}")
+    lines.append(f"- Winners HTML: {_fmt_items([safe_rel(path) for path in winners_html], empty='_(none found)_')}")
+    lines.append(f"- Winners JSON: {_fmt_items([safe_rel(path) for path in winners_json], empty='_(none found)_')}")
+    lines.append("")
+    lines.append("### A1-A7. Analyst Read")
+    lines.append("- Winning pattern formation: `...`")
+    lines.append("- Variant behavior / environment class: `...`")
+    lines.append("- Winner structure class: `...`")
+    lines.append("- Progression / survivor read: `...`")
+    lines.append("- VTRAC winner read: `...`")
+    lines.append("- Pre-system predictive thesis: `...`")
+    lines.append("- Part A handoff: `a strong predictive system needed to preserve ...`")
+    lines.append("")
+    lines.append("## Parts B-E — Raw Tool Review Surfaces")
+    lines.append("")
+    lines.append("These sections remain governed by the arena-era template. This report locks the predictive-side files that should be reviewed for Parts B-E instead of trying to restage the old summary-only shell.")
+    lines.append("")
+    lines.append("### Stable")
+    lines.append(f"- Scores CSV: {_fmt_path(predictive_state_dir / 'stable' / state / f'{state}_stable_patterns_scores.csv')}")
+    lines.append(f"- Families CSV: {_fmt_path(predictive_state_dir / 'stable' / state / f'{state}_stable_patterns_families.csv')}")
+    lines.append(f"- Compound CSV: {_fmt_path(predictive_state_dir / 'stable' / state / f'{state}_stable_patterns_compound.csv')}")
+    lines.append(f"- Metrics JSON: {_fmt_path(predictive_state_dir / 'stable' / state / f'{state}_metrics.json')}")
+    lines.append(f"- HTML report: {_fmt_path(predictive_state_dir / 'stable' / state / f'{state}_stable_patterns_report.html')}")
+    lines.append("")
+    lines.append("### Digit Reduction")
+    lines.append(f"- Scores CSV: {_fmt_path(predictive_state_dir / 'digit_reduction' / state / f'{state}_digit_reduction_scores.csv')}")
+    lines.append(f"- Report HTML: {_fmt_path(predictive_state_dir / 'digit_reduction' / state / f'{state}_digit_reduction_report.html')}")
+    lines.append(f"- Stacked report HTML: {_fmt_path(predictive_state_dir / 'digit_reduction' / state / f'{state}_digit_reduction_report_stacked.html')}")
+    lines.append("")
+    lines.append("### VTRAC")
+    lines.append(f"- Enhanced JSON: {_fmt_items([safe_rel(path) for path in list_artifacts(predictive_state_dir / 'vtrac' / state, f'{state}_vtrac_enhanced_*.json')], empty='_(none found)_')}")
+    lines.append(f"- Validation report JSON: {_fmt_path(predictive_state_dir / 'vtrac' / state / 'validation_report.json')}")
+    lines.append(f"- Validation report MD: {_fmt_path(predictive_state_dir / 'vtrac' / state / 'validation_report.md')}")
+    lines.append("")
+    lines.append("### Hot Zones")
+    lines.append(f"- Top lanes CSV: {_fmt_path(predictive_state_dir / 'hot_zones' / state / f'{state}_hot_zones_top_lanes.csv')}")
+    lines.append(f"- Per-lane CSV: {_fmt_path(predictive_state_dir / 'hot_zones' / state / f'{state}_hot_zones_per_lane.csv')}")
+    lines.append(f"- Meta JSON: {_fmt_path(predictive_state_dir / 'hot_zones' / state / f'{state}_hot_zones_meta.json')}")
+    lines.append(f"- Winner map JSON: {_fmt_items([safe_rel(path) for path in list_artifacts(predictive_state_dir / 'hot_zones' / state, '*hot_zones_winner_map.json')], empty='_(none found)_')}")
+    lines.append("")
+    lines.append("## Part F — Aggregated Analysis Arena")
+    lines.append("")
+    lines.append("### F0. Arena File Lock And Review Surface")
+    lines.append(f"- Aggregated arena JSON: {_fmt_path(aggregated_json)}")
+    lines.append(f"- Aggregated arena MD: {_fmt_path(aggregated_md)}")
+    lines.append(f"- Signals bundle JSON: {_fmt_path(signals_bundle_json)}")
+    lines.append(f"- Review links available: `{bool((aggregated or {}).get('review_links'))}`")
+    lines.append("")
+    lines.append("### F1-F9. Auto-captured arena snapshot")
+    lines.append(f"- Dominant canonicals: {_fmt_items(dominant_canonicals)}")
+    lines.append(f"- Dominant families: {_fmt_items(dominant_families)}")
+    lines.append(f"- Dominant VTRAC indices: {_fmt_items(dominant_vtrac)}")
+    lines.append(f"- Context-reinforced canonicals: {_fmt_items(reinforced_canonicals)}")
+    lines.append(f"- Context-only pressure: {_fmt_items(context_only_pressure)}")
+    lines.append(f"- State regime: {_fmt_items(state_regime)}")
+    lines.append(f"- VTRAC literal watchlist: {_fmt_items(watchlist_summary)}")
+    lines.append(f"- Stable survivor context: {_fmt_items(survivor_summary)}")
+    lines.append(f"- R-Consensus context: {_fmt_items(r_consensus_summary)}")
+    lines.append("- Arena truth alignment summary: `...`")
+    lines.append("- Arena added value read: `...`")
+    lines.append("- Arena judgment / handoff: `...`")
+    lines.append("")
+    lines.append("## Part G — Context / Aux / Control Center Audit")
+    lines.append("")
+    lines.append("### G0. Context file lock")
+    lines.append(f"- Aux summary JSON: {_fmt_path(predictive_state_dir / 'aux' / state / 'summary.json')}")
+    lines.append(f"- Aux summary MD: {_fmt_path(predictive_state_dir / 'aux' / state / 'summary.md')}")
+    lines.append(f"- Control Center dir: {_fmt_path(predictive_day_dir / 'control_center')}")
+    lines.append("")
+    lines.append("### G1-G10. Auto-captured context snapshot")
+    lines.append(f"- Positional pressure: {_fmt_items(context_sections['positional'])}")
+    lines.append(f"- Due doubles / mirror-double family pressure: {_fmt_items(context_sections['due_doubles'])}")
+    lines.append(f"- Blackapple context: {_fmt_items(context_sections['blackapple'])}")
+    lines.append(f"- Profit alerts: {_fmt_items(context_sections['profit_alerts'])}")
+    lines.append(f"- Compound events: {_fmt_items(context_sections['compound_events'])}")
+    lines.append(f"- Scoreboard carry-through: {_fmt_items(context_sections['scoreboard'])}")
+    if isinstance(aux_summary, Mapping):
+        lines.append(f"- Aux draw sources present: `{bool((aux_summary.get('draw_sources') or {}))}`")
+    lines.append("- Context reinforcement vs context-only pressure: `...`")
+    lines.append("- Policy relationship / handoff: `...`")
+    lines.append("")
+    lines.append("## Part H — Translation Sandbox / Downstream Control Arm")
+    lines.append("")
+    lines.append("### H0. File lock")
+    lines.append(f"- Translation sandbox JSON: {_fmt_path(sandbox_json)}")
+    lines.append(f"- Translation sandbox MD: {_fmt_path(sandbox_md)}")
+    lines.append(f"- Candidate Universe JSON: {_fmt_path(candidate_universe_json)}")
+    lines.append(f"- Play Card JSON: {_fmt_path(play_card_json)}")
+    lines.append(f"- Play Card MD: {_fmt_path(play_card_md)}")
+    lines.append("")
+    lines.append("### H1. Auto-captured control-arm snapshot")
+    lines.append(f"- Candidate Universe summary: {_candidate_universe_summary(candidate_universe if isinstance(candidate_universe, Mapping) else None)}")
+    lines.append(f"- Play Card summary: {_play_card_summary(play_card if isinstance(play_card, Mapping) else None)}")
+    if isinstance(sandbox, Mapping):
+        brain2_context = sandbox.get("brain2_context") or {}
+        sandbox_hyp = sandbox.get("sandbox_hypotheses") or {}
+        lines.append(f"- Translation Sandbox positional shortlist top: {_fmt_items([str((row or {}).get('canonical') or '') for row in (brain2_context.get('positional_shortlist_top') or [])])}")
+        lines.append(f"- Translation Sandbox BA canonicals: {_fmt_items(brain2_context.get('blackapple_recommended_canonicals') or [])}")
+        lines.append(f"- Translation Sandbox profit canonicals: {_fmt_items(brain2_context.get('profit_alert_implied_canonicals') or [])}")
+        boxed_seed = [str((row or {}).get('value') or '') for row in (sandbox_hyp.get('diagnostic_boxed_seed') or [])]
+        straight_seed = [str((row or {}).get('value') or '') for row in (sandbox_hyp.get('diagnostic_straight_seed') or [])]
+        vt_seed = [str((row or {}).get('value') or '') for row in (sandbox_hyp.get('diagnostic_vt_box_seed') or [])]
+        lines.append(f"- Diagnostic boxed seed: {_fmt_items(boxed_seed)}")
+        lines.append(f"- Diagnostic straight seed: {_fmt_items(straight_seed)}")
+        lines.append(f"- Diagnostic VT-box seed: {_fmt_items(vt_seed)}")
+    lines.append("- Translation-learning capture: `...`")
+    lines.append("- Control-arm comparison / bounded handoff: `...`")
+    lines.append("")
+    lines.append("## Part I — Final State-Level Learning")
+    lines.append("")
+    lines.append("- Strongest truth-side clue: `...`")
+    lines.append("- Strongest Brain 1 preservation win: `...`")
+    lines.append("- Strongest context/Brain 2 handoff clue: `...`")
+    lines.append("- Strongest conversion/control-arm gap: `...`")
+    lines.append("- Fix-now vs fix-later: `...`")
+    lines.append("- Translation Sandbox companion needed?: `yes/no`")
+    lines.append("- Brain 2 handoff: `...`")
+    lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Create an arena-native per-state Master Validation report.")
+    ap.add_argument("--date", required=True, help="Results date D (YYYY-MM-DD)")
+    ap.add_argument("--state", required=True, help="State key (for example NewYork4)")
+    ap.add_argument("--profile", default="tool_only")
+    ap.add_argument("--experiment-tag", default="arena_v0")
+    ap.add_argument(
+        "--predictive-sharepacks-root",
+        default="sharepacks/_predictive",
+        help="Predictive sharepacks root (default: sharepacks/_predictive)",
+    )
+    ap.add_argument(
+        "--truth-sharepacks-root",
+        default="sharepacks",
+        help="Frozen/results sharepacks root for winners truth (default: sharepacks)",
+    )
+    ap.add_argument(
+        "--out",
+        help="Output Markdown path (default: RUNS_2/<D>__<STATE>.md)",
+    )
+    ap.add_argument("--force", action="store_true", help="Overwrite an existing report.")
+    return ap.parse_args()
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--date",
-        required=True,
-        help="Sharepack date folder (typically the results/winners date, YYYY-MM-DD)",
-    )
-    ap.add_argument("--state", required=True, help="State key (e.g., OntarioCanada4)")
-    ap.add_argument(
-        "--out",
-        help="Output Markdown file path (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS/<DATE>__<STATE>.md)",
-    )
-    ap.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite the run report if it already exists (default: refuse to overwrite).",
-    )
-    args = ap.parse_args()
+    args = _parse_args()
+    results_date = parse_iso_date(args.date).isoformat()
+    predictive_sharepacks_root = Path(args.predictive_sharepacks_root)
+    if not predictive_sharepacks_root.is_absolute():
+        predictive_sharepacks_root = (REPO_ROOT / predictive_sharepacks_root).resolve()
+    truth_sharepacks_root = Path(args.truth_sharepacks_root)
+    if not truth_sharepacks_root.is_absolute():
+        truth_sharepacks_root = (REPO_ROOT / truth_sharepacks_root).resolve()
 
-    sharepack_date = args.date
-    state = args.state
-    # For the existing sharepacks, the folder date matches the winners/results date.
-    # The source workbook is typically "day before"; we compute it for labeling only.
-    results_date = parse_iso_date(sharepack_date)
-    history_workbook_date = results_date - timedelta(days=1)
-
-    paths = tool_sharepack_paths(sharepack_date, state)
-
-    default_out = (
-        REPO_ROOT
-        / "docs"
-        / "AAT9_KIT"
-        / "FINAL VALIDATION"
-        / "RUNS"
-        / f"{sharepack_date}__{state}.md"
-    )
+    default_out = RUNS2_DIR / f"{results_date}__{args.state}.md"
     out_path = Path(args.out) if args.out else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not args.force:
-        raise SystemExit(
-            f"Run report already exists: {out_path}. Refusing to overwrite. "
-            "Use --force to overwrite or --out to write a new file."
-        )
+        raise SystemExit(f"Run report already exists: {safe_rel(out_path)} (use --force to overwrite).")
 
-    winners_html, winners_json = list_winner_artifacts(paths["winners"])
-
-    expected = expected_files_for_tool(state)
-
-    lines: List[str] = []
-    lines.append(
-        f"# Master Validation Run Report — {state} — results {results_date.isoformat()} (history workbook ~ {history_workbook_date.isoformat()})"
+    report = build_master_validation_run_report(
+        results_date=results_date,
+        state=args.state,
+        profile=str(args.profile or "tool_only").strip(),
+        experiment_tag=normalize_tag(args.experiment_tag),
+        predictive_sharepacks_root=predictive_sharepacks_root,
+        truth_sharepacks_root=truth_sharepacks_root,
     )
-    lines.append("")
-    lines.append("Reference template:")
-    lines.append(f"- `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`")
-    lines.append("")
-    lines.append("v0.2 guidance (how this feeds selection; keep analyzer edits out of scope):")
-    lines.append("- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/V0_2__INTEGRATION_LOG.md`")
-    lines.append("- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/SUPERBRAIN_V0_2__DEFAULTS.md`")
-    lines.append("- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Template_V0_2.md`")
-    lines.append("")
-    lines.append("Sharepack pointers:")
-    lines.append(f"- Sharepack root: `sharepacks/{sharepack_date}/{state}/`")
-    lines.append(f"- Winners lens: `{paths['winners'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- Stable: `{paths['stable'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- Digit Reduction: `{paths['digit_reduction'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- VTRAC: `{paths['vtrac'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- Hot Zones: `{paths['hot_zones'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- Aux: `{paths['aux'].relative_to(REPO_ROOT)}/`")
-    lines.append(f"- Aux draws snapshot: `{paths['aux_draws'].relative_to(REPO_ROOT)}/`")
-    lines.append("")
-
-    lines.append("## Part A — Winners HTML/JSON (environment lens)")
-    if winners_html:
-        lines.append("Winners HTML files (open in browser/editor):")
-        for name in winners_html:
-            lines.append(f"- `{paths['winners'].relative_to(REPO_ROOT)}/{name}`")
-    else:
-        lines.append("_No winners HTML found in the winners sharepack folder._")
-    lines.append("")
-    if winners_json:
-        lines.append("Winners JSON files:")
-        for name in winners_json:
-            lines.append(f"- `{paths['winners'].relative_to(REPO_ROOT)}/{name}`")
-    else:
-        lines.append("_No winners JSON found in the winners sharepack folder._")
-    lines.append("")
-    lines.append("Part A answers (fill using the template’s Part A questions):")
-    for i in range(1, 15):
-        lines.append(f"- Q{i}: …")
-    lines.append("")
-
-    lines.append("---")
-    lines.append("")
-    lines.append("## Part 2 — Tool-by-tool (paste blocks + answers)")
-    lines.append("Paste blocks: the `summary.md` embedded under each tool below is the “evidence dump” (with source labels). Then fill Q1–Q10 for that tool.")
-    lines.append("")
-
-    for tool_key, title in [
-        ("stable", "Stable"),
-        ("digit_reduction", "Digit Reduction"),
-        ("vtrac", "VTRAC Analyzer"),
-        ("hot_zones", "Hot Zones"),
-    ]:
-        tool_dir = paths[tool_key]
-        lines.append(f"### 2.{title} — {state} — {sharepack_date}")
-        lines.append("")
-        if not tool_dir.exists():
-            lines.append(f"_(Tool folder not found: `{tool_dir.relative_to(REPO_ROOT)}`)_")
-            lines.append("")
-            continue
-
-        missing_brain = check_exists(tool_dir, expected[tool_key]["brain"])
-        if tool_key == "vtrac":
-            # Some VTRAC artifacts are date-global (not state-scoped inside the VTRAC folder).
-            missing_global = check_exists(
-                paths["date_root"],
-                ["vtrac_compact_report.json", "vtrac_compact_report.csv", "summary.md", "summary.csv"],
-            )
-            missing_brain.extend([f"GLOBAL:{m}" for m in missing_global])
-        if tool_key == "vtrac":
-            missing_winners = check_exists(paths["winners"], expected[tool_key]["winners"])
-        else:
-            missing_winners = check_exists(tool_dir, expected[tool_key]["winners"])
-
-        lines.append("0) Outputs reviewed")
-        lines.append("   - Brain: (see file list below)")
-        lines.append("   - Winners: (see file list below)")
-        lines.append(f"   - Missing brain?: {', '.join(missing_brain) if missing_brain else 'none'}")
-        lines.append(f"   - Missing winners?: {', '.join(missing_winners) if missing_winners else 'none'}")
-        lines.append("")
-        lines.append("   Summarizer block (embedded from summary.md):")
-        lines.append("")
-        lines.append("```markdown")
-        lines.append(maybe_embed_summary(tool_dir))
-        lines.append("```")
-        lines.append("")
-        lines.append("Tool answers (fill using the template’s Part 2 Q1–Q10 prompts):")
-        for i in range(1, 11):
-            lines.append(f"- Q{i}: …")
-        lines.append("")
-        lines.append("v0.2 Integration Log aligned interpretation (fill before changing anything):")
-        lines.append("- v0.2 posture: …")
-        lines.append("- What to prioritize (data-backed): …")
-        lines.append("- Common misreads to avoid: …")
-        lines.append("- Selection implications (Candidate Universe / Play Cards): …")
-        lines.append("- Backlog/harness hooks: …")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
-
-    lines.append("## 2B — Cross-tool synthesis (after all tools)")
-    lines.append("- Shared clusters/signals: …")
-    lines.append("- Conflicts/noise: …")
-    lines.append("- Aggregator/aux hooks to test next: …")
-    lines.append("")
-
-    lines.append("## Part 3 — Aux Features (paste block + answers)")
-    lines.append("Paste block: `summary.md` embedded below is the Aux evidence dump (with source labels). Then fill Q1–Q10 using Part 3 prompts in the master template.")
-    lines.append("")
-    aux_dir = paths["aux"]
-    if not aux_dir.exists():
-        lines.append(f"_(Aux folder not found: `{aux_dir.relative_to(REPO_ROOT)}` — run `python3 scripts/tools/aux_sharepack_summary.py --date {sharepack_date} --state {state}`)_")
-        lines.append("")
-    else:
-        lines.append(f"Aux draws snapshot dir: `{paths['aux_draws'].relative_to(REPO_ROOT)}/`")
-        lines.append("")
-        lines.append("0) Outputs reviewed")
-        lines.append("   - Draw CSV snapshot: (see aux draws folder)")
-        lines.append("   - Evidence dump: summary.md/summary.json")
-        lines.append("")
-        lines.append("   Summarizer block (embedded from summary.md):")
-        lines.append("")
-        lines.append("```markdown")
-        lines.append(maybe_embed_summary(aux_dir))
-        lines.append("```")
-        lines.append("")
-        lines.append("Part 3 answers (fill using the template’s Part 3 Q1–Q10 prompts):")
-        for i in range(1, 11):
-            lines.append(f"- Q{i}: …")
-        lines.append("")
-        lines.append("v0.2 Integration Log aligned interpretation (Aux as selection input):")
-        lines.append("- v0.2 posture: …")
-        lines.append("- What to prioritize (data-backed): …")
-        lines.append("- Common misreads to avoid: …")
-        lines.append("- Selection implications (Candidate Universe / Play Cards): …")
-        lines.append("- Backlog/harness hooks: …")
-        lines.append("")
-
-    lines.append("---")
-    lines.append("")
-    lines.append("## Part 4 — Combination / Permutation Translation (candidate pack)")
-    lines.append("Use Part 4 prompts in the master template to produce:")
-    lines.append("- A small candidate universe per draw (Midday/Evening)")
-    lines.append("- Evidence vectors per candidate (tools + aux signals)")
-    lines.append("- Coverage mapping (perm-only vs boxed vs VTRAC-straight vs full index-box)")
-    lines.append("")
-    lines.append("Reference:")
-    lines.append("- `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`")
-    lines.append("")
-    lines.append("Part 4 notes / answers:")
-    lines.append("- Candidate universe (Midday): …")
-    lines.append("- Candidate universe (Evening): …")
-    lines.append("- Evidence vectors: …")
-    lines.append("- Coverage mapping + pack decision: …")
-    lines.append("")
-
-    lines.append("---")
-    lines.append("")
-    lines.append("## Part 5 — Overall Summary (key insights + fix/future hooks)")
-    lines.append("Use Part 5 prompts in the master template to summarize:")
-    lines.append("- Pack vs winners (post-hoc)")
-    lines.append("- Key environment tags")
-    lines.append("- What drove the win (best evidence)")
-    lines.append("- Conflicts/miss patterns + fix-now vs fix-later")
-    lines.append("")
-    lines.append("Part 5 notes / answers:")
-    lines.append("- Pack vs winners: …")
-    lines.append("- Key tags: …")
-    lines.append("- Drivers: …")
-    lines.append("- Conflicts: …")
-    lines.append("- Fix-now vs fix-later: …")
-    lines.append("- Next run: …")
-    lines.append("")
-
-    out_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Wrote: {out_path}")
+    out_path.write_text(report, encoding="utf-8")
+    print(f"Wrote: {safe_rel(out_path)}")
 
 
 if __name__ == "__main__":

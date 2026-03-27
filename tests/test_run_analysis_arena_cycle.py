@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.tools.run_analysis_arena_cycle import ARENA_RUNS_DIR, _arena_runs_dir_from_arg, build_pre_commands
+from scripts.tools.run_analysis_arena_cycle import (
+    ARENA_RUNS_DIR,
+    _arena_runs_dir_from_arg,
+    _cmd_doubles_inventory,
+    _iter_state_keys_for_date,
+    build_pre_commands,
+)
 
 
 def test_arena_runs_dir_defaults_to_runs2() -> None:
@@ -84,3 +90,39 @@ def test_build_pre_commands_can_skip_new_layers(tmp_path: Path) -> None:
 
     assert len(cmds) == 1
     assert cmds[0][1].endswith("create_candidate_universe.py")
+
+
+def test_iter_state_keys_for_date_uses_sharepack_dirs(tmp_path: Path) -> None:
+    day_dir = tmp_path / "sharepacks" / "_predictive" / "2026-01-05"
+    (day_dir / "NewYork4").mkdir(parents=True)
+    (day_dir / "Florida4").mkdir(parents=True)
+    (day_dir / "control_center").mkdir(parents=True)
+
+    states = _iter_state_keys_for_date(
+        sharepacks_root=str(tmp_path / "sharepacks" / "_predictive"),
+        results_date="2026-01-05",
+        states=[],
+    )
+
+    assert states == ["Florida4", "NewYork4"]
+
+
+def test_cmd_doubles_inventory_targets_results_and_validation_dirs(tmp_path: Path) -> None:
+    cmd = _cmd_doubles_inventory(
+        start_date="2026-01-05",
+        end_date="2026-01-09",
+        validation_dir=tmp_path / "validation",
+        control_arm_runs_dir=tmp_path / "runs",
+        predictive_sharepacks_root="sharepacks/_predictive",
+        truth_sharepacks_root="sharepacks",
+        out_csv=tmp_path / "validation" / "inventory.csv",
+        out_md=tmp_path / "validation" / "inventory.md",
+        out_deep=tmp_path / "validation" / "deep.md",
+        out_study=tmp_path / "validation" / "study.md",
+    )
+
+    assert cmd[1].endswith("create_doubles_mirror_doubles_inventory.py")
+    assert "--results-root" in cmd
+    assert "data/results" in cmd
+    assert "--run-report-dir" in cmd
+    assert str(tmp_path / "validation") in cmd

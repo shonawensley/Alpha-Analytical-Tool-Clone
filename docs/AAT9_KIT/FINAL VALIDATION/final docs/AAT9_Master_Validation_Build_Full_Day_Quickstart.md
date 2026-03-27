@@ -328,7 +328,7 @@ Default output:
 
 ---
 
-## 7) (Optional but recommended) Generate paste‑ready evidence blocks + run‑report scaffolds
+## 7) (Optional but recommended) Generate evidence helpers + arena-native run-report scaffolds
 
 Per state, generate per‑tool `summary.md` blocks inside the sharepack so later sessions don’t need raw files:
 - Stable: `scripts/tools/stable_sharepack_summary.py`
@@ -345,10 +345,16 @@ Optional validation helpers (interpretation matters):
   - DR: `PYTHONPATH=.:src python3 scripts/tools/validate_dr_winners.py --sharepack sharepacks/<D>/<STATE>/digit_reduction/<STATE>` (internal consistency vs stamp)
   - Hot Zones: `python3 scripts/tools/validate_hot_zones_winners.py --sharepack sharepacks/<D>/<STATE>/hot_zones/<STATE>` (coverage/performance; failure often means “Hot Zones didn’t isolate winner”)
 
-Then scaffold the run report (what you actually fill/share):
+These summary generators are now optional helper surfaces.
+The active per-state Analysis Arena report shell no longer depends on embedding them.
+
+Then scaffold the per-state arena-native run report (what you actually fill/share):
 ```bash
 python3 scripts/tools/create_master_validation_run_report.py --date <D> --state <STATE>
 ```
+Standalone default output:
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<D>__<STATE>.md`
+- For window runs, pass `--out` under the window `VALIDATION/` folder.
 
 ---
 
@@ -358,4 +364,4 @@ For the day folder `sharepacks/<D>/`:
 - Per‑state folders exist for the tracked states and contain: tables/json/winners + all tool bundles + aux snapshot.
 - Day‑level VTRAC artifacts exist and validate: `sharepacks/<D>/vtrac_compact_report.json` is non‑empty.
 - Brain‑2 export exists: `sharepacks/<D>/control_center/README.md`.
-- (Optional) Run reports are scaffolded under `docs/AAT9_KIT/FINAL VALIDATION/RUNS/`.
+- (Optional) Arena-native validation reports are scaffolded under `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/` (or the active window `VALIDATION/` folder when using explicit `--out` paths).

@@ -74,9 +74,9 @@ Control Center (Brain‑2) sharepack export (recommended when freezing a full da
   - Contract: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
   - Per‑AID “what is a hit” matrix (prevents grading the wrong object): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Grading_Matrix.md`
   - Command: `python3 scripts/tools/evaluate_profit_alerts.py --date <D>` → `sharepacks/<D>/control_center/profit_alerts_eval.*`
-- Optional (recommended): scaffold a per-day Control Center run report (Brain-2) into `RUNS/`:
+- Optional (recommended): scaffold an arena-native per-day Control Center run report into `RUNS_2/VALIDATION`:
   - Template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`
-  - Command: `python3 scripts/tools/create_control_center_daily_run_report.py --date <D>` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+  - Command: `python3 scripts/tools/create_control_center_daily_run_report.py --date <D> --predictive-sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0` → `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/VALIDATION/<D>__CONTROL_CENTER.md`
 
 Related SOPs/refs:
 - Tables: `docs/AAT9_KIT/AAT9_String_Table_Testing.md`
@@ -102,8 +102,9 @@ Related SOPs/refs:
     - Key rule: for Master Validation, Aux must align to the **history workbook** used to build the string tables (typically D‑1 for results/sharepack date D). Use `--excel` to generate the draw CSVs into `sharepacks/<DATE>/<STATE>/aux/draws/` from that workbook. If you omit `--excel`, the script snapshots from the current live `data/cleaned/draws/*_draws.csv` which can drift after swaps.
     - Paste `sharepacks/<DATE>/<STATE>/aux/<STATE>/summary.md` into Part 3 before answering Q1–Q10.
   - Control Center sharepack export (Brain‑2; drift-proof): `python3 scripts/tools/export_control_center_sharepack.py --date <DATE>`
-  - Master Validation run report generator (stitches links + embeds per-tool `summary.md` blocks): `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
-    - Includes scaffolding through Part 5 (Part 4 “candidate pack” + Part 5 summary). For Part 4 mapping (indices/VSTRAIGHTS/perms), use `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD`.
+  - Arena-native Master Validation run report generator: `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE>`
+    - Locks winners truth + raw tool file surfaces + aggregated arena + translation sandbox + control-arm artifacts into one report shell.
+    - Optional `summary.md` helpers can still be used during manual review, but they are no longer the report generator’s primary contract.
   - VTRAC compact report validator (flags missing/empty states/sections): `python3 scripts/tools/validate_vtrac_compact_report.py --date <DATE>`
 
 ---
@@ -193,13 +194,18 @@ Tool quick index — Digit Reduction
      - Overlays: `.../analyzer_v2/winners/` (maps/flags/overlay HTML)
    - If a state errors, check that its tables exist (GA/TX will error because no tables).
 
-5) Stage 4 (Per‑tool Part 2 summaries — paste‑ready):
-   - After brain runs and winners logging exist for the date/state, generate paste‑ready Markdown blocks for Part 2:
+5) Stage 4 (Arena-era per-state validation shell):
+   - After predictive brain runs and winners logging exist for the date/state, generate the arena-native state review shell:
+     - `python3 scripts/tools/create_master_validation_run_report.py --date <DATE> --state <STATE> --predictive-sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0`
+   - The generated report now locks the raw tool evidence for Parts B-E directly from the predictive sharepack and auto-captures arena/runtime context for Parts F-I:
+     - default standalone output: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<DATE>__<STATE>.md`
+     - window runs should usually pass an explicit `--out` under `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<WINDOW>/VALIDATION/`
+   - Legacy per-tool summary scripts remain available only for archival comparisons or specialized debugging:
      - Stable: `python3 scripts/tools/stable_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/stable/<STATE> --md-out summary.md`
      - Digit Reduction: `python3 scripts/tools/dr_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/digit_reduction/<STATE> --md-out summary.md`
      - V‑TRAC: `python3 scripts/tools/vtrac_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/vtrac/<STATE> --md-out summary.md`
      - Hot Zones: `python3 scripts/tools/hot_zones_sharepack_summary.py --sharepack sharepacks/<DATE>/<STATE>/hot_zones/<STATE> --md-out summary.md`
-   - Paste each summary under Part 2 step “0) Outputs reviewed” in `docs/AAT9_KIT/FINAL VALIDATION/final docs/master_validation_FINAL_TEMPLATE_FINAL_VERSION.md`, then answer Q1–Q10 for that tool.
+   - If you use those legacy summary helpers, treat them as optional drill-down evidence and feed them into `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`, not the retired questions-only shell.
 
 ### DR outputs vs. sharepacks (multi-day runs)
 - Live DR outputs under `data/outputs/analysis/digit_reduction/<STATE>/…` always reflect the **latest** run for that state (they are not date-versioned on disk).

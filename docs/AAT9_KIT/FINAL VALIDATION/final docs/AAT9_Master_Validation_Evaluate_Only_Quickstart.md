@@ -179,7 +179,8 @@ Notes:
 ## 4) Generate the per‑run report scaffold (this is what you fill/share)
 
 Important ordering:
-- Generate summaries first (Step 3), then generate the run report so it embeds them.
+- If you want per-tool `summary.md` helpers, generate them first (Step 3).
+- The active arena-native per-state report shell does not require those summaries, but they can still help during manual review.
 
 Command:
 ```bash
@@ -187,7 +188,7 @@ python3 scripts/tools/create_master_validation_run_report.py --date <D> --state 
 ```
 
 Output (default):
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__<STATE>.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<D>__<STATE>.md`
 
 If the file already exists, do **not** overwrite it (it contains answers).
 - Either paste updated `summary.md` blocks manually, or write a new run report file using `--out`.
@@ -197,14 +198,15 @@ If the file already exists, do **not** overwrite it (it contains answers).
 ## 5) Fill the run report (how evidence blocks + questions fit together)
 
 Key idea:
-- The `summary.md` blocks are **evidence extraction** (facts, ranks, counts, file stamps).
-- The questions in the run report are **analysis/synthesis** you still must answer.
+- The raw string/context tool artifacts + aggregated arena + translation sandbox are now the primary evidence contract.
+- Optional `summary.md` blocks remain helper surfaces.
+- The questions in the run report are still the analysis/synthesis you must answer.
 
 Recommended fill order:
 1) **Part A (environment lens):** open the winners HTML/JSON under `sharepacks/<D>/<STATE>/winners/<STATE>/` and answer the Part A prompts (no tool scores).
    - If the winners JSON is too large to paste/share, generate a digest: `python3 scripts/tools/winners_json_digest.py --winners-dir sharepacks/<D>/<STATE>/winners/<STATE>`
-2) **Part 2 (tools):** for each tool, read the embedded summarizer block and answer Q1–Q10 using that evidence (cite ranks/why‑tags/coverage).
-3) **Part 3 (Aux):** paste/verify the Aux summary block, then answer Q1–Q10 (variant convergence, doubles pressure, repeat watch, etc.).
+2) **Parts B-E (raw tools):** review the locked raw tool artifacts and answer the template prompts using those evidence surfaces (cite ranks/why-tags/coverage).
+3) **Part G (context / Aux / Control Center):** review the locked context surfaces, then answer the prompts (variant convergence, doubles pressure, repeat watch, etc.).
 4) **Part 4 (pack decision):** synthesize candidates + coverage mode (boxed vs VT‑boxed vs VT‑straight, etc.). Use `TOOLS/VTRAC_REFERENCE_STRAIGHT.MD` for mapping.
 5) **Part 5 (summary):** “what mattered”, misses/conflicts, Fix‑Now vs Fix‑Later.
 
@@ -229,9 +231,9 @@ Optional (recommended when future results files exist): evaluate Profit Alerts w
 python3 scripts/tools/evaluate_profit_alerts.py --date <D>
 ```
 
-Optional: scaffold a per-day Control Center run report (Brain-2) into `RUNS/`:
+Optional: scaffold an arena-native per-day Control Center run report into `RUNS_2/VALIDATION`:
 ```bash
-python3 scripts/tools/create_control_center_daily_run_report.py --date <D>
+python3 scripts/tools/create_control_center_daily_run_report.py --date <D> --predictive-sharepacks-root sharepacks/_predictive --truth-sharepacks-root sharepacks --profile tool_only --experiment-tag arena_v0
 ```
 Default output:
-- `docs/AAT9_KIT/FINAL VALIDATION/RUNS/<D>__CONTROL_CENTER.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/VALIDATION/<D>__CONTROL_CENTER.md`

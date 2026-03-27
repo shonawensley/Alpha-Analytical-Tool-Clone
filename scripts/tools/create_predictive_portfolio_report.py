@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """
-Create a cross-state Predictive Portfolio Markdown summary for a day D.
+Create an Analysis Arena predictive portfolio report for one day D.
 
 This is a reporting-only tool:
-- Reads ONLY existing predictive sharepack artifacts (no analyzer runs).
-- Summarizes the per-state Candidate Universe + Play Card closures so you can
-  triage states quickly.
-- Profit Alerts are available as an optional column-set (controlled by
-  `--profile` / `--rank-by`), but are not required for the tool-first posture.
+- reads existing predictive sharepack artifacts
+- summarizes cross-state Brain 1 / Brain 2 posture
+- keeps Candidate Universe / Play Card visible as the downstream control arm
 
-Usage
------
-python3 scripts/tools/create_predictive_portfolio_report.py --date 2026-01-07
-python3 scripts/tools/create_predictive_portfolio_report.py --date 2026-01-07 --sharepacks-root sharepacks/_predictive
+It does NOT rerun analyzers or rebuild sharepacks.
 """
 
 from __future__ import annotations
@@ -21,16 +16,18 @@ import argparse
 import csv
 import json
 import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def _runs_dir() -> Path:
-    return REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
+RUNS2_PREDICTIVE_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "PREDICTIVE"
+FINAL_DOCS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
+SYSTEM_MAP_PATH = FINAL_DOCS_DIR / "AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md"
+OPERATING_FLOW_PATH = FINAL_DOCS_DIR / "AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md"
+CADENCE_QUICKSTART_PATH = FINAL_DOCS_DIR / "AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md"
+ARENA_CONTRACT_PATH = FINAL_DOCS_DIR / "AAT9_AGGREGATED_ANALYSIS_ARENA_CONTRACT_v0.md"
+TRANSLATION_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
 
 
 def _read_text(path: Path) -> str:
@@ -39,6 +36,12 @@ def _read_text(path: Path) -> str:
 
 def _read_json(path: Path) -> object:
     return json.loads(_read_text(path))
+
+
+def _try_read_json(path: Path) -> object | None:
+    if not path.exists():
+        return None
+    return _read_json(path)
 
 
 def _safe_rel(path: Path) -> str:
@@ -69,103 +72,59 @@ def _canon(value: str) -> str:
 
 
 def _profile_suffix(profile: str) -> str:
-    p = (profile or "mixed").strip()
+    p = str(profile or "mixed").strip()
     return "" if p == "mixed" else f"__{p}"
 
 
 def _normalize_experiment_tag(value: str) -> str:
     raw = str(value or "").strip()
-    if not raw:
+    if raw.lower() in {"", "-", "none", "null"}:
         return ""
     raw = raw.replace(" ", "_")
-    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw)
-    cleaned = cleaned.strip("_-")
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", raw).strip("_-")
     if not cleaned:
-        raise SystemExit(f"Invalid experiment tag: {value!r} (must contain A-Z/a-z/0-9/_/-)")
+        raise SystemExit(f"Invalid experiment tag: {value!r}")
     return cleaned[:60]
 
 
-@dataclass(frozen=True)
-class ProfitAlertRow:
-    variant: str
-    alert_id: str
-    strength: int
-    suggested: str
-    canonical: str
-    combos: List[str]
-    badges: str
-
-    @property
-    def cost_units(self) -> int:
-        return len(self.combos)
+def _tag_suffix(experiment_tag: str) -> str:
+    return f"__{experiment_tag}" if experiment_tag else ""
 
 
-def _parse_profit_alerts_for_state(rows: Sequence[Dict[str, str]], *, state_key: str) -> List[ProfitAlertRow]:
-    out: List[ProfitAlertRow] = []
-    for r in rows:
-        if (r.get("StateKey") or "").strip() != state_key:
-            continue
-        suggested = (r.get("Suggested") or "").strip()
-        if not suggested or suggested == "OVERLAY":
-            continue
-        implied_raw = (r.get("ImpliedSet") or "").strip()
-        if not implied_raw.startswith("["):
-            continue
-        try:
-            implied = json.loads(implied_raw)
-        except Exception:
-            continue
-        if not isinstance(implied, list):
-            continue
-        combos = sorted({_normalize_pick3(x) for x in implied if _normalize_pick3(x)})
-        if not combos:
-            continue
+def _analysis_artifact_path(
+    state_dir: Path,
+    *,
+    stem: str,
+    profile: str,
+    experiment_tag: str,
+    ext: str,
+) -> Path:
+    out_suffix = _profile_suffix(profile)
+    tag_suffix = _tag_suffix(experiment_tag)
+    tagged = state_dir / "analysis" / f"{stem}{out_suffix}{tag_suffix}.{ext}"
+    if tagged.exists():
+        return tagged
+    return state_dir / "analysis" / f"{stem}{out_suffix}.{ext}"
 
-        variant = (r.get("Variant") or "").strip() or "Unknown"
-        alert_id = (r.get("AlertId") or "").strip() or "?"
-        try:
-            strength = int((r.get("Strength") or "0").strip() or "0")
-        except Exception:
-            strength = 0
-        canonical = _canon((r.get("Canonical") or "").strip())
-        badges = (r.get("Badges") or "").strip()
 
-        out.append(
-            ProfitAlertRow(
-                variant=variant,
-                alert_id=alert_id,
-                strength=strength,
-                suggested=suggested,
-                canonical=canonical,
-                combos=combos,
-                badges=badges,
-            )
-        )
-    # Highest strength first, then cheaper, then stable ordering.
-    out.sort(key=lambda x: (-x.strength, x.cost_units, x.variant, x.alert_id, x.suggested, x.canonical))
+def _ordered_unique(values: Sequence[str]) -> List[str]:
+    seen: set[str] = set()
+    out: List[str] = []
+    for value in values:
+        value = str(value or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
     return out
 
 
-def _load_candidate_universe_summary(state_dir: Path, *, profile: str) -> Tuple[int, int, List[str], int, List[str]]:
-    """
-    Returns:
-      - packs_count
-      - union_count
-      - due_doubles_canonicals_union
-      - top_support_count (how many packs support the top canonical)
-      - top_support_canonicals (up to 3 canonicals tied for top support)
-
-    Notes:
-    - "Support" is computed as a per-pack vote over that pack's `canonicals` list.
-    - This is intended as a lightweight convergence proxy for tool-first ranking.
-    """
-    return _load_candidate_universe_summary_tagged(state_dir, profile=profile, prefer_experiment_tags=("",))
-
-
 def _candidate_universe_path(state_dir: Path, *, profile: str, experiment_tag: str) -> Path:
-    out_suffix = _profile_suffix(profile)
-    tag_suffix = f"__{experiment_tag.strip()}" if (experiment_tag or "").strip() else ""
-    return state_dir / f"candidate_universe{out_suffix}{tag_suffix}.json"
+    return state_dir / f"candidate_universe{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.json"
+
+
+def _play_card_path(state_dir: Path, *, profile: str, experiment_tag: str) -> Path:
+    return state_dir / f"play_card{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.json"
 
 
 def _load_candidate_universe_summary_tagged(
@@ -219,14 +178,7 @@ def _load_candidate_universe_summary_tagged(
 
     top_support_count = max(support.values(), default=0)
     top_support = [c for c, n in sorted(support.items(), key=lambda x: (-x[1], x[0])) if n == top_support_count][:3]
-
     return len(packs_list), union_count_int, sorted(dd_canon), top_support_count, top_support
-
-
-def _play_card_path(state_dir: Path, *, profile: str, experiment_tag: str) -> Path:
-    out_suffix = _profile_suffix(profile)
-    tag_suffix = f"__{experiment_tag.strip()}" if (experiment_tag or "").strip() else ""
-    return state_dir / f"play_card{out_suffix}{tag_suffix}.json"
 
 
 def _load_play_card_cut(
@@ -235,12 +187,8 @@ def _load_play_card_cut(
     profile: str,
     strategy: str,
     budget: int,
-    prefer_experiment_tags: Sequence[str] = ("", "vtracpack_v1"),
+    prefer_experiment_tags: Sequence[str],
 ) -> Tuple[int, List[str], List[str], List[int], List[str], Optional[Path]]:
-    """
-    Returns:
-      (boxed_canonicals_count, boxed_canonicals, combos, vtrac_pack_index, vtrac_pack_combos, source_path)
-    """
     bkey = f"B{int(budget)}"
     for tag in prefer_experiment_tags:
         pc = _play_card_path(state_dir, profile=profile, experiment_tag=tag)
@@ -261,16 +209,15 @@ def _load_play_card_cut(
 
         combos_raw = card.get("combos") or []
         combos: List[str] = []
-        combos_seen: set[str] = set()
-        for x in combos_raw:
-            n = _normalize_pick3(x)
-            if not n or n in combos_seen:
+        seen: set[str] = set()
+        for value in combos_raw:
+            combo = _normalize_pick3(str(value))
+            if not combo or combo in seen:
                 continue
-            combos.append(n)
-            combos_seen.add(n)
+            combos.append(combo)
+            seen.add(combo)
 
-        boxed_raw = card.get("boxed_canonicals") or []
-        boxed = sorted({_canon(x) for x in boxed_raw if _canon(x)})
+        boxed = sorted({_canon(str(x)) for x in (card.get("boxed_canonicals") or []) if _canon(str(x))})
         try:
             boxed_count = int(card.get("boxed_canonicals_count"))
         except Exception:
@@ -295,7 +242,7 @@ def _load_play_card_cut(
                 vtrac_pack_indices.append(idx)
             pack_raw = vtrac_pack.get("pack_combos") or []
             if isinstance(pack_raw, list):
-                vtrac_pack_combos = [_normalize_pick3(x) for x in pack_raw if _normalize_pick3(x)]
+                vtrac_pack_combos = [_normalize_pick3(str(x)) for x in pack_raw if _normalize_pick3(str(x))]
 
         return boxed_count, boxed, combos, sorted(set(vtrac_pack_indices)), vtrac_pack_combos, pc
 
@@ -303,7 +250,7 @@ def _load_play_card_cut(
 
 
 def _pack_label(pack_indices: Sequence[int], pack_combos: Sequence[str]) -> str:
-    uniq = sorted({int(x) for x in (pack_indices or []) if isinstance(x, int) or str(x).strip().isdigit()})
+    uniq = sorted({int(x) for x in (pack_indices or []) if str(x).strip().isdigit()})
     if not uniq:
         return "-"
     size = len(list(pack_combos or []))
@@ -314,56 +261,140 @@ def _pack_label(pack_indices: Sequence[int], pack_combos: Sequence[str]) -> str:
     return f"idx[{len(uniq)}]:{head}{suffix}({size})" if size else f"idx[{len(uniq)}]:{head}{suffix}"
 
 
+def _parse_profit_alerts_for_state(rows: Sequence[Dict[str, str]], *, state_key: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if (row.get("StateKey") or "").strip() != state_key:
+            continue
+        suggested = (row.get("Suggested") or "").strip()
+        implied_raw = (row.get("ImpliedSet") or "").strip()
+        combos: List[str] = []
+        if implied_raw.startswith("["):
+            try:
+                implied = json.loads(implied_raw)
+            except Exception:
+                implied = []
+            if isinstance(implied, list):
+                combos = sorted({_normalize_pick3(str(x)) for x in implied if _normalize_pick3(str(x))})
+        try:
+            strength = int((row.get("Strength") or "0").strip() or "0")
+        except Exception:
+            strength = 0
+        out.append(
+            {
+                "variant": (row.get("Variant") or "").strip() or "Unknown",
+                "alert_id": (row.get("AlertId") or "").strip() or "?",
+                "strength": strength,
+                "suggested": suggested,
+                "canonical": _canon((row.get("Canonical") or "").strip()),
+                "combos": combos,
+            }
+        )
+    out.sort(key=lambda item: (-int(item["strength"]), item["variant"], item["alert_id"], item["suggested"]))
+    return out
+
+
+def _ranked_values(items: Any, *, value_key: str = "value", limit: int = 3) -> List[str]:
+    if not isinstance(items, list):
+        return []
+    out: List[str] = []
+    for item in items[:limit]:
+        if isinstance(item, Mapping):
+            value = item.get(value_key)
+        else:
+            value = item
+        value_s = str(value or "").strip()
+        if value_s:
+            out.append(value_s)
+    return out
+
+
+def _load_arena_state_summary(state_dir: Path, *, profile: str, experiment_tag: str) -> Dict[str, Any]:
+    aggregated_path = _analysis_artifact_path(
+        state_dir,
+        stem="aggregated_analysis_arena",
+        profile=profile,
+        experiment_tag=experiment_tag,
+        ext="json",
+    )
+    sandbox_path = _analysis_artifact_path(
+        state_dir,
+        stem="translation_sandbox_seed",
+        profile=profile,
+        experiment_tag=experiment_tag,
+        ext="json",
+    )
+    aggregated = _try_read_json(aggregated_path)
+    sandbox = _try_read_json(sandbox_path)
+    arena = (aggregated or {}).get("arena_synthesis") if isinstance(aggregated, Mapping) else {}
+    brain2 = (sandbox or {}).get("brain2_context") if isinstance(sandbox, Mapping) else {}
+    scoreboard = (brain2 or {}).get("scoreboard_row") if isinstance(brain2, Mapping) else {}
+    top_profit = []
+    for row in (brain2.get("top_profit_alerts") or [])[:3] if isinstance(brain2, Mapping) else []:
+        if not isinstance(row, Mapping):
+            continue
+        top_profit.append(
+            ":".join(
+                part
+                for part in [
+                    str(row.get("variant") or "").strip(),
+                    str(row.get("alert_id") or "").strip(),
+                    str(row.get("canonical") or "").strip(),
+                ]
+                if part
+            )
+        )
+    return {
+        "aggregated_json": aggregated_path,
+        "sandbox_json": sandbox_path,
+        "top_canonicals": _ranked_values((arena or {}).get("dominant_canonicals")),
+        "top_families": _ranked_values((arena or {}).get("dominant_families")),
+        "top_vtrac": _ranked_values((arena or {}).get("dominant_vtrac_indices")),
+        "reinforced": _ranked_values((arena or {}).get("context_reinforced_canonicals")),
+        "score_rank": scoreboard.get("score_rank") if isinstance(scoreboard, Mapping) else None,
+        "role": scoreboard.get("role") if isinstance(scoreboard, Mapping) else "",
+        "bucket": scoreboard.get("targeting_bucket") if isinstance(scoreboard, Mapping) else "",
+        "tracker": scoreboard.get("tracker_posture") if isinstance(scoreboard, Mapping) else "",
+        "positional_hint": scoreboard.get("positional_hint") if isinstance(scoreboard, Mapping) else "",
+        "profit_hint": scoreboard.get("profit_alert_hint") if isinstance(scoreboard, Mapping) else "",
+        "due_hint": scoreboard.get("due_double_hint") if isinstance(scoreboard, Mapping) else "",
+        "blackapple_hint": scoreboard.get("blackapple_reco_hint") if isinstance(scoreboard, Mapping) else "",
+        "survivor_hint": scoreboard.get("survivor_hint") if isinstance(scoreboard, Mapping) else "",
+        "consensus_hint": scoreboard.get("r_consensus_hint") if isinstance(scoreboard, Mapping) else "",
+        "top_profit": top_profit,
+    }
+
+
 def parse_args() -> argparse.Namespace:
-    ap = argparse.ArgumentParser(description="Create a cross-state predictive portfolio report for a day D.")
+    ap = argparse.ArgumentParser(description="Create a cross-state predictive portfolio for the Analysis Arena branch.")
     ap.add_argument("--date", required=True, help="Predictive results/sharepack date D (YYYY-MM-DD)")
     ap.add_argument(
         "--sharepacks-root",
         default="sharepacks/_predictive",
         help="Sharepacks root directory (default: sharepacks/_predictive)",
     )
-    ap.add_argument(
-        "--profile",
-        choices=["mixed", "tool_only", "profit_only"],
-        default="tool_only",
-        help="Ablation profile to summarize (default: tool_only). Uses candidate_universe*.json and play_card*.json for that profile.",
-    )
+    ap.add_argument("--profile", choices=["mixed", "tool_only", "profit_only"], default="tool_only")
+    ap.add_argument("--experiment-tag", default="arena_v0")
     ap.add_argument(
         "--rank-by",
-        choices=["profit_alerts", "tool_first"],
+        choices=["arena_first", "tool_first", "profit_alerts"],
         default=None,
-        help="Ranking mode (default: profit_alerts for mixed; tool_first for tool_only/profit_only).",
+        help="Ranking mode (default: arena_first).",
     )
-    ap.add_argument("--out", default=None, help="Override output path (default: RUNS/<D>__PREDICTIVE_PORTFOLIO.md)")
-    ap.add_argument("--force", action="store_true", help="Overwrite an existing report (default: refuse).")
-    ap.add_argument("--top-n-alerts", type=int, default=3, help="Top N Profit Alerts rows to list per state (default: 3)")
-    ap.add_argument("--top-n-due-doubles", type=int, default=6, help="Top N Due Doubles canonicals to show per state (default: 6)")
-    ap.add_argument(
-        "--play-strategy-b12",
-        default="analysis_prefix",
-        help="Play card strategy to display for B12 (default: analysis_prefix).",
-    )
-    ap.add_argument(
-        "--play-strategy-b24",
-        default="vtrac_pack_boxed_first_laneonly_presetB",
-        help="Play card strategy to display for B24 (default: vtrac_pack_boxed_first_laneonly_presetB).",
-    )
+    ap.add_argument("--out", default=None, help="Override output path.")
+    ap.add_argument("--force", action="store_true", help="Overwrite an existing report.")
+    ap.add_argument("--top-n-alerts", type=int, default=3)
+    ap.add_argument("--top-n-due-doubles", type=int, default=6)
+    ap.add_argument("--play-strategy-b12", default="analysis_prefix")
+    ap.add_argument("--play-strategy-b24", default="vtrac_pack_boxed_first_laneonly_presetB")
     ap.add_argument(
         "--play-strategy-b36",
         default="v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22",
-        help=(
-            "Play card strategy to display for B36 (default: "
-            "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_split_spine_methods_tail_score_total_first_tail_spread_top14_pos18_22_tail_xlens_inject_methods18_packs22)."
-        ),
     )
     ap.add_argument(
         "--prefer-experiment-tags",
         default=None,
-        help=(
-            "Optional comma-separated experiment tags to prefer when selecting play_card*.json files. "
-            "Example: --prefer-experiment-tags v0_2_default_v1,,vtracpack_v1. "
-            "Default: prefer stable10 first (if present), then untagged, then vtracpack_v1."
-        ),
+        help="Optional comma-separated experiment tags to prefer for Candidate Universe / Play Card lookup.",
     )
     return ap.parse_args()
 
@@ -379,58 +410,50 @@ def main() -> None:
         raise SystemExit(f"Missing sharepack day dir: {_safe_rel(day_dir)}")
 
     cc_dir = day_dir / "control_center"
-    pa_path = cc_dir / "profit_alerts.csv"
-    pa_rows = _load_csv_rows(pa_path)
-
+    pa_rows = _load_csv_rows(cc_dir / "profit_alerts.csv")
     states = sorted(p.name for p in day_dir.iterdir() if p.is_dir() and p.name != "control_center")
     if not states:
         raise SystemExit(f"No states found under: {_safe_rel(day_dir)}")
 
-    profile = str(args.profile or "mixed").strip()
-    rank_by = str(args.rank_by or ("profit_alerts" if profile in {"mixed", "profit_only"} else "tool_first")).strip()
-    show_profit_alerts = profile in {"mixed", "profit_only"}
+    profile = str(args.profile or "tool_only").strip()
+    experiment_tag = _normalize_experiment_tag(args.experiment_tag)
+    rank_by = str(args.rank_by or "arena_first").strip()
 
-    prefer_tags: Sequence[str] = ("stable10", "", "vtracpack_v1")
     raw_prefer = str(args.prefer_experiment_tags or "").strip()
+    prefer_tags: List[str] = [experiment_tag] if experiment_tag else []
     if raw_prefer:
-        tags: List[str] = []
+        prefer_tags = []
         for part in raw_prefer.split(","):
             part = part.strip()
-            if not part or part.lower() in {"-", "none", "null"}:
-                tag = ""
-            else:
-                tag = _normalize_experiment_tag(part)
-            if tag not in tags:
-                tags.append(tag)
-        if "" not in tags:
-            tags.append("")
-        if "vtracpack_v1" not in tags:
-            tags.append("vtracpack_v1")
-        prefer_tags = tags
+            tag = _normalize_experiment_tag(part) if part and part.lower() not in {"-", "none", "null"} else ""
+            if tag not in prefer_tags:
+                prefer_tags.append(tag)
+    if "" not in prefer_tags:
+        prefer_tags.append("")
+    if "vtracpack_v1" not in prefer_tags:
+        prefer_tags.append("vtracpack_v1")
 
     b12_strategy = str(args.play_strategy_b12).strip() or "analysis_prefix"
     b24_strategy = str(args.play_strategy_b24).strip() or "vtrac_pack_boxed_first_laneonly_presetB"
-    b36_strategy = (
-        str(args.play_strategy_b36).strip()
-        or "v0_2_default_multi_pack_packheavy_spine4_index_tail_spinecap6_spine_taper_6644_sort_score_total_first"
+    b36_strategy = str(args.play_strategy_b36).strip()
+
+    RUNS2_PREDICTIVE_DIR.mkdir(parents=True, exist_ok=True)
+    default_out = RUNS2_PREDICTIVE_DIR / (
+        f"{args.date}__PREDICTIVE_PORTFOLIO{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.md"
     )
-
-    out_suffix = "" if profile == "mixed" else f"__{profile}"
-
-    runs_dir = _runs_dir()
-    runs_dir.mkdir(parents=True, exist_ok=True)
-    out_path = Path(args.out) if args.out else (runs_dir / f"{args.date}__PREDICTIVE_PORTFOLIO{out_suffix}.md")
+    out_path = Path(args.out) if args.out else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists() and not args.force:
         raise SystemExit(f"Predictive portfolio already exists: {_safe_rel(out_path)} (use --force to overwrite).")
 
-    # Build state rows.
     table_rows: List[Dict[str, Any]] = []
     for state_key in states:
         state_dir = day_dir / state_key
-        alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key) if show_profit_alerts else []
+        alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key)
         packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary_tagged(
-            state_dir, profile=profile, prefer_experiment_tags=prefer_tags
+            state_dir,
+            profile=profile,
+            prefer_experiment_tags=prefer_tags,
         )
         b12_boxed_count, b12_boxed, b12_combos, _, _, _ = _load_play_card_cut(
             state_dir,
@@ -439,67 +462,87 @@ def main() -> None:
             budget=12,
             prefer_experiment_tags=prefer_tags,
         )
-        b24_boxed_count, b24_boxed, b24_combos, b24_pack_indices, b24_pack_combos, b24_src = _load_play_card_cut(
+        _, _, _, b24_pack_indices, b24_pack_combos, b24_src = _load_play_card_cut(
             state_dir,
             profile=profile,
             strategy=b24_strategy,
             budget=24,
             prefer_experiment_tags=prefer_tags,
         )
-        b36_boxed_count, b36_boxed, b36_combos, b36_pack_indices, b36_pack_combos, b36_src = _load_play_card_cut(
+        _, _, _, b36_pack_indices, b36_pack_combos, b36_src = _load_play_card_cut(
             state_dir,
             profile=profile,
             strategy=b36_strategy,
             budget=36,
             prefer_experiment_tags=prefer_tags,
         )
+        arena = _load_arena_state_summary(state_dir, profile=profile, experiment_tag=experiment_tag)
 
         top_alerts = alerts[: max(0, int(args.top_n_alerts))]
-        top_strs: List[str] = []
-        strength_sum = 0
-        for a in top_alerts:
-            strength_sum += int(a.strength)
-            canon_label = a.canonical or (a.combos[0] if a.combos else "-")
-            top_strs.append(f"{a.variant}:{a.alert_id}:{a.suggested}:{canon_label}({a.cost_units})")
+        alert_labels: List[str] = []
+        alert_strength_sum = 0
+        for alert in top_alerts:
+            alert_strength_sum += int(alert["strength"])
+            canon_label = alert["canonical"] or (alert["combos"][0] if alert["combos"] else "-")
+            alert_labels.append(
+                f"{alert['variant']}:{alert['alert_id']}:{alert['suggested']}:{canon_label}"
+            )
 
-        dd_show = dd_canon[: max(0, int(args.top_n_due_doubles))]
-        b12_boxed_show = b12_boxed[:3]
+        arena_rank = arena.get("score_rank")
+        try:
+            arena_rank_int = int(arena_rank)
+        except Exception:
+            arena_rank_int = 9999
+
         top_support_label = (
             f"{top_support_count}:{' '.join(top_support)}" if top_support_count and top_support else ("0" if packs_count else "-")
+        )
+        arena_row_label = (
+            f"#{arena_rank_int} {arena.get('role') or '-'} / {arena.get('bucket') or '-'} / {arena.get('tracker') or '-'}"
+            if arena_rank_int != 9999
+            else "-"
         )
 
         table_rows.append(
             {
                 "StateKey": state_key,
                 "alerts_count": len(alerts),
-                "alerts_strength_sum_top": strength_sum,
-                "alerts_top": "; ".join(top_strs) if top_strs else "-",
+                "alerts_strength_sum_top": alert_strength_sum,
+                "alerts_top": "; ".join(alert_labels) if alert_labels else "-",
                 "candidate_union": union_count,
                 "candidate_packs": packs_count,
                 "candidate_top_support": int(top_support_count),
                 "candidate_top_support_label": top_support_label,
-                "due_doubles_canon": " ".join(dd_show) if dd_show else "-",
+                "due_doubles_canon": " ".join(dd_canon[: max(0, int(args.top_n_due_doubles))]) if dd_canon else "-",
                 "due_doubles_count": len(dd_canon),
-                "play_b12_boxed_count": int(b12_boxed_count),
-                "play_b12_boxed": (
-                    f"{b12_boxed_count}:{' '.join(b12_boxed_show)}" if b12_boxed_count else ("0" if b12_combos else "-")
-                ),
-                "play_b12_combos": " ".join(b12_combos),
+                "play_b12_boxed": f"{b12_boxed_count}:{' '.join(b12_boxed[:3])}" if b12_boxed_count else ("0" if b12_combos else "-"),
                 "play_b24_pack": _pack_label(b24_pack_indices, b24_pack_combos),
                 "play_b36_pack": _pack_label(b36_pack_indices, b36_pack_combos),
-                "play_b24_pack_combos": " ".join(b24_pack_combos) if b24_pack_combos else "-",
-                "play_b36_pack_combos": " ".join(b36_pack_combos) if b36_pack_combos else "-",
-                "play_b24_combos": " ".join(b24_combos),
-                "play_b36_combos": " ".join(b36_combos),
                 "play_b24_src": _safe_rel(b24_src) if b24_src else "-",
                 "play_b36_src": _safe_rel(b36_src) if b36_src else "-",
-                "play_b24_boxed_count": int(b24_boxed_count),
-                "play_b36_boxed_count": int(b36_boxed_count),
+                "arena_rank": arena_rank_int,
+                "arena_row_label": arena_row_label,
+                "arena_top": " ".join(arena.get("top_canonicals") or []) or "-",
+                "arena_vtrac": " ".join(arena.get("top_vtrac") or []) or "-",
+                "arena_reinforced": " ".join(arena.get("reinforced") or []) or "-",
+                "tracker_hint": " | ".join(
+                    part
+                    for part in [
+                        str(arena.get("positional_hint") or "").strip(),
+                        str(arena.get("profit_hint") or "").strip(),
+                        str(arena.get("due_hint") or "").strip(),
+                        str(arena.get("blackapple_hint") or "").strip(),
+                        str(arena.get("survivor_hint") or "").strip(),
+                        str(arena.get("consensus_hint") or "").strip(),
+                    ]
+                    if part
+                )
+                or "-",
+                "top_profit": " ; ".join(arena.get("top_profit") or []) or "-",
             }
         )
 
     if rank_by == "profit_alerts":
-        # Rank: more alerts + higher strength, then smaller candidate universe.
         table_rows.sort(
             key=lambda r: (
                 -int(r["alerts_count"]),
@@ -508,8 +551,7 @@ def main() -> None:
                 str(r["StateKey"]),
             )
         )
-    else:
-        # Tool-first triage: prefer stronger low-cost closures and narrower universes.
+    elif rank_by == "tool_first":
         table_rows.sort(
             key=lambda r: (
                 -int(r.get("candidate_top_support") or 0),
@@ -519,120 +561,86 @@ def main() -> None:
                 str(r["StateKey"]),
             )
         )
+    else:
+        table_rows.sort(
+            key=lambda r: (
+                int(r.get("arena_rank") or 9999),
+                int(r["candidate_union"]),
+                -int(r.get("alerts_strength_sum_top") or 0),
+                str(r["StateKey"]),
+            )
+        )
 
-    # Render markdown.
     lines: List[str] = []
-    lines.append(f"# Predictive Portfolio — D={args.date}")
+    lines.append(f"# Analysis Arena Predictive Portfolio — D={args.date}")
     lines.append("")
     lines.append("Purpose")
-    lines.append("- Cross-state triage for a predictive day (pre-results).")
-    lines.append(f"- Profile: `{profile}` | rank_by: `{rank_by}`")
-    lines.append("- Annotates state snapshots with Candidate Universe size + Due Doubles + Play Card closures.")
+    lines.append("- Cross-state pre-results triage for the Analysis Arena branch.")
+    lines.append("- Brain 1 / Brain 2 posture is surfaced first; Candidate Universe / Play Card remain the downstream control arm.")
+    lines.append(f"- Profile: `{profile}` | experiment tag: `{experiment_tag or 'untagged'}` | rank_by: `{rank_by}`")
+    lines.append("")
+    lines.append("SSOT anchors")
+    lines.append(f"- Arena system map: `{_safe_rel(SYSTEM_MAP_PATH)}`")
+    lines.append(f"- Arena operating flow: `{_safe_rel(OPERATING_FLOW_PATH)}`")
+    lines.append(f"- Arena cadence quickstart: `{_safe_rel(CADENCE_QUICKSTART_PATH)}`")
+    lines.append(f"- Aggregated arena contract: `{_safe_rel(ARENA_CONTRACT_PATH)}`")
+    lines.append(f"- Translation sandbox companion: `{_safe_rel(TRANSLATION_TEMPLATE_PATH)}`")
     lines.append("")
     lines.append("Evidence roots")
     lines.append(f"- Predictive sharepacks root: `{_safe_rel(sharepacks_root)}`")
-    if show_profit_alerts:
-        lines.append(f"- Control Center Profit Alerts: `{_safe_rel(pa_path)}`")
-    else:
-        lines.append(f"- Control Center Profit Alerts (excluded by profile): `{_safe_rel(pa_path)}`")
-    lines.append(f"- Candidate Universe file: `candidate_universe{_profile_suffix(profile)}*.json`")
-    lines.append(f"- Play Card file(s): `play_card{_profile_suffix(profile)}*.json`")
+    lines.append(f"- Control Center profit alerts: `{_safe_rel(cc_dir / 'profit_alerts.csv')}`")
+    lines.append(f"- Arena state artifact pattern: `sharepacks/_predictive/<D>/<STATE>/analysis/aggregated_analysis_arena{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.json`")
+    lines.append(f"- Translation sandbox seed pattern: `sharepacks/_predictive/<D>/<STATE>/analysis/translation_sandbox_seed{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.json`")
     lines.append("")
-    lines.append("## Portfolio table (ranked)")
+    lines.append("## Portfolio Table")
     lines.append("")
-    if show_profit_alerts:
+    lines.append("| State | Arena row | Arena top | Reinforced | Tracker hints | Alerts | CU union | B12 boxed | B24 pack | B36 pack |")
+    lines.append("|---|---|---|---|---|---:|---:|---|---|---|")
+    for row in table_rows:
         lines.append(
-            "| State | Alerts | Strength(top) | Top alerts (variant:id:mode:canon(cost)) | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed (analysis_prefix) | B24 VTRAC pack (idx/size) | B36 VTRAC pack (idx/size) |"
+            "| {StateKey} | {arena_row_label} | {arena_top} | {arena_reinforced} | {tracker_hint} | {alerts_count} | {candidate_union} | {play_b12_boxed} | {play_b24_pack} | {play_b36_pack} |".format(
+                **row
+            )
         )
-        lines.append("|---|---:|---:|---|---:|---:|---|---|---|---|---|")
-    else:
+    lines.append("")
+    lines.append("## Arena-First Board Snapshot")
+    lines.append("")
+    for row in [
+        item
+        for item in sorted(table_rows, key=lambda value: (value.get("arena_rank", 9999), value["StateKey"]))
+        if int(item.get("arena_rank", 9999)) != 9999
+    ][:8]:
         lines.append(
-            "| State | CU packs | CU union | CU top support | Due doubles (canonicals) | PlayCard B12 boxed (analysis_prefix) | B24 VTRAC pack (idx/size) | B36 VTRAC pack (idx/size) |"
+            f"- **{row['StateKey']}**: `{row['arena_row_label']}` | canonicals `{row['arena_top'] or '-'}` | vtrac `{row['arena_vtrac'] or '-'}` | top_profit `{row['top_profit']}`"
         )
-        lines.append("|---|---:|---:|---|---|---|---|---|")
-    for r in table_rows:
-        if show_profit_alerts:
+    lines.append("")
+    lines.append("## Control Arm Snapshot")
+    lines.append("")
+    lines.append("These are still baseline/control-arm surfaces, not the definition of arena truth.")
+    lines.append("")
+    for row in table_rows[:10]:
+        lines.append(
+            f"- **{row['StateKey']}**: CU packs=`{row['candidate_packs']}` union=`{row['candidate_union']}` top_support=`{row['candidate_top_support_label']}` due=`{row['due_doubles_canon']}`"
+        )
+    lines.append("")
+    lines.append("## Play Card Defaults")
+    lines.append("")
+    lines.append(f"- B12 strategy: `{b12_strategy}`")
+    lines.append(f"- B24 strategy: `{b24_strategy}`")
+    lines.append(f"- B36 strategy: `{b36_strategy}`")
+    lines.append("")
+    for row in table_rows:
+        if row["play_b24_pack"] != "-" or row["play_b36_pack"] != "-":
             lines.append(
-                "| {StateKey} | {alerts_count} | {alerts_strength_sum_top} | {alerts_top} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} | {play_b24_pack} | {play_b36_pack} |".format(
-                    **r
-                )
-            )
-        else:
-            lines.append(
-                "| {StateKey} | {candidate_packs} | {candidate_union} | {candidate_top_support_label} | {due_doubles_canon} | {play_b12_boxed} | {play_b24_pack} | {play_b36_pack} |".format(
-                    **r
-                )
-            )
-    lines.append("")
-    lines.append("## Play cards (defaults)")
-    lines.append("")
-    lines.append("These are the budgeted “what to play now” cuts derived from Candidate Universe (pre-results).")
-    lines.append("")
-    lines.append("Play strategy defaults (configurable):")
-    lines.append(f"- B12: `{b12_strategy}`")
-    lines.append(f"- B24: `{b24_strategy}`")
-    lines.append(f"- B36: `{b36_strategy}`")
-    lines.append("")
-    lines.append(f"### B12 (`{b12_strategy}`)")
-    for r in table_rows:
-        combos = str(r.get("play_b12_combos") or "").strip()
-        if not combos:
-            continue
-        lines.append(f"- **{r['StateKey']}**: `{combos}`")
-    lines.append("")
-    lines.append("### B24/B36 VTRAC pack picks")
-    lines.append("")
-    lines.append("Shows the inserted boxed-member VTRAC pack (sometimes multi-index) and which play_card file it came from.")
-    lines.append("")
-    for r in table_rows:
-        b24_pack = str(r.get("play_b24_pack") or "").strip()
-        b36_pack = str(r.get("play_b36_pack") or "").strip()
-        b24_pack_combos = str(r.get("play_b24_pack_combos") or "").strip()
-        b36_pack_combos = str(r.get("play_b36_pack_combos") or "").strip()
-        b24_src = str(r.get("play_b24_src") or "").strip()
-        b36_src = str(r.get("play_b36_src") or "").strip()
-        if b24_pack == "-" and b36_pack == "-":
-            continue
-        if b24_pack == b36_pack and b24_pack_combos == b36_pack_combos:
-            src = b24_src if b24_src and b24_src != "-" else b36_src
-            lines.append(f"- **{r['StateKey']}**: `idx(size)={b24_pack}` pack=`{b24_pack_combos or '-'}` (src: `{src}`)")
-        else:
-            lines.append(
-                f"- **{r['StateKey']}**: B24 `idx(size)={b24_pack}` pack=`{b24_pack_combos or '-'}` (src: `{b24_src}`) | "
-                f"B36 `idx(size)={b36_pack}` pack=`{b36_pack_combos or '-'}` (src: `{b36_src}`)"
+                f"- **{row['StateKey']}**: B24 `{row['play_b24_pack']}` (src `{row['play_b24_src']}`) | B36 `{row['play_b36_pack']}` (src `{row['play_b36_src']}`)"
             )
     lines.append("")
-    lines.append(f"### B24 (`{b24_strategy}`)")
+    lines.append("## Analyst Notes")
     lines.append("")
-    found_b24 = False
-    for r in table_rows:
-        combos = str(r.get("play_b24_combos") or "").strip()
-        if not combos:
-            continue
-        found_b24 = True
-        lines.append(f"- **{r['StateKey']}**: `{combos}`")
-    if not found_b24:
-        lines.append("- (not available for this profile/day)")
-    lines.append("")
-    lines.append(f"### B36 (`{b36_strategy}`)")
-    lines.append("")
-    found_b36 = False
-    for r in table_rows:
-        combos = str(r.get("play_b36_combos") or "").strip()
-        if not combos:
-            continue
-        found_b36 = True
-        lines.append(f"- **{r['StateKey']}**: `{combos}`")
-    if not found_b36:
-        lines.append("- (not available for this profile/day)")
-    lines.append("")
-    lines.append("## Notes")
-    lines.append("")
-    lines.append("- This is not a hit-rate claim; it is a *triage surface* to decide where to spend attention/budget.")
-    lines.append("- For any state, the canonical evidence remains the frozen predictive sharepack artifacts:")
-    lines.append(f"  - `{_safe_rel(cc_dir / 'profit_alerts.csv')}` (bet-ready implied sets; included only for mixed/profit_only)")
-    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/candidate_universe{_profile_suffix(profile)}*.json` (gradeable playset)")
-    lines.append(f"  - `sharepacks/_predictive/{args.date}/<STATE>/play_card{_profile_suffix(profile)}*.json` (budgeted cuts)")
+    lines.append("- Which states are strongest from the arena-first lens?: `...`")
+    lines.append("- Which states are strongest only from the control-arm lens?: `...`")
+    lines.append("- Any state where tracker hints materially outran the control arm?: `...`")
+    lines.append("- Any state where arena rank feels too high or too low?: `...`")
     lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
