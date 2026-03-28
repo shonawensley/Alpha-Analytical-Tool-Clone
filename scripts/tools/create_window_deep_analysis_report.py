@@ -41,6 +41,11 @@ def _parse_args() -> argparse.Namespace:
         default="",
         help="Optional C1/C2 frontier harness JSON. Defaults to the canonical output name inside the window root.",
     )
+    ap.add_argument(
+        "--pure-arena-scorecard-json",
+        default="",
+        help="Optional pure arena finalist scorecard JSON. Defaults to the canonical output name inside the window root.",
+    )
     ap.add_argument("--out-md", default="", help="Optional markdown output path.")
     ap.add_argument("--out-json", default="", help="Optional JSON output path.")
     ap.add_argument("--force", action="store_true", help="Overwrite existing outputs.")
@@ -59,6 +64,7 @@ def _default_paths(window_root: Path) -> Dict[str, Path]:
     return {
         "perf_json": window_root / f"{stem}__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
         "frontier_json": window_root / f"{stem}__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+        "pure_arena_json": window_root / f"{stem}__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
         "md": window_root / f"{stem}__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.md",
         "json": window_root / f"{stem}__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
     }
@@ -73,6 +79,10 @@ def _write_text(path: Path, text: str, *, force: bool) -> None:
 
 def _write_json(path: Path, payload: Any, *, force: bool) -> None:
     _write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n", force=force)
+
+
+def _pct(value: float) -> str:
+    return f"{100.0 * value:.1f}%"
 
 
 def _fmt_top(counter: Counter[str], *, limit: int = 8) -> List[Dict[str, Any]]:
@@ -98,6 +108,7 @@ def _narrative_payload(
     perf_payload: Dict[str, Any],
     *,
     frontier_payload: Dict[str, Any] | None = None,
+    pure_arena_payload: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     dates = iter_window_dates(window_root)
     winner_rows = perf_payload.get("ledger_rows") or []
@@ -202,6 +213,12 @@ def _narrative_payload(
     frontier_score_averages = frontier_payload.get("score_averages") or {}
     frontier_promotion_queue = frontier_payload.get("promotion_queue") or []
     frontier_notable_cases = frontier_payload.get("notable_cases") or {}
+    pure_arena_payload = pure_arena_payload or {}
+    pure_event_layer = pure_arena_payload.get("event_layer") or {}
+    pure_hit_layer = pure_arena_payload.get("hit_layer") or {}
+    pure_opp_layer = pure_arena_payload.get("opportunity_layer") or {}
+    pure_examples = pure_arena_payload.get("examples") or {}
+    pure_interpretation = list(pure_arena_payload.get("interpretation") or [])
 
     return {
         "metadata": perf_payload.get("metadata") or {},
@@ -242,6 +259,14 @@ def _narrative_payload(
             "promotion_queue": frontier_promotion_queue,
             "notable_cases": frontier_notable_cases,
         },
+        "pure_arena_finalist_layer": {
+            "event_layer": pure_event_layer,
+            "hit_layer": pure_hit_layer,
+            "opportunity_layer": pure_opp_layer,
+            "candidate_examples": pure_examples.get("candidate_supported_hits") or [],
+            "gap_examples": pure_examples.get("opportunity_gap_examples") or [],
+            "interpretation": pure_interpretation,
+        },
         "best_findings": {
             "control_arm_realized_rows": best_realized_rows[:12],
             "opportunity_gap_rows": opportunity_gap_rows[:12],
@@ -270,6 +295,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     shared = payload["shared_complexes"]
     trackers = payload["tracker_families"]
     pressure = payload["translational_pressure"]
+    pure_arena = payload["pure_arena_finalist_layer"]
     frontier = payload["winner_html_frontier"]
     findings = payload["best_findings"]
     promotion = payload["promotion_ledger"]
@@ -350,7 +376,27 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
         + (", ".join(f"`{row['value']}` x{row['count']}" for row in pressure["preserved_not_budgeted"]) or "_none_")
     )
     lines.append("")
-    lines.append("## 6. Winner HTML Frontier")
+    lines.append("## 6. Pure Arena Finalist / Candidate Layer")
+    lines.append("")
+    pure_event = pure_arena.get("event_layer") or {}
+    pure_hits = pure_arena.get("hit_layer") or {}
+    pure_opp = pure_arena.get("opportunity_layer") or {}
+    def _count_rate(block: Dict[str, Any]) -> str:
+        if not isinstance(block, dict):
+            return "`0/0` (`0.0%`)"
+        return f"`{int(block.get('count', 0))}/{int(block.get('denominator', 0))}` (`{_pct(float(block.get('rate', 0.0)))}`)"
+    lines.append(f"- Any candidate-like event coverage: {_count_rate(pure_event.get('any_candidate_like_events') or {})}")
+    lines.append(f"- VT-like finalist coverage: {_count_rate(pure_event.get('vt_like_events') or {})}")
+    lines.append(f"- Box-like candidate coverage: {_count_rate(pure_event.get('boxlike_events') or {})}")
+    lines.append(f"- Hit finalist support: {_count_rate(pure_hits.get('finalist_supported_hits') or {})}")
+    lines.append(f"- Straight hits with finalist support: {_count_rate(pure_hits.get('straight_with_finalist_support') or {})}")
+    lines.append(f"- Strict box hits with finalist support: {_count_rate(pure_hits.get('strict_box_with_finalist_support') or {})}")
+    lines.append(f"- Opportunity-gap box rows: {_count_rate(pure_opp.get('opportunity_gap_box_rows') or {})}")
+    lines.append(f"- Opportunity-gap rows with explicit arena box: {_count_rate(pure_opp.get('gap_rows_with_explicit_arena_box') or {})}")
+    for bullet in pure_arena.get("interpretation") or []:
+        lines.append(f"  - {bullet}")
+    lines.append("")
+    lines.append("## 7. Winner HTML Frontier")
     lines.append("")
     lines.append(f"- Frontier cases reviewed: `{frontier.get('case_count', 0)}`")
     lines.append(
@@ -406,13 +452,13 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
             + ", ".join(f"`{value}`" for value in frontier.get("warnings") or [])
         )
     lines.append("")
-    lines.append("## 7. Best Findings / Worst Misses")
+    lines.append("## 8. Best Findings / Worst Misses")
     lines.append("")
     lines.append(f"- Control-arm realized rows sampled: `{len(findings['control_arm_realized_rows'])}`")
     lines.append(f"- Opportunity-gap rows sampled: `{len(findings['opportunity_gap_rows'])}`")
     lines.append(f"- Direct miss rows sampled: `{len(findings['direct_miss_rows'])}`")
     lines.append("")
-    lines.append("## 8. Promotion Ledger")
+    lines.append("## 9. Promotion Ledger")
     lines.append("")
     for item in promotion["preserve"]:
         lines.append(f"- Preserve: {item}")
@@ -429,6 +475,7 @@ def main() -> None:
     defaults = _default_paths(window_root)
     perf_json = _window_root_from_arg(args.performance_gap_json) if args.performance_gap_json else defaults["perf_json"]
     frontier_json = _window_root_from_arg(args.frontier_json) if args.frontier_json else defaults["frontier_json"]
+    pure_arena_json = _window_root_from_arg(args.pure_arena_scorecard_json) if args.pure_arena_scorecard_json else defaults["pure_arena_json"]
     out_md = _window_root_from_arg(args.out_md) if args.out_md else defaults["md"]
     out_json = _window_root_from_arg(args.out_json) if args.out_json else defaults["json"]
 
@@ -440,6 +487,11 @@ def main() -> None:
         raw_frontier = read_json(frontier_json)
         if isinstance(raw_frontier, dict):
             frontier_payload = raw_frontier
+    pure_arena_payload: Dict[str, Any] = {}
+    if pure_arena_json.exists():
+        raw_pure_arena = read_json(pure_arena_json)
+        if isinstance(raw_pure_arena, dict):
+            pure_arena_payload = raw_pure_arena
     ledger_path = perf_payload.get("ledger_path")
     ledger_rows: List[Dict[str, Any]] = []
     if ledger_path:
@@ -451,11 +503,18 @@ def main() -> None:
                 ledger_rows = [{k: (v or "") for k, v in row.items()} for row in csv.DictReader(fh)]
     perf_payload["ledger_rows"] = ledger_rows
 
-    narrative = _narrative_payload(window_root, perf_payload, frontier_payload=frontier_payload)
+    narrative = _narrative_payload(
+        window_root,
+        perf_payload,
+        frontier_payload=frontier_payload,
+        pure_arena_payload=pure_arena_payload,
+    )
     narrative["schema_version"] = "analysis_arena_window_deep_analysis/v1"
     narrative["performance_gap_json"] = safe_rel(perf_json)
     if frontier_payload:
         narrative["frontier_json"] = safe_rel(frontier_json)
+    if pure_arena_payload:
+        narrative["pure_arena_scorecard_json"] = safe_rel(pure_arena_json)
 
     _write_json(out_json, narrative, force=args.force)
     _write_text(out_md, _render_markdown(narrative, perf_json_path=perf_json), force=args.force)

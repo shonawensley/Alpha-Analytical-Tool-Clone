@@ -129,7 +129,7 @@ def test_cmd_doubles_inventory_targets_results_and_validation_dirs(tmp_path: Pat
     assert str(tmp_path / "validation") in cmd
 
 
-def test_build_window_close_commands_includes_all_four_reports(tmp_path: Path) -> None:
+def test_build_window_close_commands_includes_all_five_reports(tmp_path: Path) -> None:
     cmds = build_window_close_commands(
         window_root=tmp_path / "WINDOW_2026-01-05_to_2026-01-09",
         runs_root=tmp_path / "RUNS",
@@ -139,7 +139,7 @@ def test_build_window_close_commands_includes_all_four_reports(tmp_path: Path) -
         force=True,
     )
 
-    assert len(cmds) == 4
+    assert len(cmds) == 5
     assert cmds[0][1].endswith("create_window_performance_gap_report.py")
     assert "--window-root" in cmds[0]
     assert "--force" in cmds[0]
@@ -159,6 +159,10 @@ def test_build_window_close_commands_includes_all_four_reports(tmp_path: Path) -
     assert "--window-root" in cmds[2]
     assert "--force" in cmds[2]
 
-    assert cmds[3][1].endswith("create_window_deep_analysis_report.py")
+    assert cmds[3][1].endswith("create_window_pure_arena_finalist_scorecard.py")
     assert "--window-root" in cmds[3]
     assert "--force" in cmds[3]
+
+    assert cmds[4][1].endswith("create_window_deep_analysis_report.py")
+    assert "--window-root" in cmds[4]
+    assert "--force" in cmds[4]

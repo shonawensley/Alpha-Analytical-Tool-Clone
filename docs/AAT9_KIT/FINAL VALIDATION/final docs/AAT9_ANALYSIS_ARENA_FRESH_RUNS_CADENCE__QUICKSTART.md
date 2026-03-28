@@ -161,6 +161,7 @@ These produce:
 
 - quantitative `arena truth vs control-arm realization vs opportunity gap`
 - deep hit analysis + machine-readable hit roster
+- pure arena finalist / candidate scorecard
 - C1/C2 vertical-frontier harness analysis + machine-readable frontier cases
 - broader Codex-style window synthesis
 

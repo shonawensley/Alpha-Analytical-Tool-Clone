@@ -441,6 +441,7 @@ def _seed_hit_analysis_window(tmp_path: Path) -> tuple[Path, Path, Path]:
 def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch) -> None:
     from scripts.tools import analysis_arena_window_utils as util
     from scripts.tools import create_window_deep_analysis_report as deep
+    from scripts.tools import create_window_pure_arena_finalist_scorecard as scorecard
     from scripts.tools import create_window_performance_gap_report as gap
 
     window_root = _seed_window(tmp_path)
@@ -450,6 +451,7 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     monkeypatch.setattr(gap, "UTILS_REPO_ROOT", tmp_path)
     monkeypatch.setattr(gap, "DEFAULT_RESULTS_ROOT", tmp_path / "data" / "results")
     monkeypatch.setattr(deep, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(scorecard, "REPO_ROOT", tmp_path)
 
     perf_md = window_root / "gap.md"
     perf_json = window_root / "gap.json"
@@ -480,6 +482,17 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert perf_payload["summary_counts"]["play_card_any_box"] == 2
     assert perf_payload["summary_counts"]["cu_exact"] == 2
     assert "Arena Intrinsic Quality" in perf_md.read_text(encoding="utf-8")
+
+    _write_text(
+        window_root / f"{window_root.name}__ANALYSIS_ARENA__PERFORMANCE_GAP__ledger.csv",
+        perf_ledger.read_text(encoding="utf-8"),
+    )
+    _write_text(
+        window_root / f"{window_root.name}__ANALYSIS_ARENA__HIT_ROSTER.csv",
+        "date,state_key,period,winner,board_rank,top_primary_target,best_clean_host,arena_primary_box,arena_primary_vt,sandbox_box_seed,sandbox_exact_seed,sandbox_vt_seed,preserved_not_budgeted,arena_box_signal,arena_exact_signal,play_straight_hit,play_box_strict_hit,play_box_any_hit,play_card_any_box,play_card_any_exact,arena_final_candidate_signature,arena_final_candidate_signature_score\n"
+        "2026-01-05,NewYork4,Midday,080,1,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,CLEAR_ARENA_FINALIST,4\n"
+        "2026-01-05,Texas4,Evening,735,5,False,False,False,True,False,False,True,False,False,False,False,False,True,True,False,PARTIAL_ARENA_FINALIST,2\n",
+    )
 
     frontier_json = window_root / "frontier.json"
     _write_json(
@@ -538,6 +551,25 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
         },
     )
 
+    pure_arena_json = window_root / "pure_arena.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_window_pure_arena_finalist_scorecard.py",
+            "--window-root",
+            str(window_root),
+            "--frontier-json",
+            str(frontier_json),
+            "--out-md",
+            str(window_root / "pure_arena.md"),
+            "--out-json",
+            str(pure_arena_json),
+            "--force",
+        ],
+    )
+    scorecard.main()
+
     deep_md = window_root / "deep.md"
     deep_json = window_root / "deep.json"
     monkeypatch.setattr(
@@ -551,6 +583,8 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
             str(perf_json),
             "--frontier-json",
             str(frontier_json),
+            "--pure-arena-scorecard-json",
+            str(pure_arena_json),
             "--out-md",
             str(deep_md),
             "--out-json",
@@ -566,8 +600,10 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert deep_payload["winner_html_frontier"]["case_count"] == 2
     assert deep_payload["winner_html_frontier"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
     assert deep_payload["winner_html_frontier"]["promotion_queue"][0]["action"] == "TEST_IN_TRANSLATOR"
+    assert deep_payload["pure_arena_finalist_layer"]["event_layer"]["winner_events"] == 2
     assert "Shared Complexes / Carryover / Decay" in deep_md.read_text(encoding="utf-8")
     assert "Winner HTML Frontier" in deep_md.read_text(encoding="utf-8")
+    assert "Pure Arena Finalist / Candidate Layer" in deep_md.read_text(encoding="utf-8")
 
 
 def test_arena_vs_legacy_window_comparison_report(tmp_path, monkeypatch) -> None:
@@ -653,6 +689,61 @@ def test_window_deep_hit_analysis_report(tmp_path, monkeypatch) -> None:
     text = out_md.read_text(encoding="utf-8")
     assert "Hit Inventory" in text
     assert "Arena Final-Candidate Signatures" in text
+
+
+def test_window_pure_arena_finalist_scorecard_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_window_pure_arena_finalist_scorecard as scorecard
+
+    window_root, _runs_root, _sharepacks_root = _seed_hit_analysis_window(tmp_path)
+    monkeypatch.setattr(scorecard, "REPO_ROOT", tmp_path)
+
+    frontier_json = window_root / "frontier.json"
+    _write_json(
+        frontier_json,
+        {
+            "signature_mix": {
+                "signature_counts": {
+                    "HIDDEN_COMPRESSED_FRONTIER": 1,
+                    "VTRAC_FRONTIER": 1,
+                }
+            },
+            "promotion_queue": [
+                {"signal": "Hidden compressed winner-family frontier"},
+                {"signal": "Feeder-to-frontier progression"},
+            ],
+        },
+    )
+
+    out_md = window_root / "pure_finalist.md"
+    out_json = window_root / "pure_finalist.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_window_pure_arena_finalist_scorecard.py",
+            "--window-root",
+            str(window_root),
+            "--frontier-json",
+            str(frontier_json),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--force",
+        ],
+    )
+    scorecard.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["event_layer"]["winner_events"] == 2
+    assert payload["event_layer"]["vt_like_events"]["count"] == 2
+    assert payload["event_layer"]["boxlike_events"]["count"] == 1
+    assert payload["hit_layer"]["finalist_supported_hits"]["count"] == 2
+    assert payload["opportunity_layer"]["opportunity_gap_box_rows"]["count"] == 0
+    assert payload["frontier_context"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
+    text = out_md.read_text(encoding="utf-8")
+    assert "Pure Arena Finalist / Candidate Scorecard" in text
+    assert "Event-Level Finalist Territory" in text
 
 
 def test_window_c1_c2_frontier_harness_report(tmp_path, monkeypatch) -> None:

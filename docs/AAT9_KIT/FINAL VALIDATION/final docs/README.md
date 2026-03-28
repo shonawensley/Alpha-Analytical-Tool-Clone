@@ -32,6 +32,7 @@ If you are working on the rebuilt Analysis Arena branch, start here:
 - Window-close reports now include:
   - performance / opportunity gap
   - deep hit analysis + hit roster
+  - pure arena finalist / candidate scorecard
   - C1/C2 frontier harness analysis + frontier cases
   - window deep analysis / Codex report
 - Per-state Master Validation: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`

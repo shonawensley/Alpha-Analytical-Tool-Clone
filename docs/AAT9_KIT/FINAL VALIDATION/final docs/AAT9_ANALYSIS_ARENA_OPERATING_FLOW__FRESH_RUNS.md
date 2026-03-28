@@ -182,9 +182,10 @@ Once a full window is complete, run:
 python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
 
-That gives the branch four different window-close artifacts:
+That gives the branch five different window-close artifacts:
 
 - one quantitative report for arena quality, control-arm realization, and opportunity gap
 - one deep converted-hit report for hit class, rank, cost, and arena-finalist signatures
+- one pure arena finalist / candidate scorecard for VTRAC/finalist territory, combo-like candidate traces, and opportunity-gap evidence
 - one winner-HTML frontier harness for C1/C2 survivor / feeder / compression analysis
 - one broader narrative report for repeated structures, carryover, tracker families, and promotions
