@@ -7,6 +7,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     _arena_runs_dir_from_arg,
     _cmd_doubles_inventory,
     _iter_state_keys_for_date,
+    build_window_close_commands,
     build_pre_commands,
 )
 
@@ -126,3 +127,34 @@ def test_cmd_doubles_inventory_targets_results_and_validation_dirs(tmp_path: Pat
     assert "data/results" in cmd
     assert "--run-report-dir" in cmd
     assert str(tmp_path / "validation") in cmd
+
+
+def test_build_window_close_commands_includes_all_three_reports(tmp_path: Path) -> None:
+    cmds = build_window_close_commands(
+        window_root=tmp_path / "WINDOW_2026-01-05_to_2026-01-09",
+        runs_root=tmp_path / "RUNS",
+        sharepacks_root="sharepacks/_predictive",
+        profile="tool_only",
+        experiment_tag="arena_v0",
+        force=True,
+    )
+
+    assert len(cmds) == 3
+    assert cmds[0][1].endswith("create_window_performance_gap_report.py")
+    assert "--window-root" in cmds[0]
+    assert "--force" in cmds[0]
+
+    assert cmds[1][1].endswith("create_window_deep_hit_analysis_report.py")
+    assert "--runs-root" in cmds[1]
+    assert str(tmp_path / "RUNS") in cmds[1]
+    assert "--sharepacks-root" in cmds[1]
+    assert "sharepacks/_predictive" in cmds[1]
+    assert "--profile" in cmds[1]
+    assert "tool_only" in cmds[1]
+    assert "--experiment-tag" in cmds[1]
+    assert "arena_v0" in cmds[1]
+    assert "--force" in cmds[1]
+
+    assert cmds[2][1].endswith("create_window_deep_analysis_report.py")
+    assert "--window-root" in cmds[2]
+    assert "--force" in cmds[2]

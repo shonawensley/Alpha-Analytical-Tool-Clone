@@ -28,6 +28,10 @@ If you are working on the rebuilt Analysis Arena branch, start here:
 - Arena fresh-runs cadence: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
 - Arena operating flow / diagram: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - Arena-era RUNS portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
+- Window-close reports now include:
+  - performance / opportunity gap
+  - deep hit analysis + hit roster
+  - window deep analysis / Codex report
 - Per-state Master Validation: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - Brain 2 operating template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - Brain 2 Master Validation companion: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`

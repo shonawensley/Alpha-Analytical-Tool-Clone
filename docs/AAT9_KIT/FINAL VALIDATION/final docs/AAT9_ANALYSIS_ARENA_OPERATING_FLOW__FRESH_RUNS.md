@@ -53,7 +53,8 @@ flowchart TD
     L --> N[Window Learning / Decay / Comparison]
     M --> N
     N --> O[Performance / Opportunity Gap Report]
-    N --> P[Window Deep Analysis / Codex Report]
+    N --> P[Deep Hit Analysis / Hit Roster]
+    N --> Q[Window Deep Analysis / Codex Report]
 ```
 
 ---
@@ -145,7 +146,8 @@ For post-results:
 2. Brain 2 Master Validation
 3. control-arm comparison
 4. performance / opportunity gap report
-5. window deep analysis / Codex report
+5. deep hit analysis / hit roster
+6. window deep analysis / Codex report
 
 ---
 
@@ -175,11 +177,11 @@ The branch is designed to let real fresh-run evidence teach those later layers.
 Once a full window is complete, run:
 
 ```bash
-python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
-python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
 
-That gives the branch two different window-close artifacts:
+That gives the branch three different window-close artifacts:
 
 - one quantitative report for arena quality, control-arm realization, and opportunity gap
+- one deep converted-hit report for hit class, rank, cost, and arena-finalist signatures
 - one broader narrative report for repeated structures, carryover, tracker families, and promotions

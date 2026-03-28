@@ -151,16 +151,16 @@ After a completed window under:
 
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_<...>/`
 
-generate the two end-of-window reports:
+generate the full end-of-window closeout set:
 
 ```bash
-python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
-python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
 
 These produce:
 
 - quantitative `arena truth vs control-arm realization vs opportunity gap`
+- deep hit analysis + machine-readable hit roster
 - broader Codex-style window synthesis
 
 Use them after:

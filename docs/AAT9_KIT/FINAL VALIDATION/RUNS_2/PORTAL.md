@@ -89,13 +89,14 @@ Suggested window closeout artifacts:
 - control-arm comparison rollups
 - strongest board-level lessons
 - `WINDOW_<...>__ANALYSIS_ARENA__PERFORMANCE_GAP.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__HIT_ROSTER.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.*`
 
 Recommended commands:
 
 ```bash
-python3 scripts/tools/create_window_performance_gap_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
-python3 scripts/tools/create_window_deep_analysis_report.py --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --force
+python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
 
 ---

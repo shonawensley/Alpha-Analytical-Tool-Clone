@@ -175,6 +175,16 @@ def _window_label(start_date: str, end_date: str) -> str:
     return start_date if start_date == end_date else f"{start_date}_to_{end_date}"
 
 
+def _window_root_from_arg(value: str) -> Path:
+    raw = str(value or "").strip()
+    if not raw:
+        raise SystemExit("--window-root is required")
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (REPO_ROOT / path).resolve()
+    return path
+
+
 def _iter_state_keys_for_date(*, sharepacks_root: str, results_date: str, states: Sequence[str]) -> list[str]:
     if states:
         return list(states)
@@ -344,6 +354,49 @@ def _cmd_doubles_inventory(
         "--out-study-queue",
         str(out_study),
     ]
+
+
+def build_window_close_commands(
+    *,
+    window_root: Path,
+    runs_root: Path,
+    sharepacks_root: str,
+    profile: str,
+    experiment_tag: str,
+    force: bool,
+) -> List[List[str]]:
+    commands: List[List[str]] = [
+        [
+            "python3",
+            "scripts/tools/create_window_performance_gap_report.py",
+            "--window-root",
+            str(window_root),
+        ],
+        [
+            "python3",
+            "scripts/tools/create_window_deep_hit_analysis_report.py",
+            "--window-root",
+            str(window_root),
+            "--runs-root",
+            str(runs_root),
+            "--sharepacks-root",
+            sharepacks_root,
+            "--profile",
+            profile,
+            "--experiment-tag",
+            experiment_tag,
+        ],
+        [
+            "python3",
+            "scripts/tools/create_window_deep_analysis_report.py",
+            "--window-root",
+            str(window_root),
+        ],
+    ]
+    if force:
+        for cmd in commands:
+            cmd.append("--force")
+    return commands
 
 
 def build_pre_commands(
@@ -557,6 +610,19 @@ def _parse_args() -> argparse.Namespace:
     post_range.add_argument("--skip-windowed", action="store_true")
     post_range.add_argument("--no-per-day-receipts", action="store_true")
     post_range.add_argument("--no-receipt", action="store_true")
+
+    window_close = sub.add_parser("window-close", help="Generate the full arena-era window-close report set for an existing RUNS_2 window.")
+    window_close.add_argument("--window-root", required=True, help="RUNS_2 window root, e.g. docs/.../RUNS_2/WINDOW_<...>")
+    window_close.add_argument("--runs-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"))
+    window_close.add_argument("--sharepacks-root", default="sharepacks/_predictive")
+    window_close.add_argument("--profile", default="tool_only")
+    window_close.add_argument("--experiment-tag", default="arena_v0")
+    window_close.add_argument("--skip-performance-gap", action="store_true")
+    window_close.add_argument("--skip-deep-hit-analysis", action="store_true")
+    window_close.add_argument("--skip-deep-analysis", action="store_true")
+    window_close.add_argument("--no-receipt", action="store_true")
+    window_close.add_argument("--force", action="store_true")
+    window_close.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1132,6 +1198,67 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs_dir / f"ANALYSIS_ARENA__CYCLE__POST_RANGE__{start_d.isoformat()}_to_{end_d.isoformat()}__{profile}__{experiment_tag}.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-close":
+        window_root = _window_root_from_arg(str(args.window_root))
+        runs_root = Path(str(args.runs_root)).resolve()
+        sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
+        profile = str(args.profile or "tool_only").strip()
+        experiment_tag = str(args.experiment_tag or "arena_v0").strip() or "arena_v0"
+
+        all_cmds = build_window_close_commands(
+            window_root=window_root,
+            runs_root=runs_root,
+            sharepacks_root=sharepacks_root,
+            profile=profile,
+            experiment_tag=experiment_tag,
+            force=bool(args.force),
+        )
+        cmds: List[List[str]] = []
+        if not bool(args.skip_performance_gap):
+            cmds.append(all_cmds[0])
+        if not bool(args.skip_deep_hit_analysis):
+            cmds.append(all_cmds[1])
+        if not bool(args.skip_deep_analysis):
+            cmds.append(all_cmds[2])
+
+        receipt_lines: List[str] = [
+            f"# Analysis Arena cycle — WINDOW CLOSE — {window_root.name}",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- window_root: `{_safe_rel(window_root)}`",
+            f"- runs_root: `{_safe_rel(runs_root)}`",
+            f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`",
+            f"- profile: `{profile}`",
+            f"- experiment_tag: `{experiment_tag}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Window-Close Artifacts",
+            "- Performance / opportunity gap report",
+            "- Deep hit analysis + hit roster",
+            "- Window deep analysis / Codex report",
+            "",
+            "## Commands",
+            "",
+        ]
+        for cmd in cmds:
+            receipt_lines.append(f"- `{(' '.join(str(c) for c in cmd))}`")
+        receipt_lines.append("")
+
+        for cmd in cmds:
+            _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = window_root / f"ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__{profile}__{experiment_tag}.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
