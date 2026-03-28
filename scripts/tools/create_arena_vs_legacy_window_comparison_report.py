@@ -127,6 +127,14 @@ def _extract_table_metric(text: str, label: str) -> Dict[str, Any]:
     }
 
 
+def _missing_fraction_metric() -> Dict[str, Any]:
+    return {"count": 0, "denominator": 0, "rate": 0.0}
+
+
+def _missing_table_metric() -> Dict[str, Any]:
+    return {"count": 0, "rate": 0.0}
+
+
 def _load_arena_gap(window_root: Path) -> Tuple[Path, Dict[str, Any]]:
     path = window_root / f"{window_root.name}__ANALYSIS_ARENA__PERFORMANCE_GAP.json"
     payload = read_json(path)
@@ -137,9 +145,24 @@ def _load_arena_gap(window_root: Path) -> Tuple[Path, Dict[str, Any]]:
 
 def _load_legacy_dashboard_metrics(legacy_runs_root: Path, *, window_label: str) -> Dict[str, Any]:
     path = legacy_runs_root / f"{window_label}__CORPUS_DASHBOARD.md"
+    if not path.exists():
+        return {
+            "path": safe_rel(path),
+            "available": False,
+            "warning": "Same-window legacy corpus dashboard is missing.",
+            "total_graded_outcomes": 0,
+            "stable_families_present": _missing_fraction_metric(),
+            "hot_zones_top_lanes": _missing_fraction_metric(),
+            "vtrac_top10": _missing_fraction_metric(),
+            "dr_top_candidates": _missing_fraction_metric(),
+            "blackapple_top_list": _missing_fraction_metric(),
+            "winner_vtrac_repeat": _missing_fraction_metric(),
+        }
     text = _read_text(path)
     return {
         "path": safe_rel(path),
+        "available": True,
+        "warning": "",
         "total_graded_outcomes": _extract_total_graded_outcomes(text),
         "stable_families_present": _extract_fraction_metric(text, "Stable families present"),
         "hot_zones_top_lanes": _extract_fraction_metric(text, "Hot Zones top lanes present"),
@@ -154,9 +177,20 @@ def _load_legacy_dashboard_metrics(legacy_runs_root: Path, *, window_label: str)
 
 def _load_legacy_dr_metrics(legacy_runs_root: Path, *, window_label: str) -> Dict[str, Any]:
     path = legacy_runs_root / f"{window_label}__DR_LENS_REPORT.md"
+    if not path.exists():
+        return {
+            "path": safe_rel(path),
+            "available": False,
+            "warning": "Same-window legacy DR lens report is missing.",
+            "active_rows": _missing_fraction_metric(),
+            "top_winner_present_any": _missing_table_metric(),
+            "dr_win_vt_boxed_any": _missing_table_metric(),
+        }
     text = _read_text(path)
     return {
         "path": safe_rel(path),
+        "available": True,
+        "warning": "",
         "active_rows": _extract_fraction_metric(text, "Active rows"),
         "top_winner_present_any": _extract_table_metric(text, "top.winner_present (any)"),
         "dr_win_vt_boxed_any": _extract_table_metric(text, "flags.dr_win_vt_boxed (any)"),
@@ -165,9 +199,21 @@ def _load_legacy_dr_metrics(legacy_runs_root: Path, *, window_label: str) -> Dic
 
 def _load_legacy_control_center_metrics(legacy_runs_root: Path, *, window_label: str) -> Dict[str, Any]:
     path = legacy_runs_root / f"{window_label}__CONTROL_CENTER_ROLLUP.md"
+    if not path.exists():
+        return {
+            "path": safe_rel(path),
+            "available": False,
+            "warning": "Same-window legacy control-center rollup is missing.",
+            "blackapple_alert_rows": _missing_fraction_metric(),
+            "blackapple_watch_rows": _missing_fraction_metric(),
+            "due_double_midday": _missing_fraction_metric(),
+            "due_double_evening": _missing_fraction_metric(),
+        }
     text = _read_text(path)
     return {
         "path": safe_rel(path),
+        "available": True,
+        "warning": "",
         "blackapple_alert_rows": _extract_fraction_metric(text, "Status ALERT"),
         "blackapple_watch_rows": _extract_fraction_metric(text, "Status WATCH"),
         "due_double_midday": _extract_fraction_metric(text, "Midday winner in any family"),
@@ -406,6 +452,8 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
     lines.append(
         f"- Legacy dashboard: [corpus dashboard]({payload['metadata']['legacy_dashboard_path']})"
     )
+    if not legacy["dashboard"].get("available", True):
+        lines.append(f"- Legacy dashboard status: `{legacy['dashboard'].get('warning', 'missing')}`")
     lines.append(
         f"- Stable family presence: `{legacy['dashboard']['stable_families_present'].get('count', 0)}/"
         f"{legacy['dashboard']['stable_families_present'].get('denominator', 0)}` "

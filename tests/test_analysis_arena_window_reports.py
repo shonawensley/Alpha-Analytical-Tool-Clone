@@ -481,6 +481,63 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert perf_payload["summary_counts"]["cu_exact"] == 2
     assert "Arena Intrinsic Quality" in perf_md.read_text(encoding="utf-8")
 
+    frontier_json = window_root / "frontier.json"
+    _write_json(
+        frontier_json,
+        {
+            "metadata": {
+                "case_count": 2,
+                "warnings": [],
+                "window_dates": ["2026-01-05"],
+                "window_root": str(window_root),
+            },
+            "signature_mix": {
+                "signature_counts": {
+                    "HIDDEN_COMPRESSED_FRONTIER": 1,
+                    "VTRAC_FRONTIER": 1,
+                },
+                "hit_class_counts": {
+                    "STRAIGHT|BOXED|VTRAC_STRAIGHT|VTRAC_BOXED": 1,
+                    "BOXED|VTRAC_BOXED": 1,
+                },
+                "inventory_type_counts": {
+                    "double": 1,
+                    "mirror_double": 1,
+                },
+                "signature_strength_counts": {
+                    "HIGH": 2,
+                },
+                "blackapple_status_counts": {
+                    "ALERT": 1,
+                    "WATCH": 1,
+                },
+            },
+            "score_averages": {
+                "vertical_stability_score": 0.95,
+                "hidden_winner_score": 0.44,
+                "feeder_progression_score": 0.51,
+                "frontier_strength_score": 64.2,
+            },
+            "promotion_queue": [
+                {
+                    "action": "TEST_IN_TRANSLATOR",
+                    "theme": "Hidden compressed frontier",
+                    "reason": "Repeated hidden winner-family survival.",
+                }
+            ],
+            "notable_cases": {
+                "strongest": {
+                    "date": "2026-01-05",
+                    "state": "NewYork4",
+                    "winner": "080",
+                    "frontier_signature_type": "VTRAC_FRONTIER",
+                    "signature_strength": "HIGH",
+                }
+            },
+            "cases": [],
+        },
+    )
+
     deep_md = window_root / "deep.md"
     deep_json = window_root / "deep.json"
     monkeypatch.setattr(
@@ -492,6 +549,8 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
             str(window_root),
             "--performance-gap-json",
             str(perf_json),
+            "--frontier-json",
+            str(frontier_json),
             "--out-md",
             str(deep_md),
             "--out-json",
@@ -504,7 +563,11 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     deep_payload = json.loads(deep_json.read_text(encoding="utf-8"))
     assert deep_payload["window_overview"]["winner_events"] == 2
     assert deep_payload["tracker_families"]["doubles_result_types"]["double"] == 1
+    assert deep_payload["winner_html_frontier"]["case_count"] == 2
+    assert deep_payload["winner_html_frontier"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
+    assert deep_payload["winner_html_frontier"]["promotion_queue"][0]["action"] == "TEST_IN_TRANSLATOR"
     assert "Shared Complexes / Carryover / Decay" in deep_md.read_text(encoding="utf-8")
+    assert "Winner HTML Frontier" in deep_md.read_text(encoding="utf-8")
 
 
 def test_arena_vs_legacy_window_comparison_report(tmp_path, monkeypatch) -> None:
