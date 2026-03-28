@@ -388,6 +388,12 @@ def build_window_close_commands(
         ],
         [
             "python3",
+            "scripts/tools/create_window_c1_c2_frontier_harness_report.py",
+            "--window-root",
+            str(window_root),
+        ],
+        [
+            "python3",
             "scripts/tools/create_window_deep_analysis_report.py",
             "--window-root",
             str(window_root),
@@ -619,6 +625,7 @@ def _parse_args() -> argparse.Namespace:
     window_close.add_argument("--experiment-tag", default="arena_v0")
     window_close.add_argument("--skip-performance-gap", action="store_true")
     window_close.add_argument("--skip-deep-hit-analysis", action="store_true")
+    window_close.add_argument("--skip-frontier-harness", action="store_true")
     window_close.add_argument("--skip-deep-analysis", action="store_true")
     window_close.add_argument("--no-receipt", action="store_true")
     window_close.add_argument("--force", action="store_true")
@@ -1225,8 +1232,10 @@ def main() -> None:
             cmds.append(all_cmds[0])
         if not bool(args.skip_deep_hit_analysis):
             cmds.append(all_cmds[1])
-        if not bool(args.skip_deep_analysis):
+        if not bool(args.skip_frontier_harness):
             cmds.append(all_cmds[2])
+        if not bool(args.skip_deep_analysis):
+            cmds.append(all_cmds[3])
 
         receipt_lines: List[str] = [
             f"# Analysis Arena cycle — WINDOW CLOSE — {window_root.name}",
@@ -1245,6 +1254,7 @@ def main() -> None:
             "## Window-Close Artifacts",
             "- Performance / opportunity gap report",
             "- Deep hit analysis + hit roster",
+            "- C1/C2 frontier harness analysis + case roster",
             "- Window deep analysis / Codex report",
             "",
             "## Commands",

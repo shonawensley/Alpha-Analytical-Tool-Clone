@@ -14,6 +14,55 @@ def _write_json(path: Path, payload: object) -> None:
     _write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def _winner_report_payload(
+    *,
+    state: str,
+    index: int,
+    winner_combo: str,
+    patterns: list[str],
+    stats: dict[str, dict[str, int]],
+    combined_rows: list[dict[str, object]],
+) -> dict[str, object]:
+    tables: dict[str, list[dict[str, object]]] = {"Combined": []}
+    for row in combined_rows:
+        cells: dict[str, object] = {}
+        for key in ("Set", "Draw", "RowType", "7", "6", "5", "4", "3", "2", "1"):
+            value = row.get(key, {"text": "N/A", "tags": []})
+            if key in {"Set", "Draw", "RowType"}:
+                cells[key] = {"text": str(value), "tags": []}
+            else:
+                cells[key] = value
+        tables["Combined"].append(
+            {
+                "Set": str(row.get("Set", "")),
+                "Draw": str(row.get("Draw", "")),
+                "RowType": str(row.get("RowType", "")),
+                "cells": cells,
+            }
+        )
+    return {
+        "state": state,
+        "index": index,
+        "winner_combo": winner_combo,
+        "score": 0,
+        "rank": 0,
+        "timestamp": "20260110_010101",
+        "patterns": patterns,
+        "legend": {
+            "hit-winner": "Winner",
+            "hit-winner-gap": "Winner (gap)",
+            "hit-vt-straight": "V-TRAC straight",
+            "hit-vt-straight-gap": "V-TRAC straight (value)",
+            "hit-family": "Index family",
+            "hit-family-gap": "Family (gap)",
+            "ls-box": "Long-string (DR) box",
+            "ls-box-edge": "Long-string (DR) box edge",
+        },
+        "tables": tables,
+        "stats": stats,
+    }
+
+
 def _seed_window(tmp_path: Path) -> Path:
     window_root = tmp_path / "runs2" / "WINDOW_2026-01-05_to_2026-01-05"
     analysis_dir = window_root / "ANALYSIS_ARENA"
@@ -268,6 +317,7 @@ def _seed_hit_analysis_window(tmp_path: Path) -> tuple[Path, Path, Path]:
     runs_root = tmp_path / "runs"
     sharepacks_root = tmp_path / "sharepacks" / "_predictive"
     cc_dir = sharepacks_root / "2026-01-05" / "control_center"
+    winners_root = tmp_path / "reports" / "stable" / "winners_by_date" / "2026-01-05"
 
     _write_json(
         analysis_dir / "2026-01-05__BOARD_SCOREBOARD__analysis_arena_day_review.json",
@@ -335,6 +385,55 @@ def _seed_hit_analysis_window(tmp_path: Path) -> tuple[Path, Path, Path]:
         "date,state,period,winner,type,has_mirror_pair,mirror_pairs\n"
         "2026-01-05,NewYork4,Midday,080,double,False,\n"
         "2026-01-05,Florida4,Evening,994,double,True,4/9\n",
+    )
+    _write_text(
+        window_root / "WINDOW_2026-01-05_to_2026-01-05__ANALYSIS_ARENA__HIT_ROSTER.csv",
+        "date,state_key,period,winner,play_straight_hit,play_box_any_hit,play_vtrac_hit,arena_final_candidate_signature,blackapple_status,compound_event_present,due_double_draws_since_double,double_context_strength,inventory_type\n"
+        "2026-01-05,NewYork4,Midday,080,1,1,1,CLEAR_ARENA_FINALIST,ALERT,1,8,STRONG,double\n"
+        "2026-01-05,Florida4,Evening,994,0,1,1,PARTIAL_ARENA_FINALIST,WATCH,1,5,MEDIUM,double\n",
+    )
+
+    _write_json(
+        winners_root / "NewYork4" / "NewYork4_vtrac4_winner_080_20260110_010101.json",
+        _winner_report_payload(
+            state="NewYork4",
+            index=4,
+            winner_combo="080",
+            patterns=["008", "080", "800"],
+            stats={
+                "pattern_occurrence": {"008": 6, "080": 3, "800": 2},
+                "pattern_persistence": {"008": 11, "080": 7, "800": 3},
+                "pattern_stability": {"008": 4, "080": 3, "800": 1},
+                "straight_counts": {"008": 4, "080": 2, "800": 1},
+            },
+            combined_rows=[
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R2", "4": {"text": "551008", "tags": ["ls-box", "ls-box-edge"]}, "3": {"text": "1008", "tags": ["ls-box", "ls-box-edge"]}, "2": {"text": "080", "tags": ["hit-winner"]}, "1": {"text": "008", "tags": ["hit-family"]}},
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R4", "4": {"text": "5508", "tags": []}, "3": {"text": "1008", "tags": []}, "2": {"text": "080", "tags": ["hit-winner"]}, "1": {"text": "008", "tags": ["hit-family", "hit-vt-straight"]}},
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R6", "4": {"text": "8800", "tags": []}, "3": {"text": "800", "tags": ["hit-family-gap"]}, "2": {"text": "080", "tags": ["hit-winner", "hit-vt-straight"]}, "1": {"text": "008", "tags": ["hit-family"]}},
+                {"Set": "Set2", "Draw": "Draw1", "RowType": "R8", "4": {"text": "8800", "tags": []}, "3": {"text": "800", "tags": ["hit-family"]}, "2": {"text": "080", "tags": ["hit-winner-gap"]}, "1": {"text": "008", "tags": ["hit-family", "hit-vt-straight-gap"]}},
+            ],
+        ),
+    )
+    _write_json(
+        winners_root / "Florida4" / "Florida4_vtrac18_winner_994_20260110_010102.json",
+        _winner_report_payload(
+            state="Florida4",
+            index=18,
+            winner_combo="994",
+            patterns=["499", "949", "994"],
+            stats={
+                "pattern_occurrence": {"499": 7, "949": 5, "994": 1},
+                "pattern_persistence": {"499": 12, "949": 9, "994": 2},
+                "pattern_stability": {"499": 5, "949": 4, "994": 1},
+                "straight_counts": {"499": 4, "949": 3, "994": 0},
+            },
+            combined_rows=[
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R2", "4": {"text": "44994", "tags": ["ls-box", "ls-box-edge"]}, "3": {"text": "4994", "tags": ["ls-box", "ls-box-edge"]}, "2": {"text": "499", "tags": ["hit-family"]}, "1": {"text": "949", "tags": ["hit-family-gap"]}},
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R4", "4": {"text": "94499", "tags": []}, "3": {"text": "9499", "tags": []}, "2": {"text": "499", "tags": ["hit-family"]}, "1": {"text": "949", "tags": ["hit-family", "hit-vt-straight"]}},
+                {"Set": "Set1", "Draw": "Draw1", "RowType": "R6", "4": {"text": "99449", "tags": []}, "3": {"text": "9944", "tags": []}, "2": {"text": "499", "tags": ["hit-family"]}, "1": {"text": "994", "tags": ["hit-winner-gap"]}},
+                {"Set": "Set2", "Draw": "Draw1", "RowType": "R8", "4": {"text": "94994", "tags": []}, "3": {"text": "9499", "tags": ["hit-family-gap"]}, "2": {"text": "499", "tags": ["hit-family", "hit-vt-straight-gap"]}, "1": {"text": "949", "tags": ["hit-family"]}},
+            ],
+        ),
     )
     return window_root, runs_root, sharepacks_root
 
@@ -491,3 +590,48 @@ def test_window_deep_hit_analysis_report(tmp_path, monkeypatch) -> None:
     text = out_md.read_text(encoding="utf-8")
     assert "Hit Inventory" in text
     assert "Arena Final-Candidate Signatures" in text
+
+
+def test_window_c1_c2_frontier_harness_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_window_c1_c2_frontier_harness_report as frontier
+
+    window_root, _runs_root, _sharepacks_root = _seed_hit_analysis_window(tmp_path)
+    monkeypatch.setattr(frontier, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(frontier, "DEFAULT_WINNER_HTML_ROOT", tmp_path / "reports" / "stable" / "winners_by_date")
+    monkeypatch.setattr(frontier, "DEFAULT_TRUTH_SHAREPACKS_ROOT", tmp_path / "sharepacks")
+
+    out_md = window_root / "frontier.md"
+    out_json = window_root / "frontier.json"
+    out_csv = window_root / "frontier.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_window_c1_c2_frontier_harness_report.py",
+            "--window-root",
+            str(window_root),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--force",
+        ],
+    )
+    frontier.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["metadata"]["case_count"] == 2
+    assert payload["signature_mix"]["signature_counts"]["FEEDER_TO_FRONTIER"] == 1
+    assert payload["signature_mix"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
+    assert payload["promotion_queue"]
+    roster = out_csv.read_text(encoding="utf-8")
+    assert "frontier_signature_type" in roster
+    assert "literal_frontier_score" in roster
+    assert "hit_class_rollup" in roster
+    assert "VTRAC_STRAIGHT" in roster
+    assert "VTRAC_BOXED" in roster
+    text = out_md.read_text(encoding="utf-8")
+    assert "Promotion Queue" in text
+    assert "Signature Mix" in text
