@@ -253,7 +253,11 @@ def _build_ledger(window_root: Path, *, results_root: Path) -> Dict[str, Any]:
             if isinstance(entry, dict) and str(entry.get("state_key") or "").strip()
         }
 
-        for state_key in sorted(winners_by_state.keys()):
+        active_state_keys = sorted(set(scoreboard_by_state) | set(shadow_by_state) | set(manifest_by_state))
+        if not active_state_keys:
+            active_state_keys = sorted(winners_by_state.keys())
+
+        for state_key in active_state_keys:
             winner_events = winner_events_for_state(
                 date=results_date,
                 state_key=state_key,
