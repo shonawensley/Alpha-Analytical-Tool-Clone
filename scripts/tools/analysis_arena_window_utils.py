@@ -114,6 +114,13 @@ def load_translation_manifest(window_root: Path, results_date: str) -> Dict[str,
     return read_json(analysis_dir(window_root) / f"{results_date}__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.json")
 
 
+def load_brain2_tracker_ledger(window_root: Path, results_date: str) -> Dict[str, Any]:
+    path = validation_dir(window_root) / f"{results_date}__BRAIN2_TRACKER_LEDGER.json"
+    if not path.exists():
+        return {}
+    return read_json(path)
+
+
 def load_state_seed_from_manifest_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
     seed_json = entry.get("seed_json")
     if not seed_json:

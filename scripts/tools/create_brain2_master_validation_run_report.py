@@ -256,6 +256,155 @@ def _group_blackapple(rows: Sequence[dict[str, str]], *, status: str) -> list[st
     return out
 
 
+def _top_profit_alert_states(rows: Sequence[dict[str, str]], *, rank_by_state: dict[str, int], limit: int = 8) -> list[dict[str, Any]]:
+    by_state: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        state_key = (row.get("StateKey") or "").strip()
+        if not state_key:
+            continue
+        slot = by_state.setdefault(
+            state_key,
+            {
+                "state_key": state_key,
+                "board_rank": rank_by_state.get(state_key),
+                "alert_count": 0,
+                "strength_sum": 0.0,
+                "alert_ids": set(),
+                "suggested": set(),
+            },
+        )
+        slot["alert_count"] += 1
+        slot["strength_sum"] += safe_float(row.get("Strength")) or 0.0
+        if row.get("AlertId"):
+            slot["alert_ids"].add((row.get("AlertId") or "").strip())
+        if row.get("Suggested"):
+            slot["suggested"].add((row.get("Suggested") or "").strip())
+    ranked = sorted(
+        by_state.values(),
+        key=lambda item: (-(item["strength_sum"]), -(item["alert_count"]), item["state_key"].lower()),
+    )
+    out: list[dict[str, Any]] = []
+    for item in ranked[:limit]:
+        out.append(
+            {
+                "state_key": item["state_key"],
+                "board_rank": item["board_rank"],
+                "alert_count": item["alert_count"],
+                "strength_sum": round(float(item["strength_sum"]), 3),
+                "alert_ids": sorted(item["alert_ids"]),
+                "suggested": sorted(item["suggested"]),
+            }
+        )
+    return out
+
+
+def _top_compound_events(rows: Sequence[dict[str, str]], *, rank_by_state: dict[str, int], limit: int = 8) -> list[dict[str, Any]]:
+    ranked = sorted(
+        rows,
+        key=lambda row: (-(safe_int(row.get("priority")) or -1), row.get("state_key", ""), row.get("variant", "")),
+    )
+    out: list[dict[str, Any]] = []
+    for row in ranked[:limit]:
+        state_key = (row.get("state_key") or row.get("StateKey") or "").strip()
+        out.append(
+            {
+                "state_key": state_key,
+                "board_rank": rank_by_state.get(state_key),
+                "variant": (row.get("variant") or row.get("Variant") or "").strip(),
+                "top_event": (row.get("top_event") or row.get("TopEvent") or "").strip(),
+                "priority": safe_int(row.get("priority")) or safe_int(row.get("Priority")),
+                "candidate_alert_ids": (row.get("candidate_alert_ids") or "").strip(),
+            }
+        )
+    return out
+
+
+def _top_blackapple_rows(
+    rows: Sequence[dict[str, str]],
+    *,
+    rank_by_state: dict[str, int],
+    status: str,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    ranked = [
+        row
+        for row in rows
+        if (row.get("Status") or "").strip().upper() == status.upper()
+    ]
+    ranked.sort(key=lambda row: (-(safe_int(row.get("BA-Score")) or -1), row.get("StateKey", ""), row.get("Variant", "")))
+    out: list[dict[str, Any]] = []
+    for row in ranked[:limit]:
+        state_key = (row.get("StateKey") or "").strip()
+        out.append(
+            {
+                "state_key": state_key,
+                "board_rank": rank_by_state.get(state_key),
+                "variant": (row.get("Variant") or "").strip(),
+                "ba_score": safe_int(row.get("BA-Score")),
+                "status": (row.get("Status") or "").strip(),
+                "examples": (row.get("Examples") or "").strip(),
+                "triggers": (row.get("Triggers") or "").strip(),
+            }
+        )
+    return out
+
+
+def _top_repeat_watch_rows(
+    rows: Sequence[dict[str, str]],
+    *,
+    rank_by_state: dict[str, int],
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    ranked = sorted(
+        rows,
+        key=lambda row: (
+            -(safe_float(row.get("Heat Hazard")) or -1.0),
+            -(safe_int(row.get("Current Streak")) or -1),
+            row.get("StateKey", ""),
+            row.get("Variant", ""),
+        ),
+    )
+    out: list[dict[str, Any]] = []
+    for row in ranked[:limit]:
+        state_key = (row.get("StateKey") or "").strip()
+        out.append(
+            {
+                "state_key": state_key,
+                "board_rank": rank_by_state.get(state_key),
+                "variant": (row.get("Variant") or "").strip(),
+                "current_index": (row.get("Current Index") or "").strip(),
+                "winner_vtrac": (row.get("Winner VTRAC") or "").strip(),
+                "heat_hazard": safe_float(row.get("Heat Hazard")),
+                "current_streak": safe_int(row.get("Current Streak")),
+                "current_equals_winner_vtrac": (row.get("Current==WinnerVTRAC") or "").strip() == "True",
+            }
+        )
+    return out
+
+
+def _scoreboard_hint_rows(
+    scoreboard_rows: Sequence[dict[str, Any]],
+    *,
+    hint_key: str,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for row in sorted(scoreboard_rows, key=lambda item: int(item.get("score_rank") or 9999)):
+        value = str(row.get(hint_key) or "").strip()
+        if not value:
+            continue
+        out.append(
+            {
+                "state_key": str(row.get("state_key") or "").strip(),
+                "board_rank": safe_int(row.get("score_rank")),
+                "role": str(row.get("role") or "").strip(),
+                "targeting_bucket": str(row.get("targeting_bucket") or "").strip(),
+                "hint": value,
+            }
+        )
+    return out[:limit]
+
+
 def _combined_due_rows(rows: Sequence[dict[str, str]]) -> list[dict[str, str]]:
     out = [row for row in rows if (row.get("Variant") or "").strip() == "Combined"]
     out.sort(key=lambda row: (-(safe_int(row.get("Draws Since Double")) or -1), row.get("StateKey", "")))
@@ -402,6 +551,105 @@ def _load_translation_learning(translation_manifest_json: Path) -> dict[str, lis
         "profit": pack(profit),
         "due": pack(due),
         "preserved": pack(preserved),
+    }
+
+
+def build_brain2_tracker_ledger(
+    *,
+    results_date: str,
+    history_date: str,
+    artifacts: DayArtifacts,
+    board_scope_states: Sequence[str],
+    scoreboard_rows: Sequence[dict[str, Any]],
+    board_verdict: dict[str, Any],
+    shadow_verdict: dict[str, Any],
+    profit_alert_rows: Sequence[dict[str, str]],
+    compound_rows: Sequence[dict[str, str]],
+    blackapple_rows: Sequence[dict[str, str]],
+    due_rows: Sequence[dict[str, str]],
+    tracker_rows: Sequence[dict[str, str]],
+    translation_learning: dict[str, list[str]],
+    control_center_dir: Path,
+    doubles_inventory_md: Path | None = None,
+    doubles_inventory_csv: Path | None = None,
+) -> dict[str, Any]:
+    rank_by_state = _scoreboard_state_rank_map(scoreboard_rows)
+    due_threshold_rows = _due_threshold_rows(due_rows)
+    daily_double_events = _daily_double_events(due_rows, rank_by_state=rank_by_state)
+    repeat_watch_top = _top_repeat_watch_rows(tracker_rows, rank_by_state=rank_by_state)
+    repeat_watch_hits = [
+        row for row in repeat_watch_top if bool(row.get("current_equals_winner_vtrac"))
+    ]
+    return {
+        "metadata": {
+            "results_date": results_date,
+            "history_date": history_date,
+            "board_scope_states": list(board_scope_states),
+            "analysis_artifacts": {
+                "scoreboard_json": _safe_rel(artifacts.scoreboard_json),
+                "shadow_json": _safe_rel(artifacts.shadow_json),
+                "translation_manifest_json": _safe_rel(artifacts.sandbox_json),
+            },
+            "control_center_dir": _safe_rel(control_center_dir),
+            "doubles_inventory_md": _safe_rel(doubles_inventory_md) if doubles_inventory_md else "",
+            "doubles_inventory_csv": _safe_rel(doubles_inventory_csv) if doubles_inventory_csv else "",
+        },
+        "board_context": {
+            "top_primary_target": board_verdict.get("top_primary_target") or "",
+            "secondary_target": board_verdict.get("secondary_target") or "",
+            "best_clean_host": board_verdict.get("best_clean_host") or "",
+            "highest_context_support_state": board_verdict.get("highest_context_support_state") or "",
+            "play_states": list(shadow_verdict.get("play_states") or []),
+            "watch_states": list(shadow_verdict.get("watch_states") or []),
+            "skip_states": list(shadow_verdict.get("skip_states") or []),
+        },
+        "profit_alerts": {
+            "available": bool(profit_alert_rows),
+            "row_count": len(profit_alert_rows),
+            "top_states": _top_profit_alert_states(profit_alert_rows, rank_by_state=rank_by_state),
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="profit_alert_hint"),
+        },
+        "compound_events": {
+            "available": bool(compound_rows),
+            "row_count": len(compound_rows),
+            "top_rows": _top_compound_events(compound_rows, rank_by_state=rank_by_state),
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="compound_event_hint"),
+        },
+        "blackapple": {
+            "available": bool(blackapple_rows),
+            "row_count": len(blackapple_rows),
+            "alert_states": _top_blackapple_rows(blackapple_rows, rank_by_state=rank_by_state, status="ALERT"),
+            "watch_states": _top_blackapple_rows(blackapple_rows, rank_by_state=rank_by_state, status="WATCH"),
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="blackapple_reco_hint"),
+        },
+        "due_doubles": {
+            "available": bool(due_rows),
+            "row_count": len(due_rows),
+            "threshold_states": [
+                {
+                    "state_key": (row.get("StateKey") or "").strip(),
+                    "board_rank": rank_by_state.get((row.get("StateKey") or "").strip()),
+                    "draws_since_double": safe_int(row.get("Draws Since Double")),
+                }
+                for row in due_threshold_rows[:12]
+            ],
+            "converting_rows": _due_converting_rows(due_rows),
+            "daily_double_events": daily_double_events[:16],
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="due_double_hint"),
+        },
+        "repeat_watch": {
+            "available": bool(tracker_rows),
+            "row_count": len(tracker_rows),
+            "top_rows": repeat_watch_top,
+            "exact_hits": repeat_watch_hits,
+        },
+        "consensus": {
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="r_consensus_hint"),
+        },
+        "survivor": {
+            "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="survivor_hint"),
+        },
+        "translation_learning": translation_learning,
     }
 
 
@@ -751,6 +999,10 @@ def main() -> None:
         help="Output Markdown path (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<D>__BRAIN2_MASTER_VALIDATION.md)",
     )
     ap.add_argument(
+        "--out-json",
+        help="Optional structured tracker-ledger JSON path (default: alongside the markdown output).",
+    )
+    ap.add_argument(
         "--control-arm-runs-dir",
         default=str(RUNS_DIR),
         help="Directory holding Candidate Universe / Play Card grades (default legacy RUNS dir)",
@@ -763,6 +1015,16 @@ def main() -> None:
     results_date = parse_iso_date(args.date).isoformat()
     analysis_arena_dir = Path(args.analysis_arena_dir)
     out_path = Path(args.out) if args.out else (RUNS2_DIR / f"{results_date}__BRAIN2_MASTER_VALIDATION.md")
+    default_json_name = (
+        out_path.name.replace("__BRAIN2_MASTER_VALIDATION.md", "__BRAIN2_TRACKER_LEDGER.json")
+        if "__BRAIN2_MASTER_VALIDATION.md" in out_path.name
+        else f"{out_path.stem}__TRACKER_LEDGER.json"
+    )
+    out_json_path = (
+        Path(args.out_json)
+        if args.out_json
+        else out_path.with_name(default_json_name)
+    )
     control_arm_runs_dir = Path(args.control_arm_runs_dir)
     doubles_inventory_md = Path(args.doubles_inventory_md) if args.doubles_inventory_md else None
     doubles_inventory_csv = Path(args.doubles_inventory_csv) if args.doubles_inventory_csv else None
@@ -796,6 +1058,13 @@ def main() -> None:
     state_decisions = shadow.get("state_decisions") if isinstance(shadow, dict) else []
     state_decisions = state_decisions if isinstance(state_decisions, list) else []
 
+    profit_alert_rows = load_csv_rows(control_center_dir / "profit_alerts.csv")
+    compound_rows = load_csv_rows(control_center_dir / "profit_compound_events.csv")
+    blackapple_rows = load_csv_rows(control_center_dir / "blackapple_alerts.csv")
+    due_rows = load_csv_rows(control_center_dir / "due_doubles.csv")
+    tracker_rows = load_csv_rows(control_center_dir / "vtrac_repeat_watch.csv")
+    translation_learning = _load_translation_learning(artifacts.sandbox_json)
+
     report = build_brain2_master_validation_report(
         results_date=results_date,
         history_date=history_date,
@@ -807,21 +1076,41 @@ def main() -> None:
         duplicate_pairs=duplicate_pairs,
         shadow_verdict=shadow_verdict,
         state_decisions=state_decisions,
-        profit_alert_rows=load_csv_rows(control_center_dir / "profit_alerts.csv"),
-        compound_rows=load_csv_rows(control_center_dir / "profit_compound_events.csv"),
-        blackapple_rows=load_csv_rows(control_center_dir / "blackapple_alerts.csv"),
-        due_rows=load_csv_rows(control_center_dir / "due_doubles.csv"),
-        tracker_rows=load_csv_rows(control_center_dir / "vtrac_repeat_watch.csv"),
-        translation_learning=_load_translation_learning(artifacts.sandbox_json),
+        profit_alert_rows=profit_alert_rows,
+        compound_rows=compound_rows,
+        blackapple_rows=blackapple_rows,
+        due_rows=due_rows,
+        tracker_rows=tracker_rows,
+        translation_learning=translation_learning,
         control_center_dir=control_center_dir,
         control_arm_runs_dir=control_arm_runs_dir,
+        doubles_inventory_md=doubles_inventory_md,
+        doubles_inventory_csv=doubles_inventory_csv,
+    )
+    tracker_ledger = build_brain2_tracker_ledger(
+        results_date=results_date,
+        history_date=history_date,
+        artifacts=artifacts,
+        board_scope_states=[str(row.get("state_key") or "") for row in scoreboard_rows],
+        scoreboard_rows=scoreboard_rows,
+        board_verdict=board_verdict,
+        shadow_verdict=shadow_verdict,
+        profit_alert_rows=profit_alert_rows,
+        compound_rows=compound_rows,
+        blackapple_rows=blackapple_rows,
+        due_rows=due_rows,
+        tracker_rows=tracker_rows,
+        translation_learning=translation_learning,
+        control_center_dir=control_center_dir,
         doubles_inventory_md=doubles_inventory_md,
         doubles_inventory_csv=doubles_inventory_csv,
     )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(report, encoding="utf-8")
+    out_json_path.write_text(json.dumps(tracker_ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Wrote: {out_path}")
+    print(f"Wrote: {out_json_path}")
 
 
 if __name__ == "__main__":

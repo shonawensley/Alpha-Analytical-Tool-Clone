@@ -5,6 +5,7 @@ from pathlib import Path
 from scripts.tools.run_analysis_arena_cycle import (
     ARENA_RUNS_DIR,
     _arena_runs_dir_from_arg,
+    _cmd_brain2_master_validation,
     _cmd_doubles_inventory,
     _iter_state_keys_for_date,
     build_window_close_commands,
@@ -127,6 +128,24 @@ def test_cmd_doubles_inventory_targets_results_and_validation_dirs(tmp_path: Pat
     assert "data/results" in cmd
     assert "--run-report-dir" in cmd
     assert str(tmp_path / "validation") in cmd
+
+
+def test_cmd_brain2_master_validation_writes_tracker_ledger(tmp_path: Path) -> None:
+    cmd = _cmd_brain2_master_validation(
+        results_date="2026-01-05",
+        analysis_arena_dir=tmp_path / "analysis",
+        board_name="analysis_arena_day_review",
+        validation_out=tmp_path / "validation" / "2026-01-05__BRAIN2_MASTER_VALIDATION.md",
+        tracker_ledger_out=tmp_path / "validation" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json",
+        control_arm_runs_dir=tmp_path / "runs",
+        doubles_inventory_md=None,
+        doubles_inventory_csv=None,
+    )
+
+    assert cmd[1].endswith("create_brain2_master_validation_run_report.py")
+    assert "--out" in cmd
+    assert "--out-json" in cmd
+    assert str(tmp_path / "validation" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json") in cmd
 
 
 def test_build_window_close_commands_includes_all_five_reports(tmp_path: Path) -> None:

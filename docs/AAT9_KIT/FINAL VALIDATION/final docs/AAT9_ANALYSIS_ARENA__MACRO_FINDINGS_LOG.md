@@ -182,3 +182,14 @@ How to use this log:
   - control-arm-only catches fell from `18` to `14` while `CANONICAL_BOX` hits rose from `18` to `21`
 - implication: The system may be starting to express a slightly cleaner higher-conviction layer, but the sample is too small to treat that as durable yet.
 - next test: See whether a third window keeps pushing high-conviction hits toward cheaper budgets and better-ranked states.
+
+### F-012
+- status: `DEFERRED`
+- window(s): `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`
+- category: `Instrumentation / surfacing`
+- summary: Some of the strongest Aux / Control Center indicators were preserved in machine-readable artifacts but still underexposed in the human state-review shell and under-aggregated at window close.
+- evidence:
+  - raw Aux summary and arena objects already preserved per-variant pair badges, boxed-combo badges, cross-variant overlap alerts, badge-pressure indices, and due-VTRAC overlays / heatboards
+  - daily Brain 2 review already carried Blackapple / profit-alert / compound / due-double / repeat-watch context, but the window-close rollup was still mostly coarse
+- implication: Before the next comparison windows, improve visibility and structured aggregation rather than assuming the underlying signal is missing.
+- next test: Confirm that per-state Master Validation now shows explicit Aux inventories and that the deep window report rolls up the new daily tracker ledger across the next comparison windows.

@@ -570,6 +570,63 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     )
     scorecard.main()
 
+    _write_json(
+        (window_root / "VALIDATION" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json"),
+        {
+            "metadata": {
+                "results_date": "2026-01-05",
+                "history_date": "2026-01-04",
+            },
+            "profit_alerts": {
+                "top_states": [
+                    {"state_key": "NewYork4", "board_rank": 1, "alert_count": 2, "strength_sum": 7.0},
+                ],
+                "scoreboard_carries": [
+                    {"state_key": "NewYork4", "board_rank": 1, "hint": "A05"},
+                ],
+            },
+            "compound_events": {
+                "top_rows": [
+                    {"state_key": "NewYork4", "variant": "Combined", "top_event": "ENGINE_GOV", "priority": 3},
+                ],
+                "scoreboard_carries": [
+                    {"state_key": "NewYork4", "board_rank": 1, "hint": "ENGINE_GOV"},
+                ],
+            },
+            "blackapple": {
+                "alert_states": [
+                    {"state_key": "NewYork4", "variant": "Combined", "ba_score": 4},
+                ],
+                "watch_states": [],
+                "scoreboard_carries": [
+                    {"state_key": "NewYork4", "board_rank": 1, "hint": "008"},
+                ],
+            },
+            "due_doubles": {
+                "threshold_states": [
+                    {"state_key": "NewYork4", "board_rank": 1, "draws_since_double": 8},
+                ],
+                "daily_double_events": ["`NewYork4` `Midday` winner=`080` type=`double` rank=`1` DS=`8` mirror_pairs=`-`"],
+                "scoreboard_carries": [
+                    {"state_key": "NewYork4", "board_rank": 1, "hint": "0/5-1/6"},
+                ],
+            },
+            "repeat_watch": {
+                "top_rows": [
+                    {"state_key": "NewYork4", "variant": "Combined", "current_index": "6", "current_equals_winner_vtrac": True},
+                ],
+                "exact_hits": [
+                    {"state_key": "NewYork4", "variant": "Combined", "current_index": "6", "current_equals_winner_vtrac": True},
+                ],
+            },
+            "consensus": {
+                "scoreboard_carries": [
+                    {"state_key": "NewYork4", "board_rank": 1, "hint": "tail 08"},
+                ],
+            },
+        },
+    )
+
     deep_md = window_root / "deep.md"
     deep_json = window_root / "deep.json"
     monkeypatch.setattr(
@@ -597,6 +654,8 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     deep_payload = json.loads(deep_json.read_text(encoding="utf-8"))
     assert deep_payload["window_overview"]["winner_events"] == 2
     assert deep_payload["tracker_families"]["doubles_result_types"]["double"] == 1
+    assert deep_payload["tracker_families"]["daily_tracker_ledgers_present"]["count"] == 1
+    assert deep_payload["tracker_families"]["daily_tracker_rollup"]["profit_alert_states"][0]["value"] == "NewYork4"
     assert deep_payload["winner_html_frontier"]["case_count"] == 2
     assert deep_payload["winner_html_frontier"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
     assert deep_payload["winner_html_frontier"]["promotion_queue"][0]["action"] == "TEST_IN_TRANSLATOR"
@@ -604,6 +663,7 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert "Shared Complexes / Carryover / Decay" in deep_md.read_text(encoding="utf-8")
     assert "Winner HTML Frontier" in deep_md.read_text(encoding="utf-8")
     assert "Pure Arena Finalist / Candidate Layer" in deep_md.read_text(encoding="utf-8")
+    assert "Daily tracker ledgers present" in deep_md.read_text(encoding="utf-8")
 
 
 def test_arena_vs_legacy_window_comparison_report(tmp_path, monkeypatch) -> None:

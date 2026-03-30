@@ -287,6 +287,7 @@ def _cmd_brain2_master_validation(
     analysis_arena_dir: Path,
     board_name: str,
     validation_out: Path,
+    tracker_ledger_out: Path,
     control_arm_runs_dir: Path,
     doubles_inventory_md: Path | None,
     doubles_inventory_csv: Path | None,
@@ -304,6 +305,8 @@ def _cmd_brain2_master_validation(
         str(control_arm_runs_dir),
         "--out",
         str(validation_out),
+        "--out-json",
+        str(tracker_ledger_out),
         "--force",
     ]
     if doubles_inventory_md:
@@ -1016,6 +1019,7 @@ def main() -> None:
                     analysis_arena_dir=analysis_runs_dir,
                     board_name=str(args.board_name or "analysis_arena_day_review"),
                     validation_out=runs_dir / f"{results_date}__BRAIN2_MASTER_VALIDATION.md",
+                    tracker_ledger_out=runs_dir / f"{results_date}__BRAIN2_TRACKER_LEDGER.json",
                     control_arm_runs_dir=control_arm_runs_dir,
                     doubles_inventory_md=None if bool(args.skip_doubles_inventory) else doubles_md,
                     doubles_inventory_csv=None if bool(args.skip_doubles_inventory) else doubles_csv,
@@ -1190,6 +1194,7 @@ def main() -> None:
                         analysis_arena_dir=analysis_runs_dir,
                         board_name=str(args.board_name or "analysis_arena_day_review"),
                         validation_out=runs_dir / f"{results_date}__BRAIN2_MASTER_VALIDATION.md",
+                        tracker_ledger_out=runs_dir / f"{results_date}__BRAIN2_TRACKER_LEDGER.json",
                         control_arm_runs_dir=control_arm_runs_dir,
                         doubles_inventory_md=None if bool(args.skip_doubles_inventory) else doubles_md,
                         doubles_inventory_csv=None if bool(args.skip_doubles_inventory) else doubles_csv,

@@ -270,7 +270,238 @@ def _watchlist_summary(items: Any, *, limit: int = 5) -> list[str]:
     return out
 
 
-def _context_summary(arena: Mapping[str, Any] | None, sandbox: Mapping[str, Any] | None) -> dict[str, list[str]]:
+def _arena_objects_from_sources(
+    arena: Mapping[str, Any] | None,
+    signals_bundle: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    signal_objects = (
+        (((signals_bundle or {}).get("tools") or {}).get("aux_control_center_context") or {}).get("arena_objects") or {}
+    )
+    if isinstance(signal_objects, Mapping):
+        out.update(signal_objects)
+    arena_objects = (
+        (((arena or {}).get("context_tools") or {}).get("aux_control_center") or {}).get("arena_objects") or {}
+    )
+    if isinstance(arena_objects, Mapping):
+        out.update(arena_objects)
+    return out
+
+
+def _variant_label(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "-"
+    mapping = {
+        "combined": "Combined",
+        "midday": "Midday",
+        "evening": "Evening",
+        "Combined": "Combined",
+        "Midday": "Midday",
+        "Evening": "Evening",
+    }
+    return mapping.get(raw, raw.title())
+
+
+def _fmt_badge_rows(rows: Any, *, literal_key: str, limit: int = 12) -> str:
+    if not isinstance(rows, list):
+        return "_none_"
+    out: list[str] = []
+    for row in rows[:limit]:
+        if not isinstance(row, Mapping):
+            continue
+        literal = str(row.get(literal_key) or "").strip()
+        if not literal:
+            continue
+        ds = row.get("draws_since")
+        sev = str(row.get("severity") or "").strip()
+        extras: list[str] = []
+        if ds not in {None, ""}:
+            extras.append(f"DS={ds}")
+        if sev:
+            extras.append(f"sev={sev}")
+        out.append(f"`{literal}`[{'; '.join(extras) or '-'}]")
+    return ", ".join(out) if out else "_none_"
+
+
+def _fmt_multi_variant_alerts(alerts: Any, *, limit: int = 12) -> str:
+    if not isinstance(alerts, Mapping):
+        return "_none_"
+    out: list[str] = []
+    for literal, payload in list(alerts.items())[:limit]:
+        if not isinstance(payload, Mapping):
+            continue
+        per_variant: list[str] = []
+        for variant in ("combined", "midday", "evening"):
+            details = payload.get(variant)
+            if not isinstance(details, Mapping):
+                continue
+            sev = str(details.get("severity") or "").strip() or "-"
+            ds = details.get("draws_since")
+            part = f"{_variant_label(variant)}={sev}"
+            if ds not in {None, ""}:
+                part += f"/DS={ds}"
+            per_variant.append(part)
+        if per_variant:
+            out.append(f"`{literal}`[{'; '.join(per_variant)}]")
+    return ", ".join(out) if out else "_none_"
+
+
+def _fmt_vtrac_overlay_rows(rows: Any, *, limit: int = 8) -> str:
+    if not isinstance(rows, list):
+        return "_none_"
+    out: list[str] = []
+    for row in rows[:limit]:
+        if not isinstance(row, Mapping):
+            continue
+        idx = row.get("index")
+        ds = row.get("draws_since")
+        if idx in {None, ""}:
+            continue
+        extras = [f"DS={ds}"] if ds not in {None, ""} else []
+        out.append(f"`{idx}`[{'; '.join(extras) or '-'}]")
+    return ", ".join(out) if out else "_none_"
+
+
+def _fmt_vtrac_heat_rows(rows: Any, *, limit: int = 8) -> str:
+    if not isinstance(rows, list):
+        return "_none_"
+    out: list[str] = []
+    for row in rows[:limit]:
+        if not isinstance(row, Mapping):
+            continue
+        idx = row.get("index")
+        if idx in {None, ""}:
+            continue
+        extras: list[str] = []
+        for key, label in (("ds", "DS"), ("hazard", "HZ"), ("trend", "TR"), ("avg_gap", "AVG")):
+            value = row.get(key)
+            if value in {None, ""}:
+                continue
+            if isinstance(value, float):
+                extras.append(f"{label}={value:.3f}")
+            else:
+                extras.append(f"{label}={value}")
+        out.append(f"`{idx}`[{'; '.join(extras) or '-'}]")
+    return ", ".join(out) if out else "_none_"
+
+
+def _aux_inventory_sections(
+    aux_summary: Mapping[str, Any] | None,
+    arena: Mapping[str, Any] | None,
+    signals_bundle: Mapping[str, Any] | None,
+) -> dict[str, list[str]]:
+    out = {
+        "badge_pairs": [],
+        "badge_combos": [],
+        "badge_indices": [],
+        "due_vtrac": [],
+    }
+    if not isinstance(aux_summary, Mapping):
+        return out
+
+    pairs_top = ((((aux_summary.get("pairs") or {}).get("top_by_variant")) or {}))
+    pair_multi = ((((aux_summary.get("pairs") or {}).get("multi_variant_alerts")) or {}))
+    for variant in ("combined", "midday", "evening"):
+        payload = pairs_top.get(variant) if isinstance(pairs_top, Mapping) else None
+        if not isinstance(payload, Mapping):
+            continue
+        repeating = payload.get("repeating") or []
+        non_repeating = payload.get("non_repeating") or []
+        combined_rows = [row for row in [*(repeating if isinstance(repeating, list) else []), *(non_repeating if isinstance(non_repeating, list) else [])] if isinstance(row, Mapping)]
+        for severity in ("red", "blue", "purple"):
+            sev_rows = [
+                row
+                for row in combined_rows
+                if str(row.get("severity") or "").strip().lower() == severity
+            ]
+            if sev_rows:
+                out["badge_pairs"].append(
+                    f"{_variant_label(variant)} pair badges `{severity.upper()}`: {_fmt_badge_rows(sev_rows, literal_key='pair')}"
+                )
+    out["badge_pairs"].append(
+        f"Cross-variant pair overlaps: {_fmt_multi_variant_alerts(pair_multi)}"
+    )
+
+    doubles_top = ((((aux_summary.get("doubles") or {}).get("top_by_variant")) or {}))
+    doubles_multi = ((((aux_summary.get("doubles") or {}).get("multi_variant_alerts")) or {}))
+    for variant in ("combined", "midday", "evening"):
+        rows = doubles_top.get(variant) if isinstance(doubles_top, Mapping) else None
+        if isinstance(rows, list) and rows:
+            out["badge_combos"].append(
+                f"{_variant_label(variant)} boxed combo badges: {_fmt_badge_rows(rows, literal_key='combo')}"
+            )
+    out["badge_combos"].append(
+        f"Cross-variant boxed-combo overlaps: {_fmt_multi_variant_alerts(doubles_multi)}"
+    )
+
+    arena_objects = _arena_objects_from_sources(arena, signals_bundle)
+    badge_pressure = arena_objects.get("aux_badge_pressure") or {}
+    if isinstance(badge_pressure, Mapping):
+        by_variant = (((badge_pressure.get("index_pressure") or {}).get("by_variant")) or {})
+        for variant in ("combined", "midday", "evening"):
+            payload = by_variant.get(variant) if isinstance(by_variant, Mapping) else None
+            top_indices = (payload or {}).get("top_indices") if isinstance(payload, Mapping) else None
+            if isinstance(top_indices, list) and top_indices:
+                rendered: list[str] = []
+                for row in top_indices[:8]:
+                    if not isinstance(row, Mapping):
+                        continue
+                    idx = row.get("index")
+                    if idx in {None, ""}:
+                        continue
+                    density = row.get("pressure_density")
+                    raw = row.get("pressure_raw")
+                    extras: list[str] = []
+                    if density not in {None, ""}:
+                        try:
+                            extras.append(f"PD={float(density):.2f}")
+                        except Exception:
+                            extras.append(f"PD={density}")
+                    if raw not in {None, ""}:
+                        extras.append(f"RAW={raw}")
+                    rendered.append(f"`{idx}`[{'; '.join(extras) or '-'}]")
+                if rendered:
+                    out["badge_indices"].append(
+                        f"{_variant_label(variant)} badge-pressure top indices: {', '.join(rendered)}"
+                    )
+        intersection = badge_pressure.get("midday_evening_intersection") or []
+        if isinstance(intersection, list):
+            rendered = ", ".join(f"`{value}`" for value in intersection[:12] if str(value).strip())
+            if rendered:
+                out["badge_indices"].append(f"Midday/Evening badge-index intersection: {rendered}")
+
+    aux_vtrac = arena_objects.get("aux_vtrac_pressure") or {}
+    overlay_top = {}
+    heatboard_top = {}
+    if isinstance(aux_vtrac, Mapping):
+        overlay_top = aux_vtrac.get("overlay_top") or {}
+        heatboard_top = aux_vtrac.get("heatboard_top") or {}
+    if not overlay_top and isinstance(aux_summary.get("vtrac"), Mapping):
+        overlay_top = ((aux_summary.get("vtrac") or {}).get("overlay_top") or {})
+    if not heatboard_top and isinstance(aux_summary.get("vtrac"), Mapping):
+        heatboard_top = ((aux_summary.get("vtrac") or {}).get("heatboard_top") or {})
+    for variant in ("Combined", "Midday", "Evening"):
+        overlay_rows = overlay_top.get(variant) if isinstance(overlay_top, Mapping) else None
+        heat_rows = heatboard_top.get(variant) if isinstance(heatboard_top, Mapping) else None
+        if isinstance(overlay_top, Mapping) and overlay_rows is None:
+            overlay_rows = overlay_top.get(variant.lower())
+        if isinstance(heatboard_top, Mapping) and heat_rows is None:
+            heat_rows = heatboard_top.get(variant.lower())
+        out["due_vtrac"].append(
+            f"{variant} due VTRAC overlay: {_fmt_vtrac_overlay_rows(overlay_rows)}"
+        )
+        out["due_vtrac"].append(
+            f"{variant} due VTRAC heatboard: {_fmt_vtrac_heat_rows(heat_rows)}"
+        )
+    return out
+
+
+def _context_summary(
+    arena: Mapping[str, Any] | None,
+    sandbox: Mapping[str, Any] | None,
+    signals_bundle: Mapping[str, Any] | None = None,
+) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {
         "positional": [],
         "due_doubles": [],
@@ -279,9 +510,7 @@ def _context_summary(arena: Mapping[str, Any] | None, sandbox: Mapping[str, Any]
         "compound_events": [],
         "scoreboard": [],
     }
-    arena_objects = (
-        (((arena or {}).get("context_tools") or {}).get("aux_control_center") or {}).get("arena_objects") or {}
-    )
+    arena_objects = _arena_objects_from_sources(arena, signals_bundle)
     if isinstance(arena_objects, Mapping):
         positional = arena_objects.get("aux_positional_pressure") or {}
         if isinstance(positional, Mapping):
@@ -412,6 +641,7 @@ def build_master_validation_run_report(
     sandbox = try_load_json(sandbox_json)
     candidate_universe = try_load_json(candidate_universe_json)
     play_card = try_load_json(play_card_json)
+    signals_bundle = try_load_json(signals_bundle_json)
     aux_summary = try_load_json(predictive_state_dir / "aux" / state / "summary.json")
 
     results = parse_results(date=results_date, state=state)
@@ -419,7 +649,12 @@ def build_master_validation_run_report(
     winners_json = list_artifacts(truth_winners_dir, "*.json")
 
     arena_synthesis = (aggregated or {}).get("arena_synthesis") or {}
-    context_sections = _context_summary(aggregated, sandbox)
+    context_sections = _context_summary(aggregated, sandbox, signals_bundle)
+    aux_inventory_sections = _aux_inventory_sections(
+        aux_summary if isinstance(aux_summary, Mapping) else None,
+        aggregated if isinstance(aggregated, Mapping) else None,
+        signals_bundle if isinstance(signals_bundle, Mapping) else None,
+    )
 
     dominant_canonicals = _ranked_values(arena_synthesis.get("dominant_canonicals"))
     dominant_families = _ranked_values(arena_synthesis.get("dominant_families"))
@@ -548,6 +783,18 @@ def build_master_validation_run_report(
     lines.append(f"- Scoreboard carry-through: {_fmt_items(context_sections['scoreboard'])}")
     if isinstance(aux_summary, Mapping):
         lines.append(f"- Aux draw sources present: `{bool((aux_summary.get('draw_sources') or {}))}`")
+    lines.append("")
+    lines.append("### G1a. Explicit Aux badge inventory")
+    for bullet in aux_inventory_sections["badge_pairs"] or ["_none_"]:
+        lines.append(f"- {bullet}")
+    for bullet in aux_inventory_sections["badge_combos"] or ["_none_"]:
+        lines.append(f"- {bullet}")
+    for bullet in aux_inventory_sections["badge_indices"] or ["_none_"]:
+        lines.append(f"- {bullet}")
+    lines.append("")
+    lines.append("### G1b. Explicit due VTRAC inventory")
+    for bullet in aux_inventory_sections["due_vtrac"] or ["_none_"]:
+        lines.append(f"- {bullet}")
     lines.append("- Context reinforcement vs context-only pressure: `...`")
     lines.append("- Policy relationship / handoff: `...`")
     lines.append("")

@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.tools.analysis_arena_window_utils import (
     analysis_dir,
     iter_window_dates,
+    load_brain2_tracker_ledger,
     load_scoreboard,
     load_shadow,
     load_translation_manifest,
@@ -89,6 +90,10 @@ def _fmt_top(counter: Counter[str], *, limit: int = 8) -> List[Dict[str, Any]]:
     return [{"value": value, "count": count} for value, count in counter.most_common(limit)]
 
 
+def _render_top_rows(rows: Iterable[Dict[str, Any]]) -> str:
+    return ", ".join(f"`{row['value']}` x{row['count']}" for row in rows) or "_none_"
+
+
 def _read_csv_rows(path: Path) -> List[Dict[str, str]]:
     import csv
 
@@ -125,6 +130,18 @@ def _narrative_payload(
     straight_counter: Counter[str] = Counter()
     vt_box_counter: Counter[str] = Counter()
     preserved_counter: Counter[str] = Counter()
+    tracker_ledger_days = 0
+    profit_alert_state_counter: Counter[str] = Counter()
+    compound_event_counter: Counter[str] = Counter()
+    blackapple_alert_counter: Counter[str] = Counter()
+    blackapple_watch_counter: Counter[str] = Counter()
+    due_threshold_counter: Counter[str] = Counter()
+    repeat_watch_hit_counter: Counter[str] = Counter()
+    hint_profit_counter: Counter[str] = Counter()
+    hint_compound_counter: Counter[str] = Counter()
+    hint_blackapple_counter: Counter[str] = Counter()
+    hint_due_counter: Counter[str] = Counter()
+    hint_consensus_counter: Counter[str] = Counter()
     previous_day_canonicals: set[str] = set()
 
     for results_date in dates:
@@ -190,6 +207,62 @@ def _narrative_payload(
             carryover_pairs[canonical] += 1
         previous_day_canonicals = current_day_canonicals
 
+        tracker_ledger = load_brain2_tracker_ledger(window_root, results_date)
+        if isinstance(tracker_ledger, dict) and tracker_ledger:
+            tracker_ledger_days += 1
+            for row in ((tracker_ledger.get("profit_alerts") or {}).get("top_states") or [])[:6]:
+                if isinstance(row, dict) and str(row.get("state_key") or "").strip():
+                    profit_alert_state_counter[str(row["state_key"]).strip()] += 1
+            for row in ((tracker_ledger.get("compound_events") or {}).get("top_rows") or [])[:6]:
+                if not isinstance(row, dict):
+                    continue
+                label = ":".join(
+                    part
+                    for part in [
+                        str(row.get("state_key") or "").strip(),
+                        str(row.get("variant") or "").strip(),
+                        str(row.get("top_event") or "").strip(),
+                    ]
+                    if part
+                )
+                if label:
+                    compound_event_counter[label] += 1
+            for row in ((tracker_ledger.get("blackapple") or {}).get("alert_states") or [])[:8]:
+                if isinstance(row, dict) and str(row.get("state_key") or "").strip():
+                    blackapple_alert_counter[str(row["state_key"]).strip()] += 1
+            for row in ((tracker_ledger.get("blackapple") or {}).get("watch_states") or [])[:8]:
+                if isinstance(row, dict) and str(row.get("state_key") or "").strip():
+                    blackapple_watch_counter[str(row["state_key"]).strip()] += 1
+            for row in ((tracker_ledger.get("due_doubles") or {}).get("threshold_states") or [])[:8]:
+                if isinstance(row, dict) and str(row.get("state_key") or "").strip():
+                    due_threshold_counter[str(row["state_key"]).strip()] += 1
+            for row in ((tracker_ledger.get("repeat_watch") or {}).get("exact_hits") or [])[:8]:
+                if not isinstance(row, dict):
+                    continue
+                label = ":".join(
+                    part
+                    for part in [
+                        str(row.get("state_key") or "").strip(),
+                        str(row.get("variant") or "").strip(),
+                        str(row.get("current_index") or "").strip(),
+                    ]
+                    if part
+                )
+                if label:
+                    repeat_watch_hit_counter[label] += 1
+            hint_map = {
+                "profit_alerts": hint_profit_counter,
+                "compound_events": hint_compound_counter,
+                "blackapple": hint_blackapple_counter,
+                "due_doubles": hint_due_counter,
+                "consensus": hint_consensus_counter,
+            }
+            for family, counter in hint_map.items():
+                carries = ((tracker_ledger.get(family) or {}).get("scoreboard_carries") or [])[:8]
+                for row in carries:
+                    if isinstance(row, dict) and str(row.get("state_key") or "").strip():
+                        counter[str(row["state_key"]).strip()] += 1
+
     doubles_rows = _load_doubles_inventory(window_root)
     doubles_counter = Counter(str(row.get("type") or "").strip() or "_none_" for row in doubles_rows)
 
@@ -242,6 +315,23 @@ def _narrative_payload(
         "tracker_families": {
             "tracker_attribution": perf_payload.get("tracker_attribution") or {},
             "doubles_result_types": dict(doubles_counter.most_common()),
+            "daily_tracker_ledgers_present": {
+                "count": tracker_ledger_days,
+                "denominator": len(dates),
+            },
+            "daily_tracker_rollup": {
+                "profit_alert_states": _fmt_top(profit_alert_state_counter, limit=8),
+                "compound_event_leads": _fmt_top(compound_event_counter, limit=8),
+                "blackapple_alert_states": _fmt_top(blackapple_alert_counter, limit=8),
+                "blackapple_watch_states": _fmt_top(blackapple_watch_counter, limit=8),
+                "due_threshold_states": _fmt_top(due_threshold_counter, limit=8),
+                "repeat_watch_exact_hits": _fmt_top(repeat_watch_hit_counter, limit=8),
+                "scoreboard_hint_profit_alert": _fmt_top(hint_profit_counter, limit=8),
+                "scoreboard_hint_compound_event": _fmt_top(hint_compound_counter, limit=8),
+                "scoreboard_hint_blackapple": _fmt_top(hint_blackapple_counter, limit=8),
+                "scoreboard_hint_due_double": _fmt_top(hint_due_counter, limit=8),
+                "scoreboard_hint_r_consensus": _fmt_top(hint_consensus_counter, limit=8),
+            },
         },
         "translational_pressure": {
             "boxed_seeds": _fmt_top(boxed_counter, limit=10),
@@ -352,6 +442,46 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
             f"- {label}: events=`{value.get('events', 0)}` arena_box=`{value.get('arena_box_signal', 0)}` "
             f"play_box=`{value.get('play_card_box', 0)}` gap_box=`{value.get('opportunity_gap_box', 0)}`"
         )
+    ledgers = trackers.get("daily_tracker_rollup") or {}
+    ledger_meta = trackers.get("daily_tracker_ledgers_present") or {}
+    lines.append(
+        f"- Daily tracker ledgers present: `{ledger_meta.get('count', 0)}/{ledger_meta.get('denominator', 0)}`"
+    )
+    lines.append(
+        "- Profit-alert lead states: "
+        + _render_top_rows(ledgers.get("profit_alert_states") or [])
+    )
+    lines.append(
+        "- Compound-event leaders: "
+        + _render_top_rows(ledgers.get("compound_event_leads") or [])
+    )
+    lines.append(
+        "- Blackapple ALERT states: "
+        + _render_top_rows(ledgers.get("blackapple_alert_states") or [])
+    )
+    lines.append(
+        "- Blackapple WATCH states: "
+        + _render_top_rows(ledgers.get("blackapple_watch_states") or [])
+    )
+    lines.append(
+        "- Due-double threshold states: "
+        + _render_top_rows(ledgers.get("due_threshold_states") or [])
+    )
+    lines.append(
+        "- Repeat-watch exact hits: "
+        + _render_top_rows(ledgers.get("repeat_watch_exact_hits") or [])
+    )
+    hint_chunks = [
+        f"profit={_render_top_rows(ledgers.get('scoreboard_hint_profit_alert') or [])}",
+        f"compound={_render_top_rows(ledgers.get('scoreboard_hint_compound_event') or [])}",
+        f"BA={_render_top_rows(ledgers.get('scoreboard_hint_blackapple') or [])}",
+        f"due={_render_top_rows(ledgers.get('scoreboard_hint_due_double') or [])}",
+        f"r_consensus={_render_top_rows(ledgers.get('scoreboard_hint_r_consensus') or [])}",
+    ]
+    lines.append(
+        "- Scoreboard hint carries: "
+        + "; ".join(hint_chunks)
+    )
     lines.append(
         "- Doubles result types: "
         + (", ".join(f"`{k}` x{v}" for k, v in (trackers.get("doubles_result_types") or {}).items()) or "_none_")

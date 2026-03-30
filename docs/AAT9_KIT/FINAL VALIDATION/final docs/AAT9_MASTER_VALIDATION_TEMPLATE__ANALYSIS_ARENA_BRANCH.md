@@ -3524,6 +3524,7 @@ Primary surfaces:
 Primary questions:
 - what badge pressure was active?
 - did badge pressure align across Midday, Evening, and Combined?
+- which exact badged pairs and boxed combos were active by variant?
 - what VTRAC overlay / heatboard indices were strongest?
 - did pair or sum context materially reinforce the state thesis?
 - did cross-variant compounding appear meaningful or only ambient?
@@ -3537,8 +3538,27 @@ Template:
 Badge pressure read:
 - `...`
 
+Explicit badge inventory:
+- Combined pair badges (red / blue / purple): `...`
+- Midday pair badges (red / blue / purple): `...`
+- Evening pair badges (red / blue / purple): `...`
+- Cross-variant pair overlaps: `...`
+- Combined boxed combo badges: `...`
+- Midday boxed combo badges: `...`
+- Evening boxed combo badges: `...`
+- Cross-variant boxed combo overlaps: `...`
+- Badge-pressure top indices / intersections: `...`
+
 VTRAC overlay / heatboard read:
 - `...`
+
+Explicit due VTRAC inventory:
+- Combined due VTRAC overlay indices: `...`
+- Midday due VTRAC overlay indices: `...`
+- Evening due VTRAC overlay indices: `...`
+- Combined due VTRAC heatboard indices: `...`
+- Midday due VTRAC heatboard indices: `...`
+- Evening due VTRAC heatboard indices: `...`
 
 Pair / sums / cross-variant compound read:
 - `...`
