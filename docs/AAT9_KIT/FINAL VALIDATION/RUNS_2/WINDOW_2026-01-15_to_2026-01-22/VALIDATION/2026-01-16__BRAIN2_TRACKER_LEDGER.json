@@ -1,0 +1,884 @@
+{
+  "blackapple": {
+    "alert_states": [
+      {
+        "ba_score": 3,
+        "board_rank": 4,
+        "examples": "015 024 123",
+        "state_key": "Indiana4",
+        "status": "ALERT",
+        "triggers": "Mirror, Root 6, SSS/TTT, Pairs 0",
+        "variant": "Combined"
+      },
+      {
+        "ba_score": 3,
+        "board_rank": 5,
+        "examples": "049 058 238",
+        "state_key": "Michigan4",
+        "status": "ALERT",
+        "triggers": "Mirror, Root 4, Float 1245, Pairs 0",
+        "variant": "Midday"
+      },
+      {
+        "ba_score": 3,
+        "board_rank": 11,
+        "examples": "049 058 247",
+        "state_key": "Pennsylvania4",
+        "status": "ALERT",
+        "triggers": "Mirror, Root 4, Float 04, Pairs 0",
+        "variant": "Midday"
+      }
+    ],
+    "available": true,
+    "row_count": 42,
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "035,038,058",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "012,013,014",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "012,015,018",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "015,024,123",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "012,013,014",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "578,038,128",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "023,167,239",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "038,047,137",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ],
+    "watch_states": [
+      {
+        "ba_score": 2,
+        "board_rank": 1,
+        "examples": "035 038 058",
+        "state_key": "Connecticut4",
+        "status": "WATCH",
+        "triggers": "Mirror, Float 38, Pairs 0",
+        "variant": "Combined"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 1,
+        "examples": "015 025 035",
+        "state_key": "Connecticut4",
+        "status": "WATCH",
+        "triggers": "Mirror, Float 359, Pairs 0",
+        "variant": "Evening"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 2,
+        "examples": "018 027 126",
+        "state_key": "Delaware4",
+        "status": "WATCH",
+        "triggers": "Root 9, Float 17, Pairs 0",
+        "variant": "Evening"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 3,
+        "examples": "023 059 158",
+        "state_key": "Florida4",
+        "status": "WATCH",
+        "triggers": "Root 5, Float 25, Pairs 2",
+        "variant": "Evening"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 3,
+        "examples": "013 023 034",
+        "state_key": "Florida4",
+        "status": "WATCH",
+        "triggers": "SSS/TTT, Float 37, Pairs 1",
+        "variant": "Midday"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 4,
+        "examples": "015 016 035",
+        "state_key": "Indiana4",
+        "status": "WATCH",
+        "triggers": "Mirror, Float 136, Pairs 0",
+        "variant": "Evening"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 6,
+        "examples": "578 038 128",
+        "state_key": "NewJersey4",
+        "status": "WATCH",
+        "triggers": "Root 2, SSS/TTT, Pairs 0",
+        "variant": "Combined"
+      },
+      {
+        "ba_score": 2,
+        "board_rank": 6,
+        "examples": "027 045 018",
+        "state_key": "NewJersey4",
+        "status": "WATCH",
+        "triggers": "Mirror, Root 9, Pairs 0",
+        "variant": "Midday"
+      }
+    ]
+  },
+  "board_context": {
+    "best_clean_host": "Connecticut4",
+    "highest_context_support_state": "Pennsylvania4",
+    "play_states": [],
+    "secondary_target": "Delaware4",
+    "skip_states": [],
+    "top_primary_target": "Connecticut4",
+    "watch_states": [
+      "Connecticut4",
+      "Delaware4",
+      "Florida4",
+      "Indiana4",
+      "Michigan4",
+      "NewJersey4",
+      "NewYork4",
+      "NorthCarolina4",
+      "Ohio4",
+      "OntarioCanada4",
+      "Pennsylvania4",
+      "PuertoRico4",
+      "SouthCarolina4",
+      "Virginia4"
+    ]
+  },
+  "compound_events": {
+    "available": false,
+    "row_count": 0,
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "Evening:CARRY_PERM:P70",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "Evening:CARRY_PERM:P70",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "Combined:CARRY_PERM:P70",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "Combined:CLAMP_4:P25",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "Evening:CARRY_PERM:P70",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "Evening:CLAMP_4:P25",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ],
+    "top_rows": []
+  },
+  "consensus": {
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "-",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "tail:01|ev:2|2d:2|trial|strong",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "tail:01|ev:2|2d:2|xvar|trial|strong",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "tail:09|ev:1|2d:1|trial|moderate",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "tail:00|ev:3|2d:3|trial|strong",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ]
+  },
+  "due_doubles": {
+    "available": true,
+    "converting_rows": [],
+    "daily_double_events": [
+      "`OntarioCanada4` `Midday` winner=`998` type=`double` rank=`10` DS=`10` mirror_pairs=`-`",
+      "`NewYork4` `Evening` winner=`496` type=`mirror_double` rank=`7` DS=`5` mirror_pairs=`4/9`",
+      "`NorthCarolina4` `Midday` winner=`169` type=`mirror_double` rank=`8` DS=`5` mirror_pairs=`1/6`",
+      "`NorthCarolina4` `Evening` winner=`083` type=`mirror_double` rank=`8` DS=`5` mirror_pairs=`3/8`",
+      "`Virginia4` `Evening` winner=`627` type=`mirror_double` rank=`14` DS=`3` mirror_pairs=`2/7`",
+      "`Ohio4` `Midday` winner=`585` type=`double` rank=`9` DS=`2` mirror_pairs=`-`",
+      "`Ohio4` `Evening` winner=`646` type=`double` rank=`9` DS=`2` mirror_pairs=`-`",
+      "`Pennsylvania4` `Evening` winner=`439` type=`mirror_double` rank=`11` DS=`2` mirror_pairs=`4/9`",
+      "`PuertoRico4` `Midday` winner=`729` type=`mirror_double` rank=`12` DS=`2` mirror_pairs=`2/7`",
+      "`PuertoRico4` `Evening` winner=`222` type=`triple` rank=`12` DS=`2` mirror_pairs=`-`",
+      "`Florida4` `Midday` winner=`273` type=`mirror_double` rank=`3` DS=`1` mirror_pairs=`2/7`",
+      "`Florida4` `Evening` winner=`100` type=`double` rank=`3` DS=`1` mirror_pairs=`-`",
+      "`Indiana4` `Midday` winner=`954` type=`mirror_double` rank=`4` DS=`1` mirror_pairs=`4/9`",
+      "`Indiana4` `Evening` winner=`836` type=`mirror_double` rank=`4` DS=`1` mirror_pairs=`3/8`",
+      "`Michigan4` `Midday` winner=`946` type=`mirror_double` rank=`5` DS=`0` mirror_pairs=`4/9`",
+      "`Michigan4` `Evening` winner=`633` type=`double` rank=`5` DS=`0` mirror_pairs=`-`"
+    ],
+    "row_count": 42,
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "Combined:0/5-4/9",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "Combined:2/7-3/8",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "Combined:3/8-4/9",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "Combined:1/6-2/7",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "Combined:1/6-2/7",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "Combined:3/8-4/9",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "Combined:0/5-1/6",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "Combined:0/5-4/9",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ],
+    "threshold_states": [
+      {
+        "board_rank": 10,
+        "draws_since_double": 10,
+        "state_key": "OntarioCanada4"
+      },
+      {
+        "board_rank": 7,
+        "draws_since_double": 5,
+        "state_key": "NewYork4"
+      },
+      {
+        "board_rank": 8,
+        "draws_since_double": 5,
+        "state_key": "NorthCarolina4"
+      },
+      {
+        "board_rank": 1,
+        "draws_since_double": 3,
+        "state_key": "Connecticut4"
+      },
+      {
+        "board_rank": 14,
+        "draws_since_double": 3,
+        "state_key": "Virginia4"
+      }
+    ]
+  },
+  "metadata": {
+    "analysis_artifacts": {
+      "scoreboard_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA/2026-01-16__BOARD_SCOREBOARD__analysis_arena_day_review.json",
+      "shadow_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA/2026-01-16__SHADOW_DECISION_POLICY__analysis_arena_day_review.json",
+      "translation_manifest_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA/2026-01-16__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.json"
+    },
+    "board_scope_states": [
+      "Connecticut4",
+      "Delaware4",
+      "Florida4",
+      "Indiana4",
+      "Michigan4",
+      "NewJersey4",
+      "NewYork4",
+      "NorthCarolina4",
+      "Ohio4",
+      "OntarioCanada4",
+      "Pennsylvania4",
+      "PuertoRico4",
+      "SouthCarolina4",
+      "Virginia4"
+    ],
+    "control_center_dir": "sharepacks/2026-01-16/control_center",
+    "doubles_inventory_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/VALIDATION/2026-01-15_to_2026-01-22__DOUBLES_MIRROR_DOUBLES__INVENTORY.csv",
+    "doubles_inventory_md": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/VALIDATION/2026-01-15_to_2026-01-22__DOUBLES_MIRROR_DOUBLES__INVENTORY.md",
+    "history_date": "2026-01-15",
+    "results_date": "2026-01-16"
+  },
+  "profit_alerts": {
+    "available": true,
+    "row_count": 75,
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "A05:899:PERM,HP5",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "A05:599:PERM,HP5",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "A05:223:PERM,HP4",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "A04:368:PERSIST,BA",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "A05:011:PERM,HP3",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "A05:788:PERM,HP3",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "A09::VTRAC,REP",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "A05:224:PERM,HP4",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ],
+    "top_states": [
+      {
+        "alert_count": 8,
+        "alert_ids": [
+          "A01",
+          "A02",
+          "A04",
+          "A05",
+          "A08",
+          "A10",
+          "A11"
+        ],
+        "board_rank": 10,
+        "state_key": "OntarioCanada4",
+        "strength_sum": 30.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3"
+        ]
+      },
+      {
+        "alert_count": 8,
+        "alert_ids": [
+          "A01",
+          "A03",
+          "A04",
+          "A05",
+          "A08",
+          "A12"
+        ],
+        "board_rank": 6,
+        "state_key": "NewJersey4",
+        "strength_sum": 27.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_4of8"
+        ]
+      },
+      {
+        "alert_count": 7,
+        "alert_ids": [
+          "A02",
+          "A04",
+          "A05",
+          "A08",
+          "A11",
+          "A12"
+        ],
+        "board_rank": 11,
+        "state_key": "Pennsylvania4",
+        "strength_sum": 25.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_4of8"
+        ]
+      },
+      {
+        "alert_count": 7,
+        "alert_ids": [
+          "A02",
+          "A04",
+          "A05",
+          "A08",
+          "A12"
+        ],
+        "board_rank": 14,
+        "state_key": "Virginia4",
+        "strength_sum": 22.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_4of8"
+        ]
+      },
+      {
+        "alert_count": 6,
+        "alert_ids": [
+          "A01",
+          "A04",
+          "A05",
+          "A08",
+          "A09",
+          "A10"
+        ],
+        "board_rank": 7,
+        "state_key": "NewYork4",
+        "strength_sum": 21.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_8"
+        ]
+      },
+      {
+        "alert_count": 6,
+        "alert_ids": [
+          "A01",
+          "A02",
+          "A04",
+          "A05",
+          "A08",
+          "A09"
+        ],
+        "board_rank": 12,
+        "state_key": "PuertoRico4",
+        "strength_sum": 21.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_8"
+        ]
+      },
+      {
+        "alert_count": 6,
+        "alert_ids": [
+          "A04",
+          "A05",
+          "A08",
+          "A10",
+          "A12"
+        ],
+        "board_rank": 8,
+        "state_key": "NorthCarolina4",
+        "strength_sum": 19.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_4of8"
+        ]
+      },
+      {
+        "alert_count": 5,
+        "alert_ids": [
+          "A02",
+          "A04",
+          "A05",
+          "A08",
+          "A12"
+        ],
+        "board_rank": 2,
+        "state_key": "Delaware4",
+        "strength_sum": 16.0,
+        "suggested": [
+          "BOX",
+          "OVERLAY",
+          "STR8_3",
+          "STR8_4of8"
+        ]
+      }
+    ]
+  },
+  "repeat_watch": {
+    "available": true,
+    "exact_hits": [],
+    "row_count": 42,
+    "top_rows": [
+      {
+        "board_rank": 2,
+        "current_equals_winner_vtrac": false,
+        "current_index": "29",
+        "current_streak": 1,
+        "heat_hazard": 0.072,
+        "state_key": "Delaware4",
+        "variant": "Midday",
+        "winner_vtrac": "12"
+      },
+      {
+        "board_rank": 6,
+        "current_equals_winner_vtrac": false,
+        "current_index": "19",
+        "current_streak": 1,
+        "heat_hazard": 0.069,
+        "state_key": "NewJersey4",
+        "variant": "Combined",
+        "winner_vtrac": "-"
+      },
+      {
+        "board_rank": 13,
+        "current_equals_winner_vtrac": false,
+        "current_index": "18",
+        "current_streak": 1,
+        "heat_hazard": 0.069,
+        "state_key": "SouthCarolina4",
+        "variant": "Combined",
+        "winner_vtrac": "-"
+      },
+      {
+        "board_rank": 9,
+        "current_equals_winner_vtrac": false,
+        "current_index": "8",
+        "current_streak": 1,
+        "heat_hazard": 0.068,
+        "state_key": "Ohio4",
+        "variant": "Evening",
+        "winner_vtrac": "19"
+      },
+      {
+        "board_rank": 5,
+        "current_equals_winner_vtrac": false,
+        "current_index": "23",
+        "current_streak": 1,
+        "heat_hazard": 0.067,
+        "state_key": "Michigan4",
+        "variant": "Midday",
+        "winner_vtrac": "25"
+      },
+      {
+        "board_rank": 5,
+        "current_equals_winner_vtrac": false,
+        "current_index": "19",
+        "current_streak": 1,
+        "heat_hazard": 0.066,
+        "state_key": "Michigan4",
+        "variant": "Combined",
+        "winner_vtrac": "-"
+      },
+      {
+        "board_rank": 6,
+        "current_equals_winner_vtrac": false,
+        "current_index": "19",
+        "current_streak": 1,
+        "heat_hazard": 0.066,
+        "state_key": "NewJersey4",
+        "variant": "Evening",
+        "winner_vtrac": "8"
+      },
+      {
+        "board_rank": 6,
+        "current_equals_winner_vtrac": false,
+        "current_index": "25",
+        "current_streak": 1,
+        "heat_hazard": 0.066,
+        "state_key": "NewJersey4",
+        "variant": "Midday",
+        "winner_vtrac": "27"
+      }
+    ]
+  },
+  "survivor": {
+    "scoreboard_carries": [
+      {
+        "board_rank": 1,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "Connecticut4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 2,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "Delaware4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 3,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "Florida4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 4,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "Indiana4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 5,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "Michigan4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 6,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "NewJersey4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 7,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "NewYork4",
+        "targeting_bucket": "small_shoulder"
+      },
+      {
+        "board_rank": 8,
+        "hint": "Prog:27|Hidden",
+        "role": "shared_host",
+        "state_key": "NorthCarolina4",
+        "targeting_bucket": "small_shoulder"
+      }
+    ]
+  },
+  "translation_learning": {
+    "blackapple": [
+      "`014` x6",
+      "`012` x5",
+      "`015` x5",
+      "`038` x4",
+      "`013` x4",
+      "`016` x4"
+    ],
+    "boxed": [
+      "`004` x9",
+      "`001` x9",
+      "`013` x7",
+      "`017` x7",
+      "`007` x7",
+      "`014` x7"
+    ],
+    "due": [
+      "`559` x4",
+      "`004` x4",
+      "`009` x4",
+      "`448` x4",
+      "`155` x4",
+      "`556` x4"
+    ],
+    "positional": [
+      "`013` x3",
+      "`047` x3",
+      "`011` x3",
+      "`357` x3",
+      "`036` x3",
+      "`367` x3"
+    ],
+    "preserved": [
+      "`017` x2",
+      "`116` x1",
+      "`166` x1",
+      "`037` x1",
+      "`357` x1",
+      "`026` x1"
+    ],
+    "profit": [
+      "`349` x3",
+      "`059` x2",
+      "`009` x2",
+      "`045` x2",
+      "`339` x2",
+      "`019` x2"
+    ],
+    "straight": [
+      "`009` x3",
+      "`090` x3",
+      "`900` x3",
+      "`040` x3",
+      "`848` x2",
+      "`088` x2"
+    ],
+    "vt_box": [
+      "`23` x13",
+      "`15` x12",
+      "`33` x11",
+      "`12` x11",
+      "`5` x9",
+      "`18` x9"
+    ]
+  }
+}

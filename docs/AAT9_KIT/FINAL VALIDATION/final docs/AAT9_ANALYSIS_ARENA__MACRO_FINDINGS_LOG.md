@@ -193,3 +193,92 @@ How to use this log:
   - daily Brain 2 review already carried Blackapple / profit-alert / compound / due-double / repeat-watch context, but the window-close rollup was still mostly coarse
 - implication: Before the next comparison windows, improve visibility and structured aggregation rather than assuming the underlying signal is missing.
 - next test: Confirm that per-state Master Validation now shows explicit Aux inventories and that the deep window report rolls up the new daily tracker ledger across the next comparison windows.
+
+---
+
+## Window Append: `2025-12-30_to_2026-01-04`
+
+### F-013
+- status: `CONFIRMED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-15_to_2026-01-22`
+- category: `Instrumentation / surfacing`
+- summary: The explicit Aux-inventory and daily tracker-ledger upgrade is now confirmed in live comparison windows, not just in code.
+- evidence:
+  - per-state validation reports now expose `### G1a. Explicit Aux badge inventory` plus cross-variant pair overlaps and due-VTRAC overlay lists
+  - [2025-12-30__Connecticut4.md](/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL%20VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/VALIDATION/2025-12-30__Connecticut4.md) and [2026-01-15__Connecticut4.md](/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL%20VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/VALIDATION/2026-01-15__Connecticut4.md) both show cross-variant overlaps and Combined / Midday / Evening due-VTRAC overlays
+  - deep window analysis now reports full ledger coverage at `6/6` daily ledgers for the December window and `8/8` for the long January window
+  - deep window analysis now rolls up Blackapple ALERT states and other tracker families instead of only coarse counts
+- implication: Strong Aux / Control Center indicators are now visible enough to be audited, mined, and fed into later translator or Brain 2 research instead of being trapped in raw sidecar files.
+- next test: Keep requiring full tracker-ledger coverage on each future window and make sure any new translator-learning ledger consumes these structured rollups instead of markdown prose.
+
+### F-014
+- status: `REPEATED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-15_to_2026-01-22`
+- category: `Pure arena finalist layer`
+- summary: A real arena-native finalist layer is now repeating across windows even before a rebuilt combo/budget arm exists.
+- evidence:
+  - candidate-like event coverage stayed in a narrow band across the completed aligned windows: `39.3%`, `37.7%`, `45.9%`, `40.7%`
+  - VT-like finalist coverage stayed material across the same windows: `37.4%`, `22.5%`, `42.2%`, `38.5%`
+  - finalist-supported credited hits stayed high in every completed aligned window: `81/103` (`78.6%`), `76/94` (`80.9%`), `65/79` (`82.3%`), `118/142` (`83.1%`)
+  - strict box hits with finalist support stayed very high: `10/10`, `10/12`, `11/11`, `11/12`
+  - straight hits with finalist support also stayed very high: `19/20`, `16/18`, `16/16`, `27/30`
+- implication: Analysis Arena is already producing real finalist/candidate-like information; the project does not need to wait for the combo/budget rebuild to start measuring meaningful upstream value.
+- next test: Formalize the translator-learning ledger around `arena_final_candidate_signature`, `arena_box_signal`, `sandbox_box_seed`, and frontier corroboration so this finalist layer can be converted more deliberately.
+
+### F-015
+- status: `MIXED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-15_to_2026-01-22`
+- category: `Arena vs legacy comparison uplift`
+- summary: Same-window legacy uplift is real on some windows, but it is not yet uniform across all window character.
+- evidence:
+  - December window was essentially flat on Candidate Universe containment: legacy exact/box `15.95% / 22.70%` vs arena `15.3% / 22.7%`
+  - `2026-01-05_to_2026-01-09` improved to `20.3% / 24.6%` from legacy `18.1% / 22.5%`
+  - short January bridge window improved to `23.9% / 30.3%` from legacy `18.5% / 27.2%`
+  - long January window kept a modest exact improvement but slight box regression: legacy `13.9% / 24.2%` vs arena `15.4% / 23.1%`
+  - Play Card any-box realization still stayed weak across all completed aligned windows: `6.1%`, `8.7%`, `10.1%`, `5.4%`
+- implication: The arena is already strong enough to outperform the old arm in some windows, but cross-window replay is still unstable enough that downstream translation and ranking work remain necessary before expecting uniform uplift.
+- next test: Build the cross-window comparison rollup so replay uplift can be broken down by draw character, hit morphology, and frontier signature instead of treated as one aggregate number.
+
+---
+
+## Window Append: `2026-01-15_to_2026-01-22`
+
+### F-016
+- status: `REPEATED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-22`
+- category: `Translator opportunity-gap teaching set`
+- summary: The longer January window materially expanded the explicit box-opportunity teaching set while keeping arena box evidence attached to every gap row.
+- evidence:
+  - December produced `5` `opportunity_gap_box` rows, the early-January window produced `5`, and the long January window produced `11`
+  - in the long January window, explicit arena box support was present on `11/11` gap rows
+  - long January also kept `arena_primary_box` on `8/11` gap rows and `sandbox_box_seed` on `7/11`
+  - `3/11` of the long-January gap rows were still ranked inside the board top-5
+- implication: The translator-learning problem is no longer abstract; there is now a substantive set of “arena knew box territory but the old arm missed” rows that can be preserved and studied directly.
+- next test: Start the translator-learning ledger from the canonical windows first, using these gap rows as the initial teaching cohort before any live translator changes are attempted.
+
+### F-017
+- status: `REPEATED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-15_to_2026-01-22`
+- category: `Brain 2 ranking`
+- summary: Brain 2 ranking still is not concentrating the best hit-bearing states near the top of the board, and the larger January window confirmed that this is not just an early-January quirk.
+- evidence:
+  - top-primary-target hit rates stayed effectively flat across the completed aligned windows: `7.4%`, `7.2%`, `7.3%`, `7.2%`
+  - median board rank for credited hits stayed mid-board or worse: `7.0`, `7.0`, `7.0`, `8.0`
+  - high-conviction median rank improved on the short January bridge (`6.0`) but the long January canonical window still sat at `7.0`
+  - the long January window still placed `66/142` credited hits in the `LOW_BOARD` tier versus only `25` in `TOP3`
+- implication: Ranking discrimination remains the cleanest scoring problem to solve next; the board is preserving useful truth, but it is still not prioritizing it sharply enough.
+- next test: Run the planned Brain 2 ranking diagnostic against the canonical comparison windows and compare false-positive top states against hit-bearing mid-board states before changing any weights.
+
+### F-018
+- status: `REPEATED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-15_to_2026-01-22`
+- category: `Winner frontier behavior`
+- summary: The frontier harness now has repeated support across the broader comparison corpus: hidden-compressed, feeder, and VTRAC frontier behavior remain dominant while literal frontier remains effectively absent.
+- evidence:
+  - December signature mix: `HIDDEN_COMPRESSED_FRONTIER` x62, `FEEDER_TO_FRONTIER` x49, `VTRAC_FRONTIER` x44, `FAMILY_FRONTIER` x8
+  - early January signature mix: `HIDDEN_COMPRESSED_FRONTIER` x48, `FEEDER_TO_FRONTIER` x37, `VTRAC_FRONTIER` x44, `LITERAL_FRONTIER` x1
+  - short January bridge signature mix: `HIDDEN_COMPRESSED_FRONTIER` x50, `FEEDER_TO_FRONTIER` x26, `VTRAC_FRONTIER` x28, `FAMILY_FRONTIER` x4
+  - long January signature mix: `HIDDEN_COMPRESSED_FRONTIER` x91, `FEEDER_TO_FRONTIER` x65, `VTRAC_FRONTIER` x54, `FAMILY_FRONTIER` x10
+  - literal frontier remained absent or nearly absent across the aligned windows
+- implication: Future translator and frontier research should be built around hidden-compressed family/VTRAC survival and feeder progression, not around a literal late-frontier expectation.
+- next test: Run the negative-control frontier study before promoting any of these signatures into live scoring or translator logic.
