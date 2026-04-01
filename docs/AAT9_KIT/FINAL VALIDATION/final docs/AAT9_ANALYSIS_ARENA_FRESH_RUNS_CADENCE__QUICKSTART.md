@@ -123,6 +123,7 @@ This order matters because the branch now preserves truth first and compression 
 
 Companion references:
 
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
@@ -162,6 +163,7 @@ These produce:
 - quantitative `arena truth vs control-arm realization vs opportunity gap`
 - deep hit analysis + machine-readable hit roster
 - pure arena finalist / candidate scorecard
+- translator-learning ledger for future translator study
 - C1/C2 vertical-frontier harness analysis + machine-readable frontier cases
 - broader Codex-style window synthesis
 
@@ -170,3 +172,29 @@ Use them after:
 1. `pre-range`
 2. `post-range`
 3. validation shells are generated
+
+## Cross-Window Rollup
+
+After `2+` completed windows, generate the system-level rollup:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py cross-window-rollup --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Then generate the tune-up diagnostics package:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py tuneup-diagnostics --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+And then the frontier negative-control study:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py frontier-negative-control --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Before starting a new fresh gold-day window, run the readiness preflight:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py fresh-window-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```

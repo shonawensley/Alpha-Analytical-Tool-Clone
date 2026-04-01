@@ -403,6 +403,12 @@ def build_window_close_commands(
         ],
         [
             "python3",
+            "scripts/tools/create_window_translator_learning_ledger.py",
+            "--window-root",
+            str(window_root),
+        ],
+        [
+            "python3",
             "scripts/tools/create_window_deep_analysis_report.py",
             "--window-root",
             str(window_root),
@@ -412,6 +418,82 @@ def build_window_close_commands(
         for cmd in commands:
             cmd.append("--force")
     return commands
+
+
+def build_cross_window_rollup_command(
+    *,
+    runs2_root: Path,
+    window_roots: Sequence[Path],
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_cross_window_rollup.py",
+        "--runs2-root",
+        str(runs2_root),
+    ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_tuneup_diagnostics_command(
+    *,
+    runs2_root: Path,
+    window_roots: Sequence[Path],
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_tuneup_diagnostics.py",
+        "--runs2-root",
+        str(runs2_root),
+    ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_frontier_negative_control_command(
+    *,
+    runs2_root: Path,
+    window_roots: Sequence[Path],
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_frontier_negative_control_study.py",
+        "--runs2-root",
+        str(runs2_root),
+    ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_fresh_window_readiness_command(
+    *,
+    runs2_root: Path,
+    window_roots: Sequence[Path],
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_fresh_window_readiness_report.py",
+        "--runs2-root",
+        str(runs2_root),
+    ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
 
 
 def build_pre_commands(
@@ -636,10 +718,39 @@ def _parse_args() -> argparse.Namespace:
     window_close.add_argument("--skip-deep-hit-analysis", action="store_true")
     window_close.add_argument("--skip-frontier-harness", action="store_true")
     window_close.add_argument("--skip-pure-arena-scorecard", action="store_true")
+    window_close.add_argument("--skip-translator-ledger", action="store_true")
     window_close.add_argument("--skip-deep-analysis", action="store_true")
     window_close.add_argument("--no-receipt", action="store_true")
     window_close.add_argument("--force", action="store_true")
     window_close.add_argument("--dry-run", action="store_true")
+
+    cross_rollup = sub.add_parser("cross-window-rollup", help="Generate the cross-window Analysis Arena comparison rollup from completed RUNS_2 windows.")
+    cross_rollup.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    cross_rollup.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
+    cross_rollup.add_argument("--no-receipt", action="store_true")
+    cross_rollup.add_argument("--force", action="store_true")
+    cross_rollup.add_argument("--dry-run", action="store_true")
+
+    tuneup = sub.add_parser("tuneup-diagnostics", help="Generate the cross-window tune-up diagnostics for completed RUNS_2 windows.")
+    tuneup.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    tuneup.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
+    tuneup.add_argument("--no-receipt", action="store_true")
+    tuneup.add_argument("--force", action="store_true")
+    tuneup.add_argument("--dry-run", action="store_true")
+
+    frontier_control = sub.add_parser("frontier-negative-control", help="Generate the cross-window frontier negative-control study for completed RUNS_2 windows.")
+    frontier_control.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    frontier_control.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
+    frontier_control.add_argument("--no-receipt", action="store_true")
+    frontier_control.add_argument("--force", action="store_true")
+    frontier_control.add_argument("--dry-run", action="store_true")
+
+    readiness = sub.add_parser("fresh-window-readiness", help="Generate the system-level fresh-window readiness report for Analysis Arena.")
+    readiness.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    readiness.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
+    readiness.add_argument("--no-receipt", action="store_true")
+    readiness.add_argument("--force", action="store_true")
+    readiness.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1248,8 +1359,10 @@ def main() -> None:
             cmds.append(all_cmds[2])
         if not bool(args.skip_pure_arena_scorecard):
             cmds.append(all_cmds[3])
-        if not bool(args.skip_deep_analysis):
+        if not bool(args.skip_translator_ledger):
             cmds.append(all_cmds[4])
+        if not bool(args.skip_deep_analysis):
+            cmds.append(all_cmds[5])
 
         receipt_lines: List[str] = [
             f"# Analysis Arena cycle — WINDOW CLOSE — {window_root.name}",
@@ -1270,6 +1383,7 @@ def main() -> None:
             "- Deep hit analysis + hit roster",
             "- C1/C2 frontier harness analysis + case roster",
             "- Pure arena finalist / candidate scorecard",
+            "- Translator-learning ledger",
             "- Window deep analysis / Codex report",
             "",
             "## Commands",
@@ -1284,6 +1398,146 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = window_root / f"ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__{profile}__{experiment_tag}.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "cross-window-rollup":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
+        cmd = build_cross_window_rollup_command(
+            runs2_root=runs2_root,
+            window_roots=window_roots,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — CROSS-WINDOW ROLLUP",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__CROSS_WINDOW_ROLLUP.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "tuneup-diagnostics":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
+        cmd = build_tuneup_diagnostics_command(
+            runs2_root=runs2_root,
+            window_roots=window_roots,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — TUNE-UP DIAGNOSTICS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__TUNEUP_DIAGNOSTICS.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "frontier-negative-control":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
+        cmd = build_frontier_negative_control_command(
+            runs2_root=runs2_root,
+            window_roots=window_roots,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — FRONTIER NEGATIVE CONTROL",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__FRONTIER_NEGATIVE_CONTROL.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "fresh-window-readiness":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
+        cmd = build_fresh_window_readiness_command(
+            runs2_root=runs2_root,
+            window_roots=window_roots,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — FRESH-WINDOW READINESS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__FRESH_WINDOW_READINESS.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

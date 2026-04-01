@@ -54,8 +54,10 @@ flowchart TD
     M --> N
     N --> O[Performance / Opportunity Gap Report]
     N --> P[Deep Hit Analysis / Hit Roster]
-    N --> Q[C1/C2 Frontier Harness / Frontier Cases]
-    N --> R[Window Deep Analysis / Codex Report]
+    N --> Q[Pure Finalist / Candidate Scorecard]
+    N --> R[Translator-Learning Ledger]
+    N --> S[C1/C2 Frontier Harness / Frontier Cases]
+    N --> T[Window Deep Analysis / Codex Report]
 ```
 
 ---
@@ -148,8 +150,10 @@ For post-results:
 3. control-arm comparison
 4. performance / opportunity gap report
 5. deep hit analysis / hit roster
-6. C1/C2 frontier harness / frontier cases
-7. window deep analysis / Codex report
+6. pure finalist / candidate scorecard
+7. translator-learning ledger
+8. C1/C2 frontier harness / frontier cases
+9. window deep analysis / Codex report
 
 ---
 
@@ -182,10 +186,35 @@ Once a full window is complete, run:
 python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
 
-That gives the branch five different window-close artifacts:
+That gives the branch six different window-close artifacts:
 
 - one quantitative report for arena quality, control-arm realization, and opportunity gap
 - one deep converted-hit report for hit class, rank, cost, and arena-finalist signatures
 - one pure arena finalist / candidate scorecard for VTRAC/finalist territory, combo-like candidate traces, and opportunity-gap evidence
+- one translator-learning ledger for future translator design and opportunity-gap teaching rows
 - one winner-HTML frontier harness for C1/C2 survivor / feeder / compression analysis
 - one broader narrative report for repeated structures, carryover, tracker families, and promotions
+
+After multiple completed windows, run the system-level rollup:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py cross-window-rollup --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+And then the tune-up diagnostics package:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py tuneup-diagnostics --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Then run the frontier negative-control study before promoting frontier features:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py frontier-negative-control --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+And before starting a new fresh gold-day window, run the readiness preflight:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py fresh-window-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```

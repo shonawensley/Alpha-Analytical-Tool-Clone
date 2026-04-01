@@ -20,9 +20,10 @@ Open these in order when running the new branch:
 2. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
 3. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 4. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md`
-5. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
-6. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
-7. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`
+5. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
+6. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+7. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+8. `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`
 
 ---
 
@@ -93,6 +94,7 @@ Suggested window closeout artifacts:
 - `WINDOW_<...>__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__HIT_ROSTER.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__C1_C2_FRONTIER_CASES.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.*`
@@ -103,6 +105,30 @@ Recommended commands:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
+```
+
+After multiple completed windows:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py cross-window-rollup --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Then generate the tune-up diagnostics:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py tuneup-diagnostics --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Then run the frontier negative-control study:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py frontier-negative-control --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Before starting a new fresh gold-day window, run the readiness preflight:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py fresh-window-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
 ```
 
 ---

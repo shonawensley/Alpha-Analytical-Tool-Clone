@@ -282,3 +282,36 @@ How to use this log:
   - literal frontier remained absent or nearly absent across the aligned windows
 - implication: Future translator and frontier research should be built around hidden-compressed family/VTRAC survival and feeder progression, not around a literal late-frontier expectation.
 - next test: Run the negative-control frontier study before promoting any of these signatures into live scoring or translator logic.
+
+---
+
+## Frontier Control Appendix
+
+### F-019
+- status: `REPEATED`
+- window(s): `2025-12-30_to_2026-01-04`, `2026-01-05_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-15_to_2026-01-22`
+- category: `Frontier negative-control study`
+- summary: The frontier control study confirmed that raw VTRAC and feeder frontier presence are too ambient to promote directly, while stronger family/literal/strength thresholds are much more discriminative for strict-box, straight, and box-gap cohorts.
+- evidence:
+  - `vtrac_frontier_v1` stayed ambient at `100.0%` of no-conversion cases and therefore had `1.00x` lift for both strict-box and box-gap cohorts
+  - `feeder_progression_v1` also stayed broad at `84.8%` of no-conversion cases, with only `1.10x` strict-box lift and `1.08x` box-gap lift
+  - by contrast, `literal_frontier_score >= 0.20` and `literal_frontier_v1` appeared in `24.4%` / `20.0%` of strict-box cases and `16.0%` / `16.0%` of box-gap cases, while remaining absent in the no-conversion control
+  - `family_frontier_score >= 0.30` rose to `48.9%` of strict-box cases, `45.2%` of straight cases, and `48.0%` of box-gap cases versus only `7.1%` of no-conversion control
+  - `frontier_strength_score >= 70` rose to `26.7%` of strict-box cases and `16.0%` of box-gap cases versus `0.5%` in no-conversion control
+- implication: Frontier traits should be promoted only in thresholded / compounded form. Raw feeder or VTRAC presence is useful context, but not a standalone predictive lever.
+- next test: Feed only thresholded family/literal/strength frontier conditions into the future translator and Brain 2 research lanes, while keeping raw feeder/VTRAC presence as supporting context only.
+
+---
+
+## Current Approved Tune-Up Package
+
+These items are approved because of the repeated findings above and should be treated as the active pre-fresh-window tune-up track:
+
+- add and maintain the active system index so the branch has one compact registry of what runs, what it outputs, and what it feeds
+- add the translator-learning ledger so opportunity-gap rows, converted finalist rows, and preserved-not-budgeted rows are not lost
+- add the cross-window rollup so repeated evidence can be compared without rereading every window manually
+- keep Brain 2 ranking diagnostic, tracker-lift analysis, and doubles subtype split in the tune-up diagnostics package
+- keep the frontier negative-control study as the promotion gate for any future frontier-derived scoring or translator changes
+- keep the fresh-window readiness report as the formal preflight before starting new gold-day windows
+- keep new work machine-readable first, then markdown
+- do not promote live scoring, translator, combo, or budget changes directly from one window

@@ -438,6 +438,133 @@ def _seed_hit_analysis_window(tmp_path: Path) -> tuple[Path, Path, Path]:
     return window_root, runs_root, sharepacks_root
 
 
+def _seed_cross_window_rollup_window(tmp_path: Path, name: str, *, cand_rate: float, box_rate: float) -> Path:
+    window_root = tmp_path / "runs2" / f"WINDOW_{name}"
+    stem = window_root.name
+    analysis_dir = window_root / "ANALYSIS_ARENA"
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+        {
+            "metadata": {"day_count": 5, "window_root": str(window_root)},
+            "summary_counts": {
+                "winner_events": 10,
+            },
+            "summary_rates": {
+                "cu_exact": cand_rate / 2.0,
+                "cu_box": cand_rate,
+                "play_card_any_box": box_rate,
+                "opportunity_gap_box": 0.2,
+                "top_primary_target": 0.1,
+            },
+        },
+    )
+    _write_text(
+        window_root / f"{stem}__ANALYSIS_ARENA__PERFORMANCE_GAP__ledger.csv",
+        "date,state_key,period,winner,board_rank,top_primary_target,best_clean_host,highest_context_support_state,arena_primary_box,arena_primary_vt,sandbox_box_seed,sandbox_exact_seed,sandbox_vt_seed,preserved_not_budgeted,arena_box_signal,arena_exact_signal,play_card_any_exact,play_card_any_box,opportunity_gap_box,opportunity_gap_exact,profit_alert_support,compound_event_support,due_double_support,blackapple_support,r_consensus_support,survivor_support\n"
+        "2026-01-05,NewYork4,Midday,080,1,True,True,True,True,True,True,True,True,False,True,False,True,True,True,False,True,False,True,True,True,True\n"
+        "2026-01-05,Texas4,Evening,735,5,False,False,False,False,True,False,False,True,False,False,False,False,True,False,False,True,True,False,False,False,True\n",
+    )
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+        {
+            "metadata": {"credited_hits": 6},
+            "hit_inventory": {
+                "strict_box_hits": 2,
+                "straight_hits": 1,
+                "vtrac_only_hits": 3,
+            },
+            "ranking": {
+                "median_rank_all_hits": 7.0,
+                "median_rank_high_conviction": 5.0,
+            },
+        },
+    )
+    _write_text(
+        window_root / f"{stem}__ANALYSIS_ARENA__HIT_ROSTER.csv",
+        "date,state_key,period,winner,board_rank,top_primary_target,best_clean_host,arena_primary_box,arena_primary_vt,sandbox_box_seed,sandbox_exact_seed,sandbox_vt_seed,preserved_not_budgeted,arena_box_signal,arena_exact_signal,play_straight_hit,play_box_strict_hit,play_box_any_hit,play_card_any_box,play_card_any_exact,arena_final_candidate_signature,profit_alert_direct_match,profit_alert_implied_match,compound_event_present,blackapple_status,due_double_support,inventory_type,due_double_period_rank,due_double_combined_rank,due_double_family_match_rank,double_context_strength,hit_primary_class\n"
+        "2026-01-05,NewYork4,Midday,080,1,True,True,True,True,True,True,True,False,True,False,True,True,True,True,True,CLEAR_ARENA_FINALIST,True,False,False,ALERT,True,double,2,3,1,STRONG,STRAIGHT\n"
+        "2026-01-05,Texas4,Evening,735,5,False,False,False,True,False,False,True,False,False,False,False,False,True,True,False,PARTIAL_ARENA_FINALIST,False,True,True,WATCH,False,mirror_double,7,8,6,MEDIUM,VTRAC_ONLY\n",
+    )
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+        {
+            "event_layer": {
+                "any_candidate_like_events": {"count": 4, "denominator": 10, "rate": 0.4},
+                "vt_like_events": {"count": 3, "denominator": 10, "rate": 0.3},
+                "boxlike_events": {"count": 2, "denominator": 10, "rate": 0.2},
+            },
+            "hit_layer": {
+                "finalist_supported_hits": {"count": 5, "denominator": 6, "rate": 5 / 6},
+                "straight_with_finalist_support": {"count": 1, "denominator": 1, "rate": 1.0},
+                "strict_box_with_finalist_support": {"count": 2, "denominator": 2, "rate": 1.0},
+            },
+            "opportunity_layer": {
+                "gap_rows_with_explicit_arena_box": {"count": 2, "denominator": 2, "rate": 1.0},
+            },
+        },
+    )
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+        {
+            "signature_mix": {
+                "signature_counts": {
+                    "HIDDEN_COMPRESSED_FRONTIER": 4,
+                    "FEEDER_TO_FRONTIER": 3,
+                    "VTRAC_FRONTIER": 2,
+                }
+            }
+        },
+    )
+    _write_text(
+        window_root / f"{stem}__ANALYSIS_ARENA__C1_C2_FRONTIER_CASES.csv",
+        "date,state_key,winner,best_board_rank,frontier_signature_type,signature_strength,literal_frontier_score,family_frontier_score,vtrac_frontier_score,frontier_purity_score,vertical_stability_score,cross_variant_echo_score,compression_score,hidden_winner_score,feeder_progression_score,double_anchor_score,frontier_strength_score,credited_event_count,hit_class_rollup,arena_final_candidate_signature_best,double_context_strength_best,inventory_types,fired_tests\n"
+        "2026-01-05,NewYork4,080,1,HIDDEN_COMPRESSED_FRONTIER,STRONG,0.22,0.46,0.41,0.65,1.0,0.66,1.0,0.78,0.61,0.72,82.0,1,STRAIGHT|BOXED|VTRAC_STRAIGHT|VTRAC_BOXED,CLEAR_ARENA_FINALIST,STRONG,double,\"hidden_mask_v1,feeder_progression_v1,vtrac_frontier_v1,double_anchor_v1\"\n"
+        "2026-01-05,Texas4,735,5,VTRAC_FRONTIER,MEDIUM,0.04,0.18,0.39,0.33,1.0,0.50,1.0,0.31,0.42,0.48,61.0,1,NONE,PARTIAL_ARENA_FINALIST,MEDIUM,mirror_double,\"vtrac_frontier_v1,feeder_progression_v1\"\n"
+        "2026-01-05,Florida4,994,7,FEEDER_TO_FRONTIER,MEDIUM,0.01,0.24,0.28,0.29,1.0,0.40,1.0,0.36,0.71,0.30,58.0,0,NONE,LIGHT_ARENA_FINALIST,MEDIUM,double,\"family_frontier_v1,feeder_progression_v1\"\n"
+        "2026-01-05,Ohio4,222,11,HIDDEN_COMPRESSED_FRONTIER,MEDIUM,0.03,0.17,0.26,0.21,1.0,0.38,1.0,0.54,0.46,0.22,55.0,0,NONE,,WEAK,,\"hidden_mask_v1,feeder_progression_v1\"\n",
+    )
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+        {
+            "summary": {
+                "winner_events": 10,
+                "translator_rows": 3,
+                "cohort_counts": {"BOX_GAP": 1, "BOX_CONVERTED": 1, "VT_FINALIST": 1},
+            }
+        },
+    )
+    _write_text(
+        window_root / f"{stem}__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.csv",
+        "date,state_key,period,winner,board_rank,primary_cohort,cohort_tags,frontier_signature_type,arena_final_candidate_signature,double_context_strength,inventory_type,due_double_period_rank,due_double_combined_rank,due_double_family_match_rank\n"
+        "2026-01-05,NewYork4,Midday,080,1,BOX_CONVERTED,BOX_CONVERTED|ARENA_EXPLICIT,HIDDEN_COMPRESSED_FRONTIER,CLEAR_ARENA_FINALIST,STRONG,double,2,3,1\n"
+        "2026-01-05,Texas4,Evening,735,5,VT_FINALIST,VT_FINALIST|VT_CONVERTED,VTRAC_FRONTIER,PARTIAL_ARENA_FINALIST,MEDIUM,mirror_double,7,8,6\n"
+        "2026-01-05,Florida4,Evening,994,7,BOX_GAP,BOX_GAP|ARENA_EXPLICIT,FEEDER_TO_FRONTIER,LIGHT_ARENA_FINALIST,MEDIUM,double,5,6,4\n",
+    )
+    _write_json(
+        window_root / f"{stem}__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+        {
+            "window_overview": {"winner_events": 10},
+            "translator_learning_ledger": {"summary": {"cohort_counts": {"BOX_GAP": 1}}},
+            "winner_html_frontier": {"case_count": 4},
+        },
+    )
+    _write_json(
+        analysis_dir / "2026-01-05__BOARD_SCOREBOARD__analysis_arena_day_review.json",
+        {
+            "board_verdict": {
+                "top_primary_target": "NewYork4",
+                "best_clean_host": "NewYork4",
+                "highest_context_support_state": "NewYork4",
+            },
+            "scoreboard_rows": [
+                {"state_key": "NewYork4", "score_rank": 1},
+                {"state_key": "Texas4", "score_rank": 5},
+            ],
+        },
+    )
+    return window_root
+
+
 def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch) -> None:
     from scripts.tools import analysis_arena_window_utils as util
     from scripts.tools import create_window_deep_analysis_report as deep
@@ -570,6 +697,45 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     )
     scorecard.main()
 
+    translator_json = window_root / "translator.json"
+    _write_json(
+        translator_json,
+        {
+            "summary": {
+                "winner_events": 2,
+                "translator_rows": 2,
+                "cohort_counts": {
+                    "BOX_GAP": 1,
+                    "BOX_CONVERTED": 1,
+                },
+                "frontier_signature_counts": {
+                    "HIDDEN_COMPRESSED_FRONTIER": 1,
+                    "VTRAC_FRONTIER": 1,
+                },
+                "rates": {
+                    "box_gap_rows": 0.5,
+                    "exact_gap_rows": 0.0,
+                    "box_converted_rows": 0.5,
+                    "vt_converted_rows": 0.0,
+                },
+            },
+            "examples": {
+                "priority_rows": [
+                    {
+                        "date": "2026-01-05",
+                        "state": "NewYork4",
+                        "period": "Midday",
+                        "winner": "080",
+                        "board_rank": 1,
+                        "primary_cohort": "BOX_GAP",
+                        "frontier_signature_type": "HIDDEN_COMPRESSED_FRONTIER",
+                    }
+                ]
+            },
+            "interpretation": ["Use this ledger as a translator teaching cohort."],
+        },
+    )
+
     _write_json(
         (window_root / "VALIDATION" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json"),
         {
@@ -642,6 +808,8 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
             str(frontier_json),
             "--pure-arena-scorecard-json",
             str(pure_arena_json),
+            "--translator-ledger-json",
+            str(translator_json),
             "--out-md",
             str(deep_md),
             "--out-json",
@@ -660,9 +828,11 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert deep_payload["winner_html_frontier"]["signature_counts"]["HIDDEN_COMPRESSED_FRONTIER"] == 1
     assert deep_payload["winner_html_frontier"]["promotion_queue"][0]["action"] == "TEST_IN_TRANSLATOR"
     assert deep_payload["pure_arena_finalist_layer"]["event_layer"]["winner_events"] == 2
+    assert deep_payload["translator_learning_ledger"]["summary"]["cohort_counts"]["BOX_GAP"] == 1
     assert "Shared Complexes / Carryover / Decay" in deep_md.read_text(encoding="utf-8")
     assert "Winner HTML Frontier" in deep_md.read_text(encoding="utf-8")
     assert "Pure Arena Finalist / Candidate Layer" in deep_md.read_text(encoding="utf-8")
+    assert "Translator Learning Ledger" in deep_md.read_text(encoding="utf-8")
     assert "Daily tracker ledgers present" in deep_md.read_text(encoding="utf-8")
 
 
@@ -806,6 +976,41 @@ def test_window_pure_arena_finalist_scorecard_report(tmp_path, monkeypatch) -> N
     assert "Event-Level Finalist Territory" in text
 
 
+def test_window_translator_learning_ledger_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_window_translator_learning_ledger as ledger
+
+    window_root, _runs_root, _sharepacks_root = _seed_hit_analysis_window(tmp_path)
+    monkeypatch.setattr(ledger, "REPO_ROOT", tmp_path)
+
+    out_md = window_root / "translator.md"
+    out_json = window_root / "translator.json"
+    out_csv = window_root / "translator.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_window_translator_learning_ledger.py",
+            "--window-root",
+            str(window_root),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--force",
+        ],
+    )
+    ledger.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["translator_rows"] == 2
+    assert payload["summary"]["cohort_counts"]["VT_FINALIST"] == 2
+    assert payload["summary"]["cohort_counts"]["PRESERVED"] == 1
+    assert "cohort_tags" in out_csv.read_text(encoding="utf-8")
+    assert "Translator-Learning Ledger" in out_md.read_text(encoding="utf-8")
+
+
 def test_window_c1_c2_frontier_harness_report(tmp_path, monkeypatch) -> None:
     from scripts.tools import create_window_c1_c2_frontier_harness_report as frontier
 
@@ -849,3 +1054,213 @@ def test_window_c1_c2_frontier_harness_report(tmp_path, monkeypatch) -> None:
     text = out_md.read_text(encoding="utf-8")
     assert "Promotion Queue" in text
     assert "Signature Mix" in text
+
+
+def test_cross_window_rollup_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_analysis_arena_cross_window_rollup as rollup
+
+    w1 = _seed_cross_window_rollup_window(tmp_path, "2026-01-01_to_2026-01-03", cand_rate=0.4, box_rate=0.1)
+    w2 = _seed_cross_window_rollup_window(tmp_path, "2026-01-05_to_2026-01-09", cand_rate=0.5, box_rate=0.2)
+    monkeypatch.setattr(rollup, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(rollup, "DEFAULT_RUNS2_ROOT", tmp_path / "runs2")
+    monkeypatch.setattr(rollup, "DEFAULT_FINAL_DOCS", tmp_path / "final_docs")
+
+    out_md = tmp_path / "final_docs" / "rollup.md"
+    out_json = tmp_path / "final_docs" / "rollup.json"
+    out_csv = tmp_path / "final_docs" / "rollup.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_analysis_arena_cross_window_rollup.py",
+            "--runs2-root",
+            str(tmp_path / "runs2"),
+            "--window-root",
+            str(w1),
+            "--window-root",
+            str(w2),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--force",
+        ],
+    )
+    rollup.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["window_count"] == 2
+    assert payload["summary"]["winner_events"] == 20
+    assert payload["rows"][0]["frontier_top_signature"] == "HIDDEN_COMPRESSED_FRONTIER"
+    assert "Window Table" in out_md.read_text(encoding="utf-8")
+    assert "candidate_like_event_rate" in out_csv.read_text(encoding="utf-8")
+
+
+def test_tuneup_diagnostics_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_analysis_arena_tuneup_diagnostics as tuneup
+
+    w1 = _seed_cross_window_rollup_window(tmp_path, "2026-01-01_to_2026-01-03", cand_rate=0.4, box_rate=0.1)
+    w2 = _seed_cross_window_rollup_window(tmp_path, "2026-01-05_to_2026-01-09", cand_rate=0.5, box_rate=0.2)
+    monkeypatch.setattr(tuneup, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(tuneup, "DEFAULT_RUNS2_ROOT", tmp_path / "runs2")
+    monkeypatch.setattr(tuneup, "DEFAULT_FINAL_DOCS", tmp_path / "final_docs")
+
+    out_md = tmp_path / "final_docs" / "tuneup.md"
+    out_json = tmp_path / "final_docs" / "tuneup.json"
+    out_rank = tmp_path / "final_docs" / "ranking.csv"
+    out_track = tmp_path / "final_docs" / "tracker.csv"
+    out_double = tmp_path / "final_docs" / "doubles.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_analysis_arena_tuneup_diagnostics.py",
+            "--runs2-root",
+            str(tmp_path / "runs2"),
+            "--window-root",
+            str(w1),
+            "--window-root",
+            str(w2),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-ranking-csv",
+            str(out_rank),
+            "--out-tracker-csv",
+            str(out_track),
+            "--out-doubles-csv",
+            str(out_double),
+            "--force",
+        ],
+    )
+    tuneup.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["brain2_ranking"]["repeated_false_positive_top_states"][0]["state_key"] == "NewYork4"
+    assert payload["tracker_lift"]["rows"]
+    assert payload["doubles_subtype"]["rows"]
+    assert "Brain 2 Ranking Diagnostic" in out_md.read_text(encoding="utf-8")
+    assert "state_key" in out_rank.read_text(encoding="utf-8")
+    assert "signal" in out_track.read_text(encoding="utf-8")
+    assert "dimension" in out_double.read_text(encoding="utf-8")
+
+
+def test_frontier_negative_control_study_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_analysis_arena_frontier_negative_control_study as study
+
+    w1 = _seed_cross_window_rollup_window(tmp_path, "2026-01-01_to_2026-01-03", cand_rate=0.4, box_rate=0.1)
+    w2 = _seed_cross_window_rollup_window(tmp_path, "2026-01-05_to_2026-01-09", cand_rate=0.5, box_rate=0.2)
+    monkeypatch.setattr(study, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(study, "DEFAULT_RUNS2_ROOT", tmp_path / "runs2")
+    monkeypatch.setattr(study, "DEFAULT_FINAL_DOCS", tmp_path / "final_docs")
+
+    out_md = tmp_path / "final_docs" / "frontier_negative_control.md"
+    out_json = tmp_path / "final_docs" / "frontier_negative_control.json"
+    out_cases = tmp_path / "final_docs" / "frontier_negative_control_cases.csv"
+    out_lifts = tmp_path / "final_docs" / "frontier_negative_control_lifts.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_analysis_arena_frontier_negative_control_study.py",
+            "--runs2-root",
+            str(tmp_path / "runs2"),
+            "--window-root",
+            str(w1),
+            "--window-root",
+            str(w2),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-cases-csv",
+            str(out_cases),
+            "--out-lifts-csv",
+            str(out_lifts),
+            "--force",
+        ],
+    )
+    study.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["metadata"]["case_count"] == 8
+    assert payload["cohort_counts"]["strict_box"] == 2
+    assert payload["cohort_counts"]["box_gap"] == 2
+    assert payload["cohort_counts"]["vt_only"] == 2
+    assert payload["cohort_counts"]["no_conversion"] == 2
+    assert payload["top_discriminative_features"]["box_gap_vs_no_conversion"]
+    assert "Cohort Inventory" in out_md.read_text(encoding="utf-8")
+    assert "feature_label" in out_lifts.read_text(encoding="utf-8")
+    assert "frontier_signature_type" in out_cases.read_text(encoding="utf-8")
+
+
+def test_fresh_window_readiness_report(tmp_path, monkeypatch) -> None:
+    from scripts.tools import create_analysis_arena_fresh_window_readiness_report as readiness
+
+    w1 = _seed_cross_window_rollup_window(tmp_path, "2026-01-01_to_2026-01-03", cand_rate=0.4, box_rate=0.1)
+    w2 = _seed_cross_window_rollup_window(tmp_path, "2026-01-05_to_2026-01-09", cand_rate=0.5, box_rate=0.2)
+    w3 = _seed_cross_window_rollup_window(tmp_path, "2026-01-15_to_2026-01-22", cand_rate=0.45, box_rate=0.15)
+    monkeypatch.setattr(readiness, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(readiness, "DEFAULT_RUNS2_ROOT", tmp_path / "runs2")
+    monkeypatch.setattr(readiness, "DEFAULT_FINAL_DOCS", tmp_path / "final_docs")
+
+    final_docs = tmp_path / "final_docs"
+    _write_text(final_docs / "AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md", "# index\n")
+    _write_text(final_docs / "AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md", "# quickstart\n")
+    _write_text(final_docs / "AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md", "# flow\n")
+    _write_text(final_docs / "README.md", "# readme\n")
+    _write_text(final_docs / "AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md", "# macro\n")
+    _write_text(tmp_path / "runs2" / "PORTAL.md", "# portal\n")
+    _write_json(final_docs / "AAT9_ANALYSIS_ARENA__CROSS_WINDOW_ROLLUP.json", {"summary": {"window_count": 3, "winner_events": 30, "credited_hits": 18}})
+    _write_json(
+        final_docs / "AAT9_ANALYSIS_ARENA__TUNEUP_DIAGNOSTICS.json",
+        {
+            "brain2_ranking": {
+                "repeated_false_positive_top_states": [{"state_key": "NewYork4"}],
+                "productive_non_primary_states": [{"state_key": "Texas4"}],
+            },
+            "tracker_lift": {"rows": [{"signal": "arena_box_signal"}]},
+            "doubles_subtype": {"rows": [{"dimension": "all_hits"}]},
+        },
+    )
+    _write_json(
+        final_docs / "AAT9_ANALYSIS_ARENA__FRONTIER_NEGATIVE_CONTROL_STUDY.json",
+        {
+            "metadata": {"case_count": 12},
+            "cohort_counts": {"strict_box": 3, "box_gap": 2, "no_conversion": 4},
+        },
+    )
+
+    out_md = final_docs / "fresh_window_readiness.md"
+    out_json = final_docs / "fresh_window_readiness.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_analysis_arena_fresh_window_readiness_report.py",
+            "--runs2-root",
+            str(tmp_path / "runs2"),
+            "--window-root",
+            str(w1),
+            "--window-root",
+            str(w2),
+            "--window-root",
+            str(w3),
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--force",
+        ],
+    )
+    readiness.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["metadata"]["ready_for_fresh_windows"] is True
+    assert payload["readiness_checks"]["minimum_completed_windows_met"] is True
+    assert payload["readiness_checks"]["frontier_control_populated"] is True
+    assert payload["rollup_summary"]["window_count"] == 3
+    assert "Ready for fresh windows" in out_md.read_text(encoding="utf-8")

@@ -8,6 +8,10 @@ from scripts.tools.run_analysis_arena_cycle import (
     _cmd_brain2_master_validation,
     _cmd_doubles_inventory,
     _iter_state_keys_for_date,
+    build_cross_window_rollup_command,
+    build_fresh_window_readiness_command,
+    build_frontier_negative_control_command,
+    build_tuneup_diagnostics_command,
     build_window_close_commands,
     build_pre_commands,
 )
@@ -148,7 +152,7 @@ def test_cmd_brain2_master_validation_writes_tracker_ledger(tmp_path: Path) -> N
     assert str(tmp_path / "validation" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json") in cmd
 
 
-def test_build_window_close_commands_includes_all_five_reports(tmp_path: Path) -> None:
+def test_build_window_close_commands_includes_all_six_reports(tmp_path: Path) -> None:
     cmds = build_window_close_commands(
         window_root=tmp_path / "WINDOW_2026-01-05_to_2026-01-09",
         runs_root=tmp_path / "RUNS",
@@ -158,7 +162,7 @@ def test_build_window_close_commands_includes_all_five_reports(tmp_path: Path) -
         force=True,
     )
 
-    assert len(cmds) == 5
+    assert len(cmds) == 6
     assert cmds[0][1].endswith("create_window_performance_gap_report.py")
     assert "--window-root" in cmds[0]
     assert "--force" in cmds[0]
@@ -182,6 +186,78 @@ def test_build_window_close_commands_includes_all_five_reports(tmp_path: Path) -
     assert "--window-root" in cmds[3]
     assert "--force" in cmds[3]
 
-    assert cmds[4][1].endswith("create_window_deep_analysis_report.py")
+    assert cmds[4][1].endswith("create_window_translator_learning_ledger.py")
     assert "--window-root" in cmds[4]
     assert "--force" in cmds[4]
+
+    assert cmds[5][1].endswith("create_window_deep_analysis_report.py")
+    assert "--window-root" in cmds[5]
+    assert "--force" in cmds[5]
+
+
+def test_build_cross_window_rollup_command_uses_explicit_windows(tmp_path: Path) -> None:
+    cmd = build_cross_window_rollup_command(
+        runs2_root=tmp_path / "RUNS_2",
+        window_roots=[
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09",
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-15_to_2026-01-22",
+        ],
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_cross_window_rollup.py")
+    assert "--runs2-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_tuneup_diagnostics_command_uses_explicit_windows(tmp_path: Path) -> None:
+    cmd = build_tuneup_diagnostics_command(
+        runs2_root=tmp_path / "RUNS_2",
+        window_roots=[
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09",
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-15_to_2026-01-22",
+        ],
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_tuneup_diagnostics.py")
+    assert "--runs2-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_frontier_negative_control_command_uses_explicit_windows(tmp_path: Path) -> None:
+    cmd = build_frontier_negative_control_command(
+        runs2_root=tmp_path / "RUNS_2",
+        window_roots=[
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09",
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-15_to_2026-01-22",
+        ],
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_frontier_negative_control_study.py")
+    assert "--runs2-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_fresh_window_readiness_command_uses_explicit_windows(tmp_path: Path) -> None:
+    cmd = build_fresh_window_readiness_command(
+        runs2_root=tmp_path / "RUNS_2",
+        window_roots=[
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09",
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-15_to_2026-01-22",
+        ],
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_fresh_window_readiness_report.py")
+    assert "--runs2-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert cmd.count("--window-root") == 2
+    assert "--force" in cmd

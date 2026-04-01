@@ -61,7 +61,27 @@
   - Most converted hits carried arena-native finalist support, which means the old downstream arm is not doing all the work alone.
   - The opportunity-gap box rows are especially valuable because they isolate places where arena showed candidate-like box evidence but the downstream arm failed to convert.
 
-## 7. Winner HTML Frontier
+## 7. Translator Learning Ledger
+
+- Translator-learning rows: `98/221`
+- Box-gap cohort rate: `5.0%`
+- Exact-gap cohort rate: `0.0%`
+- Box-converted cohort rate: `3.6%`
+- VT-converted cohort rate: `15.4%`
+- Translator cohort counts: `ARENA_EXPLICIT` x19, `BOX_CONVERTED` x8, `BOX_FINALIST` x20, `BOX_GAP` x11, `EXACT_CONVERTED` x2, `PRESERVED` x1, `VT_CONVERTED` x34, `VT_FINALIST` x85
+- Translator frontier mix: `FAMILY_FRONTIER` x10, `FEEDER_TO_FRONTIER` x22, `HIDDEN_COMPRESSED_FRONTIER` x50, `VTRAC_FRONTIER` x16
+  - `2026-01-16` `Connecticut4` `Evening` winner=`431` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`1`
+  - `2026-01-16` `Delaware4` `Evening` winner=`107` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`2`
+  - `2026-01-19` `Michigan4` `Evening` winner=`402` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`5`
+  - `2026-01-16` `NewJersey4` `Evening` winner=`180` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`6`
+  - `2026-01-18` `NewJersey4` `Evening` winner=`955` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`6`
+  - Use this ledger as the teaching cohort for future translator work, not as live scoring by itself.
+  - Opportunity-gap rows are the highest-value misses because they show candidate-like arena evidence without downstream conversion.
+  - Converted rows with arena-native support are the cleanest examples of what the rebuilt branch already expresses correctly.
+  - Current window produced `11` explicit box-gap rows worth preserving for translator study.
+  - Preserved-not-budgeted rows (`1`) remain useful as a reserve cohort for later combo/budget design.
+
+## 8. Winner HTML Frontier
 
 - Frontier cases reviewed: `220`
 - Frontier signature mix: `HIDDEN_COMPRESSED_FRONTIER` x91, `FEEDER_TO_FRONTIER` x65, `VTRAC_FRONTIER` x54, `FAMILY_FRONTIER` x10
@@ -72,13 +92,13 @@
   - `-` `-`: -
   - `-` `-`: -
 
-## 8. Best Findings / Worst Misses
+## 9. Best Findings / Worst Misses
 
 - Control-arm realized rows sampled: `12`
 - Opportunity-gap rows sampled: `12`
 - Direct miss rows sampled: `0`
 
-## 9. Promotion Ledger
+## 10. Promotion Ledger
 
 - Preserve: Keep arena truth quality, control-arm realization, and opportunity gap as separate evaluation layers.
 - Preserve: Keep translation sandbox seeds and preserved-not-budgeted canonicals as explicit translator-learning inputs.

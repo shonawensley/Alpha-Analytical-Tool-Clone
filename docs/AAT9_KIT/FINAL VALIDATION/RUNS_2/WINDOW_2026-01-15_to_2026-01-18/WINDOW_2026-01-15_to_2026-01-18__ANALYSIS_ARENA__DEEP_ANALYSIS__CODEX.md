@@ -42,10 +42,10 @@
 
 ## 5. Translational Pressure
 
-- Boxed seeds: `001` x33, `004` x32, `009` x30, `014` x29, `006` x28, `007` x24, `013` x23, `005` x22, `017` x21, `559` x20
-- Straight seeds: `040` x13, `004` x13, `400` x13, `090` x10, `009` x10, `900` x9, `100` x9, `101` x8, `022` x8, `202` x8
+- Boxed seeds: `001` x35, `004` x32, `009` x31, `006` x30, `014` x29, `007` x25, `013` x22, `017` x22, `005` x21, `011` x20
+- Straight seeds: `040` x13, `400` x13, `004` x12, `090` x11, `009` x10, `900` x10, `100` x9, `808` x8, `022` x8, `202` x8
 - VT-box seeds: `23` x53, `15` x47, `5` x43, `33` x39, `12` x36, `18` x36, `2` x33, `9` x31, `3` x27, `21` x26
-- Preserved-not-budgeted canonicals: `028` x8, `036` x5, `244` x4, `449` x3, `029` x3, `079` x3, `037` x2, `227` x2, `224` x2, `599` x2
+- Preserved-not-budgeted canonicals: `017` x7, `028` x7, `023` x4, `012` x4, `014` x3, `037` x3, `029` x3, `059` x3, `026` x3, `245` x3
 
 ## 6. Pure Arena Finalist / Candidate Layer
 
@@ -61,7 +61,26 @@
   - Most converted hits carried arena-native finalist support, which means the old downstream arm is not doing all the work alone.
   - The opportunity-gap box rows are especially valuable because they isolate places where arena showed candidate-like box evidence but the downstream arm failed to convert.
 
-## 7. Winner HTML Frontier
+## 7. Translator Learning Ledger
+
+- Translator-learning rows: `52/109`
+- Box-gap cohort rate: `3.7%`
+- Exact-gap cohort rate: `0.0%`
+- Box-converted cohort rate: `7.3%`
+- VT-converted cohort rate: `16.5%`
+- Translator cohort counts: `ARENA_EXPLICIT` x12, `BOX_CONVERTED` x8, `BOX_FINALIST` x12, `BOX_GAP` x4, `EXACT_CONVERTED` x3, `VT_CONVERTED` x18, `VT_FINALIST` x46
+- Translator frontier mix: `FAMILY_FRONTIER` x4, `FEEDER_TO_FRONTIER` x12, `HIDDEN_COMPRESSED_FRONTIER` x29, `VTRAC_FRONTIER` x7
+  - `2026-01-16` `Connecticut4` `Evening` winner=`431` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`1`
+  - `2026-01-16` `Delaware4` `Evening` winner=`107` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`2`
+  - `2026-01-18` `NewJersey4` `Evening` winner=`955` cohort=`BOX_GAP` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`6`
+  - `2026-01-15` `NorthCarolina4` `Midday` winner=`045` cohort=`BOX_GAP` frontier=`FEEDER_TO_FRONTIER` rank=`8`
+  - `2026-01-18` `Connecticut4` `Midday` winner=`238` cohort=`EXACT_CONVERTED` frontier=`HIDDEN_COMPRESSED_FRONTIER` rank=`1`
+  - Use this ledger as the teaching cohort for future translator work, not as live scoring by itself.
+  - Opportunity-gap rows are the highest-value misses because they show candidate-like arena evidence without downstream conversion.
+  - Converted rows with arena-native support are the cleanest examples of what the rebuilt branch already expresses correctly.
+  - Current window produced `4` explicit box-gap rows worth preserving for translator study.
+
+## 8. Winner HTML Frontier
 
 - Frontier cases reviewed: `108`
 - Frontier signature mix: `HIDDEN_COMPRESSED_FRONTIER` x50, `VTRAC_FRONTIER` x28, `FEEDER_TO_FRONTIER` x26, `FAMILY_FRONTIER` x4
@@ -72,13 +91,13 @@
   - `-` `-`: -
   - `-` `-`: -
 
-## 8. Best Findings / Worst Misses
+## 9. Best Findings / Worst Misses
 
 - Control-arm realized rows sampled: `12`
 - Opportunity-gap rows sampled: `12`
 - Direct miss rows sampled: `0`
 
-## 9. Promotion Ledger
+## 10. Promotion Ledger
 
 - Preserve: Keep arena truth quality, control-arm realization, and opportunity gap as separate evaluation layers.
 - Preserve: Keep translation sandbox seeds and preserved-not-budgeted canonicals as explicit translator-learning inputs.
