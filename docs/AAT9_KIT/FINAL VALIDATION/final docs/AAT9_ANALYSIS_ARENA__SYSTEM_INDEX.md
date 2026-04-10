@@ -54,6 +54,12 @@ Main phases:
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
 
+Per-window lock inputs that should be set before any fresh or backtest window:
+
+1. window start / end dates
+2. `decay-upload-days-total` horizon
+3. whether full tail results exist or the decay companion should expect `right_censored` rows
+
 ## 4. Window-Close Artifact Registry
 
 ### Performance Gap

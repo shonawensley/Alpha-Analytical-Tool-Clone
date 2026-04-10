@@ -42,8 +42,28 @@ Before running:
 2. Confirm repo root and git status
 3. Decide the profile and experiment tag
 4. Decide whether you want all states or a subset
-5. Run the arena cycle
-6. Review the emitted board bundle + translation sandbox before interpreting the control arm too literally
+5. If this is a windowed run, lock the per-window inputs before starting
+6. Run the arena cycle
+7. Review the emitted board bundle + translation sandbox before interpreting the control arm too literally
+
+## Per-Window Lock Inputs
+
+Before starting any fresh or backtest window, explicitly lock:
+
+1. `window dates`
+   - exact window start and window end
+2. `decay-upload-days-total`
+   - default `5`
+   - this means `5` total Pick3StatsC4 upload days including same-day
+3. `tail coverage expectation`
+   - either results exist through `window_end + 4 days`
+   - or the decay companion is expected to contain `right_censored` rows
+4. `decay execution posture`
+   - run the decay companion as part of closeout for backtest windows
+   - or defer it until future results arrive for live-style windows
+
+This lock step matters because same-day grading and decay grading are both official,
+but they answer different questions and should not be blended.
 
 ## Recommended Fast Path
 

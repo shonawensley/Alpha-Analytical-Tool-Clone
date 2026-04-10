@@ -39,7 +39,14 @@
 - `tuneup_diagnostics_populated`: `True`
 - `frontier_control_populated`: `True`
 
-## 6. Evidence Snapshot
+## 6. Per-Window Lock Inputs
+
+- window start / end dates
+- decay-upload-days-total horizon (default 5 total upload days including same-day)
+- tail coverage plan: full results through window_end + 4 days or expected right-censored decay rows
+- decay execution posture: run during backtest closeout now or defer until future results arrive
+
+## 7. Evidence Snapshot
 
 - Cross-window rollup window count: `4`
 - Cross-window winner events: `631`
@@ -50,9 +57,9 @@
 - Frontier control strict-box cases: `45`
 - Frontier control no-conversion cases: `211`
 
-## 7. Next Actions
+## 8. Next Actions
 
 - Use this report as the fresh-window preflight before starting new gold-day windows.
 - Keep the current cadence frozen and run cross-window-rollup, tuneup-diagnostics, and frontier-negative-control again after each new fresh window block.
-- Before each fresh window, lock the decay-upload-days-total setting and confirm whether the backtest tail results exist or whether the decay companion should expect right-censored rows.
+- Before each fresh window, explicitly lock the window dates, the decay-upload-days-total setting, and the tail coverage plan.
 - Do not promote live translator, combo, budget, or frontier scoring changes until the fresh windows repeat or contradict the current comparison-window findings.

@@ -154,6 +154,12 @@ def build_payload(runs2_root: Path, window_roots: Sequence[Path]) -> Dict[str, A
         "frontier_control_populated": int(frontier_summary.get("case_count", 0) or 0) > 0,
     }
     ready = all(bool(value) for value in readiness_checks.values())
+    window_lock_inputs = [
+        "window start / end dates",
+        "decay-upload-days-total horizon (default 5 total upload days including same-day)",
+        "tail coverage plan: full results through window_end + 4 days or expected right-censored decay rows",
+        "decay execution posture: run during backtest closeout now or defer until future results arrive",
+    ]
 
     return {
         "metadata": {
@@ -168,10 +174,11 @@ def build_payload(runs2_root: Path, window_roots: Sequence[Path]) -> Dict[str, A
         "frontier_summary": frontier_summary,
         "windows": windows,
         "readiness_checks": readiness_checks,
+        "window_lock_inputs": window_lock_inputs,
         "next_actions": [
             "Use this report as the fresh-window preflight before starting new gold-day windows.",
             "Keep the current cadence frozen and run cross-window-rollup, tuneup-diagnostics, and frontier-negative-control again after each new fresh window block.",
-            "Before each fresh window, lock the decay-upload-days-total setting and confirm whether the backtest tail results exist or whether the decay companion should expect right-censored rows.",
+            "Before each fresh window, explicitly lock the window dates, the decay-upload-days-total setting, and the tail coverage plan.",
             "Do not promote live translator, combo, budget, or frontier scoring changes until the fresh windows repeat or contradict the current comparison-window findings.",
         ],
     }
@@ -236,7 +243,14 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
         lines.append(f"- `{key}`: `{bool(value)}`")
     lines += [
         "",
-        "## 6. Evidence Snapshot",
+        "## 6. Per-Window Lock Inputs",
+        "",
+    ]
+    for item in payload.get("window_lock_inputs") or []:
+        lines.append(f"- {item}")
+    lines += [
+        "",
+        "## 7. Evidence Snapshot",
         "",
         f"- Cross-window rollup window count: `{rollup_summary.get('window_count', 0)}`",
         f"- Cross-window winner events: `{rollup_summary.get('winner_events', 0)}`",
@@ -247,7 +261,7 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
         f"- Frontier control strict-box cases: `{frontier_summary.get('strict_box_cases', 0)}`",
         f"- Frontier control no-conversion cases: `{frontier_summary.get('no_conversion_cases', 0)}`",
         "",
-        "## 7. Next Actions",
+        "## 8. Next Actions",
         "",
     ]
     for item in payload.get("next_actions") or []:
