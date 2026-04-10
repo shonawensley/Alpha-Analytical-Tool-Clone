@@ -11,6 +11,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_cross_window_rollup_command,
     build_fresh_window_readiness_command,
     build_frontier_negative_control_command,
+    build_window_decay_close_command,
     build_tuneup_diagnostics_command,
     build_window_close_commands,
     build_pre_commands,
@@ -260,4 +261,22 @@ def test_build_fresh_window_readiness_command_uses_explicit_windows(tmp_path: Pa
     assert "--runs2-root" in cmd
     assert str(tmp_path / "RUNS_2") in cmd
     assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_window_decay_close_command_uses_explicit_horizon(tmp_path: Path) -> None:
+    cmd = build_window_decay_close_command(
+        window_root=tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09",
+        results_root=tmp_path / "data" / "results",
+        decay_upload_days_total=5,
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_window_decay_carryover_scorecard.py")
+    assert "--window-root" in cmd
+    assert str(tmp_path / "RUNS_2" / "WINDOW_2026-01-05_to_2026-01-09") in cmd
+    assert "--results-root" in cmd
+    assert str(tmp_path / "data" / "results") in cmd
+    assert "--decay-upload-days-total" in cmd
+    assert "5" in cmd
     assert "--force" in cmd

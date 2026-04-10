@@ -21,7 +21,18 @@
 - Repeated VTRAC indices: `15` x9, `5` x5, `10` x5, `34` x3, `31` x3, `20` x3, `27` x3, `23` x3, `18` x3, `12` x3
 - Carryover canonicals across consecutive days: `001` x3, `009` x3, `014` x3, `049` x3, `224` x3, `225` x3, `244` x3, `255` x3, `334` x3, `344` x3
 
-## 4. Tracker Families
+## 4. Decay / Carryover Companion
+
+- Decay horizon: `5` total upload days / `10` total draws max
+- Tail days required beyond the last snapshot day: `4`
+- State-day snapshots: `56` full_horizon=`56` right_censored=`0`
+- Arena box total: same_day=`12/56` horizon=`31/56` incremental_decay=`19`
+- Arena VTRAC total: same_day=`34/56` horizon=`55/56` incremental_decay=`21`
+- Sandbox exact seed: same_day=`2/56` horizon=`5/56` incremental_decay=`3`
+- Top-primary target decay: same_day=`3/4` horizon=`4/4`
+- Decay interpretation: Same-day window grading stays clean; this scorecard separately measures delayed resolution within the configured horizon.; A miss is only a true miss when the full tail is present. Incomplete tail coverage is reported as right_censored.; Upload-day horizon is the primary setting. Draw-based accounting is preserved as a companion lens because same-day Midday/Evening crossover matters.
+
+## 5. Tracker Families
 
 - blackapple: events=`109` arena_box=`12` play_box=`11` gap_box=`4`
 - compound event: events=`70` arena_box=`10` play_box=`9` gap_box=`3`
@@ -40,14 +51,14 @@
 - Scoreboard hint carries: profit=`Connecticut4` x4, `Delaware4` x4, `Florida4` x4, `Indiana4` x4, `Michigan4` x4, `NewJersey4` x4, `NewYork4` x4, `NorthCarolina4` x4; compound=`Connecticut4` x4, `Delaware4` x4, `Florida4` x4, `Indiana4` x4, `Michigan4` x4, `NewJersey4` x4, `NewYork4` x4, `NorthCarolina4` x4; BA=`Connecticut4` x4, `Delaware4` x4, `Florida4` x4, `Indiana4` x4, `Michigan4` x4, `NewJersey4` x4, `NewYork4` x4, `NorthCarolina4` x4; due=`Connecticut4` x4, `Delaware4` x4, `Florida4` x4, `Indiana4` x4, `Michigan4` x4, `NewJersey4` x4, `NewYork4` x4, `NorthCarolina4` x4; r_consensus=`Connecticut4` x4, `Delaware4` x4, `Florida4` x4, `Indiana4` x4, `Michigan4` x4, `NewJersey4` x4, `NewYork4` x4, `NorthCarolina4` x4
 - Doubles result types: `mirror_double` x35, `double` x27, `triple` x2
 
-## 5. Translational Pressure
+## 6. Translational Pressure
 
 - Boxed seeds: `001` x35, `004` x32, `009` x31, `006` x30, `014` x29, `007` x25, `013` x22, `017` x22, `005` x21, `011` x20
 - Straight seeds: `040` x13, `400` x13, `004` x12, `090` x11, `009` x10, `900` x10, `100` x9, `808` x8, `022` x8, `202` x8
 - VT-box seeds: `23` x53, `15` x47, `5` x43, `33` x39, `12` x36, `18` x36, `2` x33, `9` x31, `3` x27, `21` x26
 - Preserved-not-budgeted canonicals: `017` x7, `028` x7, `023` x4, `012` x4, `014` x3, `037` x3, `029` x3, `059` x3, `026` x3, `245` x3
 
-## 6. Pure Arena Finalist / Candidate Layer
+## 7. Pure Arena Finalist / Candidate Layer
 
 - Any candidate-like event coverage: `50/109` (`45.9%`)
 - VT-like finalist coverage: `46/109` (`42.2%`)
@@ -61,7 +72,7 @@
   - Most converted hits carried arena-native finalist support, which means the old downstream arm is not doing all the work alone.
   - The opportunity-gap box rows are especially valuable because they isolate places where arena showed candidate-like box evidence but the downstream arm failed to convert.
 
-## 7. Translator Learning Ledger
+## 8. Translator Learning Ledger
 
 - Translator-learning rows: `52/109`
 - Box-gap cohort rate: `3.7%`
@@ -80,7 +91,7 @@
   - Converted rows with arena-native support are the cleanest examples of what the rebuilt branch already expresses correctly.
   - Current window produced `4` explicit box-gap rows worth preserving for translator study.
 
-## 8. Winner HTML Frontier
+## 9. Winner HTML Frontier
 
 - Frontier cases reviewed: `108`
 - Frontier signature mix: `HIDDEN_COMPRESSED_FRONTIER` x50, `VTRAC_FRONTIER` x28, `FEEDER_TO_FRONTIER` x26, `FAMILY_FRONTIER` x4
@@ -91,13 +102,13 @@
   - `-` `-`: -
   - `-` `-`: -
 
-## 9. Best Findings / Worst Misses
+## 10. Best Findings / Worst Misses
 
 - Control-arm realized rows sampled: `12`
 - Opportunity-gap rows sampled: `12`
 - Direct miss rows sampled: `0`
 
-## 10. Promotion Ledger
+## 11. Promotion Ledger
 
 - Preserve: Keep arena truth quality, control-arm realization, and opportunity gap as separate evaluation layers.
 - Preserve: Keep translation sandbox seeds and preserved-not-budgeted canonicals as explicit translator-learning inputs.

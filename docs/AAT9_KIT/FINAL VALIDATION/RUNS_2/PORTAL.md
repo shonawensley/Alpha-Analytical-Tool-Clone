@@ -95,6 +95,8 @@ Suggested window closeout artifacts:
 - `WINDOW_<...>__ANALYSIS_ARENA__HIT_ROSTER.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.*`
+- `WINDOW_<...>__ANALYSIS_ARENA__DECAY_CARRYOVER_ROWS.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__C1_C2_FRONTIER_CASES.*`
 - `WINDOW_<...>__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.*`
@@ -106,6 +108,17 @@ Recommended commands:
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --runs-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS --sharepacks-root sharepacks/_predictive --profile tool_only --experiment-tag arena_v0 --force
 ```
+
+Optional decay/carryover companion:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-decay-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --results-root data/results --decay-upload-days-total 5 --force
+```
+
+Interpretation rule:
+
+- keep same-day window-close metrics and decay/carryover metrics separate
+- `5` total upload days means same-day plus `4` later days of tail coverage
 
 After multiple completed windows:
 

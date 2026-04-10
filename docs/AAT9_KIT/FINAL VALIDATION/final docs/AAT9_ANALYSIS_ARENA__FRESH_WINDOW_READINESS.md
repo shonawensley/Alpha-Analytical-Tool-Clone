@@ -3,7 +3,7 @@
 ## 1. Verdict
 
 - Ready for fresh windows: `True`
-- Completed comparison windows available: `3` / `3`
+- Completed comparison windows available: `4` / `4`
 
 ## 2. Core Docs / Memory Anchors
 
@@ -26,6 +26,7 @@
 |---|---|---|---|---|---|---|---|
 | 2025-12-30_to_2026-01-04 | True | True | True | True | True | True | True |
 | 2026-01-05_to_2026-01-09 | True | True | True | True | True | True | True |
+| 2026-01-15_to_2026-01-18 | True | True | True | True | True | True | True |
 | 2026-01-15_to_2026-01-22 | True | True | True | True | True | True | True |
 
 ## 5. Readiness Checks
@@ -53,4 +54,5 @@
 
 - Use this report as the fresh-window preflight before starting new gold-day windows.
 - Keep the current cadence frozen and run cross-window-rollup, tuneup-diagnostics, and frontier-negative-control again after each new fresh window block.
+- Before each fresh window, lock the decay-upload-days-total setting and confirm whether the backtest tail results exist or whether the decay companion should expect right-censored rows.
 - Do not promote live translator, combo, budget, or frontier scoring changes until the fresh windows repeat or contradict the current comparison-window findings.

@@ -124,6 +124,8 @@ This order matters because the branch now preserves truth first and compression 
 Companion references:
 
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
@@ -167,6 +169,19 @@ These produce:
 - C1/C2 vertical-frontier harness analysis + machine-readable frontier cases
 - broader Codex-style window synthesis
 
+Optional companion decay/carryover closeout:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-decay-close --window-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2/WINDOW_<...> --results-root data/results --decay-upload-days-total 5 --force
+```
+
+Notes:
+
+- `decay-upload-days-total 5` means `5` total Pick3StatsC4 upload days including same-day
+- that corresponds to at most `10` total draws
+- for a backtest window, results must exist through `window_end + 4 days` for full decay coverage
+- if tail coverage is incomplete, the decay scorecard should mark rows as `right_censored`, not `miss`
+
 Use them after:
 
 1. `pre-range`
@@ -198,3 +213,13 @@ Before starting a new fresh gold-day window, run the readiness preflight:
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py fresh-window-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
 ```
+
+When the fresh window is complete, read it in this order:
+
+1. Arena Truth
+2. Brain 2 Prioritization
+3. Control Arm Realization
+4. Translator Opportunity
+5. Decay / Carryover Companion when available
+
+Do not start with `B12/B24/B36` or Play Card and treat them as the branch verdict.

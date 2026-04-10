@@ -52,6 +52,11 @@ def _parse_args() -> argparse.Namespace:
         default="",
         help="Optional translator-learning ledger JSON. Defaults to the canonical output name inside the window root.",
     )
+    ap.add_argument(
+        "--decay-json",
+        default="",
+        help="Optional decay/carryover scorecard JSON. Defaults to the canonical output name inside the window root.",
+    )
     ap.add_argument("--out-md", default="", help="Optional markdown output path.")
     ap.add_argument("--out-json", default="", help="Optional JSON output path.")
     ap.add_argument("--force", action="store_true", help="Overwrite existing outputs.")
@@ -72,6 +77,7 @@ def _default_paths(window_root: Path) -> Dict[str, Path]:
         "frontier_json": window_root / f"{stem}__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
         "pure_arena_json": window_root / f"{stem}__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
         "translator_json": window_root / f"{stem}__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+        "decay_json": window_root / f"{stem}__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
         "md": window_root / f"{stem}__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.md",
         "json": window_root / f"{stem}__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
     }
@@ -121,6 +127,7 @@ def _narrative_payload(
     frontier_payload: Dict[str, Any] | None = None,
     pure_arena_payload: Dict[str, Any] | None = None,
     translator_payload: Dict[str, Any] | None = None,
+    decay_payload: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     dates = iter_window_dates(window_root)
     winner_rows = perf_payload.get("ledger_rows") or []
@@ -303,6 +310,13 @@ def _narrative_payload(
     translator_summary = translator_payload.get("summary") or {}
     translator_examples = translator_payload.get("examples") or {}
     translator_interpretation = list(translator_payload.get("interpretation") or [])
+    decay_payload = decay_payload or {}
+    decay_meta = decay_payload.get("metadata") or {}
+    decay_summary = decay_payload.get("summary") or {}
+    decay_metric_rows = decay_payload.get("metric_families") or []
+    decay_cohort_rows = decay_payload.get("cohort_panels") or []
+    decay_examples = decay_payload.get("examples") or {}
+    decay_interpretation = list(decay_payload.get("interpretation") or [])
 
     return {
         "metadata": perf_payload.get("metadata") or {},
@@ -375,6 +389,15 @@ def _narrative_payload(
             "converted_examples": translator_examples.get("converted_rows") or [],
             "interpretation": translator_interpretation,
         },
+        "decay_carryover": {
+            "metadata": decay_meta,
+            "summary": decay_summary,
+            "metric_families": decay_metric_rows,
+            "cohort_panels": decay_cohort_rows,
+            "future_day_examples": decay_examples.get("future_day_decay") or [],
+            "carryforward_examples": decay_examples.get("same_day_carryforward") or [],
+            "interpretation": decay_interpretation,
+        },
         "best_findings": {
             "control_arm_realized_rows": best_realized_rows[:12],
             "opportunity_gap_rows": opportunity_gap_rows[:12],
@@ -405,6 +428,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     pressure = payload["translational_pressure"]
     pure_arena = payload["pure_arena_finalist_layer"]
     translator = payload["translator_learning_ledger"]
+    decay = payload["decay_carryover"]
     frontier = payload["winner_html_frontier"]
     findings = payload["best_findings"]
     promotion = payload["promotion_ledger"]
@@ -453,7 +477,54 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
         + (", ".join(f"`{row['value']}` x{row['count']}" for row in shared["carryover_canonicals"]) or "_none_")
     )
     lines.append("")
-    lines.append("## 4. Tracker Families")
+    lines.append("## 4. Decay / Carryover Companion")
+    lines.append("")
+    decay_meta = decay.get("metadata") or {}
+    decay_summary = decay.get("summary") or {}
+    decay_metric_rows = decay.get("metric_families") or []
+    decay_cohort_rows = decay.get("cohort_panels") or []
+    if decay_meta:
+        lines.append(
+            f"- Decay horizon: `{decay_meta.get('decay_upload_days_total', 0)}` total upload days / `{decay_meta.get('decay_draws_total_max', 0)}` total draws max"
+        )
+        lines.append(
+            f"- Tail days required beyond the last snapshot day: `{decay_meta.get('decay_tail_days_required', 0)}`"
+        )
+    else:
+        lines.append("- Decay horizon: _not generated_")
+    if decay_summary:
+        lines.append(
+            f"- State-day snapshots: `{decay_summary.get('state_day_snapshots', 0)}` full_horizon=`{decay_summary.get('full_horizon_rows', 0)}` right_censored=`{decay_summary.get('right_censored_rows', 0)}`"
+        )
+    metric_lookup = {
+        str(row.get("metric_family") or ""): row
+        for row in decay_metric_rows
+        if isinstance(row, dict)
+    }
+    for metric_name in ("arena_box_total", "arena_vt_total", "sandbox_exact_seed"):
+        row = metric_lookup.get(metric_name)
+        if not row:
+            continue
+        lines.append(
+            f"- {row.get('label', metric_name)}: same_day=`{row.get('same_day_resolved', 0)}/{row.get('active_state_days', 0)}` "
+            f"horizon=`{row.get('horizon_resolved', 0)}/{row.get('active_state_days', 0)}` "
+            f"incremental_decay=`{row.get('incremental_decay_lift', 0)}`"
+        )
+    cohort_lookup = {
+        str(row.get("cohort") or ""): row
+        for row in decay_cohort_rows
+        if isinstance(row, dict)
+    }
+    top_primary_cohort = cohort_lookup.get("top_primary_target")
+    if top_primary_cohort:
+        lines.append(
+            f"- Top-primary target decay: same_day=`{top_primary_cohort.get('same_day_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}` "
+            f"horizon=`{top_primary_cohort.get('horizon_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}`"
+        )
+    if decay.get("interpretation"):
+        lines.append("- Decay interpretation: " + "; ".join(str(item) for item in (decay.get("interpretation") or [])[:3]))
+    lines.append("")
+    lines.append("## 5. Tracker Families")
     lines.append("")
     for key, value in (trackers.get("tracker_attribution") or {}).items():
         label = key.replace("_support", "").replace("_", " ")
@@ -506,7 +577,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
         + (", ".join(f"`{k}` x{v}" for k, v in (trackers.get("doubles_result_types") or {}).items()) or "_none_")
     )
     lines.append("")
-    lines.append("## 5. Translational Pressure")
+    lines.append("## 6. Translational Pressure")
     lines.append("")
     lines.append(
         "- Boxed seeds: "
@@ -525,7 +596,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
         + (", ".join(f"`{row['value']}` x{row['count']}" for row in pressure["preserved_not_budgeted"]) or "_none_")
     )
     lines.append("")
-    lines.append("## 6. Pure Arena Finalist / Candidate Layer")
+    lines.append("## 7. Pure Arena Finalist / Candidate Layer")
     lines.append("")
     pure_event = pure_arena.get("event_layer") or {}
     pure_hits = pure_arena.get("hit_layer") or {}
@@ -545,7 +616,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     for bullet in pure_arena.get("interpretation") or []:
         lines.append(f"  - {bullet}")
     lines.append("")
-    lines.append("## 7. Translator Learning Ledger")
+    lines.append("## 8. Translator Learning Ledger")
     lines.append("")
     translator_summary = translator.get("summary") or {}
     translator_rates = translator_summary.get("rates") or {}
@@ -571,7 +642,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     for bullet in translator.get("interpretation") or []:
         lines.append(f"  - {bullet}")
     lines.append("")
-    lines.append("## 8. Winner HTML Frontier")
+    lines.append("## 9. Winner HTML Frontier")
     lines.append("")
     lines.append(f"- Frontier cases reviewed: `{frontier.get('case_count', 0)}`")
     lines.append(
@@ -627,13 +698,13 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
             + ", ".join(f"`{value}`" for value in frontier.get("warnings") or [])
         )
     lines.append("")
-    lines.append("## 9. Best Findings / Worst Misses")
+    lines.append("## 10. Best Findings / Worst Misses")
     lines.append("")
     lines.append(f"- Control-arm realized rows sampled: `{len(findings['control_arm_realized_rows'])}`")
     lines.append(f"- Opportunity-gap rows sampled: `{len(findings['opportunity_gap_rows'])}`")
     lines.append(f"- Direct miss rows sampled: `{len(findings['direct_miss_rows'])}`")
     lines.append("")
-    lines.append("## 10. Promotion Ledger")
+    lines.append("## 11. Promotion Ledger")
     lines.append("")
     for item in promotion["preserve"]:
         lines.append(f"- Preserve: {item}")
@@ -652,6 +723,7 @@ def main() -> None:
     frontier_json = _window_root_from_arg(args.frontier_json) if args.frontier_json else defaults["frontier_json"]
     pure_arena_json = _window_root_from_arg(args.pure_arena_scorecard_json) if args.pure_arena_scorecard_json else defaults["pure_arena_json"]
     translator_json = _window_root_from_arg(args.translator_ledger_json) if args.translator_ledger_json else defaults["translator_json"]
+    decay_json = _window_root_from_arg(args.decay_json) if args.decay_json else defaults["decay_json"]
     out_md = _window_root_from_arg(args.out_md) if args.out_md else defaults["md"]
     out_json = _window_root_from_arg(args.out_json) if args.out_json else defaults["json"]
 
@@ -673,6 +745,11 @@ def main() -> None:
         raw_translator = read_json(translator_json)
         if isinstance(raw_translator, dict):
             translator_payload = raw_translator
+    decay_payload: Dict[str, Any] = {}
+    if decay_json.exists():
+        raw_decay = read_json(decay_json)
+        if isinstance(raw_decay, dict):
+            decay_payload = raw_decay
     ledger_path = perf_payload.get("ledger_path")
     ledger_rows: List[Dict[str, Any]] = []
     if ledger_path:
@@ -690,6 +767,7 @@ def main() -> None:
         frontier_payload=frontier_payload,
         pure_arena_payload=pure_arena_payload,
         translator_payload=translator_payload,
+        decay_payload=decay_payload,
     )
     narrative["schema_version"] = "analysis_arena_window_deep_analysis/v1"
     narrative["performance_gap_json"] = safe_rel(perf_json)
@@ -699,6 +777,8 @@ def main() -> None:
         narrative["pure_arena_scorecard_json"] = safe_rel(pure_arena_json)
     if translator_payload:
         narrative["translator_ledger_json"] = safe_rel(translator_json)
+    if decay_payload:
+        narrative["decay_scorecard_json"] = safe_rel(decay_json)
 
     _write_json(out_json, narrative, force=args.force)
     _write_text(out_md, _render_markdown(narrative, perf_json_path=perf_json), force=args.force)

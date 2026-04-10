@@ -315,3 +315,15 @@ These items are approved because of the repeated findings above and should be tr
 - keep the fresh-window readiness report as the formal preflight before starting new gold-day windows
 - keep new work machine-readable first, then markdown
 - do not promote live scoring, translator, combo, or budget changes directly from one window
+
+### F-020
+- status: `CONFIRMED`
+- window(s): `canonical comparison package`
+- category: `Instrumentation / decay accounting`
+- summary: Decay / carryover is now treated as a separate Arena-era companion layer rather than being blended into same-day headline metrics.
+- evidence:
+  - the active package now has a dedicated `window-decay-close` companion flow and `DECAY_CARRYOVER_SCORECARD` artifact family
+  - the decay lane uses total upload-day horizon as the primary setting, with same-day included and draw offsets preserved as companion accounting
+  - same-day Arena truth, Brain 2 prioritization, control-arm realization, and translator opportunity remain the main headline stack, while delayed resolution is measured separately
+- implication: Future fresh windows can now be read in two clean lenses at once: immediate same-day performance and bounded horizon resolution. This preserves interpretability while finally giving delayed conversions their proper accounting lane.
+- next test: Generate the new decay scorecard on the canonical comparison windows and use the first fresh window block to decide whether a cross-window decay rollup becomes the next promoted research layer.

@@ -192,6 +192,146 @@ def _seed_window(tmp_path: Path) -> Path:
     return window_root
 
 
+def _seed_decay_window(tmp_path: Path) -> Path:
+    window_root = tmp_path / "runs2" / "WINDOW_2026-01-05_to_2026-01-05"
+    analysis = window_root / "ANALYSIS_ARENA"
+    predictive_root = tmp_path / "sharepacks" / "_predictive"
+
+    _write_text(
+        tmp_path / "data" / "results" / "2026-01-05.txt",
+        "State\tPick 3\nMidday\tEvening\nNew York\t080\t735\nTexas\t000\t111\nOhio\t123\t456\n",
+    )
+    _write_text(
+        tmp_path / "data" / "results" / "2026-01-06.txt",
+        "State\tPick 3\nMidday\tEvening\nNew York\t222\t333\nTexas\t952\t222\nOhio\t999\t888\n",
+    )
+
+    _write_json(
+        analysis / "2026-01-05__BOARD_SCOREBOARD__analysis_arena_day_review.json",
+        {
+            "board_verdict": {
+                "top_primary_target": "NewYork4",
+                "secondary_target": "Texas4",
+                "best_clean_host": "NewYork4",
+                "highest_context_support_state": "Texas4",
+            },
+            "scoreboard_rows": [
+                {
+                    "state_key": "NewYork4",
+                    "score_rank": 1,
+                    "priority_score": 98.0,
+                    "role": "shared_host",
+                    "targeting_bucket": "tight_core",
+                    "tracker_posture": "tracker-rich",
+                    "top_canonicals": ["008", "357"],
+                    "top_vtrac_indices": ["6", "12"],
+                    "profit_alert_hint": "A05",
+                    "due_double_hint": "0/5-1/6",
+                },
+                {
+                    "state_key": "Texas4",
+                    "score_rank": 2,
+                    "priority_score": 91.0,
+                    "role": "secondary_host",
+                    "targeting_bucket": "small_shoulder",
+                    "tracker_posture": "tracker-support",
+                    "top_canonicals": ["259"],
+                    "top_vtrac_indices": ["17"],
+                    "profit_alert_hint": "-",
+                    "due_double_hint": "-",
+                },
+                {
+                    "state_key": "Ohio4",
+                    "score_rank": 8,
+                    "priority_score": 55.0,
+                    "role": "watch",
+                    "targeting_bucket": "watch_only",
+                    "tracker_posture": "quiet",
+                    "top_canonicals": ["555"],
+                    "top_vtrac_indices": ["10"],
+                    "profit_alert_hint": "-",
+                    "due_double_hint": "-",
+                },
+            ],
+        },
+    )
+    _write_json(
+        analysis / "2026-01-05__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.json",
+        {
+            "state_receipts": [
+                {
+                    "state_key": "NewYork4",
+                    "seed_json": "sharepacks/_predictive/2026-01-05/NewYork4/analysis/translation_sandbox_seed__tool_only__arena_v0.json",
+                },
+                {
+                    "state_key": "Texas4",
+                    "seed_json": "sharepacks/_predictive/2026-01-05/Texas4/analysis/translation_sandbox_seed__tool_only__arena_v0.json",
+                },
+                {
+                    "state_key": "Ohio4",
+                    "seed_json": "sharepacks/_predictive/2026-01-05/Ohio4/analysis/translation_sandbox_seed__tool_only__arena_v0.json",
+                },
+            ]
+        },
+    )
+
+    _write_json(
+        predictive_root / "2026-01-05" / "NewYork4" / "analysis" / "translation_sandbox_seed__tool_only__arena_v0.json",
+        {
+            "brain1_core": {
+                "dominant_canonicals": ["008"],
+                "context_reinforced_canonicals": ["357"],
+                "dominant_vtrac_indices": ["6", "12"],
+            },
+            "control_arm": {
+                "preserved_not_budgeted_canonicals_top": ["008"],
+            },
+            "sandbox_hypotheses": {
+                "diagnostic_boxed_seed": [{"value": "008"}],
+                "diagnostic_straight_seed": [{"value": "080"}],
+                "diagnostic_vt_box_seed": [{"value": "6"}],
+            },
+        },
+    )
+    _write_json(
+        predictive_root / "2026-01-05" / "Texas4" / "analysis" / "translation_sandbox_seed__tool_only__arena_v0.json",
+        {
+            "brain1_core": {
+                "dominant_canonicals": ["259"],
+                "context_reinforced_canonicals": [],
+                "dominant_vtrac_indices": ["17"],
+            },
+            "control_arm": {
+                "preserved_not_budgeted_canonicals_top": ["259"],
+            },
+            "sandbox_hypotheses": {
+                "diagnostic_boxed_seed": [{"value": "259"}],
+                "diagnostic_straight_seed": [{"value": "952"}],
+                "diagnostic_vt_box_seed": [{"value": "17"}],
+            },
+        },
+    )
+    _write_json(
+        predictive_root / "2026-01-05" / "Ohio4" / "analysis" / "translation_sandbox_seed__tool_only__arena_v0.json",
+        {
+            "brain1_core": {
+                "dominant_canonicals": ["555"],
+                "context_reinforced_canonicals": [],
+                "dominant_vtrac_indices": ["10"],
+            },
+            "control_arm": {
+                "preserved_not_budgeted_canonicals_top": ["555"],
+            },
+            "sandbox_hypotheses": {
+                "diagnostic_boxed_seed": [{"value": "555"}],
+                "diagnostic_straight_seed": [{"value": "555"}],
+                "diagnostic_vt_box_seed": [{"value": "10"}],
+            },
+        },
+    )
+    return window_root
+
+
 def _seed_legacy_comparison_window(tmp_path: Path) -> tuple[Path, Path]:
     window_root = tmp_path / "runs2" / "WINDOW_2026-01-05_to_2026-01-05"
     analysis_dir = window_root / "ANALYSIS_ARENA"
@@ -736,6 +876,70 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
         },
     )
 
+    decay_json = window_root / "decay_scorecard.json"
+    _write_json(
+        decay_json,
+        {
+            "metadata": {
+                "decay_upload_days_total": 5,
+                "decay_draws_total_max": 10,
+                "decay_tail_days_required": 4,
+            },
+            "summary": {
+                "state_day_snapshots": 2,
+                "full_horizon_rows": 2,
+                "right_censored_rows": 0,
+            },
+            "metric_families": [
+                {
+                    "metric_family": "arena_box_total",
+                    "label": "Arena box total",
+                    "active_state_days": 2,
+                    "same_day_resolved": 1,
+                    "horizon_resolved": 2,
+                    "incremental_decay_lift": 1,
+                },
+                {
+                    "metric_family": "arena_vt_total",
+                    "label": "Arena VTRAC total",
+                    "active_state_days": 2,
+                    "same_day_resolved": 1,
+                    "horizon_resolved": 2,
+                    "incremental_decay_lift": 1,
+                },
+                {
+                    "metric_family": "sandbox_exact_seed",
+                    "label": "Sandbox exact seed",
+                    "active_state_days": 1,
+                    "same_day_resolved": 1,
+                    "horizon_resolved": 1,
+                    "incremental_decay_lift": 0,
+                },
+            ],
+            "cohort_panels": [
+                {
+                    "cohort": "top_primary_target",
+                    "label": "Top primary target",
+                    "state_days": 1,
+                    "same_day_resolved": 1,
+                    "horizon_resolved": 1,
+                }
+            ],
+            "examples": {
+                "future_day_decay": [
+                    {
+                        "snapshot_date": "2026-01-05",
+                        "state": "Texas4",
+                        "score_rank": 5,
+                        "arena_any_signal_event": "2026-01-06 Midday 357",
+                        "active_metric_names": ["arena_box_total"],
+                    }
+                ]
+            },
+            "interpretation": ["Delayed box resolution added one extra conversion beyond same-day."],
+        },
+    )
+
     _write_json(
         (window_root / "VALIDATION" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json"),
         {
@@ -810,6 +1014,8 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
             str(pure_arena_json),
             "--translator-ledger-json",
             str(translator_json),
+            "--decay-json",
+            str(decay_json),
             "--out-md",
             str(deep_md),
             "--out-json",
@@ -829,11 +1035,77 @@ def test_window_performance_gap_and_deep_analysis_reports(tmp_path, monkeypatch)
     assert deep_payload["winner_html_frontier"]["promotion_queue"][0]["action"] == "TEST_IN_TRANSLATOR"
     assert deep_payload["pure_arena_finalist_layer"]["event_layer"]["winner_events"] == 2
     assert deep_payload["translator_learning_ledger"]["summary"]["cohort_counts"]["BOX_GAP"] == 1
+    assert deep_payload["decay_carryover"]["summary"]["state_day_snapshots"] == 2
+    assert deep_payload["decay_scorecard_json"].endswith("decay_scorecard.json")
     assert "Shared Complexes / Carryover / Decay" in deep_md.read_text(encoding="utf-8")
+    assert "Decay / Carryover Companion" in deep_md.read_text(encoding="utf-8")
     assert "Winner HTML Frontier" in deep_md.read_text(encoding="utf-8")
     assert "Pure Arena Finalist / Candidate Layer" in deep_md.read_text(encoding="utf-8")
     assert "Translator Learning Ledger" in deep_md.read_text(encoding="utf-8")
     assert "Daily tracker ledgers present" in deep_md.read_text(encoding="utf-8")
+
+
+def test_window_decay_carryover_scorecard(tmp_path, monkeypatch) -> None:
+    from scripts.tools import analysis_arena_window_utils as util
+    from scripts.tools import create_window_decay_carryover_scorecard as decay
+
+    window_root = _seed_decay_window(tmp_path)
+
+    monkeypatch.setattr(util, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(decay, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(decay, "DEFAULT_RESULTS_ROOT", tmp_path / "data" / "results")
+
+    out_md = window_root / "decay.md"
+    out_json = window_root / "decay.json"
+    out_csv = window_root / "decay.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "create_window_decay_carryover_scorecard.py",
+            "--window-root",
+            str(window_root),
+            "--results-root",
+            str(tmp_path / "data" / "results"),
+            "--decay-upload-days-total",
+            "2",
+            "--out-md",
+            str(out_md),
+            "--out-json",
+            str(out_json),
+            "--out-csv",
+            str(out_csv),
+            "--force",
+        ],
+    )
+    decay.main()
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["metadata"]["decay_upload_days_total"] == 2
+    assert payload["metadata"]["decay_tail_days_required"] == 1
+    assert payload["summary"]["state_day_snapshots"] == 3
+
+    metric_lookup = {row["metric_family"]: row for row in payload["metric_families"]}
+    assert metric_lookup["arena_box_total"]["active_state_days"] == 3
+    assert metric_lookup["arena_box_total"]["same_day_resolved"] == 1
+    assert metric_lookup["arena_box_total"]["horizon_resolved"] == 2
+    assert metric_lookup["arena_box_total"]["incremental_decay_lift"] == 1
+
+    cohort_lookup = {row["cohort"]: row for row in payload["cohort_panels"]}
+    assert cohort_lookup["top_primary_target"]["same_day_resolved"] == 1
+    assert cohort_lookup["top_primary_target"]["horizon_resolved"] == 1
+
+    rows_by_state = {row["state_key"]: row for row in payload["rows"]}
+    assert rows_by_state["NewYork4"]["arena_box_total_profile"] == "direct_same_outcome"
+    assert rows_by_state["Texas4"]["arena_box_total_profile"] == "future_day_decay"
+    assert rows_by_state["Texas4"]["sandbox_exact_seed_profile"] == "future_day_decay"
+    assert rows_by_state["Texas4"]["arena_any_signal_event"] == "2026-01-06 Midday 952"
+    assert rows_by_state["Ohio4"]["arena_box_total_profile"] == "miss"
+
+    decay_md = out_md.read_text(encoding="utf-8")
+    assert "Decay / Carryover Scorecard" in decay_md
+    assert "Metric Family Scoreboard" in decay_md
+    assert "Cohort Panels" in decay_md
 
 
 def test_arena_vs_legacy_window_comparison_report(tmp_path, monkeypatch) -> None:

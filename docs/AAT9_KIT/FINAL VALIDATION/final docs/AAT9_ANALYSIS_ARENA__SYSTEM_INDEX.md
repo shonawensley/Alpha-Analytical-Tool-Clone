@@ -48,10 +48,11 @@ Main phases:
 1. `pre`
 2. `post`
 3. `window-close`
-4. `cross-window-rollup`
-5. `tuneup-diagnostics`
-6. `frontier-negative-control`
-7. `fresh-window-readiness`
+4. `window-decay-close`
+5. `cross-window-rollup`
+6. `tuneup-diagnostics`
+7. `frontier-negative-control`
+8. `fresh-window-readiness`
 
 ## 4. Window-Close Artifact Registry
 
@@ -115,6 +116,22 @@ Main phases:
   - cross-window rollup
   - later translator prototype
 
+### Decay / Carryover Scorecard
+- script:
+  - `scripts/tools/create_window_decay_carryover_scorecard.py`
+- outputs:
+  - `WINDOW_<...>__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.md`
+  - `WINDOW_<...>__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json`
+  - `WINDOW_<...>__ANALYSIS_ARENA__DECAY_CARRYOVER_ROWS.csv`
+- posture:
+  - companion layer, not a replacement for same-day window-close metrics
+  - primary horizon measured in total upload days, same-day included
+  - draw offsets preserved as companion accounting because Midday/Evening crossover matters
+- feeds:
+  - deep window analysis
+  - later cross-window decay study
+  - later translator / packaging research
+
 ### Deep Window Codex Analysis
 - script:
   - `scripts/tools/create_window_deep_analysis_report.py`
@@ -153,6 +170,12 @@ Main phases:
   - `<D>__BRAIN2_TRACKER_LEDGER.json`
 
 ## 6. System-Level Learning Artifacts
+
+### Metric Legend
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
+
+### How To Read Fresh-Window Results
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
 
 ### Macro Findings Log
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`
@@ -193,6 +216,7 @@ Main phases:
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
+- later cross-window decay / carryover rollup once fresh windows accumulate
 - later shadow translator prototype fed by the translator-learning ledger and the frontier control study
 
 ## 7. Promotion Rules
@@ -214,8 +238,10 @@ Main phases:
 
 1. `README.md`
 2. `AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
-3. `AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
-4. `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
-5. `RUNS_2/PORTAL.md`
-6. current window artifacts
-7. `AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`
+3. `AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
+4. `AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
+5. `AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+6. `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+7. `RUNS_2/PORTAL.md`
+8. current window artifacts
+9. `AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`

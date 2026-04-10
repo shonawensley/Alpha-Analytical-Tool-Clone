@@ -34,15 +34,16 @@
   "metadata": {
     "ready_for_fresh_windows": true,
     "runs2_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
-    "window_count": 3
+    "window_count": 4
   },
   "next_actions": [
     "Use this report as the fresh-window preflight before starting new gold-day windows.",
     "Keep the current cadence frozen and run cross-window-rollup, tuneup-diagnostics, and frontier-negative-control again after each new fresh window block.",
+    "Before each fresh window, lock the decay-upload-days-total setting and confirm whether the backtest tail results exist or whether the decay companion should expect right-censored rows.",
     "Do not promote live translator, combo, budget, or frontier scoring changes until the fresh windows repeat or contradict the current comparison-window findings."
   ],
   "readiness_checks": {
-    "completed_window_count": 3,
+    "completed_window_count": 4,
     "cross_window_rollup_populated": true,
     "docs_ready": true,
     "frontier_control_populated": true,
@@ -107,6 +108,19 @@
       "complete": true,
       "window": "2026-01-05_to_2026-01-09",
       "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09"
+    },
+    {
+      "checks": {
+        "deep_hit_analysis": true,
+        "deep_window_analysis": true,
+        "frontier_harness": true,
+        "performance_gap": true,
+        "pure_finalist_scorecard": true,
+        "translator_learning_ledger": true
+      },
+      "complete": true,
+      "window": "2026-01-15_to_2026-01-18",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18"
     },
     {
       "checks": {

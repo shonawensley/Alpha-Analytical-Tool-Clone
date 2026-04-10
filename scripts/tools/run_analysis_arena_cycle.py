@@ -420,6 +420,28 @@ def build_window_close_commands(
     return commands
 
 
+def build_window_decay_close_command(
+    *,
+    window_root: Path,
+    results_root: Path,
+    decay_upload_days_total: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_window_decay_carryover_scorecard.py",
+        "--window-root",
+        str(window_root),
+        "--results-root",
+        str(results_root),
+        "--decay-upload-days-total",
+        str(int(decay_upload_days_total)),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_cross_window_rollup_command(
     *,
     runs2_root: Path,
@@ -720,9 +742,20 @@ def _parse_args() -> argparse.Namespace:
     window_close.add_argument("--skip-pure-arena-scorecard", action="store_true")
     window_close.add_argument("--skip-translator-ledger", action="store_true")
     window_close.add_argument("--skip-deep-analysis", action="store_true")
+    window_close.add_argument("--include-decay", action="store_true", help="Also generate the decay/carryover scorecard during window-close.")
+    window_close.add_argument("--results-root", default=str(REPO_ROOT / "data" / "results"))
+    window_close.add_argument("--decay-upload-days-total", type=int, default=5)
     window_close.add_argument("--no-receipt", action="store_true")
     window_close.add_argument("--force", action="store_true")
     window_close.add_argument("--dry-run", action="store_true")
+
+    window_decay_close = sub.add_parser("window-decay-close", help="Generate the decay/carryover companion scorecard for an existing RUNS_2 window.")
+    window_decay_close.add_argument("--window-root", required=True, help="RUNS_2 window root, e.g. docs/.../RUNS_2/WINDOW_<...>")
+    window_decay_close.add_argument("--results-root", default=str(REPO_ROOT / "data" / "results"))
+    window_decay_close.add_argument("--decay-upload-days-total", type=int, default=5)
+    window_decay_close.add_argument("--no-receipt", action="store_true")
+    window_decay_close.add_argument("--force", action="store_true")
+    window_decay_close.add_argument("--dry-run", action="store_true")
 
     cross_rollup = sub.add_parser("cross-window-rollup", help="Generate the cross-window Analysis Arena comparison rollup from completed RUNS_2 windows.")
     cross_rollup.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
@@ -1339,6 +1372,7 @@ def main() -> None:
         window_root = _window_root_from_arg(str(args.window_root))
         runs_root = Path(str(args.runs_root)).resolve()
         sharepacks_root = _normalize_sharepacks_root(args.sharepacks_root)
+        results_root = Path(str(args.results_root)).resolve()
         profile = str(args.profile or "tool_only").strip()
         experiment_tag = str(args.experiment_tag or "arena_v0").strip() or "arena_v0"
 
@@ -1363,6 +1397,15 @@ def main() -> None:
             cmds.append(all_cmds[4])
         if not bool(args.skip_deep_analysis):
             cmds.append(all_cmds[5])
+        if bool(args.include_decay):
+            cmds.append(
+                build_window_decay_close_command(
+                    window_root=window_root,
+                    results_root=results_root,
+                    decay_upload_days_total=int(args.decay_upload_days_total),
+                    force=bool(args.force),
+                )
+            )
 
         receipt_lines: List[str] = [
             f"# Analysis Arena cycle — WINDOW CLOSE — {window_root.name}",
@@ -1373,8 +1416,11 @@ def main() -> None:
             f"- window_root: `{_safe_rel(window_root)}`",
             f"- runs_root: `{_safe_rel(runs_root)}`",
             f"- sharepacks_root: `{_safe_rel(Path(sharepacks_root))}`",
+            f"- results_root: `{_safe_rel(results_root)}`",
             f"- profile: `{profile}`",
             f"- experiment_tag: `{experiment_tag}`",
+            f"- include_decay: `{bool(args.include_decay)}`",
+            f"- decay_upload_days_total: `{int(args.decay_upload_days_total)}`",
             f"- force: `{bool(args.force)}`",
             f"- dry_run: `{bool(args.dry_run)}`",
             "",
@@ -1385,6 +1431,7 @@ def main() -> None:
             "- Pure arena finalist / candidate scorecard",
             "- Translator-learning ledger",
             "- Window deep analysis / Codex report",
+            "- Decay / carryover scorecard (optional companion layer)",
             "",
             "## Commands",
             "",
@@ -1398,6 +1445,43 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = window_root / f"ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__{profile}__{experiment_tag}.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-decay-close":
+        window_root = _window_root_from_arg(str(args.window_root))
+        results_root = Path(str(args.results_root)).resolve()
+        cmd = build_window_decay_close_command(
+            window_root=window_root,
+            results_root=results_root,
+            decay_upload_days_total=int(args.decay_upload_days_total),
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            f"# Analysis Arena cycle — WINDOW DECAY CLOSE — {window_root.name}",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- window_root: `{_safe_rel(window_root)}`",
+            f"- results_root: `{_safe_rel(results_root)}`",
+            f"- decay_upload_days_total: `{int(args.decay_upload_days_total)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = window_root / "ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

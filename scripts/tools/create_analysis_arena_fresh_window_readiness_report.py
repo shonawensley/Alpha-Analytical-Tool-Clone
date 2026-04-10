@@ -171,6 +171,7 @@ def build_payload(runs2_root: Path, window_roots: Sequence[Path]) -> Dict[str, A
         "next_actions": [
             "Use this report as the fresh-window preflight before starting new gold-day windows.",
             "Keep the current cadence frozen and run cross-window-rollup, tuneup-diagnostics, and frontier-negative-control again after each new fresh window block.",
+            "Before each fresh window, lock the decay-upload-days-total setting and confirm whether the backtest tail results exist or whether the decay companion should expect right-censored rows.",
             "Do not promote live translator, combo, budget, or frontier scoring changes until the fresh windows repeat or contradict the current comparison-window findings.",
         ],
     }
