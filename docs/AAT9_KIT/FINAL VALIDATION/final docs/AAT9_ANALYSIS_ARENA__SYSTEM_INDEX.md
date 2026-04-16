@@ -60,6 +60,23 @@ Per-window lock inputs that should be set before any fresh or backtest window:
 2. `decay-upload-days-total` horizon
 3. whether full tail results exist or the decay companion should expect `right_censored` rows
 
+## 3A. Results Truth Sidecars
+
+### Bonus-Ball Truth Lane
+- raw sidecar source:
+  - `data/results_bonus/<D>.txt`
+- builder:
+  - `scripts/tools/create_bonus_ball_truth_report.py`
+- outputs:
+  - `reports/stable/bonus_ball_by_date/<D>/bonus_ball_truth.json`
+  - `reports/stable/bonus_ball_by_date/<D>/bonus_ball_truth.csv`
+  - `reports/stable/bonus_ball_by_date/<D>/bonus_ball_parity_audit.md`
+- rules:
+  - `data/results/<D>.txt` stays authoritative for winners HTML and existing Pick 3 grading
+  - the sidecar parses the full structured source but only keeps the supported active bonus-ball states
+  - bonus digits are accepted only when the sidecar Pick 3 draw parity-matches the core results draw for the same state and slot
+  - bonus-ball truth remains a separate research lane and is not yet blended into standard straight / box metrics
+
 ## 4. Window-Close Artifact Registry
 
 ### Performance Gap
@@ -164,6 +181,9 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - explicit Aux badge inventory
   - cross-variant overlaps
   - due-VTRAC overlays by Combined / Midday / Evening
+  - optional Part J advanced final questions for unusually informative states
+  - companion VTRAC appendix:
+    - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__VTRAC_REFERENCE_APPENDIX.md`
 
 ### Brain 2 Master Validation
 - template:

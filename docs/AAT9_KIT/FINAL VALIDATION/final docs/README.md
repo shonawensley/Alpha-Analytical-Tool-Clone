@@ -35,6 +35,7 @@ If you are working on the rebuilt Analysis Arena branch, start here:
 - Arena frontier negative-control study: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRONTIER_NEGATIVE_CONTROL_STUDY.md`
 - Arena fresh-window readiness report: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
 - Arena decay / carryover companion scorecard: emitted per window via `window-decay-close`
+- Arena bonus-ball sidecar truth: `scripts/tools/create_bonus_ball_truth_report.py` + `data/results_bonus/YYYY-MM-DD.txt`
 - Arena-era RUNS portal: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 - Window-close reports now include:
   - performance / opportunity gap
@@ -45,6 +46,7 @@ If you are working on the rebuilt Analysis Arena branch, start here:
   - window deep analysis / Codex report
   - optional decay / carryover companion scorecard
 - Per-state Master Validation: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
+- Master Validation VTRAC appendix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__VTRAC_REFERENCE_APPENDIX.md`
 - Brain 2 operating template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - Brain 2 Master Validation companion: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_BRAIN2_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 
@@ -67,7 +69,9 @@ Legacy note:
 - Arena tune-up diagnostics (ranking / tracker / doubles research package): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__TUNEUP_DIAGNOSTICS.md`
 - Arena frontier negative-control study (promotion gate for frontier traits): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRONTIER_NEGATIVE_CONTROL_STUDY.md`
 - Arena fresh-window readiness report (preflight before new gold-day windows): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
+- Arena VTRAC appendix (optional advanced review companion): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__VTRAC_REFERENCE_APPENDIX.md`
 - Arena decay / carryover companion scorecard (per-window delayed-resolution accounting): generated under each completed window root
+- Arena bonus-ball sidecar truth (optional Fireball / Wild Ball / Superball research lane): generated under `reports/stable/bonus_ball_by_date/<D>/`
 - Final validation checklist (guardrails + design notes): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Validation_Checklist.md`
 - Control Center / Brain 2 reference (keep for later): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Final_Workflow_Control_Center.md`
 - Control Center daily template (Brain-2, per day): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Control_Center_Daily_Template.md`

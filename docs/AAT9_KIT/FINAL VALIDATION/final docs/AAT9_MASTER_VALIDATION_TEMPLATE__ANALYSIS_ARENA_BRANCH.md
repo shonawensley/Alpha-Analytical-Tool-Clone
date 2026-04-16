@@ -4688,6 +4688,174 @@ This is especially important for:
 
 ---
 
+## Part J — Advanced Final Questions (Optional / Deep Reasoning Only)
+
+Part J is optional.
+
+Use it only when the state is unusually informative, contradictory, promotion-worthy, or likely to teach something that the standard Parts A-I did not fully freeze.
+
+Do **not** use Part J to re-answer the whole review.
+
+Use it only to preserve:
+
+- additional structural clues that would likely be lost otherwise
+- straight / permutation / VT-straight clues worth freezing explicitly
+- one bounded improvement note that is concrete enough to matter later
+
+---
+
+## Part J Inputs
+
+Part J should start only after Parts A-I are complete.
+
+Required base inputs:
+
+- winners truth from Part A
+- tool evidence from Parts B-E
+- arena synthesis from Part F
+- context and control-arm reads from Parts G-H
+- final synthesis from Part I
+
+Optional companions:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Pattern_Progression_Primer.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__VTRAC_REFERENCE_APPENDIX.md`
+
+Important note:
+- the March example-review principles are already embedded directly into the prompts below
+- do **not** stop the review to hunt older example memos unless something is genuinely unclear
+
+---
+
+## Part J Reading Rules
+
+1. Keep Part J short and point-form.
+2. Only write Part J if it adds signal that Parts A-I did not already capture clearly.
+3. Prefer direct structural observations over open-ended philosophy.
+4. Keep structural clues separate from straight / permutation clues.
+5. Name at most one bounded improvement note.
+6. If no extra high-signal insight exists, say so explicitly and stop.
+
+---
+
+## Part J Output Shape
+
+Part J should add at most:
+
+- one advanced structural clue read
+- one straight / permutation clue read
+- one bounded improvement note
+
+Recommended answer style:
+
+- concise bullets
+- direct references to the winner environment
+- no essay drift
+
+---
+
+## J1. Advanced Structural Clue Read
+
+Purpose:
+- preserve additional high-value structural clues that the standard review may not have fully surfaced
+
+Helpful clue families:
+- pre-reduction cluster strength
+- permutation neighborhood pressure
+- VTRAC-family / same-index cluster behavior
+- reveal purity or false-empty risk
+- current-day corridor behavior
+- summary/body mismatch or under-surfaced body evidence when relevant
+
+Template:
+
+```md
+### J1. Advanced Structural Clue Read
+
+Additional high-value structural clues not already captured above:
+- `...`
+
+Most important advanced structural clue:
+- `...`
+
+Why this clue is worth freezing:
+- `...`
+```
+
+---
+
+## J2. Straight / Permutation / VT-Straight Clue Read
+
+Purpose:
+- force one clean pass on straight-oriented clues without turning the whole report into a straight-only theory dump
+
+Helpful clue families:
+- literal permutation pressure
+- ordered pattern clusters
+- VT-straight lane membership
+- same-index straight-neighborhood reinforcement
+- Aux / context clues that help narrow a straight or VT-straight lane
+
+Template:
+
+```md
+### J2. Straight / Permutation / VT-Straight Clue Read
+
+Strongest straight or permutation clue:
+- `...`
+
+Strongest VT-straight lane clue:
+- `...`
+
+What this suggests for future straight extraction logic:
+- `...`
+```
+
+---
+
+## J3. One Bounded Improvement Note
+
+Purpose:
+- capture the single best bounded enhancement this state suggests without reopening the whole architecture
+
+Template:
+
+```md
+### J3. One Bounded Improvement Note
+
+Single best bounded enhancement:
+- `...`
+
+Target layer:
+- `arena surfacing / context surfacing / Brain 2 / translator / downstream conversion / other`
+
+Why this is the right bounded enhancement:
+- `...`
+```
+
+---
+
+## Part J Analyst Guidance
+
+Good Part J outputs:
+- surface one or two extra clues that the main review did not hold onto cleanly
+- preserve straight / VT-straight observations in a disciplined way
+- end with one bounded enhancement instead of five speculative ones
+
+Bad Part J outputs:
+- repeat Parts A-I in different words
+- require the reviewer to go reread old memos to answer basic prompts
+- turn one interesting clue into a giant redesign
+- produce long essays instead of compact high-signal notes
+
+Correct Part J posture:
+- optional
+- sparse
+- additive
+- only for unusually informative states
+
+---
+
 ## Template Status
 
 Current per-state template flow is now:
@@ -4701,7 +4869,11 @@ Current per-state template flow is now:
 - `Part G — Aux / Control Center Context`
 - `Part H — Downstream Baseline Comparison`
 - `Part I — Final Per-State Synthesis`
+- `Part J — Advanced Final Questions (optional)`
 
 Companion workflow:
 - `AAT9_BRAIN2_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - intended for rankings, scoreboard logic, spillover, final findings, and board-wide decision support
+
+Reference appendix for optional Part J straight / VTRAC reasoning:
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__VTRAC_REFERENCE_APPENDIX.md`

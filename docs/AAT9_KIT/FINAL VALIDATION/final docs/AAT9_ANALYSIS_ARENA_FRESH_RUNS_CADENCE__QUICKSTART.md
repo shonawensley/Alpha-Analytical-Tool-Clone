@@ -168,6 +168,29 @@ So the branch is now:
 - post-results arena-native at the reporting/validation layer
 - still using the control arm only as baseline comparison inside that post flow
 
+## Optional Bonus-Ball Sidecar Truth
+
+If you are also collecting Fireball / Wild Ball / Superball source files, keep them in:
+
+- `data/results_bonus/<D>.txt`
+
+Core results stay authoritative in:
+
+- `data/results/<D>.txt`
+
+Generate the normalized bonus-ball truth companion with:
+
+```bash
+python3 scripts/tools/create_bonus_ball_truth_report.py --date <D> --force
+```
+
+This sidecar:
+
+- parses the full structured source and filters only the supported active bonus-ball states
+- accepts a bonus digit only when the sidecar Pick 3 draw parity-matches the core results draw for the same state and slot
+- writes normalized truth under `reports/stable/bonus_ball_by_date/<D>/`
+- does not drive winners HTML or replace the standard Pick 3 results path
+
 ## Window Closeout
 
 After a completed window under:
