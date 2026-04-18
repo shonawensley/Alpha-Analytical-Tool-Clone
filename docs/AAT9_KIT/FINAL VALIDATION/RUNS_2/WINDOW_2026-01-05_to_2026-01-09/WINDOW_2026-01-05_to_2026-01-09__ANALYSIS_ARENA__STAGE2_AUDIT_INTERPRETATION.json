@@ -1,0 +1,71 @@
+{
+  "decision_counts": {
+    "boxed_context_or_negative_control": 45,
+    "boxed_supporting_gate": 19,
+    "denominator_only_broad_control": 1,
+    "sample_too_small": 1,
+    "straight_context_or_negative_control": 15,
+    "vtrac_context_only": 7
+  },
+  "lane_panels": [
+    {
+      "avg_source_pool_size": 33.0625,
+      "lane": "straight",
+      "lane_hit_value_count": 97,
+      "lane_hit_value_rate": 0.0026207716416297416,
+      "note": "Supported-events field is intentionally omitted from lane panels because source rows can overlap heavily.",
+      "source_count": 16,
+      "supported_event_count_deprecated": 0,
+      "top_decisions": {
+        "denominator_only_broad_control": 1,
+        "straight_context_or_negative_control": 15
+      },
+      "total_exposure_values": 37012
+    },
+    {
+      "avg_source_pool_size": 6.1692307692307695,
+      "lane": "boxed",
+      "lane_hit_value_count": 331,
+      "lane_hit_value_rate": 0.011065053152370127,
+      "note": "Supported-events field is intentionally omitted from lane panels because source rows can overlap heavily.",
+      "source_count": 65,
+      "supported_event_count_deprecated": 0,
+      "top_decisions": {
+        "boxed_context_or_negative_control": 45,
+        "boxed_supporting_gate": 19,
+        "sample_too_small": 1
+      },
+      "total_exposure_values": 29914
+    },
+    {
+      "avg_source_pool_size": 6.857142857142857,
+      "lane": "vtrac",
+      "lane_hit_value_count": 217,
+      "lane_hit_value_rate": 0.052875243664717346,
+      "note": "Supported-events field is intentionally omitted from lane panels because source rows can overlap heavily.",
+      "source_count": 7,
+      "supported_event_count_deprecated": 0,
+      "top_decisions": {
+        "vtrac_context_only": 7
+      },
+      "total_exposure_values": 4104
+    }
+  ],
+  "metadata": {
+    "exposure_rows": 71030,
+    "include_control_pack_combos": false,
+    "seed_state_days": 70,
+    "signal_pool_count": 6894,
+    "state_day_with_winners": 69,
+    "winner_events": 138
+  },
+  "recommended_next_actions": [
+    "Review fixture candidates against the 23 gap teachers.",
+    "Use supporting gates only in paired translator tests.",
+    "Keep VTRAC broad territory in watch/decay mode until paired with box/exact evidence.",
+    "Replicate Stage 2 on older windows before permanent scoring weights."
+  ],
+  "schema_version": "analysis_arena_stage2_audit_interpretation/v1",
+  "warnings": [],
+  "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09"
+}

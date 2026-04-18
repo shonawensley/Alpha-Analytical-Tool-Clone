@@ -3,7 +3,7 @@
 ## 1. Verdict
 
 - Ready for fresh windows: `True`
-- Completed comparison windows available: `4` / `4`
+- Completed comparison windows available: `5` / `5`
 
 ## 2. Core Docs / Memory Anchors
 
@@ -28,6 +28,7 @@
 | 2026-01-05_to_2026-01-09 | True | True | True | True | True | True | True |
 | 2026-01-15_to_2026-01-18 | True | True | True | True | True | True | True |
 | 2026-01-15_to_2026-01-22 | True | True | True | True | True | True | True |
+| 2026-03-09_to_2026-03-23 | True | True | True | True | True | True | True |
 
 ## 5. Readiness Checks
 
@@ -48,14 +49,14 @@
 
 ## 7. Evidence Snapshot
 
-- Cross-window rollup window count: `4`
-- Cross-window winner events: `631`
-- Cross-window credited hits: `418`
+- Cross-window rollup window count: `5`
+- Cross-window winner events: `1045`
+- Cross-window credited hits: `692`
 - Tune-up tracker-lift rows: `24`
 - Tune-up ranking false-positive states: `1`
-- Frontier control cases: `629`
-- Frontier control strict-box cases: `45`
-- Frontier control no-conversion cases: `211`
+- Frontier control cases: `1043`
+- Frontier control strict-box cases: `74`
+- Frontier control no-conversion cases: `349`
 
 ## 8. Next Actions
 

@@ -2,79 +2,79 @@
 
 ## 1. Scope
 
-- Windows reviewed: `4`
-- Frontier cases reviewed: `629`
+- Windows reviewed: `5`
+- Frontier cases reviewed: `1043`
 - Enriched case roster: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRONTIER_NEGATIVE_CONTROL_CASES.csv`
 - Feature lift table: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRONTIER_NEGATIVE_CONTROL_LIFTS.csv`
 
 ## 2. Cohort Inventory
 
-- `strict_box`: `45` (`7.2%`)
-- `straight`: `84` (`13.4%`)
-- `box_gap`: `25` (`4.0%`)
-- `vt_only`: `228` (`36.2%`)
-- `no_conversion`: `211` (`33.5%`)
-- `low_conviction_control`: `439` (`69.8%`)
+- `strict_box`: `74` (`7.1%`)
+- `straight`: `138` (`13.2%`)
+- `box_gap`: `46` (`4.4%`)
+- `vt_only`: `375` (`36.0%`)
+- `no_conversion`: `349` (`33.5%`)
+- `low_conviction_control`: `724` (`69.4%`)
 
 ## 3. Cohort Score Averages
 
 | Cohort | Strength | Hidden | Feeder | VTRAC | Family | Literal | Double |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| strict_box | 63.62 | 0.648 | 0.566 | 0.353 | 0.351 | 0.126 | 0.532 |
-| straight | 62.31 | 0.601 | 0.592 | 0.338 | 0.332 | 0.089 | 0.470 |
-| box_gap | 63.50 | 0.738 | 0.570 | 0.326 | 0.337 | 0.106 | 0.467 |
-| vt_only | 55.36 | 0.484 | 0.542 | 0.313 | 0.200 | 0.028 | 0.363 |
-| no_conversion | 51.11 | 0.419 | 0.514 | 0.306 | 0.138 | 0.027 | 0.231 |
-| low_conviction_control | 53.31 | 0.452 | 0.529 | 0.310 | 0.170 | 0.027 | 0.299 |
+| strict_box | 62.74 | 0.638 | 0.567 | 0.348 | 0.338 | 0.127 | 0.568 |
+| straight | 61.69 | 0.576 | 0.585 | 0.338 | 0.318 | 0.091 | 0.531 |
+| box_gap | 63.60 | 0.698 | 0.565 | 0.332 | 0.357 | 0.106 | 0.505 |
+| vt_only | 55.48 | 0.481 | 0.539 | 0.314 | 0.200 | 0.027 | 0.381 |
+| no_conversion | 50.88 | 0.416 | 0.511 | 0.305 | 0.137 | 0.025 | 0.222 |
+| low_conviction_control | 53.26 | 0.450 | 0.525 | 0.310 | 0.170 | 0.026 | 0.304 |
 
 ## 4. Signature Mix
 
-- `strict_box`: `FAMILY_FRONTIER` x2, `FEEDER_TO_FRONTIER` x6, `HIDDEN_COMPRESSED_FRONTIER` x28, `LITERAL_FRONTIER` x1, `VTRAC_FRONTIER` x8
-- `straight`: `FAMILY_FRONTIER` x12, `FEEDER_TO_FRONTIER` x15, `HIDDEN_COMPRESSED_FRONTIER` x43, `LITERAL_FRONTIER` x1, `VTRAC_FRONTIER` x13
-- `box_gap`: `FAMILY_FRONTIER` x5, `FEEDER_TO_FRONTIER` x3, `HIDDEN_COMPRESSED_FRONTIER` x17
-- `vt_only`: `FAMILY_FRONTIER` x7, `FEEDER_TO_FRONTIER` x70, `HIDDEN_COMPRESSED_FRONTIER` x81, `VTRAC_FRONTIER` x70
-- `no_conversion`: `FAMILY_FRONTIER` x1, `FEEDER_TO_FRONTIER` x70, `HIDDEN_COMPRESSED_FRONTIER` x75, `VTRAC_FRONTIER` x65
+- `strict_box`: `FAMILY_FRONTIER` x4, `FEEDER_TO_FRONTIER` x14, `HIDDEN_COMPRESSED_FRONTIER` x44, `LITERAL_FRONTIER` x2, `VTRAC_FRONTIER` x10
+- `straight`: `FAMILY_FRONTIER` x15, `FEEDER_TO_FRONTIER` x35, `HIDDEN_COMPRESSED_FRONTIER` x67, `LITERAL_FRONTIER` x3, `VTRAC_FRONTIER` x18
+- `box_gap`: `FAMILY_FRONTIER` x6, `FEEDER_TO_FRONTIER` x4, `HIDDEN_COMPRESSED_FRONTIER` x28, `LITERAL_FRONTIER` x1, `VTRAC_FRONTIER` x7
+- `vt_only`: `FAMILY_FRONTIER` x15, `FEEDER_TO_FRONTIER` x114, `HIDDEN_COMPRESSED_FRONTIER` x133, `VTRAC_FRONTIER` x113
+- `no_conversion`: `FAMILY_FRONTIER` x2, `FEEDER_TO_FRONTIER` x114, `HIDDEN_COMPRESSED_FRONTIER` x122, `VTRAC_FRONTIER` x111
 
 ## 5. Discriminative Frontier Features
 
 ### Strict box vs no-conversion
 
-- `Score threshold: literal_frontier_score >= 0.20` cohort=`24.4%` control=`0.0%` lift=`999.00x` delta=`24.4%`
-- `Test: literal_frontier_v1` cohort=`20.0%` control=`0.0%` lift=`999.00x` delta=`20.0%`
-- `Score threshold: frontier_strength_score >= 70` cohort=`26.7%` control=`0.5%` lift=`56.27x` delta=`26.2%`
-- `Score threshold: vtrac_frontier_score >= 0.35` cohort=`37.8%` control=`4.3%` lift=`8.86x` delta=`33.5%`
-- `Score threshold: family_frontier_score >= 0.30` cohort=`48.9%` control=`7.1%` lift=`6.88x` delta=`41.8%`
-- `Score threshold: double_anchor_score >= 0.55` cohort=`40.0%` control=`6.2%` lift=`6.49x` delta=`33.8%`
+- `Score threshold: literal_frontier_score >= 0.20` cohort=`24.3%` control=`0.0%` lift=`999.00x` delta=`24.3%`
+- `Test: literal_frontier_v1` cohort=`21.6%` control=`0.0%` lift=`999.00x` delta=`21.6%`
+- `Score threshold: frontier_strength_score >= 70` cohort=`23.0%` control=`0.3%` lift=`80.18x` delta=`22.7%`
+- `Score threshold: vtrac_frontier_score >= 0.35` cohort=`33.8%` control=`4.0%` lift=`8.42x` delta=`29.8%`
+- `Score threshold: double_anchor_score >= 0.55` cohort=`47.3%` control=`6.0%` lift=`7.86x` delta=`41.3%`
+- `Score threshold: family_frontier_score >= 0.30` cohort=`43.2%` control=`6.6%` lift=`6.56x` delta=`36.7%`
 
 ### Straight vs no-conversion
 
-- `Score threshold: literal_frontier_score >= 0.20` cohort=`15.5%` control=`0.0%` lift=`999.00x` delta=`15.5%`
-- `Test: literal_frontier_v1` cohort=`13.1%` control=`0.0%` lift=`999.00x` delta=`13.1%`
-- `Score threshold: frontier_strength_score >= 70` cohort=`22.6%` control=`0.5%` lift=`47.73x` delta=`22.1%`
-- `Signature: FAMILY_FRONTIER` cohort=`14.3%` control=`0.5%` lift=`30.14x` delta=`13.8%`
-- `Score threshold: vtrac_frontier_score >= 0.35` cohort=`27.4%` control=`4.3%` lift=`6.42x` delta=`23.1%`
-- `Score threshold: family_frontier_score >= 0.30` cohort=`45.2%` control=`7.1%` lift=`6.36x` delta=`38.1%`
+- `Score threshold: literal_frontier_score >= 0.20` cohort=`15.2%` control=`0.0%` lift=`999.00x` delta=`15.2%`
+- `Test: literal_frontier_v1` cohort=`13.8%` control=`0.0%` lift=`999.00x` delta=`13.8%`
+- `Score threshold: frontier_strength_score >= 70` cohort=`19.6%` control=`0.3%` lift=`68.28x` delta=`19.3%`
+- `Signature: FAMILY_FRONTIER` cohort=`10.9%` control=`0.6%` lift=`18.97x` delta=`10.3%`
+- `Score threshold: double_anchor_score >= 0.55` cohort=`42.8%` control=`6.0%` lift=`7.11x` delta=`36.7%`
+- `Score threshold: vtrac_frontier_score >= 0.35` cohort=`26.1%` control=`4.0%` lift=`6.50x` delta=`22.1%`
 
 ### Box-gap vs no-conversion
 
-- `Test: literal_frontier_v1` cohort=`16.0%` control=`0.0%` lift=`999.00x` delta=`16.0%`
-- `Score threshold: literal_frontier_score >= 0.20` cohort=`16.0%` control=`0.0%` lift=`999.00x` delta=`16.0%`
-- `Signature: FAMILY_FRONTIER` cohort=`20.0%` control=`0.5%` lift=`42.20x` delta=`19.5%`
-- `Score threshold: frontier_strength_score >= 70` cohort=`16.0%` control=`0.5%` lift=`33.76x` delta=`15.5%`
-- `Score threshold: family_frontier_score >= 0.30` cohort=`48.0%` control=`7.1%` lift=`6.75x` delta=`40.9%`
-- `Score threshold: double_anchor_score >= 0.55` cohort=`40.0%` control=`6.2%` lift=`6.49x` delta=`33.8%`
+- `Test: literal_frontier_v1` cohort=`17.4%` control=`0.0%` lift=`999.00x` delta=`17.4%`
+- `Score threshold: literal_frontier_score >= 0.20` cohort=`17.4%` control=`0.0%` lift=`999.00x` delta=`17.4%`
+- `Score threshold: frontier_strength_score >= 70` cohort=`21.7%` control=`0.3%` lift=`75.87x` delta=`21.5%`
+- `Signature: FAMILY_FRONTIER` cohort=`13.0%` control=`0.6%` lift=`22.76x` delta=`12.5%`
+- `Score threshold: family_frontier_score >= 0.30` cohort=`54.3%` control=`6.6%` lift=`8.25x` delta=`47.8%`
+- `Score threshold: double_anchor_score >= 0.55` cohort=`45.7%` control=`6.0%` lift=`7.59x` delta=`39.6%`
 
 ### VT-only vs no-conversion
 
-- `Score threshold: double_anchor_score >= 0.55` cohort=`23.2%` control=`6.2%` lift=`3.77x` delta=`17.1%`
-- `Score threshold: family_frontier_score >= 0.30` cohort=`20.6%` control=`7.1%` lift=`2.90x` delta=`13.5%`
-- `Test: cross_variant_echo_v1` cohort=`22.4%` control=`8.1%` lift=`2.78x` delta=`14.3%`
-- `Score threshold: cross_variant_echo_score >= 0.45` cohort=`22.4%` control=`8.1%` lift=`2.78x` delta=`14.3%`
-- `Test: family_frontier_v1` cohort=`39.5%` control=`19.4%` lift=`2.03x` delta=`20.0%`
-- `Test: double_anchor_v1` cohort=`33.8%` control=`25.6%` lift=`1.32x` delta=`8.2%`
+- `Score threshold: double_anchor_score >= 0.55` cohort=`26.1%` control=`6.0%` lift=`4.34x` delta=`20.1%`
+- `Score threshold: family_frontier_score >= 0.30` cohort=`19.5%` control=`6.6%` lift=`2.95x` delta=`12.9%`
+- `Test: cross_variant_echo_v1` cohort=`21.3%` control=`7.4%` lift=`2.86x` delta=`13.9%`
+- `Score threshold: cross_variant_echo_score >= 0.45` cohort=`21.3%` control=`7.4%` lift=`2.86x` delta=`13.9%`
+- `Test: family_frontier_v1` cohort=`40.3%` control=`18.9%` lift=`2.13x` delta=`21.4%`
+- `Test: double_anchor_v1` cohort=`34.7%` control=`23.5%` lift=`1.48x` delta=`11.2%`
 
 ## 6. Ambient / Non-Discriminative Frontier Features
 
 - `Test: vtrac_frontier_v1` control=`100.0%` strict-box lift=`1.00x` box-gap lift=`1.00x`
-- `Test: feeder_progression_v1` control=`84.8%` strict-box lift=`1.10x` box-gap lift=`1.08x`
-- `Score threshold: feeder_progression_score >= 0.45` control=`78.2%` strict-box lift=`1.11x` box-gap lift=`1.18x`
+- `Test: feeder_progression_v1` control=`83.7%` strict-box lift=`1.11x` box-gap lift=`1.09x`
+- `Score threshold: feeder_progression_score >= 0.45` control=`74.5%` strict-box lift=`1.16x` box-gap lift=`1.17x`
