@@ -23,6 +23,17 @@ python3 scripts/tools/create_window_audit_interpretation_report.py --window-root
 python3 scripts/tools/create_window_stage2_signal_exposure_audit.py --window-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_<START>_to_<END>" --force
 python3 scripts/tools/create_window_stage2b_signal_stack_analysis.py --window-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_<START>_to_<END>" --force
 python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
+python3 scripts/tools/create_analysis_arena_stage3_decision_workbench.py --force
+python3 scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py --force
+python3 scripts/tools/create_analysis_arena_stage4b_replay_readback.py --force
+```
+
+Cycle-wrapper equivalents for Stage 3, Stage 4, and Stage 4B:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -63,6 +74,29 @@ python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
 - Stage 2B cross-window stack confirmation CSV.
 - Stage 2B cross-window hypothesis confirmation CSV.
 - Stage 2B cross-window source confirmation CSV.
+- Stage 3 decision workbench Markdown/JSON.
+- Stage 3 promotion registry CSV.
+- Stage 3 replay queue CSV.
+- Stage 3 negative-control map CSV.
+- Stage 3 evidence-utilization matrix CSV.
+- Stage 3 decay stratification CSV.
+- Stage 3 fresh-window decision readiness Markdown.
+- Focus-window Stage 3 casebook Markdown/CSV when priority cases exist.
+- Stage 4 fixture replay scorecard Markdown/JSON.
+- Stage 4 fixture replay ledger CSV.
+- Stage 4 replay decision registry CSV.
+- Stage 4 mechanism-family scorecard CSV.
+- Stage 4 source A / source B / overlap comparison CSV.
+- Stage 4 yield and concentration matrix CSV.
+- Stage 4 shared-lineage audit CSV.
+- Stage 4 negative-control replay summary CSV.
+- Stage 4 cycle receipt Markdown.
+- Stage 4B replay readback Markdown/JSON.
+- Stage 4B primitive cluster registry CSV.
+- Stage 4B survivor/support/restraint casebook Markdown/CSV.
+- Stage 4B leave-one-window-out holdout matrix CSV.
+- Stage 4B translator design queue CSV.
+- Stage 4B cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -79,7 +113,13 @@ python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
 11. Review the executive readout, hypothesis queue, stack scorecard, and wrong-lane restraint rules before any translator experiment.
 12. Backfill Stage 2 and Stage 2B onto older ready windows before treating any March-only stack as durable.
 13. Run the cross-window stack rollup and separate candidates, support gates, VTRAC watch rows, negative controls, and low-denominator fixtures.
-14. Use Stage 2 and Stage 2B decisions as experiment gates, not live scoring changes.
+14. Run the Stage 3 decision workbench after cross-window rollup.
+15. Review the Stage 3 promotion registry, replay queue, negative-control map, evidence-utilization matrix, decay stratification, and focus-window casebook before proposing any scoring redesign.
+16. Run the Stage 4 fixture replay harness after Stage 3.
+17. Review Stage 4 by mechanism family first, then source A / source B / overlap lift, shared-lineage risk, yield, concentration, and negative-control restraint summaries.
+18. Run the Stage 4B replay readback after Stage 4.
+19. Review primitive clusters, casebook exemplars, leave-one-window-out outcomes, and the translator design queue before building any prototype translator.
+20. Use Stage 2, Stage 2B, Stage 3, Stage 4, and Stage 4B decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -95,6 +135,20 @@ python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
 - Stage 2B pairing ledgers are exported as Git-safe drill-down rows; the full pair/state-day denominator count is retained in stack JSON metadata.
 - Old candidate/play-card dominated stacks are useful controls and fixture material, but they are not proof that new Analysis Arena translation logic is already solved.
 - Cross-window boxed translator candidates are replay candidates only. Low-denominator repeats must stay fixture/watch material even when their rate looks high.
+- Stage 3 `promote_candidate` means replay permission only; it does not mean live scoring permission.
+- Stage 3 `supporting_gate` means a signal may help when paired with sharper evidence, not that it should stand alone.
+- Stage 3 `watch_decay_only` keeps VTRAC/territory strength in carryforward/context lanes until bounded boxed or exact evidence proves conversion.
+- Stage 3 `negative_control` and denominator-control rows are assets for restraint, gating, and future penalty design.
+- Stage 3 evidence-utilization rows answer whether a source family was available and winner-aligned; they do not prove the future Brain should weight that family directly.
+- Stage 4 `survived_as_boxed_translator_candidate` means a bounded replay fixture survived for future translator design; it is not live-play permission.
+- Stage 4 `survived_with_lineage_guardrail` means the fixture is useful but source A and source B are not independent enough to receive duplicate-credit scoring.
+- Stage 4 source A / source B / overlap comparisons are mandatory before claiming an overlap adds value.
+- Stage 4 `future_primitive` labels are architecture-facing abstractions; legacy source names remain locators only.
+- Stage 4 concentration flags block fragile rules that are mostly carried by one state or a tiny set of state-days.
+- Stage 4 negative-control summaries are future penalty/veto library candidates, not promotion candidates.
+- Stage 4B primitive clusters collapse duplicate aliases and old-system locator variants; clusters are design units, not live rules.
+- Stage 4B leave-one-window-out confirmation is a research filter. It improves confidence but still does not grant live scoring permission.
+- Stage 4B translator design queue separates prototype candidates, duplicate-credit prototypes, support gates, decay/watch clusters, concentration retests, and low-denominator watchlists.
 
 ## 6. Guardrails
 
@@ -107,3 +161,9 @@ python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
 - Treat Stage 2B hypothesis labels as replay targets until they pass bounded fixture tests and at least one cross-window confirmation.
 - Do not promote broad VTRAC/context stacks without a bounded boxed or exact confirmation source.
 - Do not rank by hit rate alone; require denominator size, event support, lane correctness, and cross-window behavior.
+- Do not use Stage 3 outputs to bypass replay. The workbench exists to prioritize replay, not replace it.
+- Do not use Stage 4 to change live scoring directly. It is the controlled test bench before any translator/scoring rewrite.
+- Do not blend all Stage 3 replay candidates into one pool; read Stage 4 by mechanism family.
+- Do not treat arena, translation sandbox, Brain1, or old control-arm surfaces as independent confirmations when Stage 4 marks shared lineage risk.
+- Do not build a prototype translator from raw Stage 4 rows when Stage 4B has collapsed them into primitive clusters.
+- Do not treat Stage 4B holdout confirmation as final proof. It is a stronger filter, not a deployment gate.

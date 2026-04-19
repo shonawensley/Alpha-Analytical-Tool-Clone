@@ -518,6 +518,72 @@ def build_fresh_window_readiness_command(
     return cmd
 
 
+def build_stage3_decision_workbench_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    focus_window: str,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage3_decision_workbench.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if focus_window:
+        cmd += ["--focus-window", focus_window]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_stage4_fixture_replay_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    max_replay_rows: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if max_replay_rows > 0:
+        cmd += ["--max-replay-rows", str(int(max_replay_rows))]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_stage4b_replay_readback_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    casebook_limit: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage4b_replay_readback.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+        "--casebook-limit",
+        str(int(casebook_limit)),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -784,6 +850,30 @@ def _parse_args() -> argparse.Namespace:
     readiness.add_argument("--no-receipt", action="store_true")
     readiness.add_argument("--force", action="store_true")
     readiness.add_argument("--dry-run", action="store_true")
+
+    stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
+    stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage3.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage3.add_argument("--focus-window", default="", help="Optional focus window for the Stage 3 casebook.")
+    stage3.add_argument("--no-receipt", action="store_true")
+    stage3.add_argument("--force", action="store_true")
+    stage3.add_argument("--dry-run", action="store_true")
+
+    stage4 = sub.add_parser("stage4-fixture-replay", help="Generate the Stage 4 fixture replay harness from the Stage 3 queue.")
+    stage4.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage4.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage4.add_argument("--max-replay-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all Stage-3 replay rows.")
+    stage4.add_argument("--no-receipt", action="store_true")
+    stage4.add_argument("--force", action="store_true")
+    stage4.add_argument("--dry-run", action="store_true")
+
+    stage4b = sub.add_parser("stage4b-replay-readback", help="Generate the Stage 4B primitive-cluster and holdout readback package.")
+    stage4b.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage4b.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage4b.add_argument("--casebook-limit", type=int, default=96)
+    stage4b.add_argument("--no-receipt", action="store_true")
+    stage4b.add_argument("--force", action="store_true")
+    stage4b.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1622,6 +1712,134 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__FRESH_WINDOW_READINESS.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage3-decision-workbench":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        focus_window = str(args.focus_window or "").strip()
+        cmd = build_stage3_decision_workbench_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            focus_window=focus_window,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 3 DECISION WORKBENCH",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- focus_window: `{focus_window or 'auto'}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 3 grants replay/restraint/readiness interpretation only; it does not alter live scoring or candidate generation.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage4-fixture-replay":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        max_replay_rows = int(args.max_replay_rows or 0)
+        cmd = build_stage4_fixture_replay_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            max_replay_rows=max_replay_rows,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 4 FIXTURE REPLAY",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- max_replay_rows: `{max_replay_rows if max_replay_rows > 0 else 'all'}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 4 is a read-only fixture replay/audit layer; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Source A / source B / overlap comparisons and shared-lineage flags are required before any future scoring rewrite.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage4b-replay-readback":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        casebook_limit = int(args.casebook_limit or 96)
+        cmd = build_stage4b_replay_readback_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            casebook_limit=casebook_limit,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 4B REPLAY READBACK",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- casebook_limit: `{casebook_limit}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 4B is a read-only primitive-cluster, casebook, and holdout interpretation layer; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Holdout confirmation is a research filter and still does not grant live-play permission.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

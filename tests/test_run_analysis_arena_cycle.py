@@ -10,6 +10,8 @@ from scripts.tools.run_analysis_arena_cycle import (
     _iter_state_keys_for_date,
     build_cross_window_rollup_command,
     build_fresh_window_readiness_command,
+    build_stage4b_replay_readback_command,
+    build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
     build_window_decay_close_command,
     build_tuneup_diagnostics_command,
@@ -261,6 +263,42 @@ def test_build_fresh_window_readiness_command_uses_explicit_windows(tmp_path: Pa
     assert "--runs2-root" in cmd
     assert str(tmp_path / "RUNS_2") in cmd
     assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_stage4_fixture_replay_command_uses_output_dir_and_limit(tmp_path: Path) -> None:
+    cmd = build_stage4_fixture_replay_command(
+        runs2_root=tmp_path / "RUNS_2",
+        output_dir=tmp_path / "RUNS_2" / "stage4",
+        max_replay_rows=25,
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_stage4_fixture_replay_harness.py")
+    assert "--runs2-dir" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--output-dir" in cmd
+    assert str(tmp_path / "RUNS_2" / "stage4") in cmd
+    assert "--max-replay-rows" in cmd
+    assert "25" in cmd
+    assert "--force" in cmd
+
+
+def test_build_stage4b_replay_readback_command_uses_casebook_limit(tmp_path: Path) -> None:
+    cmd = build_stage4b_replay_readback_command(
+        runs2_root=tmp_path / "RUNS_2",
+        output_dir=tmp_path / "RUNS_2" / "stage4b",
+        casebook_limit=48,
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_stage4b_replay_readback.py")
+    assert "--runs2-dir" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--output-dir" in cmd
+    assert str(tmp_path / "RUNS_2" / "stage4b") in cmd
+    assert "--casebook-limit" in cmd
+    assert "48" in cmd
     assert "--force" in cmd
 
 

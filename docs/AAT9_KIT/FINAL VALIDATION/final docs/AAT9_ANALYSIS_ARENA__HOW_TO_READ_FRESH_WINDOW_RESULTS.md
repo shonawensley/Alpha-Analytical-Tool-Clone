@@ -9,6 +9,7 @@ Purpose:
 Use this after:
 
 - `fresh-window-readiness`
+- `ANALYSIS_ARENA__CYCLE__STAGE3_FRESH_WINDOW_DECISION_READINESS.md` when a Stage 3 package exists
 - `pre`
 - `post`
 - `window-close`
@@ -26,6 +27,7 @@ Write or think in this order every time:
 Only after those four should you ask:
 
 - what does the decay/carryover companion say?
+- what does the Stage 3 replay/restraint layer allow or block?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -173,6 +175,86 @@ Do not conclude here:
 
 ### Step 6 — Policy / Budget Implications
 
+Read Stage 3 before policy/budget inference when it exists:
+
+- Stage 3 decision workbench
+- Stage 3 promotion registry
+- Stage 3 replay queue
+- Stage 3 negative-control map
+- Stage 3 evidence-utilization matrix
+- Stage 3 decay stratification
+- focus-window Stage 3 casebook
+- Stage 4 fixture replay scorecard, when generated
+- Stage 4 replay decision registry
+- Stage 4 source A / source B / overlap comparison
+- Stage 4 shared-lineage audit
+- Stage 4 yield and concentration matrix
+- Stage 4 negative-control replay summary
+- Stage 4B replay readback
+- Stage 4B primitive cluster registry
+- Stage 4B survivor/support/restraint casebook
+- Stage 4B leave-one-window-out matrix
+- Stage 4B translator design queue
+
+Main questions:
+
+- which signals are replay candidates rather than one-window excitement?
+- which signals are only support gates?
+- which VTRAC/territory signals must stay watch/decay only?
+- which broad signals are negative controls or denominator controls?
+- which March-style cases should be treated as translator fixtures?
+- which Stage 3 candidates survive controlled replay by mechanism family?
+- did the overlap add value over source A alone and source B alone?
+- is the result broad enough across states, or concentrated in one fragile pocket?
+- is the evidence de-duplicated, or is it shared-lineage confirmation?
+- which Stage 4 rows collapse into the same Stage 4B primitive cluster?
+- which clusters survive leave-one-window-out confirmation?
+- which clusters are prototype candidates, support gates, decay/watch clusters, concentration retests, or low-denominator watchlists?
+
+Do not conclude here:
+
+- that `promote_candidate` means live scoring permission
+- that Stage 4 survivor status means live scoring permission
+- that Stage 4B holdout confirmation means live scoring permission
+- that a high VTRAC horizon rate is spendable boxed/straight evidence
+- that a broad support source should stand alone without denominator control
+- that two same-lineage sources should receive independent scoring credit
+
+### Step 7 — Fixture Replay Interpretation
+
+Use Stage 4 as the controlled test bench:
+
+- read mechanism-family scorecard before individual rows
+- compare source A alone, source B alone, and overlap A+B
+- separate `survived_as_boxed_translator_candidate` from support gates and watch/decay rows
+- treat `survived_with_lineage_guardrail` as useful but not independently confirmed
+- treat concentration-blocked rows as fragile fixtures, not promotion material
+- mine negative-control summaries for future penalty/veto design
+
+Do not conclude here:
+
+- that Stage 4 changes live scoring
+- that legacy locator names are future rule names
+- that all replay candidates belong in one blended pool
+
+### Step 8 — Stage 4B Primitive Readback
+
+Use Stage 4B to collapse and interpret Stage 4:
+
+- read primitive cluster registry before individual row excitement
+- use the leave-one-window-out matrix as a stronger generalization check
+- use the survivor/support/restraint casebook for concrete examples
+- use the translator design queue to decide what a future read-only prototype should test
+- keep duplicate-credit, concentration, support-only, VTRAC/decay, and negative-control lanes separate
+
+Do not conclude here:
+
+- that a cluster is a live rule
+- that holdout confirmation bypasses prototype testing
+- that support gates should become standalone candidates
+
+### Step 9 — Policy / Budget Implications
+
 Only now ask:
 
 - if the translator were stronger, would this look like `WATCH`, `PLAY`, or `SKIP`?
@@ -192,7 +274,10 @@ For every fresh window, answer these in order:
 3. Did the old control arm express that truth well or badly?
 4. Is there a translator opportunity set here?
 5. What does the decay/carryover companion add?
-6. Only then: what policy/budget questions are worth future research?
+6. What does Stage 3 permit for replay, restraint, and casebook review?
+7. What does Stage 4 fixture replay confirm, block, or keep as support/watch material?
+8. What does Stage 4B collapse into primitive clusters and holdout-confirmed prototype queues?
+9. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -201,6 +286,10 @@ For every fresh window, answer these in order:
 - Do not use one strong January window as the only baseline.
 - Do not promote raw feeder or raw VTRAC frontier presence into scoring.
 - Do not mix ranking weakness and translator weakness into one vague complaint.
+- Do not treat Stage 3 as a scoring rewrite. It is a replay/restraint/readiness layer.
+- Do not treat Stage 4 as a scoring rewrite. It is the fixture test bench before later rewrite work.
+- Do not assign duplicate credit to shared-lineage sources.
+- Do not treat Stage 4B as a scoring rewrite. It is a primitive readback and holdout filter before prototype work.
 
 ## 6. Practical Close
 

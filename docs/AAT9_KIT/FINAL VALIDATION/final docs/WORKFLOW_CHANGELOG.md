@@ -6,6 +6,64 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-04-18
+
+### Analysis Arena: Stage 4 fixture replay harness
+
+- Added a read-only Stage 4 fixture replay layer for the Stage 3 replay queue:
+  - `scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- The harness tests Stage 3 candidates against completed Stage 2B fixture windows without changing live scoring, candidate generation, translator logic, budgeting, or legacy infrastructure.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_SCORECARD.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_LEDGER.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_REPLAY_DECISION_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_MECHANISM_FAMILY_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_SOURCE_A_B_OVERLAP_COMPARISON.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_YIELD_AND_CONCENTRATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_SHARED_LINEAGE_AUDIT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_NEGATIVE_CONTROL_REPLAY_SUMMARY.csv`
+- Stage 4 adds the approved `PRO_96` controls: mechanism-family replay, future primitive aliasing, source A / source B / overlap comparison, shared-lineage de-duplication, yield/concentration diagnostics, and negative-control restraint summaries.
+- Updated the Analysis Arena system index, post-run audit protocol, and fresh-window reading guide so Stage 4 is part of the durable cadence package.
+
+### Analysis Arena: Stage 4B replay readback
+
+- Added a read-only Stage 4B readback layer for Stage 4 outputs:
+  - `scripts/tools/create_analysis_arena_stage4b_replay_readback.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 4B collapses Stage 4 rows into primitive clusters, survivor/support/restraint examples, leave-one-window-out outcomes, and a future translator design queue without changing scoring or pipeline behavior.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_PRIMITIVE_CLUSTER_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_SURVIVOR_SUPPORT_RESTRAINT_CASEBOOK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_SURVIVOR_SUPPORT_RESTRAINT_CASEBOOK.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_LEAVE_ONE_WINDOW_OUT_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_TRANSLATOR_DESIGN_QUEUE.csv`
+- Stage 4B keeps the same guardrail as Stage 4: holdout confirmation and prototype queue membership are research filters, not live scoring permission.
+
+### Analysis Arena: Stage 3 decision workbench
+
+- Added a read-only Stage 3 decision layer for completed post-run audit artifacts:
+  - `scripts/tools/create_analysis_arena_stage3_decision_workbench.py`
+- The workbench converts Stage 2 / Stage 2B evidence into replay and restraint artifacts without changing live scoring, candidate formation, budgeting, or legacy infrastructure.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_REPLAY_QUEUE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_NEGATIVE_CONTROL_MAP.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_EVIDENCE_UTILIZATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECAY_STRATIFICATION.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_FRESH_WINDOW_DECISION_READINESS.md`
+- New focus-window casebook outputs for the March 9-23 window:
+  - `WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__STAGE3_CASEBOOK.md`
+  - `WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__STAGE3_CASEBOOK.csv`
+- Updated the Analysis Arena system index, post-run audit protocol, and fresh-window reading guide so Stage 3 is durable cadence memory rather than a one-off artifact.
+
+---
+
 ## 2026-01-16
 
 ### Tool-first predictive defaults (Profit Alerts quarantined by default)

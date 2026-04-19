@@ -53,6 +53,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -240,10 +241,62 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, And Stage 4B Readback
+- protocol:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
+- Stage 1 / interpretation scripts:
+  - `scripts/tools/create_window_evidence_utilization_audit.py`
+  - `scripts/tools/create_window_audit_interpretation_report.py`
+- Stage 2 / Stage 2B scripts:
+  - `scripts/tools/create_window_stage2_signal_exposure_audit.py`
+  - `scripts/tools/create_window_stage2b_signal_stack_analysis.py`
+  - `scripts/tools/create_stage2b_cross_window_stack_rollup.py`
+- Stage 3 script:
+  - `scripts/tools/create_analysis_arena_stage3_decision_workbench.py`
+- Stage 4 script:
+  - `scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py`
+- Stage 4B script:
+  - `scripts/tools/create_analysis_arena_stage4b_replay_readback.py`
+- Stage 3 cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_REPLAY_QUEUE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_NEGATIVE_CONTROL_MAP.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_EVIDENCE_UTILIZATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECAY_STRATIFICATION.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_FRESH_WINDOW_DECISION_READINESS.md`
+- focus-window casebook output:
+  - `WINDOW_<...>__ANALYSIS_ARENA__STAGE3_CASEBOOK.md`
+  - `WINDOW_<...>__ANALYSIS_ARENA__STAGE3_CASEBOOK.csv`
+- Stage 4 cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_SCORECARD.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_LEDGER.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_REPLAY_DECISION_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_MECHANISM_FAMILY_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_SOURCE_A_B_OVERLAP_COMPARISON.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_YIELD_AND_CONCENTRATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_SHARED_LINEAGE_AUDIT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4_NEGATIVE_CONTROL_REPLAY_SUMMARY.csv`
+- Stage 4B cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_PRIMITIVE_CLUSTER_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_SURVIVOR_SUPPORT_RESTRAINT_CASEBOOK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_SURVIVOR_SUPPORT_RESTRAINT_CASEBOOK.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_LEAVE_ONE_WINDOW_OUT_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_TRANSLATOR_DESIGN_QUEUE.csv`
+- feeds:
+  - next fresh-window review posture
+  - replay queue design
+  - future Brain1 / Brain2 / translator redesign
+- guardrail:
+  - Stage 3 is replay/interpretation permission only; it does not change live scoring, candidate formation, or budget logic.
+  - Stage 4 is a controlled fixture replay/audit layer only; it tests Stage 3 decisions by mechanism family, source A / source B / overlap lift, shared lineage, yield, concentration, and negative controls before any future rewrite.
+  - Stage 4B is the readback layer that collapses Stage 4 rows into primitive clusters, casebook exemplars, leave-one-window-out outcomes, and a prototype-design queue. It still grants no live scoring permission.
+
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later shadow translator prototype fed by the translator-learning ledger and the frontier control study
+- later shadow translator prototype fed by Stage 4B primitive clusters, support gates, holdout-confirmed candidates, and restraint maps
 
 ## 7. Promotion Rules
 
