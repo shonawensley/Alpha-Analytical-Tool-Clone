@@ -584,6 +584,28 @@ def build_stage4b_replay_readback_command(
     return cmd
 
 
+def build_stage4c_shadow_translator_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    casebook_limit: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+        "--casebook-limit",
+        str(int(casebook_limit)),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -874,6 +896,17 @@ def _parse_args() -> argparse.Namespace:
     stage4b.add_argument("--no-receipt", action="store_true")
     stage4b.add_argument("--force", action="store_true")
     stage4b.add_argument("--dry-run", action="store_true")
+
+    stage4c = sub.add_parser(
+        "stage4c-shadow-translator",
+        help="Generate the Stage 4C read-only shadow translator prototype package.",
+    )
+    stage4c.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage4c.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage4c.add_argument("--casebook-limit", type=int, default=96)
+    stage4c.add_argument("--no-receipt", action="store_true")
+    stage4c.add_argument("--force", action="store_true")
+    stage4c.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1840,6 +1873,50 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage4c-shadow-translator":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        casebook_limit = int(args.casebook_limit or 96)
+        cmd = build_stage4c_shadow_translator_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            casebook_limit=casebook_limit,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 4C SHADOW TRANSLATOR PROTOTYPE",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- casebook_limit: `{casebook_limit}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 4C is a read-only shadow translator design package; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Prototype lanes remain separated: clean candidate expressions, lineage-deduped candidates, support gates, decay/watch rows, concentration restraints, low-denominator watchlists, and negative-control restraint surfaces.",
+            "- Support gates, VTRAC/decay rows, concentration-blocked rows, and negative controls cannot become standalone candidate/spend permission.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

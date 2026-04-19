@@ -26,14 +26,16 @@ python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --force
 python3 scripts/tools/create_analysis_arena_stage3_decision_workbench.py --force
 python3 scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py --force
 python3 scripts/tools/create_analysis_arena_stage4b_replay_readback.py --force
+python3 scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, and Stage 4B:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, and Stage 4C:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -97,6 +99,14 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs
 - Stage 4B leave-one-window-out holdout matrix CSV.
 - Stage 4B translator design queue CSV.
 - Stage 4B cycle receipt Markdown.
+- Stage 4C shadow translator prototype Markdown/JSON.
+- Stage 4C prototype rule registry CSV.
+- Stage 4C lane separation matrix CSV.
+- Stage 4C support gate effects CSV.
+- Stage 4C restraint application audit CSV.
+- Stage 4C holdout prototype scorecard CSV.
+- Stage 4C translator prototype casebook Markdown/CSV.
+- Stage 4C cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -119,7 +129,9 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs
 17. Review Stage 4 by mechanism family first, then source A / source B / overlap lift, shared-lineage risk, yield, concentration, and negative-control restraint summaries.
 18. Run the Stage 4B replay readback after Stage 4.
 19. Review primitive clusters, casebook exemplars, leave-one-window-out outcomes, and the translator design queue before building any prototype translator.
-20. Use Stage 2, Stage 2B, Stage 3, Stage 4, and Stage 4B decisions as experiment gates, not live scoring changes.
+20. Run the Stage 4C shadow translator prototype after Stage 4B.
+21. Review the prototype rule registry, lane separation matrix, support-gate effects, restraint audit, holdout prototype scorecard, and casebook before any translator/scoring rewrite.
+22. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, and Stage 4C decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -149,6 +161,10 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs
 - Stage 4B primitive clusters collapse duplicate aliases and old-system locator variants; clusters are design units, not live rules.
 - Stage 4B leave-one-window-out confirmation is a research filter. It improves confidence but still does not grant live scoring permission.
 - Stage 4B translator design queue separates prototype candidates, duplicate-credit prototypes, support gates, decay/watch clusters, concentration retests, and low-denominator watchlists.
+- Stage 4C prototype lanes are shadow design lanes only. They do not create deployable candidate lists or scoring weights.
+- Stage 4C `clean_boxed_candidate` and `lineage_guarded_boxed_candidate` lanes are aggregate candidate-expression research surfaces, not live rules.
+- Stage 4C support gates, decay/watch rows, concentration rows, low-denominator watchlists, and negative-control surfaces remain separated and cannot become standalone spend permission.
+- Stage 4C old-system source names remain locators; the architecture-facing vocabulary is the primitive/lane/guardrail label set.
 
 ## 6. Guardrails
 
@@ -167,3 +183,5 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs
 - Do not treat arena, translation sandbox, Brain1, or old control-arm surfaces as independent confirmations when Stage 4 marks shared lineage risk.
 - Do not build a prototype translator from raw Stage 4 rows when Stage 4B has collapsed them into primitive clusters.
 - Do not treat Stage 4B holdout confirmation as final proof. It is a stronger filter, not a deployment gate.
+- Do not treat Stage 4C as a scoring rewrite. It is a read-only shadow translator design package.
+- Do not blend Stage 4C lanes. Candidate-expression, lineage de-duplication, support context, decay watch, restraint/retest, and low-denominator watchlist rows must stay separate.

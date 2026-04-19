@@ -28,6 +28,7 @@ Only after those four should you ask:
 
 - what does the decay/carryover companion say?
 - what does the Stage 3 replay/restraint layer allow or block?
+- what does the Stage 4C shadow translator prototype keep separated before any rewrite?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -195,6 +196,13 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 4B survivor/support/restraint casebook
 - Stage 4B leave-one-window-out matrix
 - Stage 4B translator design queue
+- Stage 4C shadow translator prototype
+- Stage 4C prototype rule registry
+- Stage 4C lane separation matrix
+- Stage 4C support gate effects
+- Stage 4C restraint application audit
+- Stage 4C holdout prototype scorecard
+- Stage 4C translator prototype casebook
 
 Main questions:
 
@@ -210,12 +218,18 @@ Main questions:
 - which Stage 4 rows collapse into the same Stage 4B primitive cluster?
 - which clusters survive leave-one-window-out confirmation?
 - which clusters are prototype candidates, support gates, decay/watch clusters, concentration retests, or low-denominator watchlists?
+- which Stage 4C lane is each prototype cluster allowed to occupy?
+- which support gates are paired context versus unpaired context?
+- which candidate-expression clusters carry negative-control or concentration restraint pressure?
+- which prototype modes survive holdout without blending lanes?
 
 Do not conclude here:
 
 - that `promote_candidate` means live scoring permission
 - that Stage 4 survivor status means live scoring permission
 - that Stage 4B holdout confirmation means live scoring permission
+- that Stage 4C shadow lanes mean live scoring permission
+- that Stage 4C clean candidate-expression lanes are deployable candidate lists
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
 - that two same-lineage sources should receive independent scoring credit
@@ -253,7 +267,24 @@ Do not conclude here:
 - that holdout confirmation bypasses prototype testing
 - that support gates should become standalone candidates
 
-### Step 9 — Policy / Budget Implications
+### Step 9 — Stage 4C Shadow Translator Prototype
+
+Use Stage 4C to translate the Stage 4B queue into strict prototype lanes:
+
+- read the lane separation matrix before individual clusters
+- read clean boxed and lineage-guarded candidate lanes as aggregate shadow expressions only
+- read support-gate effects as context modifiers, not standalone candidates
+- read decay/watch rows as carryforward/territory rows, not boxed spend rows
+- read concentration and negative-control rows as restraint/retest surfaces
+- use the holdout prototype scorecard to compare prototype modes without blending lanes
+
+Do not conclude here:
+
+- that Stage 4C changes live scoring
+- that Stage 4C creates deployable candidate lists
+- that support, decay, concentration, low-denominator, or negative-control lanes can bypass their guardrails
+
+### Step 10 — Policy / Budget Implications
 
 Only now ask:
 
@@ -277,7 +308,8 @@ For every fresh window, answer these in order:
 6. What does Stage 3 permit for replay, restraint, and casebook review?
 7. What does Stage 4 fixture replay confirm, block, or keep as support/watch material?
 8. What does Stage 4B collapse into primitive clusters and holdout-confirmed prototype queues?
-9. Only then: what policy/budget questions are worth future research?
+9. What does Stage 4C separate into clean candidate-expression, lineage-dedup, support, decay/watch, restraint/retest, and low-denominator lanes?
+10. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -290,6 +322,8 @@ For every fresh window, answer these in order:
 - Do not treat Stage 4 as a scoring rewrite. It is the fixture test bench before later rewrite work.
 - Do not assign duplicate credit to shared-lineage sources.
 - Do not treat Stage 4B as a scoring rewrite. It is a primitive readback and holdout filter before prototype work.
+- Do not treat Stage 4C as a scoring rewrite. It is a read-only shadow translator design package before any fixture-backed prototype evaluation.
+- Do not blend Stage 4C lanes into a single pool.
 
 ## 6. Practical Close
 

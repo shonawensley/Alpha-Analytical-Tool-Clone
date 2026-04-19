@@ -53,7 +53,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -241,7 +241,7 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
-### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, And Stage 4B Readback
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, And Stage 4C Shadow Prototype
 - protocol:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
 - Stage 1 / interpretation scripts:
@@ -257,6 +257,8 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py`
 - Stage 4B script:
   - `scripts/tools/create_analysis_arena_stage4b_replay_readback.py`
+- Stage 4C script:
+  - `scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py`
 - Stage 3 cycle-level outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
@@ -284,19 +286,31 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_SURVIVOR_SUPPORT_RESTRAINT_CASEBOOK.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_LEAVE_ONE_WINDOW_OUT_MATRIX.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_TRANSLATOR_DESIGN_QUEUE.csv`
+- Stage 4C cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_PROTOTYPE_RULE_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_LANE_SEPARATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SUPPORT_GATE_EFFECTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_RESTRAINT_APPLICATION_AUDIT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_HOLDOUT_PROTOTYPE_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_TRANSLATOR_PROTOTYPE_CASEBOOK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_TRANSLATOR_PROTOTYPE_CASEBOOK.csv`
 - feeds:
   - next fresh-window review posture
   - replay queue design
   - future Brain1 / Brain2 / translator redesign
+  - fixture-backed shadow translator evaluation harness
 - guardrail:
   - Stage 3 is replay/interpretation permission only; it does not change live scoring, candidate formation, or budget logic.
   - Stage 4 is a controlled fixture replay/audit layer only; it tests Stage 3 decisions by mechanism family, source A / source B / overlap lift, shared lineage, yield, concentration, and negative controls before any future rewrite.
   - Stage 4B is the readback layer that collapses Stage 4 rows into primitive clusters, casebook exemplars, leave-one-window-out outcomes, and a prototype-design queue. It still grants no live scoring permission.
+  - Stage 4C is the shadow translator design layer that separates candidate-expression, lineage de-duplication, support context, decay watch, restraint/retest, and low-denominator lanes. It still grants no live scoring or candidate-generation permission.
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later shadow translator prototype fed by Stage 4B primitive clusters, support gates, holdout-confirmed candidates, and restraint maps
+- later fixture-backed shadow translator evaluation harness fed by Stage 4C prototype lanes and guardrails
 
 ## 7. Promotion Rules
 

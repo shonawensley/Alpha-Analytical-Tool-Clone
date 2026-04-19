@@ -44,6 +44,25 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4B_TRANSLATOR_DESIGN_QUEUE.csv`
 - Stage 4B keeps the same guardrail as Stage 4: holdout confirmation and prototype queue membership are research filters, not live scoring permission.
 
+### Analysis Arena: Stage 4C shadow translator prototype
+
+- Added a read-only Stage 4C shadow translator design layer for Stage 4B outputs:
+  - `scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 4C converts the Stage 4B translator design queue into strict lanes without changing scoring, candidate generation, translator logic, budget logic, or legacy infrastructure.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_PROTOTYPE_RULE_REGISTRY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_LANE_SEPARATION_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_SUPPORT_GATE_EFFECTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_RESTRAINT_APPLICATION_AUDIT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_HOLDOUT_PROTOTYPE_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_TRANSLATOR_PROTOTYPE_CASEBOOK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE4C_TRANSLATOR_PROTOTYPE_CASEBOOK.csv`
+- Stage 4C separates clean boxed candidate expressions, lineage-guarded candidate expressions, support gates, decay/watch rows, concentration/retest rows, low-denominator watchlists, and restraint surfaces so future prototype work does not blend incompatible evidence lanes.
+
 ### Analysis Arena: Stage 3 decision workbench
 
 - Added a read-only Stage 3 decision layer for completed post-run audit artifacts:
