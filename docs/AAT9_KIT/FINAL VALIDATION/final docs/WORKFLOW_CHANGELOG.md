@@ -8,6 +8,29 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-20
 
+### Analysis Arena: Stage 6F decision atlas and Stage 7A fresh confirmation scaffold
+
+- Added a read-only integrated decision atlas and priority casebook:
+  - `scripts/tools/create_analysis_arena_stage6f_integrated_decision_atlas.py`
+- Added a read-only fresh-window confirmation scaffold:
+  - `scripts/tools/create_analysis_arena_stage7a_fresh_confirmation_scaffold.py`
+- Added cycle-wrapper commands:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 6F integrates Stage 6B readback, Stage 6C confirmation contracts, Stage 6D restraint calibration, Stage 6E support narrowing, and Stage 5 value-level examples into lane decisions, blockers, carry-forward queue, macro disposition, and a priority bucket casebook.
+- Stage 7A converts the Stage 6C/6F package into pending future-window confirmation requirements, March seed benchmarks, future-window evaluation template rows, and a run checklist.
+- New cycle-level outputs include:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6F_INTEGRATED_DECISION_ATLAS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6F_LANE_DECISION_ATLAS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6F_ACTIVE_BLOCKERS_AND_CLEARANCE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6F_PRIORITY_BUCKET_CASEBOOK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6F_BUCKET_EXAMPLE_LEDGER.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7A_FRESH_CONFIRMATION_SCAFFOLD.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7A_CONFIRMATION_REQUIREMENTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7A_MARCH_SEED_BENCHMARKS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7A_FUTURE_WINDOW_EVALUATION_TEMPLATE.csv`
+- Guardrail: Stage 6F and Stage 7A are synthesis/scaffold layers only. They do not create live scoring, candidate generation, translator logic, hard vetoes, broad support promotion, macro confirmation, or budget behavior.
+
 ### Analysis Arena: Stage 6C/6D/6E post-readback confirmation workbenches
 
 - Added three read-only post-Stage-6B research layers:

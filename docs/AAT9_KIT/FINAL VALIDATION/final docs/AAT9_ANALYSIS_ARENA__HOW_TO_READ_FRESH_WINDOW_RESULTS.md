@@ -31,6 +31,8 @@ Only after those four should you ask:
 - what does the Stage 4C shadow translator prototype keep separated before any rewrite?
 - what does the Stage 6B shadow replay simulator confirm, weaken, or keep guarded before any rewrite?
 - what does the Stage 6C/6D/6E confirmation and workbench layer require before rewrite discussion?
+- what does Stage 6F integrate across lanes, blockers, macro disposition, and priority casebook examples?
+- what does Stage 7A require from the next future/fresh window before anything can be called repeated?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -253,6 +255,18 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 6E support narrowing candidates
 - Stage 6E support failure modes
 - Stage 6E support next actions
+- Stage 6F integrated decision atlas
+- Stage 6F lane decision atlas
+- Stage 6F active blockers and clearance
+- Stage 6F fresh-window carry-forward queue
+- Stage 6F macro findings disposition
+- Stage 6F priority bucket casebook
+- Stage 6F bucket example ledger
+- Stage 7A fresh confirmation scaffold
+- Stage 7A confirmation requirements
+- Stage 7A March seed benchmarks
+- Stage 7A future-window evaluation template
+- Stage 7A run checklist
 
 Main questions:
 
@@ -291,6 +305,9 @@ Main questions:
 - which Stage 6D soft-penalty hypotheses preserve conversions without pretending a hard veto is live-safe?
 - which Stage 6E support pockets beat a meaningful support-off peer, and which support rows are failure modes?
 - which support findings remain broad context only despite attractive narrative examples?
+- which Stage 6F lanes are strongest, blocked, support-only, penalty-only, companion-only, or rewrite-blocked?
+- which Stage 6F casebook targets deserve human inspection before the next fresh window?
+- which Stage 7A requirements must the next fresh window fill in, and which March seed benchmarks are only baselines?
 
 Do not conclude here:
 
@@ -308,6 +325,8 @@ Do not conclude here:
 - that Stage 6C confirmation contracts are themselves proof of live edge
 - that Stage 6D soft-penalty hypotheses are hard veto permission
 - that Stage 6E support narrowing candidates make broad support-on valid
+- that Stage 6F synthesis resolves future-window uncertainty
+- that Stage 7A March seed benchmarks are fresh-window confirmation
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -476,7 +495,38 @@ Do not conclude here:
 - that a high-pressure rescue bucket is a deployable exception
 - that a narrow support candidate makes broad support context spendable
 
-### Step 16 — Policy / Budget Implications
+### Step 16 — Stage 6F Integrated Decision Atlas
+
+Use Stage 6F to read the whole post-readback package in one place:
+
+- read the lane decision atlas before discussing individual bucket excitement
+- read active blockers as the current rewrite boundary
+- read the fresh-window carry-forward queue as the next-run instruction list
+- read macro findings disposition before logging anything as repeated or confirmed
+- read the priority bucket casebook for concrete examples behind Stage 6D and Stage 6E findings
+
+Do not conclude here:
+
+- that Stage 6F changes live scoring
+- that casebook examples override denominator scorecards
+- that an integrated atlas replaces future/fresh repeat evidence
+
+### Step 17 — Stage 7A Fresh Confirmation Scaffold
+
+Use Stage 7A to prepare the next fresh-window evaluation:
+
+- read confirmation requirements as pending tests, not passed tests
+- read March seed benchmarks as comparison anchors, not durable truth
+- use the future-window evaluation template to avoid improvising next-window scoring language
+- use the run checklist before any rewrite discussion
+
+Do not conclude here:
+
+- that Stage 7A confirms anything before the future window is actually run
+- that March seed benchmarks are deployment evidence
+- that a future scoring rewrite can start while Stage 7A requirements are still pending
+
+### Step 18 — Policy / Budget Implications
 
 Only now ask:
 
@@ -507,7 +557,9 @@ For every fresh window, answer these in order:
 13. What does Stage 6B replay show across candidate scenarios, support modifiers, restraint calibration, concentration, and guardrails?
 14. What does Stage 6B readback classify as future-window confirmation, modifier research, companion-only, retest-only, blocked, or provisional macro candidate?
 15. What does Stage 6C require, what does Stage 6D say about restraint penalty research, and what does Stage 6E say about support narrowing?
-16. Only then: what policy/budget questions are worth future research?
+16. What does Stage 6F integrate across lanes, blockers, macro findings, and concrete bucket examples?
+17. What does Stage 7A require the next fresh window to prove?
+18. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -531,6 +583,8 @@ For every fresh window, answer these in order:
 - Do not treat Stage 6C as scoring permission. It is the confirmation contract for future/fresh evidence.
 - Do not treat Stage 6D as restraint permission. It is a soft-penalty research workbench, not a hard-veto deployment path.
 - Do not treat Stage 6E as support permission. It is a narrowing workbench, not broad support-on promotion.
+- Do not treat Stage 6F as scoring permission. It is a synthesis and casebook layer.
+- Do not treat Stage 7A as confirmation. It is the future-window scaffold that still needs future data.
 
 ## 6. Practical Close
 

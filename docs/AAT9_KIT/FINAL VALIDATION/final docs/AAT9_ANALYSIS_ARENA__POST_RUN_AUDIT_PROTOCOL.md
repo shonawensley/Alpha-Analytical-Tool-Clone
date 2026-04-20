@@ -35,9 +35,11 @@ python3 scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py --
 python3 scripts/tools/create_analysis_arena_stage6c_confirmation_protocol.py --force
 python3 scripts/tools/create_analysis_arena_stage6d_restraint_calibration_workbench.py --force
 python3 scripts/tools/create_analysis_arena_stage6e_support_modifier_narrowing_workbench.py --force
+python3 scripts/tools/create_analysis_arena_stage6f_integrated_decision_atlas.py --force
+python3 scripts/tools/create_analysis_arena_stage7a_fresh_confirmation_scaffold.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, and Stage 6E:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, and Stage 7A:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
@@ -52,6 +54,8 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root 
 python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -180,6 +184,20 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --ru
 - Stage 6E support failure modes CSV.
 - Stage 6E support next actions CSV.
 - Stage 6E cycle receipt Markdown.
+- Stage 6F integrated decision atlas Markdown/JSON.
+- Stage 6F lane decision atlas CSV.
+- Stage 6F active blockers and clearance CSV.
+- Stage 6F fresh-window carry-forward queue CSV.
+- Stage 6F macro findings disposition CSV.
+- Stage 6F priority bucket casebook Markdown/CSV.
+- Stage 6F bucket example ledger CSV.
+- Stage 6F cycle receipt Markdown.
+- Stage 7A fresh confirmation scaffold Markdown/JSON.
+- Stage 7A confirmation requirements CSV.
+- Stage 7A March seed benchmarks CSV.
+- Stage 7A future-window evaluation template CSV.
+- Stage 7A run checklist CSV.
+- Stage 7A cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -220,7 +238,10 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --ru
 35. Review restraint buckets, high-pressure rescue candidates, and soft-penalty policy matrix before discussing any restraint penalty design.
 36. Run Stage 6E after Stage 6C when support context needs narrowing.
 37. Review support buckets, paired support-on/support-off candidates, and support failure modes before discussing any support modifier design.
-38. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, and Stage 6E decisions as experiment gates, not live scoring changes.
+38. Run Stage 6F after Stage 6C/6D/6E.
+39. Review lane decision atlas, active blockers, carry-forward queue, macro disposition, and priority bucket casebook before preparing the next fresh-window confirmation pass.
+40. Run Stage 7A after Stage 6F to generate future-window confirmation requirements, March seed benchmarks, evaluation template rows, and the run checklist.
+41. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, and Stage 7A decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -273,6 +294,8 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --ru
 - Stage 6C rewrite blockers stay active until fresh-window repeat evidence clears them or keeps the affected lane explicitly quarantined.
 - Stage 6D restraint rows are penalty research only. High-pressure rescue buckets and soft-penalty hypotheses cannot become hard vetoes or live candidate filters without future replay confirmation.
 - Stage 6E support rows are paired-modifier research only. Broad support-on failure remains the default unless a narrow bucket beats a meaningful support-off peer and repeats on future windows.
+- Stage 6F is a synthesis layer. It is the correct place to read cross-stage decisions together, but it does not reduce the need for future/fresh confirmation.
+- Stage 7A is a scaffold. Its March seed benchmarks are baselines for future comparison, not proof that the next window already passed.
 
 ## 6. Guardrails
 

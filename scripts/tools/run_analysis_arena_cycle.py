@@ -764,6 +764,50 @@ def build_stage6e_support_narrowing_command(
     return cmd
 
 
+def build_stage6f_integrated_decision_atlas_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    casebook_limit_per_bucket: int,
+    max_ledger_rows: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage6f_integrated_decision_atlas.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+        "--casebook-limit-per-bucket",
+        str(int(casebook_limit_per_bucket)),
+    ]
+    if max_ledger_rows > 0:
+        cmd += ["--max-ledger-rows", str(int(max_ledger_rows))]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_stage7a_fresh_confirmation_scaffold_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage7a_fresh_confirmation_scaffold.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -1147,6 +1191,28 @@ def _parse_args() -> argparse.Namespace:
     stage6e.add_argument("--no-receipt", action="store_true")
     stage6e.add_argument("--force", action="store_true")
     stage6e.add_argument("--dry-run", action="store_true")
+
+    stage6f = sub.add_parser(
+        "stage6f-decision-atlas",
+        help="Generate the Stage 6F read-only integrated decision atlas and priority bucket casebook.",
+    )
+    stage6f.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage6f.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage6f.add_argument("--casebook-limit-per-bucket", type=int, default=8)
+    stage6f.add_argument("--max-ledger-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all Stage-5 ledger rows.")
+    stage6f.add_argument("--no-receipt", action="store_true")
+    stage6f.add_argument("--force", action="store_true")
+    stage6f.add_argument("--dry-run", action="store_true")
+
+    stage7a = sub.add_parser(
+        "stage7a-fresh-confirmation-scaffold",
+        help="Generate the Stage 7A read-only fresh-window confirmation scaffold from Stage 6C/6F evidence.",
+    )
+    stage7a.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage7a.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage7a.add_argument("--no-receipt", action="store_true")
+    stage7a.add_argument("--force", action="store_true")
+    stage7a.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1542,6 +1608,92 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage6f-decision-atlas":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        cmd = build_stage6f_integrated_decision_atlas_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            casebook_limit_per_bucket=int(args.casebook_limit_per_bucket),
+            max_ledger_rows=int(args.max_ledger_rows),
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 6F INTEGRATED DECISION ATLAS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- casebook_limit_per_bucket: `{int(args.casebook_limit_per_bucket)}`",
+            f"- max_ledger_rows: `{int(args.max_ledger_rows)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 6F is a read-only integrated decision atlas; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 6F combines Stage 6B readback, Stage 6C contracts, Stage 6D restraint calibration, Stage 6E support narrowing, and Stage 5 value-ledger examples.",
+            "- Stage 6F output is decision/casebook evidence only; it does not create deployable candidate lists or scoring weights.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE6F_INTEGRATED_DECISION_ATLAS_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage7a-fresh-confirmation-scaffold":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        cmd = build_stage7a_fresh_confirmation_scaffold_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 7A FRESH CONFIRMATION SCAFFOLD",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 7A is a read-only fresh-window confirmation scaffold; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 7A turns Stage 6C/6F decisions into future-window confirmation requirements, March seed benchmarks, evaluation template rows, and a run checklist.",
+            "- Stage 7A output is pending-future-window scaffolding only; it does not confirm a fresh-window result or create deployable rules.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE7A_FRESH_CONFIRMATION_SCAFFOLD_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
