@@ -8,6 +8,31 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-20
 
+### Analysis Arena: Stage 6C/6D/6E post-readback confirmation workbenches
+
+- Added three read-only post-Stage-6B research layers:
+  - `scripts/tools/create_analysis_arena_stage6c_confirmation_protocol.py`
+  - `scripts/tools/create_analysis_arena_stage6d_restraint_calibration_workbench.py`
+  - `scripts/tools/create_analysis_arena_stage6e_support_modifier_narrowing_workbench.py`
+- Added cycle-wrapper commands:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 6C converts Stage 6B readback into future/fresh-window confirmation tests, threshold contracts, fresh-window queue items, rewrite blockers, and macro-review gates.
+- Stage 6D decomposes restraint pressure into bucket scorecards, high-pressure rescue/downweight candidates, soft-penalty policy hypotheses, and next actions.
+- Stage 6E decomposes support context into paired support-on/support-off buckets, narrow support candidates, support failure modes, and next actions. It now requires meaningful support-off peer denominators before labeling support-on as a candidate.
+- New cycle-level outputs include:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_CONFIRMATION_TEST_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_REWRITE_BLOCKERS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_HIGH_PRESSURE_RESCUE_CANDIDATES.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_SOFT_PENALTY_POLICY_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_NARROWING_CANDIDATES.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_FAILURE_MODES.csv`
+- Guardrail: Stage 6C/6D/6E outputs are confirmation and research gates only. They do not create live scoring, candidate generation, translator logic, hard vetoes, broad support promotion, or budget behavior.
+
 ### Analysis Arena: Stage 6B readback decision memo
 
 - Added a read-only Stage 6B readback decision layer for Stage 6B simulator outputs:

@@ -32,9 +32,12 @@ python3 scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py --f
 python3 scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py --force
 python3 scripts/tools/create_analysis_arena_stage6b_shadow_replay_simulator.py --force
 python3 scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py --force
+python3 scripts/tools/create_analysis_arena_stage6c_confirmation_protocol.py --force
+python3 scripts/tools/create_analysis_arena_stage6d_restraint_calibration_workbench.py --force
+python3 scripts/tools/create_analysis_arena_stage6e_support_modifier_narrowing_workbench.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, and Stage 6B readback:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, and Stage 6E:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
@@ -46,6 +49,9 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root "
 python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -155,6 +161,25 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root 
 - Stage 6B readback next action queue CSV.
 - Stage 6B readback macro-findings candidates CSV.
 - Stage 6B readback cycle receipt Markdown.
+- Stage 6C future confirmation protocol Markdown/JSON.
+- Stage 6C confirmation test matrix CSV.
+- Stage 6C threshold contract CSV.
+- Stage 6C fresh-window queue CSV.
+- Stage 6C rewrite blockers CSV.
+- Stage 6C macro review gate CSV.
+- Stage 6C cycle receipt Markdown.
+- Stage 6D restraint calibration workbench Markdown/JSON.
+- Stage 6D restraint bucket scorecard CSV.
+- Stage 6D high-pressure rescue candidates CSV.
+- Stage 6D soft-penalty policy matrix CSV.
+- Stage 6D restraint next actions CSV.
+- Stage 6D cycle receipt Markdown.
+- Stage 6E support modifier narrowing workbench Markdown/JSON.
+- Stage 6E support bucket scorecard CSV.
+- Stage 6E support narrowing candidates CSV.
+- Stage 6E support failure modes CSV.
+- Stage 6E support next actions CSV.
+- Stage 6E cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -189,7 +214,13 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root 
 29. Review replay scenario scorecard, lane increment matrix, support modifier ablation, restraint calibration, concentration audit, and guardrail compliance before building a Stage 6B readback memo.
 30. Run the Stage 6B readback decision memo after Stage 6B.
 31. Review scenario decisions, requirement results, guardrail verdict, next-action queue, and macro-findings candidates before proposing future/fresh confirmation or any rewrite specification.
-32. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, and Stage 6B readback decisions as experiment gates, not live scoring changes.
+32. Run Stage 6C after Stage 6B readback.
+33. Review confirmation test matrix, threshold contract, fresh-window queue, rewrite blockers, and macro review gate before starting any rewrite planning.
+34. Run Stage 6D after Stage 6C when restraint/hard-exclusion evidence needs calibration.
+35. Review restraint buckets, high-pressure rescue candidates, and soft-penalty policy matrix before discussing any restraint penalty design.
+36. Run Stage 6E after Stage 6C when support context needs narrowing.
+37. Review support buckets, paired support-on/support-off candidates, and support failure modes before discussing any support modifier design.
+38. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, and Stage 6E decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -238,6 +269,10 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root 
 - Stage 6B concentration audit warnings must carry forward; March-led concentration should block direct rewrite claims until readback confirms broader support.
 - Stage 6B readback decisions are gates, not scoring weights. `future_window_confirmation_required` means repeat before rewrite, not deploy.
 - Stage 6B macro-findings candidates are proposed evidence rows only; the Macro Findings Log should not receive confirmed entries until future/fresh repeat or explicit provisional review.
+- Stage 6C confirmation contracts are future-window operating requirements. They do not prove an edge by themselves.
+- Stage 6C rewrite blockers stay active until fresh-window repeat evidence clears them or keeps the affected lane explicitly quarantined.
+- Stage 6D restraint rows are penalty research only. High-pressure rescue buckets and soft-penalty hypotheses cannot become hard vetoes or live candidate filters without future replay confirmation.
+- Stage 6E support rows are paired-modifier research only. Broad support-on failure remains the default unless a narrow bucket beats a meaningful support-off peer and repeats on future windows.
 
 ## 6. Guardrails
 

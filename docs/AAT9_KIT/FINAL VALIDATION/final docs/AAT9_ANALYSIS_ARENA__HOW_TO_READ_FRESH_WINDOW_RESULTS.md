@@ -30,6 +30,7 @@ Only after those four should you ask:
 - what does the Stage 3 replay/restraint layer allow or block?
 - what does the Stage 4C shadow translator prototype keep separated before any rewrite?
 - what does the Stage 6B shadow replay simulator confirm, weaken, or keep guarded before any rewrite?
+- what does the Stage 6C/6D/6E confirmation and workbench layer require before rewrite discussion?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -236,6 +237,22 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 6B readback guardrail verdict
 - Stage 6B readback next action queue
 - Stage 6B readback macro-findings candidates
+- Stage 6C future confirmation protocol
+- Stage 6C confirmation test matrix
+- Stage 6C threshold contract
+- Stage 6C fresh-window queue
+- Stage 6C rewrite blockers
+- Stage 6C macro review gate
+- Stage 6D restraint calibration workbench
+- Stage 6D restraint bucket scorecard
+- Stage 6D high-pressure rescue candidates
+- Stage 6D soft-penalty policy matrix
+- Stage 6D restraint next actions
+- Stage 6E support modifier narrowing workbench
+- Stage 6E support bucket scorecard
+- Stage 6E support narrowing candidates
+- Stage 6E support failure modes
+- Stage 6E support next actions
 
 Main questions:
 
@@ -268,6 +285,12 @@ Main questions:
 - does the Stage 6B concentration audit keep March-led fragility visible?
 - which Stage 6B readback decisions are future-window confirmation, modifier research, companion-only, retest-only, or blocked?
 - which macro-findings candidates are provisional and which should stay run-local until repeated?
+- which Stage 6C confirmation tests must pass before the next fresh-window evidence can influence rewrite planning?
+- which active rewrite blockers remain unresolved after Stage 6C?
+- which Stage 6D high-pressure buckets are true rescue candidates versus downweight candidates?
+- which Stage 6D soft-penalty hypotheses preserve conversions without pretending a hard veto is live-safe?
+- which Stage 6E support pockets beat a meaningful support-off peer, and which support rows are failure modes?
+- which support findings remain broad context only despite attractive narrative examples?
 
 Do not conclude here:
 
@@ -282,6 +305,9 @@ Do not conclude here:
 - that Stage 6A lane contracts are live translator rules
 - that Stage 6B scenario scorecards are deployable scoring weights
 - that Stage 6B readback decisions are deployable scoring weights
+- that Stage 6C confirmation contracts are themselves proof of live edge
+- that Stage 6D soft-penalty hypotheses are hard veto permission
+- that Stage 6E support narrowing candidates make broad support-on valid
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -422,7 +448,35 @@ Do not conclude here:
 - that a macro-findings candidate should be logged as confirmed before future/fresh repeat or explicit provisional review
 - that support, decay/watch, low-denominator, broad-lineage, or restraint rows can bypass their readback gate
 
-### Step 15 — Policy / Budget Implications
+### Step 15 — Stage 6C/6D/6E Confirmation And Workbenches
+
+Use Stage 6C to convert Stage 6B readback into future-window operating contracts:
+
+- read the confirmation test matrix before proposing any rewrite sequence
+- read the threshold contract as the exact pass/fail language for the next fresh window
+- read rewrite blockers as active blockers, not documentation notes
+- read the macro review gate before adding anything to the Macro Findings Log as confirmed
+
+Use Stage 6D when restraint evidence needs calibration:
+
+- read high-pressure rescue candidates before globally declaring high pressure bad
+- read the soft-penalty policy matrix as research hypotheses, not hard-veto permission
+- keep hard exclusion blocked until a soft-before-hard repeat path exists
+
+Use Stage 6E when support context needs narrowing:
+
+- read support bucket scorecard before any support narrative example
+- require support-on buckets to beat a meaningful support-off peer
+- keep broad support-on and standalone support gates quarantined unless future windows reverse the evidence
+
+Do not conclude here:
+
+- that Stage 6C/6D/6E changes live scoring
+- that a confirmation contract replaces fresh-window evidence
+- that a high-pressure rescue bucket is a deployable exception
+- that a narrow support candidate makes broad support context spendable
+
+### Step 16 — Policy / Budget Implications
 
 Only now ask:
 
@@ -452,7 +506,8 @@ For every fresh window, answer these in order:
 12. What does Stage 6A formalize as the allowed shadow translator contract and Stage 6B simulator requirements?
 13. What does Stage 6B replay show across candidate scenarios, support modifiers, restraint calibration, concentration, and guardrails?
 14. What does Stage 6B readback classify as future-window confirmation, modifier research, companion-only, retest-only, blocked, or provisional macro candidate?
-15. Only then: what policy/budget questions are worth future research?
+15. What does Stage 6C require, what does Stage 6D say about restraint penalty research, and what does Stage 6E say about support narrowing?
+16. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -473,6 +528,9 @@ For every fresh window, answer these in order:
 - Do not treat Stage 6A as scoring permission. It is the formal contract for a future read-only Stage 6B simulator.
 - Do not treat Stage 6B as scoring permission. It is read-only scenario replay before readback and any later translator/scoring specification.
 - Do not treat Stage 6B readback as scoring permission. It is the decision gate before future/fresh repeat and any later rewrite specification.
+- Do not treat Stage 6C as scoring permission. It is the confirmation contract for future/fresh evidence.
+- Do not treat Stage 6D as restraint permission. It is a soft-penalty research workbench, not a hard-veto deployment path.
+- Do not treat Stage 6E as support permission. It is a narrowing workbench, not broad support-on promotion.
 
 ## 6. Practical Close
 

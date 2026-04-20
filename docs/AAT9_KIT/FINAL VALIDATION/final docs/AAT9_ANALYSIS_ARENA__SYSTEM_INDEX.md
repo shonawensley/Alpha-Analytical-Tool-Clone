@@ -61,7 +61,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo / Stage 6C confirmation protocol / Stage 6D restraint calibration / Stage 6E support narrowing
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -249,7 +249,7 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
-### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, And Stage 6B Readback
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, Stage 6B Readback, Stage 6C Confirmation, Stage 6D Restraint Calibration, And Stage 6E Support Narrowing
 - protocol:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
 - Stage 1 / interpretation scripts:
@@ -277,6 +277,12 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `scripts/tools/create_analysis_arena_stage6b_shadow_replay_simulator.py`
 - Stage 6B readback script:
   - `scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py`
+- Stage 6C script:
+  - `scripts/tools/create_analysis_arena_stage6c_confirmation_protocol.py`
+- Stage 6D script:
+  - `scripts/tools/create_analysis_arena_stage6d_restraint_calibration_workbench.py`
+- Stage 6E script:
+  - `scripts/tools/create_analysis_arena_stage6e_support_modifier_narrowing_workbench.py`
 - Stage 3 cycle-level outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
@@ -362,12 +368,37 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_GUARDRAIL_VERDICT.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_NEXT_ACTION_QUEUE.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_MACRO_FINDINGS_CANDIDATES.csv`
+- Stage 6C confirmation outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_CONFIRMATION_TEST_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_THRESHOLD_CONTRACT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_FRESH_WINDOW_QUEUE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_REWRITE_BLOCKERS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_MACRO_REVIEW_GATE.csv`
+- Stage 6D restraint calibration outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_BUCKET_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_HIGH_PRESSURE_RESCUE_CANDIDATES.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_SOFT_PENALTY_POLICY_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_NEXT_ACTIONS.csv`
+- Stage 6E support narrowing outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_BUCKET_SCORECARD.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_NARROWING_CANDIDATES.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_FAILURE_MODES.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_NEXT_ACTIONS.csv`
 - feeds:
   - next fresh-window review posture
   - replay queue design
   - future Brain1 / Brain2 / translator redesign
   - future/fresh-window confirmation design
-  - future translator/scoring rewrite specification after Stage 5 review, Stage 6A specification, Stage 6B replay, and Stage 6B readback
+  - future translator/scoring rewrite specification after Stage 5 review, Stage 6A specification, Stage 6B replay, Stage 6B readback, Stage 6C confirmation, Stage 6D restraint calibration, and Stage 6E support narrowing
 - guardrail:
   - Stage 3 is replay/interpretation permission only; it does not change live scoring, candidate formation, or budget logic.
   - Stage 4 is a controlled fixture replay/audit layer only; it tests Stage 3 decisions by mechanism family, source A / source B / overlap lift, shared lineage, yield, concentration, and negative controls before any future rewrite.
@@ -378,12 +409,15 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - Stage 6A converts Stage 5 readback gates into a formal shadow translator lane contract, guardrail matrix, simulation requirements, acceptance checklist, and spec queue. It still grants no live scoring or candidate-generation permission.
   - Stage 6B replays the Stage 6A lane contract as separated read-only scenarios with support/restraint ablations, concentration audit, and guardrail compliance. It still grants no live scoring or candidate-generation permission.
   - Stage 6B readback converts simulator outputs into scenario decisions, requirement results, guardrail verdicts, next actions, and macro-findings candidates. It still grants no live scoring or candidate-generation permission.
+  - Stage 6C converts Stage 6B readback into future/fresh-window confirmation tests, threshold contracts, rewrite blockers, and macro-review gates. It still grants no live scoring or candidate-generation permission.
+  - Stage 6D calibrates restraint pressure as soft-penalty research, including high-pressure rescue buckets and aggregate penalty hypotheses. It still grants no hard veto, live scoring, or candidate-generation permission.
+  - Stage 6E narrows support context through paired support-on/support-off buckets and failure modes. It still grants no broad support-on, standalone support gate, live scoring, or candidate-generation permission.
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later future/fresh-window confirmation replay/readback
-- later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, Stage 6A specification, Stage 6B simulator, Stage 6B readback, and future/fresh repeat evidence are reviewed
+- future/fresh execution of the Stage 6C confirmation contract
+- later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, Stage 6A specification, Stage 6B simulator, Stage 6B readback, Stage 6C confirmation, Stage 6D/6E workbench evidence, and future/fresh repeat evidence are reviewed
 
 ## 7. Promotion Rules
 
