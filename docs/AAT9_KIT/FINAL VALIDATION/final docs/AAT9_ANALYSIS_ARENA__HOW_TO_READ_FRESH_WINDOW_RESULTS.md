@@ -29,6 +29,7 @@ Only after those four should you ask:
 - what does the decay/carryover companion say?
 - what does the Stage 3 replay/restraint layer allow or block?
 - what does the Stage 4C shadow translator prototype keep separated before any rewrite?
+- what does the Stage 6B shadow replay simulator confirm, weaken, or keep guarded before any rewrite?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -222,6 +223,13 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 6A simulation requirements
 - Stage 6A acceptance checklist
 - Stage 6A shadow spec queue
+- Stage 6B shadow replay simulator
+- Stage 6B replay scenario scorecard
+- Stage 6B lane increment matrix
+- Stage 6B support modifier ablation
+- Stage 6B restraint calibration
+- Stage 6B concentration audit
+- Stage 6B guardrail compliance
 
 Main questions:
 
@@ -248,6 +256,10 @@ Main questions:
 - which source A / source B / overlap comparisons actually show added value?
 - which Stage 5 modes are shadow-spec seeds, support-only context, companion-only decay/watch rows, restraint retests, or low-denominator watchlists?
 - which Stage 6A lanes are allowed into a future shadow simulator, and which lanes are blocked, companion-only, support-only, or retest-only?
+- which Stage 6B scenarios improve or weaken relative to baseline without blending lanes?
+- does support context help paired candidate-expression rows, or only broad support-only rows?
+- does restraint filtering improve false-positive proxy without cutting too much positive conversion?
+- does the Stage 6B concentration audit keep March-led fragility visible?
 
 Do not conclude here:
 
@@ -260,6 +272,7 @@ Do not conclude here:
 - that Stage 5 value-level casebook rows are deployable rules
 - that Stage 5 readback grants live translator/scoring permission
 - that Stage 6A lane contracts are live translator rules
+- that Stage 6B scenario scorecards are deployable scoring weights
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -365,7 +378,25 @@ Do not conclude here:
 - that a Stage 6A lane is a deployable rule
 - that Stage 6A proves an edge without Stage 6B replay
 
-### Step 13 — Policy / Budget Implications
+### Step 13 — Stage 6B Shadow Replay Simulator
+
+Use Stage 6B to replay the Stage 6A lane contract without changing live scoring:
+
+- read the replay scenario scorecard before reading individual scenario excitement
+- compare primary restrained candidate expression against the baseline clean boxed scenario
+- compare secondary lineage-supported restraint against primary to avoid duplicate-credit expansion
+- read the support modifier ablation as paired context evidence, not standalone candidate permission
+- read restraint calibration before deciding whether hard exclusion or softer penalty research is warranted
+- read the concentration audit and guardrail compliance before any readback or rewrite discussion
+
+Do not conclude here:
+
+- that Stage 6B changes live scoring
+- that a Stage 6B scenario is a deployable candidate list
+- that support-only, decay/watch, low-denominator, or restraint rows can bypass their lane guardrails
+- that one-window concentration can justify a scoring rewrite before readback
+
+### Step 14 — Policy / Budget Implications
 
 Only now ask:
 
@@ -393,7 +424,8 @@ For every fresh window, answer these in order:
 10. What does Stage 5 prove or weaken when those lanes are replayed against completed state-day fixtures?
 11. What does Stage 5 readback classify as shadow-spec seed, support-only, companion-only, retest/watchlist, or blocked?
 12. What does Stage 6A formalize as the allowed shadow translator contract and Stage 6B simulator requirements?
-13. Only then: what policy/budget questions are worth future research?
+13. What does Stage 6B replay show across candidate scenarios, support modifiers, restraint calibration, concentration, and guardrails?
+14. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -412,6 +444,7 @@ For every fresh window, answer these in order:
 - Do not use Stage 5 casebook examples as hand-picked rules.
 - Do not treat Stage 5 readback as scoring permission. It is the interpretation gate before any shadow-only translator/scoring specification.
 - Do not treat Stage 6A as scoring permission. It is the formal contract for a future read-only Stage 6B simulator.
+- Do not treat Stage 6B as scoring permission. It is read-only scenario replay before readback and any later translator/scoring specification.
 
 ## 6. Practical Close
 
