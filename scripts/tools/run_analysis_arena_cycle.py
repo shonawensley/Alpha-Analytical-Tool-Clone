@@ -650,6 +650,25 @@ def build_stage5_readback_command(
     return cmd
 
 
+def build_stage6a_shadow_spec_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -973,6 +992,16 @@ def _parse_args() -> argparse.Namespace:
     stage5_readback.add_argument("--no-receipt", action="store_true")
     stage5_readback.add_argument("--force", action="store_true")
     stage5_readback.add_argument("--dry-run", action="store_true")
+
+    stage6a = sub.add_parser(
+        "stage6a-shadow-spec",
+        help="Generate the Stage 6A read-only shadow translator specification from Stage 5 readback.",
+    )
+    stage6a.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage6a.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage6a.add_argument("--no-receipt", action="store_true")
+    stage6a.add_argument("--force", action="store_true")
+    stage6a.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1122,6 +1151,47 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage6a-shadow-spec":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        cmd = build_stage6a_shadow_spec_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 6A SHADOW TRANSLATOR SPECIFICATION",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 6A is a read-only shadow translator specification; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 6A converts Stage 5 readback decisions into lane contracts, guardrails, simulation requirements, and acceptance checks.",
+            "- Stage 6A output is evidence for the future Stage 6B replay simulator only; it does not create deployable candidate lists or scoring weights.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

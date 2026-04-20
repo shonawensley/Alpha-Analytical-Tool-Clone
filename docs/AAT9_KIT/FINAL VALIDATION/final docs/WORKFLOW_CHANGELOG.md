@@ -8,6 +8,24 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-20
 
+### Analysis Arena: Stage 6A shadow translator specification
+
+- Added a read-only Stage 6A shadow translator specification layer for Stage 5 readback outputs:
+  - `scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 6A turns Stage 5 readback decisions into a formal shadow translator contract before any Stage 6B replay simulator or scoring rewrite is considered.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_LANE_CONTRACT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_GUARDRAIL_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SIMULATION_REQUIREMENTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_ACCEPTANCE_CHECKLIST.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_SPEC_QUEUE.csv`
+- Stage 6A remains a specification gate only. It does not create deployable candidate lists, scoring weights, translator logic, or budget behavior.
+
 ### Analysis Arena: Stage 5 readback decision memo
 
 - Added a read-only Stage 5 readback layer for Stage 5 evaluator outputs:

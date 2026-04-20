@@ -61,7 +61,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -249,7 +249,7 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
-### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, And Stage 5 Readback
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, And Stage 6A Shadow Specification
 - protocol:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
 - Stage 1 / interpretation scripts:
@@ -271,6 +271,8 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_evaluator.py`
 - Stage 5 readback script:
   - `scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py`
+- Stage 6A script:
+  - `scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py`
 - Stage 3 cycle-level outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
@@ -328,11 +330,21 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO_RECEIPT.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_MODE_DECISIONS.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_NEXT_ACTION_QUEUE.csv`
+- Stage 6A cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_LANE_CONTRACT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_GUARDRAIL_MATRIX.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SIMULATION_REQUIREMENTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_ACCEPTANCE_CHECKLIST.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_SPEC_QUEUE.csv`
 - feeds:
   - next fresh-window review posture
   - replay queue design
   - future Brain1 / Brain2 / translator redesign
   - future translator/scoring rewrite specification after Stage 5 review
+  - future Stage 6B read-only shadow replay simulator
 - guardrail:
   - Stage 3 is replay/interpretation permission only; it does not change live scoring, candidate formation, or budget logic.
   - Stage 4 is a controlled fixture replay/audit layer only; it tests Stage 3 decisions by mechanism family, source A / source B / overlap lift, shared lineage, yield, concentration, and negative controls before any future rewrite.
@@ -340,11 +352,13 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - Stage 4C is the shadow translator design layer that separates candidate-expression, lineage de-duplication, support context, decay watch, restraint/retest, and low-denominator lanes. It still grants no live scoring or candidate-generation permission.
   - Stage 5 is the fixture-backed evaluator that checks Stage 4C lanes against completed state-day artifacts, sample completeness, support context, restraint pressure, and source A / source B / overlap ablations. It still grants no live scoring or candidate-generation permission.
   - Stage 5 readback converts evaluator outputs into shadow-spec, support, restraint, watchlist, and documentation gates. It still grants no live scoring or candidate-generation permission.
+  - Stage 6A converts Stage 5 readback gates into a formal shadow translator lane contract, guardrail matrix, simulation requirements, acceptance checklist, and spec queue. It still grants no live scoring or candidate-generation permission.
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later translator/scoring rewrite specification only after Stage 5 results and the Stage 5 readback decision memo are reviewed
+- later Stage 6B read-only shadow replay simulator
+- later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, and Stage 6A/6B outputs are reviewed
 
 ## 7. Promotion Rules
 

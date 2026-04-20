@@ -216,6 +216,12 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 5 readback decision memo
 - Stage 5 readback mode decisions
 - Stage 5 readback next action queue
+- Stage 6A shadow translator specification
+- Stage 6A lane contract
+- Stage 6A guardrail matrix
+- Stage 6A simulation requirements
+- Stage 6A acceptance checklist
+- Stage 6A shadow spec queue
 
 Main questions:
 
@@ -241,6 +247,7 @@ Main questions:
 - does the restraint filter remove junk without killing too much useful signal?
 - which source A / source B / overlap comparisons actually show added value?
 - which Stage 5 modes are shadow-spec seeds, support-only context, companion-only decay/watch rows, restraint retests, or low-denominator watchlists?
+- which Stage 6A lanes are allowed into a future shadow simulator, and which lanes are blocked, companion-only, support-only, or retest-only?
 
 Do not conclude here:
 
@@ -252,6 +259,7 @@ Do not conclude here:
 - that Stage 5 fixture replay creates live scoring permission
 - that Stage 5 value-level casebook rows are deployable rules
 - that Stage 5 readback grants live translator/scoring permission
+- that Stage 6A lane contracts are live translator rules
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -341,7 +349,23 @@ Do not conclude here:
 - that a readback decision is a deployable rule
 - that a Macro Findings Log entry should be made before the readback finding is evidence-led and clearly tagged as provisional, repeated, confirmed, deferred, or contradicted
 
-### Step 12 — Policy / Budget Implications
+### Step 12 — Stage 6A Shadow Translator Specification
+
+Use Stage 6A to formalize the future shadow translator contract:
+
+- read the lane contract before reading any future simulator output
+- confirm the guardrail matrix blocks live scoring, support-only candidates, decay-to-box conversion, duplicate overlap credit, and blended lanes
+- read simulation requirements as Stage 6B test definitions, not proof that the translator works
+- read the acceptance checklist before proceeding to Stage 6B
+- use the shadow spec queue to decide what the next read-only simulator must build
+
+Do not conclude here:
+
+- that Stage 6A changes live scoring
+- that a Stage 6A lane is a deployable rule
+- that Stage 6A proves an edge without Stage 6B replay
+
+### Step 13 — Policy / Budget Implications
 
 Only now ask:
 
@@ -368,7 +392,8 @@ For every fresh window, answer these in order:
 9. What does Stage 4C separate into clean candidate-expression, lineage-dedup, support, decay/watch, restraint/retest, and low-denominator lanes?
 10. What does Stage 5 prove or weaken when those lanes are replayed against completed state-day fixtures?
 11. What does Stage 5 readback classify as shadow-spec seed, support-only, companion-only, retest/watchlist, or blocked?
-12. Only then: what policy/budget questions are worth future research?
+12. What does Stage 6A formalize as the allowed shadow translator contract and Stage 6B simulator requirements?
+13. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -386,6 +411,7 @@ For every fresh window, answer these in order:
 - Do not treat Stage 5 as a scoring rewrite. It is the fixture-backed evaluator before any future translator/scoring specification.
 - Do not use Stage 5 casebook examples as hand-picked rules.
 - Do not treat Stage 5 readback as scoring permission. It is the interpretation gate before any shadow-only translator/scoring specification.
+- Do not treat Stage 6A as scoring permission. It is the formal contract for a future read-only Stage 6B simulator.
 
 ## 6. Practical Close
 
