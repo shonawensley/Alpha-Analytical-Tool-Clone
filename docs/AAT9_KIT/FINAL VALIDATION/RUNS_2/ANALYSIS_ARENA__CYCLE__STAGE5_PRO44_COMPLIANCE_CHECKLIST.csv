@@ -1,0 +1,10 @@
+criterion,stage5_status,evidence,guardrail
+split_replay_by_mechanism_family,covered,mode/window/state/ablation rows carry mechanism_family; Stage 4 mechanism scorecard remains upstream baseline,do_not_blend_all_candidates_into_one_pool
+legacy_names_are_locators_not_rule_names,covered,Stage 5 reads Stage 4C future_primitive and preserves old source names only as source_a/source_b locators,future architecture references mechanism_family and future_primitive
+shared_lineage_deduplication,covered_for_replay_modes,lineage_guarded rows stay separate from clean rows and clean_plus_lineage_deduped is reported as a distinct prototype mode,lineage rows do not become independent confirmation credit
+source_a_source_b_overlap_ablation,covered_aggregate_stage4_backed,STAGE5_ABLATION_MATRIX summarizes Stage 4 source A / source B / overlap comparisons by mode/lane/mechanism,overlap cannot be claimed useful without source-side baseline
+yield_denominator_metrics,covered,"mode/window/state/support/restraint outputs include positive/100 ASD, wrong-lane-free/100 ASD, false-positive proxy rate, and pool-normalized yield",do_not_rank_by_raw_hit_counts
+state_concentration_read,covered,STAGE5_STATE_STRATIFICATION plus Stage 4 concentration upstream checks expose state dependence,do_not_promote_one_state_fragility
+negative_controls_as_restraint_assets,covered,STAGE5_RESTRAINT_EFFECT_AUDIT measures kept vs removed candidate rows under high-pressure restraint,"negative controls are penalty/veto surfaces, not promotion surfaces"
+vtrac_decay_not_boxed_permission,covered,decay_watch_companion is reported as a separate prototype mode and never mixed into boxed candidate-expression modes,territory persistence cannot become boxed spend permission
+sample_completeness_before_value_level_claims,new_stage5_control,"STAGE5_VALUE_COMPLETENESS_AUDIT marks value_level_complete, sample_truncated, and aggregate-only rows before interpreting value-level replay",do_not_overclaim_truncated_samples

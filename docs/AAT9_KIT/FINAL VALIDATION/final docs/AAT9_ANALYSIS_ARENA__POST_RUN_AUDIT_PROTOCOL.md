@@ -27,15 +27,17 @@ python3 scripts/tools/create_analysis_arena_stage3_decision_workbench.py --force
 python3 scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py --force
 python3 scripts/tools/create_analysis_arena_stage4b_replay_readback.py --force
 python3 scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py --force
+python3 scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_evaluator.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, and Stage 4C:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, and Stage 5:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -107,6 +109,18 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --ru
 - Stage 4C holdout prototype scorecard CSV.
 - Stage 4C translator prototype casebook Markdown/CSV.
 - Stage 4C cycle receipt Markdown.
+- Stage 5 shadow translator fixture evaluator Markdown/JSON.
+- Stage 5 value completeness audit CSV.
+- Stage 5 value-level replay ledger CSV.
+- Stage 5 prototype mode scorecard CSV.
+- Stage 5 source A / source B / overlap ablation matrix CSV.
+- Stage 5 window stratification CSV.
+- Stage 5 state stratification CSV.
+- Stage 5 support-gate ablation CSV.
+- Stage 5 restraint-effect audit CSV.
+- Stage 5 `PRO_44` compliance checklist CSV.
+- Stage 5 value-level casebook Markdown/CSV.
+- Stage 5 cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -131,7 +145,9 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --ru
 19. Review primitive clusters, casebook exemplars, leave-one-window-out outcomes, and the translator design queue before building any prototype translator.
 20. Run the Stage 4C shadow translator prototype after Stage 4B.
 21. Review the prototype rule registry, lane separation matrix, support-gate effects, restraint audit, holdout prototype scorecard, and casebook before any translator/scoring rewrite.
-22. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, and Stage 4C decisions as experiment gates, not live scoring changes.
+22. Run the Stage 5 shadow translator fixture evaluator after Stage 4C.
+23. Review value completeness first, then prototype mode scorecard, ablation matrix, support-gate ablation, restraint-effect audit, window/state stratification, `PRO_44` compliance, and value-level casebook.
+24. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, and Stage 5 decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -165,6 +181,10 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --ru
 - Stage 4C `clean_boxed_candidate` and `lineage_guarded_boxed_candidate` lanes are aggregate candidate-expression research surfaces, not live rules.
 - Stage 4C support gates, decay/watch rows, concentration rows, low-denominator watchlists, and negative-control surfaces remain separated and cannot become standalone spend permission.
 - Stage 4C old-system source names remain locators; the architecture-facing vocabulary is the primitive/lane/guardrail label set.
+- Stage 5 value-level replay is a fixture evaluator only. It tests completed state-days and does not create deployable candidate lists.
+- Stage 5 `value_level_complete` rows can support value-level claims; `sample_truncated` and aggregate-only rows must be treated as lower-precision evidence.
+- Stage 5 support-gate and restraint-effect outputs are ablations. They can suggest future translator design, but they do not change live scoring or budget behavior.
+- Stage 5 `PRO_44` compliance rows are acceptance checks for research discipline, not scoring approval.
 
 ## 6. Guardrails
 
@@ -185,3 +205,6 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --ru
 - Do not treat Stage 4B holdout confirmation as final proof. It is a stronger filter, not a deployment gate.
 - Do not treat Stage 4C as a scoring rewrite. It is a read-only shadow translator design package.
 - Do not blend Stage 4C lanes. Candidate-expression, lineage de-duplication, support context, decay watch, restraint/retest, and low-denominator watchlist rows must stay separate.
+- Do not treat Stage 5 as a scoring rewrite. It is the fixture-backed evaluator before any translator/scoring specification.
+- Do not use Stage 5 value-level casebook rows as hand-picked rules; use the scorecards and denominators first.
+- Do not claim value-level precision from Stage 5 rows marked `sample_truncated` or aggregate-only.

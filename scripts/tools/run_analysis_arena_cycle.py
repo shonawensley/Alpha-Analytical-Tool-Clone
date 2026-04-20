@@ -606,6 +606,31 @@ def build_stage4c_shadow_translator_command(
     return cmd
 
 
+def build_stage5_shadow_evaluator_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    casebook_limit: int,
+    max_value_rows: int,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_evaluator.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+        "--casebook-limit",
+        str(int(casebook_limit)),
+    ]
+    if max_value_rows > 0:
+        cmd += ["--max-value-rows", str(int(max_value_rows))]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -907,6 +932,18 @@ def _parse_args() -> argparse.Namespace:
     stage4c.add_argument("--no-receipt", action="store_true")
     stage4c.add_argument("--force", action="store_true")
     stage4c.add_argument("--dry-run", action="store_true")
+
+    stage5 = sub.add_parser(
+        "stage5-shadow-evaluator",
+        help="Generate the Stage 5 read-only shadow translator fixture evaluator.",
+    )
+    stage5.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage5.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage5.add_argument("--casebook-limit", type=int, default=120)
+    stage5.add_argument("--max-value-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all value rows.")
+    stage5.add_argument("--no-receipt", action="store_true")
+    stage5.add_argument("--force", action="store_true")
+    stage5.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1917,6 +1954,53 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage5-shadow-evaluator":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        casebook_limit = int(args.casebook_limit or 120)
+        max_value_rows = int(args.max_value_rows or 0)
+        cmd = build_stage5_shadow_evaluator_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            casebook_limit=casebook_limit,
+            max_value_rows=max_value_rows,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 5 SHADOW TRANSLATOR FIXTURE EVALUATOR",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- casebook_limit: `{casebook_limit}`",
+            f"- max_value_rows: `{max_value_rows if max_value_rows > 0 else 'all'}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 5 is a read-only fixture-backed shadow translator evaluator; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 5 evaluates Stage 4C lanes by state-day fixture behavior, sample completeness, support context, restraint pressure, and source A / source B / overlap ablations.",
+            "- Stage 5 output is evidence for future design review only; it does not create deployable candidate lists or scoring weights.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
