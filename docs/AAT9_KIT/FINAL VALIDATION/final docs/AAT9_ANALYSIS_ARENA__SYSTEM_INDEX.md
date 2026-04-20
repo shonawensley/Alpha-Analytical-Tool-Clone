@@ -19,6 +19,14 @@ An important addition is only durable when it leaves these traces:
 
 Git checkpoints are the implementation trail that proves the above really landed.
 
+### Documentation Update Rules
+
+- `WORKFLOW_CHANGELOG.md` records what was built or changed: new scripts, commands, workflow stages, outputs, and cadence behavior.
+- `AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md` records what is now part of the active Analysis Arena package, what it outputs, and what it feeds.
+- `AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md` records evidence-led lessons after review, especially repeated findings, confirmed behavior, contradicted assumptions, and explicitly provisional conclusions.
+- RUNS/RUNS_2 reports and receipts record exact run outputs and should be treated as the run ledger.
+- Git commits record exact implementation checkpoints and should not be the only human-readable memory layer.
+
 ## 2. Scope
 
 Active Analysis Arena branch means:
@@ -53,7 +61,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -241,7 +249,7 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
-### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, And Stage 5 Fixture Evaluator
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, And Stage 5 Readback
 - protocol:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
 - Stage 1 / interpretation scripts:
@@ -261,6 +269,8 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py`
 - Stage 5 script:
   - `scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_evaluator.py`
+- Stage 5 readback script:
+  - `scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py`
 - Stage 3 cycle-level outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
@@ -312,6 +322,12 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_PRO44_COMPLIANCE_CHECKLIST.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_CASEBOOK.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_CASEBOOK.csv`
+- Stage 5 readback outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_MODE_DECISIONS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_NEXT_ACTION_QUEUE.csv`
 - feeds:
   - next fresh-window review posture
   - replay queue design
@@ -323,11 +339,12 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - Stage 4B is the readback layer that collapses Stage 4 rows into primitive clusters, casebook exemplars, leave-one-window-out outcomes, and a prototype-design queue. It still grants no live scoring permission.
   - Stage 4C is the shadow translator design layer that separates candidate-expression, lineage de-duplication, support context, decay watch, restraint/retest, and low-denominator lanes. It still grants no live scoring or candidate-generation permission.
   - Stage 5 is the fixture-backed evaluator that checks Stage 4C lanes against completed state-day artifacts, sample completeness, support context, restraint pressure, and source A / source B / overlap ablations. It still grants no live scoring or candidate-generation permission.
+  - Stage 5 readback converts evaluator outputs into shadow-spec, support, restraint, watchlist, and documentation gates. It still grants no live scoring or candidate-generation permission.
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later translator/scoring rewrite specification only after Stage 5 results are reviewed
+- later translator/scoring rewrite specification only after Stage 5 results and the Stage 5 readback decision memo are reviewed
 
 ## 7. Promotion Rules
 

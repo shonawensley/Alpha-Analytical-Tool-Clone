@@ -6,6 +6,29 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-04-20
+
+### Analysis Arena: Stage 5 readback decision memo
+
+- Added a read-only Stage 5 readback layer for Stage 5 evaluator outputs:
+  - `scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 5 readback converts evaluator outputs into explicit shadow-spec, support, restraint, watchlist, and documentation gates before any translator/scoring rewrite is considered.
+- New cycle-level outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_MODE_DECISIONS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_NEXT_ACTION_QUEUE.csv`
+- Formalized the Analysis Arena documentation memory rules in the system index:
+  - changelog = what was built or changed
+  - system index = what is part of the active package
+  - macro findings log = evidence-led lessons after review
+  - RUNS/RUNS_2 reports and receipts = exact run ledger
+  - Git commits = implementation checkpoints
+- Stage 5 readback remains an interpretation gate only. It does not create deployable candidate lists, scoring weights, translator logic, or budget behavior.
+
 ## 2026-04-18
 
 ### Analysis Arena: Stage 4 fixture replay harness

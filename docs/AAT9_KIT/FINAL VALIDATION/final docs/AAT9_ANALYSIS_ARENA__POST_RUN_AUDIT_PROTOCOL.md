@@ -28,9 +28,10 @@ python3 scripts/tools/create_analysis_arena_stage4_fixture_replay_harness.py --f
 python3 scripts/tools/create_analysis_arena_stage4b_replay_readback.py --force
 python3 scripts/tools/create_analysis_arena_stage4c_shadow_translator_prototype.py --force
 python3 scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_evaluator.py --force
+python3 scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, and Stage 5:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, and Stage 5 readback:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
@@ -38,6 +39,7 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-
 python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -121,6 +123,10 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs
 - Stage 5 `PRO_44` compliance checklist CSV.
 - Stage 5 value-level casebook Markdown/CSV.
 - Stage 5 cycle receipt Markdown.
+- Stage 5 readback decision memo Markdown/JSON.
+- Stage 5 readback mode decisions CSV.
+- Stage 5 readback next action queue CSV.
+- Stage 5 readback cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -147,7 +153,9 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs
 21. Review the prototype rule registry, lane separation matrix, support-gate effects, restraint audit, holdout prototype scorecard, and casebook before any translator/scoring rewrite.
 22. Run the Stage 5 shadow translator fixture evaluator after Stage 4C.
 23. Review value completeness first, then prototype mode scorecard, ablation matrix, support-gate ablation, restraint-effect audit, window/state stratification, `PRO_44` compliance, and value-level casebook.
-24. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, and Stage 5 decisions as experiment gates, not live scoring changes.
+24. Run the Stage 5 readback decision memo after Stage 5.
+25. Review readback mode decisions and next-action queue before proposing any translator/scoring specification.
+26. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, and Stage 5 readback decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -185,6 +193,8 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs
 - Stage 5 `value_level_complete` rows can support value-level claims; `sample_truncated` and aggregate-only rows must be treated as lower-precision evidence.
 - Stage 5 support-gate and restraint-effect outputs are ablations. They can suggest future translator design, but they do not change live scoring or budget behavior.
 - Stage 5 `PRO_44` compliance rows are acceptance checks for research discipline, not scoring approval.
+- Stage 5 readback decisions are design gates. `shadow_spec_only` means shadow specification permission, not live scoring permission.
+- Stage 5 readback is the correct place to decide whether a finding is ready for the Macro Findings Log as provisional/repeated evidence or should remain a run-local engineering observation.
 
 ## 6. Guardrails
 
@@ -208,3 +218,4 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs
 - Do not treat Stage 5 as a scoring rewrite. It is the fixture-backed evaluator before any translator/scoring specification.
 - Do not use Stage 5 value-level casebook rows as hand-picked rules; use the scorecards and denominators first.
 - Do not claim value-level precision from Stage 5 rows marked `sample_truncated` or aggregate-only.
+- Do not treat Stage 5 readback as scoring permission. It is the final interpretation gate before any shadow-only translator/scoring specification.

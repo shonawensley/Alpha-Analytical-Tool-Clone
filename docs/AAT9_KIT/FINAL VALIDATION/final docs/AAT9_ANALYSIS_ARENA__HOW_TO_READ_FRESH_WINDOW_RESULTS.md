@@ -213,6 +213,9 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 5 window/state stratification
 - Stage 5 `PRO_44` compliance checklist
 - Stage 5 value-level casebook
+- Stage 5 readback decision memo
+- Stage 5 readback mode decisions
+- Stage 5 readback next action queue
 
 Main questions:
 
@@ -237,6 +240,7 @@ Main questions:
 - does support context improve candidate-expression rows or only add broad background correlation?
 - does the restraint filter remove junk without killing too much useful signal?
 - which source A / source B / overlap comparisons actually show added value?
+- which Stage 5 modes are shadow-spec seeds, support-only context, companion-only decay/watch rows, restraint retests, or low-denominator watchlists?
 
 Do not conclude here:
 
@@ -247,6 +251,7 @@ Do not conclude here:
 - that Stage 4C clean candidate-expression lanes are deployable candidate lists
 - that Stage 5 fixture replay creates live scoring permission
 - that Stage 5 value-level casebook rows are deployable rules
+- that Stage 5 readback grants live translator/scoring permission
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -321,7 +326,22 @@ Do not conclude here:
 - that casebook examples override denominator scorecards
 - that incomplete samples can support exact value-level replay claims
 
-### Step 11 — Policy / Budget Implications
+### Step 11 — Stage 5 Readback Decision Memo
+
+Use Stage 5 readback to turn evaluator outputs into explicit next-step gates:
+
+- read mode decisions before proposing any translator/scoring specification
+- treat `shadow_spec_only` as shadow-design permission, not live scoring permission
+- keep support context, decay/watch context, restraint retests, and low-denominator watchlists in separate lanes
+- use the next-action queue to decide whether the next task is narrowing, restraint calibration, macro-findings review, or shadow-spec drafting
+
+Do not conclude here:
+
+- that Stage 5 readback changes live scoring
+- that a readback decision is a deployable rule
+- that a Macro Findings Log entry should be made before the readback finding is evidence-led and clearly tagged as provisional, repeated, confirmed, deferred, or contradicted
+
+### Step 12 — Policy / Budget Implications
 
 Only now ask:
 
@@ -347,7 +367,8 @@ For every fresh window, answer these in order:
 8. What does Stage 4B collapse into primitive clusters and holdout-confirmed prototype queues?
 9. What does Stage 4C separate into clean candidate-expression, lineage-dedup, support, decay/watch, restraint/retest, and low-denominator lanes?
 10. What does Stage 5 prove or weaken when those lanes are replayed against completed state-day fixtures?
-11. Only then: what policy/budget questions are worth future research?
+11. What does Stage 5 readback classify as shadow-spec seed, support-only, companion-only, retest/watchlist, or blocked?
+12. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -364,6 +385,7 @@ For every fresh window, answer these in order:
 - Do not blend Stage 4C lanes into a single pool.
 - Do not treat Stage 5 as a scoring rewrite. It is the fixture-backed evaluator before any future translator/scoring specification.
 - Do not use Stage 5 casebook examples as hand-picked rules.
+- Do not treat Stage 5 readback as scoring permission. It is the interpretation gate before any shadow-only translator/scoring specification.
 
 ## 6. Practical Close
 

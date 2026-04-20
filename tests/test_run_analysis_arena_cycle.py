@@ -12,6 +12,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_fresh_window_readiness_command,
     build_stage4b_replay_readback_command,
     build_stage4c_shadow_translator_command,
+    build_stage5_readback_command,
     build_stage5_shadow_evaluator_command,
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
@@ -340,6 +341,21 @@ def test_build_stage5_shadow_evaluator_command_uses_casebook_limit_and_row_limit
     assert "84" in cmd
     assert "--max-value-rows" in cmd
     assert "250" in cmd
+    assert "--force" in cmd
+
+
+def test_build_stage5_readback_command_uses_output_dir(tmp_path: Path) -> None:
+    cmd = build_stage5_readback_command(
+        runs2_root=tmp_path / "RUNS_2",
+        output_dir=tmp_path / "RUNS_2" / "stage5_readback",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_stage5_readback_decision_memo.py")
+    assert "--runs2-dir" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--output-dir" in cmd
+    assert str(tmp_path / "RUNS_2" / "stage5_readback") in cmd
     assert "--force" in cmd
 
 
