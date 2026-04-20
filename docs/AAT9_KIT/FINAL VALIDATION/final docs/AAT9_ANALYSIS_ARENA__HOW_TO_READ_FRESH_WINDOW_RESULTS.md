@@ -230,6 +230,12 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 6B restraint calibration
 - Stage 6B concentration audit
 - Stage 6B guardrail compliance
+- Stage 6B readback decision memo
+- Stage 6B readback scenario decisions
+- Stage 6B readback requirement results
+- Stage 6B readback guardrail verdict
+- Stage 6B readback next action queue
+- Stage 6B readback macro-findings candidates
 
 Main questions:
 
@@ -260,6 +266,8 @@ Main questions:
 - does support context help paired candidate-expression rows, or only broad support-only rows?
 - does restraint filtering improve false-positive proxy without cutting too much positive conversion?
 - does the Stage 6B concentration audit keep March-led fragility visible?
+- which Stage 6B readback decisions are future-window confirmation, modifier research, companion-only, retest-only, or blocked?
+- which macro-findings candidates are provisional and which should stay run-local until repeated?
 
 Do not conclude here:
 
@@ -273,6 +281,7 @@ Do not conclude here:
 - that Stage 5 readback grants live translator/scoring permission
 - that Stage 6A lane contracts are live translator rules
 - that Stage 6B scenario scorecards are deployable scoring weights
+- that Stage 6B readback decisions are deployable scoring weights
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -396,7 +405,24 @@ Do not conclude here:
 - that support-only, decay/watch, low-denominator, or restraint rows can bypass their lane guardrails
 - that one-window concentration can justify a scoring rewrite before readback
 
-### Step 14 — Policy / Budget Implications
+### Step 14 — Stage 6B Readback Decision Memo
+
+Use Stage 6B readback to convert replay evidence into gates:
+
+- read scenario decisions before treating any scenario as favorable
+- read requirement results before claiming Stage 6A requirements were met
+- read guardrail verdict before proposing future/fresh confirmation work
+- read next-action queue before discussing rewrite, policy, or budget implications
+- read macro-findings candidates as provisional evidence rows, not confirmed lessons
+
+Do not conclude here:
+
+- that Stage 6B readback changes live scoring
+- that `future_window_confirmation_required` means deploy
+- that a macro-findings candidate should be logged as confirmed before future/fresh repeat or explicit provisional review
+- that support, decay/watch, low-denominator, broad-lineage, or restraint rows can bypass their readback gate
+
+### Step 15 — Policy / Budget Implications
 
 Only now ask:
 
@@ -425,7 +451,8 @@ For every fresh window, answer these in order:
 11. What does Stage 5 readback classify as shadow-spec seed, support-only, companion-only, retest/watchlist, or blocked?
 12. What does Stage 6A formalize as the allowed shadow translator contract and Stage 6B simulator requirements?
 13. What does Stage 6B replay show across candidate scenarios, support modifiers, restraint calibration, concentration, and guardrails?
-14. Only then: what policy/budget questions are worth future research?
+14. What does Stage 6B readback classify as future-window confirmation, modifier research, companion-only, retest-only, blocked, or provisional macro candidate?
+15. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -445,6 +472,7 @@ For every fresh window, answer these in order:
 - Do not treat Stage 5 readback as scoring permission. It is the interpretation gate before any shadow-only translator/scoring specification.
 - Do not treat Stage 6A as scoring permission. It is the formal contract for a future read-only Stage 6B simulator.
 - Do not treat Stage 6B as scoring permission. It is read-only scenario replay before readback and any later translator/scoring specification.
+- Do not treat Stage 6B readback as scoring permission. It is the decision gate before future/fresh repeat and any later rewrite specification.
 
 ## 6. Practical Close
 

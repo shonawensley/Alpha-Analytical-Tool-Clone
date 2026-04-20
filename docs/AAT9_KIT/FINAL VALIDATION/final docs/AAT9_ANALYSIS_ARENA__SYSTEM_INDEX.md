@@ -61,7 +61,7 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator
+9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 
@@ -249,7 +249,7 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
 
-### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, And Stage 6B Shadow Replay
+### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, And Stage 6B Readback
 - protocol:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__POST_RUN_AUDIT_PROTOCOL.md`
 - Stage 1 / interpretation scripts:
@@ -275,6 +275,8 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py`
 - Stage 6B script:
   - `scripts/tools/create_analysis_arena_stage6b_shadow_replay_simulator.py`
+- Stage 6B readback script:
+  - `scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py`
 - Stage 3 cycle-level outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE3_PROMOTION_REGISTRY.csv`
@@ -351,12 +353,21 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_RESTRAINT_CALIBRATION.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_CONCENTRATION_AUDIT.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_GUARDRAIL_COMPLIANCE.csv`
+- Stage 6B readback outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO_RECEIPT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_SCENARIO_DECISIONS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_REQUIREMENT_RESULTS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_GUARDRAIL_VERDICT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_NEXT_ACTION_QUEUE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_MACRO_FINDINGS_CANDIDATES.csv`
 - feeds:
   - next fresh-window review posture
   - replay queue design
   - future Brain1 / Brain2 / translator redesign
-  - future Stage 6B readback decision memo
-  - future translator/scoring rewrite specification after Stage 5 review, Stage 6A specification, and Stage 6B replay readback
+  - future/fresh-window confirmation design
+  - future translator/scoring rewrite specification after Stage 5 review, Stage 6A specification, Stage 6B replay, and Stage 6B readback
 - guardrail:
   - Stage 3 is replay/interpretation permission only; it does not change live scoring, candidate formation, or budget logic.
   - Stage 4 is a controlled fixture replay/audit layer only; it tests Stage 3 decisions by mechanism family, source A / source B / overlap lift, shared lineage, yield, concentration, and negative controls before any future rewrite.
@@ -366,12 +377,13 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - Stage 5 readback converts evaluator outputs into shadow-spec, support, restraint, watchlist, and documentation gates. It still grants no live scoring or candidate-generation permission.
   - Stage 6A converts Stage 5 readback gates into a formal shadow translator lane contract, guardrail matrix, simulation requirements, acceptance checklist, and spec queue. It still grants no live scoring or candidate-generation permission.
   - Stage 6B replays the Stage 6A lane contract as separated read-only scenarios with support/restraint ablations, concentration audit, and guardrail compliance. It still grants no live scoring or candidate-generation permission.
+  - Stage 6B readback converts simulator outputs into scenario decisions, requirement results, guardrail verdicts, next actions, and macro-findings candidates. It still grants no live scoring or candidate-generation permission.
 
 ### Planned Next Research Layers
 - new canonical fresh-window intake
 - later cross-window decay / carryover rollup once fresh windows accumulate
-- later Stage 6B readback decision memo
-- later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, Stage 6A specification, Stage 6B simulator, and Stage 6B readback are reviewed
+- later future/fresh-window confirmation replay/readback
+- later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, Stage 6A specification, Stage 6B simulator, Stage 6B readback, and future/fresh repeat evidence are reviewed
 
 ## 7. Promotion Rules
 

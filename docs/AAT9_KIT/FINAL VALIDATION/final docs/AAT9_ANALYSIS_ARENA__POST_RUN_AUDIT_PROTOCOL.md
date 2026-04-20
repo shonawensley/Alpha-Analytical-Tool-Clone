@@ -31,9 +31,10 @@ python3 scripts/tools/create_analysis_arena_stage5_shadow_translator_fixture_eva
 python3 scripts/tools/create_analysis_arena_stage5_readback_decision_memo.py --force
 python3 scripts/tools/create_analysis_arena_stage6a_shadow_translator_specification.py --force
 python3 scripts/tools/create_analysis_arena_stage6b_shadow_replay_simulator.py --force
+python3 scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, and Stage 6B:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, and Stage 6B readback:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
@@ -44,6 +45,7 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs
 python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -146,6 +148,13 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-
 - Stage 6B concentration audit CSV.
 - Stage 6B guardrail compliance CSV.
 - Stage 6B cycle receipt Markdown.
+- Stage 6B readback decision memo Markdown/JSON.
+- Stage 6B readback scenario decisions CSV.
+- Stage 6B readback requirement results CSV.
+- Stage 6B readback guardrail verdict CSV.
+- Stage 6B readback next action queue CSV.
+- Stage 6B readback macro-findings candidates CSV.
+- Stage 6B readback cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -178,7 +187,9 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-
 27. Review lane contract, guardrail matrix, simulation requirements, acceptance checklist, and spec queue before running Stage 6B.
 28. Run the Stage 6B shadow replay simulator after Stage 6A.
 29. Review replay scenario scorecard, lane increment matrix, support modifier ablation, restraint calibration, concentration audit, and guardrail compliance before building a Stage 6B readback memo.
-30. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, and Stage 6B decisions as experiment gates, not live scoring changes.
+30. Run the Stage 6B readback decision memo after Stage 6B.
+31. Review scenario decisions, requirement results, guardrail verdict, next-action queue, and macro-findings candidates before proposing future/fresh confirmation or any rewrite specification.
+32. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, and Stage 6B readback decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -225,6 +236,8 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-
 - Stage 6B support modifier ablations can justify future modifier design only when paired candidate rows improve; support-only rows stay excluded from candidate pools.
 - Stage 6B decay/watch companion rows remain carryforward context and must not be converted into boxed candidate-expression permission.
 - Stage 6B concentration audit warnings must carry forward; March-led concentration should block direct rewrite claims until readback confirms broader support.
+- Stage 6B readback decisions are gates, not scoring weights. `future_window_confirmation_required` means repeat before rewrite, not deploy.
+- Stage 6B macro-findings candidates are proposed evidence rows only; the Macro Findings Log should not receive confirmed entries until future/fresh repeat or explicit provisional review.
 
 ## 6. Guardrails
 
@@ -253,3 +266,4 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-
 - Do not skip Stage 6A acceptance checks before building or reading Stage 6B.
 - Do not treat Stage 6B as a scoring rewrite. It is a read-only simulator before readback and any later translator/scoring specification.
 - Do not use Stage 6B scenario scorecards as deployable candidate lists or scoring weights.
+- Do not treat Stage 6B readback as scoring permission. It is the confirmation gate before future/fresh repeat and any later rewrite specification.

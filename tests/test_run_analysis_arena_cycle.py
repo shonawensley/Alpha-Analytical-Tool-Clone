@@ -15,6 +15,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_stage5_readback_command,
     build_stage5_shadow_evaluator_command,
     build_stage6a_shadow_spec_command,
+    build_stage6b_readback_command,
     build_stage6b_shadow_replay_command,
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
@@ -388,6 +389,21 @@ def test_build_stage6b_shadow_replay_command_uses_output_dir(tmp_path: Path) -> 
     assert str(tmp_path / "RUNS_2") in cmd
     assert "--output-dir" in cmd
     assert str(tmp_path / "RUNS_2" / "stage6b") in cmd
+    assert "--force" in cmd
+
+
+def test_build_stage6b_readback_command_uses_output_dir(tmp_path: Path) -> None:
+    cmd = build_stage6b_readback_command(
+        runs2_root=tmp_path / "RUNS_2",
+        output_dir=tmp_path / "RUNS_2" / "stage6b_readback",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_stage6b_readback_decision_memo.py")
+    assert "--runs2-dir" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--output-dir" in cmd
+    assert str(tmp_path / "RUNS_2" / "stage6b_readback") in cmd
     assert "--force" in cmd
 
 

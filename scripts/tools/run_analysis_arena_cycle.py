@@ -688,6 +688,25 @@ def build_stage6b_shadow_replay_command(
     return cmd
 
 
+def build_stage6b_readback_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage6b_readback_decision_memo.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -1031,6 +1050,16 @@ def _parse_args() -> argparse.Namespace:
     stage6b.add_argument("--no-receipt", action="store_true")
     stage6b.add_argument("--force", action="store_true")
     stage6b.add_argument("--dry-run", action="store_true")
+
+    stage6b_readback = sub.add_parser(
+        "stage6b-readback",
+        help="Generate the Stage 6B read-only readback decision memo from shadow replay outputs.",
+    )
+    stage6b_readback.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage6b_readback.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage6b_readback.add_argument("--no-receipt", action="store_true")
+    stage6b_readback.add_argument("--force", action="store_true")
+    stage6b_readback.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1262,6 +1291,47 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE6B_SHADOW_REPLAY_SIMULATOR_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage6b-readback":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        cmd = build_stage6b_readback_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 6B READBACK DECISION MEMO",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 6B readback is a read-only interpretation layer; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 6B readback converts simulator evidence into scenario decisions, requirement results, guardrail verdicts, next actions, and macro-findings candidates.",
+            "- Stage 6B readback output is evidence for future/fresh-window confirmation only; it does not create deployable candidate lists or scoring weights.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
