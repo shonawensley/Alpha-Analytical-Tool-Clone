@@ -552,6 +552,37 @@ def build_window_replay_readiness_command(
     return cmd
 
 
+def build_window_replay_compare_command(
+    *,
+    baseline_window_root: Path,
+    candidate_window_root: Path | None,
+    baseline_cycle_root: Path,
+    candidate_cycle_root: Path | None,
+    evidence_tier: str,
+    run_label: str,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_window_replay_comparison_report.py",
+        "--baseline-window-root",
+        str(baseline_window_root),
+        "--baseline-cycle-root",
+        str(baseline_cycle_root),
+        "--evidence-tier",
+        evidence_tier,
+        "--run-label",
+        run_label,
+    ]
+    if candidate_window_root is not None:
+        cmd.extend(["--candidate-window-root", str(candidate_window_root)])
+    if candidate_cycle_root is not None:
+        cmd.extend(["--candidate-cycle-root", str(candidate_cycle_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_stage3_decision_workbench_command(
     *,
     runs2_root: Path,
@@ -1142,6 +1173,27 @@ def _parse_args() -> argparse.Namespace:
     replay_readiness.add_argument("--no-receipt", action="store_true")
     replay_readiness.add_argument("--force", action="store_true")
     replay_readiness.add_argument("--dry-run", action="store_true")
+
+    replay_compare = sub.add_parser(
+        "window-replay-compare",
+        help="Generate the read-only baseline-vs-rerun comparison report for Analysis Arena replay packages.",
+    )
+    replay_compare.add_argument(
+        "--baseline-window-root",
+        default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23"),
+    )
+    replay_compare.add_argument("--candidate-window-root", default="")
+    replay_compare.add_argument("--baseline-cycle-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    replay_compare.add_argument("--candidate-cycle-root", default="")
+    replay_compare.add_argument(
+        "--evidence-tier",
+        default="same_window_replay",
+        choices=["same_window_replay", "archived_window_replication", "true_fresh_confirmation"],
+    )
+    replay_compare.add_argument("--run-label", default="march_2026_15day_replay_v2_pending")
+    replay_compare.add_argument("--no-receipt", action="store_true")
+    replay_compare.add_argument("--force", action="store_true")
+    replay_compare.add_argument("--dry-run", action="store_true")
 
     stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
     stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
@@ -2599,6 +2651,61 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_READINESS.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-replay-compare":
+        baseline_window_root = _window_root_from_arg(str(args.baseline_window_root))
+        candidate_window_raw = str(args.candidate_window_root or "").strip()
+        candidate_window_root = _window_root_from_arg(candidate_window_raw) if candidate_window_raw else None
+        baseline_cycle_root = Path(str(args.baseline_cycle_root)).resolve()
+        candidate_cycle_raw = str(args.candidate_cycle_root or "").strip()
+        candidate_cycle_root = Path(candidate_cycle_raw).resolve() if candidate_cycle_raw else None
+        evidence_tier = str(args.evidence_tier or "same_window_replay").strip()
+        run_label = str(args.run_label or "window_replay_comparison").strip() or "window_replay_comparison"
+        cmd = build_window_replay_compare_command(
+            baseline_window_root=baseline_window_root,
+            candidate_window_root=candidate_window_root,
+            baseline_cycle_root=baseline_cycle_root,
+            candidate_cycle_root=candidate_cycle_root,
+            evidence_tier=evidence_tier,
+            run_label=run_label,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — WINDOW REPLAY COMPARE",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- run_label: `{run_label}`",
+            f"- evidence_tier: `{evidence_tier}`",
+            f"- baseline_window_root: `{_safe_rel(baseline_window_root)}`",
+            f"- candidate_window_root: `{_safe_rel(candidate_window_root) if candidate_window_root else 'not_provided'}`",
+            f"- baseline_cycle_root: `{_safe_rel(baseline_cycle_root)}`",
+            f"- candidate_cycle_root: `{_safe_rel(candidate_cycle_root) if candidate_cycle_root else 'not_provided'}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Window replay comparison is read-only and does not run a window.",
+            "- Candidate roots are optional so this can preserve the baseline before a rerun exists.",
+            "- Same-window replay and archived-window replication cannot unlock Stage 8A or live scoring/budget changes.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = baseline_cycle_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_COMPARE.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

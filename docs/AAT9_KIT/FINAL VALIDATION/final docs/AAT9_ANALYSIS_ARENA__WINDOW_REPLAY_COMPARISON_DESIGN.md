@@ -17,6 +17,26 @@ Use this with:
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
 - `AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
+- `AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
+
+Generate the comparison report with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force
+```
+
+When candidate rerun roots exist, pass them explicitly with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare \
+  --baseline-window-root <baseline-window-root> \
+  --candidate-window-root <candidate-window-root> \
+  --baseline-cycle-root <baseline-cycle-root> \
+  --candidate-cycle-root <candidate-cycle-root> \
+  --evidence-tier same_window_replay \
+  --run-label <run-label> \
+  --force
+```
 
 ## Required Inputs
 
@@ -42,6 +62,13 @@ Before comparing two runs, record:
 The replay-readiness report stores key artifact paths and SHA-256 hashes for the
 existing window root. Those hashes are not a prediction metric. They are a
 preservation and comparison contract.
+
+The replay-comparison report stores the baseline-vs-candidate artifact
+comparison ledger:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.json`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.csv`
 
 For same-window replay, keep the old window package intact and write the rerun
 to a separate label or namespace before comparing.

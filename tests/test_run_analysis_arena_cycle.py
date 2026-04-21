@@ -26,6 +26,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
     build_window_replay_readiness_command,
+    build_window_replay_compare_command,
     build_window_decay_close_command,
     build_tuneup_diagnostics_command,
     build_window_close_commands,
@@ -309,6 +310,50 @@ def test_build_window_replay_readiness_command_uses_roots_and_windows(tmp_path: 
     assert "--truth-sharepacks-root" in cmd
     assert str(tmp_path / "sharepacks") in cmd
     assert "--force" in cmd
+
+
+def test_build_window_replay_compare_command_allows_pending_candidate(tmp_path: Path) -> None:
+    cmd = build_window_replay_compare_command(
+        baseline_window_root=tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23",
+        candidate_window_root=None,
+        baseline_cycle_root=tmp_path / "RUNS_2",
+        candidate_cycle_root=None,
+        evidence_tier="same_window_replay",
+        run_label="march_replay_pending",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_window_replay_comparison_report.py")
+    assert "--baseline-window-root" in cmd
+    assert str(tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23") in cmd
+    assert "--candidate-window-root" not in cmd
+    assert "--baseline-cycle-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--candidate-cycle-root" not in cmd
+    assert "--evidence-tier" in cmd
+    assert "same_window_replay" in cmd
+    assert "--run-label" in cmd
+    assert "march_replay_pending" in cmd
+    assert "--force" in cmd
+
+
+def test_build_window_replay_compare_command_uses_candidate_roots(tmp_path: Path) -> None:
+    cmd = build_window_replay_compare_command(
+        baseline_window_root=tmp_path / "RUNS_2" / "baseline",
+        candidate_window_root=tmp_path / "RUNS_2" / "candidate",
+        baseline_cycle_root=tmp_path / "RUNS_2",
+        candidate_cycle_root=tmp_path / "RUNS_2_CANDIDATE",
+        evidence_tier="archived_window_replication",
+        run_label="archive_replay_v1",
+        force=False,
+    )
+
+    assert "--candidate-window-root" in cmd
+    assert str(tmp_path / "RUNS_2" / "candidate") in cmd
+    assert "--candidate-cycle-root" in cmd
+    assert str(tmp_path / "RUNS_2_CANDIDATE") in cmd
+    assert "archived_window_replication" in cmd
+    assert "--force" not in cmd
 
 
 def test_build_stage4_fixture_replay_command_uses_output_dir_and_limit(tmp_path: Path) -> None:

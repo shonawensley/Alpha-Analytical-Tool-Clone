@@ -8,6 +8,22 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-21
 
+### Analysis Arena: window replay comparison harness and March replay runbook
+
+- Added a read-only baseline-vs-candidate replay comparison generator:
+  - `scripts/tools/create_analysis_arena_window_replay_comparison_report.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force`
+- New comparison outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_COMPARE.md`
+- Added the March same-window replay runbook:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
+- The comparison report currently runs in candidate-pending mode, preserving the March baseline target ledger until a rerun package exists.
+- Guardrail: this is comparison/reporting only. It does not run a window, change scoring, create candidate objects, alter translator or budget logic, or unlock Stage 8A.
+
 ### Analysis Arena: window replay readiness report and comparison design
 
 - Added a read-only replay-readiness generator:

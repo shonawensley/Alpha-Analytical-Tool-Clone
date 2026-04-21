@@ -75,6 +75,8 @@ Window replay / replication protocol:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
 - status: operating protocol for evidence-tier labeling
 - evidence tiers:
   - `same_window_replay`
@@ -283,25 +285,33 @@ Per-window lock inputs that should be set before any fresh or backtest window:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
 - script:
   - `scripts/tools/create_analysis_arena_window_replay_readiness_report.py`
+  - `scripts/tools/create_analysis_arena_window_replay_comparison_report.py`
 - command:
   - `python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+  - `python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force`
 - outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.json`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.csv`
   - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_READINESS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_COMPARE.md`
 - posture:
   - operating protocol
-  - read-only inventory / readiness layer
-  - runtime command is report-only
+  - read-only inventory / readiness / comparison layer
+  - runtime commands are report-only
   - no fresh-confirmation substitution
 - purpose:
   - lets existing windows support regression, replay, and historical replication work
   - keeps same-window replay, archived-window replication, and true fresh-window confirmation separated
   - records which existing windows appear best suited for future replay or replication
   - preserves baseline artifact hashes and comparison categories before any same-window rerun
+  - compares baseline-vs-candidate artifacts after a rerun without granting Stage 8 permission
 
 ### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, Stage 6B Readback, Stage 6C Confirmation, Stage 6D Restraint Calibration, Stage 6E Support Narrowing, Stage 6F Atlas, Stage 7A Scaffold, And Stage 7B Harness
 - protocol:

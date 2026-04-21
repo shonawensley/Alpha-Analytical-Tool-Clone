@@ -25,6 +25,8 @@ Use this with:
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+- `AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
 
 The machine-generated readiness companion can be regenerated with:
 
@@ -33,6 +35,15 @@ python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs
 ```
 
 It emits Markdown, JSON, and CSV readiness artifacts plus a RUNS_2 cycle receipt.
+
+The companion comparison report can be regenerated with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force
+```
+
+Before a candidate rerun exists, that report records the baseline artifact
+ledger and expected comparison targets.
 
 ## Best Immediate Same-Window Replay Candidate
 

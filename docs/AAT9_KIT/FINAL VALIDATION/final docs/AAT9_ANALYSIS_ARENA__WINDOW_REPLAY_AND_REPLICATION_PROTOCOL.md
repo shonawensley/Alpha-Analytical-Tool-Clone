@@ -29,11 +29,19 @@ Current candidate-window inventory:
 - `AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+- `AAT9_ANALYSIS_ARENA__MARCH_REPLAY_RUNBOOK.md`
 
 Generate the machine-readable readiness matrix with:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Generate the baseline-vs-candidate comparison report with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force
 ```
 
 ## Evidence Tiers
@@ -172,6 +180,7 @@ For same-window replay:
 - compare against prior outputs explicitly
 - record what changed because of code/docs/cadence changes versus what is inherent in the data
 - use the replay-readiness report baseline manifest and artifact hashes as the preservation contract
+- use the replay-comparison report to classify changed artifacts before interpreting replay evidence
 
 Suggested comparison categories:
 
@@ -239,9 +248,10 @@ Stage 8 design, but they do not replace the true fresh comparison gate.
 When more run work is needed, use this order:
 
 1. Regenerate `window-replay-readiness` to confirm source coverage and baseline hashes.
-2. Same-window replay of the March 8-22 2026 window if the goal is regression or before/after comparison.
-3. Archived-window replication if the goal is wider historical stress testing.
-4. True fresh-window confirmation when new prepared gold days are available.
+2. Regenerate `window-replay-compare` to preserve the baseline comparison ledger.
+3. Same-window replay of the March 8-22 2026 window if the goal is regression or before/after comparison.
+4. Archived-window replication if the goal is wider historical stress testing.
+5. True fresh-window confirmation when new prepared gold days are available.
 
 This keeps development moving without confusing development evidence with
 confirmation evidence.
