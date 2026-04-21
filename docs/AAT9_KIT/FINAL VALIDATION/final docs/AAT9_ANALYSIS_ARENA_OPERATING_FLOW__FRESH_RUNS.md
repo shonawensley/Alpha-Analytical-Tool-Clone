@@ -178,6 +178,14 @@ That is intentional.
 
 The branch is designed to let real fresh-run evidence teach those later layers.
 
+When an already-known or archived window is rerun, label the run before
+interpretation using:
+
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+
+Same-window replay and archived-window replication are useful development and
+stress-test evidence, but they do not replace true fresh-window confirmation.
+
 ## Window-Close Commands
 
 Once a full window is complete, run:

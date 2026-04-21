@@ -42,7 +42,7 @@ Before running:
 2. Confirm repo root and git status
 3. Decide the profile and experiment tag
 4. Decide whether you want all states or a subset
-5. If this is a windowed run, lock the per-window inputs before starting
+5. If this is a windowed run, lock the evidence tier and per-window inputs before starting
 6. Run the arena cycle
 7. Review the emitted board bundle + translation sandbox before interpreting the control arm too literally
 
@@ -50,20 +50,31 @@ Before running:
 
 Before starting any fresh or backtest window, explicitly lock:
 
-1. `window dates`
+1. `evidence tier`
+   - `same_window_replay`
+   - `archived_window_replication`
+   - `true_fresh_confirmation`
+2. `run label`
+   - stable label for comparing baseline vs rerun outputs
+3. `window dates`
    - exact window start and window end
-2. `decay-upload-days-total`
+4. `decay-upload-days-total`
    - default `5`
    - this means `5` total Pick3StatsC4 upload days including same-day
-3. `tail coverage expectation`
+5. `tail coverage expectation`
    - either results exist through `window_end + 4 days`
    - or the decay companion is expected to contain `right_censored` rows
-4. `decay execution posture`
+6. `decay execution posture`
    - run the decay companion as part of closeout for backtest windows
    - or defer it until future results arrive for live-style windows
 
 This lock step matters because same-day grading and decay grading are both official,
 but they answer different questions and should not be blended.
+
+Use `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md` before
+rerunning any known or archived window. Same-window replay and archived-window
+replication can support development, but only `true_fresh_confirmation` can
+support fresh-confirmation gates.
 
 ## Recommended Fast Path
 
@@ -146,6 +157,7 @@ Companion references:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
@@ -257,7 +269,13 @@ Before starting a new fresh gold-day window, run the readiness preflight:
 python3 scripts/tools/run_analysis_arena_cycle.py fresh-window-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
 ```
 
-When the fresh window is complete, read it in this order:
+When the window is complete, first confirm the evidence tier:
+
+- `same_window_replay`
+- `archived_window_replication`
+- `true_fresh_confirmation`
+
+Then read it in this order:
 
 1. Arena Truth
 2. Brain 2 Prioritization

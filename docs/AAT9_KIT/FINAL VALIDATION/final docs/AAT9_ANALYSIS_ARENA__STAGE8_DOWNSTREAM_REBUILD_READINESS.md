@@ -44,6 +44,13 @@ Stage 7B does not mean:
 - budget rewrite permission
 - replacement of old Candidate Universe / Play Card infrastructure
 
+When known or archived windows are reused, evidence-tier labeling is governed by:
+
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+
+Same-window replay and archived-window replication may strengthen development
+confidence, but they do not replace true fresh confirmation.
+
 ## Required Sequence Before Stage 8 Implementation
 
 The clean sequence is:
@@ -227,5 +234,6 @@ Until the next fresh window is processed:
 
 - do not implement Stage 8A / 8B / 8C
 - keep this document as the downstream rebuild guardrail
+- use the window replay protocol to label known-window reruns correctly
 - use Stage 7B as the immediate fresh-window pre-flight map
 - use the eventual March-vs-fresh comparison as the real trigger for Stage 8A

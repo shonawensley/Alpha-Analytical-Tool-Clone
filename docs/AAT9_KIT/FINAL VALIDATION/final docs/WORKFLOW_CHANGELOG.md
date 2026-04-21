@@ -8,6 +8,21 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-21
 
+### Analysis Arena: window replay and replication protocol
+
+- Added a docs-only operating protocol:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+- The protocol separates available-window usage into three evidence tiers:
+  - `same_window_replay`
+  - `archived_window_replication`
+  - `true_fresh_confirmation`
+- Added a read-only available-window inventory:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
+- The current strongest same-window replay candidate is `WINDOW_2026-03-09_to_2026-03-23`; the strongest archived replication candidate is `WINDOW_2025-12-30_to_2026-01-04`.
+- Same-window replay can support regression, traceability, and before/after comparison, but it cannot unlock Stage 8A by itself.
+- Archived-window replication can stress-test March findings on older historical windows, but it cannot replace true fresh-window confirmation.
+- Updated the final-doc portal, system index, fresh-window reading guide, and Stage 8 readiness brief so reruns are labeled before interpretation.
+
 ### Analysis Arena: Stage 8 downstream rebuild readiness guardrail
 
 - Added a docs-only Stage 8 readiness brief:

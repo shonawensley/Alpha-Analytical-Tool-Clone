@@ -9,11 +9,21 @@ Purpose:
 Use this after:
 
 - `fresh-window-readiness`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md` when a known or archived window is being rerun
 - `ANALYSIS_ARENA__CYCLE__STAGE3_FRESH_WINDOW_DECISION_READINESS.md` when a Stage 3 package exists
 - `pre`
 - `post`
 - `window-close`
 - `window-decay-close` when tail results coverage exists
+
+Before reading any rerun or replication package, label the evidence tier:
+
+- `same_window_replay`
+- `archived_window_replication`
+- `true_fresh_confirmation`
+
+Do not read same-window replay or archived-window replication as true fresh
+confirmation.
 
 ## 1. Verdict Block
 
@@ -276,6 +286,7 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 7B casebook traceability
 - Stage 7B ready-for-fresh-window readback
 - Stage 8 downstream rebuild readiness guardrail
+- window replay / replication protocol
 
 Main questions:
 
@@ -319,6 +330,7 @@ Main questions:
 - which Stage 7A requirements must the next fresh window fill in, and which March seed benchmarks are only baselines?
 - which Stage 7B queue items are ready for fresh confirmation, watch-only, research-only, missing replay evidence, or still blocked?
 - which Stage 8 concepts must remain docs-only until fresh evidence repeats enough of the March structure?
+- is this package same-window replay, archived-window replication, or true fresh confirmation?
 
 Do not conclude here:
 
@@ -340,6 +352,8 @@ Do not conclude here:
 - that Stage 7A March seed benchmarks are fresh-window confirmation
 - that Stage 7B readiness statuses are live scoring permission
 - that Stage 8A / 8B / 8C may begin before March-vs-fresh Stage 7B comparison
+- that replaying a known window creates fresh confirmation
+- that archived replication can replace true fresh evidence
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -574,7 +588,23 @@ Do not conclude here:
 - that Stage 7B `ready_for_fresh_confirmation` can be converted directly into weights
 - that old Candidate Universe / Play Card behavior should be replaced before shadow comparison
 
-### Step 20 — Policy / Budget Implications
+### Step 20 — Replay / Replication Evidence Tier
+
+Use the window replay protocol before interpreting any rerun:
+
+- label same-window reruns as regression/replay evidence
+- label older historical windows as archived replication evidence
+- label only genuinely new post-gate windows as true fresh confirmation
+- preserve baseline artifacts before comparing a rerun against a prior version
+- keep Stage 8A blocked unless the run is true fresh confirmation and Stage 6B through Stage 7B have been regenerated and compared against March
+
+Do not conclude here:
+
+- that same-window improvement means the signal generalized
+- that archived-window replication is a substitute for fresh-window confirmation
+- that a known-window rerun can clear Stage 6C rewrite blockers by itself
+
+### Step 21 — Policy / Budget Implications
 
 Only now ask:
 
@@ -609,7 +639,8 @@ For every fresh window, answer these in order:
 17. What does Stage 7A require the next fresh window to prove?
 18. What does Stage 7B say is ready for fresh confirmation versus watch-only, research-only, missing, or blocked?
 19. What does the Stage 8 readiness brief keep blocked until March-vs-fresh Stage 7B comparison?
-20. Only then: what policy/budget questions are worth future research?
+20. Is this run same-window replay, archived-window replication, or true fresh confirmation?
+21. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -637,6 +668,7 @@ For every fresh window, answer these in order:
 - Do not treat Stage 7A as confirmation. It is the future-window scaffold that still needs future data.
 - Do not treat Stage 7B as deployment readiness. It is a replay/readiness harness for the next fresh-window confirmation pass.
 - Do not treat Stage 8 readiness as implementation permission. It is a docs-only downstream rebuild guardrail until fresh confirmation repeats enough evidence.
+- Do not treat same-window replay or archived-window replication as true fresh confirmation.
 
 ## 6. Practical Close
 
