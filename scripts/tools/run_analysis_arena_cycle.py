@@ -518,6 +518,40 @@ def build_fresh_window_readiness_command(
     return cmd
 
 
+def build_window_replay_readiness_command(
+    *,
+    runs2_root: Path,
+    window_roots: Sequence[Path],
+    history_root: Path,
+    results_root: Path,
+    bonus_results_root: Path,
+    predictive_sharepacks_root: Path,
+    truth_sharepacks_root: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_window_replay_readiness_report.py",
+        "--runs2-root",
+        str(runs2_root),
+        "--history-root",
+        str(history_root),
+        "--results-root",
+        str(results_root),
+        "--bonus-results-root",
+        str(bonus_results_root),
+        "--predictive-sharepacks-root",
+        str(predictive_sharepacks_root),
+        "--truth-sharepacks-root",
+        str(truth_sharepacks_root),
+    ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_stage3_decision_workbench_command(
     *,
     runs2_root: Path,
@@ -1093,6 +1127,21 @@ def _parse_args() -> argparse.Namespace:
     readiness.add_argument("--no-receipt", action="store_true")
     readiness.add_argument("--force", action="store_true")
     readiness.add_argument("--dry-run", action="store_true")
+
+    replay_readiness = sub.add_parser(
+        "window-replay-readiness",
+        help="Generate the read-only replay/replication readiness report for available Analysis Arena windows.",
+    )
+    replay_readiness.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    replay_readiness.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
+    replay_readiness.add_argument("--history-root", default=str(REPO_ROOT / "data" / "history"))
+    replay_readiness.add_argument("--results-root", default=str(REPO_ROOT / "data" / "results"))
+    replay_readiness.add_argument("--bonus-results-root", default=str(REPO_ROOT / "data" / "results_bonus"))
+    replay_readiness.add_argument("--predictive-sharepacks-root", default=str(REPO_ROOT / "sharepacks" / "_predictive"))
+    replay_readiness.add_argument("--truth-sharepacks-root", default=str(REPO_ROOT / "sharepacks"))
+    replay_readiness.add_argument("--no-receipt", action="store_true")
+    replay_readiness.add_argument("--force", action="store_true")
+    replay_readiness.add_argument("--dry-run", action="store_true")
 
     stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
     stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
@@ -2494,6 +2543,62 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__FRESH_WINDOW_READINESS.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-replay-readiness":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
+        history_root = Path(str(args.history_root)).resolve()
+        results_root = Path(str(args.results_root)).resolve()
+        bonus_results_root = Path(str(args.bonus_results_root)).resolve()
+        predictive_sharepacks_root = Path(str(args.predictive_sharepacks_root)).resolve()
+        truth_sharepacks_root = Path(str(args.truth_sharepacks_root)).resolve()
+        cmd = build_window_replay_readiness_command(
+            runs2_root=runs2_root,
+            window_roots=window_roots,
+            history_root=history_root,
+            results_root=results_root,
+            bonus_results_root=bonus_results_root,
+            predictive_sharepacks_root=predictive_sharepacks_root,
+            truth_sharepacks_root=truth_sharepacks_root,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — WINDOW REPLAY READINESS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
+            f"- history_root: `{_safe_rel(history_root)}`",
+            f"- results_root: `{_safe_rel(results_root)}`",
+            f"- bonus_results_root: `{_safe_rel(bonus_results_root)}`",
+            f"- predictive_sharepacks_root: `{_safe_rel(predictive_sharepacks_root)}`",
+            f"- truth_sharepacks_root: `{_safe_rel(truth_sharepacks_root)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Window replay readiness is a read-only inventory and baseline-manifest layer.",
+            "- It does not run a same-window replay, alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Same-window replay is restricted to bugfix/regression evidence; archived-window reuse is replication evidence only.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_READINESS.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

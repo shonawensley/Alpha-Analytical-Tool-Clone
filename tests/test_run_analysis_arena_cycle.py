@@ -25,6 +25,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_stage7b_fixture_replay_harness_command,
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
+    build_window_replay_readiness_command,
     build_window_decay_close_command,
     build_tuneup_diagnostics_command,
     build_window_close_commands,
@@ -275,6 +276,38 @@ def test_build_fresh_window_readiness_command_uses_explicit_windows(tmp_path: Pa
     assert "--runs2-root" in cmd
     assert str(tmp_path / "RUNS_2") in cmd
     assert cmd.count("--window-root") == 2
+    assert "--force" in cmd
+
+
+def test_build_window_replay_readiness_command_uses_roots_and_windows(tmp_path: Path) -> None:
+    cmd = build_window_replay_readiness_command(
+        runs2_root=tmp_path / "RUNS_2",
+        window_roots=[
+            tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23",
+            tmp_path / "RUNS_2" / "WINDOW_2026-01-15_to_2026-01-18",
+        ],
+        history_root=tmp_path / "data" / "history",
+        results_root=tmp_path / "data" / "results",
+        bonus_results_root=tmp_path / "data" / "results_bonus",
+        predictive_sharepacks_root=tmp_path / "sharepacks" / "_predictive",
+        truth_sharepacks_root=tmp_path / "sharepacks",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_window_replay_readiness_report.py")
+    assert "--runs2-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert cmd.count("--window-root") == 2
+    assert "--history-root" in cmd
+    assert str(tmp_path / "data" / "history") in cmd
+    assert "--results-root" in cmd
+    assert str(tmp_path / "data" / "results") in cmd
+    assert "--bonus-results-root" in cmd
+    assert str(tmp_path / "data" / "results_bonus") in cmd
+    assert "--predictive-sharepacks-root" in cmd
+    assert str(tmp_path / "sharepacks" / "_predictive") in cmd
+    assert "--truth-sharepacks-root" in cmd
+    assert str(tmp_path / "sharepacks") in cmd
     assert "--force" in cmd
 
 

@@ -23,6 +23,16 @@ No cadence was run to create this inventory. It only inspected file presence for
 Use this with:
 
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+
+The machine-generated readiness companion can be regenerated with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+It emits Markdown, JSON, and CSV readiness artifacts plus a RUNS_2 cycle receipt.
 
 ## Best Immediate Same-Window Replay Candidate
 

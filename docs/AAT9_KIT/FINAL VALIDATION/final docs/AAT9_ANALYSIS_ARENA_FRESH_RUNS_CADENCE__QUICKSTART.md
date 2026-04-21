@@ -76,6 +76,18 @@ rerunning any known or archived window. Same-window replay and archived-window
 replication can support development, but only `true_fresh_confirmation` can
 support fresh-confirmation gates.
 
+Before selecting a known-window rerun target, generate the replay-readiness
+matrix:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+Read:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+
 ## Recommended Fast Path
 
 From repo root:
@@ -158,6 +170,8 @@ Companion references:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/PORTAL.md`
 
@@ -261,6 +275,13 @@ And then the frontier negative-control study:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py frontier-negative-control --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+If the next target is a same-window replay or archived-window replication, run
+the replay-readiness inventory before choosing the run label:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
 ```
 
 Before starting a new fresh gold-day window, run the readiness preflight:

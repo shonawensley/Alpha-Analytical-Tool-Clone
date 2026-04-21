@@ -8,6 +8,22 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-21
 
+### Analysis Arena: window replay readiness report and comparison design
+
+- Added a read-only replay-readiness generator:
+  - `scripts/tools/create_analysis_arena_window_replay_readiness_report.py`
+- Added the cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- New readiness outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_READINESS.md`
+- Added a docs-only comparison design stub:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+- The readiness report now records source coverage, per-window readiness, Stage 6B-through-Stage 7B artifact status, baseline artifact paths/hashes, and the strongest same-window / archived replication candidates.
+- Guardrail: the command is report-only. It does not run a replay, change scoring, candidate generation, translator logic, budget logic, or legacy infrastructure.
+
 ### Analysis Arena: window replay and replication protocol
 
 - Added a docs-only operating protocol:

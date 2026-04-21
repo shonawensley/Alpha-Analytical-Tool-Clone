@@ -182,6 +182,8 @@ When an already-known or archived window is rerun, label the run before
 interpretation using:
 
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
 
 Same-window replay and archived-window replication are useful development and
 stress-test evidence, but they do not replace true fresh-window confirmation.
@@ -219,6 +221,12 @@ Then run the frontier negative-control study before promoting frontier features:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py frontier-negative-control --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
+
+For same-window replay or archived-window replication target selection, run:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
 ```
 
 And before starting a new fresh gold-day window, run the readiness preflight:

@@ -1,0 +1,924 @@
+{
+  "comparison_design_stub": {
+    "baseline_vs_rerun_categories": [
+      "unchanged",
+      "improved_traceability",
+      "newly_exposed",
+      "degraded",
+      "contradicted",
+      "renamed_or_reclassified_only",
+      "blocked_by_missing_data"
+    ],
+    "compare_before_running": [
+      "evidence_tier",
+      "run_label",
+      "baseline_manifest_status",
+      "key_artifact_hashes",
+      "allowed_conclusions",
+      "blocked_conclusions"
+    ],
+    "stage6b_to_stage7b_compare_after_rerun": [
+      "scenario decisions",
+      "requirement results",
+      "rewrite blockers",
+      "restraint bucket posture",
+      "support narrowing posture",
+      "lane decision atlas",
+      "fresh-window carry-forward queue",
+      "Stage 7B queue replay status"
+    ]
+  },
+  "metadata": {
+    "bonus_results_root": "data/results_bonus",
+    "history_root": "data/history",
+    "predictive_sharepacks_root": "sharepacks/_predictive",
+    "results_root": "data/results",
+    "runs2_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
+    "truth_sharepacks_root": "sharepacks",
+    "window_count": 6
+  },
+  "rows": [
+    {
+      "allowed_conclusions": "historical replication; window-character stress test; blocker recheck target",
+      "artifact_family_counts": {
+        "analysis_arena_files": 73,
+        "board_scoreboards": 6,
+        "brain2_tracker_ledgers": 6,
+        "cycle_receipts": 10,
+        "root_files": 50,
+        "total_files": 236,
+        "translation_sandbox_manifests": 6,
+        "validation_files": 113
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": "a4563cc45f08b1a9c9f375a3819cc70b82c8b7a3ba07970f50d869680c998770"
+        },
+        "deep_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": "e828f50a7ac7d81592fa2e6a9125f83cab61772e877b90783a0bbb495e3cc50f"
+        },
+        "deep_hit_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": "80d68acad99e97eb600d350a8c078054f08c8d8cf1f2b521f01cff0e7aeb76fc"
+        },
+        "frontier_harness_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": "f858b57bebddabbc6db0ebd6c146b263234eb937d9ef904d6cea7d2217129025"
+        },
+        "performance_gap_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": "2fb0c28b6ac685a303625eb4562e6474ae6c880f22d57307de54f8b9c9eda9dd"
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": "190970a8a928bd8af4f3d6d72bd2a5252a5eccfb1a0aa4b6059bbd173c7fd65d"
+        },
+        "translator_learning_ledger_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/WINDOW_2025-12-30_to_2026-01-04__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": "242bed27ffd0f516ff89182d816c13e786ec37ae4844262a69114888d818790a"
+        },
+        "window_close_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": "a602afb99c46dc18708e511e5d87909352b4830fe54d23bc2603377611af0389"
+        },
+        "window_decay_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": "085eba7615b1ebbfcb95d1b990679dd9a633527750c51e55c6fdb5951e097bb2"
+        }
+      },
+      "baseline_manifest_status": "baseline_complete",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [
+        "2025-12-30",
+        "2025-12-31",
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03",
+        "2026-01-04",
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08"
+      ],
+      "bonus_missing_count": 10,
+      "evidence_tier": "archived_window_replication",
+      "file_count": 236,
+      "has_bonus_tail": false,
+      "has_full_decay_tail": true,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2025-12-29",
+        "2025-12-30",
+        "2025-12-31",
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": true,
+        "deep_analysis_json": true,
+        "deep_hit_analysis_json": true,
+        "frontier_harness_json": true,
+        "performance_gap_json": true,
+        "pure_finalist_scorecard_json": true,
+        "translator_learning_ledger_json": true,
+        "window_close_receipt": true,
+        "window_decay_receipt": true
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready",
+      "recommended_next_use": "archived_replication_candidate",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2025-12-30",
+        "2025-12-31",
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03",
+        "2026-01-04"
+      ],
+      "tail_missing": [],
+      "tail_missing_count": 0,
+      "tail_results_needed": [
+        "2025-12-30",
+        "2025-12-31",
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03",
+        "2026-01-04",
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08"
+      ],
+      "truth_missing": [],
+      "truth_missing_count": 0,
+      "window_day_count": 6,
+      "window_end": "2026-01-04",
+      "window_name": "WINDOW_2025-12-30_to_2026-01-04",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04",
+      "window_start": "2025-12-30"
+    },
+    {
+      "allowed_conclusions": "historical replication; window-character stress test; blocker recheck target",
+      "artifact_family_counts": {
+        "analysis_arena_files": 61,
+        "board_scoreboards": 5,
+        "brain2_tracker_ledgers": 5,
+        "cycle_receipts": 9,
+        "root_files": 50,
+        "total_files": 206,
+        "translation_sandbox_manifests": 5,
+        "validation_files": 95
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": "0c59c4decc2038b7a123aa41d0acfa6cbbae6fb3b9e23c16283a4935e43ad8ca"
+        },
+        "deep_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": "b28324f699e4a20a72728f3f89440d5ca599e5e88b356aded17a84d75d5472d6"
+        },
+        "deep_hit_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": "e7f4c71cbff2ae8bceff5943054365392457b245cb1c8332eae8fa89045aae1e"
+        },
+        "frontier_harness_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": "a00b56dd417d193f3d1a529b438516999f7ed5d710d82b044ccd8b72ecb83764"
+        },
+        "performance_gap_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": "c018047d1913084b93c809d990e46aa0a02208171c4d4f63001377797860e9cf"
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": "e96718fb02576636909dc2a73586fab39f04df7a78d4adaede34b9e2cff4b17d"
+        },
+        "translator_learning_ledger_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/WINDOW_2026-01-05_to_2026-01-09__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": "dd085f33519112d7df938a14363bdcc3d59fec4a0cf0aef2d7ef1d789b31bfb0"
+        },
+        "window_close_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": "7739e1925a6577c81584eeb1d3810e0a94b9bde9992bcd4e2517887e5b686418"
+        },
+        "window_decay_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": "4e01467e4fb5621cbed0c17cee48880c630dfa3e87a29ae4b8f717f56b9fb743"
+        }
+      },
+      "baseline_manifest_status": "baseline_complete",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09",
+        "2026-01-10",
+        "2026-01-11",
+        "2026-01-12",
+        "2026-01-13"
+      ],
+      "bonus_missing_count": 9,
+      "evidence_tier": "archived_window_replication",
+      "file_count": 206,
+      "has_bonus_tail": false,
+      "has_full_decay_tail": false,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2026-01-04",
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": true,
+        "deep_analysis_json": true,
+        "deep_hit_analysis_json": true,
+        "frontier_harness_json": true,
+        "performance_gap_json": true,
+        "pure_finalist_scorecard_json": true,
+        "translator_learning_ledger_json": true,
+        "window_close_receipt": true,
+        "window_decay_receipt": true
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready_with_caveats",
+      "recommended_next_use": "archived_replication_with_explicit_caveats",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09"
+      ],
+      "tail_missing": [
+        "2026-01-10",
+        "2026-01-11"
+      ],
+      "tail_missing_count": 2,
+      "tail_results_needed": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09",
+        "2026-01-10",
+        "2026-01-11",
+        "2026-01-12",
+        "2026-01-13"
+      ],
+      "truth_missing": [],
+      "truth_missing_count": 0,
+      "window_day_count": 5,
+      "window_end": "2026-01-09",
+      "window_name": "WINDOW_2026-01-05_to_2026-01-09",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09",
+      "window_start": "2026-01-05"
+    },
+    {
+      "allowed_conclusions": "historical replication; window-character stress test; blocker recheck target",
+      "artifact_family_counts": {
+        "analysis_arena_files": 49,
+        "board_scoreboards": 4,
+        "brain2_tracker_ledgers": 4,
+        "cycle_receipts": 8,
+        "root_files": 50,
+        "total_files": 176,
+        "translation_sandbox_manifests": 4,
+        "validation_files": 77
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": "d75167ba585f679b0445dd25ef16b1eb575b7a51af72302a9d27dab86aa3367c"
+        },
+        "deep_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": "c5ba4d42bd937af3487e90bc98df5d20f4bae454abec8fb2a4d68374bb8300d5"
+        },
+        "deep_hit_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": "a1cbcec511be45e0c8cab1fee51915b6402695827776037f80d6f840a27b68ab"
+        },
+        "frontier_harness_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": "5230c438a9dd5aa60d82f997bdbdc05f5ca28e512698f6da723c56ac49c9f773"
+        },
+        "performance_gap_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": "d8b5350a5f22f07f34bcda992a86fa1191364e4879c62195f43d4ac88c60c77b"
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": "f17026bd4e824091c68eaf612dd88d8ecfb6b91cc8a616f6c740b18e67fbf51a"
+        },
+        "translator_learning_ledger_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/WINDOW_2026-01-15_to_2026-01-18__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": "5484fa0ddbacfc72679e9fadd7697c091a3fe19e0b2f133236d74a0baa889d7e"
+        },
+        "window_close_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": "cbc31c2acede9b4652574dac5c5eb28a911a7c2786e408a23ed26e8bcf3cd7a9"
+        },
+        "window_decay_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": "8be3890eb638dfa704fd47d9466b75d8ee9dbf9a4113fb74a5177148dc0b697f"
+        }
+      },
+      "baseline_manifest_status": "baseline_complete",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22"
+      ],
+      "bonus_missing_count": 8,
+      "evidence_tier": "archived_window_replication",
+      "file_count": 176,
+      "has_bonus_tail": false,
+      "has_full_decay_tail": true,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2026-01-14",
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": true,
+        "deep_analysis_json": true,
+        "deep_hit_analysis_json": true,
+        "frontier_harness_json": true,
+        "performance_gap_json": true,
+        "pure_finalist_scorecard_json": true,
+        "translator_learning_ledger_json": true,
+        "window_close_receipt": true,
+        "window_decay_receipt": true
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready",
+      "recommended_next_use": "archived_replication_candidate",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18"
+      ],
+      "tail_missing": [],
+      "tail_missing_count": 0,
+      "tail_results_needed": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22"
+      ],
+      "truth_missing": [],
+      "truth_missing_count": 0,
+      "window_day_count": 4,
+      "window_end": "2026-01-18",
+      "window_name": "WINDOW_2026-01-15_to_2026-01-18",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-18",
+      "window_start": "2026-01-15"
+    },
+    {
+      "allowed_conclusions": "historical replication; window-character stress test; blocker recheck target",
+      "artifact_family_counts": {
+        "analysis_arena_files": 97,
+        "board_scoreboards": 8,
+        "brain2_tracker_ledgers": 8,
+        "cycle_receipts": 12,
+        "root_files": 50,
+        "total_files": 296,
+        "translation_sandbox_manifests": 8,
+        "validation_files": 149
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": "8be48622b6026002f603ed1ea8a75a4011100a6e162f2835424eaae5c31dc581"
+        },
+        "deep_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": "dc007d6dbb254e4ed421a7486f0795f833e9ef8abb61859f4701bf243c4dc391"
+        },
+        "deep_hit_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": "d2bd2bdeda6f4eebe60cb1262ca9046ff6086c18410d274edcec172e4bd1645e"
+        },
+        "frontier_harness_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": "98f49db7b942f01cc0becf5160658146a576bdf2023706628acadb6dce14349a"
+        },
+        "performance_gap_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": "f5cd2feabb51861058975ea0db8dcf4bc251f1b3546c5f9b6887d2f05e39e48e"
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": "f5078b13bd68e17730bc1b30f6722d68ba5917dac9c9b2ce2880620260a6815c"
+        },
+        "translator_learning_ledger_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/WINDOW_2026-01-15_to_2026-01-22__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": "b9f29e7958aea6db08f526997d92e0a45111572c61ace7d3f8109b88e3641737"
+        },
+        "window_close_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": "69a69947fa13d460fb7b38272641b647067c658c49c8f3cb1b4edaaf90921a98"
+        },
+        "window_decay_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": "c5fcfca4a09bdc28f1aa6996a1a4d37e9a028ca14a303e9d8fe5d1f56bd28669"
+        }
+      },
+      "baseline_manifest_status": "baseline_complete",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22",
+        "2026-01-23",
+        "2026-01-24",
+        "2026-01-25",
+        "2026-01-26"
+      ],
+      "bonus_missing_count": 12,
+      "evidence_tier": "archived_window_replication",
+      "file_count": 296,
+      "has_bonus_tail": false,
+      "has_full_decay_tail": false,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2026-01-14",
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": true,
+        "deep_analysis_json": true,
+        "deep_hit_analysis_json": true,
+        "frontier_harness_json": true,
+        "performance_gap_json": true,
+        "pure_finalist_scorecard_json": true,
+        "translator_learning_ledger_json": true,
+        "window_close_receipt": true,
+        "window_decay_receipt": true
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready_with_caveats",
+      "recommended_next_use": "archived_replication_with_explicit_caveats",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22"
+      ],
+      "tail_missing": [
+        "2026-01-23",
+        "2026-01-24",
+        "2026-01-25"
+      ],
+      "tail_missing_count": 3,
+      "tail_results_needed": [
+        "2026-01-15",
+        "2026-01-16",
+        "2026-01-17",
+        "2026-01-18",
+        "2026-01-19",
+        "2026-01-20",
+        "2026-01-21",
+        "2026-01-22",
+        "2026-01-23",
+        "2026-01-24",
+        "2026-01-25",
+        "2026-01-26"
+      ],
+      "truth_missing": [
+        "2026-01-19"
+      ],
+      "truth_missing_count": 1,
+      "window_day_count": 8,
+      "window_end": "2026-01-22",
+      "window_name": "WINDOW_2026-01-15_to_2026-01-22",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22",
+      "window_start": "2026-01-15"
+    },
+    {
+      "allowed_conclusions": "regression; traceability; before-after comparison; deterministic rerun checks",
+      "artifact_family_counts": {
+        "analysis_arena_files": 61,
+        "board_scoreboards": 5,
+        "brain2_tracker_ledgers": 0,
+        "cycle_receipts": 7,
+        "root_files": 0,
+        "total_files": 226,
+        "translation_sandbox_manifests": 5,
+        "validation_files": 90
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": ""
+        },
+        "deep_analysis_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": ""
+        },
+        "deep_hit_analysis_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": ""
+        },
+        "frontier_harness_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": ""
+        },
+        "performance_gap_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": ""
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": ""
+        },
+        "translator_learning_ledger_json": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": ""
+        },
+        "window_close_receipt": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": ""
+        },
+        "window_decay_receipt": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": ""
+        }
+      },
+      "baseline_manifest_status": "partial_baseline",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09",
+        "2026-01-10",
+        "2026-01-11",
+        "2026-01-12",
+        "2026-01-13"
+      ],
+      "bonus_missing_count": 9,
+      "evidence_tier": "same_window_replay",
+      "file_count": 226,
+      "has_bonus_tail": false,
+      "has_full_decay_tail": false,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2026-01-04",
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": false,
+        "deep_analysis_json": false,
+        "deep_hit_analysis_json": false,
+        "frontier_harness_json": false,
+        "performance_gap_json": false,
+        "pure_finalist_scorecard_json": false,
+        "translator_learning_ledger_json": false,
+        "window_close_receipt": false,
+        "window_decay_receipt": false
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready_with_caveats",
+      "recommended_next_use": "baseline_snapshot_reference_only",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09"
+      ],
+      "tail_missing": [
+        "2026-01-10",
+        "2026-01-11"
+      ],
+      "tail_missing_count": 2,
+      "tail_results_needed": [
+        "2026-01-05",
+        "2026-01-06",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-09",
+        "2026-01-10",
+        "2026-01-11",
+        "2026-01-12",
+        "2026-01-13"
+      ],
+      "truth_missing": [],
+      "truth_missing_count": 0,
+      "window_day_count": 5,
+      "window_end": "2026-01-09",
+      "window_name": "WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT",
+      "window_start": "2026-01-05"
+    },
+    {
+      "allowed_conclusions": "regression; traceability; before-after comparison; deterministic rerun checks",
+      "artifact_family_counts": {
+        "analysis_arena_files": 181,
+        "board_scoreboards": 15,
+        "brain2_tracker_ledgers": 15,
+        "cycle_receipts": 18,
+        "root_files": 61,
+        "total_files": 517,
+        "translation_sandbox_manifests": 15,
+        "validation_files": 275
+      },
+      "baseline_hashes": {
+        "decay_carryover_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__DECAY_CARRYOVER_SCORECARD.json",
+          "sha256": "9b55ff714c55df7ef1f85f6595a5575975253236ee468eb854ccc56df7b45cfb"
+        },
+        "deep_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__DEEP_ANALYSIS__CODEX.json",
+          "sha256": "147e8e0d2ec0ab5e8bb57de73592279f820ab10bdb1477842d042086d1dc5f6b"
+        },
+        "deep_hit_analysis_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__DEEP_HIT_ANALYSIS.json",
+          "sha256": "67a238193fa13d8aebf8b5b6a03dd8db237fe45b9630b2ff8fd0292595e9c289"
+        },
+        "frontier_harness_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__C1_C2_FRONTIER_ANALYSIS.json",
+          "sha256": "574111f01742feb22e38ba251590dbe2bc0f0f00021b5a59ece49c3037a46e00"
+        },
+        "performance_gap_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__PERFORMANCE_GAP.json",
+          "sha256": "085aaf97fb4db64bb9de6abe09a06cadaac099ebf0a9c0f09231d4ca9a449244"
+        },
+        "pure_finalist_scorecard_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__PURE_FINALIST_SCORECARD.json",
+          "sha256": "5d03f79490abe27b444640260e4a143c7b059575eac664fd8540b9e9f1058844"
+        },
+        "translator_learning_ledger_json": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/WINDOW_2026-03-09_to_2026-03-23__ANALYSIS_ARENA__TRANSLATOR_LEARNING_LEDGER.json",
+          "sha256": "767fbe05dfec9f30f1301eae3cc18c1568578d9dad0cbdb78d83bf2567933bab"
+        },
+        "window_close_receipt": {
+          "exists": true,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md",
+          "sha256": "58f85bde0ec3fb1feacd55ca2c6b9d2eae520496dff0699b46c4302f219e4954"
+        },
+        "window_decay_receipt": {
+          "exists": false,
+          "path": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA__CYCLE__WINDOW_DECAY_CLOSE.md",
+          "sha256": ""
+        }
+      },
+      "baseline_manifest_status": "baseline_complete",
+      "blocked_conclusions": "no fresh-confirmation claim; no Stage 8A unlock; no live scoring/budget replacement",
+      "bonus_missing": [],
+      "bonus_missing_count": 0,
+      "evidence_tier": "same_window_replay",
+      "file_count": 517,
+      "has_bonus_tail": true,
+      "has_full_decay_tail": true,
+      "history_missing": [],
+      "history_missing_count": 0,
+      "history_needed": [
+        "2026-03-08",
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+        "2026-03-13",
+        "2026-03-14",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22"
+      ],
+      "key_artifacts": {
+        "decay_carryover_json": true,
+        "deep_analysis_json": true,
+        "deep_hit_analysis_json": true,
+        "frontier_harness_json": true,
+        "performance_gap_json": true,
+        "pure_finalist_scorecard_json": true,
+        "translator_learning_ledger_json": true,
+        "window_close_receipt": true,
+        "window_decay_receipt": false
+      },
+      "predictive_missing": [],
+      "predictive_missing_count": 0,
+      "readiness_status": "ready_with_caveats",
+      "recommended_next_use": "strongest_same_window_replay_candidate",
+      "results_missing": [],
+      "results_missing_count": 0,
+      "results_needed": [
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+        "2026-03-13",
+        "2026-03-14",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23"
+      ],
+      "tail_missing": [],
+      "tail_missing_count": 0,
+      "tail_results_needed": [
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+        "2026-03-13",
+        "2026-03-14",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27"
+      ],
+      "truth_missing": [
+        "2026-03-09",
+        "2026-03-10",
+        "2026-03-11",
+        "2026-03-12",
+        "2026-03-13",
+        "2026-03-14",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23"
+      ],
+      "truth_missing_count": 15,
+      "window_day_count": 15,
+      "window_end": "2026-03-23",
+      "window_name": "WINDOW_2026-03-09_to_2026-03-23",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23",
+      "window_start": "2026-03-09"
+    }
+  ],
+  "source_coverage": {
+    "bonus_results_date_count": 19,
+    "bonus_results_date_max": "2026-03-27",
+    "bonus_results_date_min": "2026-03-09",
+    "history_date_count": 42,
+    "history_date_max": "2026-03-22",
+    "history_date_min": "2025-06-20",
+    "predictive_date_max": "2026-03-23",
+    "predictive_date_min": "2025-12-30",
+    "predictive_sharepack_date_count": 34,
+    "results_date_count": 58,
+    "results_date_max": "2026-03-27",
+    "results_date_min": "2025-06-21",
+    "truth_date_max": "2026-01-22",
+    "truth_date_min": "2025-06-21",
+    "truth_sharepack_date_count": 22
+  },
+  "stage_artifact_status": {
+    "stage6b_readback": true,
+    "stage6b_shadow_replay": true,
+    "stage6c_confirmation": true,
+    "stage6d_restraint": true,
+    "stage6e_support": true,
+    "stage6f_atlas": true,
+    "stage7a_scaffold": true,
+    "stage7b_harness": true
+  },
+  "summary": {
+    "archived_replication_ready": 2,
+    "archived_replication_with_caveats": 2,
+    "needs_prep": 0,
+    "same_window_replay_candidates": 2,
+    "stage6b_to_stage7b_artifacts_present": true,
+    "strongest_archived_replication_candidate": "WINDOW_2025-12-30_to_2026-01-04",
+    "strongest_same_window_replay_candidate": "WINDOW_2026-03-09_to_2026-03-23"
+  }
+}

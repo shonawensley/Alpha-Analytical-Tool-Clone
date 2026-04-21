@@ -27,6 +27,14 @@ It also preserves evidence discipline:
 Current candidate-window inventory:
 
 - `AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+
+Generate the machine-readable readiness matrix with:
+
+```bash
+python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root docs/AAT9_KIT/FINAL\ VALIDATION/RUNS_2 --force
+```
 
 ## Evidence Tiers
 
@@ -153,6 +161,7 @@ Before running any available window, confirm:
 8. The run label is selected before execution.
 9. Stage 6B-through-Stage 7B expectations are understood.
 10. The run is not being misrepresented as fresh confirmation unless it is truly fresh.
+11. The replay-readiness report has been regenerated after any source-folder change.
 
 ## Baseline Preservation
 
@@ -162,6 +171,7 @@ For same-window replay:
 - use a new run label or output namespace when possible
 - compare against prior outputs explicitly
 - record what changed because of code/docs/cadence changes versus what is inherent in the data
+- use the replay-readiness report baseline manifest and artifact hashes as the preservation contract
 
 Suggested comparison categories:
 
@@ -228,9 +238,10 @@ Stage 8 design, but they do not replace the true fresh comparison gate.
 
 When more run work is needed, use this order:
 
-1. Same-window replay of the March 8-22 2026 window if the goal is regression or before/after comparison.
-2. Archived-window replication if the goal is wider historical stress testing.
-3. True fresh-window confirmation when new prepared gold days are available.
+1. Regenerate `window-replay-readiness` to confirm source coverage and baseline hashes.
+2. Same-window replay of the March 8-22 2026 window if the goal is regression or before/after comparison.
+3. Archived-window replication if the goal is wider historical stress testing.
+4. True fresh-window confirmation when new prepared gold days are available.
 
 This keeps development moving without confusing development evidence with
 confirmation evidence.

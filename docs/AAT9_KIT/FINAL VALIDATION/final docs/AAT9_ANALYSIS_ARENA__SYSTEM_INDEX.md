@@ -61,7 +61,8 @@ Main phases:
 6. `tuneup-diagnostics`
 7. `frontier-negative-control`
 8. `fresh-window-readiness`
-9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo / Stage 6C confirmation protocol / Stage 6D restraint calibration / Stage 6E support narrowing / Stage 6F integrated decision atlas / Stage 7A fresh confirmation scaffold / Stage 7B fixture replay harness
+9. `window-replay-readiness`
+10. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo / Stage 6C confirmation protocol / Stage 6D restraint calibration / Stage 6E support narrowing / Stage 6F integrated decision atlas / Stage 7A fresh confirmation scaffold / Stage 7B fixture replay harness
 
 Planned downstream rebuild guardrail:
 
@@ -72,6 +73,8 @@ Window replay / replication protocol:
 
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
 - status: operating protocol for evidence-tier labeling
 - evidence tiers:
   - `same_window_replay`
@@ -279,15 +282,26 @@ Per-window lock inputs that should be set before any fresh or backtest window:
 - doc:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
+- script:
+  - `scripts/tools/create_analysis_arena_window_replay_readiness_report.py`
+- command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- outputs:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_READINESS.md`
 - posture:
   - operating protocol
-  - read-only inventory
-  - no runtime command
+  - read-only inventory / readiness layer
+  - runtime command is report-only
   - no fresh-confirmation substitution
 - purpose:
   - lets existing windows support regression, replay, and historical replication work
   - keeps same-window replay, archived-window replication, and true fresh-window confirmation separated
   - records which existing windows appear best suited for future replay or replication
+  - preserves baseline artifact hashes and comparison categories before any same-window rerun
 
 ### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, Stage 6B Readback, Stage 6C Confirmation, Stage 6D Restraint Calibration, Stage 6E Support Narrowing, Stage 6F Atlas, Stage 7A Scaffold, And Stage 7B Harness
 - protocol:
