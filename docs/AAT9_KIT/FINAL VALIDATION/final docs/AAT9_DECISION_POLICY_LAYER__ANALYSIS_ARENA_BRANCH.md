@@ -2,6 +2,12 @@
 
 Date: `2026-03-23`
 
+Current timing guardrail:
+
+- this document remains a conceptual reference for the future downstream rebuild
+- active Stage 8A / 8B / 8C work is governed by `AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- no DPL, candidate object, boxed / straight expression, budget, or replacement behavior should be implemented before fresh-window Stage 6B-through-Stage 7B replay is compared against March
+
 ## Purpose
 
 Define the first action-taking layer that sits:

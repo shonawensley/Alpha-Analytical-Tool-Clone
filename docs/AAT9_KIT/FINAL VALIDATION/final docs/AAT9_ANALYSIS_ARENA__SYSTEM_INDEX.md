@@ -63,6 +63,11 @@ Main phases:
 8. `fresh-window-readiness`
 9. post-run audit Stage 1 / Stage 2 / Stage 2B / Stage 3 decision workbench / Stage 4 fixture replay / Stage 4B replay readback / Stage 4C shadow translator prototype / Stage 5 shadow translator fixture evaluator / Stage 5 readback decision memo / Stage 6A shadow translator specification / Stage 6B shadow replay simulator / Stage 6B readback decision memo / Stage 6C confirmation protocol / Stage 6D restraint calibration / Stage 6E support narrowing / Stage 6F integrated decision atlas / Stage 7A fresh confirmation scaffold / Stage 7B fixture replay harness
 
+Planned downstream rebuild guardrail:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- status: docs-only / design-brief-only until a fresh window reruns Stage 6B through Stage 7B and is compared against March
+
 Per-window lock inputs that should be set before any fresh or backtest window:
 
 1. window start / end dates
@@ -248,6 +253,17 @@ Per-window lock inputs that should be set before any fresh or backtest window:
 - outputs:
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json`
+
+### Stage 8 Downstream Rebuild Readiness
+- doc:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- posture:
+  - design brief only
+  - no runtime command
+  - no scoring, candidate-generation, translator, budget, or legacy replacement permission
+- purpose:
+  - preserves the future Arena-native candidate object / boxed-straight expression / budget sandbox path
+  - blocks implementation until a fresh window reruns Stage 6B through Stage 7B and is compared against March
 
 ### Post-Run Audit, Stage 3 Decision Workbench, Stage 4 Fixture Replay, Stage 4B Readback, Stage 4C Shadow Prototype, Stage 5 Fixture Evaluator, Stage 5 Readback, Stage 6A Shadow Specification, Stage 6B Shadow Replay, Stage 6B Readback, Stage 6C Confirmation, Stage 6D Restraint Calibration, Stage 6E Support Narrowing, Stage 6F Atlas, Stage 7A Scaffold, And Stage 7B Harness
 - protocol:
@@ -455,12 +471,16 @@ Per-window lock inputs that should be set before any fresh or backtest window:
 - later cross-window decay / carryover rollup once fresh windows accumulate
 - future/fresh execution of the Stage 6C confirmation contract using the Stage 7A scaffold and Stage 7B pre-flight queue
 - later translator/scoring rewrite specification only after Stage 5 results, Stage 5 readback, Stage 6A specification, Stage 6B simulator, Stage 6B readback, Stage 6C confirmation, Stage 6D/6E workbench evidence, Stage 6F atlas, Stage 7A future-window evaluation, Stage 7B replay readiness, and future/fresh repeat evidence are reviewed
+- Stage 8A Arena-native candidate object specification only after March-vs-fresh Stage 7B comparison separates repeated lanes from weakened, contradicted, blocked, and research-only lanes
+- Stage 8B boxed / straight shadow expression simulator only after Stage 8A defines traceable candidate objects
+- Stage 8C budget policy sandbox only after Stage 8B produces separated shadow expression outputs
 
 ## 7. Promotion Rules
 
 - Do not promote a new scoring feature from one window alone.
 - Do not promote frontier features into live scoring before the negative-control study is reviewed.
 - Do not rebuild budgeting before the translator-learning layer exists.
+- Do not start Stage 8A implementation before a fresh window reruns Stage 6B through Stage 7B and is compared against March.
 - Do not use `B12/B24/B36` alone as the main measure of analysis quality.
 - Keep arena truth, downstream realization, and opportunity gap as separate evaluation layers.
 
@@ -477,8 +497,9 @@ Per-window lock inputs that should be set before any fresh or backtest window:
 2. `AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
 3. `AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
 4. `AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
-5. `AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
-6. `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
-7. `RUNS_2/PORTAL.md`
-8. current window artifacts
-9. `AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`
+5. `AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+6. `AAT9_ANALYSIS_ARENA_FRESH_RUNS_CADENCE__QUICKSTART.md`
+7. `AAT9_ANALYSIS_ARENA_OPERATING_FLOW__FRESH_RUNS.md`
+8. `RUNS_2/PORTAL.md`
+9. current window artifacts
+10. `AAT9_ANALYSIS_ARENA__MACRO_FINDINGS_LOG.md`

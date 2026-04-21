@@ -8,6 +8,17 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-21
 
+### Analysis Arena: Stage 8 downstream rebuild readiness guardrail
+
+- Added a docs-only Stage 8 readiness brief:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- The brief preserves the future downstream rebuild path:
+  - Stage 8A Arena-native candidate object specification
+  - Stage 8B boxed / straight shadow expression simulator
+  - Stage 8C budget policy sandbox
+- Guardrail: this is not implementation permission. Stage 8A remains blocked until a fresh window reruns Stage 6B through Stage 7B and March-vs-fresh Stage 7B comparison separates repeated lanes from weakened, contradicted, blocked, and research-only lanes.
+- Updated the final-doc portal, system index, and fresh-window reading guide so the Stage 8 path is durable but remains downstream of fresh-window confirmation.
+
 ### Analysis Arena: Stage 7B fixture replay/readiness harness
 
 - Added a read-only pre-flight replay harness:

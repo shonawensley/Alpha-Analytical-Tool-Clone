@@ -33,6 +33,8 @@ Only after those four should you ask:
 - what does the Stage 6C/6D/6E confirmation and workbench layer require before rewrite discussion?
 - what does Stage 6F integrate across lanes, blockers, macro disposition, and priority casebook examples?
 - what does Stage 7A require from the next future/fresh window before anything can be called repeated?
+- what does Stage 7B classify as ready, watch-only, research-only, missing, or blocked before the next fresh window?
+- what does the Stage 8 readiness guardrail allow only after March-vs-fresh Stage 7B comparison?
 - what policy or budget implications seem worth future research?
 
 ## 2. Baselines
@@ -273,6 +275,7 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 7B blocker recheck
 - Stage 7B casebook traceability
 - Stage 7B ready-for-fresh-window readback
+- Stage 8 downstream rebuild readiness guardrail
 
 Main questions:
 
@@ -315,6 +318,7 @@ Main questions:
 - which Stage 6F casebook targets deserve human inspection before the next fresh window?
 - which Stage 7A requirements must the next fresh window fill in, and which March seed benchmarks are only baselines?
 - which Stage 7B queue items are ready for fresh confirmation, watch-only, research-only, missing replay evidence, or still blocked?
+- which Stage 8 concepts must remain docs-only until fresh evidence repeats enough of the March structure?
 
 Do not conclude here:
 
@@ -335,6 +339,7 @@ Do not conclude here:
 - that Stage 6F synthesis resolves future-window uncertainty
 - that Stage 7A March seed benchmarks are fresh-window confirmation
 - that Stage 7B readiness statuses are live scoring permission
+- that Stage 8A / 8B / 8C may begin before March-vs-fresh Stage 7B comparison
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -551,7 +556,25 @@ Do not conclude here:
 - that `ready_but_watch` means the lane should influence production ranking
 - that blocked rewrite gates can be bypassed because the queue is organized
 
-### Step 19 — Policy / Budget Implications
+### Step 19 — Stage 8 Downstream Rebuild Readiness
+
+Use the Stage 8 readiness brief as the guardrail before discussing candidate
+object, boxed / straight, or budget sandbox work:
+
+- read it after Stage 7B, not before Stage 7B
+- treat it as timing control, not implementation permission
+- keep Stage 8A blocked until March Stage 7B and fresh Stage 7B have been compared
+- keep Stage 8B blocked until Stage 8A candidate objects exist as a shadow contract
+- keep Stage 8C blocked until Stage 8B produces separated shadow expression outputs
+
+Do not conclude here:
+
+- that Stage 8 readiness is a scoring rewrite
+- that older DPL / translator docs override the fresh-confirmation gates
+- that Stage 7B `ready_for_fresh_confirmation` can be converted directly into weights
+- that old Candidate Universe / Play Card behavior should be replaced before shadow comparison
+
+### Step 20 — Policy / Budget Implications
 
 Only now ask:
 
@@ -585,7 +608,8 @@ For every fresh window, answer these in order:
 16. What does Stage 6F integrate across lanes, blockers, macro findings, and concrete bucket examples?
 17. What does Stage 7A require the next fresh window to prove?
 18. What does Stage 7B say is ready for fresh confirmation versus watch-only, research-only, missing, or blocked?
-19. Only then: what policy/budget questions are worth future research?
+19. What does the Stage 8 readiness brief keep blocked until March-vs-fresh Stage 7B comparison?
+20. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -612,6 +636,7 @@ For every fresh window, answer these in order:
 - Do not treat Stage 6F as scoring permission. It is a synthesis and casebook layer.
 - Do not treat Stage 7A as confirmation. It is the future-window scaffold that still needs future data.
 - Do not treat Stage 7B as deployment readiness. It is a replay/readiness harness for the next fresh-window confirmation pass.
+- Do not treat Stage 8 readiness as implementation permission. It is a docs-only downstream rebuild guardrail until fresh confirmation repeats enough evidence.
 
 ## 6. Practical Close
 
