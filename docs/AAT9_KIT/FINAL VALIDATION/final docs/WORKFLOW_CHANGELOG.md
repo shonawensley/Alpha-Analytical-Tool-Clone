@@ -6,6 +6,24 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-04-21
+
+### Analysis Arena: Stage 7B fixture replay/readiness harness
+
+- Added a read-only pre-flight replay harness:
+  - `scripts/tools/create_analysis_arena_stage7b_fixture_replay_harness.py`
+- Added cycle-wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force`
+- Stage 7B replays the Stage 6F carry-forward queue against Stage 7A confirmation requirements, active blocker rechecks, and priority casebook traceability.
+- New cycle-level outputs include:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_FIXTURE_REPLAY_HARNESS.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_QUEUE_REPLAY_STATUS.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_REQUIREMENT_COVERAGE.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_BLOCKER_RECHECK.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_CASEBOOK_TRACEABILITY.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE7B_READY_FOR_FRESH_WINDOW.md`
+- Guardrail: Stage 7B is fresh-window replay readiness only. `ready_for_fresh_confirmation` and `ready_but_watch` are testability labels, not live scoring, candidate generation, translator, budget, hard-veto, broad-support, or deployment permission.
+
 ## 2026-04-20
 
 ### Analysis Arena: Stage 6F decision atlas and Stage 7A fresh confirmation scaffold

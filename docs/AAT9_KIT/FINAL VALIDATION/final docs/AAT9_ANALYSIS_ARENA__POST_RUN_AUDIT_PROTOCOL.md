@@ -37,9 +37,10 @@ python3 scripts/tools/create_analysis_arena_stage6d_restraint_calibration_workbe
 python3 scripts/tools/create_analysis_arena_stage6e_support_modifier_narrowing_workbench.py --force
 python3 scripts/tools/create_analysis_arena_stage6f_integrated_decision_atlas.py --force
 python3 scripts/tools/create_analysis_arena_stage7a_fresh_confirmation_scaffold.py --force
+python3 scripts/tools/create_analysis_arena_stage7b_fixture_replay_harness.py --force
 ```
 
-Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, and Stage 7A:
+Cycle-wrapper equivalents for Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, Stage 7A, and Stage 7B:
 
 ```bash
 python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
@@ -56,6 +57,7 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration 
 python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
+python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2" --force
 ```
 
 ## 3. Required Outputs
@@ -198,6 +200,13 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-sca
 - Stage 7A future-window evaluation template CSV.
 - Stage 7A run checklist CSV.
 - Stage 7A cycle receipt Markdown.
+- Stage 7B fixture replay harness Markdown/JSON.
+- Stage 7B queue replay status CSV.
+- Stage 7B requirement coverage CSV.
+- Stage 7B blocker recheck CSV.
+- Stage 7B casebook traceability CSV.
+- Stage 7B ready-for-fresh-window Markdown.
+- Stage 7B cycle receipt Markdown.
 
 ## 4. Review Order
 
@@ -241,7 +250,8 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-sca
 38. Run Stage 6F after Stage 6C/6D/6E.
 39. Review lane decision atlas, active blockers, carry-forward queue, macro disposition, and priority bucket casebook before preparing the next fresh-window confirmation pass.
 40. Run Stage 7A after Stage 6F to generate future-window confirmation requirements, March seed benchmarks, evaluation template rows, and the run checklist.
-41. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, and Stage 7A decisions as experiment gates, not live scoring changes.
+41. Run Stage 7B after Stage 7A to replay the carry-forward queue against requirements, blockers, and casebook traceability before the next fresh window.
+42. Use Stage 2, Stage 2B, Stage 3, Stage 4, Stage 4B, Stage 4C, Stage 5, Stage 5 readback, Stage 6A, Stage 6B, Stage 6B readback, Stage 6C, Stage 6D, Stage 6E, Stage 6F, Stage 7A, and Stage 7B decisions as experiment gates, not live scoring changes.
 
 ## 5. Interpretation Rules
 
@@ -296,6 +306,7 @@ python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-sca
 - Stage 6E support rows are paired-modifier research only. Broad support-on failure remains the default unless a narrow bucket beats a meaningful support-off peer and repeats on future windows.
 - Stage 6F is a synthesis layer. It is the correct place to read cross-stage decisions together, but it does not reduce the need for future/fresh confirmation.
 - Stage 7A is a scaffold. Its March seed benchmarks are baselines for future comparison, not proof that the next window already passed.
+- Stage 7B is a pre-flight replay/readiness harness. `ready_for_fresh_confirmation` and `ready_but_watch` mean testable on the next fresh window, not deployable.
 
 ## 6. Guardrails
 

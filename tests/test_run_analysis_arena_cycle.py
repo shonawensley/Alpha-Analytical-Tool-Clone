@@ -22,6 +22,7 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_stage6e_support_narrowing_command,
     build_stage6f_integrated_decision_atlas_command,
     build_stage7a_fresh_confirmation_scaffold_command,
+    build_stage7b_fixture_replay_harness_command,
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
     build_window_decay_close_command,
@@ -490,6 +491,21 @@ def test_build_stage7a_fresh_confirmation_scaffold_command_uses_output_dir(tmp_p
     assert str(tmp_path / "RUNS_2") in cmd
     assert "--output-dir" in cmd
     assert str(tmp_path / "RUNS_2" / "stage7a") in cmd
+    assert "--force" in cmd
+
+
+def test_build_stage7b_fixture_replay_harness_command_uses_output_dir(tmp_path: Path) -> None:
+    cmd = build_stage7b_fixture_replay_harness_command(
+        runs2_root=tmp_path / "RUNS_2",
+        output_dir=tmp_path / "RUNS_2" / "stage7b",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_stage7b_fixture_replay_harness.py")
+    assert "--runs2-dir" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--output-dir" in cmd
+    assert str(tmp_path / "RUNS_2" / "stage7b") in cmd
     assert "--force" in cmd
 
 

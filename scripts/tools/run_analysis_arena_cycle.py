@@ -808,6 +808,25 @@ def build_stage7a_fresh_confirmation_scaffold_command(
     return cmd
 
 
+def build_stage7b_fixture_replay_harness_command(
+    *,
+    runs2_root: Path,
+    output_dir: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_stage7b_fixture_replay_harness.py",
+        "--runs2-dir",
+        str(runs2_root),
+        "--output-dir",
+        str(output_dir),
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_pre_commands(
     *,
     history_date: Optional[str],
@@ -1213,6 +1232,16 @@ def _parse_args() -> argparse.Namespace:
     stage7a.add_argument("--no-receipt", action="store_true")
     stage7a.add_argument("--force", action="store_true")
     stage7a.add_argument("--dry-run", action="store_true")
+
+    stage7b = sub.add_parser(
+        "stage7b-fixture-replay-harness",
+        help="Generate the Stage 7B read-only fixture replay/readiness harness from Stage 6F/7A evidence.",
+    )
+    stage7b.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    stage7b.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage7b.add_argument("--no-receipt", action="store_true")
+    stage7b.add_argument("--force", action="store_true")
+    stage7b.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
 
@@ -1694,6 +1723,47 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE7A_FRESH_CONFIRMATION_SCAFFOLD_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "stage7b-fixture-replay-harness":
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        cmd = build_stage7b_fixture_replay_harness_command(
+            runs2_root=runs2_root,
+            output_dir=output_dir,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — STAGE 7B FIXTURE REPLAY HARNESS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Stage 7B is a read-only fixture replay/readiness harness; it does not alter live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "- Stage 7B replays Stage 6F carry-forward decisions against Stage 7A confirmation requirements, blocker rechecks, and casebook traceability.",
+            "- Stage 7B output is fresh-window pre-flight evidence only; scoring rewrite remains blocked until future-window confirmation clears or quarantines the open gates.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__STAGE7B_FIXTURE_REPLAY_HARNESS_RECEIPT.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

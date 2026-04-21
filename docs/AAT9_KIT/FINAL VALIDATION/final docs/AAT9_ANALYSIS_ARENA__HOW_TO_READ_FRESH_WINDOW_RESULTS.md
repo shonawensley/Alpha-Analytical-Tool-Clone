@@ -267,6 +267,12 @@ Read Stage 3 before policy/budget inference when it exists:
 - Stage 7A March seed benchmarks
 - Stage 7A future-window evaluation template
 - Stage 7A run checklist
+- Stage 7B fixture replay harness
+- Stage 7B queue replay status
+- Stage 7B requirement coverage
+- Stage 7B blocker recheck
+- Stage 7B casebook traceability
+- Stage 7B ready-for-fresh-window readback
 
 Main questions:
 
@@ -308,6 +314,7 @@ Main questions:
 - which Stage 6F lanes are strongest, blocked, support-only, penalty-only, companion-only, or rewrite-blocked?
 - which Stage 6F casebook targets deserve human inspection before the next fresh window?
 - which Stage 7A requirements must the next fresh window fill in, and which March seed benchmarks are only baselines?
+- which Stage 7B queue items are ready for fresh confirmation, watch-only, research-only, missing replay evidence, or still blocked?
 
 Do not conclude here:
 
@@ -327,6 +334,7 @@ Do not conclude here:
 - that Stage 6E support narrowing candidates make broad support-on valid
 - that Stage 6F synthesis resolves future-window uncertainty
 - that Stage 7A March seed benchmarks are fresh-window confirmation
+- that Stage 7B readiness statuses are live scoring permission
 - that truncated Stage 5 samples support exact value-level claims
 - that a high VTRAC horizon rate is spendable boxed/straight evidence
 - that a broad support source should stand alone without denominator control
@@ -526,7 +534,24 @@ Do not conclude here:
 - that March seed benchmarks are deployment evidence
 - that a future scoring rewrite can start while Stage 7A requirements are still pending
 
-### Step 18 — Policy / Budget Implications
+### Step 18 — Stage 7B Fixture Replay Harness
+
+Use Stage 7B as the pre-flight map before the next fresh-window run:
+
+- read queue replay status before deciding what the next window should inspect first
+- read requirement coverage to confirm every Stage 7A requirement is traceable and testable
+- read blocker recheck rows so active rewrite blockers stay visible
+- read casebook traceability to separate strict watch targets from research-only examples
+- read the ready-for-fresh-window readback as replay permission only
+
+Do not conclude here:
+
+- that Stage 7B changes live scoring
+- that `ready_for_fresh_confirmation` means deployable
+- that `ready_but_watch` means the lane should influence production ranking
+- that blocked rewrite gates can be bypassed because the queue is organized
+
+### Step 19 — Policy / Budget Implications
 
 Only now ask:
 
@@ -559,7 +584,8 @@ For every fresh window, answer these in order:
 15. What does Stage 6C require, what does Stage 6D say about restraint penalty research, and what does Stage 6E say about support narrowing?
 16. What does Stage 6F integrate across lanes, blockers, macro findings, and concrete bucket examples?
 17. What does Stage 7A require the next fresh window to prove?
-18. Only then: what policy/budget questions are worth future research?
+18. What does Stage 7B say is ready for fresh confirmation versus watch-only, research-only, missing, or blocked?
+19. Only then: what policy/budget questions are worth future research?
 
 ## 5. What Not To Do
 
@@ -585,6 +611,7 @@ For every fresh window, answer these in order:
 - Do not treat Stage 6E as support permission. It is a narrowing workbench, not broad support-on promotion.
 - Do not treat Stage 6F as scoring permission. It is a synthesis and casebook layer.
 - Do not treat Stage 7A as confirmation. It is the future-window scaffold that still needs future data.
+- Do not treat Stage 7B as deployment readiness. It is a replay/readiness harness for the next fresh-window confirmation pass.
 
 ## 6. Practical Close
 
