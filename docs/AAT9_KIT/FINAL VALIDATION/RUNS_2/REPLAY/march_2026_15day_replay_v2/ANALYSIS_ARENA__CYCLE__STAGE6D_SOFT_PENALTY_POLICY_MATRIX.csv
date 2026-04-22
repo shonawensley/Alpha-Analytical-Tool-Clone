@@ -1,0 +1,8 @@
+policy_id,policy_type,kept_high_pressure_fraction,estimated_total_overlap_values,estimated_matched_value_count,estimated_false_positive_proxy_value_count,estimated_false_positive_proxy_rate,estimated_positive_conversion_event_count,estimated_pool_normalized_positive_yield,interpretation,allowed_permission,live_permission
+no_penalty_all_candidate_rows,stage6b_reference_bucket,,0.0,0.0,0.0,0.0,0.0,0.0,Broad candidate reference; currently higher FP pressure than hard exclusion.,reference_only,none
+hard_exclusion_non_high_pressure,stage6b_reference_bucket,,0.0,0.0,0.0,0.0,0.0,0.0,Best aggregate Stage 6B reference but cannot become a live hard veto.,reference_only,none
+removed_high_pressure_candidate_rows,stage6b_reference_bucket,,0.0,0.0,0.0,0.0,0.0,0.0,High-pressure rows contain conversions but carry weaker FP/yield in aggregate.,reference_only,none
+soft_penalty_keep_high_25pct,aggregate_soft_penalty_hypothesis,0.25,0.0,0.0,0.0,0.0,0.0,0.0,Aggregate calibration hypothesis only; use bucket rescue candidates before any rewrite design.,penalty_research_only,none
+soft_penalty_keep_high_50pct,aggregate_soft_penalty_hypothesis,0.5,0.0,0.0,0.0,0.0,0.0,0.0,Aggregate calibration hypothesis only; use bucket rescue candidates before any rewrite design.,penalty_research_only,none
+soft_penalty_keep_high_75pct,aggregate_soft_penalty_hypothesis,0.75,0.0,0.0,0.0,0.0,0.0,0.0,Aggregate calibration hypothesis only; use bucket rescue candidates before any rewrite design.,penalty_research_only,none
+stage6d_recommendation,readback_decision,,,,,,,,"Proceed with soft-penalty research only: no hard veto, no live scoring, no candidate-generation permission.",penalty_research_only,none

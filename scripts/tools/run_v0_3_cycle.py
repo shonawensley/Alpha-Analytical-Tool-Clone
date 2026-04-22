@@ -244,6 +244,7 @@ def _cmd_create_predictive_portfolio(
     force: bool,
     rank_by: Optional[str],
     prefer_experiment_tags: Optional[str],
+    out_path: Optional[Path] = None,
 ) -> List[str]:
     cmd: List[str] = [
         "python3",
@@ -259,6 +260,8 @@ def _cmd_create_predictive_portfolio(
         cmd += ["--rank-by", rank_by]
     if prefer_experiment_tags:
         cmd += ["--prefer-experiment-tags", prefer_experiment_tags]
+    if out_path is not None:
+        cmd += ["--out", str(out_path)]
     if force:
         cmd += ["--force"]
     return cmd

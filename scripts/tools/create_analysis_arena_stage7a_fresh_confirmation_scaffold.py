@@ -85,6 +85,10 @@ def _load_required_csv(path: Path, label: str) -> List[Dict[str, str]]:
     return rows
 
 
+def _load_optional_csv(path: Path) -> List[Dict[str, str]]:
+    return _read_csv_rows(path)
+
+
 def _row_by_id(rows: Sequence[Mapping[str, Any]], field: str) -> Dict[str, Mapping[str, Any]]:
     return {str(row.get(field) or ""): row for row in rows}
 
@@ -396,13 +400,13 @@ def main() -> None:
     confirmation_tests = _load_required_csv(inputs["confirmation_tests"], "Stage 6C confirmation tests")
     threshold_contract = _load_required_csv(inputs["threshold_contract"], "Stage 6C threshold contract")
     rewrite_blockers = _load_required_csv(inputs["rewrite_blockers"], "Stage 6C rewrite blockers")
-    restraint_rescue = _load_required_csv(inputs["restraint_rescue"], "Stage 6D restraint rescue")
-    support_candidates = _load_required_csv(inputs["support_candidates"], "Stage 6E support candidates")
+    restraint_rescue = _load_optional_csv(inputs["restraint_rescue"])
+    support_candidates = _load_optional_csv(inputs["support_candidates"])
     lane_atlas = _load_required_csv(inputs["lane_atlas"], "Stage 6F lane atlas")
     stage6f_blockers = _load_required_csv(inputs["stage6f_blockers"], "Stage 6F blockers")
     _load_required_csv(inputs["stage6f_queue"], "Stage 6F fresh queue")
     _load_required_csv(inputs["stage6f_macro"], "Stage 6F macro disposition")
-    stage6f_casebook = _load_required_csv(inputs["stage6f_casebook"], "Stage 6F casebook")
+    stage6f_casebook = _load_optional_csv(inputs["stage6f_casebook"])
 
     requirements = _requirement_rows(
         tests=confirmation_tests,
@@ -426,6 +430,12 @@ def main() -> None:
         "march_seed_benchmark_count": len(benchmarks),
         "future_template_row_count": len(template_rows),
         "checklist_count": len(checklist),
+        "optional_empty_inputs": {
+            "restraint_rescue_rows": len(restraint_rescue),
+            "support_candidate_rows": len(support_candidates),
+            "stage6f_casebook_rows": len(stage6f_casebook),
+            "interpretation": "Zero rows are valid when Run 2 exposes no candidate-expression rescue/support/casebook targets.",
+        },
         "status": "pending_future_window",
         "next_stage_dependency": "Populate the template after a future/fresh window reruns Stage 6B through Stage 6F.",
     }

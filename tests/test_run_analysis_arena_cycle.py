@@ -26,7 +26,9 @@ from scripts.tools.run_analysis_arena_cycle import (
     build_stage4_fixture_replay_command,
     build_frontier_negative_control_command,
     build_window_replay_readiness_command,
+    build_window_replay_baseline_manifest_command,
     build_window_replay_compare_command,
+    build_window_replay_execution_plan_command,
     build_window_decay_close_command,
     build_tuneup_diagnostics_command,
     build_window_close_commands,
@@ -78,6 +80,8 @@ def test_build_pre_commands_includes_board_review_and_translation_sandbox(tmp_pa
     assert cmds[4][1].endswith("create_predictive_portfolio_report.py")
     assert "--prefer-experiment-tags" in cmds[4]
     assert "arena_v0,,vtracpack_v1" in cmds[4]
+    assert "--out" in cmds[4]
+    assert any(str(tmp_path / "runs" / "PREDICTIVE_PORTFOLIO") in part for part in cmds[4])
     assert cmds[5][1].endswith("create_translation_sandbox_seed.py")
     assert "--overlay-json" in cmds[5]
     assert "--decision-policy-json" in cmds[5]
@@ -345,6 +349,7 @@ def test_build_window_replay_compare_command_uses_candidate_roots(tmp_path: Path
         candidate_cycle_root=tmp_path / "RUNS_2_CANDIDATE",
         evidence_tier="archived_window_replication",
         run_label="archive_replay_v1",
+        require_candidate_complete=True,
         force=False,
     )
 
@@ -353,7 +358,47 @@ def test_build_window_replay_compare_command_uses_candidate_roots(tmp_path: Path
     assert "--candidate-cycle-root" in cmd
     assert str(tmp_path / "RUNS_2_CANDIDATE") in cmd
     assert "archived_window_replication" in cmd
+    assert "--require-candidate-complete" in cmd
     assert "--force" not in cmd
+
+
+def test_build_window_replay_baseline_manifest_command_freezes_baseline(tmp_path: Path) -> None:
+    cmd = build_window_replay_baseline_manifest_command(
+        baseline_window_root=tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23",
+        baseline_cycle_root=tmp_path / "RUNS_2",
+        evidence_tier="same_window_replay",
+        run_label="march_2026_15day_replay_v2",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_window_replay_baseline_manifest.py")
+    assert "--baseline-window-root" in cmd
+    assert str(tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23") in cmd
+    assert "--baseline-cycle-root" in cmd
+    assert str(tmp_path / "RUNS_2") in cmd
+    assert "--evidence-tier" in cmd
+    assert "same_window_replay" in cmd
+    assert "--run-label" in cmd
+    assert "march_2026_15day_replay_v2" in cmd
+    assert "--force" in cmd
+
+
+def test_build_window_replay_execution_plan_command_names_candidate_sharepacks(tmp_path: Path) -> None:
+    cmd = build_window_replay_execution_plan_command(
+        run_label="march_2026_15day_replay_v2",
+        baseline_window_root=tmp_path / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23",
+        baseline_cycle_root=tmp_path / "RUNS_2",
+        runs2_root=tmp_path / "RUNS_2",
+        candidate_sharepacks_root=tmp_path / "sharepacks" / "_predictive_replay" / "march_2026_15day_replay_v2",
+        force=True,
+    )
+
+    assert cmd[1].endswith("create_analysis_arena_window_replay_execution_plan.py")
+    assert "--run-label" in cmd
+    assert "march_2026_15day_replay_v2" in cmd
+    assert "--candidate-sharepacks-root" in cmd
+    assert str(tmp_path / "sharepacks" / "_predictive_replay" / "march_2026_15day_replay_v2") in cmd
+    assert "--force" in cmd
 
 
 def test_build_stage4_fixture_replay_command_uses_output_dir_and_limit(tmp_path: Path) -> None:

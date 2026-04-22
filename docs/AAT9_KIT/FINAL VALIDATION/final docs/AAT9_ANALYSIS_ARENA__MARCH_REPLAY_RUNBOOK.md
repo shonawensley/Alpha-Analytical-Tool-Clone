@@ -18,6 +18,7 @@ Use this with:
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_DESIGN.md`
 - `AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.md`
+- `AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.md`
 
 ## Baseline
 
@@ -73,6 +74,16 @@ python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force
 Suggested label:
 
 - `march_2026_15day_replay_v2`
+
+Canonical Run 2 namespace:
+
+- candidate replay root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2`
+- candidate window root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23`
+- candidate sharepacks root: `sharepacks/_predictive_replay/march_2026_15day_replay_v2`
+
+The candidate window keeps the exact `WINDOW_2026-03-09_to_2026-03-23`
+folder name inside a nested replay root because Stage 3/4 fixture tools
+discover exact `WINDOW_<start>_to_<end>` folders.
 
 ## Candidate Output Requirement
 

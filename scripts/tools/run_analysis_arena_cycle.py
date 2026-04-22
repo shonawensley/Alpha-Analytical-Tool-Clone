@@ -15,6 +15,7 @@ from typing import List, Optional, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARENA_RUNS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
+DEFAULT_PREDICTIVE_SHAREPACKS_ROOT = (REPO_ROOT / "sharepacks" / "_predictive").resolve()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -64,6 +65,37 @@ def _arena_runs_dir_from_arg(value: str) -> Path:
 def _arena_pre_receipt_path(*, runs_dir: Path, results_date: str, profile: str, experiment_tag: str) -> Path:
     suffix = f"__{experiment_tag}" if experiment_tag else ""
     return runs_dir / f"ANALYSIS_ARENA__CYCLE__PRE__{results_date}__{profile}{suffix}.md"
+
+
+def _profile_suffix(profile: str) -> str:
+    p = str(profile or "mixed").strip()
+    return "" if p == "mixed" else f"__{p}"
+
+
+def _tag_suffix(experiment_tag: str) -> str:
+    tag = str(experiment_tag or "").strip()
+    return f"__{tag}" if tag else ""
+
+
+def _portfolio_out_path_for_runs_dir(
+    *,
+    runs_dir: Path,
+    results_date: str,
+    profile: str,
+    experiment_tag: str,
+) -> Path:
+    return runs_dir / "PREDICTIVE_PORTFOLIO" / (
+        f"{results_date}__PREDICTIVE_PORTFOLIO{_profile_suffix(profile)}{_tag_suffix(experiment_tag)}.md"
+    )
+
+
+def _should_route_portfolio_to_runs_dir(*, sharepacks_root: str, runs_dir: Path) -> bool:
+    root = Path(str(sharepacks_root or ""))
+    if not root.is_absolute():
+        root = (REPO_ROOT / root).resolve()
+    else:
+        root = root.resolve()
+    return root != DEFAULT_PREDICTIVE_SHAREPACKS_ROOT or "REPLAY" in runs_dir.parts
 
 
 def _cmd_day_board_review(
@@ -561,6 +593,7 @@ def build_window_replay_compare_command(
     evidence_tier: str,
     run_label: str,
     force: bool,
+    require_candidate_complete: bool = False,
 ) -> List[str]:
     cmd: List[str] = [
         "python3",
@@ -578,6 +611,61 @@ def build_window_replay_compare_command(
         cmd.extend(["--candidate-window-root", str(candidate_window_root)])
     if candidate_cycle_root is not None:
         cmd.extend(["--candidate-cycle-root", str(candidate_cycle_root)])
+    if require_candidate_complete:
+        cmd.append("--require-candidate-complete")
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_window_replay_baseline_manifest_command(
+    *,
+    baseline_window_root: Path,
+    baseline_cycle_root: Path,
+    evidence_tier: str,
+    run_label: str,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_window_replay_baseline_manifest.py",
+        "--baseline-window-root",
+        str(baseline_window_root),
+        "--baseline-cycle-root",
+        str(baseline_cycle_root),
+        "--evidence-tier",
+        evidence_tier,
+        "--run-label",
+        run_label,
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
+def build_window_replay_execution_plan_command(
+    *,
+    run_label: str,
+    baseline_window_root: Path,
+    baseline_cycle_root: Path,
+    runs2_root: Path,
+    candidate_sharepacks_root: Path,
+    force: bool,
+) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_window_replay_execution_plan.py",
+        "--run-label",
+        run_label,
+        "--baseline-window-root",
+        str(baseline_window_root),
+        "--baseline-cycle-root",
+        str(baseline_cycle_root),
+        "--runs2-root",
+        str(runs2_root),
+        "--candidate-sharepacks-root",
+        str(candidate_sharepacks_root),
+    ]
     if force:
         cmd.append("--force")
     return cmd
@@ -979,6 +1067,16 @@ def build_pre_commands(
         effective_prefer_tags = prefer_experiment_tags
         if effective_prefer_tags is None and experiment_tag:
             effective_prefer_tags = f"{experiment_tag},,vtracpack_v1"
+        portfolio_out_path = (
+            _portfolio_out_path_for_runs_dir(
+                runs_dir=runs_dir,
+                results_date=results_date,
+                profile=profile,
+                experiment_tag=experiment_tag,
+            )
+            if _should_route_portfolio_to_runs_dir(sharepacks_root=sharepacks_root, runs_dir=runs_dir)
+            else None
+        )
         cmds.append(
             _cmd_create_predictive_portfolio(
                 results_date=results_date,
@@ -987,6 +1085,7 @@ def build_pre_commands(
                 force=force,
                 rank_by=effective_rank,
                 prefer_experiment_tags=effective_prefer_tags,
+                out_path=portfolio_out_path,
             )
         )
     if not skip_translation_sandbox:
@@ -1191,9 +1290,48 @@ def _parse_args() -> argparse.Namespace:
         choices=["same_window_replay", "archived_window_replication", "true_fresh_confirmation"],
     )
     replay_compare.add_argument("--run-label", default="march_2026_15day_replay_v2_pending")
+    replay_compare.add_argument("--require-candidate-complete", action="store_true")
     replay_compare.add_argument("--no-receipt", action="store_true")
     replay_compare.add_argument("--force", action="store_true")
     replay_compare.add_argument("--dry-run", action="store_true")
+
+    baseline_manifest = sub.add_parser(
+        "window-replay-baseline-manifest",
+        help="Freeze a baseline manifest before executing an Analysis Arena window replay.",
+    )
+    baseline_manifest.add_argument(
+        "--baseline-window-root",
+        default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23"),
+    )
+    baseline_manifest.add_argument("--baseline-cycle-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    baseline_manifest.add_argument(
+        "--evidence-tier",
+        default="same_window_replay",
+        choices=["same_window_replay", "archived_window_replication", "true_fresh_confirmation"],
+    )
+    baseline_manifest.add_argument("--run-label", default="march_2026_15day_replay_v2")
+    baseline_manifest.add_argument("--no-receipt", action="store_true")
+    baseline_manifest.add_argument("--force", action="store_true")
+    baseline_manifest.add_argument("--dry-run", action="store_true")
+
+    replay_plan = sub.add_parser(
+        "window-replay-plan",
+        help="Generate the read-only March Run 2 execution prep plan without running the replay.",
+    )
+    replay_plan.add_argument("--run-label", default="march_2026_15day_replay_v2")
+    replay_plan.add_argument(
+        "--baseline-window-root",
+        default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "WINDOW_2026-03-09_to_2026-03-23"),
+    )
+    replay_plan.add_argument("--baseline-cycle-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    replay_plan.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
+    replay_plan.add_argument(
+        "--candidate-sharepacks-root",
+        default=str(REPO_ROOT / "sharepacks" / "_predictive_replay" / "march_2026_15day_replay_v2"),
+    )
+    replay_plan.add_argument("--no-receipt", action="store_true")
+    replay_plan.add_argument("--force", action="store_true")
+    replay_plan.add_argument("--dry-run", action="store_true")
 
     stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
     stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
@@ -2675,6 +2813,7 @@ def main() -> None:
             evidence_tier=evidence_tier,
             run_label=run_label,
             force=bool(args.force),
+            require_candidate_complete=bool(args.require_candidate_complete),
         )
         receipt_lines: List[str] = [
             "# Analysis Arena cycle — WINDOW REPLAY COMPARE",
@@ -2688,6 +2827,7 @@ def main() -> None:
             f"- candidate_window_root: `{_safe_rel(candidate_window_root) if candidate_window_root else 'not_provided'}`",
             f"- baseline_cycle_root: `{_safe_rel(baseline_cycle_root)}`",
             f"- candidate_cycle_root: `{_safe_rel(candidate_cycle_root) if candidate_cycle_root else 'not_provided'}`",
+            f"- require_candidate_complete: `{bool(args.require_candidate_complete)}`",
             f"- force: `{bool(args.force)}`",
             f"- dry_run: `{bool(args.dry_run)}`",
             "",
@@ -2706,6 +2846,103 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = baseline_cycle_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_COMPARE.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-replay-baseline-manifest":
+        baseline_window_root = _window_root_from_arg(str(args.baseline_window_root))
+        baseline_cycle_root = Path(str(args.baseline_cycle_root)).resolve()
+        evidence_tier = str(args.evidence_tier or "same_window_replay").strip()
+        run_label = str(args.run_label or "window_replay").strip() or "window_replay"
+        cmd = build_window_replay_baseline_manifest_command(
+            baseline_window_root=baseline_window_root,
+            baseline_cycle_root=baseline_cycle_root,
+            evidence_tier=evidence_tier,
+            run_label=run_label,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — WINDOW REPLAY BASELINE MANIFEST",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- run_label: `{run_label}`",
+            f"- evidence_tier: `{evidence_tier}`",
+            f"- baseline_window_root: `{_safe_rel(baseline_window_root)}`",
+            f"- baseline_cycle_root: `{_safe_rel(baseline_cycle_root)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- The baseline manifest fingerprints preserved March evidence before a same-window replay.",
+            "- It does not execute a window, alter scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            final_docs = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
+            receipt_path = final_docs / "AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST_RECEIPT.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "window-replay-plan":
+        run_label = str(args.run_label or "march_2026_15day_replay_v2").strip() or "march_2026_15day_replay_v2"
+        baseline_window_root = _window_root_from_arg(str(args.baseline_window_root))
+        baseline_cycle_root = Path(str(args.baseline_cycle_root)).resolve()
+        runs2_root = Path(str(args.runs2_root)).resolve()
+        candidate_sharepacks_root = Path(str(args.candidate_sharepacks_root)).resolve()
+        cmd = build_window_replay_execution_plan_command(
+            run_label=run_label,
+            baseline_window_root=baseline_window_root,
+            baseline_cycle_root=baseline_cycle_root,
+            runs2_root=runs2_root,
+            candidate_sharepacks_root=candidate_sharepacks_root,
+            force=bool(args.force),
+        )
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle — WINDOW REPLAY EXECUTION PLAN",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- run_label: `{run_label}`",
+            f"- baseline_window_root: `{_safe_rel(baseline_window_root)}`",
+            f"- baseline_cycle_root: `{_safe_rel(baseline_cycle_root)}`",
+            f"- runs2_root: `{_safe_rel(runs2_root)}`",
+            f"- candidate_sharepacks_root: `{_safe_rel(candidate_sharepacks_root)}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Window replay plan generation is read-only and does not run the March replay.",
+            "- The generated plan must keep Run 2 artifacts isolated from the preserved March baseline.",
+            "- Same-window replay cannot unlock Stage 8A or live scoring/budget changes.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_PLAN.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

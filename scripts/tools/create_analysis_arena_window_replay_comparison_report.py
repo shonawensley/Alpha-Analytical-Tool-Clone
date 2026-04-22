@@ -185,6 +185,11 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--candidate-cycle-root", default="", help="Optional rerun/replication cycle-level artifact root.")
     ap.add_argument("--evidence-tier", default="same_window_replay", choices=sorted(EVIDENCE_TIERS))
     ap.add_argument("--run-label", default="march_2026_15day_replay_v2_pending")
+    ap.add_argument(
+        "--require-candidate-complete",
+        action="store_true",
+        help="Exit non-zero after writing outputs if required candidate targets are missing.",
+    )
     ap.add_argument("--out-md", default="", help="Optional Markdown output path.")
     ap.add_argument("--out-json", default="", help="Optional JSON output path.")
     ap.add_argument("--out-csv", default="", help="Optional CSV output path.")
@@ -533,10 +538,10 @@ def _interpretation_for(category: str) -> str:
 def _summary_status(evidence_tier: str, candidate_provided: bool, counts: Counter[str]) -> str:
     if not candidate_provided:
         return "baseline_preserved_candidate_pending"
+    if counts.get("blocked_by_missing_data", 0):
+        return "candidate_incomplete_fail_fast"
     if counts.get("contradicted", 0) or counts.get("degraded", 0):
         return "review_required_before_interpretation"
-    if counts.get("blocked_by_missing_data", 0):
-        return "comparison_partial_missing_data"
     if evidence_tier == "true_fresh_confirmation":
         return "fresh_comparison_ready_for_manual_gate_review"
     return "replay_or_replication_comparison_complete_no_fresh_unlock"
@@ -589,6 +594,24 @@ def build_payload(
     all_rows = window_rows + cycle_rows
     counts = Counter(str(row.get("category") or "") for row in all_rows)
     candidate_provided = candidate_window_provided or candidate_cycle_provided
+    required_rows = [row for row in all_rows if bool(row.get("required", True))]
+    missing_required_candidate_targets = [
+        str(row.get("target_id") or "")
+        for row in required_rows
+        if not bool(row.get("candidate_exists"))
+    ]
+    missing_required_baseline_targets = [
+        str(row.get("target_id") or "")
+        for row in required_rows
+        if not bool(row.get("baseline_exists"))
+    ]
+    candidate_completeness_status = (
+        "candidate_not_provided"
+        if not candidate_provided
+        else "candidate_incomplete"
+        if missing_required_candidate_targets
+        else "candidate_complete"
+    )
 
     return {
         "metadata": {
@@ -611,6 +634,16 @@ def build_payload(
             "stage8_permission": "blocked",
             "allowed_conclusions": _allowed_conclusions(evidence_tier, candidate_provided),
             "blocked_conclusions": _blocked_conclusions(evidence_tier),
+            "candidate_completeness_status": candidate_completeness_status,
+            "missing_required_candidate_target_count": len(missing_required_candidate_targets),
+        },
+        "candidate_completeness": {
+            "status": candidate_completeness_status,
+            "required_target_count": len(required_rows),
+            "missing_required_candidate_target_count": len(missing_required_candidate_targets),
+            "missing_required_baseline_target_count": len(missing_required_baseline_targets),
+            "missing_required_candidate_targets": missing_required_candidate_targets,
+            "missing_required_baseline_targets": missing_required_baseline_targets,
         },
         "window_comparisons": window_rows,
         "cycle_comparisons": cycle_rows,
@@ -638,6 +671,7 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
     meta = payload.get("metadata") or {}
     summary = payload.get("summary") or {}
     counts = summary.get("category_counts") or {}
+    completeness = payload.get("candidate_completeness") or {}
     rows = payload.get("diff_ledger") or []
 
     lines: List[str] = [
@@ -650,6 +684,8 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
         f"- comparison_status: `{summary.get('comparison_status', '')}`",
         f"- total_targets: `{summary.get('total_targets', 0)}`",
         f"- stage8_permission: `{summary.get('stage8_permission', 'blocked')}`",
+        f"- candidate_completeness: `{completeness.get('status', '')}`",
+        f"- missing_required_candidate_targets: `{completeness.get('missing_required_candidate_target_count', 0)}`",
         "",
         "Category counts:",
         "",
@@ -689,17 +725,35 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
 
     lines += [
         "",
-        "## 4. Allowed Conclusions",
+        "## 4. Candidate Completeness",
+        "",
+        f"- status: `{completeness.get('status', '')}`",
+        f"- required_target_count: `{completeness.get('required_target_count', 0)}`",
+        f"- missing_required_candidate_target_count: `{completeness.get('missing_required_candidate_target_count', 0)}`",
+        f"- missing_required_baseline_target_count: `{completeness.get('missing_required_baseline_target_count', 0)}`",
+        "",
+        "Missing required candidate targets:",
+        "",
+    ]
+    missing = list(completeness.get("missing_required_candidate_targets") or [])
+    if missing:
+        lines.extend(f"- `{item}`" for item in missing)
+    else:
+        lines.append("- none")
+
+    lines += [
+        "",
+        "## 5. Allowed Conclusions",
         "",
         f"- {summary.get('allowed_conclusions', '')}",
         "",
-        "## 5. Blocked Conclusions",
+        "## 6. Blocked Conclusions",
         "",
         f"- {summary.get('blocked_conclusions', '')}",
         "- This report does not run a window and does not grant Stage 8 permission.",
         "- Same-window replay and archived-window replication cannot replace true fresh-window confirmation.",
         "",
-        "## 6. Next Use",
+        "## 7. Next Use",
         "",
     ]
     if not meta.get("candidate_window_provided") and not meta.get("candidate_cycle_provided"):
@@ -751,6 +805,10 @@ def main() -> None:
     print(f"[OK] Wrote replay comparison markdown: {safe_rel(out_md)}")
     print(f"[OK] Wrote replay comparison JSON: {safe_rel(out_json)}")
     print(f"[OK] Wrote replay comparison CSV: {safe_rel(out_csv)}")
+    completeness = payload.get("candidate_completeness") or {}
+    if bool(args.require_candidate_complete) and completeness.get("status") != "candidate_complete":
+        missing = ", ".join(completeness.get("missing_required_candidate_targets") or [])
+        raise SystemExit(f"Candidate comparison incomplete; missing required targets: {missing or 'candidate package not provided'}")
 
 
 if __name__ == "__main__":

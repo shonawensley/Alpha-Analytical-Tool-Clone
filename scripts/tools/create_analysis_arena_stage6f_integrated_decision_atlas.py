@@ -95,6 +95,10 @@ def _load_required_csv(path: Path, label: str) -> List[Dict[str, str]]:
     return rows
 
 
+def _load_optional_csv(path: Path) -> List[Dict[str, str]]:
+    return _read_csv_rows(path)
+
+
 def _row_by_id(rows: Sequence[Mapping[str, Any]], field: str) -> Dict[str, Mapping[str, Any]]:
     return {str(row.get(field) or ""): row for row in rows}
 
@@ -579,6 +583,9 @@ def _render_md(
     casebook_rows: Sequence[Mapping[str, Any]],
     output_paths: Mapping[str, Path],
 ) -> str:
+    by_type = {str(row.get("lane_type") or ""): row for row in lane_rows}
+    support_posture = str(by_type.get("support_modifier_narrowing", {}).get("decision_posture") or "support candidate posture unavailable")
+    restraint_posture = str(by_type.get("restraint_soft_penalty", {}).get("decision_posture") or "restraint rescue posture unavailable")
     lines: List[str] = [
         "# Analysis Arena Stage 6F Integrated Decision Atlas",
         "",
@@ -589,8 +596,8 @@ def _render_md(
         "## Executive Readback",
         "",
         "- Primary restrained candidate expression remains the strongest current design seed, but Stage 6C future/fresh confirmation is still required.",
-        "- Restraint evidence is promising as soft-penalty research, not hard-veto permission.",
-        "- Support evidence remains broad-failed but narrow-candidate-positive in selected paired buckets.",
+        f"- Restraint evidence posture: {restraint_posture}; restraint remains soft-penalty research, not hard-veto permission.",
+        f"- Support evidence posture: {support_posture}; support remains research/modifier-only until repeated.",
         "- Rewrite remains blocked until fresh-window confirmation clears or quarantines the open gates.",
         "",
         "## Lane Decision Atlas",
@@ -740,10 +747,10 @@ def main() -> None:
     rewrite_blockers = _load_required_csv(inputs["rewrite_blockers"], "Stage 6C rewrite blockers")
     fresh_window_queue = _load_required_csv(inputs["fresh_window_queue"], "Stage 6C fresh window queue")
     macro_gate = _load_required_csv(inputs["macro_gate"], "Stage 6C macro gate")
-    restraint_rescue = _load_required_csv(inputs["restraint_rescue"], "Stage 6D restraint rescue")
+    restraint_rescue = _load_optional_csv(inputs["restraint_rescue"])
     restraint_policy = _load_required_csv(inputs["restraint_policy"], "Stage 6D restraint policy")
     restraint_next_actions = _load_required_csv(inputs["restraint_next_actions"], "Stage 6D next actions")
-    support_candidates = _load_required_csv(inputs["support_candidates"], "Stage 6E support candidates")
+    support_candidates = _load_optional_csv(inputs["support_candidates"])
     support_failures = _load_required_csv(inputs["support_failures"], "Stage 6E support failures")
     support_next_actions = _load_required_csv(inputs["support_next_actions"], "Stage 6E next actions")
 

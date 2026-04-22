@@ -1,0 +1,143 @@
+{
+  "lane_counts": {
+    "decay_watch_only": 2698
+  },
+  "metadata": {
+    "ablation_rows": 4,
+    "casebook_rows": 0,
+    "guardrail": "read_only_stage5_fixture_evaluator_no_live_scoring_or_candidate_generation_changes",
+    "prototype_modes": 1,
+    "restraint_audit_rows": 0,
+    "runs2_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+    "support_ablation_rows": 0,
+    "value_level_replay_rows": 2698
+  },
+  "mode_scorecard": [
+    {
+      "active_state_days": 145,
+      "avg_pool_or_exposure_per_state_day": 118.8896551724138,
+      "cluster_count": 28,
+      "deduped_complete_matched_value_count": 174,
+      "deduped_complete_value_count": 1654,
+      "deduped_complete_value_match_rate": 0.10519951632406288,
+      "false_positive_proxy_rate": 0.8344451534311735,
+      "false_positive_proxy_value_count": 14385,
+      "gap_teacher_event_count": 457,
+      "ledger_rows": 2698,
+      "matched_event_count": 2904,
+      "matched_value_count": 2854,
+      "matched_value_rate": 0.1655548465688265,
+      "pool_normalized_positive_yield": 8.643192760600963,
+      "positive_conversion_event_count": 1490,
+      "positive_conversions_per_100_state_days": 1027.5862068965519,
+      "prototype_mode": "decay_watch_companion",
+      "sample_completeness_rate": 1.0,
+      "sample_status_mix": "value_level_complete:2698",
+      "state_count": 14,
+      "total_overlap_values": 17239,
+      "window_count": 1,
+      "wrong_lane_event_count": 891,
+      "wrong_lane_events_per_100_state_days": 614.4827586206897,
+      "wrong_lane_free_conversions_per_100_state_days": 413.10344827586204
+    }
+  ],
+  "outputs": {
+    "ablation_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_ABLATION_MATRIX.csv",
+    "casebook_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_CASEBOOK.csv",
+    "casebook_md": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_CASEBOOK.md",
+    "json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR.json",
+    "md": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR.md",
+    "mode_scorecard_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_PROTOTYPE_MODE_SCORECARD.csv",
+    "pro44_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_PRO44_COMPLIANCE_CHECKLIST.csv",
+    "restraint_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_RESTRAINT_EFFECT_AUDIT.csv",
+    "state_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_STATE_STRATIFICATION.csv",
+    "support_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SUPPORT_GATE_ABLATION.csv",
+    "value_completeness_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_COMPLETENESS_AUDIT.csv",
+    "value_ledger_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_REPLAY_LEDGER.csv",
+    "window_csv": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_WINDOW_STRATIFICATION.csv"
+  },
+  "pro44_compliance": [
+    {
+      "criterion": "split_replay_by_mechanism_family",
+      "evidence": "mode/window/state/ablation rows carry mechanism_family; Stage 4 mechanism scorecard remains upstream baseline",
+      "guardrail": "do_not_blend_all_candidates_into_one_pool",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "legacy_names_are_locators_not_rule_names",
+      "evidence": "Stage 5 reads Stage 4C future_primitive and preserves old source names only as source_a/source_b locators",
+      "guardrail": "future architecture references mechanism_family and future_primitive",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "shared_lineage_deduplication",
+      "evidence": "lineage_guarded rows stay separate from clean rows and clean_plus_lineage_deduped is reported as a distinct prototype mode",
+      "guardrail": "lineage rows do not become independent confirmation credit",
+      "stage5_status": "covered_for_replay_modes"
+    },
+    {
+      "criterion": "source_a_source_b_overlap_ablation",
+      "evidence": "STAGE5_ABLATION_MATRIX summarizes Stage 4 source A / source B / overlap comparisons by mode/lane/mechanism",
+      "guardrail": "overlap cannot be claimed useful without source-side baseline",
+      "stage5_status": "covered_aggregate_stage4_backed"
+    },
+    {
+      "criterion": "yield_denominator_metrics",
+      "evidence": "mode/window/state/support/restraint outputs include positive/100 ASD, wrong-lane-free/100 ASD, false-positive proxy rate, and pool-normalized yield",
+      "guardrail": "do_not_rank_by_raw_hit_counts",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "state_concentration_read",
+      "evidence": "STAGE5_STATE_STRATIFICATION plus Stage 4 concentration upstream checks expose state dependence",
+      "guardrail": "do_not_promote_one_state_fragility",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "negative_controls_as_restraint_assets",
+      "evidence": "STAGE5_RESTRAINT_EFFECT_AUDIT measures kept vs removed candidate rows under high-pressure restraint",
+      "guardrail": "negative controls are penalty/veto surfaces, not promotion surfaces",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "vtrac_decay_not_boxed_permission",
+      "evidence": "decay_watch_companion is reported as a separate prototype mode and never mixed into boxed candidate-expression modes",
+      "guardrail": "territory persistence cannot become boxed spend permission",
+      "stage5_status": "covered"
+    },
+    {
+      "criterion": "sample_completeness_before_value_level_claims",
+      "evidence": "STAGE5_VALUE_COMPLETENESS_AUDIT marks value_level_complete, sample_truncated, and aggregate-only rows before interpreting value-level replay",
+      "guardrail": "do_not_overclaim_truncated_samples",
+      "stage5_status": "new_stage5_control"
+    }
+  ],
+  "value_completeness": [
+    {
+      "interpretation": "value-level replay is exact only for matched rows with value_level_complete status",
+      "matched_aggregate_only_missing_sample": 0,
+      "matched_sample_completeness_rate": 1.0,
+      "matched_sample_truncated": 0,
+      "matched_stage5_rows": 2698,
+      "matched_value_level_complete": 2698,
+      "pairing_aggregate_only_missing_sample": 0,
+      "pairing_rows_scanned": 34091,
+      "pairing_sample_truncated": 4384,
+      "pairing_value_level_complete": 29707,
+      "window": "ALL_WINDOWS"
+    },
+    {
+      "interpretation": "value-level replay is exact only for matched rows with value_level_complete status",
+      "matched_aggregate_only_missing_sample": 0,
+      "matched_sample_completeness_rate": 1.0,
+      "matched_sample_truncated": 0,
+      "matched_stage5_rows": 2698,
+      "matched_value_level_complete": 2698,
+      "pairing_aggregate_only_missing_sample": 0,
+      "pairing_rows_scanned": 34091,
+      "pairing_sample_truncated": 4384,
+      "pairing_value_level_complete": 29707,
+      "window": "WINDOW_2026-03-09_to_2026-03-23"
+    }
+  ]
+}

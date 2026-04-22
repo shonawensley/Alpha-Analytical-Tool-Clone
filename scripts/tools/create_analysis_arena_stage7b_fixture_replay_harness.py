@@ -90,6 +90,10 @@ def _load_required_csv(path: Path, label: str) -> List[Dict[str, str]]:
     return rows
 
 
+def _load_optional_csv(path: Path) -> List[Dict[str, str]]:
+    return _read_csv_rows(path)
+
+
 def _row_by_id(rows: Sequence[Mapping[str, Any]], field: str) -> Dict[str, Mapping[str, Any]]:
     return {str(row.get(field) or ""): row for row in rows}
 
@@ -725,14 +729,14 @@ def main() -> None:
     confirmation_tests = _load_required_csv(inputs["confirmation_tests"], "Stage 6C confirmation tests")
     threshold_contract = _load_required_csv(inputs["threshold_contract"], "Stage 6C threshold contract")
     _load_required_csv(inputs["stage6c_blockers"], "Stage 6C rewrite blockers")
-    restraint_candidates = _load_required_csv(inputs["restraint_candidates"], "Stage 6D restraint candidates")
-    support_candidates = _load_required_csv(inputs["support_candidates"], "Stage 6E support candidates")
+    restraint_candidates = _load_optional_csv(inputs["restraint_candidates"])
+    support_candidates = _load_optional_csv(inputs["support_candidates"])
     lane_atlas = _load_required_csv(inputs["lane_atlas"], "Stage 6F lane atlas")
     stage6f_blockers = _load_required_csv(inputs["stage6f_blockers"], "Stage 6F blockers")
     stage6f_queue = _load_required_csv(inputs["stage6f_queue"], "Stage 6F carry-forward queue")
     stage6f_macro = _load_required_csv(inputs["stage6f_macro"], "Stage 6F macro disposition")
-    stage6f_casebook = _load_required_csv(inputs["stage6f_casebook"], "Stage 6F casebook")
-    stage6f_examples = _load_required_csv(inputs["stage6f_examples"], "Stage 6F example ledger")
+    stage6f_casebook = _load_optional_csv(inputs["stage6f_casebook"])
+    stage6f_examples = _load_optional_csv(inputs["stage6f_examples"])
     stage7a_requirements = _load_required_csv(inputs["stage7a_requirements"], "Stage 7A requirements")
     stage7a_benchmarks = _load_required_csv(inputs["stage7a_benchmarks"], "Stage 7A benchmarks")
     stage7a_template = _load_required_csv(inputs["stage7a_template"], "Stage 7A future template")
@@ -789,6 +793,13 @@ def main() -> None:
         "requirement_row_count": len(requirement_coverage),
         "blocker_row_count": len(blocker_recheck),
         "casebook_row_count": len(casebook_traceability),
+        "optional_empty_inputs": {
+            "restraint_candidate_rows": len(restraint_candidates),
+            "support_candidate_rows": len(support_candidates),
+            "stage6f_casebook_rows": len(stage6f_casebook),
+            "stage6f_example_rows": len(stage6f_examples),
+            "interpretation": "Zero rows are valid when Run 2 exposes no optional rescue/support/casebook targets.",
+        },
         "queue_status_counts": _status_counts(queue_status, "replay_readiness_status"),
         "requirement_status_counts": _status_counts(requirement_coverage, "coverage_status"),
         "blocker_status_counts": _status_counts(blocker_recheck, "recheck_status"),

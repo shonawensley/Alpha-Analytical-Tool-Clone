@@ -1,0 +1,541 @@
+{
+  "baseline_manifest": {
+    "created_by_first_preflight_command": true,
+    "csv": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST.csv",
+    "json": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST.json",
+    "md": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST.md"
+  },
+  "blockers": [],
+  "command_csv_path": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.csv",
+  "commands": [
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-baseline-manifest --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --no-receipt --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-baseline-manifest --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --no-receipt --force",
+      "phase": "preflight",
+      "purpose": "freeze March baseline manifest immediately before Run 2 execution",
+      "sequence": 1,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --force",
+      "phase": "preflight",
+      "purpose": "regenerate read-only replay readiness before executing Run 2",
+      "sequence": 2,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --force",
+      "phase": "preflight",
+      "purpose": "preserve pending baseline-vs-candidate comparison state",
+      "sequence": 3,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
+    },
+    {
+      "command": "mkdir -p '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM'",
+      "dry_run_command": "mkdir -p '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM'",
+      "phase": "namespace_setup",
+      "purpose": "create isolated Run 2 control-arm output directory before direct grade commands",
+      "sequence": 4,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py pre-range --start-history-date 2026-03-08 --end-history-date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --board-name analysis_arena_day_review --runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA --top-n-stable 10 --write-audit-evidence --play-card-write-md --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py pre-range --start-history-date 2026-03-08 --end-history-date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --board-name analysis_arena_day_review --runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA --top-n-stable 10 --write-audit-evidence --play-card-write-md --force --dry-run",
+      "phase": "pre",
+      "purpose": "build Run 2 predictive sharepacks and Analysis Arena pre artifacts in isolated namespace",
+      "sequence": 5,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-09 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-09 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-09 into isolated Run 2 control-arm dir",
+      "sequence": 6,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-09 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-09 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-09 into isolated Run 2 control-arm dir",
+      "sequence": 7,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-10 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-10 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-10 into isolated Run 2 control-arm dir",
+      "sequence": 8,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-10 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-10 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-10__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-10 into isolated Run 2 control-arm dir",
+      "sequence": 9,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-11 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-11 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-11 into isolated Run 2 control-arm dir",
+      "sequence": 10,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-11 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-11 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-11__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-11 into isolated Run 2 control-arm dir",
+      "sequence": 11,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-12 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-12 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-12 into isolated Run 2 control-arm dir",
+      "sequence": 12,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-12 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-12 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-12__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-12 into isolated Run 2 control-arm dir",
+      "sequence": 13,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-13 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-13 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-13 into isolated Run 2 control-arm dir",
+      "sequence": 14,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-13 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-13 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-13__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-13 into isolated Run 2 control-arm dir",
+      "sequence": 15,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-14 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-14 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-14 into isolated Run 2 control-arm dir",
+      "sequence": 16,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-14 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-14 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-14__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-14 into isolated Run 2 control-arm dir",
+      "sequence": 17,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-15 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-15 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-15 into isolated Run 2 control-arm dir",
+      "sequence": 18,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-15 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-15 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-15__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-15 into isolated Run 2 control-arm dir",
+      "sequence": 19,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-16 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-16 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-16 into isolated Run 2 control-arm dir",
+      "sequence": 20,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-16 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-16 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-16__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-16 into isolated Run 2 control-arm dir",
+      "sequence": 21,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-17 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-17 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-17 into isolated Run 2 control-arm dir",
+      "sequence": 22,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-17 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-17 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-17__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-17 into isolated Run 2 control-arm dir",
+      "sequence": 23,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-18 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-18 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-18 into isolated Run 2 control-arm dir",
+      "sequence": 24,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-18 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-18 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-18__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-18 into isolated Run 2 control-arm dir",
+      "sequence": 25,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-19 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-19 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-19 into isolated Run 2 control-arm dir",
+      "sequence": 26,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-19 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-19 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-19__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-19 into isolated Run 2 control-arm dir",
+      "sequence": 27,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-20 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-20 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-20 into isolated Run 2 control-arm dir",
+      "sequence": 28,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-20 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-20 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-20__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-20 into isolated Run 2 control-arm dir",
+      "sequence": 29,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-21 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-21 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-21 into isolated Run 2 control-arm dir",
+      "sequence": 30,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-21 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-21 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-21__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-21 into isolated Run 2 control-arm dir",
+      "sequence": 31,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-22 into isolated Run 2 control-arm dir",
+      "sequence": 32,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-22 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-22__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-22 into isolated Run 2 control-arm dir",
+      "sequence": 33,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_candidate_universe.py --date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__CANDIDATE_UNIVERSE_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate universe for 2026-03-23 into isolated Run 2 control-arm dir",
+      "sequence": 34,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card.py --date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card.py --date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__PLAY_CARD_GRADE__tool_only__arena_v0.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-23__PLAY_CARD_GRADE__tool_only__arena_v0.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade play card for 2026-03-23 into isolated Run 2 control-arm dir",
+      "sequence": 35,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/grade_play_card_windowed.py --start-date 2026-03-09 --end-date 2026-03-23 --window-draws 5 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09_to_2026-03-23__PLAY_CARD_WINDOWED_GRADE__tool_only__arena_v0__N5.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09_to_2026-03-23__PLAY_CARD_WINDOWED_GRADE__tool_only__arena_v0__N5.md' --out-rollup-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/play_card_windowed_rollup__tool_only__arena_v0__N5__2026-03-09_to_2026-03-23.csv' --out-rollup-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/play_card_windowed_rollup__tool_only__arena_v0__N5__2026-03-09_to_2026-03-23.md' --force",
+      "dry_run_command": "python3 scripts/tools/grade_play_card_windowed.py --start-date 2026-03-09 --end-date 2026-03-23 --window-draws 5 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --out-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09_to_2026-03-23__PLAY_CARD_WINDOWED_GRADE__tool_only__arena_v0__N5.csv' --out-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/2026-03-09_to_2026-03-23__PLAY_CARD_WINDOWED_GRADE__tool_only__arena_v0__N5.md' --out-rollup-csv '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/play_card_windowed_rollup__tool_only__arena_v0__N5__2026-03-09_to_2026-03-23.csv' --out-rollup-md '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM/play_card_windowed_rollup__tool_only__arena_v0__N5__2026-03-09_to_2026-03-23.md' --force",
+      "phase": "control_arm_grading",
+      "purpose": "grade candidate play cards across the replay window with isolated windowed outputs",
+      "sequence": 36,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py post-range --start-date 2026-03-09 --end-date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --truth-sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks --profile tool_only --experiment-tag arena_v0 --board-name analysis_arena_day_review --runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION --analysis-runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA --control-arm-runs-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM' --skip-candidate-universe-grade --skip-play-card-grade --skip-windowed --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py post-range --start-date 2026-03-09 --end-date 2026-03-23 --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --truth-sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks --profile tool_only --experiment-tag arena_v0 --board-name analysis_arena_day_review --runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION --analysis-runs-subdir REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA --control-arm-runs-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM' --skip-candidate-universe-grade --skip-play-card-grade --skip-windowed --force --dry-run",
+      "phase": "post",
+      "purpose": "build Run 2 validation reports while reading Run 2 Analysis Arena artifacts and isolated control-arm grades",
+      "sequence": 37,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --runs-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM' --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --include-decay --results-root /home/ser/code/Alpha-Analytical-Tool-Clone/data/results --decay-upload-days-total 5 --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-close --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --runs-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM' --sharepacks-root /home/ser/code/Alpha-Analytical-Tool-Clone/sharepacks/_predictive_replay/march_2026_15day_replay_v2 --profile tool_only --experiment-tag arena_v0 --include-decay --results-root /home/ser/code/Alpha-Analytical-Tool-Clone/data/results --decay-upload-days-total 5 --force --dry-run",
+      "phase": "window_close",
+      "purpose": "close Run 2 window with standard window reports and decay carryover",
+      "sequence": 38,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    },
+    {
+      "command": "python3 scripts/tools/create_window_evidence_utilization_audit.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/create_window_evidence_utilization_audit.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "phase": "post_run_audit",
+      "purpose": "generate create_window_evidence_utilization_audit for Run 2",
+      "sequence": 39,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    },
+    {
+      "command": "python3 scripts/tools/create_window_audit_interpretation_report.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/create_window_audit_interpretation_report.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "phase": "post_run_audit",
+      "purpose": "generate create_window_audit_interpretation_report for Run 2",
+      "sequence": 40,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    },
+    {
+      "command": "python3 scripts/tools/create_window_stage2_signal_exposure_audit.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/create_window_stage2_signal_exposure_audit.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "phase": "post_run_audit",
+      "purpose": "generate create_window_stage2_signal_exposure_audit for Run 2",
+      "sequence": 41,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    },
+    {
+      "command": "python3 scripts/tools/create_window_stage2b_signal_stack_analysis.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/create_window_stage2b_signal_stack_analysis.py --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "phase": "post_run_audit",
+      "purpose": "generate create_window_stage2b_signal_stack_analysis for Run 2",
+      "sequence": 42,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    },
+    {
+      "command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "phase": "post_run_audit",
+      "purpose": "generate Stage 2B cross-window rollup inside candidate replay root",
+      "sequence": 43,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 3 decision workbench from Run 2 window evidence",
+      "sequence": 44,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 4 fixture replay from Run 2 Stage 3 queue",
+      "sequence": 45,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 4B readback from Run 2 fixture evidence",
+      "sequence": 46,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 4C shadow translator prototype from Run 2 evidence",
+      "sequence": 47,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 5 shadow translator evaluator from Run 2 prototype outputs",
+      "sequence": 48,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 5 readback from Run 2 evaluator outputs",
+      "sequence": 49,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6A shadow translator spec from Run 2 readback",
+      "sequence": 50,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6B shadow replay from Run 2 Stage 6A/5 evidence",
+      "sequence": 51,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6B readback from Run 2 replay outputs",
+      "sequence": 52,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6C confirmation protocol from Run 2 readback",
+      "sequence": 53,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6D restraint calibration from Run 2 evidence",
+      "sequence": 54,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6E support narrowing from Run 2 evidence",
+      "sequence": 55,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 6F decision atlas from Run 2 evidence",
+      "sequence": 56,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 7A scaffold from Run 2 evidence",
+      "sequence": 57,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
+      "phase": "stage3_to_7b",
+      "purpose": "regenerate Stage 7B fixture replay harness from Run 2 evidence",
+      "sequence": 58,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+    },
+    {
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
+      "phase": "comparison",
+      "purpose": "compare preserved March baseline against Run 2 candidate after the replay exists",
+      "sequence": 59,
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
+    }
+  ],
+  "evidence_tier": "same_window_replay",
+  "generated_at": "2026-04-21T23:05:18.899518+00:00",
+  "guardrails": [
+    "Do not write into the preserved baseline window root.",
+    "Do not write Run 2 predictive sharepacks into sharepacks/_predictive.",
+    "Run 2 is same-window replay evidence only.",
+    "Same-window replay cannot unlock Stage 8A or live scoring/candidate/budget changes.",
+    "Review degraded or contradicted comparison rows before using Run 2 as development evidence."
+  ],
+  "namespace_status": {
+    "baseline_cycle_exists": true,
+    "baseline_window_exists": true,
+    "baseline_window_inside_candidate_window": false,
+    "candidate_control_arm_exists": false,
+    "candidate_replay_path_has_run_label": true,
+    "candidate_replay_root_exists": false,
+    "candidate_sharepacks_is_production_predictive": false,
+    "candidate_sharepacks_path_has_run_label": true,
+    "candidate_sharepacks_root_exists": false,
+    "candidate_window_equals_baseline_window": false,
+    "candidate_window_inside_baseline_window": false,
+    "candidate_window_path_has_run_label": true,
+    "candidate_window_root_exists": false,
+    "planned_write_paths_inside_baseline_window": [],
+    "safe_to_create_candidate_namespace": true
+  },
+  "namespaces": {
+    "baseline_cycle_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
+    "baseline_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23",
+    "candidate_analysis_subdir": "REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA",
+    "candidate_control_arm_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM",
+    "candidate_replay_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+    "candidate_sharepacks_root": "sharepacks/_predictive_replay/march_2026_15day_replay_v2",
+    "candidate_validation_subdir": "REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION",
+    "candidate_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23",
+    "truth_sharepacks_root": "sharepacks"
+  },
+  "run_label": "march_2026_15day_replay_v2",
+  "schema_version": "analysis_arena_window_replay_execution_plan/v1",
+  "source_coverage": {
+    "bonus_results_missing": [],
+    "history_missing": [],
+    "ready": true,
+    "results_missing": [],
+    "tail_results_missing": []
+  },
+  "stage8_permission": "blocked",
+  "status": "ready_for_approval_to_run",
+  "window": {
+    "decay_upload_days_total": 5,
+    "end_date": "2026-03-23",
+    "history_end_date": "2026-03-22",
+    "history_start_date": "2026-03-08",
+    "name": "WINDOW_2026-03-09_to_2026-03-23",
+    "start_date": "2026-03-09",
+    "tail_results_end_date": "2026-03-27"
+  }
+}

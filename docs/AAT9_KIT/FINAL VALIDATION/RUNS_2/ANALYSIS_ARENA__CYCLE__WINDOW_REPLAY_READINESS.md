@@ -1,8 +1,8 @@
 # Analysis Arena cycle — WINDOW REPLAY READINESS
 
 ## Metadata
-- generated_at: `2026-04-21T05:57:09.879133+00:00`
-- git_sha: `ca587a341a809f5cd0959c3199736e5a572997fd`
+- generated_at: `2026-04-21T23:06:09.897362+00:00`
+- git_sha: `40a4c6ede96112baf2e6e017f5ace8831661d14e`
 - runs2_root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2`
 - explicit_windows: `0`
 - history_root: `data/history`

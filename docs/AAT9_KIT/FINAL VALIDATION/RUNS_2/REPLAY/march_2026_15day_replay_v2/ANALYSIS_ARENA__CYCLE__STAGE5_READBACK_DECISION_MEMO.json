@@ -1,0 +1,166 @@
+{
+  "ablation_summary": {
+    "best_positive_overlap_rows": [],
+    "interpretation_counts": {
+      "overlap_reduces_pool_but_does_not_beat_best_source": 4
+    },
+    "pool_reduction_rows": 4,
+    "positive_overlap_lift_rows": 0,
+    "rows": 4,
+    "strongest_pool_reduction_rows": [
+      {
+        "interpretation": "overlap_reduces_pool_but_does_not_beat_best_source",
+        "mechanism_family": "old_play_card_expression_spine",
+        "overlap_lift": -42.55952380952382,
+        "pool_reduction": 5.992857142857143,
+        "prototype_lane": "decay_watch_only",
+        "prototype_mode": "decay_watch_companion"
+      },
+      {
+        "interpretation": "overlap_reduces_pool_but_does_not_beat_best_source",
+        "mechanism_family": "blackapple_related_boxed_overlap",
+        "overlap_lift": -46.07489597780861,
+        "pool_reduction": 4.048543689320388,
+        "prototype_lane": "decay_watch_only",
+        "prototype_mode": "decay_watch_companion"
+      },
+      {
+        "interpretation": "overlap_reduces_pool_but_does_not_beat_best_source",
+        "mechanism_family": "vtrac_decay_watch_spine",
+        "overlap_lift": -45.09227614490772,
+        "pool_reduction": 2.146963187188751,
+        "prototype_lane": "decay_watch_only",
+        "prototype_mode": "decay_watch_companion"
+      },
+      {
+        "interpretation": "overlap_reduces_pool_but_does_not_beat_best_source",
+        "mechanism_family": "vtrac_enhanced_secondary_spine",
+        "overlap_lift": -39.560439560439555,
+        "pool_reduction": 2.032600732600733,
+        "prototype_lane": "decay_watch_only",
+        "prototype_mode": "decay_watch_companion"
+      }
+    ]
+  },
+  "conditional_empty_inputs": {
+    "candidate_expression_modes_present": false,
+    "interpretation": "Empty support/restraint audits are valid only when Stage 5 has no candidate-expression modes.",
+    "restraint_effect_audit_empty_allowed": true,
+    "support_gate_ablation_empty_allowed": true
+  },
+  "guardrail": "read-only decision memo; no live scoring, candidate generation, translator, budget, or legacy infrastructure changes",
+  "mode_decisions": [
+    {
+      "active_state_days": 145,
+      "allowed_permission": "no_live_permission",
+      "avg_pool_or_exposure_per_state_day": 118.8896551724138,
+      "cluster_count": 28,
+      "deduped_complete_value_match_rate": 0.10519951632406288,
+      "false_positive_proxy_rate": 0.8344451534311735,
+      "intended_role": "decay_companion_only",
+      "ledger_rows": 2698,
+      "matched_value_rate": 0.1655548465688265,
+      "next_action": "Keep as decay/watch companion and feed only future carryover or territory research.",
+      "pool_normalized_positive_yield": 8.643192760600963,
+      "positive_conversions_per_100_state_days": 1027.5862068965519,
+      "prototype_mode": "decay_watch_companion",
+      "readback_decision": "companion_only",
+      "reason": "High coverage but high false-positive proxy and wrong-lane pressure; useful for carryforward context, not boxed permission.",
+      "sample_completeness_rate": 1.0,
+      "state_concentration_flag": "distributed",
+      "state_count": 14,
+      "status": "keep_separate",
+      "top_state": "Virginia4",
+      "top_state_positive_share": 0.11342281879194631,
+      "top_window": "WINDOW_2026-03-09_to_2026-03-23",
+      "top_window_positive_share": 1.0,
+      "window_concentration_flag": "high_concentration",
+      "window_count": 1
+    }
+  ],
+  "next_actions": [
+    {
+      "action": "Treat positive-conversion metrics as March-led until future/fresh windows repeat the same readback shape.",
+      "action_type": "window_concentration_guardrail",
+      "allowed_permission": "shadow_spec_with_concentration_warning",
+      "priority": 1,
+      "rationale": "1 Stage-5 modes have high positive-conversion window concentration.",
+      "source_artifact": "ANALYSIS_ARENA__CYCLE__STAGE5_WINDOW_STRATIFICATION.csv",
+      "subject": "positive_conversion_labels"
+    },
+    {
+      "action": "Treat overlap as narrowing/restraint unless it beats the best individual source on support rate.",
+      "action_type": "ablation_guardrail",
+      "allowed_permission": "no_duplicate_credit",
+      "priority": 2,
+      "rationale": "0 of 4 ablation rows showed positive overlap lift over the best source.",
+      "source_artifact": "ANALYSIS_ARENA__CYCLE__STAGE5_ABLATION_MATRIX.csv",
+      "subject": "source_a_source_b_overlap"
+    },
+    {
+      "action": "Do not append a confirmed macro finding until Stage 5 readback conclusions repeat on a future/fresh window or are explicitly reviewed as provisional.",
+      "action_type": "macro_findings_gate",
+      "allowed_permission": "provisional_only_until_repeat",
+      "priority": 3,
+      "rationale": "The readback is a decision layer; the Macro Findings Log should preserve evidence-led conclusions, not every infrastructure milestone.",
+      "source_artifact": "ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.md",
+      "subject": "macro_findings_log"
+    }
+  ],
+  "pro44_status_counts": {
+    "": 9
+  },
+  "restraint_bucket_readback": [],
+  "runs2_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+  "source_files": {
+    "ablation": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_ABLATION_MATRIX.csv",
+    "completeness": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_COMPLETENESS_AUDIT.csv",
+    "evaluator_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR.json",
+    "evaluator_md": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR.md",
+    "mode_scorecard": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_PROTOTYPE_MODE_SCORECARD.csv",
+    "pro44": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_PRO44_COMPLIANCE_CHECKLIST.csv",
+    "restraint": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_RESTRAINT_EFFECT_AUDIT.csv",
+    "state": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_STATE_STRATIFICATION.csv",
+    "support": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_SUPPORT_GATE_ABLATION.csv",
+    "window": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_WINDOW_STRATIFICATION.csv"
+  },
+  "stage5_metadata": {
+    "ablation_rows": 4,
+    "casebook_rows": 0,
+    "guardrail": "read_only_stage5_fixture_evaluator_no_live_scoring_or_candidate_generation_changes",
+    "prototype_modes": 1,
+    "restraint_audit_rows": 0,
+    "runs2_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+    "support_ablation_rows": 0,
+    "value_level_replay_rows": 2698
+  },
+  "support_bucket_readback": [],
+  "value_completeness": [
+    {
+      "interpretation": "value-level replay is exact only for matched rows with value_level_complete status",
+      "matched_aggregate_only_missing_sample": "0",
+      "matched_sample_completeness_rate": "1.0",
+      "matched_sample_truncated": "0",
+      "matched_stage5_rows": "2698",
+      "matched_value_level_complete": "2698",
+      "pairing_aggregate_only_missing_sample": "0",
+      "pairing_rows_scanned": "34091",
+      "pairing_sample_truncated": "4384",
+      "pairing_value_level_complete": "29707",
+      "window": "ALL_WINDOWS"
+    },
+    {
+      "interpretation": "value-level replay is exact only for matched rows with value_level_complete status",
+      "matched_aggregate_only_missing_sample": "0",
+      "matched_sample_completeness_rate": "1.0",
+      "matched_sample_truncated": "0",
+      "matched_stage5_rows": "2698",
+      "matched_value_level_complete": "2698",
+      "pairing_aggregate_only_missing_sample": "0",
+      "pairing_rows_scanned": "34091",
+      "pairing_sample_truncated": "4384",
+      "pairing_value_level_complete": "29707",
+      "window": "WINDOW_2026-03-09_to_2026-03-23"
+    }
+  ]
+}

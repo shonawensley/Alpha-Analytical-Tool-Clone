@@ -53,6 +53,14 @@ MODE_INTENT: Dict[str, str] = {
     "support_gate_context": "support_context_only",
 }
 
+CANDIDATE_EXPRESSION_MODES = {
+    "clean_boxed_only",
+    "clean_lineage_supported_restrained",
+    "clean_plus_lineage_deduped",
+    "clean_with_restraint_filter",
+    "clean_with_support_context",
+}
+
 
 def _parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
@@ -89,6 +97,13 @@ def _output_paths(output_dir: Path) -> Dict[str, Path]:
 def _load_required_csv(path: Path, label: str) -> List[Dict[str, str]]:
     rows = _read_csv_rows(path)
     if not rows:
+        raise SystemExit(f"Missing or empty required Stage-5 {label}: {safe_rel(path)}")
+    return rows
+
+
+def _load_conditional_csv(path: Path, label: str, *, required: bool) -> List[Dict[str, str]]:
+    rows = _read_csv_rows(path)
+    if required and not rows:
         raise SystemExit(f"Missing or empty required Stage-5 {label}: {safe_rel(path)}")
     return rows
 
@@ -579,6 +594,8 @@ def _render_md(
         "",
         "## Support Context Read",
     ]
+    if not support_bucket_rows:
+        lines.append("- No support-gate ablation rows were produced because no candidate-expression modes reached Stage 5 in this replay.")
     lines.extend(
         _table(
             ["bucket", "rows", "state-days", "FP proxy", "yield", "read"],
@@ -599,6 +616,8 @@ def _render_md(
         "",
         "## Restraint Read",
     ]
+    if not restraint_bucket_rows:
+        lines.append("- No restraint-effect rows were produced because no candidate-expression modes reached Stage 5 in this replay.")
     lines.extend(
         _table(
             ["bucket", "rows", "state-days", "FP proxy", "yield", "read"],
@@ -667,13 +686,16 @@ def build_readback_payload(
 
     mode_scorecard = _load_required_csv(paths["mode_scorecard"], "prototype mode scorecard")
     ablation_rows = _load_required_csv(paths["ablation"], "ablation matrix")
-    support_rows = _load_required_csv(paths["support"], "support-gate ablation")
-    restraint_rows = _load_required_csv(paths["restraint"], "restraint-effect audit")
     window_rows = _load_required_csv(paths["window"], "window stratification")
     state_rows = _load_required_csv(paths["state"], "state stratification")
     completeness_rows = _load_required_csv(paths["completeness"], "value completeness audit")
     pro44_rows = _load_required_csv(paths["pro44"], "PRO_44 checklist")
     evaluator_json = _load_json(paths["evaluator_json"])
+    candidate_modes_present = bool(
+        CANDIDATE_EXPRESSION_MODES & {str(row.get("prototype_mode") or "") for row in mode_scorecard}
+    )
+    support_rows = _load_conditional_csv(paths["support"], "support-gate ablation", required=candidate_modes_present)
+    restraint_rows = _load_conditional_csv(paths["restraint"], "restraint-effect audit", required=candidate_modes_present)
 
     window_concentration = _mode_positive_concentration(window_rows, group_field="window")
     state_concentration = _mode_positive_concentration(state_rows, group_field="state_key")
@@ -700,6 +722,12 @@ def build_readback_payload(
         "mode_decisions": mode_rows,
         "support_bucket_readback": support_bucket_rows,
         "restraint_bucket_readback": restraint_bucket_rows,
+        "conditional_empty_inputs": {
+            "candidate_expression_modes_present": candidate_modes_present,
+            "support_gate_ablation_empty_allowed": not candidate_modes_present and not support_rows,
+            "restraint_effect_audit_empty_allowed": not candidate_modes_present and not restraint_rows,
+            "interpretation": "Empty support/restraint audits are valid only when Stage 5 has no candidate-expression modes.",
+        },
         "ablation_summary": ablation,
         "pro44_status_counts": dict(Counter(str(row.get("status") or "") for row in pro44_rows)),
         "next_actions": next_actions,
