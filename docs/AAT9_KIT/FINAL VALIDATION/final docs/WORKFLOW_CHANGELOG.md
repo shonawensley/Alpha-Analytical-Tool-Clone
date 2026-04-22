@@ -6,6 +6,45 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-04-22
+
+### Analysis Arena: archived-window replay v2 evidence package
+
+- Built the archived-window replication package under:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/`
+- Completed three clean replay windows:
+  - `WINDOW_2025-12-30_to_2026-01-09`
+  - `WINDOW_2026-01-15_to_2026-01-18`
+  - `WINDOW_2026-01-20_to_2026-01-22`
+- Deliberately split the January 15-22 historical material around the missing `2026-01-19` truth sharepack so the replay corpus does not silently mix complete and incomplete validation days.
+- Regenerated the replay readiness report after the user supplied missing standard and bonus result files.
+- Ran each clean replay window through pre-range generation, control-arm grading, post-range validation, window-close analysis, decay companion scoring, Stage 1 evidence utilization, Stage 2 signal exposure, and Stage 2B signal-stack analysis.
+- Ran the archived replay root through the cross-window Stage 2B rollup and Stage 3 through Stage 7B readback chain.
+- Key generated root artifacts:
+  - `ANALYSIS_ARENA__CYCLE__STAGE2B_CROSS_WINDOW_STACK_ROLLUP.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE3_DECISION_WORKBENCH.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE4_FIXTURE_REPLAY_SCORECARD.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE4B_REPLAY_READBACK.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE4C_SHADOW_TRANSLATOR_PROTOTYPE.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE5_SHADOW_TRANSLATOR_FIXTURE_EVALUATOR.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6A_SHADOW_TRANSLATOR_SPECIFICATION.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6B_SHADOW_REPLAY_SIMULATOR.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE6F_INTEGRATED_DECISION_ATLAS.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE7A_FRESH_CONFIRMATION_SCAFFOLD.md`
+  - `ANALYSIS_ARENA__CYCLE__STAGE7B_FIXTURE_REPLAY_HARNESS.md`
+- Readback posture:
+  - cross-window replay has enough evidence to carry forward a disciplined fixture queue and fresh-window preflight
+  - primary restrained candidate expression remains the strongest current shadow-design seed
+  - broad support, decay/watch, VTRAC territory, duplicate-credit overlap, and hard restraint/veto remain blocked or companion-only
+  - live translator/scoring/candidate/budget rewrite remains blocked until future/fresh confirmation clears the Stage 7A/7B gates
+
+---
+
 ## 2026-04-21
 
 ### Analysis Arena: window replay comparison harness and March replay runbook

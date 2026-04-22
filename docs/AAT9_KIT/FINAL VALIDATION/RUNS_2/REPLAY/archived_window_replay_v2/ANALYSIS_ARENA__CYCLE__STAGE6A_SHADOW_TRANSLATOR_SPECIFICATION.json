@@ -1,0 +1,412 @@
+{
+  "acceptance_checklist": [
+    {
+      "check_id": "A01_primary_lane_present",
+      "failure_response": "",
+      "requirement": "primary restrained candidate-expression lane exists",
+      "status": "pass"
+    },
+    {
+      "check_id": "A02_secondary_lane_present",
+      "failure_response": "",
+      "requirement": "secondary lineage-supported restrained lane exists",
+      "status": "pass"
+    },
+    {
+      "check_id": "A03_support_standalone_forbidden",
+      "failure_response": "",
+      "requirement": "support-only context is forbidden as candidate source",
+      "status": "pass"
+    },
+    {
+      "check_id": "A04_decay_spend_forbidden",
+      "failure_response": "",
+      "requirement": "decay/VTRAC spend permission is blocked",
+      "status": "pass"
+    },
+    {
+      "check_id": "A05_overlap_duplicate_credit_blocked",
+      "failure_response": "",
+      "requirement": "source overlap duplicate-credit is blocked",
+      "status": "pass"
+    },
+    {
+      "check_id": "A06_concentration_warning_carried",
+      "failure_response": "",
+      "requirement": "March-led concentration warning is explicit",
+      "status": "pass"
+    },
+    {
+      "check_id": "A07_simulation_requirements_exist",
+      "failure_response": "",
+      "requirement": "Stage 6B simulation requirements are defined",
+      "status": "pass"
+    },
+    {
+      "check_id": "A08_no_live_permission",
+      "failure_response": "",
+      "requirement": "live scoring/candidate/budget changes are blocked",
+      "status": "pass"
+    }
+  ],
+  "guardrails": [
+    {
+      "enforcement": "No writes to live scoring, candidate generation, translator code, budget logic, or legacy infrastructure.",
+      "failure_response": "Stop and redesign as read-only artifact.",
+      "guardrail_id": "G01_no_live_permission",
+      "rule": "Stage 6A is a shadow specification only.",
+      "severity": "hard_block",
+      "source": "Stage 5 readback"
+    },
+    {
+      "enforcement": "Do not blend support, decay, low-denominator, and restraint rows into one pool.",
+      "failure_response": "Reject Stage 6B simulator output as blended and rerun with separated lanes.",
+      "guardrail_id": "G02_primary_lane_only_seed",
+      "rule": "Primary spec seed is restrained candidate-expression behavior.",
+      "severity": "hard_block",
+      "source": "clean_with_restraint_filter"
+    },
+    {
+      "enforcement": "Source A/source B aliases are locators, not independent votes.",
+      "failure_response": "Remove duplicate-credit rows before replay.",
+      "guardrail_id": "G03_secondary_lineage_dedup",
+      "rule": "Secondary lane must carry lineage de-duplication.",
+      "severity": "hard_block",
+      "source": "clean_lineage_supported_restrained"
+    },
+    {
+      "enforcement": "Treat overlap as narrowing/restraint unless it beats the best individual source on support rate.",
+      "failure_response": "Keep overlap as pool narrowing or restraint.",
+      "guardrail_id": "G04_overlap_no_duplicate_credit",
+      "rule": "Overlap does not receive extra scoring credit unless it beats the best source-side baseline.",
+      "severity": "hard_block",
+      "source": "source A/source B ablation"
+    },
+    {
+      "enforcement": "Keep support context as paired context, not standalone candidate expression.",
+      "failure_response": "Move support-only rows out of candidate-expression scoring.",
+      "guardrail_id": "G05_support_modifier_only",
+      "rule": "Support context cannot create candidates.",
+      "severity": "hard_block",
+      "source": "support gate policy"
+    },
+    {
+      "enforcement": "Carry decay columns as companion annotations only.",
+      "failure_response": "Remove decay-driven candidate rows from simulation.",
+      "guardrail_id": "G06_decay_companion_only",
+      "rule": "Decay/VTRAC territory cannot become boxed or straight spend permission.",
+      "severity": "hard_block",
+      "source": "decay_watch_companion"
+    },
+    {
+      "enforcement": "Calibrate restraint as penalty/veto pressure, not an automatic discard rule.",
+      "failure_response": "Keep restraint in research-only mode.",
+      "guardrail_id": "G07_restraint_soft_before_hard",
+      "rule": "Calibrate restraint as penalty/veto pressure before any hard exclusion.",
+      "severity": "design_constraint",
+      "source": "restraint calibration"
+    },
+    {
+      "enforcement": "Carry concentration warning in all Stage 6B outputs.",
+      "failure_response": "Do not promote from shadow spec to live rewrite.",
+      "guardrail_id": "G08_march_concentration_warning",
+      "rule": "Positive-conversion metrics are March-led until future/fresh windows repeat the shape.",
+      "severity": "design_constraint",
+      "source": "window concentration"
+    },
+    {
+      "enforcement": "Do not append a confirmed macro finding until Stage 5 readback conclusions repeat on a future/fresh window or are explicitly reviewed as provisional.",
+      "failure_response": "Keep finding in readback/spec memo only.",
+      "guardrail_id": "G09_macro_findings_gate",
+      "rule": "Macro Findings Log receives evidence-led findings, not infrastructure milestones.",
+      "severity": "documentation_gate",
+      "source": "macro findings gate"
+    }
+  ],
+  "lane_contract": [
+    {
+      "activation_scope": "candidate-expression evidence that survives Stage-5 restraint filtering",
+      "allowed_permission": "shadow_spec_only",
+      "concentration_policy": "carry March-led positive-conversion warning until future/fresh windows repeat",
+      "decay_policy": "decay/VTRAC may annotate carryforward context only; no boxed spend permission",
+      "lane_id": "primary_restrained_candidate_expression",
+      "lineage_policy": "dedupe shared lineage and do not double-count source aliases",
+      "live_permission": "forbidden",
+      "overlap_policy": "overlap can narrow or restrain only; no duplicate confirmation credit",
+      "restraint_policy": "medium restraint may remain; high restraint becomes penalty/retest input, not automatic live veto",
+      "role": "primary shadow candidate-expression seed",
+      "source_modes": "clean_with_restraint_filter",
+      "stage5_avg_pool": 78.48148148148148,
+      "stage5_decision": "watchlist_retest",
+      "stage5_false_positive_proxy_rate": 0.4728645587541293,
+      "stage5_pool_normalized_positive_yield": 51.486550259556395,
+      "stage5_status": "retest_before_design",
+      "stage5_top_window": "WINDOW_2026-01-15_to_2026-01-18",
+      "stage5_window_concentration_flag": "distributed",
+      "stage6b_requirement": "simulate against clean_boxed_only baseline, secondary lane, support-on/off, and restraint-on/off splits",
+      "support_policy": "support context may modify rank/priority only when paired with this lane; support cannot create candidates"
+    },
+    {
+      "activation_scope": "lineage-supported candidate-expression evidence with explicit de-duplication and restraint awareness",
+      "allowed_permission": "shadow_spec_only",
+      "concentration_policy": "shadow-spec allowed with concentration warning",
+      "decay_policy": "decay/VTRAC stays companion context",
+      "lane_id": "secondary_lineage_supported_restrained",
+      "lineage_policy": "mandatory lineage guardrail; source A/source B aliases are locators, not independent votes",
+      "live_permission": "forbidden",
+      "overlap_policy": "overlap requires source-side baseline comparison before any credit",
+      "restraint_policy": "carry restraint pressure as penalty/retest context",
+      "role": "secondary shadow candidate-expression seed",
+      "source_modes": "clean_lineage_supported_restrained",
+      "stage5_avg_pool": 41.94117647058823,
+      "stage5_decision": "watchlist_retest",
+      "stage5_false_positive_proxy_rate": 0.45722300140252453,
+      "stage5_pool_normalized_positive_yield": 50.63113604488079,
+      "stage5_status": "retest_before_design",
+      "stage5_top_window": "WINDOW_2026-01-15_to_2026-01-18",
+      "stage5_window_concentration_flag": "moderate_concentration",
+      "stage6b_requirement": "simulate as secondary lane and compare incremental lift versus primary-only expression",
+      "support_policy": "support is paired context only and must not expand the pool by itself"
+    },
+    {
+      "activation_scope": "not directly active; may provide narrowed fixture variants only",
+      "allowed_permission": "narrow_before_design",
+      "concentration_policy": "March-led warning blocks direct promotion",
+      "decay_policy": "no decay-to-box conversion",
+      "lane_id": "narrowed_lineage_foundation",
+      "lineage_policy": "lineage de-duplication mandatory",
+      "live_permission": "forbidden",
+      "overlap_policy": "overlap narrowing only",
+      "restraint_policy": "must test pool-control and false-positive reduction before design promotion",
+      "role": "broad candidate foundation requiring narrowing",
+      "source_modes": "clean_plus_lineage_deduped",
+      "stage5_avg_pool": 87.42105263157895,
+      "stage5_decision": "candidate_foundation_needs_pool_control",
+      "stage5_false_positive_proxy_rate": 0.5126429861529199,
+      "stage5_pool_normalized_positive_yield": 47.65201685731487,
+      "stage5_status": "narrow_before_design",
+      "stage5_top_window": "WINDOW_2025-12-30_to_2026-01-09",
+      "stage5_window_concentration_flag": "distributed",
+      "stage6b_requirement": "create narrowed variants and require better false-positive proxy than broad lineage baseline",
+      "support_policy": "support must be tested as a modifier, not an expansion"
+    },
+    {
+      "activation_scope": "only activates when paired with primary or secondary candidate-expression rows",
+      "allowed_permission": "context_modifier_only",
+      "concentration_policy": "requires on/off ablation in Stage 6B",
+      "decay_policy": "support cannot convert decay/watch rows into candidate rows",
+      "lane_id": "support_context_modifier",
+      "lineage_policy": "support aliases remain locators only",
+      "live_permission": "forbidden",
+      "overlap_policy": "support overlap cannot receive duplicate credit",
+      "restraint_policy": "support cannot override restraint pressure",
+      "role": "paired support/ranking context",
+      "source_modes": "support_gate_context|clean_with_support_context",
+      "stage5_avg_pool": 137.52173913043478,
+      "stage5_decision": "support_modifier_only|broad_context_needs_narrowing",
+      "stage5_false_positive_proxy_rate": 0.628201074928865,
+      "stage5_pool_normalized_positive_yield": 36.75308251659817,
+      "stage5_status": "keep_as_context",
+      "stage5_top_window": "WINDOW_2025-12-30_to_2026-01-09",
+      "stage5_window_concentration_flag": "moderate_concentration",
+      "stage6b_requirement": "run support-on versus support-off replay for primary and secondary lanes",
+      "support_policy": "standalone support is forbidden"
+    },
+    {
+      "activation_scope": "may annotate horizons and carryforward context only",
+      "allowed_permission": "companion_only",
+      "concentration_policy": "future decay rollup required before any stronger claim",
+      "decay_policy": "explicitly barred from boxed/straight spend permission",
+      "lane_id": "decay_watch_companion",
+      "lineage_policy": "not candidate lineage",
+      "live_permission": "forbidden",
+      "overlap_policy": "no overlap credit",
+      "restraint_policy": "wrong-lane pressure must remain visible",
+      "role": "carryforward/territory annotation",
+      "source_modes": "decay_watch_companion",
+      "stage5_avg_pool": 110.48538011695906,
+      "stage5_decision": "companion_only",
+      "stage5_false_positive_proxy_rate": 0.8295135764568888,
+      "stage5_pool_normalized_positive_yield": 9.781400518710633,
+      "stage5_status": "keep_separate",
+      "stage5_top_window": "WINDOW_2025-12-30_to_2026-01-09",
+      "stage5_window_concentration_flag": "moderate_concentration",
+      "stage6b_requirement": "keep separate companion columns; do not include in candidate pool metrics",
+      "support_policy": "not applicable"
+    },
+    {
+      "activation_scope": "not active in shadow spec except as tagged watch material",
+      "allowed_permission": "retest_before_design",
+      "concentration_policy": "requires more state-days",
+      "decay_policy": "not spend permission",
+      "lane_id": "low_denominator_watchlist",
+      "lineage_policy": "dedupe before future retest",
+      "live_permission": "forbidden",
+      "overlap_policy": "overlap cannot rescue denominator fragility",
+      "restraint_policy": "do not hard-code from small denominator",
+      "role": "retest/watchlist only",
+      "source_modes": "low_denominator_watchlist",
+      "stage5_avg_pool": 14.205882352941176,
+      "stage5_decision": "watchlist_retest",
+      "stage5_false_positive_proxy_rate": 0.36438923395445133,
+      "stage5_pool_normalized_positive_yield": 61.49068322981367,
+      "stage5_status": "retest_before_design",
+      "stage5_top_window": "WINDOW_2025-12-30_to_2026-01-09",
+      "stage5_window_concentration_flag": "moderate_concentration",
+      "stage6b_requirement": "exclude from candidate expression; report separately",
+      "support_policy": "not standalone"
+    },
+    {
+      "activation_scope": "calibrates penalties; does not create candidates",
+      "allowed_permission": "penalty_research_only",
+      "concentration_policy": "requires future/fresh retest",
+      "decay_policy": "not spend permission",
+      "lane_id": "restraint_calibration_surface",
+      "lineage_policy": "not independent evidence",
+      "live_permission": "forbidden",
+      "overlap_policy": "may act as restraint only",
+      "restraint_policy": "test soft penalty before any hard veto",
+      "role": "penalty/veto calibration surface",
+      "source_modes": "restraint_retest",
+      "stage5_avg_pool": 29.29032258064516,
+      "stage5_decision": "restraint_calibration",
+      "stage5_false_positive_proxy_rate": 0.4900881057268722,
+      "stage5_pool_normalized_positive_yield": 49.22907488986784,
+      "stage5_status": "retest_before_design",
+      "stage5_top_window": "WINDOW_2025-12-30_to_2026-01-09",
+      "stage5_window_concentration_flag": "distributed",
+      "stage6b_requirement": "simulate no-penalty, soft-penalty, and hard-exclusion views as separate readback modes",
+      "support_policy": "support cannot override restraint"
+    }
+  ],
+  "live_permission": "forbidden",
+  "next_layer": "Stage 6B read-only shadow replay simulator",
+  "runs2_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2",
+  "simulation_requirements": [
+    {
+      "mandatory_input": "Stage5 value-level replay ledger and mode decisions",
+      "metric": "false_positive_proxy_rate, pool_normalized_positive_yield, active_state_days",
+      "pass_condition": "beats clean_boxed_only on false-positive proxy or yield without larger pool explosion",
+      "reason": "Primary lane is the best Stage-5 shadow-spec seed but must be replayed before any design confidence.",
+      "requirement_id": "S6B-001",
+      "test_target": "primary_restrained_candidate_expression"
+    },
+    {
+      "mandatory_input": "Stage5 readback mode decisions",
+      "metric": "incremental positive conversion versus primary-only; lineage duplicate count",
+      "pass_condition": "adds value without duplicate-credit inflation",
+      "reason": "Secondary lane is useful only if lineage guardrails hold.",
+      "requirement_id": "S6B-002",
+      "test_target": "secondary_lineage_supported_restrained"
+    },
+    {
+      "mandatory_input": "Stage5 support-gate ablation",
+      "metric": "support-on versus support-off false-positive proxy and yield",
+      "pass_condition": "support improves or narrows paired candidate rows; standalone support remains excluded",
+      "reason": "Support context is broad and must be measured as a modifier.",
+      "requirement_id": "S6B-003",
+      "test_target": "support_context_modifier"
+    },
+    {
+      "mandatory_input": "Stage5 restraint-effect audit",
+      "metric": "no-penalty versus soft-penalty versus hard-exclusion readback",
+      "pass_condition": "soft penalty reduces junk without killing useful signal; hard exclusion requires explicit proof",
+      "reason": "Stage 5 says restraint is useful but not safe as automatic discard logic.",
+      "requirement_id": "S6B-004",
+      "test_target": "restraint_calibration_surface"
+    },
+    {
+      "mandatory_input": "Stage5 ablation matrix",
+      "metric": "overlap lift versus best source and pool reduction",
+      "pass_condition": "overlap is treated as narrowing/restraint unless positive lift appears",
+      "reason": "Stage 5 found zero positive overlap lift rows over best source.",
+      "requirement_id": "S6B-005",
+      "test_target": "source_a_source_b_overlap"
+    },
+    {
+      "mandatory_input": "Stage5 window/state stratification",
+      "metric": "positive conversion share by window and state",
+      "pass_condition": "all shadow outputs carry concentration warnings until repeated on future/fresh windows",
+      "reason": "Stage 5 positive-conversion labels are March-led.",
+      "requirement_id": "S6B-006",
+      "test_target": "window_and_state_concentration"
+    },
+    {
+      "mandatory_input": "Stage5 decay/watch mode rows",
+      "metric": "annotation coverage and wrong-lane pressure",
+      "pass_condition": "decay remains excluded from candidate pool metrics",
+      "reason": "Decay/VTRAC can explain territory but cannot become spend permission.",
+      "requirement_id": "S6B-007",
+      "test_target": "decay_watch_companion"
+    }
+  ],
+  "source_files": {
+    "mode_decisions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_MODE_DECISIONS.csv",
+    "next_actions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_NEXT_ACTION_QUEUE.csv",
+    "readback_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.json",
+    "readback_md": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_READBACK_DECISION_MEMO.md"
+  },
+  "spec_queue": [
+    {
+      "blocked_until": "Stage 6A acceptance checklist passes",
+      "permission": "read_only_replay",
+      "priority": 1,
+      "scope": "simulate primary and secondary shadow lanes against completed fixtures",
+      "source_decision": "design_shadow_spec_next",
+      "source_present_in_stage5_readback": "no",
+      "work_item": "stage6b_shadow_replay_simulator"
+    },
+    {
+      "blocked_until": "Stage 6B simulator exists",
+      "permission": "read_only_replay",
+      "priority": 2,
+      "scope": "test support-on/support-off paired with primary and secondary candidate lanes",
+      "source_decision": "support_gate_policy",
+      "source_present_in_stage5_readback": "yes",
+      "work_item": "support_modifier_ablation"
+    },
+    {
+      "blocked_until": "Stage 6B simulator exists",
+      "permission": "read_only_replay",
+      "priority": 3,
+      "scope": "compare no-penalty, soft-penalty, and hard-exclusion variants",
+      "source_decision": "restraint_calibration",
+      "source_present_in_stage5_readback": "yes",
+      "work_item": "restraint_penalty_calibration"
+    },
+    {
+      "blocked_until": "primary/secondary simulator baselines exist",
+      "permission": "shadow_design_only",
+      "priority": 4,
+      "scope": "derive smaller lineage variants without promoting broad lineage pools",
+      "source_decision": "narrow_before_design",
+      "source_present_in_stage5_readback": "yes",
+      "work_item": "narrowed_lineage_variant_design"
+    },
+    {
+      "blocked_until": "Stage 6B readback or future/fresh repeat",
+      "permission": "documentation_only",
+      "priority": 5,
+      "scope": "decide whether Stage 6A/6B findings are provisional, repeated, confirmed, deferred, or contradicted",
+      "source_decision": "macro_findings_gate",
+      "source_present_in_stage5_readback": "yes",
+      "work_item": "macro_findings_review_gate"
+    }
+  ],
+  "stage5_readback_summary": {
+    "guardrail": "read-only decision memo; no live scoring, candidate generation, translator, budget, or legacy infrastructure changes",
+    "mode_decisions": 9,
+    "next_actions": 11,
+    "stage5_metadata": {
+      "ablation_rows": 42,
+      "casebook_rows": 120,
+      "guardrail": "read_only_stage5_fixture_evaluator_no_live_scoring_or_candidate_generation_changes",
+      "prototype_modes": 9,
+      "restraint_audit_rows": 6,
+      "runs2_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2",
+      "support_ablation_rows": 16,
+      "value_level_replay_rows": 7656
+    }
+  },
+  "stage6a_permission": "shadow_specification_only"
+}

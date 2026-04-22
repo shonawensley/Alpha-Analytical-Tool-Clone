@@ -82,6 +82,29 @@ Window replay / replication protocol:
   - `same_window_replay`
   - `archived_window_replication`
   - `true_fresh_confirmation`
+- current archived-window replication package:
+  - root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/`
+  - predictive sharepacks: `sharepacks/_predictive_replay/archived_window_replay_v2/<D>/`
+  - completed clean windows:
+    - `WINDOW_2025-12-30_to_2026-01-09`
+    - `WINDOW_2026-01-15_to_2026-01-18`
+    - `WINDOW_2026-01-20_to_2026-01-22`
+  - deliberate gap handling:
+    - `2026-01-19` is excluded because the truth sharepack is missing; the surrounding January material is split into clean subwindows instead of being treated as one complete validation span
+  - root readback chain:
+    - Stage 2B cross-window rollup
+    - Stage 3 decision workbench
+    - Stage 4 fixture replay
+    - Stage 4B replay readback
+    - Stage 4C shadow translator prototype
+    - Stage 5 shadow evaluator and readback
+    - Stage 6A through Stage 6F shadow/restriction/confirmation layers
+    - Stage 7A fresh-confirmation scaffold
+    - Stage 7B fixture replay harness
+  - evidence posture:
+    - archived replication and fixture replay only
+    - useful for regression, traceability, lane separation, and fresh-window preflight
+    - not sufficient by itself to unlock Stage 8A or any live translator/scoring/candidate/budget rewrite
 
 Per-window lock inputs that should be set before any fresh or backtest window:
 

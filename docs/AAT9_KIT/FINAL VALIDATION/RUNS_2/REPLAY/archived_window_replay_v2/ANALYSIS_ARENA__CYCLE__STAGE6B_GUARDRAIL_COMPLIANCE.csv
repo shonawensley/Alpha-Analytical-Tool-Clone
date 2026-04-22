@@ -1,0 +1,8 @@
+guardrail_id,status,evidence,failure_response
+G01_no_live_permission,pass,Stage 6B writes reports only and never changes live scoring/candidate/budget code.,
+G02_stage6a_acceptance_passed,pass,All Stage 6A acceptance checks must pass before simulation.,
+G03_decay_excluded_from_candidate_union,pass,Allowed candidate union must not include decay/watch lanes.,
+G04_support_only_excluded_from_candidate_union,pass,Allowed candidate union must not include support-only lanes.,
+G05_candidate_union_exists,pass,Allowed primary/secondary candidate union exists.,
+G06_concentration_warning_carried,fail,High window concentration is detected and carried as a warning.,reject Stage 6B output until corrected
+G07_no_duplicate_credit_claim,pass,"Union scenario is reported as row replay, not source-overlap duplicate scoring credit.",

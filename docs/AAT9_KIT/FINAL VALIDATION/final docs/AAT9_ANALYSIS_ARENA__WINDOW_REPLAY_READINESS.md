@@ -4,8 +4,8 @@
 
 - Scanned windows: `6`
 - Same-window replay candidates: `2`
-- Archived replication ready: `2`
-- Archived replication with caveats: `2`
+- Archived replication ready: `3`
+- Archived replication with caveats: `1`
 - Needs prep: `0`
 - Strongest same-window replay candidate: `WINDOW_2026-03-09_to_2026-03-23`
 - Strongest archived replication candidate: `WINDOW_2025-12-30_to_2026-01-04`
@@ -21,9 +21,9 @@ Operational meaning:
 
 | Source | Count | Min | Max |
 |---|---:|---|---|
-| History workbooks | 42 | `2025-06-20` | `2026-03-22` |
-| Core results | 58 | `2025-06-21` | `2026-03-27` |
-| Bonus results | 19 | `2026-03-09` | `2026-03-27` |
+| History workbooks | 43 | `2025-06-20` | `2026-03-22` |
+| Core results | 63 | `2025-06-21` | `2026-03-27` |
+| Bonus results | 47 | `2025-12-30` | `2026-03-27` |
 | Predictive sharepacks | 34 | `2025-12-30` | `2026-03-23` |
 | Truth sharepacks | 22 | `2025-06-21` | `2026-01-22` |
 
@@ -42,20 +42,16 @@ Operational meaning:
 
 | Window | Tier | Status | Files | Tail | Bonus | Recommendation |
 |---|---|---|---:|---|---|---|
-| `WINDOW_2025-12-30_to_2026-01-04` | `archived_window_replication` | `ready` | 236 | `true` | `false` | `archived_replication_candidate` |
-| `WINDOW_2026-01-05_to_2026-01-09` | `archived_window_replication` | `ready_with_caveats` | 206 | `false` | `false` | `archived_replication_with_explicit_caveats` |
-| `WINDOW_2026-01-15_to_2026-01-18` | `archived_window_replication` | `ready` | 176 | `true` | `false` | `archived_replication_candidate` |
-| `WINDOW_2026-01-15_to_2026-01-22` | `archived_window_replication` | `ready_with_caveats` | 296 | `false` | `false` | `archived_replication_with_explicit_caveats` |
-| `WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT` | `same_window_replay` | `ready_with_caveats` | 226 | `false` | `false` | `baseline_snapshot_reference_only` |
+| `WINDOW_2025-12-30_to_2026-01-04` | `archived_window_replication` | `ready` | 236 | `true` | `true` | `archived_replication_candidate` |
+| `WINDOW_2026-01-05_to_2026-01-09` | `archived_window_replication` | `ready` | 206 | `true` | `true` | `archived_replication_candidate` |
+| `WINDOW_2026-01-15_to_2026-01-18` | `archived_window_replication` | `ready` | 176 | `true` | `true` | `archived_replication_candidate` |
+| `WINDOW_2026-01-15_to_2026-01-22` | `archived_window_replication` | `ready_with_caveats` | 296 | `true` | `true` | `archived_replication_with_explicit_caveats` |
+| `WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT` | `same_window_replay` | `ready` | 226 | `true` | `true` | `baseline_snapshot_reference_only` |
 | `WINDOW_2026-03-09_to_2026-03-23` | `same_window_replay` | `ready_with_caveats` | 517 | `true` | `true` | `strongest_same_window_replay_candidate` |
 
 ## 5. Coverage Caveats
 
-- `WINDOW_2025-12-30_to_2026-01-04`: bonus_missing=2025-12-30, 2025-12-31, 2026-01-01, 2026-01-02, 2026-01-03, ...
-- `WINDOW_2026-01-05_to_2026-01-09`: tail_missing=2026-01-10, 2026-01-11; bonus_missing=2026-01-05, 2026-01-06, 2026-01-07, 2026-01-08, 2026-01-09, ...
-- `WINDOW_2026-01-15_to_2026-01-18`: bonus_missing=2026-01-15, 2026-01-16, 2026-01-17, 2026-01-18, 2026-01-19, ...
-- `WINDOW_2026-01-15_to_2026-01-22`: truth_missing=2026-01-19; tail_missing=2026-01-23, 2026-01-24, 2026-01-25; bonus_missing=2026-01-15, 2026-01-16, 2026-01-17, 2026-01-18, 2026-01-19, ...
-- `WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT`: tail_missing=2026-01-10, 2026-01-11; bonus_missing=2026-01-05, 2026-01-06, 2026-01-07, 2026-01-08, 2026-01-09, ...
+- `WINDOW_2026-01-15_to_2026-01-22`: truth_missing=2026-01-19
 - `WINDOW_2026-03-09_to_2026-03-23`: truth_missing=2026-03-09, 2026-03-10, 2026-03-11, 2026-03-12, 2026-03-13, ...
 
 ## 6. Baseline Manifest Use

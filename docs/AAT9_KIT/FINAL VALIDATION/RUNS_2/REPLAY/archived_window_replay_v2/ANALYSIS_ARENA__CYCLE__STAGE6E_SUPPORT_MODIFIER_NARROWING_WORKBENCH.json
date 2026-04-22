@@ -1,0 +1,26 @@
+{
+  "bucket_row_count": 101,
+  "candidate_ledger_rows_loaded": 7656,
+  "guardrail": "read_only_support_research_only_no_live_permission",
+  "inputs": {
+    "next_action_queue": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_NEXT_ACTION_QUEUE.csv",
+    "requirement_results": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_REQUIREMENT_RESULTS.csv",
+    "scenario_decisions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_SCENARIO_DECISIONS.csv",
+    "support_ablation": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6B_SUPPORT_MODIFIER_ABLATION.csv",
+    "value_ledger": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_REPLAY_LEDGER.csv"
+  },
+  "next_stage_dependency": "Use only as support modifier research before any Stage 6 rewrite specification.",
+  "stage": "6E",
+  "support_failure_mode_count": 7,
+  "support_narrowing_candidate_count": 13,
+  "support_requirement_result": {
+    "evidence": "Support-on rows are broader and weaker than support-off rows in this replay.",
+    "live_permission": "forbidden",
+    "metric": "support-on versus support-off false-positive proxy and yield",
+    "next_action": "Keep support-only excluded and search for narrower paired support conditions.",
+    "pass_condition": "support improves or narrows paired candidate rows; standalone support remains excluded",
+    "readback_result": "fail_as_positive_modifier",
+    "requirement_id": "S6B-003",
+    "test_target": "support_context_modifier"
+  }
+}

@@ -1,0 +1,7 @@
+prototype_lane,rule_count,holdout_confirmed,holdout_missed,holdout_confirmation_rate,avg_rule_holdout_confirmation_rate,avg_positive_conversions_per_100_state_days,avg_supported_events_per_100_state_days,strong_count,moderate_count,watch_count,weak_count,restraint_pressure_mix,shadow_permission,lane_guardrail
+clean_boxed_candidate,8,0,0,0.0,0.0,3.3232807637366806,3.9348454905036174,0,0,8,0,medium:7|high:1,shadow_box_candidate_expression,read_only_candidate_expression_no_live_scoring
+lineage_guarded_boxed_candidate,26,0,0,0.0,0.0,4.395057264637197,4.456188941667467,0,0,26,0,medium:15|high:11,shadow_box_candidate_expression_with_dedup,read_only_candidate_expression_requires_lineage_dedup
+support_gate_only,77,0,0,0.0,0.0,2.2381585101593315,6.15218861061688,0,0,77,0,high:69|medium:8,shadow_confidence_boost_only,support_gate_never_standalone_candidate
+decay_watch_only,33,0,0,0.0,0.0,17.417988452124998,37.070383506126475,0,0,33,0,high:18|medium:15,shadow_decay_watch_only,decay_or_vtrac_watch_never_boxed_spend_permission
+concentration_retest_or_restraint,74,0,0,0.0,0.0,2.4931681301220876,2.831621265602064,0,0,74,0,high:53|medium:21,shadow_restraint_or_retest,concentration_block_requires_broader_state_retest
+low_denominator_watchlist,64,0,0,0.0,0.0,2.1971354277090294,2.2888332615681852,0,0,53,11,high:47|medium:17,shadow_collect_more_windows,insufficient_denominator_collect_more_windows

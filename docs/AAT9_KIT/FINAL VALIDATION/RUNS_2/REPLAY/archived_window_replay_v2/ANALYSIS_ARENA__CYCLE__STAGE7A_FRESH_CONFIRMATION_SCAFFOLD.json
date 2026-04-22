@@ -1,0 +1,29 @@
+{
+  "checklist_count": 5,
+  "confirmation_requirement_count": 9,
+  "future_template_row_count": 29,
+  "guardrail": "read_only_future_confirmation_scaffold_no_live_permission",
+  "inputs": {
+    "confirmation_tests": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6C_CONFIRMATION_TEST_MATRIX.csv",
+    "lane_atlas": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6F_LANE_DECISION_ATLAS.csv",
+    "restraint_rescue": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6D_HIGH_PRESSURE_RESCUE_CANDIDATES.csv",
+    "rewrite_blockers": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6C_REWRITE_BLOCKERS.csv",
+    "scenario_decisions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_SCENARIO_DECISIONS.csv",
+    "stage6f_blockers": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6F_ACTIVE_BLOCKERS_AND_CLEARANCE.csv",
+    "stage6f_casebook": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6F_PRIORITY_BUCKET_CASEBOOK.csv",
+    "stage6f_macro": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6F_MACRO_FINDINGS_DISPOSITION.csv",
+    "stage6f_queue": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6F_FRESH_WINDOW_CARRY_FORWARD_QUEUE.csv",
+    "support_candidates": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_NARROWING_CANDIDATES.csv",
+    "threshold_contract": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/ANALYSIS_ARENA__CYCLE__STAGE6C_THRESHOLD_CONTRACT.csv"
+  },
+  "march_seed_benchmark_count": 20,
+  "next_stage_dependency": "Populate the template after a future/fresh window reruns Stage 6B through Stage 6F.",
+  "optional_empty_inputs": {
+    "interpretation": "Zero rows are valid when Run 2 exposes no candidate-expression rescue/support/casebook targets.",
+    "restraint_rescue_rows": 17,
+    "stage6f_casebook_rows": 24,
+    "support_candidate_rows": 13
+  },
+  "stage": "7A",
+  "status": "pending_future_window"
+}

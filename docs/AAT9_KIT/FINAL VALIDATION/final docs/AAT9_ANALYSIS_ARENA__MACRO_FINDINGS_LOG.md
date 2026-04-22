@@ -327,3 +327,17 @@ These items are approved because of the repeated findings above and should be tr
   - same-day Arena truth, Brain 2 prioritization, control-arm realization, and translator opportunity remain the main headline stack, while delayed resolution is measured separately
 - implication: Future fresh windows can now be read in two clean lenses at once: immediate same-day performance and bounded horizon resolution. This preserves interpretability while finally giving delayed conversions their proper accounting lane.
 - next test: Generate the new decay scorecard on the canonical comparison windows and use the first fresh window block to decide whether a cross-window decay rollup becomes the next promoted research layer.
+
+### F-021
+- status: `PROVISIONAL_ARCHIVED_REPLICATION`
+- window(s): `2025-12-30_to_2026-01-09`, `2026-01-15_to_2026-01-18`, `2026-01-20_to_2026-01-22`
+- category: `Translator / scoring guardrails`
+- summary: Archived replay v2 repeated the same broad lesson: the strongest near-term material is not a broad blended scoring rewrite, but a separated shadow design where candidate expression, support context, VTRAC/decay watch, restraint pressure, and duplicate-credit overlap stay in distinct lanes.
+- evidence:
+  - Stage 2B cross-window rollup produced `4,032` stack rows, `371` hypothesis rows, and `88` source rows across the archived replay corpus
+  - Stage 3 split the evidence into `147` promote-candidate rows, `400` supporting-gate rows, `585` watch/decay rows, and `3,111` negative-control rows
+  - Stage 4 fixture replay produced `3,291` replay-ledger rows and only `14` `survived_as_boxed_translator_candidate` rows, while `386` survived as support gates and `230` were blocked by state concentration
+  - Stage 5 readback marked all prototype modes as `no_live_permission` and treated support context, decay/watch, source overlap, and restraint as modifier/research lanes rather than standalone candidate permission
+  - Stage 6B through Stage 7B preserved the rewrite block: primary restrained candidate expression remains the strongest seed, but future/fresh confirmation and soft-penalty/narrow-support work are still required
+- implication: The system is moving toward a cleaner downstream rebuild, but the rebuild should be evidence-gated. The archived replay package strengthens the case for Stage 8 design discipline; it does not justify live scoring or budget replacement yet.
+- next test: Use the Stage 7A/7B scaffold as the fresh-window preflight and compare future/fresh Stage 7B against this archived replay package before starting any Stage 8A candidate-object specification.
