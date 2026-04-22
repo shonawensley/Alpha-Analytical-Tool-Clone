@@ -9,14 +9,14 @@ This memo is read-only. It compares completed Stage 6B through Stage 7B evidence
 - March canonical source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2`
 - March same-window replay source inspected: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2`
 - Archived replay source: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2`
-- Caveat: the March same-window replay subfolder has zeroed core Stage 6B candidate metrics for baseline/primary/support lanes. For this memo, the canonical `RUNS_2` March Stage 6B/7B stack is the valid March metric source. The March same-window replay package should be repaired or regenerated before it is used as a metric baseline.
+- Caveat: the March same-window replay subfolder has zeroed core Stage 6B candidate metrics for baseline/primary/support lanes because it is an isolated single-window replay root and the Stage 3 through Stage 6B chain requires cross-window evidence for candidate/support promotion. For this memo, the canonical `RUNS_2` March Stage 6B/7B stack is the valid March metric source. If an official same-window root-level Stage 6B replay baseline is needed, it should be rebuilt as a corpus-mirrored replay root rather than treating the isolated March replay folder as corrupted.
 
 ## Executive Decision
 
 - Archived replay v2 does not confirm the March primary restrained lane strongly enough to start Stage 8A implementation or any live downstream rewrite.
 - It does confirm the value of the guardrail architecture: lane separation, duplicate-credit restraint, support-as-context, decay-as-companion, and soft-before-hard restraint all remain necessary.
 - The primary restrained candidate expression remains a testable research spine, but its status is downgraded from March-positive seed to fresh-window confirmation target.
-- The next useful work is a fresh-window confirmation run or, if no fresh window is ready, repair/regenerate the March same-window replay metrics and keep archived replay as a stress-test package.
+- The next useful work is a fresh-window confirmation run or, if no fresh window is ready, a corpus-mirrored same-window replay baseline design that preserves cross-window promotion gates while keeping archived replay as a stress-test package.
 
 ## Core Metric Read
 
@@ -75,7 +75,7 @@ Interpretation: both packages keep the translator/scoring rewrite blocked. March
 
 ## Optimal Next Step
 
-1. Repair or regenerate `REPLAY/march_2026_15day_replay_v2` Stage 6B candidate-lane metrics if we want that folder to serve as the official same-window replay baseline.
+1. Do not treat `REPLAY/march_2026_15day_replay_v2` Stage 6B zero lanes as random corruption; if an official same-window root-level Stage 6B baseline is needed, build a corpus-mirrored replay root with enough windows to preserve cross-window promotion behavior.
 2. Prepare the next fresh-window run using the Stage 7A/7B checklist, with archived replay v2 treated as the stress-test comparison layer.
 3. After fresh-window Stage 6B through Stage 7B exists, produce a three-way comparison: canonical March vs archived replay v2 vs fresh window.
 4. Only if the fresh window repeats or cleanly quarantines the open blockers should Stage 8A move from design brief to shadow candidate-object specification.

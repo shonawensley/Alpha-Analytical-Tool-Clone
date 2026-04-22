@@ -1,0 +1,80 @@
+{
+  "audit_id": "analysis_arena_march_replay_stage6b_comparability_audit",
+  "guardrail": "read_only_no_scoring_candidate_translator_budget_or_legacy_changes",
+  "finding": "march_2026_15day_replay_v2 is an isolated single-window replay root; Stage 3 cross-window gates therefore suppress boxed candidate/support promotion and downstream Stage 6B candidate lanes are zeroed by comparability mismatch, not random corruption",
+  "roots": [
+    {
+      "root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
+      "role": "canonical_march_metric_source",
+      "stage3_registry_rows": 4312,
+      "stage3_promote_candidate_rows": 164,
+      "stage3_supporting_gate_rows": 562,
+      "stage3_needs_more_windows_rows": 92,
+      "stage3_windows_seen_profile": {
+        "5": 4069,
+        "3": 103,
+        "1": 101,
+        "4": 32,
+        "2": 7
+      },
+      "stage4_fixture_replay_rows": 5675,
+      "stage4c_lane_shape": {
+        "support_gate_only": 144,
+        "concentration_retest_or_restraint": 61,
+        "decay_watch_only": 34,
+        "low_denominator_watchlist": 29,
+        "lineage_guarded_boxed_candidate": 28,
+        "clean_boxed_candidate": 18
+      },
+      "stage5_value_level_rows": 14752,
+      "stage6b_candidate_lane_status": "nonzero_candidate_support_restraint_metrics"
+    },
+    {
+      "root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+      "role": "isolated_same_window_replay_root",
+      "stage3_registry_rows": 4113,
+      "stage3_promote_candidate_rows": 0,
+      "stage3_supporting_gate_rows": 0,
+      "stage3_needs_more_windows_rows": 3451,
+      "stage3_windows_seen_profile": {
+        "1": 4113
+      },
+      "stage4_fixture_replay_rows": 104,
+      "stage4c_lane_shape": {
+        "decay_watch_only": 32
+      },
+      "stage5_value_level_rows": 2698,
+      "stage6b_candidate_lane_status": "zeroed_candidate_support_restraint_lanes_due_to_single_window_cross_window_gate"
+    },
+    {
+      "root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2",
+      "role": "multi_window_archived_replay_stress_test",
+      "stage3_registry_rows": 4120,
+      "stage3_promote_candidate_rows": 147,
+      "stage3_supporting_gate_rows": 400,
+      "stage3_needs_more_windows_rows": 95,
+      "stage3_windows_seen_profile": {
+        "3": 3979,
+        "1": 101,
+        "2": 40
+      },
+      "stage4_fixture_replay_rows": 3291,
+      "stage4c_lane_shape": {
+        "support_gate_only": 77,
+        "concentration_retest_or_restraint": 74,
+        "low_denominator_watchlist": 64,
+        "decay_watch_only": 33,
+        "lineage_guarded_boxed_candidate": 26,
+        "clean_boxed_candidate": 8
+      },
+      "stage5_value_level_rows": 7656,
+      "stage6b_candidate_lane_status": "nonzero_candidate_support_restraint_metrics"
+    }
+  ],
+  "recommended_handling": [
+    "Do not treat isolated March replay Stage 6B zero lanes as random corruption.",
+    "Keep the isolated March replay package for window-close artifact replay and traceability checks.",
+    "If official same-window root-level Stage 6B replay is required, build a corpus-mirrored replay root with enough windows to preserve cross-window promotion behavior.",
+    "Use canonical March RUNS_2 versus archived replay v2 for current readback, then require true fresh-window Stage 6B-through-Stage 7B comparison before Stage 8A."
+  ]
+}

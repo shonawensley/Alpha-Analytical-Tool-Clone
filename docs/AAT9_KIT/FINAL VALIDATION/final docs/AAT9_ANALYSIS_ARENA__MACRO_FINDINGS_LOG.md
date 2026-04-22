@@ -353,6 +353,6 @@ These items are approved because of the repeated findings above and should be tr
   - broad support repeated as blocked/weak context rather than a standalone positive modifier
   - decay/watch repeated as companion-only and should stay out of candidate-pool spend metrics
   - concentration moved from March `pass_with_warning` to archived `fail`
-  - memo caveat: `REPLAY/march_2026_15day_replay_v2` has zeroed core Stage 6B candidate-lane metrics, so canonical `RUNS_2` March artifacts remain the valid March metric source until the replay subfolder is repaired or regenerated
+  - comparability audit: `REPLAY/march_2026_15day_replay_v2` has zeroed core Stage 6B candidate-lane metrics because it is an isolated single-window replay root; all Stage 3 registry rows have `windows_seen=1`, so cross-window candidate/support promotion is suppressed
 - implication: Stage 8A should not start from March-positive evidence alone. The right interpretation is that March supplied a promising seed, archived replay supplied the stress test, and the stress test says the primary lane needs fresh-window confirmation or narrower quarantine before downstream candidate-object work begins.
-- next test: Repair/regenerate the March same-window replay metric baseline if needed, then run the next true fresh window through Stage 6B-through-Stage 7B and produce a three-way comparison: canonical March vs archived replay v2 vs fresh window.
+- next test: If same-window Stage 6B replay is needed, build a corpus-mirrored replay root instead of trying to repair an isolated one-window replay folder; then run the next true fresh window through Stage 6B-through-Stage 7B and produce a three-way comparison: canonical March vs archived replay v2 vs fresh window.

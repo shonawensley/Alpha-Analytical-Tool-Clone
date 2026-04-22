@@ -104,7 +104,11 @@ Window replay / replication protocol:
   - March-vs-archived decision memo:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.md`
     - compares canonical March Run 2 against archived replay v2 at Stage 6B-through-Stage 7B level
-    - records that the `REPLAY/march_2026_15day_replay_v2` Stage 6B candidate-lane metrics are currently not a safe official metric baseline because those lanes are zeroed
+    - records that the `REPLAY/march_2026_15day_replay_v2` Stage 6B candidate-lane metrics are currently not a safe official metric baseline because the isolated replay root does not satisfy cross-window promotion gates
+  - March replay Stage 6B comparability audit:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_REPLAY_STAGE6B_COMPARABILITY_AUDIT.md`
+    - explains why isolated single-window replay zeroes candidate/support/restraint lanes at Stage 6B
+    - recommended handling: use isolated replay for window-close traceability; use a corpus-mirrored replay root if official root-level Stage 6B same-window comparison is required
   - evidence posture:
     - archived replication and fixture replay only
     - useful for regression, traceability, lane separation, and fresh-window preflight

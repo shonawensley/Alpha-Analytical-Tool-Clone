@@ -26,6 +26,18 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - the next true decision gate remains a fresh-window Stage 6B-through-Stage 7B comparison
 - Guardrail: this memo is comparison/readback only. It does not change scoring, candidate generation, translator logic, budget logic, or legacy infrastructure.
 
+### Analysis Arena: March replay Stage 6B comparability audit
+
+- Added the read-only comparability audit:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_REPLAY_STAGE6B_COMPARABILITY_AUDIT.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_REPLAY_STAGE6B_COMPARABILITY_AUDIT.json`
+- Diagnosed the March same-window replay Stage 6B zero-lane caveat:
+  - the replay root is isolated to one window
+  - Stage 3 cross-window gates therefore label most rows as `needs_more_windows`
+  - Stage 4C/Stage 5/Stage 6B boxed candidate and broad support lanes are zero because no cross-window candidate/support lanes are promoted
+- Updated the decision memo interpretation: this is a comparability mismatch, not random corruption.
+- Guardrail: no scoring, candidate generation, translator, budget, or legacy behavior changed.
+
 ### Analysis Arena: archived-window replay v2 evidence package
 
 - Built the archived-window replication package under:
