@@ -49,6 +49,12 @@ def _parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--runs2-dir", default=str(RUNS_2_DIR), help="RUNS_2 root containing Stage-4C outputs.")
     ap.add_argument("--output-dir", default=str(RUNS_2_DIR), help="Cycle-level output directory.")
+    ap.add_argument(
+        "--window-root",
+        action="append",
+        default=[],
+        help="Explicit completed window root to include when scanning Stage-2B pairing ledgers. Can be repeated.",
+    )
     ap.add_argument("--casebook-limit", type=int, default=120, help="Maximum Stage-5 casebook rows to emit.")
     ap.add_argument("--max-value-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all rows.")
     ap.add_argument("--force", action="store_true", help="Overwrite existing Stage-5 outputs.")
@@ -132,7 +138,25 @@ def _fixture_pair_map(
     return out
 
 
-def _ledger_paths(runs2_dir: Path) -> List[Path]:
+def _ledger_paths(runs2_dir: Path, explicit_window_roots: Sequence[str] | None = None) -> List[Path]:
+    if explicit_window_roots:
+        paths: List[Path] = []
+        seen: set[Path] = set()
+        for value in explicit_window_roots:
+            window = _resolve_path(value)
+            if not window.is_dir():
+                raise SystemExit(f"Explicit window root not found: {window}")
+            matches = sorted(window.glob("*STAGE2B_SIGNAL_PAIRING_LEDGER.csv"))
+            if not matches:
+                raise SystemExit(f"Missing Stage-2B pairing ledger in explicit window root: {window}")
+            for path in matches:
+                resolved = path.resolve()
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+        return sorted(paths, key=lambda path: (path.parent.name, path.name))
+
     return sorted(runs2_dir.glob("WINDOW_*/*STAGE2B_SIGNAL_PAIRING_LEDGER.csv"))
 
 
@@ -257,6 +281,7 @@ def _mode_list(row: Dict[str, Any]) -> List[str]:
 def _build_value_rows(
     *,
     runs2_dir: Path,
+    window_roots: Sequence[str] | None = None,
     pair_map: Dict[Tuple[str, str, str, str], List[str]],
     rules_by_cluster: Dict[str, Dict[str, str]],
     max_rows: int,
@@ -265,7 +290,7 @@ def _build_value_rows(
     completeness_by_window: Dict[str, Counter[str]] = defaultdict(Counter)
     scan_counts: Dict[str, Counter[str]] = defaultdict(Counter)
 
-    for path in _ledger_paths(runs2_dir):
+    for path in _ledger_paths(runs2_dir, window_roots):
         window = _window_name_from_pairing_path(path)
         for row in _read_csv_rows(path):
             scan_counts[window]["pairing_rows_scanned"] += 1
@@ -808,6 +833,7 @@ def main() -> None:
     pair_map = _fixture_pair_map(fixture_rows, rules_by_cluster)
     value_rows, completeness_rows, _scan_counts = _build_value_rows(
         runs2_dir=runs2_dir,
+        window_roots=args.window_root,
         pair_map=pair_map,
         rules_by_cluster=rules_by_cluster,
         max_rows=int(args.max_value_rows or 0),

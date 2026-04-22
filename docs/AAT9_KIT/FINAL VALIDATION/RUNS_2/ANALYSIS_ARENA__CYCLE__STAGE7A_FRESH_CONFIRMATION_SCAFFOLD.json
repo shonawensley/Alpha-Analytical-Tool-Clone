@@ -1,7 +1,7 @@
 {
   "checklist_count": 5,
   "confirmation_requirement_count": 9,
-  "future_template_row_count": 29,
+  "future_template_row_count": 28,
   "guardrail": "read_only_future_confirmation_scaffold_no_live_permission",
   "inputs": {
     "confirmation_tests": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_CONFIRMATION_TEST_MATRIX.csv",
@@ -16,8 +16,14 @@
     "support_candidates": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_NARROWING_CANDIDATES.csv",
     "threshold_contract": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6C_THRESHOLD_CONTRACT.csv"
   },
-  "march_seed_benchmark_count": 20,
+  "march_seed_benchmark_count": 19,
   "next_stage_dependency": "Populate the template after a future/fresh window reruns Stage 6B through Stage 6F.",
+  "optional_empty_inputs": {
+    "interpretation": "Zero rows are valid when Run 2 exposes no candidate-expression rescue/support/casebook targets.",
+    "restraint_rescue_rows": 20,
+    "stage6f_casebook_rows": 16,
+    "support_candidate_rows": 4
+  },
   "stage": "7A",
   "status": "pending_future_window"
 }

@@ -39,6 +39,12 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--runs2-dir", default=str(RUNS_2_DIR), help="RUNS_2 root containing completed window folders.")
     ap.add_argument("--output-dir", default=str(RUNS_2_DIR), help="Cycle-level output directory.")
     ap.add_argument(
+        "--window-root",
+        action="append",
+        default=[],
+        help="Explicit completed window root to include. Can be repeated; when provided, RUNS_2 auto-discovery is bypassed.",
+    )
+    ap.add_argument(
         "--focus-window",
         default="",
         help="Window folder to use for the casebook. Defaults to the newest window with priority cases.",
@@ -138,7 +144,21 @@ def _counter_text(counter: Counter[str]) -> str:
     return "|".join(f"{key}:{count}" for key, count in counter.most_common() if key)
 
 
-def _discover_windows(runs2_dir: Path) -> List[Path]:
+def _discover_windows(runs2_dir: Path, explicit_window_roots: Sequence[str] | None = None) -> List[Path]:
+    if explicit_window_roots:
+        windows: List[Path] = []
+        seen: set[Path] = set()
+        for value in explicit_window_roots:
+            window = _resolve_path(value)
+            if not window.is_dir():
+                raise SystemExit(f"Explicit window root not found: {window}")
+            resolved = window.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            windows.append(window)
+        return sorted(windows, key=lambda path: path.name)
+
     return sorted(path for path in runs2_dir.iterdir() if path.is_dir() and WINDOW_RE.match(path.name))
 
 
@@ -1056,8 +1076,13 @@ def _render_workbench_md(
     return "\n".join(lines)
 
 
-def build_workbench(runs2_dir: Path, output_dir: Path, focus_window_arg: str) -> Tuple[Dict[str, Any], Dict[str, Path], Path | None]:
-    windows = _discover_windows(runs2_dir)
+def build_workbench(
+    runs2_dir: Path,
+    output_dir: Path,
+    focus_window_arg: str,
+    explicit_window_roots: Sequence[str] | None = None,
+) -> Tuple[Dict[str, Any], Dict[str, Path], Path | None]:
+    windows = _discover_windows(runs2_dir, explicit_window_roots)
     cross = _load_cross_window(runs2_dir)
     focus_window = _choose_focus_window(windows, focus_window_arg)
     paths = _cycle_paths(output_dir)
@@ -1093,7 +1118,7 @@ def main() -> None:
     args = _parse_args()
     runs2_dir = _resolve_path(args.runs2_dir)
     output_dir = _resolve_path(args.output_dir)
-    payload, paths, casebook_path = build_workbench(runs2_dir, output_dir, args.focus_window)
+    payload, paths, casebook_path = build_workbench(runs2_dir, output_dir, args.focus_window, args.window_root)
 
     registry = payload["registry_rows"]
     replay_rows = payload["replay_rows"]

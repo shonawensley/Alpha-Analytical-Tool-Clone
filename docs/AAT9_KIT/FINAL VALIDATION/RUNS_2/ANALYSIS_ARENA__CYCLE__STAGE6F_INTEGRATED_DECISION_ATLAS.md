@@ -7,19 +7,19 @@ Stage 6F is read-only. It integrates Stage 6B through Stage 6E evidence into dec
 ## Executive Readback
 
 - Primary restrained candidate expression remains the strongest current design seed, but Stage 6C future/fresh confirmation is still required.
-- Restraint evidence is promising as soft-penalty research, not hard-veto permission.
-- Support evidence remains broad-failed but narrow-candidate-positive in selected paired buckets.
+- Restraint evidence posture: 14 rescue buckets; 6 downweight buckets; hard veto remains blocked; restraint remains soft-penalty research, not hard-veto permission.
+- Support evidence posture: 3 strict support candidates; 1 mixed retest candidates; broad support remains blocked; support remains research/modifier-only until repeated.
 - Rewrite remains blocked until fresh-window confirmation clears or quarantines the open gates.
 
 ## Lane Decision Atlas
 
 | lane_id | lane_type | current_status | decision_posture | permission |
 | --- | --- | --- | --- | --- |
-| S6F-LANE-001 | primary_candidate_expression | future_window_confirmation_required | strongest_current_seed_but_future_confirmation_required | readback_only_no_live_permission |
+| S6F-LANE-001 | primary_candidate_expression | blocked | strongest_current_seed_but_future_confirmation_required | blocked |
 | S6F-LANE-002 | secondary_lineage_modifier | keep_as_lineage_modifier_retest | modifier_only_not_independent_expansion | modifier_research_only |
 | S6F-LANE-003 | broad_lineage_reference | narrow_before_design | blocked_until_narrowed | narrowing_research_only |
-| S6F-LANE-004 | support_modifier_narrowing | fail_as_positive_modifier | 3 strict support candidates; 2 mixed retest candidates; broad support remains blocked | support_research_only |
-| S6F-LANE-005 | restraint_soft_penalty | pass_research_not_live | 3 rescue buckets; 13 downweight buckets; hard veto remains blocked | penalty_research_only |
+| S6F-LANE-004 | support_modifier_narrowing | pass_modifier_candidate | 3 strict support candidates; 1 mixed retest candidates; broad support remains blocked | support_research_only |
+| S6F-LANE-005 | restraint_soft_penalty | pass_research_not_live | 14 rescue buckets; 6 downweight buckets; hard veto remains blocked | penalty_research_only |
 | S6F-LANE-006 | decay_companion_boundary | companion_only | companion_only_boundary_confirmed_for_now | companion_only |
 | S6F-LANE-007 | duplicate_credit_guardrail | pass | mandatory_guardrail | readback_reference_only |
 | S6F-LANE-008 | rewrite_gate | active_blocker | rewrite_not_allowed_yet | blocked_until_future_confirmation |
@@ -39,21 +39,21 @@ Stage 6F is read-only. It integrates Stage 6B through Stage 6E evidence into dec
 
 | target_id | source_stage | candidate | positive | yield | interpretation |
 | --- | --- | --- | --- | --- | --- |
-| S6F-TARGET-001 | Stage6D | S6D-RESCUE-012 | 50 | 18.382 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
-| S6F-TARGET-002 | Stage6D | S6D-RESCUE-015 | 39 | 18.571 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
-| S6F-TARGET-003 | Stage6D | S6D-RESCUE-016 | 39 | 18.571 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
-| S6F-TARGET-004 | Stage6D | S6D-RESCUE-001 | 502 | 12.550 | research_casebook_review_only |
-| S6F-TARGET-005 | Stage6D | S6D-RESCUE-002 | 502 | 12.550 | research_casebook_review_only |
-| S6F-TARGET-006 | Stage6D | S6D-RESCUE-003 | 494 | 12.456 | research_casebook_review_only |
-| S6F-TARGET-007 | Stage6D | S6D-RESCUE-004 | 294 | 12.312 | research_casebook_review_only |
-| S6F-TARGET-008 | Stage6D | S6D-RESCUE-005 | 286 | 12.150 | research_casebook_review_only |
-| S6F-TARGET-009 | Stage6D | S6D-RESCUE-006 | 208 | 12.903 | research_casebook_review_only |
-| S6F-TARGET-010 | Stage6D | S6D-RESCUE-007 | 208 | 12.903 | research_casebook_review_only |
-| S6F-TARGET-011 | Stage6D | S6D-RESCUE-008 | 79 | 13.036 | research_casebook_review_only |
-| S6F-TARGET-012 | Stage6D | S6D-RESCUE-009 | 76 | 10.674 | research_casebook_review_only |
-| S6F-TARGET-013 | Stage6E | S6E-SUPPORT-001 | 98 | 15.409 | priority_support_narrowing_casebook; requires fresh-window repeat |
-| S6F-TARGET-014 | Stage6E | S6E-SUPPORT-002 | 81 | 15.458 | priority_support_narrowing_casebook; requires fresh-window repeat |
-| S6F-TARGET-015 | Stage6E | S6E-SUPPORT-003 | 29 | 13.426 | priority_support_narrowing_casebook; requires fresh-window repeat |
+| S6F-TARGET-001 | Stage6D | S6D-RESCUE-002 | 477 | 19.908 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-002 | Stage6D | S6D-RESCUE-008 | 91 | 20.588 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-003 | Stage6D | S6D-RESCUE-009 | 89 | 20.554 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-004 | Stage6D | S6D-RESCUE-010 | 88 | 23.978 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-005 | Stage6D | S6D-RESCUE-011 | 78 | 26.000 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-006 | Stage6D | S6D-RESCUE-012 | 78 | 26.000 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-007 | Stage6D | S6D-RESCUE-013 | 39 | 26.000 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-008 | Stage6D | S6D-RESCUE-014 | 39 | 26.000 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-009 | Stage6D | S6D-RESCUE-015 | 38 | 18.537 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-010 | Stage6D | S6D-RESCUE-016 | 38 | 20.000 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-011 | Stage6D | S6D-RESCUE-017 | 30 | 21.583 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-012 | Stage6D | S6D-RESCUE-018 | 13 | 30.233 | priority_restraint_rescue_casebook; inspect before globally downweighting high pressure |
+| S6F-TARGET-013 | Stage6E | S6E-SUPPORT-001 | 639 | 21.450 | priority_support_narrowing_casebook; requires fresh-window repeat |
+| S6F-TARGET-014 | Stage6E | S6E-SUPPORT-002 | 473 | 20.700 | priority_support_narrowing_casebook; requires fresh-window repeat |
+| S6F-TARGET-015 | Stage6E | S6E-SUPPORT-003 | 304 | 19.119 | priority_support_narrowing_casebook; requires fresh-window repeat |
 
 ## Macro Findings Disposition
 

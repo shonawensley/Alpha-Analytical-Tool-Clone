@@ -42,6 +42,12 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--runs2-dir", default=str(RUNS_2_DIR), help="RUNS_2 root containing Stage-2B/Stage-3 artifacts.")
     ap.add_argument("--output-dir", default=str(RUNS_2_DIR), help="Cycle-level output directory.")
     ap.add_argument(
+        "--window-root",
+        action="append",
+        default=[],
+        help="Explicit completed window root to include. Can be repeated; when provided, RUNS_2 auto-discovery is bypassed.",
+    )
+    ap.add_argument(
         "--max-replay-rows",
         type=int,
         default=0,
@@ -142,7 +148,21 @@ def _counter_text(counter: Counter[str]) -> str:
     return "|".join(f"{key}:{count}" for key, count in counter.most_common() if key)
 
 
-def _discover_windows(runs2_dir: Path) -> List[Path]:
+def _discover_windows(runs2_dir: Path, explicit_window_roots: Sequence[str] | None = None) -> List[Path]:
+    if explicit_window_roots:
+        windows: List[Path] = []
+        seen: set[Path] = set()
+        for value in explicit_window_roots:
+            window = _resolve_path(value)
+            if not window.is_dir():
+                raise SystemExit(f"Explicit window root not found: {window}")
+            resolved = window.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            windows.append(window)
+        return sorted(windows, key=lambda path: path.name)
+
     return sorted(path for path in runs2_dir.iterdir() if path.is_dir() and WINDOW_RE.match(path.name))
 
 
@@ -959,7 +979,7 @@ def main() -> None:
         (str(row.get("entity_type") or ""), str(row.get("entity_key") or "")): row
         for row in registry_rows
     }
-    windows = _discover_windows(runs2_dir)
+    windows = _discover_windows(runs2_dir, args.window_root)
     if not replay_rows:
         raise SystemExit(f"Missing or empty Stage-3 replay queue: {s3['replay_csv']}")
     if not windows:

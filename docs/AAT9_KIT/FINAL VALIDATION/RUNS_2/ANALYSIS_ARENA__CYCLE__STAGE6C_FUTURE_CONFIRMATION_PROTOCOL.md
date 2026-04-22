@@ -39,13 +39,12 @@ Stage 6C is read-only. It creates confirmation contracts and queue items for fut
 
 | priority | queue_item | subject | acceptance_test |
 | --- | --- | --- | --- |
-| 1 | future_window_confirmation | primary_restrained_candidate_expression | Repeat Stage 6B replay/readback on a fresh window and compare primary against the baseline clean boxed arm. |
-| 2 | support_modifier_rework | support_context | Retest support-on only as a narrower paired modifier, never as broad positive expansion. |
-| 3 | restraint_soft_penalty_calibration | restraint_filter | Convert hard-exclusion evidence into soft-penalty simulations and test whether high-pressure rows can be downweighted without losing useful conversions. |
-| 4 | lineage_narrowing | broad_lineage_foundation_reference | Retest narrowed lineage variants; do not promote broad lineage foundation directly. |
-| 5 | decay_companion_boundary | decay_watch_companion | Keep decay evidence separate from candidate-pool scoring and repeat the boundary check in future windows. |
-| 6 | macro_findings_gate | macro_findings_log | No macro finding becomes confirmed without future/fresh repeat or explicit human review note. |
-| 7 | rewrite_block | translator_scoring_rewrite | Rewrite discussion opens only after S6C primary repeat, duplicate-credit, concentration, support, restraint, and decay gates are cleanly resolved. |
+| 1 | support_modifier_rework | support_context | Retest support-on only as a narrower paired modifier, never as broad positive expansion. |
+| 2 | restraint_soft_penalty_calibration | restraint_filter | Convert hard-exclusion evidence into soft-penalty simulations and test whether high-pressure rows can be downweighted without losing useful conversions. |
+| 3 | lineage_narrowing | broad_lineage_foundation_reference | Retest narrowed lineage variants; do not promote broad lineage foundation directly. |
+| 4 | decay_companion_boundary | decay_watch_companion | Keep decay evidence separate from candidate-pool scoring and repeat the boundary check in future windows. |
+| 5 | macro_findings_gate | macro_findings_log | No macro finding becomes confirmed without future/fresh repeat or explicit human review note. |
+| 6 | rewrite_block | translator_scoring_rewrite | Rewrite discussion opens only after S6C primary repeat, duplicate-credit, concentration, support, restraint, and decay gates are cleanly resolved. |
 
 ## Macro Gate
 

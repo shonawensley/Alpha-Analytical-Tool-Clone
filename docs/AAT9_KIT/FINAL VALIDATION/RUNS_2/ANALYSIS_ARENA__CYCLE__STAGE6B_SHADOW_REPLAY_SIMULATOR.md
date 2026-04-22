@@ -16,53 +16,53 @@ Purpose: replay the Stage 6A shadow translator contract against Stage 5 value-le
 - March-led positive-conversion concentration remains an explicit warning.
 
 ## Executive Readback
-- Primary restrained lane FP proxy: `46.8%` versus baseline `60.4%`.
-- Primary restrained lane yield: `16.075` versus baseline `12.407`.
-- Stage 6A allowed candidate union rows: `2276` with live permission still `none`.
+- Primary restrained lane FP proxy: `41.0%` versus baseline `46.6%`.
+- Primary restrained lane yield: `25.815` versus baseline `23.978`.
+- Stage 6A allowed candidate union rows: `434` with live permission still `none`.
 - Stage 6B confirms the next work should remain shadow replay/readback, not live scoring.
 
 ## Replay Scenario Scorecard
 | scenario | permission | rows | state-days | FP proxy | yield | avg pool |
 | --- | --- | --- | --- | --- | --- | --- |
-| baseline_clean_boxed | baseline_only | 1062 | 53 | 60.4% | 12.407 | 50.642 |
-| primary_restrained_candidate_expression | shadow_replay_only | 2276 | 62 | 46.8% | 16.075 | 69.032 |
-| secondary_lineage_supported_restrained | shadow_replay_only | 1740 | 43 | 46.3% | 13.395 | 75.349 |
-| stage6a_allowed_candidate_union | shadow_replay_only | 2276 | 62 | 46.8% | 16.075 | 69.032 |
-| broad_lineage_foundation_reference | reference_only | 3764 | 71 | 54.5% | 14.372 | 116.620 |
-| candidate_rows_with_support_context | support_modifier_replay_only | 3221 | 55 | 55.4% | 12.969 | 131.218 |
-| candidate_rows_without_support_context | support_ablation_reference | 543 | 24 | 48.9% | 23.895 | 44.292 |
-| support_gate_context_excluded | context_only | 4288 | 95 | 57.4% | 16.018 | 106.000 |
-| decay_watch_companion_excluded | companion_only | 6145 | 354 | 82.5% | 3.920 | 106.788 |
-| low_denominator_watchlist_excluded | retest_only | 140 | 40 | 28.2% | 20.513 | 4.875 |
-| restraint_retest_surface_excluded | penalty_research_only | 415 | 47 | 32.8% | 22.492 | 13.149 |
+| baseline_clean_boxed | baseline_only | 196 | 28 | 46.6% | 23.978 | 13.107 |
+| primary_restrained_candidate_expression | shadow_replay_only | 434 | 19 | 41.0% | 25.815 | 38.737 |
+| secondary_lineage_supported_restrained | shadow_replay_only | 410 | 16 | 40.9% | 23.919 | 43.375 |
+| stage6a_allowed_candidate_union | shadow_replay_only | 434 | 19 | 41.0% | 25.815 | 38.737 |
+| broad_lineage_foundation_reference | reference_only | 1654 | 50 | 47.2% | 21.296 | 62.640 |
+| candidate_rows_with_support_context | support_modifier_replay_only | 1581 | 43 | 46.9% | 21.450 | 69.279 |
+| candidate_rows_without_support_context | support_ablation_reference | 73 | 11 | 52.3% | 18.301 | 13.909 |
+| support_gate_context_excluded | context_only | 3623 | 84 | 58.1% | 19.317 | 102.857 |
+| decay_watch_companion_excluded | companion_only | 5475 | 310 | 82.5% | 4.382 | 109.100 |
+| low_denominator_watchlist_excluded | retest_only | 168 | 41 | 36.1% | 23.954 | 6.415 |
+| restraint_retest_surface_excluded | penalty_research_only | 1235 | 58 | 59.3% | 16.612 | 52.310 |
 
 ## Lane Increment Matrix
 | comparison | scenario A | scenario B | FP delta | yield delta | pool ratio |
 | --- | --- | --- | --- | --- | --- |
-| primary_vs_baseline | baseline_clean_boxed | primary_restrained_candidate_expression | -0.136 | 3.668 | 1.363 |
-| secondary_vs_primary | primary_restrained_candidate_expression | secondary_lineage_supported_restrained | -0.005 | -2.680 | 1.092 |
+| primary_vs_baseline | baseline_clean_boxed | primary_restrained_candidate_expression | -0.056 | 1.837 | 2.955 |
+| secondary_vs_primary | primary_restrained_candidate_expression | secondary_lineage_supported_restrained | -0.001 | -1.896 | 1.120 |
 | union_vs_primary | primary_restrained_candidate_expression | stage6a_allowed_candidate_union | 0.000 | 0.000 | 1.000 |
-| broad_lineage_vs_primary | primary_restrained_candidate_expression | broad_lineage_foundation_reference | 0.077 | -1.703 | 1.689 |
-| support_on_vs_support_off | candidate_rows_without_support_context | candidate_rows_with_support_context | 0.065 | -10.925 | 2.963 |
-| decay_vs_candidate_union | stage6a_allowed_candidate_union | decay_watch_companion_excluded | 0.357 | -12.154 | 1.547 |
+| broad_lineage_vs_primary | primary_restrained_candidate_expression | broad_lineage_foundation_reference | 0.062 | -4.519 | 1.617 |
+| support_on_vs_support_off | candidate_rows_without_support_context | candidate_rows_with_support_context | -0.054 | 3.149 | 4.981 |
+| decay_vs_candidate_union | stage6a_allowed_candidate_union | decay_watch_companion_excluded | 0.415 | -21.433 | 2.816 |
 
 ## Support Modifier Ablation
 | bucket | permission | rows | FP proxy | yield |
 | --- | --- | --- | --- | --- |
-| primary_support_on | paired_modifier_replay | 1740 | 46.3% | 13.395 |
-| primary_support_off | paired_modifier_replay | 536 | 48.5% | 24.423 |
-| all_candidate_support_on | paired_modifier_replay | 3221 | 55.4% | 12.969 |
-| all_candidate_support_off | paired_modifier_replay | 543 | 48.9% | 23.895 |
-| support_gate_standalone_excluded | excluded_context_only | 4288 | 57.4% | 16.018 |
+| primary_support_on | paired_modifier_replay | 410 | 40.9% | 23.919 |
+| primary_support_off | paired_modifier_replay | 24 | 42.9% | 57.143 |
+| all_candidate_support_on | paired_modifier_replay | 1581 | 46.9% | 21.450 |
+| all_candidate_support_off | paired_modifier_replay | 73 | 52.3% | 18.301 |
+| support_gate_standalone_excluded | excluded_context_only | 3623 | 58.1% | 19.317 |
 
 ## Restraint Calibration
 | bucket | permission | rows | FP proxy | yield |
 | --- | --- | --- | --- | --- |
-| no_penalty_all_candidate_rows | reference_only | 3764 | 54.5% | 14.372 |
-| hard_exclusion_non_high_pressure | shadow_replay_only | 2276 | 46.8% | 16.075 |
-| removed_high_pressure_candidate_rows | penalty_research_only | 1488 | 62.8% | 12.550 |
-| medium_pressure_candidate_rows | penalty_research_only | 2276 | 46.8% | 16.075 |
-| restraint_retest_surface | penalty_research_only | 415 | 32.8% | 22.492 |
+| no_penalty_all_candidate_rows | reference_only | 1654 | 47.2% | 21.296 |
+| hard_exclusion_non_high_pressure | shadow_replay_only | 434 | 41.0% | 25.815 |
+| removed_high_pressure_candidate_rows | penalty_research_only | 1220 | 49.1% | 19.908 |
+| medium_pressure_candidate_rows | penalty_research_only | 434 | 41.0% | 25.815 |
+| restraint_retest_surface | penalty_research_only | 1235 | 59.3% | 16.612 |
 
 ## Guardrail Compliance
 | guardrail | status | evidence |

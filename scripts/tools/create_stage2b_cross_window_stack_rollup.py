@@ -35,6 +35,12 @@ def _parse_args() -> argparse.Namespace:
         default=str(RUNS_2_DIR),
         help="Directory for cycle-level cross-window outputs.",
     )
+    ap.add_argument(
+        "--window-root",
+        action="append",
+        default=[],
+        help="Explicit completed window root to include. Can be repeated; when provided, RUNS_2 auto-discovery is bypassed.",
+    )
     ap.add_argument("--force", action="store_true", help="Overwrite existing outputs.")
     return ap.parse_args()
 
@@ -118,7 +124,21 @@ def _prefix_for_window(window: Path) -> str:
     return f"{window.name}__ANALYSIS_ARENA"
 
 
-def _discover_windows(runs2_dir: Path) -> List[Path]:
+def _discover_windows(runs2_dir: Path, explicit_window_roots: Sequence[str] | None = None) -> List[Path]:
+    if explicit_window_roots:
+        windows: List[Path] = []
+        seen: set[Path] = set()
+        for value in explicit_window_roots:
+            window = _resolve_path(value)
+            if not window.is_dir():
+                raise SystemExit(f"Explicit window root not found: {window}")
+            resolved = window.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            windows.append(window)
+        return sorted(windows, key=lambda path: path.name)
+
     windows = []
     for window in sorted(path for path in runs2_dir.glob("WINDOW_*") if path.is_dir()):
         prefix = _prefix_for_window(window)
@@ -524,7 +544,7 @@ def main() -> None:
     args = _parse_args()
     runs2_dir = _resolve_path(args.runs2_dir)
     output_dir = _resolve_path(args.output_dir)
-    windows = _discover_windows(runs2_dir)
+    windows = _discover_windows(runs2_dir, args.window_root)
     if not windows:
         raise SystemExit(f"No Stage 2B-ready windows found under {runs2_dir}")
 

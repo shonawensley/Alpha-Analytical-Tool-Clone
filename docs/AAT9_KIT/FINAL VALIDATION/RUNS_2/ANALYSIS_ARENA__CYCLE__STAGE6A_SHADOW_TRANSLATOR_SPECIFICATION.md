@@ -19,13 +19,13 @@ Purpose: turn Stage 5 readback decisions into a formal shadow translator contrac
 ## Lane Contract
 | lane | source modes | permission | role | FP proxy | yield |
 | --- | --- | --- | --- | --- | --- |
-| primary_restrained_candidate_expression | clean_with_restraint_filter | shadow_spec_only | primary shadow candidate-expression seed | 46.8% | 16.075 |
-| secondary_lineage_supported_restrained | clean_lineage_supported_restrained | shadow_spec_only | secondary shadow candidate-expression seed | 46.3% | 13.395 |
-| narrowed_lineage_foundation | clean_plus_lineage_deduped | narrow_before_design | broad candidate foundation requiring narrowing | 54.5% | 14.372 |
-| support_context_modifier | support_gate_context\|clean_with_support_context | context_modifier_only | paired support/ranking context | 57.4% | 16.018 |
-| decay_watch_companion | decay_watch_companion | companion_only | carryforward/territory annotation | 82.5% | 3.920 |
-| low_denominator_watchlist | low_denominator_watchlist | retest_before_design | retest/watchlist only | 28.2% | 20.513 |
-| restraint_calibration_surface | restraint_retest | penalty_research_only | penalty/veto calibration surface | 32.8% | 22.492 |
+| primary_restrained_candidate_expression | clean_with_restraint_filter | shadow_spec_only | primary shadow candidate-expression seed | 41.0% | 25.815 |
+| secondary_lineage_supported_restrained | clean_lineage_supported_restrained | shadow_spec_only | secondary shadow candidate-expression seed | 40.9% | 23.919 |
+| narrowed_lineage_foundation | clean_plus_lineage_deduped | narrow_before_design | broad candidate foundation requiring narrowing | 47.2% | 21.296 |
+| support_context_modifier | support_gate_context\|clean_with_support_context | context_modifier_only | paired support/ranking context | 58.1% | 19.317 |
+| decay_watch_companion | decay_watch_companion | companion_only | carryforward/territory annotation | 82.5% | 4.382 |
+| low_denominator_watchlist | low_denominator_watchlist | retest_before_design | retest/watchlist only | 36.1% | 23.954 |
+| restraint_calibration_surface | restraint_retest | penalty_research_only | penalty/veto calibration surface | 59.3% | 16.612 |
 
 ## Guardrail Matrix
 | guardrail | severity | rule | failure response |

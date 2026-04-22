@@ -1,0 +1,433 @@
+{
+  "cohort_interpretation": {
+    "gap_event_count": 0,
+    "gap_sources": {
+      "box": [],
+      "exact": [],
+      "families": [],
+      "tier_a": [],
+      "vtrac": []
+    },
+    "not_promoted_event_count": 0,
+    "not_promoted_sources": {
+      "box": [],
+      "exact": [],
+      "families": [],
+      "tier_a": [],
+      "vtrac": []
+    },
+    "positive_event_count": 0,
+    "wrong_lane_event_count": 0,
+    "wrong_lane_sources": {
+      "box": [],
+      "exact": [],
+      "families": [],
+      "tier_a": [],
+      "vtrac": []
+    }
+  },
+  "cross_window_context": {
+    "averages": {
+      "candidate_like_event_rate": 0.408240429559358,
+      "finalist_supported_hit_rate": 0.8168911108530736,
+      "opportunity_gap_box_rate": 0.041,
+      "play_card_any_box_rate": 0.0746
+    },
+    "credited_hits": 692,
+    "current_window": {
+      "boxlike_event_rate": "0.09049773755656108",
+      "candidate_like_event_rate": "0.4072398190045249",
+      "candidate_universe_box_rate": "0.231",
+      "candidate_universe_exact_rate": "0.154",
+      "credited_hits": "142",
+      "day_count": "8",
+      "finalist_supported_hit_rate": "0.8309859154929577",
+      "frontier_feeder_rate": "0.29545454545454547",
+      "frontier_hidden_rate": "0.41363636363636364",
+      "frontier_literal_rate": "0.0",
+      "frontier_top_signature": "HIDDEN_COMPRESSED_FRONTIER",
+      "frontier_vtrac_rate": "0.24545454545454545",
+      "gap_rows_with_explicit_arena_box_rate": "1.0",
+      "median_rank_all_hits": "8.0",
+      "median_rank_high_conviction": "7.0",
+      "opportunity_gap_box_rate": "0.05",
+      "play_card_any_box_rate": "0.054000000000000006",
+      "straight_finalist_support_rate": "0.9",
+      "straight_hits": "30",
+      "strict_box_finalist_support_rate": "0.9166666666666666",
+      "strict_box_hits": "12",
+      "top_primary_target_rate": "0.07200000000000001",
+      "translator_box_gap_rows": "11",
+      "translator_preserved_rows": "1",
+      "translator_rows": "98",
+      "vt_like_event_rate": "0.38461538461538464",
+      "vtrac_only_hits": "73",
+      "window": "2026-01-15_to_2026-01-22",
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22",
+      "winner_events": "221"
+    },
+    "windows": 5,
+    "winner_events": 1045
+  },
+  "decay_context": {
+    "metadata": {
+      "analysis_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/ANALYSIS_ARENA",
+      "decay_draws_total_max": 10,
+      "decay_tail_days_required": 4,
+      "decay_upload_days_total": 5,
+      "resolution_policy": "Upload-day horizon is primary; draw-based offsets are companion accounting only.",
+      "results_root": "data/results",
+      "results_tail_rule": "A 5 total upload-day horizon requires results through snapshot day + 4 days.",
+      "same_day_included": true,
+      "snapshot_days": 8,
+      "validation_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22/VALIDATION",
+      "window_dates": [
+        "2026-01-15",
+        "2026-01-22"
+      ],
+      "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22"
+    },
+    "summary": {
+      "full_horizon_rows": 112,
+      "max_observed_draws": 10,
+      "max_observed_upload_days": 5,
+      "right_censored_rows": 0,
+      "state_day_snapshots": 112
+    },
+    "top_metric_lifts": [
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.8928571428571429,
+        "horizon_resolved": 100,
+        "incremental_decay_lift": 49,
+        "label": "Brain 1 VTRAC core",
+        "metric_family": "brain1_vt_core",
+        "same_day_rate": 0.45535714285714285,
+        "same_day_resolved": 51
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.9821428571428571,
+        "horizon_resolved": 110,
+        "incremental_decay_lift": 43,
+        "label": "Arena VTRAC total",
+        "metric_family": "arena_vt_total",
+        "same_day_rate": 0.5982142857142857,
+        "same_day_resolved": 67
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.9821428571428571,
+        "horizon_resolved": 110,
+        "incremental_decay_lift": 43,
+        "label": "Sandbox VTRAC seed",
+        "metric_family": "sandbox_vt_seed",
+        "same_day_rate": 0.5982142857142857,
+        "same_day_resolved": 67
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.5446428571428571,
+        "horizon_resolved": 61,
+        "incremental_decay_lift": 41,
+        "label": "Arena box total",
+        "metric_family": "arena_box_total",
+        "same_day_rate": 0.17857142857142858,
+        "same_day_resolved": 20
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.6071428571428571,
+        "horizon_resolved": 68,
+        "incremental_decay_lift": 37,
+        "label": "Board top VTRAC core",
+        "metric_family": "board_top_vt_core",
+        "same_day_rate": 0.2767857142857143,
+        "same_day_resolved": 31
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.42857142857142855,
+        "horizon_resolved": 48,
+        "incremental_decay_lift": 35,
+        "label": "Brain 1 box core",
+        "metric_family": "brain1_box_core",
+        "same_day_rate": 0.11607142857142858,
+        "same_day_resolved": 13
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.41964285714285715,
+        "horizon_resolved": 47,
+        "incremental_decay_lift": 32,
+        "label": "Sandbox box seed",
+        "metric_family": "sandbox_box_seed",
+        "same_day_rate": 0.13392857142857142,
+        "same_day_resolved": 15
+      },
+      {
+        "active_state_days": 112,
+        "horizon_rate": 0.14285714285714285,
+        "horizon_resolved": 16,
+        "incremental_decay_lift": 12,
+        "label": "Board top box core",
+        "metric_family": "board_top_box_core",
+        "same_day_rate": 0.03571428571428571,
+        "same_day_resolved": 4
+      }
+    ]
+  },
+  "examples": {
+    "decay_teachers": [],
+    "gap_teachers": [],
+    "not_promoted": [],
+    "positive_conversions": [],
+    "wrong_lane": []
+  },
+  "frontier_context": {
+    "sharp_case_count": 27,
+    "sharp_cases": [
+      {
+        "date": "2026-01-16",
+        "double_anchor_score": "0.371335",
+        "event_id": "2026-01-16|Florida4|?|273",
+        "evidence_status": "",
+        "family_frontier_score": "0.995339",
+        "frontier_strength_score": "91.18",
+        "literal_frontier_score": "0.06882",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Florida4",
+        "strength": "STRONG",
+        "winner": "273"
+      },
+      {
+        "date": "2026-01-22",
+        "double_anchor_score": "0.961303",
+        "event_id": "2026-01-22|OntarioCanada4|?|544",
+        "evidence_status": "",
+        "family_frontier_score": "0.845212",
+        "frontier_strength_score": "85.005",
+        "literal_frontier_score": "0.393071",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "OntarioCanada4",
+        "strength": "STRONG",
+        "winner": "544"
+      },
+      {
+        "date": "2026-01-21",
+        "double_anchor_score": "0.846624",
+        "event_id": "2026-01-21|NewYork4|?|233",
+        "evidence_status": "",
+        "family_frontier_score": "0.806494",
+        "frontier_strength_score": "83.304",
+        "literal_frontier_score": "0.291619",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "NewYork4",
+        "strength": "STRONG",
+        "winner": "233"
+      },
+      {
+        "date": "2026-01-15",
+        "double_anchor_score": "0.935185",
+        "event_id": "2026-01-15|Indiana4|?|311",
+        "evidence_status": "",
+        "family_frontier_score": "0.690692",
+        "frontier_strength_score": "78.854",
+        "literal_frontier_score": "0.126257",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Indiana4",
+        "strength": "STRONG",
+        "winner": "311"
+      },
+      {
+        "date": "2026-01-16",
+        "double_anchor_score": "0.178571",
+        "event_id": "2026-01-16|Delaware4|?|902",
+        "evidence_status": "",
+        "family_frontier_score": "0.640975",
+        "frontier_strength_score": "78.677",
+        "literal_frontier_score": "0.0",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Delaware4",
+        "strength": "STRONG",
+        "winner": "902"
+      },
+      {
+        "date": "2026-01-21",
+        "double_anchor_score": "0.166667",
+        "event_id": "2026-01-21|Ohio4|?|740",
+        "evidence_status": "",
+        "family_frontier_score": "0.601005",
+        "frontier_strength_score": "76.989",
+        "literal_frontier_score": "0.262883",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Ohio4",
+        "strength": "STRONG",
+        "winner": "740"
+      },
+      {
+        "date": "2026-01-19",
+        "double_anchor_score": "0.190972",
+        "event_id": "2026-01-19|Indiana4|?|865",
+        "evidence_status": "",
+        "family_frontier_score": "0.391048",
+        "frontier_strength_score": "73.465",
+        "literal_frontier_score": "0.033002",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Indiana4",
+        "strength": "STRONG",
+        "winner": "865"
+      },
+      {
+        "date": "2026-01-18",
+        "double_anchor_score": "0.797994",
+        "event_id": "2026-01-18|NewJersey4|?|955",
+        "evidence_status": "",
+        "family_frontier_score": "0.611976",
+        "frontier_strength_score": "73.414",
+        "literal_frontier_score": "0.114285",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "NewJersey4",
+        "strength": "STRONG",
+        "winner": "955"
+      },
+      {
+        "date": "2026-01-22",
+        "double_anchor_score": "0.178082",
+        "event_id": "2026-01-22|Ohio4|?|048",
+        "evidence_status": "",
+        "family_frontier_score": "0.443722",
+        "frontier_strength_score": "73.206",
+        "literal_frontier_score": "0.197012",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Ohio4",
+        "strength": "STRONG",
+        "winner": "048"
+      },
+      {
+        "date": "2026-01-16",
+        "double_anchor_score": "0.419452",
+        "event_id": "2026-01-16|Indiana4|?|836",
+        "evidence_status": "",
+        "family_frontier_score": "0.697806",
+        "frontier_strength_score": "73.116",
+        "literal_frontier_score": "0.349287",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Indiana4",
+        "strength": "STRONG",
+        "winner": "836"
+      },
+      {
+        "date": "2026-01-21",
+        "double_anchor_score": "0.815833",
+        "event_id": "2026-01-21|Michigan4|?|220",
+        "evidence_status": "",
+        "family_frontier_score": "0.579502",
+        "frontier_strength_score": "72.884",
+        "literal_frontier_score": "0.070196",
+        "outcome_class": "",
+        "signature": "FAMILY_FRONTIER",
+        "state_key": "Michigan4",
+        "strength": "STRONG",
+        "winner": "220"
+      },
+      {
+        "date": "2026-01-21",
+        "double_anchor_score": "0.907692",
+        "event_id": "2026-01-21|OntarioCanada4|?|199",
+        "evidence_status": "",
+        "family_frontier_score": "0.487527",
+        "frontier_strength_score": "72.682",
+        "literal_frontier_score": "0.050481",
+        "outcome_class": "",
+        "signature": "FAMILY_FRONTIER",
+        "state_key": "OntarioCanada4",
+        "strength": "STRONG",
+        "winner": "199"
+      },
+      {
+        "date": "2026-01-18",
+        "double_anchor_score": "0.166667",
+        "event_id": "2026-01-18|NewYork4|?|682",
+        "evidence_status": "",
+        "family_frontier_score": "0.458567",
+        "frontier_strength_score": "72.394",
+        "literal_frontier_score": "0.054523",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "NewYork4",
+        "strength": "STRONG",
+        "winner": "682"
+      },
+      {
+        "date": "2026-01-17",
+        "double_anchor_score": "0.419107",
+        "event_id": "2026-01-17|Michigan4|?|501",
+        "evidence_status": "",
+        "family_frontier_score": "0.378551",
+        "frontier_strength_score": "72.32",
+        "literal_frontier_score": "0.038063",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "Michigan4",
+        "strength": "STRONG",
+        "winner": "501"
+      },
+      {
+        "date": "2026-01-22",
+        "double_anchor_score": "0.824167",
+        "event_id": "2026-01-22|NewYork4|?|787",
+        "evidence_status": "",
+        "family_frontier_score": "0.327404",
+        "frontier_strength_score": "71.204",
+        "literal_frontier_score": "0.07175",
+        "outcome_class": "",
+        "signature": "HIDDEN_COMPRESSED_FRONTIER",
+        "state_key": "NewYork4",
+        "strength": "STRONG",
+        "winner": "787"
+      }
+    ],
+    "signature_mix": {
+      "FAMILY_FRONTIER": 10,
+      "FEEDER_TO_FRONTIER": 65,
+      "HIDDEN_COMPRESSED_FRONTIER": 91,
+      "VTRAC_FRONTIER": 54
+    },
+    "strength_mix": {
+      "MEDIUM": 168,
+      "STRONG": 20,
+      "WEAK": 32
+    }
+  },
+  "pro_92_read": {
+    "file": "tasks/PRO_92.txt",
+    "integrated_points": [
+      "Analysis Arena is an upstream evidence engine, not yet a finished combo/budget engine.",
+      "The main bottleneck is expression of preserved evidence through old downstream candidate/play-card infrastructure.",
+      "Opportunity-gap rows are high-value translator teaching examples.",
+      "Broad tracker presence should be downgraded unless paired with sharper exact/box/frontier evidence.",
+      "C1/C2 frontier remains valuable only when winner sidecar completeness is enforced."
+    ]
+  },
+  "schema_version": "analysis_arena_audit_interpretation_pass/v1",
+  "signal_decisions": [],
+  "summary": {
+    "audit_counts": {},
+    "evidence_status_counts": {},
+    "outcome_class_counts": {},
+    "priority_case_count": 0,
+    "pro_92_integrated": true,
+    "window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22"
+  }
+}

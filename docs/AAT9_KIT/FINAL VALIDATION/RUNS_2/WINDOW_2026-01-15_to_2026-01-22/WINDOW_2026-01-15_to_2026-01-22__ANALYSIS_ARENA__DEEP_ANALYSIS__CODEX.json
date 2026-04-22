@@ -1538,15 +1538,15 @@
     "cohort_panels": [
       {
         "cohort": "arena_any_signal",
-        "horizon_rate": 0.9196428571428571,
-        "horizon_resolved": 103,
-        "incremental_decay_lift": 32,
+        "horizon_rate": 0.9910714285714286,
+        "horizon_resolved": 111,
+        "incremental_decay_lift": 40,
         "label": "Arena any signal",
         "profile_counts": {
           "direct_same_outcome": 43,
-          "future_day_decay": 32,
+          "future_day_decay": 40,
           "miss": 1,
-          "right_censored": 8,
+          "right_censored": 0,
           "same_day_carryforward": 28,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1574,15 +1574,15 @@
       },
       {
         "cohort": "top3_ranked",
-        "horizon_rate": 0.9166666666666666,
-        "horizon_resolved": 22,
-        "incremental_decay_lift": 8,
+        "horizon_rate": 1.0,
+        "horizon_resolved": 24,
+        "incremental_decay_lift": 10,
         "label": "Top-3 ranked states",
         "profile_counts": {
           "direct_same_outcome": 12,
-          "future_day_decay": 8,
+          "future_day_decay": 10,
           "miss": 0,
-          "right_censored": 2,
+          "right_censored": 0,
           "same_day_carryforward": 2,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1592,15 +1592,15 @@
       },
       {
         "cohort": "tracker_hint_present",
-        "horizon_rate": 0.9196428571428571,
-        "horizon_resolved": 103,
-        "incremental_decay_lift": 32,
+        "horizon_rate": 0.9910714285714286,
+        "horizon_resolved": 111,
+        "incremental_decay_lift": 40,
         "label": "Any tracker hint present",
         "profile_counts": {
           "direct_same_outcome": 43,
-          "future_day_decay": 32,
+          "future_day_decay": 40,
           "miss": 1,
-          "right_censored": 8,
+          "right_censored": 0,
           "same_day_carryforward": 28,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1610,15 +1610,15 @@
       },
       {
         "cohort": "profit_alert_hint_present",
-        "horizon_rate": 0.9196428571428571,
-        "horizon_resolved": 103,
-        "incremental_decay_lift": 32,
+        "horizon_rate": 0.9910714285714286,
+        "horizon_resolved": 111,
+        "incremental_decay_lift": 40,
         "label": "Profit-alert hint present",
         "profile_counts": {
           "direct_same_outcome": 43,
-          "future_day_decay": 32,
+          "future_day_decay": 40,
           "miss": 1,
-          "right_censored": 8,
+          "right_censored": 0,
           "same_day_carryforward": 28,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1628,15 +1628,15 @@
       },
       {
         "cohort": "due_double_hint_present",
-        "horizon_rate": 0.9196428571428571,
-        "horizon_resolved": 103,
-        "incremental_decay_lift": 32,
+        "horizon_rate": 0.9910714285714286,
+        "horizon_resolved": 111,
+        "incremental_decay_lift": 40,
         "label": "Due-double hint present",
         "profile_counts": {
           "direct_same_outcome": 43,
-          "future_day_decay": 32,
+          "future_day_decay": 40,
           "miss": 1,
-          "right_censored": 8,
+          "right_censored": 0,
           "same_day_carryforward": 28,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1817,7 +1817,7 @@
       "Same-day window grading stays clean; this scorecard separately measures delayed resolution within the configured horizon.",
       "A miss is only a true miss when the full tail is present. Incomplete tail coverage is reported as right_censored.",
       "Upload-day horizon is the primary setting. Draw-based accounting is preserved as a companion lens because same-day Midday/Evening crossover matters.",
-      "Arena-any-signal state-days gained `32` extra resolutions beyond same-day inside the current decay horizon.",
+      "Arena-any-signal state-days gained `40` extra resolutions beyond same-day inside the current decay horizon.",
       "Same-day carryforward remains distinct from future-day decay and should not be flattened into one generic later-hit bucket."
     ],
     "metadata": {
@@ -1840,16 +1840,16 @@
     "metric_families": [
       {
         "active_state_days": 112,
-        "horizon_rate": 0.10714285714285714,
-        "horizon_resolved": 12,
-        "incremental_decay_lift": 8,
+        "horizon_rate": 0.14285714285714285,
+        "horizon_resolved": 16,
+        "incremental_decay_lift": 12,
         "label": "Board top box core",
         "metric_family": "board_top_box_core",
         "profile_counts": {
           "direct_same_outcome": 0,
-          "future_day_decay": 8,
-          "miss": 47,
-          "right_censored": 53,
+          "future_day_decay": 12,
+          "miss": 96,
+          "right_censored": 0,
           "same_day_carryforward": 4,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1858,16 +1858,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.5357142857142857,
-        "horizon_resolved": 60,
-        "incremental_decay_lift": 29,
+        "horizon_rate": 0.6071428571428571,
+        "horizon_resolved": 68,
+        "incremental_decay_lift": 37,
         "label": "Board top VTRAC core",
         "metric_family": "board_top_vt_core",
         "profile_counts": {
           "direct_same_outcome": 16,
-          "future_day_decay": 29,
-          "miss": 22,
-          "right_censored": 30,
+          "future_day_decay": 37,
+          "miss": 44,
+          "right_censored": 0,
           "same_day_carryforward": 15,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1876,16 +1876,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.33035714285714285,
-        "horizon_resolved": 37,
-        "incremental_decay_lift": 24,
+        "horizon_rate": 0.42857142857142855,
+        "horizon_resolved": 48,
+        "incremental_decay_lift": 35,
         "label": "Brain 1 box core",
         "metric_family": "brain1_box_core",
         "profile_counts": {
           "direct_same_outcome": 3,
-          "future_day_decay": 24,
-          "miss": 31,
-          "right_censored": 44,
+          "future_day_decay": 35,
+          "miss": 64,
+          "right_censored": 0,
           "same_day_carryforward": 10,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1894,16 +1894,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.8303571428571429,
-        "horizon_resolved": 93,
-        "incremental_decay_lift": 42,
+        "horizon_rate": 0.8928571428571429,
+        "horizon_resolved": 100,
+        "incremental_decay_lift": 49,
         "label": "Brain 1 VTRAC core",
         "metric_family": "brain1_vt_core",
         "profile_counts": {
           "direct_same_outcome": 32,
-          "future_day_decay": 42,
-          "miss": 6,
-          "right_censored": 13,
+          "future_day_decay": 49,
+          "miss": 12,
+          "right_censored": 0,
           "same_day_carryforward": 19,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1912,16 +1912,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.32142857142857145,
-        "horizon_resolved": 36,
-        "incremental_decay_lift": 21,
+        "horizon_rate": 0.41964285714285715,
+        "horizon_resolved": 47,
+        "incremental_decay_lift": 32,
         "label": "Sandbox box seed",
         "metric_family": "sandbox_box_seed",
         "profile_counts": {
           "direct_same_outcome": 4,
-          "future_day_decay": 21,
-          "miss": 32,
-          "right_censored": 44,
+          "future_day_decay": 32,
+          "miss": 65,
+          "right_censored": 0,
           "same_day_carryforward": 11,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1938,8 +1938,8 @@
         "profile_counts": {
           "direct_same_outcome": 1,
           "future_day_decay": 4,
-          "miss": 51,
-          "right_censored": 55,
+          "miss": 106,
+          "right_censored": 0,
           "same_day_carryforward": 1,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1948,16 +1948,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.9107142857142857,
-        "horizon_resolved": 102,
-        "incremental_decay_lift": 35,
+        "horizon_rate": 0.9821428571428571,
+        "horizon_resolved": 110,
+        "incremental_decay_lift": 43,
         "label": "Sandbox VTRAC seed",
         "metric_family": "sandbox_vt_seed",
         "profile_counts": {
           "direct_same_outcome": 40,
-          "future_day_decay": 35,
-          "miss": 1,
-          "right_censored": 9,
+          "future_day_decay": 43,
+          "miss": 2,
+          "right_censored": 0,
           "same_day_carryforward": 27,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1966,16 +1966,16 @@
       },
       {
         "active_state_days": 94,
-        "horizon_rate": 0.0425531914893617,
-        "horizon_resolved": 4,
-        "incremental_decay_lift": 3,
+        "horizon_rate": 0.05319148936170213,
+        "horizon_resolved": 5,
+        "incremental_decay_lift": 4,
         "label": "Preserved not budgeted",
         "metric_family": "preserved_not_budgeted",
         "profile_counts": {
           "direct_same_outcome": 0,
-          "future_day_decay": 3,
-          "miss": 43,
-          "right_censored": 47,
+          "future_day_decay": 4,
+          "miss": 89,
+          "right_censored": 0,
           "same_day_carryforward": 1,
           "same_day_precursor_plus_same_day": 0
         },
@@ -1984,16 +1984,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.42857142857142855,
-        "horizon_resolved": 48,
-        "incremental_decay_lift": 28,
+        "horizon_rate": 0.5446428571428571,
+        "horizon_resolved": 61,
+        "incremental_decay_lift": 41,
         "label": "Arena box total",
         "metric_family": "arena_box_total",
         "profile_counts": {
           "direct_same_outcome": 5,
-          "future_day_decay": 28,
-          "miss": 25,
-          "right_censored": 39,
+          "future_day_decay": 41,
+          "miss": 51,
+          "right_censored": 0,
           "same_day_carryforward": 15,
           "same_day_precursor_plus_same_day": 0
         },
@@ -2002,16 +2002,16 @@
       },
       {
         "active_state_days": 112,
-        "horizon_rate": 0.9107142857142857,
-        "horizon_resolved": 102,
-        "incremental_decay_lift": 35,
+        "horizon_rate": 0.9821428571428571,
+        "horizon_resolved": 110,
+        "incremental_decay_lift": 43,
         "label": "Arena VTRAC total",
         "metric_family": "arena_vt_total",
         "profile_counts": {
           "direct_same_outcome": 41,
-          "future_day_decay": 35,
-          "miss": 1,
-          "right_censored": 9,
+          "future_day_decay": 43,
+          "miss": 2,
+          "right_censored": 0,
           "same_day_carryforward": 26,
           "same_day_precursor_plus_same_day": 0
         },
@@ -2020,10 +2020,10 @@
       }
     ],
     "summary": {
-      "full_horizon_rows": 56,
+      "full_horizon_rows": 112,
       "max_observed_draws": 10,
       "max_observed_upload_days": 5,
-      "right_censored_rows": 56,
+      "right_censored_rows": 0,
       "state_day_snapshots": 112
     }
   },

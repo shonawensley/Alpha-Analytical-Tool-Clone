@@ -25,9 +25,9 @@
 
 - Decay horizon: `5` total upload days / `10` total draws max
 - Tail days required beyond the last snapshot day: `4`
-- State-day snapshots: `112` full_horizon=`56` right_censored=`56`
-- Arena box total: same_day=`20/112` horizon=`48/112` incremental_decay=`28`
-- Arena VTRAC total: same_day=`67/112` horizon=`102/112` incremental_decay=`35`
+- State-day snapshots: `112` full_horizon=`112` right_censored=`0`
+- Arena box total: same_day=`20/112` horizon=`61/112` incremental_decay=`41`
+- Arena VTRAC total: same_day=`67/112` horizon=`110/112` incremental_decay=`43`
 - Sandbox exact seed: same_day=`2/112` horizon=`6/112` incremental_decay=`4`
 - Top-primary target decay: same_day=`5/8` horizon=`8/8`
 - Decay interpretation: Same-day window grading stays clean; this scorecard separately measures delayed resolution within the configured horizon.; A miss is only a true miss when the full tail is present. Incomplete tail coverage is reported as right_censored.; Upload-day horizon is the primary setting. Draw-based accounting is preserved as a companion lens because same-day Midday/Evening crossover matters.

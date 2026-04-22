@@ -6,12 +6,12 @@ The next fresh window is ready for read-only confirmation replay, not for live s
 
 ## Replay Permissions
 
-- `ready_for_fresh_confirmation`: 1 queue item(s)
+- `ready_for_fresh_confirmation`: 0 queue item(s)
 - `ready_but_watch`: 9 queue item(s)
 - `research_only`: 2 queue item(s)
 - `needs_replay_evidence`: 0 queue item(s)
 - `blocked_by_requirements`: 1 queue item(s)
-- casebook watch targets: 6
+- casebook watch targets: 15
 
 ## Allowed Next Action
 
@@ -30,16 +30,15 @@ Run the next fresh-window cadence, then rerun Stage 6B through Stage 7B and comp
 
 | priority | subject | requirement | status |
 | --- | --- | --- | --- |
-| 1 | primary_restrained_candidate_expression | S7A-REQ-001 | ready_for_fresh_confirmation |
-| 2 | support_context | S7A-REQ-003 | ready_but_watch |
-| 3 | restraint_filter | S7A-REQ-004 | ready_but_watch |
-| 4 | broad_lineage_foundation_reference | S7A-REQ-005 | ready_but_watch |
-| 6 | macro_findings_log | S7A-REQ-008 | ready_but_watch |
-| 8 | restraint_pressure_high | S7A-REQ-004 | ready_but_watch |
-| 9 | high_pressure_rescue_candidates | S7A-REQ-004 | ready_but_watch |
-| 10 | restraint_soft_penalty | S7A-REQ-004 | ready_but_watch |
-| 11 | narrow_support_modifier_candidates | S7A-REQ-003 | ready_but_watch |
-| 13 | support_modifier_boundary | S7A-REQ-003 | ready_but_watch |
+| 1 | support_context | S7A-REQ-003 | ready_but_watch |
+| 2 | restraint_filter | S7A-REQ-004 | ready_but_watch |
+| 3 | broad_lineage_foundation_reference | S7A-REQ-005 | ready_but_watch |
+| 5 | macro_findings_log | S7A-REQ-008 | ready_but_watch |
+| 7 | restraint_pressure_high | S7A-REQ-004 | ready_but_watch |
+| 8 | high_pressure_rescue_candidates | S7A-REQ-004 | ready_but_watch |
+| 9 | restraint_soft_penalty | S7A-REQ-004 | ready_but_watch |
+| 10 | narrow_support_modifier_candidates | S7A-REQ-003 | ready_but_watch |
+| 12 | support_modifier_boundary | S7A-REQ-003 | ready_but_watch |
 
 ## Blockers That Must Stay Visible
 

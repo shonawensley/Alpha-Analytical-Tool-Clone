@@ -4,11 +4,11 @@ Purpose: replay Stage 4C shadow translator lanes against completed Stage 2B stat
 
 ## Metadata
 - runs2_dir: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2`
-- value_level_replay_rows: `14752`
+- value_level_replay_rows: `12155`
 - prototype_modes: `9`
-- ablation_rows: `43`
-- support_ablation_rows: `15`
-- restraint_audit_rows: `6`
+- ablation_rows: `39`
+- support_ablation_rows: `10`
+- restraint_audit_rows: `4`
 - casebook_rows: `120`
 
 ## Guardrails
@@ -20,33 +20,33 @@ Purpose: replay Stage 4C shadow translator lanes against completed Stage 2B stat
 - Value-level claims are valid only for rows marked `value_level_complete`; truncated samples remain aggregate-only evidence.
 
 ## Value Completeness
-- matched_stage5_rows: `14752`
-- matched_value_level_complete: `14752`
+- matched_stage5_rows: `12155`
+- matched_value_level_complete: `12155`
 - matched_sample_truncated: `0`
 - matched_sample_completeness_rate: `100.0%`
 
 ## Prototype Lane Rows
 
-- `decay_watch_only`: `6145`
-- `support_gate_only`: `4288`
-- `lineage_guarded_boxed_candidate`: `2702`
-- `clean_boxed_candidate`: `1062`
-- `concentration_retest_or_restraint`: `415`
-- `low_denominator_watchlist`: `140`
+- `decay_watch_only`: `5475`
+- `support_gate_only`: `3623`
+- `lineage_guarded_boxed_candidate`: `1458`
+- `concentration_retest_or_restraint`: `1235`
+- `clean_boxed_candidate`: `196`
+- `low_denominator_watchlist`: `168`
 
 ## Prototype Mode Scorecard
 
 | mode | rows | ASD | avg pool | pos/100 ASD | wrong-free/100 ASD | FP proxy | complete |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `clean_boxed_only` | 1062 | 53 | 50.642 | 628.302 | 628.302 | 60.4% | 100.0% |
-| `clean_lineage_supported_restrained` | 1740 | 43 | 75.349 | 1009.302 | 1009.302 | 46.3% | 100.0% |
-| `clean_plus_lineage_deduped` | 3764 | 71 | 116.620 | 1676.056 | 1676.056 | 54.5% | 100.0% |
-| `clean_with_restraint_filter` | 2276 | 62 | 69.032 | 1109.677 | 1109.677 | 46.8% | 100.0% |
-| `clean_with_support_context` | 3221 | 55 | 131.218 | 1701.818 | 1701.818 | 55.4% | 100.0% |
-| `decay_watch_companion` | 6145 | 354 | 106.788 | 418.644 | 170.621 | 82.5% | 100.0% |
-| `low_denominator_watchlist` | 140 | 40 | 4.875 | 100.000 | 100.000 | 28.2% | 100.0% |
-| `restraint_retest` | 415 | 47 | 13.149 | 295.745 | 295.745 | 32.8% | 100.0% |
-| `support_gate_context` | 4288 | 95 | 106.000 | 1697.895 | 1696.842 | 57.4% | 100.0% |
+| `clean_boxed_only` | 196 | 28 | 13.107 | 314.286 | 314.286 | 46.6% | 100.0% |
+| `clean_lineage_supported_restrained` | 410 | 16 | 43.375 | 1037.500 | 1037.500 | 40.9% | 100.0% |
+| `clean_plus_lineage_deduped` | 1654 | 50 | 62.640 | 1334.000 | 1334.000 | 47.2% | 100.0% |
+| `clean_with_restraint_filter` | 434 | 19 | 38.737 | 1000.000 | 1000.000 | 41.0% | 100.0% |
+| `clean_with_support_context` | 1581 | 43 | 69.279 | 1486.047 | 1486.047 | 46.9% | 100.0% |
+| `decay_watch_companion` | 5475 | 310 | 109.100 | 478.065 | 194.516 | 82.5% | 100.0% |
+| `low_denominator_watchlist` | 168 | 41 | 6.415 | 153.659 | 153.659 | 36.1% | 100.0% |
+| `restraint_retest` | 1235 | 58 | 52.310 | 868.966 | 868.966 | 59.3% | 100.0% |
+| `support_gate_context` | 3623 | 84 | 102.857 | 1986.905 | 1983.333 | 58.1% | 100.0% |
 
 ## PRO_44 Compliance
 
@@ -64,16 +64,16 @@ Purpose: replay Stage 4C shadow translator lanes against completed Stage 2B stat
 
 | mode | lane | mechanism | overlap lift | pool reduction | interpretation |
 |---|---:|---:|---:|---:|---|
-| `low_denominator_watchlist` | `low_denominator_watchlist` | `due_doubles_support_spine` | -12.672 | 2.227 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `low_denominator_watchlist` | `low_denominator_watchlist` | `r_perm_spine` | -17.633 | 1.977 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `restraint_retest` | `concentration_retest_or_restraint` | `profit_alert_related_boxed_overlap` | -21.328 | 1.959 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `restraint_retest` | `concentration_retest_or_restraint` | `vtrac_enhanced_secondary_spine` | -22.677 | 2.722 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `low_denominator_watchlist` | `low_denominator_watchlist` | `misc_stage3_replay` | -25.461 | 3.515 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `restraint_retest` | `concentration_retest_or_restraint` | `old_play_card_expression_spine` | -26.673 | 2.052 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `restraint_retest` | `concentration_retest_or_restraint` | `mirror_pair_closure_spine` | -26.767 | 2.596 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `restraint_retest` | `concentration_retest_or_restraint` | `misc_stage3_replay` | -27.457 | 2.725 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `clean_plus_lineage_deduped` | `lineage_guarded_boxed_candidate` | `vtrac_enhanced_secondary_spine` | -29.061 | 2.896 | overlap_reduces_pool_but_does_not_beat_best_source |
-| `clean_plus_lineage_deduped` | `lineage_guarded_boxed_candidate` | `r_perm_spine` | -29.512 | 2.621 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `restraint_retest` | `concentration_retest_or_restraint` | `due_doubles_support_spine` | -7.526 | 0.875 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `low_denominator_watchlist` | `low_denominator_watchlist` | `due_doubles_support_spine` | -13.505 | 2.125 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `low_denominator_watchlist` | `low_denominator_watchlist` | `r_perm_spine` | -17.144 | 1.965 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `clean_boxed_only` | `clean_boxed_candidate` | `vtrac_enhanced_secondary_spine` | -24.462 | 2.791 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `clean_plus_lineage_deduped` | `clean_boxed_candidate` | `vtrac_enhanced_secondary_spine` | -24.462 | 2.791 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `restraint_retest` | `concentration_retest_or_restraint` | `old_play_card_expression_spine` | -24.997 | 2.320 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `low_denominator_watchlist` | `low_denominator_watchlist` | `old_play_card_expression_spine` | -25.879 | 3.466 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `restraint_retest` | `concentration_retest_or_restraint` | `mirror_pair_closure_spine` | -26.901 | 2.315 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `restraint_retest` | `concentration_retest_or_restraint` | `vtrac_enhanced_secondary_spine` | -28.495 | 2.465 | overlap_reduces_pool_but_does_not_beat_best_source |
+| `clean_plus_lineage_deduped` | `lineage_guarded_boxed_candidate` | `r_perm_spine` | -29.134 | 2.579 | overlap_reduces_pool_but_does_not_beat_best_source |
 
 ## Interpretation
 - Stage 5 moves the work from cluster-level governance into fixture-backed shadow expression evaluation.

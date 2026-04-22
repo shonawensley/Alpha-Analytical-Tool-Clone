@@ -7,8 +7,8 @@ Stage 7A is read-only. It prepares future/fresh-window evaluation rows from Stag
 ## Executive Readback
 
 - confirmation requirements: `9`
-- March seed benchmarks: `20`
-- future-window template rows: `29`
+- March seed benchmarks: `19`
+- future-window template rows: `28`
 - Nothing in this scaffold confirms a fresh-window result yet. It defines what the next fresh window must prove.
 
 ## Confirmation Requirements
@@ -29,21 +29,21 @@ Stage 7A is read-only. It prepares future/fresh-window evaluation rows from Stag
 
 | benchmark_id | type | source_id | metrics |
 | --- | --- | --- | --- |
-| S7A-BENCH-001 | stage6b_scenario | baseline_clean_boxed | fp=60.4%; yield=12.407; positive=333; state_days=53 |
-| S7A-BENCH-002 | stage6b_scenario | primary_restrained_candidate_expression | fp=46.8%; yield=16.075; positive=688; state_days=62 |
-| S7A-BENCH-003 | stage6b_scenario | secondary_lineage_supported_restrained | fp=46.3%; yield=13.395; positive=434; state_days=43 |
-| S7A-BENCH-004 | stage6b_scenario | broad_lineage_foundation_reference | fp=54.5%; yield=14.372; positive=1190; state_days=71 |
-| S7A-BENCH-005 | stage6b_scenario | decay_watch_companion_excluded | fp=82.5%; yield=3.920; positive=1482; state_days=354 |
-| S7A-BENCH-006 | stage6d_restraint_bucket | S6D-RESCUE-012 | fp=47.8%; yield=18.382; positive=50 |
-| S7A-BENCH-007 | stage6d_restraint_bucket | S6D-RESCUE-015 | fp=47.6%; yield=18.571; positive=39 |
-| S7A-BENCH-008 | stage6d_restraint_bucket | S6D-RESCUE-016 | fp=47.6%; yield=18.571; positive=39 |
-| S7A-BENCH-009 | stage6d_restraint_bucket | S6D-RESCUE-001 | fp=62.8%; yield=12.623; positive=502 |
-| S7A-BENCH-010 | stage6d_restraint_bucket | S6D-RESCUE-002 | fp=62.8%; yield=12.550; positive=502 |
-| S7A-BENCH-011 | stage6e_support_bucket | S6E-SUPPORT-001 | fp=35.8%; yield=15.409; positive=98; fp_delta_peer=-0.200 |
-| S7A-BENCH-012 | stage6e_support_bucket | S6E-SUPPORT-002 | fp=34.7%; yield=15.458; positive=81; fp_delta_peer=-0.212 |
-| S7A-BENCH-013 | stage6e_support_bucket | S6E-SUPPORT-003 | fp=39.4%; yield=13.426; positive=29; fp_delta_peer=-0.180 |
-| S7A-BENCH-014 | stage6e_support_bucket | S6E-SUPPORT-004 | fp=46.3%; yield=13.395; positive=434; fp_delta_peer=-0.022 |
-| S7A-BENCH-015 | stage6e_support_bucket | S6E-SUPPORT-005 | fp=36.6%; yield=9.901; positive=20; fp_delta_peer=-0.050 |
+| S7A-BENCH-001 | stage6b_scenario | baseline_clean_boxed | fp=46.6%; yield=23.978; positive=88; state_days=28 |
+| S7A-BENCH-002 | stage6b_scenario | primary_restrained_candidate_expression | fp=41.0%; yield=25.815; positive=190; state_days=19 |
+| S7A-BENCH-003 | stage6b_scenario | secondary_lineage_supported_restrained | fp=40.9%; yield=23.919; positive=166; state_days=16 |
+| S7A-BENCH-004 | stage6b_scenario | broad_lineage_foundation_reference | fp=47.2%; yield=21.296; positive=667; state_days=50 |
+| S7A-BENCH-005 | stage6b_scenario | decay_watch_companion_excluded | fp=82.5%; yield=4.382; positive=1482; state_days=310 |
+| S7A-BENCH-006 | stage6d_restraint_bucket | S6D-RESCUE-002 | fp=48.8%; yield=20.700; positive=473 |
+| S7A-BENCH-007 | stage6d_restraint_bucket | S6D-RESCUE-008 | fp=38.5%; yield=20.588; positive=91 |
+| S7A-BENCH-008 | stage6d_restraint_bucket | S6D-RESCUE-009 | fp=38.6%; yield=20.554; positive=89 |
+| S7A-BENCH-009 | stage6d_restraint_bucket | S6D-RESCUE-010 | fp=46.6%; yield=23.978; positive=88 |
+| S7A-BENCH-010 | stage6d_restraint_bucket | S6D-RESCUE-011 | fp=47.3%; yield=26.000; positive=78 |
+| S7A-BENCH-011 | stage6e_support_bucket | S6E-SUPPORT-001 | fp=46.9%; yield=21.450; positive=639; fp_delta_peer=-0.054 |
+| S7A-BENCH-012 | stage6e_support_bucket | S6E-SUPPORT-002 | fp=48.8%; yield=20.700; positive=473; fp_delta_peer=-0.071 |
+| S7A-BENCH-013 | stage6e_support_bucket | S6E-SUPPORT-003 | fp=51.9%; yield=19.119; positive=304; fp_delta_peer=-0.074 |
+| S7A-BENCH-014 | stage6e_support_bucket | S6E-SUPPORT-004 | fp=47.0%; yield=20.935; positive=551; fp_delta_peer=-0.056 |
+| S7A-BENCH-015 | stage6f_casebook_target | S6F-TARGET-001 | fp=49.1%; yield=19.908; positive=477; rows=1220 |
 
 ## Run Checklist
 
