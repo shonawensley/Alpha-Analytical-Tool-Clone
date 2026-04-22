@@ -101,9 +101,14 @@ Window replay / replication protocol:
     - Stage 6A through Stage 6F shadow/restriction/confirmation layers
     - Stage 7A fresh-confirmation scaffold
     - Stage 7B fixture replay harness
+  - March-vs-archived decision memo:
+    - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.md`
+    - compares canonical March Run 2 against archived replay v2 at Stage 6B-through-Stage 7B level
+    - records that the `REPLAY/march_2026_15day_replay_v2` Stage 6B candidate-lane metrics are currently not a safe official metric baseline because those lanes are zeroed
   - evidence posture:
     - archived replication and fixture replay only
     - useful for regression, traceability, lane separation, and fresh-window preflight
+    - weakens the March primary-lane promotion case rather than confirming it
     - not sufficient by itself to unlock Stage 8A or any live translator/scoring/candidate/budget rewrite
 
 Per-window lock inputs that should be set before any fresh or backtest window:

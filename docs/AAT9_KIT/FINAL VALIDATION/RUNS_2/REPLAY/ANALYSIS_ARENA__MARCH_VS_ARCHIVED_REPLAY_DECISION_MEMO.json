@@ -1,0 +1,353 @@
+{
+  "generated_from": {
+    "march_canonical_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
+    "march_same_window_replay_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
+    "archived_replay_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2"
+  },
+  "source_caveat": "canonical RUNS_2 March stage stack is used for metric comparison; march_2026_15day_replay_v2 has zeroed core Stage 6B candidate metrics and should be regenerated or repaired before serving as a metric source",
+  "stage7b_counts": {
+    "march_queue": {
+      "ready_for_fresh_confirmation": 1,
+      "ready_but_watch": 9,
+      "research_only": 2,
+      "blocked_by_requirements": 1
+    },
+    "archived_queue": {
+      "ready_but_watch": 9,
+      "research_only": 2,
+      "blocked_by_requirements": 1
+    },
+    "march_requirement_coverage": {
+      "ready_for_fresh_confirmation": 1,
+      "ready_but_watch": 6,
+      "research_only": 1,
+      "blocked_by_requirements": 1
+    },
+    "archived_requirement_coverage": {
+      "ready_for_fresh_confirmation": 1,
+      "ready_but_watch": 6,
+      "research_only": 1,
+      "blocked_by_requirements": 1
+    },
+    "march_blocker_recheck": {
+      "ready_for_fresh_confirmation": 2,
+      "ready_but_watch": 4
+    },
+    "archived_blocker_recheck": {
+      "ready_for_fresh_confirmation": 3,
+      "ready_but_watch": 3
+    }
+  },
+  "scenario_comparison": [
+    {
+      "scenario_id": "baseline_clean_boxed",
+      "march_decision": "baseline_reference_only",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.6043219076005961",
+      "archived_fp_proxy": "0.35384615384615387",
+      "fp_proxy_delta_archived_minus_march": -0.25047575375444225,
+      "march_yield": "12.406855439642325",
+      "archived_yield": "55.8974358974359",
+      "yield_delta_archived_minus_march": 43.49058045779357,
+      "march_avg_pool": "50.64150943396226",
+      "archived_avg_pool": "8.863636363636363",
+      "march_positive_events": "333",
+      "archived_positive_events": "109"
+    },
+    {
+      "scenario_id": "primary_restrained_candidate_expression",
+      "march_decision": "provisional_primary_shadow_design_seed",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.46822429906542057",
+      "archived_fp_proxy": "0.4728645587541293",
+      "fp_proxy_delta_archived_minus_march": 0.004640259688708737,
+      "march_yield": "16.074766355140188",
+      "archived_yield": "51.486550259556395",
+      "yield_delta_archived_minus_march": 35.41178390441621,
+      "march_avg_pool": "69.03225806451613",
+      "archived_avg_pool": "78.48148148148148",
+      "march_positive_events": "688",
+      "archived_positive_events": "1091"
+    },
+    {
+      "scenario_id": "secondary_lineage_supported_restrained",
+      "march_decision": "secondary_modifier_not_independent_expansion",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.46296296296296297",
+      "archived_fp_proxy": "0.45722300140252453",
+      "fp_proxy_delta_archived_minus_march": -0.0057399615604384335,
+      "march_yield": "13.39506172839506",
+      "archived_yield": "50.63113604488079",
+      "yield_delta_archived_minus_march": 37.23607431648573,
+      "march_avg_pool": "75.34883720930233",
+      "archived_avg_pool": "41.94117647058823",
+      "march_positive_events": "434",
+      "archived_positive_events": "361"
+    },
+    {
+      "scenario_id": "candidate_rows_with_support_context",
+      "march_decision": "support_on_not_validated_as_modifier",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.5536926700845226",
+      "archived_fp_proxy": "0.5102548166563082",
+      "fp_proxy_delta_archived_minus_march": -0.04343785342821438,
+      "march_yield": "12.969377857835665",
+      "archived_yield": "46.73710379117465",
+      "yield_delta_archived_minus_march": 33.76772593333898,
+      "march_avg_pool": "131.21818181818182",
+      "archived_avg_pool": "61.88461538461539",
+      "march_positive_events": "936",
+      "archived_positive_events": "752"
+    },
+    {
+      "scenario_id": "candidate_rows_without_support_context",
+      "march_decision": "support_off_reference_is_sharper",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.4891815616180621",
+      "archived_fp_proxy": "0.5148861646234676",
+      "fp_proxy_delta_archived_minus_march": 0.025704603005405502,
+      "march_yield": "23.89463781749765",
+      "archived_yield": "48.51138353765324",
+      "yield_delta_archived_minus_march": 24.61674572015559,
+      "march_avg_pool": "44.291666666666664",
+      "archived_avg_pool": "71.375",
+      "march_positive_events": "254",
+      "archived_positive_events": "831"
+    },
+    {
+      "scenario_id": "support_gate_context_excluded",
+      "march_decision": "support_gate_remains_context_only",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.574180734856008",
+      "archived_fp_proxy": "0.628201074928865",
+      "fp_proxy_delta_archived_minus_march": 0.054020340072857054,
+      "march_yield": "16.017874875868916",
+      "archived_yield": "36.75308251659817",
+      "yield_delta_archived_minus_march": 20.735207640729254,
+      "march_avg_pool": "106.0",
+      "archived_avg_pool": "137.52173913043478",
+      "march_positive_events": "1613",
+      "archived_positive_events": "2325"
+    },
+    {
+      "scenario_id": "decay_watch_companion_excluded",
+      "march_decision": "decay_watch_remains_companion_only",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.8247758114435362",
+      "archived_fp_proxy": "0.8295135764568888",
+      "fp_proxy_delta_archived_minus_march": 0.004737765013352657,
+      "march_yield": "3.9203237838266807",
+      "archived_yield": "9.781400518710633",
+      "yield_delta_archived_minus_march": 5.8610767348839525,
+      "march_avg_pool": "106.78813559322033",
+      "archived_avg_pool": "110.48538011695906",
+      "march_positive_events": "1482",
+      "archived_positive_events": "1848"
+    },
+    {
+      "scenario_id": "low_denominator_watchlist_excluded",
+      "march_decision": "low_denominator_watchlist_retest",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.28205128205128205",
+      "archived_fp_proxy": "0.36438923395445133",
+      "fp_proxy_delta_archived_minus_march": 0.08233795190316928,
+      "march_yield": "20.51282051282051",
+      "archived_yield": "61.49068322981367",
+      "yield_delta_archived_minus_march": 40.97786271699316,
+      "march_avg_pool": "4.875",
+      "archived_avg_pool": "14.205882352941176",
+      "march_positive_events": "40",
+      "archived_positive_events": "297"
+    },
+    {
+      "scenario_id": "restraint_retest_surface_excluded",
+      "march_decision": "restraint_surface_promising_but_excluded",
+      "archived_decision": "blocked_guardrail_failure",
+      "march_fp_proxy": "0.3284789644012945",
+      "archived_fp_proxy": "0.4900881057268722",
+      "fp_proxy_delta_archived_minus_march": 0.16160914132557774,
+      "march_yield": "22.491909385113267",
+      "archived_yield": "49.22907488986784",
+      "yield_delta_archived_minus_march": 26.73716550475457,
+      "march_avg_pool": "13.148936170212766",
+      "archived_avg_pool": "29.29032258064516",
+      "march_positive_events": "139",
+      "archived_positive_events": "447"
+    }
+  ],
+  "requirement_comparison": [
+    {
+      "requirement_id": "S6B-001",
+      "target": "primary_restrained_candidate_expression",
+      "march_result": "pass_with_concentration_warning",
+      "archived_result": "fail",
+      "interpretation": "weakened: March primary passed with concentration warning, archived primary failed versus its baseline"
+    },
+    {
+      "requirement_id": "S6B-002",
+      "target": "secondary_lineage_supported_restrained",
+      "march_result": "partial_modifier_only",
+      "archived_result": "partial_modifier_only",
+      "interpretation": "repeated as modifier-only: secondary lineage should not become independent expansion"
+    },
+    {
+      "requirement_id": "S6B-003",
+      "target": "support_context_modifier",
+      "march_result": "fail_as_positive_modifier",
+      "archived_result": "fail_as_positive_modifier",
+      "interpretation": "repeated block: support context is not a broad positive modifier"
+    },
+    {
+      "requirement_id": "S6B-004",
+      "target": "restraint_calibration_surface",
+      "march_result": "pass_research_not_live",
+      "archived_result": "pass_research_not_live",
+      "interpretation": "repeated research lane: restraint is soft-penalty research, not hard veto"
+    },
+    {
+      "requirement_id": "S6B-005",
+      "target": "source_a_source_b_overlap",
+      "march_result": "pass",
+      "archived_result": "pass",
+      "interpretation": "repeated guardrail: overlap is narrowing/restraint, not duplicate credit"
+    },
+    {
+      "requirement_id": "S6B-006",
+      "target": "window_and_state_concentration",
+      "march_result": "pass_with_warning",
+      "archived_result": "fail",
+      "interpretation": "weakened: concentration warning becomes an explicit fail in archived replay"
+    },
+    {
+      "requirement_id": "S6B-007",
+      "target": "decay_watch_companion",
+      "march_result": "pass_excluded",
+      "archived_result": "pass_excluded",
+      "interpretation": "repeated boundary: decay remains companion/context only"
+    }
+  ],
+  "lane_comparison": [
+    {
+      "lane_id": "S6F-LANE-001",
+      "lane_type": "primary_candidate_expression",
+      "march_status": "future_window_confirmation_required",
+      "archived_status": "blocked",
+      "march_permission": "readback_only_no_live_permission",
+      "archived_permission": "blocked",
+      "archived_posture": "strongest_current_seed_but_future_confirmation_required"
+    },
+    {
+      "lane_id": "S6F-LANE-002",
+      "lane_type": "secondary_lineage_modifier",
+      "march_status": "keep_as_lineage_modifier_retest",
+      "archived_status": "blocked",
+      "march_permission": "modifier_research_only",
+      "archived_permission": "blocked",
+      "archived_posture": "modifier_only_not_independent_expansion"
+    },
+    {
+      "lane_id": "S6F-LANE-003",
+      "lane_type": "broad_lineage_reference",
+      "march_status": "narrow_before_design",
+      "archived_status": "blocked",
+      "march_permission": "narrowing_research_only",
+      "archived_permission": "blocked",
+      "archived_posture": "blocked_until_narrowed"
+    },
+    {
+      "lane_id": "S6F-LANE-004",
+      "lane_type": "support_modifier_narrowing",
+      "march_status": "fail_as_positive_modifier",
+      "archived_status": "fail_as_positive_modifier",
+      "march_permission": "support_research_only",
+      "archived_permission": "support_research_only",
+      "archived_posture": "9 strict support candidates; 4 mixed retest candidates; broad support remains blocked"
+    },
+    {
+      "lane_id": "S6F-LANE-005",
+      "lane_type": "restraint_soft_penalty",
+      "march_status": "pass_research_not_live",
+      "archived_status": "pass_research_not_live",
+      "march_permission": "penalty_research_only",
+      "archived_permission": "penalty_research_only",
+      "archived_posture": "8 rescue buckets; 9 downweight buckets; hard veto remains blocked"
+    },
+    {
+      "lane_id": "S6F-LANE-006",
+      "lane_type": "decay_companion_boundary",
+      "march_status": "companion_only",
+      "archived_status": "blocked",
+      "march_permission": "companion_only",
+      "archived_permission": "blocked",
+      "archived_posture": "companion_only_boundary_confirmed_for_now"
+    },
+    {
+      "lane_id": "S6F-LANE-007",
+      "lane_type": "duplicate_credit_guardrail",
+      "march_status": "pass",
+      "archived_status": "pass",
+      "march_permission": "readback_reference_only",
+      "archived_permission": "readback_reference_only",
+      "archived_posture": "mandatory_guardrail"
+    },
+    {
+      "lane_id": "S6F-LANE-008",
+      "lane_type": "rewrite_gate",
+      "march_status": "active_blocker",
+      "archived_status": "active_blocker",
+      "march_permission": "blocked_until_future_confirmation",
+      "archived_permission": "blocked_until_future_confirmation",
+      "archived_posture": "rewrite_not_allowed_yet"
+    }
+  ],
+  "blocker_comparison": [
+    {
+      "blocker_id": "rewrite_blocker_concentration",
+      "blocks": "concentration_warning_break",
+      "march_recheck": "ready_but_watch",
+      "archived_recheck": "ready_for_fresh_confirmation",
+      "march_evidence": "pass",
+      "archived_evidence": "fail"
+    },
+    {
+      "blocker_id": "rewrite_blocker_decay_boundary",
+      "blocks": "decay_companion_boundary",
+      "march_recheck": "ready_but_watch",
+      "archived_recheck": "ready_but_watch",
+      "march_evidence": "pass_excluded",
+      "archived_evidence": "pass_excluded"
+    },
+    {
+      "blocker_id": "rewrite_blocker_duplicate_credit",
+      "blocks": "duplicate_credit_guardrail",
+      "march_recheck": "ready_but_watch",
+      "archived_recheck": "ready_but_watch",
+      "march_evidence": "pass",
+      "archived_evidence": "pass"
+    },
+    {
+      "blocker_id": "rewrite_blocker_primary_repeat",
+      "blocks": "primary_restrained_candidate_expression",
+      "march_recheck": "ready_for_fresh_confirmation",
+      "archived_recheck": "ready_for_fresh_confirmation",
+      "march_evidence": "fp_delta=-0.136; yield_delta=3.668; pool_ratio=1.363",
+      "archived_evidence": "fp_delta=0.119; yield_delta=-4.411; pool_ratio=8.854"
+    },
+    {
+      "blocker_id": "rewrite_blocker_restraint_soft_before_hard",
+      "blocks": "restraint_soft_penalty",
+      "march_recheck": "ready_but_watch",
+      "archived_recheck": "ready_but_watch",
+      "march_evidence": "pass_research_not_live",
+      "archived_evidence": "pass_research_not_live"
+    },
+    {
+      "blocker_id": "rewrite_blocker_support_modifier",
+      "blocks": "support_context_modifier",
+      "march_recheck": "ready_for_fresh_confirmation",
+      "archived_recheck": "ready_for_fresh_confirmation",
+      "march_evidence": "fp_delta=0.065; yield_delta=-10.925",
+      "archived_evidence": "fp_delta=-0.005; yield_delta=-1.774"
+    }
+  ]
+}

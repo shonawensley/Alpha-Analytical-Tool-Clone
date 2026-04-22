@@ -341,3 +341,18 @@ These items are approved because of the repeated findings above and should be tr
   - Stage 6B through Stage 7B preserved the rewrite block: primary restrained candidate expression remains the strongest seed, but future/fresh confirmation and soft-penalty/narrow-support work are still required
 - implication: The system is moving toward a cleaner downstream rebuild, but the rebuild should be evidence-gated. The archived replay package strengthens the case for Stage 8 design discipline; it does not justify live scoring or budget replacement yet.
 - next test: Use the Stage 7A/7B scaffold as the fresh-window preflight and compare future/fresh Stage 7B against this archived replay package before starting any Stage 8A candidate-object specification.
+
+### F-022
+- status: `PROVISIONAL_COMPARISON_READBACK`
+- window(s): `canonical March Run 2`, `archived_window_replay_v2`
+- category: `Stage 8 readiness / replay confirmation`
+- summary: The direct March-vs-archived replay decision memo weakens the primary restrained lane as an immediate Stage 8 seed while confirming that the current guardrail architecture is necessary.
+- evidence:
+  - March primary restrained candidate expression improved over March baseline (`46.8%` FP proxy vs `60.4%` baseline; `16.075` yield vs `12.407` baseline)
+  - archived primary restrained candidate expression did not improve over the sharper archived baseline (`47.3%` FP proxy vs `35.4%` baseline; `51.487` yield vs `55.897` baseline)
+  - broad support repeated as blocked/weak context rather than a standalone positive modifier
+  - decay/watch repeated as companion-only and should stay out of candidate-pool spend metrics
+  - concentration moved from March `pass_with_warning` to archived `fail`
+  - memo caveat: `REPLAY/march_2026_15day_replay_v2` has zeroed core Stage 6B candidate-lane metrics, so canonical `RUNS_2` March artifacts remain the valid March metric source until the replay subfolder is repaired or regenerated
+- implication: Stage 8A should not start from March-positive evidence alone. The right interpretation is that March supplied a promising seed, archived replay supplied the stress test, and the stress test says the primary lane needs fresh-window confirmation or narrower quarantine before downstream candidate-object work begins.
+- next test: Repair/regenerate the March same-window replay metric baseline if needed, then run the next true fresh window through Stage 6B-through-Stage 7B and produce a three-way comparison: canonical March vs archived replay v2 vs fresh window.

@@ -8,6 +8,24 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ## 2026-04-22
 
+### Analysis Arena: March-vs-archived replay decision memo
+
+- Added the read-only March-vs-archived replay decision memo:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO__SCENARIO_COMPARISON.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO__REQUIREMENT_COMPARISON.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO__LANE_COMPARISON.csv`
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO__BLOCKER_COMPARISON.csv`
+- Compared canonical March Run 2 Stage 6B-through-Stage 7B evidence against the archived replay v2 Stage 6B-through-Stage 7B evidence.
+- Recorded the March same-window replay caveat: `REPLAY/march_2026_15day_replay_v2` currently has zeroed core Stage 6B candidate-lane metrics and should be repaired or regenerated before serving as an official same-window metric baseline.
+- Decision posture:
+  - archived replay weakens the March primary-lane promotion case
+  - support context, decay/watch, source overlap, restraint, and concentration guardrails remain necessary
+  - Stage 8A remains design-ready but evidence-blocked
+  - the next true decision gate remains a fresh-window Stage 6B-through-Stage 7B comparison
+- Guardrail: this memo is comparison/readback only. It does not change scoring, candidate generation, translator logic, budget logic, or legacy infrastructure.
+
 ### Analysis Arena: archived-window replay v2 evidence package
 
 - Built the archived-window replication package under:
