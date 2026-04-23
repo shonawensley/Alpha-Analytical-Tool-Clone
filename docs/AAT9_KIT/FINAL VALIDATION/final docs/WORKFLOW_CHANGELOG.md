@@ -927,6 +927,7 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `true_fresh_confirmation`
   - `archived_window_replication`
   - `same_window_replay`
+- Added a gold-day / window inventory reference so future sessions can see the canonical Pick3StatsC4 input ranges, results windows, decay tails, bonus sidecar coverage, and non-canonical exclusions in one place.
 - Current boundary remains:
   - March Run2 canonical mix comparison is clean regression evidence.
   - Stage7B is ready for read-only confirmation replay.
@@ -938,5 +939,6 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `scripts/tools/run_analysis_arena_cycle.py`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__REPLAY_PLAN_GUARDRAIL_CHECK.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__EVIDENCE_BOUNDARY_AND_NEXT_RUN_MAP.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__GOLD_DAY_WINDOW_INVENTORY.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`

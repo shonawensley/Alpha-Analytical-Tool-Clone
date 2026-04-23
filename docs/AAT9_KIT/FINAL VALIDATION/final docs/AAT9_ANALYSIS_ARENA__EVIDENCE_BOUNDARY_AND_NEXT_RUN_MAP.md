@@ -15,6 +15,11 @@ March Run2 canonical replay work. It exists to prevent three mistakes:
 - allowing archived-window replication to unlock Stage 8
 - comparing a one-window replay cycle against a multi-window baseline cycle
 
+For the exact Pick3StatsC4 gold-day ranges, results windows, decay tails, and
+bonus sidecar coverage, use:
+
+- `AAT9_ANALYSIS_ARENA__GOLD_DAY_WINDOW_INVENTORY.md`
+
 ## Current Evidence Boundary
 
 Current confirmed state:

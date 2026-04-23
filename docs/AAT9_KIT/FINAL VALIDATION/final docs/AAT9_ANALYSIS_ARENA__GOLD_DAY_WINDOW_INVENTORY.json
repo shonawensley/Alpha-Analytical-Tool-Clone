@@ -1,0 +1,91 @@
+{
+  "canonical_windows": [
+    {
+      "evidence_tier": "archived_window_replication",
+      "full_decay_bonus_tail_end": "2026-01-08",
+      "full_decay_bonus_tail_start": "2025-12-30",
+      "gold_day_end": "2026-01-03",
+      "gold_day_start": "2025-12-29",
+      "role": "early_january_archived_replication",
+      "window_end": "2026-01-04",
+      "window_id": "WINDOW_2025-12-30_to_2026-01-04",
+      "window_name": "WINDOW_2025-12-30_to_2026-01-04",
+      "window_start": "2025-12-30"
+    },
+    {
+      "evidence_tier": "archived_window_replication",
+      "full_decay_bonus_tail_end": "2026-01-13",
+      "full_decay_bonus_tail_start": "2026-01-05",
+      "gold_day_end": "2026-01-08",
+      "gold_day_start": "2026-01-04",
+      "role": "second_non_overlap_early_january_archived_replication",
+      "window_end": "2026-01-09",
+      "window_id": "WINDOW_2026-01-05_to_2026-01-09",
+      "window_name": "WINDOW_2026-01-05_to_2026-01-09",
+      "window_start": "2026-01-05"
+    },
+    {
+      "evidence_tier": "archived_window_replication",
+      "full_decay_bonus_tail_end": "2026-01-26",
+      "full_decay_bonus_tail_start": "2026-01-15",
+      "gold_day_end": "2026-01-21",
+      "gold_day_start": "2026-01-14",
+      "role": "recovered_january_window_supersedes_jan15_jan18",
+      "window_end": "2026-01-22",
+      "window_id": "WINDOW_2026-01-15_to_2026-01-22",
+      "window_name": "WINDOW_2026-01-15_to_2026-01-22",
+      "window_start": "2026-01-15"
+    },
+    {
+      "evidence_tier": "same_window_replay_reference",
+      "full_decay_bonus_tail_end": "2026-03-27",
+      "full_decay_bonus_tail_start": "2026-03-09",
+      "gold_day_end": "2026-03-22",
+      "gold_day_start": "2026-03-08",
+      "role": "comprehensive_march_reference_and_run2_replay_baseline",
+      "window_end": "2026-03-23",
+      "window_id": "WINDOW_2026-03-09_to_2026-03-23",
+      "window_name": "WINDOW_2026-03-09_to_2026-03-23",
+      "window_start": "2026-03-09"
+    }
+  ],
+  "current_machine_counts": {
+    "archived_replication_ready": 3,
+    "fresh_window_readiness_window_count": 4,
+    "replay_guardrail_checks_passed": "14/14",
+    "same_window_replay_candidates": 1,
+    "window_replay_readiness_scanned_windows": 4
+  },
+  "date_vocabulary": {
+    "bonus_sidecar": "data/results_bonus/<D>.txt optional Fireball/Wild Ball/Superball truth lane kept separate from core Pick 3 grading",
+    "decay_tail": "results through window_end + 4 days for the default 5 total upload-day horizon, same-day included",
+    "gold_day": "Pick3StatsC4 history workbook day used to generate the next results day's predictive artifacts",
+    "results_window": "evaluated draw-result date range encoded by WINDOW_<start>_to_<end>"
+  },
+  "excluded_artifacts": [
+    {
+      "artifact": "WINDOW_2026-01-15_to_2026-01-18",
+      "reason": "superseded by recovered WINDOW_2026-01-15_to_2026-01-22"
+    },
+    {
+      "artifact": "WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT",
+      "reason": "snapshot/reference artifact only"
+    },
+    {
+      "artifact": "REPLAY/archived_window_replay_v2_jan19_recovered/_scratch_initial_parent_analysis_arena_20260422",
+      "reason": "scratch recovery artifact"
+    },
+    {
+      "artifact": "REPLAY/archived_window_replay_v2_jan19_recovered/WINDOW_2026-01-15_to_2026-01-22/_scratch_flat_postrange_attempt_20260422",
+      "reason": "scratch recovery artifact"
+    },
+    {
+      "artifact": "June 2025 material",
+      "reason": "not part of current canonical Analysis Arena evidence set"
+    }
+  ],
+  "runtime_effect": "none",
+  "schema_version": "analysis_arena_gold_day_window_inventory/v1",
+  "stage8_permission": "blocked",
+  "status": "canonical_reference"
+}
