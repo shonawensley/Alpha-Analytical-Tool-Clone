@@ -108,7 +108,7 @@ def _write_csv(path: Path, rows: List[Dict[str, Any]], *, force: bool) -> None:
         "window_root",
     ]
     with path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row.get(key, "") for key in fieldnames})
@@ -198,7 +198,27 @@ def _window_parts(window_root: Path) -> Dict[str, Any] | None:
 def _discover_windows(runs2_root: Path) -> List[Path]:
     if not runs2_root.exists():
         return []
-    return sorted(path for path in runs2_root.glob("WINDOW_*") if path.is_dir() and _window_parts(path))
+    candidates: List[tuple[Path, date, date]] = []
+    for path in runs2_root.glob("WINDOW_*"):
+        if not path.is_dir():
+            continue
+        parts = _window_parts(path)
+        if not parts or parts.get("suffix"):
+            continue
+        candidates.append((path, parts["start"], parts["end"]))
+
+    canonical: List[Path] = []
+    for path, start, end in candidates:
+        contained_by_larger_window = any(
+            other_path != path
+            and other_start <= start
+            and end <= other_end
+            and (other_start < start or end < other_end)
+            for other_path, other_start, other_end in candidates
+        )
+        if not contained_by_larger_window:
+            canonical.append(path)
+    return sorted(canonical, key=lambda item: item.name)
 
 
 def _key_artifact_paths(window_root: Path) -> Dict[str, Path]:

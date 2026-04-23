@@ -671,6 +671,16 @@ def build_window_replay_execution_plan_command(
     return cmd
 
 
+def build_replay_plan_guardrail_check_command(*, force: bool) -> List[str]:
+    cmd: List[str] = [
+        "python3",
+        "scripts/tools/create_analysis_arena_replay_plan_guardrail_check.py",
+    ]
+    if force:
+        cmd.append("--force")
+    return cmd
+
+
 def build_stage3_decision_workbench_command(
     *,
     runs2_root: Path,
@@ -1341,6 +1351,14 @@ def _parse_args() -> argparse.Namespace:
     replay_plan.add_argument("--no-receipt", action="store_true")
     replay_plan.add_argument("--force", action="store_true")
     replay_plan.add_argument("--dry-run", action="store_true")
+
+    replay_guardrail = sub.add_parser(
+        "replay-plan-guardrails",
+        help="Validate same-window replay planning guardrails and canonical replacement-cycle shape.",
+    )
+    replay_guardrail.add_argument("--no-receipt", action="store_true")
+    replay_guardrail.add_argument("--force", action="store_true")
+    replay_guardrail.add_argument("--dry-run", action="store_true")
 
     stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
     stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
@@ -2955,6 +2973,39 @@ def main() -> None:
 
         if not bool(args.no_receipt):
             receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__WINDOW_REPLAY_PLAN.md"
+            _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
+            if bool(args.dry_run):
+                print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")
+            else:
+                print(f"[OK] Wrote receipt: {_safe_rel(receipt_path)}")
+        return
+
+    if args.cmd == "replay-plan-guardrails":
+        runs2_root = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
+        cmd = build_replay_plan_guardrail_check_command(force=bool(args.force))
+        receipt_lines: List[str] = [
+            "# Analysis Arena cycle - REPLAY PLAN GUARDRAILS",
+            "",
+            "## Metadata",
+            f"- generated_at: `{_now_iso()}`",
+            f"- git_sha: `{_git_sha()}`",
+            f"- force: `{bool(args.force)}`",
+            f"- dry_run: `{bool(args.dry_run)}`",
+            "",
+            "## Command",
+            "",
+            f"- `{(' '.join(str(c) for c in cmd))}`",
+            "",
+            "## Guardrail",
+            "",
+            "- Same-window replay must use a canonical replacement cycle, not a one-window candidate cycle.",
+            "- This validation is read-only and cannot grant Stage8 or live scoring/budget permission.",
+            "",
+        ]
+        _run(cmd, dry_run=bool(args.dry_run))
+
+        if not bool(args.no_receipt):
+            receipt_path = runs2_root / "ANALYSIS_ARENA__CYCLE__REPLAY_PLAN_GUARDRAILS.md"
             _write_receipt(receipt_path, receipt_lines, dry_run=bool(args.dry_run))
             if bool(args.dry_run):
                 print(f"[DRY] Would write receipt: {_safe_rel(receipt_path)}")

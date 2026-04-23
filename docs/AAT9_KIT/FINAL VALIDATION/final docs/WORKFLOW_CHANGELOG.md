@@ -912,3 +912,31 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Master_Validation_Build_Full_Day_Quickstart.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_Evaluation_Charter.md`
   - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_Profit_Alerts_A01_A12_Integration_Notes.md`
+
+---
+
+## 2026-04-22
+
+### Analysis Arena: canonical replay guardrails and next-run boundary
+
+- Added a replay-plan guardrail check so same-window replay cannot accidentally compare a one-window candidate cycle against the multi-window baseline cycle.
+- Added wrapper command:
+  - `python3 scripts/tools/run_analysis_arena_cycle.py replay-plan-guardrails --force`
+- Hardened readiness discovery so superseded overlap windows and snapshot folders do not re-enter canonical readiness counts.
+- Added an evidence boundary / next-run map that separates:
+  - `true_fresh_confirmation`
+  - `archived_window_replication`
+  - `same_window_replay`
+- Current boundary remains:
+  - March Run2 canonical mix comparison is clean regression evidence.
+  - Stage7B is ready for read-only confirmation replay.
+  - Stage8 and downstream scoring / candidate / budget rewrite remain blocked until fresh confirmation.
+- Files:
+  - `scripts/tools/create_analysis_arena_replay_plan_guardrail_check.py`
+  - `scripts/tools/create_analysis_arena_window_replay_readiness_report.py`
+  - `scripts/tools/create_analysis_arena_fresh_window_readiness_report.py`
+  - `scripts/tools/run_analysis_arena_cycle.py`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__REPLAY_PLAN_GUARDRAIL_CHECK.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__EVIDENCE_BOUNDARY_AND_NEXT_RUN_MAP.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__SYSTEM_INDEX.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/README.md`

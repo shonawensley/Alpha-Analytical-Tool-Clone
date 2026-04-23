@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
@@ -19,6 +21,7 @@ from scripts.tools.analysis_arena_window_utils import read_json, safe_rel
 
 DEFAULT_RUNS2_ROOT = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
 DEFAULT_FINAL_DOCS = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
+WINDOW_NAME_RE = re.compile(r"^WINDOW_(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})$")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -57,11 +60,40 @@ def _write_json(path: Path, payload: Any, *, force: bool) -> None:
     _write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n", force=force)
 
 
+def _parse_window_dates(path: Path) -> tuple[date, date] | None:
+    match = WINDOW_NAME_RE.match(path.name)
+    if not match:
+        return None
+    try:
+        return date.fromisoformat(match.group(1)), date.fromisoformat(match.group(2))
+    except ValueError:
+        return None
+
+
 def _discover_windows(runs2_root: Path) -> List[Path]:
-    windows: List[Path] = []
+    candidates: List[tuple[Path, date, date]] = []
     for path in sorted(runs2_root.glob("WINDOW_*")):
-        if "__PREALIGN_SNAPSHOT" in path.name:
+        if not path.is_dir():
             continue
+        parsed = _parse_window_dates(path)
+        if not parsed:
+            continue
+        candidates.append((path, parsed[0], parsed[1]))
+
+    canonical_candidates: List[Path] = []
+    for path, start, end in candidates:
+        contained_by_larger_window = any(
+            other_path != path
+            and other_start <= start
+            and end <= other_end
+            and (other_start < start or end < other_end)
+            for other_path, other_start, other_end in candidates
+        )
+        if not contained_by_larger_window:
+            canonical_candidates.append(path)
+
+    windows: List[Path] = []
+    for path in sorted(canonical_candidates):
         stem = path.name
         required = [
             path / f"{stem}__ANALYSIS_ARENA__PERFORMANCE_GAP.json",

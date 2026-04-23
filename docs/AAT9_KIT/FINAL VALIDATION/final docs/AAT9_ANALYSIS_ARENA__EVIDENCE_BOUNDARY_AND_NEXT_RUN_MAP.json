@@ -1,0 +1,47 @@
+{
+  "current_boundary": {
+    "candidate_completeness": "candidate_complete",
+    "comparison_category_counts": {
+      "unchanged": 26
+    },
+    "missing_required_candidate_targets": 0,
+    "scoring_rewrite_status": "blocked_until_future_confirmation",
+    "stage7b_status": "ready_for_read_only_confirmation_replay",
+    "stage8_permission": "blocked"
+  },
+  "evidence_tiers": {
+    "archived_window_replication": {
+      "allowed_use": "historical stress-test and blocker-repeat evidence",
+      "stage8_unlock_permission": false
+    },
+    "same_window_replay": {
+      "allowed_use": "regression, reproducibility, traceability, and false-alarm detection",
+      "requires_canonical_replacement_cycle": true,
+      "stage8_unlock_permission": false
+    },
+    "true_fresh_confirmation": {
+      "allowed_use": "fresh confirmation evidence for future Stage8A design progression",
+      "requires_stage6b_to_stage7b_regeneration": true,
+      "stage8_unlock_permission": "possible_after_readback_not_automatic"
+    }
+  },
+  "forbidden_same_window_cycle_members": [
+    "WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT",
+    "WINDOW_2026-01-15_to_2026-01-18"
+  ],
+  "generated_local_timestamp": "2026-04-22T22:28:49-04:00",
+  "next_recommended_paths": [
+    "true_fresh_window_if_gold_days_ready",
+    "archived_window_replication_for_more_stress_test_evidence",
+    "same_window_replay_only_for_regression_after_meaningful_changes"
+  ],
+  "required_same_window_replacement_cycle": [
+    "WINDOW_2025-12-30_to_2026-01-04",
+    "WINDOW_2026-01-05_to_2026-01-09",
+    "WINDOW_2026-01-15_to_2026-01-22",
+    "REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+  ],
+  "runtime_effect": "none",
+  "schema_version": "analysis_arena_evidence_boundary_next_run_map/v1",
+  "status": "active_guardrail"
+}

@@ -1,0 +1,223 @@
+{
+  "check_csv_path": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__REPLAY_PLAN_GUARDRAIL_CHECK.csv",
+  "checks": [
+    {
+      "check_id": "G01_replacement_windows_exact",
+      "detail": "Candidate replacement cycle must use the canonical non-overlap evidence set.",
+      "expected": [
+        "WINDOW_2025-12-30_to_2026-01-04",
+        "WINDOW_2026-01-05_to_2026-01-09",
+        "WINDOW_2026-01-15_to_2026-01-22",
+        "WINDOW_2026-03-09_to_2026-03-23"
+      ],
+      "observed": [
+        "WINDOW_2025-12-30_to_2026-01-04",
+        "WINDOW_2026-01-05_to_2026-01-09",
+        "WINDOW_2026-01-15_to_2026-01-22",
+        "WINDOW_2026-03-09_to_2026-03-23"
+      ],
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G02_no_superseded_or_snapshot_windows",
+      "detail": "Snapshots and superseded overlapping windows must not enter replacement-cycle promotion evidence.",
+      "expected": "none",
+      "observed": "none",
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G03_baseline_window_replaced",
+      "detail": "The candidate cycle must replace the replayed baseline window rather than appending duplicate March evidence.",
+      "expected": true,
+      "observed": true,
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G04_no_unexpected_execution_prep_blockers",
+      "detail": "Completed Run2 artifacts may block rerun-in-place; other blockers indicate prep drift.",
+      "expected": "none besides existing replay namespace blockers",
+      "observed": "none",
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G05_stage8_blocked_in_prep",
+      "detail": "Same-window replay planning must never grant Stage8/live downstream permission.",
+      "expected": "blocked",
+      "observed": "blocked",
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G06_stage2b_canonical_replacement_command",
+      "detail": "Stage2B must build the candidate cycle from explicit canonical windows.",
+      "expected": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "observed": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G07_stage3_explicit_window_roots",
+      "detail": "stage3-decision-workbench must receive explicit replacement-cycle window roots.",
+      "expected": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "observed": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G08_stage4_explicit_window_roots",
+      "detail": "stage4-fixture-replay must receive explicit replacement-cycle window roots.",
+      "expected": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "observed": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G09_stage5_explicit_window_roots",
+      "detail": "stage5-shadow-evaluator must receive explicit replacement-cycle window roots.",
+      "expected": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "observed": {
+        "rows": 1,
+        "window_root_count": 4
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G10_comparison_uses_canonical_mix",
+      "detail": "Final comparison must point at the canonical mix candidate cycle and require candidate completeness.",
+      "expected": {
+        "require_candidate_complete": true,
+        "rows": 1,
+        "uses_canonical_mix": true
+      },
+      "observed": {
+        "rows": 1,
+        "uses_canonical_mix": true
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G11_comparison_complete_clean",
+      "detail": "March Run2 should remain deterministic replay confirmation, not a changed-evidence signal.",
+      "expected": "candidate_complete, 0 missing targets, no degraded/contradicted/improved rows",
+      "observed": {
+        "allowed_conclusions": "regression behavior, before-after differences, deterministic replay checks, traceability changes",
+        "blocked_conclusions": "no fresh confirmation, no Stage 8A unlock, no live scoring/candidate/budget replacement",
+        "candidate_completeness_status": "candidate_complete",
+        "category_counts": {
+          "unchanged": 26
+        },
+        "comparison_status": "replay_or_replication_comparison_complete_no_fresh_unlock",
+        "cycle_targets": 17,
+        "missing_required_candidate_target_count": 0,
+        "stage8_permission": "blocked",
+        "total_targets": 26,
+        "window_targets": 9
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G12_comparison_no_fresh_unlock",
+      "detail": "Same-window replay can support regression confidence only, not fresh confirmation or Stage8 unlock.",
+      "expected": {
+        "comparison_status": "replay_or_replication_comparison_complete_no_fresh_unlock",
+        "evidence_tier": "same_window_replay",
+        "stage8_permission": "blocked"
+      },
+      "observed": {
+        "comparison_status": "replay_or_replication_comparison_complete_no_fresh_unlock",
+        "evidence_tier": "same_window_replay",
+        "stage8_permission": "blocked"
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G13_fresh_window_readiness_boundary",
+      "detail": "System may proceed to fresh-window evidence collection while keeping Stage8 blocked.",
+      "expected": {
+        "ready_for_fresh_windows": true,
+        "window_count_min": 4
+      },
+      "observed": {
+        "ready_for_fresh_windows": true,
+        "runs2_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
+        "window_count": 4
+      },
+      "severity": "error",
+      "status": "pass"
+    },
+    {
+      "check_id": "G14_stage7b_read_only_ready",
+      "detail": "Stage7B can guide confirmation replay but cannot authorize scoring rewrite.",
+      "expected": {
+        "fresh_window_replay_status": "ready_for_read_only_confirmation_replay",
+        "guardrail": "read_only_fixture_replay_readiness_no_live_permission",
+        "scoring_rewrite_status": "blocked_until_future_confirmation"
+      },
+      "observed": {
+        "fresh_window_replay_status": "ready_for_read_only_confirmation_replay",
+        "guardrail": "read_only_fixture_replay_readiness_no_live_permission",
+        "scoring_rewrite_status": "blocked_until_future_confirmation"
+      },
+      "severity": "error",
+      "status": "pass"
+    }
+  ],
+  "generated_at": "2026-04-23T02:32:37.128701+00:00",
+  "inputs": {
+    "comparison_json": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_COMPARISON_REPORT.json",
+    "execution_prep_csv": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.csv",
+    "execution_prep_json": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.json",
+    "fresh_readiness_json": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__FRESH_WINDOW_READINESS.json",
+    "stage7b_json": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE7B_FIXTURE_REPLAY_HARNESS.json"
+  },
+  "schema_version": "analysis_arena_replay_plan_guardrail_check/v1",
+  "stage8_permission": "blocked",
+  "status": "pass",
+  "summary": {
+    "check_count": 14,
+    "evidence_boundary": "same-window replay is regression evidence only; fresh-window confirmation is still required before Stage8",
+    "expected_replacement_windows": [
+      "WINDOW_2025-12-30_to_2026-01-04",
+      "WINDOW_2026-01-05_to_2026-01-09",
+      "WINDOW_2026-01-15_to_2026-01-22",
+      "WINDOW_2026-03-09_to_2026-03-23"
+    ],
+    "failed": 0,
+    "observed_replacement_windows": [
+      "WINDOW_2025-12-30_to_2026-01-04",
+      "WINDOW_2026-01-05_to_2026-01-09",
+      "WINDOW_2026-01-15_to_2026-01-22",
+      "WINDOW_2026-03-09_to_2026-03-23"
+    ],
+    "passed": 14
+  }
+}
