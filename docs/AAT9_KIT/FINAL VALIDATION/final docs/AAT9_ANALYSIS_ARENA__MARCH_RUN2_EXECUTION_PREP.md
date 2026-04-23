@@ -4,7 +4,7 @@
 
 - run_label: `march_2026_15day_replay_v2`
 - evidence_tier: `same_window_replay`
-- status: `ready_for_approval_to_run`
+- status: `blocked_until_prep_items_resolved`
 - stage8_permission: `blocked`
 - command_count: `59`
 - command_csv: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.csv`
@@ -40,10 +40,10 @@ Important routing choice:
 
 - baseline_window_exists: `true`
 - baseline_cycle_exists: `true`
-- candidate_replay_root_exists: `false`
-- candidate_window_root_exists: `false`
-- candidate_sharepacks_root_exists: `false`
-- candidate_control_arm_exists: `false`
+- candidate_replay_root_exists: `true`
+- candidate_window_root_exists: `true`
+- candidate_sharepacks_root_exists: `true`
+- candidate_control_arm_exists: `true`
 - candidate_window_equals_baseline_window: `false`
 - candidate_window_inside_baseline_window: `false`
 - baseline_window_inside_candidate_window: `false`
@@ -51,7 +51,7 @@ Important routing choice:
 - candidate_window_path_has_run_label: `true`
 - candidate_sharepacks_path_has_run_label: `true`
 - candidate_sharepacks_is_production_predictive: `false`
-- safe_to_create_candidate_namespace: `true`
+- safe_to_create_candidate_namespace: `false`
 - planned_write_paths_inside_baseline_window: `[]`
 
 ## 5. Baseline Manifest
@@ -86,7 +86,8 @@ The full executable command list is in the CSV. The major order is:
 
 ## 7. Blockers
 
-- none
+- candidate window root already exists; archive or choose a new run label before execution
+- candidate sharepacks root already exists; archive or choose a new run label before execution
 
 ## 8. Guardrails
 

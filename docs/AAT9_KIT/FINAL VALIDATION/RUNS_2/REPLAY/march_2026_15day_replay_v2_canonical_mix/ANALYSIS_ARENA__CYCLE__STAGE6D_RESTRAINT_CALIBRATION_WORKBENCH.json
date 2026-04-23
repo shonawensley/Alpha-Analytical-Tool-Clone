@@ -1,0 +1,26 @@
+{
+  "bucket_row_count": 36,
+  "candidate_ledger_rows_loaded": 12155,
+  "guardrail": "read_only_penalty_research_only_no_live_permission",
+  "high_pressure_rescue_candidate_count": 20,
+  "inputs": {
+    "next_action_queue": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_NEXT_ACTION_QUEUE.csv",
+    "requirement_results": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_REQUIREMENT_RESULTS.csv",
+    "restraint_calibration": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_RESTRAINT_CALIBRATION.csv",
+    "scenario_decisions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_SCENARIO_DECISIONS.csv",
+    "value_ledger": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_REPLAY_LEDGER.csv"
+  },
+  "next_stage_dependency": "Use as a soft-penalty research workbench before any Stage 6 rewrite specification.",
+  "policy_row_count": 7,
+  "restraint_requirement_result": {
+    "evidence": "Hard exclusion improves FP proxy and yield versus no-penalty, but Stage 6A requires soft-before-hard calibration.",
+    "live_permission": "forbidden",
+    "metric": "no-penalty versus soft-penalty versus hard-exclusion readback",
+    "next_action": "Build soft-penalty calibration before any hard veto design.",
+    "pass_condition": "soft penalty reduces junk without killing useful signal; hard exclusion requires explicit proof",
+    "readback_result": "pass_research_not_live",
+    "requirement_id": "S6B-004",
+    "test_target": "restraint_calibration_surface"
+  },
+  "stage": "6D"
+}

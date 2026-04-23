@@ -2,10 +2,10 @@
 
 ## 1. Verdict
 
-- Scanned windows: `6`
-- Same-window replay candidates: `2`
+- Scanned windows: `4`
+- Same-window replay candidates: `1`
 - Archived replication ready: `3`
-- Archived replication with caveats: `1`
+- Archived replication with caveats: `0`
 - Needs prep: `0`
 - Strongest same-window replay candidate: `WINDOW_2026-03-09_to_2026-03-23`
 - Strongest archived replication candidate: `WINDOW_2025-12-30_to_2026-01-04`
@@ -25,7 +25,7 @@ Operational meaning:
 | Core results | 63 | `2025-06-21` | `2026-03-27` |
 | Bonus results | 47 | `2025-12-30` | `2026-03-27` |
 | Predictive sharepacks | 34 | `2025-12-30` | `2026-03-23` |
-| Truth sharepacks | 22 | `2025-06-21` | `2026-01-22` |
+| Truth sharepacks | 23 | `2025-06-21` | `2026-01-22` |
 
 ## 3. Stage 6B Through Stage 7B Artifact Status
 
@@ -42,16 +42,13 @@ Operational meaning:
 
 | Window | Tier | Status | Files | Tail | Bonus | Recommendation |
 |---|---|---|---:|---|---|---|
-| `WINDOW_2025-12-30_to_2026-01-04` | `archived_window_replication` | `ready` | 236 | `true` | `true` | `archived_replication_candidate` |
-| `WINDOW_2026-01-05_to_2026-01-09` | `archived_window_replication` | `ready` | 206 | `true` | `true` | `archived_replication_candidate` |
-| `WINDOW_2026-01-15_to_2026-01-18` | `archived_window_replication` | `ready` | 176 | `true` | `true` | `archived_replication_candidate` |
-| `WINDOW_2026-01-15_to_2026-01-22` | `archived_window_replication` | `ready_with_caveats` | 296 | `true` | `true` | `archived_replication_with_explicit_caveats` |
-| `WINDOW_2026-01-05_to_2026-01-09__PREALIGN_SNAPSHOT` | `same_window_replay` | `ready` | 226 | `true` | `true` | `baseline_snapshot_reference_only` |
+| `WINDOW_2025-12-30_to_2026-01-04` | `archived_window_replication` | `ready` | 240 | `true` | `true` | `archived_replication_candidate` |
+| `WINDOW_2026-01-05_to_2026-01-09` | `archived_window_replication` | `ready` | 210 | `true` | `true` | `archived_replication_candidate` |
+| `WINDOW_2026-01-15_to_2026-01-22` | `archived_window_replication` | `ready` | 300 | `true` | `true` | `archived_replication_candidate` |
 | `WINDOW_2026-03-09_to_2026-03-23` | `same_window_replay` | `ready_with_caveats` | 517 | `true` | `true` | `strongest_same_window_replay_candidate` |
 
 ## 5. Coverage Caveats
 
-- `WINDOW_2026-01-15_to_2026-01-22`: truth_missing=2026-01-19
 - `WINDOW_2026-03-09_to_2026-03-23`: truth_missing=2026-03-09, 2026-03-10, 2026-03-11, 2026-03-12, 2026-03-13, ...
 
 ## 6. Baseline Manifest Use

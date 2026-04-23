@@ -1,0 +1,26 @@
+{
+  "bucket_row_count": 65,
+  "candidate_ledger_rows_loaded": 12155,
+  "guardrail": "read_only_support_research_only_no_live_permission",
+  "inputs": {
+    "next_action_queue": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_NEXT_ACTION_QUEUE.csv",
+    "requirement_results": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_REQUIREMENT_RESULTS.csv",
+    "scenario_decisions": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_SCENARIO_DECISIONS.csv",
+    "support_ablation": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE6B_SUPPORT_MODIFIER_ABLATION.csv",
+    "value_ledger": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix/ANALYSIS_ARENA__CYCLE__STAGE5_VALUE_LEVEL_REPLAY_LEDGER.csv"
+  },
+  "next_stage_dependency": "Use only as support modifier research before any Stage 6 rewrite specification.",
+  "stage": "6E",
+  "support_failure_mode_count": 2,
+  "support_narrowing_candidate_count": 4,
+  "support_requirement_result": {
+    "evidence": "Support improves paired candidate rows.",
+    "live_permission": "forbidden",
+    "metric": "support-on versus support-off false-positive proxy and yield",
+    "next_action": "Retest support modifier on future windows.",
+    "pass_condition": "support improves or narrows paired candidate rows; standalone support remains excluded",
+    "readback_result": "pass_modifier_candidate",
+    "requirement_id": "S6B-003",
+    "test_target": "support_context_modifier"
+  }
+}

@@ -5,7 +5,10 @@
     "json": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST.json",
     "md": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST.md"
   },
-  "blockers": [],
+  "blockers": [
+    "candidate window root already exists; archive or choose a new run label before execution",
+    "candidate sharepacks root already exists; archive or choose a new run label before execution"
+  ],
   "command_csv_path": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.csv",
   "commands": [
     {
@@ -17,16 +20,16 @@
       "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --force",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --no-receipt --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-readiness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --no-receipt --force",
       "phase": "preflight",
       "purpose": "regenerate read-only replay readiness before executing Run 2",
       "sequence": 2,
       "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/final docs"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --force",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --no-receipt --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --run-label march_2026_15day_replay_v2_pending --no-receipt --force",
       "phase": "preflight",
       "purpose": "preserve pending baseline-vs-candidate comparison state",
       "sequence": 3,
@@ -482,7 +485,7 @@
     }
   ],
   "evidence_tier": "same_window_replay",
-  "generated_at": "2026-04-21T23:05:18.899518+00:00",
+  "generated_at": "2026-04-23T00:18:46.269006+00:00",
   "guardrails": [
     "Do not write into the preserved baseline window root.",
     "Do not write Run 2 predictive sharepacks into sharepacks/_predictive.",
@@ -494,18 +497,18 @@
     "baseline_cycle_exists": true,
     "baseline_window_exists": true,
     "baseline_window_inside_candidate_window": false,
-    "candidate_control_arm_exists": false,
+    "candidate_control_arm_exists": true,
     "candidate_replay_path_has_run_label": true,
-    "candidate_replay_root_exists": false,
+    "candidate_replay_root_exists": true,
     "candidate_sharepacks_is_production_predictive": false,
     "candidate_sharepacks_path_has_run_label": true,
-    "candidate_sharepacks_root_exists": false,
+    "candidate_sharepacks_root_exists": true,
     "candidate_window_equals_baseline_window": false,
     "candidate_window_inside_baseline_window": false,
     "candidate_window_path_has_run_label": true,
-    "candidate_window_root_exists": false,
+    "candidate_window_root_exists": true,
     "planned_write_paths_inside_baseline_window": [],
-    "safe_to_create_candidate_namespace": true
+    "safe_to_create_candidate_namespace": false
   },
   "namespaces": {
     "baseline_cycle_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2",
@@ -528,7 +531,7 @@
     "tail_results_missing": []
   },
   "stage8_permission": "blocked",
-  "status": "ready_for_approval_to_run",
+  "status": "blocked_until_prep_items_resolved",
   "window": {
     "decay_upload_days_total": 5,
     "end_date": "2026-03-23",

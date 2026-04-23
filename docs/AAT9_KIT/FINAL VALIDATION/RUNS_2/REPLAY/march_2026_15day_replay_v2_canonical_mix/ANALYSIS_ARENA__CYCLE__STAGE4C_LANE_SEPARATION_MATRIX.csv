@@ -1,0 +1,7 @@
+prototype_lane,rule_count,holdout_confirmed,holdout_missed,holdout_confirmation_rate,avg_rule_holdout_confirmation_rate,avg_positive_conversions_per_100_state_days,avg_supported_events_per_100_state_days,strong_count,moderate_count,watch_count,weak_count,restraint_pressure_mix,shadow_permission,lane_guardrail
+clean_boxed_candidate,5,79,43,0.6475409836065574,0.7431372549019608,1.0161898112863184,2.9956505411789744,0,5,0,0,high:5,shadow_box_candidate_expression,read_only_candidate_expression_no_live_scoring
+lineage_guarded_boxed_candidate,18,508,144,0.7791411042944786,0.7546560846560847,1.1305165293574946,3.0397940990526737,5,11,2,0,high:12|medium:6,shadow_box_candidate_expression_with_dedup,read_only_candidate_expression_requires_lineage_dedup
+support_gate_only,124,1479,378,0.7964458804523424,0.8385699389756135,0.8945165136842735,4.954114074440063,38,60,26,0,high:119|medium:5,shadow_confidence_boost_only,support_gate_never_standalone_candidate
+decay_watch_only,33,160,0,1.0,1.0,7.350564260674974,36.89494352227901,29,0,4,0,high:33,shadow_decay_watch_only,decay_or_vtrac_watch_never_boxed_spend_permission
+concentration_retest_or_restraint,91,438,220,0.6656534954407295,0.46158007406127705,0.8436668426635385,2.3957242439060753,5,39,47,0,high:83|medium:8,shadow_restraint_or_retest,concentration_block_requires_broader_state_retest
+low_denominator_watchlist,57,70,68,0.5072463768115942,0.2543859649122807,0.5895287735408499,1.571709435636304,0,12,27,18,high:56|medium:1,shadow_collect_more_windows,insufficient_denominator_collect_more_windows

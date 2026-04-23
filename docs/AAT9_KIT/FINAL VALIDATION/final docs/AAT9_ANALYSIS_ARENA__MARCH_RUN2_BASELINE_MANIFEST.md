@@ -6,7 +6,7 @@
 - evidence_tier: `same_window_replay`
 - status: `baseline_manifest_frozen`
 - stage8_permission: `blocked`
-- manifest_sha256: `48badc3e09135eb3a3187aa75a08bf439102c134ce1efc966ee050cd89e9aef7`
+- manifest_sha256: `8606294839790a43d278e1428cf2ef0990813fb10890f85587e1d10e6d4b69e1`
 
 ## 2. Frozen Roots
 
@@ -15,10 +15,10 @@
 
 ## 3. Counts
 
-- total_files: `654`
+- total_files: `655`
 - baseline_window_files: `517`
-- baseline_cycle_files: `137`
-- total_bytes: `195210219`
+- baseline_cycle_files: `138`
+- total_bytes: `191405712`
 
 ## 4. Blockers
 
