@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -37,6 +38,7 @@ DEFAULT_WINDOW_NAME = "WINDOW_2026-03-09_to_2026-03-23"
 DEFAULT_CANDIDATE_SHAREPACKS = REPO_ROOT / "sharepacks" / "_predictive_replay" / DEFAULT_LABEL
 DEFAULT_STEM = "AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP"
 DEFAULT_BASELINE_MANIFEST_STEM = "AAT9_ANALYSIS_ARENA__MARCH_RUN2_BASELINE_MANIFEST"
+WINDOW_NAME_RE = re.compile(r"^WINDOW_(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})$")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -130,7 +132,7 @@ def _write_csv(path: Path, rows: Sequence[Dict[str, Any]], *, force: bool) -> No
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = ["sequence", "phase", "purpose", "writes_to", "command", "dry_run_command"]
     with path.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer = csv.DictWriter(fh, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({field: row.get(field, "") for field in fields})
@@ -178,6 +180,58 @@ def _plan_write_paths(commands: Sequence[Dict[str, Any]]) -> List[Path]:
     return paths
 
 
+def _discover_top_level_windows(root: Path) -> List[Path]:
+    if not root.exists():
+        return []
+    candidates: List[tuple[Path, date, date]] = []
+    for path in root.iterdir():
+        if not path.is_dir():
+            continue
+        match = WINDOW_NAME_RE.match(path.name)
+        if not match:
+            continue
+        start, end = _parse_date(match.group(1)), _parse_date(match.group(2))
+        candidates.append((path, start, end))
+
+    canonical: List[Path] = []
+    for path, start, end in candidates:
+        contained_by_larger_window = any(
+            other_path != path
+            and other_start <= start
+            and end <= other_end
+            and (other_start < start or end < other_end)
+            for other_path, other_start, other_end in candidates
+        )
+        if not contained_by_larger_window:
+            canonical.append(path)
+    return sorted(canonical, key=lambda path: path.name)
+
+
+def _replacement_cycle_windows(
+    *,
+    baseline_cycle_root: Path,
+    baseline_window_root: Path,
+    candidate_window_root: Path,
+) -> tuple[List[Path], List[Path]]:
+    """Return baseline cycle windows with the replayed baseline window replaced.
+
+    Same-window replay should compare a candidate window inside the same
+    multi-window cycle context used by the baseline. A one-window candidate cycle
+    can trip cross-window guardrails and create false degradation/contradiction
+    signals, so the execution plan builds an explicit replacement-cycle window
+    list.
+    """
+
+    baseline_windows = _discover_top_level_windows(baseline_cycle_root)
+    replacement_windows: List[Path] = []
+    for window_root in baseline_windows:
+        if _path_equal(window_root, baseline_window_root):
+            continue
+        replacement_windows.append(window_root)
+    replacement_windows.append(candidate_window_root)
+    return baseline_windows, replacement_windows
+
+
 def _add_command(
     rows: List[Dict[str, Any]],
     *,
@@ -201,6 +255,13 @@ def _add_command(
             "dry_run_command": _shell_join(dry_parts) if dry_run else command,
         }
     )
+
+
+def _window_root_parts(window_roots: Sequence[Path]) -> List[str | Path]:
+    parts: List[str | Path] = []
+    for window_root in window_roots:
+        parts.extend(["--window-root", window_root])
+    return parts
 
 
 def _grade_commands(
@@ -296,10 +357,16 @@ def build_payload(
     window_name = f"WINDOW_{start_date.isoformat()}_to_{end_date.isoformat()}"
 
     replay_root = runs2_root / "REPLAY" / run_label
+    candidate_cycle_root = runs2_root / "REPLAY" / f"{run_label}_canonical_mix"
     candidate_window_root = replay_root / window_name
     candidate_analysis_subdir = Path("REPLAY") / run_label / window_name / "ANALYSIS_ARENA"
     candidate_validation_subdir = Path("REPLAY") / run_label / window_name / "VALIDATION"
     candidate_control_arm_dir = candidate_window_root / "CONTROL_ARM"
+    baseline_cycle_windows, replacement_cycle_windows = _replacement_cycle_windows(
+        baseline_cycle_root=baseline_cycle_root,
+        baseline_window_root=baseline_window_root,
+        candidate_window_root=candidate_window_root,
+    )
 
     source_coverage = {
         "history_missing": _missing_dates(history_dates, lambda item: _history_file_exists(history_root, item)),
@@ -313,6 +380,7 @@ def build_payload(
         "baseline_window_exists": baseline_window_root.exists(),
         "baseline_cycle_exists": baseline_cycle_root.exists(),
         "candidate_replay_root_exists": replay_root.exists(),
+        "candidate_cycle_root_exists": candidate_cycle_root.exists(),
         "candidate_window_root_exists": candidate_window_root.exists(),
         "candidate_sharepacks_root_exists": candidate_sharepacks_root.exists(),
         "candidate_control_arm_exists": candidate_control_arm_dir.exists(),
@@ -320,11 +388,15 @@ def build_payload(
         "candidate_window_inside_baseline_window": _is_relative_to(candidate_window_root, baseline_window_root),
         "baseline_window_inside_candidate_window": _is_relative_to(baseline_window_root, candidate_window_root),
         "candidate_replay_path_has_run_label": _has_path_part(replay_root, run_label),
+        "candidate_cycle_path_has_run_label": run_label in candidate_cycle_root.name,
         "candidate_window_path_has_run_label": _has_path_part(candidate_window_root, run_label),
         "candidate_sharepacks_path_has_run_label": _has_path_part(candidate_sharepacks_root, run_label),
         "candidate_sharepacks_is_production_predictive": _path_equal(candidate_sharepacks_root, DEFAULT_PREDICTIVE_SHAREPACKS_ROOT)
         or _is_relative_to(candidate_sharepacks_root, DEFAULT_PREDICTIVE_SHAREPACKS_ROOT),
         "safe_to_create_candidate_namespace": not candidate_window_root.exists() and not candidate_sharepacks_root.exists(),
+        "baseline_cycle_window_count": len(baseline_cycle_windows),
+        "replacement_cycle_window_count": len(replacement_cycle_windows),
+        "baseline_window_replaced_in_candidate_cycle": any(_path_equal(path, baseline_window_root) for path in baseline_cycle_windows),
     }
 
     commands: List[Dict[str, Any]] = []
@@ -543,52 +615,56 @@ def build_payload(
         )
     _add_command(
         commands,
-        phase="post_run_audit",
-        purpose="generate Stage 2B cross-window rollup inside candidate replay root",
-        writes_to=replay_root,
+        phase="canonical_replacement_cycle",
+        purpose="build candidate replacement-cycle Stage 2B with baseline peer windows plus Run 2 window",
+        writes_to=candidate_cycle_root,
         parts=[
             "python3",
             "scripts/tools/create_stage2b_cross_window_stack_rollup.py",
             "--runs2-dir",
-            replay_root,
+            baseline_cycle_root,
             "--output-dir",
-            replay_root,
+            candidate_cycle_root,
+            *_window_root_parts(replacement_cycle_windows),
             "--force",
         ],
     )
 
-    for cmd_name, purpose in [
-        ("stage3-decision-workbench", "regenerate Stage 3 decision workbench from Run 2 window evidence"),
-        ("stage4-fixture-replay", "regenerate Stage 4 fixture replay from Run 2 Stage 3 queue"),
-        ("stage4b-replay-readback", "regenerate Stage 4B readback from Run 2 fixture evidence"),
-        ("stage4c-shadow-translator", "regenerate Stage 4C shadow translator prototype from Run 2 evidence"),
-        ("stage5-shadow-evaluator", "regenerate Stage 5 shadow translator evaluator from Run 2 prototype outputs"),
-        ("stage5-readback", "regenerate Stage 5 readback from Run 2 evaluator outputs"),
-        ("stage6a-shadow-spec", "regenerate Stage 6A shadow translator spec from Run 2 readback"),
-        ("stage6b-shadow-replay", "regenerate Stage 6B shadow replay from Run 2 Stage 6A/5 evidence"),
-        ("stage6b-readback", "regenerate Stage 6B readback from Run 2 replay outputs"),
-        ("stage6c-confirmation-protocol", "regenerate Stage 6C confirmation protocol from Run 2 readback"),
-        ("stage6d-restraint-calibration", "regenerate Stage 6D restraint calibration from Run 2 evidence"),
-        ("stage6e-support-narrowing", "regenerate Stage 6E support narrowing from Run 2 evidence"),
-        ("stage6f-decision-atlas", "regenerate Stage 6F decision atlas from Run 2 evidence"),
-        ("stage7a-fresh-confirmation-scaffold", "regenerate Stage 7A scaffold from Run 2 evidence"),
-        ("stage7b-fixture-replay-harness", "regenerate Stage 7B fixture replay harness from Run 2 evidence"),
+    for cmd_name, purpose, include_windows in [
+        ("stage3-decision-workbench", "regenerate Stage 3 decision workbench from replacement-cycle evidence", True),
+        ("stage4-fixture-replay", "regenerate Stage 4 fixture replay from replacement-cycle Stage 3 queue", True),
+        ("stage4b-replay-readback", "regenerate Stage 4B readback from replacement-cycle fixture evidence", False),
+        ("stage4c-shadow-translator", "regenerate Stage 4C shadow translator prototype from replacement-cycle evidence", False),
+        ("stage5-shadow-evaluator", "regenerate Stage 5 shadow translator evaluator from replacement-cycle prototype outputs", True),
+        ("stage5-readback", "regenerate Stage 5 readback from replacement-cycle evaluator outputs", False),
+        ("stage6a-shadow-spec", "regenerate Stage 6A shadow translator spec from replacement-cycle readback", False),
+        ("stage6b-shadow-replay", "regenerate Stage 6B shadow replay from replacement-cycle Stage 6A/5 evidence", False),
+        ("stage6b-readback", "regenerate Stage 6B readback from replacement-cycle replay outputs", False),
+        ("stage6c-confirmation-protocol", "regenerate Stage 6C confirmation protocol from replacement-cycle readback", False),
+        ("stage6d-restraint-calibration", "regenerate Stage 6D restraint calibration from replacement-cycle evidence", False),
+        ("stage6e-support-narrowing", "regenerate Stage 6E support narrowing from replacement-cycle evidence", False),
+        ("stage6f-decision-atlas", "regenerate Stage 6F decision atlas from replacement-cycle evidence", False),
+        ("stage7a-fresh-confirmation-scaffold", "regenerate Stage 7A scaffold from replacement-cycle evidence", False),
+        ("stage7b-fixture-replay-harness", "regenerate Stage 7B fixture replay harness from replacement-cycle evidence", False),
     ]:
+        stage_parts: List[str | Path] = [
+            "python3",
+            "scripts/tools/run_analysis_arena_cycle.py",
+            cmd_name,
+            "--runs2-root",
+            candidate_cycle_root,
+            "--output-dir",
+            candidate_cycle_root,
+        ]
+        if include_windows:
+            stage_parts.extend(_window_root_parts(replacement_cycle_windows))
+        stage_parts.append("--force")
         _add_command(
             commands,
-            phase="stage3_to_7b",
+            phase="stage3_to_7b_canonical_cycle",
             purpose=purpose,
-            writes_to=replay_root,
-            parts=[
-                "python3",
-                "scripts/tools/run_analysis_arena_cycle.py",
-                cmd_name,
-                "--runs2-root",
-                replay_root,
-                "--output-dir",
-                replay_root,
-                "--force",
-            ],
+            writes_to=candidate_cycle_root,
+            parts=stage_parts,
             dry_run=True,
         )
     _add_command(
@@ -607,7 +683,7 @@ def build_payload(
             "--baseline-cycle-root",
             baseline_cycle_root,
             "--candidate-cycle-root",
-            replay_root,
+            candidate_cycle_root,
             "--evidence-tier",
             "same_window_replay",
             "--run-label",
@@ -627,6 +703,8 @@ def build_payload(
         blocked.append("baseline window root is missing")
     if not baseline_cycle_root.exists():
         blocked.append("baseline cycle root is missing")
+    if not namespace_status["baseline_window_replaced_in_candidate_cycle"]:
+        blocked.append("baseline window root is not present in the canonical baseline cycle window set")
     if namespace_status["candidate_window_equals_baseline_window"]:
         blocked.append("candidate window root equals preserved baseline window root")
     if namespace_status["candidate_window_inside_baseline_window"] and not namespace_status["candidate_window_equals_baseline_window"]:
@@ -635,6 +713,8 @@ def build_payload(
         blocked.append("preserved baseline window root is inside candidate window root")
     if not namespace_status["candidate_replay_path_has_run_label"]:
         blocked.append("candidate replay root does not include the Run 2 run label")
+    if not namespace_status["candidate_cycle_path_has_run_label"]:
+        blocked.append("candidate replacement-cycle root does not include the Run 2 run label")
     if not namespace_status["candidate_window_path_has_run_label"]:
         blocked.append("candidate window root does not include the Run 2 run label")
     if not namespace_status["candidate_sharepacks_path_has_run_label"]:
@@ -650,6 +730,12 @@ def build_payload(
         blocked.append("candidate window root already exists; archive or choose a new run label before execution")
     if candidate_sharepacks_root.exists():
         blocked.append("candidate sharepacks root already exists; archive or choose a new run label before execution")
+    if candidate_cycle_root.exists():
+        blocked.append("candidate replacement-cycle root already exists; archive or choose a new run label before execution")
+    if not replacement_cycle_windows:
+        blocked.append("candidate replacement-cycle window list is empty")
+    if not any(_path_equal(path, candidate_window_root) for path in replacement_cycle_windows):
+        blocked.append("candidate replacement-cycle window list does not include the Run 2 candidate window")
 
     return {
         "schema_version": "analysis_arena_window_replay_execution_plan/v1",
@@ -671,6 +757,7 @@ def build_payload(
             "baseline_window_root": safe_rel(baseline_window_root),
             "baseline_cycle_root": safe_rel(baseline_cycle_root),
             "candidate_replay_root": safe_rel(replay_root),
+            "candidate_cycle_root": safe_rel(candidate_cycle_root),
             "candidate_window_root": safe_rel(candidate_window_root),
             "candidate_analysis_subdir": str(candidate_analysis_subdir),
             "candidate_validation_subdir": str(candidate_validation_subdir),
@@ -680,6 +767,14 @@ def build_payload(
         },
         "source_coverage": source_coverage,
         "namespace_status": namespace_status,
+        "replacement_cycle": {
+            "purpose": "compare Run 2 inside the same cross-window context as the preserved baseline",
+            "baseline_cycle_windows": [safe_rel(path) for path in baseline_cycle_windows],
+            "candidate_cycle_windows": [safe_rel(path) for path in replacement_cycle_windows],
+            "candidate_cycle_root": safe_rel(candidate_cycle_root),
+            "replaced_baseline_window_root": safe_rel(baseline_window_root),
+            "candidate_window_root": safe_rel(candidate_window_root),
+        },
         "baseline_manifest": {
             "md": safe_rel(DEFAULT_FINAL_DOCS / f"{DEFAULT_BASELINE_MANIFEST_STEM}.md"),
             "json": safe_rel(DEFAULT_FINAL_DOCS / f"{DEFAULT_BASELINE_MANIFEST_STEM}.json"),
@@ -692,6 +787,7 @@ def build_payload(
             "Do not write into the preserved baseline window root.",
             "Do not write Run 2 predictive sharepacks into sharepacks/_predictive.",
             "Run 2 is same-window replay evidence only.",
+            "Stage 2B through Stage 7B must run in the canonical replacement-cycle root, not the one-window replay root.",
             "Same-window replay cannot unlock Stage 8A or live scoring/candidate/budget changes.",
             "Review degraded or contradicted comparison rows before using Run 2 as development evidence.",
         ],
@@ -703,6 +799,7 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
     coverage = payload["source_coverage"]
     ns = payload["namespace_status"]
     manifest = payload.get("baseline_manifest") or {}
+    replacement = payload.get("replacement_cycle") or {}
     commands = payload["commands"]
     blockers = payload["blockers"]
     window_name = str((payload.get("window") or {}).get("name") or DEFAULT_WINDOW_NAME)
@@ -733,6 +830,7 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
         "",
         f"- baseline_window_root: `{namespaces['baseline_window_root']}`",
         f"- candidate_replay_root: `{namespaces['candidate_replay_root']}`",
+        f"- candidate_cycle_root: `{namespaces.get('candidate_cycle_root', '')}`",
         f"- candidate_window_root: `{namespaces['candidate_window_root']}`",
         f"- candidate_sharepacks_root: `{namespaces['candidate_sharepacks_root']}`",
         f"- candidate_control_arm_dir: `{namespaces['candidate_control_arm_dir']}`",
@@ -741,6 +839,14 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
         "",
         f"- The Run 2 window keeps the exact folder name `{window_name}` inside a nested replay root.",
         "- This is intentional because Stage 3/4 fixture tools discover exact `WINDOW_<start>_to_<end>` names and would ignore a suffixed `__RUN2` folder.",
+        "- Stage 2B through Stage 7B run in the separate candidate replacement-cycle root so the candidate March window is compared inside the same multi-window context as the baseline.",
+        "",
+        "Replacement-cycle window set:",
+        "",
+    ]
+    for path in replacement.get("candidate_cycle_windows") or []:
+        lines.append(f"- `{path}`")
+    lines += [
         "",
         "## 3. Source Coverage",
         "",
@@ -780,9 +886,10 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
         "3. isolated control-arm grading into Run 2 `CONTROL_ARM`",
         "4. isolated post-range into Run 2 `VALIDATION`",
         "5. window close plus decay",
-        "6. post-run audit and Stage 2B",
-        "7. Stage 3 through Stage 7B regeneration",
-        "8. candidate-complete baseline-vs-Run-2 comparison",
+        "6. post-run audit on the candidate window",
+        "7. canonical replacement-cycle Stage 2B using baseline peer windows plus Run 2",
+        "8. Stage 3 through Stage 7B regeneration inside the canonical replacement-cycle root",
+        "9. candidate-complete baseline-vs-Run-2 comparison using the replacement-cycle root",
         "",
         "## 7. Blockers",
         "",

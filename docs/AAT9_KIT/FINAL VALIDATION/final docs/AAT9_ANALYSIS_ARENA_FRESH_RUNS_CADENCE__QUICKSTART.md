@@ -296,6 +296,13 @@ targets:
 python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --force
 ```
 
+Same-window replays must compare the candidate window inside a canonical
+replacement cycle: keep the baseline peer windows, replace only the replayed
+baseline window with the candidate window, regenerate Stage 2B through Stage 7B
+in that replacement-cycle root, and point `window-replay-compare` at that
+replacement-cycle root. Do not compare a one-window Stage 6B/7B replay root
+against a multi-window baseline cycle; that can create false guardrail blocks.
+
 Before starting a new fresh gold-day window, run the readiness preflight:
 
 ```bash

@@ -7,7 +7,8 @@
   },
   "blockers": [
     "candidate window root already exists; archive or choose a new run label before execution",
-    "candidate sharepacks root already exists; archive or choose a new run label before execution"
+    "candidate sharepacks root already exists; archive or choose a new run label before execution",
+    "candidate replacement-cycle root already exists; archive or choose a new run label before execution"
   ],
   "command_csv_path": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__MARCH_RUN2_EXECUTION_PREP.csv",
   "commands": [
@@ -348,136 +349,136 @@
       "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
     },
     {
-      "command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "phase": "post_run_audit",
-      "purpose": "generate Stage 2B cross-window rollup inside candidate replay root",
+      "command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/create_stage2b_cross_window_stack_rollup.py --runs2-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "phase": "canonical_replacement_cycle",
+      "purpose": "build candidate replacement-cycle Stage 2B with baseline peer windows plus Run 2 window",
       "sequence": 43,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 3 decision workbench from Run 2 window evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage3-decision-workbench --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 3 decision workbench from replacement-cycle evidence",
       "sequence": 44,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 4 fixture replay from Run 2 Stage 3 queue",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4-fixture-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 4 fixture replay from replacement-cycle Stage 3 queue",
       "sequence": 45,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 4B readback from Run 2 fixture evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4b-replay-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 4B readback from replacement-cycle fixture evidence",
       "sequence": 46,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 4C shadow translator prototype from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage4c-shadow-translator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 4C shadow translator prototype from replacement-cycle evidence",
       "sequence": 47,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 5 shadow translator evaluator from Run 2 prototype outputs",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-shadow-evaluator --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22' --window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 5 shadow translator evaluator from replacement-cycle prototype outputs",
       "sequence": 48,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 5 readback from Run 2 evaluator outputs",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage5-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 5 readback from replacement-cycle evaluator outputs",
       "sequence": 49,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6A shadow translator spec from Run 2 readback",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6a-shadow-spec --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6A shadow translator spec from replacement-cycle readback",
       "sequence": 50,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6B shadow replay from Run 2 Stage 6A/5 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-shadow-replay --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6B shadow replay from replacement-cycle Stage 6A/5 evidence",
       "sequence": 51,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6B readback from Run 2 replay outputs",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6b-readback --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6B readback from replacement-cycle replay outputs",
       "sequence": 52,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6C confirmation protocol from Run 2 readback",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6c-confirmation-protocol --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6C confirmation protocol from replacement-cycle readback",
       "sequence": 53,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6D restraint calibration from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6d-restraint-calibration --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6D restraint calibration from replacement-cycle evidence",
       "sequence": 54,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6E support narrowing from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6e-support-narrowing --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6E support narrowing from replacement-cycle evidence",
       "sequence": 55,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 6F decision atlas from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage6f-decision-atlas --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 6F decision atlas from replacement-cycle evidence",
       "sequence": 56,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 7A scaffold from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7a-fresh-confirmation-scaffold --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 7A scaffold from replacement-cycle evidence",
       "sequence": 57,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --force --dry-run",
-      "phase": "stage3_to_7b",
-      "purpose": "regenerate Stage 7B fixture replay harness from Run 2 evidence",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py stage7b-fixture-replay-harness --runs2-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --output-dir '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --force --dry-run",
+      "phase": "stage3_to_7b_canonical_cycle",
+      "purpose": "regenerate Stage 7B fixture replay harness from replacement-cycle evidence",
       "sequence": 58,
-      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2"
+      "writes_to": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix"
     },
     {
-      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
-      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
+      "command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
+      "dry_run_command": "python3 scripts/tools/run_analysis_arena_cycle.py window-replay-compare --baseline-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23' --candidate-window-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23' --baseline-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2' --candidate-cycle-root '/home/ser/code/Alpha-Analytical-Tool-Clone/docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix' --evidence-tier same_window_replay --run-label march_2026_15day_replay_v2 --require-candidate-complete --force",
       "phase": "comparison",
       "purpose": "compare preserved March baseline against Run 2 candidate after the replay exists",
       "sequence": 59,
@@ -485,19 +486,24 @@
     }
   ],
   "evidence_tier": "same_window_replay",
-  "generated_at": "2026-04-23T00:18:46.269006+00:00",
+  "generated_at": "2026-04-23T00:34:42.643148+00:00",
   "guardrails": [
     "Do not write into the preserved baseline window root.",
     "Do not write Run 2 predictive sharepacks into sharepacks/_predictive.",
     "Run 2 is same-window replay evidence only.",
+    "Stage 2B through Stage 7B must run in the canonical replacement-cycle root, not the one-window replay root.",
     "Same-window replay cannot unlock Stage 8A or live scoring/candidate/budget changes.",
     "Review degraded or contradicted comparison rows before using Run 2 as development evidence."
   ],
   "namespace_status": {
     "baseline_cycle_exists": true,
+    "baseline_cycle_window_count": 4,
     "baseline_window_exists": true,
     "baseline_window_inside_candidate_window": false,
+    "baseline_window_replaced_in_candidate_cycle": true,
     "candidate_control_arm_exists": true,
+    "candidate_cycle_path_has_run_label": true,
+    "candidate_cycle_root_exists": true,
     "candidate_replay_path_has_run_label": true,
     "candidate_replay_root_exists": true,
     "candidate_sharepacks_is_production_predictive": false,
@@ -508,6 +514,7 @@
     "candidate_window_path_has_run_label": true,
     "candidate_window_root_exists": true,
     "planned_write_paths_inside_baseline_window": [],
+    "replacement_cycle_window_count": 4,
     "safe_to_create_candidate_namespace": false
   },
   "namespaces": {
@@ -515,11 +522,30 @@
     "baseline_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23",
     "candidate_analysis_subdir": "REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA",
     "candidate_control_arm_dir": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/CONTROL_ARM",
+    "candidate_cycle_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix",
     "candidate_replay_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2",
     "candidate_sharepacks_root": "sharepacks/_predictive_replay/march_2026_15day_replay_v2",
     "candidate_validation_subdir": "REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION",
     "candidate_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23",
     "truth_sharepacks_root": "sharepacks"
+  },
+  "replacement_cycle": {
+    "baseline_cycle_windows": [
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23"
+    ],
+    "candidate_cycle_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2_canonical_mix",
+    "candidate_cycle_windows": [
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2025-12-30_to_2026-01-04",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-05_to_2026-01-09",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-01-15_to_2026-01-22",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23"
+    ],
+    "candidate_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/march_2026_15day_replay_v2/WINDOW_2026-03-09_to_2026-03-23",
+    "purpose": "compare Run 2 inside the same cross-window context as the preserved baseline",
+    "replaced_baseline_window_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23"
   },
   "run_label": "march_2026_15day_replay_v2",
   "schema_version": "analysis_arena_window_replay_execution_plan/v1",

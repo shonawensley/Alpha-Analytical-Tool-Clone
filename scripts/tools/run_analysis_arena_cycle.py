@@ -675,6 +675,7 @@ def build_stage3_decision_workbench_command(
     *,
     runs2_root: Path,
     output_dir: Path,
+    window_roots: Sequence[Path],
     focus_window: str,
     force: bool,
 ) -> List[str]:
@@ -686,6 +687,8 @@ def build_stage3_decision_workbench_command(
         "--output-dir",
         str(output_dir),
     ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
     if focus_window:
         cmd += ["--focus-window", focus_window]
     if force:
@@ -697,6 +700,7 @@ def build_stage4_fixture_replay_command(
     *,
     runs2_root: Path,
     output_dir: Path,
+    window_roots: Sequence[Path],
     max_replay_rows: int,
     force: bool,
 ) -> List[str]:
@@ -708,6 +712,8 @@ def build_stage4_fixture_replay_command(
         "--output-dir",
         str(output_dir),
     ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
     if max_replay_rows > 0:
         cmd += ["--max-replay-rows", str(int(max_replay_rows))]
     if force:
@@ -763,6 +769,7 @@ def build_stage5_shadow_evaluator_command(
     *,
     runs2_root: Path,
     output_dir: Path,
+    window_roots: Sequence[Path],
     casebook_limit: int,
     max_value_rows: int,
     force: bool,
@@ -777,6 +784,8 @@ def build_stage5_shadow_evaluator_command(
         "--casebook-limit",
         str(int(casebook_limit)),
     ]
+    for window_root in window_roots:
+        cmd.extend(["--window-root", str(window_root)])
     if max_value_rows > 0:
         cmd += ["--max-value-rows", str(int(max_value_rows))]
     if force:
@@ -1336,6 +1345,7 @@ def _parse_args() -> argparse.Namespace:
     stage3 = sub.add_parser("stage3-decision-workbench", help="Generate the Stage 3 replay/restraint decision workbench.")
     stage3.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
     stage3.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage3.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
     stage3.add_argument("--focus-window", default="", help="Optional focus window for the Stage 3 casebook.")
     stage3.add_argument("--no-receipt", action="store_true")
     stage3.add_argument("--force", action="store_true")
@@ -1344,6 +1354,7 @@ def _parse_args() -> argparse.Namespace:
     stage4 = sub.add_parser("stage4-fixture-replay", help="Generate the Stage 4 fixture replay harness from the Stage 3 queue.")
     stage4.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
     stage4.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage4.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
     stage4.add_argument("--max-replay-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all Stage-3 replay rows.")
     stage4.add_argument("--no-receipt", action="store_true")
     stage4.add_argument("--force", action="store_true")
@@ -1374,6 +1385,7 @@ def _parse_args() -> argparse.Namespace:
     )
     stage5.add_argument("--runs2-root", default=str(REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"))
     stage5.add_argument("--output-dir", default=None, help="Output directory, defaulting to --runs2-root.")
+    stage5.add_argument("--window-root", action="append", default=[], help="Optional explicit RUNS_2 window roots. Can be repeated.")
     stage5.add_argument("--casebook-limit", type=int, default=120)
     stage5.add_argument("--max-value-rows", type=int, default=0, help="Optional debugging limit. Default 0 means all value rows.")
     stage5.add_argument("--no-receipt", action="store_true")
@@ -2953,10 +2965,12 @@ def main() -> None:
     if args.cmd == "stage3-decision-workbench":
         runs2_root = Path(str(args.runs2_root)).resolve()
         output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
         focus_window = str(args.focus_window or "").strip()
         cmd = build_stage3_decision_workbench_command(
             runs2_root=runs2_root,
             output_dir=output_dir,
+            window_roots=window_roots,
             focus_window=focus_window,
             force=bool(args.force),
         )
@@ -2968,6 +2982,7 @@ def main() -> None:
             f"- git_sha: `{_git_sha()}`",
             f"- runs2_root: `{_safe_rel(runs2_root)}`",
             f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
             f"- focus_window: `{focus_window or 'auto'}`",
             f"- force: `{bool(args.force)}`",
             f"- dry_run: `{bool(args.dry_run)}`",
@@ -2995,10 +3010,12 @@ def main() -> None:
     if args.cmd == "stage4-fixture-replay":
         runs2_root = Path(str(args.runs2_root)).resolve()
         output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
         max_replay_rows = int(args.max_replay_rows or 0)
         cmd = build_stage4_fixture_replay_command(
             runs2_root=runs2_root,
             output_dir=output_dir,
+            window_roots=window_roots,
             max_replay_rows=max_replay_rows,
             force=bool(args.force),
         )
@@ -3010,6 +3027,7 @@ def main() -> None:
             f"- git_sha: `{_git_sha()}`",
             f"- runs2_root: `{_safe_rel(runs2_root)}`",
             f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
             f"- max_replay_rows: `{max_replay_rows if max_replay_rows > 0 else 'all'}`",
             f"- force: `{bool(args.force)}`",
             f"- dry_run: `{bool(args.dry_run)}`",
@@ -3125,11 +3143,13 @@ def main() -> None:
     if args.cmd == "stage5-shadow-evaluator":
         runs2_root = Path(str(args.runs2_root)).resolve()
         output_dir = Path(str(args.output_dir)).resolve() if args.output_dir else runs2_root
+        window_roots = [_window_root_from_arg(value) for value in list(args.window_root or [])]
         casebook_limit = int(args.casebook_limit or 120)
         max_value_rows = int(args.max_value_rows or 0)
         cmd = build_stage5_shadow_evaluator_command(
             runs2_root=runs2_root,
             output_dir=output_dir,
+            window_roots=window_roots,
             casebook_limit=casebook_limit,
             max_value_rows=max_value_rows,
             force=bool(args.force),
@@ -3142,6 +3162,7 @@ def main() -> None:
             f"- git_sha: `{_git_sha()}`",
             f"- runs2_root: `{_safe_rel(runs2_root)}`",
             f"- output_dir: `{_safe_rel(output_dir)}`",
+            f"- explicit_windows: `{len(window_roots)}`",
             f"- casebook_limit: `{casebook_limit}`",
             f"- max_value_rows: `{max_value_rows if max_value_rows > 0 else 'all'}`",
             f"- force: `{bool(args.force)}`",
