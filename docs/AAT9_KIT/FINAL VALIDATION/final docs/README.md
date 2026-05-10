@@ -29,6 +29,10 @@ If you are working on the rebuilt Analysis Arena branch, start here:
 - Arena metric legend: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
 - Arena fresh-window reading guide: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
 - Arena Stage 8 downstream rebuild readiness guardrail: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- Arena Stage 7C / Stage 8A entry dossier: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md`
+- Arena Stage 7C / Stage 8A machine appendix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__APPENDIX.json`
+- Arena Stage 7C / Stage 8A mechanism appendix: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md`
+- Arena Stage 7C / Stage 8A freeze receipt: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__FREEZE_RECEIPT.md`
 - Arena window replay / replication protocol: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - Arena available window replay inventory: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
 - Arena window replay readiness report: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`
@@ -76,6 +80,10 @@ Legacy note:
 - Arena metric legend (layer ownership + allowed conclusions): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__METRIC_LEGEND.md`
 - Arena fresh-window reading guide (fixed interpretation order): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__HOW_TO_READ_FRESH_WINDOW_RESULTS.md`
 - Arena Stage 8 downstream rebuild readiness guardrail (candidate object / boxed-straight / budget sandbox timing): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
+- Arena Stage 7C / Stage 8A entry dossier (pre-Stage-8 evidence boundary, permissions, blockers, fixtures, and fresh-window charter): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md`
+- Arena Stage 7C / Stage 8A machine appendix (machine-usable contract for the dossier): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__APPENDIX.json`
+- Arena Stage 7C / Stage 8A mechanism appendix (bounded non-authorizing mechanism backlog): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md`
+- Arena Stage 7C / Stage 8A freeze receipt (explicit signoff and next-action lock): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__FREEZE_RECEIPT.md`
 - Arena window replay / replication protocol (same-window replay vs archived replication vs true fresh confirmation): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
 - Arena available window replay inventory (read-only list of candidate rerun windows and caveats): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__AVAILABLE_WINDOW_REPLAY_INVENTORY.md`
 - Arena window replay readiness report (machine-generated readiness matrix, source coverage, and baseline hashes): `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_READINESS.md`

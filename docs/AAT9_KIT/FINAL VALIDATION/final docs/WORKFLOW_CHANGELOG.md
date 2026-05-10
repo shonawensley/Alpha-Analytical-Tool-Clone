@@ -6,6 +6,65 @@ Scope: docs, sharepack helpers (summarizers/validators/run-report generator), an
 
 ---
 
+## 2026-05-10
+
+### Analysis Arena: Stage 7C / Stage 8A dossier freeze pass
+
+- Froze the dossier package as a governing pre-Stage-8 control artifact:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__APPENDIX.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__FREEZE_RECEIPT.md`
+- Locked package status from review posture to `frozen_governing_artifact`.
+- Added explicit acceptance checks covering:
+  - controlled permission vocabulary
+  - bounded fixture bank
+  - per-fixture blocker / `allowed_next_use` / fresh-window question coverage
+  - mechanism appendix non-authorizing status
+- Guardrail: the package remains non-runtime and does not authorize live
+  scoring, candidate generation, boxed/straight runtime expression, or budget
+  policy changes.
+
+## 2026-04-29
+
+### Analysis Arena: Stage 7C / Stage 8A entry dossier package
+
+- Added the bounded pre-Stage-8 dossier package:
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__APPENDIX.json`
+  - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md`
+- The dossier locks the pre-Stage-8 decision boundary:
+  - executive verdict and evidence hierarchy
+  - evidence permission matrix
+  - primary restrained lane review
+  - blocker register
+  - Stage 8A shadow candidate-object schema
+  - compact fixture bank
+  - fresh-window confirmation charter
+  - non-goals and forbidden conclusions
+- The machine appendix turns the dossier into a machine-usable contract for:
+  - lane permissions
+  - blocker definitions
+  - shadow-object fields
+  - canonical fixtures
+  - fresh-window pass/fail questions
+  - forbidden conclusions
+- The mechanism appendix preserves a bounded backlog of mechanism ideas without
+  granting runtime permission.
+- Guardrail: this package is evidence synthesis and boundary control only. It
+  does not authorize live scoring, candidate generation, boxed/straight runtime
+  expression, budget policy, or legacy-infrastructure replacement.
+
+### Analysis Arena: final-doc registry updates for the dossier package
+
+- Updated the final-doc portal and system index to include the Stage 7C /
+  Stage 8A dossier package.
+- Updated the system index archived replication SSOT pointer to the current
+  June-inclusive canonical root:
+  - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v5_canonical_with_june2025/`
+- Guardrail: registry updates are documentation-only and do not change runtime
+  behavior.
+
 ## 2026-04-22
 
 ### Analysis Arena: March-vs-archived replay decision memo

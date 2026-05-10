@@ -1,0 +1,759 @@
+{
+  "package_meta": {
+    "generated_local_timestamp": "2026-04-29T01:32:32-04:00",
+    "freeze_local_timestamp": "2026-05-10T00:19:53-04:00",
+    "status": "frozen_governing_artifact",
+    "runtime_effect": "none",
+    "schema_version": "analysis_arena_stage7c_stage8a_entry_dossier_appendix/v1",
+    "freeze_basis": [
+      "dossier package reviewed and accepted as the pre-Stage-8 governing artifact",
+      "freeze/signoff recommendation from tasks/DOSSIER_REVIEW.txt applied",
+      "package remains non-authorizing for runtime scoring, candidate generation, boxed/straight runtime expression, and budget policy"
+    ],
+    "dossier_doc": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md",
+    "mechanism_appendix_doc": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md",
+    "freeze_receipt_doc": "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__FREEZE_RECEIPT.md",
+    "source_roots": [
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO.md",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.md",
+      "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v5_canonical_with_june2025/",
+      "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md",
+      "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__EVIDENCE_BOUNDARY_AND_NEXT_RUN_MAP.md",
+      "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__GOLD_DAY_WINDOW_INVENTORY.md"
+    ],
+    "current_archived_replication_root": "docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v5_canonical_with_june2025",
+    "current_archived_replication_windows": [
+      "WINDOW_2025-12-30_to_2026-01-09",
+      "WINDOW_2026-01-15_to_2026-01-22",
+      "WINDOW_2025-06-21_to_2025-06-27"
+    ],
+    "acceptance_checklist": [
+      "controlled_permission_vocabulary_unchanged",
+      "fixture_bank_remains_bounded",
+      "every_fixture_has_blocker_allowed_next_use_and_fresh_window_question",
+      "mechanism_appendix_remains_non_authorizing",
+      "next_action_is_true_fresh_confirmation_not_runtime_stage8"
+    ]
+  },
+  "accepted_permission_vocabulary": [
+    "blocked",
+    "candidate_shadow_only",
+    "support_research_only",
+    "penalty_research_only",
+    "companion_only",
+    "readback_reference_only",
+    "reference_only",
+    "modifier_research_only",
+    "blocked_until_future_confirmation"
+  ],
+  "accepted_outcome_vocabulary": [
+    "repeated_cleanly",
+    "repeated_with_caveat",
+    "weakened",
+    "contradicted",
+    "still_blocked",
+    "research_only",
+    "companion_only",
+    "reference_only"
+  ],
+  "lane_permissions": [
+    {
+      "lane_id": "primary_restrained_candidate_expression",
+      "current_role": "lead design seed",
+      "current_status": "blocked_seed",
+      "allowed_permission": "candidate_shadow_only",
+      "forbidden_permissions": [
+        "live_candidate_generation",
+        "live_scoring_weight",
+        "budget_use"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_primary_repeat",
+        "rewrite_blocker_concentration"
+      ],
+      "fresh_proof_required": "repeat against fresh baseline with controlled pool ratio and non-trivial conversions"
+    },
+    {
+      "lane_id": "secondary_lineage_supported_restrained",
+      "current_role": "modifier and narrowing research",
+      "current_status": "research_only",
+      "allowed_permission": "modifier_research_only",
+      "forbidden_permissions": [
+        "standalone_candidate_expansion",
+        "independent_runtime_weight"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_duplicate_credit"
+      ],
+      "fresh_proof_required": "must add non-duplicate value while preserving or improving primary metrics"
+    },
+    {
+      "lane_id": "broad_lineage_foundation_reference",
+      "current_role": "context and reference",
+      "current_status": "ambient_reference",
+      "allowed_permission": "reference_only",
+      "forbidden_permissions": [
+        "broad_candidate_promotion",
+        "runtime_positive_weight"
+      ],
+      "key_blockers": [],
+      "fresh_proof_required": "must narrow into denominator-safe non-duplicate subsets"
+    },
+    {
+      "lane_id": "support_context_modifier",
+      "current_role": "support-context research",
+      "current_status": "narrow_only_candidate",
+      "allowed_permission": "support_research_only",
+      "forbidden_permissions": [
+        "support_driven_candidate_creation",
+        "broad_support_weight"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_support_modifier"
+      ],
+      "fresh_proof_required": "support-on subset must beat matched support-off peer without materially expanding pool exposure"
+    },
+    {
+      "lane_id": "restraint_soft_penalty",
+      "current_role": "pressure and penalty research",
+      "current_status": "soft_only",
+      "allowed_permission": "penalty_research_only",
+      "forbidden_permissions": [
+        "hard_veto",
+        "hard_exclusion",
+        "runtime_filter"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_restraint_soft_before_hard"
+      ],
+      "fresh_proof_required": "soft penalty must reduce FP pressure while preserving useful conversions"
+    },
+    {
+      "lane_id": "decay_companion_boundary",
+      "current_role": "carryforward and context lane",
+      "current_status": "boundary_only",
+      "allowed_permission": "companion_only",
+      "forbidden_permissions": [
+        "same_day_candidate_permission",
+        "same_day_spend_permission"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_decay_boundary"
+      ],
+      "fresh_proof_required": "must remain useful and explicitly separated from same-day scoring"
+    },
+    {
+      "lane_id": "duplicate_credit_guardrail",
+      "current_role": "guardrail and integrity control",
+      "current_status": "always_required",
+      "allowed_permission": "readback_reference_only",
+      "forbidden_permissions": [
+        "overlap_based_strength_inflation"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_duplicate_credit"
+      ],
+      "fresh_proof_required": "candidate union must remain dedup-clean"
+    },
+    {
+      "lane_id": "translator_scoring_rewrite_gate",
+      "current_role": "global permission gate",
+      "current_status": "blocked",
+      "allowed_permission": "blocked_until_future_confirmation",
+      "forbidden_permissions": [
+        "downstream_rewrite_activity"
+      ],
+      "key_blockers": [
+        "rewrite_blocker_primary_repeat",
+        "rewrite_blocker_concentration",
+        "rewrite_blocker_support_modifier",
+        "rewrite_blocker_restraint_soft_before_hard",
+        "rewrite_blocker_duplicate_credit",
+        "rewrite_blocker_decay_boundary"
+      ],
+      "fresh_proof_required": "all prerequisite gates pass or remain explicitly quarantined after fresh readback"
+    }
+  ],
+  "blocker_register": [
+    {
+      "blocker_id": "rewrite_blocker_primary_repeat",
+      "blocks": "promotion of the primary lane into Stage 8 design authority",
+      "current_status": "active_fresh_testable",
+      "why_it_exists": "March showed promise and archived replication weakened the promotion case",
+      "clearance_condition": "at least one true fresh window must repeat the primary lane against the fresh baseline clean boxed arm",
+      "evidence_tier_to_clear": "true_fresh_confirmation"
+    },
+    {
+      "blocker_id": "rewrite_blocker_concentration",
+      "blocks": "claims that the primary lane generalizes beyond March",
+      "current_status": "active_fresh_testable",
+      "why_it_exists": "one window or state cluster can manufacture apparent lift",
+      "clearance_condition": "at least one non-March fresh window must preserve the finding outside March concentration",
+      "evidence_tier_to_clear": "true_fresh_confirmation"
+    },
+    {
+      "blocker_id": "rewrite_blocker_support_modifier",
+      "blocks": "support context acting as positive candidate expansion",
+      "current_status": "active_fresh_testable",
+      "why_it_exists": "broad support remains too noisy",
+      "clearance_condition": "narrow support-on subsets must beat matched support-off peers without materially expanding pool exposure",
+      "evidence_tier_to_clear": "true_fresh_confirmation"
+    },
+    {
+      "blocker_id": "rewrite_blocker_restraint_soft_before_hard",
+      "blocks": "hard veto or hard exclusion restraint logic",
+      "current_status": "active_fresh_testable",
+      "why_it_exists": "high-pressure zones still contain useful conversions",
+      "clearance_condition": "soft penalty must reduce FP pressure while preserving useful conversions; hard veto remains forbidden",
+      "evidence_tier_to_clear": "true_fresh_confirmation"
+    },
+    {
+      "blocker_id": "rewrite_blocker_duplicate_credit",
+      "blocks": "overlap-based score inflation",
+      "current_status": "active_watch",
+      "why_it_exists": "the same truth can be preserved through multiple related lanes",
+      "clearance_condition": "candidate union must remain dedup-clean on every replay and fresh readback",
+      "evidence_tier_to_clear": "all_replay_and_fresh_tiers"
+    },
+    {
+      "blocker_id": "rewrite_blocker_decay_boundary",
+      "blocks": "decay leaking into same-day scoring or spend logic",
+      "current_status": "active_watch",
+      "why_it_exists": "delayed truth is not same-day truth",
+      "clearance_condition": "decay must remain companion-only on every replay and fresh readback",
+      "evidence_tier_to_clear": "all_replay_and_fresh_tiers"
+    }
+  ],
+  "stage8a_shadow_schema": [
+    {
+      "field_name": "candidate_object_id",
+      "group": "identity",
+      "required": true,
+      "description": "stable shadow identifier for one state_key plus draw_slot plus canonical candidate root",
+      "forbidden_misuse": "must not act as a live pick identifier"
+    },
+    {
+      "field_name": "state_key",
+      "group": "identity",
+      "required": true,
+      "description": "state and game surface identifier",
+      "forbidden_misuse": "must not be merged across unrelated surfaces"
+    },
+    {
+      "field_name": "draw_slot",
+      "group": "identity",
+      "required": true,
+      "description": "midday or evening draw slot context",
+      "forbidden_misuse": "must not be ignored when decay or carryforward is involved"
+    },
+    {
+      "field_name": "canonical",
+      "group": "identity",
+      "required": true,
+      "description": "boxed-root candidate identity",
+      "forbidden_misuse": "must not imply straight permission by itself"
+    },
+    {
+      "field_name": "straight_values",
+      "group": "identity",
+      "required": true,
+      "description": "literal straight forms associated with the canonical root",
+      "forbidden_misuse": "must not be treated as production output in Stage 8A"
+    },
+    {
+      "field_name": "vtrac_index",
+      "group": "identity",
+      "required": true,
+      "description": "VTRAC family index carried with the object",
+      "forbidden_misuse": "must not imply literal straight permission"
+    },
+    {
+      "field_name": "vtrac_straight_lane",
+      "group": "identity",
+      "required": true,
+      "description": "VTRAC-to-straight lane mapping",
+      "forbidden_misuse": "must not be blended with literal straight output"
+    },
+    {
+      "field_name": "primary_lane",
+      "group": "lane_permission",
+      "required": true,
+      "description": "lead evidence lane that preserved the object",
+      "forbidden_misuse": "must not be silently promoted to runtime authority"
+    },
+    {
+      "field_name": "expression_permission",
+      "group": "lane_permission",
+      "required": true,
+      "description": "highest currently earned permission state",
+      "forbidden_misuse": "must not use unapproved vocabulary or imply runtime permission"
+    },
+    {
+      "field_name": "support_role",
+      "group": "lane_permission",
+      "required": true,
+      "description": "support-only, narrowed-support, blocked, or none",
+      "forbidden_misuse": "must not create candidates by itself"
+    },
+    {
+      "field_name": "restraint_role",
+      "group": "lane_permission",
+      "required": true,
+      "description": "soft-penalty research state",
+      "forbidden_misuse": "must not become hard veto permission"
+    },
+    {
+      "field_name": "decay_role",
+      "group": "lane_permission",
+      "required": true,
+      "description": "companion-only decay boundary state",
+      "forbidden_misuse": "must not become same-day permission"
+    },
+    {
+      "field_name": "bonus_ball_role",
+      "group": "lane_permission",
+      "required": true,
+      "description": "sidecar-only bonus-ball role",
+      "forbidden_misuse": "must not contaminate standard straight or box metrics"
+    },
+    {
+      "field_name": "source_trace_ids",
+      "group": "traceability",
+      "required": true,
+      "description": "trace identifiers for upstream contributing evidence",
+      "forbidden_misuse": "must not be omitted when multiple lanes overlap"
+    },
+    {
+      "field_name": "source_family_trace",
+      "group": "traceability",
+      "required": true,
+      "description": "higher-level lineage family trace",
+      "forbidden_misuse": "must not collapse unrelated families into one undifferentiated label"
+    },
+    {
+      "field_name": "lineage_dedup_key",
+      "group": "traceability",
+      "required": true,
+      "description": "anti-double-count anchor",
+      "forbidden_misuse": "must not be optional when overlap is possible"
+    },
+    {
+      "field_name": "same_day_evidence_summary",
+      "group": "evidence_summary",
+      "required": true,
+      "description": "compressed same-day evidence explanation",
+      "forbidden_misuse": "must not mix delayed decay evidence into same-day proof"
+    },
+    {
+      "field_name": "decay_evidence_summary",
+      "group": "evidence_summary",
+      "required": true,
+      "description": "separate delayed-resolution explanation",
+      "forbidden_misuse": "must not become same-day scoring rationale"
+    },
+    {
+      "field_name": "fresh_confirmation_status",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "archived-only, ready-for-fresh-confirmation, repeated, weakened, contradicted, or similar bounded status",
+      "forbidden_misuse": "must not be converted into a score"
+    },
+    {
+      "field_name": "denominator_status",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "stable, watch, or low-denominator posture",
+      "forbidden_misuse": "must not be omitted from promoted-looking objects"
+    },
+    {
+      "field_name": "false_positive_pressure",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "current FP-risk posture",
+      "forbidden_misuse": "must not be replaced with a global blended confidence score"
+    },
+    {
+      "field_name": "pool_pressure",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "current expansion or concentration pressure",
+      "forbidden_misuse": "must not be ignored when considering expression"
+    },
+    {
+      "field_name": "rank_context",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "Brain 2 ordering context kept as context, not production rank",
+      "forbidden_misuse": "must not become a live rank number in Stage 8A"
+    },
+    {
+      "field_name": "blocked_reasons",
+      "group": "risk_blockers",
+      "required": true,
+      "description": "explicit list of blockers still attached to the object",
+      "forbidden_misuse": "must not be replaced by vague comments"
+    },
+    {
+      "field_name": "allowed_next_use",
+      "group": "downstream_allowance",
+      "required": true,
+      "description": "the only downstream action currently allowed",
+      "forbidden_misuse": "must not imply runtime production or budget authority"
+    }
+  ],
+  "fixture_bank": [
+    {
+      "fixture_id": "FIX-001",
+      "anchor_case": "March-positive and archived-weakened primary lane",
+      "source_ids": [
+        "S6B-001",
+        "ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO"
+      ],
+      "lane_classification": "primary_candidate_expression",
+      "current_permission": "candidate_shadow_only",
+      "main_blockers": [
+        "rewrite_blocker_primary_repeat",
+        "rewrite_blocker_concentration"
+      ],
+      "expected_object_fields": [
+        "primary_lane",
+        "expression_permission",
+        "fresh_confirmation_status",
+        "blocked_reasons",
+        "same_day_evidence_summary"
+      ],
+      "allowed_next_use": "shadow_only_readback",
+      "fresh_window_question": "Does the primary restrained lane beat the fresh baseline while staying within pool-ratio limits?"
+    },
+    {
+      "fixture_id": "FIX-002",
+      "anchor_case": "concentration failure anchor",
+      "source_ids": [
+        "S6B-006"
+      ],
+      "lane_classification": "risk_blocker_anchor",
+      "current_permission": "blocked_until_future_confirmation",
+      "main_blockers": [
+        "rewrite_blocker_concentration"
+      ],
+      "expected_object_fields": [
+        "false_positive_pressure",
+        "pool_pressure",
+        "blocked_reasons",
+        "fresh_confirmation_status"
+      ],
+      "allowed_next_use": "blocker_aware_shadow_design_only",
+      "fresh_window_question": "Does the lane repeat outside March without being dominated by one window or state cluster?"
+    },
+    {
+      "fixture_id": "FIX-003",
+      "anchor_case": "narrow support pocket",
+      "source_ids": [
+        "S6E-SUPPORT-005"
+      ],
+      "lane_classification": "support_modifier_narrowing",
+      "current_permission": "support_research_only",
+      "main_blockers": [
+        "rewrite_blocker_support_modifier"
+      ],
+      "expected_object_fields": [
+        "support_role",
+        "source_family_trace",
+        "allowed_next_use"
+      ],
+      "allowed_next_use": "narrowed_modifier_replay_only",
+      "fresh_window_question": "Does the narrow support bucket repeat its peer improvement without materially widening exposure?"
+    },
+    {
+      "fixture_id": "FIX-004",
+      "anchor_case": "broad support failure",
+      "source_ids": [
+        "S6E-FAIL-001",
+        "S6E-FAIL-002"
+      ],
+      "lane_classification": "support_context_only",
+      "current_permission": "reference_only",
+      "main_blockers": [
+        "rewrite_blocker_support_modifier"
+      ],
+      "expected_object_fields": [
+        "support_role",
+        "expression_permission",
+        "blocked_reasons"
+      ],
+      "allowed_next_use": "annotation_only",
+      "fresh_window_question": "Does broad support remain context-only even if narrow support pockets repeat?"
+    },
+    {
+      "fixture_id": "FIX-005",
+      "anchor_case": "high-pressure rescue",
+      "source_ids": [
+        "S6D-RESCUE-006"
+      ],
+      "lane_classification": "restraint_soft_penalty",
+      "current_permission": "penalty_research_only",
+      "main_blockers": [
+        "rewrite_blocker_restraint_soft_before_hard"
+      ],
+      "expected_object_fields": [
+        "restraint_role",
+        "blocked_reasons",
+        "same_day_evidence_summary"
+      ],
+      "allowed_next_use": "soft_penalty_simulation_only",
+      "fresh_window_question": "Can soft-penalty treatment reduce FP pressure without killing rescue buckets like this?"
+    },
+    {
+      "fixture_id": "FIX-006",
+      "anchor_case": "duplicate-credit guardrail",
+      "source_ids": [
+        "S6C-007"
+      ],
+      "lane_classification": "guardrail_reference",
+      "current_permission": "readback_reference_only",
+      "main_blockers": [
+        "rewrite_blocker_duplicate_credit"
+      ],
+      "expected_object_fields": [
+        "source_trace_ids",
+        "source_family_trace",
+        "lineage_dedup_key"
+      ],
+      "allowed_next_use": "readback_reference_only",
+      "fresh_window_question": "Does union replay remain clean with no duplicate scoring credit claimed?"
+    },
+    {
+      "fixture_id": "FIX-007",
+      "anchor_case": "decay companion boundary",
+      "source_ids": [
+        "S6C-006"
+      ],
+      "lane_classification": "decay_companion_boundary",
+      "current_permission": "companion_only",
+      "main_blockers": [
+        "rewrite_blocker_decay_boundary"
+      ],
+      "expected_object_fields": [
+        "decay_role",
+        "decay_evidence_summary",
+        "allowed_next_use"
+      ],
+      "allowed_next_use": "carryforward_annotation_only",
+      "fresh_window_question": "Does decay remain explanatory carryforward without leaking into same-day scoring?"
+    },
+    {
+      "fixture_id": "FIX-008",
+      "anchor_case": "old-play-card overlap teacher",
+      "source_ids": [
+        "S6D-RESCUE-007"
+      ],
+      "lane_classification": "control_arm_overlap_teacher",
+      "current_permission": "reference_only",
+      "main_blockers": [],
+      "expected_object_fields": [
+        "source_family_trace",
+        "blocked_reasons",
+        "allowed_next_use"
+      ],
+      "allowed_next_use": "control_arm_diagnostic_only",
+      "fresh_window_question": "Does the overlap teach a translator failure, or does it belong to an Arena-native lane after proper tracing?"
+    }
+  ],
+  "fresh_window_charter": [
+    {
+      "question_id": "FW-001",
+      "target": "primary_restrained_candidate_expression",
+      "pass_condition": "false_positive_proxy_rate_delta <= -0.050 and pool_normalized_positive_yield_delta > 0 and avg_pool_ratio_b_vs_a <= 1.500 and positive conversions remain non-trivial",
+      "failure_meaning": "primary lane does not beat the fresh baseline clean boxed arm in a controlled way",
+      "post_pass_effect": "primary lane may remain alive for Stage 8A shadow design progression",
+      "still_not_allowed_if_passed": [
+        "live_scoring_rewrite",
+        "live_candidate_generation",
+        "budget_rewrite"
+      ]
+    },
+    {
+      "question_id": "FW-002",
+      "target": "concentration_warning_break",
+      "pass_condition": "metrics repeat and concentration warnings remain explicit rather than silently ignored",
+      "failure_meaning": "finding still appears too dependent on March or one state cluster",
+      "post_pass_effect": "concentration blocker may weaken from hard block to explicit caveat",
+      "still_not_allowed_if_passed": [
+        "unqualified_generality_claims"
+      ]
+    },
+    {
+      "question_id": "FW-003",
+      "target": "support_context_modifier",
+      "pass_condition": "support-on subset reduces FP proxy or improves yield versus support-off peer without materially expanding exposure",
+      "failure_meaning": "support remains contextual only",
+      "post_pass_effect": "narrow support may remain a modifier-only lane",
+      "still_not_allowed_if_passed": [
+        "broad_support_promotion",
+        "support_driven_candidate_creation"
+      ]
+    },
+    {
+      "question_id": "FW-004",
+      "target": "restraint_soft_penalty",
+      "pass_condition": "soft penalty reduces FP pressure while preserving useful conversions",
+      "failure_meaning": "restraint remains commentary or damages rescue buckets",
+      "post_pass_effect": "restraint may remain a penalty-only shadow lane",
+      "still_not_allowed_if_passed": [
+        "hard_veto",
+        "hard_exclusion"
+      ]
+    },
+    {
+      "question_id": "FW-005",
+      "target": "lineage_narrowing",
+      "pass_condition": "narrowed lineage preserves or improves FP and yield while adding non-duplicate value",
+      "failure_meaning": "lineage remains ambient reference only",
+      "post_pass_effect": "lineage may progress to bounded modifier research",
+      "still_not_allowed_if_passed": [
+        "broad_lineage_promotion"
+      ]
+    },
+    {
+      "question_id": "FW-006",
+      "target": "decay_companion_boundary",
+      "pass_condition": "decay remains useful and explicitly separated from same-day candidate permission",
+      "failure_meaning": "decay is leaking into same-day interpretation",
+      "post_pass_effect": "decay remains companion-only with better confidence",
+      "still_not_allowed_if_passed": [
+        "same_day_candidate_permission",
+        "same_day_spend_permission"
+      ]
+    },
+    {
+      "question_id": "FW-007",
+      "target": "duplicate_credit_guardrail",
+      "pass_condition": "candidate union does not claim duplicate scoring credit",
+      "failure_meaning": "apparent strength is inflated by overlap",
+      "post_pass_effect": "traceability guardrail remains trusted",
+      "still_not_allowed_if_passed": []
+    },
+    {
+      "question_id": "FW-008",
+      "target": "macro_findings_gate",
+      "pass_condition": "repeat evidence exists and caveats are logged",
+      "failure_meaning": "finding remains provisional only",
+      "post_pass_effect": "eligible findings may move from provisional to repeated-with-caveat or repeated-cleanly",
+      "still_not_allowed_if_passed": [
+        "runtime_rewrite_without_gate_review"
+      ]
+    },
+    {
+      "question_id": "FW-009",
+      "target": "translator_scoring_rewrite_gate",
+      "pass_condition": "all prerequisite gates pass or remain explicitly quarantined after fresh readback",
+      "failure_meaning": "downstream rewrite remains blocked",
+      "post_pass_effect": "Stage 8A shadow implementation discussion may begin",
+      "still_not_allowed_if_passed": [
+        "live_scoring_rewrite",
+        "live_candidate_generation",
+        "boxed_straight_runtime_policy",
+        "budget_runtime_policy"
+      ]
+    }
+  ],
+  "forbidden_conclusions": [
+    {
+      "conclusion_id": "FC-001",
+      "statement": "A promising lane is a rewrite.",
+      "why_forbidden": "the primary lane remains blocked and concentration-sensitive",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md",
+        "ANALYSIS_ARENA__CYCLE__STAGE6B_READBACK_DECISION_MEMO.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-002",
+      "statement": "Archived replication is enough to unlock Stage 8.",
+      "why_forbidden": "archived windows are stress-test evidence only",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__EVIDENCE_BOUNDARY_AND_NEXT_RUN_MAP.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-003",
+      "statement": "Same-window replay counts as fresh confirmation.",
+      "why_forbidden": "replay is regression and reproducibility evidence only",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__EVIDENCE_BOUNDARY_AND_NEXT_RUN_MAP.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-004",
+      "statement": "Support context may create candidates by itself.",
+      "why_forbidden": "support is only credible in narrowed paired subsets",
+      "source_guardrails": [
+        "ANALYSIS_ARENA__CYCLE__STAGE6E_SUPPORT_MODIFIER_NARROWING_WORKBENCH.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-005",
+      "statement": "Restraint may become a hard veto.",
+      "why_forbidden": "high-pressure rows still preserve useful conversions",
+      "source_guardrails": [
+        "ANALYSIS_ARENA__CYCLE__STAGE6D_RESTRAINT_CALIBRATION_WORKBENCH.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-006",
+      "statement": "Decay may become same-day prediction proof.",
+      "why_forbidden": "decay is a companion boundary, not same-day permission",
+      "source_guardrails": [
+        "ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-007",
+      "statement": "Duplicate credit may inflate perceived strength.",
+      "why_forbidden": "overlap can manufacture fake lift",
+      "source_guardrails": [
+        "ANALYSIS_ARENA__CYCLE__STAGE6C_FUTURE_CONFIRMATION_PROTOCOL.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-008",
+      "statement": "Queue labels are scoring weights.",
+      "why_forbidden": "readiness labels are decision-management states, not predictive coefficients",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-009",
+      "statement": "Old downstream overlap defines Arena truth.",
+      "why_forbidden": "old infrastructure remains control arm and baseline only",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-010",
+      "statement": "Stage 8 should begin as one blended score.",
+      "why_forbidden": "future rebuild must preserve lane separation and permission separation",
+      "source_guardrails": [
+        "AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md"
+      ]
+    },
+    {
+      "conclusion_id": "FC-011",
+      "statement": "Conceptual mechanism ideas are implementation permission.",
+      "why_forbidden": "mechanism appendix is conceptual only and subordinate to the evidence boundary",
+      "source_guardrails": [
+        "docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md"
+      ]
+    }
+  ],
+  "next_action_sequence": [
+    "review_memo_appendix_and_mechanism_appendix_together",
+    "freeze_dossier_after_review",
+    "run_next_true_fresh_confirmation_window_under_charter",
+    "regenerate_stage6b_through_stage7b_on_fresh_evidence",
+    "compare_canonical_march_archived_v5_and_fresh_window",
+    "decide_whether_stage8a_shadow_implementation_is_allowed"
+  ]
+}

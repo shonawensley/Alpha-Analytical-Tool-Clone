@@ -70,6 +70,14 @@ Planned downstream rebuild guardrail:
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE8_DOWNSTREAM_REBUILD_READINESS.md`
 - status: docs-only / design-brief-only until a fresh window reruns Stage 6B through Stage 7B and is compared against March
 
+Pre-Stage-8 boundary dossier:
+
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__APPENDIX.json`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__MECHANISM_APPENDIX.md`
+- `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__STAGE7C_STAGE8A_ENTRY_DOSSIER__FREEZE_RECEIPT.md`
+- status: frozen governing artifact for pre-Stage-8 evidence synthesis, lane permissions, blockers, shadow-object schema, fixture bank, and fresh-window charter
+
 Window replay / replication protocol:
 
 - `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_ANALYSIS_ARENA__WINDOW_REPLAY_AND_REPLICATION_PROTOCOL.md`
@@ -87,14 +95,15 @@ Window replay / replication protocol:
   - `archived_window_replication`
   - `true_fresh_confirmation`
 - current archived-window replication package:
-  - root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v2/`
-  - predictive sharepacks: `sharepacks/_predictive_replay/archived_window_replay_v2/<D>/`
-  - completed clean windows:
+  - root: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/archived_window_replay_v5_canonical_with_june2025/`
+  - predictive sharepacks: `sharepacks/_predictive_replay/archived_window_replay_v5_canonical_with_june2025/<D>/`
+  - canonical windows:
     - `WINDOW_2025-12-30_to_2026-01-09`
-    - `WINDOW_2026-01-15_to_2026-01-18`
-    - `WINDOW_2026-01-20_to_2026-01-22`
+    - `WINDOW_2026-01-15_to_2026-01-22`
+    - `WINDOW_2025-06-21_to_2025-06-27`
   - deliberate gap handling:
-    - `2026-01-19` is excluded because the truth sharepack is missing; the surrounding January material is split into clean subwindows instead of being treated as one complete validation span
+    - `2026-01-19` remains excluded because the truth sharepack is missing
+    - the recovered `WINDOW_2026-01-15_to_2026-01-22` supersedes the earlier split-January partial windows
   - root readback chain:
     - Stage 2B cross-window rollup
     - Stage 3 decision workbench
@@ -107,7 +116,7 @@ Window replay / replication protocol:
     - Stage 7B fixture replay harness
   - March-vs-archived decision memo:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_VS_ARCHIVED_REPLAY_DECISION_MEMO.md`
-    - compares canonical March Run 2 against archived replay v2 at Stage 6B-through-Stage 7B level
+    - preserves the initial March-vs-archived comparison readback
     - records that the `REPLAY/march_2026_15day_replay_v2` Stage 6B candidate-lane metrics are currently not a safe official metric baseline because the isolated replay root does not satisfy cross-window promotion gates
   - March replay Stage 6B comparability audit:
     - `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/REPLAY/ANALYSIS_ARENA__MARCH_REPLAY_STAGE6B_COMPARABILITY_AUDIT.md`
@@ -117,6 +126,7 @@ Window replay / replication protocol:
     - archived replication and fixture replay only
     - useful for regression, traceability, lane separation, and fresh-window preflight
     - weakens the March primary-lane promotion case rather than confirming it
+    - June-inclusive archived replication improves discipline and stress-test breadth without unlocking Stage 8 by itself
     - not sufficient by itself to unlock Stage 8A or any live translator/scoring/candidate/budget rewrite
 
 Per-window lock inputs that should be set before any fresh or backtest window:
