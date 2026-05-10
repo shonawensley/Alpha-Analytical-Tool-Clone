@@ -446,6 +446,24 @@ def build_predictive_run_report(
     lines.append(f"- Diagnostic straight seed: {_fmt_items(straight_seed)}")
     lines.append(f"- Diagnostic VT-box seed: {_fmt_items(vt_seed)}")
     lines.append("")
+    lines.append("## Arena-Preserved Truth vs Control-Arm Expression")
+    lines.append("")
+    lines.append(
+        f"- Arena-preserved boxed canonicals to watch: {_fmt_items(_ordered_unique(dominant_canonicals[:4] + reinforced[:4] + boxed_seed[:8]))}"
+    )
+    lines.append(
+        f"- Arena-preserved straight canonicals to watch: {_fmt_items(_ordered_unique(straight_seed[:8] + reinforced[:4]))}"
+    )
+    lines.append(
+        "- Interpretation rule: Brain 1 dominant canonicals, Brain 2 carry-through, and diagnostic seeds describe what the Arena preserved before results."
+    )
+    lines.append(
+        "- Control-arm rule: Candidate Universe and Play Card remain baseline expression surfaces only; they do not define Arena truth."
+    )
+    lines.append(
+        "- Review test: compare the preserved box/straight pressure above to what the control arm narrows or suppresses below."
+    )
+    lines.append("")
     lines.append("## Downstream Control Arm Snapshot")
     lines.append("")
     lines.append(f"- Candidate Universe: {_fmt_items(_candidate_universe_summary(candidate_universe if isinstance(candidate_universe, Mapping) else None))}")
